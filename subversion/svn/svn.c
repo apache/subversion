@@ -146,7 +146,6 @@ typedef enum svn_cl__longopt_t {
   opt_adds_as_modification,
   opt_vacuum_pristines,
   opt_delete,
-  opt_keep_shelved,
   opt_list
 } svn_cl__longopt_t;
 
@@ -468,9 +467,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"vacuum-pristines", opt_vacuum_pristines, 0,
                        N_("remove unreferenced pristines from .svn directory")},
 
-  {"list", opt_list, 0, N_("list shelved patches")},
-  {"keep-shelved", opt_keep_shelved, 0, N_("do not delete the shelved patch")},
-  {"delete", opt_delete, 0, N_("delete the shelved patch")},
+  {"list", opt_list, 0, N_("list shelves or checkpoints")},
+  {"delete", opt_delete, 0, N_("delete a shelf")},
 
   /* Long-opt Aliases
    *
@@ -616,31 +614,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  See also 'svn help update' for a list of possible characters\n"
      "  reporting the action taken.\n"),
     {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
-
-  { "checkpoint", svn_cl__checkpoint, {0}, N_
-    ("Checkpoint the local changes.\n"
-     "usage: 1. checkpoint save\n"
-     "       2. checkpoint revert\n"
-     "       3. checkpoint rollback NUMBER\n"
-     "       4. checkpoint list|--list\n"
-     "\n"
-     "  1. Save the working state as a new checkpoint.\n"
-     "  2. Revert the working state to the current checkpoint.\n"
-     "  3. Roll back the working state to checkpoint NUMBER.\n"
-     "  4. List all checkpoints. A synonym for 'svn checkpoints'.\n"),
-    {'q',
-     /*'-N', opt_depth, opt_targets, opt_changelist,*/
-     SVN_CL__LOG_MSG_OPTIONS,
-     opt_list},
-    { {opt_list, N_("list all checkpoints")} }
-    },
-
-  { "checkpoints", svn_cl__checkpoints, {0}, N_
-    ("List all checkpoints.\n"
-     "usage: checkpoints\n"
-     "\n"
-     "  A synonym for 'svn checkpoint list'.\n"),
-    {} },
 
   { "cleanup", svn_cl__cleanup, {0}, N_
     ("Either recover from an interrupted operation that left the working copy locked,\n"
@@ -1680,22 +1653,48 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the output of 'svn help merge' for 'undo'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
+  { "savepoint", svn_cl__checkpoint, {"sp", "checkpoint"}, N_
+    ("Save and restore local changes.\n"
+     "usage: 1. savepoint save NAME [PATH...]\n"
+     "       2. savepoint restore NAME [VERSION]\n"
+     "       3. savepoint list|--list NAME\n"
+     "\n"
+     "  1. Save local changes in the given PATHs as a new version of shelf NAME.\n"
+     "     A new log message can be given with -m, -F, etc.\n"
+     "\n"
+     "     The same as 'svn shelve --keep-local'.\n"
+     "\n"
+     "  2. Apply the VERSION (default: latest) of shelf NAME to the working copy.\n"
+     "\n"
+     "     The same as 'svn unshelve'.\n"
+     "\n"
+     "  3. List all versions of shelf NAME.\n"
+     "\n"
+     "The default PATH is the current working directory.\n"),
+    {'q', opt_dry_run,
+     opt_depth, opt_targets, opt_changelist,
+     SVN_CL__LOG_MSG_OPTIONS,
+     opt_list},
+    { {opt_list, N_("list all versions of a shelf")} }
+  },
+
   { "shelve", svn_cl__shelve, {0}, N_
-    ("Put a local change aside, as if putting it on a shelf.\n"
+    ("Put local changes aside, as if putting them on a shelf.\n"
      "usage: 1. shelve [--keep-local] NAME [PATH...]\n"
      "       2. shelve --delete NAME\n"
      "       3. shelve --list\n"
      "\n"
-     "  1. Save the local change in the given PATHs to a patch file, and\n"
-     "     revert that change from the WC unless '--keep-local' is given.\n"
-     "     If a log message is given with '-m' or '-F', include it at the\n"
-     "     beginning of the patch file.\n"
+     "  1. Save the local changes in the given PATHs to a shelf named NAME.\n"
+     "     Revert those changes from the WC unless '--keep-local' is given.\n"
+     "     If a log message is given with '-m' or '-F', replace the shelf's\n"
+     "     current log message (if any).\n"
      "\n"
-     "  2. Delete the shelved change NAME.\n"
-     "     (A backup is kept, named with a '.bak' extension.)\n"
+     "     'svn shelve --keep-local' is like 'svn checkpoint save'.\n"
      "\n"
-     "  3. List shelved changes. Include the first line of any log message\n"
-     "     and some details about the contents of the change, unless '-q' is\n"
+     "  2. Delete the shelf named NAME.\n"
+     "\n"
+     "  3. List shelves. Include the first line of any log message\n"
+     "     and some details about the contents of the shelf, unless '-q' is\n"
      "     given.\n"
      "\n"
      "  The kinds of change you can shelve are those supported by 'svn diff'\n"
@@ -1703,9 +1702,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "     mergeinfo changes, copies, moves, mkdir, rmdir,\n"
      "     'binary' content, uncommittable states\n"
      "\n"
-     "  To bring back a shelved change, use 'svn unshelve NAME'.\n"
+     "  To bring back shelved changes, use 'svn unshelve NAME'.\n"
      "\n"
-     "  A shelved change is stored as a patch file, .svn/shelves/NAME.patch\n"
+     "  Shelves are stored in <WC>/.svn/shelves/\n"
     ),
     {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
      opt_depth, opt_targets, opt_changelist,
@@ -1714,29 +1713,29 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     } },
 
   { "unshelve", svn_cl__unshelve, {0}, N_
-    ("Bring a shelved change back to a local change in the WC.\n"
-     "usage: 1. unshelve [--keep-shelved] [NAME]\n"
+    ("Bring shelved changes back into the WC.\n"
+     "usage: 1. unshelve [NAME]\n"
      "       2. unshelve --list\n"
      "\n"
-     "  1. Apply the shelved change NAME to the working copy.\n"
-     "     Delete the patch unless the '--keep-shelved' option is given.\n"
-     "     (A backup is kept, named with a '.bak' extension.)\n"
-     "     NAME defaults to the most recent shelved change.\n"
+     "  1. Apply the shelf named NAME to the working copy.\n"
+     "     NAME defaults to the most recent shelf.\n"
      "\n"
-     "  2. List shelved changes. Include the first line of any log message\n"
-     "     and some details about the contents of the change, unless '-q' is\n"
+     "     Like 'svn checkpoint restore'.\n"
+     "\n"
+     "  2. List shelves. Include the first line of any log message\n"
+     "     and some details about the contents of the shelf, unless '-q' is\n"
      "     given.\n"
      "\n"
      "  Any conflict between the change being unshelved and a change\n"
      "  already in the WC is handled the same way as by 'svn patch',\n"
      "  creating a 'reject' file.\n"
     ),
-    {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
+    {opt_list, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
-    ("List shelved changes.\n"
+    ("List shelves.\n"
      "usage: shelves\n"),
-    },
+    {'q'} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
@@ -2486,7 +2485,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.keep_changelists = TRUE;
         break;
       case opt_keep_local:
-      case opt_keep_shelved:
         opt_state.keep_local = TRUE;
         break;
       case opt_with_all_revprops:

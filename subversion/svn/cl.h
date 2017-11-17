@@ -278,7 +278,6 @@ svn_opt_subcommand_t
   svn_cl__changelist,
   svn_cl__checkout,
   svn_cl__checkpoint,
-  svn_cl__checkpoints,
   svn_cl__cleanup,
   svn_cl__commit,
   svn_cl__copy,

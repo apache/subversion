@@ -64,7 +64,7 @@ typedef svn_error_t *(svn_opt_subcommand_t)(
 
 
 /** The maximum number of aliases a subcommand can have. */
-#define SVN_OPT_MAX_ALIASES 3
+#define SVN_OPT_MAX_ALIASES 4
 
 /** The maximum number of options that can be accepted by a subcommand. */
 #define SVN_OPT_MAX_OPTIONS 50

@@ -23,9 +23,9 @@
 
 /* ==================================================================== */
 
-
-
-/*** Includes. ***/
+/* We define this here to remove any further warnings about the usage of
+   experimental functions in this file. */
+#define SVN_EXPERIMENTAL
 
 #include "svn_client.h"
 #include "svn_wc.h"
@@ -37,6 +37,7 @@
 
 #include "client.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_sorts_private.h"
 #include "svn_private_config.h"
 
 
@@ -52,39 +53,188 @@ validate_name(const char *name,
   return SVN_NO_ERROR;
 }
 
-/* Set *PATCH_ABSPATH to the abspath of the patch file for shelved change
- * NAME, no matter whether it exists.
+/* Set *PATCH_ABSPATH to the abspath of the patch file for SHELF
+ * version VERSION, no matter whether it exists.
  */
 static svn_error_t *
-get_patch_abspath(char **patch_abspath,
-                  const char *name,
-                  const char *wc_root_abspath,
-                  svn_client_ctx_t *ctx,
+get_patch_abspath(const char **abspath,
+                  svn_client_shelf_t *shelf,
+                  int version,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  char *dir;
   const char *filename;
 
-  SVN_ERR(svn_wc__get_shelves_dir(&dir, ctx->wc_ctx, wc_root_abspath,
-                                  scratch_pool, scratch_pool));
-  filename = apr_pstrcat(scratch_pool, name, ".patch", SVN_VA_NULL);
-  *patch_abspath = svn_dirent_join(dir, filename, result_pool);
+  filename = apr_psprintf(scratch_pool, "%s-%03d.patch", shelf->name, version);
+  *abspath = svn_dirent_join(shelf->shelves_dir, filename, result_pool);
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_write_patch(const char *name,
-                             const char *message,
-                             const char *wc_root_abspath,
-                             svn_boolean_t overwrite_existing,
-                             const apr_array_header_t *paths,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool)
+/* Set *PATCH_ABSPATH to the abspath of the patch file for SHELF
+ * version VERSION. Error if VERSION is invalid or nonexistent.
+ */
+static svn_error_t *
+get_existing_patch_abspath(const char **abspath,
+                           svn_client_shelf_t *shelf,
+                           int version,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
-  char *patch_abspath;
+  if (shelf->max_version <= 0)
+    return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                             _("shelf '%s': no versions available"),
+                             shelf->name);
+  if (version <= 0 || version > shelf->max_version)
+    return svn_error_createf(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                             _("shelf '%s' has no version %d: max version is %d"),
+                             shelf->name, version, shelf->max_version);
+
+  SVN_ERR(get_patch_abspath(abspath, shelf, version,
+                            result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+shelf_delete_patch_file(svn_client_shelf_t *shelf,
+                        int version,
+                        apr_pool_t *scratch_pool)
+{
+  const char *patch_abspath;
+
+  SVN_ERR(get_existing_patch_abspath(&patch_abspath, shelf, version,
+                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_remove_file2(patch_abspath, TRUE /*ignore_enoent*/,
+                              scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+get_log_abspath(char **log_abspath,
+                svn_client_shelf_t *shelf,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  const char *filename;
+
+  filename = apr_pstrcat(scratch_pool, shelf->name, ".log", SVN_VA_NULL);
+  *log_abspath = svn_dirent_join(shelf->shelves_dir, filename, result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* Set SHELF->log_message by reading from its file storage.
+ *
+ * ### Currently just reads the first line.
+ */
+static svn_error_t *
+shelf_read_log_message(svn_client_shelf_t *shelf,
+                       apr_pool_t *result_pool)
+{
+  char *log_abspath;
+  apr_file_t *file;
+  svn_error_t *err;
+  svn_stream_t *stream;
+  svn_boolean_t eof;
+  svn_stringbuf_t *line;
+
+  SVN_ERR(get_log_abspath(&log_abspath, shelf, result_pool, result_pool));
+
+  err = svn_io_file_open(&file, log_abspath,
+                         APR_FOPEN_READ,
+                         APR_FPROT_OS_DEFAULT, result_pool);
+  if (err && err->apr_err == APR_ENOENT)
+    {
+      shelf->log_message = "";
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+  stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, result_pool);
+
+  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, result_pool));
+  SVN_ERR(svn_stream_close(stream));
+  shelf->log_message = line->data;
+  return SVN_NO_ERROR;
+}
+
+/* Write SHELF->log_message to its file storage.
+ */
+static svn_error_t *
+shelf_write_log_message(svn_client_shelf_t *shelf,
+                        apr_pool_t *scratch_pool)
+{
+  char *log_abspath;
+  apr_file_t *file;
+  svn_stream_t *stream;
+
+  SVN_ERR(get_log_abspath(&log_abspath, shelf, scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_io_file_open(&file, log_abspath,
+                           APR_FOPEN_WRITE | APR_FOPEN_CREATE,
+                           APR_FPROT_OS_DEFAULT, scratch_pool));
+  stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, scratch_pool);
+
+  SVN_ERR(svn_stream_puts(stream, shelf->log_message));
+  SVN_ERR(svn_stream_close(stream));
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static char *
+get_current_abspath(svn_client_shelf_t *shelf,
+                    apr_pool_t *result_pool)
+{
+  const char *current_filename
+    = apr_psprintf(result_pool, "%s.current", shelf->name);
+  return svn_dirent_join(shelf->shelves_dir, current_filename, result_pool);
+}
+
+/*  */
+static svn_error_t *
+shelf_read_current(svn_client_shelf_t *shelf,
+                   apr_pool_t *scratch_pool)
+{
+  const char *current_abspath = get_current_abspath(shelf, scratch_pool);
+  FILE *fp = fopen(current_abspath, "r");
+
+  if (! fp)
+    {
+      shelf->max_version = 0;
+      return SVN_NO_ERROR;
+    }
+  fscanf(fp, "%d", &shelf->max_version);
+  fclose(fp);
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+shelf_write_current(svn_client_shelf_t *shelf,
+                    apr_pool_t *scratch_pool)
+{
+  const char *current_abspath = get_current_abspath(shelf, scratch_pool);
+  FILE *fp = fopen(current_abspath, "w");
+
+  fprintf(fp, "%d", shelf->max_version);
+  fclose(fp);
+  return SVN_NO_ERROR;
+}
+
+/** Write local changes to a patch file.
+ *
+ * @a paths, @a depth, @a changelists: The selection of local paths to diff.
+ *
+ * ### TODO: Ignore any external diff cmd as configured in config file.
+ *     This might also solve the buffering problem.
+ */
+static svn_error_t *
+write_patch(const char *patch_abspath,
+            const apr_array_header_t *paths,
+            svn_depth_t depth,
+            const apr_array_header_t *changelists,
+            svn_client_ctx_t *ctx,
+            apr_pool_t *scratch_pool)
+{
   apr_int32_t flag;
   apr_file_t *outfile;
   svn_stream_t *outstream;
@@ -95,33 +245,15 @@ svn_client_shelf_write_patch(const char *name,
   svn_opt_revision_t start_revision = {svn_opt_revision_base, {0}};
   svn_opt_revision_t end_revision = {svn_opt_revision_working, {0}};
 
-  printf("writing '%s.patch'\n", name);
-
-  SVN_ERR(get_patch_abspath(&patch_abspath, name, wc_root_abspath,
-                            ctx, scratch_pool, scratch_pool));
-
   /* Get streams for the output and any error output of the diff. */
   /* ### svn_stream_open_writable() doesn't work here: the buffering
          goes wrong so that diff headers appear after their hunks.
          For now, fix by opening the file without APR_BUFFERED. */
   flag = APR_FOPEN_WRITE | APR_FOPEN_CREATE;
-  if (! overwrite_existing)
-    flag |= APR_FOPEN_EXCL;
   SVN_ERR(svn_io_file_open(&outfile, patch_abspath,
                            flag, APR_FPROT_OS_DEFAULT, scratch_pool));
   outstream = svn_stream_from_aprfile2(outfile, FALSE /*disown*/, scratch_pool);
   SVN_ERR(svn_stream_for_stderr(&errstream, scratch_pool));
-
-  /* Write the patch file header (log message, etc.) */
-  if (message)
-    {
-      SVN_ERR(svn_stream_printf(outstream, scratch_pool, "%s\n",
-                                message));
-    }
-  SVN_ERR(svn_stream_printf(outstream, scratch_pool,
-                            "--This line, and those below, will be ignored--\n\n"));
-  SVN_ERR(svn_stream_printf(outstream, scratch_pool,
-                            "--This patch was generated by 'svn shelve'--\n\n"));
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -160,210 +292,188 @@ svn_client_shelf_write_patch(const char *name,
 }
 
 svn_error_t *
-svn_client_shelf_apply_patch(const char *name,
-                             const char *wc_root_abspath,
-                             svn_boolean_t reverse,
-                             svn_boolean_t dry_run,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool)
+svn_client_shelf_open(svn_client_shelf_t **shelf_p,
+                      const char *name,
+                      const char *local_abspath,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool)
 {
-  char *patch_abspath;
+  svn_client_shelf_t *shelf = apr_palloc(result_pool, sizeof(*shelf));
+  char *shelves_dir;
 
-  SVN_ERR(get_patch_abspath(&patch_abspath, name, wc_root_abspath,
-                            ctx, scratch_pool, scratch_pool));
-  SVN_ERR(svn_client_patch(patch_abspath, wc_root_abspath,
+  SVN_ERR(validate_name(name, result_pool));
+
+  SVN_ERR(svn_client_get_wc_root(&shelf->wc_root_abspath,
+                                 local_abspath, ctx,
+                                 result_pool, result_pool));
+  SVN_ERR(svn_wc__get_shelves_dir(&shelves_dir,
+                                  ctx->wc_ctx, local_abspath,
+                                  result_pool, result_pool));
+  shelf->shelves_dir = shelves_dir;
+  shelf->ctx = ctx;
+  shelf->pool = result_pool;
+
+  shelf->name = apr_pstrdup(result_pool, name);
+  SVN_ERR(shelf_read_log_message(shelf, result_pool));
+  SVN_ERR(shelf_read_current(shelf, result_pool));
+
+  *shelf_p = shelf;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_close(svn_client_shelf_t *shelf,
+                       apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_delete(const char *name,
+                        const char *local_abspath,
+                        svn_boolean_t dry_run,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool)
+{
+  svn_client_shelf_t *shelf;
+  int i;
+  char *abspath;
+
+  SVN_ERR(validate_name(name, scratch_pool));
+
+  SVN_ERR(svn_client_shelf_open(&shelf,
+                                name, local_abspath, ctx, scratch_pool));
+
+  /* Remove the patches. */
+  for (i = shelf->max_version; i > 0; i--)
+    {
+      SVN_ERR(shelf_delete_patch_file(shelf, i, scratch_pool));
+    }
+
+  /* Remove the other files */
+  SVN_ERR(get_log_abspath(&abspath, shelf, scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_remove_file2(abspath, TRUE /*ignore_enoent*/, scratch_pool));
+  abspath = get_current_abspath(shelf, scratch_pool);
+  SVN_ERR(svn_io_remove_file2(abspath, TRUE /*ignore_enoent*/, scratch_pool));
+
+  SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_apply(svn_client_shelf_t *shelf,
+                       int version,
+                       svn_boolean_t dry_run,
+                       apr_pool_t *scratch_pool)
+{
+  const char *patch_abspath;
+
+  SVN_ERR(get_existing_patch_abspath(&patch_abspath, shelf, version,
+                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_patch(patch_abspath, shelf->wc_root_abspath,
                            dry_run, 0 /*strip*/,
-                           reverse,
+                           FALSE /*reverse*/,
                            FALSE /*ignore_whitespace*/,
                            TRUE /*remove_tempfiles*/, NULL, NULL,
-                           ctx, scratch_pool));
+                           shelf->ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_shelf_delete_patch(const char *name,
-                              const char *wc_root_abspath,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *scratch_pool)
+svn_client_shelf_unapply(svn_client_shelf_t *shelf,
+                         int version,
+                         svn_boolean_t dry_run,
+                         apr_pool_t *scratch_pool)
 {
-  char *patch_abspath, *to_abspath;
+  const char *patch_abspath;
 
-  SVN_ERR(get_patch_abspath(&patch_abspath, name, wc_root_abspath,
-                            ctx, scratch_pool, scratch_pool));
-  to_abspath = apr_pstrcat(scratch_pool, patch_abspath, ".bak", SVN_VA_NULL);
+  SVN_ERR(get_existing_patch_abspath(&patch_abspath, shelf, version,
+                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_patch(patch_abspath, shelf->wc_root_abspath,
+                           dry_run, 0 /*strip*/,
+                           TRUE /*reverse*/,
+                           FALSE /*ignore_whitespace*/,
+                           TRUE /*remove_tempfiles*/, NULL, NULL,
+                           shelf->ctx, scratch_pool));
 
-  /* remove any previous backup */
-  SVN_ERR(svn_io_remove_file2(to_abspath, TRUE /*ignore_enoent*/,
-                              scratch_pool));
-
-  /* move the patch to a backup file */
-  printf("moving '%s.patch' to '%s.patch.bak'\n", name, name);
-  SVN_ERR(svn_io_file_rename2(patch_abspath, to_abspath, FALSE /*flush_to_disk*/,
-                              scratch_pool));
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_shelve(const char *name,
-                  const apr_array_header_t *paths,
-                  svn_depth_t depth,
-                  const apr_array_header_t *changelists,
-                  svn_boolean_t keep_local,
-                  svn_boolean_t dry_run,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool)
+svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
+                                     int version,
+                                     apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
-  const char *wc_root_abspath;
+  int i;
+
+  /* Delete any newer checkpoints */
+  for (i = shelf->max_version; i > version; i--)
+    {
+      SVN_ERR(shelf_delete_patch_file(shelf, i, scratch_pool));
+    }
+
+  shelf->max_version = version;
+  SVN_ERR(shelf_write_current(shelf, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_get_files(apr_array_header_t **wc_abspaths_p,
+                           svn_client_shelf_t *shelf,
+                           int version,
+                           apr_pool_t *scratch_pool)
+{
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
+                                  const apr_array_header_t *paths,
+                                  svn_depth_t depth,
+                                  const apr_array_header_t *changelists,
+                                  apr_pool_t *scratch_pool)
+{
+  int next_version = shelf->max_version + 1;
+  const char *patch_abspath;
+
+  SVN_ERR(get_patch_abspath(&patch_abspath, shelf, next_version,
+                            scratch_pool, scratch_pool));
+  SVN_ERR(write_patch(patch_abspath,
+                      paths, depth, changelists,
+                      shelf->ctx, scratch_pool));
+  SVN_ERR(svn_client_shelf_set_current_version(shelf, next_version,
+                                               scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
+                                 svn_boolean_t dry_run,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_client_ctx_t *ctx = shelf->ctx;
   const char *message = "";
-  svn_error_t *err;
-
-  SVN_ERR(validate_name(name, pool));
-
-  /* ### TODO: check all paths are in same WC; for now use first path */
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                  APR_ARRAY_IDX(paths, 0, char *), pool));
-  SVN_ERR(svn_client_get_wc_root(&wc_root_abspath,
-                                 local_abspath, ctx, pool, pool));
 
   /* Fetch the log message and any other revprops */
   if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
     {
       const char *tmp_file;
-      apr_array_header_t *commit_items = apr_array_make(pool, 1, sizeof(void *));
+      apr_array_header_t *commit_items
+        = apr_array_make(scratch_pool, 1, sizeof(void *));
 
       SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
-                                      ctx, pool));
+                                      ctx, scratch_pool));
       if (! message)
         return SVN_NO_ERROR;
     }
-
-  err = svn_client_shelf_write_patch(name, message, wc_root_abspath,
-                                     FALSE /*overwrite_existing*/,
-                                     paths, depth, changelists,
-                                     ctx, pool);
-  if (err && APR_STATUS_IS_EEXIST(err->apr_err))
+  if (message && !dry_run)
     {
-      return svn_error_quick_wrapf(err,
-                                   "Shelved change '%s' already exists",
-                                   name);
-    }
-  else
-    SVN_ERR(err);
-
-  if (!keep_local)
-    {
-      /* Reverse-apply the patch. This should be a safer way to remove those
-         changes from the WC than running a 'revert' operation. */
-      SVN_ERR(svn_client_shelf_apply_patch(name, wc_root_abspath,
-                                           TRUE /*reverse*/, dry_run,
-                                           ctx, pool));
+      shelf->log_message = apr_pstrdup(shelf->pool, message);
+      SVN_ERR(shelf_write_log_message(shelf, scratch_pool));
     }
 
-  if (dry_run)
-    {
-      SVN_ERR(svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                            ctx, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_unshelve(const char *name,
-                    const char *local_abspath,
-                    svn_boolean_t keep,
-                    svn_boolean_t dry_run,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool)
-{
-  const char *wc_root_abspath;
-  svn_error_t *err;
-
-  SVN_ERR(validate_name(name, pool));
-
-  SVN_ERR(svn_client_get_wc_root(&wc_root_abspath,
-                                 local_abspath, ctx, pool, pool));
-
-  /* Apply the patch. */
-  err = svn_client_shelf_apply_patch(name, wc_root_abspath,
-                                     FALSE /*reverse*/, dry_run,
-                                     ctx, pool);
-  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
-    {
-      return svn_error_quick_wrapf(err,
-                                   "Shelved change '%s' not found",
-                                   name);
-    }
-  else
-    SVN_ERR(err);
-
-  /* Remove the patch. */
-  if (! keep && ! dry_run)
-    {
-      SVN_ERR(svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                            ctx, pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_shelves_delete(const char *name,
-                          const char *local_abspath,
-                          svn_boolean_t dry_run,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool)
-{
-  const char *wc_root_abspath;
-
-  SVN_ERR(validate_name(name, pool));
-
-  SVN_ERR(svn_client_get_wc_root(&wc_root_abspath,
-                                 local_abspath, ctx, pool, pool));
-
-  /* Remove the patch. */
-  if (! dry_run)
-    {
-      svn_error_t *err;
-
-      err = svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                          ctx, pool);
-      if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-        {
-          return svn_error_quick_wrapf(err,
-                                       "Shelved change '%s' not found",
-                                       name);
-        }
-      else
-        SVN_ERR(err);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Set *LOGMSG to the log message stored in the file PATCH_ABSPATH.
- *
- * ### Currently just reads the first line.
- */
-static svn_error_t *
-read_logmsg_from_patch(const char **logmsg,
-                       const char *patch_abspath,
-                       apr_pool_t *result_pool,
-                       apr_pool_t *scratch_pool)
-{
-  apr_file_t *file;
-  svn_stream_t *stream;
-  svn_boolean_t eof;
-  svn_stringbuf_t *line;
-
-  SVN_ERR(svn_io_file_open(&file, patch_abspath,
-                           APR_FOPEN_READ, APR_FPROT_OS_DEFAULT, scratch_pool));
-  stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, scratch_pool);
-  SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, result_pool));
-  SVN_ERR(svn_stream_close(stream));
-  *logmsg = line->data;
   return SVN_NO_ERROR;
 }
 
@@ -374,10 +484,13 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
+  const char *wc_root_abspath;
   char *shelves_dir;
   apr_hash_t *dirents;
   apr_hash_index_t *hi;
 
+  SVN_ERR(svn_wc__get_wcroot(&wc_root_abspath, ctx->wc_ctx, local_abspath,
+                             scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__get_shelves_dir(&shelves_dir, ctx->wc_ctx, local_abspath,
                                   scratch_pool, scratch_pool));
   SVN_ERR(svn_io_get_dirents3(&dirents, shelves_dir, FALSE /*only_check_type*/,
@@ -389,21 +502,16 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *filename = apr_hash_this_key(hi);
+      svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
       int len = strlen(filename);
 
-      if (len > 6 && strcmp(filename + len - 6, ".patch") == 0)
+      if (len > 6 && strcmp(filename + len - 8, ".current") == 0)
         {
-          const char *name = apr_pstrndup(result_pool, filename, len - 6);
-          svn_client_shelved_patch_info_t *info
+          const char *name = apr_pstrndup(result_pool, filename, len - 8);
+          svn_client_shelf_info_t *info
             = apr_palloc(result_pool, sizeof(*info));
 
-          info->dirent = apr_hash_this_val(hi);
-          info->mtime = info->dirent->mtime;
-          info->patch_path
-            = svn_dirent_join(shelves_dir, filename, result_pool);
-          SVN_ERR(read_logmsg_from_patch(&info->message, info->patch_path,
-                                         result_pool, scratch_pool));
-
+          info->mtime = dirent->mtime;
           svn_hash_sets(*shelved_patch_infos, name, info);
         }
     }
@@ -422,5 +530,28 @@ svn_client_shelves_any(svn_boolean_t *any_shelved,
   SVN_ERR(svn_client_shelves_list(&shelved_patch_infos, local_abspath,
                                   ctx, scratch_pool, scratch_pool));
   *any_shelved = apr_hash_count(shelved_patch_infos) != 0;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info_p,
+                                  svn_client_shelf_t *shelf,
+                                  int version,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  svn_client_shelf_version_info_t *info
+    = apr_palloc(result_pool, sizeof(*info));
+  const svn_io_dirent2_t *dirent;
+
+  SVN_ERR(get_patch_abspath(&info->patch_abspath, shelf, version,
+                            result_pool, scratch_pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent,
+                              info->patch_abspath,
+                              FALSE /*verify_truename*/,
+                              TRUE /*ignore_enoent*/,
+                              result_pool, scratch_pool));
+  info->mtime = dirent->mtime;
+  *info_p = info;
   return SVN_NO_ERROR;
 }

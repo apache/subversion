@@ -6715,148 +6715,170 @@ svn_client_cat(svn_stream_t *out,
 
 
 
-/** Checkpointing commands
+/** Shelves and checkpoints
  *
- * @defgroup svn_client_checkpoint_funcs Client Checkpointing Functions
+ * @defgroup svn_client_shelve_checkpoint Shelves and checkpoints
  * @{
  */
 
-/**
+/** A shelf.
  *
- * @since New in 1.11.
+ * @since New in 1.X.
  */
+typedef struct svn_client_shelf_t
+{
+    /* Public fields (read-only for public use) */
+    const char *name;
+    const char *log_message;
+    int max_version;
+
+    /* Private fields */
+    const char *wc_root_abspath;
+    const char *shelves_dir;
+    svn_client_ctx_t *ctx;
+    apr_pool_t *pool;
+} svn_client_shelf_t;
+
+/** Open an existing shelf or create a new shelf.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_checkpoint_get_current(int *checkpoint_number_p,
-                                  const char *local_abspath,
-                                  svn_client_ctx_t *ctx,
+svn_client_shelf_open(svn_client_shelf_t **shelf_p,
+                      const char *name,
+                      const char *local_abspath,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool);
+
+/** Close @a shelf.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_close(svn_client_shelf_t *shelf,
+                       apr_pool_t *scratch_pool);
+
+/** Delete a shelf, by name.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_delete(const char *name,
+                        const char *local_abspath,
+                        svn_boolean_t dry_run,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool);
+
+/** Save the local modifications found by @a paths, @a depth,
+ * @a changelists as a new version of @a shelf.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
+                                  const apr_array_header_t *paths,
+                                  svn_depth_t depth,
+                                  const apr_array_header_t *changelists,
                                   apr_pool_t *scratch_pool);
 
-/**
+/** Apply version @a version of @a shelf to the WC.
  *
- * @since New in 1.11.
+ * @since New in 1.X.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_checkpoint_save(int *checkpoint_number,
-                           const char *local_abspath,
-                           /*const apr_array_header_t *paths,
-                           svn_depth_t depth,
-                           const apr_array_header_t *changelists,*/
-                           svn_client_ctx_t *ctx,
+svn_client_shelf_apply(svn_client_shelf_t *shelf,
+                       int version,
+                       svn_boolean_t dry_run,
+                       apr_pool_t *scratch_pool);
+
+/** Reverse-apply the current version of @a shelf to the WC.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_unapply(svn_client_shelf_t *shelf,
+                         int version,
+                         svn_boolean_t dry_run,
+                         apr_pool_t *scratch_pool);
+
+/** Set the current version of @a shelf. Delete all newer versions.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
+                                     int version,
+                                     apr_pool_t *scratch_pool);
+
+/** Set @a *wc_abspaths_p to the files affected by version @a version
+ * of @a shelf.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_get_files(apr_array_header_t **wc_abspaths_p,
+                           svn_client_shelf_t *shelf,
+                           int version,
                            apr_pool_t *scratch_pool);
 
-/**
+/** Information about one version.
  *
- * @since New in 1.11.
+ * @since New in 1.X.
  */
-svn_error_t *
-svn_client_checkpoint_restore(int checkpoint_number,
-                              const char *local_abspath,
-                              svn_boolean_t dry_run,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *scratch_pool);
-
-/**
- *
- * @since New in 1.11.
- */
-svn_error_t *
-svn_client_checkpoint_delete(int checkpoint_number,
-                             const char *local_abspath,
-                             svn_boolean_t dry_run,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool);
-
-/**
- *
- * @since New in 1.11.
- */
-svn_error_t *
-svn_client_checkpoint_list(apr_array_header_t **checkpoints,
-                           const char *local_abspath,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-/** @} */
-
-
-/** Shelving commands
- *
- * @defgroup svn_client_shelve_funcs Client Shelving Functions
- * @{
- */
-
-/** Shelve a change.
- *
- * Shelve as @a name the local modifications found by @a paths, @a depth,
- * @a changelists. Revert the shelved change from the WC unless @a keep_local
- * is true.
- *
- * If @a dry_run is true, don't actually do it.
- *
- * @since New in 1.11.
- */
-svn_error_t *
-svn_client_shelve(const char *name,
-                  const apr_array_header_t *paths,
-                  svn_depth_t depth,
-                  const apr_array_header_t *changelists,
-                  svn_boolean_t keep_local,
-                  svn_boolean_t dry_run,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
-
-/** Unshelve the shelved change @a name.
- *
- * @a local_abspath is any path in the WC and is used to find the WC root.
- * Rename the shelved patch to add a '.bak' extension unless @a keep is true.
- *
- * If @a dry_run is true, don't actually do it.
- *
- * @since New in 1.11.
- */
-svn_error_t *
-svn_client_unshelve(const char *name,
-                    const char *local_abspath,
-                    svn_boolean_t keep,
-                    svn_boolean_t dry_run,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
-
-/** Delete the shelved patch @a name.
- *
- * @a local_abspath is any path in the WC and is used to find the WC root.
- *
- * If @a dry_run is true, don't actually do it.
- *
- * @since New in 1.11.
- */
-svn_error_t *
-svn_client_shelves_delete(const char *name,
-                          const char *local_abspath,
-                          svn_boolean_t dry_run,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
-
-/** Information about a shelved patch.
- *
- * @since New in 1.11.
- */
-typedef struct svn_client_shelved_patch_info_t
+typedef struct svn_client_shelf_version_info_t
 {
-  const char *message;  /* first line of log message */
-  const char *patch_path;  /* abspath of the patch file */
-  svn_io_dirent2_t *dirent;  /* info about the patch file */
-  apr_time_t mtime;  /* a copy of dirent->mtime */
-} svn_client_shelved_patch_info_t;
+  const char *patch_abspath;  /* abspath of the patch file */
+  apr_time_t mtime;  /* mtime of the patch file */
+} svn_client_shelf_version_info_t;
 
-/** Set *shelved_patches to a hash, keyed by patch name, of pointers to
- * @c svn_client_shelved_patch_info_t structures.
+/** Set @a *info to the files affected by the current version of SHELF.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info,
+                                  svn_client_shelf_t *shelf,
+                                  int version,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/** Set the log message in SHELF, using the log message callbacks in
+ * the client context.
+ *
+ * @since New in 1.X.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
+                                 svn_boolean_t dry_run,
+                                 apr_pool_t *scratch_pool);
+
+/** Information about a shelf.
+ *
+ * @since New in 1.X.
+ */
+typedef struct svn_client_shelf_info_t
+{
+  apr_time_t mtime;  /* mtime of the latest change */
+} svn_client_shelf_info_t;
+
+/** Set *shelved_patches to a hash, keyed by shelf name, of pointers to
+ * @c svn_client_shelf_info_t structures.
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.11.
+ * @since New in 1.X.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         const char *local_abspath,
@@ -6874,55 +6896,14 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.11.
+ * @since New in 1.X.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelves_any(svn_boolean_t *any_shelved,
                        const char *local_abspath,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *scratch_pool);
-
-/** Write local changes to a patch file for shelved change @a name.
- *
- * @a message: An optional log message.
- * @a wc_root_abspath: The WC root dir.
- * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
- * @a paths, @a depth, @a changelists: The selection of local paths to diff.
- */
-svn_error_t *
-svn_client_shelf_write_patch(const char *name,
-                             const char *message,
-                             const char *wc_root_abspath,
-                             svn_boolean_t overwrite_existing,
-                             const apr_array_header_t *paths,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool);
-
-/** Apply the patch file for shelved change @a name to the WC.
- *
- * @a wc_root_abspath: The WC root dir.
- * @a reverse: Apply the patch in reverse.
- * @a dry_run: Don't really apply the changes, just notify what would be done.
- */
-svn_error_t *
-svn_client_shelf_apply_patch(const char *name,
-                             const char *wc_root_abspath,
-                             svn_boolean_t reverse,
-                             svn_boolean_t dry_run,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool);
-
-/** Delete the patch file for shelved change @a name.
- *
- * @a wc_root_abspath: The WC root dir.
- */
-svn_error_t *
-svn_client_shelf_delete_patch(const char *name,
-                              const char *wc_root_abspath,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *scratch_pool);
 
 /** @} */
 
