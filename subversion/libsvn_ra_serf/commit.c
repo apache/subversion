@@ -687,7 +687,7 @@ maybe_set_lock_token_header(serf_bucket_t *headers,
 {
   const char *token;
 
-  if (! (*relpath && commit_ctx->lock_tokens))
+  if (! (relpath && commit_ctx->lock_tokens))
     return SVN_NO_ERROR;
 
   if (! svn_hash_gets(commit_ctx->deleted_entries, relpath))
