@@ -1682,6 +1682,119 @@ commit_empty_last_change(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+commit_locked_empty_relpath_test(const svn_test_opts_t *opts,
+                                 apr_pool_t *pool)
+{
+  const char *url;
+  svn_ra_callbacks2_t *cbtable;
+  svn_ra_session_t *session;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton;
+  void *file_baton;
+  const char *file_url;
+  struct lock_result_t *lock_result;
+  apr_hash_t *lock_tokens;
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+  svn_revnum_t fetched_rev;
+  apr_hash_t *fetched_props;
+  const svn_string_t *propval;
+
+  SVN_ERR(svn_test__create_repos2(NULL, &url, NULL,
+                                  "test-repo-commit-locked-empty-relpath-test",
+                                  opts, pool, pool));
+
+  SVN_ERR(svn_ra_initialize(pool));
+  SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
+  SVN_ERR(svn_test__init_auth_baton(&cbtable->auth_baton, pool));
+
+  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable,
+                       NULL, NULL, pool));
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    apr_hash_make(pool),
+                                    NULL, NULL, NULL, TRUE, pool));
+  /* Add a file. */
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->add_file("file", root_baton, NULL, SVN_INVALID_REVNUM,
+                           pool, &file_baton));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* Acquire a lock on this file. */
+  {
+    struct lock_baton_t baton = {0};
+    svn_revnum_t rev = 1;
+    apr_hash_t *lock_targets;
+
+    baton.results = apr_hash_make(pool);
+    baton.pool = pool;
+
+    lock_targets = apr_hash_make(pool);
+    svn_hash_sets(lock_targets, "file", &rev);
+    SVN_ERR(svn_ra_lock(session, lock_targets, "comment", FALSE,
+                        lock_cb, &baton, pool));
+
+    SVN_ERR(expect_lock("file", baton.results, session, pool));
+    lock_result = svn_hash_gets(baton.results, "file");
+  }
+
+  /* Open a new session using the file's URL (since now, we would be
+   * using "" as the file's relpath). */
+  file_url = svn_path_url_add_component2(url, "file", pool);
+  SVN_ERR(svn_ra_open4(&session, NULL, file_url, NULL, cbtable,
+                       NULL, NULL, pool));
+
+  /* Create a new commit editor supplying our lock token. */
+  lock_tokens = apr_hash_make(pool);
+  svn_hash_sets(lock_tokens, "", lock_result->lock->token);
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL, NULL,
+                                    lock_tokens, TRUE, pool));
+  /* Edit the locked file. */
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->open_file("", root_baton, SVN_INVALID_REVNUM, pool,
+                            &file_baton));
+  SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, &handler,
+                                  &handler_baton));
+  SVN_ERR(svn_txdelta_send_string(svn_string_create("A", pool),
+                                  handler, handler_baton, pool));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* Check the result. */
+  SVN_ERR(svn_ra_get_file(session, "", SVN_INVALID_REVNUM, NULL,
+                          &fetched_rev, NULL, pool));
+  SVN_TEST_INT_ASSERT((int) fetched_rev, 2);
+
+  /* Change property of the locked file. */
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->open_file("", root_baton, SVN_INVALID_REVNUM, pool,
+                            &file_baton));
+  SVN_ERR(editor->change_file_prop(file_baton, "propname",
+                                   svn_string_create("propval", pool),
+                                   pool));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* Check the result. */
+  SVN_ERR(svn_ra_get_file(session, "", SVN_INVALID_REVNUM, NULL,
+                          &fetched_rev, &fetched_props, pool));
+  SVN_TEST_INT_ASSERT((int) fetched_rev, 3);
+  propval = svn_hash_gets(fetched_props, "propname");
+  SVN_TEST_ASSERT(propval);
+  SVN_TEST_STRING_ASSERT(propval->data, "propval");
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1716,6 +1829,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "verify checkout over a tunnel"),
     SVN_TEST_OPTS_PASS(commit_empty_last_change,
                        "check how last change applies to empty commit"),
+    SVN_TEST_OPTS_PASS(commit_locked_empty_relpath_test,
+                       "check commit editor with relpath='' and lock"),
     SVN_TEST_NULL
   };
 
