@@ -2533,12 +2533,13 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
     {
       err = callback_exception_error();
     }
-  else if (PyStr_Check(result))
+  else if (PyBytes_Check(result))
     {
       Py_ssize_t bytes;
-      const char *result_str = PyStr_AsUTF8AndSize(result, &bytes);
+      char *result_str;
 
-      if (result_str == NULL)
+      if (   -1 == PyBytes_AsStringAndSize(result, &result_str, &bytes)
+          || result_str == NULL)
         {
           err = callback_exception_error();
         }
@@ -2555,7 +2556,11 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
     }
   else
     {
+      #if IS_PY3
+      err = callback_bad_return_error("Not a bytes object");
+      #else
       err = callback_bad_return_error("Not a string");
+      #endif
     }
   Py_XDECREF(result);
   svn_swig_py_release_py_lock();
