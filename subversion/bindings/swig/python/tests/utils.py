@@ -68,8 +68,9 @@ class Temper(object):
        location. Returns the same as alloc_empty_repo."""
     dump_path = os.path.join(os.path.dirname(sys.argv[0]), repo_id)
     (handle, repo_path, repo_uri) = self.alloc_empty_repo(suffix=suffix)
-    repos.svn_repos_load_fs2(handle, open(dump_path, 'rb'), StringIO(),
-                             repos.load_uuid_default, None, False, False, None)
+    with open(dump_path, 'rb') as dump_fp:
+      repos.svn_repos_load_fs2(handle, dump_fp, StringIO(),
+                               repos.load_uuid_default, None, False, False, None)
     return (handle, repo_path, repo_uri)
 
 def file_uri_for_path(path):

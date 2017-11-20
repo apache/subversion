@@ -87,17 +87,16 @@ REPOS_URL = core.svn_uri_canonicalize(REPOS_URL)
 class SubversionRepositoryTestSetup(TestSetup):
 
     def setUp(self):
-        dumpfile = open(os.path.join(os.path.split(__file__)[0],
-                                     'svnrepos.dump'), 'rb')
+        dump_path = os.path.join(os.path.split(__file__)[0], 'svnrepos.dump')
+        with open(dump_path, 'rb') as dumpfile:
+            # Remove the trac-svnrepos directory, so that we can
+            # ensure a fresh start.
+            self.tearDown()
 
-        # Remove the trac-svnrepos directory, so that we can
-        # ensure a fresh start.
-        self.tearDown()
-
-        r = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
-        repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
-                                repos.svn_repos_load_uuid_ignore, '',
-                                0, 0, None)
+            r = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
+            repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
+                                    repos.svn_repos_load_uuid_ignore, '',
+                                    0, 0, None)
 
     def tearDown(self):
         if os.path.exists(REPOS_PATH):
