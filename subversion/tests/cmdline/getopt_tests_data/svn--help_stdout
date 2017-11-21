@@ -42,6 +42,7 @@ Available subcommands:
    resolve
    resolved
    revert
+   savepoint (sp, checkpoint)
    shelve
    unshelve
    shelves
