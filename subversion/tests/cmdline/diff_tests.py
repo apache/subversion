@@ -5140,6 +5140,26 @@ def diff_peg_resolve(sbox):
                                      repo_url + '/branches/A2',
                                      wc_dir, '-r1:2')
 
+@XFail()
+@Issue(4706)
+def diff_unversioned_files_git(sbox):
+  "diff unversioned files in git format"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_write(sbox.ospath('foo'), "foo\n")
+  svntest.main.file_write(sbox.ospath('A/bar'), "bar\n")
+  expected_output = make_diff_header("foo", "working copy", "working copy",
+                                     "foo", "A/bar") + [
+                      "@@ -1 +1 @@\n",
+                      "-foo\n",
+                      "+bar\n"
+                    ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'diff', '--git',
+                                     '--old', sbox.ospath('foo'),
+                                     '--new', sbox.ospath('A/bar'))
+
 
 ########################################################################
 #Run the tests
@@ -5236,6 +5256,7 @@ test_list = [ None,
               diff_incomplete_props,
               diff_symlinks,
               diff_peg_resolve,
+              diff_unversioned_files_git,
               ]
 
 if __name__ == '__main__':
