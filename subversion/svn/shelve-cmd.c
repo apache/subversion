@@ -104,16 +104,23 @@ shelves_list(const char *local_abspath,
       svn_client_shelved_patch_info_t *info = item->value;
       int age = (apr_time_now() - info->mtime) / 1000000 / 60;
 
-      printf("%-30s %6d mins old %10ld bytes\n",
-             name, age, (long)info->dirent->filesize);
-      printf(" %.50s\n",
-             info->message);
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("%-30s %6d mins old %10ld bytes\n"),
+                                 name, age, (long)info->dirent->filesize));
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _(" %.50s\n"),
+                                 info->message));
 
       if (diffstat)
         {
-          system(apr_psprintf(scratch_pool, "diffstat %s 2> /dev/null",
-                              info->patch_path));
-          printf("\n");
+#ifndef WIN32
+          int result = system(apr_psprintf(scratch_pool,
+                                           "diffstat %s 2> /dev/null",
+                                           info->patch_path));
+          if (result == 0)
+            SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                       "\n"));
+#endif
         }
     }
 
@@ -261,7 +268,9 @@ svn_cl__unshelve(apr_getopt_t *os,
   else
     {
       SVN_ERR(name_of_youngest(&name, local_abspath, ctx, pool, pool));
-      printf("unshelving the youngest change, '%s'\n", name);
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("unshelving the youngest change, '%s'\n"),
+                                 name));
     }
 
   /* There should be no remaining arguments. */

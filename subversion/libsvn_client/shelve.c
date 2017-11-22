@@ -95,8 +95,6 @@ svn_client_shelf_write_patch(const char *name,
   svn_opt_revision_t start_revision = {svn_opt_revision_base, {0}};
   svn_opt_revision_t end_revision = {svn_opt_revision_working, {0}};
 
-  printf("writing '%s.patch'\n", name);
-
   SVN_ERR(get_patch_abspath(&patch_abspath, name, wc_root_abspath,
                             ctx, scratch_pool, scratch_pool));
 
@@ -198,7 +196,6 @@ svn_client_shelf_delete_patch(const char *name,
                               scratch_pool));
 
   /* move the patch to a backup file */
-  printf("moving '%s.patch' to '%s.patch.bak'\n", name, name);
   SVN_ERR(svn_io_file_rename2(patch_abspath, to_abspath, FALSE /*flush_to_disk*/,
                               scratch_pool));
   return SVN_NO_ERROR;
