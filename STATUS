@@ -26,7 +26,7 @@ Candidate changes:
    Branch:
      1.8.x-issue4707
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
  * r1803435
    'svnadmin load' fails with bogus SHA1 collision error.
