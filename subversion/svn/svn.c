@@ -1681,6 +1681,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  To bring back a shelved change, use 'svn unshelve NAME'.\n"
      "\n"
      "  A shelved change is stored as a patch file, .svn/shelves/NAME.patch\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
     ),
     {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
      opt_depth, opt_targets, opt_changelist,
@@ -1705,12 +1708,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Any conflict between the change being unshelved and a change\n"
      "  already in the WC is handled the same way as by 'svn patch',\n"
      "  creating a 'reject' file.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
     ),
     {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
     ("List shelved changes.\n"
-     "usage: shelves\n"),
+     "usage: shelves\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
     },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
