@@ -693,12 +693,11 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
 /** A structure full of callback functions the delta source will invoke
  * as it produces the delta.
  *
- * @note Fields may be added to the end of this structure in future
- * versions.  Therefore, users shouldn't allocate structures of this
- * type, to preserve binary compatibility.
- *
- * @note It is recommended to use svn_delta_default_editor() or some other
- * constructor, to ensure that unused slots are filled in with no-op functions.
+ * @note Don't try to allocate one of these yourself.  Instead, always
+ * use svn_delta_default_editor() or some other constructor, to avoid
+ * backwards compatibility problems if the structure is extended in
+ * future releases and to ensure that unused slots are filled in with
+ * no-op functions.
  *
  * <h3>Function Usage</h3>
  *
