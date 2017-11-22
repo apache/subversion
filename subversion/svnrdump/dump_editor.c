@@ -1040,8 +1040,8 @@ close_file(void *file_baton,
       /* Text-content-length: 39 */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
                                 SVN_REPOS_DUMPFILE_TEXT_CONTENT_LENGTH
-                                ": %lu\n",
-                                (unsigned long)info->size));
+                                ": %" APR_SIZE_T_FMT "\n",
+                                info->size));
 
       /* Text-content-md5: 82705804337e04dcd0e586bfa2389a7f */
       SVN_ERR(svn_stream_printf(eb->stream, pool,
@@ -1055,13 +1055,13 @@ close_file(void *file_baton,
   if (fb->dump_props)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                              ": %ld\n\n",
-                              (unsigned long)info->size + propstring->len));
+                              ": %" APR_SIZE_T_FMT "\n\n",
+                              info->size + propstring->len));
   else if (fb->dump_text)
     SVN_ERR(svn_stream_printf(eb->stream, pool,
                               SVN_REPOS_DUMPFILE_CONTENT_LENGTH
-                              ": %ld\n\n",
-                              (unsigned long)info->size));
+                              ": %" APR_SIZE_T_FMT "\n\n",
+                              info->size));
 
   /* Dump the props now */
   if (fb->dump_props)
