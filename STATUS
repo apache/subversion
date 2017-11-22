@@ -15,19 +15,6 @@ Status of 1.8.20:
 Candidate changes:
 ==================
 
- * r1816069
-   Issue #4707: svnrdump dump: 2GB limit on content-length header.
-   Justification:
-     Large file support is broken in svnrdump <= 1.8.
-   Notes:
-     Only <= 1.8.x was broken; 1.9.x uses refactored code without the bug.
-     Ideally we'd add a regression test; it's a pretty obvious fix so I will
-     leave that decision to reviewers.
-   Branch:
-     1.8.x-issue4707
-   Votes:
-     +1: julianfoad, rhuijben
-
  * r1803435
    'svnadmin load' fails with bogus SHA1 collision error.
    Justification:
@@ -61,3 +48,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1816069
+   Issue #4707: svnrdump dump: 2GB limit on content-length header.
+   Justification:
+     Large file support is broken in svnrdump <= 1.8.
+   Notes:
+     Only <= 1.8.x was broken; 1.9.x uses refactored code without the bug.
+     Ideally we'd add a regression test; it's a pretty obvious fix so I will
+     leave that decision to reviewers.
+   Branch:
+     1.8.x-issue4707
+   Votes:
+     +1: julianfoad, rhuijben, luke1410
