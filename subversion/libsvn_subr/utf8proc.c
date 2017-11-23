@@ -59,7 +59,9 @@ svn_utf__utf8proc_runtime_version(void)
   SVN_UNUSED(utf8proc_grapheme_break);
   SVN_UNUSED(utf8proc_tolower);
   SVN_UNUSED(utf8proc_toupper);
+#if UTF8PROC_VERSION_MAJOR >= 2
   SVN_UNUSED(utf8proc_totitle);
+#endif
   SVN_UNUSED(utf8proc_charwidth);
   SVN_UNUSED(utf8proc_category_string);
   SVN_UNUSED(utf8proc_NFD);
