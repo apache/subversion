@@ -427,17 +427,7 @@ lock_cb(void *baton,
   struct lock_result_t *result = apr_palloc(b->pool,
                                             sizeof(struct lock_result_t));
 
-  if (lock)
-    {
-      result->lock = apr_palloc(b->pool, sizeof(svn_lock_t));
-      *result->lock = *lock;
-      result->lock->path = apr_pstrdup(b->pool, lock->path);
-      result->lock->token = apr_pstrdup(b->pool, lock->token);
-      result->lock->owner = apr_pstrdup(b->pool, lock->owner);
-      result->lock->comment = apr_pstrdup(b->pool, lock->comment);
-    }
-  else
-    result->lock = NULL;
+  result->lock = svn_lock_dup(lock, b->pool);
   result->err = ra_err;
 
   svn_hash_sets(b->results, apr_pstrdup(b->pool, path), result);
