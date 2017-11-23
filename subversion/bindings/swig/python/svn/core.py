@@ -205,7 +205,7 @@ def secs_from_timestr(svn_datetime, pool=None):
   # ### convert to a time_t; this requires intimate knowledge of
   # ### the apr_time_t type
   # ### aprtime is microseconds; turn it into seconds
-  return aprtime / 1000000
+  return aprtime // 1000000
 
 
 # ============================================================================
