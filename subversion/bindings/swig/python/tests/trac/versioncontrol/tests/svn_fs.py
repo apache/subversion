@@ -152,10 +152,10 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     def test_get_dir_entries(self):
         node = self.repos.get_node('/trunk')
         entries = node.get_entries()
-        self.assertSequenceEqual([entry.name for entry in entries],
-                                 ['README2.txt',
+        self.assertSequenceEqual(sorted([entry.name for entry in entries]),
+                                 sorted(['README2.txt',
                                   'dir1',
-                                  'README.txt'])
+                                  'README.txt']))
 
     def test_get_file_entries(self):
         node = self.repos.get_node('/trunk/README.txt')
@@ -330,10 +330,10 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112349652, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertSequenceEqual([x for x in changes],
-          [('trunk', Node.DIRECTORY, Changeset.ADD, None, -1),
-          ('branches', Node.DIRECTORY, Changeset.ADD, None, -1),
-          ('tags', Node.DIRECTORY, Changeset.ADD, None, -1)])
+        self.assertSequenceEqual(sorted([x for x in changes]),
+          sorted([('trunk', Node.DIRECTORY, Changeset.ADD, None, -1),
+                  ('branches', Node.DIRECTORY, Changeset.ADD, None, -1),
+                  ('tags', Node.DIRECTORY, Changeset.ADD, None, -1)]))
 
     def test_changeset_file_edit(self):
         chgset = self.repos.get_changeset(3)
@@ -355,9 +355,10 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112372739, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertSequenceEqual([x for x in changes],
-          [('trunk/dir1/dir2', Node.DIRECTORY, Changeset.MOVE, 'trunk/dir2', 4),
-           ('trunk/dir1/dir3', Node.DIRECTORY, Changeset.MOVE, 'trunk/dir3', 4)])
+        self.assertSequenceEqual(sorted([x for x in changes]),
+          sorted([
+            ('trunk/dir1/dir2', Node.DIRECTORY, Changeset.MOVE, 'trunk/dir2', 4),
+            ('trunk/dir1/dir3', Node.DIRECTORY, Changeset.MOVE, 'trunk/dir3', 4)]))
 
     def test_changeset_file_copy(self):
         chgset = self.repos.get_changeset(6)
