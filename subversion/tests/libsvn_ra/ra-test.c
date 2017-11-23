@@ -1769,6 +1769,9 @@ commit_locked_file(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_TEST_INT_ASSERT((int) fetched_rev, 2);
 
   /* Change property of the locked file. */
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL, NULL,
+                                    lock_tokens, TRUE, pool));
   SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
                             pool, &root_baton));
   SVN_ERR(editor->open_file("file", root_baton, SVN_INVALID_REVNUM, pool,
