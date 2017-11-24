@@ -1358,6 +1358,10 @@ if test "$RUBY" != "none"; then
 fi
 
 SVN_CHECK_SWIG
+AC_ARG_VAR(SWIG_FEATURES, [SWIG feature flags common to all bindings])
+AC_ARG_VAR(SWIG_RB_FEATURES, [SWIG feature flags specific to Ruby bindings])
+AC_ARG_VAR(SWIG_PL_FEATURES, [SWIG feature flags specific to Perl bindings])
+AC_ARG_VAR(SWIG_PY_FEATURES, [SWIG feature flags specific to Python bindings])
 
 SVN_CHECK_CTYPESGEN
 
@@ -1533,12 +1537,6 @@ AC_CHECK_HEADERS([stdbool.h stdint.h])
 if test "$CC" = "clang"; then
   SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
-
-# Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
-SWIG_CPPFLAGS="$CPPFLAGS"
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-Wdate-time ])
-AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',
