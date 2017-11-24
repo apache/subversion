@@ -6803,7 +6803,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/* Set @a *any_shelved to indicate if there are any shelved changes in this WC.
+/** Set @a *any_shelved to indicate if there are any shelved changes in this WC.
  *
  * This shall provide the answer fast, regardless of how many changes
  * are stored, unlike svn_client_shelves_list().
