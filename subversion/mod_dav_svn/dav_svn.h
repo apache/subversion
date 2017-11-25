@@ -1114,6 +1114,19 @@ dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
                           dav_svn_repos *repos,
                           apr_pool_t *scratch_pool);
 
+/* Return the liveprop-encoded form of AUTHOR, allocated in RESULT_POOL.
+ * If IS_SVN_CLIENT is set, assume that the data will be sent to a SVN
+ * client.  This mainly sanitizes AUTHOR strings with control chars in
+ * them without converting them to escape sequences etc.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+const char *
+dav_svn__fuzzy_escape_author(const char *author,
+                             svn_boolean_t is_svn_client,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
 /*** mirror.c ***/
 
 /* Perform the fixup hook for the R request.  */
