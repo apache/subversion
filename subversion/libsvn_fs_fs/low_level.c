@@ -741,6 +741,9 @@ read_header_block(apr_hash_t **headers,
   return SVN_NO_ERROR;
 }
 
+/* ### Ouch!  The implementation of this function currently modifies
+   ### the input string when tokenizing it (so the input cannot be
+   ### used after that). */
 svn_error_t *
 svn_fs_fs__parse_representation(representation_t **rep_p,
                                 svn_stringbuf_t *text,
