@@ -154,7 +154,7 @@ item_closed(svn_ra_serf__xml_estate_t *xes,
         SVN_ERR(svn_cstring_atoi64(&dirent.size, size));
 
       if (crev)
-        SVN_ERR(svn_cstring_atoi64(&dirent.created_rev, crev));
+        SVN_ERR(svn_revnum_parse(&dirent.created_rev, crev, NULL));
       else
         dirent.created_rev = SVN_INVALID_REVNUM;
 
