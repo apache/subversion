@@ -1034,21 +1034,16 @@ svn_fs_fs__read_noderev(node_revision_t **noderev_p,
 }
 
 /* Return a textual representation of the DIGEST of given KIND.
- * If IS_NULL is TRUE, no digest is available.
  * Allocate the result in RESULT_POOL.
  */
 static const char *
 format_digest(const unsigned char *digest,
               svn_checksum_kind_t kind,
-              svn_boolean_t is_null,
               apr_pool_t *result_pool)
 {
   svn_checksum_t checksum;
   checksum.digest = digest;
   checksum.kind = kind;
-
-  if (is_null)
-    return "(null)";
 
   return svn_checksum_to_cstring_display(&checksum, result_pool);
 }
@@ -1070,8 +1065,7 @@ svn_fs_fs__unparse_representation(representation_t *rep,
              " %" SVN_FILESIZE_T_FMT " %s",
              rep->revision, rep->item_index, rep->size,
              rep->expanded_size,
-             format_digest(rep->md5_digest, svn_checksum_md5, FALSE,
-                           scratch_pool));
+             format_digest(rep->md5_digest, svn_checksum_md5, scratch_pool));
 
   svn__ui64tobase36(buffer, rep->uniquifier.number);
   return svn_stringbuf_createf
@@ -1079,10 +1073,8 @@ svn_fs_fs__unparse_representation(representation_t *rep,
            " %" SVN_FILESIZE_T_FMT " %s %s %s/_%s",
            rep->revision, rep->item_index, rep->size,
            rep->expanded_size,
-           format_digest(rep->md5_digest, svn_checksum_md5,
-                         FALSE, scratch_pool),
-           format_digest(rep->sha1_digest, svn_checksum_sha1,
-                         !rep->has_sha1, scratch_pool),
+           format_digest(rep->md5_digest, svn_checksum_md5, scratch_pool),
+           format_digest(rep->sha1_digest, svn_checksum_sha1, scratch_pool),
            svn_fs_fs__id_txn_unparse(&rep->uniquifier.noderev_txn_id,
                                      scratch_pool),
            buffer);
