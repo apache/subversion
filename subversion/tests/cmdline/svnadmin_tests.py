@@ -3351,6 +3351,7 @@ def dump_no_op_change(sbox):
                                      sbox2.repo_url + '/bar')
 
 @XFail(svntest.main.is_fs_type_bdb)
+@XFail(svntest.main.is_fs_type_fsx)
 @Issue(4623)
 def dump_no_op_prop_change(sbox):
   "svnadmin dump with no-op property change"
