@@ -3336,6 +3336,24 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->data_rep && noderev->kind == svn_node_dir)
     noderev->data_rep->has_sha1 = FALSE;
 
+  /* Compatibility: while we don't need to serialize SHA1 for props (it is
+     not used), older formats can only have representation strings that either
+     have both the SHA1 value *and* the uniquifier, or don't have them at all.
+     For such formats, both values get written to the disk only if the SHA1
+     is present.
+
+     We cannot omit the uniquifier, as doing so breaks svn_fs_props_changed()
+     for properties with shared representations, see issues #4623 and #4700.
+     Therefore, we skip writing SHA1, but only for the newer formats where
+     this dependency is untied and we can write the uniquifier to the disk
+     without the SHA1.
+   */
+  if (ffd->format >= SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT &&
+      noderev->prop_rep)
+    {
+      noderev->prop_rep->has_sha1 = FALSE;
+    }
+
   /* Workaround issue #4031: is-fresh-txn-root in revision files. */
   noderev->is_fresh_txn_root = FALSE;
 
