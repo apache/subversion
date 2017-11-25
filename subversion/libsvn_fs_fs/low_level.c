@@ -814,13 +814,21 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   if (str == NULL)
     return SVN_NO_ERROR;
 
-  /* Read the SHA1 hash. */
-  if (strlen(str) != (APR_SHA1_DIGESTSIZE * 2))
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
+  /* Is the SHA1 hash present? */
+  if (str[0] == '-' && str[1] == 0)
+    {
+      checksum = NULL;
+    }
+  else
+    {
+      /* Read the SHA1 hash. */
+      if (strlen(str) != (APR_SHA1_DIGESTSIZE * 2))
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str,
-                                 scratch_pool));
+      SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, str,
+                                     scratch_pool));
+    }
 
   /* We do have a valid SHA1 but it might be all 0.
      We cannot be sure where that came from (Alas! legacy), so let's not
@@ -832,21 +840,36 @@ svn_fs_fs__parse_representation(representation_t **rep_p,
   if (checksum)
     memcpy(rep->sha1_digest, checksum->digest, sizeof(rep->sha1_digest));
 
-  /* Read the uniquifier. */
-  str = svn_cstring_tokenize("/", &string);
+  str = svn_cstring_tokenize(" ", &string);
   if (str == NULL)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
                             _("Malformed text representation offset line in node-rev"));
 
-  SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.noderev_txn_id, str));
+  /* Is the uniquifier present? */
+  if (str[0] == '-' && str[1] == 0)
+    {
+      end = string;
+    }
+  else
+    {
+      char *substring = str;
 
-  str = svn_cstring_tokenize(" ", &string);
-  if (str == NULL || *str != '_')
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Malformed text representation offset line in node-rev"));
+      /* Read the uniquifier. */
+      str = svn_cstring_tokenize("/", &substring);
+      if (str == NULL)
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Malformed text representation offset line in node-rev"));
 
-  ++str;
-  rep->uniquifier.number = svn__base36toui64(&end, str);
+      SVN_ERR(svn_fs_fs__id_txn_parse(&rep->uniquifier.noderev_txn_id, str));
+
+      str = svn_cstring_tokenize(" ", &substring);
+      if (str == NULL || *str != '_')
+        return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
+                                _("Malformed text representation offset line in node-rev"));
+
+      ++str;
+      rep->uniquifier.number = svn__base36toui64(&end, str);
+    }
 
   if (*end)
     return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
@@ -1051,6 +1074,23 @@ format_digest(const unsigned char *digest,
   return svn_checksum_to_cstring_display(&checksum, result_pool);
 }
 
+/* Return a textual representation of the uniquifier represented
+ * by NODEREV_TXN_ID and NUMBER.  Use POOL for the allocations.
+ */
+static const char *
+format_uniquifier(const svn_fs_fs__id_part_t *noderev_txn_id,
+                  apr_uint64_t number,
+                  apr_pool_t *pool)
+{
+  char buf[SVN_INT64_BUFFER_SIZE];
+  const char *txn_id_str;
+
+  txn_id_str = svn_fs_fs__id_txn_unparse(noderev_txn_id, pool);
+  svn__ui64tobase36(buf, number);
+
+  return apr_psprintf(pool, "%s/_%s", txn_id_str, buf);
+}
+
 svn_stringbuf_t *
 svn_fs_fs__unparse_representation(representation_t *rep,
                                   int format,
@@ -1058,29 +1098,80 @@ svn_fs_fs__unparse_representation(representation_t *rep,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool)
 {
-  char buffer[SVN_INT64_BUFFER_SIZE];
+  svn_stringbuf_t *str;
+  const char *sha1_str;
+  const char *uniquifier_str;
+
   if (svn_fs_fs__id_txn_used(&rep->txn_id) && mutable_rep_truncated)
     return svn_stringbuf_ncreate("-1", 2, result_pool);
 
-  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT || !rep->has_sha1)
-    return svn_stringbuf_createf
-            (result_pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
-             " %" SVN_FILESIZE_T_FMT " %s",
-             rep->revision, rep->item_index, rep->size,
-             rep->expanded_size,
-             format_digest(rep->md5_digest, svn_checksum_md5, scratch_pool));
+  /* Format of the string:
+     <rev> <item_index> <size> <expanded-size> <md5> [<sha1>] [<uniquifier>]
+   */
+  str = svn_stringbuf_createf(
+          result_pool,
+          "%ld"
+          " %" APR_UINT64_T_FMT
+          " %" SVN_FILESIZE_T_FMT
+          " %" SVN_FILESIZE_T_FMT
+          " %s",
+          rep->revision,
+          rep->item_index,
+          rep->size,
+          rep->expanded_size,
+          format_digest(rep->md5_digest, svn_checksum_md5, scratch_pool));
 
-  svn__ui64tobase36(buffer, rep->uniquifier.number);
-  return svn_stringbuf_createf
-          (result_pool, "%ld %" APR_UINT64_T_FMT " %" SVN_FILESIZE_T_FMT
-           " %" SVN_FILESIZE_T_FMT " %s %s %s/_%s",
-           rep->revision, rep->item_index, rep->size,
-           rep->expanded_size,
-           format_digest(rep->md5_digest, svn_checksum_md5, scratch_pool),
-           format_digest(rep->sha1_digest, svn_checksum_sha1, scratch_pool),
-           svn_fs_fs__id_txn_unparse(&rep->uniquifier.noderev_txn_id,
-                                     scratch_pool),
-           buffer);
+  /* Compatibility: these formats don't understand <sha1> and <uniquifier>. */
+  if (format < SVN_FS_FS__MIN_REP_SHARING_FORMAT)
+    return str;
+
+  if (format < SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT)
+    {
+      /* Compatibility: these formats can only have <sha1> and <uniquifier>
+         present simultaneously, or don't have them at all. */
+      if (rep->has_sha1)
+        {
+          sha1_str = format_digest(rep->sha1_digest, svn_checksum_sha1,
+                                   scratch_pool);
+          uniquifier_str = format_uniquifier(&rep->uniquifier.noderev_txn_id,
+                                             rep->uniquifier.number,
+                                             scratch_pool);
+          svn_stringbuf_appendbyte(str, ' ');
+          svn_stringbuf_appendcstr(str, sha1_str);
+          svn_stringbuf_appendbyte(str, ' ');
+          svn_stringbuf_appendcstr(str, uniquifier_str);
+        }
+      return str;
+    }
+
+  /* The most recent formats support optional <sha1> and <uniquifier> values. */
+  if (rep->has_sha1)
+    {
+      sha1_str = format_digest(rep->sha1_digest, svn_checksum_sha1,
+                               scratch_pool);
+    }
+  else
+    sha1_str = "-";
+
+  if (rep->uniquifier.number == 0 &&
+      rep->uniquifier.noderev_txn_id.number == 0 &&
+      rep->uniquifier.noderev_txn_id.revision == 0)
+    {
+      uniquifier_str = "-";
+    }
+  else
+    {
+      uniquifier_str = format_uniquifier(&rep->uniquifier.noderev_txn_id,
+                                         rep->uniquifier.number,
+                                         scratch_pool);
+    }
+
+  svn_stringbuf_appendbyte(str, ' ');
+  svn_stringbuf_appendcstr(str, sha1_str);
+  svn_stringbuf_appendbyte(str, ' ');
+  svn_stringbuf_appendcstr(str, uniquifier_str);
+
+  return str;
 }
 
 

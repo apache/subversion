@@ -188,6 +188,14 @@ extern "C" {
 /* The minimum format number that supports svndiff version 2. */
 #define SVN_FS_FS__MIN_SVNDIFF2_FORMAT 8
 
+/* The minimum format number that supports the special notation ("-")
+   for optional values that are not present in the representation strings,
+   such as SHA1 or the uniquifier.  For example:
+
+     15 0 563 7809 28ef320a82e7bd11eebdf3502d69e608 - 14-g/_5
+ */
+#define SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT 8
+
 /* On most operating systems apr implements file locks per process, not
    per file.  On Windows apr implements the locking as per file handle
    locks, so we don't have to add our own mutex for just in-process
