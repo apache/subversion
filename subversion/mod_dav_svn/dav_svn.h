@@ -705,6 +705,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { SVN_XML_NAMESPACE, SVN_DAV__INHERITED_PROPS_REPORT },
+  { SVN_XML_NAMESPACE, "list-report" },
   { NULL, NULL },
 };
 
@@ -756,6 +757,11 @@ dav_error *
 dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
                                     dav_svn__output *output);
+
+dav_error *
+dav_svn__list_report(const dav_resource *resource,
+                     const apr_xml_doc *doc,
+                     dav_svn__output *output);
 
 /*** posts/ ***/
 
