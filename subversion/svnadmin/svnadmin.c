@@ -1646,8 +1646,8 @@ subcommand_load(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                            opt_state->use_pre_commit_hook,
                            opt_state->use_post_commit_hook,
                            !opt_state->bypass_prop_validation,
-                           opt_state->normalize_props,
                            opt_state->ignore_dates,
+                           opt_state->normalize_props,
                            opt_state->quiet ? NULL : repos_notify_handler,
                            feedback_stream, check_cancel, NULL, pool);
 
@@ -1703,8 +1703,8 @@ subcommand_load_revprops(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   err = svn_repos_load_fs_revprops(repos, in_stream, lower, upper,
                                    !opt_state->bypass_prop_validation,
-                                   opt_state->normalize_props,
                                    opt_state->ignore_dates,
+                                   opt_state->normalize_props,
                                    opt_state->quiet ? NULL
                                                     : repos_notify_handler,
                                    feedback_stream, check_cancel, NULL, pool);
