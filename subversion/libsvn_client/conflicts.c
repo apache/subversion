@@ -5711,15 +5711,12 @@ find_modified_rev(void *baton,
         details->children_modified = svn_tristate_true;
     }
 
-  if (details)
-    {
-      if (b->node_kind == svn_node_dir &&
-          details->children_modified == svn_tristate_unknown)
-            details->children_modified = svn_tristate_false;
+  if (b->node_kind == svn_node_dir &&
+      details->children_modified == svn_tristate_unknown)
+        details->children_modified = svn_tristate_false;
 
-      APR_ARRAY_PUSH(b->edits, struct conflict_tree_incoming_edit_details *) =
-        details;
-    }
+  APR_ARRAY_PUSH(b->edits, struct conflict_tree_incoming_edit_details *) =
+    details;
 
   svn_pool_destroy(iterpool);
 
