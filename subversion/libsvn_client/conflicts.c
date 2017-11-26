@@ -5011,7 +5011,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
 
   conflict->tree_conflict_incoming_details = details;
 
-  if (details->moves)
+  if (details && details->moves)
     SVN_ERR(init_wc_move_targets(details, conflict, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
