@@ -691,7 +691,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
 
   if (new_sess->proxy_password)
     {
-      new_sess->proxy_username
+      new_sess->proxy_password
                 = apr_pstrdup(result_pool, new_sess->proxy_password);
     }
 
