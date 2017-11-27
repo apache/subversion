@@ -811,7 +811,7 @@ def verify_incremental_fsfs(sbox):
   # the listing itself is valid.
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   if r2.endswith('pack'):
-    raise svntest.Skip('Test doesn\'t handle packed revisions')
+    raise svntest.Skip("Test doesn't handle packed revisions")
 
   fp = open(r2, 'wb')
   fp.write(b"""id: 0-2.0.r2/0
