@@ -790,6 +790,10 @@ def fsfs_file(repo_dir, kind, rev):
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
+  if svntest.main.options.fsfs_version is not None and \
+     svntest.main.options.fsfs_version not in [4, 6]:
+    raise svntest.Skip("Unsupported prepackaged repository version")
+
   # setup a repo with a directory 'c:hi'
   # use physical addressing as this is hard to provoke with logical addressing
   sbox.build(create_wc = False,
@@ -1653,6 +1657,10 @@ text
 @SkipUnless(svntest.main.server_enforces_UTF8_fspaths_in_verify)
 def verify_non_utf8_paths(sbox):
   "svnadmin verify with non-UTF-8 paths"
+
+  if svntest.main.options.fsfs_version is not None and \
+     svntest.main.options.fsfs_version not in [4, 6]:
+    raise svntest.Skip("Unsupported prepackaged repository version")
 
   dumpfile = clean_dumpfile()
 
