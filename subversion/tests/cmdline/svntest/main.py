@@ -2217,6 +2217,12 @@ def parse_options(arglist=sys.argv[1:], usage=None):
 
   # Make sure the server-minor-version matches the fsfs-version parameter.
   if options.fsfs_version:
+    if options.fsfs_version == 7:
+      if options.server_minor_version \
+        and options.server_minor_version != 9 \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=7 requires --server-minor-version=9")
+      options.server_minor_version = 9
     if options.fsfs_version == 6:
       if options.server_minor_version \
         and options.server_minor_version != 8 \
