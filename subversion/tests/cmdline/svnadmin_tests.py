@@ -1690,9 +1690,6 @@ def verify_non_utf8_paths(sbox):
     elif line == b"text: 1 340 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, deltified directories: fix up the representation checksum
       fp_new.write(b"text: 1 340 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
-    elif line == b"text: 1 6 31 31 90f306aa9bfd72f456072076a2bd94f7\n":
-      # log addressing: fix up the representation checksum
-      fp_new.write(b"text: 1 6 31 31 db2d4a0bad5dff0aea9a288dec02f1fb\n")
     elif line == b"cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write(b"cpath: /\xE6\n")
