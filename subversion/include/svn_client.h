@@ -6729,7 +6729,8 @@ svn_client_cat(svn_stream_t *out,
  *
  * If @a dry_run is true, don't actually do it.
  *
- * @since New in 1.11.
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6749,7 +6750,8 @@ svn_client_shelve(const char *name,
  *
  * If @a dry_run is true, don't actually do it.
  *
- * @since New in 1.11.
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6766,7 +6768,8 @@ svn_client_unshelve(const char *name,
  *
  * If @a dry_run is true, don't actually do it.
  *
- * @since New in 1.11.
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6778,7 +6781,8 @@ svn_client_shelves_delete(const char *name,
 
 /** Information about a shelved patch.
  *
- * @since New in 1.11.
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 typedef struct svn_client_shelved_patch_info_t
 {
@@ -6788,12 +6792,13 @@ typedef struct svn_client_shelved_patch_info_t
   apr_time_t mtime;  /* a copy of dirent->mtime */
 } svn_client_shelved_patch_info_t;
 
-/** Set *shelved_patches to a hash, keyed by patch name, of pointers to
+/** Set @a *shelved_patch_infos to a hash, keyed by patch name, of pointers to
  * @c svn_client_shelved_patch_info_t structures.
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.11.
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6813,7 +6818,8 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.11.
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6825,9 +6831,15 @@ svn_client_shelves_any(svn_boolean_t *any_shelved,
 /** Write local changes to a patch file for shelved change @a name.
  *
  * @a message: An optional log message.
+ *
  * @a wc_root_abspath: The WC root dir.
+ *
  * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
+ *
  * @a paths, @a depth, @a changelists: The selection of local paths to diff.
+ *
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6844,8 +6856,13 @@ svn_client_shelf_write_patch(const char *name,
 /** Apply the patch file for shelved change @a name to the WC.
  *
  * @a wc_root_abspath: The WC root dir.
+ *
  * @a reverse: Apply the patch in reverse.
+ *
  * @a dry_run: Don't really apply the changes, just notify what would be done.
+ *
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6859,6 +6876,9 @@ svn_client_shelf_apply_patch(const char *name,
 /** Delete the patch file for shelved change @a name.
  *
  * @a wc_root_abspath: The WC root dir.
+ *
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
