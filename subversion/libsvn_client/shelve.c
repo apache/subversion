@@ -386,7 +386,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *filename = apr_hash_this_key(hi);
-      int len = strlen(filename);
+      size_t len = strlen(filename);
 
       if (len > 6 && strcmp(filename + len - 6, ".patch") == 0)
         {
