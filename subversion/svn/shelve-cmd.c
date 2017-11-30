@@ -102,7 +102,7 @@ shelves_list(const char *local_abspath,
       const svn_sort__item_t *item = &APR_ARRAY_IDX(list, i, svn_sort__item_t);
       const char *name = item->key;
       svn_client_shelved_patch_info_t *info = item->value;
-      int age = (apr_time_now() - info->mtime) / 1000000 / 60;
+      int age = (int)((apr_time_now() - info->mtime) / 1000000 / 60);
 
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                  _("%-30s %6d mins old %10ld bytes\n"),
