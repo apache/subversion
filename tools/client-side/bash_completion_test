@@ -117,7 +117,7 @@ get_svn_options() {
       # Remove deprecated options
       grep -v deprecated |
       # Find the relevant lines; remove "arg" and description.
-      sed -n -e '1,/^Valid options:$/d;/^  -/!d' \
+      sed -n -e '1,/^\(Valid\|Global\) options:$/d;/^  -/!d' \
              -e 's/\( ARG\)* * : .*//;p' |
       # Remove brackets; put each word on its own line.
       tr -d '] ' | tr '[' '\n'
