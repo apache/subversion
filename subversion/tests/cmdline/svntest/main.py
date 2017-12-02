@@ -2218,7 +2218,7 @@ def parse_options(arglist=sys.argv[1:], usage=None):
   # Make sure the server-minor-version matches the fsfs-version parameter.
   #
   # Server versions that introduced the respective FSFS formats:
-  introducing_version = { 1:1, 2:4, 3:5, 4:7, 6:8, 7:9 }
+  introducing_version = { 1:1, 2:4, 3:5, 4:6, 6:8, 7:9 }
   if options.fsfs_version:
     if options.fsfs_version in introducing_version:
       introduced_in = introducing_version[options.fsfs_version]
