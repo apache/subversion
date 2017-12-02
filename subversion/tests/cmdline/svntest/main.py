@@ -1574,6 +1574,9 @@ def is_fs_log_addressing():
   return is_fs_type_fsx() or \
         (is_fs_type_fsfs() and options.server_minor_version >= 9)
 
+def fs_has_sha1():
+  return fs_has_rep_sharing()
+
 def fs_has_rep_sharing():
   return is_fs_type_fsx() or \
         (is_fs_type_fsfs() and options.server_minor_version >= 6)
