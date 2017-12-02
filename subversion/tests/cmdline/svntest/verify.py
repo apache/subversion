@@ -29,7 +29,7 @@ from difflib import unified_diff, ndiff
 import pprint
 import logging
 
-import svntest
+import svntest, main
 
 logger = logging.getLogger()
 
@@ -467,10 +467,11 @@ def verify_exit_code(message, actual, expected,
 # A simple dump file parser.  While sufficient for the current
 # testsuite it doesn't cope with all valid dump files.
 class DumpParser:
-  def __init__(self, lines):
+  def __init__(self, lines, ignore_sha1=False):
     self.current = 0
     self.lines = lines
     self.parsed = {}
+    self.ignore_sha1 = ignore_sha1
 
   def parse_line(self, regex, required=True):
     m = re.match(regex, self.lines[self.current])
@@ -660,6 +661,9 @@ class DumpParser:
       if not header in headers:
         node[key] = None
         continue
+      if self.ignore_sha1 and (key in ['copy_sha1', 'text_sha1']):
+        node[key] = None
+        continue
       m = re.match(regex, headers[header])
       if not m:
         raise SVNDumpParseError("expected '%s' at line %d\n%s"
@@ -735,8 +739,7 @@ def compare_dump_files(message, label, expected, actual,
   of lines as returned by run_and_verify_dump, and check that the same
   revisions, nodes, properties, etc. are present in both dumps.
   """
-
-  parsed_expected = DumpParser(expected).parse()
+  parsed_expected = DumpParser(expected, not main.fs_has_sha1()).parse()
   parsed_actual = DumpParser(actual).parse()
 
   if ignore_uuid:
