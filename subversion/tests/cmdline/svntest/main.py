@@ -1578,8 +1578,7 @@ def fs_has_sha1():
   return fs_has_rep_sharing()
 
 def fs_has_rep_sharing():
-  return is_fs_type_fsx() or \
-        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+  return options.server_minor_version >= 6
 
 def fs_has_pack():
   return is_fs_type_fsx() or \
