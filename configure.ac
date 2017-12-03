@@ -156,7 +156,7 @@ SQLITE_MINIMUM_VER="3.8.2"
 SQLITE_RECOMMENDED_VER="3.8.11.1"
 dnl Used to construct the SQLite download URL.
 SQLITE_RECOMMENDED_VER_REL_YEAR="2015"
-SQLITE_URL="http://www.sqlite.org/$SQLITE_RECOMMENDED_VER_REL_YEAR/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
+SQLITE_URL="https://www.sqlite.org/$SQLITE_RECOMMENDED_VER_REL_YEAR/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})

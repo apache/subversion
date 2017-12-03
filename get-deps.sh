@@ -118,7 +118,7 @@ get_sqlite() {
     test -d $BASEDIR/sqlite-amalgamation && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://www.sqlite.org/$SQLITE_VERSION_REL_YEAR/$SQLITE.zip
+    $HTTP_FETCH https://www.sqlite.org/$SQLITE_VERSION_REL_YEAR/$SQLITE.zip
     cd $BASEDIR
 
     unzip -q $TEMPDIR/$SQLITE.zip
