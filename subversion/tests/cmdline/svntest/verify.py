@@ -29,7 +29,7 @@ from difflib import unified_diff, ndiff
 import pprint
 import logging
 
-import svntest, main
+import svntest
 
 logger = logging.getLogger()
 
@@ -739,7 +739,7 @@ def compare_dump_files(message, label, expected, actual,
   of lines as returned by run_and_verify_dump, and check that the same
   revisions, nodes, properties, etc. are present in both dumps.
   """
-  parsed_expected = DumpParser(expected, not main.fs_has_sha1()).parse()
+  parsed_expected = DumpParser(expected, not svntest.main.fs_has_sha1()).parse()
   parsed_actual = DumpParser(actual).parse()
 
   if ignore_uuid:
