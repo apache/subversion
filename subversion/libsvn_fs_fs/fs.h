@@ -196,6 +196,10 @@ extern "C" {
  */
 #define SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT 8
 
+ /* The minimum format number that supports V2 schema of the rep-cache.db
+    database. */
+#define SVN_FS_FS__MIN_REP_CACHE_SCHEMA_V2_FORMAT 8
+
 /* On most operating systems apr implements file locks per process, not
    per file.  On Windows apr implements the locking as per file handle
    locks, so we don't have to add our own mutex for just in-process

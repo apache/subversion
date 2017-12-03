@@ -430,7 +430,7 @@ I.    INTRODUCTION
 
       12. SQLite  (REQUIRED)
 
-      Subversion requires SQLite version 3.7.12 or above.  You can meet this
+      Subversion requires SQLite version 3.8.2 or above.  You can meet this
       dependency several ways:
         * Use an SQLite amalgamation file.
         * Specify an SQLite installation to use.
@@ -727,8 +727,8 @@ II.   INSTALLATION
         1.3 or later (1.2 for apr-iconv). If you are building from a Subversion
         checkout and have not downloaded Apache 2, then get these 3 libraries
         from https://www.apache.org/dist/apr/.
-      * SQLite 3.7.12 or higher from https://www.sqlite.org/download.html
-        (3.8.0 or higher recommended)
+      * SQLite 3.8.2 or higher from https://www.sqlite.org/download.html
+        (3.8.11.1 or higher recommended)
       * ZLib 1.2 or higher is required and can be obtained from
         http://www.zlib.net/
       * Either a Subversion client binary from

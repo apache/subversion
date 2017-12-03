@@ -129,6 +129,15 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'rep-cache.db':
           db1 = svntest.sqlite3.connect(src_path)
           db2 = svntest.sqlite3.connect(dst_path)
+          schema1 = db1.execute("pragma user_version").fetchone()[0]
+          schema2 = db2.execute("pragma user_version").fetchone()[0]
+          if schema1 != schema2:
+            raise svntest.Failure("rep-cache schema differs: '%s' vs. '%s'"
+                                  % (schema1, schema2))
+          # Can't test newer rep-cache schemas with an old built-in SQLite.
+          if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
+            continue
+
           rows1 = []
           rows2 = []
           for row in db1.execute("select * from rep_cache order by hash"):
