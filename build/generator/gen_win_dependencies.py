@@ -1383,7 +1383,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"
 
-    minimal_sqlite_version = (3, 7, 12)
+    minimal_sqlite_version = (3, 8, 2)
 
     # For SQLite we support 3 scenarios:
     # - Installed in standard directory layout

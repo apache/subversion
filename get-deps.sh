@@ -35,7 +35,9 @@ APR_VERSION=${APR_VERSION:-"1.4.6"}
 APU_VERSION=${APU_VERSION:-"1.5.1"}
 SERF_VERSION=${SERF_VERSION:-"1.3.8"}
 ZLIB_VERSION=${ZLIB_VERSION:-"1.2.8"}
-SQLITE_VERSION=${SQLITE_VERSION:-"3.7.15.1"}
+SQLITE_VERSION=${SQLITE_VERSION:-"3.8.11.1"}
+# Used to construct the SQLite download URL.
+SQLITE_VERSION_REL_YEAR=2015
 GTEST_VERSION=${GMOCK_VERSION:-"1.7.0"}
 GMOCK_VERSION=${GMOCK_VERSION:-"1.7.0"}
 HTTPD_VERSION=${HTTPD_VERSION:-"2.4.10"}
@@ -116,7 +118,7 @@ get_sqlite() {
     test -d $BASEDIR/sqlite-amalgamation && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://www.sqlite.org/$SQLITE.zip
+    $HTTP_FETCH http://www.sqlite.org/$SQLITE_VERSION_REL_YEAR/$SQLITE.zip
     cd $BASEDIR
 
     unzip -q $TEMPDIR/$SQLITE.zip
