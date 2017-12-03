@@ -746,7 +746,7 @@ def verify_windows_paths_in_repos(sbox):
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], output)
-  elif svntest.main.fs_has_rep_sharing():
+  elif svntest.main.fs_has_rep_sharing() and not svntest.main.is_fs_type_bdb():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDOUT', ["* Verifying repository metadata ...\n",
@@ -2525,7 +2525,7 @@ def verify_denormalized_names(sbox):
     ".*Verified revision 7."]
 
   # The BDB backend doesn't do global metadata verification.
-  if (svntest.main.fs_has_rep_sharing()):
+  if (svntest.main.fs_has_rep_sharing() and not svntest.main.is_fs_type_bdb()):
     expected_output_regex_list.insert(0, ".*Verifying repository metadata.*")
 
   if svntest.main.options.fsfs_sharding is not None:
