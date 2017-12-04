@@ -407,7 +407,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax, case-\n"
                        "                             "
-                       "and accent-insensitive, may require quotation marks"
+                       "and accent-insensitive, may require quotation marks\n"
                        "                             "
                        "to prevent shell expansion)")},
   {"search-and", opt_search_and, 1,

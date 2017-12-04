@@ -127,7 +127,8 @@ Valid options:
                                -U ARG, --context ARG: Show ARG lines of context
                                -p, --show-c-function: Show C function name
   --search ARG             : use ARG as search pattern (glob syntax, case-
-                             and accent-insensitive)
+                             and accent-insensitive, may require quotation marks
+                             to prevent shell expansion)
   --search-and ARG         : combine ARG with the previous search pattern
 
 Global options:
