@@ -123,6 +123,7 @@ shelves_list(const char *local_abspath,
       svn_client_shelf_version_info_t *info;
       int age_mins;
       char *age_str;
+      apr_hash_t *paths;
 
       SVN_ERR(svn_client_shelf_open(&shelf,
                                     name, local_abspath, ctx, scratch_pool));
@@ -132,9 +133,14 @@ shelves_list(const char *local_abspath,
       age_mins = (apr_time_now() - info->mtime) / 1000000 / 60;
       age_str = friendly_duration_str(age_mins, scratch_pool);
 
+      SVN_ERR(svn_client_shelf_get_paths(&paths,
+                                         shelf, shelf->max_version,
+                                         scratch_pool, scratch_pool));
+
       SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 _("%-30s %s ago,  %d versions\n"),
-                                 name, age_str, shelf->max_version));
+                                 _("%-30s %s ago,  %d versions,  %d paths changed\n"),
+                                 name, age_str, shelf->max_version,
+                                 apr_hash_count(paths)));
       if (with_logmsg)
         {
           SVN_ERR(svn_cmdline_printf(scratch_pool,

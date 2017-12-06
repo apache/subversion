@@ -6839,7 +6839,7 @@ typedef struct svn_client_shelf_version_info_t
   apr_time_t mtime;  /* mtime of the patch file */
 } svn_client_shelf_version_info_t;
 
-/** Set @a *info to the files affected by the current version of SHELF.
+/** Set @a *info to the files affected by the current version of @a shelf.
  *
  * @since New in 1.X.
  */
@@ -6851,7 +6851,21 @@ svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info,
                                   apr_pool_t *result_pool,
                                   apr_pool_t *scratch_pool);
 
-/** Set the log message in SHELF, using the log message callbacks in
+/** Set @a *affected_paths to a hash with one entry for each path affected
+ * by the @a shelf @a version. The hash key is the old path and value is
+ * the new path, both relative to the WC root. The key and value are the
+ * same except when a path is moved or copied.
+ *
+ * @since New in 1.X.
+ */
+svn_error_t *
+svn_client_shelf_get_paths(apr_hash_t **affected_paths,
+                           svn_client_shelf_t *shelf,
+                           int version,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/** Set the log message in @a shelf, using the log message callbacks in
  * the client context.
  *
  * @since New in 1.X.
@@ -6871,7 +6885,7 @@ typedef struct svn_client_shelf_info_t
   apr_time_t mtime;  /* mtime of the latest change */
 } svn_client_shelf_info_t;
 
-/** Set *shelved_patches to a hash, keyed by shelf name, of pointers to
+/** Set @a *shelved_patch_infos to a hash, keyed by shelf name, of pointers to
  * @c svn_client_shelf_info_t structures.
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
