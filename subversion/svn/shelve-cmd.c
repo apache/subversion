@@ -293,6 +293,71 @@ shelve(int *new_version_p,
   return SVN_NO_ERROR;
 }
 
+/* Set *BATON to true if the reported path has any local modification or
+ * any status that means we should not attempt to patch it.
+ *
+ * A callback of type svn_client_status_func_t. */
+static svn_error_t *
+modification_checker(void *baton,
+                     const char *target,
+                     const svn_client_status_t *status,
+                     apr_pool_t *scratch_pool)
+{
+  svn_boolean_t *modified = baton;
+
+  if (status->conflicted
+      || ! (status->node_status == svn_wc_status_none
+            || status->node_status == svn_wc_status_unversioned
+            || status->node_status == svn_wc_status_normal))
+    {
+      *modified = TRUE;
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Throw an error if any paths affected by SHELF:VERSION are currently
+ * modified in the WC. */
+static svn_error_t *
+check_no_modified_paths(svn_client_shelf_t *shelf,
+                        int version,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool)
+{
+  apr_hash_t *paths;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_client_shelf_get_paths(&paths,
+                                     shelf, version,
+                                     scratch_pool, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      const char *abspath = svn_path_join(shelf->wc_root_abspath, path, scratch_pool);
+      svn_boolean_t modified = FALSE;
+
+      SVN_ERR(svn_client_status6(NULL /*result_rev*/,
+                                 ctx, abspath,
+                                 NULL /*revision*/,
+                                 svn_depth_empty,
+                                 FALSE /*get_all*/,
+                                 FALSE /*check_out_of_date*/,
+                                 TRUE /*check_working_copy*/,
+                                 TRUE /*no_ignore*/,
+                                 TRUE /*ignore_externals*/,
+                                 FALSE /*depth_as_sticky*/,
+                                 NULL /*changelists*/,
+                                 modification_checker, &modified,
+                                 scratch_pool));
+      if (modified)
+        {
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                   _("Shelf affects at least one path that is already modified: '%s'"),
+                                   path);
+        }
+    }
+  return SVN_NO_ERROR;
+}
+
 /** Restore/unshelve a given or newest version of changes.
  *
  * Restore local modifications from shelf @a name version @a arg,
@@ -330,6 +395,8 @@ restore(const char *name,
     {
       version = shelf->max_version;
     }
+
+  SVN_ERR(check_no_modified_paths(shelf, version, ctx, scratch_pool));
 
   SVN_ERR(svn_client_shelf_apply(shelf, version,
                                  dry_run, scratch_pool));
