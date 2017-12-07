@@ -1246,6 +1246,9 @@ svn_diff_get_binary_diff_result_stream(const svn_diff_binary_patch_t *bpatch,
 
 /**
  * Data type to manage parsing of patches.
+ *
+ * Represents a patch to one target file.
+ *
  * API users should not allocate structures of this type directly.
  *
  * @since New in 1.7. */
@@ -1272,7 +1275,9 @@ typedef struct svn_patch_t {
   svn_diff_operation_kind_t operation;
 
   /**
-   * Indicates whether the patch is being interpreted in reverse. */
+   * Indicates whether the patch is being interpreted in reverse.
+   * ### If so, how does this affect the interpretation of other fields?
+   */
   svn_boolean_t reverse;
 
   /**
