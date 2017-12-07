@@ -167,6 +167,7 @@ svn_cl__shelve(apr_getopt_t *os,
   const char *local_abspath;
   const char *name;
   apr_array_header_t *targets;
+  svn_boolean_t has_changes;
 
   if (opt_state->quiet)
     ctx->notify_func2 = NULL; /* Easy out: avoid unneeded work */
@@ -234,10 +235,21 @@ svn_cl__shelve(apr_getopt_t *os,
                                         err, pool));
       else
         SVN_ERR(err);
-
-      if (! opt_state->quiet)
-        SVN_ERR(svn_cmdline_printf(pool, "shelved '%s'\n", name));
   }
+
+  /* If no modifications were shelved, throw an error. */
+  SVN_ERR(svn_client_shelf_has_changes(&has_changes,
+                                       name, local_abspath, ctx, pool));
+  if (! has_changes)
+    {
+      SVN_ERR(svn_client_shelves_delete(name, local_abspath,
+                                        opt_state->dry_run, ctx, pool));
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               _("No changes were shelved"));
+    }
+
+  if (! opt_state->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, "shelved '%s'\n", name));
 
   return SVN_NO_ERROR;
 }
