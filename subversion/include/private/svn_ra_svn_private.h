@@ -127,6 +127,11 @@ svn_error_t *
 svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
                              const svn_ra_svn__list_t *list);
 
+/** Returns the preferred svndiff version to be used with connection @a conn.
+ */
+int
+svn_ra_svn__svndiff_version(svn_ra_svn_conn_t *conn);
+
 
 /**
  * Set the shim callbacks to be used by @a conn to @a shim_callbacks.

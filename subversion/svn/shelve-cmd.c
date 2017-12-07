@@ -130,7 +130,7 @@ shelves_list(const char *local_abspath,
       SVN_ERR(svn_client_shelf_version_get_info(&info,
                                                 shelf, shelf->max_version,
                                                 scratch_pool, scratch_pool));
-      age_mins = (apr_time_now() - info->mtime) / 1000000 / 60;
+      age_mins = (int)((apr_time_now() - info->mtime) / 1000000 / 60);
       age_str = friendly_duration_str(age_mins, scratch_pool);
 
       SVN_ERR(svn_client_shelf_get_paths(&paths,
@@ -151,9 +151,11 @@ shelves_list(const char *local_abspath,
       if (with_diffstat)
         {
 #ifndef WIN32
-          system(apr_psprintf(scratch_pool, "diffstat %s 2> /dev/null",
-                              info->patch_abspath));
-          SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
+          int result = system(apr_psprintf(scratch_pool,
+                                           "diffstat %s 2> /dev/null",
+                                           info->patch_abspath));
+          if (result == 0)
+            SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
 #endif
         }
       SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
@@ -195,9 +197,13 @@ checkpoint_list(const char *name,
 
       if (diffstat)
         {
-          system(apr_psprintf(scratch_pool, "diffstat %s 2> /dev/null",
-                              info->patch_abspath));
-          SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
+#ifndef WIN32
+          int result = system(apr_psprintf(scratch_pool,
+                                           "diffstat %s 2> /dev/null",
+                                           info->patch_abspath));
+          if (result == 0)
+            SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
+#endif
         }
     }
 

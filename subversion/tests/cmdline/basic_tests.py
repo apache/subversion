@@ -3141,6 +3141,7 @@ def filtered_ls(sbox):
     [], [], 'ls', path, '--depth=infinity', '--search=*/*')
 
 @Issue(4700)
+@XFail(svntest.main.is_fs_type_fsx)
 def null_update_last_changed_revision(sbox):
   "null 'update' updates last changed rev"
 
@@ -3169,6 +3170,7 @@ def null_update_last_changed_revision(sbox):
 
 @Issue(4700)
 @XFail(svntest.main.is_fs_type_bdb)
+@XFail(svntest.main.is_fs_type_fsx)
 def null_prop_update_last_changed_revision(sbox):
   "null 'property update' updates last changed rev"
 

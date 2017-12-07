@@ -354,6 +354,7 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  *
  * @a local_abspath is any path in the WC, and is used to find the WC root.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_wc__get_shelves_dir(char **dir,
                         svn_wc_context_t *wc_ctx,

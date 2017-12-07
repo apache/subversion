@@ -2821,17 +2821,9 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_write(stream, svndiff_handler);
       svn_stream_set_close(stream, svndiff_close_handler);
 
-      /* If the connection does not support SVNDIFF1 or if we don't want to use
-       * compression, use the non-compressing "version 0" implementation */
-      /* ### TODO: Check SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED and decide between
-       * ###       svndiff1[at compression_level] and svndiff2 */
-      if (   svn_ra_svn_compression_level(frb->conn) > 0
-          && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
-                                svn_ra_svn_compression_level(frb->conn), pool);
-      else
-        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 0,
-                                svn_ra_svn_compression_level(frb->conn), pool);
+      svn_txdelta_to_svndiff3(d_handler, d_baton, stream,
+                              svn_ra_svn__svndiff_version(frb->conn),
+                              svn_ra_svn_compression_level(frb->conn), pool);
     }
   else
     SVN_ERR(svn_ra_svn__write_cstring(frb->conn, pool, ""));

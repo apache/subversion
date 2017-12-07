@@ -691,7 +691,7 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
 
   if (new_sess->proxy_password)
     {
-      new_sess->proxy_username
+      new_sess->proxy_password
                 = apr_pstrdup(result_pool, new_sess->proxy_password);
     }
 
@@ -1063,7 +1063,7 @@ static const svn_ra__vtable_t serf_vtable = {
   svn_ra_serf__get_deleted_rev,
   svn_ra_serf__get_inherited_props,
   NULL /* set_svn_ra_open */,
-  NULL /* svn_ra_list */,
+  svn_ra_serf__list,
   svn_ra_serf__register_editor_shim_callbacks,
   NULL /* commit_ev2 */,
   NULL /* replay_range_ev2 */

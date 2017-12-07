@@ -547,7 +547,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
     {
       const char *filename = apr_hash_this_key(hi);
       svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
-      int len = strlen(filename);
+      size_t len = strlen(filename);
 
       if (len > 6 && strcmp(filename + len - 8, ".current") == 0)
         {

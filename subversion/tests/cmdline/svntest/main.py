@@ -1574,9 +1574,11 @@ def is_fs_log_addressing():
   return is_fs_type_fsx() or \
         (is_fs_type_fsfs() and options.server_minor_version >= 9)
 
+def fs_has_sha1():
+  return fs_has_rep_sharing()
+
 def fs_has_rep_sharing():
-  return is_fs_type_fsx() or \
-        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+  return options.server_minor_version >= 6
 
 def fs_has_pack():
   return is_fs_type_fsx() or \
@@ -2216,19 +2218,18 @@ def parse_options(arglist=sys.argv[1:], usage=None):
                  % SVN_VER_MINOR)
 
   # Make sure the server-minor-version matches the fsfs-version parameter.
+  #
+  # Server versions that introduced the respective FSFS formats:
+  introducing_version = { 1:1, 2:4, 3:5, 4:6, 6:8, 7:9 }
   if options.fsfs_version:
-    if options.fsfs_version == 6:
+    if options.fsfs_version in introducing_version:
+      introduced_in = introducing_version[options.fsfs_version]
       if options.server_minor_version \
-        and options.server_minor_version != 8 \
+        and options.server_minor_version != introduced_in \
         and options.server_minor_version != SVN_VER_MINOR:
-        parser.error("--fsfs-version=6 requires --server-minor-version=8")
-      options.server_minor_version = 8
-    if options.fsfs_version == 4:
-      if options.server_minor_version \
-        and options.server_minor_version != 7 \
-        and options.server_minor_version != SVN_VER_MINOR:
-        parser.error("--fsfs-version=4 requires --server-minor-version=7")
-      options.server_minor_version = 7
+        parser.error("--fsfs-version=%d requires --server-minor-version=%d" \
+                     % (options.fsfs_version, introduced_in))
+      options.server_minor_version = introduced_in
     pass
     # ### Add more tweaks here if and when we support pre-cooked versions
     # ### of FSFS repositories.

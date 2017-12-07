@@ -406,7 +406,9 @@ const apr_getopt_option_t svn_cl__options[] =
   {"search", opt_search, 1,
                        N_("use ARG as search pattern (glob syntax, case-\n"
                        "                             "
-                       "and accent-insensitive)")},
+                       "and accent-insensitive, may require quotation marks\n"
+                       "                             "
+                       "to prevent shell expansion)")},
   {"search-and", opt_search_and, 1,
                        N_("combine ARG with the previous search pattern")},
   {"log", opt_mergeinfo_log, 0,
@@ -1670,7 +1672,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  3. List all versions of shelf NAME.\n"
      "\n"
-     "The default PATH is the current working directory.\n"),
+     "The default PATH is the current working directory.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
     {'q', opt_dry_run,
      opt_depth, opt_targets, opt_changelist,
      SVN_CL__LOG_MSG_OPTIONS,
@@ -1705,6 +1711,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  To bring back shelved changes, use 'svn unshelve NAME'.\n"
      "\n"
      "  Shelves are stored in <WC>/.svn/shelves/\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
     ),
     {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
      opt_depth, opt_targets, opt_changelist,
@@ -1729,12 +1738,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Any conflict between the change being unshelved and a change\n"
      "  already in the WC is handled the same way as by 'svn patch',\n"
      "  creating a 'reject' file.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
     ),
     {opt_list, 'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
     ("List shelves.\n"
-     "usage: shelves\n"),
+     "usage: shelves\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
     {'q'} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_

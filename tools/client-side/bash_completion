@@ -883,8 +883,8 @@ _svn()
                          --force"
 		;;
 	cleanup)
-		cmdOpts="--diff3-cmd $pOpts --include-externals -q --quiet\
-			--remove-ignored --remove-unversioned"
+		cmdOpts="$pOpts --include-externals -q --quiet\
+			--remove-ignored --remove-unversioned --vacuum-pristines"
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
@@ -953,7 +953,7 @@ _svn()
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
+		cmdOpts="$mOpts $qOpts --force --editor-cmd $pOpts \
                          --parents --allow-mixed-revisions"
 		;;
 	patch)
@@ -1006,7 +1006,7 @@ _svn()
                          $rOpts $cOpts"
 		;;
 	switch|sw)
-		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
                          --force --accept --ignore-externals --set-depth \
 		         --ignore-ancestry"
 		;;
@@ -1026,13 +1026,13 @@ _svn()
 		cmdOpts="$qOpts save restore list --list"
 		;;
 	shelve)
-		cmdOpts="$qOpts --keep-local --delete --list $qOpts --dry-run --depth --targets $cOpts"
+		cmdOpts="$qOpts --keep-local --delete --list -m --message -F --file --encoding --force-log --editor-cmd --dry-run --depth --targets $cOpts $pOpts"
 		;;
 	unshelve)
-		cmdOpts="$qOpts --list $qOpts --dry-run"
+		cmdOpts="$qOpts --list $pOpts --dry-run"
 		;;
 	shelves)
-		cmdOpts="$qOpts"
+		cmdOpts="$qOpts $pOpts"
 		;;
 	*)
 		;;
