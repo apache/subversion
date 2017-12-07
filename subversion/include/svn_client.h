@@ -6833,7 +6833,8 @@ svn_client_shelves_any(svn_boolean_t *any_shelved,
  * the new path, both relative to the WC root. The key and value are the
  * same except when a path is moved or copied.
  *
- * @since New in 1.X.
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
