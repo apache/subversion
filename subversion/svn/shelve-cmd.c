@@ -234,7 +234,12 @@ name_of_youngest(const char **name_p,
  * @a depth, @a changelists. Revert the shelved changes from the WC
  * unless @a keep_local is true.
  *
+ * If no local modifications are found, throw an error.
+ *
  * If @a dry_run is true, don't actually do it.
+ *
+ * Report in @a *new_version_p the new version number (or, with dry run,
+ * what it would be).
  */
 static svn_error_t *
 shelve(int *new_version_p,
@@ -249,13 +254,22 @@ shelve(int *new_version_p,
        apr_pool_t *scratch_pool)
 {
   svn_client_shelf_t *shelf;
+  int previous_version;
 
   SVN_ERR(svn_client_shelf_open(&shelf,
                                 name, local_abspath, ctx, scratch_pool));
+  previous_version = shelf->max_version;
 
   SVN_ERR(svn_client_shelf_save_new_version(shelf,
                                             paths, depth, changelists,
                                             scratch_pool));
+  if (shelf->max_version == previous_version)
+    {
+      SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               _("No local modifications found"));
+    }
+
   if (!keep_local)
     {
       /* Reverse-apply the patch. This should be a safer way to remove those
@@ -271,8 +285,7 @@ shelve(int *new_version_p,
 
   if (dry_run)
     {
-      SVN_ERR(svn_client_shelf_set_current_version(shelf,
-                                                   shelf->max_version - 1,
+      SVN_ERR(svn_client_shelf_set_current_version(shelf, previous_version,
                                                    scratch_pool));
     }
 

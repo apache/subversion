@@ -249,7 +249,7 @@ write_patch(const char *patch_abspath,
   /* ### svn_stream_open_writable() doesn't work here: the buffering
          goes wrong so that diff headers appear after their hunks.
          For now, fix by opening the file without APR_BUFFERED. */
-  flag = APR_FOPEN_WRITE | APR_FOPEN_CREATE;
+  flag = APR_FOPEN_WRITE | APR_FOPEN_CREATE | APR_FOPEN_TRUNCATE;
   SVN_ERR(svn_io_file_open(&outfile, patch_abspath,
                            flag, APR_FPROT_OS_DEFAULT, scratch_pool));
   outstream = svn_stream_from_aprfile2(outfile, FALSE /*disown*/, scratch_pool);
@@ -475,14 +475,20 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
 {
   int next_version = shelf->max_version + 1;
   const char *patch_abspath;
+  apr_finfo_t file_info;
 
   SVN_ERR(get_patch_abspath(&patch_abspath, shelf, next_version,
                             scratch_pool, scratch_pool));
   SVN_ERR(write_patch(patch_abspath,
                       paths, depth, changelists,
                       shelf->ctx, scratch_pool));
-  SVN_ERR(svn_client_shelf_set_current_version(shelf, next_version,
-                                               scratch_pool));
+
+  SVN_ERR(svn_io_stat(&file_info, patch_abspath, APR_FINFO_MTIME, scratch_pool));
+  if (file_info.size > 0)
+    {
+      SVN_ERR(svn_client_shelf_set_current_version(shelf, next_version,
+                                                   scratch_pool));
+    }
   return SVN_NO_ERROR;
 }
 

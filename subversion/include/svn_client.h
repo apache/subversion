@@ -6775,6 +6775,9 @@ svn_client_shelf_delete(const char *name,
 /** Save the local modifications found by @a paths, @a depth,
  * @a changelists as a new version of @a shelf.
  *
+ * If there are no local modifications in the specified locations, do not
+ * create a new version of @a shelf.
+ *
  * @since New in 1.X.
  */
 SVN_EXPERIMENTAL
@@ -6858,6 +6861,7 @@ svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info,
  *
  * @since New in 1.X.
  */
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_get_paths(apr_hash_t **affected_paths,
                            svn_client_shelf_t *shelf,
