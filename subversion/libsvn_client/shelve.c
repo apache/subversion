@@ -340,6 +340,50 @@ svn_client_shelves_delete(const char *name,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_shelf_get_paths(apr_hash_t **affected_paths,
+                           const char *name,
+                           const char *local_abspath,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
+{
+  const char *wc_root_abspath;
+  char *patch_abspath;
+  svn_patch_file_t *patch_file;
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  apr_hash_t *paths = apr_hash_make(result_pool);
+
+  SVN_ERR(validate_name(name, scratch_pool));
+
+  SVN_ERR(svn_client_get_wc_root(&wc_root_abspath,
+                                 local_abspath, ctx, scratch_pool, scratch_pool));
+  SVN_ERR(get_patch_abspath(&patch_abspath, name, wc_root_abspath,
+                            ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_diff_open_patch_file(&patch_file, patch_abspath, result_pool));
+
+  while (1)
+    {
+      svn_patch_t *patch;
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
+                                        FALSE /*reverse*/,
+                                        FALSE /*ignore_whitespace*/,
+                                        iterpool, iterpool));
+      if (! patch)
+        break;
+      svn_hash_sets(paths,
+                    apr_pstrdup(result_pool, patch->old_filename),
+                    apr_pstrdup(result_pool, patch->new_filename));
+    }
+  SVN_ERR(svn_diff_close_patch_file(patch_file, iterpool));
+  svn_pool_destroy(iterpool);
+
+  *affected_paths = paths;
+  return SVN_NO_ERROR;
+}
+
 /* Set *LOGMSG to the log message stored in the file PATCH_ABSPATH.
  *
  * ### Currently just reads the first line.

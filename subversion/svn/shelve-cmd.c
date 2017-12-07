@@ -103,10 +103,16 @@ shelves_list(const char *local_abspath,
       const char *name = item->key;
       svn_client_shelved_patch_info_t *info = item->value;
       int age = (int)((apr_time_now() - info->mtime) / 1000000 / 60);
+      apr_hash_t *paths;
+
+      SVN_ERR(svn_client_shelf_get_paths(&paths,
+                                         name, local_abspath, ctx,
+                                         scratch_pool, scratch_pool));
 
       SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 _("%-30s %6d mins old %10ld bytes\n"),
-                                 name, age, (long)info->dirent->filesize));
+                                 _("%-30s %6d mins old %10ld bytes %4d paths changed\n"),
+                                 name, age, (long)info->dirent->filesize,
+                                 apr_hash_count(paths)));
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                  _(" %.50s\n"),
                                  info->message));
