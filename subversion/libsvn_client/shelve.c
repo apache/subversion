@@ -102,7 +102,7 @@ svn_client_shelf_write_patch(const char *name,
   /* ### svn_stream_open_writable() doesn't work here: the buffering
          goes wrong so that diff headers appear after their hunks.
          For now, fix by opening the file without APR_BUFFERED. */
-  flag = APR_FOPEN_WRITE | APR_FOPEN_CREATE;
+  flag = APR_FOPEN_WRITE | APR_FOPEN_CREATE | APR_FOPEN_TRUNCATE;
   if (! overwrite_existing)
     flag |= APR_FOPEN_EXCL;
   SVN_ERR(svn_io_file_open(&outfile, patch_abspath,
