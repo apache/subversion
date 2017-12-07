@@ -2511,7 +2511,8 @@ sort_matched_hunks(const void *a, const void *b)
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * REMOVE_TEMPFILES, PATCH_FUNC, and PATCH_BATON as in svn_client_patch().
+ * REMOVE_TEMPFILES is as in svn_client_patch().
+ * TARGETS_INFO is for preserving info across calls.
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
  * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.
