@@ -1672,7 +1672,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  3. List all versions of shelf NAME.\n"
      "\n"
-     "The default PATH is the current working directory.\n"
+     "  The default PATH is the current working directory.\n"
      "\n"
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
