@@ -6724,6 +6724,7 @@ svn_client_cat(svn_stream_t *out,
 /** A shelf.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 typedef struct svn_client_shelf_t
 {
@@ -6742,6 +6743,7 @@ typedef struct svn_client_shelf_t
 /** Open an existing shelf or create a new shelf.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6754,6 +6756,7 @@ svn_client_shelf_open(svn_client_shelf_t **shelf_p,
 /** Close @a shelf.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6763,6 +6766,7 @@ svn_client_shelf_close(svn_client_shelf_t *shelf,
 /** Delete a shelf, by name.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6779,6 +6783,7 @@ svn_client_shelf_delete(const char *name,
  * create a new version of @a shelf.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6791,6 +6796,7 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
 /** Apply version @a version of @a shelf to the WC.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6802,6 +6808,7 @@ svn_client_shelf_apply(svn_client_shelf_t *shelf,
 /** Reverse-apply the current version of @a shelf to the WC.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6813,6 +6820,7 @@ svn_client_shelf_unapply(svn_client_shelf_t *shelf,
 /** Set the current version of @a shelf. Delete all newer versions.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6824,6 +6832,7 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
  * of @a shelf.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6835,6 +6844,7 @@ svn_client_shelf_get_files(apr_array_header_t **wc_abspaths_p,
 /** Information about one version.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 typedef struct svn_client_shelf_version_info_t
 {
@@ -6845,6 +6855,7 @@ typedef struct svn_client_shelf_version_info_t
 /** Set @a *info to the files affected by the current version of @a shelf.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6860,6 +6871,7 @@ svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info,
  * same except when a path is moved or copied.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6873,6 +6885,7 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
  * the client context.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6883,6 +6896,7 @@ svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
 /** Information about a shelf.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 typedef struct svn_client_shelf_info_t
 {
@@ -6895,6 +6909,7 @@ typedef struct svn_client_shelf_info_t
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -6904,7 +6919,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/* Set @a *any_shelved to indicate if there are any shelved changes in this WC.
+/** Set @a *any_shelved to indicate if there are any shelved changes in this WC.
  *
  * This shall provide the answer fast, regardless of how many changes
  * are stored, unlike svn_client_shelves_list().
@@ -6915,6 +6930,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
  * @since New in 1.X.
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
