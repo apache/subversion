@@ -1022,14 +1022,21 @@ _svn()
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
 		;;
-	checkpoint)
-		cmdOpts="$qOpts save restore list --list"
+	checkpoint|savepoint|sp)
+		cmdOpts="save restore list --list --dry-run \
+                         --depth --targets $cOpts \
+                         -m --message -F --file --encoding --force-log --editor-cmd \
+                         $qOpts $pOpts"
 		;;
 	shelve)
-		cmdOpts="$qOpts --keep-local --delete --list -m --message -F --file --encoding --force-log --editor-cmd --dry-run --depth --targets $cOpts $pOpts"
+		cmdOpts="--keep-local --delete --list --dry-run \
+                         --depth --targets $cOpts \
+                         -m --message -F --file --encoding --force-log --editor-cmd \
+                         $qOpts $pOpts"
 		;;
 	unshelve)
-		cmdOpts="$qOpts --list $pOpts --dry-run"
+		cmdOpts="--list --dry-run \
+                         $qOpts $pOpts"
 		;;
 	shelves)
 		cmdOpts="$qOpts $pOpts"
