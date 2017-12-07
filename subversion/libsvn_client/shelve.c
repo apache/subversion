@@ -144,6 +144,7 @@ shelf_read_log_message(svn_client_shelf_t *shelf,
                          APR_FPROT_OS_DEFAULT, result_pool);
   if (err && err->apr_err == APR_ENOENT)
     {
+      svn_error_clear(err);
       shelf->log_message = "";
       return SVN_NO_ERROR;
     }
