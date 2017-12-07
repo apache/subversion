@@ -429,6 +429,44 @@ restore(const char *name,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+export_as_patch(const char *name,
+                const char *arg,
+                const char *local_abspath,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool)
+{
+  int version;
+  svn_client_shelf_t *shelf;
+  svn_stream_t *stream;
+
+  SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
+                                ctx, scratch_pool));
+  if (shelf->max_version <= 0)
+    {
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               _("Shelf '%s' not found"),
+                               name);
+    }
+
+  if (arg)
+    {
+      SVN_ERR(svn_cstring_atoi(&version, arg));
+    }
+  else
+    {
+      version = shelf->max_version;
+    }
+
+  SVN_ERR(svn_stream_for_stdout(&stream, scratch_pool));
+  SVN_ERR(svn_client_shelf_export_patch(shelf, version, stream,
+                                        scratch_pool));
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__shelve(apr_getopt_t *os,
@@ -689,6 +727,22 @@ svn_cl__checkpoint(apr_getopt_t *os,
       SVN_ERR(restore(name, arg,
                       opt_state->dry_run, opt_state->quiet,
                       local_abspath, ctx, pool));
+    }
+  else if (strcmp(subsubcommand, "export") == 0)
+    {
+      const char *arg;
+
+      if (targets->nelts > 1)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("Too many arguments"));
+
+      /* Which checkpoint number? */
+      if (targets->nelts != 1)
+        arg = NULL;
+      else
+        arg = APR_ARRAY_IDX(targets, 0, char *);
+
+      SVN_ERR(export_as_patch(name, arg, local_abspath, ctx, pool));
     }
   else
     {

@@ -6841,6 +6841,18 @@ svn_client_shelf_get_files(apr_array_header_t **wc_abspaths_p,
                            int version,
                            apr_pool_t *scratch_pool);
 
+/** Output version @a version of @a shelf as a patch to @a outstream.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_export_patch(svn_client_shelf_t *shelf,
+                              int version,
+                              svn_stream_t *outstream,
+                              apr_pool_t *scratch_pool);
+
 /** Information about one version.
  *
  * @since New in 1.X.
