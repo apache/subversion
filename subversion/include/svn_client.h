@@ -6845,6 +6845,21 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
+/** Set @a *has_changes to indicate whether the shelf @a name
+ * contains any modifications, in other words if svn_client_shelf_get_paths()
+ * would return a non-empty set of paths.
+ *
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_has_changes(svn_boolean_t *has_changes,
+                             const char *name,
+                             const char *local_abspath,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
 /** Write local changes to a patch file for shelved change @a name.
  *
  * @a message: An optional log message.

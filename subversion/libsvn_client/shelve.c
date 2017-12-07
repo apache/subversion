@@ -384,6 +384,21 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_shelf_has_changes(svn_boolean_t *has_changes,
+                             const char *name,
+                             const char *local_abspath,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool)
+{
+  apr_hash_t *patch_paths;
+
+  SVN_ERR(svn_client_shelf_get_paths(&patch_paths, name, local_abspath,
+                                     ctx, scratch_pool, scratch_pool));
+  *has_changes = (apr_hash_count(patch_paths) != 0);
+  return SVN_NO_ERROR;
+}
+
 /* Set *LOGMSG to the log message stored in the file PATCH_ABSPATH.
  *
  * ### Currently just reads the first line.
