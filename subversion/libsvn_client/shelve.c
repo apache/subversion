@@ -254,7 +254,7 @@ write_patch(const char *patch_abspath,
   SVN_ERR(svn_io_file_open(&outfile, patch_abspath,
                            flag, APR_FPROT_OS_DEFAULT, scratch_pool));
   outstream = svn_stream_from_aprfile2(outfile, FALSE /*disown*/, scratch_pool);
-  SVN_ERR(svn_stream_for_stderr(&errstream, scratch_pool));
+  errstream = svn_stream_empty(scratch_pool);
 
   for (i = 0; i < paths->nelts; i++)
     {
