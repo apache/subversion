@@ -1140,16 +1140,18 @@ _svnadmin ()
 	case ${COMP_WORDS[1]} in
 	create)
 		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
-		         --fs-type --pre-1.4-compatible --pre-1.5-compatible \
-		         --pre-1.6-compatible --compatible-version"
+		         --fs-type --compatible-version"
 		;;
 	deltify)
-		cmdOpts="-r --revision -q --quiet"
+		cmdOpts="-r --revision -q --quiet -M --memory-cache-size"
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet --deltas \
 		         -M --memory-cache-size -F --file \
 		         --exclude --include --pattern"
+		;;
+        dump-revprops)
+		cmdOpts="-r --revision -q --quiet -F --file"
 		;;
 	freeze)
 		cmdOpts="-F --file"
@@ -1158,22 +1160,34 @@ _svnadmin ()
 		cmdOpts="$cmds"
 		;;
 	hotcopy)
-		cmdOpts="--clean-logs"
+		cmdOpts="--clean-logs --incremental -q --quiet"
 		;;
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
 		         --use-pre-commit-hook --use-post-commit-hook \
 		         --bypass-prop-validation -M --memory-cache-size \
-		         --no-flush-to-disk --normalize-props -F --file"
+		         --no-flush-to-disk --normalize-props -F --file \
+		         --ignore-dates -r --revision"
+		;;
+        load-revprops)
+		cmdOpts="-r --revision -q --quiet -F --file \
+		         --bypass-prop-validation --normalize-props \
+		         --force-uuid --no-flush-to-disk"
 		;;
 	lstxns)
         	cmdOpts="-r --revision"
 		;;
 	lock|unlock)
-		cmdOpts="--bypass-hooks"
+		cmdOpts="--bypass-hooks -q --quiet"
+		;;
+	pack)
+		cmdOpts="-M --memory-cache-size -q --quiet"
 		;;
 	recover)
 		cmdOpts="--wait"
+		;;
+	rmlocks)
+		cmdOpts="-q --quiet"
 		;;
 	rmtxns)
 		cmdOpts="-q --quiet"
@@ -1187,7 +1201,9 @@ _svnadmin ()
 		         --use-post-revprop-change-hook"
 		;;
 	verify)
-		cmdOpts="-r --revision -q --quiet"
+		cmdOpts="-r --revision -t --transaction -q --quiet \
+		         --check-normalization --keep-going \
+		         -M --memory-cache-size --metadata-only"
 		;;
 	*)
 		;;
