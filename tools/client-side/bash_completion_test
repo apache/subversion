@@ -20,9 +20,16 @@
 # script produces appropriate lists of completions for various incomplete svn
 # command lines.
 
-if [ ! -f "$1" ] || [ "$2" ]; then
-  echo "Usage: bash_completion_test BASH_COMPLETION_PATHNAME"
+THIS_DIR=`dirname "$0"`
+SCRIPT="$1"
+if [ -z "$SCRIPT" ]; then
+  SCRIPT="$THIS_DIR/bash_completion"
+fi
+
+if [ ! -r "$SCRIPT" ] || [ "$2" ]; then
+  echo "Usage: bash_completion_test [BASH_COMPLETION_PATHNAME]"
   echo "Tests the specified \"bash_completion\" script,"
+  echo "defaulting to the one in the same directory as this test,"
   echo "including checking it against the \"svn\" program found in the current PATH."
   exit 1
 fi
@@ -32,7 +39,7 @@ shopt -s extglob
 export LC_ALL=C
 
 # Execute the script which is to be tested.
-. "$1"
+. "$SCRIPT"
 
 # From the given incomplete svn command, print a space-separated list of
 # possible completions of the last argument (or of an empty first argument
