@@ -164,24 +164,26 @@ includes svn "he" "help"
 includes svn "" "help"
 includes svn "" "--version"
 
-echo "Checking list of subcommands"
-HELP_SUBCMDS=`get_svn_subcommands svn | tr "\n" " "`
-COMPLETION_SUBCMDS=`get_completions svn | tr " " "\n" | grep -v "^-" | sort | tr "\n" " "`
-if [ "$HELP_SUBCMDS" != "$COMPLETION_SUBCMDS" ]; then
-  fail "non-option completions for \"svn \" != subcommands accepted" \
-       "    (non-o. cmpl.: $COMPLETION_SUBCMDS)" \
-       "    (svn accepts:  $HELP_SUBCMDS)"
-fi
-
-echo "Checking list of options for each subcommand"
-for SUBCMD in $HELP_SUBCMDS; do
-  HELP_OPTIONS=`get_svn_options svn $SUBCMD | tr "\n" " "`
-  COMPLETION_OPTIONS=`get_completions svn $SUBCMD - | tr " " "\n" | sort | tr "\n" " "`
-  if [ "$HELP_OPTIONS" != "$COMPLETION_OPTIONS" ]; then
-    fail "completions for \"svn $SUBCMD -\" != options accepted" \
-	 "    (completions: $COMPLETION_OPTIONS)" \
-         "    (svn accepts: $HELP_OPTIONS)"
+for SVN_CMD in svn svnadmin svndumpfilter svnlook svnrdump svnsync; do
+  echo "Checking list of subcommands: $SVN_CMD"
+  HELP_SUBCMDS=`get_svn_subcommands "$SVN_CMD" | tr "\n" " "`
+  COMPLETION_SUBCMDS=`get_completions "$SVN_CMD" | tr " " "\n" | grep -v "^-" | sort | tr "\n" " "`
+  if [ "$HELP_SUBCMDS" != "$COMPLETION_SUBCMDS" ]; then
+    fail "non-option completions for \"$SVN_CMD\" != subcommands accepted" \
+         "    (non-o. cmpl.: $COMPLETION_SUBCMDS)" \
+         "    (help says:    $HELP_SUBCMDS)"
   fi
+
+  echo "Checking list of options for each subcommand"
+  for SUBCMD in $HELP_SUBCMDS; do
+    HELP_OPTIONS=`get_svn_options $SVN_CMD $SUBCMD | tr "\n" " "`
+    COMPLETION_OPTIONS=`get_completions $SVN_CMD $SUBCMD - | tr " " "\n" | sort | tr "\n" " "`
+    if [ "$HELP_OPTIONS" != "$COMPLETION_OPTIONS" ]; then
+      fail "completions for \"$SVN_CMD $SUBCMD -\" != options accepted" \
+           "    (completions: $COMPLETION_OPTIONS)" \
+           "    (help says:   $HELP_OPTIONS)"
+    fi
+  done
 done
 
 echo "Checking rejection of synonyms"
