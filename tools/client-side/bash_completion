@@ -128,7 +128,7 @@ function _svn_complete_target() {
 		COMPREPLY=( $(compgen -d -S '/' -X '*/.*' -- $cur ) )
 		return
 	elif [[ ( $1 == "all" && $cur == ^/* ) || ( "$colon" == ":" && $cur == //*/* ) ]]
-	then	# we already hava a protocoll and host: autocomplete for svn ls ^/bla | svn ls remote_url | svn checkout remote_url
+	then	# we already have a protocol and host: autocomplete for svn ls ^/bla | svn ls remote_url | svn checkout remote_url
 		local p
 		if [ "$colon" == ":" ] ; then
 			p="$prefix$colon"
@@ -446,7 +446,7 @@ _svn()
 
 	    # then we have an argument
 	    if [[ $cmd = 'merge' && ! $URL ]] ; then
-              # fist argument is the source URL for the merge
+              # first argument is the source URL for the merge
 	      URL=$opt
 	    fi
 
