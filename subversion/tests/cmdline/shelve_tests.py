@@ -42,15 +42,10 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
-######################################################################
-# Tests
-#
-#   Each test must return on success or raise on failure.
-
 #----------------------------------------------------------------------
 
-def basic_shelve(sbox):
-  "basic shelve"
+def shelve_unshelve(sbox, modifier):
+  "Round-trip: shelve and unshelve"
 
   sbox.build()
   was_cwd = os.getcwd()
@@ -59,58 +54,74 @@ def basic_shelve(sbox):
   wc_dir = ''
 
   # Make some changes to the working copy
-  mu_path = sbox.ospath('A/mu')
-  svntest.main.file_append(mu_path, 'appended mu text')
+  modifier(sbox)
 
-  modified_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  modified_output.tweak('A/mu', status='M ')
-  svntest.actions.run_and_verify_status(wc_dir, modified_output)
+  # Save the modified state
+  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
+                                      sbox.wc_dir)
+  modified_state = svntest.wc.State.from_status(output, wc_dir)
 
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelve', 'foo')
-  virginal_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  svntest.actions.run_and_verify_status(wc_dir, virginal_output)
+  virginal_state = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, virginal_state)
 
   # Unshelve; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
                                      'unshelve', 'foo')
-  svntest.actions.run_and_verify_status(wc_dir, modified_output)
+  svntest.actions.run_and_verify_status(wc_dir, modified_state)
 
   os.chdir(was_cwd)
+
+######################################################################
+# Tests
+#
+#   Each test must return on success or raise on failure.
+
+def shelve_text_mods(sbox):
+  "basic shelve"
+
+  def modifier(sbox):
+    sbox.simple_append('A/mu', 'appended mu text')
+
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
 def shelve_prop_changes(sbox):
   "shelve prop changes"
 
-  sbox.build()
-  was_cwd = os.getcwd()
-  os.chdir(sbox.wc_dir)
-  sbox.wc_dir = ''
-  wc_dir = ''
+  def modifier(sbox):
+    sbox.simple_propset('p', 'v', 'A')
+    sbox.simple_propset('p', 'v', 'A/mu')
 
-  # Make some changes to the working copy
-  sbox.simple_propset('p', 'v', 'A')
-  sbox.simple_propset('p', 'v', 'A/mu')
+  shelve_unshelve(sbox, modifier)
 
-  modified_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  modified_output.tweak('A', status=' M')
-  modified_output.tweak('A/mu', status=' M')
-  svntest.actions.run_and_verify_status(wc_dir, modified_output)
+#----------------------------------------------------------------------
 
-  # Shelve; check there are no longer any modifications
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo')
-  virginal_output = svntest.actions.get_virginal_state(wc_dir, 1)
-  svntest.actions.run_and_verify_status(wc_dir, virginal_output)
+def shelve_adds(sbox):
+  "shelve adds"
 
-  # Unshelve; check the original modifications are here again
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'unshelve', 'foo')
-  svntest.actions.run_and_verify_status(wc_dir, modified_output)
+  def modifier(sbox):
+    sbox.simple_append('A/new', 'A new file\n')
+    sbox.simple_add('A/new')
+    sbox.simple_append('A/new2', 'A new file\n')
+    sbox.simple_add('A/new2')
+    sbox.simple_propset('p', 'v', 'A/new2')
 
-  os.chdir(was_cwd)
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
+@XFail()
+def shelve_deletes(sbox):
+  "shelve deletes"
+
+  def modifier(sbox):
+    sbox.simple_rm('A/mu')
+
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
@@ -120,8 +131,10 @@ def shelve_prop_changes(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              basic_shelve,
+              shelve_text_mods,
               shelve_prop_changes,
+              shelve_adds,
+              shelve_deletes,
              ]
 
 if __name__ == '__main__':
