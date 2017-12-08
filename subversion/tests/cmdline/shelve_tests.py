@@ -80,7 +80,7 @@ def shelve_unshelve(sbox, modifier):
 #   Each test must return on success or raise on failure.
 
 def shelve_text_mods(sbox):
-  "basic shelve"
+  "shelve text mods"
 
   def modifier(sbox):
     sbox.simple_append('A/mu', 'appended mu text')
@@ -115,6 +115,7 @@ def shelve_adds(sbox):
 #----------------------------------------------------------------------
 
 @XFail()
+@Issue(4709)
 def shelve_deletes(sbox):
   "shelve deletes"
 
