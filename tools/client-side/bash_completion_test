@@ -41,18 +41,24 @@ export LC_ALL=C
 # Execute the script which is to be tested.
 . "$SCRIPT"
 
-# From the given incomplete svn command, print a space-separated list of
+# From the given incomplete command, print a space-separated list of
 # possible completions of the last argument (or of an empty first argument
 # if no subcommand is given).
-# Usage: get_svn_completions [SVN-SUBCOMMAND [SVN-OPTION...]]
-get_svn_completions() {
-  COMP_WORDS=(svn "$@")
-  if [ $# == 0 ]; then
+#
+# Usage: get_completions SVN-CMD [SVN-SUBCOMMAND [SVN-OPTION...]]
+# where SVN-CMD is "svn", "svnadmin", etc.; such that when a leading
+# underscore is added, it must name one of the completion functions in
+# "bash_completion".
+get_completions() {
+  SVN_CMD="$1"
+  COMP_WORDS=("$@")
+  if [ $# == 1 ]; then
     COMP_CWORD=1
   else
-    COMP_CWORD=$#
+    COMP_CWORD=$(($#-1))
   fi
-  _svn
+  # Call the appropriate completion function (e.g. "_svn") with no arguments.
+  "_$SVN_CMD"
   echo -n "${COMPREPLY[*]}"
 }
 
@@ -69,30 +75,38 @@ fail() {
 }
 
 # Check that EXPECTED-WORD is among the completions of the last word in
-# SVN-COMMAND.  SVN-COMMAND is a single argument to this function, split
-# into multiple arguments when passed to "get_svn_completions()".
-# Usage: includes SVN-COMMAND EXPECTED-WORD
+# SVN-ARGS.  SVN-ARGS is a single argument to this function, split
+# into multiple arguments when passed to "get_completions()".
+# Usage: includes SVN-CMD SVN-ARGS EXPECTED-WORD
 includes() {
-  COMPLETIONS=`get_svn_completions $1`
-  if [[ "$2" != @(${COMPLETIONS// /|}) ]]; then
-    fail "completions of \"svn $1\" should include \"$2\"" \
+  SVN_CMD="$1"
+  SVN_ARGS="$2"
+  EXPECTED_WORD="$3"
+  COMPLETIONS=`get_completions "$SVN_CMD" $SVN_ARGS`
+  if [[ "$EXPECTED_WORD" != @(${COMPLETIONS// /|}) ]]; then
+    fail "completions of \"$SVN_CMD $SVN_ARGS\" should include \"$EXPECTED_WORD\"" \
       "(completions: $COMPLETIONS)"
   fi
 }
 
 excludes() {
-  COMPLETIONS=`get_svn_completions $1`
-  if [[ "$2" == @(${COMPLETIONS// /|}) ]]; then
-    fail "completions of \"svn $1\" should exclude \"$2\"" \
+  SVN_CMD="$1"
+  SVN_ARGS="$2"
+  EXPECTED_WORD="$3"
+  COMPLETIONS=`get_completions "$SVN_CMD" $SVN_ARGS`
+  if [[ "$EXPECTED_WORD" == @(${COMPLETIONS// /|}) ]]; then
+    fail "completions of \"$SVN_CMD $SVN_ARGS\" should exclude \"$EXPECTED_WORD\"" \
       "(completions: $COMPLETIONS)"
   fi
 }
 
-# Print the valid subcommands for "svn", one per line, sorted.
+# Print the valid subcommands for an "svn"-like program, one per line, sorted.
 # Exclude any synonym that is just a truncation of its full name.
-# Usage: get_svn_subcommands
+# Usage: get_svn_subcommands SVN-CMD
+# where SVN-CMD is "svn" or another program that outputs similar help.
 get_svn_subcommands() {
-  svn help |
+  SVN_CMD="$1"
+  "$SVN_CMD" help |
     # Find the relevant lines.
     sed -n -e '1,/^Available subcommands:$/d;/^$/q;p' |
     # Remove brackets and commas
@@ -118,9 +132,12 @@ get_svn_subcommands() {
 }
 
 # Print the valid option switches for "svn SUBCMD", one per line, sorted.
-# Usage: get_svn_options SUBCMD
+# Usage: get_svn_options SVN-CMD SUBCMD
+# where SVN-CMD is "svn" or another program that outputs similar help.
 get_svn_options() {
-  { svn help "$1" |
+  SVN_CMD="$1"
+  SUBCMD="$2"
+  { "$SVN_CMD" help "$SUBCMD" |
       # Remove deprecated options
       grep -v deprecated |
       # Find the relevant lines; remove "arg" and description.
@@ -129,7 +146,7 @@ get_svn_options() {
       # Remove brackets; put each word on its own line.
       tr -d '] ' | tr '[' '\n'
     # The following options are always accepted but not listed in the help
-    if [ "$1" != "help" ] ; then
+    if [ "$SUBCMD" != "help" ] ; then
       echo "-h"
       echo "--help"
     fi
@@ -143,13 +160,13 @@ set +e  # Do not exit on error
 TESTS_FAILED=
 
 echo "Checking general completion"
-includes "he" "help"
-includes "" "help"
-includes "" "--version"
+includes svn "he" "help"
+includes svn "" "help"
+includes svn "" "--version"
 
 echo "Checking list of subcommands"
-HELP_SUBCMDS=`get_svn_subcommands | tr "\n" " "`
-COMPLETION_SUBCMDS=`get_svn_completions | tr " " "\n" | grep -v "^-" | sort | tr "\n" " "`
+HELP_SUBCMDS=`get_svn_subcommands svn | tr "\n" " "`
+COMPLETION_SUBCMDS=`get_completions svn | tr " " "\n" | grep -v "^-" | sort | tr "\n" " "`
 if [ "$HELP_SUBCMDS" != "$COMPLETION_SUBCMDS" ]; then
   fail "non-option completions for \"svn \" != subcommands accepted" \
        "    (non-o. cmpl.: $COMPLETION_SUBCMDS)" \
@@ -158,8 +175,8 @@ fi
 
 echo "Checking list of options for each subcommand"
 for SUBCMD in $HELP_SUBCMDS; do
-  HELP_OPTIONS=`get_svn_options $SUBCMD | tr "\n" " "`
-  COMPLETION_OPTIONS=`get_svn_completions $SUBCMD - | tr " " "\n" | sort | tr "\n" " "`
+  HELP_OPTIONS=`get_svn_options svn $SUBCMD | tr "\n" " "`
+  COMPLETION_OPTIONS=`get_completions svn $SUBCMD - | tr " " "\n" | sort | tr "\n" " "`
   if [ "$HELP_OPTIONS" != "$COMPLETION_OPTIONS" ]; then
     fail "completions for \"svn $SUBCMD -\" != options accepted" \
 	 "    (completions: $COMPLETION_OPTIONS)" \
@@ -168,11 +185,11 @@ for SUBCMD in $HELP_SUBCMDS; do
 done
 
 echo "Checking rejection of synonyms"
-excludes "diff -x -u -" "-x"
-excludes "diff -x -u --e" "--extensions"
-excludes "diff --extensions -u -" "--extensions"
-excludes "diff --extensions -u -" "-x"
-excludes "diff --extensions=-u -" "-x"
+excludes svn "diff -x -u -" "-x"
+excludes svn "diff -x -u --e" "--extensions"
+excludes svn "diff --extensions -u -" "--extensions"
+excludes svn "diff --extensions -u -" "-x"
+excludes svn "diff --extensions=-u -" "-x"
 
 if [ $TESTS_FAILED ]; then
   echo "FAILURE: at least one bash_completion test failed."
