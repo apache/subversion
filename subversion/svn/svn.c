@@ -459,7 +459,7 @@ const apr_getopt_option_t svn_cl__options[] =
                           "   'wc-root'    root of TARGET's working copy")},
 
   {"adds-as-modification", opt_adds_as_modification, 0,
-                       N_("Local additions are merged with incoming additions "
+                       N_("Local additions are merged with incoming additions\n"
                        "                             "
                        "instead of causing a tree conflict. Use of this\n"
                        "                             "
