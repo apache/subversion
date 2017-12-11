@@ -143,7 +143,7 @@ public class NativeResources
     {
         initNativeLibrary();
         version = new Version();
-        if (!version.isAtLeast(1, 10, 0))
+        if (!version.isAtLeast(1, 11, 0))
         {
             throw new LinkageError("Native library version must be at least " +
                                    "1.10.0, but is only " + version);
