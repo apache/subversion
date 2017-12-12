@@ -146,7 +146,7 @@ public class NativeResources
         if (!version.isAtLeast(1, 11, 0))
         {
             throw new LinkageError("Native library version must be at least " +
-                                   "1.10.0, but is only " + version);
+                                   "1.11.0, but is only " + version);
         }
 
         runtimeVersion = new RuntimeVersion();
