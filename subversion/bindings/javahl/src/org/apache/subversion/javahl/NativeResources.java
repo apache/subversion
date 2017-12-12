@@ -141,12 +141,15 @@ public class NativeResources
      */
     private static final void init()
     {
+        final int SVN_VER_MAJOR = 1;
+        final int SVN_VER_MINOR = 11;
         initNativeLibrary();
         version = new Version();
-        if (!version.isAtLeast(1, 11, 0))
+        if (!version.isAtLeast(SVN_VER_MAJOR, SVN_VER_MINOR, 0))
         {
             throw new LinkageError("Native library version must be at least " +
-                                   "1.11.0, but is only " + version);
+                                   SVN_VER_MAJOR + "." + SVN_VER_MINOR + ".0," +
+                                   "but is only " + version);
         }
 
         runtimeVersion = new RuntimeVersion();
