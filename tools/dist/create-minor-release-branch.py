@@ -21,34 +21,13 @@
 
 
 # About this script:
-#   This script is intended to simplify creating Subversion releases for
-#   any of the supported release lines of Subversion.
-#   It works well with our Apache infrastructure, and should make rolling,
-#   posting, and announcing releases dirt simple.
-#
-#   This script may be run on a number of platforms, but it is intended to
-#   be run on people.apache.org.  As such, it may have dependencies (such
-#   as Python version) which may not be common, but are guaranteed to be
-#   available on people.apache.org.
+#   This script is intended to automate steps in creating a new Subversion
+#   minor release.
 
-# It'd be kind of nice to use the Subversion python bindings in this script,
-# but people.apache.org doesn't currently have them installed
-
-# Stuff we need
 import os
 import re
 import sys
-import glob
-import fnmatch
-import shutil
-import urllib2
-import hashlib
-import tarfile
 import logging
-import datetime
-import tempfile
-import operator
-import itertools
 import subprocess
 import argparse       # standard in Python 2.7
 
