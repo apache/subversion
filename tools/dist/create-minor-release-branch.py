@@ -52,6 +52,8 @@ import itertools
 import subprocess
 import argparse       # standard in Python 2.7
 
+from release import Version
+
 
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
@@ -86,125 +88,6 @@ def get_buildbot_url():
 #----------------------------------------------------------------------
 # Utility functions
 
-class Version(object):
-    regex = re.compile(r'(\d+).(\d+).(\d+)(?:-(?:(rc|alpha|beta)(\d+)))?')
-
-    def __init__(self, ver_str):
-        # Special case the 'trunk-nightly' version
-        if ver_str == 'trunk-nightly':
-            self.major = None
-            self.minor = None
-            self.patch = None
-            self.pre = 'nightly'
-            self.pre_num = None
-            self.base = 'nightly'
-            self.branch = 'trunk'
-            return
-
-        match = self.regex.search(ver_str)
-
-        if not match:
-            raise RuntimeError("Bad version string '%s'" % ver_str)
-
-        self.major = int(match.group(1))
-        self.minor = int(match.group(2))
-        self.patch = int(match.group(3))
-
-        if match.group(4):
-            self.pre = match.group(4)
-            self.pre_num = int(match.group(5))
-        else:
-            self.pre = None
-            self.pre_num = None
-
-        self.base = '%d.%d.%d' % (self.major, self.minor, self.patch)
-        self.branch = '%d.%d' % (self.major, self.minor)
-
-    def is_prerelease(self):
-        return self.pre != None
-
-    def is_recommended(self):
-        return self.branch == recommended_release
-
-    def get_download_anchor(self):
-        if self.is_prerelease():
-            return 'pre-releases'
-        else:
-            if self.is_recommended():
-                return 'recommended-release'
-            else:
-                return 'supported-releases'
-
-    def get_ver_tags(self, revnum):
-        # These get substituted into svn_version.h
-        ver_tag = ''
-        ver_numtag = ''
-        if self.pre == 'alpha':
-            ver_tag = '" (Alpha %d)"' % self.pre_num
-            ver_numtag = '"-alpha%d"' % self.pre_num
-        elif self.pre == 'beta':
-            ver_tag = '" (Beta %d)"' % args.version.pre_num
-            ver_numtag = '"-beta%d"' % self.pre_num
-        elif self.pre == 'rc':
-            ver_tag = '" (Release Candidate %d)"' % self.pre_num
-            ver_numtag = '"-rc%d"' % self.pre_num
-        elif self.pre == 'nightly':
-            ver_tag = '" (Nightly Build r%d)"' % revnum
-            ver_numtag = '"-nightly-r%d"' % revnum
-        else:
-            ver_tag = '" (r%d)"' % revnum 
-            ver_numtag = '""'
-        return (ver_tag, ver_numtag)
-
-    def __serialize(self):
-        return (self.major, self.minor, self.patch, self.pre, self.pre_num)
-
-    def __eq__(self, that):
-        return self.__serialize() == that.__serialize()
-
-    def __ne__(self, that):
-        return self.__serialize() != that.__serialize()
-
-    def __hash__(self):
-        return hash(self.__serialize())
-
-    def __lt__(self, that):
-        if self.major < that.major: return True
-        if self.major > that.major: return False
-
-        if self.minor < that.minor: return True
-        if self.minor > that.minor: return False
-
-        if self.patch < that.patch: return True
-        if self.patch > that.patch: return False
-
-        if not self.pre and not that.pre: return False
-        if not self.pre and that.pre: return False
-        if self.pre and not that.pre: return True
-
-        # We are both pre-releases
-        if self.pre != that.pre:
-            return self.pre < that.pre
-        else:
-            return self.pre_num < that.pre_num
-
-    def __str__(self):
-        "Return an SVN_VER_NUMBER-formatted string, or 'nightly'."
-        if self.pre:
-            if self.pre == 'nightly':
-                return 'nightly'
-            else:
-                extra = '-%s%d' % (self.pre, self.pre_num)
-        else:
-            extra = ''
-
-        return self.base + extra
-
-    def __repr__(self):
-
-        return "Version(%s)" % repr(str(self))
-
-#----------------------------------------------------------------------
 def run(cmd, dry_run=False):
     print('+ ' + ' '.join(cmd))
     if not dry_run:
