@@ -56,20 +56,21 @@ import argparse       # standard in Python 2.7
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
 secure_repos = 'https://svn.apache.org/repos/asf/subversion'
+buildbot_repos = 'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster'
 
 # Local working copies
-trunk_wc_path = 'svn-trunk'
-branches_wc_path = '.'
-buildbot_wc_path = 'svn-buildmaster'
+base_dir = None  # set by main()
 
 def get_trunk_wc_path(path=None):
+    trunk_wc_path = os.path.join(base_dir, 'svn-trunk')
     if path is None: return trunk_wc_path
     return os.path.join(trunk_wc_path, path)
 def get_branch_wc_path(ver, path=None):
-    branch_wc_path = os.path.join(branches_wc_path, ver.branch + '.x')
+    branch_wc_path = os.path.join(base_dir, ver.branch + '.x')
     if path is None: return branch_wc_path
     return os.path.join(branch_wc_path, path)
 def get_buildbot_wc_path(path=None):
+    buildbot_wc_path = os.path.join(base_dir, 'svn-buildmaster')
     if path is None: return buildbot_wc_path
     return os.path.join(buildbot_wc_path, path)
 
@@ -80,7 +81,7 @@ def get_branch_url(ver):
 def get_tag_url(ver):
     return secure_repos + '/tags/' + ver.base
 def get_buildbot_url():
-    return 'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster'
+    return buildbot_repos
 
 #----------------------------------------------------------------------
 # Utility functions
@@ -204,15 +205,6 @@ class Version(object):
         return "Version(%s)" % repr(str(self))
 
 #----------------------------------------------------------------------
-def get_prefix(base_dir):
-    return os.path.join(base_dir, 'prefix')
-
-def get_tempdir(base_dir):
-    return os.path.join(base_dir, 'tempdir')
-
-def get_workdir(base_dir):
-    return os.path.join(get_tempdir(base_dir), 'working')
-
 def run(cmd, dry_run=False):
     print('+ ' + ' '.join(cmd))
     if not dry_run:
@@ -423,16 +415,15 @@ def main():
     # Parse the arguments
     args = parser.parse_args()
 
+    global base_dir
+    base_dir = args.base_dir
+
     # Set up logging
     logger = logging.getLogger()
     if args.verbose:
         logger.setLevel(logging.DEBUG)
     else:
         logger.setLevel(logging.INFO)
-
-    # Fix up our path so we can use our installed versions
-    os.environ['PATH'] = os.path.join(get_prefix(args.base_dir), 'bin') + ':' \
-                                                            + os.environ['PATH']
 
     # Make timestamps in tarballs independent of local timezone
     os.environ['TZ'] = 'UTC'
