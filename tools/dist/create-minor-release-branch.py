@@ -378,8 +378,8 @@ def update_buildbot_config(ver):
 
     relpath = 'master1/projects/subversion.conf'
     edit_file(get_buildbot_wc_path(relpath),
-              r'MINOR_LINES=[(.*%s)]' % (prev_ver.minor,),
-              r'MINOR_LINES=[\1, %s]' % (ver.minor,))
+              r'(MINOR_LINES=\[.*%s)(\])' % (prev_ver.minor,),
+              r'\1, %s\2' % (ver.minor,))
 
     log_msg = '''\
 Subversion: start monitoring the %s branch.
