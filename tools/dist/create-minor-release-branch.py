@@ -59,13 +59,19 @@ secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 
 # Local working copies
 trunk_wc_path = 'svn-trunk'
+branches_wc_path = '.'
+buildbot_wc_path = 'svn-buildmaster'
+
 def get_trunk_wc_path(path=None):
     if path is None: return trunk_wc_path
     return os.path.join(trunk_wc_path, path)
 def get_branch_wc_path(ver, path=None):
-    branch_wc_path = os.path.join('svn-branches', ver.branch + '.x')
+    branch_wc_path = os.path.join(branches_wc_path, ver.branch + '.x')
     if path is None: return branch_wc_path
     return os.path.join(branch_wc_path, path)
+def get_buildbot_wc_path(path=None):
+    if path is None: return buildbot_wc_path
+    return os.path.join(buildbot_wc_path, path)
 
 def get_trunk_url():
     return secure_repos + '/trunk'
@@ -73,6 +79,8 @@ def get_branch_url(ver):
     return secure_repos + '/branches/' + ver.branch + '.x'
 def get_tag_url(ver):
     return secure_repos + '/tags/' + ver.base
+def get_buildbot_url():
+    return 'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster'
 
 #----------------------------------------------------------------------
 # Utility functions
@@ -217,21 +225,25 @@ def run_svn(cmd, dry_run=False):
 def svn_commit(cmd):
     run_svn(['commit'] + cmd, dry_run=True)
 
+def svn_checkout(*args):
+    args = ['checkout'] + list(args) + ['--revision={2017-12-01}']
+    run_svn(args)
+
 #----------------------------------------------------------------------
 def edit_file(path, pattern, replacement):
     print("Editing '%s'" % (path,))
     print("  pattern='%s'" % (pattern,))
     print("  replace='%s'" % (replacement,))
-    old_text = open(path, 'r').read():
+    old_text = open(path, 'r').read()
     new_text = re.sub(pattern, replacement, old_text)
     assert new_text != old_text
     open(path, 'w').write(new_text)
 
-def prepend_file(relpath, text):
+def prepend_file(path, text):
     print("Prepending to '%s'" % (path,))
     print("  text='%s'" % (text,))
     original = open(path, 'r').read()
-    open(path, 'w').write(text).write(original)
+    open(path, 'w').write(text + original)
 
 #----------------------------------------------------------------------
 def make_release_branch(ver):
@@ -241,9 +253,11 @@ def make_release_branch(ver):
 
 #----------------------------------------------------------------------
 def update_minor_ver_in_trunk(ver):
+    """Change the minor version in trunk to the next (future) minor version.
+    """
     trunk_wc = get_trunk_wc_path()
     trunk_url = get_trunk_url()
-    run_svn(['checkout', trunk_url, trunk_wc])
+    svn_checkout(trunk_url, trunk_wc)
 
     prev_ver = Version('1.%d.0' % (ver.minor - 1,))
     next_ver = Version('1.%d.0' % (ver.minor + 1,))
@@ -252,30 +266,30 @@ def update_minor_ver_in_trunk(ver):
     relpath = 'subversion/include/svn_version.h'
     relpaths.append(relpath)
     edit_file(get_trunk_wc_path(relpath),
-              r'^#define SVN_VER_MINOR *%s$' % (prev_ver.minor,),
-              r'^#define SVN_VER_MINOR *%s$' % (ver.minor,))
+              r'(#define SVN_VER_MINOR *)%s' % (ver.minor,),
+              r'\g<1>%s' % (next_ver.minor,))
 
     relpath = 'subversion/tests/cmdline/svntest/main.py'
     relpaths.append(relpath)
     edit_file(get_trunk_wc_path(relpath),
-              r'^SVN_VER_MINOR = %s$' % (prev_ver.minor,),
-              r'^SVN_VER_MINOR = %s$' % (ver.minor,))
+              r'(SVN_VER_MINOR = )%s' % (ver.minor,),
+              r'\g<1>%s' % (next_ver.minor,))
 
     relpath = 'subversion/bindings/javahl/src/org/apache/subversion/javahl/NativeResources.java'
     relpaths.append(relpath)
     try:
         # since r1817921 (just after branching 1.10)
         edit_file(get_trunk_wc_path(relpath),
-                  r'SVN_VER_MINOR = %s;' % (prev_ver.minor,),
-                  r'SVN_VER_MINOR = %s;' % (ver.minor,))
+                  r'SVN_VER_MINOR = %s;' % (ver.minor,),
+                  r'SVN_VER_MINOR = %s;' % (next_ver.minor,))
     except:
         # before r1817921: two separate places
         edit_file(get_trunk_wc_path(relpath),
-                  r'version.isAtLeast\(1, %s, 0\)' % (prev_ver.minor,),
-                  r'version.isAtLeast\(1, %s, 0\)' % (ver.minor,))
+                  r'version.isAtLeast\(1, %s, 0\)' % (ver.minor,),
+                  r'version.isAtLeast\(1, %s, 0\)' % (next_ver.minor,))
         edit_file(get_trunk_wc_path(relpath),
-                  r'1.%s.0, but' % (prev_ver.minor,),
-                  r'1.%s.0, but' % (ver.minor,))
+                  r'1.%s.0, but' % (ver.minor,),
+                  r'1.%s.0, but' % (next_ver.minor,))
 
     relpath = 'CHANGES'
     relpaths.append(relpath)
@@ -287,16 +301,16 @@ def update_minor_ver_in_trunk(ver):
                  + '\n')
 
     log_msg = '''\
-Increment the trunk version number, and introduce a new CHANGES
-section for the upcoming %s release.
+Increment the trunk version number to %s, and introduce a new CHANGES
+section, following the creation of the %s.x release branch.
 
 * subversion/include/svn_version.h,
-  subversion/tests/cmdline/svntest/main.py,
-  subversion/bindings/javahl/src/org/apache/subversion/javahl/NativeResources.java:
-    (SVN_VER_MINOR): Increment version number.
+  subversion/bindings/javahl/src/org/apache/subversion/javahl/NativeResources.java,
+  subversion/tests/cmdline/svntest/main.py
+    (SVN_VER_MINOR): Increment to %s.
 
-* CHANGES: New section for %s.
-''' % (ver.base, next_ver.base)
+* CHANGES: New section for %s.0.
+''' % (next_ver.branch, ver.branch, next_ver.minor, next_ver.branch)
     commit_paths = [get_trunk_wc_path(p) for p in relpaths]
     svn_commit(commit_paths + ['-m', log_msg])
 
@@ -304,7 +318,7 @@ section for the upcoming %s release.
 def create_status_file_on_branch(ver):
     branch_wc = get_branch_wc_path(ver)
     branch_url = get_branch_url(ver)
-    run_svn(['checkout', branch_url, branch_wc, '--depth=immediates'])
+    svn_checkout(branch_url, branch_wc, '--depth=immediates')
 
     status_local_path = os.path.join(branch_wc, 'STATUS')
     text='''\
@@ -344,6 +358,34 @@ def update_backport_bot(ver):
 https://github.com/apache/infrastructure-puppet/blob/deployment/modules/svnqavm_pvm_asf/manifests/init.pp
 "Add new %s.x branch to list of backport branches"
 """ % (ver.branch,))
+    print("""Someone needs to run the 'svn checkout' manually.
+The exact checkout command is documented in machines/svn-qavm2/notes.txt
+in the private repository (need to use a trunk client and the svn-master.a.o
+hostname).
+""")
+
+#----------------------------------------------------------------------
+def update_buildbot_config(ver):
+    """Add the new branch to the list of branches monitored by the buildbot
+       master.
+    """
+    buildbot_wc = get_buildbot_wc_path()
+    buildbot_url = get_buildbot_url()
+    svn_checkout(buildbot_url, buildbot_wc)
+
+    prev_ver = Version('1.%d.0' % (ver.minor - 1,))
+    next_ver = Version('1.%d.0' % (ver.minor + 1,))
+
+    relpath = 'master1/projects/subversion.conf'
+    edit_file(get_buildbot_wc_path(relpath),
+              r'MINOR_LINES=[(.*%s)]' % (prev_ver.minor,),
+              r'MINOR_LINES=[\1, %s]' % (ver.minor,))
+
+    log_msg = '''\
+Subversion: start monitoring the %s branch.
+''' % (ver.branch)
+    commit_paths = [get_buildbot_wc_path(relpath)]
+    svn_commit(commit_paths + ['-m', log_msg])
 
 #----------------------------------------------------------------------
 def steps(args):
@@ -353,7 +395,7 @@ def steps(args):
     update_minor_ver_in_trunk(ver)
     create_status_file_on_branch(ver)
     update_backport_bot(ver)
-    # update_buildbot_config(ver)
+    update_buildbot_config(ver)
 
 
 #----------------------------------------------------------------------
