@@ -122,7 +122,7 @@ Candidate changes:
    Justification:
      API violation: svn_config_get_user_config() may return NULL.
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
 
 Veto-blocked changes:
 =====================
