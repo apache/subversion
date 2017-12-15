@@ -1468,10 +1468,10 @@ seek_handler_checksum(void *baton, const svn_stream_mark_t *mark)
   else
     {
       if (btn->read_ctx)
-        svn_checksum_ctx_reset(btn->read_ctx);
+        SVN_ERR(svn_checksum_ctx_reset(btn->read_ctx));
 
       if (btn->write_ctx)
-        svn_checksum_ctx_reset(btn->write_ctx);
+        SVN_ERR(svn_checksum_ctx_reset(btn->write_ctx));
 
       SVN_ERR(svn_stream_reset(btn->proxy));
     }
