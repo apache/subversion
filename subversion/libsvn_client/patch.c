@@ -2145,8 +2145,8 @@ reject_hunk(patch_target_t *target, target_content_t *content,
   if (prop_name)
     {
       /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Property'. */
-      svn_stream_printf(target->reject_stream,
-                        pool, "Property: %s" APR_EOL_STR, prop_name);
+      SVN_ERR(svn_stream_printf(target->reject_stream,
+                                pool, "Property: %s" APR_EOL_STR, prop_name));
       atat = prop_atat;
     }
   else
