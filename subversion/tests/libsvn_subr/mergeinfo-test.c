@@ -1762,7 +1762,7 @@ test_rangelist_merge_overlap(apr_pool_t *pool)
      svn_string_t * tmp_string;
      svn_rangelist_t *range_list;
 
-     svn_rangelist_to_string(&tmp_string, rangelist, pool);
+     SVN_ERR(svn_rangelist_to_string(&tmp_string, rangelist, pool));
 
      SVN_ERR(svn_rangelist__parse(&range_list, tmp_string->data, pool));
   }
