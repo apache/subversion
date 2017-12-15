@@ -6884,7 +6884,7 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
  * contains any modifications, in other words if svn_client_shelf_get_paths()
  * would return a non-empty set of paths.
  *
- * @since New in 1.10.
+ * @since New in 1.10, changed in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
