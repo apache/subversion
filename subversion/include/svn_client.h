@@ -6828,19 +6828,6 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
                                      int version,
                                      apr_pool_t *scratch_pool);
 
-/** Set @a *wc_abspaths_p to the files affected by version @a version
- * of @a shelf.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_get_files(apr_array_header_t **wc_abspaths_p,
-                           svn_client_shelf_t *shelf,
-                           int version,
-                           apr_pool_t *scratch_pool);
-
 /** Output version @a version of @a shelf as a patch to @a outstream.
  *
  * @since New in 1.X.
@@ -6882,7 +6869,7 @@ svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info,
  * the new path, both relative to the WC root. The key and value are the
  * same except when a path is moved or copied.
  *
- * @since New in 1.X.
+ * @since New in 1.10, changed in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -6892,6 +6879,20 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
                            int version,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
+
+/** Set @a *has_changes to indicate whether @a shelf @a version
+ * contains any modifications, in other words if svn_client_shelf_get_paths()
+ * would return a non-empty set of paths.
+ *
+ * @since New in 1.10.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_has_changes(svn_boolean_t *has_changes,
+                             svn_client_shelf_t *shelf,
+                             int version,
+                             apr_pool_t *scratch_pool);
 
 /** Set the log message in @a shelf, using the log message callbacks in
  * the client context.
