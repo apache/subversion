@@ -167,11 +167,11 @@ shelves_list(const char *local_abspath,
 /* Print info about each checkpoint of the shelf named NAME.
  */
 static svn_error_t *
-checkpoint_list(const char *name,
-                const char *local_abspath,
-                svn_boolean_t diffstat,
-                svn_client_ctx_t *ctx,
-                apr_pool_t *scratch_pool)
+checkpoint_log(const char *name,
+               const char *local_abspath,
+               svn_boolean_t diffstat,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
 {
   svn_client_shelf_t *shelf;
   int i;
@@ -649,10 +649,7 @@ svn_cl__checkpoint(apr_getopt_t *os,
   const char *local_abspath;
   const char *name;
 
-  if (opt_state->list)
-    subsubcommand = "list";
-  else
-    SVN_ERR(get_next_argument(&subsubcommand, os, pool, pool));
+  SVN_ERR(get_next_argument(&subsubcommand, os, pool, pool));
 
   SVN_ERR(get_next_argument(&name, os, pool, pool));
 
@@ -665,15 +662,15 @@ svn_cl__checkpoint(apr_getopt_t *os,
   if (opt_state->quiet)
     ctx->notify_func2 = NULL;
 
-  if (strcmp(subsubcommand, "list") == 0)
+  if (strcmp(subsubcommand, "log") == 0)
     {
       if (targets->nelts)
         return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                 _("Too many arguments"));
 
-      SVN_ERR(checkpoint_list(name, local_abspath,
-                              ! opt_state->quiet /*diffstat*/,
-                              ctx, pool));
+      SVN_ERR(checkpoint_log(name, local_abspath,
+                             ! opt_state->quiet /*diffstat*/,
+                             ctx, pool));
     }
   else if (strcmp(subsubcommand, "save") == 0)
     {

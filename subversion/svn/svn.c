@@ -1659,7 +1659,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ("Save and restore local changes.\n"
      "usage: 1. savepoint save NAME [PATH...]\n"
      "       2. savepoint restore NAME [VERSION]\n"
-     "       3. savepoint list|--list NAME\n"
+     "       3. savepoint log NAME\n"
      "       4. savepoint export NAME [VERSION]\n"
      "\n"
      "  1. Save local changes in the given PATHs as a new version of shelf NAME.\n"
@@ -1684,8 +1684,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_depth, opt_targets, opt_changelist,
      /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
      'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
-     opt_list},
-    { {opt_list, N_("list all versions of a shelf")} }
+    }
   },
 
   { "shelve", svn_cl__shelve, {0}, N_

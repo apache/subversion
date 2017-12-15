@@ -1023,7 +1023,7 @@ _svn()
 		cmdOpts="$qOpts $pOpts"
 		;;
 	checkpoint|savepoint|sp)
-		cmdOpts="save restore list --list --dry-run \
+		cmdOpts="save restore log --dry-run \
                          --depth --targets $cOpts \
                          -m --message -F --file --encoding --force-log --editor-cmd \
                          $qOpts $pOpts"
