@@ -1654,8 +1654,8 @@ prompt_move_target_path(int *preferred_move_target_idx,
         {
           char buf[1024];
 
-          svn_cmdline_fprintf(stderr, iterpool, "%s\n",
-                              svn_err_best_message(err, buf, sizeof(buf)));
+          SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
+                                      svn_err_best_message(err, buf, sizeof(buf))));
           svn_error_clear(err);
           continue;
         }
