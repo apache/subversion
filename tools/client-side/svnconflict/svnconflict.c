@@ -363,12 +363,12 @@ svnconflict_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         &conflict, local_abspath, ctx, pool));
 
   if (text_conflicted)
-    svn_cmdline_printf(pool, "text-conflict\n");
+    SVN_ERR(svn_cmdline_printf(pool, "text-conflict\n"));
 
   for (i = 0; i < props_conflicted->nelts; i++)
     {
       const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *); 
-      svn_cmdline_printf(pool, "prop-conflict: %s\n", propname);
+      SVN_ERR(svn_cmdline_printf(pool, "prop-conflict: %s\n", propname));
     }
 
   if (tree_conflicted)
@@ -380,14 +380,14 @@ svnconflict_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                                        &local_change,
                                                        conflict, ctx,
                                                        pool, pool));
-      svn_cmdline_printf(pool, "tree-conflict: %s %s\n",
-                         incoming_change, local_change);
+      SVN_ERR(svn_cmdline_printf(pool, "tree-conflict: %s %s\n",
+                                 incoming_change, local_change));
     }
 
   return SVN_NO_ERROR;
 }
 
-static void
+static svn_error_t *
 print_conflict_options(apr_array_header_t *options, apr_pool_t *pool)
 {
   int i;
@@ -401,8 +401,9 @@ print_conflict_options(apr_array_header_t *options, apr_pool_t *pool)
       option = APR_ARRAY_IDX(options, i, svn_client_conflict_option_t *);
       id = svn_client_conflict_option_get_id(option);
       label = svn_client_conflict_option_get_label(option, pool);
-      svn_cmdline_printf(pool, "%d: %s\n", id, label);
+      SVN_ERR(svn_cmdline_printf(pool, "%d: %s\n", id, label));
     }
+  return SVN_NO_ERROR;
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -433,7 +434,7 @@ svnconflict_options_text(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_client_conflict_text_get_resolution_options(&options,
                                                           conflict, ctx,
                                                           pool, pool));
-  print_conflict_options(options, pool);
+  SVN_ERR(print_conflict_options(options, pool));
 
   return SVN_NO_ERROR;
 }
@@ -466,7 +467,7 @@ svnconflict_options_prop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_client_conflict_prop_get_resolution_options(&options,
                                                           conflict, ctx,
                                                           pool, pool));
-  print_conflict_options(options, pool);
+  SVN_ERR(print_conflict_options(options, pool));
 
   return SVN_NO_ERROR;
 }
@@ -500,7 +501,7 @@ svnconflict_options_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options,
                                                           conflict, ctx,
                                                           pool, pool));
-  print_conflict_options(options, pool);
+  SVN_ERR(print_conflict_options(options, pool));
 
   return SVN_NO_ERROR;
 }

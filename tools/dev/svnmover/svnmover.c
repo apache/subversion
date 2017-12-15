@@ -2436,7 +2436,7 @@ do_put_file(svn_branch__txn_t *txn,
     else
       SVN_ERR(svn_stream_for_stdin2(&src, FALSE, scratch_pool));
 
-    svn_stringbuf_from_stream(&text, src, 0, scratch_pool);
+    SVN_ERR(svn_stringbuf_from_stream(&text, src, 0, scratch_pool));
   }
   payload = svn_element__payload_create_file(props, text, scratch_pool);
 
