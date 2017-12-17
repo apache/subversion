@@ -1467,6 +1467,7 @@ SERF_FLAG=--with-serf="$(PREFIX)/serf"
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
 # so we have to do that ourselves :(
 SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
+LZ4_LDFLAG=-Wl,-rpath,$(PREFIX)/lz4/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
@@ -1501,7 +1502,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(RUBY_OBJDIR)/.installed $(PYTHON_OBJDIR)/.installed
 	cd $(SVN_SRCDIR) && ./autogen.sh
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
