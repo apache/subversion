@@ -527,6 +527,19 @@ I.    INTRODUCTION
 
       $ ./get-dep.sh gmock
 
+      22. LZ4 (OPTIONAL)
+
+      Subversion uses LZ4 compression libary version 1.7.5 or above. Configure
+      will attempt to locate the system library by default using pkg-config
+      and known paths.
+
+      If it is installed in a non-standard location, then use:
+
+        --with-lz4=/path/to/liblz3
+      
+      If configure should use the version bundled with the sources, use:
+        --with-lz4=internal
+
   D. Documentation
 
       The primary documentation for Subversion is the free book
