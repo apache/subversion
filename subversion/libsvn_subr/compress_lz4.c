@@ -126,3 +126,17 @@ svn__decompress_lz4(const void *data, apr_size_t len,
 
   return SVN_NO_ERROR;
 }
+
+const char *
+svn_lz4__compiled_version(void)
+{
+  static const char lz4_version_str[] = LZ4_VERSION_STRING;
+
+  return lz4_version_str;
+}
+
+const char *
+svn_lz4__runtime_version(void)
+{
+  return LZ4_versionString();
+}

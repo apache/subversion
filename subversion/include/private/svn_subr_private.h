@@ -738,6 +738,12 @@ const char *svn_zlib__compiled_version(void);
 /* Return the zlib version we run against. */
 const char *svn_zlib__runtime_version(void);
 
+/* Return the lz4 version we compiled against. */
+const char *svn_lz4__compiled_version(void);
+
+/* Return the lz4 version we run against. */
+const char *svn_lz4__runtime_version(void);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
