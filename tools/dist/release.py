@@ -174,7 +174,7 @@ class Version(object):
             ver_tag = '" (Alpha %d)"' % self.pre_num
             ver_numtag = '"-alpha%d"' % self.pre_num
         elif self.pre == 'beta':
-            ver_tag = '" (Beta %d)"' % args.version.pre_num
+            ver_tag = '" (Beta %d)"' % self.pre_num
             ver_numtag = '"-beta%d"' % self.pre_num
         elif self.pre == 'rc':
             ver_tag = '" (Release Candidate %d)"' % self.pre_num
