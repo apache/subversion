@@ -42,7 +42,7 @@ AC_DEFUN(SVN_LZ4,
       SVN_LZ4_PREFIX
     fi
     if test "$lz4_found" != "yes"; then
-      AC_MSG_ERROR([Subversion requires LZ4])
+      AC_MSG_ERROR([Subversion requires LZ4 >= 1.7.5, or use --with-lz4=internal])
     fi
   fi
   AC_SUBST(SVN_LZ4_INCLUDES)
@@ -53,17 +53,19 @@ AC_DEFUN(SVN_LZ4_STD,
 [
   if test -n "$PKG_CONFIG"; then
     AC_MSG_CHECKING([for lz4 library via pkg-config])
-    if $PKG_CONFIG liblz4 --exists; then
+    if $PKG_CONFIG liblz4 --atleast-version=1.7.5; then
       AC_MSG_RESULT([yes])
       lz4_found=yes
       SVN_LZ4_INCLUDES=`$PKG_CONFIG liblz4 --cflags`
       SVN_LZ4_LIBS=`$PKG_CONFIG liblz4 --libs`
       SVN_LZ4_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_LZ4_LIBS)`"
+    else
+      AC_MSG_RESULT([no])
     fi
-  else
+  fi
+  if test "$lz4_found" != "yes"; then
     AC_MSG_NOTICE([lz4 configuration without pkg-config])
-    AC_CHECK_LIB(lz4, LZ4_decompress_safe, [
-      AC_MSG_RESULT([yes])
+    AC_CHECK_LIB(lz4, LZ4_versionString, [
       lz4_found=yes
       SVN_LZ4_LIBS="-llz4"
     ])
