@@ -741,8 +741,10 @@ const char *svn_zlib__runtime_version(void);
 /* Return the lz4 version we compiled against. */
 const char *svn_lz4__compiled_version(void);
 
-/* Return the lz4 version we run against. */
-const char *svn_lz4__runtime_version(void);
+/* Return the lz4 version we run against as a composed value:
+ * major * 100 * 100 + minor * 100 + release
+ */
+int svn_lz4__runtime_version(void);
 
 #ifdef __cplusplus
 }

@@ -170,7 +170,12 @@ svn_sysinfo__linked_libs(apr_pool_t *pool)
   lib = &APR_ARRAY_PUSH(array, svn_version_ext_linked_lib_t);
   lib->name = "LZ4";
   lib->compiled_version = apr_pstrdup(pool, svn_lz4__compiled_version());
-  lib->runtime_version = apr_pstrdup(pool, svn_lz4__runtime_version());
+
+  int lz4_version = svn_lz4__runtime_version();
+  lib->runtime_version = apr_psprintf(pool, "%d.%d.%d",
+                                      lz4_version / 100 / 100,
+                                      (lz4_version / 100) % 100,
+                                      lz4_version % 100);
 
   return array;
 }
