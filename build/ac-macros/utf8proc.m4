@@ -28,7 +28,15 @@ AC_DEFUN(SVN_UTF8PROC,
   AC_ARG_WITH([utf8proc],
     [AS_HELP_STRING([--with-utf8proc=PREFIX|internal],
                     [look for utf8proc in PREFIX or use the internal code])],
-    [utf8proc_prefix="$withval"],
+    [
+      if test "$withval" = internal; then
+        utf8proc_prefix=internal
+      elif test "$withval" = yes; then
+        utf8proc_prefix=std
+      else
+        utf8proc_prefix="$withval"
+      fi
+    ],
     [utf8proc_prefix=std])
 
   if test "$utf8proc_prefix" = "internal"; then

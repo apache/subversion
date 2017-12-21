@@ -28,7 +28,15 @@ AC_DEFUN(SVN_LZ4,
   AC_ARG_WITH([lz4],
     [AS_HELP_STRING([--with-lz4=PREFIX|internal],
                     [look for lz4 in PREFIX or use the internal code])],
-    [lz4_prefix="$withval"],
+    [
+      if test "$withval" = internal; then
+        lz4_prefix=internal
+      elif test "$withval" = yes; then
+        lz4_prefix=std
+      else
+        lz4_prefix="$withval"
+      fi
+    ],
     [lz4_prefix=std])
 
   if test "$lz4_prefix" = "internal"; then
