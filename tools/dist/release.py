@@ -1174,6 +1174,173 @@ def get_keys(args):
         fd.seek(0)
         subprocess.check_call(['gpg', '--import'], stdin=fd)
 
+def add_to_changes_dict(changes_dict, audience, section, change, revision):
+    # Normalize arguments
+    if audience:
+        audience = audience.upper()
+    if section:
+        section = section.lower()
+    change = change.strip()
+    
+    if not audience in changes_dict:
+        changes_dict[audience] = dict()
+    if not section in changes_dict[audience]:
+        changes_dict[audience][section] = dict()
+    
+    changes = changes_dict[audience][section]
+    if change in changes:
+        changes[change].add(revision)
+    else:
+        changes[change] = set([revision])
+        
+def print_section(changes_dict, audience, section, title, mandatory=False):
+    if audience in changes_dict:
+        audience_changes = changes_dict[audience]
+        if mandatory or (section in audience_changes):
+            if title:
+                print('  - %s:' % title)
+        if section in audience_changes:
+            print_changes(audience_changes[section])
+        elif mandatory:
+            print('    (none)')
+
+def print_changes(changes):
+    # Print in alphabetical order, so entries with the same prefix are together
+    for change in sorted(changes):
+        revs = changes[change]
+        rev_string = 'r' + str(min(revs)) + (' et al' if len(revs) > 1 else '')
+        print('    * %s (%s)' % (change, rev_string))
+
+def write_changelog(args):
+    'Write changelog, parsed from commit messages'
+    # Changelog lines are lines with the following format:
+    #   '['[audience[:section]]']' <message>
+    # or:
+    #   <message> '['[audience[:section]]']'
+    # where audience = U (User-visible) or D (Developer-visible)
+    #       section = general|major|minor|client|server|clientserver|other|api|bindings
+    #                 (section is optional and is treated case-insensitively)
+    #       message = the actual text for CHANGES
+    #
+    # This means the "changes label" can be used as prefix or suffix, and it
+    # can also be left empty (which results in an uncategorized changes entry),
+    # if the committer isn't sure where the changelog entry belongs.
+    #
+    # Putting [skip], [ignore], [c:skip] or [c:ignore] somewhere in the
+    # log message means this commit must be ignored for Changelog processing
+    # (ignored even with the --include-unlabeled-summaries option).
+    # 
+    # If there is no changes label anywhere in the commit message, and the
+    # --include-unlabeled-summaries option is used, we'll consider the summary
+    # line of the commit message (= first line except if it starts with a *)
+    # as an uncategorized changes entry, except if it contains "status",
+    # "changes", "post-release housekeeping" or "follow-up".
+    #
+    # Examples:
+    #   [U:major] Better interactive conflict resolution for tree conflicts
+    #   ra_serf: Adjustments for serf versions with HTTP/2 support [U:minor]
+    #   [U] Fix 'svn diff URL@REV WC' wrongly looks up URL@HEAD (issue #4597)
+    #   Fix bug with canonicalizing Window-specific drive-relative URL []
+    #   New svn_ra_list() API function [D:api]
+    #   [D:bindings] JavaHL: Allow access to constructors of a couple JavaHL classes
+
+    branch = secure_repos + '/' + args.branch
+    previous = secure_repos + '/' + args.previous
+    include_unlabeled = args.include_unlabeled
+    
+    mergeinfo = subprocess.check_output(['svn', 'mergeinfo', '--show-revs',
+                    'eligible', '--log', branch, previous]).splitlines()
+    
+    separator_pattern = re.compile('^-{72}$')
+    revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
+    changes_prefix_pattern = re.compile('^\[(U|D)?:?([^\]]+)?\](.+)$')
+    changes_suffix_pattern = re.compile('^(.+)\[(U|D)?:?([^\]]+)?\]$')
+    
+    changes_dict = dict()  # audience -> (section -> (change -> set(revision)))
+    revision = -1
+    got_firstline = False
+    unlabeled_summary = None
+    changes_ignore = False
+    audience = None
+    section = None
+    message = None
+    
+    for line in mergeinfo:
+        if separator_pattern.match(line):
+            # New revision section. Reset variables.
+            # If there's an unlabeled summary from a previous section, and
+            # include_unlabeled is True, put it into uncategorized_changes.
+            if include_unlabeled and unlabeled_summary and not changes_ignore:
+                add_to_changes_dict(changes_dict, None, None,
+                                    unlabeled_summary, revision)
+            revision = -1
+            got_firstline = False
+            unlabeled_summary = None
+            changes_ignore = False
+            audience = None
+            section = None
+            message = None
+            continue
+
+        revmatch = revline_pattern.match(line)
+        if revmatch and (revision == -1):
+            # A revision line: get the revision number
+            revision = int(revmatch.group(1))
+            logging.debug('Changelog processing revision r%d' % revision)
+            continue
+
+        if line.strip() == '':
+            # Skip empty / whitespace lines
+            continue
+
+        if not got_firstline:
+            got_firstline = True
+            if (not re.search('status|changes|post-release housekeeping|follow-up|^\*',
+                              line, re.IGNORECASE)
+                    and not changes_prefix_pattern.match(line)
+                    and not changes_suffix_pattern.match(line)):
+                unlabeled_summary = line
+
+        if re.search('\[(c:)?(skip|ignore)\]', line, re.IGNORECASE):
+            changes_ignore = True
+            
+        prefix_match = changes_prefix_pattern.match(line)
+        if prefix_match:
+            audience = prefix_match.group(1)
+            section = prefix_match.group(2)
+            message = prefix_match.group(3)
+            add_to_changes_dict(changes_dict, audience, section, message, revision)
+
+        suffix_match = changes_suffix_pattern.match(line)
+        if suffix_match:
+            message = suffix_match.group(1)
+            audience = suffix_match.group(2)
+            section = suffix_match.group(3)
+            add_to_changes_dict(changes_dict, audience, section, message, revision)
+
+    # Output the sorted changelog entries
+    # 1) Uncategorized changes
+    print_section(changes_dict, None, None, None)
+    print
+    # 2) User-visible changes
+    print(' User-visible changes:')
+    print_section(changes_dict, 'U', None, None)
+    print_section(changes_dict, 'U', 'general', 'General')
+    print_section(changes_dict, 'U', 'major', 'Major new features')
+    print_section(changes_dict, 'U', 'minor', 'Minor new features and improvements')
+    print_section(changes_dict, 'U', 'client', 'Client-side bugfixes', mandatory=True)
+    print_section(changes_dict, 'U', 'server', 'Server-side bugfixes', mandatory=True)
+    print_section(changes_dict, 'U', 'clientserver', 'Client-side and server-side bugfixes')
+    print_section(changes_dict, 'U', 'other', 'Other tool improvements and bugfixes')
+    print_section(changes_dict, 'U', 'bindings', 'Bindings bugfixes', mandatory=True)
+    print
+    # 3) Developer-visible changes
+    print(' Developer-visible changes:')
+    print_section(changes_dict, 'D', None, None)
+    print_section(changes_dict, 'D', 'general', 'General', mandatory=True)
+    print_section(changes_dict, 'D', 'api', 'API changes', mandatory=True)
+    print_section(changes_dict, 'D', 'bindings', 'Bindings')
+
 #----------------------------------------------------------------------
 # Main entry point for argument parsing and handling
 
@@ -1338,6 +1505,29 @@ def main():
                             separate subcommand.''')
     subparser.set_defaults(func=cleanup)
 
+    # write-changelog
+    subparser = subparsers.add_parser('write-changelog',
+                    help='''Output to stdout changelog entries parsed from
+                            commit messages, optionally labeled with a category
+                            like [U:client], [D:api], [U], ...''')
+    subparser.set_defaults(func=write_changelog)
+    subparser.add_argument('branch',
+                    help='''The branch (or tag or trunk), relative to
+                            ^/subversion/, of which to generate the
+                            changelog, when compared to "previous".''')
+    subparser.add_argument('previous',
+                    help='''The "previous" branch or tag, relative to 
+                            ^/subversion/, to compare "branch" against.''')
+    subparser.add_argument('--include-unlabeled-summaries',
+                    dest='include_unlabeled',
+                    action='store_true', default=False,
+                    help='''Include summary lines that do not have a changes
+                            label, unless an explicit [c:skip] or [c:ignore]
+                            is part of the commit message (except if the
+                            summary line contains 'STATUS', 'CHANGES',
+                            'Post-release housekeeping', 'Follow-up' or starts
+                            with '*').''')
+    
     # Parse the arguments
     args = parser.parse_args()
 
