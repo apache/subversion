@@ -529,7 +529,7 @@ I.    INTRODUCTION
 
       22. LZ4 (OPTIONAL)
 
-      Subversion uses LZ4 compression libary version r120 or above. Configure
+      Subversion uses LZ4 compression libary version r129 or above. Configure
       will attempt to locate the system library by default using pkg-config
       and known paths.
 
