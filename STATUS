@@ -22,6 +22,13 @@ Candidate changes:
    Votes:
      +1: danielsh, jamessan
 
+  * r1818651, r1818662, r1818727, r1818801, r1818803, r1818807, r1818868, r1818871
+    Improve lz4,utf8proc configure behavior, and print the lzr4 version in --version -v
+    Justification:
+      Correctly detect, note and print dependencies for builders/packagers.
+    Votes:
+     +1: astieger
+
 Veto-blocked changes:
 =====================
 
