@@ -1387,7 +1387,7 @@ svn_ra_local__get_dir(svn_ra_session_t *session,
             {
               /* size  */
               if (fs_entry->kind == svn_node_dir)
-                entry->size = 0;
+                entry->size = SVN_INVALID_FILESIZE;
               else
                 SVN_ERR(svn_fs_file_length(&(entry->size), root,
                                            fullpath, iterpool));
