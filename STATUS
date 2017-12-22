@@ -29,6 +29,16 @@ Candidate changes:
     Votes:
      +1: astieger, jamessan
 
+ * r1819093
+   Introduce a new global option: --password-from-stdin
+   Justification:
+     Small, useful, self-contained feature written by a new contributor.
+     It would be nice if this were released in 1.10 because otherwise the
+     contributor would have to wait for a very long time to see the result
+     of their work in a release.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
