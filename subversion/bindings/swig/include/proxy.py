@@ -12,17 +12,36 @@
     if "_is_valid" in self.__dict__:
       assert self.__dict__["_is_valid"](), "Variable has already been deleted"
 
-  def __getattr__(self, name):
-    """Get an attribute from this object"""
-    self.assert_valid()
+  def __getattribute__(self, name):
+    """Manage access to all attributes of this object."""
 
-    value = _swig_getattr(self, self.__class__, name)
+    # Start by mimicing __getattr__ behavior: immediately return __dict__ or
+    # items directly present in __dict__
+    mydict = object.__getattribute__(self, '__dict__')
+    if name == "__dict__":
+      return mydict
+
+    if name in mydict:
+      return mydict[name]
+
+    object.__getattribute__(self, 'assert_valid')()
+
+    try:
+      value = object.__getattribute__(self, name)
+    except AttributeError:
+      value = _swig_getattr(self,
+                            object.__getattribute__(self, '__class__'),
+                            name)
 
     # If we got back a different object than we have, we need to copy all our
     # metadata into it, so that it looks identical
-    members = self.__dict__.get("_members")
-    if members is not None:
-      _copy_metadata_deep(value, members.get(name))
+    try:
+      members = object.__getattribute__(self, '_members')
+      if name in members:
+          _copy_metadata_deep(value, members[name])
+          # Verify that the new object is good
+    except AttributeError:
+      pass
 
     # Verify that the new object is good
     _assert_valid_deep(value)
