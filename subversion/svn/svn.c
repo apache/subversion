@@ -801,7 +801,9 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline}
   },
 
-  { "list", svn_cl__list, {"ls"}, N_
+  { "list", svn_cl__list, {"ls"},
+#if defined(WIN32)
+    N_
     ("List directory entries in the repository.\n"
      "usage: list [TARGET[@REV]...]\n"
      "\n"
@@ -815,12 +817,8 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Multiple --search patterns may be specified and the output will be\n"
      "  reduced to those paths whose last segment - i.e. the file or directory\n"
-#if defined(WIN32)
      "  name - contains a sub-string matching at least one of these patterns\n"
      "  (Windows only).\n"
-#else
-     "  name - matches at least one of these patterns.\n"
-#endif
      "\n"
      "  With --verbose, the following fields will be shown for each item:\n"
      "\n"
@@ -829,6 +827,31 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
+#else
+    N_
+    ("List directory entries in the repository.\n"
+     "usage: list [TARGET[@REV]...]\n"
+     "\n"
+     "  List each TARGET file and the contents of each TARGET directory as\n"
+     "  they exist in the repository.  If TARGET is a working copy path, the\n"
+     "  corresponding repository URL will be used. If specified, REV determines\n"
+     "  in which revision the target is first looked up.\n"
+     "\n"
+     "  The default TARGET is '.', meaning the repository URL of the current\n"
+     "  working directory.\n"
+     "\n"
+     "  Multiple --search patterns may be specified and the output will be\n"
+     "  reduced to those paths whose last segment - i.e. the file or directory\n"
+     "  name - matches at least one of these patterns.\n"
+     "\n"
+     "  With --verbose, the following fields will be shown for each item:\n"
+     "\n"
+     "    Revision number of the last commit\n"
+     "    Author of the last commit\n"
+     "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
+     "    Size (in bytes)\n"
+     "    Date and time of the last commit\n"),
+#endif
     {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
      opt_include_externals, opt_search}, },
 
