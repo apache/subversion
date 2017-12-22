@@ -68,6 +68,7 @@
    use the short option letter as identifier.  */
 typedef enum svn_min__longopt_t {
   opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
+  opt_auth_password_from_stdin,
   opt_auth_username,
   opt_config_dir,
   opt_config_options,
@@ -113,6 +114,9 @@ const apr_getopt_option_t svn_min__options[] =
                     N_("specify a password ARG (caution: on many operating\n"
                        "                             "
                        "systems, other users will be able to see this)")},
+  {"password-from-stdin",
+                    opt_auth_password_from_stdin, 0,
+                    N_("read password from stdin")},
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
@@ -209,11 +213,11 @@ const apr_getopt_option_t svn_min__options[] =
    command to take these arguments allows scripts to just pass them
    willy-nilly to every invocation of 'svn') . */
 const int svn_min__global_options[] =
-{ opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
-  opt_force_interactive, opt_trust_server_cert,
-  opt_trust_server_cert_unknown_ca, opt_trust_server_cert_cn_mismatch,
-  opt_trust_server_cert_expired, opt_trust_server_cert_not_yet_valid,
-  opt_trust_server_cert_other_failure,
+{ opt_auth_username, opt_auth_password, opt_auth_password_from_stdin,
+  opt_no_auth_cache, opt_non_interactive, opt_force_interactive,
+  opt_trust_server_cert, opt_trust_server_cert_unknown_ca,
+  opt_trust_server_cert_cn_mismatch, opt_trust_server_cert_expired,
+  opt_trust_server_cert_not_yet_valid, opt_trust_server_cert_other_failure,
   opt_config_dir, opt_config_options, 0
 };
 
@@ -417,6 +421,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t interactive_conflicts = FALSE;
   svn_boolean_t force_interactive = FALSE;
   apr_hash_t *cfg_hash;
+  svn_boolean_t read_pass_from_stdin = FALSE;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -528,6 +533,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
                                         opt_arg, pool));
         break;
+      case opt_auth_password_from_stdin:
+        read_pass_from_stdin = TRUE;
+        break;
       case opt_no_auth_cache:
         opt_state.no_auth_cache = TRUE;
         break;
@@ -605,6 +613,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     opt_state.non_interactive = !svn_cmdline__be_interactive(
                                   opt_state.non_interactive,
                                   force_interactive);
+
+  /* --password-from-stdin can only be used with --non-interactive */
+  if (read_pass_from_stdin && !opt_state.non_interactive)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--password-from-stdin requires "
+                                "--non-interactive"));
+    }
 
   /* ### This really belongs in libsvn_client.  The trouble is,
      there's no one place there to run it from, no
@@ -787,6 +803,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       }
   }
 #endif
+
+  /* Get password from stdin if necessary */
+  if (read_pass_from_stdin)
+    {
+      SVN_ERR(svn_io_stdin_readline(&opt_state.auth_password, pool, pool));
+    }
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;

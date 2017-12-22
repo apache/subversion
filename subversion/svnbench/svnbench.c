@@ -53,6 +53,7 @@
    use the short option letter as identifier.  */
 typedef enum svn_cl__longopt_t {
   opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
+  opt_auth_password_from_stdin,
   opt_auth_username,
   opt_config_dir,
   opt_config_options,
@@ -112,6 +113,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"verbose",       'v', 0, N_("print extra information")},
   {"username",      opt_auth_username, 1, N_("specify a username ARG")},
   {"password",      opt_auth_password, 1, N_("specify a password ARG")},
+  {"password-from-stdin",
+                    opt_auth_password_from_stdin, 0, N_("read password from stdin")},
   {"targets",       opt_targets, 1,
                     N_("pass contents of file ARG as additional args")},
   {"depth",         opt_depth, 1,
@@ -197,7 +200,8 @@ const apr_getopt_option_t svn_cl__options[] =
    command to take these arguments allows scripts to just pass them
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
-{ opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
+{ opt_auth_username, opt_auth_password, opt_auth_password_from_stdin,
+  opt_no_auth_cache, opt_non_interactive,
   opt_trust_server_cert, opt_trust_server_cert_failures,
   opt_config_dir, opt_config_options, 0
 };
@@ -394,6 +398,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_time_t start_time, time_taken;
   ra_progress_baton_t ra_progress_baton = {0};
   svn_membuf_t buf;
+  svn_boolean_t read_pass_from_stdin = FALSE;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -625,6 +630,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
                                             opt_arg, pool));
         break;
+      case opt_auth_password_from_stdin:
+        read_pass_from_stdin = TRUE;
+        break;
       case opt_stop_on_copy:
         opt_state.stop_on_copy = TRUE;
         break;
@@ -842,6 +850,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                   "--non-interactive"));
     }
 
+  /* --password-from-stdin can only be used with --non-interactive */
+  if (read_pass_from_stdin && !opt_state.non_interactive)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--password-from-stdin requires "
+                                "--non-interactive"));
+    }
+
   /* Ensure that 'revision_ranges' has at least one item, and make
      'start_revision' and 'end_revision' match that item. */
   if (opt_state.revision_ranges->nelts == 0)
@@ -917,6 +933,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                                        pool));
+    }
+
+  /* Get password from stdin if necessary */
+  if (read_pass_from_stdin)
+    {
+      SVN_ERR(svn_io_stdin_readline(&opt_state.auth_password, pool, pool));
     }
 
   /* Set up our cancellation support. */
