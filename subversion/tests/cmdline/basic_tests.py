@@ -3114,7 +3114,7 @@ def plaintext_password_storage_disabled(sbox):
       f.close()
 
 
-
+@Skip(svntest.main.is_os_windows)
 def filtered_ls(sbox):
   "filtered 'svn ls'"
 
