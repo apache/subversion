@@ -815,7 +815,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Multiple --search patterns may be specified and the output will be\n"
      "  reduced to those paths whose last segment - i.e. the file or directory\n"
+#if defined(WIN32)
+     "  name - contains a sub-string matching at least one of these patterns\n"
+     "  (Windows only).\n"
+#else
      "  name - matches at least one of these patterns.\n"
+#endif
      "\n"
      "  With --verbose, the following fields will be shown for each item:\n"
      "\n"
