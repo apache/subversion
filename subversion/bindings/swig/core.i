@@ -387,6 +387,7 @@
     if (PyLong_Check($input)) {
         temp = PyLong_AsUnsignedLong($input);
     }
+%#if IS_PY3 != 1
     else if (PyInt_Check($input)) {
         /* wish there was a PyInt_AsUnsignedLong but there isn't
            the mask version doesn't do bounds checking for us.
@@ -395,6 +396,7 @@
            problem goes away because PyInt is gone anyway. */
         temp = PyInt_AsUnsignedLongMask($input);
     }
+%#endif
     else {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
