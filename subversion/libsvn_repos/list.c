@@ -51,7 +51,7 @@ fill_dirent(svn_dirent_t *dirent,
   if (dirent->kind == svn_node_file)
     SVN_ERR(svn_fs_file_length(&(dirent->size), root, path, scratch_pool));
   else
-    dirent->size = 0;
+    dirent->size = SVN_INVALID_FILESIZE;
 
   SVN_ERR(svn_fs_node_has_props(&dirent->has_props, root, path,
                                 scratch_pool));

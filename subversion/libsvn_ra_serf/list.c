@@ -139,6 +139,8 @@ item_closed(svn_ra_serf__xml_estate_t *xes,
 
       if (size)
         SVN_ERR(svn_cstring_atoi64(&dirent.size, size));
+      else
+        dirent.size = SVN_INVALID_FILESIZE;
 
       if (crev)
         SVN_ERR(svn_revnum_parse(&dirent.created_rev, crev, NULL));
