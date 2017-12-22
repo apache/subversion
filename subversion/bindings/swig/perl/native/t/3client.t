@@ -1091,8 +1091,8 @@ isa_ok($dirents->{'dir1'},'_p_svn_dirent_t',
 is($dirents->{'dir1'}->kind(),$SVN::Core::node_dir,
    'kind() returns a dir node');
 # TEST
-is($dirents->{'dir1'}->size(),0,
-   'size() returns 0 for a directory');
+is($dirents->{'dir1'}->size(), -1,
+   'size() returns -1 for a directory');
 # TEST
 is($dirents->{'dir1'}->has_props(),1,
    'has_props() returns true');
