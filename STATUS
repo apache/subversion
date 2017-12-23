@@ -39,6 +39,38 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1818578, r1819037, r1819049, r1819052
+   Fix svn_dirent_t.size API inconsistency
+   Justification:
+     Our APIs should behave as document and consistenly across all RA layers.
+     API changes should go into 1.10.0.
+   Votes:
+     +1: stefan2
+
+ * r1818577, r1819146
+   Fix test suite handling of pre-cooked repositories 
+   Justification:
+     We want our test suite to pass with fsfs-v4 repos as it did in 1.9.
+     As a bonus, it will also work with fsfs-v3 now.
+   Votes:
+     +1: stefan2
+
+ * r1819036, r1819043
+   Switch 'svn ls --search' on Windows to sub-string matching.
+   Justification:
+     The new feature was mostly unusable on the Windows CLI.  With this
+     CLI-only work-around, it becomes worthwhile again.
+   Votes:
+     +1: stefan2
+
+ * r1818584
+   Fix crash when exiting 'svnserve --config-file'.
+   Justification:
+     This is a user-reported crash. The underlying container type is now also
+     part of the authz infrastructure and should be as robust as possible.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
