@@ -57,8 +57,11 @@
         _assert_valid_deep(v)
     # Ensure that the passed in value isn't a type, which could have an
     # assert_valid attribute, but it can not be called without an instance.
-    elif type(value) != type and hasattr(value, "assert_valid"):
+    elif type(value) != type:
+      try:
         value.assert_valid()
+      except AttributeError:
+        pass
 %}
 
 /* Default code for all wrapped proxy classes in Python.
