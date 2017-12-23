@@ -20,8 +20,8 @@ Candidate changes:
     Justification:
       Correctly detect, note and print dependencies for builders/packagers.
     Votes:
-     +1: stefan2,
-     +1: astieger, jamessan (without r1819162)
+     +1: stefan2, astieger
+     +1: jamessan (without r1819162)
 
  * r1819093
    Introduce a new global option: --password-from-stdin
