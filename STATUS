@@ -124,6 +124,14 @@ Candidate changes:
    Votes:
      +1: danielsh, jamessan
 
+ * r1818584
+   Fix crash when exiting 'svnserve --config-file'.
+   Justification:
+     This is a user-reported crash. The underlying container type is now also
+     part of the authz infrastructure and should be as robust as possible.
+   Votes:
+     +1: stefan2
+
 Veto-blocked changes:
 =====================
 
