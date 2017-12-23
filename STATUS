@@ -15,13 +15,6 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1817856
-   Fix segfault when no home directory is available.
-   Justification:
-     API violation: svn_config_get_user_config() may return NULL.
-   Votes:
-     +1: danielsh, jamessan
-
   * r1818651, r1818662, r1818727, r1818801, r1818803, r1818807, r1818868, r1818871
     Improve lz4,utf8proc configure behavior, and print the lz4 version in --version -v
     Justification:
@@ -76,3 +69,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1817856
+   Fix segfault when no home directory is available.
+   Justification:
+     API violation: svn_config_get_user_config() may return NULL.
+   Votes:
+     +1: danielsh, jamessan, stefan2
+
