@@ -84,6 +84,7 @@ class GenericSWIGWrapper:
   def set_parent_pool(self, pool):
     """Set the parent pool of this object"""
     self._parent_pool = pool
+    self._is_valid = weakref.ref(pool._is_valid)
 
   def valid(self):
     """Is this object valid?"""
