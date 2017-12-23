@@ -15,12 +15,13 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
-  * r1818651, r1818662, r1818727, r1818801, r1818803, r1818807, r1818868, r1818871
+  * r1818651, r1818662, r1818727, r1818801, r1818803, r1818807, r1818868, r1818871, r1819162
     Improve lz4,utf8proc configure behavior, and print the lz4 version in --version -v
     Justification:
       Correctly detect, note and print dependencies for builders/packagers.
     Votes:
-     +1: astieger, jamessan
+     +1: stefan2,
+     +1: astieger, jamessan (without r1819162)
 
  * r1819093
    Introduce a new global option: --password-from-stdin
