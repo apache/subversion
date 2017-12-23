@@ -2236,8 +2236,16 @@ def parse_options(arglist=sys.argv[1:], usage=None):
     parser.error("test harness only supports server minor versions 3-%d"
                  % SVN_VER_MINOR)
 
-  # Make sure the server-minor-version matches the fsfs-version parameter.
-  #
+  pass
+
+  return (parser, args)
+
+def tweak_options_for_precooked_repos():
+  """Make sure the server-minor-version matches the fsfs-version parameter
+     for pre-cooked repositories."""
+
+  global options
+
   # Server versions that introduced the respective FSFS formats:
   introducing_version = { 1:1, 2:4, 3:5, 4:6, 6:8, 7:9 }
   if options.fsfs_version:
@@ -2249,12 +2257,8 @@ def parse_options(arglist=sys.argv[1:], usage=None):
         parser.error("--fsfs-version=%d requires --server-minor-version=%d" \
                      % (options.fsfs_version, introduced_in))
       options.server_minor_version = introduced_in
-    pass
     # ### Add more tweaks here if and when we support pre-cooked versions
     # ### of FSFS repositories.
-  pass
-
-  return (parser, args)
 
 
 def run_tests(test_list, serial_only = False):
@@ -2350,6 +2354,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   if not options:
     # Override which tests to run from the commandline
     (parser, args) = parse_options()
+    tweak_options_for_precooked_repos()
     test_selection = args
   else:
     parser = _create_parser()
