@@ -27,6 +27,11 @@ usage() {
   echo "usage: $NAME -r N:M"
   echo "  will retrieve all log messages in the range rN:rM, open them in"
   echo "  \$EDITOR, and commit any edits to them."
+  echo ""
+  echo "  Run this with cwd being a working copy of ^/subversion/trunk."
+  # TODO: We only need the cwd in case SVN_CLIENT__REVKIND_NEEDS_WC() is true
+  #   for N or M.  When N and M are both numeric or HEAD, teach this script
+  #   to disregard its cwd and contact ^/subversion/trunk directly.
 }
 
 # parse argv
