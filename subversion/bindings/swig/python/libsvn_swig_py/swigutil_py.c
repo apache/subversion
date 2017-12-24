@@ -59,6 +59,15 @@
 #undef PyLong_FromSize_t
 #undef PyLong_AsLong
 #undef PyInt_Check
+
+/* In Python 3 use the bytes format character for raw data */
+#define SVN_SWIG_BYTES_FMT "y"
+
+#else
+
+/* In Python 2 use the string format character for raw data */
+#define SVN_SWIG_BYTES_FMT "s"
+
 #endif
 
 #include <py3c.h>
@@ -2579,7 +2588,8 @@ write_handler_pyio(void *baton, const char *data, apr_size_t *len)
     {
       svn_swig_py_acquire_py_lock();
       if ((result = PyObject_CallMethod(py_io, (char *)"write",
-                                        (char *)"s#", data, *len)) == NULL)
+                                       (char *) SVN_SWIG_BYTES_FMT "#",
+                                       data, *len)) == NULL)
         {
           err = callback_exception_error();
         }

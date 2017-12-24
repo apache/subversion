@@ -53,7 +53,7 @@ import shutil
 import sys
 import tempfile
 import unittest
-from io import StringIO
+from io import BytesIO
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -94,7 +94,7 @@ class SubversionRepositoryTestSetup(TestSetup):
             self.tearDown()
 
             r = repos.svn_repos_create(REPOS_PATH, '', '', None, None)
-            repos.svn_repos_load_fs2(r, dumpfile, StringIO(),
+            repos.svn_repos_load_fs2(r, dumpfile, BytesIO(),
                                     repos.svn_repos_load_uuid_ignore, '',
                                     0, 0, None)
 

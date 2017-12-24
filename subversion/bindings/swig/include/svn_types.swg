@@ -1098,7 +1098,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(argout) unsigned char digest[ANY]
 {
-  %append_output(PyStr_FromStringAndSize((const char *)$1, APR_MD5_DIGESTSIZE));
+  %append_output(PyBytes_FromStringAndSize((const char *)$1, APR_MD5_DIGESTSIZE));
 }
 #endif
 
@@ -1171,7 +1171,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     if ($input == Py_None) {
         $1 = NULL;
     } else {
-        $1 = (unsigned char *) PyStr_AsString($input);
+        $1 = (unsigned char *) PyBytes_AsString($input);
         if ($1 == NULL) SWIG_fail;
     }
 }

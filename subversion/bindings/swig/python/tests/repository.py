@@ -20,12 +20,7 @@
 #
 import unittest, setup_path, os, sys
 from sys import version_info # For Python version check
-if version_info[0] >= 3:
-  # Python >=3.0
-  from io import StringIO
-else:
-  # Python <3.0
-  from StringIO import StringIO
+from io import BytesIO
 from svn import core, repos, fs, delta
 from svn.core import SubversionException
 import utils
@@ -130,14 +125,14 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       self.callback_calls += 1
       return None
 
-    dumpstream = StringIO()
-    feedbackstream = StringIO()
+    dumpstream = BytesIO()
+    feedbackstream = BytesIO()
     repos.dump_fs2(self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0,
                    is_cancelled)
 
     # Check that we can dump stuff
-    dump = dumpstream.getvalue()
-    feedback = feedbackstream.getvalue()
+    dump = dumpstream.getvalue().decode("UTF-8")
+    feedback = feedbackstream.getvalue().decode("UTF-8")
     expected_feedback = "* Dumped revision " + str(self.rev)
     self.assertEqual(dump.count("Node-path: trunk/README.txt"), 2)
     self.assertEqual(feedback.count(expected_feedback), 1)
@@ -154,17 +149,17 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertRaises(ValueError, repos.dump_fs2,
       self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0, None)
 
-    dumpstream = StringIO()
-    feedbackstream = StringIO()
+    dumpstream = BytesIO()
+    feedbackstream = BytesIO()
 
     # Check that we can grab the feedback stream, but not the dumpstream
     repos.dump_fs2(self.repos, None, feedbackstream, 0, self.rev, 0, 0, None)
-    feedback = feedbackstream.getvalue()
+    feedback = feedbackstream.getvalue().decode('UTF-8')
     self.assertEqual(feedback.count(expected_feedback), 1)
 
     # Check that we can grab the dumpstream, but not the feedbackstream
     repos.dump_fs2(self.repos, dumpstream, None, 0, self.rev, 0, 0, None)
-    dump = dumpstream.getvalue()
+    dump = dumpstream.getvalue().decode('UTF-8')
     self.assertEqual(dump.count("Node-path: trunk/README.txt"), 2)
 
     # Check that we can ignore both the dumpstream and the feedbackstream
@@ -182,7 +177,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       return None
     dump_path = os.path.join(os.path.dirname(sys.argv[0]),
         "trac/versioncontrol/tests/svnrepos.dump")
-    stream = open(dump_path)
+    stream = open(dump_path, 'rb')
     dsp = DumpStreamParser()
     ptr, baton = repos.make_parse_fns3(dsp)
     repos.parse_dumpstream3(stream, ptr, baton, False, is_cancelled)

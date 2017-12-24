@@ -22,12 +22,7 @@ import unittest, setup_path
 
 from svn import core, repos, fs, delta, ra
 from sys import version_info # For Python version check
-if version_info[0] >= 3:
-  # Python >=3.0
-  from io import StringIO
-else:
-  # Python <3.0
-  from StringIO import StringIO
+from io import BytesIO
 
 import utils
 
@@ -64,10 +59,10 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assertEqual(properties["svn:mime-type"], "text/plain")
 
     # Test getting the contents of a file
-    filestream = StringIO()
+    filestream = BytesIO()
     rev, properties = ra.get_file(self.ra_ctx, "trunk/README2.txt",
                                   fs_revnum, filestream)
-    self.assertEqual("A test.\n", filestream.getvalue())
+    self.assertEqual("A test.\n", filestream.getvalue().decode('UTF-8'))
 
   def test_get_repos_root(self):
     root = ra.get_repos_root(self.ra_ctx)

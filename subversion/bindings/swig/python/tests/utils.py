@@ -20,13 +20,12 @@
 #
 import os.path, sys, tempfile
 from svn import core, repos
+from io import BytesIO
 try:
   # Python >=3.0
-  from io import StringIO
   from urllib.request import pathname2url
 except ImportError:
   # Python <3.0
-  from cStringIO import StringIO
   from urllib import pathname2url
 
 class Temper(object):
@@ -69,7 +68,7 @@ class Temper(object):
     dump_path = os.path.join(os.path.dirname(sys.argv[0]), repo_id)
     (handle, repo_path, repo_uri) = self.alloc_empty_repo(suffix=suffix)
     with open(dump_path, 'rb') as dump_fp:
-      repos.svn_repos_load_fs2(handle, dump_fp, StringIO(),
+      repos.svn_repos_load_fs2(handle, dump_fp, BytesIO(),
                                repos.load_uuid_default, None, False, False, None)
     return (handle, repo_path, repo_uri)
 

@@ -19,12 +19,7 @@
 #
 #
 from sys import version_info # For Python version check
-if version_info[0] >= 3:
-  # Python >=3.0
-  from io import StringIO
-else:
-  # Python <3.0
-  from cStringIO import StringIO
+from io import BytesIO
 import unittest, os, tempfile, setup_path, binascii
 import svn.diff
 from svn import core, repos, wc, client
@@ -229,7 +224,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     # exact contents even on Windows, and therefore the MD5 checksum.
     readme_path = '%s/trunk/README.txt' % self.path
     fp = open(readme_path, 'wb')
-    fp.write('hello\n')
+    fp.write('hello\n'.encode('UTF-8'))
     fp.close()
 
     # Setup ra_ctx.
@@ -270,7 +265,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     (commit_info,) = commit_info
 
     # Assert the commit.
-    self.assertEqual(binascii.b2a_hex(checksum),
+    self.assertEqual(binascii.b2a_hex(checksum).decode('UTF-8'),
                       'b1946ac92492d2347c6235b4d2611184')
     self.assertEqual(commit_info.revision, 13)
 
@@ -346,13 +341,13 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       original_header = modified_header = ''
       encoding = 'utf8'
       relative_to_dir = None
-      sio = StringIO()
-      svn.diff.file_output_unified3(sio, diff,
+      bio = BytesIO()
+      svn.diff.file_output_unified3(bio, diff,
                                     left, right,
                                     original_header, modified_header,
                                     encoding, relative_to_dir,
                                     options.show_c_function, pool)
-      got_diffs[path[len(self.path) + 1:]] = sio.getvalue().splitlines()
+      got_diffs[path[len(self.path) + 1:]] = bio.getvalue().decode('UTF-8').splitlines()
 
     # Diff callbacks that call props_changed and write_diff.
     contentstate = propstate = state = wc.notify_state_unknown
