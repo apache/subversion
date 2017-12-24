@@ -146,11 +146,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1817856
-   Fix segfault when no home directory is available.
-   Justification:
-     API violation: svn_config_get_user_config() may return NULL.
-   Votes:
-     +1: danielsh, jamessan, stefan2
-
