@@ -152,9 +152,11 @@ SVN_FIND_APACHE(20051115, $apache_whitelist_ver)
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
 dnl the correct command to unpack the downloaded file.
-SQLITE_MINIMUM_VER="3.7.12"
-SQLITE_RECOMMENDED_VER="3.7.15.1"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
+SQLITE_MINIMUM_VER="3.8.2"
+SQLITE_RECOMMENDED_VER="3.8.11.1"
+dnl Used to construct the SQLite download URL.
+SQLITE_RECOMMENDED_VER_REL_YEAR="2015"
+SQLITE_URL="https://www.sqlite.org/$SQLITE_RECOMMENDED_VER_REL_YEAR/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -1358,6 +1360,10 @@ if test "$RUBY" != "none"; then
 fi
 
 SVN_CHECK_SWIG
+AC_ARG_VAR(SWIG_FEATURES, [SWIG feature flags common to all bindings])
+AC_ARG_VAR(SWIG_RB_FEATURES, [SWIG feature flags specific to Ruby bindings])
+AC_ARG_VAR(SWIG_PL_FEATURES, [SWIG feature flags specific to Perl bindings])
+AC_ARG_VAR(SWIG_PY_FEATURES, [SWIG feature flags specific to Python bindings])
 
 SVN_CHECK_CTYPESGEN
 
@@ -1533,12 +1539,6 @@ AC_CHECK_HEADERS([stdbool.h stdint.h])
 if test "$CC" = "clang"; then
   SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
-
-# Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
-SWIG_CPPFLAGS="$CPPFLAGS"
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-Wdate-time ])
-AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',

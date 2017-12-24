@@ -614,6 +614,7 @@ svn_cl__try(svn_error_t *err,
               if (! quiet)
                 svn_handle_warning2(stderr, err, "svn: ");
               svn_error_clear(err);
+              va_end(ap);
               return SVN_NO_ERROR;
             }
         }

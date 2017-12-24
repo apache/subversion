@@ -16525,8 +16525,8 @@ db_process_commit_queue(svn_wc__db_t *db,
                                                         iterpool),
                                                     iterpool, iterpool));
 
-              lock_remove_txn(queue->wcroot, cqi->local_relpath, work_item,
-                              iterpool);
+              SVN_ERR(lock_remove_txn(queue->wcroot, cqi->local_relpath,
+                                      work_item, iterpool));
             }
           if (cqi->remove_changelist)
             SVN_ERR(svn_wc__db_op_set_changelist(db,

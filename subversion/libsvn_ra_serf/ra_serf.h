@@ -1431,6 +1431,18 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        svn_depth_t depth,
                        apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.list(). */
+svn_error_t *
+svn_ra_serf__list(svn_ra_session_t *ra_session,
+                  const char *path,
+                  svn_revnum_t revision,
+                  const apr_array_header_t *patterns,
+                  svn_depth_t depth,
+                  apr_uint32_t dirent_fields,
+                  svn_ra_dirent_receiver_t receiver,
+                  void *receiver_baton,
+                  apr_pool_t *scratch_pool);
+
 /* Request a mergeinfo-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.
 
@@ -1589,6 +1601,16 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
 
 svn_boolean_t
 svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session);
+
+/* Return an APR array of svn_ra_serf__dav_props_t containing the
+ * properties (names and namespaces) corresponding to the flegs set
+ * in DIRENT_FIELDS.  If SESSION does not support deadprops, only
+ * the generic "DAV:allprop" will be returned.  Allocate the result
+ * in RESULT_POOL. */
+apr_array_header_t *
+svn_ra_serf__get_dirent_props(apr_uint32_t dirent_fields,
+                              svn_ra_serf__session_t *session,
+                              apr_pool_t *result_pool);
 
 /* Default limit for in-memory size of a request body. */
 #define SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE 256 * 1024

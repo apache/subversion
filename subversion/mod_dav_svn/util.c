@@ -37,6 +37,7 @@
 #include "svn_fs.h"
 #include "svn_dav.h"
 #include "svn_base64.h"
+#include "svn_ctype.h"
 
 #include "dav_svn.h"
 #include "private/svn_fspath.h"
@@ -953,4 +954,49 @@ dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
 
    *youngest_p = repos->youngest_rev;
    return SVN_NO_ERROR;
+}
+
+const char *
+dav_svn__fuzzy_escape_author(const char *author,
+                             svn_boolean_t is_svn_client,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  apr_size_t len = strlen(author);
+  if (is_svn_client && !svn_xml_is_xml_safe(author, len))
+    {
+      /* We are talking to a Subversion client, which will (like any proper
+         xml parser) error out if we produce control characters in XML.
+
+         However Subversion clients process both the generic
+         <creator-displayname /> as the custom element for svn:author.
+
+         Let's skip outputting the invalid characters here to make the XML
+         valid, so clients can see the custom element.
+
+         Subversion Clients will then either use a slightly invalid
+         author (unlikely) or more likely use the second result, which
+         will be transferred with full escaping capabilities.
+
+         We have tests in place to assert proper behavior over the RA layer.
+       */
+      apr_size_t i;
+      svn_stringbuf_t *buf;
+
+      buf = svn_stringbuf_ncreate(author, len, scratch_pool);
+
+      for (i = 0; i < buf->len; i++)
+        {
+          char c = buf->data[i];
+
+          if (svn_ctype_iscntrl(c))
+            {
+              svn_stringbuf_remove(buf, i--, 1);
+            }
+        }
+
+      author = buf->data;
+    }
+
+  return apr_xml_quote_string(result_pool, author, 1);
 }

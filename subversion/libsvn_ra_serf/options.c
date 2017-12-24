@@ -232,6 +232,11 @@ capabilities_headers_iterator_callback(void *baton,
              advertise this capability (Subversion 1.10 and greater). */
           session->supports_svndiff1 = TRUE;
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LIST, vals))
+        {
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_LIST, capability_yes);
+        }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_SVNDIFF2, vals))
         {
           /* Same for svndiff2. */
@@ -383,6 +388,8 @@ options_response_handler(serf_request_t *request,
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
+                    capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_LIST,
                     capability_no);
 
       /* Then see which ones we can discover. */

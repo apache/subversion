@@ -56,7 +56,7 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
-SVN_VER_MINOR = 10
+SVN_VER_MINOR = 11
 
 ######################################################################
 #
@@ -1043,7 +1043,8 @@ def _post_create_repos(path, minor_version = None):
         shutil.copy(options.config_file, confpath)
 
       if options.memcached_server is not None or \
-         options.fsfs_compression is not None and \
+         options.fsfs_compression is not None or \
+         options.fsfs_dir_deltification is not None and \
          os.path.exists(confpath):
         with open(confpath, 'r') as conffile:
           newlines = []
@@ -1051,6 +1052,10 @@ def _post_create_repos(path, minor_version = None):
             if line.startswith('# compression ') and \
                options.fsfs_compression is not None:
               line = 'compression = %s\n' % options.fsfs_compression
+            if line.startswith('# enable-dir-deltification ') and \
+               options.fsfs_dir_deltification is not None:
+              line = 'enable-dir-deltification = %s\n' % \
+                options.fsfs_dir_deltification
             newlines += line
             if options.memcached_server is not None and \
                line == '[memcached-servers]\n':
@@ -1569,9 +1574,11 @@ def is_fs_log_addressing():
   return is_fs_type_fsx() or \
         (is_fs_type_fsfs() and options.server_minor_version >= 9)
 
+def fs_has_sha1():
+  return fs_has_rep_sharing()
+
 def fs_has_rep_sharing():
-  return is_fs_type_fsx() or \
-        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+  return options.server_minor_version >= 6
 
 def fs_has_pack():
   return is_fs_type_fsx() or \
@@ -1603,28 +1610,28 @@ def server_has_mergeinfo():
   return options.server_minor_version >= 5
 
 def server_has_revprop_commit():
-  return options.server_minor_version >= 5
+  return options.server_caps.has_revprop_commit
 
 def server_authz_has_aliases():
-  return options.server_minor_version >= 5
+  return options.server_caps.authz_has_aliases
 
 def server_gets_client_capabilities():
-  return options.server_minor_version >= 5
+  return options.server_caps.gets_client_capabilities
 
 def server_has_partial_replay():
-  return options.server_minor_version >= 5
+  return options.server_caps.has_partial_replay
 
 def server_enforces_UTF8_fspaths_in_verify():
-  return options.server_minor_version >= 6
+  return options.server_caps.enforces_UTF8_fspaths_in_verify
 
 def server_enforces_date_syntax():
-  return options.server_minor_version >= 5
+  return options.server_caps.enforces_date_syntax
 
 def server_has_atomic_revprop():
-  return options.server_minor_version >= 7
+  return options.server_caps.has_atomic_revprop
 
 def server_has_reverse_get_file_revs():
-  return options.server_minor_version >= 8
+  return options.server_caps.has_reverse_get_file_revs
 
 def is_plaintext_password_storage_disabled():
   try:
@@ -1739,6 +1746,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--dump-load-cross-check')
     if options.fsfs_compression:
       args.append('--fsfs-compression=' + options.fsfs_compression)
+    if options.fsfs_dir_deltification:
+      args.append('--fsfs-dir-deltification=' + options.fsfs_dir_deltification)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2153,6 +2162,8 @@ def _create_parser(usage=None):
                     help='Use memcached server at specified URL (FSFS only)')
   parser.add_option('--fsfs-compression', action='store', type='str',
                     help='Set compression type (for fsfs)')
+  parser.add_option('--fsfs-dir-deltification', action='store', type='str',
+                    help='Set directory deltification option (for fsfs)')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2165,6 +2176,19 @@ def _create_parser(usage=None):
 
   return parser
 
+class ServerCaps():
+  """A simple struct that contains the actual server capabilities that don't
+     depend on other settings like FS versions."""
+
+  def __init__(self, options):
+    self.has_revprop_commit = options.server_minor_version >= 5
+    self.authz_has_aliases = options.server_minor_version >= 5
+    self.gets_client_capabilities = options.server_minor_version >= 5
+    self.has_partial_replay = options.server_minor_version >= 5
+    self.enforces_UTF8_fspaths_in_verify = options.server_minor_version >= 6
+    self.enforces_date_syntax = options.server_minor_version >= 5
+    self.has_atomic_revprop = options.server_minor_version >= 7
+    self.has_reverse_get_file_revs = options.server_minor_version >= 8
 
 def parse_options(arglist=sys.argv[1:], usage=None):
   """Parse the arguments in arg_list, and set the global options object with
@@ -2174,6 +2198,12 @@ def parse_options(arglist=sys.argv[1:], usage=None):
 
   parser = _create_parser(usage)
   (options, args) = parser.parse_args(arglist)
+
+  # Peg the actual server capabilities.
+  # We tweak the server_minor_version later to accommodate FS restrictions,
+  # but we don't want them to interfere with expectations towards the "pure"
+  # server code.
+  options.server_caps = ServerCaps(options)
 
   # If there are no logging handlers registered yet, then install our
   # own with our custom formatter. (anything currently installed *is*
@@ -2206,26 +2236,29 @@ def parse_options(arglist=sys.argv[1:], usage=None):
     parser.error("test harness only supports server minor versions 3-%d"
                  % SVN_VER_MINOR)
 
-  # Make sure the server-minor-version matches the fsfs-version parameter.
-  if options.fsfs_version:
-    if options.fsfs_version == 6:
-      if options.server_minor_version \
-        and options.server_minor_version != 8 \
-        and options.server_minor_version != SVN_VER_MINOR:
-        parser.error("--fsfs-version=6 requires --server-minor-version=8")
-      options.server_minor_version = 8
-    if options.fsfs_version == 4:
-      if options.server_minor_version \
-        and options.server_minor_version != 7 \
-        and options.server_minor_version != SVN_VER_MINOR:
-        parser.error("--fsfs-version=4 requires --server-minor-version=7")
-      options.server_minor_version = 7
-    pass
-    # ### Add more tweaks here if and when we support pre-cooked versions
-    # ### of FSFS repositories.
   pass
 
   return (parser, args)
+
+def tweak_options_for_precooked_repos():
+  """Make sure the server-minor-version matches the fsfs-version parameter
+     for pre-cooked repositories."""
+
+  global options
+
+  # Server versions that introduced the respective FSFS formats:
+  introducing_version = { 1:1, 2:4, 3:5, 4:6, 6:8, 7:9 }
+  if options.fsfs_version:
+    if options.fsfs_version in introducing_version:
+      introduced_in = introducing_version[options.fsfs_version]
+      if options.server_minor_version \
+        and options.server_minor_version != introduced_in \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=%d requires --server-minor-version=%d" \
+                     % (options.fsfs_version, introduced_in))
+      options.server_minor_version = introduced_in
+    # ### Add more tweaks here if and when we support pre-cooked versions
+    # ### of FSFS repositories.
 
 
 def run_tests(test_list, serial_only = False):
@@ -2321,6 +2354,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   if not options:
     # Override which tests to run from the commandline
     (parser, args) = parse_options()
+    tweak_options_for_precooked_repos()
     test_selection = args
   else:
     parser = _create_parser()

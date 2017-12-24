@@ -33,7 +33,7 @@
             [--httpd-version=<version>] [--httpd-whitelist=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
-            [--fsfs-compression=<type>]
+            [--fsfs-compression=<type>] [--fsfs-dir-deltification=<true|false>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -278,6 +278,8 @@ class TestHarness:
       cmdline.append('--memcached-server=%s' % self.opts.memcached_server)
     if self.opts.fsfs_compression is not None:
       cmdline.append('--fsfs-compression=%s' % self.opts.fsfs_compression)
+    if self.opts.fsfs_dir_deltification is not None:
+      cmdline.append('--fsfs-dir-deltification=%s' % self.opts.fsfs_dir_deltification)
 
     self.py_test_cmdline = cmdline
 
@@ -424,7 +426,7 @@ class TestHarness:
           os.write(sys.stdout.fileno(), b'.' * job.test_count())
 
 
-  def _run_global_sheduler(self, testlist, has_py_tests):
+  def _run_global_scheduler(self, testlist, has_py_tests):
     # Collect all tests to execute (separate jobs for each test in python
     # test cases, one job for each c test case).  Do that concurrently to
     # mask latency.  This takes .5s instead of about 3s.
@@ -576,7 +578,7 @@ class TestHarness:
     if self.opts.global_scheduler is None:
       failed = self._run_local_schedulers(testlist)
     else:
-      failed = self._run_global_sheduler(testlist, len(py_tests) > 0)
+      failed = self._run_global_scheduler(testlist, len(py_tests) > 0)
 
     # Open the log again to for filtering.
     if self.logfile:
@@ -1028,6 +1030,8 @@ def create_parser():
                     help='Use memcached server at specified URL (FSFS only)')
   parser.add_option('--fsfs-compression', action='store', type='str',
                     help='Set compression type (for fsfs)')
+  parser.add_option('--fsfs-dir-deltification', action='store', type='str',
+                    help='Set directory deltification option (for fsfs)')
 
   parser.set_defaults(set_log_level=None)
   return parser
@@ -1036,7 +1040,9 @@ def main():
   (opts, args) = create_parser().parse_args(sys.argv[1:])
 
   if len(args) < 3:
-    print(__doc__)
+    print("{}: at least three positional arguments required; got {!r}".format(
+      os.path.basename(sys.argv[0]), args
+    ))
     sys.exit(2)
 
   if opts.log_to_stdout:

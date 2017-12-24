@@ -1131,7 +1131,7 @@ svn_fs_x__write_changes(svn_stream_t *stream,
     }
 
   if (terminate_list)
-    svn_stream_puts(stream, "\n");
+    SVN_ERR(svn_stream_puts(stream, "\n"));
 
   svn_pool_destroy(iterpool);
 

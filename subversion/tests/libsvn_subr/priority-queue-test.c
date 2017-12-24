@@ -125,7 +125,7 @@ verify_queue_order(svn_priority_queue__t *queue)
     }
 
   /* the queue should now be empty */
-  verify_empty_queue(queue);
+  SVN_ERR(verify_empty_queue(queue));
 
   return SVN_NO_ERROR;
 }
@@ -154,7 +154,7 @@ test_empty_queue(apr_pool_t *pool)
   svn_priority_queue__t *queue
     = svn_priority_queue__create(elements, compare_func);
 
-  verify_empty_queue(queue);
+  SVN_ERR(verify_empty_queue(queue));
 
   return SVN_NO_ERROR;
 }
@@ -214,7 +214,7 @@ test_update(apr_pool_t *pool)
     }
 
   /* the queue should now be empty */
-  verify_empty_queue(queue);
+  SVN_ERR(verify_empty_queue(queue));
 
   return SVN_NO_ERROR;
 }

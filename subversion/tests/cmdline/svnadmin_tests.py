@@ -129,6 +129,15 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'rep-cache.db':
           db1 = svntest.sqlite3.connect(src_path)
           db2 = svntest.sqlite3.connect(dst_path)
+          schema1 = db1.execute("pragma user_version").fetchone()[0]
+          schema2 = db2.execute("pragma user_version").fetchone()[0]
+          if schema1 != schema2:
+            raise svntest.Failure("rep-cache schema differs: '%s' vs. '%s'"
+                                  % (schema1, schema2))
+          # Can't test newer rep-cache schemas with an old built-in SQLite.
+          if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
+            continue
+
           rows1 = []
           rows2 = []
           for row in db1.execute("select * from rep_cache order by hash"):
@@ -746,7 +755,7 @@ def verify_windows_paths_in_repos(sbox):
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], output)
-  elif svntest.main.fs_has_rep_sharing():
+  elif svntest.main.fs_has_rep_sharing() and not svntest.main.is_fs_type_bdb():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDOUT', ["* Verifying repository metadata ...\n",
@@ -790,6 +799,10 @@ def fsfs_file(repo_dir, kind, rev):
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
+  if svntest.main.options.fsfs_version is not None and \
+     svntest.main.options.fsfs_version not in [4, 6]:
+    raise svntest.Skip("Unsupported prepackaged repository version")
+
   # setup a repo with a directory 'c:hi'
   # use physical addressing as this is hard to provoke with logical addressing
   sbox.build(create_wc = False,
@@ -807,7 +820,7 @@ def verify_incremental_fsfs(sbox):
   # the listing itself is valid.
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   if r2.endswith('pack'):
-    raise svntest.Skip('Test doesn\'t handle packed revisions')
+    raise svntest.Skip("Test doesn't handle packed revisions")
 
   fp = open(r2, 'wb')
   fp.write(b"""id: 0-2.0.r2/0
@@ -1654,6 +1667,10 @@ text
 def verify_non_utf8_paths(sbox):
   "svnadmin verify with non-UTF-8 paths"
 
+  if svntest.main.options.fsfs_version is not None and \
+     svntest.main.options.fsfs_version not in [4, 6]:
+    raise svntest.Skip("Unsupported prepackaged repository version")
+
   dumpfile = clean_dumpfile()
 
   # Corruption only possible in physically addressed revisions created
@@ -1676,15 +1693,12 @@ def verify_non_utf8_paths(sbox):
     if line == b"A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write(b"\xE6\n")
-    elif line == b"text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+    elif line == b"text: 1 340 32 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, PLAIN directories: fix up the representation checksum
-      fp_new.write(b"text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
-    elif line == b"text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
+      fp_new.write(b"text: 1 340 32 32 f2e93e73272cac0f18fccf16f224eb93\n")
+    elif line == b"text: 1 340 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, deltified directories: fix up the representation checksum
-      fp_new.write(b"text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
-    elif line == b"text: 1 6 31 31 90f306aa9bfd72f456072076a2bd94f7\n":
-      # log addressing: fix up the representation checksum
-      fp_new.write(b"text: 1 6 31 31 db2d4a0bad5dff0aea9a288dec02f1fb\n")
+      fp_new.write(b"text: 1 340 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
     elif line == b"cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write(b"cpath: /\xE6\n")
@@ -2520,7 +2534,7 @@ def verify_denormalized_names(sbox):
     ".*Verified revision 7."]
 
   # The BDB backend doesn't do global metadata verification.
-  if (svntest.main.fs_has_rep_sharing()):
+  if (svntest.main.fs_has_rep_sharing() and not svntest.main.is_fs_type_bdb()):
     expected_output_regex_list.insert(0, ".*Verifying repository metadata.*")
 
   if svntest.main.options.fsfs_sharding is not None:
@@ -3350,7 +3364,8 @@ def dump_no_op_change(sbox):
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
-@XFail() # This test will XPASS on FSFS if rep-caching is disabled.
+@XFail(svntest.main.is_fs_type_bdb)
+@XFail(svntest.main.is_fs_type_fsx)
 @Issue(4623)
 def dump_no_op_prop_change(sbox):
   "svnadmin dump with no-op property change"

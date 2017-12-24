@@ -540,7 +540,7 @@ create_wc_with_dir_add_vs_dir_add_merge_conflict(
       /* Now move the new directory to the colliding path. */
       new_dir_path = svn_relpath_join(trunk_path, new_dir_name, b->pool);
       SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
-      sbox_wc_move(b, move_src_path, new_dir_path);
+      SVN_ERR(sbox_wc_move(b, move_src_path, new_dir_path));
       SVN_ERR(sbox_wc_commit(b, ""));
     }
   new_dir_path = svn_relpath_join(branch_path, new_dir_name, b->pool);
