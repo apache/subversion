@@ -15,31 +15,13 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
-  * r1818651, r1818662, r1818727, r1818801, r1818803, r1818807, r1818868, r1818871, r1819162
-    Improve lz4,utf8proc configure behavior, and print the lz4 version in --version -v
-    Justification:
-      Correctly detect, note and print dependencies for builders/packagers.
-    Votes:
-     +1: stefan2, astieger
-     +1: jamessan (without r1819162)
-
- * r1819093
-   Introduce a new global option: --password-from-stdin
-   Justification:
-     Small, useful, self-contained feature written by a new contributor.
-     It would be nice if this were released in 1.10 because otherwise the
-     contributor would have to wait for a very long time to see the result
-     of their work in a release.
-   Votes:
-     +1: stsp, stefan2
-
  * r1818578, r1819037, r1819049, r1819052
    Fix svn_dirent_t.size API inconsistency
    Justification:
      Our APIs should behave as document and consistenly across all RA layers.
      API changes should go into 1.10.0.
    Votes:
-     +1: stefan2
+     +1: stefan2, jamessan
 
  * r1818577, r1819146
    Fix test suite handling of pre-cooked repositories 
@@ -63,10 +45,28 @@ Candidate changes:
      This is a user-reported crash. The underlying container type is now also
      part of the authz infrastructure and should be as robust as possible.
    Votes:
-     +1: stefan2
+     +1: stefan2, jamessan
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+  * r1818651, r1818662, r1818727, r1818801, r1818803, r1818807, r1818868, r1818871, r1819162
+    Improve lz4,utf8proc configure behavior, and print the lz4 version in --version -v
+    Justification:
+      Correctly detect, note and print dependencies for builders/packagers.
+    Votes:
+     +1: stefan2, astieger, jamessan
+
+ * r1819093
+   Introduce a new global option: --password-from-stdin
+   Justification:
+     Small, useful, self-contained feature written by a new contributor.
+     It would be nice if this were released in 1.10 because otherwise the
+     contributor would have to wait for a very long time to see the result
+     of their work in a release.
+   Votes:
+     +1: stsp, stefan2, jamessan
+
