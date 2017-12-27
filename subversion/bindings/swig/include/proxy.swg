@@ -59,9 +59,11 @@
     # assert_valid attribute, but it can not be called without an instance.
     elif type(value) != type:
       try:
-        value.assert_valid()
+        fn = value.assert_valid
       except AttributeError:
         pass
+      else:
+        fn()
 %}
 
 /* Default code for all wrapped proxy classes in Python.
