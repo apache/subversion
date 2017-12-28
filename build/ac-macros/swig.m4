@@ -124,12 +124,12 @@ AC_DEFUN(SVN_FIND_SWIG,
         CPPFLAGS="$save_cppflags"
 
         if test "$python_header_found" = "no"; then
-          AC_MSG_WARN([Python.h not found, disabling python swig bindings])
+          AC_MSG_WARN([Python.h not found; disabling python swig bindings])
         else
           SVN_PY3C()
 
           if test "$py3c_found" = "no"; then
-            AC_MSG_WARN([py3c library not found, disabling python swig bindings])
+            AC_MSG_WARN([py3c library not found; disabling python swig bindings])
           else
             AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
               ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
