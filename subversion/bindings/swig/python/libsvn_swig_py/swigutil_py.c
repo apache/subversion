@@ -353,31 +353,31 @@ static int svn_swig_ensure_valid_swig_wrapper(PyObject *input)
   PyObject *assertFn;
   PyObject *unwrapFn;
   if (NULL != (assertFn = PyObject_GetAttrString(input, assertValid)))
-  {
-    PyObject *result = PyObject_CallObject(assertFn, NULL);
-    Py_DECREF(assertFn);
-    if (result == NULL)
-      return 1;
-    Py_DECREF(result);
-  }
+    {
+      PyObject *result = PyObject_CallObject(assertFn, NULL);
+      Py_DECREF(assertFn);
+      if (result == NULL)
+        return 1;
+      Py_DECREF(result);
+    }
   else
-  {
-    /* Clear any getattr() error, it isn't needed. */
-    PyErr_Clear();
-  }
+    {
+      /* Clear any getattr() error, it isn't needed. */
+      PyErr_Clear();
+    }
   if (NULL != (unwrapFn = PyObject_GetAttrString(input, unwrap)))
-  {
-    input = PyObject_CallObject(unwrapFn, NULL);
-    Py_DECREF(unwrapFn);
-    if (input == NULL)
-      return 1;
-    Py_DECREF(input);
-  }
+    {
+      input = PyObject_CallObject(unwrapFn, NULL);
+      Py_DECREF(unwrapFn);
+      if (input == NULL)
+        return 1;
+      Py_DECREF(input);
+    }
   else
-  {
-    /* Clear any getattr() error, it isn't needed. */
-    PyErr_Clear();
-  }
+    {
+      /* Clear any getattr() error, it isn't needed. */
+      PyErr_Clear();
+    }
 
   return 0;
 }
