@@ -124,7 +124,7 @@ AC_DEFUN(SVN_FIND_SWIG,
         CPPFLAGS="$save_cppflags"
 
         if test "$python_header_found" = "no"; then
-          AC_MSG_WARN([Python.h not found, disabling swig bindings])
+          AC_MSG_WARN([Python.h not found, disabling python swig bindings])
         else
           SVN_PY3C()
 
