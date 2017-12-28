@@ -16,8 +16,6 @@ TODO
 * Make the error more meaningful if the user attempts to build python swig
   bindings, even if py3c was disabled or not found. Currently the error on
   makefile builds is "none: command not found", which isn't very descriptive.
-* While the bindings compile and correctly link with Python 3, there are still runtime
-  issues to work through. Notably several Bytes versus Strings issues.
 
 
 References:
