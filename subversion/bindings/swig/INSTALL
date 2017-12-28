@@ -98,6 +98,17 @@ Step 1:  Install a suitable version of SWIG (which is
       from the command line. SWIG should report that it is version 1.3.24
       or newer.
 
+Step 1a: Install py3c library if building Python SWIG bindings.
+
+    * Check your distribution packages first for a suitable version, and if found
+      install from there.
+
+    * To install from source, download the latest release from
+      https://github.com/encukou/py3c.
+
+    * This is a header-only library, so no configuring or compiling is
+      necessary, simply 'make install'.
+      
 Step 2:  Build and Install Subversion.
 
   See Subversion's own INSTALL file for details.
