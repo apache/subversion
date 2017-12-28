@@ -112,74 +112,88 @@ AC_DEFUN(SVN_FIND_SWIG,
 
       if test "$ac_cv_python_includes" = "none"; then
         AC_MSG_WARN([python bindings cannot be built without distutils module])
-      fi
-
-      SVN_PY3C()
-
-      if test "$py3c_found" = "no"; then
-        AC_MSG_WARN([py3c library not found, disabling python swig bindings])
       else
-        AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
-          ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
-        ])
-        SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
 
-        AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
-          ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
-        ])
-        SWIG_PY_LINK="$ac_cv_python_link"
+        python_header_found="no"
 
-        AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
-          ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
+        save_cppflags="$CPPFLAGS"
+        CPPFLAGS="$CPPFLAGS $ac_cv_python_includes"
+        AC_CHECK_HEADER(Python.h, [
+          python_header_found="yes"
         ])
-        SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
+        CPPFLAGS="$save_cppflags"
 
-        AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
-          ac_cv_python_is_py3="no"
-          $PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
-             ac_cv_python_is_py3="yes"
-        ])
-
-        if test "$ac_cv_python_is_py3" = "yes"; then
-           SWIG_PY_OPTS="-python -py3"
+        if test "$python_header_found" = "no"; then
+          AC_MSG_WARN([Python.h not found, disabling swig bindings])
         else
-           SWIG_PY_OPTS="-python"
-        fi
+          SVN_PY3C()
 
-        dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
-        dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
-        dnl thus the egrep patterns have a + in them.
-        SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
-        CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-        AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
-                       [svn_cv_pycfmt_apr_int64_t], [
-          if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-            AC_EGREP_CPP([MaTcHtHiS +\"lld\" +EnDeNd],
-                         [#include <apr.h>
-                          MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                         [svn_cv_pycfmt_apr_int64_t="L"])
+          if test "$py3c_found" = "no"; then
+            AC_MSG_WARN([py3c library not found, disabling python swig bindings])
+          else
+            AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
+              ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
+            ])
+            SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
+
+            AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
+              ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
+            ])
+            SWIG_PY_LINK="$ac_cv_python_link"
+
+            AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
+              ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
+            ])
+            SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
+
+            AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
+              ac_cv_python_is_py3="no"
+              $PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
+                 ac_cv_python_is_py3="yes"
+            ])
+
+            if test "$ac_cv_python_is_py3" = "yes"; then
+               SWIG_PY_OPTS="-python -py3"
+            else
+               SWIG_PY_OPTS="-python"
+            fi
+
+            dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
+            dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
+            dnl thus the egrep patterns have a + in them.
+            SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
+            CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
+            AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
+                           [svn_cv_pycfmt_apr_int64_t], [
+              if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+                AC_EGREP_CPP([MaTcHtHiS +\"lld\" +EnDeNd],
+                             [#include <apr.h>
+                              MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                             [svn_cv_pycfmt_apr_int64_t="L"])
+              fi
+              if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+                AC_EGREP_CPP([MaTcHtHiS +\"ld\" +EnDeNd],r
+                             [#include <apr.h>
+                              MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                             [svn_cv_pycfmt_apr_int64_t="l"])
+              fi
+              if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+                AC_EGREP_CPP([MaTcHtHiS +\"d\" +EnDeNd],
+                             [#include <apr.h>
+                              MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                             [svn_cv_pycfmt_apr_int64_t="i"])
+              fi
+            ])
+            CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
+            if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+              AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
+            fi
+            AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
+                               ["$svn_cv_pycfmt_apr_int64_t"],
+                               [Define to the Python/C API format character suitable]
+                               [ for apr_int64_t])
           fi
-          if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-            AC_EGREP_CPP([MaTcHtHiS +\"ld\" +EnDeNd],r
-                         [#include <apr.h>
-                          MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                         [svn_cv_pycfmt_apr_int64_t="l"])
-          fi
-          if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-            AC_EGREP_CPP([MaTcHtHiS +\"d\" +EnDeNd],
-                         [#include <apr.h>
-                          MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                         [svn_cv_pycfmt_apr_int64_t="i"])
-          fi
-        ])
-        CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
-        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-          AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
         fi
-        AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
-                           ["$svn_cv_pycfmt_apr_int64_t"],
-                           [Define to the Python/C API format character suitable]
-                           [ for apr_int64_t])
       fi
 
     fi
