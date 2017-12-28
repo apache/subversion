@@ -63,7 +63,7 @@ _kindmap = {core.svn_node_dir: Node.DIRECTORY,
 
 def _get_history(path, authz, fs_ptr, start, end, limit=None):
     history = []
-    if hasattr(repos, 'svn_repos_history2'):
+    if getattr(repos, 'svn_repos_history2', None) is not None:
         # For Subversion >= 1.1
         def authz_cb(root, path, pool):
             if limit and len(history) >= limit:

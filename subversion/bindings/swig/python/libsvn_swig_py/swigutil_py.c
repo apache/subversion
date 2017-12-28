@@ -195,14 +195,25 @@ int svn_swig_py_get_pool_arg(PyObject *args, swig_type_info *type,
   if (argnum >= 0)
     {
       PyObject *input = PyTuple_GET_ITEM(args, argnum);
-      if (input != Py_None && PyObject_HasAttrString(input, markValid))
+      if (input != Py_None)
         {
-          *pool = svn_swig_py_must_get_ptr(input, type, argnum+1);
-          if (*pool == NULL)
-            return 1;
-          *py_pool = input;
-          Py_INCREF(input);
-          return 0;
+          PyObject *fn;
+          if (NULL != (fn = PyObject_GetAttrString(input, markValid)))
+            {
+              Py_DECREF(fn);
+
+              *pool = svn_swig_py_must_get_ptr(input, type, argnum+1);
+              if (*pool == NULL)
+                return 1;
+              *py_pool = input;
+              Py_INCREF(input);
+              return 0;
+            }
+          else
+            {
+              /* Clear any getattr() error, it isn't needed. */
+              PyErr_Clear();
+            }
         }
     }
 
@@ -266,12 +277,19 @@ static int proxy_set_pool(PyObject **proxy, PyObject *pool)
     {
       if (pool == NULL)
         {
-          if (PyObject_HasAttrString(*proxy, setParentPool))
+          PyObject *setFn;
+          if (NULL != (setFn = PyObject_GetAttrString(*proxy, setParentPool)))
             {
-              result = PyObject_CallMethod(*proxy, setParentPool, emptyTuple);
+              result = PyObject_CallObject(setFn, NULL);
+              Py_DECREF(setFn);
               if (result == NULL)
                 return 1;
               Py_DECREF(result);
+            }
+          else
+            {
+              /* Clear any getattr() error, it isn't needed. */
+              PyErr_Clear();
             }
         }
       else
@@ -330,23 +348,45 @@ static PyObject *svn_swig_NewPointerObjString(void *ptr, const char *type,
   return svn_swig_py_new_pointer_obj(ptr, typeinfo, py_pool, NULL);
 }
 
+static int svn_swig_ensure_valid_swig_wrapper(PyObject *input)
+{
+  PyObject *assertFn;
+  PyObject *unwrapFn;
+  if (NULL != (assertFn = PyObject_GetAttrString(input, assertValid)))
+  {
+    PyObject *result = PyObject_CallObject(assertFn, NULL);
+    Py_DECREF(assertFn);
+    if (result == NULL)
+      return 1;
+    Py_DECREF(result);
+  }
+  else
+  {
+    /* Clear any getattr() error, it isn't needed. */
+    PyErr_Clear();
+  }
+  if (NULL != (unwrapFn = PyObject_GetAttrString(input, unwrap)))
+  {
+    input = PyObject_CallObject(unwrapFn, NULL);
+    Py_DECREF(unwrapFn);
+    if (input == NULL)
+      return 1;
+    Py_DECREF(input);
+  }
+  else
+  {
+    /* Clear any getattr() error, it isn't needed. */
+    PyErr_Clear();
+  }
+
+  return 0;
+}
+
 /** Wrapper for SWIG_ConvertPtr */
 int svn_swig_py_convert_ptr(PyObject *input, void **obj, swig_type_info *type)
 {
-  if (PyObject_HasAttrString(input, assertValid))
-    {
-      PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
-      if (result == NULL)
-        return 1;
-      Py_DECREF(result);
-    }
-  if (PyObject_HasAttrString(input, unwrap))
-    {
-      input = PyObject_CallMethod(input, unwrap, emptyTuple);
-      if (input == NULL)
-        return 1;
-      Py_DECREF(input);
-    }
+  if (svn_swig_ensure_valid_swig_wrapper(input))
+    return 1;
 
   return SWIG_ConvertPtr(input, obj, type, SWIG_POINTER_EXCEPTION | 0);
 }
@@ -361,21 +401,8 @@ static int svn_swig_ConvertPtrString(PyObject *input,
 /** Wrapper for SWIG_MustGetPtr */
 void *svn_swig_py_must_get_ptr(void *input, swig_type_info *type, int argnum)
 {
-  if (PyObject_HasAttrString(input, assertValid))
-    {
-      PyObject *result = PyObject_CallMethod(input, assertValid, emptyTuple);
-      if (result == NULL)
-        return NULL;
-      Py_DECREF(result);
-    }
-
-  if (PyObject_HasAttrString(input, unwrap))
-    {
-      input = PyObject_CallMethod(input, unwrap, emptyTuple);
-      if (input == NULL)
-        return NULL;
-      Py_DECREF((PyObject *) input);
-    }
+  if (svn_swig_ensure_valid_swig_wrapper(input))
+    return NULL;
 
   return SWIG_MustGetPtr(input, type, argnum, SWIG_POINTER_EXCEPTION | 0);
 }

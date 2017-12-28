@@ -34,7 +34,7 @@ def get_svn_merge_range_t_objects():
      garbage collector, used for detecting memory leaks."""
   return [
     o for o in gc.get_objects()
-      if hasattr(o, '__class__') and
+      if getattr(o, '__class__', None) is not None and
         o.__class__.__name__ == 'svn_merge_range_t'
   ]
 
