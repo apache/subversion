@@ -331,7 +331,8 @@ class GeneratorBase:
                                '\n'.join(lines))
 
   def errno_filter(self, codes):
-    return codes
+    # list() to force the generator under python3
+    return list(codes)
 
   class FileSectionOptionEnum(object):
     # These are accessed via getattr() later on
