@@ -47,6 +47,13 @@ Candidate changes:
    Votes:
      +1: stefan2, jamessan
 
+ * r1819444
+   autogen.sh: Correct the symbolic error name generation logic under Python 3.
+   Justification:
+     Fixes a false positive warning in autogen.sh under Python 3.  Trivial fix.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
