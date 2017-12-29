@@ -64,7 +64,7 @@
 
 #endif
 
-#include <swigutil_py3c.h>
+#include "swigutil_py3c.h"
 
 /* Py_ssize_t for old Pythons */
 /* This code is as recommended by: */
