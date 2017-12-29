@@ -32,8 +32,6 @@ typedef struct svn_string_t svn_string_t;
 */
 #ifdef SWIGPYTHON
 
-#include <py3c.h>
-
 %typemap(argout) RET_STRING {
     PyObject *s;
     if (*$1 == NULL) {

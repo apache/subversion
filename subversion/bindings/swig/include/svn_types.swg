@@ -28,10 +28,6 @@
 %include svn_string.swg
 %include svn_containers.swg
 
-#ifdef SWIGPYTHON
-#include <py3c.h>
-#endif
-
 /* -----------------------------------------------------------------------
    Generic handling for "type **" parameters.  Almost all such parameters
    are OUTPUT parameters.  Handling is as follows:

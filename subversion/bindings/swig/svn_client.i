@@ -34,11 +34,6 @@
 %import svn_delta.i
 %import svn_wc.i
 
-#ifdef SWIGPYTHON
-%{
-#include <py3c.h>
-%}
-#endif
 /* Ignore platform-specific auth functions */
 %ignore svn_client_get_windows_simple_provider;
 

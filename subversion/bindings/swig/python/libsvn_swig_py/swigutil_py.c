@@ -52,13 +52,7 @@
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
 
-/* This py3c include needs to be after the swig includes. */
 #if PY_VERSION_HEX >= 0x03000000
-/* SWIG and py3c both define a few compat defines, so need to undef
-   here to give preference to the py3c versions. */
-#undef PyLong_FromSize_t
-#undef PyLong_AsLong
-#undef PyInt_Check
 
 /* In Python 3 use the bytes format character for raw data */
 #define SVN_SWIG_BYTES_FMT "y"
@@ -70,7 +64,7 @@
 
 #endif
 
-#include <py3c.h>
+#include <swigutil_py3c.h>
 
 /* Py_ssize_t for old Pythons */
 /* This code is as recommended by: */

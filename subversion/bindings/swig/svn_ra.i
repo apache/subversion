@@ -33,12 +33,6 @@
 %import core.i
 %import svn_delta.i
 
-#ifdef SWIGPYTHON
-%{
-#include <py3c.h>
-%}
-#endif
-
 /* Bad pool convention, also these are not public interfaces, they were
    simply placed in the public header by mistake. */
 %ignore svn_ra_svn_init;

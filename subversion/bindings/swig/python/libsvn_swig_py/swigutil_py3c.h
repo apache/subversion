@@ -1,4 +1,7 @@
 /*
+ * swigutil_py3c.c: utility header for the SWIG Python binding interface with
+ * the py3c library
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -17,45 +20,29 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- *
- * svn_diff.i: SWIG interface file for svn_diff.h
  */
 
-#if defined(SWIGPYTHON)
-%module(package="libsvn") diff
-#elif defined(SWIGPERL)
-%module "SVN::_Diff"
-#elif defined(SWIGRUBY)
-%module "svn::ext::diff"
+#ifndef SVN_SWIG_SWIGUTIL_PY3C_H
+#define SVN_SWIG_SWIGUTIL_PY3C_H
+
+/* This file needs to be included after any swig includes, as it undefines
+ * certain conflicting items, where the py3c variants are preferred over those
+ * defined within SWIG.
+ */
+
+#include <Python.h>
+
+#if PY_VERSION_HEX >= 0x03000000
+/* SWIG and py3c both define a few Python 3compat defines, so undef here to give
+   preference to the py3c versions. */
+#undef PyLong_FromSize_t
+#undef PyLong_AsLong
+#undef PyInt_FromLong
+#undef PyInt_AsLong
+#undef PyInt_Check
+
 #endif
 
-%include svn_global.swg
-%import core.i
+#include <py3c.h>
 
-/* -----------------------------------------------------------------------
-   %apply-ing of typemaps defined elsewhere
-*/
-
-%apply const char *MAY_BE_NULL {
-    const char *original_header,
-    const char *modified_header,
-    const char *header_encoding,
-    const char *relative_to_dir
-};
-
-#ifdef SWIGPYTHON
-%apply svn_stream_t *WRAPPED_STREAM { svn_stream_t * };
-
-/* The WRAPPED_STREAM typemap can't cope with struct members, and there
-   isn't really a reason to change these. */
-%immutable svn_diff_hunk_t::diff_text;
-%immutable svn_diff_hunk_t::original_text;
-%immutable svn_diff_hunk_t::modified_text;
-
-/* Ditto. */
-%immutable svn_patch_t::patch_file;
 #endif
-
-/* ----------------------------------------------------------------------- */
-
-%include svn_diff_h.swg

@@ -32,12 +32,6 @@
 %include svn_global.swg
 %import core.i
 
-#ifdef SWIGPYTHON
-%{
-#include <py3c.h>
-%}
-#endif
-
 #ifdef SWIGRUBY
 %ignore svn_compat_wrap_file_rev_handler;
 #endif

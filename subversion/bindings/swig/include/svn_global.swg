@@ -54,6 +54,7 @@
 #ifdef SWIGPYTHON
 %{
 #include "swigutil_py.h"
+#include "swigutil_py3c.h"
 %}
 #endif
 #ifdef SWIGPERL

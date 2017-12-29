@@ -49,12 +49,6 @@
 %}
 #endif
 
-#ifdef SWIGPYTHON
-%{
-#include <py3c.h>
-%}
-#endif
-
 /* ### for now, let's ignore this thing. */
 %ignore svn_prop_t;
 

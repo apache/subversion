@@ -33,12 +33,6 @@
 %import core.i
 %import svn_delta.i
 
-#ifdef SWIGPYTHON
-%{
-#include <py3c.h>
-%}
-#endif
-
 /* -----------------------------------------------------------------------
    do not generate any constructors or destructors (of structures) -- all
    structures are going to come /out/ of the FS (so we don't need to

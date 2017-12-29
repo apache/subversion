@@ -34,12 +34,6 @@
 %import svn_delta.i
 %import svn_fs.i
 
-#ifdef SWIGPYTHON
-%{
-#include <py3c.h>
-%}
-#endif
-
 /* -----------------------------------------------------------------------
    %apply-ing of typemaps defined elsewhere
 */
