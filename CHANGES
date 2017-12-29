@@ -39,6 +39,8 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * diff3: Reduce processing time and memory usage (r1731659)
     * ra_serf: Adjustments for serf versions with HTTP/2 support (r1716400)
     * ra_serf: Send svndiff1 deltas during commit (r1704317, r1704613, r1791290)
+    * ra_serf: Stream svndiff deltas w/o creating temporary files (r1803143 et al)
+    * ra_serf: Don't necessarily request full MERGE reponses (r1806017 et al)
     * 'svn patch': Parse binary diffs in git-style patches (r1703925)
     * 'svnadmin info' now reports latest revision in the repository (r1697953)
     * ra_svn: Various performance-related tweaks (r1694490)
@@ -109,6 +111,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * ra_serf: Keep small svndiffs in memory during commit (r1724455)
     * ra_serf: Improve error messages related to lock operations (r1716450)
     * ra_serf: Work around a bug in serf bucket handling (r1714806)
+    * ra_serf: Fix lock token handling for file-path commits (r1815799 et al)
     * Raise a malfunction instead of segfaulting with corrupt wc.db (r1749887)
     * Fix check for unversioned obstructions blocking file externals (r1735932)
     * 'svn patch' bugfixes:
@@ -175,6 +178,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Fix insertion of very large items into the membuffer cache (r1717337, -8)
     * Fix capacity check of the membuffer cache's prefix pool (r1714356)
     * Prevent paths containing newlines from being committed (r1662585)
+    * Fix for properties: Null updates break last-changed-revision (issue #4700)
     * 'svnfsfs stats': Fix false positive checksum errors reading old revisions
       (r1785904)
     * 'svnfsfs stats': Fix support for pre-v4 FSFS repositories. (r1816966)
@@ -194,6 +198,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Transcode command-line arguments to UTF-8 (r1797190, r1797362, et al)
     * Fix segfault on x509 certificate with empty name (r1798157)
     * Fix segfault with invalid URLs in svn:externals (r1803471)
+    * Windows: Failure to write files might remain undetected (r1806014)
 - Other tool improvements and bugfixes:
     * New svn-mergeinfo-normalizer tool (r1695992 et al)
     * Allow configuring mailer.py to use SMTP SSL (r1777846)
@@ -204,6 +209,8 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * bash_completion: Add 1.10 options (r1802196)
     * fsfs-stats: Following rename to svnfsfs in r1594860, install a wrapper
       for compatibility (r1802032)
+    * Drop support for upgrading working copies created with Subversion 1.7
+      (r1807584 et al)
 
  Developer-visible changes:
   - General:
@@ -214,7 +221,9 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * get-deps.sh: download Googlemock and Googletest from GitHub (r1746303)
     * windows: Add autodetection for 'zlibstat.lib' (r1783704)
     * windows: Compile libsvn_fs_* as DLLs (r1696758, -83)
+    * windows: Allow building against OpenSSL 1.1.0 (r1814724 et al)
     * OS X: Silence compile-time deprecation warnings with SASL (r1739649)
+    * OS X: Silence ranlib warnings about disabled WIN32 code (r1809792)
     * 'make check GLOBAL_SCHEDULER=1' will run many tests in parallel (r1716399)
     * unix: New '--enable-apache-whitelist' configure script option (r1732294)
     * OS X: Support 'configure --enable-runtime-module-search' (r1677273)
@@ -236,6 +245,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * gnome-keyring: Support libsecret in preference to libgnome-keyring
       (r1798004)
     * kwallet: Support KDE 5 in preference to KDE 4 (r1798731)
+    * kwallet: Fix KDE5 support with clang 3.8 (r1802536 et al)
     * kwallet: Add --with-kwallet=INCDIR:LIBDIR build option (r1802646)
     * Rename cxxhl bindings 'make tests' to avoid confusion with 'make test'
       (r1800849)
@@ -243,6 +253,11 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * svnserveautocheck.sh: Support out-of-tree builds when running a single
       test file (r1802081)
     * Distribution artifacts now prepared with swig 3.0.10 (r1802135)
+    * SQLite: Use https:// links to download amalgamation sources (r1817043)
+    * Create reproducible tarballs (r1804618 et al)
+    * Disable static builds of the apache and auth provider modules (r1802612)
+    * utf8proc: Update to version 2.1.0 (r1809090 et al)
+    * utf8proc: Build against the system library by default (r1803210 et al)
   - API changes:
     * New svn_client_conflict_* API functions for the new conflict resolver.
     * New svn_repos_fs_get_mergeinfo2() with streamy access (r1780810 et al)
@@ -279,6 +294,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * JavaHL: Make StringArray nullable (r1785429)
     * JavaHL: Add missing exception checks (r1801108)
     * Ruby: Fix handling of NULL MD5 digests (r1811786)
+    * Ruby: Detect versions up to 2.4 (r1806570)
 
 
 Version 1.9.7
