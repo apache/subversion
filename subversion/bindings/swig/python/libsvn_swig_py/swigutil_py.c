@@ -164,15 +164,20 @@ FILE *svn_swig_py_as_file(PyObject *pyfile)
   int fd = PyObject_AsFileDescriptor(pyfile);
   if (fd >= 0)
     {
-      PyObject *mode_obj = PyObject_GetAttrString(pyfile, "mode");
-      PyObject *mode_byte_obj = PyUnicode_AsUTF8String(mode_obj);
-      char *mode = PyBytes_AsString(mode_byte_obj);
+      PyObject *mode_obj;
+      PyObject *mode_byte_obj = NULL;
+      char *mode = NULL;
 
-      if (mode)
+      /* If any Python API returns NULL, then the Python exception is set and
+         this function will return NULL signifying to the caller that an error
+         occurred. */
+      if (   NULL != (mode_obj = PyObject_GetAttrString(pyfile, "mode"))
+          && NULL != (mode_byte_obj = PyUnicode_AsUTF8String(mode_obj))
+          && NULL != (mode = PyBytes_AsString(mode_byte_obj)))
         fp = fdopen(fd, mode);
 
-      Py_DECREF(mode_obj);
-      Py_DECREF(mode_byte_obj);
+      Py_XDECREF(mode_obj);
+      Py_XDECREF(mode_byte_obj);
     }
 
   return fp;
