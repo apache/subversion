@@ -40,6 +40,7 @@
 #undef PyInt_FromLong
 #undef PyInt_AsLong
 #undef PyInt_Check
+#undef PyInt_FromSize_t
 
 #endif
 
