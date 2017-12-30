@@ -59,7 +59,12 @@ class Generator:
 
     # Calculate SWIG paths
     self.swig_path = swig_path
-    self.swig_libdir = subprocess.check_output([self.swig_path, "-swiglib"]).strip()
+    if os.access(self.swig_path, os.X_OK):
+      # ### TODO: What's the reason for this os.access() check?  It was added
+      # ### in r873265 (== r33191).
+      self.swig_libdir = subprocess.check_output([self.swig_path, "-swiglib"]).strip()
+    else:
+      self.swig_libdir = None
 
   _swigVersion = None
   def version(self):
