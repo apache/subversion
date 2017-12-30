@@ -343,9 +343,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112361898, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertSequenceEqual([x for x in changes],
-                                 [('trunk/README.txt', Node.FILE, Changeset.EDIT,
-                                   'trunk/README.txt', 2)])
+        self.assertSequenceEqual(sorted([x for x in changes]),
+                                 sorted([('trunk/README.txt', Node.FILE, Changeset.EDIT,
+                                   'trunk/README.txt', 2)]))
 
     def test_changeset_dir_moves(self):
         chgset = self.repos.get_changeset(5)
@@ -368,9 +368,9 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         self.assertEqual(1112381806, chgset.date)
 
         changes = chgset.get_changes()
-        self.assertSequenceEqual([x for x in changes],
-          [('trunk/README2.txt', Node.FILE, Changeset.COPY,
-            'trunk/README.txt', 3)])
+        self.assertSequenceEqual(sorted([x for x in changes]),
+          sorted([('trunk/README2.txt', Node.FILE, Changeset.COPY,
+                   'trunk/README.txt', 3)]))
 
 
 def suite():

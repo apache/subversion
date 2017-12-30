@@ -429,7 +429,7 @@ class SubversionChangeset(Changeset):
                 changes[v][2] = Changeset.MOVE
                 moves.append(deletions[k])
         offset = 0
-        for i in moves:
+        for i in sorted(moves):
             del changes[i - offset]
             offset += 1
 
