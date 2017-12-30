@@ -54,6 +54,15 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1819556, r1819557
+   Improve external command invocation in the swig parts of the build system.
+   Both gen-make.py and 'make swig-py' are affected.
+   Justification:
+     More robust build system (e.g., error checking in the __init__.py
+     callers).
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
