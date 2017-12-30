@@ -392,6 +392,7 @@ class SubversionChangeset(Changeset):
         repos.svn_repos_replay(root, e_ptr, e_baton)
 
         idx = 0
+        # Variables to record copy/deletes for later move detection
         copies, deletions = {}, {}
         changes = []
         for path, change in list(editor.changes.items()):
@@ -409,10 +410,12 @@ class SubversionChangeset(Changeset):
             action = ''
             if change.action == repos.CHANGE_ACTION_DELETE:
                 action = Changeset.DELETE
+                # Save off the index within changes of this deletion
                 deletions[change.base_path] = idx
             elif change.added:
                 if change.base_path and change.base_rev:
                     action = Changeset.COPY
+                    # Save off the index within changes of this copy
                     copies[change.base_path] = idx
                 else:
                     action = Changeset.ADD
@@ -423,18 +426,19 @@ class SubversionChangeset(Changeset):
             changes.append([path, kind, action, base_path, change.base_rev])
             idx += 1
 
-        moves = []
+        # Detect moves by checking for copies whose source was deleted in this
+        # change set.
+        moves = set()
         for k,v in list(copies.items()):
             if k in deletions:
                 changes[v][2] = Changeset.MOVE
-                moves.append(deletions[k])
-        offset = 0
-        for i in sorted(moves):
-            del changes[i - offset]
-            offset += 1
+                # Record the index of the now redundant delete action.
+                moves.add(deletions[k])
 
-        for change in changes:
-            yield tuple(change)
+        for i, change in enumerate(changes):
+            # Do not return the 'delete' changes that were part of moves.
+            if i not in moves:
+                yield tuple(change)
 
     def _get_prop(self, name):
         return fs.revision_prop(self.fs_ptr, self.rev, name)
