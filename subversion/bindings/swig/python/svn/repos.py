@@ -24,12 +24,11 @@
 ######################################################################
 
 from libsvn.repos import *
-from svn.core import _unprefix_names, Pool, _bi_list
+from svn.core import _unprefix_names, Pool, _as_list
 _unprefix_names(locals(), 'svn_repos_')
 _unprefix_names(locals(), 'SVN_REPOS_')
-__all__ = [x for x in _bi_list(locals()) if x.lower().startswith('svn_')]
+__all__ = [x for x in _as_list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names
-del _bi_list
 
 
 # Names that are not to be exported

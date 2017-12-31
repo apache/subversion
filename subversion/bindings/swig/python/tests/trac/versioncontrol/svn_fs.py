@@ -349,7 +349,7 @@ class SubversionNode(Node):
 
     def get_properties(self):
         props = fs.node_proplist(self.root, self.scoped_path)
-        for name,value in list(props.items()):
+        for name,value in core._as_list(props.items()):
             props[name] = str(value) # Make sure the value is a proper string
         return props
 
@@ -395,7 +395,7 @@ class SubversionChangeset(Changeset):
         # Variables to record copy/deletes for later move detection
         copies, deletions = {}, {}
         changes = []
-        for path, change in list(editor.changes.items()):
+        for path, change in core._as_list(editor.changes.items()):
             if not self.authz.has_permission(path):
                 # FIXME: what about base_path?
                 continue
@@ -429,7 +429,7 @@ class SubversionChangeset(Changeset):
         # Detect moves by checking for copies whose source was deleted in this
         # change set.
         moves = set()
-        for k,v in list(copies.items()):
+        for k,v in core._as_list(copies.items()):
             if k in deletions:
                 changes[v][2] = Changeset.MOVE
                 # Record the index of the now redundant delete action.

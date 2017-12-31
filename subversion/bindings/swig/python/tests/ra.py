@@ -186,7 +186,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
         if file_baton is not None:
           editor.close_file(file_baton, None, pool)
         return dir_baton
-      delta.path_driver(editor, edit_baton, -1, list(all_paths.keys()), driver_cb)
+      delta.path_driver(editor, edit_baton, -1, core._as_list(all_paths.keys()), driver_cb)
       editor.close_edit(edit_baton)
     except:
       try:
@@ -210,7 +210,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       self.assertEqual(author, info.author)
       self.assertEqual(date, info.date)
       self.assertEqual(message, revprops['svn:log'])
-      for (path, change) in list(changed_paths.items()):
+      for (path, change) in core._as_list(changed_paths.items()):
         path = path.lstrip('/')
         self.assertTrue(path in all_paths)
         if path in to_delete:
@@ -353,7 +353,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
       called[0] = True
       self.assertEqual(log_entry.revision, rev)
       if discover_changed_paths:
-        self.assertEqual(list(log_entry.changed_paths.keys()), ['/bla3'])
+        self.assertEqual(core._as_list(log_entry.changed_paths.keys()), ['/bla3'])
         changed_path = log_entry.changed_paths['/bla3']
         self.assertTrue(changed_path.action in ['A', 'D', 'R', 'M'])
         self.assertEqual(changed_path.copyfrom_path, None)

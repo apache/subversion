@@ -24,8 +24,7 @@
 ######################################################################
 
 from libsvn.diff import *
-from svn.core import _unprefix_names, _bi_list
+from svn.core import _unprefix_names, _as_list
 _unprefix_names(locals(), 'svn_diff_')
-__all__ = [x for x in _bi_list(locals()) if x.lower().startswith('svn_')]
+__all__ = [x for x in _as_list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names
-del _bi_list

@@ -239,7 +239,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # Count and verify changes
     change_count = 0
     for log in logs:
-      for path_changed in list(log.values()):
+      for path_changed in core._as_list(log.values()):
         change_count += 1
         path_changed.assert_valid()
     self.assertEqual(logs[2]["/tags/v1.1"].action, "A")

@@ -131,7 +131,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     # When reference counting is working properly, each svn_merge_range_t in
     # the returned mergeinfo will have a ref count of 1...
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
-    for (path, rangelist) in list(mergeinfo.items()):
+    for (path, rangelist) in core._as_list(mergeinfo.items()):
       # ....and now 2 (incref during iteration of rangelist)
 
       for (i, r) in enumerate(rangelist):
