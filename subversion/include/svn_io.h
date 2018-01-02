@@ -2633,6 +2633,15 @@ svn_io_file_readline(apr_file_t *file,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
+/** Reads a string from stdin until a newline or EOF is found
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_io_stdin_readline(const char **result,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
 /** @} */
 
 #ifdef __cplusplus

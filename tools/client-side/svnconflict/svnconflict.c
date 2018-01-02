@@ -78,6 +78,7 @@ typedef struct svnconflict_cmd_baton_t
    use the short option letter as identifier.  */
 typedef enum svnconflict_longopt_t {
   opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
+  opt_auth_password_from_stdin,
   opt_auth_username,
   opt_config_dir,
   opt_config_options,
@@ -96,6 +97,9 @@ static const apr_getopt_option_t svnconflict_options[] =
                     N_("specify a password ARG (caution: on many operating\n"
                        "                             "
                        "systems, other users will be able to see this)")},
+  {"password-from-stdin",
+                    opt_auth_password_from_stdin, 0,
+                    N_("read password from stdin")},
   {"config-dir",    opt_config_dir, 1,
                     N_("read user configuration files from directory ARG")},
   {"config-option", opt_config_options, 1,
@@ -141,7 +145,8 @@ static svn_error_t * svnconflict_resolve_tree(apr_getopt_t *, void *,
 
 /* Options that apply to all commands. */
 static const int svnconflict_global_options[] =
-{ opt_auth_username, opt_auth_password, opt_config_dir, opt_config_options, 0 };
+{ opt_auth_username, opt_auth_password, opt_auth_password_from_stdin,
+  opt_config_dir, opt_config_options, 0 };
 
 static const svn_opt_subcommand_desc2_t svnconflict_cmd_table[] =
 {
@@ -363,12 +368,12 @@ svnconflict_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                         &conflict, local_abspath, ctx, pool));
 
   if (text_conflicted)
-    svn_cmdline_printf(pool, "text-conflict\n");
+    SVN_ERR(svn_cmdline_printf(pool, "text-conflict\n"));
 
   for (i = 0; i < props_conflicted->nelts; i++)
     {
       const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *); 
-      svn_cmdline_printf(pool, "prop-conflict: %s\n", propname);
+      SVN_ERR(svn_cmdline_printf(pool, "prop-conflict: %s\n", propname));
     }
 
   if (tree_conflicted)
@@ -380,14 +385,14 @@ svnconflict_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                                        &local_change,
                                                        conflict, ctx,
                                                        pool, pool));
-      svn_cmdline_printf(pool, "tree-conflict: %s %s\n",
-                         incoming_change, local_change);
+      SVN_ERR(svn_cmdline_printf(pool, "tree-conflict: %s %s\n",
+                                 incoming_change, local_change));
     }
 
   return SVN_NO_ERROR;
 }
 
-static void
+static svn_error_t *
 print_conflict_options(apr_array_header_t *options, apr_pool_t *pool)
 {
   int i;
@@ -401,8 +406,9 @@ print_conflict_options(apr_array_header_t *options, apr_pool_t *pool)
       option = APR_ARRAY_IDX(options, i, svn_client_conflict_option_t *);
       id = svn_client_conflict_option_get_id(option);
       label = svn_client_conflict_option_get_label(option, pool);
-      svn_cmdline_printf(pool, "%d: %s\n", id, label);
+      SVN_ERR(svn_cmdline_printf(pool, "%d: %s\n", id, label));
     }
+  return SVN_NO_ERROR;
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
@@ -433,7 +439,7 @@ svnconflict_options_text(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_client_conflict_text_get_resolution_options(&options,
                                                           conflict, ctx,
                                                           pool, pool));
-  print_conflict_options(options, pool);
+  SVN_ERR(print_conflict_options(options, pool));
 
   return SVN_NO_ERROR;
 }
@@ -466,7 +472,7 @@ svnconflict_options_prop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_client_conflict_prop_get_resolution_options(&options,
                                                           conflict, ctx,
                                                           pool, pool));
-  print_conflict_options(options, pool);
+  SVN_ERR(print_conflict_options(options, pool));
 
   return SVN_NO_ERROR;
 }
@@ -500,7 +506,7 @@ svnconflict_options_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options,
                                                           conflict, ctx,
                                                           pool, pool));
-  print_conflict_options(options, pool);
+  SVN_ERR(print_conflict_options(options, pool));
 
   return SVN_NO_ERROR;
 }
@@ -639,6 +645,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_auth_baton_t *ab;
   svn_config_t *cfg_config;
   apr_hash_t *cfg_hash;
+  svn_boolean_t read_pass_from_stdin = FALSE;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -703,6 +710,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_auth_password:
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
                                         opt_arg, pool));
+        break;
+      case opt_auth_password_from_stdin:
+        read_pass_from_stdin = TRUE;
         break;
       case opt_config_dir:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
@@ -844,6 +854,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     }
 
   cfg_config = svn_hash_gets(cfg_hash, SVN_CONFIG_CATEGORY_CONFIG);
+
+  /* Get password from stdin if necessary */
+  if (read_pass_from_stdin)
+    {
+      SVN_ERR(svn_io_stdin_readline(&opt_state.auth_password, pool, pool));
+    }
+
 
   /* Create a client context object. */
   command_baton.opt_state = &opt_state;

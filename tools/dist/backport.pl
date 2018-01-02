@@ -1297,7 +1297,8 @@ sub nominate_main {
   # Done!
   system "$SVN diff -- $STATUS";
   if (prompt "Commit this nomination? ") {
-    system "$SVN commit -m '* STATUS: Nominate r$revnums[0].' -- $STATUS";
+    my $header = join ', ', map "r$_", @revnums;
+    system "$SVN commit -m '* STATUS: Nominate $header.' -- $STATUS";
     exit $?;
   }
   elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {

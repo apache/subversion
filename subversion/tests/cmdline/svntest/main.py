@@ -1610,28 +1610,28 @@ def server_has_mergeinfo():
   return options.server_minor_version >= 5
 
 def server_has_revprop_commit():
-  return options.server_minor_version >= 5
+  return options.server_caps.has_revprop_commit
 
 def server_authz_has_aliases():
-  return options.server_minor_version >= 5
+  return options.server_caps.authz_has_aliases
 
 def server_gets_client_capabilities():
-  return options.server_minor_version >= 5
+  return options.server_caps.gets_client_capabilities
 
 def server_has_partial_replay():
-  return options.server_minor_version >= 5
+  return options.server_caps.has_partial_replay
 
 def server_enforces_UTF8_fspaths_in_verify():
-  return options.server_minor_version >= 6
+  return options.server_caps.enforces_UTF8_fspaths_in_verify
 
 def server_enforces_date_syntax():
-  return options.server_minor_version >= 5
+  return options.server_caps.enforces_date_syntax
 
 def server_has_atomic_revprop():
-  return options.server_minor_version >= 7
+  return options.server_caps.has_atomic_revprop
 
 def server_has_reverse_get_file_revs():
-  return options.server_minor_version >= 8
+  return options.server_caps.has_reverse_get_file_revs
 
 def is_plaintext_password_storage_disabled():
   try:
@@ -2176,6 +2176,19 @@ def _create_parser(usage=None):
 
   return parser
 
+class ServerCaps():
+  """A simple struct that contains the actual server capabilities that don't
+     depend on other settings like FS versions."""
+
+  def __init__(self, options):
+    self.has_revprop_commit = options.server_minor_version >= 5
+    self.authz_has_aliases = options.server_minor_version >= 5
+    self.gets_client_capabilities = options.server_minor_version >= 5
+    self.has_partial_replay = options.server_minor_version >= 5
+    self.enforces_UTF8_fspaths_in_verify = options.server_minor_version >= 6
+    self.enforces_date_syntax = options.server_minor_version >= 5
+    self.has_atomic_revprop = options.server_minor_version >= 7
+    self.has_reverse_get_file_revs = options.server_minor_version >= 8
 
 def parse_options(arglist=sys.argv[1:], usage=None):
   """Parse the arguments in arg_list, and set the global options object with
@@ -2185,6 +2198,12 @@ def parse_options(arglist=sys.argv[1:], usage=None):
 
   parser = _create_parser(usage)
   (options, args) = parser.parse_args(arglist)
+
+  # Peg the actual server capabilities.
+  # We tweak the server_minor_version later to accommodate FS restrictions,
+  # but we don't want them to interfere with expectations towards the "pure"
+  # server code.
+  options.server_caps = ServerCaps(options)
 
   # If there are no logging handlers registered yet, then install our
   # own with our custom formatter. (anything currently installed *is*
@@ -2217,8 +2236,16 @@ def parse_options(arglist=sys.argv[1:], usage=None):
     parser.error("test harness only supports server minor versions 3-%d"
                  % SVN_VER_MINOR)
 
-  # Make sure the server-minor-version matches the fsfs-version parameter.
-  #
+  pass
+
+  return (parser, args)
+
+def tweak_options_for_precooked_repos():
+  """Make sure the server-minor-version matches the fsfs-version parameter
+     for pre-cooked repositories."""
+
+  global options
+
   # Server versions that introduced the respective FSFS formats:
   introducing_version = { 1:1, 2:4, 3:5, 4:6, 6:8, 7:9 }
   if options.fsfs_version:
@@ -2230,12 +2257,8 @@ def parse_options(arglist=sys.argv[1:], usage=None):
         parser.error("--fsfs-version=%d requires --server-minor-version=%d" \
                      % (options.fsfs_version, introduced_in))
       options.server_minor_version = introduced_in
-    pass
     # ### Add more tweaks here if and when we support pre-cooked versions
     # ### of FSFS repositories.
-  pass
-
-  return (parser, args)
 
 
 def run_tests(test_list, serial_only = False):
@@ -2331,6 +2354,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   if not options:
     # Override which tests to run from the commandline
     (parser, args) = parse_options()
+    tweak_options_for_precooked_repos()
     test_selection = args
   else:
     parser = _create_parser()

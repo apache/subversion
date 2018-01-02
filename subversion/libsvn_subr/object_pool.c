@@ -172,9 +172,11 @@ add_object_ref(object_ref_t *object_ref,
   if (svn_atomic_inc(&object_ref->ref_count) == 0)
     svn_atomic_dec(&object_ref->object_pool->unused_count);
 
-  /* make sure the reference gets released automatically */
-  apr_pool_cleanup_register(pool, object_ref, object_ref_cleanup,
-                            apr_pool_cleanup_null);
+  /* Make sure the reference gets released automatically.
+     Since POOL might be a parent pool of OBJECT_REF->OBJECT_POOL,
+     to the reference counting update before destroing any of the
+     pool hierarchy. */
+  apr_pool_pre_cleanup_register(pool, object_ref, object_ref_cleanup);
 }
 
 /* Actual implementation of svn_object_pool__lookup.

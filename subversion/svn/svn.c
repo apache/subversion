@@ -68,6 +68,7 @@
    use the short option letter as identifier.  */
 typedef enum svn_cl__longopt_t {
   opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
+  opt_auth_password_from_stdin,
   opt_auth_username,
   opt_autoprops,
   opt_changelist,
@@ -202,6 +203,9 @@ const apr_getopt_option_t svn_cl__options[] =
                     N_("specify a password ARG (caution: on many operating\n"
                        "                             "
                        "systems, other users will be able to see this)")},
+  {"password-from-stdin",
+                    opt_auth_password_from_stdin, 0,
+                    N_("read password from stdin")},
   {"extensions",    'x', 1,
                     N_("Specify differencing options for external diff or\n"
                        "                             "
@@ -502,7 +506,8 @@ const apr_getopt_option_t svn_cl__options[] =
    command to take these arguments allows scripts to just pass them
    willy-nilly to every invocation of 'svn') . */
 const int svn_cl__global_options[] =
-{ opt_auth_username, opt_auth_password, opt_no_auth_cache, opt_non_interactive,
+{ opt_auth_username, opt_auth_password, opt_auth_password_from_stdin,
+  opt_no_auth_cache, opt_non_interactive,
   opt_force_interactive, opt_trust_server_cert,
   opt_trust_server_cert_failures,
   opt_config_dir, opt_config_options, 0
@@ -799,7 +804,34 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline}
   },
 
-  { "list", svn_cl__list, {"ls"}, N_
+  { "list", svn_cl__list, {"ls"},
+#if defined(WIN32)
+    N_
+    ("List directory entries in the repository.\n"
+     "usage: list [TARGET[@REV]...]\n"
+     "\n"
+     "  List each TARGET file and the contents of each TARGET directory as\n"
+     "  they exist in the repository.  If TARGET is a working copy path, the\n"
+     "  corresponding repository URL will be used. If specified, REV determines\n"
+     "  in which revision the target is first looked up.\n"
+     "\n"
+     "  The default TARGET is '.', meaning the repository URL of the current\n"
+     "  working directory.\n"
+     "\n"
+     "  Multiple --search patterns may be specified and the output will be\n"
+     "  reduced to those paths whose last segment - i.e. the file or directory\n"
+     "  name - contains a sub-string matching at least one of these patterns\n"
+     "  (Windows only).\n"
+     "\n"
+     "  With --verbose, the following fields will be shown for each item:\n"
+     "\n"
+     "    Revision number of the last commit\n"
+     "    Author of the last commit\n"
+     "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
+     "    Size (in bytes)\n"
+     "    Date and time of the last commit\n"),
+#else
+    N_
     ("List directory entries in the repository.\n"
      "usage: list [TARGET[@REV]...]\n"
      "\n"
@@ -822,6 +854,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"),
+#endif
     {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
      opt_include_externals, opt_search}, },
 
@@ -2067,6 +2100,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_hash_t *changelists;
   apr_hash_t *cfg_hash;
   svn_membuf_t buf;
+  svn_boolean_t read_pass_from_stdin = FALSE;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -2361,6 +2395,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_auth_password:
         SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
                                         opt_arg, pool));
+        break;
+      case opt_auth_password_from_stdin:
+        read_pass_from_stdin = TRUE;
         break;
       case opt_encoding:
         opt_state.encoding = apr_pstrdup(pool, opt_arg);
@@ -2857,6 +2894,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                   "--non-interactive"));
     }
 
+  /* --password-from-stdin can only be used with --non-interactive */
+  if (read_pass_from_stdin && !opt_state.non_interactive)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--password-from-stdin requires "
+                                "--non-interactive"));
+    }
+
   /* Disallow simultaneous use of both --diff-cmd and
      --internal-diff.  */
   if (opt_state.diff.diff_cmd && opt_state.diff.internal_diff)
@@ -3146,6 +3191,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                                    conflict_stats, pool));
+    }
+
+  /* Get password from stdin if necessary */
+  if (read_pass_from_stdin)
+    {
+      SVN_ERR(svn_io_stdin_readline(&opt_state.auth_password, pool, pool));
     }
 
   /* Set up our cancellation support. */

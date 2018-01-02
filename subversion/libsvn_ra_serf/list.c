@@ -21,26 +21,13 @@
  * ====================================================================
  */
 
-
-
-
-#include <apr_uri.h>
 #include <serf.h>
 
 #include "svn_hash.h"
-#include "svn_pools.h"
-#include "svn_ra.h"
-#include "svn_dav.h"
 #include "svn_base64.h"
 #include "svn_xml.h"
-#include "svn_config.h"
-#include "svn_path.h"
-#include "svn_props.h"
 #include "svn_time.h"
 
-#include "private/svn_dav_protocol.h"
-#include "private/svn_string_private.h"
-#include "private/svn_subr_private.h"
 #include "svn_private_config.h"
 
 #include "ra_serf.h"
@@ -152,6 +139,8 @@ item_closed(svn_ra_serf__xml_estate_t *xes,
 
       if (size)
         SVN_ERR(svn_cstring_atoi64(&dirent.size, size));
+      else
+        dirent.size = SVN_INVALID_FILESIZE;
 
       if (crev)
         SVN_ERR(svn_revnum_parse(&dirent.created_rev, crev, NULL));

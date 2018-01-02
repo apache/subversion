@@ -277,9 +277,9 @@ test_authz_parse(const svn_test_opts_t *opts,
 
   printf("[users]\n");
   if (authz->has_anon_rights)
-    print_user_rights(NULL, NULL, 0, &authz->anon_rights, pool);
+    SVN_ERR(print_user_rights(NULL, NULL, 0, &authz->anon_rights, pool));
   if (authz->has_authn_rights)
-    print_user_rights(NULL, NULL, 0, &authz->authn_rights, pool);
+    SVN_ERR(print_user_rights(NULL, NULL, 0, &authz->authn_rights, pool));
   SVN_ERR(svn_iter_apr_hash(NULL, authz->user_rights,
                             print_user_rights, NULL, pool));
   printf("\n\n");

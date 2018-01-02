@@ -1259,7 +1259,7 @@ get_and_increment_txn_key_body(void *baton,
       SVN_ERR(svn_io_check_path(txn_dir, &kind, iterpool));
       if (kind == svn_node_none)
         {
-          svn_io_dir_make(txn_dir, APR_OS_DEFAULT, iterpool);
+          SVN_ERR(svn_io_dir_make(txn_dir, APR_OS_DEFAULT, iterpool));
           break;
         }
 
