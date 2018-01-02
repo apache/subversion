@@ -44,21 +44,16 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 
-def shelve_unshelve(sbox, modifier):
-  "Round-trip: shelve and unshelve"
+def shelve_unshelve_verify(sbox):
+  """Round-trip: shelve; verify all changes are reverted;
+     unshelve; verify all changes are restored.
+  """
 
-  sbox.build()
-  was_cwd = os.getcwd()
-  os.chdir(sbox.wc_dir)
-  sbox.wc_dir = ''
-  wc_dir = ''
-
-  # Make some changes to the working copy
-  modifier(sbox)
+  wc_dir = sbox.wc_dir
 
   # Save the modified state
   _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
-                                      sbox.wc_dir)
+                                      wc_dir)
   modified_state = svntest.wc.State.from_status(output, wc_dir)
 
   # Shelve; check there are no longer any modifications
@@ -71,6 +66,23 @@ def shelve_unshelve(sbox, modifier):
   svntest.actions.run_and_verify_svn(None, [],
                                      'unshelve', 'foo')
   svntest.actions.run_and_verify_status(wc_dir, modified_state)
+
+#----------------------------------------------------------------------
+
+def shelve_unshelve(sbox, modifier):
+  """Round-trip: build 'sbox'; apply changes by calling 'modifier(sbox)';
+     shelve and unshelve; verify changes are fully reverted and restored.
+  """
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # Make some changes to the working copy
+  modifier(sbox)
+
+  shelve_unshelve_verify(sbox)
 
   os.chdir(was_cwd)
 
@@ -126,6 +138,23 @@ def shelve_deletes(sbox):
 
 #----------------------------------------------------------------------
 
+def shelve_from_inner_path(sbox):
+  "shelve from inner path"
+
+  def modifier(sbox):
+    sbox.simple_append('A/mu', 'appended mu text')
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.ospath('A'))
+  sbox.wc_dir = '..'
+
+  modifier(sbox)
+  shelve_unshelve_verify(sbox)
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -136,6 +165,7 @@ test_list = [ None,
               shelve_prop_changes,
               shelve_adds,
               shelve_deletes,
+              shelve_from_inner_path,
              ]
 
 if __name__ == '__main__':
