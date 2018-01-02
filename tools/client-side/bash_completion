@@ -128,7 +128,7 @@ function _svn_complete_target() {
 		COMPREPLY=( $(compgen -d -S '/' -X '*/.*' -- $cur ) )
 		return
 	elif [[ ( $1 == "all" && $cur == ^/* ) || ( "$colon" == ":" && $cur == //*/* ) ]]
-	then	# we already hava a protocoll and host: autocomplete for svn ls ^/bla | svn ls remote_url | svn checkout remote_url
+	then	# we already have a protocol and host: autocomplete for svn ls ^/bla | svn ls remote_url | svn checkout remote_url
 		local p
 		if [ "$colon" == ":" ] ; then
 			p="$prefix$colon"
@@ -248,6 +248,7 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
+	cmds="$cmds shelve shelves unshelve"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -445,7 +446,7 @@ _svn()
 
 	    # then we have an argument
 	    if [[ $cmd = 'merge' && ! $URL ]] ; then
-              # fist argument is the source URL for the merge
+              # first argument is the source URL for the merge
 	      URL=$opt
 	    fi
 
@@ -881,8 +882,8 @@ _svn()
                          --force"
 		;;
 	cleanup)
-		cmdOpts="--diff3-cmd $pOpts --include-externals -q --quiet\
-			--remove-ignored --remove-unversioned"
+		cmdOpts="$pOpts --include-externals -q --quiet\
+			--remove-ignored --remove-unversioned --vacuum-pristines"
 		;;
 	commit|ci)
 		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
@@ -951,7 +952,7 @@ _svn()
 		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
+		cmdOpts="$mOpts $qOpts --force --editor-cmd $pOpts \
                          --parents --allow-mixed-revisions"
 		;;
 	patch)
@@ -1004,7 +1005,7 @@ _svn()
                          $rOpts $cOpts"
 		;;
 	switch|sw)
-		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
                          --force --accept --ignore-externals --set-depth \
 		         --ignore-ancestry"
 		;;
@@ -1019,6 +1020,15 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	shelve)
+		cmdOpts="$qOpts --keep-local --delete --list -m --message -F --file --encoding --force-log --editor-cmd --dry-run --depth --targets $cOpts $pOpts"
+		;;
+	unshelve)
+		cmdOpts="$qOpts --keep-shelved --list --dry-run $pOpts"
+		;;
+	shelves)
+		cmdOpts="$pOpts"
 		;;
 	*)
 		;;
@@ -1130,16 +1140,18 @@ _svnadmin ()
 	case ${COMP_WORDS[1]} in
 	create)
 		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
-		         --fs-type --pre-1.4-compatible --pre-1.5-compatible \
-		         --pre-1.6-compatible --compatible-version"
+		         --fs-type --compatible-version"
 		;;
 	deltify)
-		cmdOpts="-r --revision -q --quiet"
+		cmdOpts="-r --revision -q --quiet -M --memory-cache-size"
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet --deltas \
 		         -M --memory-cache-size -F --file \
 		         --exclude --include --pattern"
+		;;
+        dump-revprops)
+		cmdOpts="-r --revision -q --quiet -F --file"
 		;;
 	freeze)
 		cmdOpts="-F --file"
@@ -1148,22 +1160,34 @@ _svnadmin ()
 		cmdOpts="$cmds"
 		;;
 	hotcopy)
-		cmdOpts="--clean-logs"
+		cmdOpts="--clean-logs --incremental -q --quiet"
 		;;
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
 		         --use-pre-commit-hook --use-post-commit-hook \
 		         --bypass-prop-validation -M --memory-cache-size \
-		         --no-flush-to-disk --normalize-props -F --file"
+		         --no-flush-to-disk --normalize-props -F --file \
+		         --ignore-dates -r --revision"
+		;;
+        load-revprops)
+		cmdOpts="-r --revision -q --quiet -F --file \
+		         --bypass-prop-validation --normalize-props \
+		         --force-uuid --no-flush-to-disk"
 		;;
 	lstxns)
         	cmdOpts="-r --revision"
 		;;
 	lock|unlock)
-		cmdOpts="--bypass-hooks"
+		cmdOpts="--bypass-hooks -q --quiet"
+		;;
+	pack)
+		cmdOpts="-M --memory-cache-size -q --quiet"
 		;;
 	recover)
 		cmdOpts="--wait"
+		;;
+	rmlocks)
+		cmdOpts="-q --quiet"
 		;;
 	rmtxns)
 		cmdOpts="-q --quiet"
@@ -1177,7 +1201,9 @@ _svnadmin ()
 		         --use-post-revprop-change-hook"
 		;;
 	verify)
-		cmdOpts="-r --revision -q --quiet"
+		cmdOpts="-r --revision -t --transaction -q --quiet \
+		         --check-normalization --keep-going \
+		         -M --memory-cache-size --metadata-only"
 		;;
 	*)
 		;;

@@ -2697,6 +2697,8 @@ svn_fs_fs__set_proplist(svn_fs_t *fs,
     {
       noderev->prop_rep = apr_pcalloc(pool, sizeof(*noderev->prop_rep));
       noderev->prop_rep->txn_id = *svn_fs_fs__id_txn_id(noderev->id);
+      SVN_ERR(set_uniquifier(fs, noderev->prop_rep, pool));
+      noderev->prop_rep->revision = SVN_INVALID_REVNUM;
       SVN_ERR(svn_fs_fs__put_node_revision(fs, noderev->id, noderev, FALSE,
                                            pool));
     }
@@ -3259,7 +3261,8 @@ write_final_rev(const svn_fs_id_t **new_id_p,
                              ? SVN_FS_FS__ITEM_TYPE_DIR_PROPS
                              : SVN_FS_FS__ITEM_TYPE_FILE_PROPS;
       SVN_ERR(svn_fs_fs__get_proplist(&proplist, fs, noderev, pool));
-
+      noderev->prop_rep->txn_id = *txn_id;
+      SVN_ERR(set_uniquifier(fs, noderev->prop_rep, pool));
       noderev->prop_rep->revision = rev;
 
       if (ffd->deltify_properties)
@@ -3328,13 +3331,28 @@ write_final_rev(const svn_fs_id_t **new_id_p,
         }
     }
 
-  /* don't serialize SHA1 for dirs to disk (waste of space) */
+  /* don't serialize SHA1 for dir content to disk (waste of space) */
+  /* ### Could clients record bogus last-changed-revisions (issue #4700)? */
   if (noderev->data_rep && noderev->kind == svn_node_dir)
     noderev->data_rep->has_sha1 = FALSE;
 
-  /* don't serialize SHA1 for props to disk (waste of space) */
-  if (noderev->prop_rep)
-    noderev->prop_rep->has_sha1 = FALSE;
+  /* Compatibility: while we don't need to serialize SHA1 for props (it is
+     not used), older formats can only have representation strings that either
+     have both the SHA1 value *and* the uniquifier, or don't have them at all.
+     For such formats, both values get written to the disk only if the SHA1
+     is present.
+
+     We cannot omit the uniquifier, as doing so breaks svn_fs_props_changed()
+     for properties with shared representations, see issues #4623 and #4700.
+     Therefore, we skip writing SHA1, but only for the newer formats where
+     this dependency is untied and we can write the uniquifier to the disk
+     without the SHA1.
+   */
+  if (ffd->format >= SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT &&
+      noderev->prop_rep)
+    {
+      noderev->prop_rep->has_sha1 = FALSE;
+    }
 
   /* Workaround issue #4031: is-fresh-txn-root in revision files. */
   noderev->is_fresh_txn_root = FALSE;

@@ -652,7 +652,7 @@ typedef struct svn_dirent_t
   /** node kind */
   svn_node_kind_t kind;
 
-  /** length of file text, or 0 for directories */
+  /** length of file text, otherwise SVN_INVALID_FILESIZE */
   svn_filesize_t size;
 
   /** does the node have props? */

@@ -385,14 +385,20 @@ svn_cl__list(apr_getopt_t *os,
               apr_array_header_t *pattern_group
                 = APR_ARRAY_IDX(opt_state->search_patterns, k,
                                 apr_array_header_t *);
+              const char *pattern;
 
               /* Should never fail but ... */
               if (pattern_group->nelts != 1)
                 return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                   _("'search-and' option is not supported"));
 
-              APR_ARRAY_PUSH(patterns, const char *)
-                = APR_ARRAY_IDX(pattern_group, 0, const char *);
+              pattern = APR_ARRAY_IDX(pattern_group, 0, const char *);
+#if defined(WIN32)
+              /* As we currently can't pass glob patterns via the Windows
+                 CLI, fall back to sub-string search. */
+              pattern = apr_psprintf(subpool, "*%s*", pattern);
+#endif
+              APR_ARRAY_PUSH(patterns, const char *) = pattern;
             }
         }
 

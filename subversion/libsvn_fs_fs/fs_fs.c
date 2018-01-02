@@ -1470,7 +1470,10 @@ svn_fs_fs__min_unpacked_rev(svn_revnum_t *min_unpacked,
 {
   fs_fs_data_t *ffd = fs->fsap_data;
 
-  SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+  /* Calling this for pre-v4 repos is illegal. */
+  if (ffd->format >= SVN_FS_FS__MIN_PACKED_FORMAT)
+    SVN_ERR(svn_fs_fs__update_min_unpacked_rev(fs, pool));
+
   *min_unpacked = ffd->min_unpacked_rev;
 
   return SVN_NO_ERROR;

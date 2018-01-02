@@ -5011,7 +5011,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
 
   conflict->tree_conflict_incoming_details = details;
 
-  if (details->moves)
+  if (details && details->moves)
     SVN_ERR(init_wc_move_targets(details, conflict, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
@@ -5711,15 +5711,12 @@ find_modified_rev(void *baton,
         details->children_modified = svn_tristate_true;
     }
 
-  if (details)
-    {
-      if (b->node_kind == svn_node_dir &&
-          details->children_modified == svn_tristate_unknown)
-            details->children_modified = svn_tristate_false;
+  if (b->node_kind == svn_node_dir &&
+      details->children_modified == svn_tristate_unknown)
+        details->children_modified = svn_tristate_false;
 
-      APR_ARRAY_PUSH(b->edits, struct conflict_tree_incoming_edit_details *) =
-        details;
-    }
+  APR_ARRAY_PUSH(b->edits, struct conflict_tree_incoming_edit_details *) =
+    details;
 
   svn_pool_destroy(iterpool);
 

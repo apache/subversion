@@ -147,7 +147,7 @@ load_index(const char *path,
 
       /* Get the next line from the input and stop if there is none. */
       svn_pool_clear(iterpool);
-      svn_stream_readline(input, &line, "\n", &eol, iterpool);
+      SVN_ERR(svn_stream_readline(input, &line, "\n", &eol, iterpool));
       if (eol)
         break;
 

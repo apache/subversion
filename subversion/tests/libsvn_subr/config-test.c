@@ -70,12 +70,12 @@ get_config_file_path(const char **cfg_file,
 }
 
 static const char *config_keys[] = { "foo", "a", "b", "c", "d", "e", "f", "g",
-                                     "h", "i", NULL };
+                                     "h", "i", "m", NULL };
 static const char *config_values[] = { "bar", "Aa", "100", "bar",
                                        "a %(bogus)s oyster bar",
                                        "%(bogus)s shmoo %(",
                                        "%Aa", "lyrical bard", "%(unterminated",
-                                       "Aa 100", NULL };
+                                       "Aa 100", "foo bar baz", NULL };
 
 static svn_error_t *
 test_text_retrieval(const svn_test_opts_t *opts,

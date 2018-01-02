@@ -178,6 +178,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t help;            /* print usage message */
   const char *auth_username;     /* auth username */
   const char *auth_password;     /* auth password */
+  svn_boolean_t auth_password_from_stdin; /* read password from stdin */
   const char *extensions;        /* subprocess extension args */
   apr_array_header_t *targets;   /* target list from file */
   svn_boolean_t xml;             /* output in xml, e.g., "svn log --xml" */
@@ -255,6 +256,7 @@ typedef struct svn_cl__opt_state_t
   const char *show_item;           /* print only the given item */
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
   svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
+  svn_boolean_t list;
   svn_version_t *compatible_version; /* working copy compatibility version */
 } svn_cl__opt_state_t;
 
@@ -303,6 +305,9 @@ svn_opt_subcommand_t
   svn_cl__revert,
   svn_cl__resolve,
   svn_cl__resolved,
+  svn_cl__shelve,
+  svn_cl__unshelve,
+  svn_cl__shelves,
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,

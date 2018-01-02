@@ -115,7 +115,7 @@ show_diff(svn_client_conflict_t *conflict,
        * as it appears after the merge operation).
        *
        * For conflicts recorded by the 'update' and 'switch' operations,
-       * show a diff beween 'theirs' (the new pristine version of the
+       * show a diff between 'theirs' (the new pristine version of the
        * file) and 'merged' (the version of the file as it appears with
        * local changes merged with the new pristine version).
        *
@@ -1654,8 +1654,8 @@ prompt_move_target_path(int *preferred_move_target_idx,
         {
           char buf[1024];
 
-          svn_cmdline_fprintf(stderr, iterpool, "%s\n",
-                              svn_err_best_message(err, buf, sizeof(buf)));
+          SVN_ERR(svn_cmdline_fprintf(stderr, iterpool, "%s\n",
+                                      svn_err_best_message(err, buf, sizeof(buf))));
           svn_error_clear(err);
           continue;
         }
