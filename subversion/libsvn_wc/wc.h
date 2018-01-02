@@ -159,6 +159,7 @@ extern "C" {
  *
  * == 1.8.x shipped with format 31
  * == 1.9.x shipped with format 31
+ * == 1.10.x shipped with format 31
  *
  * The bump to 32 added support for compressed pristines and pristine storage
  * within the working copy database.
