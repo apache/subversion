@@ -1636,7 +1636,7 @@ svn_wc__version_string_from_format(int wc_format)
       case SVN_WC__WC_NG_VERSION: return "1.7";
       case 29: return "1.7";
       case 31: return "1.8";
-      case 32: return "1.10";
+      case 32: return "1.11";
     }
   return _("(unreleased development version)");
 }
