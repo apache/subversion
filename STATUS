@@ -71,6 +71,14 @@ Candidate changes:
    Votes:
      +1: brane, danielsh
 
+ * r1819911
+   Document the WC format used by Subversion 1.10.x. No functional change.
+   Justification:
+     It makes sense to have the correct format documented on the release
+     branch, even if it's only in a private include file.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
