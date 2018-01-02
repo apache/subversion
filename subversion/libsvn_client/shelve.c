@@ -225,6 +225,9 @@ shelf_write_current(svn_client_shelf_t *shelf,
  *
  * @a paths, @a depth, @a changelists: The selection of local paths to diff.
  *
+ * @a paths are relative to CWD (or absolute). Paths in patch are relative
+ * to WC root (@a wc_root_abspath).
+ *
  * ### TODO: Ignore any external diff cmd as configured in config file.
  *     This might also solve the buffering problem.
  */
@@ -233,6 +236,7 @@ write_patch(const char *patch_abspath,
             const apr_array_header_t *paths,
             svn_depth_t depth,
             const apr_array_header_t *changelists,
+            const char *wc_root_abspath,
             svn_client_ctx_t *ctx,
             apr_pool_t *scratch_pool)
 {
@@ -263,6 +267,7 @@ write_patch(const char *patch_abspath,
       if (svn_path_is_url(path))
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                  _("'%s' is not a local path"), path);
+      SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
 
       SVN_ERR(svn_client_diff_peg6(
                      NULL /*options*/,
@@ -270,7 +275,7 @@ write_patch(const char *patch_abspath,
                      &peg_revision,
                      &start_revision,
                      &end_revision,
-                     NULL,
+                     wc_root_abspath,
                      depth,
                      TRUE /*notice_ancestry*/,
                      FALSE /*no_diff_added*/,
@@ -505,6 +510,7 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
                             scratch_pool, scratch_pool));
   SVN_ERR(write_patch(patch_abspath,
                       paths, depth, changelists,
+                      shelf->wc_root_abspath,
                       shelf->ctx, scratch_pool));
 
   SVN_ERR(svn_io_stat(&file_info, patch_abspath, APR_FINFO_MTIME, scratch_pool));
