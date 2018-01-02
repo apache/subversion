@@ -159,6 +159,7 @@ extern "C" {
  *
  * == 1.8.x shipped with format 31
  * == 1.9.x shipped with format 31
+ * == 1.10.x shipped with format 31
  *
  * Please document any further format changes here.
  */
