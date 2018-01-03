@@ -79,6 +79,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1819804
+   Fix 'shelve' when the current working directory is not the WC root.
+   Justification:
+     Makes shelve follow typical UI of svn commands
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
