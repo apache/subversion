@@ -83,12 +83,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1819603
-   Fix a bug in the config parser that caused it to strip leading characters
-   from value continuation lines.
-   Justification:
-     Existing config files should keep working.
-   Votes:
-     +1: brane, danielsh, jamessan
-
