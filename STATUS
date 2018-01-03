@@ -63,14 +63,6 @@ Candidate changes:
    Votes:
      +1: danielsh, jamessan
 
- * r1819911
-   Document the WC format used by Subversion 1.10.x. No functional change.
-   Justification:
-     It makes sense to have the correct format documented on the release
-     branch, even if it's only in a private include file.
-   Votes:
-     +1: brane, jamessan
-
  * r1819804
    Fix 'shelve' when the current working directory is not the WC root.
    Justification:
@@ -83,3 +75,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1819911
+   Document the WC format used by Subversion 1.10.x. No functional change.
+   Justification:
+     It makes sense to have the correct format documented on the release
+     branch, even if it's only in a private include file.
+   Votes:
+     +1: brane, jamessan, danielsh
+
