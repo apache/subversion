@@ -37,7 +37,7 @@ Candidate changes:
      The new feature was mostly unusable on the Windows CLI.  With this
      CLI-only work-around, it becomes worthwhile again.
    Votes:
-     +1: stefan2
+     +1: stefan2, jamessan
 
  * r1818584
    Fix crash when exiting 'svnserve --config-file'.
@@ -52,7 +52,7 @@ Candidate changes:
    Justification:
      Fixes a false positive warning in autogen.sh under Python 3.  Trivial fix.
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
 
  * r1819556, r1819557
    Improve external command invocation in the swig parts of the build system.
@@ -61,15 +61,7 @@ Candidate changes:
      More robust build system (e.g., error checking in the __init__.py
      callers).
    Votes:
-     +1: danielsh
-
- * r1819603
-   Fix a bug in the config parser that caused it to strip leading characters
-   from value continuation lines.
-   Justification:
-     Existing config files should keep working.
-   Votes:
-     +1: brane, danielsh
+     +1: danielsh, jamessan
 
  * r1819911
    Document the WC format used by Subversion 1.10.x. No functional change.
@@ -77,7 +69,7 @@ Candidate changes:
      It makes sense to have the correct format documented on the release
      branch, even if it's only in a private include file.
    Votes:
-     +1: brane
+     +1: brane, jamessan
 
  * r1819804
    Fix 'shelve' when the current working directory is not the WC root.
@@ -91,3 +83,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1819603
+   Fix a bug in the config parser that caused it to strip leading characters
+   from value continuation lines.
+   Justification:
+     Existing config files should keep working.
+   Votes:
+     +1: brane, danielsh, jamessan
+
