@@ -845,6 +845,7 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
+	       --password-from-stdin \
 	       --trust-server-cert-failures \
 	       --force-interactive"
 	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
