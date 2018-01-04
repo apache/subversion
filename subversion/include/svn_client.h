@@ -4260,7 +4260,7 @@ svn_client_upgrade(const char *wcroot_dir,
                    apr_pool_t *scratch_pool);
 
 /**
- * Returns the version string related to the earliest supported
+ * Returns the version related to the earliest supported
  * working copy metadata format.
  */
 const svn_version_t *
