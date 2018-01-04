@@ -47,12 +47,25 @@ Candidate changes:
    Votes:
      +1: stefan2, jamessan
 
+ * r1819804
+   Fix 'shelve' when the current working directory is not the WC root.
+   Justification:
+     Makes shelve follow typical UI of svn commands
+   Votes:
+     +1: jamessan, stefan2
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1819444
    autogen.sh: Correct the symbolic error name generation logic under Python 3.
    Justification:
      Fixes a false positive warning in autogen.sh under Python 3.  Trivial fix.
    Votes:
-     +1: danielsh, jamessan
+     +1: danielsh, jamessan, stefan2
 
  * r1819556, r1819557
    Improve external command invocation in the swig parts of the build system.
@@ -61,17 +74,5 @@ Candidate changes:
      More robust build system (e.g., error checking in the __init__.py
      callers).
    Votes:
-     +1: danielsh, jamessan
+     +1: danielsh, jamessan, stefan2
 
- * r1819804
-   Fix 'shelve' when the current working directory is not the WC root.
-   Justification:
-     Makes shelve follow typical UI of svn commands
-   Votes:
-     +1: jamessan
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
