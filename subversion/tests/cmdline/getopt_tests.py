@@ -60,7 +60,7 @@ def load_expected_output(basename):
   return exp_stdout, exp_stderr
 
 # With plaintext password storage enabled, `svn --version' emits a warning:
-warn_line_re = re.compile("WARNING: Plaintext password storage")
+warn_line_re = re.compile("^WARNING: Plaintext password storage")
 
 # This is a list of lines to delete.
 del_lines_res = [
@@ -99,6 +99,10 @@ rep_lines_res = [
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
+
+                 # In svn --version, the supported WC versions vary.
+                 (re.compile(r'^Supported working copy (WC) version.*$'),
+                  'Supported working copy (WC) versions: from X.Y to X.Y')
                 ]
 
 # This is a trigger pattern that selects the secondary set of
