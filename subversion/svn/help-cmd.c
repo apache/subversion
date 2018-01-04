@@ -167,8 +167,9 @@ svn_cl__help(apr_getopt_t *os,
                                                     : NULL,
                                           NULL,
                                           pool));
-  svn_stringbuf_appendcstr(version_footer,
-                           _("\nThe following authentication credential caches are available:\n\n"));
+  svn_stringbuf_appendcstr(
+      version_footer,
+      _("\nThe following authentication credential caches are available:\n\n"));
 
   /*### There is no API to query available providers at run time. */
   if (config_path)
