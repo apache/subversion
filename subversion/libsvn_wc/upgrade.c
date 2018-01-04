@@ -1646,8 +1646,37 @@ svn_wc__format_from_version(int *format,
                             const svn_version_t* version,
                             apr_pool_t *scratch_pool)
 {
-  /* TODO: Convert VERSION to *FORMAT */
-  *format = SVN_WC__VERSION;
+  if (!version)
+    {
+      *format = SVN_WC__VERSION;
+      return SVN_NO_ERROR;
+    }
+
+  if (version->major != SVN_VER_MAJOR || version->minor > SVN_VER_MINOR)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Can't determine working copy format "
+                               "for Subversion %d.%d.%d"),
+                             version->major,
+                             version->minor,
+                             version->patch);
+
+  switch (version->minor)
+    {
+      case 0: /* Same as 1.3.x. */
+      case 1: /* Same as 1.3.x. */
+      case 2: /* Same as 1.3.x. */
+      case 3: *format = 4; break;
+      case 4: *format = 8; break;
+      case 5: *format = 9; break;
+      case 6: *format = 10; break;
+      case 7: *format = 29; break;
+      case 8: /* Same as 1.10.x. */
+      case 9: /* Same as 1.10.x. */
+      case 10: *format = 31; break;
+      case 11: /* Same as the current version. */
+      default: *format = SVN_WC__VERSION; break;
+    }
+
   return SVN_NO_ERROR;
 }
 
