@@ -15,14 +15,6 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1818578, r1819037, r1819049, r1819052
-   Fix svn_dirent_t.size API inconsistency
-   Justification:
-     Our APIs should behave as document and consistenly across all RA layers.
-     API changes should go into 1.10.0.
-   Votes:
-     +1: stefan2, jamessan
-
  * r1818577, r1819146
    Fix test suite handling of pre-cooked repositories 
    Justification:
@@ -36,14 +28,6 @@ Candidate changes:
    Justification:
      The new feature was mostly unusable on the Windows CLI.  With this
      CLI-only work-around, it becomes worthwhile again.
-   Votes:
-     +1: stefan2, jamessan
-
- * r1818584
-   Fix crash when exiting 'svnserve --config-file'.
-   Justification:
-     This is a user-reported crash. The underlying container type is now also
-     part of the authz infrastructure and should be as robust as possible.
    Votes:
      +1: stefan2, jamessan
 
@@ -76,3 +60,18 @@ Approved changes:
    Votes:
      +1: danielsh, jamessan, stefan2
 
+ * r1818578, r1819037, r1819049, r1819052
+   Fix svn_dirent_t.size API inconsistency
+   Justification:
+     Our APIs should behave as document and consistenly across all RA layers.
+     API changes should go into 1.10.0.
+   Votes:
+     +1: stefan2, jamessan, brane
+
+ * r1818584
+   Fix crash when exiting 'svnserve --config-file'.
+   Justification:
+     This is a user-reported crash. The underlying container type is now also
+     part of the authz infrastructure and should be as robust as possible.
+   Votes:
+     +1: stefan2, jamessan, brane
