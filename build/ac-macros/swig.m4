@@ -155,7 +155,7 @@ AC_DEFUN(SVN_FIND_SWIG,
             if test "$ac_cv_python_is_py3" = "yes"; then
                SWIG_PY_OPTS="-python -py3"
             else
-               SWIG_PY_OPTS="-python"
+               SWIG_PY_OPTS="-python -classic"
             fi
 
             dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
