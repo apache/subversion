@@ -23,13 +23,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1819804
-   Fix 'shelve' when the current working directory is not the WC root.
-   Justification:
-     Makes shelve follow typical UI of svn commands
-   Votes:
-     +1: jamessan, stefan2
-
 Veto-blocked changes:
 =====================
 
@@ -66,7 +59,7 @@ Approved changes:
      The new feature was mostly unusable on the Windows CLI.  With this
      CLI-only work-around, it becomes worthwhile again.
    Votes:
-     +1: stefan2, jamessan
+     +1: stefan2, jamessan, brane
 
  * r1818584
    Fix crash when exiting 'svnserve --config-file'.
@@ -75,3 +68,10 @@ Approved changes:
      part of the authz infrastructure and should be as robust as possible.
    Votes:
      +1: stefan2, jamessan, brane
+
+ * r1819804
+   Fix 'shelve' when the current working directory is not the WC root.
+   Justification:
+     Makes shelve follow typical UI of svn commands
+   Votes:
+     +1: jamessan, stefan2, brane
