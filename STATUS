@@ -23,14 +23,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1819036, r1819043
-   Switch 'svn ls --search' on Windows to sub-string matching.
-   Justification:
-     The new feature was mostly unusable on the Windows CLI.  With this
-     CLI-only work-around, it becomes worthwhile again.
-   Votes:
-     +1: stefan2, jamessan
-
  * r1819804
    Fix 'shelve' when the current working directory is not the WC root.
    Justification:
@@ -67,6 +59,14 @@ Approved changes:
      API changes should go into 1.10.0.
    Votes:
      +1: stefan2, jamessan, brane
+
+ * r1819036, r1819043
+   Switch 'svn ls --search' on Windows to sub-string matching.
+   Justification:
+     The new feature was mostly unusable on the Windows CLI.  With this
+     CLI-only work-around, it becomes worthwhile again.
+   Votes:
+     +1: stefan2, jamessan
 
  * r1818584
    Fix crash when exiting 'svnserve --config-file'.
