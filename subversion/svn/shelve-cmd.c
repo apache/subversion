@@ -53,12 +53,13 @@ get_next_argument(const char **arg,
   return SVN_NO_ERROR;
 }
 
-/* Return a human-friendly description of the time duration MINUTES.
+/* Return a human-friendly description of DURATION.
  */
 static char *
-friendly_duration_str(int minutes,
+friendly_duration_str(apr_time_t duration,
                       apr_pool_t *result_pool)
 {
+  int minutes = (int)(duration / 1000000 / 60);
   char *s;
 
   if (minutes >= 60 * 24)
@@ -68,6 +69,22 @@ friendly_duration_str(int minutes,
   else
     s = apr_psprintf(result_pool, _("%d minutes"), minutes);
   return s;
+}
+
+/* Print some details of the changes in the patch described by INFO.
+ */
+static svn_error_t *
+show_diffstat(const svn_client_shelf_version_info_t *info,
+              apr_pool_t *scratch_pool)
+{
+#ifndef WIN32
+  int result = system(apr_psprintf(scratch_pool,
+                                   "diffstat -p0 %s 2> /dev/null",
+                                   info->patch_abspath));
+  if (result == 0)
+    SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
+#endif
+  return SVN_NO_ERROR;
 }
 
 /* A comparison function for svn_sort__hash(), comparing the mtime of two
@@ -109,6 +126,7 @@ shelves_list(const char *local_abspath,
              svn_client_ctx_t *ctx,
              apr_pool_t *scratch_pool)
 {
+  apr_time_t time_now = apr_time_now();
   apr_array_header_t *list;
   int i;
 
@@ -121,7 +139,6 @@ shelves_list(const char *local_abspath,
       const char *name = item->key;
       svn_client_shelf_t *shelf;
       svn_client_shelf_version_info_t *info;
-      int age_mins;
       char *age_str;
       apr_hash_t *paths;
 
@@ -130,8 +147,7 @@ shelves_list(const char *local_abspath,
       SVN_ERR(svn_client_shelf_version_get_info(&info,
                                                 shelf, shelf->max_version,
                                                 scratch_pool, scratch_pool));
-      age_mins = (int)((apr_time_now() - info->mtime) / 1000000 / 60);
-      age_str = friendly_duration_str(age_mins, scratch_pool);
+      age_str = friendly_duration_str(time_now - info->mtime, scratch_pool);
 
       SVN_ERR(svn_client_shelf_get_paths(&paths,
                                          shelf, shelf->max_version,
@@ -150,13 +166,7 @@ shelves_list(const char *local_abspath,
 
       if (with_diffstat)
         {
-#ifndef WIN32
-          int result = system(apr_psprintf(scratch_pool,
-                                           "diffstat -p0 %s 2> /dev/null",
-                                           info->patch_abspath));
-          if (result == 0)
-            SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
-#endif
+          SVN_ERR(show_diffstat(info, scratch_pool));
         }
       SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
     }
@@ -169,10 +179,11 @@ shelves_list(const char *local_abspath,
 static svn_error_t *
 checkpoint_log(const char *name,
                const char *local_abspath,
-               svn_boolean_t diffstat,
+               svn_boolean_t with_diffstat,
                svn_client_ctx_t *ctx,
                apr_pool_t *scratch_pool)
 {
+  apr_time_t time_now = apr_time_now();
   svn_client_shelf_t *shelf;
   int i;
 
@@ -182,28 +193,20 @@ checkpoint_log(const char *name,
   for (i = 1; i <= shelf->max_version; i++)
     {
       svn_client_shelf_version_info_t *info;
-      int age_mins;
       char *age_str;
 
       SVN_ERR(svn_client_shelf_version_get_info(&info,
                                                 shelf, i,
                                                 scratch_pool, scratch_pool));
-      age_mins = (apr_time_now() - info->mtime) / 1000000 / 60;
-      age_str = friendly_duration_str(age_mins, scratch_pool);
+      age_str = friendly_duration_str(time_now - info->mtime, scratch_pool);
 
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                  _("version %d: %s ago\n"),
                                  i, age_str));
 
-      if (diffstat)
+      if (with_diffstat)
         {
-#ifndef WIN32
-          int result = system(apr_psprintf(scratch_pool,
-                                           "diffstat %s 2> /dev/null",
-                                           info->patch_abspath));
-          if (result == 0)
-            SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
-#endif
+          SVN_ERR(show_diffstat(info, scratch_pool));
         }
     }
 
