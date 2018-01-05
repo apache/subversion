@@ -29,14 +29,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1818578, r1819037, r1819049, r1819052
-   Fix svn_dirent_t.size API inconsistency
-   Justification:
-     Our APIs should behave as document and consistenly across all RA layers.
-     API changes should go into 1.10.0.
-   Votes:
-     +1: stefan2, jamessan, brane
-
  * r1819036, r1819043
    Switch 'svn ls --search' on Windows to sub-string matching.
    Justification:
