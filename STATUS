@@ -28,10 +28,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1819804
-   Fix 'shelve' when the current working directory is not the WC root.
-   Justification:
-     Makes shelve follow typical UI of svn commands
-   Votes:
-     +1: jamessan, stefan2, brane

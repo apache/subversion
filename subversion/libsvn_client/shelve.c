@@ -128,6 +128,7 @@ svn_client_shelf_write_patch(const char *name,
       if (svn_path_is_url(path))
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                  _("'%s' is not a local path"), path);
+      SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
 
       SVN_ERR(svn_client_diff_peg6(
                      NULL /*options*/,
@@ -135,7 +136,7 @@ svn_client_shelf_write_patch(const char *name,
                      &peg_revision,
                      &start_revision,
                      &end_revision,
-                     NULL,
+                     wc_root_abspath,
                      depth,
                      TRUE /*notice_ancestry*/,
                      FALSE /*no_diff_added*/,
