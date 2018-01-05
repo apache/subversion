@@ -29,14 +29,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1819036, r1819043
-   Switch 'svn ls --search' on Windows to sub-string matching.
-   Justification:
-     The new feature was mostly unusable on the Windows CLI.  With this
-     CLI-only work-around, it becomes worthwhile again.
-   Votes:
-     +1: stefan2, jamessan, brane
-
  * r1818584
    Fix crash when exiting 'svnserve --config-file'.
    Justification:
