@@ -29,13 +29,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1819444
-   autogen.sh: Correct the symbolic error name generation logic under Python 3.
-   Justification:
-     Fixes a false positive warning in autogen.sh under Python 3.  Trivial fix.
-   Votes:
-     +1: danielsh, jamessan, stefan2
-
  * r1819556, r1819557
    Improve external command invocation in the swig parts of the build system.
    Both gen-make.py and 'make swig-py' are affected.
