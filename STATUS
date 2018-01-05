@@ -29,15 +29,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1819556, r1819557
-   Improve external command invocation in the swig parts of the build system.
-   Both gen-make.py and 'make swig-py' are affected.
-   Justification:
-     More robust build system (e.g., error checking in the __init__.py
-     callers).
-   Votes:
-     +1: danielsh, jamessan, stefan2
-
  * r1818578, r1819037, r1819049, r1819052
    Fix svn_dirent_t.size API inconsistency
    Justification:
