@@ -15,6 +15,12 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1818577, r1819146
    Fix test suite handling of pre-cooked repositories
    Justification:
@@ -23,8 +29,3 @@ Candidate changes:
    Votes:
      +1: stefan2, brane
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
