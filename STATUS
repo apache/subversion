@@ -55,18 +55,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1808955, r1808956, r1809558, r1809564
-   Transmit the run-time HTTPD version to the DAV test driver.
-   Justification:
-     Prevents spurious test failures where compile-time and run-time
-     HTTPD versions are different.
-   Branch:
-     ^/subversion/branches/1.9.x-r1808955
-   Votes:
-     +1: brane
-     +0: danielsh (this works on OS X and Linux but nevertheless I wonder
-          about its portability)
-
  * r1809090, r1809091, r1809096, r1809100, r1809103, r1809134, r1809189, r1809195, r1809200
    Upgrade to utf8proc 2.1.0.
    Justification:
@@ -146,3 +134,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1808955, r1808956, r1809558, r1809564
+   Transmit the run-time HTTPD version to the DAV test driver.
+   Justification:
+     Prevents spurious test failures where compile-time and run-time
+     HTTPD versions are different.
+   Branch:
+     ^/subversion/branches/1.9.x-r1808955
+   Votes:
+     +1: brane, stefan2
+     +0: danielsh (this works on OS X and Linux but nevertheless I wonder
+          about its portability)
+
