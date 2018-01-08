@@ -30,12 +30,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1818577, r1819146
-   Fix test suite handling of pre-cooked repositories
-   Justification:
-     We want our test suite to pass with fsfs-v4 repos as it did in 1.9.
-     As a bonus, it will also work with fsfs-v3 now.
-   Votes:
-     +1: stefan2, brane
-
