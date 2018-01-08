@@ -113,16 +113,6 @@ Candidate changes:
    Votes:
      +1: stefan2
 
- * r1820518
-   swig-py: Support raw binary file-like objects for readable svn_stream_t*
-   parameters. [D:bindings]
-   Justification:
-     Allow passing any file-like object for an svn_stream_t* parameter, as
-     implicitly permitted by the docstring of svn.core.Stream and comment of
-     '%ignore svn_stream_create;'.
-   Votes:
-     +1: danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -144,3 +134,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1820518
+   swig-py: Support raw binary file-like objects for readable svn_stream_t*
+   parameters. [D:bindings]
+   Justification:
+     Allow passing any file-like object for an svn_stream_t* parameter, as
+     implicitly permitted by the docstring of svn.core.Stream and comment of
+     '%ignore svn_stream_create;'.
+   Votes:
+     +1: danielsh, brane
