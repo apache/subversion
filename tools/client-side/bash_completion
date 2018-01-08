@@ -1024,19 +1024,36 @@ _svn()
 		cmdOpts="$qOpts $pOpts"
 		;;
 	checkpoint|savepoint|sp)
-		cmdOpts="save restore log --dry-run \
+		cmdOpts="save restore log diff --dry-run \
                          --depth --targets $cOpts \
                          -m --message -F --file --encoding --force-log --editor-cmd \
                          $qOpts $pOpts"
 		;;
+	shelf)
+		cmdOpts="diff drop list log \
+                         --diff --drop --list --log --dry-run \
+                         $qOpts $pOpts"
+		;;
+	shelf-diff)
+		cmdOpts="$pOpts"
+		;;
+	shelf-drop)
+		cmdOpts="$pOpts"
+		;;
+	shelf-list)
+		cmdOpts="$qOpts $pOpts"
+		;;
+	shelf-log)
+		cmdOpts="$qOpts $pOpts"
+		;;
 	shelve)
-		cmdOpts="--keep-local --delete --list --dry-run \
+		cmdOpts="--keep-local --dry-run \
                          --depth --targets $cOpts \
                          -m --message -F --file --encoding --force-log --editor-cmd \
                          $qOpts $pOpts"
 		;;
 	unshelve)
-		cmdOpts="--list --dry-run \
+		cmdOpts="--dry-run \
                          $qOpts $pOpts"
 		;;
 	shelves)

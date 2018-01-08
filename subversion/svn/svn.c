@@ -146,7 +146,8 @@ typedef enum svn_cl__longopt_t {
   opt_show_item,
   opt_adds_as_modification,
   opt_vacuum_pristines,
-  opt_delete,
+  opt_drop,
+  opt_log,
   opt_list
 } svn_cl__longopt_t;
 
@@ -474,7 +475,8 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("remove unreferenced pristines from .svn directory")},
 
   {"list", opt_list, 0, N_("list shelves or checkpoints")},
-  {"delete", opt_delete, 0, N_("delete a shelf")},
+  {"drop", opt_drop, 0, N_("delete a shelf")},
+  {"log", opt_log, 0, N_("show versions of a shelf")},
 
   /* Long-opt Aliases
    *
@@ -1693,7 +1695,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "usage: 1. savepoint save NAME [PATH...]\n"
      "       2. savepoint restore NAME [VERSION]\n"
      "       3. savepoint log NAME\n"
-     "       4. savepoint export NAME [VERSION]\n"
+     "       4. savepoint diff NAME [VERSION]\n"
      "\n"
      "  1. Save local changes in the given PATHs as a new version of shelf NAME.\n"
      "     A new log message can be given with -m, -F, etc.\n"
@@ -1706,7 +1708,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  3. List all versions of shelf NAME.\n"
      "\n"
-     "  4. Export the shelf NAME:VERSION (default: latest) as a patch.\n"
+     "  4. Show the changes in shelf NAME:VERSION (default: latest) as a diff.\n"
      "\n"
      "  The default PATH is the current working directory.\n"
      "\n"
@@ -1720,24 +1722,85 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     }
   },
 
-  { "shelve", svn_cl__shelve, {0}, N_
-    ("Put local changes aside, as if putting them on a shelf.\n"
-     "usage: 1. shelve [--keep-local] NAME [PATH...]\n"
-     "       2. shelve --delete NAME\n"
-     "       3. shelve --list\n"
+  { "shelf", svn_cl__shelf, {0}, N_
+    ("Examine or manage a shelf.\n"
+     "usage: 1. shelf --diff NAME [VERSION]\n"
+     "       2. shelf --drop [--dry-run] NAME\n"
+     "       3. shelf --list\n"
+     "       4. shelf --log NAME\n"
      "\n"
-     "  1. Save the local changes in the given PATHs to a shelf named NAME.\n"
-     "     Revert those changes from the WC unless '--keep-local' is given.\n"
-     "     If a log message is given with '-m' or '-F', replace the shelf's\n"
-     "     current log message (if any).\n"
-     "\n"
-     "     'svn shelve --keep-local' is like 'svn checkpoint save'.\n"
+     "  1. Show the changes in shelf NAME:VERSION (default: latest) as a diff.\n"
      "\n"
      "  2. Delete the shelf named NAME.\n"
      "\n"
      "  3. List shelves. Include the first line of any log message\n"
      "     and some details about the contents of the shelf, unless '-q' is\n"
      "     given.\n"
+     "\n"
+     "  4. List all versions of shelf NAME.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+    {opt_diff, opt_drop, opt_list, opt_log, opt_dry_run, 'q'}
+  },
+
+  { "shelf-diff", svn_cl__shelf_diff, {0}, N_
+    ("Show shelved changes as a diff.\n"
+     "usage: shelf-diff NAME [VERSION]\n"
+     "\n"
+     "  Export the shelf NAME:VERSION (default: latest) as a patch.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+  },
+
+  { "shelf-drop", svn_cl__shelf_drop, {0}, N_
+    ("Delete a shelf.\n"
+     "usage: shelf-drop NAME\n"
+     "\n"
+     "  Delete the shelf named NAME.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+  },
+
+  { "shelf-list", svn_cl__shelves, {"shelves"}, N_
+    ("List shelves.\n"
+     "usage: shelf-list\n"
+     "\n"
+     "  List shelves. Include the first line of any log message\n"
+     "  and some details about the contents of the shelf, unless '-q' is\n"
+     "  given.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+    {'q'}
+  },
+
+  { "shelf-log", svn_cl__shelf_log, {0}, N_
+    ("Show the versions of a shelf.\n"
+     "usage: shelf-log NAME\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+    {'q'}
+  },
+
+  { "shelve", svn_cl__shelve, {0}, N_
+    ("Put local changes aside, as if putting them on a shelf.\n"
+     "usage: shelve [--keep-local] NAME [PATH...]\n"
+     "\n"
+     "  Save the local changes in the given PATHs to a shelf named NAME.\n"
+     "  Revert those changes from the WC unless '--keep-local' is given.\n"
+     "  If a log message is given with '-m' or '-F', replace the shelf's\n"
+     "  current log message (if any).\n"
+     "\n"
+     "  'svn shelve --keep-local' is like 'svn checkpoint save'.\n"
      "\n"
      "  The kinds of change you can shelve are those supported by 'svn diff'\n"
      "  and 'svn patch'. The following are currently NOT supported:\n"
@@ -1751,7 +1814,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     ),
-    {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
+    {'q', opt_dry_run, opt_keep_local,
      opt_depth, opt_targets, opt_changelist,
      /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
      'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
@@ -1759,17 +1822,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "unshelve", svn_cl__unshelve, {0}, N_
     ("Bring shelved changes back into the WC.\n"
-     "usage: 1. unshelve [NAME]\n"
-     "       2. unshelve --list\n"
+     "usage: unshelve [NAME]\n"
      "\n"
-     "  1. Apply the shelf named NAME to the working copy.\n"
-     "     NAME defaults to the most recent shelf.\n"
+     "  Apply the shelf named NAME to the working copy.\n"
+     "  NAME defaults to the most recent shelf.\n"
      "\n"
-     "     Like 'svn checkpoint restore'.\n"
-     "\n"
-     "  2. List shelves. Include the first line of any log message\n"
-     "     and some details about the contents of the shelf, unless '-q' is\n"
-     "     given.\n"
+     "  Like 'svn checkpoint restore'.\n"
      "\n"
      "  Any conflict between the change being unshelved and a change\n"
      "  already in the WC is handled the same way as by 'svn patch',\n"
@@ -1778,7 +1836,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     ),
-    {opt_list, 'q', opt_dry_run} },
+    {'q', opt_dry_run} },
 
   { "shelves", svn_cl__shelves, {0}, N_
     ("List shelves.\n"
@@ -2342,6 +2400,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_list:
         opt_state.list = TRUE;
         break;
+      case opt_log:
+        opt_state.log = TRUE;
+        break;
       case opt_revprop:
         opt_state.revprop = TRUE;
         break;
@@ -2525,7 +2586,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.summarize = TRUE;
         break;
       case opt_remove:
-      case opt_delete:
+      case opt_drop:
         opt_state.remove = TRUE;
         break;
       case opt_changelist:
