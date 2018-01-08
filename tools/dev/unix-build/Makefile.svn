@@ -45,6 +45,7 @@ EXCLUSIVE_WC_LOCKS ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
+MAKE_JOBS ?= 4
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
@@ -339,7 +340,7 @@ $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 
 # compile bdb
 $(BDB_OBJDIR)/.compiled: $(BDB_OBJDIR)/.configured
-	(cd $(BDB_SRCDIR)/build_unix && env MAKEFLAGS= make)
+	(cd $(BDB_SRCDIR)/build_unix && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install bdb
@@ -398,7 +399,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 
 # compile apr
 $(APR_OBJDIR)/.compiled: $(APR_OBJDIR)/.configured
-	(cd $(APR_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(APR_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install apr
@@ -446,7 +447,7 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 # compile apr-iconv
 $(APR_ICONV_OBJDIR)/.compiled: $(APR_ICONV_OBJDIR)/.configured
 	(cd $(APR_ICONV_OBJDIR) \
-		&& env MAKEFLAGS= make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)")
+		&& env MAKEFLAGS= make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)" -j${MAKE_JOBS})
 	touch $@
 
 # install apr-iconv
@@ -528,7 +529,7 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 
 # compile gnu-iconv
 $(GNU_ICONV_OBJDIR)/.compiled: $(GNU_ICONV_OBJDIR)/.configured
-	(cd $(GNU_ICONV_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(GNU_ICONV_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install gnu-iconv
@@ -603,7 +604,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 
 # compile apr-util
 $(APR_UTIL_OBJDIR)/.compiled: $(APR_UTIL_OBJDIR)/.configured
-	(cd $(APR_UTIL_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(APR_UTIL_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install apr-util
@@ -732,7 +733,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 
 # compile httpd
 $(HTTPD_OBJDIR)/.compiled: $(HTTPD_OBJDIR)/.configured
-	(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install httpd
@@ -813,7 +814,7 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 
 # compile neon
 $(NEON_OBJDIR)/.compiled: $(NEON_OBJDIR)/.configured
-	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install neon
@@ -861,7 +862,7 @@ $(SERF_OBJDIR)/.retrieved:
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_SRCDIR) && \
-		scons DEBUG=1 \
+		scons -j${MAKE_JOBS} DEBUG=1 \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
@@ -964,7 +965,7 @@ $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 
 # compile sqlite
 $(SQLITE_OBJDIR)/.compiled: $(SQLITE_OBJDIR)/.configured
-	(cd $(SQLITE_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(SQLITE_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install sqlite
@@ -1040,7 +1041,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 
 # compile cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
-	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install cyrus-sasl
@@ -1085,7 +1086,7 @@ $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 
 # compile libmagic
 $(LIBMAGIC_OBJDIR)/.compiled: $(LIBMAGIC_OBJDIR)/.configured
-	(cd $(LIBMAGIC_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(LIBMAGIC_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install libmagic
@@ -1143,7 +1144,7 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 
 # compile ruby
 $(RUBY_OBJDIR)/.compiled: $(RUBY_OBJDIR)/.configured
-	(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install ruby
@@ -1178,7 +1179,7 @@ $(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
 
 # compile bz2
 $(BZ2_OBJDIR)/.compiled: $(BZ2_OBJDIR)/.retrieved
-	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CFLAGS="-g $(PROFILE_CFLAGS) -fPIC")
+	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CFLAGS="-g $(PROFILE_CFLAGS) -fPIC" -j${MAKE_JOBS})
 	touch $@
 
 # install bz2
@@ -1254,7 +1255,7 @@ $(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
 	(cd $(PYTHON_OBJDIR) && \
 		env MAKEFLAGS= \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
-		make)
+		make -j${MAKE_JOBS})
 	touch $@
 
 # install python
@@ -1325,7 +1326,7 @@ $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 
 # compile gettext
 $(GETTEXT_OBJDIR)/.compiled: $(GETTEXT_OBJDIR)/.configured
-	(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make)
+	(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install gettext
@@ -1366,7 +1367,7 @@ $(LZ4_OBJDIR)/.configured: $(LZ4_OBJDIR)/.retrieved
 # compile lz4
 $(LZ4_OBJDIR)/.compiled: $(LZ4_OBJDIR)/.configured
 	(cd $(LZ4_SRCDIR)/lib && \
-		env MAKEFLAGS= $(MAKE) PREFIX=$(PREFIX)/lz4)
+		env MAKEFLAGS= $(MAKE) -j${MAKE_JOBS} PREFIX=$(PREFIX)/lz4)
 	touch $@
 
 # install lz4
@@ -1535,7 +1536,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 # compile svn
 $(SVN_OBJDIR)/.compiled: $(SVN_OBJDIR)/.configured
 	cd $(svn_builddir) \
-		&& env MAKEFLAGS= make EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
+		&& env MAKEFLAGS= make -j${MAKE_JOBS} EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
 	touch $@
 
 # install svn
@@ -1557,18 +1558,18 @@ $(SVN_OBJDIR)/.pre-generated-swig-cleaned:
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-generated-swig-cleaned
 	cd $(svn_builddir) \
 		&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			env MAKEFLAGS= make swig-py
+			env MAKEFLAGS= make -j${MAKE_JOBS} swig-py
 	cd $(svn_builddir) && \
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make swig-rb
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make -j${MAKE_JOBS} swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
 			&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-				env MAKEFLAGS= make swig-pl; \
+				env MAKEFLAGS= make -j${MAKE_JOBS} swig-pl; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-			&& env MAKEFLAGS= make javahl; \
+			&& env MAKEFLAGS= make -j${MAKE_JOBS} javahl; \
 	fi
 	touch $@
 
