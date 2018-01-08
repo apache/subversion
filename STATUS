@@ -15,6 +15,12 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1820518
    swig-py: Support raw binary file-like objects for readable svn_stream_t*
    parameters. [D:bindings]
@@ -23,10 +29,4 @@ Candidate changes:
      implicitly permitted by the docstring of svn.core.Stream and comment of
      '%ignore svn_stream_create;'.
    Votes:
-     +1: danielsh
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: danielsh, brane
