@@ -488,20 +488,6 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
 {
   char *end, save;
 
-  /* Allow any number of 'r's to prefix a revision number, because
-     that way if a script pastes svn output into another svn command
-     (like "svn log -r${REV_COPIED_FROM_OUTPUT}"), it'll Just Work,
-     even when compounded.
-
-     As it happens, none of our special revision words begins with
-     "r".  If any ever do, then this code will have to get smarter.
-
-     Incidentally, this allows "r{DATE}".  We could avoid that with
-     some trivial code rearrangement, but it's not clear what would
-     be gained by doing so. */
-  while (*str == 'r')
-    str++;
-
   if (*str == '{')
     {
       svn_boolean_t matched;
@@ -526,9 +512,19 @@ static char *parse_one_rev(svn_opt_revision_t *revision, char *str,
       revision->value.date = tm;
       return end + 1;
     }
-  else if (svn_ctype_isdigit(*str))
+  else if (svn_ctype_isdigit(*str)
+           || (str[0] == 'r' && svn_ctype_isdigit(str[1])))
     {
       /* It's a number. */
+
+      /* Allow an 'r' to prefix a revision number, because
+         that way if a script pastes svn output into another svn command
+         (like "svn log -r${REV_COPIED_FROM_OUTPUT}"), it'll Just Work.
+
+         Previously we stripped any number of leading 'r's from any
+         revision spec. */
+      if (str[0] == 'r')
+        str++;
       end = str + 1;
       while (svn_ctype_isdigit(*end))
         end++;
@@ -594,7 +590,10 @@ svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
 
   if (svn_opt_parse_revision(&(range->start), &(range->end),
                              arg, pool) == -1)
-    return -1;
+    {
+      range->start.kind = svn_opt_revision_shelf;
+      range->start.value.shelf = apr_pstrdup(pool, arg);
+    }
 
   APR_ARRAY_PUSH(opt_ranges, svn_opt_revision_range_t *) = range;
   return 0;
@@ -651,6 +650,8 @@ svn_opt__revision_to_string(const svn_opt_revision_t *revision,
         return "working";
       case svn_opt_revision_head:
         return "head";
+      case svn_opt_revision_shelf:
+        return apr_pstrdup(result_pool, revision->value.shelf);
       default:
         return NULL;
     }
@@ -810,6 +811,11 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
           ret = svn_opt_parse_revision(&start_revision,
                                        &end_revision,
                                        rev_str, pool);
+          if (ret == -1)
+            {
+              start_revision.kind = svn_opt_revision_shelf;
+              end_revision.value.shelf = rev_str;  /* is allocated in POOL */
+            }
         }
 
       if (ret || end_revision.kind != svn_opt_revision_unspecified)

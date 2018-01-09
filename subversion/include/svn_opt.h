@@ -369,7 +369,10 @@ enum svn_opt_revision_kind {
   svn_opt_revision_working,
 
   /** repository youngest */
-  svn_opt_revision_head
+  svn_opt_revision_head,
+
+  /** shelf */
+  svn_opt_revision_shelf
 
   /* please update svn_opt__revision_to_string() when extending this enum */
 };
@@ -390,6 +393,10 @@ typedef union svn_opt_revision_value_t
 
   /** the date of the revision */
   apr_time_t date;
+
+  /** a shelf identifier;
+   * @since New in 1.X. */
+  const char *shelf;
 } svn_opt_revision_value_t;
 
 /** A revision, specified in one of @c svn_opt_revision_kind ways. */
@@ -660,6 +667,8 @@ svn_opt_parse_all_args(apr_array_header_t **args_p,
  * specifier with no path before it, such as "@abc".
  * @since Since 1.9.0, this no longer returns an error if @a path contains a peg
  * specifier with no path before it, such as "@abc".
+ * @since Since 1.X, if @a *rev refers to a shelf then its lifetime is
+ * restricted to that of @a pool.
  */
 svn_error_t *
 svn_opt_parse_path(svn_opt_revision_t *rev,

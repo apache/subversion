@@ -1267,6 +1267,35 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/** Set @a shelf's revprop @a prop_name to @a prop_val.
+ *
+ * (Initially only implements svn:log; others ignored.)
+ */
+svn_error_t *
+svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
+                               const char *prop_name,
+                               const svn_string_t *prop_val,
+                               apr_pool_t *scratch_pool);
+
+/** Get @a shelf's revprop @a prop_name into @a prop_val.
+ *
+ * (Initially only implements svn:log; others get NULL.)
+ */
+svn_error_t *
+svn_client__shelf_revprop_get(svn_string_t **prop_val,
+                               svn_client_shelf_t *shelf,
+                               const char *prop_name,
+                               apr_pool_t *result_pool);
+
+/** Get @a shelf's revprops into @a props.
+ *
+ * (Initially only implements svn:log.)
+ */
+svn_error_t *
+svn_client__shelf_revprop_list(apr_hash_t **props,
+                               svn_client_shelf_t *shelf,
+                               apr_pool_t *result_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -41,6 +41,7 @@
 #include "svn_opt.h"
 #include "svn_xml.h"
 #include "svn_base64.h"
+#include "svn_path.h"
 #include "cl.h"
 
 #include "private/svn_string_private.h"
@@ -60,10 +61,11 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
 
   if (revision->kind != svn_opt_revision_number
       && revision->kind != svn_opt_revision_date
-      && revision->kind != svn_opt_revision_head)
+      && revision->kind != svn_opt_revision_head
+      && revision->kind != svn_opt_revision_shelf)
     return svn_error_create
       (SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-       _("Must specify the revision as a number, a date or 'HEAD' "
+       _("Must specify the revision as a number, a date, 'HEAD' or a shelf "
          "when operating on a revision property"));
 
   /* There must be exactly one target at this point.  If it was optional and
@@ -72,9 +74,19 @@ svn_cl__revprop_prepare(const svn_opt_revision_t *revision,
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Wrong number of targets specified"));
 
+  target = APR_ARRAY_IDX(targets, 0, const char *);
+
+  if (revision->kind == svn_opt_revision_shelf)
+    {
+      if (svn_path_is_url(target))
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("A shelf needs a local path not a URL"));
+      *URL = apr_pstrdup(pool, target);
+      return SVN_NO_ERROR;
+    }
+
   /* (The docs say the target must be either a URL or implicit '.', but
      explicit WC targets are also accepted.) */
-  target = APR_ARRAY_IDX(targets, 0, const char *);
   SVN_ERR(svn_client_url_from_path2(URL, target, ctx, pool, pool));
   if (*URL == NULL)
     return svn_error_create

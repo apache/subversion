@@ -476,6 +476,18 @@ svn_client_revprop_set2(const char *propname,
     return svn_error_createf(SVN_ERR_CLIENT_PROPERTY_NAME, NULL,
                              _("Bad property name: '%s'"), propname);
 
+  if (revision->kind == svn_opt_revision_shelf)
+    {
+      svn_client_shelf_t *shelf;
+
+      SVN_ERR(svn_client_shelf_open(&shelf, revision->value.shelf,
+                                    URL, ctx, pool));
+      SVN_ERR(svn_client__shelf_revprop_set(shelf, propname, propval, pool));
+      SVN_ERR(svn_client_shelf_close(shelf, pool));
+      *set_rev = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
+
   /* Open an RA session for the URL. */
   SVN_ERR(svn_client_open_ra_session2(&ra_session, URL, NULL,
                                       ctx, pool, pool));
@@ -975,6 +987,18 @@ svn_client_revprop_get(const char *propname,
   svn_ra_session_t *ra_session;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_error_t *err;
+
+  if (revision->kind == svn_opt_revision_shelf)
+    {
+      svn_client_shelf_t *shelf;
+
+      SVN_ERR(svn_client_shelf_open(&shelf, revision->value.shelf,
+                                    URL, ctx, pool));
+      SVN_ERR(svn_client__shelf_revprop_get(propval, shelf, propname, pool));
+      SVN_ERR(svn_client_shelf_close(shelf, pool));
+      *set_rev = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
@@ -1553,6 +1577,18 @@ svn_client_revprop_list(apr_hash_t **props,
   apr_hash_t *proplist;
   apr_pool_t *subpool = svn_pool_create(pool);
   svn_error_t *err;
+
+  if (revision->kind == svn_opt_revision_shelf)
+    {
+      svn_client_shelf_t *shelf;
+
+      SVN_ERR(svn_client_shelf_open(&shelf, revision->value.shelf,
+                                    URL, ctx, pool));
+      SVN_ERR(svn_client__shelf_revprop_list(props, shelf, pool));
+      SVN_ERR(svn_client_shelf_close(shelf, pool));
+      *set_rev = SVN_INVALID_REVNUM;
+      return SVN_NO_ERROR;
+    }
 
   /* Open an RA session for the URL. Note that we don't have a local
      directory, nor a place to put temp files. */
