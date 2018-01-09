@@ -159,9 +159,13 @@ shelves_list(const char *local_abspath,
                                  apr_hash_count(paths)));
       if (with_logmsg)
         {
+          char *log_message;
+
+          SVN_ERR(svn_client_shelf_get_log_message(&log_message, shelf,
+                                                   scratch_pool));
           SVN_ERR(svn_cmdline_printf(scratch_pool,
                                      _(" %.50s\n"),
-                                     shelf->log_message));
+                                     log_message));
         }
 
       if (with_diffstat)

@@ -6731,6 +6731,7 @@ typedef struct svn_client_shelf_t
     /* Public fields (read-only for public use) */
     const char *name;
     const char *log_message;
+    apr_hash_t *revprops;
     int max_version;
 
     /* Private fields */
@@ -6905,6 +6906,17 @@ svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
                                  svn_boolean_t dry_run,
                                  apr_pool_t *scratch_pool);
+
+/** Get the log message in @a shelf into @a *log_message.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_get_log_message(char **log_message,
+                                 svn_client_shelf_t *shelf,
+                                 apr_pool_t *result_pool);
 
 /** Information about a shelf.
  *

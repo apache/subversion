@@ -122,36 +122,38 @@ get_log_abspath(char **log_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Set SHELF->log_message by reading from its file storage.
+/* Set SHELF->revprops by reading from its file storage.
  */
 static svn_error_t *
-shelf_read_log_message(svn_client_shelf_t *shelf,
-                       apr_pool_t *result_pool)
+shelf_read_revprops(svn_client_shelf_t *shelf,
+                    apr_pool_t *scratch_pool)
 {
   char *log_abspath;
   svn_error_t *err;
-  svn_stringbuf_t *log_msg_str;
+  svn_stream_t *stream;
 
-  SVN_ERR(get_log_abspath(&log_abspath, shelf, result_pool, result_pool));
+  SVN_ERR(get_log_abspath(&log_abspath, shelf, scratch_pool, scratch_pool));
 
-  err = svn_stringbuf_from_file2(&log_msg_str, log_abspath, result_pool);
+  shelf->revprops = apr_hash_make(shelf->pool);
+  err = svn_stream_open_readonly(&stream, log_abspath,
+                                 scratch_pool, scratch_pool);
   if (err && err->apr_err == APR_ENOENT)
     {
       svn_error_clear(err);
-      shelf->log_message = "";
       return SVN_NO_ERROR;
     }
   else
     SVN_ERR(err);
-  shelf->log_message = log_msg_str->data;
+  SVN_ERR(svn_hash_read2(shelf->revprops, stream, "PROPS-END", shelf->pool));
+  SVN_ERR(svn_stream_close(stream));
   return SVN_NO_ERROR;
 }
 
-/* Write SHELF->log_message to its file storage.
+/* Write SHELF's revprops to its file storage.
  */
 static svn_error_t *
-shelf_write_log_message(svn_client_shelf_t *shelf,
-                        apr_pool_t *scratch_pool)
+shelf_write_revprops(svn_client_shelf_t *shelf,
+                     apr_pool_t *scratch_pool)
 {
   char *log_abspath;
   apr_file_t *file;
@@ -164,7 +166,7 @@ shelf_write_log_message(svn_client_shelf_t *shelf,
                            APR_FPROT_OS_DEFAULT, scratch_pool));
   stream = svn_stream_from_aprfile2(file, FALSE /*disown*/, scratch_pool);
 
-  SVN_ERR(svn_stream_puts(stream, shelf->log_message));
+  SVN_ERR(svn_hash_write2(shelf->revprops, stream, "PROPS-END", scratch_pool));
   SVN_ERR(svn_stream_close(stream));
   return SVN_NO_ERROR;
 }
@@ -175,11 +177,9 @@ svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
                                const svn_string_t *prop_val,
                                apr_pool_t *scratch_pool)
 {
-  if (strcmp(prop_name, "svn:log") == 0)
-    {
-      shelf->log_message = apr_pstrdup(shelf->pool, prop_val->data);
-      SVN_ERR(shelf_write_log_message(shelf, scratch_pool));
-    }
+  svn_hash_sets(shelf->revprops, prop_name,
+                svn_string_dup(prop_val, shelf->pool));
+  SVN_ERR(shelf_write_revprops(shelf, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -189,14 +189,7 @@ svn_client__shelf_revprop_get(svn_string_t **prop_val,
                                const char *prop_name,
                                apr_pool_t *result_pool)
 {
-  if (strcmp(prop_name, "svn:log") == 0)
-    {
-      *prop_val = svn_string_create(shelf->log_message, result_pool);
-    }
-  else
-    {
-      *prop_val = NULL;
-    }
+  *prop_val = svn_hash_gets(shelf->revprops, prop_name);
   return SVN_NO_ERROR;
 }
 
@@ -205,9 +198,7 @@ svn_client__shelf_revprop_list(apr_hash_t **props,
                                svn_client_shelf_t *shelf,
                                apr_pool_t *result_pool)
 {
-  *props = apr_hash_make(result_pool);
-  svn_hash_sets(*props, "svn:log",
-                svn_string_create(shelf->log_message, result_pool));
+  *props = shelf->revprops;
   return SVN_NO_ERROR;
 }
 
@@ -351,7 +342,7 @@ svn_client_shelf_open(svn_client_shelf_t **shelf_p,
   shelf->pool = result_pool;
 
   shelf->name = apr_pstrdup(result_pool, name);
-  SVN_ERR(shelf_read_log_message(shelf, result_pool));
+  SVN_ERR(shelf_read_revprops(shelf, result_pool));
   SVN_ERR(shelf_read_current(shelf, result_pool));
 
   *shelf_p = shelf;
@@ -554,6 +545,20 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
 }
 
 svn_error_t *
+svn_client_shelf_get_log_message(char **log_message,
+                                 svn_client_shelf_t *shelf,
+                                 apr_pool_t *result_pool)
+{
+  svn_string_t *propval = svn_hash_gets(shelf->revprops, "svn:log");
+
+  if (propval)
+    *log_message = apr_pstrdup(result_pool, propval->data);
+  else
+    *log_message = "";
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
                                  svn_boolean_t dry_run,
                                  apr_pool_t *scratch_pool)
@@ -575,8 +580,10 @@ svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
     }
   if (message && !dry_run)
     {
-      shelf->log_message = apr_pstrdup(shelf->pool, message);
-      SVN_ERR(shelf_write_log_message(shelf, scratch_pool));
+      svn_string_t *propval = svn_string_create(message, shelf->pool);
+
+      SVN_ERR(svn_client__shelf_revprop_set(shelf, "svn:log", propval,
+                                            scratch_pool));
     }
 
   return SVN_NO_ERROR;
