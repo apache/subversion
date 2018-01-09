@@ -15,6 +15,13 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+ * r1820627
+   davautocheck.sh: Support a --lldb option alongside --gdb.
+   Justification:
+     Will be helpful in debugging backports.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
