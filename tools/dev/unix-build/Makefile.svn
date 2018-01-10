@@ -1048,7 +1048,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 	touch $@
 
 # compile cyrus-sasl (ignore MAKE_JOBS; multiple jobs cause random build failures)
-$(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configure
+$(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
 	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
