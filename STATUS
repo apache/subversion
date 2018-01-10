@@ -22,6 +22,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1820718
+   Fix JavaHL SSL server trust prompting to allow accepting temporarily.
+   Justification:
+     Cannot accept temporarily without this fix.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
