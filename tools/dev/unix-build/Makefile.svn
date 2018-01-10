@@ -683,6 +683,13 @@ $(HTTPD_OBJDIR)/acinclude.diff:
 	echo >>$@.tmp '     AC_CHECK_FUNCS(SSL_set_state)'
 	mv -f $@.tmp $@
 
+# fix build without APR_HAS_THREADS (broken by r1750836)
+ifneq ($(THREADING),yes)
+HTTPD_REVERT_1750836_CMD = (cd $(HTTPD_SRCDIR)/modules/proxy && svn diff -c-1750836 https://svn.apache.org/repos/asf/httpd/httpd/branches/2.2.x/modules/proxy/proxy_util.c | patch)
+else
+HTTPD_REVERT_1750836_CMD = true
+endif
+
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	$(HTTPD_OBJDIR)/chil-engine.diff $(HTTPD_OBJDIR)/ssl-set-state.diff \
@@ -711,6 +718,7 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 		< $(HTTPD_SRCDIR)/modules/ssl/${f}.orig \
 		> $(HTTPD_SRCDIR)/modules/ssl/${f};\
 	)
+	$(HTTPD_REVERT_1750836_CMD)
 	touch $@
 
 # configure httpd
