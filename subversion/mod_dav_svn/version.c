@@ -152,9 +152,6 @@ get_vsn_options(apr_pool_t *p, apr_text_header *phdr)
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_INHERITED_PROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_INLINE_PROPS);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_REVERSE_FILE_REVS);
-  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_SVNDIFF1);
-  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_SVNDIFF2);
-  apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_PUT_RESULT_CHECKSUM);
   apr_text_append(p, phdr, SVN_DAV_NS_DAV_SVN_LIST);
   /* Mergeinfo is a special case: here we merely say that the server
    * knows how to handle mergeinfo -- whether the repository does too
@@ -179,11 +176,29 @@ get_option(const dav_resource *resource,
            const apr_xml_elem *elem,
            apr_text_header *option)
 {
+  int i;
   request_rec *r = resource->info->r;
   const char *repos_root_uri =
     dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_PUBLIC,
                        SVN_IGNORED_REVNUM, "", FALSE /* add_href */,
                        resource->pool);
+  svn_version_t *master_version = dav_svn__get_master_version(r);
+
+  /* These capabilities are used during commit and when configured as
+     a WebDAV slave (SVNMasterURI is set) their availablity should
+     depend on the master version (SVNMasterVersion is set) if it is
+     older than our own version.  Also, although SVNDIFF1 is available
+     before 1.10 none of those earlier servers advertised it so for
+     consistency we don't advertise it for masters older than 1.10. */
+  struct capability_versions_t {
+    const char *capability_name;
+    svn_version_t min_version;
+  } capabilities[] = {
+    { SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS,  { 1,  8, 0, ""} },
+    { SVN_DAV_NS_DAV_SVN_SVNDIFF1,            { 1, 10, 0, ""} },
+    { SVN_DAV_NS_DAV_SVN_SVNDIFF2,            { 1, 10, 0, ""} },
+    { SVN_DAV_NS_DAV_SVN_PUT_RESULT_CHECKSUM, { 1, 10, 0, ""} },
+  };
 
   /* ### DAV:version-history-collection-set */
   if (elem->ns != APR_XML_NS_DAV_ID
@@ -208,14 +223,6 @@ get_option(const dav_resource *resource,
                                      resource->pool));
   apr_text_append(resource->pool, option,
                   "</D:activity-collection-set>");
-
-  /* If we're allowed (by configuration) to do so, advertise support
-     for ephemeral transaction properties. */
-  if (dav_svn__check_ephemeral_txnprops_support(r))
-    {
-      apr_table_addn(r->headers_out, "DAV",
-                     SVN_DAV_NS_DAV_SVN_EPHEMERAL_TXNPROPS);
-    }
 
   if (resource->info->repos->fs)
     {
@@ -277,8 +284,6 @@ get_option(const dav_resource *resource,
      DeltaV-free!  If we're configured to advise this support, do so.  */
   if (resource->info->repos->v2_protocol)
     {
-      int i;
-      svn_version_t *master_version = dav_svn__get_master_version(r);
       dav_svn__bulk_upd_conf bulk_upd_conf = dav_svn__get_bulk_updates_flag(r);
 
       /* The list of Subversion's custom POSTs and which versions of
@@ -347,6 +352,22 @@ get_option(const dav_resource *resource,
           apr_table_addn(r->headers_out, SVN_DAV_SUPPORTED_POSTS_HEADER,
                          apr_pstrdup(r->pool, posts_versions[i].post_name));
         }
+    }
+
+  /* Report commit capabilites. */
+  for (i = 0; i < sizeof(capabilities)/sizeof(capabilities[0]); ++i)
+    {
+      /* If a master version is declared filter out unsupported
+         capabilities. */
+      if (master_version
+          && (!svn_version__at_least(master_version,
+                                     capabilities[i].min_version.major,
+                                     capabilities[i].min_version.minor,
+                                     capabilities[i].min_version.patch)))
+        continue;
+
+      apr_table_addn(r->headers_out, "DAV",
+                     apr_pstrdup(r->pool, capabilities[i].capability_name));
     }
 
   return NULL;
