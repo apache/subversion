@@ -29,6 +29,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1820778
+   Make mod_dav_svn report commit capabilities based on SVNMasterVersion.
+   Justification:
+     Allows 1.10 write-through proxy to 1.9 master.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
