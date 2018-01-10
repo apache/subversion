@@ -359,10 +359,6 @@ svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
    master server version (if provided via SVNMasterVersion).  */
 svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
 
-/* For the repository referred to by this request, should ephemeral
-   txnprop support be advertised?  */
-svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
-
 
 
 /* SPECIAL URI
