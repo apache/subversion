@@ -1047,9 +1047,9 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 		--prefix=$(PREFIX)/cyrus-sasl
 	touch $@
 
-# compile cyrus-sasl
-$(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
-	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
+# compile cyrus-sasl (ignore MAKE_JOBS; multiple jobs cause random build failures)
+$(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configure
+	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install cyrus-sasl
