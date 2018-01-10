@@ -68,8 +68,11 @@ public class ExampleAuthn {
                              SSLServerCertFailures failures,
                              SSLServerCertInfo info,
                              boolean maySave) {
-          System.out.println("sslServerTrustPrompt not implemented!");
-          return SSLServerTrustResult.acceptTemporarily();
+          System.out.println("sslServerTrustPrompt");
+          System.out.println("(r)eject or (t)emporary?");
+          String s = System.console().readLine();
+          return s.equals("t") ? SSLServerTrustResult.acceptTemporarily()
+                               : SSLServerTrustResult.reject();
         }
 
         public SSLClientCertResult
