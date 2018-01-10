@@ -1150,9 +1150,9 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 		--without-gmp
 	touch $@
 
-# compile ruby
+# compile ruby (ignore MAKE_JOBS; multiple jobs cause random build failures)
 $(RUBY_OBJDIR)/.compiled: $(RUBY_OBJDIR)/.configured
-	(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
+	(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
 
 # install ruby
