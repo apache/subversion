@@ -79,7 +79,7 @@ show_diffstat(const svn_client_shelf_version_info_t *info,
 {
 #ifndef WIN32
   int result = system(apr_psprintf(scratch_pool,
-                                   "diffstat -p0 %s 2> /dev/null",
+                                   "diffstat -p0 '%s' 2> /dev/null",
                                    info->patch_abspath));
   if (result == 0)
     SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
@@ -118,6 +118,63 @@ list_sorted_by_date(apr_array_header_t **list,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static svn_error_t *
+stats(svn_client_shelf_t *shelf,
+      int version,
+      apr_time_t time_now,
+      svn_boolean_t with_logmsg,
+      apr_pool_t *scratch_pool)
+{
+  svn_client_shelf_version_info_t *info;
+  char *age_str;
+  char *version_str;
+  apr_hash_t *paths;
+  const char *paths_str = "";
+  char *info_str;
+
+  SVN_ERR(svn_client_shelf_version_get_info(&info,
+                                            shelf, version,
+                                            scratch_pool, scratch_pool));
+
+  age_str = friendly_duration_str(time_now - info->mtime, scratch_pool);
+  if (version == shelf->max_version)
+    version_str = apr_psprintf(scratch_pool,
+                               _("version %d"), version);
+  else
+    version_str = apr_psprintf(scratch_pool,
+                               _("version %d of %d"),
+                               version, shelf->max_version);
+  SVN_ERR(svn_client_shelf_get_paths(&paths,
+                                     shelf, shelf->max_version,
+                                     scratch_pool, scratch_pool));
+  if (paths)
+    paths_str = apr_psprintf(scratch_pool,
+                             _(", %d paths changed"), apr_hash_count(paths));
+  info_str = apr_psprintf(scratch_pool,
+                          _("%s, %s ago%s\n"),
+                          version_str, age_str, paths_str);
+  SVN_ERR(svn_cmdline_printf(scratch_pool,
+                             "%-30s %s",
+                             shelf->name, info_str));
+
+  if (with_logmsg)
+    {
+      char *log_message;
+
+      SVN_ERR(svn_client_shelf_get_log_message(&log_message, shelf,
+                                               scratch_pool));
+      if (log_message)
+        {
+          SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                     _(" %.50s\n"),
+                                     log_message));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Display a list of shelves */
 static svn_error_t *
 shelves_list(const char *local_abspath,
@@ -139,38 +196,14 @@ shelves_list(const char *local_abspath,
       const char *name = item->key;
       svn_client_shelf_t *shelf;
       svn_client_shelf_version_info_t *info;
-      char *age_str;
-      apr_hash_t *paths;
 
       SVN_ERR(svn_client_shelf_open(&shelf,
                                     name, local_abspath, ctx, scratch_pool));
       SVN_ERR(svn_client_shelf_version_get_info(&info,
                                                 shelf, shelf->max_version,
                                                 scratch_pool, scratch_pool));
-      age_str = friendly_duration_str(time_now - info->mtime, scratch_pool);
-
-      SVN_ERR(svn_client_shelf_get_paths(&paths,
-                                         shelf, shelf->max_version,
-                                         scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 _("%-30s %s ago,  %d versions,  %d paths changed\n"),
-                                 name, age_str, shelf->max_version,
-                                 apr_hash_count(paths)));
-      if (with_logmsg)
-        {
-          char *log_message;
-
-          SVN_ERR(svn_client_shelf_get_log_message(&log_message, shelf,
-                                                   scratch_pool));
-          if (log_message)
-            {
-              SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                         _(" %.50s\n"),
-                                         log_message));
-            }
-        }
-
+      SVN_ERR(stats(shelf, shelf->max_version, time_now,
+                    with_logmsg, scratch_pool));
       if (with_diffstat)
         {
           SVN_ERR(show_diffstat(info, scratch_pool));
@@ -200,17 +233,12 @@ shelf_log(const char *name,
   for (i = 1; i <= shelf->max_version; i++)
     {
       svn_client_shelf_version_info_t *info;
-      char *age_str;
 
       SVN_ERR(svn_client_shelf_version_get_info(&info,
                                                 shelf, i,
                                                 scratch_pool, scratch_pool));
-      age_str = friendly_duration_str(time_now - info->mtime, scratch_pool);
-
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 _("version %d: %s ago\n"),
-                                 i, age_str));
-
+      SVN_ERR(stats(shelf, i, time_now,
+                    FALSE /*with_logmsg*/, scratch_pool));
       if (with_diffstat)
         {
           SVN_ERR(show_diffstat(info, scratch_pool));
@@ -309,6 +337,42 @@ shelve(int *new_version_p,
   return SVN_NO_ERROR;
 }
 
+struct status_baton
+{
+  /* These fields correspond to the ones in the
+     svn_cl__print_status() interface. */
+  const char *target_abspath;
+  const char *target_path;
+
+  svn_boolean_t verbose;  /* display all statuses while checking them */
+  svn_boolean_t printed_header;
+  svn_boolean_t *modified;  /* set to TRUE when any modification is found */
+
+  svn_client_ctx_t *ctx;
+};
+
+/* A status callback function for printing STATUS for PATH. */
+static svn_error_t *
+print_status(void *baton,
+             const char *path,
+             const svn_client_status_t *status,
+             apr_pool_t *pool)
+{
+  struct status_baton *sb = baton;
+  unsigned int conflicts;
+
+  return svn_cl__print_status(sb->target_abspath, sb->target_path,
+                              path, status,
+                              TRUE /*suppress_externals_placeholders*/,
+                              FALSE /*detailed*/,
+                              FALSE /*show_last_committed*/,
+                              TRUE /*skip_unrecognized*/,
+                              FALSE /*repos_locks*/,
+                              &conflicts, &conflicts, &conflicts,
+                              sb->ctx,
+                              pool);
+}
+
 /* Set *BATON to true if the reported path has any local modification or
  * any status that means we should not attempt to patch it.
  *
@@ -319,14 +383,25 @@ modification_checker(void *baton,
                      const svn_client_status_t *status,
                      apr_pool_t *scratch_pool)
 {
-  svn_boolean_t *modified = baton;
+  struct status_baton *sb = baton;
 
   if (status->conflicted
       || ! (status->node_status == svn_wc_status_none
             || status->node_status == svn_wc_status_unversioned
             || status->node_status == svn_wc_status_normal))
     {
-      *modified = TRUE;
+      if (sb->verbose)
+        {
+          if (!sb->printed_header)
+            {
+              SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                         _("--- Paths modified in shelf and in WC:\n")));
+              sb->printed_header = TRUE;
+            }
+          SVN_ERR(print_status(baton, target, status, scratch_pool));
+        }
+
+      *sb->modified = TRUE;
     }
   return SVN_NO_ERROR;
 }
@@ -336,11 +411,19 @@ modification_checker(void *baton,
 static svn_error_t *
 check_no_modified_paths(svn_client_shelf_t *shelf,
                         int version,
+                        svn_boolean_t verbose,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *scratch_pool)
 {
   apr_hash_t *paths;
+  struct status_baton sb;
+  svn_boolean_t any_modified = FALSE;
   apr_hash_index_t *hi;
+
+  sb.verbose = verbose;
+  sb.printed_header = FALSE;
+  sb.modified = &any_modified;
+  sb.ctx = ctx;
 
   SVN_ERR(svn_client_shelf_get_paths(&paths,
                                      shelf, version,
@@ -349,8 +432,9 @@ check_no_modified_paths(svn_client_shelf_t *shelf,
     {
       const char *path = apr_hash_this_key(hi);
       const char *abspath = svn_path_join(shelf->wc_root_abspath, path, scratch_pool);
-      svn_boolean_t modified = FALSE;
 
+      sb.target_abspath = abspath;
+      sb.target_path = abspath;
       SVN_ERR(svn_client_status6(NULL /*result_rev*/,
                                  ctx, abspath,
                                  NULL /*revision*/,
@@ -362,14 +446,14 @@ check_no_modified_paths(svn_client_shelf_t *shelf,
                                  TRUE /*ignore_externals*/,
                                  FALSE /*depth_as_sticky*/,
                                  NULL /*changelists*/,
-                                 modification_checker, &modified,
+                                 modification_checker, &sb,
                                  scratch_pool));
-      if (modified)
-        {
-          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                   _("Shelf affects at least one path that is already modified: '%s'"),
-                                   path);
-        }
+    }
+  if (any_modified)
+    {
+      return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Cannot unshelve/restore, as at least one "
+                                "path is modified in shelf and in WC"));
     }
   return SVN_NO_ERROR;
 }
@@ -391,6 +475,7 @@ shelf_restore(const char *name,
               apr_pool_t *scratch_pool)
 {
   int version, old_version;
+  apr_time_t time_now = apr_time_now();
   svn_client_shelf_t *shelf;
 
   SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
@@ -412,7 +497,15 @@ shelf_restore(const char *name,
       version = shelf->max_version;
     }
 
-  SVN_ERR(check_no_modified_paths(shelf, version, ctx, scratch_pool));
+  if (! quiet)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 _("--- Unshelve '%s' in WC root '%s'\n"),
+                                 shelf->name, shelf->wc_root_abspath));
+      SVN_ERR(stats(shelf, version, time_now,
+                    TRUE /*with_logmsg*/, scratch_pool));
+    }
+  SVN_ERR(check_no_modified_paths(shelf, version, !quiet, ctx, scratch_pool));
 
   SVN_ERR(svn_client_shelf_apply(shelf, version,
                                  dry_run, scratch_pool));
@@ -649,7 +742,7 @@ svn_cl__unshelve(apr_getopt_t *os,
       SVN_ERR(name_of_youngest(&name,
                                local_abspath, ctx, scratch_pool, scratch_pool));
       SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 _("unshelving the youngest change, '%s'\n"),
+                                 _("unshelving the youngest shelf, '%s'\n"),
                                  name));
     }
 
