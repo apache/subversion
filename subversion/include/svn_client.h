@@ -6909,6 +6909,8 @@ svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
 
 /** Get the log message in @a shelf into @a *log_message.
  *
+ * Set @a *log_message to NULL if there is no log message.
+ *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */

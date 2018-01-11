@@ -173,11 +173,11 @@ shelf_write_revprops(svn_client_shelf_t *shelf,
 
 svn_error_t *
 svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
-                               const char *prop_name,
-                               const svn_string_t *prop_val,
-                               apr_pool_t *scratch_pool)
+                              const char *prop_name,
+                              const svn_string_t *prop_val,
+                              apr_pool_t *scratch_pool)
 {
-  svn_hash_sets(shelf->revprops, prop_name,
+  svn_hash_sets(shelf->revprops, apr_pstrdup(shelf->pool, prop_name),
                 svn_string_dup(prop_val, shelf->pool));
   SVN_ERR(shelf_write_revprops(shelf, scratch_pool));
   return SVN_NO_ERROR;
@@ -185,9 +185,9 @@ svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
 
 svn_error_t *
 svn_client__shelf_revprop_get(svn_string_t **prop_val,
-                               svn_client_shelf_t *shelf,
-                               const char *prop_name,
-                               apr_pool_t *result_pool)
+                              svn_client_shelf_t *shelf,
+                              const char *prop_name,
+                              apr_pool_t *result_pool)
 {
   *prop_val = svn_hash_gets(shelf->revprops, prop_name);
   return SVN_NO_ERROR;
@@ -554,7 +554,7 @@ svn_client_shelf_get_log_message(char **log_message,
   if (propval)
     *log_message = apr_pstrdup(result_pool, propval->data);
   else
-    *log_message = "";
+    *log_message = NULL;
   return SVN_NO_ERROR;
 }
 
