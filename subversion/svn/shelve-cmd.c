@@ -860,29 +860,7 @@ svn_cl__shelf(apr_getopt_t *os,
               void *baton,
               apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   const char *subsubcommand;
-
-  if (opt_state->show_diff)
-    {
-      SVN_ERR(svn_cl__shelf_diff(os, baton, pool));
-      return SVN_NO_ERROR;
-    }
-  else if (opt_state->remove)
-    {
-      SVN_ERR(svn_cl__shelf_drop(os, baton, pool));
-      return SVN_NO_ERROR;
-    }
-  else if (opt_state->list)
-    {
-      SVN_ERR(svn_cl__shelf_list(os, baton, pool));
-      return SVN_NO_ERROR;
-    }
-  else if (opt_state->log)
-    {
-      SVN_ERR(svn_cl__shelf_log(os, baton, pool));
-      return SVN_NO_ERROR;
-    }
 
   SVN_ERR(get_next_argument(&subsubcommand, os, pool, pool));
 
@@ -909,8 +887,7 @@ svn_cl__shelf(apr_getopt_t *os,
   else
     {
       return svn_error_createf(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                               _("Unknown shelf command '%s'; "
-                                 "try 'svn help shelf'"),
+                               _("Unknown shelf command '%s'"),
                                subsubcommand);
     }
 

@@ -145,10 +145,7 @@ typedef enum svn_cl__longopt_t {
   opt_pin_externals,
   opt_show_item,
   opt_adds_as_modification,
-  opt_vacuum_pristines,
-  opt_drop,
-  opt_log,
-  opt_list
+  opt_vacuum_pristines
 } svn_cl__longopt_t;
 
 
@@ -473,10 +470,6 @@ const apr_getopt_option_t svn_cl__options[] =
 
   {"vacuum-pristines", opt_vacuum_pristines, 0,
                        N_("remove unreferenced pristines from .svn directory")},
-
-  {"list", opt_list, 0, N_("list shelves")},
-  {"drop", opt_drop, 0, N_("delete a shelf")},
-  {"log", opt_log, 0, N_("show versions of a shelf")},
 
   /* Long-opt Aliases
    *
@@ -1692,11 +1685,11 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "shelf", svn_cl__shelf, {0}, N_
     ("Examine or manage a shelf.\n"
-     "usage: 1. shelf diff | shelf --diff  -> see shelf-diff\n"
-     "       2. shelf drop | shelf --drop  -> see shelf-drop\n"
-     "       3. shelf list | shelf --list  -> see shelf-list (shelves)\n"
-     "       4. shelf log  | shelf --log   -> see shelf-log\n"
-     "       5. shelf save                 -> see shelf-save\n"
+     "usage: 1. shelf diff  -> see shelf-diff\n"
+     "       2. shelf drop  -> see shelf-drop\n"
+     "       3. shelf list  -> see shelf-list (shelves)\n"
+     "       4. shelf log   -> see shelf-log\n"
+     "       5. shelf save  -> see shelf-save\n"
      "\n"
      "  See also:\n"
      "    shelve\n"
@@ -1705,8 +1698,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     ),
-    {opt_diff, opt_drop, opt_list, opt_log,
-     opt_dry_run, 'q',
+    {opt_dry_run, 'q',
      opt_depth, opt_targets, opt_changelist,
      /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
      'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
@@ -2377,12 +2369,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_dry_run:
         opt_state.dry_run = TRUE;
         break;
-      case opt_list:
-        opt_state.list = TRUE;
-        break;
-      case opt_log:
-        opt_state.log = TRUE;
-        break;
       case opt_revprop:
         opt_state.revprop = TRUE;
         break;
@@ -2566,7 +2552,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.summarize = TRUE;
         break;
       case opt_remove:
-      case opt_drop:
         opt_state.remove = TRUE;
         break;
       case opt_changelist:

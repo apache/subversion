@@ -1025,7 +1025,6 @@ _svn()
 		;;
 	shelf)
 		cmdOpts="diff drop list log save \
-                         --diff --drop --list --log \
                          --dry-run \
                          --depth --targets $cOpts \
                          -m --message -F --file --encoding --force-log --editor-cmd \
