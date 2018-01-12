@@ -6740,7 +6740,24 @@ typedef struct svn_client_shelf_t
     apr_pool_t *pool;
 } svn_client_shelf_t;
 
+/** One version of a shelved change-set.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+typedef struct svn_client_shelf_version_t
+{
+  /* Public fields (read-only for public use) */
+  svn_client_shelf_t *shelf;
+  apr_time_t mtime;  /** time-stamp of this version */
+
+  /* TODO: these should be Private fields */
+  const char *patch_abspath;  /** abspath of the patch file */
+} svn_client_shelf_version_t;
+
 /** Open an existing shelf or create a new shelf.
+ *
+ * The shelf should be closed after use by calling svn_client_shelf_close().
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6754,6 +6771,8 @@ svn_client_shelf_open(svn_client_shelf_t **shelf_p,
                       apr_pool_t *result_pool);
 
 /** Close @a shelf.
+ *
+ * If @a shelf is NULL, do nothing; otherwise @a shelf must be an open shelf.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6793,31 +6812,9 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
                                   const apr_array_header_t *changelists,
                                   apr_pool_t *scratch_pool);
 
-/** Apply version @a version of @a shelf to the WC.
+/** Set the newest version of @a shelf to @a version.
  *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_apply(svn_client_shelf_t *shelf,
-                       int version,
-                       svn_boolean_t dry_run,
-                       apr_pool_t *scratch_pool);
-
-/** Reverse-apply the current version of @a shelf to the WC.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_unapply(svn_client_shelf_t *shelf,
-                         int version,
-                         svn_boolean_t dry_run,
-                         apr_pool_t *scratch_pool);
-
-/** Set the current version of @a shelf. Delete all newer versions.
+ * Delete all newer versions.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6828,6 +6825,54 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
                                      int version,
                                      apr_pool_t *scratch_pool);
 
+/** Open an existing shelf version.
+ *
+ * There is no need to "close" it after use.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
+                              svn_client_shelf_t *shelf,
+                              int version,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/** Apply version @a version of @a shelf to the WC.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
+                       svn_boolean_t dry_run,
+                       apr_pool_t *scratch_pool);
+
+/** Reverse-apply the current version of @a shelf to the WC.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
+                         svn_boolean_t dry_run,
+                         apr_pool_t *scratch_pool);
+
+/** Set @a *patch_abspath to the patch file path of @a shelf_version.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_get_patch_abspath(char **patch_abspath,
+                                   svn_client_shelf_version_t *shelf_version,
+                                   apr_pool_t *scratch_pool);
+
 /** Output version @a version of @a shelf as a patch to @a outstream.
  *
  * @since New in 1.X.
@@ -6835,34 +6880,9 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_export_patch(svn_client_shelf_t *shelf,
-                              int version,
+svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
                               svn_stream_t *outstream,
                               apr_pool_t *scratch_pool);
-
-/** Information about one version.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-typedef struct svn_client_shelf_version_info_t
-{
-  const char *patch_abspath;  /* abspath of the patch file */
-  apr_time_t mtime;  /* mtime of the patch file */
-} svn_client_shelf_version_info_t;
-
-/** Set @a *info to the files affected by the current version of @a shelf.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info,
-                                  svn_client_shelf_t *shelf,
-                                  int version,
-                                  apr_pool_t *result_pool,
-                                  apr_pool_t *scratch_pool);
 
 /** Set @a *affected_paths to a hash with one entry for each path affected
  * by the @a shelf @a version. The hash key is the old path and value is
@@ -6875,8 +6895,7 @@ svn_client_shelf_version_get_info(svn_client_shelf_version_info_t **info,
 SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_get_paths(apr_hash_t **affected_paths,
-                           svn_client_shelf_t *shelf,
-                           int version,
+                           svn_client_shelf_version_t *shelf_version,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
 
