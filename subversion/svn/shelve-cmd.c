@@ -671,6 +671,42 @@ svn_cl__shelf(apr_getopt_t *os,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static svn_error_t *
+shelf_shelve(int *new_version,
+             const char *name,
+             apr_array_header_t *targets,
+             svn_depth_t depth,
+             apr_array_header_t *changelists,
+             svn_boolean_t keep_local,
+             svn_boolean_t dry_run,
+             svn_client_ctx_t *ctx,
+             apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+
+  if (depth == svn_depth_unknown)
+    depth = svn_depth_infinity;
+
+  SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
+
+  SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, scratch_pool));
+
+  svn_opt_push_implicit_dot_target(targets, scratch_pool);
+
+  /* ### TODO: check all paths are in same WC; for now use first path */
+  SVN_ERR(svn_dirent_get_absolute(&local_abspath,
+                                  APR_ARRAY_IDX(targets, 0, char *),
+                                  scratch_pool));
+
+  SVN_ERR(shelve(new_version, name,
+                 targets, depth, changelists,
+                 keep_local, dry_run,
+                 local_abspath, ctx, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__shelve(apr_getopt_t *os,
@@ -679,14 +715,11 @@ svn_cl__shelve(apr_getopt_t *os,
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  const char *local_abspath;
   const char *name;
   apr_array_header_t *targets;
 
   if (opt_state->quiet)
     ctx->notify_func2 = NULL; /* Easy out: avoid unneeded work */
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
 
   SVN_ERR(get_next_argument(&name, os, pool, pool));
 
@@ -694,32 +727,18 @@ svn_cl__shelve(apr_getopt_t *os,
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
-  svn_opt_push_implicit_dot_target(targets, pool);
-
   {
-      svn_depth_t depth = opt_state->depth;
       int new_version;
       svn_error_t *err;
-
-      SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
-
-      if (depth == svn_depth_unknown)
-        depth = svn_depth_infinity;
-
-      SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
-      /* ### TODO: check all paths are in same WC; for now use first path */
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                      APR_ARRAY_IDX(targets, 0, char *),
-                                      pool));
 
       if (ctx->log_msg_func3)
         SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
                                            opt_state, NULL, ctx->config,
                                            pool));
-      err = shelve(&new_version, name,
-                   targets, depth, opt_state->changelists,
-                   opt_state->keep_local, opt_state->dry_run,
-                   local_abspath, ctx, pool);
+      err = shelf_shelve(&new_version, name,
+                         targets, opt_state->depth, opt_state->changelists,
+                         opt_state->keep_local, opt_state->dry_run,
+                         ctx, pool);
       if (ctx->log_msg_func3)
         SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                         err, pool));
@@ -918,28 +937,17 @@ svn_cl__checkpoint(apr_getopt_t *os,
     }
   else if (strcmp(subsubcommand, "save") == 0)
     {
-      svn_depth_t depth
-        = (opt_state->depth == svn_depth_unknown) ? svn_depth_infinity
-                                                  : opt_state->depth;
       int new_version;
       svn_error_t *err;
-
-      svn_opt_push_implicit_dot_target(targets, pool);
-      SVN_ERR(svn_cl__check_targets_are_local_paths(targets));
-      SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
-      /* ### TODO: check all paths are in same WC; for now use first path */
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath,
-                                      APR_ARRAY_IDX(targets, 0, char *),
-                                      pool));
 
       if (ctx->log_msg_func3)
         SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
                                            opt_state, NULL, ctx->config,
                                            pool));
-      err = shelve(&new_version,
-                   name, targets, depth, opt_state->changelists,
-                   TRUE /*keep_local*/, opt_state->dry_run,
-                   local_abspath, ctx, pool);
+      err = shelf_shelve(&new_version, name,
+                         targets, opt_state->depth, opt_state->changelists,
+                         TRUE /*keep_local*/, opt_state->dry_run,
+                         ctx, pool);
       if (ctx->log_msg_func3)
         SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
                                         err, pool));
