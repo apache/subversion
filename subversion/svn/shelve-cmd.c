@@ -604,73 +604,6 @@ shelf_drop(const char *name,
   return SVN_NO_ERROR;
 }
 
-/* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
-svn_cl__shelf(apr_getopt_t *os,
-              void *baton,
-              apr_pool_t *pool)
-{
-  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
-  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  const char *local_abspath;
-  const char *name;
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
-
-  if (opt_state->list)
-    {
-      if (os->ind < os->argc)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
-      SVN_ERR(shelves_list(local_abspath,
-                           ! opt_state->quiet /*with_logmsg*/,
-                           ! opt_state->quiet /*with_diffstat*/,
-                           ctx, pool));
-      return SVN_NO_ERROR;
-    }
-
-  SVN_ERR(get_next_argument(&name, os, pool, pool));
-
-  if (opt_state->remove)
-    {
-      if (os->ind < os->argc)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
-      SVN_ERR(shelf_drop(name, local_abspath,
-                         opt_state->dry_run, opt_state->quiet,
-                         ctx, pool));
-      return SVN_NO_ERROR;
-    }
-
-  if (opt_state->log)
-    {
-      if (os->ind < os->argc)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
-      SVN_ERR(shelf_log(name, local_abspath,
-                        !opt_state->quiet, ctx, pool));
-      return SVN_NO_ERROR;
-    }
-
-  if (opt_state->show_diff)
-    {
-      const char *arg = NULL;
-
-      /* Which checkpoint number? */
-      if (os->ind < os->argc)
-        SVN_ERR(get_next_argument(&arg, os, pool, pool));
-
-      if (os->ind < os->argc)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
-
-      SVN_ERR(shelf_diff(name, arg, local_abspath,
-                         ctx, pool));
-      return SVN_NO_ERROR;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /*  */
 static svn_error_t *
 shelf_shelve(int *new_version,
@@ -704,6 +637,19 @@ shelf_shelve(int *new_version,
                  keep_local, dry_run,
                  local_abspath, ctx, scratch_pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* This implements the `svn_opt_subcommand_t' interface. */
+svn_error_t *
+svn_cl__shelf_save(apr_getopt_t *os,
+                   void *baton,
+                   apr_pool_t *pool)
+{
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+
+  opt_state->keep_local = TRUE;
+  SVN_ERR(svn_cl__shelve(os, baton, pool));
   return SVN_NO_ERROR;
 }
 
@@ -746,9 +692,16 @@ svn_cl__shelve(apr_getopt_t *os,
         SVN_ERR(err);
 
       if (! opt_state->quiet)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("shelved '%s' version %d\n"),
-                                   name, new_version));
+        {
+          if (opt_state->keep_local)
+            SVN_ERR(svn_cmdline_printf(pool,
+                                       _("saved '%s' version %d\n"),
+                                       name, new_version));
+          else
+            SVN_ERR(svn_cmdline_printf(pool,
+                                       _("shelved '%s' version %d\n"),
+                                       name, new_version));
+        }
   }
 
   return SVN_NO_ERROR;
@@ -764,7 +717,7 @@ svn_cl__unshelve(apr_getopt_t *os,
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *local_abspath;
   const char *name;
-  apr_array_header_t *targets;
+  const char *arg = NULL;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", scratch_pool));
 
@@ -781,17 +734,18 @@ svn_cl__unshelve(apr_getopt_t *os,
                                  name));
     }
 
-  /* There should be no remaining arguments. */
-  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets,
-                                                      ctx, FALSE, scratch_pool));
-  if (targets->nelts)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+  /* Which checkpoint number? */
+  if (os->ind < os->argc)
+    SVN_ERR(get_next_argument(&arg, os, scratch_pool, scratch_pool));
+
+  if (os->ind < os->argc)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Too many arguments"));
 
   if (opt_state->quiet)
     ctx->notify_func2 = NULL; /* Easy out: avoid unneeded work */
 
-  SVN_ERR(shelf_restore(name, NULL,
+  SVN_ERR(shelf_restore(name, arg,
                         opt_state->dry_run, opt_state->quiet,
                         local_abspath, ctx, scratch_pool));
 
@@ -800,9 +754,9 @@ svn_cl__unshelve(apr_getopt_t *os,
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__shelves(apr_getopt_t *os,
-                void *baton,
-                apr_pool_t *pool)
+svn_cl__shelf_list(apr_getopt_t *os,
+                   void *baton,
+                   apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -889,7 +843,8 @@ svn_cl__shelf_log(apr_getopt_t *os,
 
   /* There should be no remaining arguments. */
   if (os->ind < os->argc)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0,
+                            _("Too many arguments"));
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
   SVN_ERR(shelf_log(name, local_abspath,
@@ -901,103 +856,61 @@ svn_cl__shelf_log(apr_getopt_t *os,
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__checkpoint(apr_getopt_t *os,
-                   void *baton,
-                   apr_pool_t *pool)
+svn_cl__shelf(apr_getopt_t *os,
+              void *baton,
+              apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
-  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *subsubcommand;
-  apr_array_header_t *targets;
-  const char *local_abspath;
-  const char *name;
+
+  if (opt_state->show_diff)
+    {
+      SVN_ERR(svn_cl__shelf_diff(os, baton, pool));
+      return SVN_NO_ERROR;
+    }
+  else if (opt_state->remove)
+    {
+      SVN_ERR(svn_cl__shelf_drop(os, baton, pool));
+      return SVN_NO_ERROR;
+    }
+  else if (opt_state->list)
+    {
+      SVN_ERR(svn_cl__shelf_list(os, baton, pool));
+      return SVN_NO_ERROR;
+    }
+  else if (opt_state->log)
+    {
+      SVN_ERR(svn_cl__shelf_log(os, baton, pool));
+      return SVN_NO_ERROR;
+    }
 
   SVN_ERR(get_next_argument(&subsubcommand, os, pool, pool));
 
-  SVN_ERR(get_next_argument(&name, os, pool, pool));
-
-  /* Parse the remaining arguments as paths. */
-  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
-                                                      opt_state->targets,
-                                                      ctx, FALSE, pool));
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
-
-  if (opt_state->quiet)
-    ctx->notify_func2 = NULL;
-
-  if (strcmp(subsubcommand, "log") == 0)
+  if (strcmp(subsubcommand, "diff") == 0)
     {
-      if (targets->nelts)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("Too many arguments"));
-
-      SVN_ERR(shelf_log(name, local_abspath,
-                        !opt_state->quiet /*diffstat*/,
-                        ctx, pool));
+      SVN_ERR(svn_cl__shelf_diff(os, baton, pool));
+    }
+  else if (strcmp(subsubcommand, "drop") == 0)
+    {
+      SVN_ERR(svn_cl__shelf_drop(os, baton, pool));
+    }
+  else if (strcmp(subsubcommand, "list") == 0)
+    {
+      SVN_ERR(svn_cl__shelf_list(os, baton, pool));
+    }
+  else if (strcmp(subsubcommand, "log") == 0)
+    {
+      SVN_ERR(svn_cl__shelf_log(os, baton, pool));
     }
   else if (strcmp(subsubcommand, "save") == 0)
     {
-      int new_version;
-      svn_error_t *err;
-
-      if (ctx->log_msg_func3)
-        SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
-                                           opt_state, NULL, ctx->config,
-                                           pool));
-      err = shelf_shelve(&new_version, name,
-                         targets, opt_state->depth, opt_state->changelists,
-                         TRUE /*keep_local*/, opt_state->dry_run,
-                         ctx, pool);
-      if (ctx->log_msg_func3)
-        SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
-                                        err, pool));
-      else
-        SVN_ERR(err);
-
-      if (!opt_state->quiet)
-        SVN_ERR(svn_cmdline_printf(pool,
-                                   _("saved '%s' version %d\n"),
-                                   name, new_version));
-    }
-  else if (strcmp(subsubcommand, "restore") == 0)
-    {
-      const char *arg = NULL;
-
-      if (targets->nelts > 1)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("Too many arguments"));
-
-      /* Which checkpoint number? */
-      if (targets->nelts != 1)
-        arg = NULL;
-      else
-        arg = APR_ARRAY_IDX(targets, 0, char *);
-
-      SVN_ERR(shelf_restore(name, arg,
-                            opt_state->dry_run, opt_state->quiet,
-                            local_abspath, ctx, pool));
-    }
-  else if (strcmp(subsubcommand, "diff") == 0)
-    {
-      const char *arg;
-
-      /* Which checkpoint number? */
-      if (os->ind < os->argc)
-        arg = NULL;
-      else
-        arg = APR_ARRAY_IDX(targets, 0, char *);
-
-      if (os->ind < os->argc)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("Too many arguments"));
-
-      SVN_ERR(shelf_diff(name, arg, local_abspath, ctx, pool));
+      SVN_ERR(svn_cl__shelf_save(os, baton, pool));
     }
   else
     {
       return svn_error_createf(SVN_ERR_CL_INSUFFICIENT_ARGS, NULL,
-                               _("checkpoint: Unknown checkpoint command '%s'; "
-                                 "try 'svn help checkpoint'"),
+                               _("Unknown shelf command '%s'; "
+                                 "try 'svn help shelf'"),
                                subsubcommand);
     }
 

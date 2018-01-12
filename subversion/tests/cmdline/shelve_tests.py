@@ -178,14 +178,14 @@ def save_revert_restore(sbox, modifier1, modifier2):
 
   # Save a checkpoint; check nothing changed
   svntest.actions.run_and_verify_svn(None, [],
-                                     'sp', 'save', 'foo')
+                                     'shelf-save', 'foo')
   svntest.actions.run_and_verify_status(wc_dir, modified_state1)
 
   # Modify again; remember the state; save a checkpoint
   modifier2(sbox)
   modified_state2 = state_from_status(wc_dir)
   svntest.actions.run_and_verify_svn(None, [],
-                                     'sp', 'save', 'foo')
+                                     'shelf-save', 'foo')
   svntest.actions.run_and_verify_status(wc_dir, modified_state2)
 
   # Revert
@@ -196,7 +196,7 @@ def save_revert_restore(sbox, modifier1, modifier2):
 
   # Restore; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
-                                     'sp', 'restore', 'foo', '1')
+                                     'unshelve', 'foo', '1')
   svntest.actions.run_and_verify_status(wc_dir, modified_state1)
 
   os.chdir(was_cwd)
