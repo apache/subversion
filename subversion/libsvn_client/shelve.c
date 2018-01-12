@@ -427,20 +427,6 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
 }
 
 svn_error_t *
-svn_client_shelf_has_changes(svn_boolean_t *has_changes,
-                             svn_client_shelf_t *shelf,
-                             int version,
-                             apr_pool_t *scratch_pool)
-{
-  apr_hash_t *patch_paths;
-
-  SVN_ERR(svn_client_shelf_get_paths(&patch_paths, shelf, version,
-                                     scratch_pool, scratch_pool));
-  *has_changes = (apr_hash_count(patch_paths) != 0);
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_client_shelf_apply(svn_client_shelf_t *shelf,
                        int version,
                        svn_boolean_t dry_run,

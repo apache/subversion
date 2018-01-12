@@ -6730,13 +6730,12 @@ typedef struct svn_client_shelf_t
 {
     /* Public fields (read-only for public use) */
     const char *name;
-    const char *log_message;
-    apr_hash_t *revprops;
     int max_version;
 
     /* Private fields */
     const char *wc_root_abspath;
     const char *shelves_dir;
+    apr_hash_t *revprops;
     svn_client_ctx_t *ctx;
     apr_pool_t *pool;
 } svn_client_shelf_t;
@@ -6880,20 +6879,6 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
                            int version,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
-
-/** Set @a *has_changes to indicate whether @a shelf @a version
- * contains any modifications, in other words if svn_client_shelf_get_paths()
- * would return a non-empty set of paths.
- *
- * @since New in 1.10, changed in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_has_changes(svn_boolean_t *has_changes,
-                             svn_client_shelf_t *shelf,
-                             int version,
-                             apr_pool_t *scratch_pool);
 
 /** Set the log message in @a shelf, using the log message callbacks in
  * the client context.
