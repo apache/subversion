@@ -1726,11 +1726,11 @@ svn_repos_stat(svn_dirent_t **dirent,
                apr_pool_t *pool);
 
 /**
- * Callback type to be used with @c svn_repos_list.  It will be invoked for
+ * Callback type to be used with svn_repos_list().  It will be invoked for
  * every directory entry found.
  *
  * The full path of the entry is given in @a path and @a dirent contains
- * various additional information.  If @c svn_repos_list has been called
+ * various additional information.  If svn_repos_list() has been called
  * with @a path_info_only set, only the @a kind element of this struct
  * will be valid.
  *
@@ -1751,14 +1751,14 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
  * Walk the sub-tree starting at @a path under @a root up to the given
  * @a depth.  For each directory entry found, @a receiver will be called
  * with @a receiver_baton.  The starting @a path will be reported as well.
- * Because retrieving all elements of a @c svn_dirent_t can be expensive,
+ * Because retrieving all elements of a #svn_dirent_t can be expensive,
  * you may set @a path_info_only to receive only the path name and the node
  * kind.  The entries will be reported ordered by their path.
  *
  * @a patterns is an optional array of <tt>const char *</tt>.  If it is
  * not @c NULL, only those directory entries will be reported whose last
  * path segment matches at least one of these patterns.  This feature uses
- * @c apr_fnmatch for glob matching and requiring '.' to matched by dots
+ * apr_fnmatch() for glob matching and requiring '.' to matched by dots
  * in the path.
  *
  * If @a authz_read_func is not @c NULL, this function will neither report
@@ -1768,7 +1768,7 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
  * @a cancel_func and @a cancel_baton.
  *
  * @a path must point to a directory and @a depth must be at least
- * @c svn_depth_empty.
+ * #svn_depth_empty.
  *
  * Use @a scratch_pool for temporary memory allocation.
  *
