@@ -36,6 +36,11 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1821183
+   Tweaks to doc strings and Doxygen mark-up of 1.10 API changes.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
