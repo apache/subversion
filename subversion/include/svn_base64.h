@@ -51,6 +51,8 @@ extern "C" {
  * stream will only consist of base64 encoding characters. Be sure to close
  * the stream when done writing in order to squeeze out the last bit of
  * encoded data.  The stream is allocated in @a pool.
+ *
+ * @since New in 1.10.
  */
 svn_stream_t *
 svn_base64_encode2(svn_stream_t *output,

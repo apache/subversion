@@ -144,7 +144,9 @@ typedef struct svn_ra_svn_cmd_entry_t
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
-/** Data types defined by the svn:// protocol. */
+/** Data types defined by the svn:// protocol.
+ *
+ * @since The typedef name is new in 1.10; the enumerators are not. */
 typedef enum
 {
   SVN_RA_SVN_NUMBER,
