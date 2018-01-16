@@ -5440,20 +5440,3 @@ svn_io_file_readline(apr_file_t *file,
 
   return SVN_NO_ERROR;
 }
-
-svn_error_t *
-svn_io_stdin_readline(const char **result,
-                      apr_pool_t *result_pool,
-                      apr_pool_t *scratch_pool)
-{
-  svn_stringbuf_t *buf = NULL;
-  svn_stream_t *stdin_stream = NULL;
-  svn_boolean_t oob = FALSE;
-
-  SVN_ERR(svn_stream_for_stdin2(&stdin_stream, TRUE, scratch_pool));
-  SVN_ERR(svn_stream_readline(stdin_stream, &buf, APR_EOL_STR, &oob, result_pool));
-
-  *result = buf->data;
-
-  return SVN_NO_ERROR;
-}
