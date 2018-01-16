@@ -35,6 +35,9 @@ Candidate changes:
      Allows 1.10 write-through proxy to 1.9 master.
    Votes:
      +1: philip
+   Notes:
+     I believe this is a release blocker, without it we break backward
+     compatibilty for write-through proxies.
 
  * r1821183
    Tweaks to doc strings and Doxygen mark-up of 1.10 API changes.
