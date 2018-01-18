@@ -1808,8 +1808,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Apply the shelf named NAME to the working copy.\n"
      "  NAME defaults to the newest shelf.\n"
      "\n"
-     "  The same as 'svn shelf-restore'.\n"
-     "\n"
      "  Any conflict between the change being unshelved and a change\n"
      "  already in the WC is handled the same way as by 'svn patch',\n"
      "  creating a 'reject' file.\n"
