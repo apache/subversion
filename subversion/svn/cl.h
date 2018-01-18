@@ -305,7 +305,6 @@ svn_opt_subcommand_t
   svn_cl__revert,
   svn_cl__resolve,
   svn_cl__resolved,
-  svn_cl__shelf,
   svn_cl__shelf_diff,
   svn_cl__shelf_drop,
   svn_cl__shelf_list,

@@ -1683,28 +1683,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the output of 'svn help merge' for 'undo'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
-  { "shelf", svn_cl__shelf, {0}, N_
-    ("Examine or manage a shelf.\n"
-     "usage: 1. shelf diff  -> see shelf-diff\n"
-     "       2. shelf drop  -> see shelf-drop\n"
-     "       3. shelf list  -> see shelf-list (shelves)\n"
-     "       4. shelf log   -> see shelf-log\n"
-     "       5. shelf save  -> see shelf-save\n"
-     "\n"
-     "  See also:\n"
-     "    shelve\n"
-     "    unshelve\n"
-     "\n"
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    ),
-    {opt_dry_run, 'q',
-     opt_depth, opt_targets, opt_changelist,
-     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
-     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
-    }
-  },
-
   { "shelf-diff", svn_cl__shelf_diff, {0}, N_
     ("Show shelved changes as a diff.\n"
      "usage: shelf-diff NAME [VERSION]\n"
@@ -3078,7 +3056,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           || subcommand->cmd_func == svn_cl__move
           || subcommand->cmd_func == svn_cl__lock
           || subcommand->cmd_func == svn_cl__propedit
-          || subcommand->cmd_func == svn_cl__shelf
+          || subcommand->cmd_func == svn_cl__shelf_save
           || subcommand->cmd_func == svn_cl__shelve))
     {
       /* If the -F argument is a file that's under revision control,
