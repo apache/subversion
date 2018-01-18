@@ -2578,8 +2578,7 @@ svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
   svn_stream_t *stream;
 
   stream = svn_stream_create(py_io, pool);
-  svn_stream_set_read2(stream, NULL /* only full read support */,
-                       read_handler_pyio);
+  svn_stream_set_read2(stream, read_handler_pyio, NULL);
   svn_stream_set_write(stream, write_handler_pyio);
   svn_stream_set_close(stream, close_handler_pyio);
   apr_pool_cleanup_register(pool, py_io, svn_swig_py_stream_destroy,

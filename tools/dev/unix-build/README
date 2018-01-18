@@ -94,3 +94,22 @@ everything is "svn-check".
 Notes
 =====
 The script currently doesn't build Ctypes Python bindings.
+
+OpenBSD-specific notes
+======================
+On OpenBSD install the following packages to get dependencies and
+tools not covered by this Makefile:
+
+pkg_add autoconf automake bison coreutils gmake gperf groff libtool \
+	python ruby scons subversion swig wget
+
+Some of these packages are available in several versions. Tested at time
+of writing were: autoconf-2.68 automake-1.19 python-2.7.14 ruby-2.4.2
+
+OpenBSD's autoconf and automake wrappers require desired versions in
+environment variables and will raise errors if these aren't set:
+export AUTOCONF_VERSION=2.68
+export AUTOMAKE_VERSION=1.19
+
+A 'python' symlink is required; follow instructions printed by pkg_add
+when the python package is installed.

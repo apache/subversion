@@ -807,7 +807,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Get password from stdin if necessary */
   if (read_pass_from_stdin)
     {
-      SVN_ERR(svn_io_stdin_readline(&opt_state.auth_password, pool, pool));
+      SVN_ERR(svn_cmdline__stdin_readline(&opt_state.auth_password, pool, pool));
     }
 
   /* Create a client context object. */

@@ -175,7 +175,7 @@ typedef void (*svn_xml_char_data)(void *baton,
  * but some internal structures may be allocated out of pool.  Use
  * svn_xml_free_parser() to free all memory used by the parser.
  *
- * Since Subversion 1.10 parser will be freed automatically on pool
+ * @since Since Subversion 1.10 parser will be freed automatically on pool
  * cleanup or by svn_xml_free_parser() call.
  */
 svn_xml_parser_t *
