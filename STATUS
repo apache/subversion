@@ -51,7 +51,17 @@ Candidate changes:
      See discussion which starts here:
      https://svn.haxx.se/dev/archive-2018-01/0054.shtml
    Votes:
-     +1: stsp
+     +1: stsp, julianfoad
+
+ * r1820044
+   Make 'svn shelves' diffstat output show WC-relative paths.
+   Votes:
+     +1: julianfoad
+
+ * r1820046,r1820047
+   Let 'svn shelves' accept '-q' for consistency with 'svn shelve --list -q'.
+   Votes:
+     +1: julianfoad
 
 Veto-blocked changes:
 =====================
