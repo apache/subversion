@@ -6860,65 +6860,6 @@ svn_client_shelf_has_changes(svn_boolean_t *has_changes,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool);
 
-/** Write local changes to a patch file for shelved change @a name.
- *
- * @a message: An optional log message.
- *
- * @a wc_root_abspath: The WC root dir.
- *
- * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
- *
- * @a paths, @a depth, @a changelists: The selection of local paths to diff.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_write_patch(const char *name,
-                             const char *message,
-                             const char *wc_root_abspath,
-                             svn_boolean_t overwrite_existing,
-                             const apr_array_header_t *paths,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool);
-
-/** Apply the patch file for shelved change @a name to the WC.
- *
- * @a wc_root_abspath: The WC root dir.
- *
- * @a reverse: Apply the patch in reverse.
- *
- * @a dry_run: Don't really apply the changes, just notify what would be done.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_apply_patch(const char *name,
-                             const char *wc_root_abspath,
-                             svn_boolean_t reverse,
-                             svn_boolean_t dry_run,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool);
-
-/** Delete the patch file for shelved change @a name.
- *
- * @a wc_root_abspath: The WC root dir.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_delete_patch(const char *name,
-                              const char *wc_root_abspath,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *scratch_pool);
-
 /** @} */
 
 /** Changelist commands
