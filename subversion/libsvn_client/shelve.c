@@ -34,22 +34,80 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_utf.h"
+#include "svn_ctype.h"
 
 #include "client.h"
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sorts_private.h"
 #include "svn_private_config.h"
 
 
-/* Throw an error if NAME does not conform to our naming rules. */
 static svn_error_t *
-validate_name(const char *name,
-              apr_pool_t *scratch_pool)
+shelf_name_encode(char **encoded_name_p,
+                  const char *name,
+                  apr_pool_t *result_pool)
 {
-  if (name[0] == '\0' || strchr(name, '/'))
-    return svn_error_createf(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
-                             _("Shelve: Bad name '%s'"), name);
+  char *encoded_name
+    = apr_palloc(result_pool, strlen(name) * 2 + 1);
+  char *out_pos = encoded_name;
 
+  if (name[0] == '\0')
+    return svn_error_create(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
+                            _("Shelf name cannot be the empty string"));
+
+  while (*name)
+    {
+      apr_snprintf(out_pos, 3, "%02x", *name++);
+      out_pos += 2;
+    }
+  *encoded_name_p = encoded_name;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+shelf_name_decode(char **decoded_name_p,
+                  const char *codename,
+                  apr_pool_t *result_pool)
+{
+  svn_stringbuf_t *sb
+    = svn_stringbuf_create_ensure(strlen(codename) / 2, result_pool);
+  const char *input = codename;
+
+  while (*input)
+    {
+      int c;
+      int nchars;
+      int nitems = sscanf(input, "%02x%n", &c, &nchars);
+
+      if (nitems != 1 || nchars != 2)
+        return svn_error_createf(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
+                                 _("Shelve: Bad encoded name '%s'"), codename);
+      svn_stringbuf_appendbyte(sb, c);
+      input += 2;
+    }
+  *decoded_name_p = sb->data;
+  return SVN_NO_ERROR;
+}
+
+/* Set *NAME to the shelf name from FILENAME, if FILENAME names a '.current'
+ * file, else to NULL. */
+static svn_error_t *
+shelf_name_from_filename(char **name,
+                         const char *filename,
+                         apr_pool_t *result_pool)
+{
+  size_t len = strlen(filename);
+
+  if (len > 8 && strcmp(filename + len - 8, ".current") == 0)
+    {
+      char *codename = apr_pstrndup(result_pool, filename, len - 6);
+      SVN_ERR(shelf_name_decode(name, codename, result_pool));
+    }
+  else
+    {
+      *name = NULL;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -63,9 +121,11 @@ get_patch_abspath(const char **abspath,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  const char *filename;
+  char *codename;
+  char *filename;
 
-  filename = apr_psprintf(scratch_pool, "%s-%03d.patch", shelf->name, version);
+  SVN_ERR(shelf_name_encode(&codename, shelf->name, result_pool));
+  filename = apr_psprintf(scratch_pool, "%s-%03d.patch", codename, version);
   *abspath = svn_dirent_join(shelf->shelves_dir, filename, result_pool);
   return SVN_NO_ERROR;
 }
@@ -115,9 +175,11 @@ get_log_abspath(char **log_abspath,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
+  char *codename;
   const char *filename;
 
-  filename = apr_pstrcat(scratch_pool, shelf->name, ".log", SVN_VA_NULL);
+  SVN_ERR(shelf_name_encode(&codename, shelf->name, result_pool));
+  filename = apr_pstrcat(scratch_pool, codename, ".log", SVN_VA_NULL);
   *log_abspath = svn_dirent_join(shelf->shelves_dir, filename, result_pool);
   return SVN_NO_ERROR;
 }
@@ -203,13 +265,18 @@ svn_client__shelf_revprop_list(apr_hash_t **props,
 }
 
 /*  */
-static char *
-get_current_abspath(svn_client_shelf_t *shelf,
+static svn_error_t *
+get_current_abspath(char **current_abspath,
+                    svn_client_shelf_t *shelf,
                     apr_pool_t *result_pool)
 {
-  const char *current_filename
-    = apr_psprintf(result_pool, "%s.current", shelf->name);
-  return svn_dirent_join(shelf->shelves_dir, current_filename, result_pool);
+  char *codename;
+  char *filename;
+
+  SVN_ERR(shelf_name_encode(&codename, shelf->name, result_pool));
+  filename = apr_psprintf(result_pool, "%s.current", codename);
+  *current_abspath = svn_dirent_join(shelf->shelves_dir, filename, result_pool);
+  return SVN_NO_ERROR;
 }
 
 /*  */
@@ -217,9 +284,11 @@ static svn_error_t *
 shelf_read_current(svn_client_shelf_t *shelf,
                    apr_pool_t *scratch_pool)
 {
-  const char *current_abspath = get_current_abspath(shelf, scratch_pool);
-  FILE *fp = fopen(current_abspath, "r");
+  char *current_abspath;
+  FILE *fp;
 
+  SVN_ERR(get_current_abspath(&current_abspath, shelf, scratch_pool));
+  fp = fopen(current_abspath, "r");
   if (! fp)
     {
       shelf->max_version = 0;
@@ -235,9 +304,11 @@ static svn_error_t *
 shelf_write_current(svn_client_shelf_t *shelf,
                     apr_pool_t *scratch_pool)
 {
-  const char *current_abspath = get_current_abspath(shelf, scratch_pool);
-  FILE *fp = fopen(current_abspath, "w");
+  char *current_abspath;
+  FILE *fp;
 
+  SVN_ERR(get_current_abspath(&current_abspath, shelf, scratch_pool));
+  fp = fopen(current_abspath, "w");
   fprintf(fp, "%d", shelf->max_version);
   fclose(fp);
   return SVN_NO_ERROR;
@@ -329,8 +400,6 @@ svn_client_shelf_open(svn_client_shelf_t **shelf_p,
   svn_client_shelf_t *shelf = apr_palloc(result_pool, sizeof(*shelf));
   char *shelves_dir;
 
-  SVN_ERR(validate_name(name, result_pool));
-
   SVN_ERR(svn_client_get_wc_root(&shelf->wc_root_abspath,
                                  local_abspath, ctx,
                                  result_pool, result_pool));
@@ -367,8 +436,6 @@ svn_client_shelf_delete(const char *name,
   int i;
   char *abspath;
 
-  SVN_ERR(validate_name(name, scratch_pool));
-
   SVN_ERR(svn_client_shelf_open(&shelf,
                                 name, local_abspath, ctx, scratch_pool));
 
@@ -381,7 +448,7 @@ svn_client_shelf_delete(const char *name,
   /* Remove the other files */
   SVN_ERR(get_log_abspath(&abspath, shelf, scratch_pool, scratch_pool));
   SVN_ERR(svn_io_remove_file2(abspath, TRUE /*ignore_enoent*/, scratch_pool));
-  abspath = get_current_abspath(shelf, scratch_pool);
+  SVN_ERR(get_current_abspath(&abspath, shelf, scratch_pool));
   SVN_ERR(svn_io_remove_file2(abspath, TRUE /*ignore_enoent*/, scratch_pool));
 
   SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
@@ -595,11 +662,11 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
     {
       const char *filename = apr_hash_this_key(hi);
       svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
-      size_t len = strlen(filename);
+      char *name = NULL;
 
-      if (len > 6 && strcmp(filename + len - 8, ".current") == 0)
+      svn_error_clear(shelf_name_from_filename(&name, filename, result_pool));
+      if (name && dirent->kind == svn_node_file)
         {
-          const char *name = apr_pstrndup(result_pool, filename, len - 8);
           svn_client_shelf_info_t *info
             = apr_palloc(result_pool, sizeof(*info));
 
