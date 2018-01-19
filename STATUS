@@ -39,20 +39,6 @@ Candidate changes:
      I believe this is a release blocker, without it we break backward
      compatibilty for write-through proxies.
 
- * r1821183
-   Tweaks to doc strings and Doxygen mark-up of 1.10 API changes.
-   Votes:
-     +1: julianfoad
-
- * r1821224
-   Rename and move the new-for-1.10 function 'svn_io_stdin_readline()'.
-   Justification:
-     This function is not a good fit for our public API.
-     See discussion which starts here:
-     https://svn.haxx.se/dev/archive-2018-01/0054.shtml
-   Votes:
-     +1: stsp, julianfoad
-
  * r1820044
    Make 'svn shelves' diffstat output show WC-relative paths.
    Votes:
@@ -68,3 +54,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1821183
+   Tweaks to doc strings and Doxygen mark-up of 1.10 API changes.
+   Votes:
+     +1: julianfoad, danielsh
+
+ * r1821224
+   Rename and move the new-for-1.10 function 'svn_io_stdin_readline()'.
+   Justification:
+     This function is not a good fit for our public API.
+     See discussion which starts here:
+     https://svn.haxx.se/dev/archive-2018-01/0054.shtml
+   Votes:
+     +1: stsp, julianfoad, danielsh
+
