@@ -55,11 +55,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1821183
-   Tweaks to doc strings and Doxygen mark-up of 1.10 API changes.
-   Votes:
-     +1: julianfoad, danielsh
-
  * r1821224
    Rename and move the new-for-1.10 function 'svn_io_stdin_readline()'.
    Justification:
@@ -68,4 +63,3 @@ Approved changes:
      https://svn.haxx.se/dev/archive-2018-01/0054.shtml
    Votes:
      +1: stsp, julianfoad, danielsh
-

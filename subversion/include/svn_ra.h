@@ -1130,13 +1130,12 @@ svn_ra_get_dir(svn_ra_session_t *session,
                apr_pool_t *pool);
 
 /**
- * Callback type to be used with @a svn_ra_list.  It will be invoked for
+ * Callback type to be used with svn_ra_list().  It will be invoked for
  * every directory entry found.
  *
  * The full path of the entry is given in @a rel_path and @a dirent contains
- * various additional information.  If @a svn_repos_list has been called
- * with @c path_info_only set, only the @c kind element of this struct
- * will be valid.
+ * various additional information. Only the elements of @a dirent specified
+ * by the @a dirent_fields argument to svn_ra_list() will be valid.
  *
  * @a baton is the user-provided receiver baton.  @a scratch_pool may be
  * used for temporary allocations.
@@ -1155,21 +1154,21 @@ typedef svn_error_t *(* svn_ra_dirent_receiver_t)(const char *rel_path,
  * In @a session, walk the sub-tree starting at @a path at @a revision down
  * to the given @a depth.  For each directory entry found, @a receiver will
  * be called with @a receiver_baton.  The starting @a path will be reported
- * as well.  Because retrieving elements of a @c svn_dirent_t can be
+ * as well.  Because retrieving elements of a #svn_dirent_t can be
  * expensive, you need to select them individually via flags set in
  * @a dirent_fields.
  *
  * @a patterns is an optional array of <tt>const char *</tt>.  If it is
  * not @c NULL, only those directory entries will be reported whose last
  * path segment matches at least one of these patterns.  This feature uses
- * @c apr_fnmatch for glob matching and requiring '.' to matched by dots
+ * apr_fnmatch() for glob matching and requiring '.' to matched by dots
  * in the path.
  *
  * @a path must point to a directory and @a depth must be at least
- * @c svn_depth_empty.
+ * #svn_depth_empty.
  *
  * If the server doesn't support the 'list' command, return
- * @c SVN_ERR_UNSUPPORTED_FEATURE in preference to any other error that
+ * #SVN_ERR_UNSUPPORTED_FEATURE in preference to any other error that
  * might otherwise be returned.
  *
  * Use @a scratch_pool for temporary memory allocation.

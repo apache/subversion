@@ -4376,7 +4376,7 @@ typedef struct svn_client_conflict_t svn_client_conflict_t;
 typedef struct svn_client_conflict_option_t svn_client_conflict_option_t;
 
 /**
- * A public enumuneration of conflict option IDs.
+ * A public enumeration of conflict option IDs.
  *
  * @since New in 1.10, unless noted otherwise.
  */
@@ -6506,7 +6506,7 @@ svn_client_list4(const char *path_or_url,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_list4(), but with @a patterm set to @c NULL.
+/** Similar to svn_client_list4(), but with @a patterns set to @c NULL.
  *
  * @since New in 1.8.
  *
