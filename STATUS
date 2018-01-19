@@ -54,6 +54,11 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1821678
+   Encode the shelf name to ensure a valid filename for the patch file.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
