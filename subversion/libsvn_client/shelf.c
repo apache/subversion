@@ -541,7 +541,7 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
 }
 
 svn_error_t *
-svn_client_shelf_get_patch_abspath(char **patch_abspath,
+svn_client_shelf_get_patch_abspath(const char **patch_abspath,
                                    svn_client_shelf_version_t *shelf_version,
                                    apr_pool_t *scratch_pool)
 {
