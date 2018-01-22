@@ -6715,7 +6715,244 @@ svn_client_cat(svn_stream_t *out,
 
 
 
-/** Shelving commands
+/** Shelving v2, with checkpoints
+ *
+ * @defgroup svn_client_shelves_checkpoints Shelves and checkpoints
+ * @{
+ */
+
+/** A shelf.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+typedef struct svn_client_shelf_t
+{
+    /* Public fields (read-only for public use) */
+    const char *name;
+    int max_version;
+
+    /* Private fields */
+    const char *wc_root_abspath;
+    const char *shelves_dir;
+    apr_hash_t *revprops;
+    svn_client_ctx_t *ctx;
+    apr_pool_t *pool;
+} svn_client_shelf_t;
+
+/** One version of a shelved change-set.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+typedef struct svn_client_shelf_version_t
+{
+  /* Public fields (read-only for public use) */
+  svn_client_shelf_t *shelf;
+  apr_time_t mtime;  /** time-stamp of this version */
+
+  /* TODO: these should be Private fields */
+  const char *patch_abspath;  /** abspath of the patch file */
+} svn_client_shelf_version_t;
+
+/** Open an existing shelf or create a new shelf.
+ *
+ * The shelf should be closed after use by calling svn_client_shelf_close().
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_open(svn_client_shelf_t **shelf_p,
+                      const char *name,
+                      const char *local_abspath,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool);
+
+/** Close @a shelf.
+ *
+ * If @a shelf is NULL, do nothing; otherwise @a shelf must be an open shelf.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_close(svn_client_shelf_t *shelf,
+                       apr_pool_t *scratch_pool);
+
+/** Delete a shelf, by name.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_delete(const char *name,
+                        const char *local_abspath,
+                        svn_boolean_t dry_run,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool);
+
+/** Save the local modifications found by @a paths, @a depth,
+ * @a changelists as a new version of @a shelf.
+ *
+ * If there are no local modifications in the specified locations, do not
+ * create a new version of @a shelf.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
+                                  const apr_array_header_t *paths,
+                                  svn_depth_t depth,
+                                  const apr_array_header_t *changelists,
+                                  apr_pool_t *scratch_pool);
+
+/** Set the newest version of @a shelf to @a version.
+ *
+ * Delete all newer versions.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
+                                     int version,
+                                     apr_pool_t *scratch_pool);
+
+/** Open an existing shelf version.
+ *
+ * There is no need to "close" it after use.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
+                              svn_client_shelf_t *shelf,
+                              int version,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/** Apply version @a version of @a shelf to the WC.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
+                       svn_boolean_t dry_run,
+                       apr_pool_t *scratch_pool);
+
+/** Reverse-apply the current version of @a shelf to the WC.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
+                         svn_boolean_t dry_run,
+                         apr_pool_t *scratch_pool);
+
+/** Set @a *patch_abspath to the patch file path of @a shelf_version.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_get_patch_abspath(char **patch_abspath,
+                                   svn_client_shelf_version_t *shelf_version,
+                                   apr_pool_t *scratch_pool);
+
+/** Output version @a version of @a shelf as a patch to @a outstream.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
+                              svn_stream_t *outstream,
+                              apr_pool_t *scratch_pool);
+
+/** Set @a *affected_paths to a hash with one entry for each path affected
+ * by the @a shelf @a version. The hash key is the old path and value is
+ * the new path, both relative to the WC root. The key and value are the
+ * same except when a path is moved or copied.
+ *
+ * @since New in 1.10, changed in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
+                               svn_client_shelf_version_t *shelf_version,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+
+/** Set the log message in @a shelf, using the log message callbacks in
+ * the client context.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
+                                 svn_boolean_t dry_run,
+                                 apr_pool_t *scratch_pool);
+
+/** Get the log message in @a shelf into @a *log_message.
+ *
+ * Set @a *log_message to NULL if there is no log message.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_get_log_message(char **log_message,
+                                 svn_client_shelf_t *shelf,
+                                 apr_pool_t *result_pool);
+
+/** Information about a shelf.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+typedef struct svn_client_shelf_info_t
+{
+  apr_time_t mtime;  /* mtime of the latest change */
+} svn_client_shelf_info_t;
+
+/** Set @a *shelved_patch_infos to a hash, keyed by shelf name, of pointers to
+ * @c svn_client_shelf_info_t structures.
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_list(apr_hash_t **shelf_infos,
+                      const char *local_abspath,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
+
+/** @} */
+
+/** Shelving v1
  *
  * @defgroup svn_client_shelve_funcs Client Shelving Functions
  * @{
