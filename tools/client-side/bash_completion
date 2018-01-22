@@ -248,8 +248,8 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
-	cmds="$cmds shelf-diff shelf-drop shelf-list shelf-log"
-	cmds="$cmds shelf-save shelve shelves unshelve"
+	cmds="$cmds shelf-diff shelf-drop shelf-list shelf-log shelf-save"
+	cmds="$cmds shelve shelves unshelve"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'

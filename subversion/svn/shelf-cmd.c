@@ -78,7 +78,7 @@ show_diffstat(svn_client_shelf_version_t *shelf_version,
               apr_pool_t *scratch_pool)
 {
 #ifndef WIN32
-  char *patch_abspath;
+  const char *patch_abspath;
   int result;
 
   SVN_ERR(svn_client_shelf_get_patch_abspath(&patch_abspath, shelf_version,
@@ -299,8 +299,8 @@ run_status_on_wc_paths(const char *paths_base_abspath,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      const char *abspath = svn_path_join(paths_base_abspath, path,
-                                          scratch_pool);
+      const char *abspath = svn_dirent_join(paths_base_abspath, path,
+                                            scratch_pool);
 
       SVN_ERR(svn_client_status6(NULL /*result_rev*/,
                                  ctx, abspath,
@@ -517,8 +517,8 @@ check_no_modified_paths(const char *paths_base_abspath,
   for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
     {
       const char *path = apr_hash_this_key(hi);
-      const char *abspath = svn_path_join(paths_base_abspath, path,
-                                          scratch_pool);
+      const char *abspath = svn_dirent_join(paths_base_abspath, path,
+                                            scratch_pool);
 
       SVN_ERR(svn_client_status6(NULL /*result_rev*/,
                                  ctx, abspath,
