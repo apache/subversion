@@ -148,9 +148,11 @@ typedef enum svn_cl__longopt_t {
   opt_show_item,
   opt_adds_as_modification,
   opt_vacuum_pristines,
+#ifdef WITH_SHELVE_V1
   opt_delete,
   opt_keep_shelved,
   opt_list
+#endif
 } svn_cl__longopt_t;
 
 
@@ -2426,9 +2428,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_dry_run:
         opt_state.dry_run = TRUE;
         break;
+#ifdef WITH_SHELVE_V1
       case opt_list:
         opt_state.list = TRUE;
         break;
+#endif
       case opt_revprop:
         opt_state.revprop = TRUE;
         break;
@@ -2612,7 +2616,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.diff.summarize = TRUE;
         break;
       case opt_remove:
+#ifdef WITH_SHELVE_V1
       case opt_delete:
+#endif
         opt_state.remove = TRUE;
         break;
       case opt_changelist:
@@ -2628,7 +2634,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.keep_changelists = TRUE;
         break;
       case opt_keep_local:
+#ifdef WITH_SHELVE_V1
       case opt_keep_shelved:
+#endif
         opt_state.keep_local = TRUE;
         break;
       case opt_with_all_revprops:
