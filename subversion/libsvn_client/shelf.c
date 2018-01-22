@@ -201,7 +201,7 @@ shelf_read_revprops(svn_client_shelf_t *shelf,
   shelf->revprops = apr_hash_make(shelf->pool);
   err = svn_stream_open_readonly(&stream, log_abspath,
                                  scratch_pool, scratch_pool);
-  if (err && err->apr_err == APR_ENOENT)
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
       return SVN_NO_ERROR;
