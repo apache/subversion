@@ -456,10 +456,10 @@ svn_client_shelf_delete(const char *name,
 }
 
 svn_error_t *
-svn_client_shelf_get_paths(apr_hash_t **affected_paths,
-                           svn_client_shelf_version_t *shelf_version,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
+svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
+                               svn_client_shelf_version_t *shelf_version,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
 {
   svn_patch_file_t *patch_file;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -637,11 +637,11 @@ svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
 }
 
 svn_error_t *
-svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
-                        const char *local_abspath,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+svn_client_shelf_list(apr_hash_t **shelf_infos,
+                      const char *local_abspath,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
 {
   const char *wc_root_abspath;
   char *shelves_dir;
@@ -655,7 +655,7 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
   SVN_ERR(svn_io_get_dirents3(&dirents, shelves_dir, FALSE /*only_check_type*/,
                               result_pool, scratch_pool));
 
-  *shelved_patch_infos = apr_hash_make(result_pool);
+  *shelf_infos = apr_hash_make(result_pool);
 
   /* Remove non-shelves */
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
@@ -671,24 +671,10 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
             = apr_palloc(result_pool, sizeof(*info));
 
           info->mtime = dirent->mtime;
-          svn_hash_sets(*shelved_patch_infos, name, info);
+          svn_hash_sets(*shelf_infos, name, info);
         }
     }
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_shelves_any(svn_boolean_t *any_shelved,
-                       const char *local_abspath,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *scratch_pool)
-{
-  apr_hash_t *shelved_patch_infos;
-
-  SVN_ERR(svn_client_shelves_list(&shelved_patch_infos, local_abspath,
-                                  ctx, scratch_pool, scratch_pool));
-  *any_shelved = apr_hash_count(shelved_patch_infos) != 0;
   return SVN_NO_ERROR;
 }
 

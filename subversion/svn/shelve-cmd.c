@@ -93,10 +93,10 @@ show_diffstat(svn_client_shelf_version_t *shelf_version,
 }
 
 /* A comparison function for svn_sort__hash(), comparing the mtime of two
-   svn_client_shelved_patch_info_t's. */
+   svn_client_shelf_info_t's. */
 static int
-compare_shelved_patch_infos_by_mtime(const svn_sort__item_t *a,
-                                     const svn_sort__item_t *b)
+compare_shelf_infos_by_mtime(const svn_sort__item_t *a,
+                             const svn_sort__item_t *b)
 {
   svn_client_shelf_info_t *a_val = a->value;
   svn_client_shelf_info_t *b_val = b->value;
@@ -113,12 +113,12 @@ list_sorted_by_date(apr_array_header_t **list,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *scratch_pool)
 {
-  apr_hash_t *shelved_patch_infos;
+  apr_hash_t *shelf_infos;
 
-  SVN_ERR(svn_client_shelves_list(&shelved_patch_infos, local_abspath,
-                                  ctx, scratch_pool, scratch_pool));
-  *list = svn_sort__hash(shelved_patch_infos,
-                         compare_shelved_patch_infos_by_mtime,
+  SVN_ERR(svn_client_shelf_list(&shelf_infos, local_abspath,
+                                ctx, scratch_pool, scratch_pool));
+  *list = svn_sort__hash(shelf_infos,
+                         compare_shelf_infos_by_mtime,
                          scratch_pool);
   return SVN_NO_ERROR;
 }
@@ -155,8 +155,8 @@ stats(svn_client_shelf_t *shelf,
     version_str = apr_psprintf(scratch_pool,
                                _("version %d of %d"),
                                version, shelf->max_version);
-  SVN_ERR(svn_client_shelf_get_paths(&paths,
-                                     shelf_version, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_shelf_paths_changed(&paths, shelf_version,
+                                         scratch_pool, scratch_pool));
   if (paths)
     paths_str = apr_psprintf(scratch_pool,
                              _(", %d paths changed"), apr_hash_count(paths));
@@ -512,8 +512,8 @@ check_no_modified_paths(const char *paths_base_abspath,
   sb.modified = FALSE;
   sb.ctx = ctx;
 
-  SVN_ERR(svn_client_shelf_get_paths(&paths, shelf_version,
-                                     scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_shelf_paths_changed(&paths, shelf_version,
+                                         scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
     {
       const char *path = apr_hash_this_key(hi);
@@ -734,9 +734,9 @@ svn_cl__shelf_save(apr_getopt_t *os,
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__shelve(apr_getopt_t *os,
-               void *baton,
-               apr_pool_t *pool)
+svn_cl__shelf_shelve(apr_getopt_t *os,
+                     void *baton,
+                     apr_pool_t *pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
@@ -788,9 +788,9 @@ svn_cl__shelve(apr_getopt_t *os,
 
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
-svn_cl__unshelve(apr_getopt_t *os,
-                 void *baton,
-                 apr_pool_t *scratch_pool)
+svn_cl__shelf_unshelve(apr_getopt_t *os,
+                       void *baton,
+                       apr_pool_t *scratch_pool)
 {
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;

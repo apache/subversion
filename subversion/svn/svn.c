@@ -1750,7 +1750,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     }
   },
 
-  { "shelve", svn_cl__shelve, {0}, N_
+  { "shelve", svn_cl__shelf_shelve, {0}, N_
     ("Move local changes onto a shelf.\n"
      "usage: shelve [--keep-local] NAME [PATH...]\n"
      "\n"
@@ -1779,7 +1779,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
     } },
 
-  { "unshelve", svn_cl__unshelve, {0}, N_
+  { "unshelve", svn_cl__shelf_unshelve, {0}, N_
     ("Copy shelved changes back into the WC.\n"
      "usage: unshelve [NAME [VERSION]]\n"
      "\n"
@@ -3057,7 +3057,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           || subcommand->cmd_func == svn_cl__lock
           || subcommand->cmd_func == svn_cl__propedit
           || subcommand->cmd_func == svn_cl__shelf_save
-          || subcommand->cmd_func == svn_cl__shelve))
+          || subcommand->cmd_func == svn_cl__shelf_shelve))
     {
       /* If the -F argument is a file that's under revision control,
          that's probably not what the user intended. */

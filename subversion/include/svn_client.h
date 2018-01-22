@@ -6894,10 +6894,10 @@ svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_get_paths(apr_hash_t **affected_paths,
-                           svn_client_shelf_version_t *shelf_version,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
+svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
+                               svn_client_shelf_version_t *shelf_version,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /** Set the log message in @a shelf, using the log message callbacks in
  * the client context.
@@ -6944,31 +6944,11 @@ typedef struct svn_client_shelf_info_t
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
-                        const char *local_abspath,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
-/** Set @a *any_shelved to indicate if there are any shelved changes in this WC.
- *
- * This shall provide the answer fast, regardless of how many changes
- * are stored, unlike svn_client_shelves_list().
- *
- * ### Initial implementation isn't O(1) fast -- it just calls
- *     svn_client_shelves_list().
- *
- * @a local_abspath is any path in the WC and is used to find the WC root.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelves_any(svn_boolean_t *any_shelved,
-                       const char *local_abspath,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *scratch_pool);
+svn_client_shelf_list(apr_hash_t **shelf_infos,
+                      const char *local_abspath,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool);
 
 /** @} */
 
