@@ -6868,15 +6868,6 @@ svn_client_shelf_has_changes(svn_boolean_t *has_changes,
  * @{
  */
 
-/** Implementation note:
- *
- *  For now, changelists are implemented by scattering the
- *  associations across multiple .svn/entries files in a working copy.
- *  However, this client API was written so that we have the option of
- *  changing the underlying implementation -- we may someday want to
- *  store changelist definitions in a centralized database.
- */
-
 /**
  * Add each path in @a paths (recursing to @a depth as necessary) to
  * @a changelist.  If a path is already a member of another
