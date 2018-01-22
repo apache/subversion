@@ -98,10 +98,12 @@ shelf_name_from_filename(char **name,
                          apr_pool_t *result_pool)
 {
   size_t len = strlen(filename);
+  static const char suffix[] = ".current";
+  int suffix_len = sizeof(suffix) - 1;
 
-  if (len > 8 && strcmp(filename + len - 8, ".current") == 0)
+  if (len > suffix_len && strcmp(filename + len - suffix_len, suffix) == 0)
     {
-      char *codename = apr_pstrndup(result_pool, filename, len - 6);
+      char *codename = apr_pstrndup(result_pool, filename, len - suffix_len);
       SVN_ERR(shelf_name_decode(name, codename, result_pool));
     }
   else
