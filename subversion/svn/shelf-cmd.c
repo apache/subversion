@@ -78,7 +78,7 @@ show_diffstat(svn_client_shelf_version_t *shelf_version,
               apr_pool_t *scratch_pool)
 {
 #ifndef WIN32
-  char *patch_abspath;
+  const char *patch_abspath;
   int result;
 
   SVN_ERR(svn_client_shelf_get_patch_abspath(&patch_abspath, shelf_version,
