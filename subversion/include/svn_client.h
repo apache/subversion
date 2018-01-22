@@ -7045,26 +7045,6 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/** Set @a *any_shelved to indicate if there are any shelved changes in this WC.
- *
- * This shall provide the answer fast, regardless of how many changes
- * are stored, unlike svn_client_shelves_list().
- *
- * ### Initial implementation isn't O(1) fast -- it just calls
- *     svn_client_shelves_list().
- *
- * @a local_abspath is any path in the WC and is used to find the WC root.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelves_any(svn_boolean_t *any_shelved,
-                       const char *local_abspath,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *scratch_pool);
-
 /** Set @a *affected_paths to a hash with one entry for each path affected
  * by the shelf @a name. The hash key is the old path and value is
  * the new path, both relative to the WC root. The key and value are the
