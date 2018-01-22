@@ -42,9 +42,13 @@ Available subcommands:
    resolve
    resolved
    revert
+   shelf-diff
+   shelf-drop
+   shelf-list (shelves)
+   shelf-log
+   shelf-save
    shelve
    unshelve
-   shelves
    status (stat, st)
    switch (sw)
    unlock

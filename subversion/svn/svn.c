@@ -61,7 +61,7 @@
 #include "svn_private_config.h"
 
 
-#define WITH_SHELVE_V1
+/*#define WITH_SHELVE_V1*/
 
 /*** Option Processing ***/
 
