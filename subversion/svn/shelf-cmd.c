@@ -728,7 +728,7 @@ svn_cl__shelf_save(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
 
   opt_state->keep_local = TRUE;
-  SVN_ERR(svn_cl__shelve(os, baton, pool));
+  SVN_ERR(svn_cl__shelf_shelve(os, baton, pool));
   return SVN_NO_ERROR;
 }
 
