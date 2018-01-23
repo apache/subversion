@@ -498,6 +498,11 @@ print_git_diff_header(svn_stream_t *os,
    needed to normalize paths relative the repository root, and are ignored
    if USE_GIT_DIFF_FORMAT is FALSE.
 
+   If @a pretty_print_mergeinfo is true, then describe 'svn:mergeinfo'
+   property changes in a human-readable form that says what changes were
+   merged or reverse merged; otherwise (or if the mergeinfo property values
+   don't parse correctly) display them just like any other property.
+
    ANCHOR is the local path where the diff editor is anchored. */
 static svn_error_t *
 display_prop_diffs(const apr_array_header_t *propchanges,
@@ -514,6 +519,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    const char *relative_to_dir,
                    svn_boolean_t show_diff_header,
                    svn_boolean_t use_git_diff_format,
+                   svn_boolean_t pretty_print_mergeinfo,
                    const char *ra_session_relpath,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
@@ -588,7 +594,7 @@ display_prop_diffs(const apr_array_header_t *propchanges,
 
   SVN_ERR(svn_diff__display_prop_diffs(
             outstream, encoding, propchanges, left_props,
-            TRUE /* pretty_print_mergeinfo */,
+            pretty_print_mergeinfo,
             -1 /* context_size */,
             cancel_func, cancel_baton, scratch_pool));
 
@@ -668,6 +674,9 @@ typedef struct diff_writer_info_t
   /* Whether to ignore copyfrom information when showing adds */
   svn_boolean_t show_copies_as_adds;
 
+  /* Whether to show mergeinfo prop changes in human-readable form */
+  svn_boolean_t pretty_print_mergeinfo;
+
   /* Empty files for creating diffs or NULL if not used yet */
   const char *empty_file;
 
@@ -718,6 +727,7 @@ diff_props_changed(const char *diff_relpath,
                                  dwi->relative_to_dir,
                                  show_diff_header,
                                  dwi->use_git_diff_format,
+                                 dwi->pretty_print_mergeinfo,
                                  dwi->ddi.session_relpath,
                                  dwi->cancel_func,
                                  dwi->cancel_baton,
@@ -2519,7 +2529,7 @@ create_diff_writer_info(diff_writer_info_t *dwi,
       * These cases require server communication.
 */
 svn_error_t *
-svn_client_diff6(const apr_array_header_t *options,
+svn_client_diff7(const apr_array_header_t *options,
                  const char *path_or_url1,
                  const svn_opt_revision_t *revision1,
                  const char *path_or_url2,
@@ -2534,6 +2544,7 @@ svn_client_diff6(const apr_array_header_t *options,
                  svn_boolean_t ignore_properties,
                  svn_boolean_t properties_only,
                  svn_boolean_t use_git_diff_format,
+                 svn_boolean_t pretty_print_mergeinfo,
                  const char *header_encoding,
                  svn_stream_t *outstream,
                  svn_stream_t *errstream,
@@ -2573,6 +2584,7 @@ svn_client_diff6(const apr_array_header_t *options,
   dwi.no_diff_added = no_diff_added;
   dwi.no_diff_deleted = no_diff_deleted;
   dwi.show_copies_as_adds = show_copies_as_adds;
+  dwi.pretty_print_mergeinfo = pretty_print_mergeinfo;
 
   dwi.cancel_func = ctx->cancel_func;
   dwi.cancel_baton = ctx->cancel_baton;
@@ -2607,7 +2619,7 @@ svn_client_diff6(const apr_array_header_t *options,
 }
 
 svn_error_t *
-svn_client_diff_peg6(const apr_array_header_t *options,
+svn_client_diff_peg7(const apr_array_header_t *options,
                      const char *path_or_url,
                      const svn_opt_revision_t *peg_revision,
                      const svn_opt_revision_t *start_revision,
@@ -2622,6 +2634,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
                      svn_boolean_t ignore_properties,
                      svn_boolean_t properties_only,
                      svn_boolean_t use_git_diff_format,
+                     svn_boolean_t pretty_print_mergeinfo,
                      const char *header_encoding,
                      svn_stream_t *outstream,
                      svn_stream_t *errstream,
@@ -2657,6 +2670,7 @@ svn_client_diff_peg6(const apr_array_header_t *options,
   dwi.no_diff_added = no_diff_added;
   dwi.no_diff_deleted = no_diff_deleted;
   dwi.show_copies_as_adds = show_copies_as_adds;
+  dwi.pretty_print_mergeinfo = pretty_print_mergeinfo;
 
   dwi.cancel_func = ctx->cancel_func;
   dwi.cancel_baton = ctx->cancel_baton;
