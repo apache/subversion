@@ -489,7 +489,7 @@ print_git_diff_header(svn_stream_t *os,
 
 /* A helper func that writes out verbal descriptions of property diffs
    to OUTSTREAM.   Of course, OUTSTREAM will probably be whatever was
-   passed to svn_client_diff6(), which is probably stdout.
+   passed to svn_client_diff7(), which is probably stdout.
 
    ### FIXME needs proper docstring
 
@@ -1776,8 +1776,8 @@ diff_prepare_repos_repos(const char **url1,
 
 /* A Theoretical Note From Ben, regarding do_diff().
 
-   This function is really svn_client_diff6().  If you read the public
-   API description for svn_client_diff6(), it sounds quite Grand.  It
+   This function is really svn_client_diff7().  If you read the public
+   API description for svn_client_diff7(), it sounds quite Grand.  It
    sounds really generalized and abstract and beautiful: that it will
    diff any two paths, be they working-copy paths or URLs, at any two
    revisions.
@@ -1801,7 +1801,7 @@ diff_prepare_repos_repos(const char **url1,
    pigeonholed into one of these use-cases, we currently bail with a
    friendly apology.
 
-   Perhaps someday a brave soul will truly make svn_client_diff6()
+   Perhaps someday a brave soul will truly make svn_client_diff7()
    perfectly general.  For now, we live with the 90% case.  Certainly,
    the commandline client only calls this function in legal ways.
    When there are other users of svn_client.h, maybe this will become
@@ -1814,7 +1814,7 @@ static svn_error_t *
 unsupported_diff_error(svn_error_t *child_err)
 {
   return svn_error_create(SVN_ERR_INCORRECT_PARAMS, child_err,
-                          _("Sorry, svn_client_diff6 was called in a way "
+                          _("Sorry, svn_client_diff7 was called in a way "
                             "that is not yet supported"));
 }
 
@@ -1823,7 +1823,7 @@ unsupported_diff_error(svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
-   All other options are the same as those passed to svn_client_diff6(). */
+   All other options are the same as those passed to svn_client_diff7(). */
 static svn_error_t *
 diff_wc_wc(const char **root_relpath,
            svn_boolean_t *root_is_dir,
@@ -1888,7 +1888,7 @@ diff_wc_wc(const char **root_relpath,
    and the actual two paths compared are determined by following copy
    history from PATH_OR_URL2.
 
-   All other options are the same as those passed to svn_client_diff6(). */
+   All other options are the same as those passed to svn_client_diff7(). */
 static svn_error_t *
 diff_repos_repos(const char **root_relpath,
                  svn_boolean_t *root_is_dir,
@@ -2058,7 +2058,7 @@ diff_repos_repos(const char **root_relpath,
 
    If REVERSE is TRUE, the diff will be reported in reverse.
 
-   All other options are the same as those passed to svn_client_diff6(). */
+   All other options are the same as those passed to svn_client_diff7(). */
 static svn_error_t *
 diff_repos_wc(const char **root_relpath,
               svn_boolean_t *root_is_dir,
