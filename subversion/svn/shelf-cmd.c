@@ -206,8 +206,8 @@ shelves_list(const char *local_abspath,
       svn_client_shelf_t *shelf;
       svn_client_shelf_version_t *shelf_version;
 
-      SVN_ERR(svn_client_shelf_open(&shelf,
-                                    name, local_abspath, ctx, scratch_pool));
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                         ctx, scratch_pool));
       SVN_ERR(svn_client_shelf_version_open(&shelf_version,
                                             shelf, shelf->max_version,
                                             scratch_pool, scratch_pool));
@@ -236,8 +236,8 @@ shelf_log(const char *name,
   svn_client_shelf_t *shelf;
   int i;
 
-  SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
-                                ctx, scratch_pool));
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                         ctx, scratch_pool));
 
   for (i = 1; i <= shelf->max_version; i++)
     {
@@ -566,14 +566,8 @@ shelf_restore(const char *name,
   svn_client_shelf_t *shelf;
   svn_client_shelf_version_t *shelf_version;
 
-  SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
-                                ctx, scratch_pool));
-  if (shelf->max_version <= 0)
-    {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("Shelf '%s' not found"),
-                               name);
-    }
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                         ctx, scratch_pool));
 
   old_version = shelf->max_version;
   if (arg)
@@ -636,14 +630,8 @@ shelf_diff(const char *name,
   svn_client_shelf_version_t *shelf_version;
   svn_stream_t *stream;
 
-  SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
-                                ctx, scratch_pool));
-  if (shelf->max_version <= 0)
-    {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("Shelf '%s' not found"),
-                               name);
-    }
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                         ctx, scratch_pool));
 
   if (arg)
     {

@@ -393,12 +393,15 @@ write_patch(const char *patch_abspath,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_open(svn_client_shelf_t **shelf_p,
-                      const char *name,
-                      const char *local_abspath,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *result_pool)
+/* Construct a shelf object representing an empty shelf: no versions,
+ * no revprops, no looking to see if such a shelf exists on disk.
+ */
+static svn_error_t *
+shelf_construct(svn_client_shelf_t **shelf_p,
+                const char *name,
+                const char *local_abspath,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *result_pool)
 {
   svn_client_shelf_t *shelf = apr_palloc(result_pool, sizeof(*shelf));
   char *shelves_dir;
@@ -414,10 +417,44 @@ svn_client_shelf_open(svn_client_shelf_t **shelf_p,
   shelf->pool = result_pool;
 
   shelf->name = apr_pstrdup(result_pool, name);
-  SVN_ERR(shelf_read_revprops(shelf, result_pool));
-  SVN_ERR(shelf_read_current(shelf, result_pool));
+  shelf->revprops = apr_hash_make(result_pool);
+  shelf->max_version = 0;
 
   *shelf_p = shelf;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_open_existing(svn_client_shelf_t **shelf_p,
+                               const char *name,
+                               const char *local_abspath,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool)
+{
+  SVN_ERR(shelf_construct(shelf_p, name,
+                          local_abspath, ctx, result_pool));
+  SVN_ERR(shelf_read_revprops(*shelf_p, result_pool));
+  SVN_ERR(shelf_read_current(*shelf_p, result_pool));
+  if ((*shelf_p)->max_version <= 0)
+    {
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               _("Shelf '%s' not found"),
+                               name);
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_open(svn_client_shelf_t **shelf_p,
+                      const char *name,
+                      const char *local_abspath,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool)
+{
+  SVN_ERR(shelf_construct(shelf_p, name,
+                          local_abspath, ctx, result_pool));
+  SVN_ERR(shelf_read_revprops(*shelf_p, result_pool));
+  SVN_ERR(shelf_read_current(*shelf_p, result_pool));
   return SVN_NO_ERROR;
 }
 
@@ -439,8 +476,8 @@ svn_client_shelf_delete(const char *name,
   int i;
   char *abspath;
 
-  SVN_ERR(svn_client_shelf_open(&shelf,
-                                name, local_abspath, ctx, scratch_pool));
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name,
+                                         local_abspath, ctx, scratch_pool));
 
   /* Remove the patches. */
   for (i = shelf->max_version; i > 0; i--)
