@@ -6770,6 +6770,21 @@ svn_client_shelf_open(svn_client_shelf_t **shelf_p,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool);
 
+/** Open an existing shelf or error if it doesn't exist.
+ *
+ * The shelf should be closed after use by calling svn_client_shelf_close().
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_open_existing(svn_client_shelf_t **shelf_p,
+                               const char *name,
+                               const char *local_abspath,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool);
+
 /** Close @a shelf.
  *
  * If @a shelf is NULL, do nothing; otherwise @a shelf must be an open shelf.
