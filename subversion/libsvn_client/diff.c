@@ -2407,7 +2407,6 @@ do_diff(const char **root_relpath,
 
               /* ### What about ddi? */
               /* Ignores changelists, ignore_ancestry */
-              SVN_DBG(("arbi"));
               SVN_ERR(svn_client__arbitrary_nodes_diff(root_relpath, root_is_dir,
                                                        abspath1, abspath2,
                                                        depth,
