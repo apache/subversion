@@ -849,7 +849,8 @@ _svn()
 	       --password-from-stdin \
 	       --trust-server-cert-failures \
 	       --force-interactive"
-	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
+	mOpts="-m --message -F --file --encoding --force-log --with-revprop \
+               --editor-cmd"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
 	nOpts="-N --non-recursive --depth"
@@ -888,16 +889,16 @@ _svn()
 			--remove-ignored --remove-unversioned --vacuum-pristines"
 		;;
 	commit|ci)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
+		cmdOpts="$mOpts $qOpts $nOpts --targets $pOpts \
 		         --no-unlock $cOpts --keep-changelists \
 		         --include-externals"
 		;;
 	copy|cp)
-		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts --parents \
+		cmdOpts="$mOpts $rOpts $qOpts $pOpts --parents \
 		         --ignore-externals --pin-externals"
 		;;
 	delete|del|remove|rm)
-		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts \
+		cmdOpts="--force $mOpts $qOpts --targets $pOpts \
                          --keep-local"
 		;;
 	diff|di)
@@ -917,7 +918,7 @@ _svn()
 		;;
 	import)
 		cmdOpts="--auto-props --no-auto-props $mOpts $qOpts $nOpts \
-		         --no-ignore --editor-cmd $pOpts --force"
+		         --no-ignore $pOpts --force"
 		;;
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
@@ -951,10 +952,10 @@ _svn()
 		         $qOpts -v --verbose --incremental --log"
 		;;
 	mkdir)
-		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
+		cmdOpts="$mOpts $qOpts $pOpts --parents"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $qOpts --force --editor-cmd $pOpts \
+		cmdOpts="$mOpts $qOpts --force $pOpts \
                          --parents --allow-mixed-revisions"
 		;;
 	patch)
@@ -967,7 +968,7 @@ _svn()
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="--editor-cmd $pOpts $mOpts --force"
+		cmdOpts="$pOpts $mOpts --force"
 		[[ $isRevProp || ! $prop ]] && \
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
@@ -1038,13 +1039,13 @@ _svn()
 	shelf-save)
 		cmdOpts="--dry-run \
                          --depth --targets $cOpts \
-                         $mOpts --editor-cmd \
+                         $mOpts \
                          $qOpts $pOpts"
 		;;
 	shelve)
 		cmdOpts="--keep-local --dry-run \
                          --depth --targets $cOpts \
-                         $mOpts --editor-cmd \
+                         $mOpts \
                          $qOpts $pOpts"
 		;;
 	unshelve)
