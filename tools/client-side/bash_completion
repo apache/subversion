@@ -1038,13 +1038,13 @@ _svn()
 	shelf-save)
 		cmdOpts="--dry-run \
                          --depth --targets $cOpts \
-                         -m --message -F --file --encoding --force-log --editor-cmd \
+                         $mOpts --editor-cmd \
                          $qOpts $pOpts"
 		;;
 	shelve)
 		cmdOpts="--keep-local --dry-run \
                          --depth --targets $cOpts \
-                         -m --message -F --file --encoding --force-log --editor-cmd \
+                         $mOpts --editor-cmd \
                          $qOpts $pOpts"
 		;;
 	unshelve)

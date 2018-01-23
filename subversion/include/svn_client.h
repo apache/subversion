@@ -6735,7 +6735,7 @@ typedef struct svn_client_shelf_t
     /* Private fields */
     const char *wc_root_abspath;
     const char *shelves_dir;
-    apr_hash_t *revprops;
+    apr_hash_t *revprops;  /* non-null; allocated in POOL */
     svn_client_ctx_t *ctx;
     apr_pool_t *pool;
 } svn_client_shelf_t;
@@ -6900,7 +6900,7 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
                                apr_pool_t *scratch_pool);
 
 /** Set the log message in @a shelf, using the log message callbacks in
- * the client context.
+ * the client context, and set other revprops to @a revprop_table.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6908,6 +6908,7 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
 SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
+                                 apr_hash_t *revprop_table,
                                  svn_boolean_t dry_run,
                                  apr_pool_t *scratch_pool);
 
