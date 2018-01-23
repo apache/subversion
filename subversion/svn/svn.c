@@ -1759,8 +1759,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ),
     {'q', opt_dry_run,
      opt_depth, opt_targets, opt_changelist,
-     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
-     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
+     SVN_CL__LOG_MSG_OPTIONS,
     }
   },
 
@@ -1788,8 +1787,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     ),
     {'q', opt_dry_run, opt_keep_local,
      opt_depth, opt_targets, opt_changelist,
-     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
-     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
+     SVN_CL__LOG_MSG_OPTIONS,
     } },
 
   { "unshelve", svn_cl__shelf_unshelve, {0}, N_

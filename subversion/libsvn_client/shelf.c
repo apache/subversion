@@ -35,6 +35,7 @@
 #include "svn_hash.h"
 #include "svn_utf.h"
 #include "svn_ctype.h"
+#include "svn_props.h"
 
 #include "client.h"
 #include "private/svn_client_private.h"
@@ -609,6 +610,7 @@ svn_client_shelf_get_log_message(char **log_message,
 
 svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
+                                 apr_hash_t *revprop_table,
                                  svn_boolean_t dry_run,
                                  apr_pool_t *scratch_pool)
 {
@@ -627,6 +629,12 @@ svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
       if (! message)
         return SVN_NO_ERROR;
     }
+
+  if (revprop_table)
+    shelf->revprops = svn_prop_hash_dup(revprop_table, shelf->pool);
+  else
+    shelf->revprops = apr_hash_make(shelf->pool);
+
   if (message && !dry_run)
     {
       svn_string_t *propval = svn_string_create(message, shelf->pool);

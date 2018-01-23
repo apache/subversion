@@ -405,6 +405,7 @@ shelve(int *new_version_p,
        const apr_array_header_t *paths,
        svn_depth_t depth,
        const apr_array_header_t *changelists,
+       apr_hash_t *revprop_table,
        svn_boolean_t keep_local,
        svn_boolean_t dry_run,
        svn_boolean_t quiet,
@@ -477,7 +478,8 @@ shelve(int *new_version_p,
                                        dry_run, scratch_pool));
     }
 
-  SVN_ERR(svn_client_shelf_set_log_message(shelf, dry_run, scratch_pool));
+  SVN_ERR(svn_client_shelf_set_log_message(shelf, revprop_table,
+                                           dry_run, scratch_pool));
 
   if (new_version_p)
     *new_version_p = shelf->max_version;
@@ -689,6 +691,7 @@ shelf_shelve(int *new_version,
              apr_array_header_t *targets,
              svn_depth_t depth,
              apr_array_header_t *changelists,
+             apr_hash_t *revprop_table,
              svn_boolean_t keep_local,
              svn_boolean_t dry_run,
              svn_boolean_t quiet,
@@ -713,6 +716,7 @@ shelf_shelve(int *new_version,
 
   SVN_ERR(shelve(new_version, name,
                  targets, depth, changelists,
+                 revprop_table,
                  keep_local, dry_run, quiet,
                  local_abspath, ctx, scratch_pool));
 
@@ -762,6 +766,7 @@ svn_cl__shelf_shelve(apr_getopt_t *os,
                                            pool));
       err = shelf_shelve(&new_version, name,
                          targets, opt_state->depth, opt_state->changelists,
+                         opt_state->revprop_table,
                          opt_state->keep_local, opt_state->dry_run,
                          opt_state->quiet, ctx, pool);
       if (ctx->log_msg_func3)
