@@ -1747,10 +1747,10 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "shelf-save", svn_cl__shelf_save, {0}, N_
     ("Copy local changes onto a new version of a shelf.\n"
-     "usage: shelf-log NAME\n"
+     "usage: shelf-save NAME [PATH...]\n"
      "\n"
      "  Save local changes in the given PATHs as a new version of shelf NAME.\n"
-     "  A new log message can be given with -m, -F, etc.\n"
+     "  The shelf's log message can be set with -m, -F, etc.\n"
      "\n"
      "  The same as 'svn shelve --keep-local'.\n"
      "\n"
@@ -1770,8 +1770,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Save the local changes in the given PATHs to a shelf named NAME.\n"
      "  Revert those changes from the WC unless '--keep-local' is given.\n"
-     "  If a log message is given with '-m' or '-F', replace the shelf's\n"
-     "  current log message (if any).\n"
+     "  The shelf's log message can be set with -m, -F, etc.\n"
      "\n"
      "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
      "\n"
