@@ -1854,8 +1854,9 @@ diff_wc_wc(const char **root_relpath,
              && (revision2->kind == svn_opt_revision_working))))
     return unsupported_diff_error(
        svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                        _("Only diffs between a path's text-base "
-                          "and its working files are supported at this time"
+                        _("A non-URL diff at this time must be either from "
+                          "a path's base to the same path's working version "
+                          "or between the working versions of two paths"
                           )));
 
   if (ddi)
@@ -2406,6 +2407,7 @@ do_diff(const char **root_relpath,
 
               /* ### What about ddi? */
               /* Ignores changelists, ignore_ancestry */
+              SVN_DBG(("arbi"));
               SVN_ERR(svn_client__arbitrary_nodes_diff(root_relpath, root_is_dir,
                                                        abspath1, abspath2,
                                                        depth,
