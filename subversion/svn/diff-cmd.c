@@ -463,7 +463,7 @@ svn_cl__diff(apr_getopt_t *os,
                                 ctx, iterpool));
             }
           else
-            SVN_ERR(svn_client_diff6(
+            SVN_ERR(svn_client_diff7(
                      options,
                      target1,
                      &(opt_state->start_revision),
@@ -479,6 +479,7 @@ svn_cl__diff(apr_getopt_t *os,
                      ignore_properties,
                      opt_state->diff.properties_only,
                      opt_state->diff.use_git_diff_format,
+                     TRUE /*pretty_print_mergeinfo*/,
                      svn_cmdline_output_encoding(pool),
                      outstream,
                      errstream,
@@ -515,7 +516,7 @@ svn_cl__diff(apr_getopt_t *os,
                                 ctx, iterpool));
             }
           else
-            SVN_ERR(svn_client_diff_peg6(
+            SVN_ERR(svn_client_diff_peg7(
                      options,
                      truepath,
                      &peg_revision,
@@ -531,6 +532,7 @@ svn_cl__diff(apr_getopt_t *os,
                      ignore_properties,
                      opt_state->diff.properties_only,
                      opt_state->diff.use_git_diff_format,
+                     TRUE /*pretty_print_mergeinfo*/,
                      svn_cmdline_output_encoding(pool),
                      outstream,
                      errstream,
