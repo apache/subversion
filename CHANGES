@@ -93,7 +93,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * 'svn': --non-interactive uses recommended tree conflict resolution (r1805620)
     * Evaluate 'old mode' and 'new mode' lines from git-syle diffs (r1705391)
     * svnrdump, svndumpfilter: Enable buffered stdin (r1703074)
-    * ra_serf: Receive svndiff1 and gzip compressed deltas (r1781282, -3, -4)
+    * ra_serf: Receive svndiff1 and gzip compressed deltas (r1791282, -3, -4)
     * svnadmin: 'lock', 'unlock', 'rmlocks': Take the -q option (r1796406)
     * New svndiff2 binary delta format using lz4 compression (r1801938, et al)
     * gpg-agent: Support gpg ≥2.1.13 and unset GPG_AGENT_INFO (r1795087)
