@@ -7791,6 +7791,68 @@ def patch_merge(sbox):
                                        expected_disk, None,
                                        expected_skip)
 
+def patch_mergeinfo_in_regular_prop_format(sbox):
+  "patch mergeinfo in regular prop format"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  strip_count = wc_dir.count(os.path.sep)+1
+
+  sbox.simple_copy('A/B/E', 'E')
+  sbox.simple_append('A/B/E/alpha', 'extra\nlines\n')
+  sbox.simple_commit()
+
+  sbox.simple_propset('a', 'A', 'E') # 'a' < 'svn:mergeinfo'
+  sbox.simple_propset('z', 'Z', 'E') # 'z' > 'svn:mergeinfo'
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A/B/E', sbox.ospath('E'))
+  # Rename 'svn:mergeinfo' to 'svn_mergeinfo' so that 'diff' doesn't
+  # pretty-print it; then rename it back before we run it through 'patch'.
+  # (Alternatively, we could disable pretty-printing when we implement a
+  # command-line switch to do so.)
+  mergeinfo_value = sbox.simple_propget('svn:mergeinfo', 'E')
+  sbox.simple_propdel('svn:mergeinfo', 'E')
+  sbox.simple_propset('svn_mergeinfo', mergeinfo_value, 'E')
+
+  _, diff, _ = svntest.actions.run_and_verify_svn(None, [],
+                                                  'diff', wc_dir)
+  diff = re.sub('svn_mergeinfo', 'svn:mergeinfo', ''.join(diff))
+
+  sbox.simple_revert('E', 'E/alpha')
+
+  patch = sbox.get_tempname('recurse.patch')
+  svntest.main.file_write(patch, diff, mode='wb')
+
+  expected_output = wc.State(wc_dir, {
+    'E'                 : Item(status=' U'),
+    'E/alpha'           : Item(status='U '),
+  })
+  expected_skip = wc.State(wc_dir, {})
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.add({
+    'E'                 : Item(status=' M', wc_rev='2'),
+    'E/alpha'           : Item(status='M ', wc_rev='2'),
+    'E/beta'            : Item(status='  ', wc_rev='2'),
+  })
+  expected_status.tweak('A/B/E/alpha', wc_rev=2)
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.tweak('A/B/E/alpha', contents="This is the file 'alpha'.\nextra\nlines\n")
+  expected_disk.add({
+    'E'                 : Item(props={'a': 'A',
+                                      # here is the correctly patched mergeinfo
+                                      'svn:mergeinfo': '/A/B/E:2',
+                                      'z': 'Z'}),
+    'E/beta'            : Item(contents="This is the file 'beta'.\n"),
+    'E/alpha'           : Item(contents="This is the file 'alpha'.\nextra\nlines\n"),
+  })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch,
+                                       expected_output, expected_disk,
+                                       expected_status, expected_skip,
+                                       [], True, True,
+                                       '--strip', strip_count)
+
 ########################################################################
 #Run the tests
 
@@ -7874,6 +7936,7 @@ test_list = [ None,
               missing_trailing_context,
               patch_missed_trail,
               patch_merge,
+              patch_mergeinfo_in_regular_prop_format,
             ]
 
 if __name__ == '__main__':
