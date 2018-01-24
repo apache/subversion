@@ -3003,7 +3003,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: ra_serf doesn't support http-auth-types config (issue #3435)
     * fixed: merge sets incorrect mergeinfo on skipped paths (issue #3440)
     * fixed: ra_serf inconsistent handling of cached authn creds (issue #3450)
-    * fixed: ra_serf sefault with using NTLM or Negotiate auth (r876910)
+    * fixed: ra_serf segfault with using NTLM or Negotiate auth (r876910)
     * fixed: excluded subtrees are not detected by svnversion (issue #3461)
     * fixed: submitting a changelist while obstructed item exists (issue #3484)
     * fixed: crash when changing an external's URL (issue #3530)
