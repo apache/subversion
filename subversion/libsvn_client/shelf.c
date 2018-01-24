@@ -365,7 +365,7 @@ write_patch(const char *patch_abspath,
                                  _("'%s' is not a local path"), path);
       SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
 
-      SVN_ERR(svn_client_diff_peg6(
+      SVN_ERR(svn_client_diff_peg7(
                      NULL /*options*/,
                      path,
                      &peg_revision,
@@ -381,6 +381,7 @@ write_patch(const char *patch_abspath,
                      FALSE /*ignore_properties*/,
                      FALSE /*properties_only*/,
                      FALSE /*use_git_diff_format*/,
+                     FALSE /*pretty_print_mergeinfo*/,
                      SVN_APR_LOCALE_CHARSET,
                      outstream,
                      errstream,

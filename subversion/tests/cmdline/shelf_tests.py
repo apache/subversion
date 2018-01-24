@@ -217,7 +217,6 @@ def checkpoint_basic(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(3747)
 def shelve_mergeinfo(sbox):
   "shelve mergeinfo"
