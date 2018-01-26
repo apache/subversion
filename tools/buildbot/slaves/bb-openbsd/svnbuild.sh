@@ -24,4 +24,5 @@ set -x
 
 url="$(svn info --show-item url)"
 branch="${url##*/}"
+(test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
 (cd .. && gmake BRANCH="$branch" THREADING="no" JAVA="no" MAKE_JOBS=8)
