@@ -22,7 +22,6 @@
 set -e
 set -x
 
-export JAVA_HOME=/usr/local/jdk-1.7.0
-
-branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
-(cd .. && gmake BRANCH="$branch" THREADING="no")
+url="$(svn info --show-item url)"
+branch="${url##*/}"
+(cd .. && gmake BRANCH="$branch" THREADING="no" JAVA="no" MAKE_JOBS=8)

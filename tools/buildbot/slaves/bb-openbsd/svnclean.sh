@@ -22,12 +22,20 @@
 set -e
 set -x
 
-branch="$(basename $(svn info . | grep ^URL  | cut -d' ' -f2))"
+url="$(svn info --show-item url)"
+branch="${url##*/}"
 (test -h ../svn-trunk || ln -s build ../svn-trunk)
-for i in 6 7 8 9 10; do
+for i in $(jot - 6 12); do
   (test -h ../svn-1.${i}.x || ln -s build ../svn-1.${i}.x)
 done
+lastchangedrev="$(svn info --show-item=last-changed-revision ../../unix-build/Makefile.svn)"
 svn update ../../unix-build
+newlastchangedrev="$(svn info --show-item=last-changed-revision ../../unix-build/Makefile.svn)"
 (test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
-(cd .. && gmake BRANCH="$branch" reset clean)
+# always rebuild svn, but only rebuild dependencies if Makefile.svn has changed
+if [ "$lastchangedrev" != "$newlastchangedrev" ]; then
+  (cd .. && gmake BRANCH="$branch" reset clean)
+else
+  (cd .. && gmake BRANCH="$branch" svn-reset svn-clean)
+fi
 rm -f tests.log* fails.log*
