@@ -26,7 +26,6 @@ url="$(svn info --show-item url)"
 branch="${url##*/}"
 export MALLOC_OPTIONS=S
 (cd .. && gmake BRANCH="$branch" PARALLEL="" THREADING="no" JAVA="no" \
-                MEMCACHED_SERVER="127.0.0.1:11211" \
                 EXCLUSIVE_WC_LOCKS=1 \
                                   svn-check-local \
                                   svn-check-svn \
