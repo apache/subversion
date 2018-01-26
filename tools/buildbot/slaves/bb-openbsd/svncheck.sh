@@ -25,7 +25,7 @@ set -x
 url="$(svn info --show-item url)"
 branch="${url##*/}"
 export MALLOC_OPTIONS=S
-(cd .. && gmake BRANCH="$branch" PARALLEL="" THREADING="no" JAVA="no" \
+(cd .. && gmake BRANCH="$branch" PARALLEL="1" THREADING="no" JAVA="no" \
                 EXCLUSIVE_WC_LOCKS=1 \
                                   svn-check-local \
                                   svn-check-svn \
