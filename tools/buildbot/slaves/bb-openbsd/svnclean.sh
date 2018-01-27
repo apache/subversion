@@ -36,6 +36,6 @@ newlastchangedrev="$(svn info --show-item=last-changed-revision ../../unix-build
 if [ "$lastchangedrev" != "$newlastchangedrev" ]; then
   (cd .. && gmake BRANCH="$branch" reset clean)
 else
-  (cd .. && gmake BRANCH="$branch" svn-reset svn-clean)
+  (cd .. && gmake BRANCH="$branch" svn-reset svn-bindings-reset svn-clean)
 fi
 rm -f tests.log* fails.log*
