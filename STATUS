@@ -59,6 +59,11 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1822401
+   Fix 'dereference pointer to the wrong object' crash in conflict resolver.
+   Votes:
+     +1: stsp
+   
 Veto-blocked changes:
 =====================
 
