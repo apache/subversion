@@ -496,22 +496,31 @@ svn_client_shelf_delete(const char *name,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
-                               svn_client_shelf_version_t *shelf_version,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+/* Get the paths changed, relative to WC root, as a hash and/or an array.
+ */
+static svn_error_t *
+shelf_paths_changed(apr_hash_t **paths_hash_p,
+                    apr_array_header_t **paths_array_p,
+                    svn_client_shelf_version_t *shelf_version,
+                    svn_boolean_t as_abspath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
 {
+  svn_client_shelf_t *shelf = shelf_version->shelf;
   svn_patch_file_t *patch_file;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_hash_t *paths = apr_hash_make(result_pool);
 
+  if (paths_hash_p)
+    *paths_hash_p = apr_hash_make(result_pool);
+  if (paths_array_p)
+    *paths_array_p = apr_array_make(result_pool, 0, sizeof(void *));
   SVN_ERR(svn_diff_open_patch_file(&patch_file, shelf_version->patch_abspath,
                                    result_pool));
 
   while (1)
     {
       svn_patch_t *patch;
+      char *old_path, *new_path;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file,
@@ -520,14 +529,41 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
                                         iterpool, iterpool));
       if (! patch)
         break;
-      svn_hash_sets(paths,
-                    apr_pstrdup(result_pool, patch->old_filename),
-                    apr_pstrdup(result_pool, patch->new_filename));
+
+      old_path = (as_abspath
+                  ? svn_dirent_join(shelf->wc_root_abspath,
+                                    patch->old_filename, result_pool)
+                  : apr_pstrdup(result_pool, patch->old_filename));
+      new_path = (as_abspath
+                  ? svn_dirent_join(shelf->wc_root_abspath,
+                                    patch->new_filename, result_pool)
+                  : apr_pstrdup(result_pool, patch->new_filename));
+      if (paths_hash_p)
+        {
+          svn_hash_sets(*paths_hash_p, old_path, new_path);
+        }
+      if (paths_array_p)
+        {
+          APR_ARRAY_PUSH(*paths_array_p, void *) = old_path;
+          if (strcmp(old_path, new_path) != 0)
+            APR_ARRAY_PUSH(*paths_array_p, void *) = new_path;
+        }
     }
   SVN_ERR(svn_diff_close_patch_file(patch_file, iterpool));
   svn_pool_destroy(iterpool);
 
-  *affected_paths = paths;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
+                               svn_client_shelf_version_t *shelf_version,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(shelf_paths_changed(affected_paths, NULL, shelf_version,
+                              FALSE /*as_abspath*/,
+                              result_pool, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -552,14 +588,20 @@ svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_client_patch(shelf_version->patch_abspath,
-                           shelf_version->shelf->wc_root_abspath,
-                           dry_run, 0 /*strip*/,
-                           TRUE /*reverse*/,
-                           FALSE /*ignore_whitespace*/,
-                           TRUE /*remove_tempfiles*/, NULL, NULL,
-                           shelf_version->shelf->ctx, scratch_pool));
+  apr_array_header_t *targets;
 
+  SVN_ERR(shelf_paths_changed(NULL, &targets, shelf_version,
+                              TRUE /*as_abspath*/,
+                              scratch_pool, scratch_pool));
+  if (!dry_run)
+    {
+      SVN_ERR(svn_client_revert4(targets, svn_depth_empty,
+                                 NULL /*changelists*/,
+                                 FALSE /*clear_changelists*/,
+                                 FALSE /*metadata_only*/,
+                                 FALSE /*added_keep_local*/,
+                                 shelf_version->shelf->ctx, scratch_pool));
+    }
   return SVN_NO_ERROR;
 }
 

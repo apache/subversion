@@ -126,7 +126,6 @@ def shelve_adds(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(4709)
 def shelve_deletes(sbox):
   "shelve deletes"
