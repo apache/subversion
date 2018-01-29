@@ -468,12 +468,11 @@ shelve(int *new_version_p,
                    : _("None of the local modifications could be shelved"));
     }
 
+  /* Un-apply the patch, if required. */
   if (!keep_local)
     {
       svn_client_shelf_version_t *shelf_version;
 
-      /* Reverse-apply the patch. This should be a safer way to remove those
-         changes from the WC than running a 'revert' operation. */
       SVN_ERR(svn_client_shelf_version_open(&shelf_version,
                                             shelf, shelf->max_version,
                                             scratch_pool, scratch_pool));
