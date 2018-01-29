@@ -1322,7 +1322,7 @@ class IncludeDependencyInfo:
     values."""
     hdrs = { }
 
-    for line in fileinput.FileInput(fname, openhook=fileinput.hook_encoded("utf-8", "surrogateescape")):
+    for line in fileinput.FileInput(fname, openhook=fileinput.hook_encoded("utf-8")):
       match = self._re_include.match(line)
       if not match:
         continue
