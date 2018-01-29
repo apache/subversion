@@ -4341,17 +4341,23 @@ svn_client_relocate(const char *dir,
 
 /**
  * Restore the pristine version of working copy @a paths,
- * effectively undoing any local mods.  For each path in @a paths,
- * revert it if it is a file.  Else if it is a directory, revert
- * according to @a depth:
+ * effectively undoing any local mods. This means returning each
+ * path's versioned status to 'unmodified' and changing its on-disk
+ * state to match that.
+ *
+ * If an item was in a state of conflict, reverting also marks the
+ * conflict as resolved. If there are conflict marker files attached
+ * to the item, these are removed.
  *
  * @a paths is an array of (const char *) local WC paths.
  *
- * If @a depth is #svn_depth_empty, revert just the properties on
- * the directory; else if #svn_depth_files, revert the properties
+ * For each path in @a paths, revert it if it is a file.  Else if it is
+ * a directory, revert according to @a depth:
+ * If @a depth is #svn_depth_empty, revert just
+ * the directory; else if #svn_depth_files, revert the directory
  * and any files immediately under the directory; else if
  * #svn_depth_immediates, revert all of the preceding plus
- * properties on immediate subdirectories; else if #svn_depth_infinity,
+ * immediate subdirectories; else if #svn_depth_infinity,
  * revert path and everything under it fully recursively.
  *
  * @a changelists is an array of <tt>const char *</tt> changelist
@@ -4363,9 +4369,14 @@ svn_client_relocate(const char *dir,
  * If @a clear_changelists is TRUE, then changelist information for the
  * paths is cleared while reverting.
  *
- * If @a metadata_only is TRUE, the files and directories aren't changed
- * by the operation. If there are conflict marker files attached to the
- * targets these are removed.
+ * The @a metadata_only and @a added_keep_local options control the
+ * extent of reverting. If @a metadata_only is TRUE, the working copy
+ * files are untouched, but if there are conflict marker files attached
+ * to these files these markers are removed. Otherwise, if
+ * @a added_keep_local is TRUE, then all items are reverted except an
+ * item that was scheduled as plain 'add' (not a copy) will not be
+ * removed from the working copy. Otherwise, all items are reverted and
+ * their on-disk state changed to match.
  *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
@@ -4375,8 +4386,28 @@ svn_client_relocate(const char *dir,
  * then do not error, just invoke @a ctx->notify_func2 with @a
  * ctx->notify_baton2, using notification code #svn_wc_notify_skip.
  *
- * @since New in 1.9.
+ * @warn The 'revert' command intentionally and permanently loses
+ * local modifications.
+ *
+ * @since New in 1.11.
  */
+svn_error_t *
+svn_client_revert4(const apr_array_header_t *paths,
+                   svn_depth_t depth,
+                   const apr_array_header_t *changelists,
+                   svn_boolean_t clear_changelists,
+                   svn_boolean_t metadata_only,
+                   svn_boolean_t added_keep_local,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool);
+
+/** Similar to svn_client_revert4(), but with @a remove_added_from_disk set to
+ * FALSE.
+ *
+ * @since New in 1.9.
+ * @deprecated Provided for backwards compatibility with the 1.10 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_revert3(const apr_array_header_t *paths,
                    svn_depth_t depth,
