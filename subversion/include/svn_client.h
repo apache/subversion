@@ -6880,6 +6880,8 @@ svn_client_shelf_delete(const char *name,
 /** Save the local modifications found by @a paths, @a depth,
  * @a changelists as a new version of @a shelf.
  *
+ * @a paths are relative to the CWD, or absolute.
+ *
  * If there are no local modifications in the specified locations, do not
  * create a new version of @a shelf.
  *
