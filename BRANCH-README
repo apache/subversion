@@ -12,7 +12,11 @@ features for the C extension interfaces for each version.
 TODO
 ----
 
-* Ensure Windows builds still work in light of the addition of the py3c library.
+* Windows build has been updated to work with the py3c library for python swig
+  bindings:
+    * Python 2 compiles and tests pass
+    * Python 3 has a compile error.
+    * Currently only build for Visual Studio > 2008 have been updated.
 * Make the error more meaningful if the user attempts to build python swig
   bindings, even if py3c was disabled or not found. Currently the error on
   makefile builds is "none: command not found", which isn't very descriptive.
