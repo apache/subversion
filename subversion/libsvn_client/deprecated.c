@@ -2936,6 +2936,22 @@ svn_client_resolved(const char *path,
 }
 /*** From revert.c ***/
 svn_error_t *
+svn_client_revert3(const apr_array_header_t *paths,
+                   svn_depth_t depth,
+                   const apr_array_header_t *changelists,
+                   svn_boolean_t clear_changelists,
+                   svn_boolean_t metadata_only,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  SVN_ERR(svn_client_revert4(paths, depth, changelists,
+                             clear_changelists, metadata_only,
+                             TRUE /*added_keep_local*/,
+                             ctx, pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_revert2(const apr_array_header_t *paths,
                    svn_depth_t depth,
                    const apr_array_header_t *changelists,

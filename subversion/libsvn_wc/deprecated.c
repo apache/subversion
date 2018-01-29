@@ -1091,6 +1091,33 @@ svn_wc_add(const char *path,
 
 /*** From revert.c ***/
 svn_error_t *
+svn_wc_revert5(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelist_filter,
+               svn_boolean_t clear_changelists,
+               svn_boolean_t metadata_only,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc_revert6(wc_ctx, local_abspath,
+                         depth,
+                         use_commit_times,
+                         changelist_filter,
+                         clear_changelists,
+                         metadata_only,
+                         TRUE /*added_keep_local*/,
+                         cancel_func, cancel_baton,
+                         notify_func, notify_baton,
+                         scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_revert4(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
