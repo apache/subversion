@@ -120,6 +120,7 @@ class Generator(gen_win.WinGeneratorBase):
       'instrument_purify_quantify' : self.instrument_purify_quantify,
       'version' : self.vcproj_version,
       'toolset_version' : 'v' + self.vcproj_version.replace('.',''),
+      'user_macros': self.user_macros,
       }
 
     if self.vcproj_extension == '.vcproj':

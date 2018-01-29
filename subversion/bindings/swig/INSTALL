@@ -237,6 +237,9 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
            http://www.python.org/
            http://www.activestate.com/ActivePerl/
 
+       If you plan to build python bindings, you will also need to download and
+       extract the py3c library from https://github.com/encukou/py3c/releases.
+       
        NOTE: Our Python SWIG bindings will currently NOT compile in Debug mode
              unless you have python24_d.lib (which binary distributions of
              Python do not contain).  Therefore, the Python bindings will only
@@ -252,6 +255,11 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
        Example:
 
         > gen-make.py <other options> --with-swig="C:\Program Files\SWIG-2.0.2"
+        
+       If you are building python bindings, point to the py3c directory as well:
+       
+        > gen-make.py <other options> --with-swig="C:\Program Files\SWIG-2.0.2" \
+                                      --with-py3c="C:\SVN\py3c"
 
    4.  If you haven't already built Subversion, you should do so now.
        Instructions are in the main INSTALL file.

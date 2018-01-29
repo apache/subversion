@@ -43,7 +43,9 @@
 [for platforms][for configs]  <ImportGroup Label="PropertySheets" Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
     <Import Project="$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props" Condition="exists('$(UserRootDir)\Microsoft.Cpp.$(Platform).user.props')" Label="LocalAppDataPlatform" />
   </ImportGroup>
-[end][end]  <PropertyGroup Label="UserMacros" />
+[end][end]  <PropertyGroup Label="UserMacros">
+[for user_macros]    <[user_macros.name]>[user_macros.value]</[user_macros.name]>
+[end]  </PropertyGroup>
 [for platforms][for configs]  <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='[configs.name]|[platforms]'">
     <OutDir>$(SolutionDir)[configs.name]\[target.output_dir]\</OutDir>
     <IntDir>$(SolutionDir)[configs.name]\obj\[target.intermediate_dir]\[target.proj_name]\</IntDir>
