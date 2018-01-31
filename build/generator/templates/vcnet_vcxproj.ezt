@@ -62,7 +62,6 @@
       <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
-      <ProgramDataBaseFileName>$(OutDir)$(TargetName).pdb</ProgramDataBaseFileName>
       <DisableSpecificWarnings>4100;4127;4206;4512;4701;4706;4800;%(DisableSpecificWarnings)</DisableSpecificWarnings>
       <TreatSpecificWarningsAsErrors>4002;4003;4013;4020;4022;4024;4028;4029;4030;4031;4033;4047;4089;4113;4115;4133;4204;4700;4715;4789;%(TreatSpecificWarningsAsErrors)</TreatSpecificWarningsAsErrors>
 [if-any configs.forced_include_files]      <ForcedIncludeFiles>[for configs.forced_include_files][configs.forced_include_files];[end]%(ForcedIncludeFiles)</ForcedIncludeFiles>
