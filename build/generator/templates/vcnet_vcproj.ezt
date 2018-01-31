@@ -33,6 +33,7 @@
 			OutputDirectory="..\..\..\[configs.name]\[target.output_dir]"
 			BuildLogFile="$(IntDir)\BuildLog_$(ProjectName).htm"
 			IntermediateDirectory="..\..\..\[configs.name]\[target.intermediate_dir]\[target.proj_name]"
+			InheritedPropertySheets=".\[target.proj_name].vsprops"
 			ConfigurationType="[target_type]"[is configs.name "Release"]
 			WholeProgramOptimization="FALSE"[end]>
 			<Tool
