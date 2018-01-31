@@ -40,11 +40,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1820046,r1820047
-   Let 'svn shelves' accept '-q' for consistency with 'svn shelve --list -q'.
-   Votes:
-     +1: julianfoad, rhuijben, jamessan
-
  * r1821621
    Remove lower level shelving functions from (experimental) public API.
    Votes:
@@ -62,4 +57,3 @@ Approved changes:
    
 Veto-blocked changes:
 =====================
-

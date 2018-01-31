@@ -1756,7 +1756,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     ),
-    },
+    {'q'} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"

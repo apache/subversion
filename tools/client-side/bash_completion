@@ -1028,7 +1028,7 @@ _svn()
 		cmdOpts="$qOpts --keep-shelved --list --dry-run $pOpts"
 		;;
 	shelves)
-		cmdOpts="$pOpts"
+		cmdOpts="$qOpts $pOpts"
 		;;
 	*)
 		;;
