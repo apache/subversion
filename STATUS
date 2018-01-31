@@ -40,11 +40,6 @@ Candidate changes:
 Approved changes:
 =================
 
- * r1821621
-   Remove lower level shelving functions from (experimental) public API.
-   Votes:
-     +1: julianfoad, rhuijben, jamessan
-
  * r1821678
    Encode the shelf name to ensure a valid filename for the patch file.
    Votes:

@@ -36,6 +36,7 @@
 #include "svn_utf.h"
 
 #include "client.h"
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
@@ -73,16 +74,26 @@ get_patch_abspath(char **patch_abspath,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_write_patch(const char *name,
-                             const char *message,
-                             const char *wc_root_abspath,
-                             svn_boolean_t overwrite_existing,
-                             const apr_array_header_t *paths,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool)
+/** Write local changes to a patch file for shelved change @a name.
+ *
+ * @a message: An optional log message.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ *
+ * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
+ *
+ * @a paths, @a depth, @a changelists: The selection of local paths to diff.
+ */
+static svn_error_t *
+shelf_write_patch(const char *name,
+                  const char *message,
+                  const char *wc_root_abspath,
+                  svn_boolean_t overwrite_existing,
+                  const apr_array_header_t *paths,
+                  svn_depth_t depth,
+                  const apr_array_header_t *changelists,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
 {
   char *patch_abspath;
   apr_int32_t flag;
@@ -158,13 +169,21 @@ svn_client_shelf_write_patch(const char *name,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_apply_patch(const char *name,
-                             const char *wc_root_abspath,
-                             svn_boolean_t reverse,
-                             svn_boolean_t dry_run,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool)
+/** Apply the patch file for shelved change @a name to the WC.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ *
+ * @a reverse: Apply the patch in reverse.
+ *
+ * @a dry_run: Don't really apply the changes, just notify what would be done.
+ */
+static svn_error_t *
+shelf_apply_patch(const char *name,
+                  const char *wc_root_abspath,
+                  svn_boolean_t reverse,
+                  svn_boolean_t dry_run,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
 {
   char *patch_abspath;
 
@@ -180,11 +199,15 @@ svn_client_shelf_apply_patch(const char *name,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_delete_patch(const char *name,
-                              const char *wc_root_abspath,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *scratch_pool)
+/** Delete the patch file for shelved change @a name.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ */
+static svn_error_t *
+shelf_delete_patch(const char *name,
+                   const char *wc_root_abspath,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
 {
   char *patch_abspath, *to_abspath;
 
@@ -237,10 +260,10 @@ svn_client_shelve(const char *name,
         return SVN_NO_ERROR;
     }
 
-  err = svn_client_shelf_write_patch(name, message, wc_root_abspath,
-                                     FALSE /*overwrite_existing*/,
-                                     paths, depth, changelists,
-                                     ctx, pool);
+  err = shelf_write_patch(name, message, wc_root_abspath,
+                          FALSE /*overwrite_existing*/,
+                          paths, depth, changelists,
+                          ctx, pool);
   if (err && APR_STATUS_IS_EEXIST(err->apr_err))
     {
       return svn_error_quick_wrapf(err,
@@ -254,15 +277,15 @@ svn_client_shelve(const char *name,
     {
       /* Reverse-apply the patch. This should be a safer way to remove those
          changes from the WC than running a 'revert' operation. */
-      SVN_ERR(svn_client_shelf_apply_patch(name, wc_root_abspath,
-                                           TRUE /*reverse*/, dry_run,
-                                           ctx, pool));
+      SVN_ERR(shelf_apply_patch(name, wc_root_abspath,
+                                TRUE /*reverse*/, dry_run,
+                                ctx, pool));
     }
 
   if (dry_run)
     {
-      SVN_ERR(svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                            ctx, pool));
+      SVN_ERR(shelf_delete_patch(name, wc_root_abspath,
+                                 ctx, pool));
     }
 
   return SVN_NO_ERROR;
@@ -285,9 +308,9 @@ svn_client_unshelve(const char *name,
                                  local_abspath, ctx, pool, pool));
 
   /* Apply the patch. */
-  err = svn_client_shelf_apply_patch(name, wc_root_abspath,
-                                     FALSE /*reverse*/, dry_run,
-                                     ctx, pool);
+  err = shelf_apply_patch(name, wc_root_abspath,
+                          FALSE /*reverse*/, dry_run,
+                          ctx, pool);
   if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
     {
       return svn_error_quick_wrapf(err,
@@ -300,8 +323,8 @@ svn_client_unshelve(const char *name,
   /* Remove the patch. */
   if (! keep && ! dry_run)
     {
-      SVN_ERR(svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                            ctx, pool));
+      SVN_ERR(shelf_delete_patch(name, wc_root_abspath,
+                                 ctx, pool));
     }
 
   return SVN_NO_ERROR;
@@ -326,8 +349,8 @@ svn_client_shelves_delete(const char *name,
     {
       svn_error_t *err;
 
-      err = svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                          ctx, pool);
+      err = shelf_delete_patch(name, wc_root_abspath,
+                               ctx, pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
           return svn_error_quick_wrapf(err,
