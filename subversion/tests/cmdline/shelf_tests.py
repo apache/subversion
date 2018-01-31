@@ -44,21 +44,16 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 
-def shelve_unshelve(sbox, modifier):
-  "Round-trip: shelve and unshelve"
+def shelve_unshelve_verify(sbox):
+  """Round-trip: shelve; verify all changes are reverted;
+     unshelve; verify all changes are restored.
+  """
 
-  sbox.build()
-  was_cwd = os.getcwd()
-  os.chdir(sbox.wc_dir)
-  sbox.wc_dir = ''
-  wc_dir = ''
-
-  # Make some changes to the working copy
-  modifier(sbox)
+  wc_dir = sbox.wc_dir
 
   # Save the modified state
   _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
-                                      sbox.wc_dir)
+                                      wc_dir)
   modified_state = svntest.wc.State.from_status(output, wc_dir)
 
   # Shelve; check there are no longer any modifications
@@ -71,6 +66,23 @@ def shelve_unshelve(sbox, modifier):
   svntest.actions.run_and_verify_svn(None, [],
                                      'unshelve', 'foo')
   svntest.actions.run_and_verify_status(wc_dir, modified_state)
+
+#----------------------------------------------------------------------
+
+def shelve_unshelve(sbox, modifier):
+  """Round-trip: build 'sbox'; apply changes by calling 'modifier(sbox)';
+     shelve and unshelve; verify changes are fully reverted and restored.
+  """
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # Make some changes to the working copy
+  modifier(sbox)
+
+  shelve_unshelve_verify(sbox)
 
   os.chdir(was_cwd)
 
@@ -114,7 +126,6 @@ def shelve_adds(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(4709)
 def shelve_deletes(sbox):
   "shelve deletes"
@@ -126,6 +137,95 @@ def shelve_deletes(sbox):
 
 #----------------------------------------------------------------------
 
+def shelve_from_inner_path(sbox):
+  "shelve from inner path"
+
+  def modifier(sbox):
+    sbox.simple_append('A/mu', 'appended mu text')
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.ospath('A'))
+  sbox.wc_dir = '..'
+
+  modifier(sbox)
+  shelve_unshelve_verify(sbox)
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
+
+def state_from_status(wc_dir):
+  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
+                                      wc_dir)
+  return svntest.wc.State.from_status(output, wc_dir)
+
+def save_revert_restore(sbox, modifier1, modifier2):
+  "Save 2 checkpoints; revert; restore 1st"
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = ''
+
+  # Make some changes to the working copy
+  modifier1(sbox)
+
+  # Remember the modified state
+  modified_state1 = state_from_status(wc_dir)
+
+  # Save a checkpoint; check nothing changed
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelf-save', 'foo')
+  svntest.actions.run_and_verify_status(wc_dir, modified_state1)
+
+  # Modify again; remember the state; save a checkpoint
+  modifier2(sbox)
+  modified_state2 = state_from_status(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelf-save', 'foo')
+  svntest.actions.run_and_verify_status(wc_dir, modified_state2)
+
+  # Revert
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'revert', '-R', '.')
+  virginal_state = svntest.actions.get_virginal_state(wc_dir, 1)
+  svntest.actions.run_and_verify_status(wc_dir, virginal_state)
+
+  # Restore; check the original modifications are here again
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'unshelve', 'foo', '1')
+  svntest.actions.run_and_verify_status(wc_dir, modified_state1)
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
+
+def checkpoint_basic(sbox):
+  "checkpoint basic"
+
+  def modifier1(sbox):
+    sbox.simple_append('A/mu', 'appended mu text\n')
+
+  def modifier2(sbox):
+    sbox.simple_append('iota', 'appended iota text\n')
+    sbox.simple_append('A/mu', 'appended another line\n')
+
+  save_revert_restore(sbox, modifier1, modifier2)
+
+#----------------------------------------------------------------------
+
+@Issue(3747)
+def shelve_mergeinfo(sbox):
+  "shelve mergeinfo"
+
+  def modifier(sbox):
+    sbox.simple_propset('svn:mergeinfo', '/trunk/A:1-3,10', 'A')
+    sbox.simple_propset('svn:mergeinfo', '/trunk/A/mu:1-3,10', 'A/mu')
+
+  shelve_unshelve(sbox, modifier)
+
 
 ########################################################################
 # Run the tests
@@ -136,6 +236,9 @@ test_list = [ None,
               shelve_prop_changes,
               shelve_adds,
               shelve_deletes,
+              shelve_from_inner_path,
+              checkpoint_basic,
+              shelve_mergeinfo,
              ]
 
 if __name__ == '__main__':

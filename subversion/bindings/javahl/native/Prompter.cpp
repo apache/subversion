@@ -342,8 +342,7 @@ svn_error_t *Prompter::dispatch_ssl_server_trust_prompt(
   svn_auth_cred_ssl_server_trust_t *cred =
     static_cast<svn_auth_cred_ssl_server_trust_t*>(apr_pcalloc(pool, sizeof(*cred)));
   cred->may_save = save;
-  if (save)
-    cred->accepted_failures = failures;
+  cred->accepted_failures = failures;
   *cred_p = cred;
 
   return SVN_NO_ERROR;

@@ -25,7 +25,7 @@
 import os
 import re
 import shutil
-import generator.util.executable as _exec
+import subprocess
 from generator.gen_base import _collect_paths
 try:
   # Python >=3.0
@@ -59,14 +59,19 @@ class Generator:
 
     # Calculate SWIG paths
     self.swig_path = swig_path
-    self.swig_libdir = _exec.output([self.swig_path, "-swiglib"], strip=1)
+    if os.access(self.swig_path, os.X_OK):
+      # ### TODO: What's the reason for this os.access() check?  It was added
+      # ### in r873265 (== r33191).
+      self.swig_libdir = subprocess.check_output([self.swig_path, "-swiglib"]).strip()
+    else:
+      self.swig_libdir = None
 
   _swigVersion = None
   def version(self):
     """Get the version number of SWIG"""
 
     if not self._swigVersion:
-      swig_version = _exec.output([self.swig_path, "-version"])
+      swig_version = subprocess.check_output([self.swig_path, "-version"])
       m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
       if m:
         self._swigVersion = tuple(map(int, m.groups()))

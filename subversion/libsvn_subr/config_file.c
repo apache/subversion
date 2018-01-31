@@ -466,6 +466,7 @@ parse_value_continuation_lines(int *pch, parse_context_t *ctx)
               else
                 {
                   /* This is a continuation line. Read it. */
+                  SVN_ERR(parser_ungetc(ctx, ch));
                   SVN_ERR(parser_get_line(ctx, ctx->line_read, &ch));
 
                   /* Trailing whitespace is ignored. */

@@ -269,6 +269,15 @@ svn_cmdline__disable_cancellation_handler(void);
 void
 svn_cmdline__cancellation_exit(void);
 
+/** Reads a string from stdin until a newline or EOF is found
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_cmdline__stdin_readline(const char **result,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

@@ -34,21 +34,74 @@
 #include "svn_path.h"
 #include "svn_hash.h"
 #include "svn_utf.h"
+#include "svn_ctype.h"
 
 #include "client.h"
+#include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "svn_private_config.h"
 
 
-/* Throw an error if NAME does not conform to our naming rules. */
 static svn_error_t *
-validate_name(const char *name,
-              apr_pool_t *scratch_pool)
+shelf_name_encode(char **encoded_name_p,
+                  const char *name,
+                  apr_pool_t *result_pool)
 {
-  if (name[0] == '\0' || strchr(name, '/'))
-    return svn_error_createf(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
-                             _("Shelve: Bad name '%s'"), name);
+  char *encoded_name
+    = apr_palloc(result_pool, strlen(name) * 2 + 1);
+  char *out_pos = encoded_name;
 
+  if (name[0] == '\0')
+    return svn_error_create(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
+                            _("Shelf name cannot be the empty string"));
+
+  while (*name)
+    {
+      apr_snprintf(out_pos, 3, "%02x", *name++);
+      out_pos += 2;
+    }
+  *encoded_name_p = encoded_name;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+shelf_name_decode(char **decoded_name_p,
+                  const char *codename,
+                  apr_pool_t *result_pool)
+{
+  svn_stringbuf_t *sb
+    = svn_stringbuf_create_ensure(strlen(codename) / 2, result_pool);
+  const char *input = codename;
+
+  while (*input)
+    {
+      int c;
+      int nchars;
+      int nitems = sscanf(input, "%02x%n", &c, &nchars);
+
+      if (nitems != 1 || nchars != 2)
+        return svn_error_createf(SVN_ERR_BAD_CHANGELIST_NAME, NULL,
+                                 _("Shelve: Bad encoded name '%s'"), codename);
+      svn_stringbuf_appendbyte(sb, c);
+      input += 2;
+    }
+  *decoded_name_p = sb->data;
+  return SVN_NO_ERROR;
+}
+
+/* Set *NAME to the shelf name from FILENAME. */
+static svn_error_t *
+shelf_name_from_filename(char **name,
+                         const char *filename,
+                         apr_pool_t *result_pool)
+{
+  size_t len = strlen(filename);
+
+  if (len > 6 && strcmp(filename + len - 6, ".patch") == 0)
+    {
+      char *codename = apr_pstrndup(result_pool, filename, len - 6);
+      SVN_ERR(shelf_name_decode(name, codename, result_pool));
+    }
   return SVN_NO_ERROR;
 }
 
@@ -64,25 +117,36 @@ get_patch_abspath(char **patch_abspath,
                   apr_pool_t *scratch_pool)
 {
   char *dir;
-  const char *filename;
+  char *filename;
 
   SVN_ERR(svn_wc__get_shelves_dir(&dir, ctx->wc_ctx, wc_root_abspath,
                                   scratch_pool, scratch_pool));
-  filename = apr_pstrcat(scratch_pool, name, ".patch", SVN_VA_NULL);
+  SVN_ERR(shelf_name_encode(&filename, name, scratch_pool));
+  filename = apr_pstrcat(scratch_pool, filename, ".patch", SVN_VA_NULL);
   *patch_abspath = svn_dirent_join(dir, filename, result_pool);
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_write_patch(const char *name,
-                             const char *message,
-                             const char *wc_root_abspath,
-                             svn_boolean_t overwrite_existing,
-                             const apr_array_header_t *paths,
-                             svn_depth_t depth,
-                             const apr_array_header_t *changelists,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool)
+/** Write local changes to a patch file for shelved change @a name.
+ *
+ * @a message: An optional log message.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ *
+ * @a overwrite_existing: If a file at @a patch_abspath exists, overwrite it.
+ *
+ * @a paths, @a depth, @a changelists: The selection of local paths to diff.
+ */
+static svn_error_t *
+shelf_write_patch(const char *name,
+                  const char *message,
+                  const char *wc_root_abspath,
+                  svn_boolean_t overwrite_existing,
+                  const apr_array_header_t *paths,
+                  svn_depth_t depth,
+                  const apr_array_header_t *changelists,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
 {
   char *patch_abspath;
   apr_int32_t flag;
@@ -128,6 +192,7 @@ svn_client_shelf_write_patch(const char *name,
       if (svn_path_is_url(path))
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                  _("'%s' is not a local path"), path);
+      SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
 
       SVN_ERR(svn_client_diff_peg6(
                      NULL /*options*/,
@@ -135,7 +200,7 @@ svn_client_shelf_write_patch(const char *name,
                      &peg_revision,
                      &start_revision,
                      &end_revision,
-                     NULL,
+                     wc_root_abspath,
                      depth,
                      TRUE /*notice_ancestry*/,
                      FALSE /*no_diff_added*/,
@@ -157,13 +222,21 @@ svn_client_shelf_write_patch(const char *name,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_apply_patch(const char *name,
-                             const char *wc_root_abspath,
-                             svn_boolean_t reverse,
-                             svn_boolean_t dry_run,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool)
+/** Apply the patch file for shelved change @a name to the WC.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ *
+ * @a reverse: Apply the patch in reverse.
+ *
+ * @a dry_run: Don't really apply the changes, just notify what would be done.
+ */
+static svn_error_t *
+shelf_apply_patch(const char *name,
+                  const char *wc_root_abspath,
+                  svn_boolean_t reverse,
+                  svn_boolean_t dry_run,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
 {
   char *patch_abspath;
 
@@ -179,11 +252,15 @@ svn_client_shelf_apply_patch(const char *name,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_shelf_delete_patch(const char *name,
-                              const char *wc_root_abspath,
-                              svn_client_ctx_t *ctx,
-                              apr_pool_t *scratch_pool)
+/** Delete the patch file for shelved change @a name.
+ *
+ * @a wc_root_abspath: The WC root dir.
+ */
+static svn_error_t *
+shelf_delete_patch(const char *name,
+                   const char *wc_root_abspath,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
 {
   char *patch_abspath, *to_abspath;
 
@@ -216,8 +293,6 @@ svn_client_shelve(const char *name,
   const char *message = "";
   svn_error_t *err;
 
-  SVN_ERR(validate_name(name, pool));
-
   /* ### TODO: check all paths are in same WC; for now use first path */
   SVN_ERR(svn_dirent_get_absolute(&local_abspath,
                                   APR_ARRAY_IDX(paths, 0, char *), pool));
@@ -236,10 +311,10 @@ svn_client_shelve(const char *name,
         return SVN_NO_ERROR;
     }
 
-  err = svn_client_shelf_write_patch(name, message, wc_root_abspath,
-                                     FALSE /*overwrite_existing*/,
-                                     paths, depth, changelists,
-                                     ctx, pool);
+  err = shelf_write_patch(name, message, wc_root_abspath,
+                          FALSE /*overwrite_existing*/,
+                          paths, depth, changelists,
+                          ctx, pool);
   if (err && APR_STATUS_IS_EEXIST(err->apr_err))
     {
       return svn_error_quick_wrapf(err,
@@ -253,15 +328,15 @@ svn_client_shelve(const char *name,
     {
       /* Reverse-apply the patch. This should be a safer way to remove those
          changes from the WC than running a 'revert' operation. */
-      SVN_ERR(svn_client_shelf_apply_patch(name, wc_root_abspath,
-                                           TRUE /*reverse*/, dry_run,
-                                           ctx, pool));
+      SVN_ERR(shelf_apply_patch(name, wc_root_abspath,
+                                TRUE /*reverse*/, dry_run,
+                                ctx, pool));
     }
 
   if (dry_run)
     {
-      SVN_ERR(svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                            ctx, pool));
+      SVN_ERR(shelf_delete_patch(name, wc_root_abspath,
+                                 ctx, pool));
     }
 
   return SVN_NO_ERROR;
@@ -278,15 +353,13 @@ svn_client_unshelve(const char *name,
   const char *wc_root_abspath;
   svn_error_t *err;
 
-  SVN_ERR(validate_name(name, pool));
-
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath,
                                  local_abspath, ctx, pool, pool));
 
   /* Apply the patch. */
-  err = svn_client_shelf_apply_patch(name, wc_root_abspath,
-                                     FALSE /*reverse*/, dry_run,
-                                     ctx, pool);
+  err = shelf_apply_patch(name, wc_root_abspath,
+                          FALSE /*reverse*/, dry_run,
+                          ctx, pool);
   if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
     {
       return svn_error_quick_wrapf(err,
@@ -299,8 +372,8 @@ svn_client_unshelve(const char *name,
   /* Remove the patch. */
   if (! keep && ! dry_run)
     {
-      SVN_ERR(svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                            ctx, pool));
+      SVN_ERR(shelf_delete_patch(name, wc_root_abspath,
+                                 ctx, pool));
     }
 
   return SVN_NO_ERROR;
@@ -315,8 +388,6 @@ svn_client_shelves_delete(const char *name,
 {
   const char *wc_root_abspath;
 
-  SVN_ERR(validate_name(name, pool));
-
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath,
                                  local_abspath, ctx, pool, pool));
 
@@ -325,8 +396,8 @@ svn_client_shelves_delete(const char *name,
     {
       svn_error_t *err;
 
-      err = svn_client_shelf_delete_patch(name, wc_root_abspath,
-                                          ctx, pool);
+      err = shelf_delete_patch(name, wc_root_abspath,
+                               ctx, pool);
       if (err && APR_STATUS_IS_ENOENT(err->apr_err))
         {
           return svn_error_quick_wrapf(err,
@@ -353,8 +424,6 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
   svn_patch_file_t *patch_file;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_hash_t *paths = apr_hash_make(result_pool);
-
-  SVN_ERR(validate_name(name, scratch_pool));
 
   SVN_ERR(svn_client_get_wc_root(&wc_root_abspath,
                                  local_abspath, ctx, scratch_pool, scratch_pool));
@@ -445,15 +514,16 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
   for (hi = apr_hash_first(scratch_pool, dirents); hi; hi = apr_hash_next(hi))
     {
       const char *filename = apr_hash_this_key(hi);
-      size_t len = strlen(filename);
+      svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
+      char *name = NULL;
 
-      if (len > 6 && strcmp(filename + len - 6, ".patch") == 0)
+      svn_error_clear(shelf_name_from_filename(&name, filename, result_pool));
+      if (name && dirent->kind == svn_node_file)
         {
-          const char *name = apr_pstrndup(result_pool, filename, len - 6);
           svn_client_shelved_patch_info_t *info
             = apr_palloc(result_pool, sizeof(*info));
 
-          info->dirent = apr_hash_this_val(hi);
+          info->dirent = dirent;
           info->mtime = info->dirent->mtime;
           info->patch_path
             = svn_dirent_join(shelves_dir, filename, result_pool);
@@ -464,19 +534,5 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
         }
     }
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_client_shelves_any(svn_boolean_t *any_shelved,
-                       const char *local_abspath,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *scratch_pool)
-{
-  apr_hash_t *shelved_patch_infos;
-
-  SVN_ERR(svn_client_shelves_list(&shelved_patch_infos, local_abspath,
-                                  ctx, scratch_pool, scratch_pool));
-  *any_shelved = apr_hash_count(shelved_patch_infos) != 0;
   return SVN_NO_ERROR;
 }

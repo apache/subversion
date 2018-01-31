@@ -24,7 +24,7 @@
 #
 
 '''usage: python run_tests.py
-            [--verbose] [--log-to-stdout] [--cleanup]
+            [--verbose] [--log-to-stdout] [--cleanup] [--bin=<path>]
             [--parallel | --parallel=<n>] [--global-scheduler]
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
