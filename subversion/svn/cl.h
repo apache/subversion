@@ -257,7 +257,6 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
   svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
   svn_boolean_t list;
-  svn_boolean_t log;
 } svn_cl__opt_state_t;
 
 /* Conflict stats for operations such as update and merge. */
