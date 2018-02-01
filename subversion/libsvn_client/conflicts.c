@@ -9841,12 +9841,6 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   svn_node_kind_t incoming_new_kind;
-  struct conflict_tree_incoming_delete_details *details;
-
-  details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->moves == NULL)
-    return SVN_NO_ERROR;
-
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
@@ -9863,7 +9857,12 @@ configure_option_incoming_move_file_merge(svn_client_conflict_t *conflict,
       incoming_new_kind == svn_node_none &&
       incoming_change == svn_wc_conflict_action_delete)
     {
+      struct conflict_tree_incoming_delete_details *details;
       const char *description;
+
+      details = conflict->tree_conflict_incoming_details;
+      if (details == NULL || details->moves == NULL)
+        return SVN_NO_ERROR;
 
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;
@@ -9899,11 +9898,6 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
   svn_node_kind_t incoming_new_kind;
-  struct conflict_tree_incoming_delete_details *details;
-
-  details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->moves == NULL)
-    return SVN_NO_ERROR;
 
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
@@ -9921,7 +9915,12 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
       incoming_new_kind == svn_node_none &&
       incoming_change == svn_wc_conflict_action_delete)
     {
+      struct conflict_tree_incoming_delete_details *details;
       const char *description;
+
+      details = conflict->tree_conflict_incoming_details;
+      if (details == NULL || details->moves == NULL)
+        return SVN_NO_ERROR;
 
       if (apr_hash_count(details->wc_move_targets) == 0)
         return SVN_NO_ERROR;

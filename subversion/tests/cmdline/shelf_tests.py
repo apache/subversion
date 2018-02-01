@@ -126,7 +126,6 @@ def shelve_adds(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @Issue(4709)
 def shelve_deletes(sbox):
   "shelve deletes"
@@ -215,6 +214,18 @@ def checkpoint_basic(sbox):
 
   save_revert_restore(sbox, modifier1, modifier2)
 
+#----------------------------------------------------------------------
+
+@Issue(3747)
+def shelve_mergeinfo(sbox):
+  "shelve mergeinfo"
+
+  def modifier(sbox):
+    sbox.simple_propset('svn:mergeinfo', '/trunk/A:1-3,10', 'A')
+    sbox.simple_propset('svn:mergeinfo', '/trunk/A/mu:1-3,10', 'A/mu')
+
+  shelve_unshelve(sbox, modifier)
+
 
 ########################################################################
 # Run the tests
@@ -227,6 +238,7 @@ test_list = [ None,
               shelve_deletes,
               shelve_from_inner_path,
               checkpoint_basic,
+              shelve_mergeinfo,
              ]
 
 if __name__ == '__main__':

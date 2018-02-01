@@ -187,7 +187,7 @@ stats(svn_client_shelf_t *shelf,
 /* Display a list of shelves */
 static svn_error_t *
 shelves_list(const char *local_abspath,
-             svn_boolean_t with_logmsg,
+             svn_boolean_t quiet,
              svn_boolean_t with_diffstat,
              svn_client_ctx_t *ctx,
              apr_pool_t *scratch_pool)
@@ -206,13 +206,16 @@ shelves_list(const char *local_abspath,
       svn_client_shelf_t *shelf;
       svn_client_shelf_version_t *shelf_version;
 
-      SVN_ERR(svn_client_shelf_open(&shelf,
-                                    name, local_abspath, ctx, scratch_pool));
+      SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                             ctx, scratch_pool));
       SVN_ERR(svn_client_shelf_version_open(&shelf_version,
                                             shelf, shelf->max_version,
                                             scratch_pool, scratch_pool));
-      SVN_ERR(stats(shelf, shelf->max_version, time_now,
-                    with_logmsg, scratch_pool));
+      if (quiet)
+        SVN_ERR(svn_cmdline_printf(scratch_pool, "%s\n", shelf->name));
+      else
+        SVN_ERR(stats(shelf, shelf->max_version, time_now,
+                      TRUE /*with_logmsg*/, scratch_pool));
       if (with_diffstat)
         {
           SVN_ERR(show_diffstat(shelf_version, scratch_pool));
@@ -236,8 +239,8 @@ shelf_log(const char *name,
   svn_client_shelf_t *shelf;
   int i;
 
-  SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
-                                ctx, scratch_pool));
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                         ctx, scratch_pool));
 
   for (i = 1; i <= shelf->max_version; i++)
     {
@@ -405,6 +408,7 @@ shelve(int *new_version_p,
        const apr_array_header_t *paths,
        svn_depth_t depth,
        const apr_array_header_t *changelists,
+       apr_hash_t *revprop_table,
        svn_boolean_t keep_local,
        svn_boolean_t dry_run,
        svn_boolean_t quiet,
@@ -464,12 +468,11 @@ shelve(int *new_version_p,
                    : _("None of the local modifications could be shelved"));
     }
 
+  /* Un-apply the patch, if required. */
   if (!keep_local)
     {
       svn_client_shelf_version_t *shelf_version;
 
-      /* Reverse-apply the patch. This should be a safer way to remove those
-         changes from the WC than running a 'revert' operation. */
       SVN_ERR(svn_client_shelf_version_open(&shelf_version,
                                             shelf, shelf->max_version,
                                             scratch_pool, scratch_pool));
@@ -477,7 +480,8 @@ shelve(int *new_version_p,
                                        dry_run, scratch_pool));
     }
 
-  SVN_ERR(svn_client_shelf_set_log_message(shelf, dry_run, scratch_pool));
+  SVN_ERR(svn_client_shelf_set_log_message(shelf, revprop_table,
+                                           dry_run, scratch_pool));
 
   if (new_version_p)
     *new_version_p = shelf->max_version;
@@ -564,14 +568,8 @@ shelf_restore(const char *name,
   svn_client_shelf_t *shelf;
   svn_client_shelf_version_t *shelf_version;
 
-  SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
-                                ctx, scratch_pool));
-  if (shelf->max_version <= 0)
-    {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("Shelf '%s' not found"),
-                               name);
-    }
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                         ctx, scratch_pool));
 
   old_version = shelf->max_version;
   if (arg)
@@ -634,14 +632,8 @@ shelf_diff(const char *name,
   svn_client_shelf_version_t *shelf_version;
   svn_stream_t *stream;
 
-  SVN_ERR(svn_client_shelf_open(&shelf, name, local_abspath,
-                                ctx, scratch_pool));
-  if (shelf->max_version <= 0)
-    {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("Shelf '%s' not found"),
-                               name);
-    }
+  SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
+                                         ctx, scratch_pool));
 
   if (arg)
     {
@@ -689,6 +681,7 @@ shelf_shelve(int *new_version,
              apr_array_header_t *targets,
              svn_depth_t depth,
              apr_array_header_t *changelists,
+             apr_hash_t *revprop_table,
              svn_boolean_t keep_local,
              svn_boolean_t dry_run,
              svn_boolean_t quiet,
@@ -713,6 +706,7 @@ shelf_shelve(int *new_version,
 
   SVN_ERR(shelve(new_version, name,
                  targets, depth, changelists,
+                 revprop_table,
                  keep_local, dry_run, quiet,
                  local_abspath, ctx, scratch_pool));
 
@@ -762,6 +756,7 @@ svn_cl__shelf_shelve(apr_getopt_t *os,
                                            pool));
       err = shelf_shelve(&new_version, name,
                          targets, opt_state->depth, opt_state->changelists,
+                         opt_state->revprop_table,
                          opt_state->keep_local, opt_state->dry_run,
                          opt_state->quiet, ctx, pool);
       if (ctx->log_msg_func3)
@@ -847,8 +842,8 @@ svn_cl__shelf_list(apr_getopt_t *os,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
   SVN_ERR(shelves_list(local_abspath,
-                       ! opt_state->quiet /*with_logmsg*/,
-                       ! opt_state->quiet /*with_diffstat*/,
+                       opt_state->quiet,
+                       opt_state->verbose /*with_diffstat*/,
                        ctx, pool));
 
   return SVN_NO_ERROR;
@@ -927,7 +922,7 @@ svn_cl__shelf_log(apr_getopt_t *os,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
   SVN_ERR(shelf_log(name, local_abspath,
-                    !opt_state->quiet /*with_diffstat*/,
+                    opt_state->verbose /*with_diffstat*/,
                     ctx, pool));
 
   return SVN_NO_ERROR;

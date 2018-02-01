@@ -601,6 +601,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(FSFS_DIR_DELTIFICATION)" != ""; then                    \
 	    flags="--fsfs-dir-deltification $(FSFS_DIR_DELTIFICATION) $$flags";\
 	  fi;                                                                \
+	  if test "$(SVN_BIN_DIR)" != ""; then                               \
+	    flags="--bin $(SVN_BIN_DIR) $$flags";                            \
+	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
 	            --config-file $(top_srcdir)/subversion/tests/tests.conf  \
