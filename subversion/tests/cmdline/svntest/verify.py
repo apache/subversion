@@ -280,7 +280,7 @@ class UnorderedOutput(ExpectedOutput):
 
   def display_differences(self, message, label, actual):
     display_lines(message, self.expected, actual, label + ' (unordered)', label)
-    display_lines_diff(self.expected, actual, label + ' (unordered)', label)
+    display_lines_diff(sorted(self.expected), sorted(actual), label + ' (unordered)', label)
 
 
 class UnorderedRegexListOutput(ExpectedOutput):

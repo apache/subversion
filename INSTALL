@@ -856,11 +856,7 @@ II.   INSTALLATION
 
   E.4 Building the Binaries
 
-      To build the binaries either follow the instructions here or use
-      build\win32\vc6-build.bat.in after editing its default paths to match
-      yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
-      using all options so it requires Apache 2 source and the other optional
-      components.
+      To build the binaries either follow these instructions.
 
       Start in the SVN directory you created.
 

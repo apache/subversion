@@ -285,6 +285,7 @@ revert_restore(svn_boolean_t *run_wq,
                svn_boolean_t metadata_only,
                svn_boolean_t use_commit_times,
                svn_boolean_t revert_root,
+               svn_boolean_t added_keep_local,
                const struct svn_wc__db_info_t *info,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
@@ -344,8 +345,9 @@ revert_restore(svn_boolean_t *run_wq,
     }
   else
     {
-      if (!copied_here)
+      if (added_keep_local && !copied_here)
         {
+          /* It is a plain add, and we want to keep the local file/dir. */
           if (notify_func && notify_required)
             notify_func(notify_baton,
                         svn_wc_create_notify(local_abspath,
@@ -359,8 +361,17 @@ revert_restore(svn_boolean_t *run_wq,
                                                   scratch_pool));
           return SVN_NO_ERROR;
         }
+      else if (!copied_here)
+        {
+          /* It is a plain add, and we don't want to keep the local file/dir. */
+          status = svn_wc__db_status_not_present;
+          kind = svn_node_none;
+          recorded_size = SVN_INVALID_FILESIZE;
+          recorded_time = 0;
+        }
       else
         {
+          /* It is a copy, so we don't want to keep the local file/dir. */
           /* ### Initialise to values which prevent the code below from
            * ### trying to restore anything to disk.
            * ### 'status' should be status_unknown but that doesn't exist. */
@@ -429,6 +440,7 @@ revert_restore(svn_boolean_t *run_wq,
           SVN_ERR(revert_restore(run_wq,
                                  db, child_abspath, depth, metadata_only,
                                  use_commit_times, FALSE /* revert root */,
+                                 added_keep_local,
                                  apr_hash_this_val(hi),
                                  cancel_func, cancel_baton,
                                  notify_func, notify_baton,
@@ -536,11 +548,7 @@ revert_wc_data(svn_boolean_t *run_wq,
   /* If we expect a versioned item to be present then check that any
      item on disk matches the versioned item, if it doesn't match then
      fix it or delete it.  */
-  if (on_disk != svn_node_none
-      && status != svn_wc__db_status_server_excluded
-      && status != svn_wc__db_status_deleted
-      && status != svn_wc__db_status_excluded
-      && status != svn_wc__db_status_not_present)
+  if (on_disk != svn_node_none)
     {
       if (on_disk == svn_node_dir && kind != svn_node_dir)
         {
@@ -560,7 +568,11 @@ revert_wc_data(svn_boolean_t *run_wq,
               on_disk = svn_node_none;
             }
         }
-      else if (on_disk == svn_node_file)
+      else if (on_disk == svn_node_file
+               && status != svn_wc__db_status_server_excluded
+               && status != svn_wc__db_status_deleted
+               && status != svn_wc__db_status_excluded
+               && status != svn_wc__db_status_not_present)
         {
           svn_boolean_t modified;
           apr_hash_t *props;
@@ -712,6 +724,7 @@ revert(svn_wc__db_t *db,
        svn_boolean_t use_commit_times,
        svn_boolean_t clear_changelists,
        svn_boolean_t metadata_only,
+       svn_boolean_t added_keep_local,
        svn_cancel_func_t cancel_func,
        void *cancel_baton,
        svn_wc_notify_func2_t notify_func,
@@ -762,6 +775,7 @@ revert(svn_wc__db_t *db,
     err = svn_error_trace(
               revert_restore(&run_queue, db, local_abspath, depth, metadata_only,
                              use_commit_times, TRUE /* revert root */,
+                             added_keep_local,
                              info, cancel_func, cancel_baton,
                              notify_func, notify_baton,
                              scratch_pool));
@@ -791,6 +805,7 @@ revert_changelist(svn_wc__db_t *db,
                   apr_hash_t *changelist_hash,
                   svn_boolean_t clear_changelists,
                   svn_boolean_t metadata_only,
+                  svn_boolean_t added_keep_local,
                   svn_cancel_func_t cancel_func,
                   void *cancel_baton,
                   svn_wc_notify_func2_t notify_func,
@@ -809,7 +824,7 @@ revert_changelist(svn_wc__db_t *db,
                                         scratch_pool))
     SVN_ERR(revert(db, local_abspath,
                    svn_depth_empty, use_commit_times, clear_changelists,
-                   metadata_only,
+                   metadata_only, added_keep_local,
                    cancel_func, cancel_baton,
                    notify_func, notify_baton,
                    scratch_pool));
@@ -845,6 +860,7 @@ revert_changelist(svn_wc__db_t *db,
       SVN_ERR(revert_changelist(db, child_abspath, depth,
                                 use_commit_times, changelist_hash,
                                 clear_changelists, metadata_only,
+                                added_keep_local,
                                 cancel_func, cancel_baton,
                                 notify_func, notify_baton,
                                 iterpool));
@@ -871,6 +887,7 @@ revert_partial(svn_wc__db_t *db,
                svn_boolean_t use_commit_times,
                svn_boolean_t clear_changelists,
                svn_boolean_t metadata_only,
+               svn_boolean_t added_keep_local,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -892,6 +909,7 @@ revert_partial(svn_wc__db_t *db,
      children.  */
   SVN_ERR(revert(db, local_abspath, svn_depth_empty,
                  use_commit_times, clear_changelists, metadata_only,
+                 added_keep_local,
                  cancel_func, cancel_baton,
                  notify_func, notify_baton, iterpool));
 
@@ -926,7 +944,7 @@ revert_partial(svn_wc__db_t *db,
       /* Revert just this node (depth=empty).  */
       SVN_ERR(revert(db, child_abspath,
                      svn_depth_empty, use_commit_times, clear_changelists,
-                     metadata_only,
+                     metadata_only, added_keep_local,
                      cancel_func, cancel_baton,
                      notify_func, notify_baton,
                      iterpool));
@@ -939,13 +957,14 @@ revert_partial(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_revert5(svn_wc_context_t *wc_ctx,
+svn_wc_revert6(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,
                const apr_array_header_t *changelist_filter,
                svn_boolean_t clear_changelists,
                svn_boolean_t metadata_only,
+               svn_boolean_t added_keep_local,
                svn_cancel_func_t cancel_func,
                void *cancel_baton,
                svn_wc_notify_func2_t notify_func,
@@ -963,6 +982,7 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
                                                changelist_hash,
                                                clear_changelists,
                                                metadata_only,
+                                               added_keep_local,
                                                cancel_func, cancel_baton,
                                                notify_func, notify_baton,
                                                scratch_pool));
@@ -972,6 +992,7 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
     return svn_error_trace(revert(wc_ctx->db, local_abspath,
                                   depth, use_commit_times, clear_changelists,
                                   metadata_only,
+                                  added_keep_local,
                                   cancel_func, cancel_baton,
                                   notify_func, notify_baton,
                                   scratch_pool));
@@ -986,6 +1007,7 @@ svn_wc_revert5(svn_wc_context_t *wc_ctx,
     return svn_error_trace(revert_partial(wc_ctx->db, local_abspath,
                                           depth, use_commit_times,
                                           clear_changelists, metadata_only,
+                                          added_keep_local,
                                           cancel_func, cancel_baton,
                                           notify_func, notify_baton,
                                           scratch_pool));
