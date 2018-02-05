@@ -1667,6 +1667,33 @@ test_remove_prefix_from_catalog(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_rangelist_merge_overlap(apr_pool_t *pool)
+{
+  const char *rangelist_str = "19473-19612*,19615-19630*,19631-19634";
+  const char *changes_str = "15014-20515*";
+  const char *expected_str = "15014-19630*,19631-19634,19635-20515*";
+  /* wrong result: "15014-19630*,19634-19631*,19631-19634,19635-20515*" */
+  svn_rangelist_t *rangelist, *changes;
+  svn_string_t *result_string;
+
+  /* prepare the inputs */
+  SVN_ERR(svn_rangelist__parse(&rangelist, rangelist_str, pool));
+  SVN_ERR(svn_rangelist__parse(&changes, changes_str, pool));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(changes));
+
+  /* perform the merge */
+  SVN_ERR(svn_rangelist_merge2(rangelist, changes, pool, pool));
+
+  /* check the output */
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_ERR(svn_rangelist_to_string(&result_string, rangelist, pool));
+  SVN_TEST_STRING_ASSERT(result_string->data, expected_str);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1709,5 +1736,7 @@ struct svn_test_descriptor_t test_funcs[] =
                    "diff of rangelists"),
     SVN_TEST_PASS2(test_remove_prefix_from_catalog,
                    "removal of prefix paths from catalog keys"),
+    SVN_TEST_PASS2(test_rangelist_merge_overlap,
+                   "merge of rangelists with overlaps (issue 4686)"),
     SVN_TEST_NULL
   };
