@@ -1503,6 +1503,17 @@ SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
 endif
 
+# On OpenBSD, MExtUtils -e ldopts outputs -L/usr/local/lib, which can
+# cause us to link Perl bindings against the wrong set of SVN libraries.
+# As a workaround, we patch the configure script after it has been generated.
+ifeq ($(UNAME),OpenBSD)
+SWIG_PL_INCLUDES_HACK= sed -i 's^\($$PERL -MExtUtils::Embed -e ccopts\)^\1 | sed -e s@-I/usr/local/include@@^' $(svn_builddir)/configure
+SWIG_PL_LINK_HACK= sed -i 's^\($$PERL -MExtUtils::Embed -e ldopts\)^\1 | sed -e s@-L/usr/local/lib@@^' $(svn_builddir)/configure
+else
+SWIG_PL_INCLUDES_HACK=true
+SWIG_PL_LINK_HACK=true
+endif
+
 $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(APR_OBJDIR)/.installed $(APR_UTIL_OBJDIR)/.installed \
 	$(BDB_OBJDIR)/.installed $(SQLITE_OBJDIR)/.installed \
@@ -1511,6 +1522,8 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(SERF_OBJDIR)/.installed $(SERF_OLD_OBJDIR)/.installed \
 	$(RUBY_OBJDIR)/.installed $(PYTHON_OBJDIR)/.installed
 	cd $(SVN_SRCDIR) && ./autogen.sh
+	$(SWIG_PL_INCLUDES_HACK)
+	$(SWIG_PL_LINK_HACK)
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
@@ -1587,13 +1600,15 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 		env MAKEFLAGS= make install-swig-py
 	cd $(svn_builddir) && \
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make install-swig-rb
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) MAKEFLAGS= make install-swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-	    && env MAKEFLAGS= make install-swig-pl-lib; \
-	  cd subversion/bindings/swig/perl/native \
-		  && perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
-		  && env MAKEFLAGS= make install; \
+			&& env MAKEFLAGS= LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+				make install-swig-pl-lib; \
+		cd subversion/bindings/swig/perl/native \
+			&& perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
+			&& env MAKEFLAGS= LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+				make install; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
