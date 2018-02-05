@@ -173,6 +173,7 @@ AC_DEFUN(SVN_FIND_SWIG,
       if test "$PERL_VERSION" -ge "5008000"; then
         SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
         SWIG_PL_LINK="`$PERL -MExtUtils::Embed -e ldopts`"
+        SWIG_PL_LINK="`SVN_REMOVE_STANDARD_LIB_DIRS($SWIG_PL_LINK)`"
       else
         AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
       fi
