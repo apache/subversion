@@ -1827,9 +1827,9 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "diff of rangelists"),
     SVN_TEST_PASS2(test_remove_prefix_from_catalog,
                    "removal of prefix paths from catalog keys"),
-    SVN_TEST_XFAIL2(test_rangelist_merge_overlap,
+    SVN_TEST_PASS2(test_rangelist_merge_overlap,
                    "merge of rangelists with overlaps (issue 4686)"),
-    SVN_TEST_XFAIL2(test_rangelist_loop,
+    SVN_TEST_PASS2(test_rangelist_loop,
                     "test rangelist edgecases via loop"),
     SVN_TEST_NULL
   };
