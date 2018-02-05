@@ -374,7 +374,7 @@ typedef struct svn_fs_fs__changes_list_t
      of elements in the list is a multiple of our block / range size. */
   svn_boolean_t eol;
 
-  /* Array of #svn_fs_x__change_t * representing a consecutive sub-range of
+  /* Array of #svn_fs_fs__change_t * representing a consecutive sub-range of
      elements in a changed paths list. */
 
   /* number of entries in the array */
