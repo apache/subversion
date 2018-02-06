@@ -35,6 +35,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1823327
+   Performance: Make the 'info' command fast on old repository revisions.
+   Justification:
+     Performance was bad.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
