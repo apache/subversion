@@ -26,11 +26,11 @@ Candidate changes:
    Make mod_dav_svn report commit capabilities based on SVNMasterVersion.
    Justification:
      Allows 1.10 write-through proxy to 1.9 master.
-   Votes:
-     +1: philip, rhuijben
    Notes:
      I believe this is a release blocker, without it we break backward
      compatibilty for write-through proxies.
+   Votes:
+     +1: philip, rhuijben
 
  * r1820044
    Make 'svn shelves' diffstat output show WC-relative paths.
@@ -43,7 +43,7 @@ Candidate changes:
      Assertion failure during certain merges.
    Branch: ^/subversion/branches/1.10.x-issue4686
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
 Approved changes:
 =================
