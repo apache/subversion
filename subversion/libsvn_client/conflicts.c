@@ -6704,8 +6704,9 @@ resolve_merge_incoming_added_file_text_update(
   /* Revert the path in order to restore the repository's line of
    * history, which is part of the BASE tree. This revert operation
    * is why are being careful about not losing the temporary copy. */
-  err = svn_wc_revert5(ctx->wc_ctx, local_abspath, svn_depth_empty,
+  err = svn_wc_revert6(ctx->wc_ctx, local_abspath, svn_depth_empty,
                        FALSE, NULL, TRUE, FALSE,
+                       TRUE /*added_keep_local*/,
                        NULL, NULL, /* no cancellation */
                        ctx->notify_func2, ctx->notify_baton2,
                        scratch_pool);
@@ -8708,8 +8709,9 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       svn_opt_revision_t incoming_new_opt_rev;
 
       /* Revert the incoming move target directory. */
-      SVN_ERR(svn_wc_revert5(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
+      SVN_ERR(svn_wc_revert6(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
                              FALSE, NULL, TRUE, FALSE,
+                             TRUE /*added_keep_local*/,
                              NULL, NULL, /* no cancellation */
                              ctx->notify_func2, ctx->notify_baton2,
                              scratch_pool));
