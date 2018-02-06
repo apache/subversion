@@ -1279,7 +1279,7 @@ sub nominate_main {
   # Open the file in line-mode (not paragraph-mode).
   my @STATUS;
   tie @STATUS, "Tie::File", $STATUS, recsep => "\n";
-  my ($index) = grep { $STATUS[$_] =~ /^Veto/ } (0..$#STATUS);
+  my ($index) = grep { $STATUS[$_] =~ /^Veto|Approved/ } (0..$#STATUS);
   die "Couldn't find where to add an entry" unless $index;
 
   # Add an empty line if needed.
