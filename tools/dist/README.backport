@@ -7,20 +7,23 @@ F1. Auto-merge bot; the nightly svn-role commits.
 
 F2. Conflicts detector bot; the svn-backport-conflicts-1.9.x buildbot task.
 
-And two interactive functions, described later.
+And two interactive functions¹:
+
+F3. Reviewing STATUS nominations and casting votes.
+
+F4. Adding new entries to STATUS.
 
 
 
 The scripts are:
 
 backport.pl:
-    oldest script, implements both [F1] and [F2], plus two interactive
-    functions¹.  As of March 2015, used in production by svn-role and
-    by svn-backport-conflicts-1.9.x.
+    oldest script, implements [F1], [F2], and [F3].  As of Feb 2018, used in
+    production by svn-role (running on svn-qavm3) and by svn-backport-conflicts-1.9.x
+    (a buildbot job).
 
 nominate.pl:
-    Symlink to backport.pl.  Implements one of the two interactive features.
-    Not used by bots.
+    Symlink to backport.pl.  Implements [F4].  (The script inspects its argv[0].)
 
 backport_tests_pl.py:
     Regression tests for backport.pl.
@@ -39,9 +42,11 @@ backport/*.py:
 
 detect-conflicting-backports.py:
     Implementation of [F2] using backport.py.
+    Not currently used in production.
 
 merge-approved-backports.py:
     Implementation of [F1] using backport.py.
+    Not currently used in production.
 
 backport_tests_py.py:
     Regression tests for detect-conflicting-backports.py and merge-approved-backports.py
@@ -52,13 +57,25 @@ backport_tests.py:
     svntest framework (../../subversion/tests/cmdline/svntest/), which is
     written in Python 2.
 
+    Note that backport_tests.py and backport/*.py are written in different
+    languages, so they never 'import' each other.  backport_tests.py invokes
+    detect-conflicting-backports.py, merge-approved-backports.py, and
+    backport.pl in the same manner: through subprocess.check_call().
+
 backport*.dump:
     Expected output files for backport_tests.py; see the BackportTest
-    decorator.
+    decorator in backport_tests.py.
 
 
 All scripts can be run with '--help' to display their usage messages.
 
+backport.pl is considered deprecated since backport.py is better architected
+and is written in a language that many more active developers are comfortable
+with.  The unattended jobs [F1] and [F2] should be converted to using
+backport.py whenever someone gets around to do the legwork.  The interactive
+versions [F3] and [F4] are still in active use, however, so the physical
+backport.pl script should be kept around until Python versions of these are
+available.
 
 
 ¹ For backport.pl's interactive features, see:
