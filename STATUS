@@ -22,11 +22,6 @@ Candidate changes:
    Votes:
      +1: danielsh, brane
 
- * r1820044
-   Make 'svn shelves' diffstat output show WC-relative paths.
-   Votes:
-     +1: julianfoad, jamessan
-
  * r1823327
    Performance: Make the 'info' command fast on old repository revisions.
    Justification:
@@ -57,3 +52,8 @@ Approved changes:
      compatibilty for write-through proxies.
    Votes:
      +1: philip, rhuijben, stsp
+
+ * r1820044
+   Make 'svn shelves' diffstat output show WC-relative paths.
+   Votes:
+     +1: julianfoad, jamessan, stsp
