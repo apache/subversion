@@ -44,7 +44,7 @@ Approved changes:
      I believe this is a release blocker, without it we break backward
      compatibilty for write-through proxies.
    Votes:
-     +1: philip, rhuijben, stsp
+     +1: philip, rhuijben, stsp, brane
 
  * r1820044
    Make 'svn shelves' diffstat output show WC-relative paths.
