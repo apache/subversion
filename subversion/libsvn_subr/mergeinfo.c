@@ -891,7 +891,7 @@ adjust_remaining_ranges(svn_rangelist_t *rangelist,
               new_modified_range->end = modified_range->end;
               new_modified_range->inheritable = FALSE;
               modified_range->end = next_range->start;
-              (*range_index)+=2;
+              (*range_index) += 2 + elements_to_delete;
               svn_sort__array_insert(rangelist, &new_modified_range,
                                      *range_index);
               /* Recurse with the new range. */

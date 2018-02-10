@@ -57,11 +57,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1823202,r1823203
-   Fix issue #4686 "Unable to parse reversed revision range '19634-19631'"
-   Justification:
-     Assertion failure during certain merges.
-   Branch: ^/subversion/branches/1.10.x-issue4686
-   Votes:
-     +1: julianfoad, rhuijben, philip
