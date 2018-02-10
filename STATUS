@@ -36,8 +36,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.9.x-r1794166
    Votes:
-     +1: jamessan
-     -0: stsp (see https://svn.haxx.se/dev/archive-2017-05/0047.shtml) (without r1795087)
+     +1: jamessan, stsp
 
  * r1802032, r1803825
    Install 'fsfs-stats' as a wrapper to 'svnfsfs', to which it was renamed in
