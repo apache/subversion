@@ -41,7 +41,7 @@ Approved changes:
      JavaHL needs this to handle failure to verify such certs.
      'svn auth' also affected.
    Votes:
-     +1: philip, rhuijben, stsp
+     +1: philip, rhuijben, stsp, brane
 
  * r1820778
    Make mod_dav_svn report commit capabilities based on SVNMasterVersion.
