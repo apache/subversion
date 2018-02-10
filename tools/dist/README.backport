@@ -62,7 +62,7 @@ backport_tests.py:
     detect-conflicting-backports.py, merge-approved-backports.py, and
     backport.pl in the same manner: through subprocess.check_call().
 
-backport*.dump:
+backport_tests_data/backport*.dump:
     Expected output files for backport_tests.py; see the BackportTest
     decorator in backport_tests.py.
 
