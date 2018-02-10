@@ -22,16 +22,6 @@ Candidate changes:
    Votes:
      +1: danielsh
 
- * r1820778
-   Make mod_dav_svn report commit capabilities based on SVNMasterVersion.
-   Justification:
-     Allows 1.10 write-through proxy to 1.9 master.
-   Notes:
-     I believe this is a release blocker, without it we break backward
-     compatibilty for write-through proxies.
-   Votes:
-     +1: philip, rhuijben
-
  * r1820044
    Make 'svn shelves' diffstat output show WC-relative paths.
    Votes:
@@ -55,5 +45,15 @@ Approved changes:
    Justification:
      JavaHL needs this to handle failure to verify such certs.
      'svn auth' also affected.
+   Votes:
+     +1: philip, rhuijben, stsp
+
+ * r1820778
+   Make mod_dav_svn report commit capabilities based on SVNMasterVersion.
+   Justification:
+     Allows 1.10 write-through proxy to 1.9 master.
+   Notes:
+     I believe this is a release blocker, without it we break backward
+     compatibilty for write-through proxies.
    Votes:
      +1: philip, rhuijben, stsp
