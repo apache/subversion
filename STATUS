@@ -74,14 +74,6 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
- * r1811786
-   When svn_md5_digest_to_cstring() returns NULL, pass an empty string to
-   rb_str_new2().
-   Justification:
-     Prevent a crash if svn_md5_digest_to_cstring returns NULL
-   Votes:
-     +1: jamessan, stsp
-
  * r1813771, r1813783, r1813789, r1813794, r1813802, r1813898
    Issue #4700: null updates don't update last-changed-revision.
    Justification:
@@ -155,3 +147,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1811786
+   When svn_md5_digest_to_cstring() returns NULL, pass an empty string to
+   rb_str_new2().
+   Justification:
+     Prevent a crash if svn_md5_digest_to_cstring returns NULL
+   Votes:
+     +1: jamessan, stsp
+
