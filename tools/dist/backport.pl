@@ -791,7 +791,7 @@ sub vote {
 
     # Add to state votes that aren't '+0' or 'edit'
     $state->{$_->{digest}}++ for grep
-                                   +{ qw/-1 t -0 t +1 t/ }->{$_->{vote}},
+                                 ($_->{approval} or $_->{vote} =~ /^(-1|-0|[+]1)$/),
                                  @votesarray;
   }
 }
