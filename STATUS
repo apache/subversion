@@ -102,7 +102,7 @@ Candidate changes:
    Justification:
      Incorrect proxy settings can block user's access to the repo
    Votes:
-     +1: jamessan
+     +1: jamessan, stsp
 
  * r1818584
    Fix crash when exiting 'svnserve --config-file'.
