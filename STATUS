@@ -72,7 +72,7 @@ Candidate changes:
    Justification:
      Prevent user confusion.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1811786
    When svn_md5_digest_to_cstring() returns NULL, pass an empty string to
