@@ -1940,17 +1940,9 @@ endif
 libpath:
 	@echo export LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 		"PYTHONPATH=$(SVN_PREFIX)/lib/svn-python"
-#
-# OpenBSD requires an LD_PRELOAD hack to dlopen() libraries linked to
-# libpthread (e.g. libsvn_auth_gnome_keyring.so) into executables that
-# aren't linked to libpthread.
-ifeq ($(UNAME),OpenBSD)
-LIB_PTHREAD_HACK=LD_PRELOAD=libpthread.so
-endif
-
 .PHONY: start-svnserve stop-svnserve start-httpd stop-httpd
 
-HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
+HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		$(PREFIX)/httpd/bin/apachectl
 HTTPD_START_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k start
 HTTPD_START_CMD_PROXY = $(HTTPD_CMD) -f $(HTTPD_PROXY_CONF)
@@ -2007,7 +1999,7 @@ define do_check
 -cd $(svn_builddir) && for fs in fsfs bdb; do \
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
-    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
+    env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
         env MAKEFLAGS= make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
 	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) \
 	  SVN_BIN_DIR=$(SVN_PREFIX)/bin \
@@ -2066,7 +2058,6 @@ svn-check-swig-pl:
 	-if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			$(LIB_PTHREAD_HACK) \
 			env MAKEFLAGS= make check-swig-pl 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.pl; \
 	fi
@@ -2084,8 +2075,7 @@ svn-check-swig-rb:
 		env RUBYLIB=$(RUBYLIB) \
 		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		PATH=$(SVN_PREFIX)/bin:$$PATH \
-		$(LIB_PTHREAD_HACK) \
-			env MAKEFLAGS= make check-swig-rb 2>&1) | \
+		MAKEFLAGS= make check-swig-rb 2>&1) | \
 			tee $(svn_builddir)/tests.log.bindings.rb
 
 svn-check-javahl:
