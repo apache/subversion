@@ -22,13 +22,6 @@ Candidate changes:
    Votes:
      +1: danielsh, brane
 
- * r1823327
-   Performance: Make the 'info' command fast on old repository revisions.
-   Justification:
-     Performance was bad.
-   Votes:
-     +1: julianfoad, brane
-
 Veto-blocked changes:
 =====================
 
@@ -57,3 +50,10 @@ Approved changes:
    Make 'svn shelves' diffstat output show WC-relative paths.
    Votes:
      +1: julianfoad, jamessan, stsp
+
+ * r1823327
+   Performance: Make the 'info' command fast on old repository revisions.
+   Justification:
+     Performance was bad.
+   Votes:
+     +1: julianfoad, brane, stsp
