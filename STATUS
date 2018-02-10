@@ -20,7 +20,7 @@ Candidate changes:
    Justification:
      Will be helpful in debugging backports.
    Votes:
-     +1: danielsh
+     +1: danielsh, brane
 
  * r1820044
    Make 'svn shelves' diffstat output show WC-relative paths.
