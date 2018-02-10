@@ -111,7 +111,7 @@ Candidate changes:
      This is a user-reported crash. The underlying container type is now also
      part of the authz infrastructure and should be as robust as possible.
    Votes:
-     +1: stefan2
+     +1: stefan2, stsp
 
  * r1820718
    Fix JavaHL SSL server trust prompting to allow accepting temporarily.
