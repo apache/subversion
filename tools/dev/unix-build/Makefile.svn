@@ -240,6 +240,10 @@ endif
 # We need this to make sure some targets below pick up the right libraries
 LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
 
+# We need this to make sure some targets below pick up the right pkg-config files
+PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFIX)/serf/lib/pkgconfig:$(PREFIX)/sqlite/lib/pkgconfig:$(PREFIX)/ruby/lib/pkgconfig:$(PREFIX)/python/lib/pkgconfig:$(PREFIX)/lz4/lib/pkgconfig
+
+
 #######################################################################
 # Main targets.
 #######################################################################
@@ -390,6 +394,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -439,6 +444,7 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 	cd $(APR_ICONV_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(APR_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--with-apr=$(PREFIX)/apr
@@ -522,6 +528,7 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GNU_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/iconv \
 		--enable-extra-encodings
@@ -592,6 +599,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
@@ -728,6 +736,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
@@ -812,6 +821,7 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	fi
 	cd $(NEON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(NEON_SRCDIR)/configure \
 		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
@@ -874,7 +884,8 @@ $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
-			PREFIX=$(PREFIX)/serf
+			PREFIX=$(PREFIX)/serf \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH)
 	touch $@
 
 # install serf
@@ -966,6 +977,7 @@ endif
 $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
 		$(THREADSAFE_FLAG)
@@ -1036,6 +1048,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
 		CPPFLAGS="-I/usr/include/kerberosV" \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(CYRUS_SASL_SRCDIR)/configure \
 		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
 		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
@@ -1087,6 +1100,7 @@ $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
 $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 	cd $(LIBMAGIC_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(LIBMAGIC_SRCDIR)/configure \
 		--enable-fsect-man5 \
 		--prefix=$(PREFIX)/libmagic
@@ -1140,6 +1154,7 @@ endif
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
@@ -1250,6 +1265,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
 		--enable-shared \
@@ -1317,6 +1333,7 @@ $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 	cd $(GETTEXT_SRCDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
 		LDFLAGS="-L$(PREFIX)/iconv/lib" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GETTEXT_SRCDIR)/configure \
 		--prefix=$(PREFIX)/gettext \
 		--with-libiconv-prefix=$(PREFIX)/iconv \
@@ -1529,6 +1546,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 			GREP="`which grep`" \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
