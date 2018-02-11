@@ -19,7 +19,7 @@
 #
 #
 import unittest, setup_path
-import mergeinfo, core, client, delta, checksum, pool, ra, wc, repository, \
+import mergeinfo, core, client, delta, checksum, pool, fs, ra, wc, repository, \
        auth, trac.versioncontrol.tests
 from svn.core import svn_cache_config_get, svn_cache_config_set
 
@@ -37,6 +37,7 @@ def suite():
   s.addTest(client.suite())
   s.addTest(delta.suite())
   s.addTest(pool.suite())
+  s.addTest(fs.suite())
   s.addTest(ra.suite())
   s.addTest(wc.suite())
   s.addTest(repository.suite())
