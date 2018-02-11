@@ -1962,6 +1962,7 @@ libpath:
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 		$(PREFIX)/httpd/bin/apachectl
+HTTPD_LOG_ROTATE = mv $(PREFIX)/httpd/logs/error_log $(PREFIX)/httpd/logs/error_log.old
 HTTPD_START_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k start
 HTTPD_START_CMD_PROXY = $(HTTPD_CMD) -f $(HTTPD_PROXY_CONF)
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
@@ -1980,6 +1981,7 @@ SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`; sleep 3; \
 			rm -f $(PWD)/svnserve-$(WC).pid
 
 start-httpd: $(HTTPD_CHECK_CONF)
+	-$(HTTPD_LOG_ROTATE)
 	$(HTTPD_START_CMD)
 	@echo "To run tests over http, run:"
 	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
