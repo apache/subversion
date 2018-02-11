@@ -20,10 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1820627
-   davautocheck.sh: Support a --lldb option alongside --gdb.
-   Justification:
-     Will be helpful in debugging backports.
-   Votes:
-     +1: danielsh, brane, stsp

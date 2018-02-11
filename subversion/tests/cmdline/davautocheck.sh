@@ -79,8 +79,8 @@
 # environment.
 #
 # Passing --no-tests as argv[1] will have the script start a server
-# but not run any tests.  Passing --gdb will do the same, and in addition
-# spawn gdb in the foreground attached to the running server.
+# but not run any tests.  Passing --gdb or --lldb will do the same, and in
+# addition spawn gdb/lldb in the foreground attached to the running server.
 
 PYTHON=${PYTHON:-python}
 
@@ -760,6 +760,12 @@ say "HTTPD is good"
 
 if [ $# -eq 1 ] && [ "x$1" = 'x--no-tests' ]; then
   echo "http://localhost:$HTTPD_PORT/svn-test-work/repositories"
+  exit
+fi
+
+if [ $# -eq 1 ] && [ "x$1" = 'x--lldb' ]; then
+  echo "http://localhost:$HTTPD_PORT/svn-test-work/repositories"
+  $STOPSCRIPT && lldb --one-line=run -- $START -X
   exit
 fi
 
