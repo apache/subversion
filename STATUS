@@ -21,16 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1820778
-   Make mod_dav_svn report commit capabilities based on SVNMasterVersion.
-   Justification:
-     Allows 1.10 write-through proxy to 1.9 master.
-   Notes:
-     I believe this is a release blocker, without it we break backward
-     compatibilty for write-through proxies.
-   Votes:
-     +1: philip, rhuijben, stsp, brane
-
  * r1820044
    Make 'svn shelves' diffstat output show WC-relative paths.
    Votes:
