@@ -21,14 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1822996
-   Fix x509 parser to handle RSASSA-PSS certificates.
-   Justification:
-     JavaHL needs this to handle failure to verify such certs.
-     'svn auth' also affected.
-   Votes:
-     +1: philip, rhuijben, stsp, brane
-
  * r1820778
    Make mod_dav_svn report commit capabilities based on SVNMasterVersion.
    Justification:
