@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1823327
-   Performance: Make the 'info' command fast on old repository revisions.
-   Justification:
-     Performance was bad.
-   Votes:
-     +1: julianfoad, brane, stsp
-
  * r1820627
    davautocheck.sh: Support a --lldb option alongside --gdb.
    Justification:
