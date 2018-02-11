@@ -121,7 +121,7 @@ shelves_list(const char *local_abspath,
         {
 #ifndef WIN32
           int result = system(apr_psprintf(scratch_pool,
-                                           "diffstat %s 2> /dev/null",
+                                           "diffstat -p0 %s 2> /dev/null",
                                            info->patch_path));
           if (result == 0)
             SVN_ERR(svn_cmdline_printf(scratch_pool,
