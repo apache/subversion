@@ -34,11 +34,13 @@ del _unprefix_names
 # Names that are not to be exported
 import sys as _sys, os as _os, tempfile as _tempfile, subprocess as _subprocess
 try:
+  # Python <3.0
+  # Check for Python <3.0 first to prevent the presence of the python2-future
+  # package from incorrectly importing Python 3 behavior when it isn't intended.
+  import __builtin__ as builtins
+except ImportError:
   # Python >=3.0
   import builtins
-except ImportError:
-  # Python <3.0
-  import __builtin__ as builtins
 import svn.core as _svncore
 
 
@@ -76,7 +78,7 @@ class FileDiff:
     return 0
 
   def _dump_contents(self, file, root, path, pool=None):
-    fp = builtins.open(file, 'w+') # avoid namespace clash with
+    fp = builtins.open(file, 'wb') # avoid namespace clash with
                                    # trimmed-down svn_fs_open()
     if path is not None:
       stream = file_contents(root, path, pool)
