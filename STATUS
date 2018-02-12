@@ -20,12 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1823966
-   Shelving: fix unsafe 'system' calls.
-   Justification:
-     Avoids potential command-line-quoting-safety issues.
-   Notes:
-     --accept=working
-   Votes:
-     +1: julianfoad, danielsh, stsp
