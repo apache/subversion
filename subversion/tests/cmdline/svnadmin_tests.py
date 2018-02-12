@@ -777,9 +777,13 @@ def verify_windows_paths_in_repos(sbox):
 def fsfs_file(repo_dir, kind, rev):
   if svntest.main.options.server_minor_version >= 5:
     if svntest.main.options.fsfs_sharding is None:
+      if svntest.main.is_fs_type_fsx():
+        rev = 'r' + rev
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
       shard = int(rev) // svntest.main.options.fsfs_sharding
+      if svntest.main.is_fs_type_fsx():
+        rev = 'r' + rev
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
       if svntest.main.options.fsfs_packing is None or kind == 'revprops':
@@ -2856,10 +2860,7 @@ def verify_quickly(sbox):
   "verify quickly using metadata"
 
   sbox.build(create_wc = False)
-  if svntest.main.is_fs_type_fsfs():
-    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
-  else:
-    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', 'r1'), 'r+b')
+  rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
 
   # set new contents
   rev_file.seek(8)
