@@ -15,15 +15,6 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1823966
-   Shelving: fix unsafe 'system' calls.
-   Justification:
-     Avoids potential command-line-quoting-safety issues.
-   Notes:
-     --accept=working
-   Votes:
-     +1: julianfoad, danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -38,5 +29,13 @@ Approved changes:
    Justification:
      Don't mislead users into wrongly believing verification is enabled.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
+ * r1823966
+   Shelving: fix unsafe 'system' calls.
+   Justification:
+     Avoids potential command-line-quoting-safety issues.
+   Notes:
+     --accept=working
+   Votes:
+     +1: julianfoad, danielsh, stsp
