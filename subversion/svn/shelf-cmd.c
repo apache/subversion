@@ -71,6 +71,36 @@ friendly_duration_str(apr_time_t duration,
   return s;
 }
 
+#ifndef WIN32
+/* Run CMD with ARGS.
+ * Send its stdout to the parent's stdout. Disconnect its stdin and stderr.
+ */
+static svn_error_t *
+run_cmd(const char *cmd,
+        const char *const *args,
+        apr_pool_t *scratch_pool)
+{
+  apr_status_t apr_err;
+  apr_file_t *outfile;
+  svn_error_t *err;
+  int exitcode;
+
+  apr_err = apr_file_open_stdout(&outfile, scratch_pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stdout");
+
+  err = svn_io_run_cmd(NULL /*path*/, cmd, args,
+                       &exitcode, NULL /*exitwhy*/,
+                       TRUE /*inherit*/,
+                       NULL /*infile*/, outfile, NULL /*errfile*/,
+                       scratch_pool);
+  if (err || exitcode)
+    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, err,
+                             _("Could not run external command '%s'"), cmd);
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* Print some details of the changes in the patch described by INFO.
  */
 static svn_error_t *
@@ -79,14 +109,19 @@ show_diffstat(svn_client_shelf_version_t *shelf_version,
 {
 #ifndef WIN32
   const char *patch_abspath;
-  int result;
+  const char *args[4];
+  svn_error_t *err;
 
   SVN_ERR(svn_client_shelf_get_patch_abspath(&patch_abspath, shelf_version,
                                              scratch_pool));
-  result = system(apr_psprintf(scratch_pool,
-                               "diffstat -p0 '%s' 2> /dev/null",
-                               patch_abspath));
-  if (result == 0)
+  args[0] = "diffstat";
+  args[1] = "-p0";
+  args[2] = patch_abspath;
+  args[3] = NULL;
+  err = run_cmd("diffstat", args, scratch_pool);
+  if (err)
+    svn_error_clear(err);
+  else
     SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
 #endif
   return SVN_NO_ERROR;
