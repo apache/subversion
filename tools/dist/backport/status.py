@@ -194,10 +194,10 @@ class StatusFile:
         try:
           entry = StatusEntry(para_text, status_file=self)
           kind = Kind.nomination
-        except ParseException:
+        except ParseException as e:
           kind = Kind.unknown
-          logger.warning("Failed to parse entry {!r} in {!r}".format(
-                          para_text, status_fp))
+          logger.warning("Failed to parse entry {!r} in {!r}: {}".format(
+                          para_text, status_fp, e))
       else:
         kind = Kind.preamble
 
