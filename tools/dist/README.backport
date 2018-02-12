@@ -78,5 +78,8 @@ backport.pl script should be kept around until Python versions of these are
 available.
 
 
+TODO: document that "Notes: ... --accept=foo ..." is parsed, see backport_tests.py #3.
+
+
 ¹ For backport.pl's interactive features, see:
 <http://mail-archives.apache.org/mod_mbox/subversion-dev/201503.mbox/%3c20150304225114.GD2036@tarsus.local2%3e>
