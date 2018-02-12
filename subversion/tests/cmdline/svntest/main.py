@@ -1035,7 +1035,8 @@ def _post_create_repos(path, minor_version = None):
       users += (crosscheck_username + " = " + crosscheck_password + "\n")
     file_append(os.path.join(path, "conf", "passwd"), users)
 
-  if options.fs_type is None or options.fs_type == 'fsfs':
+  if options.fs_type is None or options.fs_type == 'fsfs' or \
+     options.fs_type == 'fsx':
     # fsfs.conf file
     if (minor_version is None or minor_version >= 6):
       confpath = get_fsfs_conf_file_path(path)
