@@ -15,6 +15,14 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+ * r1824033
+   Update our copies of APR utility files to those in our recommended APR
+   version.
+   Justification:
+     The release build scripts should match those in the recommended APR deps.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
