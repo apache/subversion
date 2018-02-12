@@ -36,7 +36,7 @@ Candidate changes:
      Cuts 'make check' run time in half for me because invoking the
      libtool wrapper shell scripts is slow (at least on OpenBSD).
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
  * r1823211
     Filter standard library directories from SWIG_PL_LINK.
