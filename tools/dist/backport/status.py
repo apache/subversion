@@ -379,9 +379,11 @@ class StatusEntry:
       raise ParseException("Entry found with neither branch nor revisions")
 
     # Parse the logsummary.
-    while lines and not self._is_subheader(lines[0]):
+    while True:
       self.logsummary.append(lines[0])
       lines = lines[1:]
+      if (not lines) or self._is_subheader(lines[0]):
+        break
 
     # Parse votes.
     if "Votes:" in lines:

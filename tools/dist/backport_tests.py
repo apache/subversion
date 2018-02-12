@@ -660,6 +660,21 @@ def backport_unicode_entry(sbox):
   # Run it.
   run_backport(sbox)
 
+#----------------------------------------------------------------------
+@BackportTest('76cee987-25c9-4d6c-ad40-000000000013')
+def backport_logsummary_colon(sbox):
+  "a logsummary that looks like a header"
+
+  # r6: nominate r4
+  approved_entries = [
+    make_entry([4], logsummary="HTTPv2: Add comments."),
+  ]
+  sbox.simple_append(STATUS, serialize_STATUS(approved_entries))
+  sbox.simple_commit(message='Nominate r4')
+
+  # Run it.
+  run_backport(sbox)
+
 
 #----------------------------------------------------------------------
 
@@ -680,6 +695,7 @@ test_list = [ None,
               backport_otherproject_change,
               backport_STATUS_mods,
               backport_unicode_entry,
+              backport_logsummary_colon,
               # When adding a new test, include the test number in the last
               # 6 bytes of the UUID, in decimal.
              ]
