@@ -77,9 +77,7 @@ try:
   import svn.repos
   import svn.core
 except ImportError:
-  sys.stderr.write(
-    "You need version %s or better of the Subversion Python bindings.\n" \
-    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
+  sys.stderr.write("Unable to import Subversion Python bindings.\n")
   sys.exit(1)
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
