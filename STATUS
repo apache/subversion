@@ -21,16 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1823989
-   Correct the generated fsfs.conf file's statement of the default value of
-   verify-before-commit.  It is keyed not on --enable-debug but on
-   --enable-maintainer-mode (on Windows there is no distinction between the
-   two).
-   Justification:
-     Don't mislead users into wrongly believing verification is enabled.
-   Votes:
-     +1: danielsh, stsp
-
  * r1823966
    Shelving: fix unsafe 'system' calls.
    Justification:
