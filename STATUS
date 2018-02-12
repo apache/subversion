@@ -15,6 +15,12 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1823966
    Shelving: fix unsafe 'system' calls.
    Justification:
@@ -22,10 +28,5 @@ Candidate changes:
    Notes:
      --accept=working
    Votes:
-     +1: julianfoad
+     +1: julianfoad, danielsh
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
