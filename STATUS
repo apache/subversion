@@ -19,6 +19,8 @@ Candidate changes:
    Shelving: fix unsafe 'system' calls.
    Justification:
      Avoids potential command-line-quoting-safety issues.
+   Notes:
+     Manual merge needed, followed by 'svn revert subversion/svn/shelf-cmd.c'.
    Votes:
      +1: julianfoad
 
