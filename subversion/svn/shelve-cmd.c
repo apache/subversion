@@ -84,6 +84,36 @@ list_sorted_by_date(apr_array_header_t **list,
   return SVN_NO_ERROR;
 }
 
+#ifndef WIN32
+/* Run CMD with ARGS.
+ * Send its stdout to the parent's stdout. Disconnect its stdin and stderr.
+ */
+static svn_error_t *
+run_cmd(const char *cmd,
+        const char *const *args,
+        apr_pool_t *scratch_pool)
+{
+  apr_status_t apr_err;
+  apr_file_t *outfile;
+  svn_error_t *err;
+  int exitcode;
+
+  apr_err = apr_file_open_stdout(&outfile, scratch_pool);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err, "Can't open stdout");
+
+  err = svn_io_run_cmd(NULL /*path*/, cmd, args,
+                       &exitcode, NULL /*exitwhy*/,
+                       TRUE /*inherit*/,
+                       NULL /*infile*/, outfile, NULL /*errfile*/,
+                       scratch_pool);
+  if (err || exitcode)
+    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, err,
+                             _("Could not run external command '%s'"), cmd);
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* Display a list of shelved changes */
 static svn_error_t *
 shelves_list(const char *local_abspath,
@@ -120,10 +150,17 @@ shelves_list(const char *local_abspath,
       if (diffstat)
         {
 #ifndef WIN32
-          int result = system(apr_psprintf(scratch_pool,
-                                           "diffstat -p0 %s 2> /dev/null",
-                                           info->patch_path));
-          if (result == 0)
+          const char *args[4];
+          svn_error_t *err;
+
+          args[0] = "diffstat";
+          args[1] = "-p0";
+          args[2] = info->patch_path;
+          args[3] = NULL;
+          err = run_cmd("diffstat", args, scratch_pool);
+          if (err)
+            svn_error_clear(err);
+          else
             SVN_ERR(svn_cmdline_printf(scratch_pool,
                                        "\n"));
 #endif
