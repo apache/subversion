@@ -15,6 +15,13 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+ * r1823966
+   Shelving: fix unsafe 'system' calls.
+   Justification:
+     Avoids potential command-line-quoting-safety issues.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
