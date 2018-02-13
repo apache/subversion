@@ -21,32 +21,32 @@ Candidate changes:
    Justification:
      The release build scripts should match those in the recommended APR deps.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, philip
 
  * r1823791
    Ensure that libsvn_swig_perl is built before Makefile.PL.
    Justification:
      Fixes the Perl bindings build in parallel mode (make -jN)
    Votes:
-     +1: stsp
-
- * r1822587, r1822591
-   Make it possible to run 'nake check' with installed binaries.
-   Justification:
-     Cuts 'make check' run time in half for me because invoking the
-     libtool wrapper shell scripts is slow (at least on OpenBSD).
-   Votes:
-     +1: stsp, danielsh
+     +1: stsp, philip
 
  * r1823211
     Filter standard library directories from SWIG_PL_LINK.
     Justification:
       Consistency with how this is done for other swig bindings.
     Votes:
-      +1: stsp
+      +1: stsp, philip
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1822587, r1822591
+   Make it possible to run 'make check' with installed binaries.
+   Justification:
+     Cuts 'make check' run time in half for me because invoking the
+     libtool wrapper shell scripts is slow (at least on OpenBSD).
+   Votes:
+     +1: stsp, danielsh, philip
