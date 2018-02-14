@@ -1748,6 +1748,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-compression=' + options.fsfs_compression)
     if options.fsfs_dir_deltification:
       args.append('--fsfs-dir-deltification=' + options.fsfs_dir_deltification)
+    if options.svn_bin:
+      args.append('--bin=' + options.svn_bin)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)

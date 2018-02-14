@@ -42,11 +42,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1822587, r1822591
-   Make it possible to run 'make check' with installed binaries.
-   Justification:
-     Cuts 'make check' run time in half for me because invoking the
-     libtool wrapper shell scripts is slow (at least on OpenBSD).
-   Votes:
-     +1: stsp, danielsh, philip
