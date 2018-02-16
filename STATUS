@@ -15,30 +15,31 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1824033
    Update our copies of APR utility files to those in our recommended APR
    version.
    Justification:
      The release build scripts should match those in the recommended APR deps.
    Votes:
-     +1: julianfoad, philip
+     +1: julianfoad, philip, jamessan
 
  * r1823791
    Ensure that libsvn_swig_perl is built before Makefile.PL.
    Justification:
      Fixes the Perl bindings build in parallel mode (make -jN)
    Votes:
-     +1: stsp, philip
+     +1: stsp, philip, jamessan
 
  * r1823211
     Filter standard library directories from SWIG_PL_LINK.
     Justification:
       Consistency with how this is done for other swig bindings.
     Votes:
-      +1: stsp, philip
+      +1: stsp, philip, jamessan
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
