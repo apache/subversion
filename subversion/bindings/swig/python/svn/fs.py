@@ -42,6 +42,7 @@ except ImportError:
   # Python >=3.0
   import builtins
 import svn.core as _svncore
+import svn.diff as _svndiff
 
 
 def entries(root, path, pool=None):
@@ -58,6 +59,7 @@ class FileDiff:
 
     self.tempfile1 = None
     self.tempfile2 = None
+    self.difftemp  = None
 
     self.root1 = root1
     self.path1 = path1
@@ -110,27 +112,49 @@ class FileDiff:
   def get_pipe(self):
     self.get_files()
 
-    # use an array for the command to avoid the shell and potential
-    # security exposures
-    cmd = ["diff"] \
-          + self.diffoptions \
-          + [self.tempfile1, self.tempfile2]
+    # If diffoptions were provided, then the diff command needs to be
+    # called in preference to using the internal Subversion diff.
+    if self.diffoptions is not None:
+      # use an array for the command to avoid the shell and potential
+      # security exposures
+      cmd = ["diff"] \
+            + self.diffoptions \
+            + [self.tempfile1, self.tempfile2]
 
-    # open the pipe, and return the file object for reading from the child.
-    p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
-                          close_fds=_sys.platform != "win32")
-    return p.stdout
+      # open the pipe, and return the file object for reading from the child.
+      p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
+                            close_fds=_sys.platform != "win32")
+      return p.stdout
+
+    else:
+      if self.difftemp is None:
+        self.difftemp = _tempfile.mktemp()
+
+        with builtins.open(self.difftemp, "wb") as fp:
+          diffopt = _svndiff.file_options_create()
+          diffobj = _svndiff.file_diff_2(self.tempfile1,
+                                         self.tempfile2,
+                                         diffopt)
+
+          _svndiff.file_output_unified4(fp,
+                                        diffobj,
+                                        self.tempfile1,
+                                        self.tempfile2,
+                                        None, None,
+                                        "utf8",
+                                        None,
+                                        diffopt.show_c_function,
+                                        diffopt.context_size,
+                                        None, None)
+
+      return builtins.open(self.difftemp, "rb")
 
   def __del__(self):
     # it seems that sometimes the files are deleted, so just ignore any
     # failures trying to remove them
-    if self.tempfile1 is not None:
-      try:
-        _os.remove(self.tempfile1)
-      except OSError:
-        pass
-    if self.tempfile2 is not None:
-      try:
-        _os.remove(self.tempfile2)
-      except OSError:
-        pass
+    for tmpfile in [self.tempfile1, self.tempfile2, self.difftemp]:
+      if tmpfile is not None:
+        try:
+          _os.remove(tmpfile)
+        except OSError:
+          pass
