@@ -863,7 +863,7 @@ extraclean-swig-headers: clean-swig-headers
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
 
-$(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
+$(SWIG_PL_DIR)/native/Makefile: libsvn_swig_perl $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL PREFIX=$(prefix)
 
 # There is a "readlink -f" command on some systems for the same purpose,
@@ -872,9 +872,7 @@ $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 READLINK_PY=$(PYTHON) -c 'import sys,os; print(os.path.realpath(sys.argv[1]))'
 READLINK_PL=$(PERL) -e 'use Cwd; print Cwd::realpath(shift)'
 
-swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
-  $(SWIG_PL_DIR)/native/Makefile
-swig-pl: $(swig-pl_DEPS)
+swig-pl: autogen-swig-pl $(SWIG_PL_DIR)/native/Makefile
 	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
 	  for f in $(SWIG_PL_SRC_DIR)/native/*.c ; do \
 	     if [ -e "$$f" ] ; then \

@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1823791
-   Ensure that libsvn_swig_perl is built before Makefile.PL.
-   Justification:
-     Fixes the Perl bindings build in parallel mode (make -jN)
-   Votes:
-     +1: stsp, philip, jamessan
-
  * r1823211
     Filter standard library directories from SWIG_PL_LINK.
     Justification:
