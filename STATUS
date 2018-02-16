@@ -21,14 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1824033
-   Update our copies of APR utility files to those in our recommended APR
-   version.
-   Justification:
-     The release build scripts should match those in the recommended APR deps.
-   Votes:
-     +1: julianfoad, philip, jamessan
-
  * r1823791
    Ensure that libsvn_swig_perl is built before Makefile.PL.
    Justification:
@@ -42,4 +34,3 @@ Approved changes:
       Consistency with how this is done for other swig bindings.
     Votes:
       +1: stsp, philip, jamessan
-
