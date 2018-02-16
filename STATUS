@@ -96,14 +96,6 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
- * r1818584
-   Fix crash when exiting 'svnserve --config-file'.
-   Justification:
-     This is a user-reported crash. The underlying container type is now also
-     part of the authz infrastructure and should be as robust as possible.
-   Votes:
-     +1: stefan2, stsp
-
  * r1820718
    Fix JavaHL SSL server trust prompting to allow accepting temporarily.
    Justification:
@@ -147,3 +139,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1818584
+   Fix crash when exiting 'svnserve --config-file'.
+   Justification:
+     This is a user-reported crash. The underlying container type is now also
+     part of the authz infrastructure and should be as robust as possible.
+   Votes:
+     +1: stefan2, stsp, jamessan
+
