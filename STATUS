@@ -20,10 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1823211
-    Filter standard library directories from SWIG_PL_LINK.
-    Justification:
-      Consistency with how this is done for other swig bindings.
-    Votes:
-      +1: stsp, philip, jamessan
