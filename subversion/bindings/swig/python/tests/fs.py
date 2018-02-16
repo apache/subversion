@@ -19,7 +19,7 @@
 # under the License.
 #
 #
-import os, unittest
+import os, unittest, sys
 from tempfile import mkstemp
 try:
   # Python >=3.0
@@ -59,7 +59,7 @@ class SubversionFSTestCase(unittest.TestCase):
     """Test diffing of a repository path."""
     tmpfd, self.tmpfile = mkstemp()
 
-    tmpfp = os.fdopen(tmpfd, "w")
+    tmpfp = os.fdopen(tmpfd, "wb")
 
     # Use a unicode file to ensure proper non-ascii handling.
     tmpfp.write(u'⊙_ʘ'.encode('utf8'))
@@ -83,13 +83,25 @@ class SubversionFSTestCase(unittest.TestCase):
                                 clientctx)
     self.assertEqual(commitinfo.revision, self.rev + 1)
 
+    # Test standard internal diff
     fdiff = fs.FileDiff(fs.revision_root(self.fs, commitinfo.revision), "/trunk/UniTest.txt",
-                        None, None)
+                        None, None, diffoptions=None)
 
     diffp = fdiff.get_pipe()
     diffoutput = diffp.read().decode('utf8')
 
-    self.assertTrue(diffoutput.find(u'< ⊙_ʘ') > 0)
+    self.assertTrue(diffoutput.find(u'-⊙_ʘ') > 0)
+
+    # Test passing diffoptions to an external 'diff' executable.
+    # It is unusual to have the 'diff' tool on Windows, so do not
+    # try the test there.
+    if sys.platform != "win32":
+      fdiff = fs.FileDiff(fs.revision_root(self.fs, commitinfo.revision), "/trunk/UniTest.txt",
+                          None, None, diffoptions=['--normal'])
+      diffp = fdiff.get_pipe()
+      diffoutput = diffp.read().decode('utf8')
+
+      self.assertTrue(diffoutput.find(u'< ⊙_ʘ') > 0)
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
