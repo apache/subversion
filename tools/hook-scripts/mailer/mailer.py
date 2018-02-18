@@ -71,14 +71,10 @@ _MIN_SVN_VERSION = [1, 5, 0]
 
 # Import the Subversion Python bindings, making sure they meet our
 # minimum version requirements.
-try:
-  import svn.fs
-  import svn.delta
-  import svn.repos
-  import svn.core
-except ImportError:
-  sys.stderr.write("Unable to import Subversion Python bindings.\n")
-  sys.exit(1)
+import svn.fs
+import svn.delta
+import svn.repos
+import svn.core
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
