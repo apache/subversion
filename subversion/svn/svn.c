@@ -1831,7 +1831,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  To bring back a shelved change, use 'svn unshelve NAME'.\n"
      "\n"
-     "  A shelved change is stored as a patch file, .svn/shelves/NAME.patch\n"
+     "  Shelved changes are stored in <WC>/.svn/shelves/\n"
      "\n"
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
