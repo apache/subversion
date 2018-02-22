@@ -15,6 +15,13 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
+ * r1825045
+   Shelving: correct the help text for shelving v1 storage location.
+   Justification:
+     The help incorrectly specified the names of stored patch files.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
