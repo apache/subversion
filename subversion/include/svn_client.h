@@ -6855,22 +6855,29 @@ typedef struct svn_client_shelf_version_t
 
 /** Open an existing shelf or create a new shelf.
  *
+ * Create a new shelf (containing no versions) if a shelf named @a name
+ * is not found.
+ *
  * The shelf should be closed after use by calling svn_client_shelf_close().
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_open(svn_client_shelf_t **shelf_p,
-                      const char *name,
-                      const char *local_abspath,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *result_pool);
+svn_client_shelf_open_or_create(svn_client_shelf_t **shelf_p,
+                                const char *name,
+                                const char *local_abspath,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *result_pool);
 
-/** Open an existing shelf or error if it doesn't exist.
+/** Open an existing shelf named @a name, or error if it doesn't exist.
  *
  * The shelf should be closed after use by calling svn_client_shelf_close().
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6895,7 +6902,9 @@ svn_error_t *
 svn_client_shelf_close(svn_client_shelf_t *shelf,
                        apr_pool_t *scratch_pool);
 
-/** Delete a shelf, by name.
+/** Delete the shelf named @a name, or error if it doesn't exist.
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6914,7 +6923,8 @@ svn_client_shelf_delete(const char *name,
  * @a paths are relative to the CWD, or absolute.
  *
  * If there are no local modifications in the specified locations, do not
- * create a new version of @a shelf.
+ * create a new version of @a shelf, and return SVN_NO_ERROR. In this case
+ * @a shelf->max_version after the call is the same as before the call.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7166,6 +7176,8 @@ svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
  * the new path, both relative to the WC root. The key and value are the
  * same except when a path is moved or copied.
  *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ *
  * @since New in 1.10.
  * @warning EXPERIMENTAL.
  */
@@ -7181,6 +7193,8 @@ svn_client_shelf_get_paths(apr_hash_t **affected_paths,
 /** Set @a *has_changes to indicate whether the shelf @a name
  * contains any modifications, in other words if svn_client_shelf_get_paths()
  * would return a non-empty set of paths.
+ *
+ * @a local_abspath is any path in the WC and is used to find the WC root.
  *
  * @since New in 1.10.
  * @warning EXPERIMENTAL.

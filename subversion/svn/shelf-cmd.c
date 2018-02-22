@@ -456,8 +456,9 @@ shelve(int *new_version_p,
   const char *cwd_abspath;
   struct status_baton sb;
 
-  SVN_ERR(svn_client_shelf_open(&shelf,
-                                name, local_abspath, ctx, scratch_pool));
+  SVN_ERR(svn_client_shelf_open_or_create(&shelf,
+                                          name, local_abspath,
+                                          ctx, scratch_pool));
   previous_version = shelf->max_version;
 
   if (! quiet)
