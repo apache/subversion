@@ -332,6 +332,7 @@ void SVNRepos::load(File &path,
                     bool usePostCommitHook,
                     bool validateProps,
                     bool ignoreDates,
+                    bool normalizeProps,
                     const char *relativePath,
                     ReposNotifyCallback *notifyCallback)
 {
@@ -368,10 +369,10 @@ void SVNRepos::load(File &path,
                               path.getInternalStyle(requestPool), NULL,
                               requestPool.getPool(), requestPool.getPool()), );
 
-  SVN_JNI_ERR(svn_repos_load_fs5(repos, dataIn.getStream(requestPool),
+  SVN_JNI_ERR(svn_repos_load_fs6(repos, dataIn.getStream(requestPool),
                                  lower, upper, uuid_action, relativePath,
                                  usePreCommitHook, usePostCommitHook,
-                                 validateProps, ignoreDates,
+                                 validateProps, ignoreDates, normalizeProps,
                                  notifyCallback != NULL
                                     ? ReposNotifyCallback::notify
                                     : NULL,
