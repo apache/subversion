@@ -20,7 +20,16 @@ Candidate changes:
    Justification:
      The help incorrectly specified the names of stored patch files.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, brane
+
+ * r1825215
+   Expose the functionality of the new-in-1.10 svn_repos_load_fs6 in JavaHL.
+   Justification:
+     It makes sense to expose all new APIs through bindings.
+   Warning:
+     Must be part of the 1.10.0 release, because it extends the JavaHL API.
+   Votes:
+     +1: brane
 
 Veto-blocked changes:
 =====================
