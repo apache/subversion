@@ -613,7 +613,7 @@ The second is if you have $SVN::Error::handler set to undef as a wrapper for
 calls you want to croak on when there is an error, but you don't want to write
 an explicit error handler. For example:
 
-my $result_rev = SVN::Error::croak_on_error($ctx-E<gt>checkout($url, $path, 'HEAD', 1));
+my $rev = SVN::Error::croak_on_error($ctx-E<gt>checkout($url,$path,'HEAD',1));
 
 If there is no error then croak_on_error will return the arguments passed to it
 unchanged.
