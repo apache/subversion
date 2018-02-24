@@ -15,7 +15,7 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1825024
+ * r1825024, r1825266
    Fix "can't break line" warning in generated man page.
    Justification:
      Small documentation fix
