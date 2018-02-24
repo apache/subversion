@@ -31,6 +31,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1825024
+   Fix "can't break line" warning in generated man page.
+   Justification:
+     Small documentation fix
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
