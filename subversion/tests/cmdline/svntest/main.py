@@ -224,6 +224,10 @@ SVN_PROP_INHERITABLE_IGNORES = "svn:global-ignores"
 general_repo_dir = os.path.join(work_dir, "repositories")
 general_wc_dir = os.path.join(work_dir, "working_copies")
 
+# Directories used for DAV tests
+other_dav_root_dir = os.path.join(work_dir, "fsdavroot")
+non_dav_root_dir = os.path.join(work_dir, "nodavroot")
+
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
 # quit and when we startup.
@@ -2336,6 +2340,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   global pristine_url
   global pristine_greek_repos_url
+  global other_dav_root_url
+  global non_dav_root_url
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
@@ -2414,6 +2420,10 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                 svntest.wc.svn_uri_quote(
                                   pristine_greek_repos_dir.replace(
                                       os.path.sep, '/'))
+
+  other_dav_root_url = options.test_area_url + '/fsdavroot'
+  non_dav_root_url = options.test_area_url + '/nodavroot'
+
 
   if options.use_jsvn:
     if options.svn_bin is None:
