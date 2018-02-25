@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1825045
-   Shelving: correct the help text for shelving v1 storage location.
-   Justification:
-     The help incorrectly specified the names of stored patch files.
-   Votes:
-     +1: julianfoad, brane, jamessan
-
  * r1825215
    Expose the functionality of the new-in-1.10 svn_repos_load_fs6 in JavaHL.
    Justification:
