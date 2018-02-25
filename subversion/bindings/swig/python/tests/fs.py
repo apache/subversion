@@ -19,8 +19,9 @@
 # under the License.
 #
 #
-import os, unittest, sys
+import os, unittest, sys, errno
 from tempfile import mkstemp
+from subprocess import Popen, PIPE
 try:
   # Python >=3.0
   from urllib.parse import urljoin
@@ -46,23 +47,13 @@ class SubversionFSTestCase(unittest.TestCase):
     self.fs = repos.fs(self.repos)
     self.rev = fs.youngest_rev(self.fs)
     self.tmpfile = None
-
-  def tearDown(self):
-    self.fs = None
-    self.repos = None
-    self.temper.cleanup()
-
-    if self.tmpfile is not None:
-      os.remove(self.tmpfile)
-
-  def test_diff_repos_paths(self):
-    """Test diffing of a repository path."""
+    self.unistr = u'⊙_ʘ'
     tmpfd, self.tmpfile = mkstemp()
 
     tmpfp = os.fdopen(tmpfd, "wb")
 
     # Use a unicode file to ensure proper non-ascii handling.
-    tmpfp.write(u'⊙_ʘ'.encode('utf8'))
+    tmpfp.write(self.unistr.encode('utf8'))
 
     tmpfp.close()
 
@@ -81,27 +72,48 @@ class SubversionFSTestCase(unittest.TestCase):
                                 urljoin(self.repos_uri +"/", "trunk/UniTest.txt"),
                                 True, True,
                                 clientctx)
-    self.assertEqual(commitinfo.revision, self.rev + 1)
+
+    self.commitedrev = commitinfo.revision
+
+  def tearDown(self):
+    self.fs = None
+    self.repos = None
+    self.temper.cleanup()
+
+    if self.tmpfile is not None:
+      os.remove(self.tmpfile)
+
+  def test_diff_repos_paths_internal(self):
+    """Test diffing of a repository path using the internal diff."""
 
     # Test standard internal diff
-    fdiff = fs.FileDiff(fs.revision_root(self.fs, commitinfo.revision), "/trunk/UniTest.txt",
+    fdiff = fs.FileDiff(fs.revision_root(self.fs, self.commitedrev), "/trunk/UniTest.txt",
                         None, None, diffoptions=None)
 
     diffp = fdiff.get_pipe()
     diffoutput = diffp.read().decode('utf8')
 
-    self.assertTrue(diffoutput.find(u'-⊙_ʘ') > 0)
+    self.assertTrue(diffoutput.find(u'-' + self.unistr) > 0)
 
-    # Test passing diffoptions to an external 'diff' executable.
-    # It is unusual to have the 'diff' tool on Windows, so do not
-    # try the test there.
-    if sys.platform != "win32":
-      fdiff = fs.FileDiff(fs.revision_root(self.fs, commitinfo.revision), "/trunk/UniTest.txt",
-                          None, None, diffoptions=['--normal'])
-      diffp = fdiff.get_pipe()
-      diffoutput = diffp.read().decode('utf8')
+  def test_diff_repos_paths_external(self):
+    """Test diffing of a repository path using an external diff (if available)."""
 
-      self.assertTrue(diffoutput.find(u'< ⊙_ʘ') > 0)
+    # Test if this environment has the diff command, if not then skip the test
+    try:
+      diffout, differr = Popen(["diff"], stdin=PIPE, stderr=PIPE).communicate()
+
+    except OSError as err:
+      if err.errno == errno.ENOENT:
+        self.skipTest("'diff' command not present")
+      else:
+        raise err
+
+    fdiff = fs.FileDiff(fs.revision_root(self.fs, self.commitedrev), "/trunk/UniTest.txt",
+                        None, None, diffoptions=[])
+    diffp = fdiff.get_pipe()
+    diffoutput = diffp.read().decode('utf8')
+
+    self.assertTrue(diffoutput.find(u'< ' + self.unistr) > 0)
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
