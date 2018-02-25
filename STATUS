@@ -20,10 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1825024, r1825266
-   Fix "can't break line" warning in generated man page.
-   Justification:
-     Small documentation fix
-   Votes:
-     +1: jamessan, brane
