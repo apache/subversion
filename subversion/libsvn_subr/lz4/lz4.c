@@ -1471,4 +1471,11 @@ int LZ4_decompress_fast_withPrefix64k(const char* source, char* dest, int origin
 }
 
 #endif   /* LZ4_COMMONDEFS_ONLY */
+#else /* !SVN_INTERNAL_LZ4 */
+
+/* Silence OSX ranlib warnings about object files with no symbols. */
+#include <apr.h>
+extern const apr_uint32_t svn__fake__lz4internal;
+const apr_uint32_t svn__fake__lz4internal = 0xdeadbeef;
+
 #endif /* SVN_INTERNAL_LZ4 */
