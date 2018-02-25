@@ -61,7 +61,7 @@ class SVNRepos : public SVNBase
             Revision &revsionStart, Revision &revisionEnd,
             bool ignoreUUID, bool forceUUID,
             bool usePreCommitHook, bool usePostCommitHook,
-            bool validateProps, bool ignoreDates,
+            bool validateProps, bool ignoreDates, bool normalizeProps,
             const char *relativePath, ReposNotifyCallback *notifyCallback);
   void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);

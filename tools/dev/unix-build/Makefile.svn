@@ -171,7 +171,7 @@ FETCH_CMD	= wget -c
 SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
 BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
 APR_URL		= https://svn.apache.org/repos/asf/apr/apr
-APR_ICONV_URL	= https://www.apache.org/dist/apr/$(APR_ICONV_DIST)
+APR_ICONV_URL	= https://archive.apache.org/dist/apr/$(APR_ICONV_DIST)
 GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
@@ -239,6 +239,10 @@ endif
 
 # We need this to make sure some targets below pick up the right libraries
 LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
+
+# We need this to make sure some targets below pick up the right pkg-config files
+PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFIX)/serf/lib/pkgconfig:$(PREFIX)/sqlite/lib/pkgconfig:$(PREFIX)/ruby/lib/pkgconfig:$(PREFIX)/python/lib/pkgconfig:$(PREFIX)/lz4/lib/pkgconfig
+
 
 #######################################################################
 # Main targets.
@@ -390,6 +394,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -439,6 +444,7 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 	cd $(APR_ICONV_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(APR_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--with-apr=$(PREFIX)/apr
@@ -522,6 +528,7 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GNU_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/iconv \
 		--enable-extra-encodings
@@ -592,6 +599,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
@@ -728,6 +736,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
@@ -812,6 +821,7 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	fi
 	cd $(NEON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(NEON_SRCDIR)/configure \
 		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
@@ -874,7 +884,8 @@ $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
-			PREFIX=$(PREFIX)/serf
+			PREFIX=$(PREFIX)/serf \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH)
 	touch $@
 
 # install serf
@@ -966,6 +977,7 @@ endif
 $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
 		$(THREADSAFE_FLAG)
@@ -1036,6 +1048,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
 		CPPFLAGS="-I/usr/include/kerberosV" \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(CYRUS_SASL_SRCDIR)/configure \
 		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
 		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
@@ -1087,6 +1100,7 @@ $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
 $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 	cd $(LIBMAGIC_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(LIBMAGIC_SRCDIR)/configure \
 		--enable-fsect-man5 \
 		--prefix=$(PREFIX)/libmagic
@@ -1140,6 +1154,7 @@ endif
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
@@ -1250,6 +1265,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
 		--enable-shared \
@@ -1317,6 +1333,7 @@ $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 	cd $(GETTEXT_SRCDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
 		LDFLAGS="-L$(PREFIX)/iconv/lib" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GETTEXT_SRCDIR)/configure \
 		--prefix=$(PREFIX)/gettext \
 		--with-libiconv-prefix=$(PREFIX)/iconv \
@@ -1503,6 +1520,17 @@ SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
 endif
 
+# On OpenBSD, MExtUtils -e ldopts outputs -L/usr/local/lib, which can
+# cause us to link Perl bindings against the wrong set of SVN libraries.
+# As a workaround, we patch the configure script after it has been generated.
+ifeq ($(UNAME),OpenBSD)
+SWIG_PL_INCLUDES_HACK= sed -i 's^\($$PERL -MExtUtils::Embed -e ccopts\)^\1 | sed -e s@-I/usr/local/include@@^' $(svn_builddir)/configure
+SWIG_PL_LINK_HACK= sed -i 's^\($$PERL -MExtUtils::Embed -e ldopts\)^\1 | sed -e s@-L/usr/local/lib@@^' $(svn_builddir)/configure
+else
+SWIG_PL_INCLUDES_HACK=true
+SWIG_PL_LINK_HACK=true
+endif
+
 $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(APR_OBJDIR)/.installed $(APR_UTIL_OBJDIR)/.installed \
 	$(BDB_OBJDIR)/.installed $(SQLITE_OBJDIR)/.installed \
@@ -1511,11 +1539,14 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(SERF_OBJDIR)/.installed $(SERF_OLD_OBJDIR)/.installed \
 	$(RUBY_OBJDIR)/.installed $(PYTHON_OBJDIR)/.installed
 	cd $(SVN_SRCDIR) && ./autogen.sh
+	$(SWIG_PL_INCLUDES_HACK)
+	$(SWIG_PL_LINK_HACK)
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 			GREP="`which grep`" \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
@@ -1563,6 +1594,17 @@ $(SVN_OBJDIR)/.pre-generated-swig-cleaned:
 		&& env MAKEFLAGS= make clean-swig
 	touch $@
 
+
+# On OpenBSD, Perl's LDDLFLAGS include -L/usr/local/lib, which can cause
+# us to link Perl bindings against the wrong set of SVN libraries.
+# We manually fix up the generated Makefile.PL to work around this issue.
+ifeq ($(UNAME),OpenBSD)
+MAKEFILE_PL_LDDLFLAGS_HACK= sed -i 's@^WriteMakefile@$$config{LDDLFLAGS} =~ s+-L/usr/local/lib++; WriteMakefile@' \
+			$(SVN_SRCDIR)/subversion/bindings/swig/perl/native/Makefile.PL
+else
+MAKEFILE_PL_LDDLFLAGS_HACK=true
+endif
+
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-generated-swig-cleaned
 	cd $(svn_builddir) \
 		&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
@@ -1571,13 +1613,15 @@ $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-ge
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
 		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make -j${MAKE_JOBS} swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) && make $(SVN_SRCDIR)/subversion/bindings/swig/perl/native/Makefile.PL; \
+		$(MAKEFILE_PL_LDDLFLAGS_HACK); \
 		cd $(svn_builddir) \
 			&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 				env MAKEFLAGS= make -j${MAKE_JOBS} swig-pl; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-			&& env MAKEFLAGS= make -j${MAKE_JOBS} javahl; \
+			&& env MAKEFLAGS= make javahl; \
 	fi
 	touch $@
 
@@ -1587,13 +1631,15 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 		env MAKEFLAGS= make install-swig-py
 	cd $(svn_builddir) && \
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make install-swig-rb
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) MAKEFLAGS= make install-swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-	    && env MAKEFLAGS= make install-swig-pl-lib; \
-	  cd subversion/bindings/swig/perl/native \
-		  && perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
-		  && env MAKEFLAGS= make install; \
+			&& env MAKEFLAGS= LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+				make install-swig-pl-lib; \
+		cd subversion/bindings/swig/perl/native \
+			&& perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
+			&& env MAKEFLAGS= LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+				make install; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
@@ -1924,6 +1970,7 @@ endif
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
 		$(PREFIX)/httpd/bin/apachectl
+HTTPD_LOG_ROTATE = mv $(PREFIX)/httpd/logs/error_log $(PREFIX)/httpd/logs/error_log.old
 HTTPD_START_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k start
 HTTPD_START_CMD_PROXY = $(HTTPD_CMD) -f $(HTTPD_PROXY_CONF)
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
@@ -1942,6 +1989,7 @@ SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`; sleep 3; \
 			rm -f $(PWD)/svnserve-$(WC).pid
 
 start-httpd: $(HTTPD_CHECK_CONF)
+	-$(HTTPD_LOG_ROTATE)
 	$(HTTPD_START_CMD)
 	@echo "To run tests over http, run:"
 	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"

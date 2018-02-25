@@ -274,6 +274,9 @@ say "Using '$HTPASSWD'..."
 LOAD_MOD_DAV=$(get_loadmodule_config mod_dav) \
   || fail "DAV module not found"
 
+LOAD_MOD_DAV_FS=$(get_loadmodule_config mod_dav_fs) \
+  || fail "Filesystem DAV module not found"
+
 LOAD_MOD_LOG_CONFIG=$(get_loadmodule_config mod_log_config) \
   || fail "log_config module not found"
 
@@ -440,6 +443,7 @@ $LOAD_MOD_MIME
 $LOAD_MOD_ALIAS
 $LOAD_MOD_UNIXD
 $LOAD_MOD_DAV
+$LOAD_MOD_DAV_FS
 LoadModule          dav_svn_module "$MOD_DAV_SVN"
 $LOAD_MOD_AUTH
 $LOAD_MOD_AUTHN_CORE
@@ -474,6 +478,13 @@ mkdir "$HTTPD_LOCK" \
 </IfModule>
 __EOF__
 fi
+
+HTTPD_DAV="$HTTPD_ROOT/dav"
+mkdir "$HTTPD_DAV" \
+    || fail "couldn't create DAV lock directory '$HTTPD_DAV'"
+cat >> "$HTTPD_CFG" <<__EOF__
+DavLockDB "$HTTPD_DAV/lock.db"
+__EOF__
 
 if [ ${USE_SSL:+set} ]; then
 cat >> "$HTTPD_CFG" <<__EOF__
@@ -516,6 +527,15 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
 <Directory "$HTTPD_ROOT">
   AllowOverride     none
   #Require           all granted
+</Directory>
+
+Alias /nodavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/nodavroot
+<Directory $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/nodavroot>
+</Directory>
+
+Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
+<Directory $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot>
+  DAV filesystem
 </Directory>
 
 <Location /svn-test-work/repositories>

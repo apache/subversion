@@ -446,11 +446,11 @@ svn_client_shelf_open_existing(svn_client_shelf_t **shelf_p,
 }
 
 svn_error_t *
-svn_client_shelf_open(svn_client_shelf_t **shelf_p,
-                      const char *name,
-                      const char *local_abspath,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *result_pool)
+svn_client_shelf_open_or_create(svn_client_shelf_t **shelf_p,
+                                const char *name,
+                                const char *local_abspath,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *result_pool)
 {
   SVN_ERR(shelf_construct(shelf_p, name,
                           local_abspath, ctx, result_pool));

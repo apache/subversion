@@ -2493,6 +2493,76 @@ create_diff_writer_info(diff_writer_info_t *dwi,
   return SVN_NO_ERROR;
 }
 
+/* Set up *DIFF_PROCESSOR and *DDI for normal and git-style diffs (but not
+ * summary diffs).
+ */
+static svn_error_t *
+get_diff_processor(svn_diff_tree_processor_t **diff_processor,
+                   struct diff_driver_info_t **ddi,
+                   const apr_array_header_t *options,
+                   const char *path_or_url1,
+                   const char *path_or_url2,
+                   const char *relative_to_dir,
+                   svn_boolean_t no_diff_added,
+                   svn_boolean_t no_diff_deleted,
+                   svn_boolean_t show_copies_as_adds,
+                   svn_boolean_t ignore_content_type,
+                   svn_boolean_t ignore_properties,
+                   svn_boolean_t properties_only,
+                   svn_boolean_t use_git_diff_format,
+                   svn_boolean_t pretty_print_mergeinfo,
+                   const char *header_encoding,
+                   svn_stream_t *outstream,
+                   svn_stream_t *errstream,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *pool)
+{
+  diff_writer_info_t *dwi = apr_pcalloc(pool, sizeof(*dwi));
+  svn_diff_tree_processor_t *processor;
+
+  /* setup callback and baton */
+  dwi->ddi.orig_path_1 = path_or_url1;
+  dwi->ddi.orig_path_2 = path_or_url2;
+
+  SVN_ERR(create_diff_writer_info(dwi, options,
+                                  ctx->config, pool));
+  dwi->pool = pool;
+  dwi->outstream = outstream;
+  dwi->errstream = errstream;
+  dwi->header_encoding = header_encoding;
+
+  dwi->force_binary = ignore_content_type;
+  dwi->ignore_properties = ignore_properties;
+  dwi->properties_only = properties_only;
+  dwi->relative_to_dir = relative_to_dir;
+  dwi->use_git_diff_format = use_git_diff_format;
+  dwi->no_diff_added = no_diff_added;
+  dwi->no_diff_deleted = no_diff_deleted;
+  dwi->show_copies_as_adds = show_copies_as_adds;
+  dwi->pretty_print_mergeinfo = pretty_print_mergeinfo;
+
+  dwi->cancel_func = ctx->cancel_func;
+  dwi->cancel_baton = ctx->cancel_baton;
+
+  dwi->wc_ctx = ctx->wc_ctx;
+  dwi->ddi.session_relpath = NULL;
+  dwi->ddi.anchor = NULL;
+
+  processor = svn_diff__tree_processor_create(dwi, pool);
+
+  processor->dir_added = diff_dir_added;
+  processor->dir_changed = diff_dir_changed;
+  processor->dir_deleted = diff_dir_deleted;
+
+  processor->file_added = diff_file_added;
+  processor->file_changed = diff_file_changed;
+  processor->file_deleted = diff_file_deleted;
+
+  *diff_processor = processor;
+  *ddi = &dwi->ddi;
+  return SVN_NO_ERROR;
+}
+
 /*----------------------------------------------------------------------- */
 
 /*** Public Interfaces. ***/
@@ -2553,10 +2623,9 @@ svn_client_diff7(const apr_array_header_t *options,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *pool)
 {
-  diff_writer_info_t dwi = { 0 };
   svn_opt_revision_t peg_revision;
-  const svn_diff_tree_processor_t *diff_processor;
-  svn_diff_tree_processor_t *processor;
+  svn_diff_tree_processor_t *diff_processor;
+  struct diff_driver_info_t *ddi;
 
   if (ignore_properties && properties_only)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
@@ -2566,51 +2635,27 @@ svn_client_diff7(const apr_array_header_t *options,
   /* We will never do a pegged diff from here. */
   peg_revision.kind = svn_opt_revision_unspecified;
 
-  /* setup callback and baton */
-  dwi.ddi.orig_path_1 = path_or_url1;
-  dwi.ddi.orig_path_2 = path_or_url2;
-
-  SVN_ERR(create_diff_writer_info(&dwi, options,
-                                  ctx->config, pool));
-  dwi.pool = pool;
-  dwi.outstream = outstream;
-  dwi.errstream = errstream;
-  dwi.header_encoding = header_encoding;
-
-  dwi.force_binary = ignore_content_type;
-  dwi.ignore_properties = ignore_properties;
-  dwi.properties_only = properties_only;
-  dwi.relative_to_dir = relative_to_dir;
-  dwi.use_git_diff_format = use_git_diff_format;
-  dwi.no_diff_added = no_diff_added;
-  dwi.no_diff_deleted = no_diff_deleted;
-  dwi.show_copies_as_adds = show_copies_as_adds;
-  dwi.pretty_print_mergeinfo = pretty_print_mergeinfo;
-
-  dwi.cancel_func = ctx->cancel_func;
-  dwi.cancel_baton = ctx->cancel_baton;
-
-  dwi.wc_ctx = ctx->wc_ctx;
-  dwi.ddi.session_relpath = NULL;
-  dwi.ddi.anchor = NULL;
-
-  processor = svn_diff__tree_processor_create(&dwi, pool);
-
-  processor->dir_added = diff_dir_added;
-  processor->dir_changed = diff_dir_changed;
-  processor->dir_deleted = diff_dir_deleted;
-
-  processor->file_added = diff_file_added;
-  processor->file_changed = diff_file_changed;
-  processor->file_deleted = diff_file_deleted;
-
-  diff_processor = processor;
-
   /* --show-copies-as-adds and --git imply --notice-ancestry */
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
 
-  return svn_error_trace(do_diff(NULL, NULL, &dwi.ddi,
+  SVN_ERR(get_diff_processor(&diff_processor, &ddi,
+                             options,
+                             path_or_url1, path_or_url2,
+                             relative_to_dir,
+                             no_diff_added,
+                             no_diff_deleted,
+                             show_copies_as_adds,
+                             ignore_content_type,
+                             ignore_properties,
+                             properties_only,
+                             use_git_diff_format,
+                             pretty_print_mergeinfo,
+                             header_encoding,
+                             outstream, errstream,
+                             ctx, pool));
+
+  return svn_error_trace(do_diff(NULL, NULL, ddi,
                                  path_or_url1, path_or_url2,
                                  revision1, revision2,
                                  &peg_revision, TRUE /* no_peg_revision */,
@@ -2643,60 +2688,35 @@ svn_client_diff_peg7(const apr_array_header_t *options,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
-  diff_writer_info_t dwi = { 0 };
-  const svn_diff_tree_processor_t *diff_processor;
-  svn_diff_tree_processor_t *processor;
+  svn_diff_tree_processor_t *diff_processor;
+  struct diff_driver_info_t *ddi;
 
   if (ignore_properties && properties_only)
     return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
                             _("Cannot ignore properties and show only "
                               "properties at the same time"));
 
-  /* setup callback and baton */
-  dwi.ddi.orig_path_1 = path_or_url;
-  dwi.ddi.orig_path_2 = path_or_url;
-
-  SVN_ERR(create_diff_writer_info(&dwi, options,
-                                  ctx->config, pool));
-  dwi.pool = pool;
-  dwi.outstream = outstream;
-  dwi.errstream = errstream;
-  dwi.header_encoding = header_encoding;
-
-  dwi.force_binary = ignore_content_type;
-  dwi.ignore_properties = ignore_properties;
-  dwi.properties_only = properties_only;
-  dwi.relative_to_dir = relative_to_dir;
-  dwi.use_git_diff_format = use_git_diff_format;
-  dwi.no_diff_added = no_diff_added;
-  dwi.no_diff_deleted = no_diff_deleted;
-  dwi.show_copies_as_adds = show_copies_as_adds;
-  dwi.pretty_print_mergeinfo = pretty_print_mergeinfo;
-
-  dwi.cancel_func = ctx->cancel_func;
-  dwi.cancel_baton = ctx->cancel_baton;
-
-  dwi.wc_ctx = ctx->wc_ctx;
-  dwi.ddi.session_relpath = NULL;
-  dwi.ddi.anchor = NULL;
-
-  processor = svn_diff__tree_processor_create(&dwi, pool);
-
-  processor->dir_added = diff_dir_added;
-  processor->dir_changed = diff_dir_changed;
-  processor->dir_deleted = diff_dir_deleted;
-
-  processor->file_added = diff_file_added;
-  processor->file_changed = diff_file_changed;
-  processor->file_deleted = diff_file_deleted;
-
-  diff_processor = processor;
-
   /* --show-copies-as-adds and --git imply --notice-ancestry */
   if (show_copies_as_adds || use_git_diff_format)
     ignore_ancestry = FALSE;
 
-  return svn_error_trace(do_diff(NULL, NULL, &dwi.ddi,
+  SVN_ERR(get_diff_processor(&diff_processor, &ddi,
+                             options,
+                             path_or_url, path_or_url,
+                             relative_to_dir,
+                             no_diff_added,
+                             no_diff_deleted,
+                             show_copies_as_adds,
+                             ignore_content_type,
+                             ignore_properties,
+                             properties_only,
+                             use_git_diff_format,
+                             pretty_print_mergeinfo,
+                             header_encoding,
+                             outstream, errstream,
+                             ctx, pool));
+
+  return svn_error_trace(do_diff(NULL, NULL, ddi,
                                  path_or_url, path_or_url,
                                  start_revision, end_revision,
                                  peg_revision, FALSE /* no_peg_revision */,
