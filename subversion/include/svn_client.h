@@ -7024,6 +7024,57 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/** Set @a shelf's revprop @a prop_name to @a prop_val.
+ *
+ * This can be used to set or change the shelf's log message
+ * (property name "svn:log" or #SVN_PROP_REVISION_LOG).
+ *
+ * If @a prop_val is NULL, delete the property (if present).
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_set(svn_client_shelf_t *shelf,
+                             const char *prop_name,
+                             const svn_string_t *prop_val,
+                             apr_pool_t *scratch_pool);
+
+/** Get @a shelf's revprop @a prop_name into @a *prop_val.
+ *
+ * If the property is not present, set @a *prop_val to NULL.
+ *
+ * This can be used to get the shelf's log message
+ * (property name "svn:log" or #SVN_PROP_REVISION_LOG).
+ *
+ * The lifetime of the result is limited to that of @a shelf and/or
+ * of @a result_pool.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_get(svn_string_t **prop_val,
+                             svn_client_shelf_t *shelf,
+                             const char *prop_name,
+                             apr_pool_t *result_pool);
+
+/** Get @a shelf's revprops into @a props.
+ *
+ * The lifetime of the result is limited to that of @a shelf and/or
+ * of @a result_pool.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_list(apr_hash_t **props,
+                              svn_client_shelf_t *shelf,
+                              apr_pool_t *result_pool);
+
 /** Set the log message in @a shelf, using the log message callbacks in
  * the client context, and set other revprops to @a revprop_table.
  *

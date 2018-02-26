@@ -1250,39 +1250,6 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
-/** Set @a shelf's revprop @a prop_name to @a prop_val.
- *
- * If @a prop_val is NULL, delete the property (if present).
- */
-svn_error_t *
-svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
-                               const char *prop_name,
-                               const svn_string_t *prop_val,
-                               apr_pool_t *scratch_pool);
-
-/** Get @a shelf's revprop @a prop_name into @a *prop_val.
- *
- * If the property is not present, set @a *prop_val to NULL.
- *
- * The lifetime of the result is limited to that of @a shelf and/or
- * of @a result_pool.
- */
-svn_error_t *
-svn_client__shelf_revprop_get(svn_string_t **prop_val,
-                               svn_client_shelf_t *shelf,
-                               const char *prop_name,
-                               apr_pool_t *result_pool);
-
-/** Get @a shelf's revprops into @a props.
- *
- * The lifetime of the result is limited to that of @a shelf and/or
- * of @a result_pool.
- */
-svn_error_t *
-svn_client__shelf_revprop_list(apr_hash_t **props,
-                               svn_client_shelf_t *shelf,
-                               apr_pool_t *result_pool);
-
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
