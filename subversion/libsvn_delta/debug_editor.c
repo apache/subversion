@@ -458,7 +458,7 @@ svn_delta__get_debug_editor(const svn_delta_editor_t **editor,
                             const char *prefix,
                             apr_pool_t *pool)
 {
-  svn_delta_editor_t *tree_editor = apr_palloc(pool, sizeof(*tree_editor));
+  svn_delta_editor_t *tree_editor = svn_delta_default_editor(pool);
   struct edit_baton *eb = apr_palloc(pool, sizeof(*eb));
   apr_file_t *errfp;
   svn_stream_t *out;
