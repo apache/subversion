@@ -703,7 +703,7 @@ svn_client_shelf_get_log_message(char **log_message,
 
 svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
-                                 char *message,
+                                 const char *message,
                                  apr_pool_t *scratch_pool)
 {
   svn_string_t *propval

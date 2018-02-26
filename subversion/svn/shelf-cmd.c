@@ -534,8 +534,10 @@ shelve(int *new_version_p,
 
       if (message && !dry_run)
         {
-          svn_string_t *propval = svn_string_create(message, shelf->pool);
+          svn_string_t *propval = svn_string_create(message, scratch_pool);
 
+          if (! revprop_table)
+            revprop_table = apr_hash_make(scratch_pool);
           svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG, propval);
         }
     }
