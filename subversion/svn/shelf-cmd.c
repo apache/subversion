@@ -28,7 +28,9 @@
 #include "svn_client.h"
 #include "svn_error_codes.h"
 #include "svn_error.h"
+#include "svn_hash.h"
 #include "svn_path.h"
+#include "svn_props.h"
 #include "svn_utf.h"
 
 #include "cl.h"
@@ -516,8 +518,29 @@ shelve(int *new_version_p,
                                        dry_run, scratch_pool));
     }
 
-  SVN_ERR(svn_client_shelf_set_log_message(shelf, revprop_table,
-                                           dry_run, scratch_pool));
+  /* Fetch the log message and any other revprops */
+  if (ctx->log_msg_func3)
+    {
+      const char *tmp_file;
+      apr_array_header_t *commit_items
+        = apr_array_make(scratch_pool, 1, sizeof(void *));
+      const char *message = "";
+
+      SVN_ERR(ctx->log_msg_func3(&message, &tmp_file, commit_items,
+                                 ctx->log_msg_baton3, scratch_pool));
+      /* Abort the shelving if the log message callback requested so. */
+      if (! message)
+        return SVN_NO_ERROR;
+
+      if (message && !dry_run)
+        {
+          svn_string_t *propval = svn_string_create(message, shelf->pool);
+
+          svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG, propval);
+        }
+    }
+
+  SVN_ERR(svn_client_shelf_revprop_set_all(shelf, revprop_table, scratch_pool));
 
   if (new_version_p)
     *new_version_p = shelf->max_version;

@@ -7041,6 +7041,19 @@ svn_client_shelf_revprop_set(svn_client_shelf_t *shelf,
                              const svn_string_t *prop_val,
                              apr_pool_t *scratch_pool);
 
+/** Set @a shelf's revprops to @a revprop_table.
+ *
+ * This deletes all previous revprops.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_set_all(svn_client_shelf_t *shelf,
+                                 apr_hash_t *revprop_table,
+                                 apr_pool_t *scratch_pool);
+
 /** Get @a shelf's revprop @a prop_name into @a *prop_val.
  *
  * If the property is not present, set @a *prop_val to NULL.
@@ -7075,8 +7088,11 @@ svn_client_shelf_revprop_list(apr_hash_t **props,
                               svn_client_shelf_t *shelf,
                               apr_pool_t *result_pool);
 
-/** Set the log message in @a shelf, using the log message callbacks in
- * the client context, and set other revprops to @a revprop_table.
+/** Set the log message in @a shelf to @a log_message.
+ *
+ * If @a log_message is null, delete the log message.
+ *
+ * Similar to svn_client_shelf_revprop_set(... SVN_PROP_REVISION_LOG ...).
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7084,13 +7100,16 @@ svn_client_shelf_revprop_list(apr_hash_t **props,
 SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
-                                 apr_hash_t *revprop_table,
-                                 svn_boolean_t dry_run,
+                                 char *log_message,
                                  apr_pool_t *scratch_pool);
 
 /** Get the log message in @a shelf into @a *log_message.
  *
  * Set @a *log_message to NULL if there is no log message.
+ *
+ * Similar to svn_client_shelf_revprop_get(... SVN_PROP_REVISION_LOG ...).
+ *
+ * The result is allocated in @a result_pool.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
