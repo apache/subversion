@@ -7100,7 +7100,7 @@ svn_client_shelf_revprop_list(apr_hash_t **props,
 SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
-                                 char *log_message,
+                                 const char *log_message,
                                  apr_pool_t *scratch_pool);
 
 /** Get the log message in @a shelf into @a *log_message.
