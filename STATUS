@@ -33,7 +33,7 @@ Candidate changes:
      Assertion failure during certain merges.
    Branch: ^/subversion/branches/1.8.x-issue4686
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
  * r1823327
    Performance: Make the 'info' command fast on old repository revisions.
