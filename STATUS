@@ -25,7 +25,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.8.x-fsfs-txn-access
    Votes:
-     +1: stefan2
+     +1: stefan2, stsp
 
  * r1800754,r1800755,r1800803,r1801705,r1801722,r1823202,r1823203
    Fix issue #4686 "Unable to parse reversed revision range '19634-19631'"
