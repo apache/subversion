@@ -2044,7 +2044,7 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
 
 /* The implemementation of svn_wc_diff6(), but reporting to a diff processor
  *
- * New mode: when ROOT_RELPATH and ROOT_IS_DIR are not NULL:
+ * New mode: when ROOT_RELPATH is not NULL:
  *
  *   If LOCAL_ABSPATH is the WC root, set *ROOT_RELPATH to "" and send
  *   diff processor relpaths relative to LOCAL_ABSPATH; otherwise set
@@ -2052,18 +2052,19 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
  *   processor relpaths relative to the parent of LOCAL_ABSPATH.
  *   (*ROOT_RELPATH will be either "" or a single path component.)
  *
- *   Set *ROOT_IS_DIR to TRUE if the working version of LOCAL_ABSPATH is
- *   a directory, else to FALSE.
- *
- *   Assignments to *ROOT_RELPATH and *ROOT_IS_DIR are made before the first
- *   call to DIFF_PROCESSOR.
- *
- * Backward compatibility mode for svn_wc_diff6(): when ROOT_RELPATH and
- * ROOT_IS_DIR are NULL:
+ * Backward compatibility mode for svn_wc_diff6(): when ROOT_RELPATH is NULL:
  *
  *   Send diff processor relpaths relative to LOCAL_ABSPATH if it is a
  *   directory; otherwise, relative to the parent of LOCAL_ABSPATH.
  *   This matches the "anchor and target" semantics of svn_wc_diff6().
+ *
+ * If ROOT_IS_DIR is not NULL:
+ *
+ *   Set *ROOT_IS_DIR to TRUE if the working version of LOCAL_ABSPATH is
+ *   a directory, else to FALSE.
+ *
+ * Assignments to *ROOT_RELPATH and *ROOT_IS_DIR are made before the first
+ * call to DIFF_PROCESSOR.
  */
 svn_error_t *
 svn_wc__diff7(const char **root_relpath,
