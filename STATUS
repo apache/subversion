@@ -36,7 +36,7 @@ Candidate changes:
    Justication:
      Cosmetic correctness of 'svn --version --verbose' output.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
 Veto-blocked changes:
 =====================
