@@ -9899,6 +9899,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
 {
   svn_node_kind_t victim_node_kind;
   svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
   const char *incoming_old_repos_relpath;
   svn_revnum_t incoming_old_pegrev;
   svn_node_kind_t incoming_old_kind;
@@ -9907,6 +9908,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
   svn_node_kind_t incoming_new_kind;
 
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &incoming_old_repos_relpath, &incoming_old_pegrev,
@@ -9920,7 +9922,8 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
   if (victim_node_kind == svn_node_dir &&
       incoming_old_kind == svn_node_dir &&
       incoming_new_kind == svn_node_none &&
-      incoming_change == svn_wc_conflict_action_delete)
+      incoming_change == svn_wc_conflict_action_delete &&
+      local_change == svn_wc_conflict_reason_edited)
     {
       struct conflict_tree_incoming_delete_details *details;
       const char *description;
