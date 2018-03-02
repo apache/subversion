@@ -6719,6 +6719,7 @@ def update_conflict_details(sbox):
 # Keywords should be updated in local file even if text change is shortcut
 # (due to the local change being the same as the incoming change, for example).
 @XFail()
+@Issue(4585)
 def update_keywords_on_shortcut(sbox):
   "update_keywords_on_shortcut"
 
