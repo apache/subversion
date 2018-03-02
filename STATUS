@@ -23,7 +23,7 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1825709
+ * r1825709, r1825711
    Don't offer conflict resolution options for 'local move vs incoming move'.
    Justication:
      The resolver does not support 'move vs move' resolution yet.
