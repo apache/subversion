@@ -9674,11 +9674,13 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
       incoming_details = conflict->tree_conflict_incoming_details;
       is_incoming_move = (incoming_details != NULL &&
                           incoming_details->moves != NULL);
-      if (local_change == svn_wc_conflict_reason_edited && is_incoming_move)
+      if (local_change == svn_wc_conflict_reason_moved_away ||
+          local_change == svn_wc_conflict_reason_edited)
         {
           /* An option which ignores the incoming deletion makes no sense
-           * if we know it is actually a move. */
-          return SVN_NO_ERROR;
+           * if we know there was a local move and/or an incoming move. */
+          if (is_incoming_move)
+            return SVN_NO_ERROR;
         }
       else if (local_change == svn_wc_conflict_reason_deleted)
         {
@@ -9739,14 +9741,17 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
   if (incoming_change == svn_wc_conflict_action_delete)
     {
       struct conflict_tree_incoming_delete_details *incoming_details;
+      svn_boolean_t is_incoming_move;
 
       incoming_details = conflict->tree_conflict_incoming_details;
-
-      if (local_change == svn_wc_conflict_reason_edited &&
-          incoming_details != NULL && incoming_details->moves != NULL)
+      is_incoming_move = (incoming_details != NULL &&
+                          incoming_details->moves != NULL);
+      if (is_incoming_move &&
+          (local_change == svn_wc_conflict_reason_edited ||
+          local_change == svn_wc_conflict_reason_moved_away))
         {
           /* An option which accepts the incoming deletion makes no sense
-           * if we know it is actually a move. */
+           * if we know there was a local move and/or an incoming move. */
           return SVN_NO_ERROR;
         }
       else
