@@ -31,6 +31,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1825721
+   Convert macOS versions 10.13.x to release name "High Sierra".
+   Justication:
+     Cosmetic correctness of 'svn --version --verbose' output.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
