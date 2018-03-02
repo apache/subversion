@@ -608,6 +608,27 @@ check_no_modified_paths(const char *paths_base_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Intercept patch notifications to detect when there is a conflict */
+struct patch_notify_baton_t
+{
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
+  svn_boolean_t rejects;
+};
+
+/* Intercept patch notifications to detect when there is a conflict */
+static void
+patch_notify(void *baton,
+             const svn_wc_notify_t *notify,
+             apr_pool_t *pool)
+{
+  struct patch_notify_baton_t *b = baton;
+
+  if (notify->action == svn_wc_notify_patch_rejected_hunk)
+    b->rejects = TRUE;
+  b->notify_func(b->notify_baton, notify, pool);
+}
+
 /** Restore/unshelve a given or newest version of changes.
  *
  * Restore local modifications from shelf @a name version @a arg,
@@ -628,6 +649,7 @@ shelf_restore(const char *name,
   apr_time_t time_now = apr_time_now();
   svn_client_shelf_t *shelf;
   svn_client_shelf_version_t *shelf_version;
+  struct patch_notify_baton_t b;
 
   SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
                                          ctx, scratch_pool));
@@ -656,8 +678,22 @@ shelf_restore(const char *name,
   SVN_ERR(check_no_modified_paths(shelf->wc_root_abspath,
                                   shelf_version, quiet, ctx, scratch_pool));
 
+  b.rejects = FALSE;
+  b.notify_func = ctx->notify_func2;
+  b.notify_baton = ctx->notify_baton2;
+  ctx->notify_func2 = patch_notify;
+  ctx->notify_baton2 = &b;
+
   SVN_ERR(svn_client_shelf_apply(shelf_version,
                                  dry_run, scratch_pool));
+  ctx->notify_func2 = b.notify_func;
+  ctx->notify_baton2 = b.notify_baton;
+
+  if (b.rejects)
+    {
+      return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                              _("Unshelve/restore failed due to conflicts"));
+    }
 
   if (! dry_run)
     {
