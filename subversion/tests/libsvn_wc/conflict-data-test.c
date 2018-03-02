@@ -594,6 +594,7 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
                               svn_wc_conflict_reason_moved_away,
                               svn_wc_conflict_action_delete,
                               sbox_wc_path(&sbox, "A/B"),
+                              sbox_wc_path(&sbox, "A/C"),
                               pool, pool));
 
   SVN_ERR(svn_wc__conflict_skel_set_op_switch(
@@ -610,11 +611,13 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
   {
     svn_wc_conflict_reason_t reason;
     svn_wc_conflict_action_t action;
-    const char *moved_away_op_root_abspath;
+    const char *moved_away_src_op_root_abspath;
+    const char *moved_away_dst_op_root_abspath;
 
     SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason,
                                                 &action,
-                                                &moved_away_op_root_abspath,
+                                                &moved_away_src_op_root_abspath,
+                                                &moved_away_dst_op_root_abspath,
                                                 sbox.wc_ctx->db,
                                                 sbox.wc_abspath,
                                                 conflict_skel,
@@ -622,8 +625,10 @@ test_serialize_tree_conflict(const svn_test_opts_t *opts,
 
     SVN_TEST_ASSERT(reason == svn_wc_conflict_reason_moved_away);
     SVN_TEST_ASSERT(action == svn_wc_conflict_action_delete);
-    SVN_TEST_STRING_ASSERT(moved_away_op_root_abspath,
+    SVN_TEST_STRING_ASSERT(moved_away_src_op_root_abspath,
                            sbox_wc_path(&sbox, "A/B"));
+    SVN_TEST_STRING_ASSERT(moved_away_dst_op_root_abspath,
+                           sbox_wc_path(&sbox, "A/C"));
   }
 
   return SVN_NO_ERROR;

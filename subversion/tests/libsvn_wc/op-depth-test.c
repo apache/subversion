@@ -535,7 +535,7 @@ check_db_conflicts(svn_test__sandbox_t *b,
           SVN_ERR(svn_wc__conflict_read_tree_conflict(&info->tc.reason,
                                                       &info->tc.action,
                                                       &move_src_abspath,
-                                                      b->wc_ctx->db,
+                                                      NULL, b->wc_ctx->db,
                                                       local_abspath,
                                                       conflict,
                                                       b->pool, iterpool));
