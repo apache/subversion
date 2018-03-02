@@ -395,10 +395,11 @@ resolve_repos_relative_url(const char **path, const char **repos_url,
 }
 
 /*
- * Get the, possibly cached, svn_authz_t for this request.
+ * Get the svn_authz_t for this request.
  */
 static svn_authz_t *
 get_access_conf(request_rec *r, authz_svn_config_rec *conf,
+                apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool)
 {
   const char *access_file;
@@ -467,7 +468,7 @@ get_access_conf(request_rec *r, authz_svn_config_rec *conf,
   svn_err = svn_repos_authz_read3(&access_conf,
                                   access_file, groups_file,
                                   TRUE, NULL,
-                                  r->connection->pool, scratch_pool);
+                                  result_pool, scratch_pool);
 
   if (svn_err)
     {
@@ -687,7 +688,7 @@ req_check_access(request_rec *r,
     }
 
   /* Retrieve/cache authorization file */
-  access_conf = get_access_conf(r,conf, r->pool);
+  access_conf = get_access_conf(r,conf, r->pool, r->pool);
   if (access_conf == NULL)
     return DECLINED;
 
@@ -804,7 +805,7 @@ subreq_bypass2(request_rec *r,
     }
 
   /* Retrieve authorization file */
-  access_conf = get_access_conf(r, conf, scratch_pool);
+  access_conf = get_access_conf(r, conf, scratch_pool, scratch_pool);
   if (access_conf == NULL)
     return HTTP_FORBIDDEN;
 
