@@ -38,6 +38,14 @@ Candidate changes:
    Votes:
      +1: brane, stsp
 
+ * r1825736
+   Fix a memory usage problem in mod_authz_svn.
+   Justifiation:
+     Server uses too much memory if authz is enabled.
+     See https://svn.haxx.se/dev/archive-2018-03/0010.shtml
+   Votes:
+     +1: stsp
+  
 Veto-blocked changes:
 =====================
 
