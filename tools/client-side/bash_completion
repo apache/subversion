@@ -1049,7 +1049,7 @@ _svn()
                          $qOpts $pOpts"
 		;;
 	unshelve)
-		cmdOpts="--dry-run \
+		cmdOpts="--drop --dry-run \
                          $qOpts $pOpts"
 		;;
 	*)

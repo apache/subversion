@@ -146,6 +146,7 @@ typedef enum svn_cl__longopt_t {
   opt_show_item,
   opt_adds_as_modification,
   opt_vacuum_pristines,
+  opt_drop,
 } svn_cl__longopt_t;
 
 
@@ -470,6 +471,9 @@ const apr_getopt_option_t svn_cl__options[] =
 
   {"vacuum-pristines", opt_vacuum_pristines, 0,
                        N_("remove unreferenced pristines from .svn directory")},
+
+  {"drop", opt_drop, 0,
+                       N_("drop shelf after successful unshelve")},
 
   /* Long-opt Aliases
    *
@@ -1778,7 +1782,7 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
 
   { "unshelve", svn_cl__shelf_unshelve, {0}, N_
     ("Copy shelved changes back into the WC.\n"
-     "usage: unshelve [NAME [VERSION]]\n"
+     "usage: unshelve [--drop] [NAME [VERSION]]\n"
      "\n"
      "  Apply the shelf named NAME to the working copy.\n"
      "  NAME defaults to the newest shelf.\n"
@@ -1787,10 +1791,13 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  already in the WC is handled the same way as by 'svn patch',\n"
      "  creating a 'reject' file.\n"
      "\n"
+     "  With --drop, delete the shelf (like shelf-drop) after successfully\n"
+     "  unshelving with no conflicts.\n"
+     "\n"
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     ),
-    {'q', opt_dry_run} },
+    {opt_drop, 'q', opt_dry_run} },
 
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
@@ -2526,6 +2533,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_remove:
         opt_state.remove = TRUE;
+        break;
+      case opt_drop:
+        opt_state.drop = TRUE;
         break;
       case opt_changelist:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));

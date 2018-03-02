@@ -920,6 +920,12 @@ svn_cl__shelf_unshelve(apr_getopt_t *os,
                         opt_state->dry_run, opt_state->quiet,
                         local_abspath, ctx, scratch_pool));
 
+  if (opt_state->drop)
+    {
+      SVN_ERR(shelf_drop(name, local_abspath,
+                         opt_state->dry_run, opt_state->quiet,
+                         ctx, scratch_pool));
+    }
   return SVN_NO_ERROR;
 }
 
