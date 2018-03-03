@@ -810,13 +810,16 @@ test_utf_conversions(apr_pool_t *pool)
   /* To assure proper alignment of the source string, it needs to be copied
      into an array of the appropriate type before calling
      svn_utf__utf{16,32}_to_utf8. */
-  apr_uint16_t *source16 = apr_pcalloc(pool, maxlen * sizeof(*source16));
-  apr_int32_t *source32 = apr_pcalloc(pool, maxlen * sizeof(*source32));
+  apr_uint16_t *source16;
+  apr_int32_t *source32;
 
   for (tc = tests; tc->source; ++tc)
     if (tc->sourcelen > maxlen)
       maxlen = tc->sourcelen;
   maxlen++;
+
+  source16 = apr_pcalloc(pool, maxlen * sizeof(*source16));
+  source32 = apr_pcalloc(pool, maxlen * sizeof(*source32));
 
   for (tc = tests; tc->source; ++tc)
     {
