@@ -44,8 +44,7 @@ Candidate changes:
      Server uses too much memory if authz is enabled.
      See https://svn.haxx.se/dev/archive-2018-03/0010.shtml
    Votes:
-     +1: philip
-     +1: stsp (without r1825778)
+     +1: philip, stsp
   
 Veto-blocked changes:
 =====================
