@@ -752,8 +752,10 @@ test_utf_conversions(apr_pool_t *pool)
   {
     svn_boolean_t sixteenbit;
     svn_boolean_t bigendian;
+    apr_size_t sourcelen;
     const char *source;
     const char *result;
+    svn_boolean_t counted;
   } tests[] = {
 
 #define UTF_32_LE FALSE, FALSE
@@ -762,32 +764,36 @@ test_utf_conversions(apr_pool_t *pool)
 #define UTF_16_BE TRUE, TRUE
 
     /* Normal character conversion */
-    { UTF_32_LE, "t\0\0\0" "e\0\0\0" "s\0\0\0" "t\0\0\0" "\0\0\0\0", "test" },
-    { UTF_32_BE, "\0\0\0t" "\0\0\0e" "\0\0\0s" "\0\0\0t" "\0\0\0\0", "test" },
-    { UTF_16_LE, "t\0" "e\0" "s\0" "t\0" "\0\0", "test" },
-    { UTF_16_BE, "\0t" "\0e" "\0s" "\0t" "\0\0", "test" },
+    { UTF_32_LE, 4, "t\0\0\0" "e\0\0\0" "s\0\0\0" "t\0\0\0" "\0\0\0\0", "test", FALSE },
+    { UTF_32_BE, 4, "\0\0\0t" "\0\0\0e" "\0\0\0s" "\0\0\0t" "\0\0\0\0", "test", FALSE },
+    { UTF_16_LE, 4, "t\0" "e\0" "s\0" "t\0" "\0\0", "test", FALSE },
+    { UTF_16_BE, 4, "\0t" "\0e" "\0s" "\0t" "\0\0", "test", FALSE },
 
     /* Valid surrogate pairs */
-    { UTF_16_LE, "\x00\xD8" "\x00\xDC" "\0\0", "\xf0\x90\x80\x80" }, /* U+010000 */
-    { UTF_16_LE, "\x34\xD8" "\x1E\xDD" "\0\0", "\xf0\x9d\x84\x9e" }, /* U+01D11E */
-    { UTF_16_LE, "\xFF\xDB" "\xFD\xDF" "\0\0", "\xf4\x8f\xbf\xbd" }, /* U+10FFFD */
+    { UTF_16_LE, 2, "\x00\xD8" "\x00\xDC" "\0\0", "\xf0\x90\x80\x80", FALSE }, /* U+010000 */
+    { UTF_16_LE, 2, "\x34\xD8" "\x1E\xDD" "\0\0", "\xf0\x9d\x84\x9e", FALSE }, /* U+01D11E */
+    { UTF_16_LE, 2, "\xFF\xDB" "\xFD\xDF" "\0\0", "\xf4\x8f\xbf\xbd", FALSE }, /* U+10FFFD */
 
-    { UTF_16_BE, "\xD8\x00" "\xDC\x00" "\0\0", "\xf0\x90\x80\x80" }, /* U+010000 */
-    { UTF_16_BE, "\xD8\x34" "\xDD\x1E" "\0\0", "\xf0\x9d\x84\x9e" }, /* U+01D11E */
-    { UTF_16_BE, "\xDB\xFF" "\xDF\xFD" "\0\0", "\xf4\x8f\xbf\xbd" }, /* U+10FFFD */
+    { UTF_16_BE, 2, "\xD8\x00" "\xDC\x00" "\0\0", "\xf0\x90\x80\x80", FALSE }, /* U+010000 */
+    { UTF_16_BE, 2, "\xD8\x34" "\xDD\x1E" "\0\0", "\xf0\x9d\x84\x9e", FALSE }, /* U+01D11E */
+    { UTF_16_BE, 2, "\xDB\xFF" "\xDF\xFD" "\0\0", "\xf4\x8f\xbf\xbd", FALSE }, /* U+10FFFD */
 
     /* Swapped, single and trailing surrogate pairs */
-    { UTF_16_LE, "*\0" "\x00\xDC" "\x00\xD8" "*\0\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*" },
-    { UTF_16_LE, "*\0" "\x1E\xDD" "*\0\0\0", "*\xed\xb4\x9e*" },
-    { UTF_16_LE, "*\0" "\xFF\xDB" "*\0\0\0", "*\xed\xaf\xbf*" },
-    { UTF_16_LE, "\x1E\xDD" "\0\0", "\xed\xb4\x9e" },
-    { UTF_16_LE, "\xFF\xDB" "\0\0", "\xed\xaf\xbf" },
+    { UTF_16_LE, 4, "*\0" "\x00\xDC" "\x00\xD8" "*\0\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*", FALSE },
+    { UTF_16_LE, 3, "*\0" "\x1E\xDD" "*\0\0\0", "*\xed\xb4\x9e*", FALSE },
+    { UTF_16_LE, 3, "*\0" "\xFF\xDB" "*\0\0\0", "*\xed\xaf\xbf*", FALSE },
+    { UTF_16_LE, 1, "\x1E\xDD" "\0\0", "\xed\xb4\x9e", FALSE },
+    { UTF_16_LE, 1, "\xFF\xDB" "\0\0", "\xed\xaf\xbf", FALSE },
 
-    { UTF_16_BE, "\0*" "\xDC\x00" "\xD8\x00" "\0*\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*" },
-    { UTF_16_BE, "\0*" "\xDD\x1E" "\0*\0\0", "*\xed\xb4\x9e*" },
-    { UTF_16_BE, "\0*" "\xDB\xFF" "\0*\0\0", "*\xed\xaf\xbf*" },
-    { UTF_16_BE, "\xDD\x1E" "\0\0", "\xed\xb4\x9e" },
-    { UTF_16_BE, "\xDB\xFF" "\0\0", "\xed\xaf\xbf" },
+    { UTF_16_BE, 4, "\0*" "\xDC\x00" "\xD8\x00" "\0*\0\0", "*\xed\xb0\x80" "\xed\xa0\x80*", FALSE },
+    { UTF_16_BE, 3, "\0*" "\xDD\x1E" "\0*\0\0", "*\xed\xb4\x9e*", FALSE },
+    { UTF_16_BE, 3, "\0*" "\xDB\xFF" "\0*\0\0", "*\xed\xaf\xbf*", FALSE },
+    { UTF_16_BE, 1, "\xDD\x1E" "\0\0", "\xed\xb4\x9e", FALSE },
+    { UTF_16_BE, 1, "\xDB\xFF" "\0\0", "\xed\xaf\xbf", FALSE },
+
+    /* Counted strings with NUL characters */
+    { UTF_16_LE, 3, "x\0" "\0\0" "y\0" "*\0", "x\0y", TRUE },
+    { UTF_32_BE, 3, "\0\0\0x" "\0\0\0\0" "\0\0\0y" "\0\0\0*", "x\0y", TRUE },
 
 #undef UTF_32_LE
 #undef UTF_32_BE
@@ -799,32 +805,42 @@ test_utf_conversions(apr_pool_t *pool)
 
   const struct cvt_test_t *tc;
   const svn_string_t *result;
-  int i;
+  apr_size_t maxlen = 0;
 
-  for (i = 1, tc = tests; tc->source; ++tc, ++i)
+  for (tc = tests; tc->source; ++tc)
+    if (tc->sourcelen > maxlen)
+      maxlen = tc->sourcelen;
+  maxlen++;
+
+  /* To assure proper alignment of the source string, it needs to be copied
+     into an array of the appropriate type before calling
+     svn_utf__utf{16,32}_to_utf8. */
+  apr_uint16_t *source16 = apr_pcalloc(pool, maxlen * sizeof(*source16));
+  apr_int32_t *source32 = apr_pcalloc(pool, maxlen * sizeof(*source32));
+
+  for (tc = tests; tc->source; ++tc)
     {
       if (tc->sixteenbit)
-        SVN_ERR(svn_utf__utf16_to_utf8(&result, (const void*)tc->source,
-                                       SVN_UTF__UNKNOWN_LENGTH,
-                                       tc->bigendian, pool, pool));
+        {
+          memset(source16, 0, maxlen * sizeof(*source16));
+          memcpy(source16, tc->source, (tc->sourcelen + 1) * sizeof(*source16));
+          SVN_ERR(svn_utf__utf16_to_utf8(&result, source16,
+                                         tc->counted ? tc->sourcelen : SVN_UTF__UNKNOWN_LENGTH,
+                                         tc->bigendian, pool, pool));
+        }
       else
-        SVN_ERR(svn_utf__utf32_to_utf8(&result, (const void*)tc->source,
-                                       SVN_UTF__UNKNOWN_LENGTH,
-                                       tc->bigendian, pool, pool));
-      SVN_ERR_ASSERT(0 == strcmp(result->data, tc->result));
+        {
+          memset(source32, 0, maxlen * sizeof(*source32));
+          memcpy(source32, tc->source, (tc->sourcelen + 1) * sizeof(*source32));
+          SVN_ERR(svn_utf__utf32_to_utf8(&result, source32,
+                                         tc->counted ? tc->sourcelen : SVN_UTF__UNKNOWN_LENGTH,
+                                         tc->bigendian, pool, pool));
+        }
+      if (tc->counted)
+        SVN_ERR_ASSERT(0 == memcmp(result->data, tc->result, tc->sourcelen));
+      else
+        SVN_ERR_ASSERT(0 == strcmp(result->data, tc->result));
     }
-
-  /* Test counted strings with NUL characters */
-  SVN_ERR(svn_utf__utf16_to_utf8(
-              &result, (void*)("x\0" "\0\0" "y\0" "*\0"), 3,
-              FALSE, pool, pool));
-  SVN_ERR_ASSERT(0 == memcmp(result->data, "x\0y", 3));
-
-  SVN_ERR(svn_utf__utf32_to_utf8(
-              &result,
-              (void*)("\0\0\0x" "\0\0\0\0" "\0\0\0y" "\0\0\0*"), 3,
-              TRUE, pool, pool));
-  SVN_ERR_ASSERT(0 == memcmp(result->data, "x\0y", 3));
 
   return SVN_NO_ERROR;
 }
