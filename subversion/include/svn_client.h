@@ -6950,7 +6950,7 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
                                      int version,
                                      apr_pool_t *scratch_pool);
 
-/** Open an existing shelf version.
+/** Open an existing @a shelf_version, or error if it doesn't exist.
  *
  * There is no need to "close" it after use.
  *
@@ -6965,7 +6965,7 @@ svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
-/** Apply version @a version of @a shelf to the WC.
+/** Apply @a shelf_version to the WC.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6976,7 +6976,7 @@ svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
                        svn_boolean_t dry_run,
                        apr_pool_t *scratch_pool);
 
-/** Reverse-apply the current version of @a shelf to the WC.
+/** Reverse-apply @a shelf_version to the WC.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -6998,7 +6998,7 @@ svn_client_shelf_get_patch_abspath(const char **patch_abspath,
                                    svn_client_shelf_version_t *shelf_version,
                                    apr_pool_t *scratch_pool);
 
-/** Output version @a version of @a shelf as a patch to @a outstream.
+/** Output @a shelf_version as a patch to @a outstream.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7010,9 +7010,12 @@ svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
                               apr_pool_t *scratch_pool);
 
 /** Set @a *affected_paths to a hash with one entry for each path affected
- * by the @a shelf @a version. The hash key is the old path and value is
- * the new path, both relative to the WC root. The key and value are the
- * same except when a path is moved or copied.
+ * by the @a shelf_version.
+ *
+ * The hash key is the path of the affected file, relative to the WC root.
+ *
+ * (Future possibility: When moves and copies are supported, the hash key
+ * is the old path and value is the new path.)
  *
  * @since New in 1.10, changed in 1.X.
  * @warning EXPERIMENTAL.
