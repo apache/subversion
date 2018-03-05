@@ -307,6 +307,7 @@ svn_opt_subcommand_t
   svn_cl__shelf_diff,
   svn_cl__shelf_drop,
   svn_cl__shelf_list,
+  svn_cl__shelf_list_by_paths,
   svn_cl__shelf_log,
   svn_cl__shelf_save,
   svn_cl__shelf_shelve,
