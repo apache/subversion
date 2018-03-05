@@ -1732,7 +1732,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     ),
-    {}
   },
 
   { "shelf-log", svn_cl__shelf_log, {0}, N_
