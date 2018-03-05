@@ -7130,8 +7130,9 @@ typedef struct svn_client_shelf_info_t
   apr_time_t mtime;  /* mtime of the latest change */
 } svn_client_shelf_info_t;
 
-/** Set @a *shelved_patch_infos to a hash, keyed by shelf name, of pointers to
- * @c svn_client_shelf_info_t structures.
+/** Set @a *shelf_infos to a hash, keyed by shelf name, of pointers to
+ * @c svn_client_shelf_info_t structures, one for each shelf in the
+ * given WC.
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
