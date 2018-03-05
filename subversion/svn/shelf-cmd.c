@@ -55,6 +55,79 @@ get_next_argument(const char **arg,
   return SVN_NO_ERROR;
 }
 
+/* Parse the remaining arguments as paths relative to a WC.
+ *
+ * TARGETS are relative to current working directory.
+ *
+ * Set *targets_by_wcroot to a hash mapping (char *)wcroot_abspath to
+ * (apr_array_header_t *)array of relpaths relative to that WC root.
+ */
+static svn_error_t *
+targets_relative_to_wcs(apr_hash_t **targets_by_wcroot_p,
+                         apr_array_header_t *targets,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_hash_t *targets_by_wcroot = apr_hash_make(result_pool);
+  int i;
+
+  /* Make each target relative to the WC root. */
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const char *wcroot_abspath;
+      apr_array_header_t *paths;
+
+      SVN_ERR(svn_dirent_get_absolute(&target, target, result_pool));
+      SVN_ERR(svn_client_get_wc_root(&wcroot_abspath, target,
+                                     ctx, result_pool, scratch_pool));
+      paths = svn_hash_gets(targets_by_wcroot, wcroot_abspath);
+      if (! paths)
+        {
+          paths = apr_array_make(result_pool, 0, sizeof(char *));
+          svn_hash_sets(targets_by_wcroot, wcroot_abspath, paths);
+        }
+      target = svn_dirent_skip_ancestor(wcroot_abspath, target);
+
+      if (target)
+        APR_ARRAY_PUSH(paths, const char *) = target;
+    }
+  *targets_by_wcroot_p = targets_by_wcroot;
+  return SVN_NO_ERROR;
+}
+
+/* Return targets relative to a WC. Error if they refer to more than one WC. */
+static svn_error_t *
+targets_relative_to_a_wc(const char **wc_root_abspath_p,
+                         apr_array_header_t **paths_p,
+                         apr_getopt_t *os,
+                         const apr_array_header_t *known_targets,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *targets;
+  apr_hash_t *targets_by_wcroot;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      known_targets,
+                                                      ctx, FALSE, result_pool));
+  svn_opt_push_implicit_dot_target(targets, result_pool);
+
+  SVN_ERR(targets_relative_to_wcs(&targets_by_wcroot, targets,
+                                  ctx, result_pool, scratch_pool));
+  if (apr_hash_count(targets_by_wcroot) != 1)
+    return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
+                            _("All targets must be in the same WC"));
+
+  hi = apr_hash_first(scratch_pool, targets_by_wcroot);
+  *wc_root_abspath_p = apr_hash_this_key(hi);
+  *paths_p = apr_hash_this_val(hi);
+  return SVN_NO_ERROR;
+}
+
 /* Return a human-friendly description of DURATION.
  */
 static char *
@@ -949,6 +1022,112 @@ svn_cl__shelf_list(apr_getopt_t *os,
                        opt_state->verbose /*with_diffstat*/,
                        ctx, pool));
 
+  return SVN_NO_ERROR;
+}
+
+/* "svn shelf-list-by-paths [PATH...]"
+ *
+ * TARGET_RELPATHS are all within the same WC, relative to WC_ROOT_ABSPATH.
+ */
+static svn_error_t *
+shelf_list_by_paths(apr_array_header_t *target_relpaths,
+                    const char *wc_root_abspath,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *shelves;
+  apr_hash_t *paths_to_shelf_name = apr_hash_make(scratch_pool);
+  apr_array_header_t *array;
+  int i;
+
+  SVN_ERR(list_sorted_by_date(&shelves,
+                              wc_root_abspath, ctx, scratch_pool));
+
+  /* Check paths are valid */
+  for (i = 0; i < target_relpaths->nelts; i++)
+    {
+      char *target_relpath = APR_ARRAY_IDX(target_relpaths, i, char *);
+
+      if (svn_path_is_url(target_relpath))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s' is not a local path"), target_relpath);
+      SVN_ERR_ASSERT(svn_relpath_is_canonical(target_relpath));
+    }
+
+  /* Find the most recent shelf for each affected path */
+  for (i = 0; i < shelves->nelts; i++)
+    {
+      svn_sort__item_t *item = &APR_ARRAY_IDX(shelves, i, svn_sort__item_t);
+      const char *name = item->key;
+      svn_client_shelf_t *shelf;
+      svn_client_shelf_version_t *shelf_version;
+      apr_hash_t *shelf_paths;
+      int j;
+
+      SVN_ERR(svn_client_shelf_open_existing(&shelf,
+                                             name, wc_root_abspath,
+                                             ctx, scratch_pool));
+      SVN_ERR(svn_client_shelf_version_open(&shelf_version,
+                                            shelf, shelf->max_version,
+                                            scratch_pool, scratch_pool));
+      SVN_ERR(svn_client_shelf_paths_changed(&shelf_paths,
+                                             shelf_version,
+                                             scratch_pool, scratch_pool));
+      for (j = 0; j < target_relpaths->nelts; j++)
+        {
+          char *target_relpath = APR_ARRAY_IDX(target_relpaths, j, char *);
+          apr_hash_index_t *hi;
+
+          for (hi = apr_hash_first(scratch_pool, shelf_paths);
+               hi; hi = apr_hash_next(hi))
+            {
+              const char *shelf_path = apr_hash_this_key(hi);
+
+              if (svn_relpath_skip_ancestor(target_relpath, shelf_path))
+                {
+                  if (! svn_hash_gets(paths_to_shelf_name, shelf_path))
+                    {
+                      svn_hash_sets(paths_to_shelf_name, shelf_path, shelf->name);
+                    }
+                }
+            }
+        }
+    }
+
+  /* Print the results. */
+  array = svn_sort__hash(paths_to_shelf_name,
+                         svn_sort_compare_items_as_paths,
+                         scratch_pool);
+  for (i = 0; i < array->nelts; i++)
+    {
+      svn_sort__item_t *item = &APR_ARRAY_IDX(array, i, svn_sort__item_t);
+      const char *path = item->key;
+      const char *name = item->value;
+
+      SVN_ERR(svn_cmdline_printf(scratch_pool, "%-20.20s %s\n",
+                                 name,
+                                 svn_dirent_local_style(path, scratch_pool)));
+    }
+  return SVN_NO_ERROR;
+}
+
+/* This implements the `svn_opt_subcommand_t' interface. */
+svn_error_t *
+svn_cl__shelf_list_by_paths(apr_getopt_t *os,
+                            void *baton,
+                            apr_pool_t *pool)
+{
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  const char *wc_root_abspath;
+  apr_array_header_t *targets;
+
+  /* Parse the remaining arguments as paths. */
+  SVN_ERR(targets_relative_to_a_wc(&wc_root_abspath, &targets,
+                                   os, opt_state->targets,
+                                   ctx, pool, pool));
+
+  SVN_ERR(shelf_list_by_paths(targets, wc_root_abspath, ctx, pool));
   return SVN_NO_ERROR;
 }
 

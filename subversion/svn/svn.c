@@ -1723,6 +1723,18 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
     {'q', 'v'}
   },
 
+  { "shelf-list-by-paths", svn_cl__shelf_list_by_paths, {0}, N_
+    ("List which shelf affects each path.\n"
+     "usage: shelf-list-by-paths [PATH...]\n"
+     "\n"
+     "  List which shelf most recently affects each path below the given PATHs.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+    {}
+  },
+
   { "shelf-log", svn_cl__shelf_log, {0}, N_
     ("Show the versions of a shelf.\n"
      "usage: shelf-log NAME\n"

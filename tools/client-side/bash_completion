@@ -248,7 +248,7 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
-	cmds="$cmds shelf-diff shelf-drop shelf-list shelf-log shelf-save"
+	cmds="$cmds shelf-list-by-paths shelf-diff shelf-drop shelf-list shelf-log shelf-save"
 	cmds="$cmds shelve shelves unshelve"
 
 	# help options have a strange command status...
@@ -1023,6 +1023,9 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	shelf-list-by-paths)
+		cmdOpts="$pOpts"
 		;;
 	shelf-diff)
 		cmdOpts="$pOpts"
