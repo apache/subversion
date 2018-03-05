@@ -45,6 +45,7 @@ Available subcommands:
    shelf-diff
    shelf-drop
    shelf-list (shelves)
+   shelf-list-by-paths
    shelf-log
    shelf-save
    shelve
