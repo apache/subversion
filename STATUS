@@ -31,13 +31,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1825721
-   Convert macOS versions 10.13.x to release name "High Sierra".
-   Justication:
-     Cosmetic correctness of 'svn --version --verbose' output.
-   Votes:
-     +1: brane, stsp
-
  * r1825783, r1825787, r1825788
    Ensure test data is correctly aligned before calling
    svn_utf__utf{16,32}_to_utf8
@@ -58,3 +51,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1825721
+   Convert macOS versions 10.13.x to release name "High Sierra".
+   Justication:
+     Cosmetic correctness of 'svn --version --verbose' output.
+   Votes:
+     +1: brane, stsp, philip
