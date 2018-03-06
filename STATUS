@@ -46,6 +46,13 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1825979
+   Minor clarification to docstring.
+   Justification:
+     Trivial documentation fix.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
