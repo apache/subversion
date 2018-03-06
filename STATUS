@@ -29,7 +29,7 @@ Candidate changes:
      The resolver does not support 'move vs move' resolution yet.
      The current behaviour is misleading.
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
  * r1825783, r1825787, r1825788
    Ensure test data is correctly aligned before calling
