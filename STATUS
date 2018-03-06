@@ -21,7 +21,7 @@ Candidate changes:
    Justification:
      The core build should be warning-free.
    Votes:
-     +1: brane
+     +1: brane, philip
 
  * r1825709, r1825711
    Don't offer conflict resolution options for 'local move vs incoming move'.
