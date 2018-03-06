@@ -37,7 +37,7 @@ Candidate changes:
    Justification:
      Fixes test failure
    Votes:
-     +1: jamessan
+     +1: jamessan, philip
 
  * r1825979
    Minor clarification to docstring.
