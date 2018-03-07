@@ -15,14 +15,6 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1825306
-   Silence OSX ranlib warnings about object files with no symbols when
-   linking with an external LZ4 library.
-   Justification:
-     The core build should be warning-free.
-   Votes:
-     +1: brane, philip
-
  * r1825709, r1825711
    Don't offer conflict resolution options for 'local move vs incoming move'.
    Justication:
@@ -44,10 +36,19 @@ Candidate changes:
    Justification:
      Trivial documentation fix.
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1825306
+   Silence OSX ranlib warnings about object files with no symbols when
+   linking with an external LZ4 library.
+   Justification:
+     The core build should be warning-free.
+   Votes:
+     +1: brane, philip, jamessan
+
