@@ -2199,6 +2199,7 @@ svn_fs_fs__get_contents_from_file(svn_stream_t **contents_p,
       next_rep.revision = rh->base_revision;
       next_rep.item_index = rh->base_item_index;
       next_rep.size = rh->base_length;
+      next_rep.expanded_size = rep->expanded_size;
       svn_fs_fs__id_txn_reset(&next_rep.txn_id);
 
       SVN_ERR(build_rep_list(&rb->rs_list, &rb->base_window,
