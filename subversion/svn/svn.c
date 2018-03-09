@@ -531,26 +531,26 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      {{opt_parents, N_("add intermediate parents")}} },
 
   { "auth", svn_cl__auth, {0}, N_
-   ("Manage cached authentication credentials.\n"
-    "usage: 1. svn auth [PATTERN ...]\n"
-    "usage: 2. svn auth --remove PATTERN [PATTERN ...]\n"
-    "\n"
-    "  With no arguments, list all cached authentication credentials.\n"
-    "  Authentication credentials include usernames, passwords,\n"
-    "  SSL certificates, and SSL client-certificate passphrases.\n"
-    "  If PATTERN is specified, only list credentials with attributes matching one\n"
-    "  or more patterns. With the --remove option, remove cached authentication\n"
-    "  credentials matching one or more patterns.\n"
-    "\n"
-    "  If more than one pattern is specified credentials are considered only if they\n"
-    "  match all specified patterns. Patterns are matched case-sensitively and may\n"
-    "  contain glob wildcards:\n"
-    "    ?      matches any single character\n"
-    "    *      matches a sequence of arbitrary characters\n"
-    "    [abc]  matches any of the characters listed inside the brackets\n"
-    "  Note that wildcards will usually need to be quoted or escaped on the\n"
-    "  command line because many command shells will interfere by trying to\n"
-    "  expand them.\n"),
+    ("Manage cached authentication credentials.\n"
+     "usage: 1. svn auth [PATTERN ...]\n"
+     "usage: 2. svn auth --remove PATTERN [PATTERN ...]\n"
+     "\n"
+     "  With no arguments, list all cached authentication credentials.\n"
+     "  Authentication credentials include usernames, passwords,\n"
+     "  SSL certificates, and SSL client-certificate passphrases.\n"
+     "  If PATTERN is specified, only list credentials with attributes matching one\n"
+     "  or more patterns. With the --remove option, remove cached authentication\n"
+     "  credentials matching one or more patterns.\n"
+     "\n"
+     "  If more than one pattern is specified credentials are considered only if they\n"
+     "  match all specified patterns. Patterns are matched case-sensitively and may\n"
+     "  contain glob wildcards:\n"
+     "    ?      matches any single character\n"
+     "    *      matches a sequence of arbitrary characters\n"
+     "    [abc]  matches any of the characters listed inside the brackets\n"
+     "  Note that wildcards will usually need to be quoted or escaped on the\n"
+     "  command line because many command shells will interfere by trying to\n"
+     "  expand them.\n"),
     { opt_remove, opt_show_passwords },
     { {opt_remove, N_("remove matching authentication credentials")} }
 
