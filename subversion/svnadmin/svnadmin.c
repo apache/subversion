@@ -435,7 +435,6 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "usage: svnadmin list-unused-dblogs REPOS_PATH\n"
     "\n"), N_(
     "List unused Berkeley DB log files.\n"
-    "\n"), N_(
    )},
    {0} },
 
