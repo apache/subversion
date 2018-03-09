@@ -69,10 +69,44 @@ typedef svn_error_t *(svn_opt_subcommand_t)(
 /** The maximum number of options that can be accepted by a subcommand. */
 #define SVN_OPT_MAX_OPTIONS 50
 
+/** The maximum number of paragraphs of help text a subcommand can have. */
+#define SVN_OPT_MAX_PARAGRAPHS 50
+
 /** Options that have no short option char should use an identifying
  * integer equal to or greater than this.
  */
 #define SVN_OPT_FIRST_LONGOPT_ID 256
+
+
+/** One element of a subcommand dispatch table.
+ *
+ * @since New in 1.11.
+ */
+typedef struct svn_opt_subcommand_desc3_t
+{
+  /** The full name of this command. */
+  const char *name;
+
+  /** The function this command invokes. */
+  svn_opt_subcommand_t *cmd_func;
+
+  /** A list of alias names for this command (e.g., 'up' for 'update'). */
+  const char *aliases[SVN_OPT_MAX_ALIASES];
+
+  /** A multi-paragraph string describing this command. */
+  const char *help[SVN_OPT_MAX_PARAGRAPHS];
+
+  /** A list of options accepted by this command.  Each value in the
+   * array is a unique enum (the 2nd field in apr_getopt_option_t)
+   */
+  int valid_options[SVN_OPT_MAX_OPTIONS];
+
+  /** A list of option help descriptions, keyed by the option unique enum
+   * (the 2nd field in apr_getopt_option_t), which override the generic
+   * descriptions given in an apr_getopt_option_t on a per-subcommand basis.
+   */
+  struct { int optch; const char *desc; } desc_overrides[SVN_OPT_MAX_OPTIONS];
+} svn_opt_subcommand_desc3_t;
 
 
 /** One element of a subcommand dispatch table.
@@ -139,6 +173,17 @@ typedef struct svn_opt_subcommand_desc_t
  * Return the entry in @a table whose name matches @a cmd_name, or @c NULL if
  * none.  @a cmd_name may be an alias.
  *
+ * @since New in 1.11.
+ */
+const svn_opt_subcommand_desc3_t *
+svn_opt_get_canonical_subcommand3(const svn_opt_subcommand_desc3_t *table,
+                                  const char *cmd_name);
+
+
+/**
+ * Same as svn_opt_get_canonical_subcommand3(), but with a different
+ * version of the subcommand description table.
+ *
  * @since New in 1.4.
  */
 const svn_opt_subcommand_desc2_t *
@@ -170,6 +215,18 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
  *
  * The returned value may be statically allocated, or allocated in @a pool.
  *
+ * @since New in 1.11.
+ */
+const apr_getopt_option_t *
+svn_opt_get_option_from_code3(int code,
+                              const apr_getopt_option_t *option_table,
+                              const svn_opt_subcommand_desc3_t *command,
+                              apr_pool_t *pool);
+
+/**
+ * Same as svn_opt_get_option_from_code3(), but with a different
+ * version of the subcommand description table.
+ *
  * @since New in 1.4.
  */
 const apr_getopt_option_t *
@@ -197,6 +254,17 @@ svn_opt_get_option_from_code(int code,
  * option_code, else return @c FALSE.  If @a global_options is
  * non-NULL, it is a zero-terminated array, and all subcommands take
  * the options listed in it.
+ *
+ * @since New in 1.11.
+ */
+svn_boolean_t
+svn_opt_subcommand_takes_option4(const svn_opt_subcommand_desc3_t *command,
+                                 int option_code,
+                                 const int *global_options);
+
+/**
+ * Same as svn_opt_subcommand_takes_option4(), but with a different
+ * version of the subcommand description table.
  *
  * @since New in 1.5.
  */
@@ -243,6 +311,20 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
  * @a footer followed by a newline.
  *
  * Use @a pool for temporary allocation.
+ *
+ * @since New in 1.11.
+ */
+void
+svn_opt_print_generic_help3(const char *header,
+                            const svn_opt_subcommand_desc3_t *cmd_table,
+                            const apr_getopt_option_t *opt_table,
+                            const char *footer,
+                            apr_pool_t *pool,
+                            FILE *stream);
+
+/**
+ * Same as svn_opt_print_generic_help3(), but with a different
+ * version of the subcommand description table.
  *
  * @since New in 1.4.
  */
@@ -296,6 +378,19 @@ svn_opt_format_option(const char **string,
  * appears a second time in @a options_table with a different name, then
  * use that second name as an alias for the first name.  This additional
  * behaviour is new in 1.7.
+ *
+ * @since New in 1.11.
+ */
+void
+svn_opt_subcommand_help4(const char *subcommand,
+                         const svn_opt_subcommand_desc3_t *table,
+                         const apr_getopt_option_t *options_table,
+                         const int *global_options,
+                         apr_pool_t *pool);
+
+/**
+ * Same as svn_opt_subcommand_help4(), but with a different
+ * version of the subcommand description table.
  *
  * @since New in 1.5.
  */
@@ -700,9 +795,28 @@ svn_opt_parse_path(svn_opt_revision_t *rev,
  * --version flag *and* subcommand arguments on a help command line.
  * The logic for handling such a situation should be in one place.
  *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_opt_print_help5(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    svn_boolean_t verbose,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc3_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const int *global_options,
+                    const char *footer,
+                    apr_pool_t *pool);
+
+/**
+ * Same as svn_opt_print_help5(), but with a different
+ * version of the subcommand description table.
+ *
  * @since New in 1.8.
  */
-
 svn_error_t *
 svn_opt_print_help4(apr_getopt_t *os,
                     const char *pgm_name,
