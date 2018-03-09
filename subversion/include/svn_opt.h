@@ -70,7 +70,7 @@ typedef svn_error_t *(svn_opt_subcommand_t)(
 #define SVN_OPT_MAX_OPTIONS 50
 
 /** The maximum number of paragraphs of help text a subcommand can have. */
-#define SVN_OPT_MAX_PARAGRAPHS 50
+#define SVN_OPT_MAX_PARAGRAPHS 100
 
 /** Options that have no short option char should use an identifying
  * integer equal to or greater than this.
