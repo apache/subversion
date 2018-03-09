@@ -218,20 +218,20 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
   { "null-blame", svn_cl__null_blame, {0}, {N_(
      "Fetch all versions of a file in a batch.\n"
      "usage: null-blame [-rM:N] TARGET[@REV]...\n"
-     "\n"
+     "\n"), N_(
      "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
      "  annotate each line that is present in revision N of the file, with\n"
      "  the last revision at or before rN that changed or added the line,\n"
      "  looking back no further than rM.\n"
-     "\n"
+     "\n"), N_(
      "  With a reverse revision range '-r M:N' where M > N,\n"
      "  annotate each line that is present in revision N of the file, with\n"
      "  the next revision after rN that changed or deleted the line,\n"
      "  looking forward no further than rM.\n"
-     "\n"
+     "\n"), N_(
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"
-     "\n"
+     "\n"), N_(
      "  Write the annotated result to standard output.\n"
     )},
     {'r', 'g'} },
@@ -239,10 +239,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
   { "null-export", svn_cl__null_export, {0}, {N_(
      "Create an unversioned copy of a tree.\n"
      "usage: null-export [-r REV] URL[@PEGREV]\n"
-     "\n"
+     "\n"), N_(
      "  Exports a clean directory tree from the repository specified by\n"
      "  URL, at revision REV if it is given, otherwise at HEAD.\n"
-     "\n"
+     "\n"), N_(
      "  If specified, PEGREV determines in which revision the target is first\n"
      "  looked up.\n"
     )},
@@ -251,17 +251,17 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
   { "null-list", svn_cl__null_list, {"ls"}, {N_(
      "List directory entries in the repository.\n"
      "usage: null-list [TARGET[@REV]...]\n"
-     "\n"
+     "\n"), N_(
      "  List each TARGET file and the contents of each TARGET directory as\n"
      "  they exist in the repository.  If TARGET is a working copy path, the\n"
      "  corresponding repository URL will be used. If specified, REV determines\n"
      "  in which revision the target is first looked up.\n"
-     "\n"
+     "\n"), N_(
      "  The default TARGET is '.', meaning the repository URL of the current\n"
      "  working directory.\n"
-     "\n"
+     "\n"), N_(
      "  With --verbose, the following fields will be fetched for each item:\n"
-     "\n"
+     "\n"), N_(
      "    Revision number of the last commit\n"
      "    Author of the last commit\n"
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
@@ -274,27 +274,27 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "Fetch the log messages for a set of revision(s) and/or path(s).\n"
      "usage: 1. null-log [PATH][@REV]\n"
      "       2. null-log URL[@REV] [PATH...]\n"
-     "\n"
+     "\n"), N_(
      "  1. Fetch the log messages for the URL corresponding to PATH\n"
      "     (default: '.'). If specified, REV is the revision in which the\n"
      "     URL is first looked up, and the default revision range is REV:1.\n"
      "     If REV is not specified, the default revision range is BASE:1,\n"
      "     since the URL might not exist in the HEAD revision.\n"
-     "\n"
+     "\n"), N_(
      "  2. Fetch the log messages for the PATHs (default: '.') under URL.\n"
      "     If specified, REV is the revision in which the URL is first\n"
      "     looked up, and the default revision range is REV:1; otherwise,\n"
      "     the URL is looked up in HEAD, and the default revision range is\n"
      "     HEAD:1.\n"
-     "\n"
+     "\n"), N_(
      "  Multiple '-c' or '-r' options may be specified (but not a\n"
      "  combination of '-c' and '-r' options), and mixing of forward and\n"
      "  reverse ranges is allowed.\n"
-     "\n"
+     "\n"), N_(
      "  With -v, also print all affected paths with each log message.\n"
      "  With -q, don't print the log message body itself (note that this is\n"
      "  compatible with -v).\n"
-     "\n"
+     "\n"), N_(
      "  Each log message is printed just once, even if more than one of the\n"
      "  affected paths for that revision were explicitly requested.  Logs\n"
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
@@ -308,7 +308,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
   { "null-info", svn_cl__null_info, {0}, {N_(
      "Display information about a local or remote item.\n"
      "usage: null-info [TARGET[@REV]...]\n"
-     "\n"
+     "\n"), N_(
      "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
      "  determines in which revision the target is first looked up.\n"

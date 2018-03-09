@@ -235,14 +235,14 @@ const svn_opt_subcommand_desc3_t svn_min__cmd_table[] =
      "Generate a report of which part of the sub-tree mergeinfo can be\n"
      "removed and which part can't.\n"
      "usage: analyze [WCPATH...]\n"
-     "\n"
+     "\n"), N_(
      "  If neither --remove-obsoletes, --remove-redundant nor --combine-ranges\n"
      "  option is given, all three will be used implicitly.\n"
-     "\n"
+     "\n"), N_(
      "  In verbose mode, the command will behave just like 'normalize --dry-run'\n"
      "  but will show an additional summary of all deleted branches that were\n"
      "  encountered plus the revision of their latest deletion (if available).\n"
-     "\n"
+     "\n"), N_(
      "  In non-verbose mode, the per-node output does not give the parent path,\n"
      "  no successful elisions and branch removals nor the list of remaining\n"
      "  branches.\n"
@@ -254,11 +254,11 @@ const svn_opt_subcommand_desc3_t svn_min__cmd_table[] =
   { "normalize", svn_min__normalize, { 0 }, {N_(
      "Normalize / reduce the mergeinfo throughout the working copy sub-tree.\n"
      "usage: normalize [WCPATH...]\n"
-     "\n"
+     "\n"), N_(
      "  If neither --remove-obsoletes, --remove-redundant, --combine-ranges\n"
      "  nor --remove-redundant-misaligned option is given, --remove-redundant\n"
      "  will be used implicitly.\n"
-     "\n"
+     "\n"), N_(
      "  In non-verbose mode, only general progress as well as a summary before\n"
      "  and after the normalization process will be shown.  Note that sub-node\n"
      "  mergeinfo which could be removed entirely does not contribute to the\n"
@@ -266,12 +266,12 @@ const svn_opt_subcommand_desc3_t svn_min__cmd_table[] =
      "  ranges combined only refers to the mergeinfo lines still present after\n"
      "  the normalization process.  To get total numbers, compare the initial\n"
      "  with the final mergeinfo statistics.\n"
-     "\n"
+     "\n"), N_(
      "  The detailed operation log in verbose mode replaces the progress display.\n"
      "  For each node with mergeinfo, the nearest parent node with mergeinfo is\n"
      "  given - if there is one and the result of trying to remove the mergeinfo\n"
      "  is shown for each branch.  The various outputs are:\n"
-     "\n"
+     "\n"), N_(
      "    elide redundant branch - Revision ranges are the same as in the parent.\n"
      "                             Mergeinfo for this branch can be elided.\n"
      "    elide branch           - Not an exact match with the parent but the\n"
@@ -325,7 +325,7 @@ const svn_opt_subcommand_desc3_t svn_min__cmd_table[] =
      "                             The sub-tree mergeinfo cannot be elided.\n"
      "    REVERSE RANGE(S) found - The mergeinfo contains illegal reverse ranges.\n"
      "                             The sub-tree mergeinfo cannot be elided.\n"
-     "\n"
+     "\n"), N_(
      "  If all branches have been removed from a nodes' mergeinfo, the whole\n"
      "  svn:mergeinfo property will be removed.  Otherwise, only obsolete\n"
      "  branches will be removed.  In verbose mode, a list of branches that\n"
@@ -339,11 +339,11 @@ const svn_opt_subcommand_desc3_t svn_min__cmd_table[] =
      "Read a list of branch names from the given file and remove all\n"
      "mergeinfo referring to these branches from the given targets.\n"
      "usage: remove-branches [WCPATH...] --file FILE\n"
-     "\n"
+     "\n"), N_(
      "  The command will behave just like 'normalize --remove-obsoletes' but\n"
      "  will never actually contact the repository.  Instead, it assumes any\n"
      "  path given in FILE is a deleted branch.\n"
-     "\n"
+     "\n"), N_(
      "  Compared to a simple 'normalize --remove-obsoletes' run, this command\n"
      "  allows for selective removal of obsolete branches.  It may therefore be\n"
      "  better suited for large deployments with complex branch structures.\n"
