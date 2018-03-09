@@ -84,19 +84,22 @@ enum svn_svnrdump__longopt_t
 static const svn_opt_subcommand_desc3_t svnrdump__cmd_table[] =
 {
   { "dump", dump_cmd, { 0 }, {N_(
-       "usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
+       "usage: svnrdump dump URL [-r LOWER[:UPPER]]\n"
+       "\n"
        "Dump revisions LOWER to UPPER of repository at remote URL to stdout\n"
        "in a 'dumpfile' portable format.  If only LOWER is given, dump that\n"
        "one revision.\n"
     )},
     { 'r', 'q', opt_incremental, SVN_SVNRDUMP__BASE_OPTIONS } },
   { "load", load_cmd, { 0 }, {N_(
-       "usage: svnrdump load URL\n\n"
+       "usage: svnrdump load URL\n"
+       "\n"
        "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"
     )},
     { 'q', opt_skip_revprop, SVN_SVNRDUMP__BASE_OPTIONS } },
   { "help", 0, { "?", "h" }, {N_(
-       "usage: svnrdump help [SUBCOMMAND...]\n\n"
+       "usage: svnrdump help [SUBCOMMAND...]\n"
+       "\n"
        "Describe the usage of this program or its subcommands.\n"
     )},
     { 0 } },

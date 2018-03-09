@@ -113,19 +113,23 @@ static svn_opt_subcommand_t
 static const svn_opt_subcommand_desc3_t cmd_table[] =
 {
   {"help", subcommand_help, {"?", "h"}, {(
-    "usage: svnauthz help [SUBCOMMAND...]\n\n"
+    "usage: svnauthz help [SUBCOMMAND...]\n"
+    "\n"
     "Describe the usage of this program or its subcommands.\n"
     )},
    {0} },
   {"validate", subcommand_validate, {0} /* no aliases */, {(
     "Checks the syntax of an authz file.\n"
     "usage: 1. svnauthz validate TARGET\n"
-    "       2. svnauthz validate --transaction TXN REPOS_PATH FILE_PATH\n\n"
+    "       2. svnauthz validate --transaction TXN REPOS_PATH FILE_PATH\n"
+    "\n"
     "  1. Loads and validates the syntax of the authz file at TARGET.\n"
     "     TARGET can be a path to a file or an absolute file:// URL to an authz\n"
-    "     file in a repository, but cannot be a repository relative URL (^/).\n\n"
+    "     file in a repository, but cannot be a repository relative URL (^/).\n"
+    "\n"
     "  2. Loads and validates the syntax of the authz file at FILE_PATH in the\n"
-    "     transaction TXN in the repository at REPOS_PATH.\n\n"
+    "     transaction TXN in the repository at REPOS_PATH.\n"
+    "\n"
     "Returns:\n"
     "    0   when syntax is OK.\n"
     "    1   when syntax is invalid.\n"
@@ -172,11 +176,14 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnauthz_opt_state *opt_state = baton;
   const char *header =
     ("general usage: svnauthz SUBCOMMAND TARGET [ARGS & OPTIONS ...]\n"
-     "               " SVNAUTHZ_COMPAT_NAME " TARGET\n\n"
+     "               " SVNAUTHZ_COMPAT_NAME " TARGET\n"
+    "\n"
      "If the command name starts with '" SVNAUTHZ_COMPAT_NAME "', runs in\n"
-     "pre-1.8 compatibility mode: run the 'validate' subcommand on TARGET.\n\n"
+     "pre-1.8 compatibility mode: run the 'validate' subcommand on TARGET.\n"
+    "\n"
      "Type 'svnauthz help <subcommand>' for help on a specific subcommand.\n"
-     "Type 'svnauthz --version' to see the program version.\n\n"
+     "Type 'svnauthz --version' to see the program version.\n"
+    "\n"
      "Available subcommands:\n");
 
   const char *fs_desc_start
