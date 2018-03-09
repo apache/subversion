@@ -124,7 +124,7 @@ Candidate changes:
      Commits fail with a false "Filesystem is corrupt" error.
    Branch: ^/subversion/branches/1.9.x-issue4722
    Votes:
-     +1: philip
+     +1: philip, stsp
 
 Veto-blocked changes:
 =====================
