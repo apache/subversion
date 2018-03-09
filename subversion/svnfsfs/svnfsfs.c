@@ -114,20 +114,24 @@ static const apr_getopt_option_t options_table[] =
 static const svn_opt_subcommand_desc3_t cmd_table[] =
 {
   {"help", subcommand__help, {"?", "h"}, {N_(
-    "usage: svnfsfs help [SUBCOMMAND...]\n\n"
+    "usage: svnfsfs help [SUBCOMMAND...]\n"
+    "\n"
     "Describe the usage of this program or its subcommands.\n"
    )},
    {0} },
 
   {"dump-index", subcommand__dump_index, {0}, {N_(
-    "usage: svnfsfs dump-index REPOS_PATH -r REV\n\n"
+    "usage: svnfsfs dump-index REPOS_PATH -r REV\n"
+    "\n"
     "Dump the index contents for the revision / pack file containing revision REV\n"
     "to console.  This is only available for FSFS format 7 (SVN 1.9+) repositories.\n"
     "The table produced contains a header in the first line followed by one line\n"
-    "per index entry, ordered by location in the revision / pack file.  Columns:\n\n"
+    "per index entry, ordered by location in the revision / pack file.  Columns:\n"
+    "\n"
     "   * Byte offset (hex) at which the item starts\n"
     "   * Length (hex) of the item in bytes\n"
-    "   * Item type (string) is one of the following:\n\n"
+    "   * Item type (string) is one of the following:\n"
+    "\n"
     "        none ... Unused section.  File contents shall be NULs.\n"
     "        frep ... File representation.\n"
     "        drep ... Directory representation.\n"
@@ -136,10 +140,12 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "        node ... Node revision.\n"
     "        chgs ... Changed paths list.\n"
     "        rep .... Representation of unknown type.  Should not be used.\n"
-    "        ??? .... Invalid.  Index data is corrupt.\n\n"
+    "        ??? .... Invalid.  Index data is corrupt.\n"
+    "\n"
     "        The distinction between frep, drep, fprop and dprop is a mere internal\n"
     "        classification used for various optimizations and does not affect the\n"
-    "        operational correctness.\n\n"
+    "        operational correctness.\n"
+    "\n"
     "   * Revision that the item belongs to (decimal)\n"
     "   * Item number (decimal) within that revision\n"
     "   * Modified FNV1a checksum (8 hex digits)\n"
@@ -147,7 +153,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
    {'r', 'M'} },
 
   {"load-index", subcommand__load_index, {0}, {N_(
-    "usage: svnfsfs load-index REPOS_PATH\n\n"
+    "usage: svnfsfs load-index REPOS_PATH\n"
+    "\n"
     "Read index contents from console.  The format is the same as produced by the\n"
     "dump-index command, except that checksum as well as header are optional and will\n"
     "be ignored.  The data must cover the full revision / pack file;  the revision\n"
@@ -156,7 +163,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
    {'M'} },
 
   {"stats", subcommand__stats, {0}, {N_(
-    "usage: svnfsfs stats REPOS_PATH\n\n"
+    "usage: svnfsfs stats REPOS_PATH\n"
+    "\n"
     "Write object size statistics to console.\n"
    )},
    {'M'} },
