@@ -652,19 +652,19 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
       opt_include_externals, 'q', opt_merge_cmd }, 
     { { opt_merge_cmd, N_("deprecated and ignored") } } },
       
-  { "commit", svn_cl__commit, {"ci"},
-    N_("Send changes from your working copy to the repository.\n"
-       "usage: commit [PATH...]\n"
-       "\n"
-       "  A log message must be provided, but it can be empty.  If it is not\n"
-       "  given by a --message or --file option, an editor will be started.\n"
-       "\n"
-       "  If any targets are (or contain) locked items, those will be\n"
-       "  unlocked after a successful commit, unless --no-unlock is given.\n"
-       "\n"
-       "  If --include-externals is given, also commit file and directory\n"
-       "  externals reached by recursion. Do not commit externals with a\n"
-       "  fixed revision.\n"),
+  { "commit", svn_cl__commit, {"ci"}, N_
+    ("Send changes from your working copy to the repository.\n"
+     "usage: commit [PATH...]\n"
+     "\n"
+     "  A log message must be provided, but it can be empty.  If it is not\n"
+     "  given by a --message or --file option, an editor will be started.\n"
+     "\n"
+     "  If any targets are (or contain) locked items, those will be\n"
+     "  unlocked after a successful commit, unless --no-unlock is given.\n"
+     "\n"
+     "  If --include-externals is given, also commit file and directory\n"
+     "  externals reached by recursion. Do not commit externals with a\n"
+     "  fixed revision.\n"),
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
      opt_changelist, opt_keep_changelists, opt_include_externals} },
 
