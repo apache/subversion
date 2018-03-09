@@ -89,10 +89,10 @@ enum svnsync__opt {
                              svnsync_opt_config_dir, \
                              svnsync_opt_config_options
 
-static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
+static const svn_opt_subcommand_desc3_t svnsync_cmd_table[] =
   {
-    { "initialize", initialize_cmd, { "init" },
-      N_("usage: svnsync initialize DEST_URL SOURCE_URL\n"
+    { "initialize", initialize_cmd, { "init" }, {N_(
+         "usage: svnsync initialize DEST_URL SOURCE_URL\n"
          "\n"
          "Initialize a destination repository for synchronization from\n"
          "another repository.\n"
@@ -113,12 +113,13 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "You should not commit to, or make revision property changes in,\n"
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
-         "mirror of the source repository.\n"),
+         "mirror of the source repository.\n"
+      )},
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
         svnsync_opt_allow_non_empty, svnsync_opt_disable_locking,
         svnsync_opt_steal_lock, 'M' } },
-    { "synchronize", synchronize_cmd, { "sync" },
-      N_("usage: svnsync synchronize DEST_URL [SOURCE_URL]\n"
+    { "synchronize", synchronize_cmd, { "sync" }, {N_(
+         "usage: svnsync synchronize DEST_URL [SOURCE_URL]\n"
          "\n"
          "Transfer all pending revisions to the destination from the source\n"
          "with which it was initialized.\n"
@@ -127,11 +128,12 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "ignoring what is recorded in the destination repository as the\n"
          "source URL.  Specifying SOURCE_URL is recommended in particular\n"
          "if untrusted users/administrators may have write access to the\n"
-         "DEST_URL repository.\n"),
+         "DEST_URL repository.\n"
+      )},
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q',
         svnsync_opt_disable_locking, svnsync_opt_steal_lock, 'M' } },
-    { "copy-revprops", copy_revprops_cmd, { 0 },
-      N_("usage:\n"
+    { "copy-revprops", copy_revprops_cmd, { 0 }, {N_(
+         "usage:\n"
          "\n"
          "    1. svnsync copy-revprops DEST_URL [SOURCE_URL]\n"
          "    2. svnsync copy-revprops DEST_URL REV[:REV2]\n"
@@ -152,22 +154,25 @@ static const svn_opt_subcommand_desc2_t svnsync_cmd_table[] =
          "change hooks for all revision properties, it is recommended to use\n"
          "the --skip-unchanged option for best performance.\n"
          "\n"
-         "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"),
+         "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"
+      )},
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q', 'r',
         svnsync_opt_disable_locking, svnsync_opt_steal_lock,
         svnsync_opt_skip_unchanged, 'M' } },
-    { "info", info_cmd, { 0 },
-      N_("usage: svnsync info DEST_URL\n"
+    { "info", info_cmd, { 0 }, {N_(
+         "usage: svnsync info DEST_URL\n"
          "\n"
          "Print information about the synchronization destination repository\n"
-         "located at DEST_URL.\n"),
+         "located at DEST_URL.\n"
+      )},
       { SVNSYNC_OPTS_DEFAULT } },
-    { "help", help_cmd, { "?", "h" },
-      N_("usage: svnsync help [SUBCOMMAND...]\n"
+    { "help", help_cmd, { "?", "h" }, {N_(
+         "usage: svnsync help [SUBCOMMAND...]\n"
          "\n"
-         "Describe the usage of this program or its subcommands.\n"),
+         "Describe the usage of this program or its subcommands.\n"
+      )},
       { 0 } },
-    { NULL, NULL, { 0 }, NULL, { 0 } }
+    { NULL, NULL, { 0 }, {NULL}, { 0 } }
   };
 
 static const apr_getopt_option_t svnsync_options[] =
@@ -1937,7 +1942,7 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(os, "svnsync",
+  SVN_ERR(svn_opt_print_help5(os, "svnsync",
                               opt_baton ? opt_baton->version : FALSE,
                               opt_baton ? opt_baton->quiet : FALSE,
                               /*###opt_state ? opt_state->verbose :*/ FALSE,
@@ -1960,7 +1965,7 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_error_t *
 sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
+  const svn_opt_subcommand_desc3_t *subcommand = NULL;
   apr_array_header_t *received_opts;
   opt_baton_t opt_baton;
   svn_config_t *config;
@@ -2189,7 +2194,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     }
 
   if (opt_baton.help)
-    subcommand = svn_opt_get_canonical_subcommand2(svnsync_cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand3(svnsync_cmd_table, "help");
 
   /* The --non-interactive and --force-interactive options are mutually
    * exclusive. */
@@ -2269,8 +2274,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (opt_baton.version)
             {
               /* Use the "help" subcommand to handle "--version". */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", help_cmd, {0}, "",
+              static const svn_opt_subcommand_desc3_t pseudo_cmd =
+                { "--version", help_cmd, {0}, {""},
                   {svnsync_opt_version,  /* must accept its own option */
                    'q',  /* --quiet */
                   } };
@@ -2290,7 +2295,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
                                           pool));
-          subcommand = svn_opt_get_canonical_subcommand2(svnsync_cmd_table,
+          subcommand = svn_opt_get_canonical_subcommand3(svnsync_cmd_table,
                                                          first_arg);
           if (subcommand == NULL)
             {
@@ -2308,11 +2313,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
+      if (! svn_opt_subcommand_takes_option4(subcommand, opt_id, NULL))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, svnsync_options, subcommand,
+            svn_opt_get_option_from_code3(opt_id, svnsync_options, subcommand,
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')

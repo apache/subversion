@@ -148,16 +148,17 @@ static const int svnconflict_global_options[] =
 { opt_auth_username, opt_auth_password, opt_auth_password_from_stdin,
   opt_config_dir, opt_config_options, 0 };
 
-static const svn_opt_subcommand_desc2_t svnconflict_cmd_table[] =
+static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
 {
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
-  { "help", svnconflict_help, {"?", "h"}, N_
-    ("Describe the usage of this program or its subcommands.\n"
-     "usage: help [SUBCOMMAND...]\n"),
+  { "help", svnconflict_help, {"?", "h"}, {N_(
+     "Describe the usage of this program or its subcommands.\n"
+     "usage: help [SUBCOMMAND...]\n"
+    )},
     {0} },
 
-  { "list", svnconflict_list, {"ls"}, N_
-    ("List conflicts at a conflicted path.\n"
+  { "list", svnconflict_list, {"ls"}, {N_(
+     "List conflicts at a conflicted path.\n"
      "usage: list PATH\n"
      "\n"
      "  List conflicts at PATH, one per line. Possible conflicts are:\n"
@@ -176,67 +177,67 @@ static const svn_opt_subcommand_desc2_t svnconflict_cmd_table[] =
      "    If a tree conflict exists, no text or property conflicts exist.\n"
      "  \n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
-     ""),
+    )},
     {0}, },
 
-  { "options-text", svnconflict_options_text, {0}, N_
-    ("List options for resolving a text conflict at path.\n"
+  { "options-text", svnconflict_options_text, {0}, {N_(
+     "List options for resolving a text conflict at path.\n"
      "usage: options-text PATH\n"
      "\n"
      "  List text conflict resolution options at PATH, one per line.\n"
      "  Each line contains a numeric option ID, a colon, and a description.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
-     ""),
+    )},
     {0}, },
 
-  { "options-prop", svnconflict_options_prop, {0}, N_
-    ("List options for resolving a property conflict at path.\n"
+  { "options-prop", svnconflict_options_prop, {0}, {N_(
+     "List options for resolving a property conflict at path.\n"
      "usage: options-prop PATH\n"
      "\n"
      "  List property conflict resolution options at PATH, one per line.\n"
      "  Each line contains a numeric option ID, a colon, and a description.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
-     ""),
+    )},
     {0}, },
 
-  { "options-tree", svnconflict_options_tree, {0}, N_
-    ("List options for resolving a tree conflict at path.\n"
+  { "options-tree", svnconflict_options_tree, {0}, {N_(
+     "List options for resolving a tree conflict at path.\n"
      "usage: options-tree PATH\n"
      "\n"
      "  List tree conflict resolution options at PATH, one per line.\n"
      "  Each line contains a numeric option ID, a colon, and a description.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
-     ""),
+    )},
     {0}, },
 
-  { "resolve-text", svnconflict_resolve_text, {0}, N_
-    ("Resolve the text conflict at path.\n"
+  { "resolve-text", svnconflict_resolve_text, {0}, {N_(
+     "Resolve the text conflict at path.\n"
      "usage: resolve-text OPTION_ID PATH\n"
      "\n"
      "  Resolve the text conflict at PATH with a given resolution option.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
-     ""),
+    )},
     {0}, },
 
-  { "resolve-prop", svnconflict_resolve_prop, {0}, N_
-    ("Resolve the property conflict at path.\n"
+  { "resolve-prop", svnconflict_resolve_prop, {0}, {N_(
+     "Resolve the property conflict at path.\n"
      "usage: resolve-prop PROPNAME OPTION_ID PATH\n"
      "\n"
      "  Resolve conflicted property PROPNAME at PATH with a given resolution option.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
-     ""),
+    )},
     {0}, },
 
-  { "resolve-tree", svnconflict_resolve_tree, {0}, N_
-    ("Resolve the tree conflict at path.\n"
+  { "resolve-tree", svnconflict_resolve_tree, {0}, {N_(
+     "Resolve the tree conflict at path.\n"
      "usage: resolve-tree OPTION_ID PATH\n"
      "\n"
      "  Resolve the tree conflict at PATH with a given resolution option.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
-     ""),
+    )},
     {0}, },
 
-  { NULL, NULL, {0}, NULL, {0} }
+  { NULL, NULL, {0}, {NULL}, {0} }
 };
 
 /* Version compatibility check */
@@ -297,7 +298,7 @@ svnconflict_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
       SVN_ERR(svn_ra_print_modules(version_footer, pool));
     }
 
-  SVN_ERR(svn_opt_print_help4(os,
+  SVN_ERR(svn_opt_print_help5(os,
                               "svnconflict",   /* ### erm, derive somehow? */
                               opt_state ? opt_state->version : FALSE,
                               FALSE, /* quiet */
@@ -641,7 +642,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *received_opts;
   svnconflict_cmd_baton_t command_baton;
   int i;
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
+  const svn_opt_subcommand_desc3_t *subcommand = NULL;
   svn_auth_baton_t *ab;
   svn_config_t *cfg_config;
   apr_hash_t *cfg_hash;
@@ -742,7 +743,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is svnconflict_help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand2(svnconflict_cmd_table,
+    subcommand = svn_opt_get_canonical_subcommand3(svnconflict_cmd_table,
                                                    "help");
 
   /* If we're not running the `help' subcommand, then look for a
@@ -754,8 +755,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", svnconflict_help, {0}, "",
+              static const svn_opt_subcommand_desc3_t pseudo_cmd =
+                { "--version", svnconflict_help, {0}, {""},
                   {opt_version,    /* must accept its own option */
                    opt_config_dir  /* all commands accept this */
                   } };
@@ -778,7 +779,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
                                           pool));
-          subcommand = svn_opt_get_canonical_subcommand2(svnconflict_cmd_table,
+          subcommand = svn_opt_get_canonical_subcommand3(svnconflict_cmd_table,
                                                          first_arg);
           if (subcommand == NULL)
             {
@@ -805,12 +806,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id,
+      if (! svn_opt_subcommand_takes_option4(subcommand, opt_id,
                                              svnconflict_global_options))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, svnconflict_options,
+            svn_opt_get_option_from_code3(opt_id, svnconflict_options,
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')

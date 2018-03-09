@@ -301,25 +301,27 @@ static const apr_getopt_option_t options_table[] =
 /* Array of available subcommands.
  * The entire list must be terminated with an entry of nulls.
  */
-static const svn_opt_subcommand_desc2_t cmd_table[] =
+static const svn_opt_subcommand_desc3_t cmd_table[] =
 {
-  {"crashtest", subcommand_crashtest, {0}, N_
-   ("usage: svnadmin crashtest REPOS_PATH\n\n"
+  {"crashtest", subcommand_crashtest, {0}, {N_(
+    "usage: svnadmin crashtest REPOS_PATH\n\n"
     "Open the repository at REPOS_PATH, then abort, thus simulating\n"
-    "a process that crashes while holding an open repository handle.\n"),
+    "a process that crashes while holding an open repository handle.\n"
+   )},
    {0} },
 
-  {"create", subcommand_create, {0}, N_
-   ("usage: svnadmin create REPOS_PATH\n\n"
-    "Create a new, empty repository at REPOS_PATH.\n"),
+  {"create", subcommand_create, {0}, {N_(
+    "usage: svnadmin create REPOS_PATH\n\n"
+    "Create a new, empty repository at REPOS_PATH.\n"
+   )},
    {svnadmin__bdb_txn_nosync, svnadmin__bdb_log_keep,
     svnadmin__config_dir, svnadmin__fs_type, svnadmin__compatible_version,
     svnadmin__pre_1_4_compatible, svnadmin__pre_1_5_compatible,
     svnadmin__pre_1_6_compatible
     } },
 
-  {"delrevprop", subcommand_delrevprop, {0}, N_
-   ("usage: 1. svnadmin delrevprop REPOS_PATH -r REVISION NAME\n"
+  {"delrevprop", subcommand_delrevprop, {0}, {N_(
+    "usage: 1. svnadmin delrevprop REPOS_PATH -r REVISION NAME\n"
     "                   2. svnadmin delrevprop REPOS_PATH -t TXN NAME\n\n"
     "1. Delete the property NAME on revision REVISION.\n\n"
     "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
@@ -327,21 +329,23 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "an email notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
     "irreversibly destroy the previous value of the property.\n\n"
-    "2. Delete the property NAME on transaction TXN.\n"),
+    "2. Delete the property NAME on transaction TXN.\n"
+   )},
    {'r', 't', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
-  {"deltify", subcommand_deltify, {0}, N_
-   ("usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
+  {"deltify", subcommand_deltify, {0}, {N_(
+    "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n\n"
     "Run over the requested revision range, performing predecessor delti-\n"
     "fication on the paths changed in those revisions.  Deltification in\n"
     "essence compresses the repository by only storing the differences or\n"
     "delta from the preceding revision.  If no revisions are specified,\n"
-    "this will simply deltify the HEAD revision.\n"),
+    "this will simply deltify the HEAD revision.\n"
+   )},
    {'r', 'q', 'M'} },
 
-  {"dump", subcommand_dump, {0}, N_
-   ("usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n\n"
+  {"dump", subcommand_dump, {0}, {N_(
+    "usage: svnadmin dump REPOS_PATH [-r LOWER[:UPPER] [--incremental]]\n\n"
     "Dump the contents of filesystem to stdout in a 'dumpfile'\n"
     "portable format, sending feedback to stderr.  Dump revisions\n"
     "LOWER rev through UPPER rev.  If no revisions are given, dump all\n"
@@ -354,70 +358,79 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "\n"
     "Using --exclude or --include gives results equivalent to authz-based\n"
     "path exclusions. In particular, when the source of a copy is\n"
-    "excluded, the copy is transformed into an add (unlike in 'svndumpfilter').\n"),
+    "excluded, the copy is transformed into an add (unlike in 'svndumpfilter').\n"
+   )},
   {'r', svnadmin__incremental, svnadmin__deltas, 'q', 'M', 'F',
    svnadmin__exclude, svnadmin__include, svnadmin__glob },
   {{'F', N_("write to file ARG instead of stdout")}} },
 
-  {"dump-revprops", subcommand_dump_revprops, {0}, N_
-   ("usage: svnadmin dump-revprops REPOS_PATH [-r LOWER[:UPPER]]\n\n"
+  {"dump-revprops", subcommand_dump_revprops, {0}, {N_(
+    "usage: svnadmin dump-revprops REPOS_PATH [-r LOWER[:UPPER]]\n\n"
     "Dump the revision properties of filesystem to stdout in a 'dumpfile'\n"
     "portable format, sending feedback to stderr.  Dump revisions\n"
     "LOWER rev through UPPER rev.  If no revisions are given, dump the\n"
     "properties for all revisions.  If only LOWER is given, dump the\n"
-    "properties for that one revision.\n"),
+    "properties for that one revision.\n"
+   )},
   {'r', 'q', 'F'},
   {{'F', N_("write to file ARG instead of stdout")}} },
 
-  {"freeze", subcommand_freeze, {0}, N_
-   ("usage: 1. svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
+  {"freeze", subcommand_freeze, {0}, {N_(
+    "usage: 1. svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
     "               2. svnadmin freeze -F FILE PROGRAM [ARG...]\n\n"
     "1. Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"
     "   Allows safe use of third-party backup tools on a live repository.\n"
     "\n"
     "2. Like 1 except all repositories listed in FILE are locked. The file\n"
     "   format is repository paths separated by newlines.  Repositories are\n"
-    "   locked in the same order as they are listed in the file.\n"),
+    "   locked in the same order as they are listed in the file.\n"
+   )},
    {'F'},
    {{'F', N_("read repository paths from file ARG")}} },
 
-  {"help", subcommand_help, {"?", "h"}, N_
-   ("usage: svnadmin help [SUBCOMMAND...]\n\n"
-    "Describe the usage of this program or its subcommands.\n"),
+  {"help", subcommand_help, {"?", "h"}, {N_(
+    "usage: svnadmin help [SUBCOMMAND...]\n\n"
+    "Describe the usage of this program or its subcommands.\n"
+   )},
    {0} },
 
-  {"hotcopy", subcommand_hotcopy, {0}, N_
-   ("usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
+  {"hotcopy", subcommand_hotcopy, {0}, {N_(
+    "usage: svnadmin hotcopy REPOS_PATH NEW_REPOS_PATH\n\n"
     "Make a hot copy of a repository.\n"
     "If --incremental is passed, data which already exists at the destination\n"
-    "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"),
+    "is not copied again.  Incremental mode is implemented for FSFS repositories.\n"
+   )},
    {svnadmin__clean_logs, svnadmin__incremental, 'q'} },
 
-  {"info", subcommand_info, {0}, N_
-   ("usage: svnadmin info REPOS_PATH\n\n"
-    "Print information about the repository at REPOS_PATH.\n"),
+  {"info", subcommand_info, {0}, {N_(
+    "usage: svnadmin info REPOS_PATH\n\n"
+    "Print information about the repository at REPOS_PATH.\n"
+   )},
    {0} },
 
-  {"list-dblogs", subcommand_list_dblogs, {0}, N_
-   ("usage: svnadmin list-dblogs REPOS_PATH\n\n"
+  {"list-dblogs", subcommand_list_dblogs, {0}, {N_(
+    "usage: svnadmin list-dblogs REPOS_PATH\n\n"
     "List all Berkeley DB log files.\n\n"
     "WARNING: Modifying or deleting logfiles which are still in use\n"
-    "will cause your repository to be corrupted.\n"),
+    "will cause your repository to be corrupted.\n"
+   )},
    {0} },
 
-  {"list-unused-dblogs", subcommand_list_unused_dblogs, {0}, N_
-   ("usage: svnadmin list-unused-dblogs REPOS_PATH\n\n"
-    "List unused Berkeley DB log files.\n\n"),
+  {"list-unused-dblogs", subcommand_list_unused_dblogs, {0}, {N_(
+    "usage: svnadmin list-unused-dblogs REPOS_PATH\n\n"
+    "List unused Berkeley DB log files.\n\n"
+   )},
    {0} },
 
-  {"load", subcommand_load, {0}, N_
-   ("usage: svnadmin load REPOS_PATH\n\n"
+  {"load", subcommand_load, {0}, {N_(
+    "usage: svnadmin load REPOS_PATH\n\n"
     "Read a 'dumpfile'-formatted stream from stdin, committing\n"
     "new revisions into the repository's filesystem.  If the repository\n"
     "was previously empty, its UUID will, by default, be changed to the\n"
     "one specified in the stream.  Progress feedback is sent to stdout.\n"
     "If --revision is specified, limit the loaded revisions to only those\n"
-    "in the dump stream whose revision numbers match the specified range.\n"),
+    "in the dump stream whose revision numbers match the specified range.\n"
+   )},
    {'q', 'r', svnadmin__ignore_uuid, svnadmin__force_uuid,
     svnadmin__ignore_dates,
     svnadmin__use_pre_commit_hook, svnadmin__use_post_commit_hook,
@@ -426,65 +439,73 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     svnadmin__no_flush_to_disk, 'F'},
    {{'F', N_("read from file ARG instead of stdin")}} },
 
-  {"load-revprops", subcommand_load_revprops, {0}, N_
-   ("usage: svnadmin load-revprops REPOS_PATH\n\n"
+  {"load-revprops", subcommand_load_revprops, {0}, {N_(
+    "usage: svnadmin load-revprops REPOS_PATH\n\n"
     "Read a 'dumpfile'-formatted stream from stdin, setting the revision\n"
     "properties in the repository's filesystem.  Revisions not found in the\n"
     "repository will cause an error.  Progress feedback is sent to stdout.\n"
     "If --revision is specified, limit the loaded revisions to only those\n"
-    "in the dump stream whose revision numbers match the specified range.\n"),
+    "in the dump stream whose revision numbers match the specified range.\n"
+   )},
    {'q', 'r', svnadmin__force_uuid, svnadmin__normalize_props,
     svnadmin__bypass_prop_validation, svnadmin__no_flush_to_disk, 'F'},
    {{'F', N_("read from file ARG instead of stdin")}} },
 
-  {"lock", subcommand_lock, {0}, N_
-   ("usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
+  {"lock", subcommand_lock, {0}, {N_(
+    "usage: svnadmin lock REPOS_PATH PATH USERNAME COMMENT-FILE [TOKEN]\n\n"
     "Lock PATH by USERNAME setting comments from COMMENT-FILE.\n"
     "If provided, use TOKEN as lock token.  Use --bypass-hooks to avoid\n"
-    "triggering the pre-lock and post-lock hook scripts.\n"),
+    "triggering the pre-lock and post-lock hook scripts.\n"
+   )},
   {svnadmin__bypass_hooks, 'q'} },
 
-  {"lslocks", subcommand_lslocks, {0}, N_
-   ("usage: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n\n"
+  {"lslocks", subcommand_lslocks, {0}, {N_(
+    "usage: svnadmin lslocks REPOS_PATH [PATH-IN-REPOS]\n\n"
     "Print descriptions of all locks on or under PATH-IN-REPOS (which,\n"
-    "if not provided, is the root of the repository).\n"),
+    "if not provided, is the root of the repository).\n"
+   )},
    {0} },
 
-  {"lstxns", subcommand_lstxns, {0}, N_
-   ("usage: svnadmin lstxns REPOS_PATH\n\n"
+  {"lstxns", subcommand_lstxns, {0}, {N_(
+    "usage: svnadmin lstxns REPOS_PATH\n\n"
     "Print the names of uncommitted transactions. With -rN skip the output\n"
     "of those that have a base revision more recent than rN.  Transactions\n"
     "with base revisions much older than HEAD are likely to have been\n"
-    "abandonded and are candidates to be removed.\n"),
+    "abandonded and are candidates to be removed.\n"
+   )},
    {'r'},
    { {'r', "transaction base revision ARG"} } },
 
-  {"pack", subcommand_pack, {0}, N_
-   ("usage: svnadmin pack REPOS_PATH\n\n"
+  {"pack", subcommand_pack, {0}, {N_(
+    "usage: svnadmin pack REPOS_PATH\n\n"
     "Possibly compact the repository into a more efficient storage model.\n"
-    "This may not apply to all repositories, in which case, exit.\n"),
+    "This may not apply to all repositories, in which case, exit.\n"
+   )},
    {'q', 'M'} },
 
-  {"recover", subcommand_recover, {0}, N_
-   ("usage: svnadmin recover REPOS_PATH\n\n"
+  {"recover", subcommand_recover, {0}, {N_(
+    "usage: svnadmin recover REPOS_PATH\n\n"
     "Run the recovery procedure on a repository.  Do this if you've\n"
     "been getting errors indicating that recovery ought to be run.\n"
     "Berkeley DB recovery requires exclusive access and will\n"
-    "exit if the repository is in use by another process.\n"),
+    "exit if the repository is in use by another process.\n"
+   )},
    {svnadmin__wait} },
 
-  {"rmlocks", subcommand_rmlocks, {0}, N_
-   ("usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n\n"
-    "Unconditionally remove lock from each LOCKED_PATH.\n"),
+  {"rmlocks", subcommand_rmlocks, {0}, {N_(
+    "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n\n"
+    "Unconditionally remove lock from each LOCKED_PATH.\n"
+   )},
    {'q'} },
 
-  {"rmtxns", subcommand_rmtxns, {0}, N_
-   ("usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
-    "Delete the named transaction(s).\n"),
+  {"rmtxns", subcommand_rmtxns, {0}, {N_(
+    "usage: svnadmin rmtxns REPOS_PATH TXN_NAME...\n\n"
+    "Delete the named transaction(s).\n"
+   )},
    {'q'} },
 
-  {"setlog", subcommand_setlog, {0}, N_
-   ("usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
+  {"setlog", subcommand_setlog, {0}, {N_(
+    "usage: svnadmin setlog REPOS_PATH -r REVISION FILE\n\n"
     "Set the log-message on revision REVISION to the contents of FILE.  Use\n"
     "--bypass-hooks to avoid triggering the revision-property-related hooks\n"
     "(for example, if you do not want an email notification sent\n"
@@ -492,11 +513,12 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "revision properties has not been enabled in the pre-revprop-change\n"
     "hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
-    "overwrite the previous log message.\n"),
+    "overwrite the previous log message.\n"
+   )},
    {'r', svnadmin__bypass_hooks} },
 
-  {"setrevprop", subcommand_setrevprop, {0}, N_
-   ("usage: 1. svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
+  {"setrevprop", subcommand_setrevprop, {0}, {N_(
+    "usage: 1. svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
     "                   2. svnadmin setrevprop REPOS_PATH -t TXN NAME FILE\n\n"
     "1. Set the property NAME on revision REVISION to the contents of FILE.\n\n"
     "Use --use-pre-revprop-change-hook/--use-post-revprop-change-hook to\n"
@@ -504,26 +526,29 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "an email notification sent from your post-revprop-change hook).\n\n"
     "NOTE: Revision properties are not versioned, so this command will\n"
     "overwrite the previous value of the property.\n\n"
-    "2. Set the property NAME on transaction TXN to the contents of FILE.\n"),
+    "2. Set the property NAME on transaction TXN to the contents of FILE.\n"
+   )},
    {'r', 't', svnadmin__use_pre_revprop_change_hook,
     svnadmin__use_post_revprop_change_hook} },
 
-  {"setuuid", subcommand_setuuid, {0}, N_
-   ("usage: svnadmin setuuid REPOS_PATH [NEW_UUID]\n\n"
+  {"setuuid", subcommand_setuuid, {0}, {N_(
+    "usage: svnadmin setuuid REPOS_PATH [NEW_UUID]\n\n"
     "Reset the repository UUID for the repository located at REPOS_PATH.  If\n"
     "NEW_UUID is provided, use that as the new repository UUID; otherwise,\n"
-    "generate a brand new UUID for the repository.\n"),
+    "generate a brand new UUID for the repository.\n"
+   )},
    {0} },
 
-  {"unlock", subcommand_unlock, {0}, N_
-   ("usage: svnadmin unlock REPOS_PATH LOCKED_PATH USERNAME TOKEN\n\n"
+  {"unlock", subcommand_unlock, {0}, {N_(
+    "usage: svnadmin unlock REPOS_PATH LOCKED_PATH USERNAME TOKEN\n\n"
     "Unlock LOCKED_PATH (as USERNAME) after verifying that the token\n"
     "associated with the lock matches TOKEN.  Use --bypass-hooks to avoid\n"
-    "triggering the pre-unlock and post-unlock hook scripts.\n"),
+    "triggering the pre-unlock and post-unlock hook scripts.\n"
+   )},
    {svnadmin__bypass_hooks, 'q'} },
 
-  {"upgrade", subcommand_upgrade, {0}, N_
-   ("usage: svnadmin upgrade REPOS_PATH\n\n"
+  {"upgrade", subcommand_upgrade, {0}, {N_(
+    "usage: svnadmin upgrade REPOS_PATH\n\n"
     "Upgrade the repository located at REPOS_PATH to the latest supported\n"
     "schema version.\n\n"
     "This functionality is provided as a convenience for repository\n"
@@ -532,16 +557,18 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "and load operation.  As such, the upgrade performs only the minimum\n"
     "amount of work needed to accomplish this while still maintaining the\n"
     "integrity of the repository.  It does not guarantee the most optimized\n"
-    "repository state as a dump and subsequent load would.\n"),
+    "repository state as a dump and subsequent load would.\n"
+   )},
    {0} },
 
-  {"verify", subcommand_verify, {0}, N_
-   ("usage: svnadmin verify REPOS_PATH\n\n"
-    "Verify the data stored in the repository.\n"),
+  {"verify", subcommand_verify, {0}, {N_(
+    "usage: svnadmin verify REPOS_PATH\n\n"
+    "Verify the data stored in the repository.\n"
+   )},
    {'t', 'r', 'q', svnadmin__keep_going, 'M',
     svnadmin__check_normalization, svnadmin__metadata_only} },
 
-  { NULL, NULL, {0}, NULL, {0} }
+  { NULL, NULL, {0}, {NULL}, {0} }
 };
 
 
@@ -1540,7 +1567,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(os, "svnadmin",
+  SVN_ERR(svn_opt_print_help5(os, "svnadmin",
                               opt_state ? opt_state->version : FALSE,
                               opt_state ? opt_state->quiet : FALSE,
                               /*###opt_state ? opt_state->verbose :*/ FALSE,
@@ -2794,7 +2821,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_error_t *err;
   apr_status_t apr_err;
 
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
+  const svn_opt_subcommand_desc3_t *subcommand = NULL;
   struct svnadmin_opt_state opt_state = { 0 };
   apr_getopt_t *os;
   int opt_id;
@@ -3049,7 +3076,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is subcommand_help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand3(cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -3060,8 +3087,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", subcommand_help, {0}, "",
+              static const svn_opt_subcommand_desc3_t pseudo_cmd =
+                { "--version", subcommand_help, {0}, {""},
                   {svnadmin__version,  /* must accept its own option */
                    'q',  /* --quiet */
                   } };
@@ -3083,7 +3110,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
                                           pool));
-          subcommand = svn_opt_get_canonical_subcommand2(cmd_table, first_arg);
+          subcommand = svn_opt_get_canonical_subcommand3(cmd_table, first_arg);
           if (subcommand == NULL)
             {
               svn_error_clear(
@@ -3135,11 +3162,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
+      if (! svn_opt_subcommand_takes_option4(subcommand, opt_id, NULL))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, options_table, subcommand,
+            svn_opt_get_option_from_code3(opt_id, options_table, subcommand,
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')

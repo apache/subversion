@@ -117,7 +117,7 @@ svn_opt_subcommand_t
   svn_min__remove_branches;
 
 /* See definition in svn.c for documentation. */
-extern const svn_opt_subcommand_desc2_t svn_min__cmd_table[];
+extern const svn_opt_subcommand_desc3_t svn_min__cmd_table[];
 
 /* See definition in svn.c for documentation. */
 extern const int svn_min__global_options[];
