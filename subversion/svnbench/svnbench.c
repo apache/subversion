@@ -206,16 +206,17 @@ const int svn_cl__global_options[] =
   opt_config_dir, opt_config_options, 0
 };
 
-const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
+const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 {
-  { "help", svn_cl__help, {"?", "h"}, N_
-    ("Describe the usage of this program or its subcommands.\n"
-     "usage: help [SUBCOMMAND...]\n"),
+  { "help", svn_cl__help, {"?", "h"}, {N_(
+     "Describe the usage of this program or its subcommands.\n"
+     "usage: help [SUBCOMMAND...]\n"
+    )},
     {0} },
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
-  { "null-blame", svn_cl__null_blame, {0}, N_
-    ("Fetch all versions of a file in a batch.\n"
+  { "null-blame", svn_cl__null_blame, {0}, {N_(
+     "Fetch all versions of a file in a batch.\n"
      "usage: null-blame [-rM:N] TARGET[@REV]...\n"
      "\n"
      "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
@@ -231,22 +232,24 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  If specified, REV determines in which revision the target is first\n"
      "  looked up.\n"
      "\n"
-     "  Write the annotated result to standard output.\n"),
+     "  Write the annotated result to standard output.\n"
+    )},
     {'r', 'g'} },
 
-  { "null-export", svn_cl__null_export, {0}, N_
-    ("Create an unversioned copy of a tree.\n"
+  { "null-export", svn_cl__null_export, {0}, {N_(
+     "Create an unversioned copy of a tree.\n"
      "usage: null-export [-r REV] URL[@PEGREV]\n"
      "\n"
      "  Exports a clean directory tree from the repository specified by\n"
      "  URL, at revision REV if it is given, otherwise at HEAD.\n"
      "\n"
      "  If specified, PEGREV determines in which revision the target is first\n"
-     "  looked up.\n"),
+     "  looked up.\n"
+    )},
     {'r', 'q', 'N', opt_depth} },
 
-  { "null-list", svn_cl__null_list, {"ls"}, N_
-    ("List directory entries in the repository.\n"
+  { "null-list", svn_cl__null_list, {"ls"}, {N_(
+     "List directory entries in the repository.\n"
      "usage: null-list [TARGET[@REV]...]\n"
      "\n"
      "  List each TARGET file and the contents of each TARGET directory as\n"
@@ -263,11 +266,12 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "    Author of the last commit\n"
      "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
      "    Size (in bytes)\n"
-     "    Date and time of the last commit\n"),
+     "    Date and time of the last commit\n"
+    )},
     {'r', 'v', 'q', 'R', opt_depth, opt_search} },
 
-  { "null-log", svn_cl__null_log, {0}, N_
-    ("Fetch the log messages for a set of revision(s) and/or path(s).\n"
+  { "null-log", svn_cl__null_log, {0}, {N_(
+     "Fetch the log messages for a set of revision(s) and/or path(s).\n"
      "usage: 1. null-log [PATH][@REV]\n"
      "       2. null-log URL[@REV] [PATH...]\n"
      "\n"
@@ -294,23 +298,25 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  Each log message is printed just once, even if more than one of the\n"
      "  affected paths for that revision were explicitly requested.  Logs\n"
      "  follow copy history by default.  Use --stop-on-copy to disable this\n"
-     "  behavior, which can be useful for determining branchpoints.\n"),
+     "  behavior, which can be useful for determining branchpoints.\n"
+    )},
     {'r', 'q', 'v', 'g', 'c', opt_targets, opt_stop_on_copy,
      'l', opt_with_all_revprops, opt_with_no_revprops, opt_with_revprop,},
     {{opt_with_revprop, N_("retrieve revision property ARG")},
      {'c', N_("the change made in revision ARG")}} },
 
-  { "null-info", svn_cl__null_info, {0}, N_
-    ("Display information about a local or remote item.\n"
+  { "null-info", svn_cl__null_info, {0}, {N_(
+     "Display information about a local or remote item.\n"
      "usage: null-info [TARGET[@REV]...]\n"
      "\n"
      "  Print information about each TARGET (default: '.').\n"
      "  TARGET may be either a working-copy path or URL.  If specified, REV\n"
-     "  determines in which revision the target is first looked up.\n"),
+     "  determines in which revision the target is first looked up.\n"
+    )},
     {'r', 'R', opt_depth, opt_targets, opt_changelist}
   },
 
-  { NULL, NULL, {0}, NULL, {0} }
+  { NULL, NULL, {0}, {NULL}, {0} }
 };
 
 
@@ -389,7 +395,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
   int i;
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
+  const svn_opt_subcommand_desc3_t *subcommand = NULL;
   svn_cl__cmd_baton_t command_baton;
   svn_auth_baton_t *ab;
   svn_config_t *cfg_config;
@@ -722,7 +728,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is svn_cl__help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand2(svn_cl__cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand3(svn_cl__cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -733,8 +739,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", svn_cl__help, {0}, "",
+              static const svn_opt_subcommand_desc3_t pseudo_cmd =
+                { "--version", svn_cl__help, {0}, {""},
                   {opt_version,    /* must accept its own option */
                    'q',            /* brief output */
                    'v',            /* verbose output */
@@ -759,7 +765,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
                                           pool));
-          subcommand = svn_opt_get_canonical_subcommand2(svn_cl__cmd_table,
+          subcommand = svn_opt_get_canonical_subcommand3(svn_cl__cmd_table,
                                                          first_arg);
           if (subcommand == NULL)
             {
@@ -786,12 +792,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id,
+      if (! svn_opt_subcommand_takes_option4(subcommand, opt_id,
                                              svn_cl__global_options))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, svn_cl__options,
+            svn_opt_get_option_from_code3(opt_id, svn_cl__options,
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')

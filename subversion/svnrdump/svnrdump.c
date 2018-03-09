@@ -81,23 +81,26 @@ enum svn_svnrdump__longopt_t
                                    opt_non_interactive, \
                                    opt_force_interactive
 
-static const svn_opt_subcommand_desc2_t svnrdump__cmd_table[] =
+static const svn_opt_subcommand_desc3_t svnrdump__cmd_table[] =
 {
-  { "dump", dump_cmd, { 0 },
-    N_("usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
+  { "dump", dump_cmd, { 0 }, {N_(
+       "usage: svnrdump dump URL [-r LOWER[:UPPER]]\n\n"
        "Dump revisions LOWER to UPPER of repository at remote URL to stdout\n"
        "in a 'dumpfile' portable format.  If only LOWER is given, dump that\n"
-       "one revision.\n"),
+       "one revision.\n"
+    )},
     { 'r', 'q', opt_incremental, SVN_SVNRDUMP__BASE_OPTIONS } },
-  { "load", load_cmd, { 0 },
-    N_("usage: svnrdump load URL\n\n"
-       "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"),
+  { "load", load_cmd, { 0 }, {N_(
+       "usage: svnrdump load URL\n\n"
+       "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"
+    )},
     { 'q', opt_skip_revprop, SVN_SVNRDUMP__BASE_OPTIONS } },
-  { "help", 0, { "?", "h" },
-    N_("usage: svnrdump help [SUBCOMMAND...]\n\n"
-       "Describe the usage of this program or its subcommands.\n"),
+  { "help", 0, { "?", "h" }, {N_(
+       "usage: svnrdump help [SUBCOMMAND...]\n\n"
+       "Describe the usage of this program or its subcommands.\n"
+    )},
     { 0 } },
-  { NULL, NULL, { 0 }, NULL, { 0 } }
+  { NULL, NULL, { 0 }, {NULL}, { 0 } }
 };
 
 static const apr_getopt_option_t svnrdump__options[] =
@@ -671,7 +674,7 @@ help_cmd(apr_getopt_t *os,
       "\n"
       "Available subcommands:\n");
 
-  return svn_opt_print_help4(os, "svnrdump", FALSE, FALSE, FALSE, NULL,
+  return svn_opt_print_help5(os, "svnrdump", FALSE, FALSE, FALSE, NULL,
                              header, svnrdump__cmd_table, svnrdump__options,
                              NULL, NULL, pool);
 }
@@ -777,7 +780,7 @@ static svn_error_t *
 sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   svn_error_t *err = SVN_NO_ERROR;
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
+  const svn_opt_subcommand_desc3_t *subcommand = NULL;
   opt_baton_t *opt_baton;
   svn_revnum_t latest_revision = SVN_INVALID_REVNUM;
   const char *config_dir = NULL;
@@ -937,7 +940,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   if (opt_baton->help)
     {
-      subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
+      subcommand = svn_opt_get_canonical_subcommand3(svnrdump__cmd_table,
                                                      "help");
     }
   if (subcommand == NULL)
@@ -947,8 +950,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (opt_baton->version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", help_cmd, {0}, "",
+              static const svn_opt_subcommand_desc3_t pseudo_cmd =
+                { "--version", help_cmd, {0}, {""},
                   {opt_version,  /* must accept its own option */
                    'q',  /* --quiet */
                   } };
@@ -968,7 +971,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
                                           pool));
-          subcommand = svn_opt_get_canonical_subcommand2(svnrdump__cmd_table,
+          subcommand = svn_opt_get_canonical_subcommand3(svnrdump__cmd_table,
                                                          first_arg);
 
           if (subcommand == NULL)
@@ -996,11 +999,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
+      if (! svn_opt_subcommand_takes_option4(subcommand, opt_id, NULL))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, svnrdump__options,
+            svn_opt_get_option_from_code3(opt_id, svnrdump__options,
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')

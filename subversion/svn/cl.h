@@ -320,7 +320,7 @@ svn_opt_subcommand_t
 
 
 /* See definition in svn.c for documentation. */
-extern const svn_opt_subcommand_desc2_t svn_cl__cmd_table[];
+extern const svn_opt_subcommand_desc3_t svn_cl__cmd_table[];
 
 /* See definition in svn.c for documentation. */
 extern const int svn_cl__global_options[];
