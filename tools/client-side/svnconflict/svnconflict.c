@@ -160,7 +160,7 @@ static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
   { "list", svnconflict_list, {"ls"}, {N_(
      "List conflicts at a conflicted path.\n"
      "usage: list PATH\n"
-     "\n"
+     "\n"), N_(
      "  List conflicts at PATH, one per line. Possible conflicts are:\n"
      "  \n"
      "  text-conflict\n"
@@ -183,7 +183,7 @@ static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
   { "options-text", svnconflict_options_text, {0}, {N_(
      "List options for resolving a text conflict at path.\n"
      "usage: options-text PATH\n"
-     "\n"
+     "\n"), N_(
      "  List text conflict resolution options at PATH, one per line.\n"
      "  Each line contains a numeric option ID, a colon, and a description.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
@@ -193,7 +193,7 @@ static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
   { "options-prop", svnconflict_options_prop, {0}, {N_(
      "List options for resolving a property conflict at path.\n"
      "usage: options-prop PATH\n"
-     "\n"
+     "\n"), N_(
      "  List property conflict resolution options at PATH, one per line.\n"
      "  Each line contains a numeric option ID, a colon, and a description.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
@@ -203,7 +203,7 @@ static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
   { "options-tree", svnconflict_options_tree, {0}, {N_(
      "List options for resolving a tree conflict at path.\n"
      "usage: options-tree PATH\n"
-     "\n"
+     "\n"), N_(
      "  List tree conflict resolution options at PATH, one per line.\n"
      "  Each line contains a numeric option ID, a colon, and a description.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
@@ -213,7 +213,7 @@ static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
   { "resolve-text", svnconflict_resolve_text, {0}, {N_(
      "Resolve the text conflict at path.\n"
      "usage: resolve-text OPTION_ID PATH\n"
-     "\n"
+     "\n"), N_(
      "  Resolve the text conflict at PATH with a given resolution option.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
     )},
@@ -222,7 +222,7 @@ static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
   { "resolve-prop", svnconflict_resolve_prop, {0}, {N_(
      "Resolve the property conflict at path.\n"
      "usage: resolve-prop PROPNAME OPTION_ID PATH\n"
-     "\n"
+     "\n"), N_(
      "  Resolve conflicted property PROPNAME at PATH with a given resolution option.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
     )},
@@ -231,7 +231,7 @@ static const svn_opt_subcommand_desc3_t svnconflict_cmd_table[] =
   { "resolve-tree", svnconflict_resolve_tree, {0}, {N_(
      "Resolve the tree conflict at path.\n"
      "usage: resolve-tree OPTION_ID PATH\n"
-     "\n"
+     "\n"), N_(
      "  Resolve the tree conflict at PATH with a given resolution option.\n"
      "  If PATH is not in conflict, the exit code will be 1, and 0 otherwise.\n"
     )},

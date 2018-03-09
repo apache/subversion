@@ -216,35 +216,35 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 {
   {"author", subcommand_author, {0}, {N_(
       "usage: svnlook author REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the author.\n"
    )},
    {'r', 't'} },
 
   {"cat", subcommand_cat, {0}, {N_(
       "usage: svnlook cat REPOS_PATH FILE_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the contents of a file.  Leading '/' on FILE_PATH is optional.\n"
    )},
    {'r', 't'} },
 
   {"changed", subcommand_changed, {0}, {N_(
       "usage: svnlook changed REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the paths that were changed.\n"
    )},
    {'r', 't', svnlook__copy_info} },
 
   {"date", subcommand_date, {0}, {N_(
       "usage: svnlook date REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the datestamp.\n"
    )},
    {'r', 't'} },
 
   {"diff", subcommand_diff, {0}, {N_(
       "usage: svnlook diff REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print GNU-style diffs of changed files and properties.\n"
    )},
    {'r', 't', svnlook__no_diff_deleted, svnlook__no_diff_added,
@@ -253,7 +253,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 
   {"dirs-changed", subcommand_dirschanged, {0}, {N_(
       "usage: svnlook dirs-changed REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the directories that were themselves changed (property edits)\n"
       "or whose file children were changed.\n"
    )},
@@ -261,7 +261,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 
   {"filesize", subcommand_filesize, {0}, {N_(
       "usage: svnlook filesize REPOS_PATH PATH_IN_REPOS\n"
-      "\n"
+      "\n"), N_(
       "Print the size (in bytes) of the file located at PATH_IN_REPOS as\n"
       "it is represented in the repository.\n"
    )},
@@ -269,14 +269,14 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 
   {"help", subcommand_help, {"?", "h"}, {N_(
       "usage: svnlook help [SUBCOMMAND...]\n"
-      "\n"
+      "\n"), N_(
       "Describe the usage of this program or its subcommands.\n"
    )},
    {0} },
 
   {"history", subcommand_history, {0}, {N_(
       "usage: svnlook history REPOS_PATH [PATH_IN_REPOS]\n"
-      "\n"
+      "\n"), N_(
       "Print information about the history of a path in the repository (or\n"
       "the root directory if no path is supplied).\n"
    )},
@@ -284,21 +284,21 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 
   {"info", subcommand_info, {0}, {N_(
       "usage: svnlook info REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the author, datestamp, log message size, and log message.\n"
    )},
    {'r', 't'} },
 
   {"lock", subcommand_lock, {0}, {N_(
       "usage: svnlook lock REPOS_PATH PATH_IN_REPOS\n"
-      "\n"
+      "\n"), N_(
       "If a lock exists on a path in the repository, describe it.\n"
    )},
    {0} },
 
   {"log", subcommand_log, {0}, {N_(
       "usage: svnlook log REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the log message.\n"
    )},
    {'r', 't'} },
@@ -308,7 +308,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
       "                    "
       /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook propget --revprop REPOS_PATH PROPNAME\n"
-      "\n"
+      "\n"), N_(
       "Print the raw value of a property on a path in the repository.\n"
       "With --revprop, print the raw value of a revision property.\n"
    )},
@@ -319,7 +319,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
       "                      "
       /* The line above is actually needed, so do NOT delete it! */
       "       2. svnlook proplist --revprop REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "List the properties of a path in the repository, or\n"
       "with the --revprop option, revision properties.\n"
       "With -v, show the property values too.\n"
@@ -329,7 +329,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 
   {"tree", subcommand_tree, {0}, {N_(
       "usage: svnlook tree REPOS_PATH [PATH_IN_REPOS]\n"
-      "\n"
+      "\n"), N_(
       "Print the tree, starting at PATH_IN_REPOS (if supplied, at the root\n"
       "of the tree otherwise), optionally showing node revision ids.\n"
    )},
@@ -337,14 +337,14 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 
   {"uuid", subcommand_uuid, {0}, {N_(
       "usage: svnlook uuid REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the repository's UUID.\n"
    )},
    {0} },
 
   {"youngest", subcommand_youngest, {0}, {N_(
       "usage: svnlook youngest REPOS_PATH\n"
-      "\n"
+      "\n"), N_(
       "Print the youngest revision number.\n"
    )},
    {svnlook__no_newline} },

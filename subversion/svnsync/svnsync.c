@@ -93,13 +93,13 @@ static const svn_opt_subcommand_desc3_t svnsync_cmd_table[] =
   {
     { "initialize", initialize_cmd, { "init" }, {N_(
          "usage: svnsync initialize DEST_URL SOURCE_URL\n"
-         "\n"
+         "\n"), N_(
          "Initialize a destination repository for synchronization from\n"
          "another repository.\n"
-         "\n"
+         "\n"), N_(
          "If the source URL is not the root of a repository, only the\n"
          "specified part of the repository will be synchronized.\n"
-         "\n"
+         "\n"), N_(
          "The destination URL must point to the root of a repository which\n"
          "has been configured to allow revision property changes.  In\n"
          "the general case, the destination repository must contain no\n"
@@ -109,7 +109,7 @@ static const svn_opt_subcommand_desc3_t svnsync_cmd_table[] =
          "their counterparts in the source repository.  (This is useful\n"
          "when initializing a copy of a repository as a mirror of that same\n"
          "repository, for example.)\n"
-         "\n"
+         "\n"), N_(
          "You should not commit to, or make revision property changes in,\n"
          "the destination repository by any method other than 'svnsync'.\n"
          "In other words, the destination repository should be a read-only\n"
@@ -120,10 +120,10 @@ static const svn_opt_subcommand_desc3_t svnsync_cmd_table[] =
         svnsync_opt_steal_lock, 'M' } },
     { "synchronize", synchronize_cmd, { "sync" }, {N_(
          "usage: svnsync synchronize DEST_URL [SOURCE_URL]\n"
-         "\n"
+         "\n"), N_(
          "Transfer all pending revisions to the destination from the source\n"
          "with which it was initialized.\n"
-         "\n"
+         "\n"), N_(
          "If SOURCE_URL is provided, use that as the source repository URL,\n"
          "ignoring what is recorded in the destination repository as the\n"
          "source URL.  Specifying SOURCE_URL is recommended in particular\n"
@@ -134,26 +134,26 @@ static const svn_opt_subcommand_desc3_t svnsync_cmd_table[] =
         svnsync_opt_disable_locking, svnsync_opt_steal_lock, 'M' } },
     { "copy-revprops", copy_revprops_cmd, { 0 }, {N_(
          "usage:\n"
-         "\n"
+         "\n"), N_(
          "    1. svnsync copy-revprops DEST_URL [SOURCE_URL]\n"
          "    2. svnsync copy-revprops DEST_URL REV[:REV2]\n"
-         "\n"
+         "\n"), N_(
          "Copy the revision properties in a given range of revisions to the\n"
          "destination from the source with which it was initialized.  If the\n"
          "revision range is not specified, it defaults to all revisions in\n"
          "the DEST_URL repository.  Note also that the 'HEAD' revision is the\n"
          "latest in DEST_URL, not necessarily the latest in SOURCE_URL.\n"
-         "\n"
+         "\n"), N_(
          "If SOURCE_URL is provided, use that as the source repository URL,\n"
          "ignoring what is recorded in the destination repository as the\n"
          "source URL.  Specifying SOURCE_URL is recommended in particular\n"
          "if untrusted users/administrators may have write access to the\n"
          "DEST_URL repository.\n"
-         "\n"
+         "\n"), N_(
          "Unless you need to trigger the destination repositoy's revprop\n"
          "change hooks for all revision properties, it is recommended to use\n"
          "the --skip-unchanged option for best performance.\n"
-         "\n"
+         "\n"), N_(
          "Form 2 is deprecated syntax, equivalent to specifying \"-rREV[:REV2]\".\n"
       )},
       { SVNSYNC_OPTS_DEFAULT, svnsync_opt_source_prop_encoding, 'q', 'r',
@@ -161,14 +161,14 @@ static const svn_opt_subcommand_desc3_t svnsync_cmd_table[] =
         svnsync_opt_skip_unchanged, 'M' } },
     { "info", info_cmd, { 0 }, {N_(
          "usage: svnsync info DEST_URL\n"
-         "\n"
+         "\n"), N_(
          "Print information about the synchronization destination repository\n"
          "located at DEST_URL.\n"
       )},
       { SVNSYNC_OPTS_DEFAULT } },
     { "help", help_cmd, { "?", "h" }, {N_(
          "usage: svnsync help [SUBCOMMAND...]\n"
-         "\n"
+         "\n"), N_(
          "Describe the usage of this program or its subcommands.\n"
       )},
       { 0 } },
