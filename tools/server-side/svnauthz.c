@@ -110,29 +110,34 @@ static svn_opt_subcommand_t
 /* Array of available subcommands.
  * The entire list must be terminated with an entry of nulls.
  */
-static const svn_opt_subcommand_desc2_t cmd_table[] =
+static const svn_opt_subcommand_desc3_t cmd_table[] =
 {
-  {"help", subcommand_help, {"?", "h"},
-   ("usage: svnauthz help [SUBCOMMAND...]\n\n"
-    "Describe the usage of this program or its subcommands.\n"),
+  {"help", subcommand_help, {"?", "h"}, {(
+    "usage: svnauthz help [SUBCOMMAND...]\n"
+    "\n"
+    "Describe the usage of this program or its subcommands.\n"
+    )},
    {0} },
-  {"validate", subcommand_validate, {0} /* no aliases */,
-   ("Checks the syntax of an authz file.\n"
+  {"validate", subcommand_validate, {0} /* no aliases */, {(
+    "Checks the syntax of an authz file.\n"
     "usage: 1. svnauthz validate TARGET\n"
-    "       2. svnauthz validate --transaction TXN REPOS_PATH FILE_PATH\n\n"
+    "       2. svnauthz validate --transaction TXN REPOS_PATH FILE_PATH\n"
+    "\n"
     "  1. Loads and validates the syntax of the authz file at TARGET.\n"
     "     TARGET can be a path to a file or an absolute file:// URL to an authz\n"
-    "     file in a repository, but cannot be a repository relative URL (^/).\n\n"
+    "     file in a repository, but cannot be a repository relative URL (^/).\n"
+    "\n"
     "  2. Loads and validates the syntax of the authz file at FILE_PATH in the\n"
-    "     transaction TXN in the repository at REPOS_PATH.\n\n"
+    "     transaction TXN in the repository at REPOS_PATH.\n"
+    "\n"
     "Returns:\n"
     "    0   when syntax is OK.\n"
     "    1   when syntax is invalid.\n"
     "    2   operational error\n"
-    ),
+    )},
    {'t'} },
-  {"accessof", subcommand_accessof, {0} /* no aliases */,
-   ("Print or test the permissions set by an authz file.\n"
+  {"accessof", subcommand_accessof, {0} /* no aliases */, {(
+    "Print or test the permissions set by an authz file.\n"
     "usage: 1. svnauthz accessof TARGET\n"
     "       2. svnauthz accessof -t TXN REPOS_PATH FILE_PATH\n"
     "\n"
@@ -159,10 +164,10 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
     "    1   when syntax is invalid.\n"
     "    2   operational error\n"
     "    3   when '--is' argument doesn't match\n"
-    ),
+    )},
    {'t', svnauthz__username, svnauthz__path, svnauthz__repos, svnauthz__is,
     svnauthz__groups_file, 'R'} },
-  { NULL, NULL, {0}, NULL, {0} }
+  { NULL, NULL, {0}, {NULL}, {0} }
 };
 
 static svn_error_t *
@@ -171,11 +176,14 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   struct svnauthz_opt_state *opt_state = baton;
   const char *header =
     ("general usage: svnauthz SUBCOMMAND TARGET [ARGS & OPTIONS ...]\n"
-     "               " SVNAUTHZ_COMPAT_NAME " TARGET\n\n"
+     "               " SVNAUTHZ_COMPAT_NAME " TARGET\n"
+    "\n"
      "If the command name starts with '" SVNAUTHZ_COMPAT_NAME "', runs in\n"
-     "pre-1.8 compatibility mode: run the 'validate' subcommand on TARGET.\n\n"
+     "pre-1.8 compatibility mode: run the 'validate' subcommand on TARGET.\n"
+    "\n"
      "Type 'svnauthz help <subcommand>' for help on a specific subcommand.\n"
-     "Type 'svnauthz --version' to see the program version.\n\n"
+     "Type 'svnauthz --version' to see the program version.\n"
+    "\n"
      "Available subcommands:\n");
 
   const char *fs_desc_start
@@ -186,7 +194,7 @@ subcommand_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(fs_desc_start, pool);
   SVN_ERR(svn_fs_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(os, "svnauthz",
+  SVN_ERR(svn_opt_print_help5(os, "svnauthz",
                               opt_state ? opt_state->version : FALSE,
                               FALSE, /* quiet */
                               FALSE, /* verbose */
@@ -459,7 +467,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 {
   svn_error_t *err;
 
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
+  const svn_opt_subcommand_desc3_t *subcommand = NULL;
   struct svnauthz_opt_state opt_state = { 0 };
   apr_getopt_t *os;
   apr_array_header_t *received_opts;
@@ -545,9 +553,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       /* Pre 1.8 compatibility mode. */
       if (argc == 1) /* No path argument */
-        subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "help");
+        subcommand = svn_opt_get_canonical_subcommand3(cmd_table, "help");
       else
-        subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "validate");
+        subcommand = svn_opt_get_canonical_subcommand3(cmd_table, "validate");
     }
 
   /* If the user asked for help, then the rest of the arguments are
@@ -555,7 +563,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is subcommand_help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand2(cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand3(cmd_table, "help");
 
   if (subcommand == NULL)
     {
@@ -564,8 +572,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", subcommand_help, {0}, "",
+              static const svn_opt_subcommand_desc3_t pseudo_cmd =
+                { "--version", subcommand_help, {0}, {""},
                   {svnauthz__version /* must accept its own option */ } };
 
               subcommand = &pseudo_cmd;
@@ -585,7 +593,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
                                           pool));
-          subcommand = svn_opt_get_canonical_subcommand2(cmd_table, first_arg);
+          subcommand = svn_opt_get_canonical_subcommand3(cmd_table, first_arg);
           if (subcommand == NULL)
             {
               os->ind++;
@@ -658,11 +666,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id, NULL))
+      if (! svn_opt_subcommand_takes_option4(subcommand, opt_id, NULL))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, options_table, subcommand,
+            svn_opt_get_option_from_code3(opt_id, options_table, subcommand,
                                           pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')

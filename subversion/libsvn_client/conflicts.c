@@ -9674,11 +9674,13 @@ configure_option_incoming_delete_ignore(svn_client_conflict_t *conflict,
       incoming_details = conflict->tree_conflict_incoming_details;
       is_incoming_move = (incoming_details != NULL &&
                           incoming_details->moves != NULL);
-      if (local_change == svn_wc_conflict_reason_edited && is_incoming_move)
+      if (local_change == svn_wc_conflict_reason_moved_away ||
+          local_change == svn_wc_conflict_reason_edited)
         {
           /* An option which ignores the incoming deletion makes no sense
-           * if we know it is actually a move. */
-          return SVN_NO_ERROR;
+           * if we know there was a local move and/or an incoming move. */
+          if (is_incoming_move)
+            return SVN_NO_ERROR;
         }
       else if (local_change == svn_wc_conflict_reason_deleted)
         {
@@ -9739,14 +9741,17 @@ configure_option_incoming_delete_accept(svn_client_conflict_t *conflict,
   if (incoming_change == svn_wc_conflict_action_delete)
     {
       struct conflict_tree_incoming_delete_details *incoming_details;
+      svn_boolean_t is_incoming_move;
 
       incoming_details = conflict->tree_conflict_incoming_details;
-
-      if (local_change == svn_wc_conflict_reason_edited &&
-          incoming_details != NULL && incoming_details->moves != NULL)
+      is_incoming_move = (incoming_details != NULL &&
+                          incoming_details->moves != NULL);
+      if (is_incoming_move &&
+          (local_change == svn_wc_conflict_reason_edited ||
+          local_change == svn_wc_conflict_reason_moved_away))
         {
           /* An option which accepts the incoming deletion makes no sense
-           * if we know it is actually a move. */
+           * if we know there was a local move and/or an incoming move. */
           return SVN_NO_ERROR;
         }
       else
@@ -9894,6 +9899,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
 {
   svn_node_kind_t victim_node_kind;
   svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
   const char *incoming_old_repos_relpath;
   svn_revnum_t incoming_old_pegrev;
   svn_node_kind_t incoming_old_kind;
@@ -9902,6 +9908,7 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
   svn_node_kind_t incoming_new_kind;
 
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
             &incoming_old_repos_relpath, &incoming_old_pegrev,
@@ -9915,7 +9922,8 @@ configure_option_incoming_dir_merge(svn_client_conflict_t *conflict,
   if (victim_node_kind == svn_node_dir &&
       incoming_old_kind == svn_node_dir &&
       incoming_new_kind == svn_node_none &&
-      incoming_change == svn_wc_conflict_action_delete)
+      incoming_change == svn_wc_conflict_action_delete &&
+      local_change == svn_wc_conflict_reason_edited)
     {
       struct conflict_tree_incoming_delete_details *details;
       const char *description;

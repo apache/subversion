@@ -7002,7 +7002,7 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
                                      int version,
                                      apr_pool_t *scratch_pool);
 
-/** Open an existing shelf version.
+/** Open an existing @a shelf_version, or error if it doesn't exist.
  *
  * There is no need to "close" it after use.
  *
@@ -7017,7 +7017,7 @@ svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
-/** Apply version @a version of @a shelf to the WC.
+/** Apply @a shelf_version to the WC.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7028,7 +7028,7 @@ svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
                        svn_boolean_t dry_run,
                        apr_pool_t *scratch_pool);
 
-/** Reverse-apply the current version of @a shelf to the WC.
+/** Reverse-apply @a shelf_version to the WC.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7050,7 +7050,7 @@ svn_client_shelf_get_patch_abspath(const char **patch_abspath,
                                    svn_client_shelf_version_t *shelf_version,
                                    apr_pool_t *scratch_pool);
 
-/** Output version @a version of @a shelf as a patch to @a outstream.
+/** Output @a shelf_version as a patch to @a outstream.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7062,9 +7062,12 @@ svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
                               apr_pool_t *scratch_pool);
 
 /** Set @a *affected_paths to a hash with one entry for each path affected
- * by the @a shelf @a version. The hash key is the old path and value is
- * the new path, both relative to the WC root. The key and value are the
- * same except when a path is moved or copied.
+ * by the @a shelf_version.
+ *
+ * The hash key is the path of the affected file, relative to the WC root.
+ *
+ * (Future possibility: When moves and copies are supported, the hash key
+ * is the old path and value is the new path.)
  *
  * @since New in 1.10, changed in 1.X.
  * @warning EXPERIMENTAL.
@@ -7076,8 +7079,75 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/** Set the log message in @a shelf, using the log message callbacks in
- * the client context, and set other revprops to @a revprop_table.
+/** Set @a shelf's revprop @a prop_name to @a prop_val.
+ *
+ * This can be used to set or change the shelf's log message
+ * (property name "svn:log" or #SVN_PROP_REVISION_LOG).
+ *
+ * If @a prop_val is NULL, delete the property (if present).
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_set(svn_client_shelf_t *shelf,
+                             const char *prop_name,
+                             const svn_string_t *prop_val,
+                             apr_pool_t *scratch_pool);
+
+/** Set @a shelf's revprops to @a revprop_table.
+ *
+ * This deletes all previous revprops.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_set_all(svn_client_shelf_t *shelf,
+                                 apr_hash_t *revprop_table,
+                                 apr_pool_t *scratch_pool);
+
+/** Get @a shelf's revprop @a prop_name into @a *prop_val.
+ *
+ * If the property is not present, set @a *prop_val to NULL.
+ *
+ * This can be used to get the shelf's log message
+ * (property name "svn:log" or #SVN_PROP_REVISION_LOG).
+ *
+ * The lifetime of the result is limited to that of @a shelf and/or
+ * of @a result_pool.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_get(svn_string_t **prop_val,
+                             svn_client_shelf_t *shelf,
+                             const char *prop_name,
+                             apr_pool_t *result_pool);
+
+/** Get @a shelf's revprops into @a props.
+ *
+ * The lifetime of the result is limited to that of @a shelf and/or
+ * of @a result_pool.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_revprop_list(apr_hash_t **props,
+                              svn_client_shelf_t *shelf,
+                              apr_pool_t *result_pool);
+
+/** Set the log message in @a shelf to @a log_message.
+ *
+ * If @a log_message is null, delete the log message.
+ *
+ * Similar to svn_client_shelf_revprop_set(... SVN_PROP_REVISION_LOG ...).
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7085,13 +7155,16 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
 SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
-                                 apr_hash_t *revprop_table,
-                                 svn_boolean_t dry_run,
+                                 const char *log_message,
                                  apr_pool_t *scratch_pool);
 
 /** Get the log message in @a shelf into @a *log_message.
  *
  * Set @a *log_message to NULL if there is no log message.
+ *
+ * Similar to svn_client_shelf_revprop_get(... SVN_PROP_REVISION_LOG ...).
+ *
+ * The result is allocated in @a result_pool.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
@@ -7112,8 +7185,9 @@ typedef struct svn_client_shelf_info_t
   apr_time_t mtime;  /* mtime of the latest change */
 } svn_client_shelf_info_t;
 
-/** Set @a *shelved_patch_infos to a hash, keyed by shelf name, of pointers to
- * @c svn_client_shelf_info_t structures.
+/** Set @a *shelf_infos to a hash, keyed by shelf name, of pointers to
+ * @c svn_client_shelf_info_t structures, one for each shelf in the
+ * given WC.
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *

@@ -237,10 +237,10 @@ shelf_write_revprops(svn_client_shelf_t *shelf,
 }
 
 svn_error_t *
-svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
-                              const char *prop_name,
-                              const svn_string_t *prop_val,
-                              apr_pool_t *scratch_pool)
+svn_client_shelf_revprop_set(svn_client_shelf_t *shelf,
+                             const char *prop_name,
+                             const svn_string_t *prop_val,
+                             apr_pool_t *scratch_pool)
 {
   svn_hash_sets(shelf->revprops, apr_pstrdup(shelf->pool, prop_name),
                 svn_string_dup(prop_val, shelf->pool));
@@ -249,19 +249,32 @@ svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
 }
 
 svn_error_t *
-svn_client__shelf_revprop_get(svn_string_t **prop_val,
-                              svn_client_shelf_t *shelf,
-                              const char *prop_name,
-                              apr_pool_t *result_pool)
+svn_client_shelf_revprop_set_all(svn_client_shelf_t *shelf,
+                                 apr_hash_t *revprop_table,
+                                 apr_pool_t *scratch_pool)
+{
+  if (revprop_table)
+    shelf->revprops = svn_prop_hash_dup(revprop_table, shelf->pool);
+  else
+    shelf->revprops = apr_hash_make(shelf->pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_revprop_get(svn_string_t **prop_val,
+                             svn_client_shelf_t *shelf,
+                             const char *prop_name,
+                             apr_pool_t *result_pool)
 {
   *prop_val = svn_hash_gets(shelf->revprops, prop_name);
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client__shelf_revprop_list(apr_hash_t **props,
-                               svn_client_shelf_t *shelf,
-                               apr_pool_t *result_pool)
+svn_client_shelf_revprop_list(apr_hash_t **props,
+                              svn_client_shelf_t *shelf,
+                              apr_pool_t *result_pool)
 {
   *props = shelf->revprops;
   return SVN_NO_ERROR;
@@ -679,7 +692,7 @@ svn_client_shelf_get_log_message(char **log_message,
                                  svn_client_shelf_t *shelf,
                                  apr_pool_t *result_pool)
 {
-  svn_string_t *propval = svn_hash_gets(shelf->revprops, "svn:log");
+  svn_string_t *propval = svn_hash_gets(shelf->revprops, SVN_PROP_REVISION_LOG);
 
   if (propval)
     *log_message = apr_pstrdup(result_pool, propval->data);
@@ -690,39 +703,14 @@ svn_client_shelf_get_log_message(char **log_message,
 
 svn_error_t *
 svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
-                                 apr_hash_t *revprop_table,
-                                 svn_boolean_t dry_run,
+                                 const char *message,
                                  apr_pool_t *scratch_pool)
 {
-  svn_client_ctx_t *ctx = shelf->ctx;
-  const char *message = "";
+  svn_string_t *propval
+    = message ? svn_string_create(message, shelf->pool) : NULL;
 
-  /* Fetch the log message and any other revprops */
-  if (SVN_CLIENT__HAS_LOG_MSG_FUNC(ctx))
-    {
-      const char *tmp_file;
-      apr_array_header_t *commit_items
-        = apr_array_make(scratch_pool, 1, sizeof(void *));
-
-      SVN_ERR(svn_client__get_log_msg(&message, &tmp_file, commit_items,
-                                      ctx, scratch_pool));
-      if (! message)
-        return SVN_NO_ERROR;
-    }
-
-  if (revprop_table)
-    shelf->revprops = svn_prop_hash_dup(revprop_table, shelf->pool);
-  else
-    shelf->revprops = apr_hash_make(shelf->pool);
-
-  if (message && !dry_run)
-    {
-      svn_string_t *propval = svn_string_create(message, shelf->pool);
-
-      SVN_ERR(svn_client__shelf_revprop_set(shelf, "svn:log", propval,
-                                            scratch_pool));
-    }
-
+  SVN_ERR(svn_client_shelf_revprop_set(shelf, SVN_PROP_REVISION_LOG, propval,
+                                       scratch_pool));
   return SVN_NO_ERROR;
 }
 
