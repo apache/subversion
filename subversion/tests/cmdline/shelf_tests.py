@@ -74,7 +74,8 @@ def shelve_unshelve(sbox, modifier):
      shelve and unshelve; verify changes are fully reverted and restored.
   """
 
-  sbox.build()
+  if not sbox.is_built():
+    sbox.build()
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
@@ -116,10 +117,8 @@ def shelve_adds(sbox):
   "shelve adds"
 
   def modifier(sbox):
-    sbox.simple_append('A/new', 'A new file\n')
-    sbox.simple_add('A/new')
-    sbox.simple_append('A/new2', 'A new file\n')
-    sbox.simple_add('A/new2')
+    sbox.simple_add_text('A new file\n', 'A/new')
+    sbox.simple_add_text('A new file\n', 'A/new2')
     sbox.simple_propset('p', 'v', 'A/new2')
 
   shelve_unshelve(sbox, modifier)
@@ -132,6 +131,36 @@ def shelve_deletes(sbox):
 
   def modifier(sbox):
     sbox.simple_rm('A/mu')
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
+@XFail()
+def shelve_empty_adds(sbox):
+  "shelve empty adds"
+  sbox.build(empty=True)
+
+  def modifier(sbox):
+    sbox.simple_add_text('', 'empty')
+    sbox.simple_add_text('', 'empty-with-prop')
+    sbox.simple_propset('p', 'v', 'empty-with-prop')
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
+@XFail()
+def shelve_empty_deletes(sbox):
+  "shelve empty deletes"
+  sbox.build(empty=True)
+  sbox.simple_add_text('', 'empty')
+  sbox.simple_add_text('', 'empty-with-prop')
+  sbox.simple_propset('p', 'v', 'empty-with-prop')
+  sbox.simple_commit()
+
+  def modifier(sbox):
+    sbox.simple_rm('empty', 'empty-with-prop')
 
   shelve_unshelve(sbox, modifier)
 
@@ -236,6 +265,8 @@ test_list = [ None,
               shelve_prop_changes,
               shelve_adds,
               shelve_deletes,
+              shelve_empty_adds,
+              shelve_empty_deletes,
               shelve_from_inner_path,
               checkpoint_basic,
               shelve_mergeinfo,
