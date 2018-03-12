@@ -620,18 +620,33 @@ svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
 
 svn_error_t *
 svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
-                                     int version,
+                                     int version_number,
                                      apr_pool_t *scratch_pool)
 {
+  svn_client_shelf_version_t *shelf_version;
+
+  SVN_ERR(svn_client_shelf_version_open(&shelf_version, shelf, version_number,
+                                        scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_shelf_delete_newer_versions(shelf, shelf_version,
+                                                 scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
+                                       svn_client_shelf_version_t *shelf_version,
+                                       apr_pool_t *scratch_pool)
+{
+  int previous_version = shelf_version ? shelf_version->version_number : 0;
   int i;
 
   /* Delete any newer checkpoints */
-  for (i = shelf->max_version; i > version; i--)
+  for (i = shelf->max_version; i > previous_version; i--)
     {
       SVN_ERR(shelf_delete_patch_file(shelf, i, scratch_pool));
     }
 
-  shelf->max_version = version;
+  shelf->max_version = previous_version;
   SVN_ERR(shelf_write_current(shelf, scratch_pool));
   return SVN_NO_ERROR;
 }
@@ -661,11 +676,12 @@ svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
 }
 
 svn_error_t *
-svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
-                                  const apr_array_header_t *paths,
-                                  svn_depth_t depth,
-                                  const apr_array_header_t *changelists,
-                                  apr_pool_t *scratch_pool)
+svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
+                                   svn_client_shelf_t *shelf,
+                                   const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   apr_pool_t *scratch_pool)
 {
   int next_version = shelf->max_version + 1;
   const char *patch_abspath;
@@ -681,9 +697,31 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
   SVN_ERR(svn_io_stat(&file_info, patch_abspath, APR_FINFO_MTIME, scratch_pool));
   if (file_info.size > 0)
     {
-      SVN_ERR(svn_client_shelf_set_current_version(shelf, next_version,
-                                                   scratch_pool));
+      shelf->max_version = next_version;
+      SVN_ERR(shelf_write_current(shelf, scratch_pool));
+
+      if (new_version_p)
+        SVN_ERR(svn_client_shelf_version_open(new_version_p, shelf, next_version,
+                                              scratch_pool, scratch_pool));
     }
+  else
+    {
+      if (new_version_p)
+        *new_version_p = NULL;
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
+                                  const apr_array_header_t *paths,
+                                  svn_depth_t depth,
+                                  const apr_array_header_t *changelists,
+                                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_client_shelf_save_new_version2(NULL, shelf,
+                                             paths, depth, changelists,
+                                             scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -759,7 +797,7 @@ svn_client_shelf_list(apr_hash_t **shelf_infos,
 svn_error_t *
 svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
                               svn_client_shelf_t *shelf,
-                              int version,
+                              int version_number,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
@@ -769,7 +807,7 @@ svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
 
   shelf_version->shelf = shelf;
   SVN_ERR(get_existing_patch_abspath(&shelf_version->patch_abspath,
-                                     shelf, version,
+                                     shelf, version_number,
                                      result_pool, scratch_pool));
   SVN_ERR(svn_io_stat_dirent2(&dirent,
                               shelf_version->patch_abspath,
@@ -777,6 +815,48 @@ svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
                               TRUE /*ignore_enoent*/,
                               result_pool, scratch_pool));
   shelf_version->mtime = dirent->mtime;
+  shelf_version->version_number = version_number;
   *shelf_version_p = shelf_version;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_get_newest_version(svn_client_shelf_version_t **shelf_version_p,
+                                    svn_client_shelf_t *shelf,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool)
+{
+  if (shelf->max_version == 0)
+    {
+      *shelf_version_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(svn_client_shelf_version_open(shelf_version_p,
+                                        shelf, shelf->max_version,
+                                        result_pool, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_get_all_versions(apr_array_header_t **versions_p,
+                                  svn_client_shelf_t *shelf,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  int i;
+
+  *versions_p = apr_array_make(result_pool, shelf->max_version - 1,
+                               sizeof(svn_client_shelf_version_t *));
+
+  for (i = 1; i <= shelf->max_version; i++)
+    {
+      svn_client_shelf_version_t *shelf_version;
+
+      SVN_ERR(svn_client_shelf_version_open(&shelf_version,
+                                            shelf, i,
+                                            result_pool, scratch_pool));
+      APR_ARRAY_PUSH(*versions_p, svn_client_shelf_version_t *) = shelf_version;
+    }
   return SVN_NO_ERROR;
 }
