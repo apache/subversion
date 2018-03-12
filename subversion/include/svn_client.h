@@ -6828,7 +6828,7 @@ typedef struct svn_client_shelf_t
 {
     /* Public fields (read-only for public use) */
     const char *name;
-    int max_version;
+    int max_version;  /** @deprecated */
 
     /* Private fields */
     const char *wc_root_abspath;
@@ -6849,8 +6849,9 @@ typedef struct svn_client_shelf_version_t
   svn_client_shelf_t *shelf;
   apr_time_t mtime;  /** time-stamp of this version */
 
-  /* TODO: these should be Private fields */
+  /* Private fields */
   const char *patch_abspath;  /** abspath of the patch file */
+  int version_number;  /** version number starting from 1 */
 } svn_client_shelf_version_t;
 
 /** Open an existing shelf or create a new shelf.
@@ -6920,16 +6921,33 @@ svn_client_shelf_delete(const char *name,
 /** Save the local modifications found by @a paths, @a depth,
  * @a changelists as a new version of @a shelf.
  *
+ * Return the new shelf-version in @a *new_version_p.
+ *
  * @a paths are relative to the CWD, or absolute.
  *
  * If there are no local modifications in the specified locations, do not
- * create a new version of @a shelf, and return SVN_NO_ERROR. In this case
- * @a shelf->max_version after the call is the same as before the call.
+ * create a new version of @a shelf; set @a *new_version_p to null and
+ * return SVN_NO_ERROR. In this case @a shelf->max_version after the call
+ * is the same as before the call.
+ *
+ * @a *new_version_p may be null if that output is not wanted.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
+                                   svn_client_shelf_t *shelf,
+                                   const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   apr_pool_t *scratch_pool);
+
+/** @deprecated Use svn_client_shelf_save_new_version2() instead.
+ * @warning EXPERIMENTAL.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
                                   const apr_array_header_t *paths,
@@ -6937,20 +6955,36 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
                                   const apr_array_header_t *changelists,
                                   apr_pool_t *scratch_pool);
 
-/** Set the newest version of @a shelf to @a version.
+/** Delete all newer versions of @a shelf newer than @a shelf_version.
  *
- * Delete all newer versions.
+ * If @a shelf_version is null, delete all versions of @a shelf.
+ *
+ * Leave the shelf's log message and other revprops unchanged.
+ *
+ * Any #svn_client_shelf_version_t object that refers to a deleted version
+ * will become invalid: attempting to use it will give undefined behaviour.
+ * The given @a shelf_version will remain valid.
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
+svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
+                                       svn_client_shelf_version_t *shelf_version,
+                                       apr_pool_t *scratch_pool);
+
+/** @deprecated Use svn_client_shelf_delete_newer_versions() instead.
+ * @warning EXPERIMENTAL.
+ */
+SVN_DEPRECATED
+svn_error_t *
 svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
-                                     int version,
+                                     int version_number,
                                      apr_pool_t *scratch_pool);
 
-/** Open an existing @a shelf_version, or error if it doesn't exist.
+/** Return in @a shelf_version an existing version of @a shelf, given its
+ * @a version_number. Error if that version doesn't exist.
  *
  * There is no need to "close" it after use.
  *
@@ -6961,9 +6995,38 @@ SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
                               svn_client_shelf_t *shelf,
-                              int version,
+                              int version_number,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
+
+/** Return in @a shelf_version the newest version of @a shelf.
+ *
+ * Set @a shelf_version to null if no versions exist.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_get_newest_version(svn_client_shelf_version_t **shelf_version_p,
+                                    svn_client_shelf_t *shelf,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
+/** Return in @a versions_p an array of (#svn_client_shelf_version_t *)
+ * containing all versions of @a shelf.
+ *
+ * The versions will be in chronological order, oldest to newest.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_get_all_versions(apr_array_header_t **versions_p,
+                                  svn_client_shelf_t *shelf,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /** Apply @a shelf_version to the WC.
  *
