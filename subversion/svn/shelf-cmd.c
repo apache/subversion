@@ -131,18 +131,28 @@ targets_relative_to_a_wc(const char **wc_root_abspath_p,
 /* Return a human-friendly description of DURATION.
  */
 static char *
-friendly_duration_str(apr_time_t duration,
-                      apr_pool_t *result_pool)
+friendly_age_str(apr_time_t mtime,
+                 apr_time_t time_now,
+                 apr_pool_t *result_pool)
 {
-  int minutes = (int)(duration / 1000000 / 60);
+  int minutes = (int)((time_now - mtime) / 1000000 / 60);
   char *s;
 
   if (minutes >= 60 * 24)
-    s = apr_psprintf(result_pool, _("%d days"), minutes / 60 / 24);
+    s = apr_psprintf(result_pool,
+                     Q_("%d day ago", "%d days ago",
+                        minutes / 60 / 24),
+                     minutes / 60 / 24);
   else if (minutes >= 60)
-    s = apr_psprintf(result_pool, _("%d hours"), minutes / 60);
+    s = apr_psprintf(result_pool,
+                     Q_("%d hour ago", "%d hours ago",
+                        minutes / 60),
+                     minutes / 60);
   else
-    s = apr_psprintf(result_pool, _("%d minutes"), minutes);
+    s = apr_psprintf(result_pool,
+                     Q_("%d minute ago", "%d minutes ago",
+                        minutes),
+                     minutes);
   return s;
 }
 
@@ -246,32 +256,30 @@ stats(svn_client_shelf_t *shelf,
   char *version_str;
   apr_hash_t *paths;
   const char *paths_str = "";
-  char *info_str;
 
   if (! shelf_version)
     {
       return SVN_NO_ERROR;
     }
 
-  age_str = friendly_duration_str(time_now - shelf_version->mtime, scratch_pool);
+  age_str = friendly_age_str(shelf_version->mtime, time_now, scratch_pool);
   if (version == shelf->max_version)
     version_str = apr_psprintf(scratch_pool,
                                _("version %d"), version);
   else
     version_str = apr_psprintf(scratch_pool,
-                               _("version %d of %d"),
+                               Q_("version %d of %d", "version %d of %d",
+                                  shelf->max_version),
                                version, shelf->max_version);
   SVN_ERR(svn_client_shelf_paths_changed(&paths, shelf_version,
                                          scratch_pool, scratch_pool));
-  if (paths)
-    paths_str = apr_psprintf(scratch_pool,
-                             _(", %d paths changed"), apr_hash_count(paths));
-  info_str = apr_psprintf(scratch_pool,
-                          _("%s, %s ago%s\n"),
-                          version_str, age_str, paths_str);
+  paths_str = apr_psprintf(scratch_pool,
+                           Q_("%d path changed", "%d paths changed",
+                              apr_hash_count(paths)),
+                           apr_hash_count(paths));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
-                             "%-30s %s",
-                             shelf->name, info_str));
+                             "%-30s %s, %s, %s",
+                             shelf->name, version_str, age_str, paths_str));
 
   if (with_logmsg)
     {
@@ -772,8 +780,10 @@ shelf_restore(const char *name,
     {
       if (version < old_version)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                   _("restored '%s' version %d and deleted %d newer versions\n"),
-                                   name, version, old_version - version));
+                  Q_("restored '%s' version %d and deleted %d newer version\n",
+                     "restored '%s' version %d and deleted %d newer versions\n",
+                     old_version - version),
+                  name, version, old_version - version));
       else
         SVN_ERR(svn_cmdline_printf(scratch_pool,
                                    _("restored '%s' version %d (the newest version)\n"),
