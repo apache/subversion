@@ -7050,17 +7050,6 @@ svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool);
 
-/** Set @a *patch_abspath to the patch file path of @a shelf_version.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_get_patch_abspath(const char **patch_abspath,
-                                   svn_client_shelf_version_t *shelf_version,
-                                   apr_pool_t *scratch_pool);
-
 /** Output @a shelf_version as a patch to @a outstream.
  *
  * @since New in 1.X.

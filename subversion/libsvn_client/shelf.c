@@ -652,15 +652,6 @@ svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
 }
 
 svn_error_t *
-svn_client_shelf_get_patch_abspath(const char **patch_abspath,
-                                   svn_client_shelf_version_t *shelf_version,
-                                   apr_pool_t *scratch_pool)
-{
-  *patch_abspath = shelf_version->patch_abspath;
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
                               svn_stream_t *outstream,
                               apr_pool_t *scratch_pool)
