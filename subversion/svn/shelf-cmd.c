@@ -156,62 +156,6 @@ friendly_age_str(apr_time_t mtime,
   return s;
 }
 
-#ifndef WIN32
-/* Run CMD with ARGS.
- * Send its stdout to the parent's stdout. Disconnect its stdin and stderr.
- */
-static svn_error_t *
-run_cmd(const char *cmd,
-        const char *const *args,
-        apr_pool_t *scratch_pool)
-{
-  apr_status_t apr_err;
-  apr_file_t *outfile;
-  svn_error_t *err;
-  int exitcode;
-
-  apr_err = apr_file_open_stdout(&outfile, scratch_pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, "Can't open stdout");
-
-  err = svn_io_run_cmd(NULL /*path*/, cmd, args,
-                       &exitcode, NULL /*exitwhy*/,
-                       TRUE /*inherit*/,
-                       NULL /*infile*/, outfile, NULL /*errfile*/,
-                       scratch_pool);
-  if (err || exitcode)
-    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, err,
-                             _("Could not run external command '%s'"), cmd);
-  return SVN_NO_ERROR;
-}
-#endif
-
-/* Print some details of the changes in the patch described by INFO.
- */
-static svn_error_t *
-show_diffstat(svn_client_shelf_version_t *shelf_version,
-              apr_pool_t *scratch_pool)
-{
-#ifndef WIN32
-  const char *patch_abspath;
-  const char *args[4];
-  svn_error_t *err;
-
-  SVN_ERR(svn_client_shelf_get_patch_abspath(&patch_abspath, shelf_version,
-                                             scratch_pool));
-  args[0] = "diffstat";
-  args[1] = "-p0";
-  args[2] = patch_abspath;
-  args[3] = NULL;
-  err = run_cmd("diffstat", args, scratch_pool);
-  if (err)
-    svn_error_clear(err);
-  else
-    SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
-#endif
-  return SVN_NO_ERROR;
-}
-
 /* A comparison function for svn_sort__hash(), comparing the mtime of two
    svn_client_shelf_info_t's. */
 static int
@@ -302,7 +246,6 @@ stats(svn_client_shelf_t *shelf,
 static svn_error_t *
 shelves_list(const char *local_abspath,
              svn_boolean_t quiet,
-             svn_boolean_t with_diffstat,
              svn_client_ctx_t *ctx,
              apr_pool_t *scratch_pool)
 {
@@ -329,10 +272,6 @@ shelves_list(const char *local_abspath,
       else
         SVN_ERR(stats(shelf, shelf->max_version, shelf_version, time_now,
                       TRUE /*with_logmsg*/, scratch_pool));
-      if (with_diffstat && shelf_version)
-        {
-          SVN_ERR(show_diffstat(shelf_version, scratch_pool));
-        }
       SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
     }
 
@@ -344,7 +283,6 @@ shelves_list(const char *local_abspath,
 static svn_error_t *
 shelf_log(const char *name,
           const char *local_abspath,
-          svn_boolean_t with_diffstat,
           svn_client_ctx_t *ctx,
           apr_pool_t *scratch_pool)
 {
@@ -364,10 +302,6 @@ shelf_log(const char *name,
 
       SVN_ERR(stats(shelf, i + 1, shelf_version, time_now,
                     FALSE /*with_logmsg*/, scratch_pool));
-      if (with_diffstat)
-        {
-          SVN_ERR(show_diffstat(shelf_version, scratch_pool));
-        }
     }
 
   SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
@@ -1025,7 +959,6 @@ svn_cl__shelf_list(apr_getopt_t *os,
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
   SVN_ERR(shelves_list(local_abspath,
                        opt_state->quiet,
-                       opt_state->verbose /*with_diffstat*/,
                        ctx, pool));
 
   return SVN_NO_ERROR;
@@ -1209,7 +1142,6 @@ svn_cl__shelf_log(apr_getopt_t *os,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
   SVN_ERR(shelf_log(name, local_abspath,
-                    opt_state->verbose /*with_diffstat*/,
                     ctx, pool));
 
   return SVN_NO_ERROR;
