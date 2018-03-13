@@ -1128,7 +1128,6 @@ svn_cl__shelf_log(apr_getopt_t *os,
                   void *baton,
                   apr_pool_t *pool)
 {
-  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *name;
   const char *local_abspath;
