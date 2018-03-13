@@ -6957,7 +6957,9 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
 
 /** Delete all newer versions of @a shelf newer than @a shelf_version.
  *
- * If @a shelf_version is null, delete all versions of @a shelf.
+ * If @a shelf_version is null, delete all versions of @a shelf. (The
+ * shelf will still exist, with any log message and other revprops, but
+ * with no versions in it.)
  *
  * Leave the shelf's log message and other revprops unchanged.
  *
