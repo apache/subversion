@@ -52,7 +52,7 @@ Candidate changes:
      A bug that can cause failing commits over http://, regression
      introduced in 1.10.
    Votes:
-     +1: kotkov
+     +1: kotkov, philip
 
 Veto-blocked changes:
 =====================
