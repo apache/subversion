@@ -118,14 +118,20 @@ Candidate changes:
    Votes:
      +1: julianfoad, stsp
 
- * r1826272, r1826720, r1826721
+ * r1826272
    Fix issue 4722: commits that fail when a file DELTA is a multiple of 16K.
    Justification:
      Commits fail with a false "Filesystem is corrupt" error.
    Branch: ^/subversion/branches/1.9.x-issue4722
    Votes:
+     +1: philip, stsp
+
+ * r1826720, r1826721
+   Regression test and FSFS checksum verification for issue 4722.
+   Justification:
+     Tests the issue 4722 fix.
+   Votes:
      +1: philip
-     +1: stsp (r1826272 only)
 
 Veto-blocked changes:
 =====================
