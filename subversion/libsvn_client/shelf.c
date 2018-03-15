@@ -187,7 +187,9 @@ get_log_abspath(char **log_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Set SHELF->revprops by reading from its file storage.
+/* Set SHELF->revprops by reading from its storage (the '.log' file).
+ * Set SHELF->revprops to empty if the storage file does not exist; this
+ * is not an error.
  */
 static svn_error_t *
 shelf_read_revprops(svn_client_shelf_t *shelf,
@@ -295,7 +297,9 @@ get_current_abspath(char **current_abspath,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Read SHELF->max_version from its storage (the '.current' file).
+ * Set SHELF->max_version to -1 if that file does not exist.
+ */
 static svn_error_t *
 shelf_read_current(svn_client_shelf_t *shelf,
                    apr_pool_t *scratch_pool)
@@ -307,7 +311,7 @@ shelf_read_current(svn_client_shelf_t *shelf,
   fp = fopen(current_abspath, "r");
   if (! fp)
     {
-      shelf->max_version = 0;
+      shelf->max_version = -1;
       return SVN_NO_ERROR;
     }
   fscanf(fp, "%d", &shelf->max_version);
@@ -449,7 +453,7 @@ svn_client_shelf_open_existing(svn_client_shelf_t **shelf_p,
                           local_abspath, ctx, result_pool));
   SVN_ERR(shelf_read_revprops(*shelf_p, result_pool));
   SVN_ERR(shelf_read_current(*shelf_p, result_pool));
-  if ((*shelf_p)->max_version <= 0)
+  if ((*shelf_p)->max_version < 0)
     {
       return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                _("Shelf '%s' not found"),
@@ -465,10 +469,18 @@ svn_client_shelf_open_or_create(svn_client_shelf_t **shelf_p,
                                 svn_client_ctx_t *ctx,
                                 apr_pool_t *result_pool)
 {
-  SVN_ERR(shelf_construct(shelf_p, name,
+  svn_client_shelf_t *shelf;
+
+  SVN_ERR(shelf_construct(&shelf, name,
                           local_abspath, ctx, result_pool));
-  SVN_ERR(shelf_read_revprops(*shelf_p, result_pool));
-  SVN_ERR(shelf_read_current(*shelf_p, result_pool));
+  SVN_ERR(shelf_read_revprops(shelf, result_pool));
+  SVN_ERR(shelf_read_current(shelf, result_pool));
+  if (shelf->max_version < 0)
+    {
+      shelf->max_version = 0;
+      SVN_ERR(shelf_write_current(shelf, result_pool));
+    }
+  *shelf_p = shelf;
   return SVN_NO_ERROR;
 }
 
