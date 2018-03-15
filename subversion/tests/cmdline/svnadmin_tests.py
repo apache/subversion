@@ -3823,7 +3823,7 @@ def load_issue4725(sbox):
 
   sbox2 = sbox.clone_dependent()
   sbox2.build(create_wc=False, empty=True)
-  load_and_verify_dumpstream(sbox2, None, [], None, False, dump, '-M1000')
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump, '-M100')
 
 ########################################################################
 # Run the tests
