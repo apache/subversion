@@ -618,7 +618,7 @@ version(const char *progname,
                          pool);
 
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
-  return svn_opt_print_help4(NULL, ensure_appname(progname, pool),
+  return svn_opt_print_help5(NULL, ensure_appname(progname, pool),
                              TRUE, quiet, FALSE, version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
