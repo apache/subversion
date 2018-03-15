@@ -1547,6 +1547,34 @@ svn_client_switch(svn_revnum_t *result_rev,
 
 /** @} */
 
+/** Callback for svn_client_layout_list()
+ */
+typedef svn_error_t * (*svn_client_layout_func_t)(
+                            void *layout_baton,
+                            const char *local_abspath,
+                            const char *repos_root_url,
+                            svn_boolean_t not_present,
+                            svn_boolean_t url_changed,
+                            const char *url,
+                            svn_boolean_t revision_changed,
+                            svn_revnum_t revision,
+                            svn_boolean_t depth_changed,
+                            svn_depth_t depth,
+                            apr_pool_t *scratch_pool);
+
+/**
+ * Describe the layout of the working copy below @a local_abspath to
+ * the callback @a layout.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_layout_list(const char *local_abspath,
+                       svn_client_layout_func_t layout,
+                       void *layout_baton,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *scratch_pool);
+
+
 /**
  * @defgroup Add Begin versioning files/directories in a working copy.
  *

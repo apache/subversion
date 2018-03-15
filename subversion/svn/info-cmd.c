@@ -45,6 +45,131 @@
 
 /*** Code. ***/
 
+struct layout_list_baton_t
+{
+  svn_boolean_t checkout;
+  const char *target;
+  const char *target_abspath;
+};
+
+/* Implements svn_client_layout_func_t */
+static svn_error_t *
+layout_func(void *layout_baton,
+            const char *local_abspath,
+            const char *repos_root_url,
+            svn_boolean_t not_present,
+            svn_boolean_t url_changed,
+            const char *url,
+            svn_boolean_t revision_changed,
+            svn_revnum_t revision,
+            svn_boolean_t depth_changed,
+            svn_depth_t depth,
+            apr_pool_t *scratch_pool)
+{
+  struct layout_list_baton_t *llb = layout_baton;
+  const char *relpath = svn_dirent_skip_ancestor(llb->target_abspath, local_abspath);
+
+  if (llb->checkout)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 "svn checkout %s@%lu %s",
+                                 url, revision, llb->target));
+      if (depth != svn_depth_infinity)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                   " --depth %s", svn_depth_to_word(depth)));
+      llb->checkout = FALSE;
+    }
+  else if (depth == svn_depth_exclude)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 "svn update --set-depth exclude %s",
+                                 svn_dirent_join(llb->target, relpath,
+                                                 scratch_pool)));
+    }
+  else if (not_present)
+    {
+      /* Easiest way to create a not present node: update to r0 */
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 "svn update -r 0 %s",
+                                 svn_dirent_join(llb->target, relpath,
+                                                 scratch_pool)));
+    }
+  else if (!url_changed && revision_changed)
+    {
+      /* Easiest way to create a not present node: update to r0 */
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 "svn update -r %lu %s",
+                                 revision,
+                                 svn_dirent_join(llb->target, relpath,
+                                                 scratch_pool)));
+
+      if (depth_changed)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                   " --set-depth %s",
+                                   svn_depth_to_word(depth)));
+    }
+  else if (url_changed)
+    {
+      /* Easiest way to create a not present node: update to r0 */
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 "svn switch ^/%s@%lu %s",
+                                 svn_uri_skip_ancestor(repos_root_url,
+                                                       url, scratch_pool),
+                                 revision,
+                                 svn_dirent_join(llb->target, relpath,
+                                                 scratch_pool)));
+      if (depth_changed)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                   " --set-depth %s",
+                                   svn_depth_to_word(depth)));
+    }
+  else if (depth_changed)
+    {
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                   "svn update --set-depth %s %s",
+                                   svn_depth_to_word(depth),
+                                   svn_dirent_join(llb->target, relpath,
+                                                   scratch_pool)));
+    }
+  else
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+cl_layout_list(apr_array_header_t *targets,
+               void *baton,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
+{
+  const char *list_path, *list_abspath;
+  struct layout_list_baton_t llb;
+
+  /* Add "." if user passed 0 arguments */
+  svn_opt_push_implicit_dot_target(targets, scratch_pool);
+
+  if (targets->nelts > 1)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+
+  list_path = APR_ARRAY_IDX(targets, 0, const char *);
+
+  SVN_ERR(svn_cl__check_target_is_local_path(list_path));
+
+  SVN_ERR(svn_dirent_get_absolute(&list_abspath, list_path,
+                                  scratch_pool));
+
+  llb.checkout = TRUE;
+  llb.target = list_path;
+  llb.target_abspath = list_abspath;
+
+  return svn_error_trace(svn_client_layout_list(list_abspath,
+                                                layout_func, &llb,
+                                                ctx, scratch_pool));
+}
+
 static svn_error_t *
 svn_cl__info_print_time(apr_time_t atime,
                         const char *desc,
@@ -917,6 +1042,9 @@ svn_cl__info(apr_getopt_t *os,
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
+
+  if (opt_state->viewspec)
+    return svn_error_trace(cl_layout_list(targets, baton, ctx, pool));
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
