@@ -267,7 +267,7 @@ shelves_list(const char *local_abspath,
                                              ctx, scratch_pool));
       SVN_ERR(svn_client_shelf_get_newest_version(&shelf_version, shelf,
                                                   scratch_pool, scratch_pool));
-      if (quiet)
+      if (quiet || !shelf_version)
         SVN_ERR(svn_cmdline_printf(scratch_pool, "%s\n", shelf->name));
       else
         SVN_ERR(stats(shelf, shelf->max_version, shelf_version, time_now,
