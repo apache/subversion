@@ -861,7 +861,7 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
  * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_freeze(apr_array_header_t *paths,
+svn_repos_freeze(const apr_array_header_t *paths,
                  svn_repos_freeze_func_t freeze_func,
                  void *freeze_baton,
                  apr_pool_t *pool);
