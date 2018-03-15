@@ -60,6 +60,9 @@ typedef struct
 
   /* the offset within the representation right after reading the window */
   apr_off_t end_offset;
+
+  /* svndiff version */
+  int ver;
 } svn_fs_fs__raw_cached_window_t;
 
 /**
