@@ -3802,7 +3802,6 @@ def dump_invalid_filtering_option(sbox):
                                           '--include', '/A/B/E',
                                           sbox.repo_dir)
 
-@XFail(svntest.main.is_fs_type_fsfs)
 @Issue(4725)
 def load_issue4725(sbox):
   """load that triggers issue 4725"""
