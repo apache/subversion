@@ -113,6 +113,7 @@ typedef struct svn_opt_subcommand_desc3_t
 /** One element of a subcommand dispatch table.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
  */
 typedef struct svn_opt_subcommand_desc2_t
 {
@@ -186,7 +187,9 @@ svn_opt_get_canonical_subcommand3(const svn_opt_subcommand_desc3_t *table,
  * version of the subcommand description table.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
  */
+SVN_DEPRECATED
 const svn_opt_subcommand_desc2_t *
 svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
                                   const char *cmd_name);
@@ -229,7 +232,9 @@ svn_opt_get_option_from_code3(int code,
  * version of the subcommand description table.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
  */
+SVN_DEPRECATED
 const apr_getopt_option_t *
 svn_opt_get_option_from_code2(int code,
                               const apr_getopt_option_t *option_table,
@@ -268,7 +273,9 @@ svn_opt_subcommand_takes_option4(const svn_opt_subcommand_desc3_t *command,
  * version of the subcommand description table.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
  */
+SVN_DEPRECATED
 svn_boolean_t
 svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
                                  int option_code,
@@ -328,7 +335,9 @@ svn_opt_print_generic_help3(const char *header,
  * version of the subcommand description table.
  *
  * @since New in 1.4.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_print_generic_help2(const char *header,
                             const svn_opt_subcommand_desc2_t *cmd_table,
@@ -394,7 +403,9 @@ svn_opt_subcommand_help4(const char *subcommand,
  * version of the subcommand description table.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
  */
+SVN_DEPRECATED
 void
 svn_opt_subcommand_help3(const char *subcommand,
                          const svn_opt_subcommand_desc2_t *table,
@@ -817,7 +828,9 @@ svn_opt_print_help5(apr_getopt_t *os,
  * version of the subcommand description table.
  *
  * @since New in 1.8.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_print_help4(apr_getopt_t *os,
                     const char *pgm_name,

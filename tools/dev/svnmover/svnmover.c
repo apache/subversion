@@ -4042,7 +4042,7 @@ display_version(apr_getopt_t *os, svn_boolean_t _quiet, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(NULL, "svnmover", TRUE, _quiet, FALSE,
+  SVN_ERR(svn_opt_print_help5(NULL, "svnmover", TRUE, _quiet, FALSE,
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 

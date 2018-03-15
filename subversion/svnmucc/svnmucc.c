@@ -342,7 +342,7 @@ display_version(apr_pool_t *pool)
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(NULL, "svnmucc", TRUE, FALSE, FALSE,
+  SVN_ERR(svn_opt_print_help5(NULL, "svnmucc", TRUE, FALSE, FALSE,
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 
