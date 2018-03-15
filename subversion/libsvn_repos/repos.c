@@ -1721,7 +1721,7 @@ svn_repos_recover4(const char *path,
 }
 
 struct freeze_baton_t {
-  apr_array_header_t *paths;
+  const apr_array_header_t *paths;
   int counter;
   svn_repos_freeze_func_t freeze_func;
   void *freeze_baton;
