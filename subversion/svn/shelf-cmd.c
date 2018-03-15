@@ -222,7 +222,7 @@ stats(svn_client_shelf_t *shelf,
                               apr_hash_count(paths)),
                            apr_hash_count(paths));
   SVN_ERR(svn_cmdline_printf(scratch_pool,
-                             "%-30s %s, %s, %s",
+                             "%-30s %s, %s, %s\n",
                              shelf->name, version_str, age_str, paths_str));
 
   if (with_logmsg)
