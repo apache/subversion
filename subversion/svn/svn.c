@@ -459,7 +459,11 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                             "
                           "                author of 'last-changed-revision'\n"
                           "                             "
-                          "   'wc-root'    root of TARGET's working copy")},
+                          "   'wc-root'    root of TARGET's working copy\n"
+                          "                             "
+                          "   'schedule'   'normal','add','delete','replace'\n"
+                          "                             "
+                          "   'depth'      checkout depth of TARGET in WC")},
 
   {"adds-as-modification", opt_adds_as_modification, 0,
                        N_("Local additions are merged with incoming additions\n"
