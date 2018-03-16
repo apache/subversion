@@ -193,10 +193,13 @@ output_svn_viewspec_py(void *layout_baton,
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
                                  "Format: %d\n"
-                                 "Url: %s\n"
-                                 "Revision: %ld\n"
-                                 "\n",
-                                 llb->vs_py_format, url, revision));
+                                 "Url: %s\n",
+                                 llb->vs_py_format, url));
+      if (llb->with_revs)
+        SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                   "Revision: %ld\n",
+                                   revision));
+      SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
       llb->checkout = FALSE;
 
       if (depth == svn_depth_empty)
