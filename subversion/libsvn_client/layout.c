@@ -139,7 +139,7 @@ layout_set_path(void *report_baton,
                                     (depth != expected_depth),
                                     it->depth,
                                     pool));
-}
+    }
 
 static svn_error_t *
 layout_link_path(void *report_baton,
@@ -274,8 +274,7 @@ svn_client_layout_list(const char *local_abspath,
   lb.layout_baton = layout_baton;
 
   /* Drive the reporter structure, describing the revisions within
-     LOCAL_ABSPATH.  When this calls reporter->finish_report, the
-     reporter will drive the update_editor. */
+     LOCAL_ABSPATH.  */
   SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath,
                                   &layout_reporter, &lb,
                                   FALSE /* restore_files */,
