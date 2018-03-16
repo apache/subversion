@@ -3270,6 +3270,9 @@ cache_windows(svn_fs_t *fs,
               apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  auto_read_diff_version(rs, iterpool);
+
   while (rs->current < rs->size)
     {
       apr_off_t end_offset;
@@ -3309,8 +3312,6 @@ cache_windows(svn_fs_t *fs,
           apr_off_t start_offset = rs->start + rs->current;
           apr_size_t window_len;
           char *buf;
-
-          auto_read_diff_version(rs, iterpool);
 
           /* navigate to the current window */
           SVN_ERR(rs_aligned_seek(rs, NULL, start_offset, iterpool));
