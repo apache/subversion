@@ -50,6 +50,7 @@ struct layout_list_baton_t
   svn_boolean_t checkout;
   const char *target;
   const char *target_abspath;
+  int vs_py_format;
 };
 
 /* Output as 'svn' command-line commands.
@@ -142,6 +143,8 @@ depth_to_viewspec_py(svn_depth_t depth,
       return "/~";
     case svn_depth_empty:
       return "";
+    case svn_depth_exclude:
+      return "!";
     default:
       break;
     }
@@ -172,24 +175,22 @@ output_svn_viewspec_py(void *layout_baton,
   const char *rev_str = "";
   const char *repos_rel_url = "";
 
-  if (depth == svn_depth_exclude)
-    {
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("svn-viewspec.py format 1 does not support "
-                                 "the 'excluded' state found at '%s'"),
-                               relpath);
-    }
   depth_str = ((depth_changed || llb->checkout)
                ? depth_to_viewspec_py(depth, scratch_pool)
                : "");
+  if (llb->vs_py_format >= 2
+      && SVN_IS_VALID_REVNUM(revision)
+      && depth >= svn_depth_empty)
+    rev_str = apr_psprintf(scratch_pool, "@%ld", revision);
 
   if (llb->checkout)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 "Format: 1\n"
+                                 "Format: %d\n"
                                  "Url: %s\n"
+                                 "Revision: %ld\n"
                                  "\n",
-                                 url));
+                                 llb->vs_py_format, url, revision));
       llb->checkout = FALSE;
 
       if (depth == svn_depth_empty)
@@ -199,17 +200,24 @@ output_svn_viewspec_py(void *layout_baton,
     }
   else if (not_present)
     {
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("svn-viewspec.py format 1 does not support "
-                                 "the 'not-present' state found at '%s'"),
-                               relpath);
+      /* Easiest way to create a not present node: update to r0 */
+      if (llb->vs_py_format < 2)
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("svn-viewspec.py format 1 does not support "
+                                   "the 'not-present' state found at '%s'"),
+                                 relpath);
+      rev_str = "@0";
     }
   else if (url_changed)
     {
-      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("svn-viewspec.py format 1 does not support "
-                                 "the 'switched' state found at '%s'"),
-                               relpath);
+      if (llb->vs_py_format < 2)
+        return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                 _("svn-viewspec.py format 1 does not support "
+                                   "the 'switched' state found at '%s'"),
+                                 relpath);
+      repos_rel_url = svn_uri_skip_ancestor(repos_root_url, url,
+                                            scratch_pool);
+      repos_rel_url = apr_psprintf(scratch_pool, "^/%s", repos_rel_url);
     }
   else if (!(revision_changed || depth_changed))
     return SVN_NO_ERROR;
@@ -250,6 +258,8 @@ cl_layout_list(apr_array_header_t *targets,
   if (TRUE)
     {
       /* svn-viewspec.py format */
+      llb.vs_py_format = 2;
+
       SVN_ERR(svn_client_layout_list(list_abspath,
                                      output_svn_viewspec_py, &llb,
                                      ctx, scratch_pool));
