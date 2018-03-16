@@ -3271,7 +3271,7 @@ cache_windows(svn_fs_t *fs,
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  auto_read_diff_version(rs, iterpool);
+  SVN_ERR(auto_read_diff_version(rs, iterpool));
 
   while (rs->current < rs->size)
     {
