@@ -1548,6 +1548,8 @@ svn_client_switch(svn_revnum_t *result_rev,
 /** @} */
 
 /** Callback for svn_client_layout_list()
+ *
+ * @warning EXPERIMENTAL.
  */
 typedef svn_error_t * (*svn_client_layout_func_t)(
                             void *layout_baton,
@@ -1565,8 +1567,10 @@ typedef svn_error_t * (*svn_client_layout_func_t)(
 /**
  * Describe the layout of the working copy below @a local_abspath to
  * the callback @a layout.
+ *
+ * @warning EXPERIMENTAL.
  */
-SVN_EXPERIMENTAL
+/*SVN_EXPERIMENTAL*/ /*commented out during development to avoid a warning*/
 svn_error_t *
 svn_client_layout_list(const char *local_abspath,
                        svn_client_layout_func_t layout,
