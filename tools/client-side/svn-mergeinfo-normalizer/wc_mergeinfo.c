@@ -112,8 +112,8 @@ static int
 compare_mergeinfo(const void *lhs,
                   const void *rhs)
 {
-  const mergeinfo_t *lhs_mi = *(const mergeinfo_t **)lhs;
-  const mergeinfo_t *rhs_mi = *(const mergeinfo_t **)rhs;
+  const mergeinfo_t *lhs_mi = *(const mergeinfo_t *const *)lhs;
+  const mergeinfo_t *rhs_mi = *(const mergeinfo_t *const *)rhs;
 
   return strcmp(lhs_mi->local_path, rhs_mi->local_path);
 }
