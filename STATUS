@@ -54,7 +54,7 @@ Candidate changes:
    Votes:
      +1: kotkov, philip
 
- * r1826811, r1826814, 1826877
+ * r1826811, r1826814, 1826877, r1826907
    Fix issue 4725: zlib error in fsfs cache.
    Justification:
      Needed when svnadmin uses a FSFS cache bigger than 64MB.
