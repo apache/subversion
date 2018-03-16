@@ -52,19 +52,22 @@ struct layout_list_baton_t
   const char *target_abspath;
 };
 
-/* Implements svn_client_layout_func_t */
+/* Output as 'svn' command-line commands.
+ *
+ * Implements svn_client_layout_func_t
+ */
 static svn_error_t *
-layout_func(void *layout_baton,
-            const char *local_abspath,
-            const char *repos_root_url,
-            svn_boolean_t not_present,
-            svn_boolean_t url_changed,
-            const char *url,
-            svn_boolean_t revision_changed,
-            svn_revnum_t revision,
-            svn_boolean_t depth_changed,
-            svn_depth_t depth,
-            apr_pool_t *scratch_pool)
+output_svn_command_line(void *layout_baton,
+                        const char *local_abspath,
+                        const char *repos_root_url,
+                        svn_boolean_t not_present,
+                        svn_boolean_t url_changed,
+                        const char *url,
+                        svn_boolean_t revision_changed,
+                        svn_revnum_t revision,
+                        svn_boolean_t depth_changed,
+                        svn_depth_t depth,
+                        apr_pool_t *scratch_pool)
 {
   struct layout_list_baton_t *llb = layout_baton;
   const char *relpath = svn_dirent_skip_ancestor(llb->target_abspath,
@@ -124,6 +127,100 @@ layout_func(void *layout_baton,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static const char *
+depth_to_viewspec_py(svn_depth_t depth,
+                     apr_pool_t *result_pool)
+{
+  switch (depth)
+    {
+    case svn_depth_infinity:
+      return "/**";
+    case svn_depth_immediates:
+      return "/*";
+    case svn_depth_files:
+      return "/~";
+    case svn_depth_empty:
+      return "";
+    default:
+      break;
+    }
+  return NULL;
+}
+
+/* Output in the format used by 'tools/client-side/viewspec.py'
+ *
+ * Implements svn_client_layout_func_t
+ */
+static svn_error_t *
+output_svn_viewspec_py(void *layout_baton,
+                       const char *local_abspath,
+                       const char *repos_root_url,
+                       svn_boolean_t not_present,
+                       svn_boolean_t url_changed,
+                       const char *url,
+                       svn_boolean_t revision_changed,
+                       svn_revnum_t revision,
+                       svn_boolean_t depth_changed,
+                       svn_depth_t depth,
+                       apr_pool_t *scratch_pool)
+{
+  struct layout_list_baton_t *llb = layout_baton;
+  const char *relpath = svn_dirent_skip_ancestor(llb->target_abspath,
+                                                 local_abspath);
+  const char *depth_str;
+  const char *rev_str = "";
+  const char *repos_rel_url = "";
+
+  if (depth == svn_depth_exclude)
+    {
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("svn-viewspec.py format 1 does not support "
+                                 "the 'excluded' state found at '%s'"),
+                               relpath);
+    }
+  depth_str = ((depth_changed || llb->checkout)
+               ? depth_to_viewspec_py(depth, scratch_pool)
+               : "");
+
+  if (llb->checkout)
+    {
+      SVN_ERR(svn_cmdline_printf(scratch_pool,
+                                 "Format: 1\n"
+                                 "Url: %s\n"
+                                 "\n",
+                                 url));
+      llb->checkout = FALSE;
+
+      if (depth == svn_depth_empty)
+        return SVN_NO_ERROR;
+      if (depth_str[0] == '/')
+        depth_str++;
+    }
+  else if (not_present)
+    {
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("svn-viewspec.py format 1 does not support "
+                                 "the 'not-present' state found at '%s'"),
+                               relpath);
+    }
+  else if (url_changed)
+    {
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("svn-viewspec.py format 1 does not support "
+                                 "the 'switched' state found at '%s'"),
+                               relpath);
+    }
+  else if (!(revision_changed || depth_changed))
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_cmdline_printf(scratch_pool,
+                             "%s%s %s%s\n",
+                             relpath, depth_str, repos_rel_url, rev_str));
+
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 cl_layout_list(apr_array_header_t *targets,
                void *baton,
@@ -150,9 +247,20 @@ cl_layout_list(apr_array_header_t *targets,
   llb.target = list_path;
   llb.target_abspath = list_abspath;
 
-  SVN_ERR(svn_client_layout_list(list_abspath,
-                                 layout_func, &llb,
-                                 ctx, scratch_pool));
+  if (TRUE)
+    {
+      /* svn-viewspec.py format */
+      SVN_ERR(svn_client_layout_list(list_abspath,
+                                     output_svn_viewspec_py, &llb,
+                                     ctx, scratch_pool));
+    }
+  else
+    {
+      /* svn command-line format */
+      SVN_ERR(svn_client_layout_list(list_abspath,
+                                     output_svn_command_line, &llb,
+                                     ctx, scratch_pool));
+    }
   return SVN_NO_ERROR;
 }
 
