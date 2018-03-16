@@ -53,7 +53,7 @@ svn_fs_fs__noderev_deserialize(void *buffer,
 /**
  * Adds position information to the raw window data in WINDOW.
  */
-typedef struct
+typedef struct svn_fs_fs__raw_cached_window_t
 {
   /* the (unprocessed) txdelta window byte sequence cached / to be cached */
   svn_string_t window;
@@ -89,7 +89,7 @@ svn_fs_fs__deserialize_raw_window(void **item,
  * #svn_txdelta_window_t is not sufficient for caching the data it
  * represents because data read process needs auxiliary information.
  */
-typedef struct
+typedef struct svn_fs_fs__txdelta_cached_window_t
 {
   /* the txdelta window information cached / to be cached */
   svn_txdelta_window_t *window;
