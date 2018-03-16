@@ -50,6 +50,7 @@ struct layout_list_baton_t
   svn_boolean_t checkout;
   const char *target;
   const char *target_abspath;
+  svn_boolean_t with_revs;
   int vs_py_format;
 };
 
@@ -75,7 +76,7 @@ output_svn_command_line(void *layout_baton,
                                                  local_abspath);
   const char *cmd;
   const char *depth_str;
-  const char *rev_str;
+  const char *url_rev_str;
 
   depth_str = (depth_changed
                ? apr_psprintf(scratch_pool, " --set-depth=%s",
@@ -88,39 +89,44 @@ output_svn_command_line(void *layout_baton,
       if (depth != svn_depth_infinity)
         depth_str = apr_psprintf(scratch_pool,
                                  " --depth=%s", svn_depth_to_word(depth));
-      rev_str = apr_psprintf(scratch_pool,
-                             " %s@%lu",
-                             url, revision);
+      url_rev_str = apr_psprintf(scratch_pool, " %s", url);
+      if (llb->with_revs)
+        url_rev_str = apr_psprintf(scratch_pool, "%s@%ld",
+                                   url_rev_str, revision);
       llb->checkout = FALSE;
     }
   else if (not_present)
     {
       /* Easiest way to create a not present node: update to r0 */
       cmd = "svn update";
-      rev_str = " -r0";
+      url_rev_str = " -r0";
     }
   else if (url_changed)
     {
       cmd = "svn switch";
-      rev_str = apr_psprintf(scratch_pool,
-                             " ^/%s@%lu",
-                             svn_uri_skip_ancestor(repos_root_url,
-                                                   url, scratch_pool),
-                             revision);
+      url_rev_str = apr_psprintf(scratch_pool, " ^/%s",
+                                 svn_uri_skip_ancestor(repos_root_url,
+                                                       url, scratch_pool));
+      if (llb->with_revs)
+        url_rev_str = apr_psprintf(scratch_pool, "%s@%ld",
+                                   url_rev_str, revision);
     }
-  else if (revision_changed || depth_changed)
+  else if (llb->with_revs && revision_changed)
     {
       cmd = "svn update";
-      rev_str = (revision_changed
-                 ? apr_psprintf(scratch_pool, " -r%lu", revision)
-                 : "");
+      url_rev_str = apr_psprintf(scratch_pool, " -r%ld", revision);
+    }
+  else if (depth_changed)
+    {
+      cmd = "svn update";
+      url_rev_str = "";
     }
   else
     return SVN_NO_ERROR;
 
   SVN_ERR(svn_cmdline_printf(scratch_pool,
                              "%s%-23s%-10s %s\n",
-                             cmd, depth_str, rev_str,
+                             cmd, depth_str, url_rev_str,
                              svn_dirent_local_style(
                                svn_dirent_join(llb->target, relpath,
                                                scratch_pool), scratch_pool)));
@@ -178,9 +184,9 @@ output_svn_viewspec_py(void *layout_baton,
   depth_str = ((depth_changed || llb->checkout)
                ? depth_to_viewspec_py(depth, scratch_pool)
                : "");
-  if (llb->vs_py_format >= 2
-      && revision_changed
-      && depth >= svn_depth_empty)
+  if (! llb->with_revs)
+    revision_changed = FALSE;
+  if (revision_changed)
     rev_str = apr_psprintf(scratch_pool, "@%ld", revision);
 
   if (llb->checkout)
@@ -254,6 +260,7 @@ cl_layout_list(apr_array_header_t *targets,
   llb.checkout = TRUE;
   llb.target = list_path;
   llb.target_abspath = list_abspath;
+  llb.with_revs = TRUE;
 
   if (TRUE)
     {
