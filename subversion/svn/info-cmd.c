@@ -179,7 +179,7 @@ output_svn_viewspec_py(void *layout_baton,
                ? depth_to_viewspec_py(depth, scratch_pool)
                : "");
   if (llb->vs_py_format >= 2
-      && SVN_IS_VALID_REVNUM(revision)
+      && revision_changed
       && depth >= svn_depth_empty)
     rev_str = apr_psprintf(scratch_pool, "@%ld", revision);
 
