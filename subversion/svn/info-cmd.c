@@ -67,74 +67,59 @@ layout_func(void *layout_baton,
             apr_pool_t *scratch_pool)
 {
   struct layout_list_baton_t *llb = layout_baton;
-  const char *relpath = svn_dirent_skip_ancestor(llb->target_abspath, local_abspath);
+  const char *relpath = svn_dirent_skip_ancestor(llb->target_abspath,
+                                                 local_abspath);
+  const char *cmd;
+  const char *depth_str;
+  const char *rev_str;
+
+  depth_str = (depth_changed
+               ? apr_psprintf(scratch_pool, " --set-depth=%s",
+                              svn_depth_to_word(depth))
+               : "");
 
   if (llb->checkout)
     {
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 "svn checkout %s@%lu %s",
-                                 url, revision, llb->target));
+      cmd = "svn checkout";
       if (depth != svn_depth_infinity)
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                   " --depth %s", svn_depth_to_word(depth)));
+        depth_str = apr_psprintf(scratch_pool,
+                                 " --depth=%s", svn_depth_to_word(depth));
+      rev_str = apr_psprintf(scratch_pool,
+                             " %s@%lu",
+                             url, revision);
       llb->checkout = FALSE;
-    }
-  else if (depth == svn_depth_exclude)
-    {
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 "svn update --set-depth exclude %s",
-                                 svn_dirent_join(llb->target, relpath,
-                                                 scratch_pool)));
     }
   else if (not_present)
     {
       /* Easiest way to create a not present node: update to r0 */
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 "svn update -r 0 %s",
-                                 svn_dirent_join(llb->target, relpath,
-                                                 scratch_pool)));
-    }
-  else if (!url_changed && revision_changed)
-    {
-      /* Easiest way to create a not present node: update to r0 */
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 "svn update -r %lu %s",
-                                 revision,
-                                 svn_dirent_join(llb->target, relpath,
-                                                 scratch_pool)));
-
-      if (depth_changed)
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                   " --set-depth %s",
-                                   svn_depth_to_word(depth)));
+      cmd = "svn update";
+      rev_str = " -r0";
     }
   else if (url_changed)
     {
-      /* Easiest way to create a not present node: update to r0 */
-      SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                 "svn switch ^/%s@%lu %s",
-                                 svn_uri_skip_ancestor(repos_root_url,
-                                                       url, scratch_pool),
-                                 revision,
-                                 svn_dirent_join(llb->target, relpath,
-                                                 scratch_pool)));
-      if (depth_changed)
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                   " --set-depth %s",
-                                   svn_depth_to_word(depth)));
+      cmd = "svn switch";
+      rev_str = apr_psprintf(scratch_pool,
+                             " ^/%s@%lu",
+                             svn_uri_skip_ancestor(repos_root_url,
+                                                   url, scratch_pool),
+                             revision);
     }
-  else if (depth_changed)
+  else if (revision_changed || depth_changed)
     {
-        SVN_ERR(svn_cmdline_printf(scratch_pool,
-                                   "svn update --set-depth %s %s",
-                                   svn_depth_to_word(depth),
-                                   svn_dirent_join(llb->target, relpath,
-                                                   scratch_pool)));
+      cmd = "svn update";
+      rev_str = (revision_changed
+                 ? apr_psprintf(scratch_pool, " -r%lu", revision)
+                 : "");
     }
   else
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_cmdline_printf(scratch_pool, "\n"));
+  SVN_ERR(svn_cmdline_printf(scratch_pool,
+                             "%s%-23s%-10s %s\n",
+                             cmd, depth_str, rev_str,
+                             svn_dirent_local_style(
+                               svn_dirent_join(llb->target, relpath,
+                                               scratch_pool), scratch_pool)));
 
   return SVN_NO_ERROR;
 }
@@ -165,9 +150,10 @@ cl_layout_list(apr_array_header_t *targets,
   llb.target = list_path;
   llb.target_abspath = list_abspath;
 
-  return svn_error_trace(svn_client_layout_list(list_abspath,
-                                                layout_func, &llb,
-                                                ctx, scratch_pool));
+  SVN_ERR(svn_client_layout_list(list_abspath,
+                                 layout_func, &llb,
+                                 ctx, scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -1044,7 +1030,10 @@ svn_cl__info(apr_getopt_t *os,
                                                       ctx, FALSE, pool));
 
   if (opt_state->viewspec)
-    return svn_error_trace(cl_layout_list(targets, baton, ctx, pool));
+    {
+      SVN_ERR(cl_layout_list(targets, baton, ctx, pool));
+      return SVN_NO_ERROR;
+    }
 
   /* Add "." if user passed 0 arguments. */
   svn_opt_push_implicit_dot_target(targets, pool);
