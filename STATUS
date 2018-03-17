@@ -23,13 +23,6 @@ Candidate changes:
    Votes:
      +1: jamessan, philip
 
- * r1825979
-   Minor clarification to docstring.
-   Justification:
-     Trivial documentation fix.
-   Votes:
-     +1: danielsh, jamessan
-
  * r1826720, r1826721
    Regression test and FSFS checksum test, part of issue 4722.
    Justification:
@@ -55,6 +48,15 @@ Candidate changes:
 
 Veto-blocked changes:
 =====================
+
+ * r1825979
+   Minor clarification to docstring.
+   Justification:
+     Trivial documentation fix.
+   Votes:
+     +1: danielsh, jamessan
+     -1: brane (the docstring "clarification" is wrong, since
+                we do not propagate the compression level to LZ4)
 
 Approved changes:
 =================
