@@ -52,6 +52,7 @@
 # Run this script with the test suite name and test number to execute just this
 # test:
 #   subversion/tests/cmdline/davautocheck.sh basic 4
+# This script can also be invoked via "make davautocheck".
 #
 # If the temporary directory is not deleted, it can be reused for further
 # manual DAV protocol interoperation testing. HTTPD must be started by
@@ -65,18 +66,19 @@
 #   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \
 #     subversion/tests/cmdline/davautocheck.sh
 #
-# To prevent the server from advertising httpv2, pass USE_HTTPV1 in
-# the environment.
+# Other environment variables that are interpreted by this script:
 #
-# To enable "SVNCacheRevProps on" set CACHE_REVPROPS in the environment.
+#  make davautocheck CACHE_REVPROPS=1       # sets SVNCacheRevProps on
 #
-# To test over https set USE_SSL in the environment.
+#  make davautocheck BLOCK_READ=1           # sets SVNBlockRead on
 #
-# To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
-# appropriate value in the environment.
+#  make davautocheck USE_SSL=1              # run over https
 #
-# To load an MPM module for Apache 2.4 use APACHE_MPM=event in the
-# environment.
+#  make davautocheck USE_HTTPV1=1           # sets SVNAdvertiseV2Protocol off
+#
+#  make davautocheck APACHE_MPM=event       # specifies the 2.4 MPM
+#
+#  make davautocheck SVN_PATH_AUTHZ=short_circuit  # SVNPathAuthz short_circuit
 #
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.  Passing --gdb or --lldb will do the same, and in
