@@ -22,15 +22,6 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1826747
-   Fix a cause of unexpected short reads on the stream returned by the
-   svn_txdelta_to_svndiff_stream() API.
-   Justification:
-     A bug that can cause failing commits over http://, regression
-     introduced in 1.10.
-   Votes:
-     +1: kotkov, philip
-
  * r1826811, r1826814, 1826877, r1826907, r1826971
    Fix issue 4725: zlib error in fsfs cache.
    Justification:
@@ -68,3 +59,12 @@ Approved changes:
      Fixes test failure
    Votes:
      +1: jamessan, philip, brane
+
+ * r1826747
+   Fix a cause of unexpected short reads on the stream returned by the
+   svn_txdelta_to_svndiff_stream() API.
+   Justification:
+     A bug that can cause failing commits over http://, regression
+     introduced in 1.10.
+   Votes:
+     +1: kotkov, philip, brane
