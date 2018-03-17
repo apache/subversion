@@ -15,14 +15,6 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1825709, r1825711
-   Don't offer conflict resolution options for 'local move vs incoming move'.
-   Justication:
-     The resolver does not support 'move vs move' resolution yet.
-     The current behaviour is misleading.
-   Votes:
-     +1: stsp, philip
-
  * r1825783, r1825787, r1825788
    Ensure test data is correctly aligned before calling
    svn_utf__utf{16,32}_to_utf8
@@ -66,3 +58,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1825709, r1825711
+   Don't offer conflict resolution options for 'local move vs incoming move'.
+   Justication:
+     The resolver does not support 'move vs move' resolution yet.
+     The current behaviour is misleading.
+   Votes:
+     +1: stsp, philip, brane
