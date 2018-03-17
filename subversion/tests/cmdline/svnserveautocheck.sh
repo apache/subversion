@@ -124,6 +124,10 @@ if [ ${CACHE_REVPROPS:+set} ]; then
   SVNSERVE_ARGS="$SVNSERVE_ARGS --cache-revprops on"
 fi
 
+if [ ${BLOCK_READ:+set} ]; then
+  SVNSERVE_ARGS="$SVNSERVE_ARGS --block-read on"
+fi
+
 "$SERVER_CMD" -d -r "$ABS_BUILDDIR/subversion/tests/cmdline" \
             --listen-host 127.0.0.1 \
             --listen-port $SVNSERVE_PORT \
