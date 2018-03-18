@@ -44,14 +44,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1825783, r1825787, r1825788
-   Ensure test data is correctly aligned before calling
-   svn_utf__utf{16,32}_to_utf8
-   Justification:
-     Fixes test failure
-   Votes:
-     +1: jamessan, philip, brane
-
  * r1826747
    Fix a cause of unexpected short reads on the stream returned by the
    svn_txdelta_to_svndiff_stream() API.
