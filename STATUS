@@ -29,6 +29,13 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1827105, r1827114
+   Add testsuite support for testing FSFS with block-read enabled.
+   Justification:
+     Allows testing the code responsible for issue 4725.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
