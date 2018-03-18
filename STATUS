@@ -43,12 +43,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1826747
-   Fix a cause of unexpected short reads on the stream returned by the
-   svn_txdelta_to_svndiff_stream() API.
-   Justification:
-     A bug that can cause failing commits over http://, regression
-     introduced in 1.10.
-   Votes:
-     +1: kotkov, philip, brane
