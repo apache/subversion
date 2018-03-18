@@ -5093,6 +5093,9 @@ test_merge_incoming_move_dir_across_branches(const svn_test_opts_t *opts,
                                   ctx, b->pool, b->pool));
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
 
+  SVN_ERR_ASSERT(svn_client_conflict_get_local_change(conflict) ==
+                 svn_wc_conflict_reason_edited);
+
   /* Check possible move destinations for the directory. */
   SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options, conflict,
                                                           ctx, b->pool,
