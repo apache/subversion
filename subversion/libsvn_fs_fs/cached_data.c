@@ -2151,11 +2151,23 @@ rep_read_contents(void *baton,
   if (rb->current_fulltext)
     svn_stringbuf_appendbytes(rb->current_fulltext, buf, *len);
 
-  /* This is a FULL_READ_FN so a short read implies EOF. */
+  /* This is a FULL_READ_FN so a short read implies EOF and we can
+     verify the length. */
   rb->off += *len;
   if (*len < len_requested && rb->off != rb->len)
-    return svn_error_create(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Length mismatch while reading representation"));
+      {
+        /* A warning rather than an error to allow the data to be
+           retrieved when the length is wrong but the data is
+           present, i.e. if repository corruption has stored the wrong
+           expanded length. */
+        svn_error_t *err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Length mismatch while reading representation"
+                              " expected %" APR_OFF_T_FMT
+                              " got %" APR_OFF_T_FMT), rb->len, rb->off);
+
+        rb->fs->warning(rb->fs->warning_baton, err);
+        svn_error_clear(err);
+      }
 
   /* Perform checksumming.  We want to check the checksum as soon as
      the last byte of data is read, in case the caller never performs
