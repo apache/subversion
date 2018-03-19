@@ -126,7 +126,7 @@ Candidate changes:
    Votes:
      +1: philip, stsp
 
- * r1826720, r1826721
+ * r1826720, r1826721, 1827191
    Regression test and FSFS checksum verification for issue 4722.
    Justification:
      Tests the issue 4722 fix.
