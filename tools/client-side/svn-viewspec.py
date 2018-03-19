@@ -159,8 +159,8 @@ def svn_path_compare_paths(path1, path2):
     NOTE: Stolen unapologetically from Subversion's Python bindings
     module svn.core."""
 
-    path1_len = len(path1);
-    path2_len = len(path2);
+    path1_len = len(path1)
+    path2_len = len(path2)
     min_len = min(path1_len, path2_len)
     i = 0
 
