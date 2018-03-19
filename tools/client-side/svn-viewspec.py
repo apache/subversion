@@ -121,6 +121,8 @@ DEPTH_FILES      = 'files'
 DEPTH_IMMEDIATES = 'immediates'
 DEPTH_INFINITY   = 'infinity'
 
+os_system = None
+args = None
 
 class TreeNode:
     """A representation of a single node in a Subversion sparse
@@ -280,10 +282,10 @@ def checkout_tree(base_url, revision, tree_node, target_dir, is_top=True):
     if revision != -1:
         revision_str = "--revision=%d " % (revision)
     if is_top:
-        os.system('svn checkout "%s" "%s" --depth=%s %s'
+        os_system('svn checkout "%s" "%s" --depth=%s %s'
                   % (base_url, target_dir, depth, revision_str))
     else:
-        os.system('svn update "%s" --set-depth=%s %s'
+        os_system('svn update "%s" --set-depth=%s %s'
                   % (target_dir, depth, revision_str))
     child_names = tree_node.children.keys()
     child_names.sort(svn_path_compare_paths)
@@ -304,27 +306,34 @@ def checkout_spec(viewspec, target_dir):
 
 def usage_and_exit(errmsg=None):
     stream = errmsg and sys.stderr or sys.stdout
-    msg = __doc__.replace("__SCRIPTNAME__", os.path.basename(sys.argv[0]))
+    msg = __doc__.replace("__SCRIPTNAME__", os.path.basename(args[0]))
     stream.write(msg)
     if errmsg:
         stream.write("ERROR: %s\n" % (errmsg))
-    sys.exit(errmsg and 1 or 0)
+        return 1
+    return 0
 
-def main():
-    argc = len(sys.argv)
+def main(os_sys, args_in):
+    global os_system
+    global args
+    os_system = os_sys
+    args = args_in
+
+    argc = len(args)
     if argc < 2:
-        usage_and_exit('Not enough arguments.')
-    subcommand = sys.argv[1]
+        return usage_and_exit('Not enough arguments.')
+    subcommand = args[1]
     if subcommand == 'help':
-        usage_and_exit()
+        return usage_and_exit()
     elif subcommand == 'help-format':
         msg = FORMAT_HELP.replace("__SCRIPTNAME__",
-                                  os.path.basename(sys.argv[0]))
+                                  os.path.basename(args[0]))
         sys.stdout.write(msg)
+        return 1
     elif subcommand == 'examine':
         if argc < 3:
-            usage_and_exit('No viewspec file specified.')
-        fp = (sys.argv[2] == '-') and sys.stdin or open(sys.argv[2], 'r')
+            return usage_and_exit('No viewspec file specified.')
+        fp = (args[2] == '-') and sys.stdin or open(args[2], 'r')
         viewspec = parse_viewspec(fp)
         sys.stdout.write("Url: %s\n" % (viewspec.base_url))
         revision = viewspec.revision
@@ -336,13 +345,14 @@ def main():
         viewspec.tree.dump(True)
     elif subcommand == 'checkout':
         if argc < 3:
-            usage_and_exit('No viewspec file specified.')
+            return usage_and_exit('No viewspec file specified.')
         if argc < 4:
-            usage_and_exit('No target directory specified.')
-        fp = (sys.argv[2] == '-') and sys.stdin or open(sys.argv[2], 'r')
-        checkout_spec(parse_viewspec(fp), sys.argv[3])
+            return usage_and_exit('No target directory specified.')
+        fp = (args[2] == '-') and sys.stdin or open(args[2], 'r')
+        checkout_spec(parse_viewspec(fp), args[3])
     else:
-        usage_and_exit('Unknown subcommand "%s".' % (subcommand))
+        return usage_and_exit('Unknown subcommand "%s".' % (subcommand))
 
 if __name__ == "__main__":
-    main()
+    if main(os.system, sys.argv):
+        sys.exit(1)
