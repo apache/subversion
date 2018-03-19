@@ -100,6 +100,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Add 'http-compression=auto' client config option as default (r1803899 et al)
     * Speed up processing of mergeinfo (r1802470 et al)
     * Check for invalid 'xt' fields in x509 certs (r1809290)
+    * New '--password-from-stdin' option for 'svn' (r1819093)
   - Client-side bugfixes:
     * svnbench: Honour the '--with-no-revprops' option (r1709593)
     * ra_serf: Fix segfault when running over HTTP v1 (r1766089)
