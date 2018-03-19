@@ -15,7 +15,7 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1826720, r1826721
+ * r1826720, r1826721, 1827191
    Regression test and FSFS checksum test, part of issue 4722.
    Justification:
      Keeps 1.10 in sync with 1.11 and 1.9.
