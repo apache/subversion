@@ -252,7 +252,6 @@ def parse_viewspec(viewspec_fp):
         # Add our rule to the set thereof.
         assert not rules.has_key(path)
         rules[path] = depth
-        print path, depth
 
     tree = TreeNode('', root_depth)
     paths = rules.keys()
