@@ -1731,129 +1731,6 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
-  { "shelf-diff", svn_cl__shelf_diff, {0}, {N_(
-     "Show shelved changes as a diff.\n"
-     "usage: shelf-diff NAME [VERSION]\n"
-     "\n"), N_(
-     "  Show the changes in shelf NAME:VERSION (default: latest) as a diff.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
-  { "shelf-drop", svn_cl__shelf_drop, {0}, {N_(
-     "Delete a shelf.\n"
-     "usage: shelf-drop NAME\n"
-     "\n"), N_(
-     "  Delete the shelf named NAME.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
-  { "shelf-list", svn_cl__shelf_list, {"shelves"}, {N_(
-     "List shelves.\n"
-     "usage: shelf-list\n"
-     "\n"), N_(
-     "  List shelves. Include the first line of any log message\n"
-     "  and some details about the contents of the shelf, unless '-q' is\n"
-     "  given.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', 'v'}
-  },
-
-  { "shelf-list-by-paths", svn_cl__shelf_list_by_paths, {0}, {N_(
-     "List which shelf affects each path.\n"
-     "usage: shelf-list-by-paths [PATH...]\n"
-     "\n"), N_(
-     "  List which shelf most recently affects each path below the given PATHs.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
-  { "shelf-log", svn_cl__shelf_log, {0}, {N_(
-     "Show the versions of a shelf.\n"
-     "usage: shelf-log NAME\n"
-     "\n"), N_(
-     "  Show all versions of shelf NAME.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', 'v'}
-  },
-
-  { "shelf-save", svn_cl__shelf_save, {0}, {N_(
-     "Copy local changes onto a new version of a shelf.\n"
-     "usage: shelf-save NAME [PATH...]\n"
-     "\n"), N_(
-     "  Save local changes in the given PATHs as a new version of shelf NAME.\n"
-     "  The shelf's log message can be set with -m, -F, etc.\n"
-     "\n"), N_(
-     "  The same as 'svn shelve --keep-local'.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', opt_dry_run,
-     opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS,
-    }
-  },
-
-  { "shelve", svn_cl__shelf_shelve, {0}, {N_(
-     "Move local changes onto a shelf.\n"
-     "usage: shelve [--keep-local] NAME [PATH...]\n"
-     "\n"), N_(
-     "  Save the local changes in the given PATHs to a shelf named NAME.\n"
-     "  Revert those changes from the WC unless '--keep-local' is given.\n"
-     "  The shelf's log message can be set with -m, -F, etc.\n"
-     "\n"), N_(
-     "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
-     "\n"), N_(
-     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
-     "  and 'svn patch'. The following are currently NOT supported:\n"
-     "     copies, moves, mkdir, rmdir,\n"
-     "     'binary' content, uncommittable states\n"
-     "\n"), N_(
-     "  To bring back shelved changes, use 'svn unshelve NAME'.\n"
-     "\n"), N_(
-     "  Shelves are stored in <WC>/.svn/shelves/\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', opt_dry_run, opt_keep_local,
-     opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS,
-    } },
-
-  { "unshelve", svn_cl__shelf_unshelve, {0}, {N_(
-     "Copy shelved changes back into the WC.\n"
-     "usage: unshelve [--drop] [NAME [VERSION]]\n"
-     "\n"), N_(
-     "  Apply the shelf named NAME to the working copy.\n"
-     "  NAME defaults to the newest shelf.\n"
-     "\n"), N_(
-     "  Any conflict between the change being unshelved and a change\n"
-     "  already in the WC is handled the same way as by 'svn patch',\n"
-     "  creating a 'reject' file.\n"
-     "\n"), N_(
-     "  With --drop, delete the shelf (like shelf-drop) after successfully\n"
-     "  unshelving with no conflicts.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {opt_drop, 'q', opt_dry_run} },
-
   { "status", svn_cl__status, {"stat", "st"}, {N_(
      "Print the status of working copy files and directories.\n"
      "usage: status [PATH...]\n"
@@ -2071,6 +1948,129 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  Local modifications are preserved.\n"
     )},
     { 'q' } },
+
+  { "x-shelf-diff", svn_cl__shelf_diff, {"shelf-diff"}, {N_(
+     "Show shelved changes as a diff.\n"
+     "usage: x-shelf-diff NAME [VERSION]\n"
+     "\n"), N_(
+     "  Show the changes in shelf NAME:VERSION (default: latest) as a diff.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+  },
+
+  { "x-shelf-drop", svn_cl__shelf_drop, {"shelf-drop"}, {N_(
+     "Delete a shelf.\n"
+     "usage: x-shelf-drop NAME\n"
+     "\n"), N_(
+     "  Delete the shelf named NAME.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+  },
+
+  { "x-shelf-list", svn_cl__shelf_list, {"shelf-list", "shelves"}, {N_(
+     "List shelves.\n"
+     "usage: x-shelf-list\n"
+     "\n"), N_(
+     "  List shelves. Include the first line of any log message\n"
+     "  and some details about the contents of the shelf, unless '-q' is\n"
+     "  given.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', 'v'}
+  },
+
+  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {"shelf-list-by-paths"}, {N_(
+     "List which shelf affects each path.\n"
+     "usage: x-shelf-list-by-paths [PATH...]\n"
+     "\n"), N_(
+     "  List which shelf most recently affects each path below the given PATHs.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+  },
+
+  { "x-shelf-log", svn_cl__shelf_log, {"shelf-log"}, {N_(
+     "Show the versions of a shelf.\n"
+     "usage: x-shelf-log NAME\n"
+     "\n"), N_(
+     "  Show all versions of shelf NAME.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', 'v'}
+  },
+
+  { "x-shelf-save", svn_cl__shelf_save, {"shelf-save"}, {N_(
+     "Copy local changes onto a new version of a shelf.\n"
+     "usage: x-shelf-save NAME [PATH...]\n"
+     "\n"), N_(
+     "  Save local changes in the given PATHs as a new version of shelf NAME.\n"
+     "  The shelf's log message can be set with -m, -F, etc.\n"
+     "\n"), N_(
+     "  The same as 'svn shelve --keep-local'.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', opt_dry_run,
+     opt_depth, opt_targets, opt_changelist,
+     SVN_CL__LOG_MSG_OPTIONS,
+    }
+  },
+
+  { "x-shelve", svn_cl__shelf_shelve, {"shelve"}, {N_(
+     "Move local changes onto a shelf.\n"
+     "usage: x-shelve [--keep-local] NAME [PATH...]\n"
+     "\n"), N_(
+     "  Save the local changes in the given PATHs to a shelf named NAME.\n"
+     "  Revert those changes from the WC unless '--keep-local' is given.\n"
+     "  The shelf's log message can be set with -m, -F, etc.\n"
+     "\n"), N_(
+     "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
+     "\n"), N_(
+     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
+     "  and 'svn patch'. The following are currently NOT supported:\n"
+     "     copies, moves, mkdir, rmdir,\n"
+     "     'binary' content, uncommittable states\n"
+     "\n"), N_(
+     "  To bring back shelved changes, use 'svn unshelve NAME'.\n"
+     "\n"), N_(
+     "  Shelves are stored in <WC>/.svn/shelves/\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', opt_dry_run, opt_keep_local,
+     opt_depth, opt_targets, opt_changelist,
+     SVN_CL__LOG_MSG_OPTIONS,
+    } },
+
+  { "x-unshelve", svn_cl__shelf_unshelve, {"unshelve"}, {N_(
+     "Copy shelved changes back into the WC.\n"
+     "usage: x-unshelve [--drop] [NAME [VERSION]]\n"
+     "\n"), N_(
+     "  Apply the shelf named NAME to the working copy.\n"
+     "  NAME defaults to the newest shelf.\n"
+     "\n"), N_(
+     "  Any conflict between the change being unshelved and a change\n"
+     "  already in the WC is handled the same way as by 'svn patch',\n"
+     "  creating a 'reject' file.\n"
+     "\n"), N_(
+     "  With --drop, delete the shelf (like shelf-drop) after successfully\n"
+     "  unshelving with no conflicts.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {opt_drop, 'q', opt_dry_run} },
 
   { NULL, NULL, {0}, {NULL}, {0} }
 };
