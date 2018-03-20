@@ -1744,7 +1744,7 @@ svn_fs_paths_changed3(svn_fs_path_change_iterator_t **iterator,
  *
  * Use @a pool for all allocations, including the hash and its values.
  *
- * @note Retrieving the #node_rev_id element of #svn_fs_path_change2_t may
+ * @note Retrieving the #svn_fs_path_change2_t.node_rev_id element may
  *       be expensive in some FS backends.
  *
  * @since New in 1.6.
@@ -2492,7 +2492,7 @@ svn_fs_file_md5_checksum(unsigned char digest[],
  * svn_fs_file_contents().  In that case, the result of reading from
  * @a *contents is undefined.
  *
- * ### @todo kff: I am worried about lifetime issues with this pool vs
+ * @todo kff: I am worried about lifetime issues with this pool vs
  * the trail created farther down the call stack.  Trace this function
  * to investigate...
  */
