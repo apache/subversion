@@ -311,7 +311,7 @@ svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
 /**
  * Print a generic (not command-specific) usage message to @a stream.
  *
- * ### @todo Why is @a stream a stdio file instead of an svn stream?
+ * @todo Why is @a stream a stdio file instead of an svn stream?
  *
  * If @a header is non-NULL, print @a header followed by a newline.  Then
  * loop over @a cmd_table printing the usage for each command (getting

@@ -520,7 +520,7 @@ typedef struct svn_client_commit_item3_t
 
   /**
    * When processing the commit this contains the relative path for
-   * the commit session. #NULL until the commit item is preprocessed.
+   * the commit session. NULL until the commit item is preprocessed.
    * @since New in 1.7.
    */
   const char *session_relpath;
@@ -4418,7 +4418,7 @@ svn_client_relocate(const char *dir,
  * then do not error, just invoke @a ctx->notify_func2 with @a
  * ctx->notify_baton2, using notification code #svn_wc_notify_skip.
  *
- * @warn The 'revert' command intentionally and permanently loses
+ * @warning The 'revert' command intentionally and permanently loses
  * local modifications.
  *
  * @since New in 1.11.
@@ -4713,7 +4713,7 @@ typedef svn_error_t *(*svn_client_conflict_walk_func_t)(
 
 /**
  * Walk all conflicts within the specified @a depth of @a local_abspath.
- * Pass each conflict found during the walk to the @conflict_walk_func
+ * Pass each conflict found during the walk to the @a conflict_walk_func
  * callback, along with @a conflict_walk_func_baton.
  * Use cancellation and notification support provided by client context @a ctx.
  * 
@@ -5011,7 +5011,7 @@ svn_client_conflict_get_repos_info(const char **repos_root_url,
  * Any output parameter may be set to @c NULL by the caller to indicate that
  * a particular piece of information should not be returned.
  *
- * In case of tree conflicts, this path@revision does not necessarily exist
+ * In case of tree conflicts, this "path@revision" does not necessarily exist
  * in the repository, and it does not necessarily represent the incoming
  * change which is responsible for the occurance of the tree conflict.
  * The responsible incoming change is generally located somewhere between
