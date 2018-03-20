@@ -34,7 +34,7 @@ Candidate changes:
    Justification:
      Allows testing the code responsible for issue 4725.
    Votes:
-     +1: philip
+     +1: philip, julianfoad
 
 Veto-blocked changes:
 =====================
