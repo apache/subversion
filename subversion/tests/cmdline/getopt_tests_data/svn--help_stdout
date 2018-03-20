@@ -42,19 +42,19 @@ Available subcommands:
    resolve
    resolved
    revert
-   shelf-diff
-   shelf-drop
-   shelf-list (shelves)
-   shelf-list-by-paths
-   shelf-log
-   shelf-save
-   shelve
-   unshelve
    status (stat, st)
    switch (sw)
    unlock
    update (up)
    upgrade
+   x-shelf-diff (shelf-diff)
+   x-shelf-drop (shelf-drop)
+   x-shelf-list (shelf-list, shelves)
+   x-shelf-list-by-paths (shelf-list-by-paths)
+   x-shelf-log (shelf-log)
+   x-shelf-save (shelf-save)
+   x-shelve (shelve)
+   x-unshelve (unshelve)
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.apache.org/
