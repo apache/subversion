@@ -591,57 +591,6 @@ test_apply(svn_client_shelf_version_t *shelf_version,
   return SVN_NO_ERROR;
 }
 
-/* Throw an error if any paths affected by SHELF_VERSION are currently
- * modified in the WC. */
-static svn_error_t *
-check_no_modified_paths(const char *paths_base_abspath,
-                        svn_client_shelf_version_t *shelf_version,
-                        svn_boolean_t quiet,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *scratch_pool)
-{
-  apr_hash_t *paths;
-  struct status_baton sb;
-  apr_hash_index_t *hi;
-
-  sb.target_abspath = shelf_version->shelf->wc_root_abspath;
-  sb.target_path = "";
-  sb.header = _("--- Paths modified in shelf and in WC:\n");
-  sb.quiet = quiet;
-  sb.modified = FALSE;
-  sb.ctx = ctx;
-
-  SVN_ERR(svn_client_shelf_paths_changed(&paths, shelf_version,
-                                         scratch_pool, scratch_pool));
-  for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
-    {
-      const char *path = apr_hash_this_key(hi);
-      const char *abspath = svn_dirent_join(paths_base_abspath, path,
-                                            scratch_pool);
-
-      SVN_ERR(svn_client_status6(NULL /*result_rev*/,
-                                 ctx, abspath,
-                                 NULL /*revision*/,
-                                 svn_depth_empty,
-                                 FALSE /*get_all*/,
-                                 FALSE /*check_out_of_date*/,
-                                 TRUE /*check_working_copy*/,
-                                 TRUE /*no_ignore*/,
-                                 TRUE /*ignore_externals*/,
-                                 FALSE /*depth_as_sticky*/,
-                                 NULL /*changelists*/,
-                                 modification_checker, &sb,
-                                 scratch_pool));
-    }
-  if (sb.modified)
-    {
-      return svn_error_create(SVN_ERR_ILLEGAL_TARGET, NULL,
-                              _("Cannot unshelve/restore, as at least one "
-                                "path is modified in shelf and in WC"));
-    }
-  return SVN_NO_ERROR;
-}
-
 /* Intercept patch notifications to detect when there is a conflict */
 struct patch_notify_baton_t
 {
