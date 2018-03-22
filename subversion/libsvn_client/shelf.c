@@ -592,6 +592,82 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
   return SVN_NO_ERROR;
 }
 
+/* A filter to only apply the patch to a particular file. */
+struct patch_filter_baton_t
+{
+  /* The single path to be selected for patching */
+  const char *path;
+};
+
+static svn_error_t *
+patch_filter(void *baton,
+             svn_boolean_t *filtered,
+             const char *canon_path_from_patchfile,
+             const char *patch_abspath,
+             const char *reject_abspath,
+             apr_pool_t *scratch_pool)
+{
+  struct patch_filter_baton_t *fb = baton;
+
+  *filtered = (strcmp(canon_path_from_patchfile, fb->path) != 0);
+  return SVN_NO_ERROR;
+}
+
+/* Intercept patch notifications to detect when there is a conflict */
+struct patch_notify_baton_t
+{
+  svn_boolean_t conflict;
+};
+
+/* Intercept patch notifications to detect when there is a conflict */
+static void
+patch_notify(void *baton,
+             const svn_wc_notify_t *notify,
+             apr_pool_t *pool)
+{
+  struct patch_notify_baton_t *nb = baton;
+
+  if (notify->action == svn_wc_notify_patch_rejected_hunk
+      || notify->action == svn_wc_notify_skip)
+    nb->conflict = TRUE;
+}
+
+svn_error_t *
+svn_client_shelf_test_apply_file(svn_boolean_t *conflict_p,
+                                 svn_client_shelf_version_t *shelf_version,
+                                 const char *file_relpath,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_client_ctx_t *ctx = shelf_version->shelf->ctx;
+  svn_wc_notify_func2_t ctx_notify_func;
+  void *ctx_notify_baton;
+  struct patch_filter_baton_t fb;
+  struct patch_notify_baton_t nb;
+
+  fb.path = file_relpath;
+
+  nb.conflict = FALSE;
+  ctx_notify_func = ctx->notify_func2;
+  ctx_notify_baton = ctx->notify_baton2;
+  ctx->notify_func2 = patch_notify;
+  ctx->notify_baton2 = &nb;
+
+  SVN_ERR(svn_client_patch(shelf_version->patch_abspath,
+                           shelf_version->shelf->wc_root_abspath,
+                           TRUE /*dry_run*/, 0 /*strip*/,
+                           FALSE /*reverse*/,
+                           FALSE /*ignore_whitespace*/,
+                           TRUE /*remove_tempfiles*/,
+                           patch_filter, &fb,
+                           shelf_version->shelf->ctx, scratch_pool));
+
+  ctx->notify_func2 = ctx_notify_func;
+  ctx->notify_baton2 = ctx_notify_baton;
+
+  *conflict_p = nb.conflict;
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
                        svn_boolean_t dry_run,
