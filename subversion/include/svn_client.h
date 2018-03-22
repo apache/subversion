@@ -7064,6 +7064,10 @@ svn_client_shelf_get_all_versions(apr_array_header_t **versions_p,
 
 /** Apply @a shelf_version to the WC.
  *
+ * If @a dry_run is true, try applying the shelf-version to the WC and
+ * report the full set of notifications about successes and conflicts,
+ * but leave the WC untouched.
+ *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
@@ -7072,6 +7076,24 @@ svn_error_t *
 svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
                        svn_boolean_t dry_run,
                        apr_pool_t *scratch_pool);
+
+/** Test whether we can successfully apply the patch for @a file_relpath
+ * in @a shelf_version to the WC.
+ *
+ * Try applying the shelf-version to the WC and set @a *conflict_p to
+ * true if any conflict occurs, else to false.
+ *
+ * Leave the WC untouched.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_test_apply_file(svn_boolean_t *conflict_p,
+                                 svn_client_shelf_version_t *shelf_version,
+                                 const char *file_relpath,
+                                 apr_pool_t *scratch_pool);
 
 /** Reverse-apply @a shelf_version to the WC.
  *

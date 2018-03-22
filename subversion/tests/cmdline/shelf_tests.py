@@ -44,6 +44,11 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 
+def state_from_status(wc_dir):
+  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
+                                      wc_dir)
+  return svntest.wc.State.from_status(output, wc_dir)
+
 def shelve_unshelve_verify(sbox):
   """Round-trip: shelve; verify all changes are reverted;
      unshelve; verify all changes are restored.
@@ -52,9 +57,7 @@ def shelve_unshelve_verify(sbox):
   wc_dir = sbox.wc_dir
 
   # Save the modified state
-  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
-                                      wc_dir)
-  modified_state = svntest.wc.State.from_status(output, wc_dir)
+  modified_state = state_from_status(wc_dir)
 
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
@@ -184,11 +187,6 @@ def shelve_from_inner_path(sbox):
 
 #----------------------------------------------------------------------
 
-def state_from_status(wc_dir):
-  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
-                                      wc_dir)
-  return svntest.wc.State.from_status(output, wc_dir)
-
 def save_revert_restore(sbox, modifier1, modifier2):
   "Save 2 checkpoints; revert; restore 1st"
 
@@ -255,6 +253,49 @@ def shelve_mergeinfo(sbox):
 
   shelve_unshelve(sbox, modifier)
 
+#----------------------------------------------------------------------
+
+def unshelve_refuses_if_conflicts(sbox):
+  "unshelve refuses if conflicts"
+
+  def modifier1(sbox):
+    sbox.simple_append('alpha', 'A-mod1\nB\nC\nD\n', truncate=True)
+    sbox.simple_append('beta', 'A-mod1\nB\nC\nD\n', truncate=True)
+
+  def modifier2(sbox):
+    sbox.simple_append('beta', 'A-mod2\nB\nC\nD\n', truncate=True)
+
+  sbox.build(empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = ''
+
+  sbox.simple_add_text('A\nB\nC\nD\n', 'alpha')
+  sbox.simple_add_text('A\nB\nC\nD\n', 'beta')
+  sbox.simple_commit()
+  initial_state = state_from_status(wc_dir)
+
+  # Make initial mods; remember this modified state
+  modifier1(sbox)
+  modified_state1 = state_from_status(wc_dir)
+  assert modified_state1 != initial_state
+
+  # Shelve; check there are no longer any local mods
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelve', 'foo')
+  svntest.actions.run_and_verify_status(wc_dir, initial_state)
+
+  # Make a different local mod that will conflict with the shelf
+  modifier2(sbox)
+  modified_state2 = state_from_status(wc_dir)
+
+  # Try to unshelve; check it fails with an error about a conflict
+  svntest.actions.run_and_verify_svn(None, '.*[Cc]onflict.*',
+                                     'unshelve', 'foo')
+  # Check nothing changed in the attempt
+  svntest.actions.run_and_verify_status(wc_dir, modified_state2)
+
 
 ########################################################################
 # Run the tests
@@ -270,6 +311,7 @@ test_list = [ None,
               shelve_from_inner_path,
               checkpoint_basic,
               shelve_mergeinfo,
+              unshelve_refuses_if_conflicts,
              ]
 
 if __name__ == '__main__':

@@ -564,7 +564,34 @@ shelve(int *new_version_p,
   return SVN_NO_ERROR;
 }
 
-/* Throw an error if any paths affected by SHELF:VERSION are currently
+/* Throw an error if any path affected by SHELF_VERSION gives a conflict
+ * when applied (as a dry-run) to the WC. */
+static svn_error_t *
+test_apply(svn_client_shelf_version_t *shelf_version,
+           svn_client_ctx_t *ctx,
+           apr_pool_t *scratch_pool)
+{
+  apr_hash_t *paths;
+  apr_hash_index_t *hi;
+
+  SVN_ERR(svn_client_shelf_paths_changed(&paths, shelf_version,
+                                         scratch_pool, scratch_pool));
+  for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
+    {
+      const char *path = apr_hash_this_key(hi);
+      svn_boolean_t conflict;
+
+      SVN_ERR(svn_client_shelf_test_apply_file(&conflict, shelf_version, path,
+                                               scratch_pool));
+      if (conflict)
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("Conflict in applying shelf '%s' path '%s'"),
+                                 shelf_version->shelf->name, path);
+    }
+  return SVN_NO_ERROR;
+}
+
+/* Throw an error if any paths affected by SHELF_VERSION are currently
  * modified in the WC. */
 static svn_error_t *
 check_no_modified_paths(const char *paths_base_abspath,
@@ -642,13 +669,15 @@ patch_notify(void *baton,
  * or the newest version is @a arg is null.
  *
  * If @a dry_run is true, don't actually do it.
+ *
+ * Error if any path would have a conflict, unless @a force_if_conflict.
  */
 static svn_error_t *
 shelf_restore(const char *name,
               const char *arg,
               svn_boolean_t dry_run,
               svn_boolean_t quiet,
-              svn_boolean_t force_already_modified,
+              svn_boolean_t force_if_conflict,
               const char *local_abspath,
               svn_client_ctx_t *ctx,
               apr_pool_t *scratch_pool)
@@ -685,10 +714,11 @@ shelf_restore(const char *name,
       SVN_ERR(stats(shelf, version, shelf_version, time_now,
                     TRUE /*with_logmsg*/, scratch_pool));
     }
-  if (! force_already_modified)
+  if (! force_if_conflict)
     {
-      SVN_ERR(check_no_modified_paths(shelf->wc_root_abspath,
-                                      shelf_version, quiet, ctx, scratch_pool));
+      SVN_ERR_W(test_apply(shelf_version, ctx, scratch_pool),
+                _("Cannot unshelve/restore, as at least one "
+                  "path would conflict"));
     }
 
   b.rejects = FALSE;
