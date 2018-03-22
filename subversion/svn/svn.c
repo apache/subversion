@@ -2060,7 +2060,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  Apply the shelf named NAME to the working copy.\n"
      "  NAME defaults to the newest shelf.\n"
      "\n"), N_(
-     "  Any conflict between the change being unshelved and a change\n"
+     "  Unshelve normally refuses to run if any of the files are already\n"
+     "  modified in the WC. With --force, it does not check. In that case,\n"
+     "  any conflict between the change being unshelved and a change\n"
      "  already in the WC is handled the same way as by 'svn patch',\n"
      "  creating a 'reject' file.\n"
      "\n"), N_(
@@ -2070,7 +2072,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     )},
-    {opt_drop, 'q', opt_dry_run} },
+    {opt_drop, 'q', opt_dry_run, opt_force} },
 
   { NULL, NULL, {0}, {NULL}, {0} }
 };

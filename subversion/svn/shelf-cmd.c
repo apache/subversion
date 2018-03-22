@@ -648,6 +648,7 @@ shelf_restore(const char *name,
               const char *arg,
               svn_boolean_t dry_run,
               svn_boolean_t quiet,
+              svn_boolean_t force_already_modified,
               const char *local_abspath,
               svn_client_ctx_t *ctx,
               apr_pool_t *scratch_pool)
@@ -684,8 +685,11 @@ shelf_restore(const char *name,
       SVN_ERR(stats(shelf, version, shelf_version, time_now,
                     TRUE /*with_logmsg*/, scratch_pool));
     }
-  SVN_ERR(check_no_modified_paths(shelf->wc_root_abspath,
-                                  shelf_version, quiet, ctx, scratch_pool));
+  if (! force_already_modified)
+    {
+      SVN_ERR(check_no_modified_paths(shelf->wc_root_abspath,
+                                      shelf_version, quiet, ctx, scratch_pool));
+    }
 
   b.rejects = FALSE;
   b.notify_func = ctx->notify_func2;
@@ -931,6 +935,7 @@ svn_cl__shelf_unshelve(apr_getopt_t *os,
 
   SVN_ERR(shelf_restore(name, arg,
                         opt_state->dry_run, opt_state->quiet,
+                        opt_state->force /*force_already_modified*/,
                         local_abspath, ctx, scratch_pool));
 
   if (opt_state->drop)
