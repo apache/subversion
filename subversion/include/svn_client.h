@@ -3099,9 +3099,10 @@ svn_client_blame(const char *path_or_url,
  *
  * Generated headers are encoded using @a header_encoding.
  *
- * Diff output will not be generated for binary files, unless @a
- * ignore_content_type is TRUE, in which case diffs will be shown
- * regardless of the content types.
+ * If either side has an svn:mime-type property that indicates 'binary'
+ * content, then if @a ignore_content_type is set, attempt to produce the
+ * diff in the usual way, otherwise produce a 'GIT binary diff' in git mode
+ * or print a warning message in non-git mode.
  *
  * @a diff_options (an array of <tt>const char *</tt>) is used to pass
  * additional command line options to the diff processes invoked to compare
