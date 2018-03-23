@@ -1690,74 +1690,6 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "  the output of 'svn help merge' for 'undo'.\n"),
     {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
 
-  { "shelve", svn_cl__shelve, {0}, N_
-    ("Put a local change aside, as if putting it on a shelf.\n"
-     "usage: 1. shelve [--keep-local] NAME [PATH...]\n"
-     "       2. shelve --delete NAME\n"
-     "       3. shelve --list\n"
-     "\n"
-     "  1. Save the local change in the given PATHs to a patch file, and\n"
-     "     revert that change from the WC unless '--keep-local' is given.\n"
-     "     If a log message is given with '-m' or '-F', include it at the\n"
-     "     beginning of the patch file.\n"
-     "\n"
-     "  2. Delete the shelved change NAME.\n"
-     "     (A backup is kept, named with a '.bak' extension.)\n"
-     "\n"
-     "  3. List shelved changes. Include the first line of any log message\n"
-     "     and some details about the contents of the change, unless '-q' is\n"
-     "     given.\n"
-     "\n"
-     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
-     "  and 'svn patch'. The following are currently NOT supported:\n"
-     "     mergeinfo changes, copies, moves, mkdir, rmdir,\n"
-     "     'binary' content, uncommittable states\n"
-     "\n"
-     "  To bring back a shelved change, use 'svn unshelve NAME'.\n"
-     "\n"
-     "  Shelved changes are stored in <WC>/.svn/shelves/\n"
-     "\n"
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    ),
-    {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
-     opt_depth, opt_targets, opt_changelist,
-     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
-     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
-    } },
-
-  { "unshelve", svn_cl__unshelve, {0}, N_
-    ("Bring a shelved change back to a local change in the WC.\n"
-     "usage: 1. unshelve [--keep-shelved] [NAME]\n"
-     "       2. unshelve --list\n"
-     "\n"
-     "  1. Apply the shelved change NAME to the working copy.\n"
-     "     Delete the patch unless the '--keep-shelved' option is given.\n"
-     "     (A backup is kept, named with a '.bak' extension.)\n"
-     "     NAME defaults to the most recent shelved change.\n"
-     "\n"
-     "  2. List shelved changes. Include the first line of any log message\n"
-     "     and some details about the contents of the change, unless '-q' is\n"
-     "     given.\n"
-     "\n"
-     "  Any conflict between the change being unshelved and a change\n"
-     "  already in the WC is handled the same way as by 'svn patch',\n"
-     "  creating a 'reject' file.\n"
-     "\n"
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    ),
-    {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
-
-  { "shelves", svn_cl__shelves, {0}, N_
-    ("List shelved changes.\n"
-     "usage: shelves\n"
-     "\n"
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    ),
-    {'q'} },
-
   { "status", svn_cl__status, {"stat", "st"}, N_
     ("Print the status of working copy files and directories.\n"
      "usage: status [PATH...]\n"
@@ -1970,6 +1902,74 @@ const svn_opt_subcommand_desc2_t svn_cl__cmd_table[] =
      "\n"
      "  Local modifications are preserved.\n"),
     { 'q' } },
+
+  { "x-shelve", svn_cl__shelve, {"shelve"}, N_
+    ("Put a local change aside, as if putting it on a shelf.\n"
+     "usage: 1. x-shelve [--keep-local] NAME [PATH...]\n"
+     "       2. x-shelve --delete NAME\n"
+     "       3. x-shelve --list\n"
+     "\n"
+     "  1. Save the local change in the given PATHs to a patch file, and\n"
+     "     revert that change from the WC unless '--keep-local' is given.\n"
+     "     If a log message is given with '-m' or '-F', include it at the\n"
+     "     beginning of the patch file.\n"
+     "\n"
+     "  2. Delete the shelved change NAME.\n"
+     "     (A backup is kept, named with a '.bak' extension.)\n"
+     "\n"
+     "  3. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
+     "  and 'svn patch'. The following are currently NOT supported:\n"
+     "     mergeinfo changes, copies, moves, mkdir, rmdir,\n"
+     "     'binary' content, uncommittable states\n"
+     "\n"
+     "  To bring back a shelved change, use 'svn x-unshelve NAME'.\n"
+     "\n"
+     "  Shelved changes are stored in <WC>/.svn/shelves/\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+    {opt_delete, opt_list, 'q', opt_dry_run, opt_keep_local,
+     opt_depth, opt_targets, opt_changelist,
+     /* almost SVN_CL__LOG_MSG_OPTIONS but not currently opt_with_revprop: */
+     'm', 'F', opt_force_log, opt_editor_cmd, opt_encoding,
+    } },
+
+  { "x-unshelve", svn_cl__unshelve, {"unshelve"}, N_
+    ("Bring a shelved change back to a local change in the WC.\n"
+     "usage: 1. x-unshelve [--keep-shelved] [NAME]\n"
+     "       2. x-unshelve --list\n"
+     "\n"
+     "  1. Apply the shelved change NAME to the working copy.\n"
+     "     Delete the patch unless the '--keep-shelved' option is given.\n"
+     "     (A backup is kept, named with a '.bak' extension.)\n"
+     "     NAME defaults to the most recent shelved change.\n"
+     "\n"
+     "  2. List shelved changes. Include the first line of any log message\n"
+     "     and some details about the contents of the change, unless '-q' is\n"
+     "     given.\n"
+     "\n"
+     "  Any conflict between the change being unshelved and a change\n"
+     "  already in the WC is handled the same way as by 'svn patch',\n"
+     "  creating a 'reject' file.\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+    {opt_keep_shelved, opt_list, 'q', opt_dry_run} },
+
+  { "x-shelves", svn_cl__shelves, {"shelves"}, N_
+    ("List shelved changes.\n"
+     "usage: x-shelves\n"
+     "\n"
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    ),
+    {'q'} },
 
   { NULL, NULL, {0}, NULL, {0} }
 };
