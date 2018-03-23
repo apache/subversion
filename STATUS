@@ -47,6 +47,15 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1827337
+   Shelving: Name the subcommands 'x-shelve' etc.
+   Justification:
+     Make users more aware of the 'experimental' nature.
+   Branch:
+     1.10.x-x-shelve
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
