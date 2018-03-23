@@ -15,12 +15,12 @@ Status of 1.10.0:
 Candidate changes:
 ==================
 
- * r1826720, r1826721, 1827191
+ * r1826720, r1826721, r1827191, r1827574
    Regression test and FSFS checksum test, part of issue 4722.
    Justification:
      Keeps 1.10 in sync with 1.11 and 1.9.
    Votes:
-     +1: philip
+     +1: philip (without r1827574)
 
  * r1826811, r1826814, 1826877, r1826907, r1826971
    Fix issue 4725: FSFS block-read mode doesn't work.
