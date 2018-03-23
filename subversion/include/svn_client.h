@@ -7083,6 +7083,21 @@ svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
  * Try applying the shelf-version to the WC and set @a *conflict_p to
  * true if any conflict occurs, else to false.
  *
+ * If @a file_relpath is not found in @a shelf_version, set @a *conflict_p
+ * to FALSE.
+ *
+ * @a file_relpath is relative to the WC root.
+ *
+ * A conflict means the shelf cannot be applied successfully to the WC
+ * because the change to be applied is not compatible with the current
+ * working state of the WC file. Examples are a text conflict, or the
+ * file does not exist or is a directory, or the shelf is trying to add
+ * the file but it already exists, or trying to delete it but it does not
+ * exist.
+ *
+ * Return an error only if something is broken, e.g. unable to read data
+ * from the specified shelf-version.
+ *
  * Leave the WC untouched.
  *
  * @since New in 1.X.
