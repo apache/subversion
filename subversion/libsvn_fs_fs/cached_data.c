@@ -2161,9 +2161,13 @@ rep_read_contents(void *baton,
            present, i.e. if repository corruption has stored the wrong
            expanded length. */
         svn_error_t *err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
-                            _("Length mismatch while reading representation"
-                              " expected %" APR_OFF_T_FMT
-                              " got %" APR_OFF_T_FMT), rb->len, rb->off);
+                            _("Length mismatch while reading representation:"
+                              " expected %s,"
+                              " got %s"),
+                            apr_psprintf(rb->pool, "%" SVN_FILESIZE_T_FMT,
+                                         rb->len),
+                            apr_psprintf(rb->pool, "%" SVN_FILESIZE_T_FMT,
+                                         rb->off));
 
         rb->fs->warning(rb->fs->warning_baton, err);
         svn_error_clear(err);
