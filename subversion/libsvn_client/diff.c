@@ -795,9 +795,12 @@ transform_link_to_git(const char **new_tmpfile,
 }
 
 /* Show differences between TMPFILE1 and TMPFILE2. DIFF_RELPATH, REV1, and
-   REV2 are used in the headers to indicate the file and revisions.  If either
-   MIMETYPE1 or MIMETYPE2 indicate binary content, don't show a diff,
-   but instead print a warning message.
+   REV2 are used in the headers to indicate the file and revisions.
+
+   If either side has an svn:mime-type property that indicates 'binary'
+   content, then if DWI->force_binary is set, attempt to produce the
+   diff in the usual way, otherwise produce a 'GIT binary diff' in git mode
+   or print a warning message in non-git mode.
 
    If FORCE_DIFF is TRUE, always write a diff, even for empty diffs.
 
