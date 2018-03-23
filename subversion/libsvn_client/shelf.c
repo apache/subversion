@@ -59,7 +59,7 @@ shelf_name_encode(char **encoded_name_p,
 
   while (*name)
     {
-      apr_snprintf(out_pos, 3, "%02x", *name++);
+      apr_snprintf(out_pos, 3, "%02x", (unsigned char)(*name++));
       out_pos += 2;
     }
   *encoded_name_p = encoded_name;
