@@ -49,16 +49,19 @@ Candidate changes:
      1.10.x-x-shelve
    Votes:
      +1: julianfoad
+     +1: danielsh (Q: should shelf_write_patch()'s output line be updated too?)
 
 Veto-blocked changes:
 =====================
 
- * r1825979
+ * r1825979, r1827670
    Minor clarification to docstring.
    Justification:
      Trivial documentation fix.
    Votes:
-     +1: danielsh, jamessan
+     +1: danielsh
+   Votes (without r1827670):
+     +1: jamessan
      -1: brane (the docstring "clarification" is wrong, since
                 we do not propagate the compression level to LZ4)
 
