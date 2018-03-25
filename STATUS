@@ -139,10 +139,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1823327
-   Performance: Make the 'info' command fast on old repository revisions.
-   Justification:
-     Performance was bad.
-   Votes:
-     +1: julianfoad, stsp, stefan2
