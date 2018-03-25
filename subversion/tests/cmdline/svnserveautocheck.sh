@@ -31,6 +31,14 @@
 # distribution; it's easiest to just run it as "make svnserveautocheck".
 # Like "make check", you can specify further options like
 # "make svnserveautocheck FS_TYPE=bdb TESTS=subversion/tests/cmdline/basic.py".
+#
+# Other environment variables that can be passed:
+#
+#  make svnserveautocheck CACHE_REVPROPS=1   # run svnserve --cache-revprops
+#
+#  make svnserveautocheck BLOCK_READ=1       # run svnserve --block-read on
+#
+#  make svnserveautocheck THREADED=1         # run svnserve -T
 
 PYTHON=${PYTHON:-python}
 
@@ -122,6 +130,10 @@ fi
 
 if [ ${CACHE_REVPROPS:+set} ]; then
   SVNSERVE_ARGS="$SVNSERVE_ARGS --cache-revprops on"
+fi
+
+if [ ${BLOCK_READ:+set} ]; then
+  SVNSERVE_ARGS="$SVNSERVE_ARGS --block-read on"
 fi
 
 "$SERVER_CMD" -d -r "$ABS_BUILDDIR/subversion/tests/cmdline" \
