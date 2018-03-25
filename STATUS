@@ -140,18 +140,9 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1826272
-   Fix issue 4722: commits that fail when a file DELTA is a multiple of 16K.
-   Justification:
-     Commits fail with a false "Filesystem is corrupt" error.
-   Branch: ^/subversion/branches/1.9.x-issue4722
-   Votes:
-     +1: philip, stsp, stefan2
-
  * r1823327
    Performance: Make the 'info' command fast on old repository revisions.
    Justification:
      Performance was bad.
    Votes:
      +1: julianfoad, stsp, stefan2
-
