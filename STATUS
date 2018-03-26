@@ -20,8 +20,7 @@ Candidate changes:
    Justification:
      Keeps 1.10 in sync with 1.11 and 1.9.
    Votes:
-     +1: philip (without r1827574)
-     +1: stefan2
+     +1: philip, stefan2
 
 Veto-blocked changes:
 =====================
