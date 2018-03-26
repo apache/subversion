@@ -1513,11 +1513,22 @@ check_diff_target_exists(const char *url,
 
 /** Prepare a repos repos diff between PATH_OR_URL1 and
  * PATH_OR_URL2@PEG_REVISION, in the revision range REVISION1:REVISION2.
- * Return URLs and peg revisions in *URL1, *REV1 and in *URL2, *REV2.
- * Return suitable anchors in *ANCHOR1 and *ANCHOR2, and targets in
- * *TARGET1 and *TARGET2, based on *URL1 and *URL2.
- * Indicate the corresponding node kinds in *KIND1 and *KIND2, and verify
+ *
+ * Return the resolved URL and peg revision pairs in *URL1, *REV1 and in
+ * *URL2, *REV2.
+ *
+ * Return suitable anchor URL and target pairs in *ANCHOR1, *TARGET1 and
+ * in *ANCHOR2, *TARGET2, corresponding to *URL1 and *URL2.
+ *
+ * (The choice of anchor URLs here appears to be: start with *URL1, *URL2;
+ * then take the parent dir on both sides, unless either of *URL1 or *URL2
+ * is the repository root or the parent dir of *URL1 is unreadable.)
+ *
+ * Set *KIND1 and *KIND2 to the node kinds of *URL1 and *URL2, and verify
  * that at least one of the diff targets exists.
+ *
+ * Set *RA_SESSION to an RA session parented at the URL *ANCHOR1.
+ *
  * Use client context CTX. Do all allocations in POOL. */
 static svn_error_t *
 diff_prepare_repos_repos(const char **url1,
@@ -1789,6 +1800,16 @@ unsupported_diff_error(svn_error_t *child_err)
    PATH1 and PATH2 are both working copy paths.  REVISION1 and
    REVISION2 are their respective revisions.
 
+   For now, require PATH1=PATH2, REVISION1='base', REVISION2='working',
+   otherwise return an error.
+
+   Set *ROOT_RELPATH to "" if PATH1 is a WC root, else to basename(PATH1).
+   Set *ROOT_IS_DIR to TRUE if the working version of PATH1 is
+   a directory, else to FALSE.
+
+   If DDI is non-null: Set DDI->anchor to the parent of PATH1 if the working
+   version of PATH1 is a dir, else to PATH1; set DDI->orig_path* to PATH*.
+
    All other options are the same as those passed to svn_client_diff7(). */
 static svn_error_t *
 diff_wc_wc(const char **root_relpath,
@@ -1836,6 +1857,9 @@ diff_wc_wc(const char **root_relpath,
         ddi->anchor = svn_dirent_dirname(path1, scratch_pool);
       else
         ddi->anchor = path1;
+
+      ddi->orig_path_1 = path1;
+      ddi->orig_path_2 = path2;
     }
 
   SVN_ERR(svn_wc__diff7(root_relpath, root_is_dir,
@@ -1854,6 +1878,20 @@ diff_wc_wc(const char **root_relpath,
    If PEG_REVISION is specified, PATH_OR_URL2 is the path at the peg revision,
    and the actual two paths compared are determined by following copy
    history from PATH_OR_URL2.
+
+   If DDI is non-null: Set DDI->orig_path_* to the two diff target URLs as
+   resolved at the given revisions; set DDI->anchor to an anchor WC path
+   if either of PATH_OR_URL* is given as a WC path, else to null; set
+   DDI->session_relpath to the repository-relpath of the anchor URL for
+   DDI->orig_path_1.
+
+   (The choice of WC anchor implementated here for DDI->anchor appears to
+   be: choose PATH_OR_URL2 (if it's a WC path) or else PATH_OR_URL1 (if
+   it's a WC path); then take its parent dir unless both resolved URLs
+   refer to directories.)
+
+   (For the choice of URL anchor for DDI->session_relpath, see
+   diff_prepare_repos_repos().)
 
    All other options are the same as those passed to svn_client_diff7(). */
 static svn_error_t *
@@ -2024,6 +2062,11 @@ diff_repos_repos(const char **root_relpath,
    working copy (BASE or WORKING)
 
    If REVERSE is TRUE, the diff will be reported in reverse.
+
+   If DDI is non-null: Set DDI->orig_path_* to the URLs of the two diff
+   targets as resolved at the given revisions; set DDI->anchor to a WC path
+   anchor for PATH2; set DDI->session_relpath to the repository-relpath of
+   the URL of that same anchor WC path.
 
    All other options are the same as those passed to svn_client_diff7(). */
 static svn_error_t *
@@ -2371,7 +2414,12 @@ do_diff(const char **root_relpath,
               SVN_ERR(svn_dirent_get_absolute(&abspath2, path_or_url2,
                                               scratch_pool));
 
-              /* ### What about ddi? */
+              if (ddi)
+                {
+                  ddi->orig_path_1 = path_or_url1;
+                  ddi->orig_path_2 = path_or_url2;
+                }
+
               /* Ignores changelists, ignore_ancestry */
               SVN_ERR(svn_client__arbitrary_nodes_diff(root_relpath, root_is_dir,
                                                        abspath1, abspath2,
@@ -2466,8 +2514,6 @@ static svn_error_t *
 get_diff_processor(svn_diff_tree_processor_t **diff_processor,
                    struct diff_driver_info_t **ddi,
                    const apr_array_header_t *options,
-                   const char *path_or_url1,
-                   const char *path_or_url2,
                    const char *relative_to_dir,
                    svn_boolean_t no_diff_added,
                    svn_boolean_t no_diff_deleted,
@@ -2487,8 +2533,6 @@ get_diff_processor(svn_diff_tree_processor_t **diff_processor,
   svn_diff_tree_processor_t *processor;
 
   /* setup callback and baton */
-  dwi->ddi.orig_path_1 = path_or_url1;
-  dwi->ddi.orig_path_2 = path_or_url2;
 
   SVN_ERR(create_diff_writer_info(dwi, options,
                                   ctx->config, pool));
@@ -2607,7 +2651,6 @@ svn_client_diff7(const apr_array_header_t *options,
 
   SVN_ERR(get_diff_processor(&diff_processor, &ddi,
                              options,
-                             path_or_url1, path_or_url2,
                              relative_to_dir,
                              no_diff_added,
                              no_diff_deleted,
@@ -2668,7 +2711,6 @@ svn_client_diff_peg7(const apr_array_header_t *options,
 
   SVN_ERR(get_diff_processor(&diff_processor, &ddi,
                              options,
-                             path_or_url, path_or_url,
                              relative_to_dir,
                              no_diff_added,
                              no_diff_deleted,
