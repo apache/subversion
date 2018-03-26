@@ -111,12 +111,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1826720, r1826721, r1827191
+ * r1826720, r1826721, r1827191, r1827574
    Regression test and FSFS checksum verification for issue 4722.
    Justification:
      Tests the issue 4722 fix.
    Votes:
-     +1: philip, stefan2
+     +1: philip
+     +1: stefan2 (without r1827574)
 
 Veto-blocked changes:
 =====================
