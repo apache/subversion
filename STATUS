@@ -23,37 +23,6 @@ Candidate changes:
      +1: philip (without r1827574)
      +1: stefan2
 
- * r1826811, r1826814, r1826877, r1826907, r1826971
-   Fix issue 4725: FSFS block-read mode doesn't work.
-   Justification:
-     Block-read is enabled automatically when svnadmin has a cache bigger
-     than 64MB.  It can be manually enabled in mod_dav_svn/svnserve.
-   Votes:
-     +1: philip, stefan2
-
- * r1827562
-   Shelving: fix encoding of non-ASCII shelf names.
-   Justification:
-     Allows using non-ASCII shelf names (in a non-ASCII locale).
-   Notes:
-     The file name differs between branch and trunk, so merge like this:
-     svn merge -c1827562 ^/subversion/trunk/subversion/libsvn_client/shelf.c subversion/libsvn_client/shelve.c
-   Votes:
-     +1: julianfoad, stefan2
-
- * r1827337
-   Shelving: Name the subcommands 'x-shelve' etc.
-   Justification:
-     Make users more aware of the 'experimental' nature.
-   Branch:
-     1.10.x-x-shelve
-   Notes:
-     To danielsh: (A: shelf_write_patch()'s "created by" line doesn't need
-     to be updated).
-   Votes:
-     +1: julianfoad
-     +1: danielsh (Q: should shelf_write_patch()'s output line be updated too?)
-
 Veto-blocked changes:
 =====================
 
@@ -70,3 +39,34 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1826811, r1826814, r1826877, r1826907, r1826971
+   Fix issue 4725: FSFS block-read mode doesn't work.
+   Justification:
+     Block-read is enabled automatically when svnadmin has a cache bigger
+     than 64MB.  It can be manually enabled in mod_dav_svn/svnserve.
+   Votes:
+     +1: philip, stefan2, rhuijben
+
+ * r1827562
+   Shelving: fix encoding of non-ASCII shelf names.
+   Justification:
+     Allows using non-ASCII shelf names (in a non-ASCII locale).
+   Notes:
+     The file name differs between branch and trunk, so merge like this:
+     svn merge -c1827562 ^/subversion/trunk/subversion/libsvn_client/shelf.c subversion/libsvn_client/shelve.c
+   Votes:
+     +1: julianfoad, stefan2, rhuijben
+
+ * r1827337
+   Shelving: Name the subcommands 'x-shelve' etc.
+   Justification:
+     Make users more aware of the 'experimental' nature.
+   Branch:
+     1.10.x-x-shelve
+   Notes:
+     To danielsh: (A: shelf_write_patch()'s "created by" line doesn't need
+     to be updated).
+   Votes:
+     +1: julianfoad, rhuijben
+     +1: danielsh (Q: should shelf_write_patch()'s output line be updated too?)
