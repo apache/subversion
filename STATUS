@@ -22,15 +22,6 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
- * r1825979, r1827670
-   Minor clarification to docstring.
-   Justification:
-     Trivial documentation fix.
-   Votes:
-     +1: danielsh, brane
-   Votes (without r1827670):
-     +1: jamessan
-
 Veto-blocked changes:
 =====================
 
@@ -49,3 +40,11 @@ Approved changes:
    Votes:
      +1: julianfoad, rhuijben
      +1: danielsh (Q: should shelf_write_patch()'s output line be updated too?)
+
+ * r1825979, r1827670
+   Minor clarification to docstring.
+   Justification:
+     Trivial documentation fix.
+   Votes:
+     +1: danielsh, brane, jamessan
+
