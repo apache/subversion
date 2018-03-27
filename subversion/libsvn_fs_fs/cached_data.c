@@ -1268,7 +1268,7 @@ parse_raw_window(void **out,
   stream = svn_stream_from_string(&raw_window, result_pool);
 
   /* parse it */
-  SVN_ERR(svn_txdelta_read_svndiff_window(&result->window, stream, 1,
+  SVN_ERR(svn_txdelta_read_svndiff_window(&result->window, stream, window->ver,
                                           result_pool));
 
   /* complete the window and return it */
@@ -3206,7 +3206,7 @@ init_rep_state(rep_state_t *rs,
   rs->start = entry->offset + rs->header_size;
   rs->current = rep_header->type == svn_fs_fs__rep_plain ? 0 : 4;
   rs->size = entry->size - rep_header->header_size - 7;
-  rs->ver = 1;
+  rs->ver = -1;
   rs->chunk_index = 0;
   rs->raw_window_cache = ffd->raw_window_cache;
   rs->window_cache = ffd->txdelta_window_cache;
@@ -3264,6 +3264,9 @@ cache_windows(svn_fs_t *fs,
               apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  SVN_ERR(auto_read_diff_version(rs, iterpool));
+
   while (rs->current < rs->size)
     {
       apr_off_t end_offset;
@@ -3324,6 +3327,7 @@ cache_windows(svn_fs_t *fs,
           window.end_offset = rs->current;
           window.window.len = window_len;
           window.window.data = buf;
+          window.ver = rs->ver;
 
           /* cache the window now */
           SVN_ERR(svn_cache__set(rs->raw_window_cache, &key, &window,

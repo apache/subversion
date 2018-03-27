@@ -39,14 +39,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1826811, r1826814, r1826877, r1826907, r1826971
-   Fix issue 4725: FSFS block-read mode doesn't work.
-   Justification:
-     Block-read is enabled automatically when svnadmin has a cache bigger
-     than 64MB.  It can be manually enabled in mod_dav_svn/svnserve.
-   Votes:
-     +1: philip, stefan2, rhuijben
-
  * r1827337
    Shelving: Name the subcommands 'x-shelve' etc.
    Justification:

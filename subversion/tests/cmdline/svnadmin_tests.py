@@ -3801,6 +3801,28 @@ def dump_invalid_filtering_option(sbox):
                                           '--include', '/A/B/E',
                                           sbox.repo_dir)
 
+@Issue(4725)
+def load_issue4725(sbox):
+  """load that triggers issue 4725"""
+
+  sbox.build(empty=True)
+
+  sbox.simple_mkdir('subversion')
+  sbox.simple_commit()
+  sbox.simple_mkdir('subversion/trunk')
+  sbox.simple_mkdir('subversion/branches')
+  sbox.simple_commit()
+  sbox.simple_mkdir('subversion/trunk/src')
+  sbox.simple_commit()
+
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       sbox.repo_dir)
+
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump, '-M100')
+
 ########################################################################
 # Run the tests
 
@@ -3873,7 +3895,8 @@ test_list = [ None,
               dump_exclude_by_pattern,
               dump_include_by_pattern,
               dump_exclude_all_rev_changes,
-              dump_invalid_filtering_option
+              dump_invalid_filtering_option,
+              load_issue4725,
              ]
 
 if __name__ == '__main__':
