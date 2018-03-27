@@ -9,11 +9,11 @@ use v5.10.0; # needed for $^V
 # experimental and "subject to change" in v5.18 (see perl5180delta).  Every
 # use of it now triggers a warning.
 #
-# As of Perl v5.24.1, the semantics of given/when provided by Perl are
+# As of Perl v5.26.1, the semantics of given/when provided by Perl are
 # compatible with those expected by the script, so disable the warning for
 # those Perls.  But don't try to disable the the warning category on Perls
 # that don't know that category, since that breaks compilation.
-no if (v5.17.0 le $^V and $^V le v5.24.1),
+no if (v5.17.0 le $^V and $^V le v5.26.1),
    warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
