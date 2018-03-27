@@ -22,19 +22,17 @@ Candidate changes:
    Votes:
      +1: philip, stefan2
 
-Veto-blocked changes:
-=====================
-
  * r1825979, r1827670
    Minor clarification to docstring.
    Justification:
      Trivial documentation fix.
    Votes:
-     +1: danielsh
+     +1: danielsh, brane
    Votes (without r1827670):
      +1: jamessan
-     -1: brane (the docstring "clarification" is wrong, since
-                we do not propagate the compression level to LZ4)
+
+Veto-blocked changes:
+=====================
 
 Approved changes:
 =================
