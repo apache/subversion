@@ -40,11 +40,3 @@ Approved changes:
    Votes:
      +1: julianfoad, rhuijben
      +1: danielsh (Q: should shelf_write_patch()'s output line be updated too?)
-
- * r1825979, r1827670
-   Minor clarification to docstring.
-   Justification:
-     Trivial documentation fix.
-   Votes:
-     +1: danielsh, brane, jamessan
-
