@@ -42,14 +42,14 @@ Available subcommands:
    resolve
    resolved
    revert
-   shelve
-   unshelve
-   shelves
    status (stat, st)
    switch (sw)
    unlock
    update (up)
    upgrade
+   x-shelve (shelve)
+   x-unshelve (unshelve)
+   x-shelves (shelves)
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.apache.org/

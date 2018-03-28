@@ -27,16 +27,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1827337
-   Shelving: Name the subcommands 'x-shelve' etc.
-   Justification:
-     Make users more aware of the 'experimental' nature.
-   Branch:
-     1.10.x-x-shelve
-   Notes:
-     To danielsh: (A: shelf_write_patch()'s "created by" line doesn't need
-     to be updated).
-   Votes:
-     +1: julianfoad, rhuijben
-     +1: danielsh (Q: should shelf_write_patch()'s output line be updated too?)
