@@ -137,7 +137,6 @@ def verify_xml_response(expected_xml, actual_xml):
 # Tests
 
 @SkipUnless(svntest.main.is_ra_type_dav)
-@SkipUnless(server_has_mergeinfo)
 def cache_control_header(sbox):
   "verify 'Cache-Control' headers on responses"
 
