@@ -16,7 +16,7 @@ Candidate changes:
 ==================
 
  * r1705038
-   Fix issue 4607, patch with missing newline removes newline when applied.
+   Fix issue #4607, patch with missing newline removes newline when applied.
    Justification:
      Silently makes unexpected changes.
    Votes:
@@ -112,9 +112,9 @@ Candidate changes:
      +1: julianfoad
 
  * r1826720, r1826721, r1827191, r1827574
-   Regression test and FSFS checksum verification for issue 4722.
+   Regression test and FSFS checksum verification for issue #4722.
    Justification:
-     Tests the issue 4722 fix.
+     Tests the issue #4722 fix.
    Votes:
      +1: philip
      +1: stefan2 (without r1827574)
