@@ -956,6 +956,7 @@ def get_sha1info(args):
     target = get_target(args)
 
     sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
+    sha1s.sort()
 
     class info(object):
         pass
