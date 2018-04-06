@@ -370,14 +370,17 @@ static const svn_opt_subcommand_desc2_t cmd_table[] =
   {{'F', N_("write to file ARG instead of stdout")}} },
 
   {"freeze", subcommand_freeze, {0}, N_
-   ("usage: 1. svnadmin freeze REPOS_PATH PROGRAM [ARG...]\n"
-    "               2. svnadmin freeze -F FILE PROGRAM [ARG...]\n\n"
+   ("usage: 1. svnadmin freeze REPOS_PATH -- PROGRAM [ARG...]\n"
+    "               2. svnadmin freeze -F FILE -- PROGRAM [ARG...]\n\n"
     "1. Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"
     "   Allows safe use of third-party backup tools on a live repository.\n"
     "\n"
     "2. Like 1 except all repositories listed in FILE are locked. The file\n"
     "   format is repository paths separated by newlines.  Repositories are\n"
-    "   locked in the same order as they are listed in the file.\n"),
+    "   locked in the same order as they are listed in the file.\n"
+    "\n"
+    "The '--' tells svnadmin to stop looking for svnadmin options and pass\n"
+    "all later arguments to PROGRAM even if they begin with '-'.\n"),
    {'F'},
    {{'F', N_("read repository paths from file ARG")}} },
 
