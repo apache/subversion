@@ -455,7 +455,7 @@ def reflect_dropped_renumbered_revs(sbox):
 #   2) Dump 'SOURCE-REPOS' in a series of incremental dumps and load
 #      each of them to 'TARGET-REPOS'.
 #
-# See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
+# See https://issues.apache.org/jira/browse/SVN-3020#desc13
 #
 # This test replicates svnadmin_tests.py 20 'don't filter mergeinfo revs
 # from incremental dump' but uses 'svnrdump [dump|load]' in place of
@@ -704,7 +704,7 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
+  # See https://issues.apache.org/jira/browse/SVN-3020#desc16.
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)

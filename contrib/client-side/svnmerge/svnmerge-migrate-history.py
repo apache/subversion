@@ -259,7 +259,7 @@ class Migrator:
         # Run the final version of the new svn:mergeinfo through the
         # parser to ensure it is in canonical form, e.g. no overlapping
         # or unordered rangelists, see
-        # http://subversion.tigris.org/issues/show_bug.cgi?id=3302.
+        # https://issues.apache.org/jira/browse/SVN-3302.
         mergeinfo = svn.core.svn_mergeinfo_parse(new_mergeinfo_prop_val)
         new_mergeinfo_prop_val = mergeinfo2str(mergeinfo)
 

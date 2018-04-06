@@ -2818,7 +2818,7 @@ def remap_file_external_with_prop_del(sbox):
 
   # Now update to bring the new external down.
   # This previously segfaulted as described in
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=4093#desc1
+  # https://issues.apache.org/jira/browse/SVN-4093#desc1
   svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
 

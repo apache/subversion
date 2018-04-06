@@ -1363,7 +1363,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
   # how can any prop changes be merged to it?  The answer is that
   # the merge code does some quiet housekeeping, merging gamma_moved's
   # inherited mergeinfo into its incoming mergeinfo, see
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=4309
+  # https://issues.apache.org/jira/browse/SVN-4309
   # This test is not covering issue #4309 so we let the current
   # behavior pass.
   # r17 - B) Synch merge from A to A_COPY

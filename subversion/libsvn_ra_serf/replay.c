@@ -701,7 +701,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
      wish for the best.
 
      See issue #4287:
-     http://subversion.tigris.org/issues/show_bug.cgi?id=4287
+     https://issues.apache.org/jira/browse/SVN-4287
   */
   if (session->supports_rev_rsrc_replay)
     {

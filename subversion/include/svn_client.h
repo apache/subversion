@@ -500,7 +500,7 @@ typedef struct svn_client_commit_item3_t
    * contents in @c incoming_prop_changes->pool, so that it has the
    * same lifetime as this data structure.
    *
-   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for a
+   * See https://issues.apache.org/jira/browse/SVN-806 for a
    * description of what would happen if the post-commit process
    * didn't group these changes together with all other changes to the
    * item.
