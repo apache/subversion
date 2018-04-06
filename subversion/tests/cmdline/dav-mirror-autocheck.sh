@@ -249,7 +249,7 @@ HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
 SVN=$ABS_BUILDDIR/subversion/svn/svn
 SVNADMIN=$ABS_BUILDDIR/subversion/svnadmin/svnadmin
 SVNSYNC=$ABS_BUILDDIR/subversion/svnsync/svnsync
-SVNMUCC=${SVNMUCC:-$ABS_BUILDDIR/tools/client-side/svnmucc/svnmucc}
+SVNMUCC=$ABS_BUILDDIR/subversion/svnmucc/svnmucc
 SVNLOOK=$ABS_BUILDDIR/subversion/svnlook/svnlook
 
 [ -x $HTTPD ] || fail "HTTPD '$HTTPD' not executable"
@@ -259,9 +259,7 @@ SVNLOOK=$ABS_BUILDDIR/subversion/svnlook/svnlook
 [ -x $SVNADMIN ] || fail "SVNADMIN $SVNADMIN not built"
 [ -x $SVNSYNC ] || fail "SVNSYNC $SVNSYNC not built"
 [ -x $SVNLOOK ] || fail "SVNLOOK $SVNLOOK not built"
-[ -x $SVNMUCC ] \
- || fail SVNMUCC $SVNMUCC executable not built, needed for test. \
-    \'cd $ABS_BUILDDIR\; make svnmucc\' to fix.
+[ -x $SVNMUCC ] || fail "SVNMUCC $SVNMUCC not built"
 
 say HTTPD: $HTTPD
 say SVN: $SVN
@@ -365,7 +363,9 @@ $SVNADMIN create "$SLAVE_REPOS" || fail "create slave repos failed"
 $SVNADMIN dump "$MASTER_REPOS" | $SVNADMIN load "$SLAVE_REPOS" \
   || fail "duplicate repositories failed"
 # make sure uuid's match
-[ `cat "$SLAVE_REPOS/db/uuid"` = `cat "$MASTER_REPOS/db/uuid"` ] \
+read MASTER_UUID < "$MASTER_REPOS/db/uuid"
+read SLAVE_UUID < "$SLAVE_REPOS/db/uuid"
+[ "$SLAVE_UUID" = "$MASTER_UUID" ] \
   || fail "master/slave uuid mismatch"
 # setup hooks:
 #  slave allows revprop changes
