@@ -115,14 +115,16 @@ Candidate changes:
      +1: luke1410
 
  * r1753130
-   Fix compile error with VS 2005+ and SQLite 3.12.0+.
+   Fix compile error with VS 2005+ and SQLite 3.12.0-3.20.1.
    Justification:
      SVN should compile with SQLite 3.12.0 out of the box.
      Backport branch required, since SQLite include handling changed after 1.8.
+   Notes:
+     As of SQLite 3.21.0 the fix is no longer required.
    Branch:
      ^/subversion/branches/1.7.x-sqlite-3.12
    Votes:
-     +1 (non-binding): luke1410
+     +0: luke1410
 
  * r1804691
    Merge the CVE-2017-9800 patch from 1.8.19: see r1804723 (which is a merge
