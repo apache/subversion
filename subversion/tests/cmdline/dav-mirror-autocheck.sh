@@ -227,6 +227,12 @@ function usage() {
 
 SCRIPT=$(basename $0)
 
+NO_TESTS=
+if [ "x$1" = 'x--no-tests' ]; then
+  NO_TESTS=1
+  shift
+fi
+
 if [ $# -ne 1 ] ; then
   usage
 fi
@@ -425,6 +431,12 @@ HTTPD_PID=$HTTPD_ROOT/pid
 $SVNSYNC initialize --non-interactive "$SYNC_URL" "$MASTER_URL" \
     --username=svnsync --password=svnsync \
     || fail "svnsync initialize failed"
+
+if [ $NO_TESTS ]; then
+  echo "MASTER_URL=$MASTER_URL"
+  echo "SLAVE_URL=$SLAVE_URL"
+  exit
+fi
 
 # OK, let's start testing! Commit changes to slave, expect
 # them to proxy through to the master, and then
