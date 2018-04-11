@@ -737,8 +737,12 @@ def sign_candidates(args):
     def sign_file(filename):
         asc_file = open(filename + '.asc', 'a')
         logging.info("Signing %s" % filename)
-        proc = subprocess.check_call(['gpg', '-ba', '-o', '-', filename],
-                                     stdout=asc_file)
+        if args.userid:
+            proc = subprocess.check_call(['gpg', '-ba', '-u', args.userid,
+                                         '-o', '-', filename], stdout=asc_file)
+        else:
+            proc = subprocess.check_call(['gpg', '-ba', '-o', '-', filename],
+                                         stdout=asc_file)
         asc_file.close()
 
     target = get_target(args)
@@ -1399,6 +1403,10 @@ def main():
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
+    subparser.add_argument('--userid',
+                    help='''The (optional) USER-ID specifying the key to be
+                            used for signing, such as '110B1C95' (Key-ID). If
+                            omitted, uses the default key.''')
 
     # Setup the parser for the post-candidates subcommand
     subparser = subparsers.add_parser('post-candidates',
