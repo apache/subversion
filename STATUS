@@ -15,6 +15,13 @@ Status of 1.10.1:
 Candidate changes:
 ==================
 
+* r1829012
+  Correctly claim to offer Gnome Keyring support with libsecret
+  Justification:
+    New feature, would cause confusion if missing from svn --version
+  Votes:
+    +1: astieger
+
 Veto-blocked changes:
 =====================
 
