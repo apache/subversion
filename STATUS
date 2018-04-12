@@ -20,7 +20,7 @@ Candidate changes:
   Justification:
     New feature, would cause confusion if missing from svn --version
   Votes:
-    +1: astieger
+    +1: astieger, brane
 
 Veto-blocked changes:
 =====================
