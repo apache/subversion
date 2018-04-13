@@ -22,6 +22,13 @@ Candidate changes:
   Votes:
     +1: astieger, brane
 
+* r1828613
+  Fix a JavaHL local refs capacity warning when unparsing externals.
+  Justification:
+    Prevents overflow of the JNI local references stack.
+  Votes:
+    +1: brane
+
 Veto-blocked changes:
 =====================
 
