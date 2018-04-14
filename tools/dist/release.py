@@ -832,11 +832,14 @@ def create_tag(args):
                               (args.version.major, args.version.minor,
                                args.version.patch + 1))
 
+        HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
+                                        '--', url]).strip()
+        HEAD = int(HEAD)
         def file_object_for(relpath):
             fd = tempfile.NamedTemporaryFile()
             url = branch + '/' + relpath
             fd.url = url
-            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, args.revnum)],
+            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
                                   stdout=fd)
             return fd
 
@@ -850,7 +853,7 @@ def create_tag(args):
 
         svn_version_h.seek(0, os.SEEK_SET)
         STATUS.seek(0, os.SEEK_SET)
-        subprocess.check_call(['svnmucc', '-r', str(args.revnum),
+        subprocess.check_call(['svnmucc', '-r', str(HEAD),
                                '-m', 'Post-release housekeeping: '
                                      'bump the %s branch to %s.'
                                % (branch.split('/')[-1], str(new_version)),
