@@ -255,7 +255,7 @@ struct repos_move_info {
   /* The revision in which this move was committed. */
   svn_revnum_t rev;
 
-  /* The author who commited the revision in which this move was committed. */
+  /* The author who committed the revision in which this move was committed. */
   const char *rev_author;
 
   /* The repository relpath the node was moved from in this revision. */
