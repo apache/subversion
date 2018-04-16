@@ -42,16 +42,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, stsp
 
- * r1828782
-   Document build issues with certain SQLite versions using Visual Studio
-   2005+.
-   Justification:
-     Help new users to prevent avoidable build issues.
-   Branch:
-     ^/subversion/branches/1.8.x-sqlite-compatibility-docu
-   Votes:
-     +1: luke1410
-
 Veto-blocked changes:
 =====================
 
@@ -73,3 +63,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1828782
+   Document build issues with certain SQLite versions using Visual Studio
+   2005+.
+   Justification:
+     Help new users to prevent avoidable build issues.
+   Branch:
+     ^/subversion/branches/1.8.x-sqlite-compatibility-docu
+   Votes:
+     +1: luke1410
