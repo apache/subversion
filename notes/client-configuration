@@ -59,8 +59,8 @@ dev@s.a.o: "Bikeshed: configuration override order";
 dev@s.a.o: "Default commandline args";
     http://svn.haxx.se/dev/archive-2010-12/0449.shtml
 Issue 1974: "server-side config which 'broadcasts' to clients";
-    http://subversion.tigris.org/issues/show_bug.cgi?id=1974
+    https://issues.apache.org/jira/browse/SVN-1974
 Issue 3765: "client-configurable default args";
-    http://subversion.tigris.org/issues/show_bug.cgi?id=3765
+    https://issues.apache.org/jira/browse/SVN-3765
 Issue 3769: "Add APIs which allow library consumers to specify configuration options"
-    http://subversion.tigris.org/issues/show_bug.cgi?id=3769
+    https://issues.apache.org/jira/browse/SVN-3769
