@@ -31,7 +31,7 @@
 #
 # The set of changes sent through the system is currently
 # just the test case for issue 2939, using svnmucc
-# http://subversion.tigris.org/issues/show_bug.cgi?id=2939
+# https://issues.apache.org/jira/browse/SVN-2939
 # But of course, any svn traffic liable to break over
 # mirroring would be a good addition.
 #
@@ -443,7 +443,7 @@ fi
 # svnsync back to the slave
 #
 # reproducible test case from:
-# http://subversion.tigris.org/issues/show_bug.cgi?id=2939
+# https://issues.apache.org/jira/browse/SVN-2939
 #
 BASE_URL="$SLAVE_URL"
 say running svnmucc test to $BASE_URL

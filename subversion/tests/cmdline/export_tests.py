@@ -721,7 +721,7 @@ def export_working_copy_ignoring_keyword_translation(sbox):
 def export_with_url_unsafe_characters(sbox):
   "export file with URL unsafe characters"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3683 ##
+  ## See https://issues.apache.org/jira/browse/SVN-3683 ##
 
   sbox.build()
   wc_dir = sbox.wc_dir

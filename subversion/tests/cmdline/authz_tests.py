@@ -863,7 +863,7 @@ def authz_svnserve_anon_access_read(sbox):
   # is not really a branch (it's the same URL), but we only care about
   # authz here, not the semantics of the merge.  (Merges had been
   # failing in authz, for the reasons summarized in
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=2712#desc13.)
+  # https://issues.apache.org/jira/browse/SVN-2712#desc13.)
   svntest.actions.run_and_verify_svn(None, [],
                                      'merge', '-c', '2',
                                      B_url, B_path)

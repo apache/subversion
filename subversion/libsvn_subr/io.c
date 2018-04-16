@@ -2707,8 +2707,8 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
  directory scan.  A previous workaround involving rewinddir is
  problematic on Win32 and some NFS clients, notably NetBSD.
 
- See http://subversion.tigris.org/issues/show_bug.cgi?id=1896 and
- http://subversion.tigris.org/issues/show_bug.cgi?id=3501.
+ See https://issues.apache.org/jira/browse/SVN-1896 and
+ https://issues.apache.org/jira/browse/SVN-3501.
 */
 
 /* Neither windows nor unix allows us to delete a non-empty

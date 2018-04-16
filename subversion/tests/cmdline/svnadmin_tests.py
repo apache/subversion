@@ -1047,7 +1047,7 @@ def fsfs_recover_old_db_current(sbox):
 def load_with_parent_dir(sbox):
   "'svnadmin load --parent-dir' reparents mergeinfo"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2983. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2983. ##
   sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
@@ -1138,7 +1138,7 @@ def set_uuid(sbox):
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3020. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3020. ##
 
   sbox.build(empty=True)
 
@@ -1330,7 +1330,7 @@ def verify_with_invalid_revprops(sbox):
 #   2) Dump 'SOURCE-REPOS' in a series of incremental dumps and load
 #      each of them to 'TARGET-REPOS'.
 #
-# See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
+# See https://issues.apache.org/jira/browse/SVN-3020#desc13
 @Issue(3020)
 def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
@@ -1516,7 +1516,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
+  # See https://issues.apache.org/jira/browse/SVN-3020#desc16.
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
@@ -1527,7 +1527,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 def hotcopy_symlink(sbox):
   "'svnadmin hotcopy' replicates symlink"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2591. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2591. ##
 
   # Create a repository.
   sbox.build(create_wc=False, empty=True)
@@ -1818,7 +1818,7 @@ def test_lslocks_and_rmlocks(sbox):
 def load_ranges(sbox):
   "'svnadmin load --revision X:Y'"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3734. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3734. ##
   sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),

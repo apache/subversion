@@ -75,7 +75,7 @@ struct parse_baton
      (svn_revnum_t *) in the dump stream to their corresponding revisions
      (svn_revnum_t *) in the loaded repository.  The hash and its
      contents are allocated in POOL. */
-  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=3903
+  /* ### See https://issues.apache.org/jira/browse/SVN-3903
      ### for discussion about improving the memory costs of this mapping. */
   apr_hash_t *rev_map;
 
@@ -253,7 +253,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
 
   /* Issue #3020
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16
+     https://issues.apache.org/jira/browse/SVN-3020#desc16
      Remove mergeinfo older than the oldest revision in the dump stream
      and adjust its revisions by the difference between the head rev of
      the target repository and the current dump stream rev. */
@@ -323,7 +323,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  mergeinfo with a start rev > end rev.  If that gets into the
                  repository then a world of bustage breaks loose anytime that
                  bogus mergeinfo is parsed.  See
-                 http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
+                 https://issues.apache.org/jira/browse/SVN-3020#desc16.
                  */
               continue;
             }

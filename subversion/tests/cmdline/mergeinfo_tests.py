@@ -196,7 +196,7 @@ def mergeinfo_on_unknown_url(sbox):
 
 # Test for issue #3126 'svn mergeinfo shows too few or too many
 # eligible revisions'.  Specifically
-# http://subversion.tigris.org/issues/show_bug.cgi?id=3126#desc5.
+# https://issues.apache.org/jira/browse/SVN-3126#desc5.
 @SkipUnless(server_has_mergeinfo)
 @Issue(3126)
 def non_inheritable_mergeinfo(sbox):
