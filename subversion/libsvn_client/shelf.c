@@ -356,6 +356,34 @@ note_shelved(apr_array_header_t *shelved,
   return SVN_NO_ERROR;
 }
 
+/* Set *IS_BINARY to true iff the pristine or working version of
+ * LOCAL_ABSPATH has a MIME-type that we regard as 'binary'.
+ */
+static svn_error_t *
+is_binary_file(svn_boolean_t *is_binary,
+               const char *local_abspath,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
+{
+  apr_hash_t *props;
+  const svn_string_t *value;
+
+  SVN_ERR(svn_wc_get_pristine_props(&props, ctx->wc_ctx,
+                                    local_abspath,
+                                    scratch_pool, scratch_pool));
+  value = props ? svn_hash_gets(props, SVN_PROP_MIME_TYPE)
+                : NULL;
+  *is_binary = value && svn_mime_type_is_binary(value->data);
+
+  SVN_ERR(svn_wc_prop_get2(&value, ctx->wc_ctx, local_abspath,
+                           SVN_PROP_MIME_TYPE,
+                           scratch_pool, scratch_pool));
+  if (value && svn_mime_type_is_binary(value->data))
+    *is_binary = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
 /* An implementation of svn_wc_status_func4_t. */
 static svn_error_t *
 walk_callback(void *baton,
@@ -386,30 +414,39 @@ walk_callback(void *baton,
       case svn_wc_status_deleted:
       case svn_wc_status_added:
       case svn_wc_status_replaced:
-        SVN_ERR(svn_client_diff_peg7(
-                NULL /*options*/,
-                local_abspath,
-                &peg_revision,
-                &start_revision,
-                &end_revision,
-                wb->wc_root_abspath,
-                svn_depth_empty,
-                TRUE /*notice_ancestry*/,
-                FALSE /*no_diff_added*/,
-                FALSE /*no_diff_deleted*/,
-                TRUE /*show_copies_as_adds*/,
-                FALSE /*ignore_content_type: FALSE -> omit binary files*/,
-                FALSE /*ignore_properties*/,
-                FALSE /*properties_only*/,
-                FALSE /*use_git_diff_format*/,
-                FALSE /*pretty_print_mergeinfo*/,
-                SVN_APR_LOCALE_CHARSET,
-                wb->outstream,
-                wb->errstream,
-                NULL /*changelists*/,
-                wb->ctx, scratch_pool));
+      {
+        svn_boolean_t binary = FALSE;
+        if (status->kind == svn_node_file)
+          {
+            SVN_ERR(is_binary_file(&binary, local_abspath,
+                                   wb->ctx, scratch_pool));
+          }
+        /* For binary files, use git diff binary literal format.
+           This works for a stop-gap, but is inefficient for large files. */
+        SVN_ERR(svn_client_diff_peg7(NULL /*options*/,
+                                     local_abspath,
+                                     &peg_revision,
+                                     &start_revision,
+                                     &end_revision,
+                                     wb->wc_root_abspath,
+                                     svn_depth_empty,
+                                     TRUE /*notice_ancestry*/,
+                                     FALSE /*no_diff_added*/,
+                                     FALSE /*no_diff_deleted*/,
+                                     TRUE /*show_copies_as_adds*/,
+                                     FALSE /*ignore_content_type: FALSE -> omit binary files*/,
+                                     FALSE /*ignore_properties*/,
+                                     FALSE /*properties_only*/,
+                                     binary /*use_git_diff_format*/,
+                                     FALSE /*pretty_print_mergeinfo*/,
+                                     SVN_APR_LOCALE_CHARSET,
+                                     wb->outstream,
+                                     wb->errstream,
+                                     NULL /*changelists*/,
+                                     wb->ctx, scratch_pool));
         wb->any_shelved = TRUE;
         break;
+      }
 
       case svn_wc_status_incomplete:
         if ((status->text_status != svn_wc_status_normal

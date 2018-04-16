@@ -297,7 +297,6 @@ def unshelve_refuses_if_conflicts(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 def shelve_binary_file_mod(sbox):
   "shelve binary file mod"
 
@@ -313,7 +312,6 @@ def shelve_binary_file_mod(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 def shelve_binary_file_add(sbox):
   "shelve binary file add"
 
@@ -324,7 +322,6 @@ def shelve_binary_file_add(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 def shelve_binary_file_del(sbox):
   "shelve binary file del"
 
