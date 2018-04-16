@@ -480,7 +480,7 @@ def update_to_rev_zero(sbox):
 def receive_overlapping_same_change(sbox):
   "overlapping identical changes should not conflict"
 
-  ### (See http://subversion.tigris.org/issues/show_bug.cgi?id=682.)
+  ### (See https://issues.apache.org/jira/browse/SVN-682.)
   ###
   ### How this test works:
   ###

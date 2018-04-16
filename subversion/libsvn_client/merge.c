@@ -242,7 +242,7 @@ typedef struct merge_cmd_baton_t {
 
   /* Rangelist containing single range which describes the gap, if any,
      in the natural history of the merge source currently being processed.
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=3432.
+     See https://issues.apache.org/jira/browse/SVN-3432.
      Updated during each call to do_directory_merge().  May be NULL if there
      is no gap. */
   svn_rangelist_t *implicit_src_gap;
@@ -3621,7 +3621,7 @@ notify_merge_completed(const char *target_abspath,
 
 
 /* Remove merge source gaps from range used for merge notifications.
-   See http://subversion.tigris.org/issues/show_bug.cgi?id=4138
+   See https://issues.apache.org/jira/browse/SVN-4138
 
    If IMPLICIT_SRC_GAP is not NULL then it is a rangelist containing a
    single range (see the implicit_src_gap member of merge_cmd_baton_t).
@@ -5445,7 +5445,7 @@ record_skips_in_mergeinfo(const char *mergeinfo_path,
          ### TODO: An empty range is fine if the skipped path doesn't
          ### inherit any mergeinfo from a parent, but if it does
          ### we need to account for that.  See issue #3440
-         ### http://subversion.tigris.org/issues/show_bug.cgi?id=3440. */
+         ### https://issues.apache.org/jira/browse/SVN-3440. */
       svn_hash_sets(merges, skipped_abspath,
                     apr_array_make(scratch_pool, 0,
                                    sizeof(svn_merge_range_t *)));
@@ -7878,7 +7878,7 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
          was added (with preexisting mergeinfo) by the merge.  That's actually
          more correct, since the inherited mergeinfo likely describes
          non-existent or unrelated merge history, but it's not quite so simple
-         as that, see http://subversion.tigris.org/issues/show_bug.cgi?id=4309
+         as that, see https://issues.apache.org/jira/browse/SVN-4309
          */
 
       /* Get the path's new explicit mergeinfo... */

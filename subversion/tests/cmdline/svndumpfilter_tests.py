@@ -83,7 +83,7 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2982. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2982. ##
 
   # Test svndumpfilter with include option
   sbox.build(empty=True)
@@ -134,7 +134,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
   "svndumpfilter loses mergeinfo"
   #svndumpfilter loses mergeinfo if invoked without --renumber-revs
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3181. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3181. ##
 
   sbox.build(empty=True)
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
@@ -217,7 +217,7 @@ def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
 @Issue(2697)
 def dumpfilter_with_targets(sbox):
   "svndumpfilter --targets blah"
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2697. ##
 
   sbox.build(empty=True)
 
@@ -677,7 +677,7 @@ def accepts_deltas(sbox):
 @Issue(4234)
 def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
   "dumpfilter targets expect leading '/' in prefixes"
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=4234. ##
+  ## See https://issues.apache.org/jira/browse/SVN-4234. ##
 
   sbox.build(empty=True)
 

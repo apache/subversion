@@ -697,7 +697,7 @@ def simple_property_merges(sbox):
 def merge_similar_unrelated_trees(sbox):
   "merging similar trees ancestrally unrelated"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=1249. ##
+  ## See https://issues.apache.org/jira/browse/SVN-1249. ##
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -3939,7 +3939,7 @@ def avoid_repeated_merge_on_subtree_with_merge_info(sbox):
                                        check_props=True)
 
   # Test for part of Issue #2821, see
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=2821#desc22
+  # https://issues.apache.org/jira/browse/SVN-2821#desc22
   #
   # Revert all local changes.
   svntest.actions.run_and_verify_svn(None, [], 'revert', '-R', wc_dir)
@@ -6007,7 +6007,7 @@ def foreign_repos_does_not_update_mergeinfo(sbox):
 def avoid_reflected_revs(sbox):
   "avoid repeated merges for cyclic merging"
 
-  # See <http://subversion.tigris.org/issues/show_bug.cgi?id=2897>.
+  # See <https://issues.apache.org/jira/browse/SVN-2897>.
   #
   # This test cherry-picks some changes (all of them, in fact) from the
   # parent branch 'A' to the child branch 'A_COPY', and then tries to
@@ -8294,7 +8294,7 @@ def cherry_picking(sbox):
 def propchange_of_subdir_raises_conflict(sbox):
   "merge of propchange on subdir raises conflict"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2969. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2969. ##
 
   # Create a WC with a single branch
   sbox.build()
@@ -8515,7 +8515,7 @@ def reverse_merge_prop_add_on_child(sbox):
 def merge_target_with_non_inheritable_mergeinfo(sbox):
   "merge target with non inheritable mergeinfo"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2970. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2970. ##
 
   # Create a WC with a single branch
   sbox.build()
@@ -8547,7 +8547,7 @@ def merge_target_with_non_inheritable_mergeinfo(sbox):
   expected_output = wc.State(A_COPY_B_path, {
     'lambda' : Item(status='U '),
     })
-  # Issue #3642 http://subversion.tigris.org/issues/show_bug.cgi?id=3642
+  # Issue #3642 https://issues.apache.org/jira/browse/SVN-3642
   #
   # We don't expect A_COPY/B/F to have mergeinfo recorded on it because
   # not only is it unaffected by the merge at depth immediates, it could
@@ -8820,7 +8820,7 @@ def merge_from_renamed_branch_fails_while_avoiding_repeat_merge(sbox):
   #Merge r4 from A/RENAMED_C to A/C
   #Merge r2:5 from A/RENAMED_C to A/C <-- This fails tracked via #3032.
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3032. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3032. ##
 
   # Create a WC with a single branch
   sbox.build()
@@ -9250,7 +9250,7 @@ def new_subtrees_should_not_break_merge(sbox):
   # so we expect only subtree merges on A_COPY/D, A_COPY_D_H, and
   # A_COPY/D/H/nu.  The fact that A/D/H/nu doesn't exist at r6 should not cause
   # the merge to fail -- see
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc7.
+  # https://issues.apache.org/jira/browse/SVN-3067#desc7.
   expected_output = wc.State(A_COPY_path, {
     'D/H/omega': Item(status='U '),
     })
@@ -10495,7 +10495,7 @@ def reverse_merge_away_all_mergeinfo(sbox):
 # Another test for issue #3067: 'subtrees with intersecting mergeinfo,
 # that don't exist at the start of a merge range shouldn't break the
 # merge'.  Specifically see
-# http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5
+# https://issues.apache.org/jira/browse/SVN-3067#desc5
 @SkipUnless(server_has_mergeinfo)
 @Issues(3138,3067,4217)
 def dont_merge_revs_into_subtree_that_predate_it(sbox):
@@ -10614,7 +10614,7 @@ def dont_merge_revs_into_subtree_that_predate_it(sbox):
   # Cherry harvest all eligible revisions from 'A/D/H' to 'H_COPY'.
   #
   # This is where we see the problem described in
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc5.
+  # https://issues.apache.org/jira/browse/SVN-3067#desc5.
   #
   # Use run_and_verify_svn() because run_and_verify_merge*() require
   # explicit revision ranges.
@@ -11786,7 +11786,7 @@ def subtree_source_missing_in_requested_range(sbox):
 # Another test for issue #3067: 'subtrees that don't exist at the start
 # or end of a merge range shouldn't break the merge'
 #
-# See http://subversion.tigris.org/issues/show_bug.cgi?id=3067#desc34
+# See https://issues.apache.org/jira/browse/SVN-3067#desc34
 @Issue(3067)
 @SkipUnless(server_has_mergeinfo)
 def subtrees_with_empty_mergeinfo(sbox):
@@ -13305,7 +13305,7 @@ def no_self_referential_filtering_on_added_path(sbox):
   # how can any prop changes be merged to it?  The answer is that
   # the merge code does some quiet housekeeping, merging C_MOVED's
   # inherited mergeinfo into its incoming mergeinfo, see
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=4309
+  # https://issues.apache.org/jira/browse/SVN-4309
   # This test is not covering issue #4309 so we let the current
   # behavior pass.
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
@@ -13374,7 +13374,7 @@ def no_self_referential_filtering_on_added_path(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3324
-# http://subversion.tigris.org/issues/show_bug.cgi?id=3324
+# https://issues.apache.org/jira/browse/SVN-3324
 @Issue(3324)
 @SkipUnless(server_has_mergeinfo)
 def merge_range_prior_to_rename_source_existence(sbox):
@@ -13881,7 +13881,7 @@ def dont_merge_gaps_in_history(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3432 'Merge can record mergeinfo from natural history
-# gaps'.  See http://subversion.tigris.org/issues/show_bug.cgi?id=3432
+# gaps'.  See https://issues.apache.org/jira/browse/SVN-3432
 @Issue(3432)
 @SkipUnless(server_has_mergeinfo)
 def handle_gaps_in_implicit_mergeinfo(sbox):
@@ -15122,7 +15122,7 @@ def foreign_repos_del_and_props(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3642 'immediate depth merges don't create proper subtree
-# mergeinfo'. See http://subversion.tigris.org/issues/show_bug.cgi?id=3642
+# mergeinfo'. See https://issues.apache.org/jira/browse/SVN-3642
 @Issue(3642)
 def immediate_depth_merge_creates_minimal_subtree_mergeinfo(sbox):
   "no spurious mergeinfo from immediate depth merges"
@@ -15817,7 +15817,7 @@ def subtree_merges_inherit_invalid_working_mergeinfo(sbox):
 
 #----------------------------------------------------------------------
 # Test for issue #3686 'executable flag not correctly set on merge'
-# See http://subversion.tigris.org/issues/show_bug.cgi?id=3686
+# See https://issues.apache.org/jira/browse/SVN-3686
 @Issue(3686)
 @SkipUnless(server_has_mergeinfo)
 @SkipUnless(svntest.main.is_posix_os)

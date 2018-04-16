@@ -4333,7 +4333,7 @@ def copy_added_dir_with_copy(sbox):
 def copy_broken_symlink(sbox):
   """copy broken symlink"""
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3303. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3303. ##
 
   sbox.build()
   wc_dir = sbox.wc_dir

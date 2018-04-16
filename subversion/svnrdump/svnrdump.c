@@ -344,7 +344,7 @@ init_client_context(svn_client_ctx_t **ctx_p,
      ### auxiliary GETs/PROPFINDs to happening (well-ordered) on a
      ### single server connection.
      ###
-     ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
+     ### See https://issues.apache.org/jira/browse/SVN-4116.
   */
   cfg_servers = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_SERVERS);
   svn_config_set_bool(cfg_servers, SVN_CONFIG_SECTION_GLOBAL,
@@ -429,7 +429,7 @@ dump_initial_full_revision(svn_ra_session_t *session,
      our update-driven dump generation work the way a replay-driven
      one would.
 
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=4101
+     See https://issues.apache.org/jira/browse/SVN-4101
   */
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
   SVN_ERR(svn_ra_get_path_relative_to_root(session, &source_relpath,
