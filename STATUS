@@ -36,6 +36,14 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1829260
+   Revert r1751167, since it broke use of pre-generated Swig bindings in
+   release builds.
+   Justification:
+     Fix build of pre-generated Swig bindings when swig is not installed
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
