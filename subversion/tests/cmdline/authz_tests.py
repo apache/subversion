@@ -168,7 +168,7 @@ def authz_read_access(sbox):
   fws_url = B_url + '/folder with spaces'
   fws_empty_folder_url = fws_url + '/empty folder'
 
-  if sbox.repo_url.startswith("http"):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
@@ -280,7 +280,7 @@ def authz_write_access(sbox):
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E220004: Access denied.*"
@@ -367,7 +367,7 @@ def authz_checkout_test(sbox):
   # 1st part: disable all read access, checkout should fail
 
   # write an authz file with *= on /
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
@@ -502,7 +502,7 @@ def authz_log_and_tracing_test(sbox):
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
   # write an authz file with *=rw on /
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
@@ -533,7 +533,7 @@ def authz_log_and_tracing_test(sbox):
 
   # now disable read access on the first version of rho, keep the copy in
   # /A/D readable.
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
@@ -551,7 +551,7 @@ def authz_log_and_tracing_test(sbox):
                                      'log', '-r', '2', '--limit', '1',
                                      wc_dir)
 
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err2 = expected_err
   else:
     expected_err2 = ".*svn: E220001: ((Unreadable path encountered; " \
@@ -593,7 +593,7 @@ def authz_log_and_tracing_test(sbox):
   svntest.actions.run_and_verify_svn(None, expected_err2,
                                      'cat', '-r', '2', D_url+'/rho')
 
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err2 = expected_err
   else:
     expected_err2 = ".*svn: E220001: Unreadable path encountered; access denied.*"
@@ -624,7 +624,7 @@ def authz_aliases(sbox):
 
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
-  if sbox.repo_url.startswith("http"):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
@@ -669,9 +669,9 @@ def authz_validate(sbox):
   write_authz_file(sbox, { "/"  : "* = r",
                            "/A/B" : "@undefined_group = rw" })
 
-  if sbox.repo_url.startswith("http"):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
-  elif sbox.repo_url.startswith("svn"):
+  elif svntest.main.is_ra_type_svn():
     expected_err = ".*Invalid authz configuration"
   else:
     expected_err = ".*@undefined_group.*"
@@ -688,9 +688,9 @@ devs1 = @admins, dev1
 devs2 = @admins, dev2
 devs = @devs1, dev3, dev4""" })
 
-  if sbox.repo_url.startswith("http"):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
-  elif sbox.repo_url.startswith("svn"):
+  elif svntest.main.is_ra_type_svn():
     expected_err = ".*Invalid authz configuration"
   else:
     expected_err = ".*Circular dependency.*"
@@ -726,7 +726,7 @@ def authz_locking(sbox):
   write_authz_file(sbox, {"/": "", "/A": "jrandom = rw"})
   write_restrictive_svnserve_conf(sbox.repo_dir)
 
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: warning: W170001: Authorization failed.*"
@@ -781,7 +781,7 @@ def authz_locking(sbox):
   svntest.actions.run_and_verify_info([{'Lock Token' : None}],
                                       sbox.ospath('A/mu'))
 
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: warning: W160039: .*([Aa]uth.*perf|[Ff]orbidden).*"
   else:
     expected_err = ".*svn: warning: W170001: Authorization failed.*"
@@ -981,7 +981,7 @@ def multiple_matches(sbox):
   sbox.build(create_wc = False)
   root_url = sbox.repo_url
   write_restrictive_svnserve_conf(sbox.repo_dir)
-  if sbox.repo_url.startswith("http"):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
@@ -1137,7 +1137,7 @@ def case_sensitive_authz(sbox):
   # error messages
   expected_error_for_commit = ".*Commit failed.*"
 
-  if sbox.repo_url.startswith("http"):
+  if svntest.main.is_ra_type_dav():
     expected_error_for_cat = ".*[Ff]orbidden.*"
   else:
     expected_error_for_cat = ".*svn: E170001: Authorization failed.*"

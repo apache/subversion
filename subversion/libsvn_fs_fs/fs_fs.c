@@ -1151,8 +1151,8 @@ write_config(svn_fs_t *fs,
 "[" CONFIG_SECTION_DEBUG "]"                                                 NL
 "###"                                                                        NL
 "### Whether to verify each new revision immediately before finalizing"      NL
-"### the commit. The default is false in release-mode builds, and true"      NL
-"### in debug-mode builds."                                                  NL
+"### the commit.  This is disabled by default except in maintainer-mode"     NL
+"### builds."                                                                NL
 "# " CONFIG_OPTION_VERIFY_BEFORE_COMMIT " = false"                           NL
 ;
 #undef NL

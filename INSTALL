@@ -147,10 +147,11 @@ I.    INTRODUCTION
          for other languages, you need to have those languages
          available at build time.
 
-      * KDELibs, GNOME Keyring  (OPTIONAL for client)
+      * KDE Framework 5, libsecret, GNOME Keyring (OPTIONAL for client)
 
          Subversion contains optional support for storing passwords in
-         KWallet (KDE 4) or GNOME Keyring.
+         KWallet via KDE Framework 5 libraries (preferred) or kdelibs4,
+         and GNOME Keyring via libsecret (preferred) or GNOME APIs.
 
       * libmagic (OPTIONAL)
 
@@ -456,19 +457,22 @@ I.    INTRODUCTION
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      15. Qt 4  (Unix only, OPTIONAL)
+      15. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      16. KDELibs 4  (Unix only, OPTIONAL)
+      16. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
+      Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
+      and needs kf5-config to find them. The KDELibs 4 api is also supported.
       KDELibs contains core KDE libraries. Subversion uses libkdecore and libkdeui
       libraries when support for KWallet is enabled. kde4-config is used to get
       some necessary options. pkg-config, D-Bus and Qt 4 are also required.
+
       If you want to build support for KWallet, then pass the '--with-kwallet'
       option to `configure`. If KDE is installed in a non-standard prefix, then
       use:

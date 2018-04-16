@@ -754,40 +754,23 @@ typedef struct svn_client__copy_pair_t
 
 /*** Commit Stuff ***/
 
-/* WARNING: This is all new, untested, un-peer-reviewed conceptual
-   stuff.
+/* The "Harvest Committables" System
 
-   The day that 'svn switch' came into existence, our old commit
-   crawler (svn_wc_crawl_local_mods) became obsolete.  It relied far
-   too heavily on the on-disk hierarchy of files and directories, and
-   simply had no way to support disjoint working copy trees or nest
-   working copies.  The primary reason for this is that commit
-   process, in order to guarantee atomicity, is a single drive of a
+   The commit process requires, per repository, a single drive of a
    commit editor which is based not on working copy paths, but on
-   URLs.  With the completion of 'svn switch', it became all too
-   likely that the on-disk working copy hierarchy would no longer be
-   guaranteed to map to a similar in-repository hierarchy.
+   URLs.  The on-disk working copy hierarchy does not, in general,
+   map to a similar in-repository hierarchy, due to switched subtrees
+   and disjoint working copies.
 
-   Aside from this new brokenness of the old system, an unrelated
-   feature request had cropped up -- the ability to know in advance of
-   your commit, exactly what would be committed (so that log messages
-   could be initially populated with this information).  Since the old
-   crawler discovered commit candidates while in the process of
-   committing, it was impossible to harvest this information upfront.
-   As a workaround, svn_wc_statuses() was used to stat the whole
-   working copy for changes before the commit started...and then the
-   commit would again stat the whole tree for changes.
-
-   Enter the new system.
+   Also we wish to know exactly what would be committed, in advance of
+   the commit, so that a log message editor can be initially populated
+   with this information.
 
    The primary goal of this system is very straightforward: harvest
    all commit candidate information up front, and cache enough info in
    the process to use this to drive a URL-sorted commit.
 
-   *** END-OF-KNOWLEDGE ***
-
-   The prototypes below are still in development.  In general, the
-   idea is that commit-y processes ('svn mkdir URL', 'svn delete URL',
+   The idea is that commit-y processes ('svn mkdir URL', 'svn delete URL',
    'svn commit', 'svn copy WC_PATH URL', 'svn copy URL1 URL2', 'svn
    move URL1 URL2', others?) generate the cached commit candidate
    information, and hand this information off to a consumer which is
@@ -844,7 +827,7 @@ typedef svn_error_t *(*svn_client__check_url_kind_t)(void *baton,
      - if the candidate has a lock token, add it to the LOCK_TOKENS hash.
 
      - if the candidate is a directory scheduled for deletion, crawl
-       the directories children recursively for any lock tokens and
+       the directory's children recursively for any lock tokens and
        add them to the LOCK_TOKENS array.
 
    At the successful return of this function, COMMITTABLES will point
@@ -1129,14 +1112,34 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool);
 
-/* Produce a diff with depth DEPTH between two files or two directories at
- * LEFT_ABSPATH1 and RIGHT_ABSPATH, using the provided diff callbacks to
- * show changes in files. The files and directories involved may be part of
- * a working copy or they may be unversioned. For versioned files, show
- * property changes, too.
+/* Produce a diff with depth DEPTH between the file or directory at
+ * LEFT_ABSPATH and the file or directory at RIGHT_ABSPATH, reporting
+ * differences to DIFF_PROCESSOR.
  *
- * If ANCHOR_ABSPATH is not null, set it to the anchor of the diff before
- * the first processor call. (The anchor is LEFT_ABSPATH or an ancestor of it)
+ * The files and directories involved may be part of a working copy or
+ * they may be unversioned. For versioned files, show property changes,
+ * too.
+ *
+ * No copy or move information is reported to the diff processor.
+ *
+ * If both LEFT_ABSPATH and RIGHT_ABSPATH are directories on disk:
+ *   set *ROOT_RELPATH to "" and
+ *   set *ROOT_IS_DIR to TRUE and
+ *   send diff processor relpaths relative to LEFT_ABSPATH
+ *   (which is the same as relative to RIGHT_ABSPATH);
+ * else:
+ *   set *ROOT_RELPATH to the basename of LEFT_ABSPATH and
+ *   set *ROOT_IS_DIR to FALSE and
+ *   send diff processor relpaths relative to the parent of LEFT_ABSPATH
+ *   (so they all start with a basename(LEFT_ABSPATH) component).
+ *
+ * As any children reached by recursion are matched by name, a diff
+ * processor relpath applies equally to both sides of the diff, except
+ * for its first component in the latter case above.
+ *
+ * Assignments to *ROOT_RELPATH and *ROOT_IS_DIR are made before the first
+ * call to DIFF_PROCESSOR. Each of ROOT_RELPATH and ROOT_IS_DIR may be NULL
+ * if not wanted.
  */
 svn_error_t *
 svn_client__arbitrary_nodes_diff(const char **root_relpath,
@@ -1266,39 +1269,6 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
-
-/** Set @a shelf's revprop @a prop_name to @a prop_val.
- *
- * If @a prop_val is NULL, delete the property (if present).
- */
-svn_error_t *
-svn_client__shelf_revprop_set(svn_client_shelf_t *shelf,
-                               const char *prop_name,
-                               const svn_string_t *prop_val,
-                               apr_pool_t *scratch_pool);
-
-/** Get @a shelf's revprop @a prop_name into @a *prop_val.
- *
- * If the property is not present, set @a *prop_val to NULL.
- *
- * The lifetime of the result is limited to that of @a shelf and/or
- * of @a result_pool.
- */
-svn_error_t *
-svn_client__shelf_revprop_get(svn_string_t **prop_val,
-                               svn_client_shelf_t *shelf,
-                               const char *prop_name,
-                               apr_pool_t *result_pool);
-
-/** Get @a shelf's revprops into @a props.
- *
- * The lifetime of the result is limited to that of @a shelf and/or
- * of @a result_pool.
- */
-svn_error_t *
-svn_client__shelf_revprop_list(apr_hash_t **props,
-                               svn_client_shelf_t *shelf,
-                               apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

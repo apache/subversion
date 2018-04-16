@@ -6839,7 +6839,7 @@ revert_maybe_raise_moved_away(svn_wc__db_wcroot_t * wcroot,
     }
 
   SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
-                                              NULL,
+                                              NULL, NULL,
                                               db, wcroot->abspath,
                                               conflict,
                                               scratch_pool,

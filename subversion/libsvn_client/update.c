@@ -567,7 +567,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 {
   const char *anchor_abspath, *lockroot_abspath;
   svn_error_t *err;
-  svn_opt_revision_t peg_revision = *revision;
+  svn_opt_revision_t opt_rev = *revision;  /* operative revision */
   apr_hash_t *conflicted_paths
     = ctx->conflict_func2 ? apr_hash_make(pool) : NULL;
 
@@ -620,7 +620,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
           err = update_internal(result_rev, timestamp_sleep, conflicted_paths,
                                 &ra_session, missing_parent,
-                                anchor_abspath, &peg_revision, svn_depth_empty,
+                                anchor_abspath, &opt_rev, svn_depth_empty,
                                 FALSE, ignore_externals,
                                 allow_unver_obstructions, adds_as_modification,
                                 FALSE, ctx, pool, iterpool);
@@ -631,8 +631,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
           /* If we successfully updated a missing parent, let's re-use
              the returned revision number for future updates for the
              sake of consistency. */
-          peg_revision.kind = svn_opt_revision_number;
-          peg_revision.value.number = *result_rev;
+          opt_rev.kind = svn_opt_revision_number;
+          opt_rev.value.number = *result_rev;
         }
 
       svn_pool_destroy(iterpool);
@@ -648,7 +648,7 @@ svn_client__update_internal(svn_revnum_t *result_rev,
   err = update_internal(result_rev, timestamp_sleep, conflicted_paths,
                         &ra_session,
                         local_abspath, anchor_abspath,
-                        &peg_revision, depth, depth_is_sticky,
+                        &opt_rev, depth, depth_is_sticky,
                         ignore_externals, allow_unver_obstructions,
                         adds_as_modification,
                         TRUE, ctx, pool, pool);

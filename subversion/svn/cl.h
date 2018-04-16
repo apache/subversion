@@ -256,7 +256,8 @@ typedef struct svn_cl__opt_state_t
   const char *show_item;           /* print only the given item */
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
   svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
-  svn_boolean_t list;
+  svn_boolean_t drop;             /* drop shelf after successful unshelve */
+  svn_boolean_t viewspec;
 } svn_cl__opt_state_t;
 
 /* Conflict stats for operations such as update and merge. */
@@ -307,13 +308,11 @@ svn_opt_subcommand_t
   svn_cl__shelf_diff,
   svn_cl__shelf_drop,
   svn_cl__shelf_list,
+  svn_cl__shelf_list_by_paths,
   svn_cl__shelf_log,
   svn_cl__shelf_save,
   svn_cl__shelf_shelve,
   svn_cl__shelf_unshelve,
-  svn_cl__shelve,
-  svn_cl__unshelve,
-  svn_cl__shelves,
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
@@ -322,7 +321,7 @@ svn_opt_subcommand_t
 
 
 /* See definition in svn.c for documentation. */
-extern const svn_opt_subcommand_desc2_t svn_cl__cmd_table[];
+extern const svn_opt_subcommand_desc3_t svn_cl__cmd_table[];
 
 /* See definition in svn.c for documentation. */
 extern const int svn_cl__global_options[];

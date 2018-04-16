@@ -25,4 +25,5 @@ set -x
 url="$(svn info --show-item url)"
 branch="${url##*/}"
 (test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
+touch ../objdir/svn-${branch}/.retrieved
 (cd .. && gmake BRANCH="$branch" THREADING="no" JAVA="no" MAKE_JOBS=8)

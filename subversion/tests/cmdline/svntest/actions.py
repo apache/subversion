@@ -74,6 +74,11 @@ def setup_pristine_greek_repository():
   if not os.path.exists(main.general_repo_dir):
     os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
 
+  if not os.path.exists(main.other_dav_root_dir):
+    os.makedirs(main.other_dav_root_dir)
+  if not os.path.exists(main.non_dav_root_dir):
+    os.makedirs(main.non_dav_root_dir)
+
   # If there's no pristine repos, create one.
   if not os.path.exists(main.pristine_greek_repos_dir):
     if main.options.fsfs_version is not None:
