@@ -34,7 +34,7 @@ Candidate changes:
    Justification:
      A regression in 1.10.0. Broke 'make install-swig-rb-doc'.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
  * r1829260
    Revert r1751167, since it broke use of pre-generated Swig bindings in
