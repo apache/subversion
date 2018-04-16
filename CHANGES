@@ -5725,7 +5725,7 @@ http://svn.apache.org/repos/asf/subversion/tags/0.28.2
       twice as slow and lose all concurrent-client scalability.
 
       This is a temporary fix for a larger design problem.  See issue
-      http://subversion.tigris.org/issues/show_bug.cgi?id=1499
+      https://issues.apache.org/jira/browse/SVN-1499
 
 
 Version 0.28.1

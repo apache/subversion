@@ -425,7 +425,7 @@ Purpose: Retrieve a record of the changes made in a given revision,
 
 Target URL: Prior to Subversion 1.8, the target URL was the public
             resource URL of the aforementioned subtree.  Per issue #4287
-            (http://subversion.tigris.org/issues/show_bug.cgi?id=4287),
+            (https://issues.apache.org/jira/browse/SVN-4287),
             it was discovered that this was an incorrect approach, so
             in Subversion 1.8, mod_dav_svn allowed clients to submit
             this report (with a slightly different Request syntax)

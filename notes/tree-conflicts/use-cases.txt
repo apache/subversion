@@ -3,8 +3,8 @@
               TREE CONFLICTS USE CASES AND DESIRED BEHAVIOURS
 
 
-Issue reference:  http://subversion.tigris.org/issues/show_bug.cgi?id=2282
-                  http://subversion.tigris.org/issues/show_bug.cgi?id=3630
+Issue reference:  https://issues.apache.org/jira/browse/SVN-2282
+                  https://issues.apache.org/jira/browse/SVN-3630
 
 These use cases are based on a scenario paper "SVN move/rename
 problems & suggested improvements" submitted by a corporate Subversion
