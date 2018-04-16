@@ -386,7 +386,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
 
   {"freeze", subcommand_freeze, {0}, {N_(
     "usage: 1. svnadmin freeze REPOS_PATH -- PROGRAM [ARG...]\n"
-    "               2. svnadmin freeze -F FILE -- PROGRAM [ARG...]\n\n"
+    "               2. svnadmin freeze -F FILE -- PROGRAM [ARG...]\n"
     "\n"), N_(
     "1. Run PROGRAM passing ARGS while holding a write-lock on REPOS_PATH.\n"
     "   Allows safe use of third-party backup tools on a live repository.\n"
