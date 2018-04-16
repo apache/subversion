@@ -480,9 +480,9 @@ svn_client_revprop_set2(const char *propname,
     {
       svn_client_shelf_t *shelf;
 
-      SVN_ERR(svn_client_shelf_open(&shelf, revision->value.shelf,
-                                    URL, ctx, pool));
-      SVN_ERR(svn_client__shelf_revprop_set(shelf, propname, propval, pool));
+      SVN_ERR(svn_client_shelf_open_existing(&shelf, revision->value.shelf,
+                                             URL, ctx, pool));
+      SVN_ERR(svn_client_shelf_revprop_set(shelf, propname, propval, pool));
       SVN_ERR(svn_client_shelf_close(shelf, pool));
       *set_rev = SVN_INVALID_REVNUM;
       return SVN_NO_ERROR;
@@ -992,9 +992,9 @@ svn_client_revprop_get(const char *propname,
     {
       svn_client_shelf_t *shelf;
 
-      SVN_ERR(svn_client_shelf_open(&shelf, revision->value.shelf,
-                                    URL, ctx, pool));
-      SVN_ERR(svn_client__shelf_revprop_get(propval, shelf, propname, pool));
+      SVN_ERR(svn_client_shelf_open_existing(&shelf, revision->value.shelf,
+                                             URL, ctx, pool));
+      SVN_ERR(svn_client_shelf_revprop_get(propval, shelf, propname, pool));
       SVN_ERR(svn_client_shelf_close(shelf, pool));
       *set_rev = SVN_INVALID_REVNUM;
       return SVN_NO_ERROR;
@@ -1582,9 +1582,9 @@ svn_client_revprop_list(apr_hash_t **props,
     {
       svn_client_shelf_t *shelf;
 
-      SVN_ERR(svn_client_shelf_open(&shelf, revision->value.shelf,
-                                    URL, ctx, pool));
-      SVN_ERR(svn_client__shelf_revprop_list(props, shelf, pool));
+      SVN_ERR(svn_client_shelf_open_existing(&shelf, revision->value.shelf,
+                                             URL, ctx, pool));
+      SVN_ERR(svn_client_shelf_revprop_list(props, shelf, pool));
       SVN_ERR(svn_client_shelf_close(shelf, pool));
       *set_rev = SVN_INVALID_REVNUM;
       return SVN_NO_ERROR;
