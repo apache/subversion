@@ -334,6 +334,149 @@ shelf_write_current(svn_client_shelf_t *shelf,
   return SVN_NO_ERROR;
 }
 
+/* A baton for use with walk_callback(). */
+typedef struct walk_baton_t {
+  apr_hash_t *changelist_hash;
+  const char *wc_root_abspath;
+  svn_stream_t *outstream;
+  svn_stream_t *errstream;
+  svn_client_ctx_t *ctx;
+  svn_boolean_t any_shelved;  /* were any paths successfully shelved? */
+  apr_array_header_t *unshelvable;  /* paths unshelvable */
+  apr_pool_t *pool;  /* pool for data in 'unshelvable', etc. */
+} walk_baton_t;
+
+/*  */
+static svn_error_t *
+note_shelved(apr_array_header_t *shelved,
+             const char *relpath,
+             apr_pool_t *pool)
+{
+  APR_ARRAY_PUSH(shelved, const char *) = apr_pstrdup(pool, relpath);
+  return SVN_NO_ERROR;
+}
+
+/* An implementation of svn_wc_status_func4_t. */
+static svn_error_t *
+walk_callback(void *baton,
+              const char *local_abspath,
+              const svn_wc_status3_t *status,
+              apr_pool_t *scratch_pool)
+{
+  walk_baton_t *wb = baton;
+  svn_opt_revision_t peg_revision = {svn_opt_revision_unspecified, {0}};
+  svn_opt_revision_t start_revision = {svn_opt_revision_base, {0}};
+  svn_opt_revision_t end_revision = {svn_opt_revision_working, {0}};
+  const char *wc_relpath = svn_dirent_skip_ancestor(wb->wc_root_abspath,
+                                                    local_abspath);
+
+  /* If the status item has an entry, but doesn't belong to one of the
+     changelists our caller is interested in, we filter out this status
+     transmission.  */
+  if (wb->changelist_hash
+      && (! status->changelist
+          || ! svn_hash_gets(wb->changelist_hash, status->changelist)))
+    {
+      return SVN_NO_ERROR;
+    }
+
+  switch (status->node_status)
+    {
+      case svn_wc_status_modified:
+      case svn_wc_status_deleted:
+      case svn_wc_status_added:
+      case svn_wc_status_replaced:
+        SVN_ERR(svn_client_diff_peg7(
+                NULL /*options*/,
+                local_abspath,
+                &peg_revision,
+                &start_revision,
+                &end_revision,
+                wb->wc_root_abspath,
+                svn_depth_empty,
+                TRUE /*notice_ancestry*/,
+                FALSE /*no_diff_added*/,
+                FALSE /*no_diff_deleted*/,
+                TRUE /*show_copies_as_adds*/,
+                FALSE /*ignore_content_type: FALSE -> omit binary files*/,
+                FALSE /*ignore_properties*/,
+                FALSE /*properties_only*/,
+                FALSE /*use_git_diff_format*/,
+                FALSE /*pretty_print_mergeinfo*/,
+                SVN_APR_LOCALE_CHARSET,
+                wb->outstream,
+                wb->errstream,
+                NULL /*changelists*/,
+                wb->ctx, scratch_pool));
+        wb->any_shelved = TRUE;
+        break;
+
+      case svn_wc_status_incomplete:
+        if ((status->text_status != svn_wc_status_normal
+             && status->text_status != svn_wc_status_none)
+            || (status->prop_status != svn_wc_status_normal
+                && status->prop_status != svn_wc_status_none))
+          {
+            /* Incomplete, but local modifications */
+            SVN_ERR(note_shelved(wb->unshelvable, wc_relpath, wb->pool));
+          }
+        break;
+
+      case svn_wc_status_conflicted:
+      case svn_wc_status_missing:
+      case svn_wc_status_obstructed:
+        SVN_ERR(note_shelved(wb->unshelvable, wc_relpath, wb->pool));
+        break;
+
+      case svn_wc_status_normal:
+      case svn_wc_status_ignored:
+      case svn_wc_status_none:
+      case svn_wc_status_external:
+      case svn_wc_status_unversioned:
+      default:
+        break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Walk the tree rooted at PATHS, to depth DEPTH.
+ *
+ * PATHS are absolute, or relative to CWD.
+ */
+static svn_error_t *
+wc_walk_status_multi(const apr_array_header_t *paths,
+                     svn_depth_t depth,
+                     /*const apr_array_header_t *changelists,*/
+                     svn_wc_status_func4_t status_func,
+                     void *status_baton,
+                     svn_client_ctx_t *ctx,
+                     apr_pool_t *scratch_pool)
+{
+  int i;
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+      if (svn_path_is_url(path))
+        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                 _("'%s' is not a local path"), path);
+      SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
+
+      SVN_ERR(svn_wc_walk_status(ctx->wc_ctx, path, depth,
+                                 FALSE /*get_all*/, FALSE /*no_ignore*/,
+                                 FALSE /*ignore_text_mods*/,
+                                 NULL /*ignore_patterns*/,
+                                 status_func, status_baton,
+                                 ctx->cancel_func, ctx->cancel_baton,
+                                 scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /** Write local changes to a patch file.
  *
  * @a paths, @a depth, @a changelists: The selection of local paths to diff.
@@ -345,23 +488,30 @@ shelf_write_current(svn_client_shelf_t *shelf,
  *     This might also solve the buffering problem.
  */
 static svn_error_t *
-write_patch(const char *patch_abspath,
+write_patch(svn_boolean_t *any_shelved,
+            apr_array_header_t **unshelvable,
+            const char *patch_abspath,
             const apr_array_header_t *paths,
             svn_depth_t depth,
             const apr_array_header_t *changelists,
             const char *wc_root_abspath,
             svn_client_ctx_t *ctx,
+            apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
+  walk_baton_t walk_baton = { 0 };
   apr_int32_t flag;
   apr_file_t *outfile;
-  svn_stream_t *outstream;
-  svn_stream_t *errstream;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  int i;
-  svn_opt_revision_t peg_revision = {svn_opt_revision_unspecified, {0}};
-  svn_opt_revision_t start_revision = {svn_opt_revision_base, {0}};
-  svn_opt_revision_t end_revision = {svn_opt_revision_working, {0}};
+
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&walk_baton.changelist_hash,
+                                       changelists, scratch_pool));
+
+  walk_baton.wc_root_abspath = wc_root_abspath;
+  walk_baton.ctx = ctx;
+  walk_baton.any_shelved = FALSE;
+  walk_baton.unshelvable = apr_array_make(result_pool, 0, sizeof(char *));
+  walk_baton.pool = result_pool;
 
   /* Get streams for the output and any error output of the diff. */
   /* ### svn_stream_open_writable() doesn't work here: the buffering
@@ -370,44 +520,20 @@ write_patch(const char *patch_abspath,
   flag = APR_FOPEN_WRITE | APR_FOPEN_CREATE | APR_FOPEN_TRUNCATE;
   SVN_ERR(svn_io_file_open(&outfile, patch_abspath,
                            flag, APR_FPROT_OS_DEFAULT, scratch_pool));
-  outstream = svn_stream_from_aprfile2(outfile, FALSE /*disown*/, scratch_pool);
-  errstream = svn_stream_empty(scratch_pool);
+  walk_baton.outstream = svn_stream_from_aprfile2(outfile, FALSE /*disown*/,
+                                                  scratch_pool);
+  walk_baton.errstream = svn_stream_empty(scratch_pool);
 
-  for (i = 0; i < paths->nelts; i++)
-    {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+  /* Walk the WC */
+  SVN_ERR(wc_walk_status_multi(paths, depth, /*changelists,*/
+                               walk_callback, &walk_baton,
+                               ctx, scratch_pool));
 
-      if (svn_path_is_url(path))
-        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                 _("'%s' is not a local path"), path);
-      SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
+  SVN_ERR(svn_stream_close(walk_baton.outstream));
+  SVN_ERR(svn_stream_close(walk_baton.errstream));
 
-      SVN_ERR(svn_client_diff_peg7(
-                     NULL /*options*/,
-                     path,
-                     &peg_revision,
-                     &start_revision,
-                     &end_revision,
-                     wc_root_abspath,
-                     depth,
-                     TRUE /*notice_ancestry*/,
-                     FALSE /*no_diff_added*/,
-                     FALSE /*no_diff_deleted*/,
-                     TRUE /*show_copies_as_adds*/,
-                     FALSE /*ignore_content_type: FALSE -> omit binary files*/,
-                     FALSE /*ignore_properties*/,
-                     FALSE /*properties_only*/,
-                     FALSE /*use_git_diff_format*/,
-                     FALSE /*pretty_print_mergeinfo*/,
-                     SVN_APR_LOCALE_CHARSET,
-                     outstream,
-                     errstream,
-                     changelists,
-                     ctx, iterpool));
-    }
-  SVN_ERR(svn_stream_close(outstream));
-  SVN_ERR(svn_stream_close(errstream));
-
+  *any_shelved = walk_baton.any_shelved;
+  *unshelvable = walk_baton.unshelvable;
   return SVN_NO_ERROR;
 }
 
@@ -764,17 +890,27 @@ svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
 {
   int next_version = shelf->max_version + 1;
   const char *patch_abspath;
-  apr_finfo_t file_info;
+  svn_boolean_t any_shelved;
+  apr_array_header_t *unshelvable;
 
   SVN_ERR(get_patch_abspath(&patch_abspath, shelf, next_version,
                             scratch_pool, scratch_pool));
-  SVN_ERR(write_patch(patch_abspath,
+  SVN_ERR(write_patch(&any_shelved, &unshelvable,
+                      patch_abspath,
                       paths, depth, changelists,
                       shelf->wc_root_abspath,
-                      shelf->ctx, scratch_pool));
+                      shelf->ctx, scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_io_stat(&file_info, patch_abspath, APR_FINFO_MTIME, scratch_pool));
-  if (file_info.size > 0)
+  if (unshelvable->nelts > 0)
+    {
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               Q_("%d path could not be shelved",
+                                  "%d paths could not be shelved",
+                                  unshelvable->nelts),
+                               unshelvable->nelts);
+    }
+
+  if (any_shelved)
     {
       shelf->max_version = next_version;
       SVN_ERR(shelf_write_current(shelf, scratch_pool));
