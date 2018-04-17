@@ -491,6 +491,10 @@ I.    INTRODUCTION
 
           http://www.sqlite.org/download.html
 
+      Note that SQLite 3.12.0 to 3.20.1 will cause build errors on Windows with
+      Visual Studio 2005+. It's therefore suggested to use SQLite 3.21.0 or
+      above.
+
 
       14. pkg-config  (Unix only, OPTIONAL)
 
