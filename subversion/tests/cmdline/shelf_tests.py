@@ -44,22 +44,28 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 
-def shelve_unshelve_verify(sbox):
+def state_from_status(wc_dir):
+  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
+                                      wc_dir)
+  return svntest.wc.State.from_status(output, wc_dir)
+
+def shelve_unshelve_verify(sbox, modifier):
   """Round-trip: shelve; verify all changes are reverted;
      unshelve; verify all changes are restored.
   """
 
   wc_dir = sbox.wc_dir
+  virginal_state = state_from_status(wc_dir)
+
+  # Make some changes to the working copy
+  modifier(sbox)
 
   # Save the modified state
-  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
-                                      wc_dir)
-  modified_state = svntest.wc.State.from_status(output, wc_dir)
+  modified_state = state_from_status(wc_dir)
 
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelve', 'foo')
-  virginal_state = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, virginal_state)
 
   # Unshelve; check the original modifications are here again
@@ -74,15 +80,13 @@ def shelve_unshelve(sbox, modifier):
      shelve and unshelve; verify changes are fully reverted and restored.
   """
 
-  sbox.build()
+  if not sbox.is_built():
+    sbox.build()
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
 
-  # Make some changes to the working copy
-  modifier(sbox)
-
-  shelve_unshelve_verify(sbox)
+  shelve_unshelve_verify(sbox, modifier)
 
   os.chdir(was_cwd)
 
@@ -116,10 +120,8 @@ def shelve_adds(sbox):
   "shelve adds"
 
   def modifier(sbox):
-    sbox.simple_append('A/new', 'A new file\n')
-    sbox.simple_add('A/new')
-    sbox.simple_append('A/new2', 'A new file\n')
-    sbox.simple_add('A/new2')
+    sbox.simple_add_text('A new file\n', 'A/new')
+    sbox.simple_add_text('A new file\n', 'A/new2')
     sbox.simple_propset('p', 'v', 'A/new2')
 
   shelve_unshelve(sbox, modifier)
@@ -137,6 +139,36 @@ def shelve_deletes(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+def shelve_empty_adds(sbox):
+  "shelve empty adds"
+  sbox.build(empty=True)
+
+  def modifier(sbox):
+    sbox.simple_add_text('', 'empty')
+    sbox.simple_add_text('', 'empty-with-prop')
+    sbox.simple_propset('p', 'v', 'empty-with-prop')
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
+@XFail()
+def shelve_empty_deletes(sbox):
+  "shelve empty deletes"
+  sbox.build(empty=True)
+  sbox.simple_add_text('', 'empty')
+  sbox.simple_add_text('', 'empty-with-prop')
+  sbox.simple_propset('p', 'v', 'empty-with-prop')
+  sbox.simple_commit()
+
+  def modifier(sbox):
+    sbox.simple_rm('empty', 'empty-with-prop')
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
 def shelve_from_inner_path(sbox):
   "shelve from inner path"
 
@@ -148,17 +180,11 @@ def shelve_from_inner_path(sbox):
   os.chdir(sbox.ospath('A'))
   sbox.wc_dir = '..'
 
-  modifier(sbox)
-  shelve_unshelve_verify(sbox)
+  shelve_unshelve_verify(sbox, modifier)
 
   os.chdir(was_cwd)
 
 #----------------------------------------------------------------------
-
-def state_from_status(wc_dir):
-  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
-                                      wc_dir)
-  return svntest.wc.State.from_status(output, wc_dir)
 
 def save_revert_restore(sbox, modifier1, modifier2):
   "Save 2 checkpoints; revert; restore 1st"
@@ -226,6 +252,89 @@ def shelve_mergeinfo(sbox):
 
   shelve_unshelve(sbox, modifier)
 
+#----------------------------------------------------------------------
+
+def unshelve_refuses_if_conflicts(sbox):
+  "unshelve refuses if conflicts"
+
+  def modifier1(sbox):
+    sbox.simple_append('alpha', 'A-mod1\nB\nC\nD\n', truncate=True)
+    sbox.simple_append('beta', 'A-mod1\nB\nC\nD\n', truncate=True)
+
+  def modifier2(sbox):
+    sbox.simple_append('beta', 'A-mod2\nB\nC\nD\n', truncate=True)
+
+  sbox.build(empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = ''
+
+  sbox.simple_add_text('A\nB\nC\nD\n', 'alpha')
+  sbox.simple_add_text('A\nB\nC\nD\n', 'beta')
+  sbox.simple_commit()
+  initial_state = state_from_status(wc_dir)
+
+  # Make initial mods; remember this modified state
+  modifier1(sbox)
+  modified_state1 = state_from_status(wc_dir)
+  assert modified_state1 != initial_state
+
+  # Shelve; check there are no longer any local mods
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelve', 'foo')
+  svntest.actions.run_and_verify_status(wc_dir, initial_state)
+
+  # Make a different local mod that will conflict with the shelf
+  modifier2(sbox)
+  modified_state2 = state_from_status(wc_dir)
+
+  # Try to unshelve; check it fails with an error about a conflict
+  svntest.actions.run_and_verify_svn(None, '.*[Cc]onflict.*',
+                                     'unshelve', 'foo')
+  # Check nothing changed in the attempt
+  svntest.actions.run_and_verify_status(wc_dir, modified_state2)
+
+#----------------------------------------------------------------------
+
+def shelve_binary_file_mod(sbox):
+  "shelve binary file mod"
+
+  sbox.build(empty=True)
+  sbox.simple_add_text('\0\1\2\3\4\5', 'bin')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  def modifier(sbox):
+    sbox.simple_append('bin', '\5\4\3\2\1\0', truncate=True)
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
+def shelve_binary_file_add(sbox):
+  "shelve binary file add"
+
+  def modifier(sbox):
+    sbox.simple_add_text('\0\1\2\3\4\5', 'bin')
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
+def shelve_binary_file_del(sbox):
+  "shelve binary file del"
+
+  sbox.build(empty=True)
+  sbox.simple_add_text('\0\1\2\3\4\5', 'bin')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  def modifier(sbox):
+    sbox.simple_rm('bin')
+
+  shelve_unshelve(sbox, modifier)
+
 
 ########################################################################
 # Run the tests
@@ -236,9 +345,15 @@ test_list = [ None,
               shelve_prop_changes,
               shelve_adds,
               shelve_deletes,
+              shelve_empty_adds,
+              shelve_empty_deletes,
               shelve_from_inner_path,
               checkpoint_basic,
               shelve_mergeinfo,
+              unshelve_refuses_if_conflicts,
+              shelve_binary_file_mod,
+              shelve_binary_file_add,
+              shelve_binary_file_del,
              ]
 
 if __name__ == '__main__':

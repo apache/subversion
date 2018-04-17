@@ -437,7 +437,7 @@ dav_svn__replay_report(const dav_resource *resource,
      URL, and BASE_DIR is embedded in the request body.
 
      The old-school (and incorrect, see issue #4287 --
-     http://subversion.tigris.org/issues/show_bug.cgi?id=4287) way was
+     https://issues.apache.org/jira/browse/SVN-4287) way was
      to REPORT on the public URL of the BASE_DIR and embed the REV in
      the report body.
   */

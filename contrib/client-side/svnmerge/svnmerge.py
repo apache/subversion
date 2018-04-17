@@ -1367,7 +1367,7 @@ def action_init(target_dir, target_props):
         # the copy target is the merge target, then we want to mark as
         # integrated up to the specific rev of the merge target from
         # which the merge source was copied.  (Longer discussion at:
-        # http://subversion.tigris.org/issues/show_bug.cgi?id=2810  )
+        # https://issues.apache.org/jira/browse/SVN-2810  )
         cf_source, cf_rev, copy_committed_in_rev = get_copyfrom(target_dir)
 
         cf_pathid = None

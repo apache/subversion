@@ -179,7 +179,9 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
  *
  * Either @a sock or @a in_stream/@a out_stream must be set, not both.
  * @a compression_level specifies the desired network data compression
- * level (zlib/lz4) from 0 (no compression) to 9 (best but slowest).
+ * level from 0 (no compression) to 9 (best but slowest). The effect
+ * of the parameter depends on the compression algorithm; for example,
+ * it is used verbatim by zlib/deflate but ignored by LZ4.
  *
  * If @a zero_copy_limit is not 0, cached file contents smaller than the
  * given limit may be sent directly to the network socket.  Otherwise,

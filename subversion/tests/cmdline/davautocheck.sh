@@ -52,6 +52,7 @@
 # Run this script with the test suite name and test number to execute just this
 # test:
 #   subversion/tests/cmdline/davautocheck.sh basic 4
+# This script can also be invoked via "make davautocheck".
 #
 # If the temporary directory is not deleted, it can be reused for further
 # manual DAV protocol interoperation testing. HTTPD must be started by
@@ -65,18 +66,19 @@
 #   APXS=/opt/svn/1.4.x/bin/apxs MODULE_PATH=/opt/svn/1.4.x/modules \
 #     subversion/tests/cmdline/davautocheck.sh
 #
-# To prevent the server from advertising httpv2, pass USE_HTTPV1 in
-# the environment.
+# Other environment variables that are interpreted by this script:
 #
-# To enable "SVNCacheRevProps on" set CACHE_REVPROPS in the environment.
+#  make davautocheck CACHE_REVPROPS=1       # sets SVNCacheRevProps on
 #
-# To test over https set USE_SSL in the environment.
+#  make davautocheck BLOCK_READ=1           # sets SVNBlockRead on
 #
-# To use value for "SVNPathAuthz" directive set SVN_PATH_AUTHZ with
-# appropriate value in the environment.
+#  make davautocheck USE_SSL=1              # run over https
 #
-# To load an MPM module for Apache 2.4 use APACHE_MPM=event in the
-# environment.
+#  make davautocheck USE_HTTPV1=1           # sets SVNAdvertiseV2Protocol off
+#
+#  make davautocheck APACHE_MPM=event       # specifies the 2.4 MPM
+#
+#  make davautocheck SVN_PATH_AUTHZ=short_circuit  # SVNPathAuthz short_circuit
 #
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.  Passing --gdb or --lldb will do the same, and in
@@ -220,6 +222,11 @@ fi
 CACHE_REVPROPS_SETTING=off
 if [ ${CACHE_REVPROPS:+set} ]; then
   CACHE_REVPROPS_SETTING=on
+fi
+
+BLOCK_READ_SETTING=off
+if [ ${BLOCK_READ:+set} ]; then
+  BLOCK_READ_SETTING=on
 fi
 
 if [ ${MODULE_PATH:+set} ]; then
@@ -539,39 +546,41 @@ Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
 </Directory>
 
 <Location /svn-test-work/repositories>
+__EOF__
+location_common() {
+cat >> "$HTTPD_CFG" <<__EOF__
   DAV               svn
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
   AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
-  Require           valid-user
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
+  SVNListParentPath On
+  SVNBlockRead      ${BLOCK_READ_SETTING}
+__EOF__
+}
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /ddt-test-work/repositories>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   ${SVN_PATH_AUTHZ_LINE}
   DontDoThatConfigFile "$HTTPD_DONTDOTHAT"
 </Location>
 <Location /svn-test-work/local_tmp/repos>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/repos"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /authz-test-work/anon>
@@ -594,84 +603,54 @@ Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /authz-test-work/mixed>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-  SVNListParentPath On
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
   Satisfy Any
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /authz-test-work/mixed-noauthwhenanon>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-  SVNListParentPath On
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
   AuthzSVNNoAuthWhenAnonymousAllowed On
   SVNPathAuthz On
 </Location>
 <Location /authz-test-work/authn>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-  SVNListParentPath On
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /authz-test-work/authn-anonoff>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-  SVNListParentPath On
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
   AuthzSVNAnonymous Off
   SVNPathAuthz On
 </Location>
 <Location /authz-test-work/authn-lcuser>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-  SVNListParentPath On
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   Require           valid-user
   AuthzForceUsernameCase Lower
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /authz-test-work/authn-group>
-  DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-  SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-  SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-  SVNListParentPath On
-  AuthType          Basic
-  AuthName          "Subversion Repository"
-  AuthUserFile      $HTTPD_USERS
   AuthGroupFile     $HTTPD_GROUPS
   Require           group random
   AuthzSVNAuthoritative Off
@@ -679,15 +658,10 @@ Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
 </Location>
 <IfModule mod_authz_core.c>
   <Location /authz-test-work/sallrany>
-    DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
     SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-    AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-    SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-    SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-    SVNListParentPath On
-    AuthType          Basic
-    AuthName          "Subversion Repository"
-    AuthUserFile      $HTTPD_USERS
     AuthzSendForbiddenOnFailure On
     Satisfy All
     <RequireAny>
@@ -697,15 +671,10 @@ Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
     ${SVN_PATH_AUTHZ_LINE}
   </Location>
   <Location /authz-test-work/sallrall>
-    DAV               svn
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
     SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-    AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
-    SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
-    SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
-    SVNListParentPath On
-    AuthType          Basic
-    AuthName          "Subversion Repository"
-    AuthUserFile      $HTTPD_USERS
     AuthzSendForbiddenOnFailure On
     Satisfy All
     <RequireAll>

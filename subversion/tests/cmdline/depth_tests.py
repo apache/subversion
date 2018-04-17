@@ -1073,7 +1073,7 @@ def commit_depth_immediates(sbox):
   #    Message-ID: <46968831.2070906@collab.net>
   #    Date: Thu, 12 Jul 2007 15:59:45 -0400
   #
-  # See also http://subversion.tigris.org/issues/show_bug.cgi?id=2882.
+  # See also https://issues.apache.org/jira/browse/SVN-2882.
   #
   # Outline of the test:
   # ====================

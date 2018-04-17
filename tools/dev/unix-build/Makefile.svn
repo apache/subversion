@@ -1135,13 +1135,54 @@ ruby-clean:
 $(DISTDIR)/$(RUBY_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(RUBY_URL)
 
+$(RUBY_OBJDIR)/openssl_missing.patch:
+	mkdir -p $(dir $@)
+	echo > $@.tmp 'Index: ext/openssl/openssl_missing.h'
+	echo >> $@.tmp '--- ext/openssl/openssl_missing.h.orig'
+	echo >> $@.tmp '+++ ext/openssl/openssl_missing.h'
+	echo >> $@.tmp '@@ -119,6 +119,9 @@ void ossl_HMAC_CTX_free(HMAC_CTX *);'
+	echo >> $@.tmp ' #if !defined(HAVE_X509_STORE_SET_EX_DATA)'
+	echo >> $@.tmp ' #  define X509_STORE_set_ex_data(x, idx, data) \'
+	echo >> $@.tmp ' 	CRYPTO_set_ex_data(&(x)->ex_data, (idx), (data))'
+	echo >> $@.tmp '+#endif'
+	echo >> $@.tmp '+'
+	echo >> $@.tmp '+#if !defined(HAVE_X509_STORE_GET_EX_NEW_INDEX)'
+	echo >> $@.tmp ' #  define X509_STORE_get_ex_new_index(l, p, newf, dupf, freef) \'
+	echo >> $@.tmp ' 	CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_X509_STORE, (l), (p), \'
+	echo >> $@.tmp ' 				(newf), (dupf), (freef))'
+	echo >> $@.tmp '@@ -192,6 +195,7 @@ void ossl_X509_REQ_get0_signature(const X509_REQ *, co'
+	echo >> $@.tmp ' #endif'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp ' #if !defined(HAVE_OPAQUE_OPENSSL)'
+	echo >> $@.tmp '+#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x2070000fL'
+	echo >> $@.tmp ' #define IMPL_PKEY_GETTER(_type, _name) \'
+	echo >> $@.tmp ' static inline _type *EVP_PKEY_get0_##_type(EVP_PKEY *pkey) { \'
+	echo >> $@.tmp ' 	return pkey->pkey._name; }'
+	echo >> $@.tmp '@@ -243,6 +247,7 @@ IMPL_PKEY_GETTER(EC_KEY, ec)'
+	echo >> $@.tmp ' #undef IMPL_PKEY_GETTER'
+	echo >> $@.tmp ' #undef IMPL_KEY_ACCESSOR2'
+	echo >> $@.tmp ' #undef IMPL_KEY_ACCESSOR3'
+	echo >> $@.tmp '+#endif'
+	echo >> $@.tmp ' #endif /* HAVE_OPAQUE_OPENSSL */'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp ' #if defined(HAVE_AUTHENTICATED_ENCRYPTION) && !defined(EVP_CTRL_AEAD_GET_TAG)'
+	mv -f $@.tmp $@
+
+ifeq ($(UNAME),OpenBSD)
+RUBY_SSL_EX_NEW_DATA_PATCH = sed -i -e '/^have_func("X509_STORE_set_ex_data")$$/ { p; s/^.*$$/\have_func("X509_STORE_get_ex_new_index")/; }'
+else
+RUBY_SSL_EX_NEW_DATA_PATCH = true
+endif
+
 # retrieve ruby
 #
-$(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
+$(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST) $(RUBY_OBJDIR)/openssl_missing.patch
 	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	-which ghead && sed -i -e "s/head -c/ghead -c/" $(RUBY_SRCDIR)/configure
+	$(RUBY_SSL_EX_NEW_DATA_PATCH) $(RUBY_SRCDIR)/ext/openssl/extconf.rb
+	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/openssl_missing.patch
 	touch $@
 
 ifeq ($(THREADING),yes)
@@ -2112,7 +2153,7 @@ svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			env MAKEFLAGS= make $(JAVAHL_CHECK_TARGET) 2>&1) | \
+			MAKEFLAGS= make $(JAVAHL_CHECK_TARGET) 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 

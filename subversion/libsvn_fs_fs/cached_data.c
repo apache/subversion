@@ -1268,7 +1268,7 @@ parse_raw_window(void **out,
   stream = svn_stream_from_string(&raw_window, result_pool);
 
   /* parse it */
-  SVN_ERR(svn_txdelta_read_svndiff_window(&result->window, stream, 1,
+  SVN_ERR(svn_txdelta_read_svndiff_window(&result->window, stream, window->ver,
                                           result_pool));
 
   /* complete the window and return it */
@@ -2103,13 +2103,14 @@ skip_contents(struct rep_read_baton *baton,
 
 /* BATON is of type `rep_read_baton'; read the next *LEN bytes of the
    representation and store them in *BUF.  Sum as we read and verify
-   the MD5 sum at the end. */
+   the MD5 sum at the end.  This is a READ_FULL_FN for svn_stream_t. */
 static svn_error_t *
 rep_read_contents(void *baton,
                   char *buf,
                   apr_size_t *len)
 {
   struct rep_read_baton *rb = baton;
+  apr_size_t len_requested = *len;
 
   /* Get data from the fulltext cache for as long as we can. */
   if (rb->fulltext_cache)
@@ -2150,6 +2151,28 @@ rep_read_contents(void *baton,
   if (rb->current_fulltext)
     svn_stringbuf_appendbytes(rb->current_fulltext, buf, *len);
 
+  /* This is a FULL_READ_FN so a short read implies EOF and we can
+     verify the length. */
+  rb->off += *len;
+  if (*len < len_requested && rb->off != rb->len)
+      {
+        /* A warning rather than an error to allow the data to be
+           retrieved when the length is wrong but the data is
+           present, i.e. if repository corruption has stored the wrong
+           expanded length. */
+        svn_error_t *err = svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
+                            _("Length mismatch while reading representation:"
+                              " expected %s,"
+                              " got %s"),
+                            apr_psprintf(rb->pool, "%" SVN_FILESIZE_T_FMT,
+                                         rb->len),
+                            apr_psprintf(rb->pool, "%" SVN_FILESIZE_T_FMT,
+                                         rb->off));
+
+        rb->fs->warning(rb->fs->warning_baton, err);
+        svn_error_clear(err);
+      }
+
   /* Perform checksumming.  We want to check the checksum as soon as
      the last byte of data is read, in case the caller never performs
      a short read, but we don't want to finalize the MD5 context
@@ -2157,7 +2180,6 @@ rep_read_contents(void *baton,
   if (!rb->checksum_finalized)
     {
       SVN_ERR(svn_checksum_update(rb->md5_checksum_ctx, buf, *len));
-      rb->off += *len;
       if (rb->off == rb->len)
         {
           svn_checksum_t *md5_checksum;
@@ -3206,7 +3228,7 @@ init_rep_state(rep_state_t *rs,
   rs->start = entry->offset + rs->header_size;
   rs->current = rep_header->type == svn_fs_fs__rep_plain ? 0 : 4;
   rs->size = entry->size - rep_header->header_size - 7;
-  rs->ver = 1;
+  rs->ver = -1;
   rs->chunk_index = 0;
   rs->raw_window_cache = ffd->raw_window_cache;
   rs->window_cache = ffd->txdelta_window_cache;
@@ -3264,6 +3286,9 @@ cache_windows(svn_fs_t *fs,
               apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
+
+  SVN_ERR(auto_read_diff_version(rs, iterpool));
+
   while (rs->current < rs->size)
     {
       apr_off_t end_offset;
@@ -3324,6 +3349,7 @@ cache_windows(svn_fs_t *fs,
           window.end_offset = rs->current;
           window.window.len = window_len;
           window.window.data = buf;
+          window.ver = rs->ver;
 
           /* cache the window now */
           SVN_ERR(svn_cache__set(rs->raw_window_cache, &key, &window,

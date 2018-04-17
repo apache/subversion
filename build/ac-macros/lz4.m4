@@ -39,6 +39,10 @@ AC_DEFUN(SVN_LZ4,
     ],
     [lz4_prefix=std])
 
+  if test "$lz4_prefix" = "no"; then
+    dnl The user has tried to disable LZ4
+    AC_MSG_ERROR([Subversion requires LZ4])
+  fi
   if test "$lz4_prefix" = "internal"; then
     AC_MSG_NOTICE([using internal lz4])
     AC_DEFINE([SVN_INTERNAL_LZ4], [1],

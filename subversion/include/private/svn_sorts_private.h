@@ -190,7 +190,7 @@ svn_priority_queue__size(svn_priority_queue__t *queue);
 
 /**
  * Returns a reference to the first element in the @a queue.  The queue
- * contents remains unchanged.  If the @a queue is empty, #NULL will be
+ * contents remains unchanged.  If the @a queue is empty, NULL will be
  * returned.
  */
 void *
@@ -212,7 +212,7 @@ svn_priority_queue__pop(svn_priority_queue__t *queue);
 
 /**
  * Append the new @a element to the @a queue.  @a element must neither be
- * #NULL nor the first element as returned by #svn_priority_queue__peek.
+ * NULL nor the first element as returned by #svn_priority_queue__peek.
  */
 void
 svn_priority_queue__push(svn_priority_queue__t *queue, const void *element);

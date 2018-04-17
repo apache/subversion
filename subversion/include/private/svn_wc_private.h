@@ -537,7 +537,7 @@ svn_wc__node_get_origin(svn_boolean_t *is_copy,
  * If @a base_only is TRUE then only the base node will be examined,
  * otherwise the current base or working node will be examined.
  *
- * If a value is not interesting you can pass #NULL.
+ * If a value is not interesting you can pass NULL.
  *
  * If @a local_abspath is not in the working copy, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND.  Use @a scratch_pool for all temporary

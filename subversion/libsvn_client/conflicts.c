@@ -255,7 +255,7 @@ struct repos_move_info {
   /* The revision in which this move was committed. */
   svn_revnum_t rev;
 
-  /* The author who commited the revision in which this move was committed. */
+  /* The author who committed the revision in which this move was committed. */
   const char *rev_author;
 
   /* The repository relpath the node was moved from in this revision. */
@@ -5944,8 +5944,11 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
             {
               if (i == edits->nelts - (max_revs_to_display / 2))
                   s = apr_psprintf(result_pool,
-                                   _("%s\n [%d revisions omitted for "
-                                     "brevity],\n"),
+                                   Q_("%s\n [%d revision omitted for "
+                                      "brevity],\n",
+                                      "%s\n [%d revisions omitted for "
+                                      "brevity],\n",
+                                      num_revs_to_skip),
                                    s, num_revs_to_skip);
 
               s = apr_psprintf(result_pool, _("%s r%ld by %s%s"), s,

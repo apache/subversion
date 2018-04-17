@@ -257,6 +257,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
   svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
   svn_boolean_t drop;             /* drop shelf after successful unshelve */
+  svn_boolean_t viewspec;
   svn_version_t *compatible_version; /* working copy compatibility version */
 } svn_cl__opt_state_t;
 

@@ -102,7 +102,7 @@ tool_versions = {
 
 # The version that is our current recommended release
 # ### TODO: derive this from svn_version.h; see ../../build/getversion.py
-recommended_release = '1.9'
+recommended_release = '1.10'
 
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
@@ -737,8 +737,12 @@ def sign_candidates(args):
     def sign_file(filename):
         asc_file = open(filename + '.asc', 'a')
         logging.info("Signing %s" % filename)
-        proc = subprocess.check_call(['gpg', '-ba', '-o', '-', filename],
-                                     stdout=asc_file)
+        if args.userid:
+            proc = subprocess.check_call(['gpg', '-ba', '-u', args.userid,
+                                         '-o', '-', filename], stdout=asc_file)
+        else:
+            proc = subprocess.check_call(['gpg', '-ba', '-o', '-', filename],
+                                         stdout=asc_file)
         asc_file.close()
 
     target = get_target(args)
@@ -828,11 +832,14 @@ def create_tag(args):
                               (args.version.major, args.version.minor,
                                args.version.patch + 1))
 
+        HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
+                                        '--', url]).strip()
+        HEAD = int(HEAD)
         def file_object_for(relpath):
             fd = tempfile.NamedTemporaryFile()
             url = branch + '/' + relpath
             fd.url = url
-            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, args.revnum)],
+            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
                                   stdout=fd)
             return fd
 
@@ -846,7 +853,7 @@ def create_tag(args):
 
         svn_version_h.seek(0, os.SEEK_SET)
         STATUS.seek(0, os.SEEK_SET)
-        subprocess.check_call(['svnmucc', '-r', str(args.revnum),
+        subprocess.check_call(['svnmucc', '-r', str(HEAD),
                                '-m', 'Post-release housekeeping: '
                                      'bump the %s branch to %s.'
                                % (branch.split('/')[-1], str(new_version)),
@@ -956,6 +963,7 @@ def get_sha1info(args):
     target = get_target(args)
 
     sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
+    sha1s.sort()
 
     class info(object):
         pass
@@ -1398,6 +1406,10 @@ def main():
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
+    subparser.add_argument('--userid',
+                    help='''The (optional) USER-ID specifying the key to be
+                            used for signing, such as '110B1C95' (Key-ID). If
+                            omitted, uses the default key.''')
 
     # Setup the parser for the post-candidates subcommand
     subparser = subparsers.add_parser('post-candidates',

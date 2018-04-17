@@ -71,9 +71,8 @@ def svnversion_test(sbox):
   expected_output = wc.State(wc_dir, {'A/mu' : Item(verb='Sending')})
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/mu', wc_rev=2)
-  if svntest.actions.run_and_verify_commit(wc_dir,
-                                           expected_output, expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output, expected_status)
 
   # Unmodified, mixed
   svntest.actions.run_and_verify_svnversion(wc_dir, repo_url,
@@ -98,13 +97,12 @@ def svnversion_test(sbox):
                       + 'appended mu text')
   expected_disk.tweak('iota',
                       contents=expected_disk.desc['A/D/gamma'].contents)
-  if svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
-                                           expected_output,
-                                           expected_disk,
-                                           expected_status,
-                                           [],
-                                           False, '--ignore-ancestry'):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_switch(wc_dir, iota_path, gamma_url,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [],
+                                        False, '--ignore-ancestry')
 
   # Prop modified, mixed, part wc switched
   svntest.actions.run_and_verify_svnversion(wc_dir, repo_url,

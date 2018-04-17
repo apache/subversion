@@ -256,6 +256,24 @@ class RegexListOutput(ExpectedOutput):
   def display_differences(self, message, label, actual):
     display_lines(message, self.expected, actual, label + ' (regexp)', label)
 
+    assert actual is not None
+    if not isinstance(actual, list):
+      actual = [actual]
+
+    if self.match_all:
+      logger.warn('DIFF ' + label + ':')
+      if len(self.expected) != len(actual):
+        logger.warn('# Expected %d lines; actual %d lines' %
+                    (len(self.expected), len(actual)))
+      for e, a in map(None, self.expected_res, actual):
+        if e is not None and a is not None and e.match(a):
+          logger.warn("|  " + a.rstrip())
+        else:
+          if e is not None:
+            logger.warn("| -" + e.pattern.rstrip())
+          if a is not None:
+            logger.warn("| +" + a.rstrip())
+
   def insert(self, index, line):
     self.expected.insert(index, line)
     self.expected_res = [re.compile(e) for e in self.expected]
@@ -305,6 +323,9 @@ class UnorderedRegexListOutput(ExpectedOutput):
     assert actual is not None
     if not isinstance(actual, list):
       actual = [actual]
+    else:
+      # copy the list so we can remove elements without affecting caller
+      actual = actual[:]
 
     if len(self.expected) != len(actual):
       return False
@@ -323,6 +344,27 @@ class UnorderedRegexListOutput(ExpectedOutput):
     display_lines(message, self.expected, actual,
                   label + ' (regexp) (unordered)', label)
 
+    assert actual is not None
+    if not isinstance(actual, list):
+      actual = [actual]
+    else:
+      # copy the list so we can remove elements without affecting caller
+      actual = actual[:]
+
+    logger.warn('DIFF ' + label + ':')
+    if len(self.expected) != len(actual):
+      logger.warn('# Expected %d lines; actual %d lines' %
+                  (len(self.expected), len(actual)))
+    for e in self.expected:
+      expect_re = re.compile(e)
+      for actual_line in actual:
+        if expect_re.match(actual_line):
+          actual.remove(actual_line)
+          break
+      else:
+        logger.warn("| -" + expect_re.pattern.rstrip())
+    for a in actual:
+      logger.warn("| +" + a.rstrip())
 
 class AlternateOutput(ExpectedOutput):
   """Matches any one of a list of ExpectedOutput instances.

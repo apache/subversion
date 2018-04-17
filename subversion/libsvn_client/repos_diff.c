@@ -380,7 +380,7 @@ get_file_from_ra(struct file_baton *fb,
      way.  Hence this little hack:  We populate FILE_BATON->PROPCHANGES only
      with *actual* property changes.
 
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
+     See https://issues.apache.org/jira/browse/SVN-3657#desc9 and
      http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details.
  */
 static void

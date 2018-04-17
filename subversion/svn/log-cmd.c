@@ -334,7 +334,7 @@ svn_cl__log_entry_receiver(void *baton,
       return SVN_NO_ERROR;
     }
 
-  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=807
+  /* ### See https://issues.apache.org/jira/browse/SVN-807
      for more on the fallback fuzzy conversions below. */
 
   if (author == NULL)

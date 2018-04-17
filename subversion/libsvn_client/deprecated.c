@@ -1726,7 +1726,7 @@ svn_client_log(const apr_array_header_t *targets,
    * we just invoke the receiver manually on a hand-constructed log
    * message for revision 0.
    *
-   * See also http://subversion.tigris.org/issues/show_bug.cgi?id=692.
+   * See also https://issues.apache.org/jira/browse/SVN-692.
    */
   if (err && (err->apr_err == SVN_ERR_FS_NO_SUCH_REVISION)
       && (start->kind == svn_opt_revision_head)

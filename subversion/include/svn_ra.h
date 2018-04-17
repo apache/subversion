@@ -555,9 +555,9 @@ typedef struct svn_ra_callbacks2_t
 
   /** Fetch working copy properties.
    *
-   *<pre> ### we might have a problem if the RA layer ever wants a property
-   * ### that corresponds to a different revision of the file than
-   * ### what is in the WC. we'll cross that bridge one day...</pre>
+   * @note we might have a problem if the RA layer ever wants a property
+   *       that corresponds to a different revision of the file than
+   *       what is in the WC. we'll cross that bridge one day...
    */
   svn_ra_get_wc_prop_func_t get_wc_prop;
 
@@ -1857,7 +1857,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * @note Prior to Subversion 1.9, this function may request delta handlers
  * from @a handler even for empty text deltas.  Starting with 1.9, the
  * delta handler / baton return arguments passed to @a handler will be
- * #NULL unless there is an actual difference in the file contents between
+ * NULL unless there is an actual difference in the file contents between
  * the current and the previous call.
  *
  * @since New in 1.5.

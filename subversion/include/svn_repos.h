@@ -861,7 +861,7 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
  * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_freeze(apr_array_header_t *paths,
+svn_repos_freeze(const apr_array_header_t *paths,
                  svn_repos_freeze_func_t freeze_func,
                  void *freeze_baton,
                  apr_pool_t *pool);
@@ -2404,7 +2404,7 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * @note Prior to Subversion 1.9, this function may request delta handlers
  * from @a handler even for empty text deltas.  Starting with 1.9, the
  * delta handler / baton return arguments passed to @a handler will be
- * #NULL unless there is an actual difference in the file contents between
+ * NULL unless there is an actual difference in the file contents between
  * the current and the previous call.
  *
  * @since New in 1.5.
@@ -3803,7 +3803,7 @@ typedef struct svn_repos_parse_fns3_t
  *
  * @since New in 1.8.
 
- * @since Starting in 1.10, @a parse_fns may contain #NULL pointers for
+ * @since Starting in 1.10, @a parse_fns may contain NULL pointers for
  * those callbacks that the caller is not interested in.
  */
 svn_error_t *
