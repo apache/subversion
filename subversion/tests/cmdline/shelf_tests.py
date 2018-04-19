@@ -336,6 +336,29 @@ def shelve_binary_file_del(sbox):
 
   shelve_unshelve(sbox, modifier)
 
+#----------------------------------------------------------------------
+
+def shelve_with_log_message(sbox):
+  "shelve with log message"
+
+  sbox.build(empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  sbox.simple_add_text('New file', 'f')
+  log_message = 'Log message for foo'
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelve', 'foo', '-m', log_message)
+  expected_output = svntest.verify.RegexListOutput(
+    ['foo .*',
+     ' ' + log_message
+    ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'shelf-list')
+
+  os.chdir(was_cwd)
+
 
 ########################################################################
 # Run the tests
@@ -355,6 +378,7 @@ test_list = [ None,
               shelve_binary_file_mod,
               shelve_binary_file_add,
               shelve_binary_file_del,
+              shelve_with_log_message,
              ]
 
 if __name__ == '__main__':
