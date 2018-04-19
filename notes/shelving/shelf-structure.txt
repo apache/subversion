@@ -1,0 +1,50 @@
+== Storage Structure for Shelving ==
+
+
+=== Shelving (trunk) ===
+
+In development in trunk (1.11-dev), marked "experimental".
+
+Each shelf has zero or more versions of the change, and exactly one set of
+'revision' properties.
+
+* .svn/shelves
+  This subdirectory holds all shelving metadata and data.
+  It is created on demand, and never deleted.
+
+* .svn/shelves/<encoded-name>.current
+  Holds an ASCII-decimal number stating the latest shelf-version of the
+  shelf <encoded-name>.
+
+* .svn/shelves/<encoded-name>.log
+  Holds the 'revision' properties of the shelf, in svn_hash_write2() format
+  terminated with "PROPS-END". Created when any revprop is set; need not
+  exist.
+
+* .svn/shelves/<encoded-name>-<version>.patch
+  The patch file representing version <version>.
+
+<encoded-name>: the shelf name as UTF-8, encoded byte-by-byte into
+  two-hex-digit pairs, e.g. shelf name 'Az' is encoded as '417f'.
+
+<version>: an ASCII-decimal number, starting at 1
+
+
+=== Shelving v1 ===
+
+Released in Subversion 1.10.0, marked "experimental".
+
+Shelving only, no 'checkpoints' (versions). Each shelf has an optional log
+message.
+
+* .svn/shelves
+  This subdirectory holds all shelving metadata and data.
+  It is created on demand, and never deleted.
+
+* .svn/shelves/<encoded-name>.patch
+  The patch file representing one shelf, preceded by its log message.
+
+<encoded-name>: the shelf name as UTF-8, encoded byte-by-byte into
+  two-hex-digit pairs, e.g. shelf name 'Az' is encoded as '417f'.
+
+
