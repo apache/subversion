@@ -260,6 +260,7 @@ svn_client_shelf_revprop_set_all(svn_client_shelf_t *shelf,
   else
     shelf->revprops = apr_hash_make(shelf->pool);
 
+  SVN_ERR(shelf_write_revprops(shelf, scratch_pool));
   return SVN_NO_ERROR;
 }
 
