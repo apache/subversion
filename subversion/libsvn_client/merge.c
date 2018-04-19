@@ -340,17 +340,25 @@ typedef struct merge_cmd_baton_t {
    merge source is an ancestor of the right-side (or vice-versa), the merge
    source is in the same repository as the merge target, and we are not
    ignoring mergeinfo. */
-#define HONOR_MERGEINFO(merge_b) ((merge_b)->mergeinfo_capable      \
-                                  && (merge_b)->merge_source.ancestral  \
-                                  && (merge_b)->same_repos          \
-                                  && (! (merge_b)->ignore_mergeinfo))
+static svn_boolean_t
+HONOR_MERGEINFO(const merge_cmd_baton_t *merge_b)
+{
+  return (merge_b->mergeinfo_capable
+          && merge_b->merge_source.ancestral
+          && merge_b->same_repos
+          && (!merge_b->ignore_mergeinfo));
+}
 
 
 /* Return TRUE iff we should be recording mergeinfo for the merge described
    by MERGE_B.  Specifically, that is if we are honoring mergeinfo and the
    merge is not a dry run.  */
-#define RECORD_MERGEINFO(merge_b) (HONOR_MERGEINFO(merge_b) \
-                                   && !(merge_b)->dry_run)
+static svn_boolean_t
+RECORD_MERGEINFO(const merge_cmd_baton_t *merge_b)
+{
+  return (HONOR_MERGEINFO(merge_b)
+          && !merge_b->dry_run);
+}
 
 
 /*-----------------------------------------------------------------------*/
@@ -3607,17 +3615,6 @@ notify_merge_completed(const char *target_abspath,
       ctx->notify_func2(ctx->notify_baton2, n, pool);
     }
 }
-
-/* Is the notification the result of a real operative merge? */
-#define IS_OPERATIVE_NOTIFICATION(notify)  \
-                    (notify->content_state == svn_wc_notify_state_conflicted \
-                     || notify->content_state == svn_wc_notify_state_merged  \
-                     || notify->content_state == svn_wc_notify_state_changed \
-                     || notify->prop_state == svn_wc_notify_state_conflicted \
-                     || notify->prop_state == svn_wc_notify_state_merged     \
-                     || notify->prop_state == svn_wc_notify_state_changed    \
-                     || notify->action == svn_wc_notify_update_add \
-                     || notify->action == svn_wc_notify_tree_conflict)
 
 
 /* Remove merge source gaps from range used for merge notifications.
