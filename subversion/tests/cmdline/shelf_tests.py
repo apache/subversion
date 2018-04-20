@@ -297,7 +297,7 @@ def unshelve_refuses_if_conflicts(sbox):
 
 #----------------------------------------------------------------------
 
-Skip()  # fails on MacOSX; unknown reason, maybe related to global state
+@Skip()  # fails on MacOSX; unknown reason, maybe related to global state
 def shelve_binary_file_mod(sbox):
   "shelve binary file mod"
 
