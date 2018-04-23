@@ -3410,6 +3410,49 @@ merge_node_absent(const char *relpath,
   return SVN_NO_ERROR;
 }
 
+/* Return a diff processor that will apply the merge to the WC.
+ */
+static svn_diff_tree_processor_t *
+merge_apply_processor(merge_cmd_baton_t *merge_cmd_baton,
+                      apr_pool_t *result_pool)
+{
+  svn_diff_tree_processor_t *merge_processor;
+
+  merge_processor = svn_diff__tree_processor_create(merge_cmd_baton,
+                                                    result_pool);
+
+  merge_processor->dir_opened   = merge_dir_opened;
+  merge_processor->dir_changed  = merge_dir_changed;
+  merge_processor->dir_added    = merge_dir_added;
+  merge_processor->dir_deleted  = merge_dir_deleted;
+  merge_processor->dir_closed   = merge_dir_closed;
+
+  merge_processor->file_opened  = merge_file_opened;
+  merge_processor->file_changed = merge_file_changed;
+  merge_processor->file_added   = merge_file_added;
+  merge_processor->file_deleted = merge_file_deleted;
+  /* Not interested in file_closed() */
+
+  merge_processor->node_absent = merge_node_absent;
+
+  return merge_processor;
+}
+
+/* Initialize minimal dir baton to allow calculating 'R'eplace
+   from 'D'elete + 'A'dd. */
+static void *
+open_dir_for_replace_single_file(apr_pool_t *result_pool)
+{
+  struct merge_dir_baton_t *dir_baton = apr_pcalloc(result_pool, sizeof(*dir_baton));
+
+  dir_baton->pool = result_pool;
+  dir_baton->tree_conflict_reason = CONFLICT_REASON_NONE;
+  dir_baton->tree_conflict_action = svn_wc_conflict_action_edit;
+  dir_baton->skip_reason = svn_wc_notify_state_unknown;
+
+  return dir_baton;
+}
+
 /*-----------------------------------------------------------------------*/
 
 /*** Merge Notification ***/
@@ -7647,18 +7690,9 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
              do a text-n-props merge; otherwise, do a delete-n-add merge. */
           if (! (merge_b->diff_ignore_ancestry || sources_related))
             {
-              struct merge_dir_baton_t dir_baton;
+              void *dir_baton = open_dir_for_replace_single_file(iterpool);
               void *file_baton;
               svn_boolean_t skip;
-
-              /* Initialize minimal dir baton to allow calculating 'R'eplace
-                 from 'D'elete + 'A'dd. */
-
-              memset(&dir_baton, 0, sizeof(dir_baton));
-              dir_baton.pool = iterpool;
-              dir_baton.tree_conflict_reason = CONFLICT_REASON_NONE;
-              dir_baton.tree_conflict_action = svn_wc_conflict_action_edit;
-              dir_baton.skip_reason = svn_wc_notify_state_unknown;
 
               /* Delete... */
               file_baton = NULL;
@@ -7667,7 +7701,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                              left_source,
                                              NULL /* right_source */,
                                              NULL /* copyfrom_source */,
-                                             &dir_baton,
+                                             dir_baton,
                                              processor,
                                              iterpool, iterpool));
               if (! skip)
@@ -7686,7 +7720,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
                                              NULL /* left_source */,
                                              right_source,
                                              NULL /* copyfrom_source */,
-                                             &dir_baton,
+                                             dir_baton,
                                              processor,
                                              iterpool, iterpool));
               if (! skip)
@@ -9894,28 +9928,7 @@ do_merge(apr_hash_t **modified_subtrees,
   merge_cmd_baton.notify_begin.notify_func2 = ctx->notify_func2;
   merge_cmd_baton.notify_begin.notify_baton2 = ctx->notify_baton2;
 
-  {
-    svn_diff_tree_processor_t *merge_processor;
-
-    merge_processor = svn_diff__tree_processor_create(&merge_cmd_baton,
-                                                      scratch_pool);
-
-    merge_processor->dir_opened   = merge_dir_opened;
-    merge_processor->dir_changed  = merge_dir_changed;
-    merge_processor->dir_added    = merge_dir_added;
-    merge_processor->dir_deleted  = merge_dir_deleted;
-    merge_processor->dir_closed   = merge_dir_closed;
-
-    merge_processor->file_opened  = merge_file_opened;
-    merge_processor->file_changed = merge_file_changed;
-    merge_processor->file_added   = merge_file_added;
-    merge_processor->file_deleted = merge_file_deleted;
-    /* Not interested in file_closed() */
-
-    merge_processor->node_absent = merge_node_absent;
-
-    processor = merge_processor;
-  }
+  processor = merge_apply_processor(&merge_cmd_baton, scratch_pool);
 
   if (src_session)
     {
