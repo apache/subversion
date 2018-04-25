@@ -5179,6 +5179,86 @@ test_merge_incoming_move_dir_across_branches(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_update_incoming_delete_locally_deleted_file(const svn_test_opts_t *opts,
+                                                 apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t text_conflicted;
+  apr_array_header_t *props_conflicted;
+  svn_boolean_t tree_conflicted;
+  svn_wc_status3_t *wc_status;
+
+  SVN_ERR(svn_test__sandbox_create(
+            b, "update_incoming_delete_locally_deleted_file", opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b));
+  /* Delete the file. */
+  SVN_ERR(sbox_wc_delete(b, "A/mu"));
+  SVN_ERR(sbox_wc_commit(b, ""));
+  /* Update to revision before delete. */
+  SVN_ERR(sbox_wc_update(b, "", 1));
+  /* Delete the file locally. */
+  SVN_ERR(sbox_wc_delete(b, "A/mu"));
+  /* Attempt an update to HEAD. */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* We should have a tree conflict in the file "mu". */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A/mu"),
+                                  ctx, pool, pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(&text_conflicted,
+                                             &props_conflicted,
+                                             &tree_conflicted,
+                                             conflict, pool, pool));
+  SVN_TEST_ASSERT(!text_conflicted);
+  SVN_TEST_INT_ASSERT(props_conflicted->nelts, 0);
+  SVN_TEST_ASSERT(tree_conflicted);
+
+  /* Check available tree conflict resolution options. */
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
+
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
+  }
+
+  /* Resolve the tree conflict accepting the incoming deletion. */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict, svn_client_conflict_option_incoming_delete_accept,
+            ctx, pool));
+
+  /* Check the status. */
+  SVN_ERR(svn_wc_status3(&wc_status, ctx->wc_ctx, sbox_wc_path(b, "A/mu"),
+                         pool, pool));
+  SVN_TEST_INT_ASSERT(wc_status->kind, svn_node_unknown);
+  SVN_TEST_ASSERT(!wc_status->versioned);
+  SVN_TEST_ASSERT(!wc_status->conflicted);
+  SVN_TEST_INT_ASSERT(wc_status->node_status, svn_wc_status_none);
+  SVN_TEST_INT_ASSERT(wc_status->text_status, svn_wc_status_none);
+  SVN_TEST_INT_ASSERT(wc_status->prop_status, svn_wc_status_none);
+  SVN_TEST_INT_ASSERT(wc_status->actual_kind, svn_node_none);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -5269,6 +5349,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                         "cherry-pick edit from moved file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir_across_branches,
                         "merge incoming dir move across branches"),
+    SVN_TEST_OPTS_XFAIL(test_update_incoming_delete_locally_deleted_file,
+                        "update incoming delete to deleted file (#4739)"),
     SVN_TEST_NULL
   };
 
