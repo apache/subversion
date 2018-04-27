@@ -117,6 +117,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   apr_hash_t *keywords;
   svn_boolean_t special = FALSE;
   svn_boolean_t need_translation;
+  svn_stream_t *v_stream; /* versioned_file */
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
 
@@ -148,50 +149,33 @@ compare_and_verify(svn_boolean_t *modified_p,
       return svn_error_trace(svn_stream_close(pristine_stream));
     }
 
-#if 0
-  /* ### On second thought, I think this needs more review before enabling
-     ### This case might break when we have a fixed "\r\n" EOL, because
-     ### we use a repair mode in the compare itself. */
-  if (need_translation
-      && !special
-      && !props_mod
-      && (keywords == NULL)
-      && (versioned_file_size < pristine_file_size))
-    {
-      *modified_p = TRUE; /* The file is < its repository normal form
-                             and the properties didn't change.
-
-                             That must be a change. */
-
-      /* ### Why did we open the pristine? */
-      return svn_error_trace(svn_stream_close(pristine_stream));
-    }
-#endif
-
   /* ### Other checks possible? */
 
-  if (need_translation)
+  /* Reading files is necessary. */
+  if (special && need_translation)
     {
-      /* Reading files is necessary. */
-      svn_stream_t *v_stream;  /* versioned_file */
+      SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file_abspath,
+                                          scratch_pool, scratch_pool));
+    }
+  else
+    {
+      /* We don't use APR-level buffering because the comparison function
+       * will do its own buffering. */
+      apr_file_t *file;
+      SVN_ERR(svn_io_file_open(&file, versioned_file_abspath, APR_READ,
+                               APR_OS_DEFAULT, scratch_pool));
+      v_stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
 
-      if (special)
+      if (need_translation)
         {
-          SVN_ERR(svn_subst_read_specialfile(&v_stream, versioned_file_abspath,
-                                             scratch_pool, scratch_pool));
-        }
-      else
-        {
-          SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file_abspath,
-                                           scratch_pool, scratch_pool));
-
-          if (!exact_comparison && need_translation)
+          if (!exact_comparison)
             {
               if (eol_style == svn_subst_eol_style_native)
                 eol_str = SVN_SUBST_NATIVE_EOL_STR;
               else if (eol_style != svn_subst_eol_style_fixed
                        && eol_style != svn_subst_eol_style_none)
-                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
+                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL,
+                                        svn_stream_close(v_stream), NULL);
 
               /* Wrap file stream to detranslate into normal form,
                * "repairing" the EOL style if it is inconsistent. */
@@ -202,7 +186,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                                                      FALSE /* expand */,
                                                      scratch_pool);
             }
-          else if (need_translation)
+          else
             {
               /* Wrap base stream to translate into working copy form, and
                * arrange to throw an error if its EOL style is inconsistent. */
@@ -212,21 +196,10 @@ compare_and_verify(svn_boolean_t *modified_p,
                                                             scratch_pool);
             }
         }
-
-      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
-                                        scratch_pool));
     }
-  else
-    {
-      /* Translation would be a no-op, so compare the original file. */
-      svn_stream_t *v_stream;  /* versioned_file */
 
-      SVN_ERR(svn_stream_open_readonly(&v_stream, versioned_file_abspath,
-                                       scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
-                                        scratch_pool));
-    }
+  SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
+                                    scratch_pool));
 
   *modified_p = (! same);
 
@@ -243,7 +216,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   svn_stream_t *pristine_stream;
   svn_filesize_t pristine_size;
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *checksum;
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
@@ -264,7 +237,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   /* If we don't have a pristine or the node has a status that allows a
      pristine, just say that the node is modified */
   if (!checksum
-      || (kind != svn_kind_file)
+      || (kind != svn_node_file)
       || ((status != svn_wc__db_status_normal)
           && (status != svn_wc__db_status_added)))
     {
@@ -272,8 +245,8 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_io_stat_dirent(&dirent, local_abspath, TRUE,
-                             scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, TRUE,
+                              scratch_pool, scratch_pool));
 
   if (dirent->kind != svn_node_file)
     {
@@ -382,20 +355,22 @@ svn_wc_text_modified_p2(svn_boolean_t *modified_p,
 
 
 
-svn_error_t *
-svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
-                              svn_boolean_t *prop_conflicted_p,
-                              svn_boolean_t *tree_conflicted_p,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *scratch_pool)
+static svn_error_t *
+internal_conflicted_p(svn_boolean_t *text_conflicted_p,
+                      svn_boolean_t *prop_conflicted_p,
+                      svn_boolean_t *tree_conflicted_p,
+                      svn_boolean_t *ignore_move_edit_p,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
   svn_skel_t *conflicts;
   svn_boolean_t resolved_text = FALSE;
   svn_boolean_t resolved_props = FALSE;
 
-  SVN_ERR(svn_wc__db_read_conflict(&conflicts, db, local_abspath,
+  SVN_ERR(svn_wc__db_read_conflict(&conflicts, NULL, NULL,
+                                   db, local_abspath,
                                    scratch_pool, scratch_pool));
 
   if (!conflicts)
@@ -406,6 +381,8 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
         *prop_conflicted_p = FALSE;
       if (tree_conflicted_p)
         *tree_conflicted_p = FALSE;
+      if (ignore_move_edit_p)
+        *ignore_move_edit_p = FALSE;
 
       return SVN_NO_ERROR;
     }
@@ -489,7 +466,28 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
         }
     }
 
-  /* tree_conflicts don't have markers, so don't need checking */
+  if (ignore_move_edit_p)
+    {
+      *ignore_move_edit_p = FALSE;
+      if (tree_conflicted_p && *tree_conflicted_p)
+        {
+          svn_wc_conflict_reason_t reason;
+          svn_wc_conflict_action_t action;
+
+          SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action, NULL,
+                                                      NULL, db, local_abspath,
+                                                      conflicts,
+                                                      scratch_pool,
+                                                      scratch_pool));
+
+          if (reason == svn_wc_conflict_reason_moved_away
+              && action == svn_wc_conflict_action_edit)
+            {
+              *tree_conflicted_p = FALSE;
+              *ignore_move_edit_p = TRUE;
+            }
+        }
+    }
 
   if (resolved_text || resolved_props)
     {
@@ -509,6 +507,47 @@ svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_wc__internal_conflicted_p(svn_boolean_t *text_conflicted_p,
+                              svn_boolean_t *prop_conflicted_p,
+                              svn_boolean_t *tree_conflicted_p,
+                              svn_wc__db_t *db,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
+{
+  SVN_ERR(internal_conflicted_p(text_conflicted_p, prop_conflicted_p,
+                                tree_conflicted_p, NULL,
+                                db, local_abspath, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
+                                svn_boolean_t *conflict_ignored_p,
+                                svn_wc__db_t *db,
+                                const char *local_abspath,
+                                svn_boolean_t tree_only,
+                                apr_pool_t *scratch_pool)
+{
+  svn_boolean_t text_conflicted, prop_conflicted, tree_conflicted;
+  svn_boolean_t conflict_ignored;
+
+  if (!conflict_ignored_p)
+    conflict_ignored_p = &conflict_ignored;
+
+  SVN_ERR(internal_conflicted_p(tree_only ? NULL: &text_conflicted,
+                                tree_only ? NULL: &prop_conflicted,
+                                &tree_conflicted, conflict_ignored_p,
+                                db, local_abspath, scratch_pool));
+  if (tree_only)
+    *conflicted_p = tree_conflicted;
+  else
+    *conflicted_p = text_conflicted || prop_conflicted || tree_conflicted;
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_error_t *
 svn_wc_conflicted_p3(svn_boolean_t *text_conflicted_p,
@@ -558,18 +597,150 @@ svn_wc__has_switched_subtrees(svn_boolean_t *is_switched,
 }
 
 
+/* A baton for use with modcheck_found_entry(). */
+typedef struct modcheck_baton_t {
+  svn_boolean_t ignore_unversioned;
+  svn_boolean_t found_mod;  /* whether a modification has been found */
+  svn_boolean_t found_not_delete;  /* Found a not-delete modification */
+} modcheck_baton_t;
+
+/* An implementation of svn_wc_status_func4_t. */
+static svn_error_t *
+modcheck_callback(void *baton,
+                  const char *local_abspath,
+                  const svn_wc_status3_t *status,
+                  apr_pool_t *scratch_pool)
+{
+  modcheck_baton_t *mb = baton;
+
+  switch (status->node_status)
+    {
+      case svn_wc_status_normal:
+      case svn_wc_status_ignored:
+      case svn_wc_status_none:
+      case svn_wc_status_external:
+        break;
+
+      case svn_wc_status_incomplete:
+        if ((status->text_status != svn_wc_status_normal
+             && status->text_status != svn_wc_status_none)
+            || (status->prop_status != svn_wc_status_normal
+                && status->prop_status != svn_wc_status_none))
+          {
+            mb->found_mod = TRUE;
+            mb->found_not_delete = TRUE;
+            /* Incomplete, but local modifications */
+            return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+          }
+        break;
+
+      case svn_wc_status_deleted:
+        mb->found_mod = TRUE;
+        if (!mb->ignore_unversioned
+            && status->actual_kind != svn_node_none
+            && status->actual_kind != svn_node_unknown)
+          {
+            /* The delete is obstructed by something unversioned */
+            mb->found_not_delete = TRUE;
+            return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+          }
+        break;
+
+      case svn_wc_status_unversioned:
+        if (mb->ignore_unversioned)
+          break;
+        /* else fall through */
+      case svn_wc_status_missing:
+      case svn_wc_status_obstructed:
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+
+      default:
+      case svn_wc_status_added:
+      case svn_wc_status_replaced:
+      case svn_wc_status_modified:
+        mb->found_mod = TRUE;
+        mb->found_not_delete = TRUE;
+        /* Exit from the status walker: We know what we want to know */
+        return svn_error_create(SVN_ERR_CEASE_INVOCATION, NULL, NULL);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Set *MODIFIED to true iff there are any local modifications within the
+ * tree rooted at LOCAL_ABSPATH, using DB. If *MODIFIED
+ * is set to true and all the local modifications were deletes then set
+ * *ALL_EDITS_ARE_DELETES to true, set it to false otherwise.  LOCAL_ABSPATH
+ * may be a file or a directory. */
+svn_error_t *
+svn_wc__node_has_local_mods(svn_boolean_t *modified,
+                            svn_boolean_t *all_edits_are_deletes,
+                            svn_wc__db_t *db,
+                            const char *local_abspath,
+                            svn_boolean_t ignore_unversioned,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool)
+{
+  modcheck_baton_t modcheck_baton = { FALSE, FALSE, FALSE };
+  svn_error_t *err;
+
+  if (!all_edits_are_deletes)
+    {
+      SVN_ERR(svn_wc__db_has_db_mods(modified, db, local_abspath,
+                                     scratch_pool));
+
+      if (*modified)
+        return SVN_NO_ERROR;
+    }
+
+  modcheck_baton.ignore_unversioned = ignore_unversioned;
+
+  /* Walk the WC tree for status with depth infinity, looking for any local
+   * modifications. If it's a "sparse" directory, that's OK: there can be
+   * no local mods in the pieces that aren't present in the WC. */
+
+  err = svn_wc__internal_walk_status(db, local_abspath,
+                                     svn_depth_infinity,
+                                     FALSE, FALSE, FALSE, NULL,
+                                     modcheck_callback, &modcheck_baton,
+                                     cancel_func, cancel_baton,
+                                     scratch_pool);
+
+  if (err && err->apr_err == SVN_ERR_CEASE_INVOCATION)
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+
+  *modified = modcheck_baton.found_mod;
+  if (all_edits_are_deletes)
+    *all_edits_are_deletes = (modcheck_baton.found_mod
+                              && !modcheck_baton.found_not_delete);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc__has_local_mods(svn_boolean_t *is_modified,
                        svn_wc_context_t *wc_ctx,
                        const char *local_abspath,
+                       svn_boolean_t ignore_unversioned,
                        svn_cancel_func_t cancel_func,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__db_has_local_mods(is_modified,
-                                                   wc_ctx->db,
-                                                   local_abspath,
-                                                   cancel_func,
-                                                   cancel_baton,
-                                                   scratch_pool));
+  svn_boolean_t modified;
+
+  SVN_ERR(svn_wc__node_has_local_mods(&modified, NULL,
+                                      wc_ctx->db, local_abspath,
+                                      ignore_unversioned,
+                                      cancel_func, cancel_baton,
+                                      scratch_pool));
+
+  *is_modified = modified;
+  return SVN_NO_ERROR;
 }

@@ -36,7 +36,7 @@ import re
 
 try:
   from svn import core
-except ImportError, e:
+except ImportError as e:
   sys.stderr.write("ERROR: Unable to import Subversion's Python bindings: '%s'\n" \
                    "Hint: Set your PYTHONPATH environment variable, or adjust your " \
                    "PYTHONSTARTUP\nfile to point to your Subversion install " \
@@ -72,7 +72,11 @@ def get_errors():
   ## errno values.
   errs.update(errno.errorcode)
   ## APR-defined errors, from apr_errno.h.
-  for line in open(os.path.join(os.path.dirname(sys.argv[0]), 'aprerr.txt')):
+  dirname = os.path.dirname(os.path.realpath(__file__))
+  for line in open(os.path.join(dirname, 'aprerr.txt')):
+    # aprerr.txt parsing duplicated in gen_base.py:write_errno_table()
+    if line.startswith('#'):
+       continue
     key, _, val = line.split()
     errs[int(val)] = key
   ## Subversion errors, from svn_error_codes.h.
@@ -91,6 +95,8 @@ def print_error(code):
   except KeyError:
     if code == -41:
       print("Sit by a lake.")
+    elif code >= 120100 and code < 121000:
+      print('%08d  <error code from libserf; see serf.h>' % (code))
     else:
       print('%08d  *** UNKNOWN ERROR CODE ***' % (code))
 

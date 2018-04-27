@@ -29,6 +29,7 @@
 #include "svn_tree.h"
 
 #include "private/svn_tree_impl.h"
+#include "private/svn_sorts_private.h"
 
 #include "svn_private_config.h"
 
@@ -367,7 +368,7 @@ walk_two_trees(svn_tree_node_t *node1,
       for (hi = apr_hash_first(scratch_pool, all_children); hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
+          const char *name = apr_hash_this_key(hi);
           svn_tree_node_t *child1, *child2;
 
           svn_pool_clear(iterpool);

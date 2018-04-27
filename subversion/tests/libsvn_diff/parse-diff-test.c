@@ -25,6 +25,8 @@
 #include "../svn_test.h"
 
 #include "svn_diff.h"
+#include "svn_hash.h"
+#include "svn_mergeinfo.h"
 #include "svn_pools.h"
 #include "svn_utf.h"
 
@@ -64,6 +66,8 @@ static const char *git_unidiff =
   "Index: A/C/gamma"                                                    NL
   "===================================================================" NL
   "diff --git a/A/C/gamma b/A/C/gamma"                                  NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "--- a/A/C/gamma\t(revision 2)"                                       NL
   "+++ b/A/C/gamma\t(working copy)"                                     NL
   "@@ -1 +1,2 @@"                                                       NL
@@ -84,6 +88,8 @@ static const char *git_tree_and_text_unidiff =
   "Index: iota.copied"                                                  NL
   "===================================================================" NL
   "diff --git a/iota b/iota.copied"                                     NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "copy from iota"                                                      NL
   "copy to iota.copied"                                                 NL
   "--- a/iota\t(revision 2)"                                            NL
@@ -94,6 +100,8 @@ static const char *git_tree_and_text_unidiff =
   "Index: A/mu.moved"                                                   NL
   "===================================================================" NL
   "diff --git a/A/mu b/A/mu.moved"                                      NL
+  "old mode 100644"                                                     NL
+  "new mode 100755"                                                     NL
   "rename from A/mu"                                                    NL
   "rename to A/mu.moved"                                                NL
   "--- a/A/mu\t(revision 2)"                                            NL
@@ -112,7 +120,7 @@ static const char *git_tree_and_text_unidiff =
   "Index: A/B/lambda"                                                   NL
   "===================================================================" NL
   "diff --git a/A/B/lambda b/A/B/lambda"                                NL
-  "deleted file mode 100644"                                            NL
+  "deleted file mode 100755"                                            NL
   "--- a/A/B/lambda\t(revision 2)"                                      NL
   "+++ /dev/null\t(working copy)"                                       NL
   "@@ -1 +0,0 @@"                                                       NL
@@ -132,8 +140,6 @@ static const char *bad_git_diff_header =
   "diff --git foo4 b/foo4"                                              NL
   "diff --git a/foo5 b/foo5"                                            NL
   "random noise"                                                        NL
-  "copy from foo5"                                                      NL
-  "copy to foo5"                                                        NL
   "diff --git a/foo6 b/foo6"                                            NL
   "copy from foo6"                                                      NL
   "random noise"                                                        NL
@@ -255,6 +261,27 @@ static const char *unidiff_lacking_trailing_eol =
   " This is the file 'gamma'."                                          NL
   "+some more bytes to 'gamma'"; /* Don't add NL after this line */
 
+static const char *unidiff_with_mergeinfo =
+  "Index: A/C"                                                          NL
+  "===================================================================" NL
+  "--- A/C\t(revision 2)"                                               NL
+  "+++ A/C\t(working copy)"                                             NL
+  "Modified: svn:ignore"                                                NL
+  "## -7,6 +7,7 ##"                                                     NL
+  " configure"                                                          NL
+  " libtool"                                                            NL
+  " .gdb_history"                                                       NL
+  "+.swig_checked"                                                      NL
+  " *.orig"                                                             NL
+  " *.rej"                                                              NL
+  " TAGS"                                                               NL
+  "Modified: svn:mergeinfo"                                             NL
+  "## -0,1 +0,3 ##"                                                     NL
+  "   Reverse-merged /subversion/branches/1.6.x-r935631:r952683-955333" NL
+  "   /subversion/branches/nfc-nfd-aware-client:r870276,870376 をマージしました"NL
+  "   Fusionné /subversion/branches/1.7.x-r1507044:r1507300-1511568"    NL
+  "   Merged /subversion/branches/1.8.x-openssl-dirs:r1535139"          NL;
+/* The above diff intentionally contains i18n versions of some lines. */
 
 /* Create a PATCH_FILE containing the contents of DIFF. */
 static svn_error_t *
@@ -282,6 +309,24 @@ create_patch_file(svn_patch_file_t **patch_file,
   return SVN_NO_ERROR;
 }
 
+/* svn_stream_readline() with hunk reader semantics */
+static svn_error_t *
+stream_readline_diff(svn_stream_t *stream,
+                     svn_stringbuf_t **buf,
+                     const char *eol,
+                     svn_boolean_t *eof,
+                     apr_pool_t *result_pool)
+{
+  SVN_ERR(svn_stream_readline(stream, buf, eol, eof, result_pool));
+
+  /* Hunks are only at EOF after they are completely read, even if
+     they don't have a final EOL in the text */
+  if (*eof && (*buf)->len)
+    *eof = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
 /* Check that reading a line from HUNK equals what's inside EXPECTED.
  * If ORIGINAL is TRUE, read the original hunk text; else, read the
  * modified hunk text. */
@@ -300,7 +345,7 @@ check_content(svn_diff_hunk_t *hunk, svn_boolean_t original,
 
   while (TRUE)
   {
-    SVN_ERR(svn_stream_readline(exp, &exp_buf, NL, &exp_eof, pool));
+    SVN_ERR(stream_readline_diff(exp, &exp_buf, NL, &exp_eof, pool));
     if (original)
       SVN_ERR(svn_diff_hunk_readline_original_text(hunk, &hunk_buf, NULL,
                                                    &hunk_eof, pool, pool));
@@ -426,6 +471,10 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "A/C/gamma");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_modified);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
 
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
@@ -461,6 +510,10 @@ test_parse_git_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "new");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_added);
   SVN_TEST_ASSERT(patch->hunks->nelts == 0);
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
 
   SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
 
@@ -486,6 +539,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "iota");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "iota.copied");
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_copied);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -508,6 +565,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_ASSERT(patch);
   SVN_TEST_STRING_ASSERT(patch->old_filename, "A/mu");
   SVN_TEST_STRING_ASSERT(patch->new_filename, "A/mu.moved");
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_false);
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_moved);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
 
@@ -551,6 +612,10 @@ test_parse_git_tree_and_text_diff(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(patch->new_filename, "/dev/null");
   SVN_TEST_ASSERT(patch->operation == svn_diff_op_deleted);
   SVN_TEST_ASSERT(patch->hunks->nelts == 1);
+  SVN_TEST_ASSERT(patch->old_executable_bit == svn_tristate_true);
+  SVN_TEST_ASSERT(patch->new_executable_bit == svn_tristate_unknown);
+  SVN_TEST_ASSERT(patch->old_symlink_bit == svn_tristate_false);
+  SVN_TEST_ASSERT(patch->new_symlink_bit == svn_tristate_unknown);
 
   hunk = APR_ARRAY_IDX(patch->hunks, 0, svn_diff_hunk_t *);
 
@@ -646,7 +711,7 @@ test_parse_property_diff(apr_pool_t *pool)
   prop_patch = apr_hash_get(patch->prop_patches, "prop_add",
                             APR_HASH_KEY_STRING);
 
-  SVN_TEST_ASSERT(!strcmp("prop_add", prop_patch->name));
+  SVN_TEST_STRING_ASSERT(prop_patch->name, "prop_add");
   SVN_TEST_ASSERT(prop_patch->operation == svn_diff_op_added);
   hunks = prop_patch->hunks;
 
@@ -959,9 +1024,92 @@ test_parse_unidiff_lacking_trailing_eol(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_parse_unidiff_with_mergeinfo(apr_pool_t *pool)
+{
+  svn_patch_file_t *patch_file;
+  svn_boolean_t reverse;
+  svn_boolean_t ignore_whitespace;
+  int i;
+  apr_pool_t *iterpool;
+
+  reverse = FALSE;
+  ignore_whitespace = FALSE;
+  iterpool = svn_pool_create(pool);
+  for (i = 0; i < 2; i++)
+    {
+      svn_patch_t *patch;
+      svn_mergeinfo_t mergeinfo;
+      svn_mergeinfo_t reverse_mergeinfo;
+      svn_rangelist_t *rangelist;
+      svn_merge_range_t *range;
+
+      svn_pool_clear(iterpool);
+
+      SVN_ERR(create_patch_file(&patch_file, unidiff_with_mergeinfo,
+                                pool));
+
+      SVN_ERR(svn_diff_parse_next_patch(&patch, patch_file, reverse,
+                                        ignore_whitespace, iterpool,
+                                        iterpool));
+      SVN_TEST_ASSERT(patch);
+      SVN_TEST_STRING_ASSERT(patch->old_filename, "A/C");
+      SVN_TEST_STRING_ASSERT(patch->new_filename, "A/C");
+
+      /* svn:ignore */
+      SVN_TEST_ASSERT(apr_hash_count(patch->prop_patches) == 1);
+
+      SVN_TEST_ASSERT(patch->mergeinfo);
+      SVN_TEST_ASSERT(patch->reverse_mergeinfo);
+
+      if (reverse)
+        {
+          mergeinfo = patch->reverse_mergeinfo;
+          reverse_mergeinfo = patch->mergeinfo;
+        }
+      else
+        {
+          mergeinfo = patch->mergeinfo;
+          reverse_mergeinfo = patch->reverse_mergeinfo;
+        }
+
+      rangelist = svn_hash_gets(reverse_mergeinfo,
+                                "/subversion/branches/1.6.x-r935631");
+      SVN_TEST_ASSERT(rangelist);
+      SVN_TEST_ASSERT(rangelist->nelts == 1);
+      range = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
+      SVN_TEST_ASSERT(range->start == 952682);
+      SVN_TEST_ASSERT(range->end == 955333);
+
+      rangelist = svn_hash_gets(mergeinfo,
+                                "/subversion/branches/nfc-nfd-aware-client");
+      SVN_TEST_ASSERT(rangelist);
+      SVN_TEST_ASSERT(rangelist->nelts == 2);
+      range = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
+      SVN_TEST_ASSERT(range->end == 870276);
+      range = APR_ARRAY_IDX(rangelist, 1, svn_merge_range_t *);
+      SVN_TEST_ASSERT(range->end == 870376);
+
+      rangelist = svn_hash_gets(mergeinfo,
+                                "/subversion/branches/1.8.x-openssl-dirs");
+      SVN_TEST_ASSERT(rangelist);
+      SVN_TEST_ASSERT(rangelist->nelts == 1);
+      range = APR_ARRAY_IDX(rangelist, 0, svn_merge_range_t *);
+      SVN_TEST_ASSERT(range->end == 1535139);
+
+      reverse = !reverse;
+      SVN_ERR(svn_diff_close_patch_file(patch_file, pool));
+    }
+  svn_pool_destroy(iterpool);
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
-struct svn_test_descriptor_t test_funcs[] =
+
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_parse_unidiff,
@@ -982,5 +1130,9 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test git diffs with spaces in paths"),
     SVN_TEST_PASS2(test_parse_unidiff_lacking_trailing_eol,
                    "test parsing unidiffs lacking trailing eol"),
+    SVN_TEST_PASS2(test_parse_unidiff_with_mergeinfo,
+                   "test parsing unidiffs with mergeinfo"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

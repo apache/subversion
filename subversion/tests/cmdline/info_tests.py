@@ -34,6 +34,8 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 
+from prop_tests import binary_mime_type_on_text_file_warning
+
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
 SkipUnless = svntest.testcase.SkipUnless_deco
@@ -173,12 +175,12 @@ def info_with_tree_conflicts(sbox):
     path = os.path.join(G, fname)
 
     # check plain info
-    expected_str1 = ".*local %s, incoming %s.*" % (reason, action)
+    expected_str1 = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_info = { 'Tree conflict' : expected_str1 }
     svntest.actions.run_and_verify_info([expected_info], path)
 
     # check XML info
-    exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+    exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                   [], 'info',
                                                                   path,
                                                                   '--xml')
@@ -197,7 +199,7 @@ def info_with_tree_conflicts(sbox):
   expected_infos = [{ 'Path' : re.escape(G) }]
   for fname, action, reason in scenarios:
     path = os.path.join(G, fname)
-    tree_conflict_re = ".*local %s, incoming %s.*" % (reason, action)
+    tree_conflict_re = ".*local file %s, incoming file %s.*" % (reason, action)
     expected_infos.append({ 'Path' : re.escape(path),
                             'Tree conflict' : tree_conflict_re })
   expected_infos.sort(key=lambda info: info['Path'])
@@ -206,7 +208,7 @@ def info_with_tree_conflicts(sbox):
 def info_on_added_file(sbox):
   """info on added file"""
 
-  svntest.actions.make_repo_and_wc(sbox)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # create new file
@@ -231,7 +233,7 @@ def info_on_added_file(sbox):
   svntest.actions.run_and_verify_info([expected], new_file)
 
   # check XML info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                 [], 'info',
                                                                 new_file,
                                                                 '--xml')
@@ -249,7 +251,7 @@ def info_on_added_file(sbox):
 
 def info_on_mkdir(sbox):
   """info on new dir with mkdir"""
-  svntest.actions.make_repo_and_wc(sbox)
+  sbox.build()
   wc_dir = sbox.wc_dir
 
   # create a new directory using svn mkdir
@@ -271,7 +273,7 @@ def info_on_mkdir(sbox):
   svntest.actions.run_and_verify_info([expected], new_dir)
 
   # check XML info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, None,
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
                                                                 [], 'info',
                                                                 new_dir,
                                                                 '--xml')
@@ -349,7 +351,7 @@ def info_multiple_targets(sbox):
     non_existent_path = os.path.join(wc_dir, 'non-existent')
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'info', alpha, beta)
 
     # One non-existing target
@@ -372,7 +374,7 @@ def info_multiple_targets(sbox):
     non_existent_url = sbox.repo_url +  '/non-existent'
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'info', alpha, beta)
 
     # One non-existing target
@@ -481,12 +483,12 @@ def info_show_exclude(sbox):
   expected_error = 'svn: E200009: Could not display info for all targets.*'
 
   # Expect error on iota (status = not-present)
-  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+  svntest.actions.run_and_verify_svn([], expected_error, 'info', iota)
 
   sbox.simple_update()
 
   # Expect error on iota (unversioned)
-  svntest.actions.run_and_verify_svn(None, [], expected_error, 'info', iota)
+  svntest.actions.run_and_verify_svn([], expected_error, 'info', iota)
 
 @Issue(3998)
 def binary_tree_conflict(sbox):
@@ -494,7 +496,9 @@ def binary_tree_conflict(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  sbox.simple_propset('svn:mime-type', 'binary/octet-stream', 'iota')
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type', 'binary/octet-stream',
+                       sbox.ospath('iota'))
   sbox.simple_commit()
 
   iota = sbox.ospath('iota')
@@ -512,7 +516,7 @@ def binary_tree_conflict(sbox):
   })
   svntest.actions.run_and_verify_update(iota,
                                         expected_output, None, expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         iota, '-r', '2')
 
   expected_info = [{
@@ -521,6 +525,11 @@ def binary_tree_conflict(sbox):
       'Conflict Current Base File' : re.escape(iota + '.r2'),
   }]
   svntest.actions.run_and_verify_info(expected_info, iota)
+
+  expected_info = [{
+      'Path' : '%s' % re.escape(wc_dir),
+  }]
+  svntest.actions.run_and_verify_info(expected_info, wc_dir)
 
 def relpath_escaping(sbox):
   "relpath escaping should be usable as-is"
@@ -540,7 +549,7 @@ def relpath_escaping(sbox):
               'URL' : '.*/path.*with.*space.*',
               'Relative URL' : '.*/path.*with.*space.*',
              }
-             
+
   svntest.actions.run_and_verify_info([expected], sbox.ospath(name))
 
   info = svntest.actions.run_and_parse_info(sbox.ospath(name), sbox.ospath(name2))
@@ -549,7 +558,7 @@ def relpath_escaping(sbox):
 
   # Also test the local path (to help resolving the relative path) and an
   # unescaped path which the client should automatically encode
-  svntest.actions.run_and_verify_svn(None, None, [], 'info',
+  svntest.actions.run_and_verify_svn(None, [], 'info',
                                      info[0]['Relative URL'],
                                      info[0]['URL'],
                                      testpath,
@@ -582,6 +591,162 @@ def relpath_escaping(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output, None, None)
 
+def node_hidden_info(sbox):
+  "fetch svn info on 'hidden' nodes"
+
+  sbox.build()
+
+  sbox.simple_rm('A/B/E/alpha')
+  sbox.simple_commit()
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'up', '--set-depth', 'exclude',
+                                     sbox.ospath('A/B/E/beta'))
+
+  sbox.simple_copy('A/B/E', 'E')
+
+  # Running info on BASE not-present fails
+  expected_err = '.*(E|W)155010: The node \'.*alpha\' was not found.*'
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'info', sbox.ospath('A/B/E/alpha'))
+
+  expected_info = [
+    {
+        'Path': re.escape(sbox.ospath('A/B/E/beta')),
+        'Schedule': 'normal',
+        'Depth': 'exclude',
+        'Node Kind': 'file',
+    },
+    {
+        'Path': re.escape(sbox.ospath('E/alpha')),
+        'Schedule': 'delete',
+        'Depth': 'exclude',
+        'Node Kind': 'unknown',
+    },
+    {
+        'Path': re.escape(sbox.ospath('E/beta')),
+        'Schedule': 'normal',
+        'Depth': 'exclude',
+        'Node Kind': 'file',
+    }
+  ]
+
+  svntest.actions.run_and_verify_info(expected_info,
+                                      sbox.ospath('A/B/E/beta'),
+                                      sbox.ospath('E/alpha'),
+                                      sbox.ospath('E/beta'))
+
+
+def info_item_simple(sbox):
+  "show one info item"
+
+  sbox.build(read_only=True)
+  svntest.actions.run_and_verify_svn(
+    ['1'], [],
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath(''))
+
+
+def info_item_simple_multiple(sbox):
+  "show one info item with multiple targets"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    r'^jrandom\s+\S+(/|\\)info_tests-\d+((/|\\)[^/\\]+)?$', [],
+    'info', '--show-item=last-changed-author',
+    '--depth=immediates', sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    r'^1\s+\S+(/|\\)info_tests-\d+(/|\\)[^/\\]+$', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.ospath('A'), sbox.ospath('iota'))
+
+
+def info_item_url(sbox):
+  "show one info item with URL targets"
+
+  sbox.build(create_wc=False, read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    '1', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.repo_url)
+
+
+  svntest.actions.run_and_verify_svn(
+    r'^1\s+[^/:]+://.+/repos/[^/]+$', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.repo_url + '/A', sbox.repo_url + '/iota')
+
+
+  # Empty working copy root on URL targets
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=wc-root',
+    sbox.repo_url)
+
+
+def info_item_uncommmitted(sbox):
+  "show one info item on uncommitted targets"
+
+  sbox.build()
+
+  svntest.main.file_write(sbox.ospath('newfile'), 'newfile')
+  sbox.simple_add('newfile')
+  sbox.simple_mkdir('newdir')
+
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=last-changed-revision',
+    sbox.ospath('newfile'))
+
+  svntest.actions.run_and_verify_svn(
+    '', [],
+    'info', '--show-item=last-changed-author',
+    sbox.ospath('newdir'))
+
+  svntest.actions.run_and_verify_svn(
+    r'\s+\S+(/|\\)new(file|dir)', [],
+    'info', '--show-item=last-changed-date',
+    sbox.ospath('newfile'), sbox.ospath('newdir'))
+
+  svntest.actions.run_and_verify_svn(
+    r'\^/new(file|dir)\s+\S+(/|\\)new(file|dir)', [],
+    'info', '--show-item=relative-url',
+    sbox.ospath('newfile'), sbox.ospath('newdir'))
+
+
+def info_item_failures(sbox):
+  "failure modes of 'svn info --show-item'"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    None, r'.*E200009:.*',
+    'info', '--show-item=revision',
+    sbox.ospath('not-there'))
+
+  svntest.actions.run_and_verify_svn(
+    None, r".*E205000: .*; did you mean 'wc-root'\?",
+    'info', '--show-item=root',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --show-item is not valid in --xml mode"),
+    'info', '--show-item=revision', '--xml',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --incremental is only valid in --xml mode"),
+    'info', '--show-item=revision', '--incremental',
+    sbox.ospath(''))
+
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E205000: --no-newline is only available.*"),
+    'info', '--show-item=revision', '--no-newline',
+    sbox.ospath('A'), sbox.ospath('iota'))
+
+
 ########################################################################
 # Run the tests
 
@@ -597,6 +762,12 @@ test_list = [ None,
               info_show_exclude,
               binary_tree_conflict,
               relpath_escaping,
+              node_hidden_info,
+              info_item_simple,
+              info_item_simple_multiple,
+              info_item_url,
+              info_item_uncommmitted,
+              info_item_failures,
              ]
 
 if __name__ == '__main__':

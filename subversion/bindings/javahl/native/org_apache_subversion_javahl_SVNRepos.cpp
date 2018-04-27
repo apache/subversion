@@ -170,7 +170,7 @@ Java_org_apache_subversion_javahl_SVNRepos_dump
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNRepos_hotcopy
 (JNIEnv *env, jobject jthis, jobject jpath, jobject jtargetPath,
- jboolean jcleanLogs, jboolean jincremental)
+ jboolean jcleanLogs, jboolean jincremental, jobject jnotifyCallback)
 {
   JNIEntry(SVNRepos, hotcopy);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -188,8 +188,11 @@ Java_org_apache_subversion_javahl_SVNRepos_hotcopy
   if (JNIUtil::isExceptionThrown())
     return;
 
+  ReposNotifyCallback notifyCallback(jnotifyCallback);
+
   cl->hotcopy(path, targetPath, jcleanLogs ? true : false,
-              jincremental ? true : false);
+              jincremental ? true : false,
+              jnotifyCallback != NULL ? &notifyCallback : NULL);
 }
 
 JNIEXPORT void JNICALL
@@ -239,10 +242,13 @@ Java_org_apache_subversion_javahl_SVNRepos_listUnusedDBLogs
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNRepos_load
-(JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
- jboolean jignoreUUID, jboolean jforceUUID, jboolean jusePreCommitHook,
- jboolean jusePostCommitHook, jstring jrelativePath, jobject jnotifyCallback)
+Java_org_apache_subversion_javahl_SVNRepos_load(
+    JNIEnv *env, jobject jthis, jobject jpath, jobject jinputData,
+    jobject jrevisionStart, jobject jrevisionEnd,
+    jboolean jignoreUUID, jboolean jforceUUID,
+    jboolean jusePreCommitHook, jboolean jusePostCommitHook,
+    jboolean jvalidateProps, jboolean jignoreDates, jboolean jnormalizeProps,
+    jstring jrelativePath, jobject jnotifyCallback)
 {
   JNIEntry(SVNRepos, load);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -264,12 +270,26 @@ Java_org_apache_subversion_javahl_SVNRepos_load
   if (JNIUtil::isExceptionThrown())
     return;
 
+  Revision revisionStart(jrevisionStart);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  Revision revisionEnd(jrevisionEnd, true);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   ReposNotifyCallback notifyCallback(jnotifyCallback);
 
-  cl->load(path, inputData, jignoreUUID ? true : false,
-           jforceUUID ? true : false, jusePreCommitHook ? true : false,
-           jusePostCommitHook ? true : false, relativePath,
-           jnotifyCallback != NULL ? &notifyCallback : NULL);
+  cl->load(path, inputData, revisionStart, revisionEnd,
+           jignoreUUID ? true : false,
+           jforceUUID ? true : false,
+           jusePreCommitHook ? true : false,
+           jusePostCommitHook ? true : false,
+           jvalidateProps ? true : false,
+           jignoreDates ? true : false,
+           jnormalizeProps ? true : false,
+           relativePath,
+           (jnotifyCallback != NULL ? &notifyCallback : NULL));
 }
 
 JNIEXPORT void JNICALL
@@ -314,6 +334,28 @@ Java_org_apache_subversion_javahl_SVNRepos_recover
   ReposNotifyCallback callback(jnotifyCallback);
 
   return cl->recover(path, jnotifyCallback != NULL ? &callback : NULL);
+}
+
+JNIEXPORT void JNICALL
+Java_org_apache_subversion_javahl_SVNRepos_freeze
+(JNIEnv *env, jobject jthis, jobject jaction, jobjectArray jpaths)
+{
+  JNIEntry(SVNRepos, freeze);
+  SVNRepos *cl = SVNRepos::getCppObject(jthis);
+  if (cl == NULL)
+    {
+      JNIUtil::throwError(_("bad C++ this"));
+      return;
+    }
+
+  if (!jpaths || !env->GetArrayLength(jpaths))
+    {
+      JNIUtil::throwError(_("list of repository paths must not be empty"));
+      return;
+    }
+
+  ReposFreezeAction action(jaction);
+  cl->freeze(jpaths, &action);
 }
 
 JNIEXPORT void JNICALL
@@ -375,9 +417,11 @@ Java_org_apache_subversion_javahl_SVNRepos_setRevProp
 }
 
 JNIEXPORT void JNICALL
-Java_org_apache_subversion_javahl_SVNRepos_verify
-(JNIEnv *env, jobject jthis, jobject jpath, jobject jrevisionStart,
- jobject jrevisionEnd, jobject jcallback)
+Java_org_apache_subversion_javahl_SVNRepos_verify(
+    JNIEnv *env, jobject jthis, jobject jpath,
+    jobject jrevisionStart, jobject jrevisionEnd,
+    jboolean jcheckNormalization, jboolean jmetadataOnly,
+    jobject jnotifyCallback, jobject jverifyCallback)
 {
   JNIEntry(SVNRepos, verify);
   SVNRepos *cl = SVNRepos::getCppObject(jthis);
@@ -399,12 +443,18 @@ Java_org_apache_subversion_javahl_SVNRepos_verify
   if (JNIUtil::isExceptionThrown())
     return;
 
-  ReposNotifyCallback callback(jcallback);
+  ReposNotifyCallback notify_cb(jnotifyCallback);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
+  ReposVerifyCallback verify_cb(jverifyCallback);
   if (JNIUtil::isExceptionThrown())
     return;
 
   cl->verify(path, revisionStart, revisionEnd,
-             jcallback != NULL ? &callback : NULL);
+             jcheckNormalization, jmetadataOnly,
+             jnotifyCallback != NULL ? &notify_cb : NULL,
+             jverifyCallback != NULL ? &verify_cb : NULL);
 }
 
 JNIEXPORT jobject JNICALL

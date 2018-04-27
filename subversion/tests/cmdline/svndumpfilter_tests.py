@@ -34,8 +34,7 @@ import svntest
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 
 # Get some helper routines
-from svnadmin_tests import (load_and_verify_dumpstream, load_dumpstream,
-                            test_create)
+from svnadmin_tests import load_and_verify_dumpstream, load_dumpstream
 from svntest.main import run_svn, run_svnadmin
 
 # (abbreviation)
@@ -60,18 +59,13 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
     dump = [ dump ]
 
   # Does the caller want the stderr?
-  try:
-      varargs.index('-q')
+  if '-q' in varargs or '--quiet' in varargs:
       expected_errput = None # Stderr with -q or --quiet is a real error!
-  except:
-      try:
-          varargs.index('--quiet')
-          expected_errput = None
-      except:
-          expected_errput = svntest.verify.AnyOutput
+  else:
+      expected_errput = svntest.verify.AnyOutput
   ## TODO: Should we handle exit_code?
   exit_code, output, errput = svntest.main.run_command_stdin(
-    svntest.main.svndumpfilter_binary, expected_errput, bufsize, 1,
+    svntest.main.svndumpfilter_binary, expected_errput, bufsize, True,
     dump, *varargs)
 
   # Since we call svntest.main.run_command_stdin() in binary mode,
@@ -89,14 +83,14 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2982. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2982. ##
 
   # Test svndumpfilter with include option
-  test_create(sbox)
+  sbox.build(empty=True)
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   filtered_out, filtered_err = filter_and_return_output(
       dumpfile, 0, "include",
@@ -112,13 +106,13 @@ def reflect_dropped_renumbered_revs(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/trunk - /branch1:4-5\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
 
   # Test svndumpfilter with exclude option
-  test_create(sbox)
+  sbox.build(empty=True)
   filtered_out, filtered_err = filter_and_return_output(
       dumpfile, 0, "exclude", "branch1",
       "--skip-missing-merge-sources",
@@ -131,7 +125,7 @@ def reflect_dropped_renumbered_revs(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/trunk - \n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -140,13 +134,13 @@ def svndumpfilter_loses_mergeinfo(sbox):
   "svndumpfilter loses mergeinfo"
   #svndumpfilter loses mergeinfo if invoked without --renumber-revs
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3181. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3181. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'with_merges.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   filtered_out, filtered_err = filter_and_return_output(dumpfile, 0, "include",
                                                         "trunk", "branch1",
@@ -158,7 +152,7 @@ def svndumpfilter_loses_mergeinfo(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/trunk - /branch1:4-8\n",
     ])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -223,14 +217,14 @@ def _simple_dumpfilter_test(sbox, dumpfile, *dumpargs):
 @Issue(2697)
 def dumpfilter_with_targets(sbox):
   "svndumpfilter --targets blah"
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2697. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2697. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
   try:
@@ -248,12 +242,12 @@ def dumpfilter_with_targets(sbox):
 def dumpfilter_with_patterns(sbox):
   "svndumpfilter --pattern PATH_PREFIX"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
   _simple_dumpfilter_test(sbox, dumpfile,
                           'exclude', '--pattern', '/A/D/[GH]*', '/A/[B]/E*')
 
@@ -268,7 +262,7 @@ def dumpfilter_with_patterns(sbox):
 def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   "filter mergeinfo revs outside of dump stream"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # Load a partial dump into an existing repository.
   #
@@ -283,7 +277,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #                      |            |                            |     |
   # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
   #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
+  # initial          |        |     |       |______                |     |
   # import         copy       |   copy             |            merge   merge
   #                  |        |     |            merge           (r5)   (r8)
   #                  |        |     |            (r9)              |     |
@@ -323,9 +317,9 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   # --skip-missing-merge-soruces which should strip out any revisions < 6.
   # Then we'll load the filtered result into an empty repository.  This
   # should offset the incoming mergeinfo by -5.  In addition, any mergeinfo
-  # revisions that are adjusted to r1 should be removed because that implies
-  # a merge of -r0:1, which is impossible.  The resulting mergeinfo should
-  # look like this:
+  # referring to the initial revision in the dump file (r6) should be
+  # removed because the change it refers to (r5:6) is not wholly within the
+  # dumpfile.  The resulting mergeinfo should look like this:
   #
   #   Properties on 'branches/B1':
   #     svn:mergeinfo
@@ -341,7 +335,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   partial_dump = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'mergeinfo_included_partial.dump')
-  partial_dump_contents = open(partial_dump).read()
+  partial_dump_contents = svntest.actions.load_dumpfile(partial_dump)
   filtered_dumpfile2, filtered_out = filter_and_return_output(
       partial_dump_contents,
       8192, # Set a sufficiently large bufsize to avoid a deadlock
@@ -357,7 +351,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
     url + "/B2 - /trunk:4\n",
     url + "/B1/B/E - /branches/B2/B/E:6-7\n",
     "/trunk/B/E:3-4\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -371,15 +365,16 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   #     Project-Z     (Added r5)
   #     docs/         (Added r6)
   #       README      (Added r6).
-  test_create(sbox)
-  skeleton_dumpfile = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                        'svnadmin_tests_data',
-                                        'skeleton_repos.dump')).read()
+  sbox.build(empty=True)
+  skeleton_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                                  'svnadmin_tests_data',
+                                                  'skeleton_repos.dump')
+  skeleton_dumpfile = svntest.actions.load_dumpfile(skeleton_location)
   load_dumpstream(sbox, skeleton_dumpfile, '--ignore-uuid')
   partial_dump2 = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'mergeinfo_included_partial.dump')
-  partial_dump_contents2 = open(partial_dump2).read()
+  partial_dump_contents2 = svntest.actions.load_dumpfile(partial_dump2)
   # Now use the partial dump file we used above, but this time exclude
   # the B2 branch.  Load the filtered dump into the /Projects/Project-X
   # subtree of the skeleton repos.
@@ -484,7 +479,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /Projects/Project-X/trunk:9\n",
     url + "/B1/B/E - /Projects/Project-X/trunk/B/E:8-9\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -500,7 +495,7 @@ def filter_mergeinfo_revs_outside_of_dump_stream(sbox):
 def dropped_but_not_renumbered_empty_revs(sbox):
   "mergeinfo maps correctly when dropping revs"
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   # The dump file mergeinfo_included_full.dump represents this repository:
   #
@@ -511,7 +506,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   #                      |            |                            |     |
   # trunk---r2---r3-----r5---r6-------r8---r9--------------->      |     |
   #   r1             |        |     |       |                      |     |
-  # intial           |        |     |       |______                |     |
+  # initial          |        |     |       |______                |     |
   # import         copy       |   copy             |            merge   merge
   #                  |        |     |            merge           (r5)   (r8)
   #                  |        |     |            (r9)              |     |
@@ -556,10 +551,10 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   full_dump = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svnadmin_tests_data',
                                    'mergeinfo_included_full.dump')
-  full_dump_contents = open(full_dump).read()
+  full_dump_contents = svntest.actions.load_dumpfile(full_dump)
   filtered_dumpfile, filtered_out = filter_and_return_output(
       full_dump_contents,
-      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      16384, # Set a sufficiently large bufsize to avoid a deadlock
       "exclude", "branches/B2",
       "--skip-missing-merge-sources", "--drop-empty-revs")
 
@@ -590,7 +585,7 @@ def dropped_but_not_renumbered_empty_revs(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     url + "/B1 - /trunk:6,8\n",
     url + "/B1/B/E - /trunk/B/E:5-8\n"])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
 
@@ -601,7 +596,7 @@ def match_empty_prefix(sbox):
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   def test(sbox, dumpfile, *dumpargs):
     """Run svndumpfilter with DUMPFILE as the input lines, load
@@ -616,7 +611,7 @@ def match_empty_prefix(sbox):
       raise verify.UnexpectedStderr(filtered_err)
 
     # Load the filtered dump into a repo and check the result
-    test_create(sbox)
+    sbox.build(empty=True)
     load_dumpstream(sbox, filtered_output, '--ignore-uuid')
     svntest.actions.run_and_verify_update(sbox.wc_dir,
                                           expected_output,
@@ -650,11 +645,11 @@ def accepts_deltas(sbox):
   "accepts deltas in the input"
   # Accept format v3 (as created by 'svnadmin --deltas' or svnrdump).
 
-  test_create(sbox)
+  sbox.build(empty=True)
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'simple_v3.dump')
-  dump_in = open(dumpfile_location).read()
+  dump_in = svntest.actions.load_dumpfile(dumpfile_location)
 
   dump_out, err = filter_and_return_output(dump_in, 0, "include",
                                                         "trunk", "--quiet")
@@ -677,19 +672,19 @@ def accepts_deltas(sbox):
   load_and_verify_dumpstream(sbox, [], [], expected_revs, True, dump_out,
                              '--ignore-uuid')
 
-  
+
 
 @Issue(4234)
 def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
   "dumpfilter targets expect leading '/' in prefixes"
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=4234. ##
+  ## See https://issues.apache.org/jira/browse/SVN-4234. ##
 
-  test_create(sbox)
+  sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
                                    'svndumpfilter_tests_data',
                                    'greek_tree.dump')
-  dumpfile = open(dumpfile_location).read()
+  dumpfile = svntest.actions.load_dumpfile(dumpfile_location)
 
   (fd, targets_file) = tempfile.mkstemp(dir=svntest.main.temp_dir)
   try:
@@ -704,6 +699,67 @@ def dumpfilter_targets_expect_leading_slash_prefixes(sbox):
   finally:
     os.close(fd)
     os.remove(targets_file)
+
+@Issue(3681)
+def drop_all_empty_revisions(sbox):
+  "drop all empty revisions except revision 0"
+
+  dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svndumpfilter_tests_data',
+                                   'empty_revisions.dump')
+  dump_contents = svntest.actions.load_dumpfile(dumpfile_location)
+
+  filtered_dumpfile, filtered_err = filter_and_return_output(
+      dump_contents,
+      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      "include", "branch1",
+      "--drop-all-empty-revs")
+
+  expected_err = [
+       "Including (and dropping empty revisions for) prefixes:\n",
+       "   '/branch1'\n",
+       "\n",
+       "Revision 0 committed as 0.\n",
+       "Revision 1 skipped.\n",
+       "Revision 2 committed as 2.\n",
+       "Revision 3 skipped.\n",
+       "\n",
+       "Dropped 2 revisions.\n",
+       "\n"]
+
+  svntest.verify.verify_outputs(
+      "Actual svndumpfilter stderr does not agree with expected stderr",
+      None, filtered_err, None, expected_err)
+
+  # Test with --renumber-revs option.
+  filtered_dumpfile, filtered_err = filter_and_return_output(
+      dump_contents,
+      8192, # Set a sufficiently large bufsize to avoid a deadlock
+      "include", "branch1",
+      "--drop-all-empty-revs",
+      "--renumber-revs")
+
+  expected_err = [
+       "Including (and dropping empty revisions for) prefixes:\n",
+       "   '/branch1'\n",
+       "\n",
+       "Revision 0 committed as 0.\n",
+       "Revision 1 skipped.\n",
+       "Revision 2 committed as 1.\n",
+       "Revision 3 skipped.\n",
+       "\n",
+       "Dropped 2 revisions.\n",
+       "\n",
+       "Revisions renumbered as follows:\n",
+       "   3 => (dropped)\n",
+       "   2 => 1\n",
+       "   1 => (dropped)\n",
+       "   0 => 0\n",
+       "\n"]
+
+  svntest.verify.verify_outputs(
+      "Actual svndumpfilter stderr does not agree with expected stderr",
+      None, filtered_err, None, expected_err)
 
 
 ########################################################################
@@ -721,6 +777,7 @@ test_list = [ None,
               match_empty_prefix,
               accepts_deltas,
               dumpfilter_targets_expect_leading_slash_prefixes,
+              drop_all_empty_revisions,
               ]
 
 if __name__ == '__main__':

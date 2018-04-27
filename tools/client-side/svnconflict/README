@@ -1,0 +1,27 @@
+svnconflict provides a non-interactive interface to SVN's conflict resolver.
+It is intended for use by non-interactive merge scripts, which cannot easily
+use interactive tree conflict resolution features provided by 'svn resolve'.
+
+svnconflict operates on a single working copy path only. It is assumed that
+scripts are able to discover conflicted paths in the working copy via other
+means, such as 'svn status'.
+
+The following operations are supported:
+
+List conflicts at PATH: svnconflict list PATH
+Show text-conflict resolution options for PATH: svnconflict options-text PATH
+Show prop-conflict resolution options for PATH: svnconflict options-prop PATH
+Show tree-conflict resolution options for PATH: svnconflict options-tree PATH
+Resolve text conflict PATH: svnconflict resolve-text OPTION_ID PATH
+Resolve prop conflict PATH: svnconflict resolve-prop PROPNAME OPTION_ID PATH
+Resolve tree conflict PATH: svnconflict resolve-tree OPTION_ID PATH
+
+Note that some advanced operations which are offered by 'svn resolve' are not
+supported, such as selecting a move target path from a set of ambiguous move
+target candidates. svnconflict will always use a default choice in such cases.
+
+svnconflict may contact the repository to obtain information about a conflict.
+It will never modify the repository, but only read information from it.
+svnconflict will not prompt for credentials. If read-access to the repository
+requires credentials but no suitable credentials are stored in Subversion's
+authentication cache or provided on the command line, the operation may fail.

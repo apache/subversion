@@ -167,7 +167,7 @@ ra_treen_read_dir(svn_tree_node_t *node,
       for (hi = apr_hash_first(scratch_pool, dirents); hi;
            hi = apr_hash_next(hi))
         {
-          const char *name = svn__apr_hash_index_key(hi);
+          const char *name = apr_hash_this_key(hi);
           const char *relpath = svn_relpath_join(nb->relpath, name, result_pool);
           svn_tree_node_t *child;
 

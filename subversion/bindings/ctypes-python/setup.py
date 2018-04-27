@@ -58,7 +58,7 @@ class clean(_clean):
         if not self.dry_run:
           os.remove(f)
       else:
-        log.warn("'%s' does not exist -- can't clean it", os.path.normpath(f))
+        log.debug("'%s' does not exist -- can't clean it", os.path.normpath(f))
 
     # Run standard clean command
     _clean.run(self)

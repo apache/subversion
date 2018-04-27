@@ -21,8 +21,8 @@
 #
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
-#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|pre PRE_NUM]
-#                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL] 
+#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM]
+#                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL]
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
 #                  [-sqlite PATH-TO-SQLITE] [-zip] [-sign]
@@ -47,16 +47,17 @@
 #   working copy, so you may wish to create a dist-resources directory
 #   containing the apr/, apr-util/, neon/, serf/, zlib/ and sqlite/
 #   dependencies, and run dist.sh from that.
-#  
+#
 #   When building alpha, beta or rc tarballs pass the appropriate flag
 #   followed by a number.  For example "-alpha 5", "-beta 3", "-rc 2".
-# 
+#
 #   If neither an -alpha, -beta, -pre or -rc option is specified, a release
 #   tarball will be built.
-#  
+#
 #   To build a Windows zip file package, additionally pass -zip and the
 #   path to apr-iconv with -apri.
 
+set -e
 
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM] \
@@ -119,7 +120,7 @@ if [ -n "$ALPHA" ] && [ -n "$BETA" ] && [ -n "$NIGHTLY" ] && [ -n "$PRE" ] ||
   exit 1
 elif [ -n "$ALPHA" ] ; then
   VER_TAG="Alpha $ALPHA"
-  VER_NUMTAG="-alpha$ALPHA" 
+  VER_NUMTAG="-alpha$ALPHA"
 elif [ -n "$BETA" ] ; then
   VER_TAG="Beta $BETA"
   VER_NUMTAG="-beta$BETA"
@@ -183,20 +184,6 @@ if [ $? -ne 0 ] && [ -z "$ZIP" ]; then
   exit 1
 fi
 
-# Default to 'wget', but allow 'curl' to be used if available.
-HTTP_FETCH=wget
-HTTP_FETCH_OUTPUT="-O"
-type wget > /dev/null 2>&1
-if [ $? -ne 0 ]; then
-  type curl > /dev/null 2>&1
-  if [ $? -ne 0 ]; then
-    echo "Neither curl or wget found."
-    exit 2
-  fi
-  HTTP_FETCH=curl
-  HTTP_FETCH_OUTPUT="-o"
-fi
-
 DISTNAME="subversion-${VERSION}${VER_NUMTAG}"
 DIST_SANDBOX=.dist_sandbox
 DISTPATH="$DIST_SANDBOX/$DISTNAME"
@@ -218,8 +205,8 @@ export TZ
 
 echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 (cd "$DIST_SANDBOX" && \
- ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH" \
+ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS \
+     "https://svn.apache.org/repos/asf/subversion/$REPOS_PATH"@"$REVISION" \
      "$DISTNAME" --username none --password none)
 
 rm -f "$DISTPATH/STATUS"
@@ -256,7 +243,7 @@ fi
 # Instead of attempting to deal with various line ending issues, just export
 # the find_python script manually.
 ${svn:-svn} export -q -r "$REVISION"  \
-     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
+     "https://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
      --username none --password none "$DIST_SANDBOX/find_python.sh"
 PYTHON="`$DIST_SANDBOX/find_python.sh`"
 if test -z "$PYTHON"; then
@@ -305,6 +292,15 @@ if [ -z "$ZIP" ] ; then
   echo "Running ./autogen.sh in sandbox, to create ./configure ..."
   (cd "$DISTPATH" && ./autogen.sh --release) || exit 1
 fi
+
+# Generate the .pot file, for use by translators.
+echo "Running po-update.sh in sandbox, to create subversion.pot..."
+# Can't use the po-update.sh in the packaged export since it might have CRLF
+# line endings, in which case it won't run.  So first we export it again.
+${svn:-svn} export -q -r "$REVISION"  \
+     "https://svn.apache.org/repos/asf/subversion/$REPOS_PATH/tools/po/po-update.sh" \
+     --username none --password none "$DIST_SANDBOX/po-update.sh"
+(cd "$DISTPATH" && ../po-update.sh pot) || exit 1
 
 # Pre-translate the various sql-derived header files
 echo "Generating SQL-derived headers..."
@@ -374,9 +370,10 @@ sign_file()
   fi
 }
 
-# allow md5sum and sha1sum tool names to be overridden
+# allow md5sum, sha1sum, and sha512sum tool names to be overridden
 [ -n "$MD5SUM" ] || MD5SUM=md5sum
 [ -n "$SHA1SUM" ] || SHA1SUM=sha1sum
+[ -n "$SHA512SUM" ] || SHA512SUM=sha512sum
 
 echo ""
 echo "Done:"
@@ -392,6 +389,12 @@ if [ -z "$ZIP" ]; then
     echo "sha1sums:"
     $SHA1SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   fi
+  type $SHA512SUM > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha512sums:"
+    $SHA512SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  fi
 else
   ls -l "$DISTNAME.zip"
   sign_file $DISTNAME.zip
@@ -403,5 +406,11 @@ else
     echo ""
     echo "sha1sum:"
     $SHA1SUM "$DISTNAME.zip"
+  fi
+  type $SHA512SUM > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha512sum:"
+    $SHA512SUM "$DISTNAME.zip"
   fi
 fi

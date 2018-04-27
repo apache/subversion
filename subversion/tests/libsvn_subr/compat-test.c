@@ -162,7 +162,7 @@ test_version_parsing(apr_pool_t *pool)
         }
     }
   svn_pool_destroy(iterpool);
-  
+
   return SVN_NO_ERROR;
 }
 
@@ -204,12 +204,15 @@ test_version_at_least(apr_pool_t *pool)
         return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                                 "Expected at-least to be TRUE; got FALSE");
     }
-  
+
   return SVN_NO_ERROR;
 }
 
 /* An array of all test functions */
-struct svn_test_descriptor_t test_funcs[] =
+
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_version_compatibility,
@@ -220,3 +223,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "svn_version__at_least"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

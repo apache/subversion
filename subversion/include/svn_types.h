@@ -29,8 +29,10 @@
 
 /* ### this should go away, but it causes too much breakage right now */
 #include <stdlib.h>
+#include <limits.h> /* for ULONG_MAX */
 
 #include <apr.h>         /* for apr_size_t, apr_int64_t, ... */
+#include <apr_version.h>
 #include <apr_errno.h>   /* for apr_status_t */
 #include <apr_pools.h>   /* for apr_pool_t */
 #include <apr_hash.h>    /* for apr_hash_t */
@@ -63,6 +65,50 @@ extern "C" {
 #endif
 
 
+/** Macro used to mark experimental functions.
+ *
+ * @since New in 1.9.
+ */
+#ifndef SVN_EXPERIMENTAL
+# if !defined(SWIGPERL) && !defined(SWIGPYTHON) && !defined(SWIGRUBY)
+#  if defined(__has_attribute)
+#    if __has_attribute(__warning__)
+#      define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
+#    else
+#      define SVN_EXPERIMENTAL
+#    endif
+#  elif !defined(__llvm__) && defined(__GNUC__) \
+      && (__GNUC__ >= 4 || (__GNUC__==3 && __GNUC_MINOR__>=1))
+#   define SVN_EXPERIMENTAL __attribute__((warning("experimental function used")))
+#  elif defined(_MSC_VER) && _MSC_VER >= 1300
+#   define SVN_EXPERIMENTAL __declspec(deprecated("experimental function used"))
+#  else
+#   define SVN_EXPERIMENTAL
+#  endif
+# else
+#  define SVN_EXPERIMENTAL
+# endif
+#endif
+
+/** Macro used to mark functions that require a final null sentinel argument.
+ *
+ * @since New in 1.9.
+ */
+#ifndef SVN_NEEDS_SENTINEL_NULL
+#  if defined(__has_attribute)
+#    if __has_attribute(__sentinel__)
+#      define SVN_NEEDS_SENTINEL_NULL __attribute__((sentinel))
+#    else
+#      define SVN_NEEDS_SENTINEL_NULL
+#    endif
+#  elif defined(__GNUC__) && (__GNUC__ >= 4)
+#    define SVN_NEEDS_SENTINEL_NULL __attribute__((sentinel))
+#  else
+#    define SVN_NEEDS_SENTINEL_NULL
+#  endif
+#endif
+
+
 /** Indicate whether the current platform supports unaligned data access.
  *
  * On the majority of machines running SVN (x86 / x64), unaligned access
@@ -71,10 +117,16 @@ extern "C" {
  * Unaligned access on other machines (e.g. IA64) will trigger memory
  * access faults or simply misbehave.
  *
+ * Note: Some platforms may only support unaligned access for integers
+ * (PowerPC).  As a result this macro should only be used to determine
+ * if unaligned access is supported for integers.
+ *
  * @since New in 1.7.
  */
 #ifndef SVN_UNALIGNED_ACCESS_IS_OK
-# if defined(_M_IX86) || defined(_M_X64) || defined(i386) || defined(__x86_64)
+# if defined(_M_IX86) || defined(i386) \
+     || defined(_M_X64) || defined(__x86_64) \
+     || defined(__powerpc__) || defined(__ppc__)
 #  define SVN_UNALIGNED_ACCESS_IS_OK 1
 # else
 #  define SVN_UNALIGNED_ACCESS_IS_OK 0
@@ -95,6 +147,26 @@ typedef int svn_boolean_t;
 /** uhh... false */
 #define FALSE 0
 #endif /* FALSE */
+
+
+
+/* Declaration of a unique type, never defined, for the SVN_VA_NULL macro.
+ *
+ * NOTE: Private. Not for direct use by third-party code.
+ */
+struct svn__null_pointer_constant_stdarg_sentinel_t;
+
+/** Null pointer constant used as a sentinel in variable argument lists.
+ *
+ * Use of this macro ensures that the argument is of the correct size when a
+ * pointer is expected. (The macro @c NULL is not defined as a pointer on
+ * all systems, and the arguments to variadic functions are not converted
+ * automatically to the expected type.)
+ *
+ * @since New in 1.9.
+ */
+#define SVN_VA_NULL ((struct svn__null_pointer_constant_stdarg_sentinel_t*)0)
+/* See? (char*)NULL -- They have the same length, but the cast looks ugly. */
 
 
 
@@ -179,21 +251,26 @@ typedef struct svn_version_t svn_version_t;
  * These functions enable the caller to dereference an APR hash table index
  * without type casts or temporary variables.
  *
- * ### These are private, and may go away when APR implements them natively.
+ * These functions are provided by APR itself from version 1.5.
+ * Definitions are provided here for when using older versions of APR.
  * @{
  */
 
+#if !APR_VERSION_AT_LEAST(1, 5, 0)
+
 /** Return the key of the hash table entry indexed by @a hi. */
 const void *
-svn__apr_hash_index_key(const apr_hash_index_t *hi);
+apr_hash_this_key(apr_hash_index_t *hi);
 
 /** Return the key length of the hash table entry indexed by @a hi. */
 apr_ssize_t
-svn__apr_hash_index_klen(const apr_hash_index_t *hi);
+apr_hash_this_key_len(apr_hash_index_t *hi);
 
 /** Return the value of the hash table entry indexed by @a hi. */
 void *
-svn__apr_hash_index_val(const apr_hash_index_t *hi);
+apr_hash_this_val(apr_hash_index_t *hi);
+
+#endif
 
 /** @} */
 
@@ -212,37 +289,21 @@ svn__apr_hash_index_val(const apr_hash_index_t *hi);
                       || ((s) == APR_OS_START_SYSERR + ERROR_INVALID_NAME))
 #endif
 
+/** On Windows, APR_STATUS_IS_EPIPE does not include ERROR_NO_DATA error.
+ * So we include it.*/
+/* ### These fixes should go into APR. */
+#ifndef WIN32
+#define SVN__APR_STATUS_IS_EPIPE(s)  APR_STATUS_IS_EPIPE(s)
+#else
+#define SVN__APR_STATUS_IS_EPIPE(s)  (APR_STATUS_IS_EPIPE(s) \
+                      || ((s) == APR_OS_START_SYSERR + ERROR_NO_DATA))
+#endif
+
 /** @} */
 
 
 
-/** A node kind.
- *
- * @since New in 1.8. Replaces svn_node_kind_t.
- */
-typedef enum svn_kind_t
-{
-  /** something's here, but we don't know what */
-  svn_kind_unknown,
-
-  /** absent */
-  svn_kind_none,
-
-  /** regular file */
-  svn_kind_file,
-
-  /** directory */
-  svn_kind_dir,
-
-  /** symbolic link */
-  svn_kind_symlink
-
-} svn_kind_t;
-
-/** The various types of nodes in the Subversion filesystem.
- *
- * This type is superseded by #svn_kind_t and will be deprecated when
- * transition to the new type is complete. */
+/** The various types of nodes in the Subversion filesystem. */
 typedef enum svn_node_kind_t
 {
   /** absent */
@@ -255,7 +316,14 @@ typedef enum svn_node_kind_t
   svn_node_dir,
 
   /** something's here, but we don't know what */
-  svn_node_unknown
+  svn_node_unknown,
+
+  /**
+   * symbolic link
+   * @note This value is not currently used by the public API.
+   * @since New in 1.8.
+   */
+  svn_node_symlink
 } svn_node_kind_t;
 
 /** Return a constant string expressing @a kind as an English word, e.g.,
@@ -277,24 +345,6 @@ svn_node_kind_to_word(svn_node_kind_t kind);
 svn_node_kind_t
 svn_node_kind_from_word(const char *word);
 
-/** Return the #svn_node_kind_t corresponding to the given #svn_kind_t;
- * #svn_kind_symlink will become #svn_node_file.
- *
- * @since New in 1.8.
- */
-svn_node_kind_t
-svn__node_kind_from_kind(svn_kind_t kind);
-
-/** Return the #svn_kind_t corresponding to the given #svn_node_kind_t,
- * or #svn_kind_symlink if @a is_symlink is true.
- *
- * @since New in 1.8.
- */
-svn_kind_t
-svn__kind_from_node_kind(svn_node_kind_t kind,
-                         svn_boolean_t is_symlink);
-
-
 
 /** Generic three-state property to represent an unknown value for values
  * that are just like booleans.  The values have been set deliberately to
@@ -306,8 +356,11 @@ svn__kind_from_node_kind(svn_node_kind_t kind,
  * @since New in 1.7. */
 typedef enum svn_tristate_t
 {
+  /** state known to be false (the constant does not evaulate to false) */
   svn_tristate_false = 2,
+  /** state known to be true */
   svn_tristate_true,
+  /** state could be true or false */
   svn_tristate_unknown
 } svn_tristate_t;
 
@@ -363,7 +416,7 @@ svn_tristate__from_word(const char * word);
  *  2. Creating a new textual name similar to
  *     SVN_SUBST__SPECIAL_LINK_STR in libsvn_subr/subst.c.
  *  3. Handling the translation/detranslation case for the new type in
- *     create_special_file and detranslate_special_file, using the
+ *     create_special_file_from_stream and detranslate_special_file, using the
  *     routines from 1.
  */
 
@@ -550,8 +603,7 @@ svn_depth_from_word(const char *word);
  * non-recursive (which in turn usually translates to #svn_depth_files).
  */
 #define SVN_DEPTH_IS_RECURSIVE(depth)                              \
-  (((depth) == svn_depth_infinity || (depth) == svn_depth_unknown) \
-   ? TRUE : FALSE)
+  ((depth) == svn_depth_infinity || (depth) == svn_depth_unknown)
 
 
 
@@ -588,13 +640,19 @@ svn_depth_from_word(const char *word);
 
 /** @} */
 
-/** A general subversion directory entry. */
+/** A general subversion directory entry.
+ *
+ * @note To allow for extending the #svn_dirent_t structure in future
+ * releases, always use svn_dirent_create() to allocate the stucture.
+ *
+ * @since New in 1.6.
+ */
 typedef struct svn_dirent_t
 {
   /** node kind */
   svn_node_kind_t kind;
 
-  /** length of file text, or 0 for directories */
+  /** length of file text, otherwise SVN_INVALID_FILESIZE */
   svn_filesize_t size;
 
   /** does the node have props? */
@@ -620,6 +678,14 @@ svn_dirent_t *
 svn_dirent_dup(const svn_dirent_t *dirent,
                apr_pool_t *pool);
 
+/**
+ * Create a new svn_dirent_t instance with all values initialized to their
+ * not-available values.
+ *
+ * @since New in 1.8.
+ */
+svn_dirent_t *
+svn_dirent_create(apr_pool_t *result_pool);
 
 
 /** Keyword substitution.
@@ -1005,13 +1071,17 @@ typedef svn_error_t *(*svn_log_message_receiver_t)(
   const char *message,
   apr_pool_t *pool);
 
-
 
 /** Callback function type for commits.
  *
  * When a commit succeeds, an instance of this is invoked with the
  * @a commit_info, along with the @a baton closure.
  * @a pool can be used for temporary allocations.
+ *
+ * @note Implementers of this callback that pass this callback to
+ * svn_ra_get_commit_editor3() should be careful with returning errors
+ * as these might be returned as commit errors. See the documentation
+ * of svn_ra_get_commit_editor3() for more details.
  *
  * @since New in 1.4.
  */
@@ -1212,7 +1282,7 @@ svn_merge_range_contains_rev(const svn_merge_range_t *range, svn_revnum_t rev);
  *  @{ */
 
 /**
- * A representation of a segment of a object's version history with an
+ * A representation of a segment of an object's version history with an
  * emphasis on the object's location in the repository as of various
  * revisions.
  *
@@ -1221,7 +1291,7 @@ svn_merge_range_contains_rev(const svn_merge_range_t *range, svn_revnum_t rev);
 typedef struct svn_location_segment_t
 {
   /** The beginning (oldest) and ending (youngest) revisions for this
-      segment. */
+      segment, both inclusive. */
   svn_revnum_t range_start;
   svn_revnum_t range_end;
 

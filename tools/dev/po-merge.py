@@ -146,6 +146,7 @@ def main(argv):
     string_count = 0
     update_count = 0
     untranslated = 0
+    fuzzy = 0
     while True:
         comments, msgid, msgid_plural, msgstr = parse_translation(infile)
         if not comments and msgid is None:
@@ -177,14 +178,19 @@ def main(argv):
                 for i in msgstr:
                     outfile.write('msgstr[%s] %s\n' % (n, msgstr[n]))
                     n += 1
-        for m in msgstr:
-            if m == '""':
-                untranslated += 1
+        if msgstr is not None:
+            for m in msgstr:
+                if m == '""':
+                    untranslated += 1
+        for c in comments:
+            if c.startswith('#,') and 'fuzzy' in c.split(', '):
+                fuzzy += 1
 
     # We're done.  Tell the user what we did.
     print(('%d strings updated. '
+          '%d fuzzy strings. '
           '%d of %d strings are still untranslated (%.0f%%).' %
-          (update_count, untranslated, string_count,
+          (update_count, fuzzy, untranslated, string_count,
            100.0 * untranslated / string_count)))
 
 if __name__ == '__main__':

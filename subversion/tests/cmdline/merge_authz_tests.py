@@ -41,8 +41,8 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
-from merge_tests import set_up_branch
-from merge_tests import expected_merge_output
+from svntest.mergetrees import set_up_branch
+from svntest.mergetrees import expected_merge_output
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import write_restrictive_svnserve_conf
 from svntest.main import write_authz_file
@@ -112,7 +112,7 @@ def mergeinfo_and_skipped_paths(sbox):
 
   # Checkout just the branch under the newly restricted authz.
   wc_restricted = sbox.add_wc_path('restricted')
-  svntest.actions.run_and_verify_svn(None, None, [], 'checkout',
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
                                      sbox.repo_url,
                                      wc_restricted)
 
@@ -122,7 +122,7 @@ def mergeinfo_and_skipped_paths(sbox):
   A_COPY_2_H_path = os.path.join(wc_restricted, "A_COPY_2", "D", "H")
   A_COPY_3_path = os.path.join(wc_restricted, "A_COPY_3")
   omega_path = os.path.join(wc_restricted, "A_COPY", "D", "H", "omega")
-  zeta_path = os.path.join(wc_dir, "A", "D", "H", "zeta")
+  zeta_path = sbox.ospath("A/D/H/zeta")
 
   # Merge r4:8 into the restricted WC's A_COPY.
   #
@@ -194,8 +194,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1)
+                                       check_props=True)
 
   # Merge r4:8 into the restricted WC's A_COPY_2.
   #
@@ -212,6 +211,8 @@ def mergeinfo_and_skipped_paths(sbox):
   # always takes precedence in terms of getting *non*-inheritable mergeinfo.
   expected_output = wc.State(A_COPY_2_path, {
     'D/H/omega' : Item(status='U '),
+    # Below the skip
+    'D/G/rho'   : Item(status='  ', treeconflict='U'),
     })
   expected_mergeinfo_output = wc.State(A_COPY_2_path, {
     ''          : Item(status=' U'),
@@ -257,7 +258,7 @@ def mergeinfo_and_skipped_paths(sbox):
     })
   expected_skip = wc.State(A_COPY_2_path, {
     'B/E'     : Item(verb='Skipped missing target'),
-    'D/G/rho' : Item(verb='Skipped'),
+    'D/G'     : Item(verb='Skipped missing target'),
     'D/H/psi' : Item(verb='Skipped missing target'),
     })
   svntest.actions.run_and_verify_merge(A_COPY_2_path, '4', '8',
@@ -268,8 +269,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
   # Merge r5:7 into the restricted WC's A_COPY_3.
   #
@@ -333,9 +333,8 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+                                       check_props=True)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', '--recursive',
                                      wc_restricted)
 
   # Test issue #2997.  If a merge requires two separate editor drives and the
@@ -377,23 +376,23 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, '-c5', '-c8',
+                                       [], True, False,
+                                       '-c5', '-c8',
                                        A_COPY_2_H_path)
 
   # Test issue #2829 'Improve handling for skipped paths encountered
   # during a merge'
 
   # Revert previous changes to restricted WC
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+  svntest.actions.run_and_verify_svn(None, [], 'revert', '--recursive',
                                      wc_restricted)
   # Add new path 'A/D/H/zeta'
   svntest.main.file_write(zeta_path, "This is the file 'zeta'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', zeta_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', zeta_path)
   expected_output = wc.State(wc_dir, {'A/D/H/zeta' : Item(verb='Adding')})
   wc_status.add({'A/D/H/zeta' : Item(status='  ', wc_rev=9)})
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        wc_status, None, wc_dir)
+                                        wc_status)
 
   # Merge -r7:9 to the restricted WC's A_COPY_2/D/H.
   #
@@ -434,8 +433,7 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
   # Merge -r4:9 to the restricted WC's A_COPY_2/D/H.
   #
@@ -443,7 +441,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # non-inheritable mergeinfo (due to the fact 'A_COPY_2/D/H/psi' is missing
   # and skipped). 'A_COPY_2/D/H/zeta' must therefore get its own explicit
   # mergeinfo from this merge.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', '--recursive',
+  svntest.actions.run_and_verify_svn(None, [], 'revert', '--recursive',
                                      wc_restricted)
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
@@ -481,15 +479,14 @@ def mergeinfo_and_skipped_paths(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0)
+                                       check_props=True)
 
 @SkipUnless(server_has_mergeinfo)
 @Issue(2876)
 def merge_fails_if_subtree_is_deleted_on_src(sbox):
   "merge fails if subtree is deleted on src"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2876. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2876. ##
 
   # Create a WC
   sbox.build()
@@ -501,10 +498,10 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
                              svntest.main.wc_author2 + " = rw")})
 
   # Some paths we'll care about
-  Acopy_path = os.path.join(wc_dir, 'A_copy')
-  gamma_path = os.path.join(wc_dir, 'A', 'D', 'gamma')
-  Acopy_gamma_path = os.path.join(wc_dir, 'A_copy', 'D', 'gamma')
-  Acopy_D_path = os.path.join(wc_dir, 'A_copy', 'D')
+  Acopy_path = sbox.ospath('A_copy')
+  gamma_path = sbox.ospath('A/D/gamma')
+  Acopy_gamma_path = sbox.ospath('A_copy/D/gamma')
+  Acopy_D_path = sbox.ospath('A_copy/D')
   A_url = sbox.repo_url + '/A'
   Acopy_url = sbox.repo_url + '/A_copy'
 
@@ -524,13 +521,13 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
 
   # Commit the new content
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', A_url, Acopy_url,
+  svntest.actions.run_and_verify_svn(None, [], 'cp', A_url, Acopy_url,
                                      '-m', 'create a new copy of A')
 
   # Update working copy
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   svntest.main.file_substitute(gamma_path, "line1", "this is line1")
   # Create expected output tree for commit
@@ -564,10 +561,10 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
     })
 
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Delete A/D/gamma from working copy
-  svntest.actions.run_and_verify_svn(None, None, [], 'delete', gamma_path)
+  svntest.actions.run_and_verify_svn(None, [], 'delete', gamma_path)
   # Create expected output tree for commit
   expected_output = wc.State(wc_dir, {
     'A/D/gamma' : Item(verb='Deleting'),
@@ -578,10 +575,9 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir, wc_dir)
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[3,4]],
                           ['U    ' + Acopy_gamma_path + '\n',
                            ' U   ' + Acopy_gamma_path + '\n']),
@@ -601,7 +597,6 @@ def merge_fails_if_subtree_is_deleted_on_src(sbox):
   # see notes/tree-conflicts/detection.txt, but --force currently avoids
   # this.
   svntest.actions.run_and_verify_svn(
-    None,
     expected_merge_output([[3,6]],
                           ['D    ' + Acopy_gamma_path + '\n',
                            ' U   ' + Acopy_path + '\n']),
@@ -618,16 +613,16 @@ def reintegrate_fails_if_no_root_access(sbox):
   # should be able to reintegrate, regardless of what authorization
   # they have to parents of the source and target.
   #
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3242#desc78
+  # See https://issues.apache.org/jira/browse/SVN-3242#desc78
 
   # Some paths we'll care about
   wc_dir = sbox.wc_dir
-  A_path          = os.path.join(wc_dir, 'A')
-  A_COPY_path     = os.path.join(wc_dir, 'A_COPY')
-  beta_COPY_path  = os.path.join(wc_dir, 'A_COPY', 'B', 'E', 'beta')
-  rho_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'G', 'rho')
-  omega_COPY_path = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'omega')
-  psi_COPY_path   = os.path.join(wc_dir, 'A_COPY', 'D', 'H', 'psi')
+  A_path          = sbox.ospath('A')
+  A_COPY_path     = sbox.ospath('A_COPY')
+  beta_COPY_path  = sbox.ospath('A_COPY/B/E/beta')
+  rho_COPY_path   = sbox.ospath('A_COPY/D/G/rho')
+  omega_COPY_path = sbox.ospath('A_COPY/D/H/omega')
+  psi_COPY_path   = sbox.ospath('A_COPY/D/H/psi')
 
   # Copy A@1 to A_COPY in r2, and then make some changes to A in r3-6.
   sbox.build()
@@ -635,12 +630,12 @@ def reintegrate_fails_if_no_root_access(sbox):
   expected_disk, expected_status = set_up_branch(sbox)
 
   # Make a change on the branch, to A_COPY/mu, commit in r7.
-  svntest.main.file_write(os.path.join(wc_dir, "A_COPY", "mu"),
+  svntest.main.file_write(sbox.ospath("A_COPY/mu"),
                           "Changed on the branch.")
   expected_output = wc.State(wc_dir, {'A_COPY/mu' : Item(verb='Sending')})
   expected_status.tweak('A_COPY/mu', wc_rev=7)
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
   expected_disk.tweak('A_COPY/mu', contents='Changed on the branch.')
 
   # Update the WC.
@@ -655,9 +650,9 @@ def reintegrate_fails_if_no_root_access(sbox):
                                            'U    ' + psi_COPY_path   + '\n',
                                            # Mergeinfo notification
                                            ' U   ' + A_COPY_path     + '\n'])
-  svntest.actions.run_and_verify_svn(None, expected_output, [], 'merge',
+  svntest.actions.run_and_verify_svn(expected_output, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'synch A_COPY with A', wc_dir)
+  sbox.simple_commit(message='synch A_COPY with A')
 
   # Update so we are ready for reintegrate.
   svntest.main.run_svn(None, 'up', wc_dir)
@@ -731,9 +726,176 @@ def reintegrate_fails_if_no_root_access(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, True, True,
+                                       [], True, True,
                                        '--reintegrate', A_path)
+
+def diff_unauth_parent(sbox):
+  "diff directory without reading parent"
+
+  sbox.build(create_wc=False)
+
+  # Create r2: Change A a bit
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         'propset', 'k', 'v',
+                                         sbox.repo_url + '/A',
+                                         '-m', 'set prop')
+
+  # Create r3 Mark E and G
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         'propset', 'this-is', 'E',
+                                         sbox.repo_url + '/A/B/E',
+                                         'propset', 'this-is', 'G',
+                                         sbox.repo_url + '/A/D/G',
+                                         '-m', 'set prop')
+
+  # Create r4: Replace A/B/E with A/D/G
+  svntest.actions.run_and_verify_svnmucc(None, [],
+                                         'rm', sbox.repo_url + '/A/B/E',
+                                         'cp', '3', sbox.repo_url + '/A/D/G',
+                                         sbox.repo_url + '/A/B/E',
+                                         '-m', 'replace A/B/E')
+
+
+  if is_ra_type_svn() or is_ra_type_dav():
+    write_restrictive_svnserve_conf(sbox.repo_dir)
+    write_authz_file(sbox, {"/"       : "* =",
+                            "/A"    : "* = rw"})
+
+  # Diff the property change
+  expected_output = [
+    'Index: .\n',
+    '===================================================================\n',
+    '--- .\t(revision 1)\n',
+    '+++ .\t(revision 2)\n',
+    '\n',
+    'Property changes on: .\n',
+    '___________________________________________________________________\n',
+    'Added: k\n',
+    '## -0,0 +1 ##\n',
+    '+v\n',
+    '\ No newline at end of property\n'
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'diff', sbox.repo_url + '/A', '-c', '2')
+
+  if is_ra_type_svn() or is_ra_type_dav():
+    write_authz_file(sbox, {"/"       : "* =",
+                            "/A/B/E"    : "* = rw"})
+
+  # Diff the replacement
+  expected_output = [
+    'Index: alpha\n',
+    '===================================================================\n',
+    '--- alpha\t(revision 3)\n',
+    '+++ alpha\t(nonexistent)\n',
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'alpha\'.\n',
+    'Index: beta\n',
+    '===================================================================\n',
+    '--- beta\t(revision 3)\n',
+    '+++ beta\t(nonexistent)\n',
+    '@@ -1 +0,0 @@\n',
+    '-This is the file \'beta\'.\n',
+    'Index: tau\n',
+    '===================================================================\n',
+    '--- tau\t(nonexistent)\n',
+    '+++ tau\t(revision 4)\n',
+    '@@ -0,0 +1 @@\n',
+    '+This is the file \'tau\'.\n',
+    'Index: rho\n',
+    '===================================================================\n',
+    '--- rho\t(nonexistent)\n',
+    '+++ rho\t(revision 4)\n',
+    '@@ -0,0 +1 @@\n',
+    '+This is the file \'rho\'.\n',
+    'Index: pi\n',
+    '===================================================================\n',
+    '--- pi\t(nonexistent)\n',
+    '+++ pi\t(revision 4)\n',
+    '@@ -0,0 +1 @@\n',
+    '+This is the file \'pi\'.\n',
+  ]
+
+  if is_ra_type_svn() or is_ra_type_dav():
+    # Because we can't anchor above C we see just a changed C, not a
+    # replacement
+    expected_output += [
+    'Index: .\n',
+    '===================================================================\n',
+    '--- .\t(revision 3)\n',
+    '+++ .\t(revision 4)\n',
+    '\n',
+    'Property changes on: .\n',
+    '___________________________________________________________________\n',
+      'Modified: this-is\n',
+      '## -1 +1 ##\n',
+      '-E\n',
+      '\ No newline at end of property\n',
+      '+G\n',
+      '\ No newline at end of property\n',
+    ]
+  else:
+    # ### We should also see a property deletion here!
+    expected_output += [
+    'Index: .\n',
+    '===================================================================\n',
+    '--- .\t(revision 3)\n',
+    '+++ .\t(nonexistent)\n',
+    '\n',
+    'Property changes on: .\n',
+    '___________________________________________________________________\n',
+    'Deleted: this-is\n',
+    '## -1 +0,0 ##\n',
+    '-E\n',
+    '\ No newline at end of property\n',
+    'Index: .\n',
+    '===================================================================\n',
+    '--- .\t(nonexistent)\n',
+    '+++ .\t(revision 4)\n',
+    '\n',
+    'Property changes on: .\n',
+    '___________________________________________________________________\n',
+      'Added: this-is\n',
+      '## -0,0 +1 ##\n',
+      '+G\n',
+      '\ No newline at end of property\n',
+    ]
+
+  # Use two url diff, because 'svn diff url -c' uses copyfrom to diff against
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'diff', sbox.repo_url + '/A/B/E@3',
+                                      sbox.repo_url + '/A/B/E@4',
+                                      '--notice-ancestry')
+
+  # Do the same thing with summarize to really see directory deletes and adds
+  if is_ra_type_svn() or is_ra_type_dav():
+    # With no rights on the parent directory we just see a property change on E
+    expected_output = [
+      'D       %s/A/B/E/alpha\n' % sbox.repo_url,
+      'D       %s/A/B/E/beta\n' % sbox.repo_url,
+      'A       %s/A/B/E/tau\n' % sbox.repo_url,
+      'A       %s/A/B/E/rho\n' % sbox.repo_url,
+      'A       %s/A/B/E/pi\n' % sbox.repo_url,
+      ' M      %s/A/B/E\n' % sbox.repo_url,
+    ]
+  else:
+    # But with rights on the parent we see a replacement of E
+    expected_output = [
+      'D       %s/A/B/E/alpha\n' % sbox.repo_url,
+      'D       %s/A/B/E/beta\n' % sbox.repo_url,
+      'D       %s/A/B/E\n' % sbox.repo_url,
+      'A       %s/A/B/E/tau\n' % sbox.repo_url,
+      'A       %s/A/B/E/rho\n' % sbox.repo_url,
+      'A       %s/A/B/E/pi\n' % sbox.repo_url,
+      'A       %s/A/B/E\n' % sbox.repo_url,
+    ]
+
+  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'diff', sbox.repo_url + '/A/B/E@3',
+                                      sbox.repo_url + '/A/B/E@4',
+                                      '--notice-ancestry', '--summarize')
 
 ########################################################################
 # Run the tests
@@ -744,6 +906,7 @@ test_list = [ None,
               mergeinfo_and_skipped_paths,
               merge_fails_if_subtree_is_deleted_on_src,
               reintegrate_fails_if_no_root_access,
+              diff_unauth_parent,
              ]
 serial_only = True
 

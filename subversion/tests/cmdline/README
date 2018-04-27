@@ -12,7 +12,7 @@ command-line client.  It has no access to code internals; it never
 looks inside the .svn/ directory; it only performs actions that a
 human user would do.
 
-These tests require Python 2.5 or later.
+These tests require Python 2.7 or later.
 
   [ For more general information on Subversion's testing system,
     please read the README in subversion/tests/. ]
@@ -83,6 +83,133 @@ paths adjusted appropriately:
      Require valid-user
    </Location>
 
+   <Location /authz-test-work/anon>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     # This may seem unnecessary but granting access to everyone here is necessary
+     # to exercise a bug with httpd 2.3.x+.  The "Require all granted" syntax is
+     # new to 2.3.x+ which we can detect with the mod_authz_core.c module
+     # signature.  Use the "Allow from all" syntax with older versions for symmetry.
+     <IfModule mod_authz_core.c>
+       Require all granted
+     </IfModule>
+     <IfModule !mod_authz_core.c>
+       Allow from all
+     </IfMOdule>
+   </Location>
+   <Location /authz-test-work/mixed>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     Satisfy Any
+   </Location>
+   <Location /authz-test-work/mixed-noauthwhenanon>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzSVNNoAuthWhenAnonymousAllowed On
+   </Location>
+   <Location /authz-test-work/authn>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+   </Location>
+   <Location /authz-test-work/authn-anonoff>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzSVNAnonymous Off
+   </Location>
+   <Location /authz-test-work/authn-lcuser>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzForceUsernameCase Lower
+   </Location>
+   <Location /authz-test-work/authn-lcuser>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     Require           valid-user
+     AuthzForceUsernameCase Lower
+   </Location>
+   <Location /authz-test-work/authn-group>
+     DAV               svn
+     SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+     AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+     SVNListParentPath On
+     AuthType          Basic
+     AuthName          "Subversion Repository"
+     AuthUserFile /usr/local/apache2/conf/users
+     AuthGroupFile /usr/local/apache2/conf/groups
+     Require           group random
+     AuthzSVNAuthoritative Off
+   </Location>
+   <IfModule mod_authz_core.c>
+     <Location /authz-test-work/sallrany>
+       DAV               svn
+       SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+       AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+       SVNListParentPath On
+       AuthType          Basic
+       AuthName          "Subversion Repository"
+       AuthUserFile /usr/local/apache2/conf/users
+       AuthzSendForbiddenOnFailure On
+       Satisfy All
+       <RequireAny>
+         Require valid-user
+         Require expr req('ALLOW') == '1'
+       </RequireAny>
+     </Location>
+     <Location /authz-test-work/sallrall>
+       DAV               svn
+       SVNParentPath /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/local_tmp
+       AuthzSVNAccessFile /home/yourusernamehere/projects/svn/subversion/tests/cmdline/svn-test-work/authz
+       SVNListParentPath On
+       AuthType          Basic
+       AuthName          "Subversion Repository"
+       AuthUserFile /usr/local/apache2/conf/users
+       AuthzSendForbiddenOnFailure On
+       Satisfy All
+       <RequireAll>
+         Require valid-user
+         Require expr req('ALLOW') == '1'
+       </RequireAll>
+     </Location>
+   </IfModule>
+
+
    RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$ /svn-test-work/repositories/$1
    RedirectMatch           ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$ /svn-test-work/repositories/$1
 
@@ -101,6 +228,15 @@ just drop the following 2-line snippet into the
 ----------------------------
 jrandom:xCGl35kV9oWCY
 jconstant:xCGl35kV9oWCY
+JRANDOM:xCGl35kV9oWCY
+JCONSTANT:xCGl35kV9oWCY
+----------------------------
+
+and these lines into the
+/usr/local/apache/conf/groups file:
+----------------------------
+random: jrandom
+constant: jconstant
 ----------------------------
 
 Now, (re)start Apache and run the tests over mod_dav_svn.
@@ -138,6 +274,8 @@ Note [1]: It would be quite too much to expect those password entries
           ----------------------------
           jrandom:$apr1$3p1.....$FQW6RceW5QhJ2blWDQgKn0
           jconstant:$apr1$jp1.....$Usrqji1c9H6AbOxOGAzzb0
+          JRANDOM:$apr1$3p1.....$FQW6RceW5QhJ2blWDQgKn0
+          JCONSTANT:$apr1$jp1.....$Usrqji1c9H6AbOxOGAzzb0
           ----------------------------
 
 
@@ -151,7 +289,13 @@ it will run just one suite or just one test:
      $ ./davautocheck.sh basic
      $ ./davautocheck.sh basic 15
 
-It also respects some environment variables.
+With '--no-tests' argument, it will start httpd but not run any tests.  This is
+useful for manual testing --- create repositories in
+./svn-test-work/repositories/<$repo> and they will be accessible at
+<URL>/svn-test-work/repositories/<$repo>.  You can also run individual tests by passing the --url option to them, as described above.
+
+davautocheck.sh also respects some environment variables; see the comments at
+the top of the script for details.
 
 Running over ra_svn
 -------------------
@@ -174,8 +318,8 @@ or if you're running an individual test,
 
 $ ./basic_tests.py --url=svn://localhost --enable-sasl 3
 
-Note that to do this you'll have to have a subversion.conf file in your
-SASL lib dir (i.e. something like /usr/lib/sasl2/subversion.conf), it
+Note that to do this you'll have to have a svn.conf file in your
+SASL lib dir (i.e. something like /usr/lib/sasl2/svn.conf), it
 should contain something like:
 
 pwcheck_method: auxprop
@@ -188,6 +332,16 @@ $ saslpasswd2 -c -u svntest jrandom
 $ saslpasswd2 -c -u svntest jconstant
 
 As usual, both users should use the password 'rayjandom'.
+
+To enable DUMP_LOAD_CROSS_CHECK to work a third user is required,
+
+$ saslpasswd2 -c -u svntest __dumpster__
+
+with password '__loadster__'.
+
+The user running the tests will need read access to the sasl database
+and on some systems this can be arranged by adding the user to the sasl
+group.
 
 There are 'make svnserveautocheck' and ./svnserveautocheck.sh commands,
 analogous to davautocheck.sh documented above.
@@ -245,9 +399,25 @@ Directory Contents
 
           /verify.py:       Verifies output from Subversion.
 
-          /entry.py:        Parse an `entries' file (### not used yet)
+          /testcase.py:     Control of test case execution - contains
+                            decorators for expected failures and conditionally
+                            executed tests.
 
+          /sandbox.py:      Tools for manipulating a test's working area 
+                            ("a sandbox"), those are handy for most simple
+                            actions a test might want to perform on a wc.
 
+          /objects.py:      Objects that keep track of state during a test.
+                            (not directly used by the test scripts.)
+
+          /mergetrees.py:   Routines that create merge scenarios.
+          
+          /factory.py:      Automatically generate a (near-)complete new 
+                            cmdline test from a series of shell commands.
+          
+          /error.py:        Error codes as constants, for convenience.
+                            (auto-generated by tools/dev/gen-py-error.py)
+                            
 
 What the Python Tests are Doing
 ===============================
@@ -341,7 +511,7 @@ the bottom of the file. To avoid renumbering of existing tests, you
 should add new tests to the end of the list.
 
 
-Testing Compatability With Previous Release
+Testing Compatibility With Previous Release
 ===========================================
 
 You can run the Python test suite against older installed versions of

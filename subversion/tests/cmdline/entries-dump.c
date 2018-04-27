@@ -38,6 +38,7 @@
 #include "private/svn_wc_private.h"
 
 #include "../../libsvn_wc/wc.h"
+#include "../../libsvn_wc/lock.h"
 
 static void
 str_value(const char *name, const char *value)
@@ -66,24 +67,46 @@ bool_value(const char *name, svn_boolean_t value)
 }
 
 static svn_error_t *
-entries_dump(const char *dir_path, apr_pool_t *pool)
+entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *pool)
 {
-  svn_wc_adm_access_t *adm_access;
+  svn_wc_adm_access_t *adm_access = NULL;
   apr_hash_t *entries;
   apr_hash_index_t *hi;
   svn_boolean_t locked;
   svn_error_t *err;
+  svn_wc_context_t *wc_ctx = NULL;
+  const char *dir_abspath;
 
-  err = svn_wc_adm_open3(&adm_access, NULL, dir_path, FALSE, 0,
+  SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
+
+  err = svn_wc_adm_open3(&adm_access, related, dir_path, FALSE, 0,
                          NULL, NULL, pool);
   if (!err)
     {
-      SVN_ERR(svn_wc_locked(&locked, dir_path, pool));
+      SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                             svn_wc__adm_get_db(adm_access),
+                                             pool));
+
+      SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
       SVN_ERR(svn_wc_entries_read(&entries, adm_access, TRUE, pool));
+    }
+  else if (err && err->apr_err == SVN_ERR_WC_LOCKED
+           && related
+           && ! strcmp(dir_path, svn_wc_adm_access_path(related)))
+    {
+      /* Common caller error: Can't open a baton when there is one. */
+      svn_error_clear(err);
+
+      SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
+                                             svn_wc__adm_get_db(related),
+                                             pool));
+
+      SVN_ERR(svn_wc_locked2(NULL, &locked, wc_ctx, dir_abspath, pool));
+      SVN_ERR(svn_wc_entries_read(&entries, related, TRUE, pool));
     }
   else
     {
-      const char *dir_abspath, *lockfile_path;
+      const char *lockfile_path;
       svn_node_kind_t kind;
 
       /* ### Should svn_wc_adm_open3 be returning UPGRADE_REQUIRED? */
@@ -91,23 +114,18 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
         return err;
       svn_error_clear(err);
       adm_access = NULL;
-      SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
       SVN_ERR(svn_wc__read_entries_old(&entries, dir_abspath, pool, pool));
       lockfile_path = svn_dirent_join_many(pool, dir_path,
                                            svn_wc_get_adm_dir(pool),
-                                           "lock", NULL);
+                                           "lock", SVN_VA_NULL);
       SVN_ERR(svn_io_check_path(lockfile_path, &kind, pool));
       locked = (kind == svn_node_file);
     }
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const void *key;
-      void *value;
-      const svn_wc_entry_t *entry;
-
-      apr_hash_this(hi, &key, NULL, &value);
-      entry = value;
+      const char *key = apr_hash_this_key(hi);
+      const svn_wc_entry_t *entry = apr_hash_this_val(hi);
 
       SVN_ERR_ASSERT(strcmp(key, entry->name) == 0);
 
@@ -148,12 +166,15 @@ entries_dump(const char *dir_path, apr_pool_t *pool)
       /* skip: keep_local */
       int_value("depth", entry->depth);
       /* skip: tree_conflict_data */
-      /* skip: file_external_path */
+      bool_value("file_external", entry->file_external_path != NULL);
       /* skip: file_external_peg_rev */
       /* skip: file_external_rev */
       bool_value("locked", locked && *entry->name == '\0');
       printf("entries['%s'] = e\n", (const char *)key);
     }
+
+  if (wc_ctx)
+    SVN_ERR(svn_wc_context_destroy(wc_ctx));
 
   if (adm_access)
     SVN_ERR(svn_wc_adm_close2(adm_access, pool));
@@ -168,6 +189,7 @@ struct directory_walk_baton
   svn_wc_context_t *wc_ctx;
   const char *root_abspath;
   const char *prefix_path;
+  svn_wc_adm_access_t *adm_access;
 };
 
 /* svn_wc__node_found_func_t implementation for directory_dump */
@@ -207,7 +229,7 @@ directory_dump_old(struct directory_walk_baton *bt,
                                    scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, entries); hi; hi = apr_hash_next(hi))
     {
-      const svn_wc_entry_t *entry = svn__apr_hash_index_val(hi);
+      const svn_wc_entry_t *entry = apr_hash_this_val(hi);
       const char *local_abspath;
 
       if (entry->deleted || entry->absent || entry->kind != svn_node_dir)
@@ -252,6 +274,83 @@ directory_dump(const char *path,
   return svn_error_trace(svn_wc_context_destroy(bt.wc_ctx));
 }
 
+static svn_error_t *
+tree_dump_dir(const char *local_abspath,
+              svn_node_kind_t kind,
+              void *walk_baton,
+              apr_pool_t *scratch_pool)
+{
+  struct directory_walk_baton *bt = walk_baton;
+  const char *path;
+
+  if (kind != svn_node_dir)
+    return SVN_NO_ERROR;
+
+  if (strcmp(local_abspath, bt->root_abspath) != 0)
+    {
+      svn_boolean_t is_wcroot;
+      SVN_ERR(svn_wc__db_is_wcroot(&is_wcroot, bt->wc_ctx->db,
+                                   local_abspath, scratch_pool));
+
+      if (is_wcroot)
+        return SVN_NO_ERROR; /* Report the stub, but not the data */
+    }
+
+  /* If LOCAL_ABSPATH a child of or equal to ROOT_ABSPATH, then display
+     a relative path starting with PREFIX_PATH. */
+  path = svn_dirent_skip_ancestor(bt->root_abspath, local_abspath);
+  if (path)
+    path = svn_dirent_join(bt->prefix_path, path, scratch_pool);
+  else
+    path = local_abspath;
+
+  printf("entries = {}\n");
+  SVN_ERR(entries_dump(path, bt->adm_access, scratch_pool));
+
+  printf("dirs['%s'] = entries\n", path);
+  return SVN_NO_ERROR;
+
+}
+
+static svn_error_t *
+tree_dump(const char *path,
+          apr_pool_t *scratch_pool)
+{
+  struct directory_walk_baton bt;
+  svn_sqlite__db_t *sdb;
+  svn_wc__db_t *db;
+
+  bt.prefix_path = path;
+
+  /* Obtain an access baton to allow re-using the same wc_db for all access */
+  SVN_ERR(svn_wc_adm_open3(&bt.adm_access, NULL, path, FALSE, 0, NULL, NULL,
+                           scratch_pool));
+
+  db = svn_wc__adm_get_db(bt.adm_access);
+
+  SVN_ERR(svn_wc__context_create_with_db(&bt.wc_ctx, NULL, db, scratch_pool));
+
+  SVN_ERR(svn_dirent_get_absolute(&bt.root_abspath, path, scratch_pool));
+
+  /* And now get us a transaction on the database to avoid obtaining and
+     releasing locks all the time */
+  SVN_ERR(svn_wc__db_temp_borrow_sdb(&sdb, bt.wc_ctx->db, bt.root_abspath,
+                                     scratch_pool));
+
+  SVN_SQLITE__WITH_LOCK(
+      svn_wc__internal_walk_children(db, bt.root_abspath, FALSE,
+                                     NULL, tree_dump_dir, &bt,
+                                     svn_depth_infinity,
+                                     NULL, NULL, scratch_pool),
+      sdb);
+
+  /* And close everything we've opened */
+  SVN_ERR(svn_wc_context_destroy(bt.wc_ctx));
+  SVN_ERR(svn_wc_adm_close2(bt.adm_access, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 int
 main(int argc, const char *argv[])
 {
@@ -263,7 +362,7 @@ main(int argc, const char *argv[])
 
   if (argc < 2 || argc > 4)
     {
-      fprintf(stderr, "USAGE: entries-dump [--entries|--subdirs] DIR_PATH\n");
+      fprintf(stderr, "USAGE: entries-dump [--entries|--subdirs|--tree-dump] DIR_PATH\n");
       exit(1);
     }
 
@@ -285,9 +384,11 @@ main(int argc, const char *argv[])
     cmd = NULL;
 
   if (!cmd || !strcmp(cmd, "--entries"))
-    err = entries_dump(path, pool);
+    err = entries_dump(path, NULL, pool);
   else if (!strcmp(cmd, "--subdirs"))
     err = directory_dump(path, pool);
+  else if (!strcmp(cmd, "--tree-dump"))
+    err = tree_dump(path, pool);
   else
     err = svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                             "Invalid command '%s'",

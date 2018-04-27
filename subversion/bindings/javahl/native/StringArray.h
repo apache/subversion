@@ -47,6 +47,10 @@ class StringArray : Array
   ~StringArray();
   const apr_array_header_t *array(const SVN::Pool &pool);
   const std::vector<std::string> &vector(void) const;
+  bool isNull() const
+  {
+    return Array::isNull();
+  }
 };
 
 #endif // STRINGARRAY_H

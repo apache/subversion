@@ -34,6 +34,39 @@
 
 #include "../svn_test.h"
 
+/* Create memcached cache if configured */
+static svn_error_t *
+create_memcache(svn_memcache_t **memcache,
+                const svn_test_opts_t *opts,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  svn_config_t *config = NULL;
+  if (opts->config_file)
+    {
+      SVN_ERR(svn_config_read3(&config, opts->config_file,
+                               TRUE, FALSE, FALSE, scratch_pool));
+    }
+  else if (opts->memcached_server)
+    {
+      SVN_ERR(svn_config_create2(&config, FALSE, FALSE, scratch_pool));
+
+      svn_config_set(config, SVN_CACHE_CONFIG_CATEGORY_MEMCACHED_SERVERS,
+                     "key" /* some value; ignored*/,
+                     opts->memcached_server);
+    }
+
+  if (config)
+    {
+      SVN_ERR(svn_cache__make_memcache_from_config(memcache, config,
+                                                   result_pool, scratch_pool));
+    }
+  else
+    *memcache = NULL;
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_cache__serialize_func_t */
 static svn_error_t *
 serialize_revnum(void **data,
@@ -147,19 +180,12 @@ test_memcache_basic(const svn_test_opts_t *opts,
                     apr_pool_t *pool)
 {
   svn_cache__t *cache;
-  svn_config_t *config;
   svn_memcache_t *memcache = NULL;
   const char *prefix = apr_psprintf(pool,
                                     "test_memcache_basic-%" APR_TIME_T_FMT,
                                     apr_time_now());
 
-  if (opts->config_file)
-    {
-      SVN_ERR(svn_config_read2(&config, opts->config_file,
-                               TRUE, FALSE, pool));
-      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
-    }
-
+  SVN_ERR(create_memcache(&memcache, opts, pool, pool));
   if (! memcache)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "not configured to use memcached");
@@ -193,19 +219,118 @@ test_membuffer_cache_basic(apr_pool_t *pool)
                                             deserialize_revnum,
                                             APR_HASH_KEY_STRING,
                                             "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
                                             FALSE,
-                                            pool));
+                                            FALSE,
+                                            pool, pool));
 
   return basic_cache_test(cache, FALSE, pool);
 }
 
+/* Implements svn_cache__deserialize_func_t */
+static svn_error_t *
+raise_error_deserialize_func(void **out,
+                             void *data,
+                             apr_size_t data_len,
+                             apr_pool_t *pool)
+{
+  return svn_error_create(APR_EGENERAL, NULL, NULL);
+}
+
+/* Implements svn_cache__partial_getter_func_t */
+static svn_error_t *
+raise_error_partial_getter_func(void **out,
+                                const void *data,
+                                apr_size_t data_len,
+                                void *baton,
+                                apr_pool_t *result_pool)
+{
+  return svn_error_create(APR_EGENERAL, NULL, NULL);
+}
+
+/* Implements svn_cache__partial_setter_func_t */
+static svn_error_t *
+raise_error_partial_setter_func(void **data,
+                                apr_size_t *data_len,
+                                void *baton,
+                                apr_pool_t *result_pool)
+{
+  return svn_error_create(APR_EGENERAL, NULL, NULL);
+}
+
+static svn_error_t *
+test_membuffer_serializer_error_handling(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+  svn_revnum_t twenty = 20;
+  svn_boolean_t found;
+  void *val;
+
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, 0,
+                                            TRUE, TRUE, pool));
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache__create_membuffer_cache(&cache,
+                                            membuffer,
+                                            serialize_revnum,
+                                            raise_error_deserialize_func,
+                                            APR_HASH_KEY_STRING,
+                                            "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE,
+                                            FALSE,
+                                            pool, pool));
+
+  SVN_ERR(svn_cache__set(cache, "twenty", &twenty, pool));
+
+  /* Test retrieving data from cache using full getter that
+     always raises an error. */
+  SVN_TEST_ASSERT_ERROR(
+    svn_cache__get(&val, &found, cache, "twenty", pool),
+    APR_EGENERAL);
+
+  /* Test retrieving data from cache using partial getter that
+     always raises an error. */
+  SVN_TEST_ASSERT_ERROR(
+    svn_cache__get_partial(&val, &found, cache, "twenty",
+                           raise_error_partial_getter_func,
+                           NULL, pool),
+    APR_EGENERAL);
+
+  /* Create a new cache. */
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, 0,
+                                            TRUE, TRUE, pool));
+  SVN_ERR(svn_cache__create_membuffer_cache(&cache,
+                                            membuffer,
+                                            serialize_revnum,
+                                            deserialize_revnum,
+                                            APR_HASH_KEY_STRING,
+                                            "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE,
+                                            FALSE,
+                                            pool, pool));
+
+  /* Store one entry in cache. */
+  SVN_ERR(svn_cache__set(cache, "twenty", &twenty, pool));
+
+  /* Test setting data in cache using partial setter that
+     always raises an error. */
+  SVN_TEST_ASSERT_ERROR(
+    svn_cache__set_partial(cache, "twenty",
+                           raise_error_partial_setter_func,
+                           NULL, pool),
+    APR_EGENERAL);
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 test_memcache_long_key(const svn_test_opts_t *opts,
                        apr_pool_t *pool)
 {
   svn_cache__t *cache;
-  svn_config_t *config;
   svn_memcache_t *memcache = NULL;
   svn_revnum_t fifty = 50, *answer;
   svn_boolean_t found = FALSE;
@@ -221,12 +346,7 @@ test_memcache_long_key(const svn_test_opts_t *opts,
     "0123456789" "0123456789" "0123456789" "0123456789" "0123456789" /* 300 */
     ;
 
-  if (opts->config_file)
-    {
-      SVN_ERR(svn_config_read2(&config, opts->config_file,
-                               TRUE, FALSE, pool));
-      SVN_ERR(svn_cache__make_memcache_from_config(&memcache, config, pool));
-    }
+  SVN_ERR(create_memcache(&memcache, opts, pool, pool));
 
   if (! memcache)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
@@ -255,10 +375,227 @@ test_memcache_long_key(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_membuffer_cache_clearing(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+  svn_boolean_t found;
+  svn_revnum_t *value;
+  svn_revnum_t valueA = 12345;
+  svn_revnum_t valueB = 67890;
+
+  /* Create a simple cache for strings, keyed by strings. */
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, 0,
+                                            TRUE, TRUE, pool));
+  SVN_ERR(svn_cache__create_membuffer_cache(&cache,
+                                            membuffer,
+                                            serialize_revnum,
+                                            deserialize_revnum,
+                                            APR_HASH_KEY_STRING,
+                                            "cache:",
+                                            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY,
+                                            FALSE,
+                                            FALSE,
+                                            pool, pool));
+
+  /* Initially, the cache is empty. */
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key A", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key B", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  /* Add entries. */
+  SVN_ERR(svn_cache__set(cache, "key A", &valueA, pool));
+  SVN_ERR(svn_cache__set(cache, "key B", &valueB, pool));
+
+  /* Added entries should be cached (too small to get evicted already). */
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key A", pool));
+  SVN_TEST_ASSERT(found);
+  SVN_TEST_ASSERT(*value == valueA);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key B", pool));
+  SVN_TEST_ASSERT(found);
+  SVN_TEST_ASSERT(*value == valueB);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  /* Clear the cache. */
+  SVN_ERR(svn_cache__membuffer_clear(membuffer));
+
+  /* The cache is empty again. */
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key A", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key B", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__get((void **) &value, &found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  /* But still functional: */
+  SVN_ERR(svn_cache__set(cache, "key B", &valueB, pool));
+  SVN_ERR(svn_cache__has_key(&found, cache, "key A", pool));
+  SVN_TEST_ASSERT(!found);
+  SVN_ERR(svn_cache__has_key(&found, cache, "key B", pool));
+  SVN_TEST_ASSERT(found);
+  SVN_ERR(svn_cache__has_key(&found, cache, "key C", pool));
+  SVN_TEST_ASSERT(!found);
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_iter_apr_hash_cb_t. */
+static svn_error_t *
+null_cache_iter_func(void *baton,
+                     const void *key,
+                     apr_ssize_t klen,
+                     void *val,
+                     apr_pool_t *pool)
+{
+  /* shall never be called */
+  return svn_error_create(SVN_ERR_TEST_FAILED, NULL, "should not be called");
+}
+
+static svn_error_t *
+test_null_cache(apr_pool_t *pool)
+{
+  svn_boolean_t found, done;
+  int *data = NULL;
+  svn_cache__info_t info;
+
+  svn_cache__t *cache;
+  SVN_ERR(svn_cache__create_null(&cache, "test-dummy", pool));
+
+  /* Can't cache anything. */
+  SVN_TEST_ASSERT(svn_cache__is_cachable(cache, 0) == FALSE);
+  SVN_TEST_ASSERT(svn_cache__is_cachable(cache, 1) == FALSE);
+
+  /* No point in adding data. */
+  SVN_ERR(svn_cache__set(cache, "data", &data, pool));
+  SVN_ERR(svn_cache__get((void **)&data, &found, cache, "data", pool));
+  SVN_TEST_ASSERT(found == FALSE);
+
+  SVN_ERR(svn_cache__has_key(&found, cache, "data", pool));
+  SVN_TEST_ASSERT(found == FALSE);
+
+  /* Iteration "works" but is a no-op. */
+  SVN_ERR(svn_cache__iter(&done, cache, null_cache_iter_func, NULL, pool));
+  SVN_TEST_ASSERT(done);
+
+  /* It shall know its name. */
+  SVN_ERR(svn_cache__get_info(cache, &info, TRUE, pool));
+  SVN_TEST_STRING_ASSERT(info.id, "test-dummy");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_membuffer_unaligned_string_keys(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+  svn_revnum_t fifty = 50;
+  svn_revnum_t *answer;
+  svn_boolean_t found = FALSE;
+
+  /* Allocate explicitly to have aligned string and this add one
+   * to have unaligned string.*/
+  const char *aligned_key = apr_pstrdup(pool, "fifty");
+  const char *unaligned_key = apr_pstrdup(pool, "_fifty") + 1;
+  const char *unaligned_prefix = apr_pstrdup(pool, "_cache:") + 1;
+
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, 0,
+                                            TRUE, TRUE, pool));
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache__create_membuffer_cache(
+            &cache, membuffer, serialize_revnum, deserialize_revnum,
+            APR_HASH_KEY_STRING, unaligned_prefix,
+            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY, FALSE, FALSE,
+            pool, pool));
+
+  SVN_ERR(svn_cache__set(cache, unaligned_key, &fifty, pool));
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, unaligned_key,
+                         pool));
+
+  if (! found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for 'fifty'");
+  if (*answer != 50)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 50 but found '%ld'", *answer);
+
+  /* Make sure that we get proper result when providing aligned key*/
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, aligned_key,
+                         pool));
+
+  if (! found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for 'fifty'");
+  if (*answer != 50)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 50 but found '%ld'", *answer);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_membuffer_unaligned_fixed_keys(apr_pool_t *pool)
+{
+  svn_cache__t *cache;
+  svn_membuffer_t *membuffer;
+  svn_revnum_t fifty = 50;
+  svn_revnum_t *answer;
+  svn_boolean_t found = FALSE;
+
+  /* Allocate explicitly to have aligned string and this add one
+   * to have unaligned key.*/
+  const char *aligned_key = apr_pstrdup(pool, "12345678");
+  const char *unaligned_key = apr_pstrdup(pool, "_12345678") + 1;
+  const char *unaligned_prefix = apr_pstrdup(pool, "_cache:") + 1;
+
+  SVN_ERR(svn_cache__membuffer_cache_create(&membuffer, 10*1024, 1, 0,
+                                            TRUE, TRUE, pool));
+
+  /* Create a cache with just one entry. */
+  SVN_ERR(svn_cache__create_membuffer_cache(
+            &cache, membuffer, serialize_revnum, deserialize_revnum,
+            8 /* klen*/,
+            unaligned_prefix,
+            SVN_CACHE__MEMBUFFER_DEFAULT_PRIORITY, FALSE, FALSE,
+            pool, pool));
+
+  SVN_ERR(svn_cache__set(cache, unaligned_key, &fifty, pool));
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, unaligned_key,
+                         pool));
+
+  if (! found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for '12345678' (unaligned)");
+  if (*answer != 50)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 50 but found '%ld'", *answer);
+
+  /* Make sure that we get proper result when providing aligned key*/
+  SVN_ERR(svn_cache__get((void **) &answer, &found, cache, aligned_key,
+                         pool));
+
+  if (! found)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "cache failed to find entry for '12345678' (aligned)");
+  if (*answer != 50)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "expected 50 but found '%ld'", *answer);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_inprocess_cache_basic,
@@ -269,5 +606,17 @@ struct svn_test_descriptor_t test_funcs[] =
                        "memcache svn_cache with very long keys"),
     SVN_TEST_PASS2(test_membuffer_cache_basic,
                    "basic membuffer svn_cache test"),
+    SVN_TEST_PASS2(test_membuffer_serializer_error_handling,
+                   "test for error handling in membuffer svn_cache"),
+    SVN_TEST_PASS2(test_membuffer_cache_clearing,
+                   "test clearing a membuffer svn_cache"),
+    SVN_TEST_PASS2(test_null_cache,
+                   "basic null svn_cache test"),
+    SVN_TEST_PASS2(test_membuffer_unaligned_string_keys,
+                   "test membuffer cache with unaligned string keys"),
+    SVN_TEST_PASS2(test_membuffer_unaligned_fixed_keys,
+                   "test membuffer cache with unaligned fixed keys"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

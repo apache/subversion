@@ -28,6 +28,7 @@
 
 #define SVN_DEPRECATED
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
@@ -103,7 +104,7 @@ verify_mergeinfo_parse(const char *input,
 
       /* Were we expecting any more ranges? */
       if (j < MAX_NBR_RANGES - 1
-          && !expected_ranges[j].end == 0)
+          && expected_ranges[j].end != 0)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "svn_mergeinfo_parse (%s) failed to "
                                  "produce the expected number of ranges",
@@ -113,11 +114,7 @@ verify_mergeinfo_parse(const char *input,
 }
 
 
-/* Some of our own global variables (for simplicity), which map paths
-   -> merge ranges. */
-static apr_hash_t *info1, *info2;
-
-#define NBR_MERGEINFO_VALS 24
+#define NBR_MERGEINFO_VALS 25
 
 /* Valid mergeinfo values. */
 static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
@@ -151,7 +148,8 @@ static const char * const mergeinfo_vals[NBR_MERGEINFO_VALS] =
     "/A/:7-8",
     "/A///:7-8",
     "/A/.:7-8",
-    "/A/./B:7-8"
+    "/A/./B:7-8",
+    ":7-8",
   };
 /* Paths corresponding to mergeinfo_vals. */
 static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
@@ -184,7 +182,8 @@ static const char * const mergeinfo_paths[NBR_MERGEINFO_VALS] =
     "/A",
     "/A",
     "/A",
-    "/A/B"
+    "/A/B",
+    "/",
   };
 /* First ranges from the paths identified by mergeinfo_paths. */
 static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
@@ -211,6 +210,7 @@ static svn_merge_range_t mergeinfo_ranges[NBR_MERGEINFO_VALS][MAX_NBR_RANGES] =
     { {0, 1, TRUE}, {4, 12, FALSE} },
     { {0, 53, TRUE}, {53, 90, FALSE} },
     { {0, 77, TRUE} },
+    { {6, 8, TRUE} },
     { {6, 8, TRUE} },
     { {6, 8, TRUE} },
     { {6, 8, TRUE} },
@@ -267,6 +267,7 @@ test_parse_combine_rangeinfo(apr_pool_t *pool)
 {
   apr_array_header_t *result;
   svn_merge_range_t *resultrange;
+  apr_hash_t *info1;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, single_mergeinfo, pool));
 
@@ -300,7 +301,7 @@ test_parse_combine_rangeinfo(apr_pool_t *pool)
 }
 
 
-#define NBR_BROKEN_MERGEINFO_VALS 27
+#define NBR_BROKEN_MERGEINFO_VALS 26
 /* Invalid mergeinfo values. */
 static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
   {
@@ -332,8 +333,6 @@ static const char * const broken_mergeinfo_vals[NBR_BROKEN_MERGEINFO_VALS] =
     "/trunk:",
     "/trunk:2-9\n/branch:",
     "::",
-    /* No path */
-    ":1-3",
     /* Invalid revisions */
     "trunk:a-3",
     "branch:3-four",
@@ -345,6 +344,7 @@ test_parse_broken_mergeinfo(apr_pool_t *pool)
 {
   int i;
   svn_error_t *err;
+  apr_hash_t *info1;
 
   /* Trigger some error(s) with mal-formed input. */
   for (i = 0; i < NBR_BROKEN_MERGEINFO_VALS; i++)
@@ -564,6 +564,7 @@ test_mergeinfo_intersect(apr_pool_t *pool)
     { {0, 1, TRUE}, {2, 4, TRUE}, {11, 12, TRUE} };
   svn_rangelist_t *rangelist;
   apr_hash_t *intersection;
+  apr_hash_t *info1, *info2;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, "/trunk: 1-6,12-16\n/foo: 31", pool));
   SVN_ERR(svn_mergeinfo_parse(&info2, "/trunk: 1,3-4,7,9,11-12", pool));
@@ -700,6 +701,7 @@ test_merge_mergeinfo(apr_pool_t *pool)
     {
       int j;
       svn_string_t *info2_starting, *info2_ending;
+      apr_hash_t *info1, *info2;
 
       SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo[i].mergeinfo1, pool));
       SVN_ERR(svn_mergeinfo_parse(&info2, mergeinfo[i].mergeinfo2, pool));
@@ -1108,6 +1110,7 @@ test_rangelist_to_string(apr_pool_t *pool)
   svn_rangelist_t *result;
   svn_string_t *output;
   svn_string_t *expected = svn_string_create("3,5,7-11,13-14", pool);
+  apr_hash_t *info1;
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
 
@@ -1117,7 +1120,7 @@ test_rangelist_to_string(apr_pool_t *pool)
 
   SVN_ERR(svn_rangelist_to_string(&output, result, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Rangelist string not what we expected");
 
   return SVN_NO_ERROR;
@@ -1128,13 +1131,14 @@ test_mergeinfo_to_string(apr_pool_t *pool)
 {
   svn_string_t *output;
   svn_string_t *expected;
+  apr_hash_t *info1, *info2;
   expected = svn_string_create("/fred:8-10\n/trunk:3,5,7-11,13-14", pool);
 
   SVN_ERR(svn_mergeinfo_parse(&info1, mergeinfo1, pool));
 
   SVN_ERR(svn_mergeinfo_to_string(&output, info1, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Mergeinfo string not what we expected");
 
   /* Manually construct some mergeinfo with relative path
@@ -1150,7 +1154,7 @@ test_mergeinfo_to_string(apr_pool_t *pool)
                apr_hash_get(info1, "/trunk", APR_HASH_KEY_STRING));
   SVN_ERR(svn_mergeinfo_to_string(&output, info2, pool));
 
-  if (svn_string_compare(expected, output) != TRUE)
+  if (!svn_string_compare(expected, output))
     return fail(pool, "Mergeinfo string not what we expected");
 
   return SVN_NO_ERROR;
@@ -1666,10 +1670,125 @@ test_remove_prefix_from_catalog(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_rangelist_merge_overlap(apr_pool_t *pool)
+{
+  const char *rangelist_str = "19473-19612*,19615-19630*,19631-19634";
+  const char *changes_str = "15014-20515*";
+  const char *expected_str = "15014-19630*,19631-19634,19635-20515*";
+  /* wrong result: "15014-19630*,19634-19631*,19631-19634,19635-20515*" */
+  svn_rangelist_t *rangelist, *changes;
+  svn_string_t *result_string;
+
+  /* prepare the inputs */
+  SVN_ERR(svn_rangelist__parse(&rangelist, rangelist_str, pool));
+  SVN_ERR(svn_rangelist__parse(&changes, changes_str, pool));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(changes));
+
+  /* perform the merge */
+  SVN_ERR(svn_rangelist_merge2(rangelist, changes, pool, pool));
+
+  /* check the output */
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_ERR(svn_rangelist_to_string(&result_string, rangelist, pool));
+  SVN_TEST_STRING_ASSERT(result_string->data, expected_str);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_loop(apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int x, y;
+
+  for (x = 0; x < 62; x++)
+    for (y = x + 1; y < 63; y++)
+      {
+        svn_rangelist_t *base_list;
+        svn_rangelist_t *change_list;
+        svn_merge_range_t *mrange;
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(svn_rangelist__parse(&base_list,
+                                     "2,4,7-9,12-15,18-20,"
+                                     "22*,25*,28-30*,33-35*,"
+                                     "38-40,43-45*,48-50,52-54,56-59*",
+                                     iterpool));
+
+        change_list = apr_array_make(iterpool, 1, sizeof(mrange));
+
+        mrange = apr_pcalloc(pool, sizeof(*mrange));
+        mrange->start = x;
+        mrange->end = y;
+        APR_ARRAY_PUSH(change_list, svn_merge_range_t *) = mrange;
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          SVN_ERR(svn_rangelist_merge2(bl, cl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_ERR(svn_rangelist_merge2(cl, bl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+
+        mrange->inheritable = TRUE;
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          SVN_ERR(svn_rangelist_merge2(bl, cl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+
+        {
+          svn_rangelist_t *bl = svn_rangelist_dup(base_list, iterpool);
+          svn_rangelist_t *cl = svn_rangelist_dup(change_list, iterpool);
+
+          SVN_ERR(svn_rangelist_merge2(cl, bl, iterpool, iterpool));
+
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(bl));
+          SVN_TEST_ASSERT(svn_rangelist__is_canonical(cl));
+
+          /* TODO: Verify result */
+        }
+      }
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 4;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_parse_single_line_mergeinfo,
@@ -1708,5 +1827,11 @@ struct svn_test_descriptor_t test_funcs[] =
                    "diff of rangelists"),
     SVN_TEST_PASS2(test_remove_prefix_from_catalog,
                    "removal of prefix paths from catalog keys"),
+    SVN_TEST_PASS2(test_rangelist_merge_overlap,
+                   "merge of rangelists with overlaps (issue 4686)"),
+    SVN_TEST_PASS2(test_rangelist_loop,
+                    "test rangelist edgecases via loop"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

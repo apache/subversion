@@ -35,6 +35,8 @@
 #include "InputStream.h"
 #include "MessageReceiver.h"
 #include "ReposNotifyCallback.h"
+#include "ReposVerifyCallback.h"
+#include "ReposFreezeAction.h"
 #include "StringArray.h"
 #include "File.h"
 
@@ -44,21 +46,28 @@ class SVNRepos : public SVNBase
   void rmlocks(File &path, StringArray &locks);
   jobject lslocks(File &path, svn_depth_t depth);
   void verify(File &path, Revision &revisionStart, Revision &revisionEnd,
-              ReposNotifyCallback *notifyCallback);
+              bool checkNormalization, bool metadataOnly,
+              ReposNotifyCallback *notifyCallback,
+              ReposVerifyCallback *verifyCallback);
   void setRevProp(File &path, Revision &revision,
                   const char *propName, const char *propValue,
                   bool usePreRevPropChangeHook,
                   bool usePostRevPropChangeHook);
   void rmtxns(File &path, StringArray &transactions);
   jlong recover(File &path, ReposNotifyCallback *notifyCallback);
+  void freeze(jobjectArray jpaths, ReposFreezeAction* action);
   void lstxns(File &path, MessageReceiver &messageReceiver);
-  void load(File &path, InputStream &dataIn, bool ignoreUUID, bool forceUUID,
+  void load(File &path, InputStream &dataIn,
+            Revision &revsionStart, Revision &revisionEnd,
+            bool ignoreUUID, bool forceUUID,
             bool usePreCommitHook, bool usePostCommitHook,
+            bool validateProps, bool ignoreDates, bool normalizeProps,
             const char *relativePath, ReposNotifyCallback *notifyCallback);
   void listUnusedDBLogs(File &path,
                         MessageReceiver &messageReceiver);
   void listDBLogs(File &path, MessageReceiver &messageReceiver);
-  void hotcopy(File &path, File &targetPath, bool cleanLogs, bool incremental);
+  void hotcopy(File &path, File &targetPath, bool cleanLogs, bool incremental,
+               ReposNotifyCallback *notifyCallback);
   void dump(File &path, OutputStream &dataOut, Revision &revsionStart,
             Revision &RevisionEnd, bool incremental, bool useDeltas,
             ReposNotifyCallback *notifyCallback);

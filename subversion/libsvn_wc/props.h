@@ -98,7 +98,13 @@ svn_wc__canonicalize_props(apr_hash_t **prepared_props,
    CONFLICT_SKEL itself must not be NULL.)
 
    If STATE is non-null, set *STATE to the state of the local properties
-   after the merge.  */
+   after the merge, one of:
+
+     svn_wc_notify_state_unchanged
+     svn_wc_notify_state_changed
+     svn_wc_notify_state_merged
+     svn_wc_notify_state_conflicted
+ */
 svn_error_t *
 svn_wc__merge_props(svn_skel_t **conflict_skel,
                     svn_wc_notify_state_t *state,
@@ -133,11 +139,17 @@ svn_wc__get_actual_props(apr_hash_t **props,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Creates a property reject file at *TMP_PREJFILE_ABSPATH, with
+   either the property conflict data from DB (when PROP_CONFLICT_DATA
+   is NULL) or the information in PROP_CONFLICT_DATA if it isn't.
+ */
 svn_error_t *
 svn_wc__create_prejfile(const char **tmp_prejfile_abspath,
                         svn_wc__db_t *db,
                         const char *local_abspath,
-                        const svn_skel_t *conflict_skel,
+                        const svn_skel_t *prop_conflict_data,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 

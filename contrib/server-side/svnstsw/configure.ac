@@ -98,7 +98,7 @@ fi
 # even in VPATH builds.  Unfortunately, autoconf doesn't define a
 # shell variable containing the absolute path to the top source
 # directory (at least it's not documented), so we can't use that here.
-# However, it does have a preset *ouput* variable.  The following
+# However, it does have a preset *output* variable.  The following
 # causes a literal '-I${top_srcdir}/include' to appear in the
 # definition of the CONFIGURECPPFLAGS variable.  The '${top_srcdir}'
 # is then substituted by make.  Unfortunately, this is somewhat

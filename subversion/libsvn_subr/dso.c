@@ -19,14 +19,16 @@
  * ====================================================================
  */
 
-#include <apr_thread_mutex.h>
 #include <apr_hash.h>
 
+#include "svn_hash.h"
 #include "svn_dso.h"
 #include "svn_pools.h"
 #include "svn_private_config.h"
 
 #include "private/svn_mutex.h"
+#include "private/svn_atomic.h"
+#include "private/svn_subr_private.h"
 
 /* A mutex to protect our global pool and cache. */
 static svn_mutex__t *dso_mutex = NULL;
@@ -40,18 +42,18 @@ static apr_hash_t *dso_cache;
 /* Just an arbitrary location in memory... */
 static int not_there_sentinel;
 
+static volatile svn_atomic_t atomic_init_status = 0;
+
 /* A specific value we store in the dso_cache to indicate that the
    library wasn't found.  This keeps us from allocating extra memory
    from dso_pool when trying to find libraries we already know aren't
    there.  */
 #define NOT_THERE ((void *) &not_there_sentinel)
 
-svn_error_t *
-svn_dso_initialize2(void)
+static svn_error_t *
+atomic_init_func(void *baton,
+                 apr_pool_t *pool)
 {
-  if (dso_pool)
-    return SVN_NO_ERROR;
-
   dso_pool = svn_pool_create(NULL);
 
   SVN_ERR(svn_mutex__init(&dso_mutex, TRUE, dso_pool));
@@ -60,11 +62,20 @@ svn_dso_initialize2(void)
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_dso_initialize2(void)
+{
+  SVN_ERR(svn_atomic__init_once(&atomic_init_status, atomic_init_func,
+                                NULL, NULL));
+
+  return SVN_NO_ERROR;
+}
+
 #if APR_HAS_DSO
 static svn_error_t *
 svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
 {
-  *dso = apr_hash_get(dso_cache, fname, APR_HASH_KEY_STRING);
+  *dso = svn_hash_gets(dso_cache, fname);
 
   /* First check to see if we've been through this before...  We do this
      to avoid calling apr_dso_load multiple times for a given library,
@@ -91,19 +102,13 @@ svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
           *dso = NULL;
 
           /* It wasn't found, so set the special "we didn't find it" value. */
-          apr_hash_set(dso_cache,
-                       apr_pstrdup(dso_pool, fname),
-                       APR_HASH_KEY_STRING,
-                       NOT_THERE);
+          svn_hash_sets(dso_cache, apr_pstrdup(dso_pool, fname), NOT_THERE);
 
           return SVN_NO_ERROR;
         }
 
       /* Stash the dso so we can use it next time. */
-      apr_hash_set(dso_cache,
-                   apr_pstrdup(dso_pool, fname),
-                   APR_HASH_KEY_STRING,
-                   *dso);
+      svn_hash_sets(dso_cache, apr_pstrdup(dso_pool, fname), *dso);
     }
 
   return SVN_NO_ERROR;
@@ -112,11 +117,17 @@ svn_dso_load_internal(apr_dso_handle_t **dso, const char *fname)
 svn_error_t *
 svn_dso_load(apr_dso_handle_t **dso, const char *fname)
 {
-  if (! dso_pool)
-    SVN_ERR(svn_dso_initialize2());
+  SVN_ERR(svn_dso_initialize2());
 
   SVN_MUTEX__WITH_LOCK(dso_mutex, svn_dso_load_internal(dso, fname));
 
   return SVN_NO_ERROR;
 }
+
+apr_pool_t *
+svn_dso__pool(void)
+{
+  return dso_pool;
+}
+
 #endif /* APR_HAS_DSO */

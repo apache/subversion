@@ -78,7 +78,7 @@
  <!-- whether entries should be grouped by day -->
  <xsl:param name="groupbyday" select="'no'" />
 
- <!-- whether to seperate log messages by empty lines -->
+ <!-- whether to separate log messages by empty lines -->
  <xsl:param name="separate-daylogs" select="'no'" />
 
  <!-- whether a revision number should be included -->

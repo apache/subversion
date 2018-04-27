@@ -25,343 +25,56 @@
  */
 
 #include "Prompter.h"
-#include "Pool.h"
+#include "AuthnCallback.hpp"
+
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "../include/org_apache_subversion_javahl_callback_UserPasswordCallback.h"
+
 #include <apr_strings.h>
-#include "svn_auth.h"
 #include "svn_error.h"
 #include "svn_error_codes.h"
 #include "svn_private_config.h"
 
-/**
- * Constructor
- * @param jprompter     a global reference to the Java callback object
- */
-Prompter::Prompter(jobject jprompter)
-{
-  m_prompter = jprompter;
-}
 
-Prompter::~Prompter()
+#include "jniwrapper/jni_stack.hpp"
+#include "jniwrapper/jni_string.hpp"
+
+// Class Prompter
+
+Prompter::UniquePtr Prompter::create(jobject jprompter)
 {
-  if (m_prompter!= NULL)
+  if (!jprompter)
+    return UniquePtr(NULL);
+
+  // Make sure no C++ exceptions are propagated from here.
+  const ::Java::Env jenv;
+  try
     {
-      // Since the reference to the Java object is a global one, it
-      // has to be deleted.
-      JNIEnv *env = JNIUtil::getEnv();
-      env->DeleteGlobalRef(m_prompter);
+      const jclass cls = ::Java::ClassCache::get_authn_cb(jenv)->get_class();
+      if (!jenv.IsInstanceOf(jprompter, cls))
+        return UniquePtr(NULL);
+
+      return UniquePtr(new Prompter(jenv, jprompter));
     }
+  SVN_JAVAHL_JNI_CATCH;
+  return UniquePtr(NULL);
 }
 
-/**
- * Create a C++ peer object for the Java callback object
- *
- * @param jprompter     Java callback object
- * @return              C++ peer object
- */
-Prompter *Prompter::makeCPrompter(jobject jprompter)
+Prompter::UniquePtr Prompter::clone() const
 {
-  // If we have no Java object, we need no C++ object.
-  if (jprompter == NULL)
-    return NULL;
-
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  // Sanity check that the Java object implements UserPasswordCallback.
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  if (!env->IsInstanceOf(jprompter, clazz))
-    POP_AND_RETURN_NULL;
-
-  // Create a new global ref for the Java object, because it is
-  // longer used that this call.
-  jobject myPrompt = env->NewGlobalRef(jprompter);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  env->PopLocalFrame(NULL);
-
-  // Create the C++ peer.
-  return new Prompter(myPrompt);
+  return create(m_prompter.get());
 }
 
-/**
- * Retrieve the username from the Java object
- * @return Java string for the username or NULL
- */
-jstring Prompter::username()
-{
-  JNIEnv *env = JNIUtil::getEnv();
+Prompter::Prompter(::Java::Env env, jobject jprompter)
+  : m_prompter(env, jprompter)
+{}
 
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
+Prompter::~Prompter() {}
 
-  // The method id will not change during the time this library is
-  // loaded, so it can be cached.
-  static jmethodID mid = 0;
 
-  if (mid == 0)
-    {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      mid = env->GetMethodID(clazz, "getUsername", "()Ljava/lang/String;");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN_NULL;
-    }
-
-  jstring ret = static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  return (jstring) env->PopLocalFrame(ret);
-}
-
-/**
- * Retrieve the password from the Java object
- * @return Java string for the password or NULL
- */
-jstring Prompter::password()
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  // The method id will not change during the time this library is
-  // loaded, so it can be cached.
-  static jmethodID mid = 0;
-
-  if (mid == 0)
-    {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      mid = env->GetMethodID(clazz, "getPassword", "()Ljava/lang/String;");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN_NULL;
-    }
-
-  jstring ret = static_cast<jstring>(env->CallObjectMethod(m_prompter, mid));
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  return (jstring) env->PopLocalFrame(ret);
-}
-/**
- * Ask the user a question, which can be answered by yes/no.
- * @param realm         the server realm, for which this question is asked
- * @param question      the question to ask the user
- * @param yesIsDefault  flag if the yes-button should be the default button
- * @return flag who the user answered the question
- */
-bool Prompter::askYesNo(const char *realm, const char *question,
-                        bool yesIsDefault)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return false;
-
-  // The method id will not change during the time this library is
-  // loaded, so it can be cached.
-  static jmethodID mid = 0;
-
-  if (mid == 0)
-    {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(false);
-
-      mid = env->GetMethodID(clazz, "askYesNo",
-                             "(Ljava/lang/String;Ljava/lang/String;Z)Z");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN(false);
-    }
-
-  // convert the texts to Java strings
-  jstring jrealm = JNIUtil::makeJString(realm);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(false);
-
-  jstring jquestion = JNIUtil::makeJString(question);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(false);
-
-  // execute the callback
-  jboolean ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jquestion,
-                                        yesIsDefault ? JNI_TRUE : JNI_FALSE);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(false);
-
-  env->PopLocalFrame(NULL);
-  return ret ? true:false;
-}
-
-const char *Prompter::askQuestion(const char *realm, const char *question,
-                                  bool showAnswer, bool maySave)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  static jmethodID mid = 0;
-  static jmethodID mid2 = 0;
-  if (mid == 0)
-    {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      mid = env->GetMethodID(clazz, "askQuestion",
-                             "(Ljava/lang/String;Ljava/lang/String;"
-                             "ZZ)Ljava/lang/String;");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN_NULL;
-
-      mid2 = env->GetMethodID(clazz, "userAllowedSave", "()Z");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN_NULL;
-    }
-
-  jstring jrealm = JNIUtil::makeJString(realm);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring jquestion = JNIUtil::makeJString(question);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  jstring janswer = static_cast<jstring>(
-                       env->CallObjectMethod(m_prompter, mid, jrealm,
-                                    jquestion,
-                                    showAnswer ? JNI_TRUE : JNI_FALSE,
-                                    maySave ? JNI_TRUE : JNI_FALSE));
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  JNIStringHolder answer(janswer);
-  if (answer != NULL)
-    {
-      m_answer = answer;
-      m_maySave = env->CallBooleanMethod(m_prompter, mid2) ? true: false;
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-  else
-    {
-      m_answer = "";
-      m_maySave = false;
-    }
-
-  env->PopLocalFrame(NULL);
-  return m_answer.c_str();
-}
-
-int Prompter::askTrust(const char *question, bool maySave)
-{
-   static jmethodID mid = 0;
-   JNIEnv *env = JNIUtil::getEnv();
-
-   // Create a local frame for our references
-   env->PushLocalFrame(LOCAL_FRAME_SIZE);
-   if (JNIUtil::isJavaExceptionThrown())
-     return -1;
-
-   if (mid == 0)
-     {
-       jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
-       if (JNIUtil::isJavaExceptionThrown())
-         POP_AND_RETURN(-1);
-
-       mid = env->GetMethodID(clazz, "askTrustSSLServer",
-                              "(Ljava/lang/String;Z)I");
-       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-         POP_AND_RETURN(-1);
-     }
-   jstring jquestion = JNIUtil::makeJString(question);
-   if (JNIUtil::isJavaExceptionThrown())
-     POP_AND_RETURN(-1);
-
-   jint ret = env->CallIntMethod(m_prompter, mid, jquestion,
-                                 maySave ? JNI_TRUE : JNI_FALSE);
-   if (JNIUtil::isJavaExceptionThrown())
-     POP_AND_RETURN(-1);
-
-   env->PopLocalFrame(NULL);
-   return ret;
-}
-
-bool Prompter::prompt(const char *realm, const char *pi_username, bool maySave)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-  jboolean ret;
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return false;
-
-  static jmethodID mid = 0;
-  static jmethodID mid2 = 0;
-  if (mid == 0)
-    {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/UserPasswordCallback");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(false);
-
-      mid = env->GetMethodID(clazz, "prompt",
-                             "(Ljava/lang/String;Ljava/lang/String;Z)Z");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN(false);
-
-      mid2 = env->GetMethodID(clazz, "userAllowedSave", "()Z");
-      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
-        POP_AND_RETURN(false);
-    }
-
-  jstring jrealm = JNIUtil::makeJString(realm);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(false);
-
-  jstring jusername = JNIUtil::makeJString(pi_username);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(false);
-
-  ret = env->CallBooleanMethod(m_prompter, mid, jrealm, jusername,
-                               maySave ? JNI_TRUE: JNI_FALSE);
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(false);
-
-  m_maySave = env->CallBooleanMethod(m_prompter, mid2) ? true : false;
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(false);
-
-  env->PopLocalFrame(NULL);
-  return ret ? true:false;
-}
-
-svn_auth_provider_object_t *Prompter::getProviderSimple(SVN::Pool &in_pool)
+svn_auth_provider_object_t *
+Prompter::get_provider_simple(SVN::Pool &in_pool)
 {
   apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
@@ -374,7 +87,8 @@ svn_auth_provider_object_t *Prompter::getProviderSimple(SVN::Pool &in_pool)
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderUsername(SVN::Pool &in_pool)
+svn_auth_provider_object_t *
+Prompter::get_provider_username(SVN::Pool &in_pool)
 {
   apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
@@ -387,7 +101,8 @@ svn_auth_provider_object_t *Prompter::getProviderUsername(SVN::Pool &in_pool)
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust(SVN::Pool &in_pool)
+svn_auth_provider_object_t *Prompter::
+get_provider_server_ssl_trust(SVN::Pool &in_pool)
 {
   apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
@@ -397,7 +112,8 @@ svn_auth_provider_object_t *Prompter::getProviderServerSSLTrust(SVN::Pool &in_po
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderClientSSL(SVN::Pool &in_pool)
+svn_auth_provider_object_t *Prompter::
+get_provider_client_ssl(SVN::Pool &in_pool)
 {
   apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
@@ -410,7 +126,8 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSL(SVN::Pool &in_pool)
   return provider;
 }
 
-svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword(SVN::Pool &in_pool)
+svn_auth_provider_object_t *
+Prompter::get_provider_client_ssl_password(SVN::Pool &in_pool)
 {
   apr_pool_t *pool = in_pool.getPool();
   svn_auth_provider_object_t *provider;
@@ -421,72 +138,418 @@ svn_auth_provider_object_t *Prompter::getProviderClientSSLPassword(SVN::Pool &in
   return provider;
 }
 
-svn_error_t *Prompter::simple_prompt(svn_auth_cred_simple_t **cred_p,
-                                     void *baton,
-                                     const char *realm, const char *username,
-                                     svn_boolean_t may_save,
-                                     apr_pool_t *pool)
+svn_error_t *Prompter::simple_prompt(
+    svn_auth_cred_simple_t **cred_p,
+    void *baton,
+    const char *realm,
+    const char *username,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
 {
-  Prompter *that = static_cast<Prompter *>(baton);
-  svn_auth_cred_simple_t *ret =
-    reinterpret_cast<svn_auth_cred_simple_t*>(apr_pcalloc(pool, sizeof(*ret)));
-  if (!that->prompt(realm, username, may_save ? true : false))
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_simple_prompt(
+          env, cred_p, realm, username, may_save, pool));
+  return err;
+}
+
+svn_error_t *Prompter::username_prompt(
+    svn_auth_cred_username_t **cred_p,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_username_prompt(
+          env, cred_p, realm, may_save, pool));
+  return err;
+}
+
+svn_error_t *Prompter::ssl_server_trust_prompt(
+    svn_auth_cred_ssl_server_trust_t **cred_p,
+    void *baton,
+    const char *realm,
+    apr_uint32_t failures,
+    const svn_auth_ssl_server_cert_info_t *cert_info,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_ssl_server_trust_prompt(
+          env, cred_p, realm, failures, cert_info, may_save, pool));
+  return err;
+}
+
+svn_error_t *Prompter::ssl_client_cert_prompt(
+    svn_auth_cred_ssl_client_cert_t **cred_p,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_ssl_client_cert_prompt(
+          env, cred_p, realm, may_save, pool));
+  return err;
+}
+
+svn_error_t *Prompter::ssl_client_cert_pw_prompt(
+    svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_ssl_client_cert_pw_prompt(
+          env, cred_p, realm, may_save, pool));
+  return err;
+}
+
+svn_error_t *Prompter::plaintext_prompt(
+    svn_boolean_t *may_save_plaintext,
+    const char *realmstring,
+    void *baton,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_plaintext_prompt(
+          env, may_save_plaintext, realmstring, pool));
+  return err;
+}
+
+svn_error_t *Prompter::plaintext_passphrase_prompt(
+    svn_boolean_t *may_save_plaintext,
+    const char *realmstring,
+    void *baton,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_plaintext_passphrase_prompt(
+          env, may_save_plaintext, realmstring, pool));
+  return err;
+}
+
+
+svn_error_t *Prompter::dispatch_simple_prompt(
+    ::Java::Env env,
+    svn_auth_cred_simple_t **cred_p,
+    const char *realm,
+    const char *username,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+
+  ::JavaHL::AuthnCallback::AuthnResult result(
+      env,
+      authn.user_password_prompt(::Java::String(env, realm),
+                                 ::Java::String(env, username),
+                                 may_save));
+  if (!result.get())
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("User canceled dialog"));
-  jstring juser = that->username();
-  JNIStringHolder user(juser);
-  if (user == NULL)
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            _("User canceled dialog"));
-  ret->username = apr_pstrdup(pool,user);
-  jstring jpass = that->password();
-  JNIStringHolder pass(jpass);
-  if (pass == NULL)
-    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
-                            _("User canceled dialog"));
-  else
-    {
-      ret->password  = apr_pstrdup(pool, pass);
-      ret->may_save = that->m_maySave;
-    }
-  *cred_p = ret;
+
+  ::Java::String user(env, result.identity());
+  ::Java::String pass(env, result.secret());
+  svn_auth_cred_simple_t *cred =
+    static_cast<svn_auth_cred_simple_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->username = user.strdup(pool);
+  cred->password  = pass.strdup(pool);
+  cred->may_save = result.save();
+  *cred_p = cred;
 
   return SVN_NO_ERROR;
 }
 
-svn_error_t *Prompter::username_prompt(svn_auth_cred_username_t **cred_p,
-                                       void *baton,
-                                       const char *realm,
-                                       svn_boolean_t may_save,
-                                       apr_pool_t *pool)
+svn_error_t *Prompter::dispatch_username_prompt(
+    ::Java::Env env,
+    svn_auth_cred_username_t **cred_p,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
 {
-  Prompter *that = static_cast<Prompter *>(baton);
-  svn_auth_cred_username_t *ret =
-    reinterpret_cast<svn_auth_cred_username_t*>(apr_pcalloc(pool, sizeof(*ret)));
-  const char *user = that->askQuestion(realm, _("Username: "), true,
-                                       may_save ? true : false);
-  if (user == NULL)
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+
+  ::JavaHL::AuthnCallback::AuthnResult result(
+      env,
+      authn.username_prompt(::Java::String(env, realm), may_save));
+  if (!result.get())
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("User canceled dialog"));
-  ret->username = apr_pstrdup(pool,user);
-  ret->may_save = that->m_maySave;
-  *cred_p = ret;
+
+  ::Java::String user(env, result.identity());
+  svn_auth_cred_username_t *cred =
+    static_cast<svn_auth_cred_username_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->username = user.strdup(pool);
+  cred->may_save = result.save();
+  *cred_p = cred;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *Prompter::dispatch_ssl_server_trust_prompt(
+    ::Java::Env env,
+    svn_auth_cred_ssl_server_trust_t **cred_p,
+    const char *realm,
+    apr_uint32_t failures,
+    const svn_auth_ssl_server_cert_info_t *cert_info,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+
+  ::JavaHL::AuthnCallback::AuthnResult result(
+      env,
+      authn.ssl_server_trust_prompt(
+          ::Java::String(env, realm),
+          ::JavaHL::AuthnCallback::SSLServerCertFailures(env, jint(failures)),
+          ::JavaHL::AuthnCallback::SSLServerCertInfo(env, cert_info->ascii_cert),
+          may_save));
+  if (!result.get())
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            _("User canceled dialog"));
+
+  const bool trust = result.trust();
+  if (!trust)
+    {
+      *cred_p = NULL;
+      return SVN_NO_ERROR;
+    }
+
+  const bool save = result.save();
+  svn_auth_cred_ssl_server_trust_t *cred =
+    static_cast<svn_auth_cred_ssl_server_trust_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->may_save = save;
+  cred->accepted_failures = failures;
+  *cred_p = cred;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *Prompter::dispatch_ssl_client_cert_prompt(
+    ::Java::Env env,
+    svn_auth_cred_ssl_client_cert_t **cred_p,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+
+  ::JavaHL::AuthnCallback::AuthnResult result(
+      env,
+      authn.ssl_client_cert_prompt(::Java::String(env, realm), may_save));
+  if (!result.get())
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            _("User canceled dialog"));
+
+  ::Java::String path(env, result.identity());
+  svn_auth_cred_ssl_client_cert_t *cred =
+    static_cast<svn_auth_cred_ssl_client_cert_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->cert_file = path.strdup(pool);
+  cred->may_save = result.save();
+  *cred_p = cred;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *Prompter::dispatch_ssl_client_cert_pw_prompt(
+    ::Java::Env env,
+    svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+
+  ::JavaHL::AuthnCallback::AuthnResult result(
+      env,
+      authn.ssl_client_cert_passphrase_prompt(
+          ::Java::String(env, realm), may_save));
+  if (!result.get())
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            _("User canceled dialog"));
+
+  ::Java::String passphrase(env, result.secret());
+  svn_auth_cred_ssl_client_cert_pw_t *cred =
+    static_cast<svn_auth_cred_ssl_client_cert_pw_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->password = passphrase.strdup(pool);
+  cred->may_save = result.save();
+  *cred_p = cred;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *Prompter::dispatch_plaintext_prompt(
+    ::Java::Env env,
+    svn_boolean_t *may_save_plaintext,
+    const char *realmstring,
+    apr_pool_t *pool)
+{
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+  *may_save_plaintext =
+    authn.allow_store_plaintext_password(::Java::String(env, realmstring));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *Prompter::dispatch_plaintext_passphrase_prompt(
+    ::Java::Env env,
+    svn_boolean_t *may_save_plaintext,
+    const char *realmstring,
+    apr_pool_t *pool)
+{
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+  *may_save_plaintext =
+    authn.allow_store_plaintext_passphrase(::Java::String(env, realmstring));
+  return SVN_NO_ERROR;
+}
+
+
+// Class CompatPrompter
+
+Prompter::UniquePtr CompatPrompter::create(jobject jprompter)
+{
+  if (!jprompter)
+    return UniquePtr(NULL);
+
+  // Make sure no C++ exceptions are propagated from here.
+  const ::Java::Env jenv;
+  try
+    {
+      const jclass cls =
+        ::Java::ClassCache::get_user_passwd_cb(jenv)->get_class();
+      if (!jenv.IsInstanceOf(jprompter, cls))
+        return UniquePtr(NULL);
+
+      return UniquePtr(new CompatPrompter(jenv, jprompter));
+    }
+  SVN_JAVAHL_JNI_CATCH;
+  return UniquePtr(NULL);
+}
+
+Prompter::UniquePtr CompatPrompter::clone() const
+{
+  return create(m_prompter.get());
+}
+
+CompatPrompter::CompatPrompter(::Java::Env env, jobject jprompter)
+  : Prompter(env, jprompter)
+{}
+
+CompatPrompter::~CompatPrompter() {}
+
+namespace {
+jstring compat_ask_question(
+    bool& allowed_save,
+    ::Java::Env env,
+    ::JavaHL::UserPasswordCallback& authn,
+    const char *realm, const char *question,
+    bool show_answer, bool may_save)
+{
+  const jstring janswer =
+    authn.ask_question(::Java::String(env, realm),
+                       ::Java::String(env, question),
+                       show_answer, may_save);
+
+  if (janswer)
+    allowed_save = authn.user_allowed_save();
+  else
+    allowed_save = false;
+
+  return janswer;
+}
+} // anonymous namespace
+
+svn_error_t *CompatPrompter::dispatch_simple_prompt(
+    ::Java::Env env,
+    svn_auth_cred_simple_t **cred_p,
+    const char *realm, const char *username,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  ::JavaHL::UserPasswordCallback authn(env, m_prompter.get());
+
+  if (!authn.prompt(::Java::String(env, realm),
+                    ::Java::String(env, username),
+                    may_save))
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            _("User canceled dialog"));
+  const ::Java::String user(env, authn.get_username());
+  const ::Java::String pass(env, authn.get_password());
+
+  if (!user.get() || !pass.get())
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            _("User canceled dialog"));
+
+  svn_auth_cred_simple_t *cred =
+    static_cast<svn_auth_cred_simple_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->username = user.strdup(pool);
+  cred->password  = pass.strdup(pool);
+  cred->may_save = authn.user_allowed_save();
+  *cred_p = cred;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *CompatPrompter::dispatch_username_prompt(
+    ::Java::Env env,
+    svn_auth_cred_username_t **cred_p,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  ::JavaHL::UserPasswordCallback authn(env, m_prompter.get());
+
+  bool allowed_save;
+  const ::Java::String user(
+      env,
+      compat_ask_question(allowed_save, env, authn,
+                          realm, _("Username: "), true, may_save));
+  if (!user.get())
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            _("User canceled dialog"));
+
+  svn_auth_cred_username_t *cred =
+    static_cast<svn_auth_cred_username_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->username = user.strdup(pool);
+  cred->may_save = allowed_save;
+  *cred_p = cred;
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
-                                  void *baton,
-                                  const char *realm,
-                                  apr_uint32_t failures,
-                                  const svn_auth_ssl_server_cert_info_t *cert_info,
-                                  svn_boolean_t may_save,
-                                  apr_pool_t *pool)
+CompatPrompter::dispatch_ssl_server_trust_prompt(
+    ::Java::Env env,
+    svn_auth_cred_ssl_server_trust_t **cred_p,
+    const char *realm,
+    apr_uint32_t failures,
+    const svn_auth_ssl_server_cert_info_t *cert_info,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
 {
-  Prompter *that = static_cast<Prompter *>(baton);
-  svn_auth_cred_ssl_server_trust_t *ret =
-    reinterpret_cast<svn_auth_cred_ssl_server_trust_t*>(apr_pcalloc(pool, sizeof(*ret)));
+  ::JavaHL::UserPasswordCallback authn(env, m_prompter.get());
 
   std::string question = _("Error validating server certificate for ");
   question += realm;
@@ -526,16 +589,20 @@ Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
       question += "\n";
     }
 
-  switch(that->askTrust(question.c_str(), may_save ? true : false))
+  svn_auth_cred_ssl_server_trust_t *cred =
+    static_cast<svn_auth_cred_ssl_server_trust_t*>(apr_pcalloc(pool, sizeof(*cred)));
+
+  switch (authn.ask_trust_ssl_server(::Java::String(env, question), may_save))
     {
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptTemporary:
-      *cred_p = ret;
-      ret->may_save = FALSE;
+      cred->may_save = FALSE;
+      cred->accepted_failures = failures;
+      *cred_p = cred;
       break;
     case org_apache_subversion_javahl_callback_UserPasswordCallback_AcceptPermanently:
-      *cred_p = ret;
-      ret->may_save = TRUE;
-      ret->accepted_failures = failures;
+      cred->may_save = TRUE;
+      cred->accepted_failures = failures;
+      *cred_p = cred;
       break;
     default:
       *cred_p = NULL;
@@ -544,79 +611,91 @@ Prompter::ssl_server_trust_prompt(svn_auth_cred_ssl_server_trust_t **cred_p,
 }
 
 svn_error_t *
-Prompter::ssl_client_cert_prompt(svn_auth_cred_ssl_client_cert_t **cred_p,
-                                 void *baton,
-                                 const char *realm,
-                                 svn_boolean_t may_save,
-                                 apr_pool_t *pool)
+CompatPrompter::dispatch_ssl_client_cert_prompt(
+    ::Java::Env env,
+    svn_auth_cred_ssl_client_cert_t **cred_p,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
 {
-  Prompter *that = static_cast<Prompter *>(baton);
-  svn_auth_cred_ssl_client_cert_t *ret =
-    reinterpret_cast<svn_auth_cred_ssl_client_cert_t*>(apr_pcalloc(pool, sizeof(*ret)));
-  const char *cert_file =
-    that->askQuestion(realm, _("client certificate filename: "), true,
-                      may_save ? true : false);
-  if (cert_file == NULL)
+  ::JavaHL::UserPasswordCallback authn(env, m_prompter.get());
+
+  bool allowed_save;
+  const ::Java::String path(
+      env,
+      compat_ask_question(allowed_save, env, authn, realm,
+                          _("Client certificate filename: "),
+                          true, may_save));
+  if (!path.get())
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("User canceled dialog"));
-  ret->cert_file = apr_pstrdup(pool, cert_file);
-  ret->may_save = that->m_maySave;
-  *cred_p = ret;
+
+  svn_auth_cred_ssl_client_cert_t *cred =
+    static_cast<svn_auth_cred_ssl_client_cert_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->cert_file = path.strdup(pool);
+  cred->may_save = allowed_save;
+  *cred_p = cred;
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-Prompter::ssl_client_cert_pw_prompt(svn_auth_cred_ssl_client_cert_pw_t **cred_p,
-                                    void *baton,
-                                    const char *realm,
-                                    svn_boolean_t may_save,
-                                    apr_pool_t *pool)
+CompatPrompter::dispatch_ssl_client_cert_pw_prompt(
+    ::Java::Env env,
+    svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
 {
-  Prompter *that = static_cast<Prompter *>(baton);
-  svn_auth_cred_ssl_client_cert_pw_t *ret =
-    reinterpret_cast<svn_auth_cred_ssl_client_cert_pw_t*>(apr_pcalloc(pool, sizeof(*ret)));
-  const char *info = that->askQuestion(realm,
-                                       _("client certificate passphrase: "),
-                                       false, may_save ? true : false);
-  if (info == NULL)
+  ::JavaHL::UserPasswordCallback authn(env, m_prompter.get());
+
+  bool allowed_save;
+  const ::Java::String info(
+      env,
+      compat_ask_question(allowed_save, env, authn, realm,
+                          _("Client certificate passphrase: "),
+                          false, may_save));
+  if (!info.get())
     return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
                             _("User canceled dialog"));
-  ret->password = apr_pstrdup(pool, info);
-  ret->may_save = that->m_maySave;
-  *cred_p = ret;
+
+  svn_auth_cred_ssl_client_cert_pw_t *cred =
+    static_cast<svn_auth_cred_ssl_client_cert_pw_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->password = info.strdup(pool);
+  cred->may_save = allowed_save;
+  *cred_p = cred;
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-Prompter::plaintext_prompt(svn_boolean_t *may_save_plaintext,
-                           const char *realmstring,
-                           void *baton,
-                           apr_pool_t *pool)
+CompatPrompter::dispatch_plaintext_prompt(
+    ::Java::Env env,
+    svn_boolean_t *may_save_plaintext,
+    const char *realmstring,
+    apr_pool_t *pool)
 {
-  Prompter *that = static_cast<Prompter *>(baton);
+  ::JavaHL::UserPasswordCallback authn(env, m_prompter.get());
 
-  bool result = that->askYesNo(realmstring,
-                               _("Store password unencrypted?"),
-                               false);
-
-  *may_save_plaintext = (result ? TRUE : FALSE);
+  *may_save_plaintext = authn.ask_yes_no(
+      ::Java::String(env, realmstring),
+      ::Java::String(env, _("Store password unencrypted?")),
+      false);
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-Prompter::plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
-                                      const char *realmstring,
-                                      void *baton,
-                                      apr_pool_t *pool)
+CompatPrompter::dispatch_plaintext_passphrase_prompt(
+    ::Java::Env env,
+    svn_boolean_t *may_save_plaintext,
+    const char *realmstring,
+    apr_pool_t *pool)
 {
-  Prompter *that = static_cast<Prompter *>(baton);
+  ::JavaHL::UserPasswordCallback authn(env, m_prompter.get());
 
-  bool result = that->askYesNo(realmstring,
-                               _("Store passphrase unencrypted?"),
-                               false);
-
-  *may_save_plaintext = (result ? TRUE : FALSE);
+  *may_save_plaintext = authn.ask_yes_no(
+      ::Java::String(env, realmstring),
+      ::Java::String(env, _("Store passphrase unencrypted?")),
+      false);
 
   return SVN_NO_ERROR;
 }

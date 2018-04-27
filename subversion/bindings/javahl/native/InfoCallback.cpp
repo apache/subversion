@@ -80,12 +80,12 @@ InfoCallback::singleInfo(const char *path,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/InfoCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/InfoCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "singleInfo",
-                             "(L"JAVA_PACKAGE"/types/Info;)V");
+                             "(" JAVAHL_ARG("/types/Info;") ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -95,8 +95,6 @@ InfoCallback::singleInfo(const char *path,
     POP_AND_RETURN(SVN_NO_ERROR);
 
   env->CallVoidMethod(m_callback, mid, jinfo2);
-  // Return SVN_NO_ERROR here regardless of an exception or not.
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }

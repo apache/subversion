@@ -52,8 +52,11 @@ extern "C" {
 /* a pool-key for the shared dav_svn_root used by autoversioning  */
 #define DAV_SVN__AUTOVERSIONING_ACTIVITY "svn-autoversioning-activity"
 
-/* Option values for SVNAllowBulkUpdates */
+/* Option values for SVNAllowBulkUpdates.  Note that
+   it's important that CONF_BULKUPD_DEFAULT is 0 to make
+   merge_dir_config in mod_dav_svn do the right thing. */
 typedef enum dav_svn__bulk_upd_conf {
+    CONF_BULKUPD_DEFAULT,
     CONF_BULKUPD_ON,
     CONF_BULKUPD_OFF,
     CONF_BULKUPD_PREFER
@@ -146,6 +149,9 @@ typedef struct dav_svn_repos {
   /* The path to the activities db */
   const char *activities_db;
 
+  /* Cached yongest revision of the repository. SVN_INVALID_REVNUM if
+     youngest revision is not fetched yet. */
+  svn_revnum_t youngest_rev;
 } dav_svn_repos;
 
 
@@ -284,11 +290,19 @@ struct dav_resource_private {
   svn_boolean_t auto_checked_out;
 
   /* was this resource fetched using our public peg-/working-rev CGI
-     interface (ie: /path/to/item?p=PEGREV]? */
+     interface (ie: /path/to/item?p=PEGREV)? */
   svn_boolean_t pegged;
 
   /* Cache any revprop change error */
   svn_error_t *revprop_error;
+
+  /* was keyword substitution requested using our public CGI interface
+     (ie: /path/to/item?kw=1)? */
+  svn_boolean_t keyword_subst;
+
+  /* whether this resource parameters are fixed and won't change
+     between requests. */
+  svn_boolean_t idempotent;
 };
 
 
@@ -322,6 +336,14 @@ svn_boolean_t dav_svn__get_fulltext_cache_flag(request_rec *r);
 /* for the repository referred to by this request, is revprop caching active? */
 svn_boolean_t dav_svn__get_revprop_cache_flag(request_rec *r);
 
+/* for the repository referred to by this request, is node prop caching active? */
+svn_boolean_t
+dav_svn__get_nodeprop_cache_flag(request_rec *r);
+
+/* has block read mode been enabled for the repository referred to by this
+ * request? */
+svn_boolean_t dav_svn__get_block_read_flag(request_rec *r);
+
 /* for the repository referred to by this request, are subrequests bypassed?
  * A function pointer if yes, NULL if not.
  */
@@ -336,10 +358,6 @@ svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
    account the support level expected of based on the specified
    master server version (if provided via SVNMasterVersion).  */
 svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
-
-/* For the repository referred to by this request, should ephemeral
-   txnprop support be advertised?  */
-svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
 
 
 
@@ -435,6 +453,40 @@ const char *dav_svn__get_vtxn_stub(request_rec *r);
 /* For accessing transaction properties (typically "!svn/vtxr") */
 const char *dav_svn__get_vtxn_root_stub(request_rec *r);
 
+
+/*** Output helpers ***/
+
+/* An opaque type which represents an output for a particular request.
+
+   All writes should target a dav_svn__output object by either using
+   the dav_svn__brigade functions or by preparing a bucket brigade and
+   passing it to the output with dav_svn__output_pass_brigade().
+
+   IMPORTANT:  Don't write to an ap_filter_t coming from mod_dav, and
+   use this wrapper and the corresponding private API instead.  Using
+   the ap_filter_t can cause unbounded memory usage with self-removing
+   output filters (e.g., with the filters installed by mod_headers or
+   mod_deflate).
+
+   See https://mail-archives.apache.org/mod_mbox/httpd-dev/201608.mbox/%3C20160822151917.GA22369%40redhat.com%3E
+*/
+typedef struct dav_svn__output dav_svn__output;
+
+/* Create the output wrapper for request R, allocated in POOL. */
+dav_svn__output *
+dav_svn__output_create(request_rec *r,
+                       apr_pool_t *pool);
+
+/* Get a bucket allocator to use for all bucket/brigade creations
+   when writing to OUTPUT. */
+apr_bucket_alloc_t *
+dav_svn__output_get_bucket_alloc(dav_svn__output *output);
+
+/* Pass the bucket brigade BB down to the OUTPUT's filter stack. */
+svn_error_t *
+dav_svn__output_pass_brigade(dav_svn__output *output,
+                             apr_bucket_brigade *bb);
+
 
 /*** activity.c ***/
 
@@ -447,7 +499,7 @@ const char *dav_svn__get_vtxn_root_stub(request_rec *r);
    NOTE:  This function will overwrite the svn:author property, if
    any, found in REVPROPS.  */
 dav_error *
-dav_svn__create_txn(const dav_svn_repos *repos,
+dav_svn__create_txn(dav_svn_repos *repos,
                     const char **ptxn_name,
                     apr_hash_t *revprops,
                     apr_pool_t *pool);
@@ -475,6 +527,8 @@ dav_svn__store_activity(const dav_svn_repos *repos,
 /* POST request handler.  (Used by HTTP protocol v2 clients only.)  */
 int dav_svn__method_post(request_rec *r);
 
+/* Request handler to GET Subversion internal status (FSFS cache). */
+int dav_svn__status(request_rec *r);
 
 /*** repos.c ***/
 
@@ -621,7 +675,7 @@ dav_svn__insert_all_liveprops(request_rec *r,
 /* Generate the HTTP response body for a successful MERGE. */
 /* ### more docco */
 dav_error *
-dav_svn__merge_response(ap_filter_t *output,
+dav_svn__merge_response(dav_svn__output *output,
                         const dav_svn_repos *repos,
                         svn_revnum_t new_rev,
                         const char *post_commit_err,
@@ -647,6 +701,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { SVN_XML_NAMESPACE, SVN_DAV__INHERITED_PROPS_REPORT },
+  { SVN_XML_NAMESPACE, "list-report" },
   { NULL, NULL },
 };
 
@@ -655,49 +710,54 @@ static const dav_report_elem dav_svn__reports_list[] = {
 dav_error *
 dav_svn__update_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output);
+                       dav_svn__output *output);
 dav_error *
 dav_svn__log_report(const dav_resource *resource,
                     const apr_xml_doc *doc,
-                    ap_filter_t *output);
+                    dav_svn__output *output);
 dav_error *
 dav_svn__dated_rev_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output);
+                          dav_svn__output *output);
 dav_error *
 dav_svn__get_locations_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
-                              ap_filter_t *output);
+                              dav_svn__output *output);
 dav_error *
 dav_svn__get_location_segments_report(const dav_resource *resource,
                                       const apr_xml_doc *doc,
-                                      ap_filter_t *output);
+                                      dav_svn__output *output);
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output);
+                          dav_svn__output *output);
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output);
+                       dav_svn__output *output);
 dav_error *
 dav_svn__get_mergeinfo_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
-                              ap_filter_t *output);
+                              dav_svn__output *output);
 dav_error *
 dav_svn__get_locks_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output);
+                          dav_svn__output *output);
 
 dav_error *
 dav_svn__get_deleted_rev_report(const dav_resource *resource,
                                 const apr_xml_doc *doc,
-                                ap_filter_t *output);
+                                dav_svn__output *output);
 
 dav_error *
 dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
-                                    ap_filter_t *output);
+                                    dav_svn__output *output);
+
+dav_error *
+dav_svn__list_report(const dav_resource *resource,
+                     const apr_xml_doc *doc,
+                     dav_svn__output *output);
 
 /*** posts/ ***/
 
@@ -705,11 +765,11 @@ dav_svn__get_inherited_props_report(const dav_resource *resource,
 dav_error *
 dav_svn__post_create_txn(const dav_resource *resource,
                          svn_skel_t *request_skel,
-                         ap_filter_t *output);
+                         dav_svn__output *output);
 dav_error *
 dav_svn__post_create_txn_with_props(const dav_resource *resource,
                                     svn_skel_t *request_skel,
-                                    ap_filter_t *output);
+                                    dav_svn__output *output);
 
 /*** authz.c ***/
 
@@ -783,30 +843,35 @@ dav_svn__authz_read_func(dav_svn__authz_read_baton *baton);
 
    If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
    default value for the error code.
+
+   mod_dav is definitive documentation of the parameters, but a
+   guideline to the different error is:
+
+   STATUS is the HTTP status returned to the client.
+
+   ERROR_ID is an additional DAV-specific error such as a violation of
+   the DAV rules.  mod_dav.h defines some values but callers can pass
+   others.
+
+   APRERR is any underlying OS/system error.
 */
 dav_error *
-dav_svn__new_error_tag(apr_pool_t *pool,
+dav_svn__new_error_svn(apr_pool_t *pool,
                        int status,
                        int error_id,
-                       const char *desc,
-                       const char *namespace,
-                       const char *tagname);
+                       apr_status_t aprerr,
+                       const char *desc);
 
 
 /* A wrapper around mod_dav's dav_new_error, mod_dav_svn uses this
    instead of the mod_dav function to enable special mod_dav_svn specific
-   processing.  See dav_new_error for parameter documentation.
-   Note that DESC may be null (it's hard to track this down from
-   dav_new_error()'s documentation, but see the dav_error type,
-   which says that its desc field may be NULL).
-
-   If ERROR_ID is 0, SVN_ERR_RA_DAV_REQUEST_FAILED will be used as a
-   default value for the error code.
+   processing.  See dav_svn__new_error_svn for additional details.
 */
 dav_error *
 dav_svn__new_error(apr_pool_t *pool,
                    int status,
                    int error_id,
+                   apr_status_t aprerr,
                    const char *desc);
 
 
@@ -871,7 +936,7 @@ dav_svn__build_uri(const dav_svn_repos *repos,
                    enum dav_svn__build_what what,
                    svn_revnum_t revision,
                    const char *path,
-                   int add_href,
+                   svn_boolean_t add_href,
                    apr_pool_t *pool);
 
 
@@ -896,6 +961,12 @@ dav_svn__simple_parse_uri(dav_svn__uri_info *info,
                           const char *uri,
                           apr_pool_t *pool);
 
+/* Test the request R to determine if we should return the list of
+ * repositories at the parent path.  Only true if SVNListParentPath directive
+ * is 'on' and the request is for our configured root path. */
+svn_boolean_t
+dav_svn__is_parentpath_list(request_rec *r);
+
 
 int dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri);
 
@@ -905,22 +976,27 @@ int dav_svn__find_ns(const apr_array_header_t *namespaces, const char *uri);
 
 /* Write LEN bytes from DATA to OUTPUT using BB.  */
 svn_error_t *dav_svn__brigade_write(apr_bucket_brigade *bb,
-                                    ap_filter_t *output,
+                                    dav_svn__output *output,
                                     const char *buf,
                                     apr_size_t len);
 
 /* Write NULL-terminated string STR to OUTPUT using BB.  */
 svn_error_t *dav_svn__brigade_puts(apr_bucket_brigade *bb,
-                                   ap_filter_t *output,
+                                   dav_svn__output *output,
                                    const char *str);
 
 
 /* Write data to OUTPUT using BB, using FMT as the output format string.  */
 svn_error_t *dav_svn__brigade_printf(apr_bucket_brigade *bb,
-                                     ap_filter_t *output,
+                                     dav_svn__output *output,
                                      const char *fmt,
                                      ...)
   __attribute__((format(printf, 3, 4)));
+
+/* Write an unspecified number of strings to OUTPUT using BB.  */
+svn_error_t *dav_svn__brigade_putstrs(apr_bucket_brigade *bb,
+                                      dav_svn__output *output,
+                                      ...) SVN_NEEDS_SENTINEL_NULL;
 
 
 
@@ -955,11 +1031,10 @@ dav_svn__sanitize_error(svn_error_t *serr,
 
 
 /* Return a writable generic stream that will encode its output to base64
-   and send it to the Apache filter OUTPUT using BB.  Allocate the stream in
-   POOL. */
+   and send it to OUTPUT using BB.  Allocate the stream in POOL. */
 svn_stream_t *
 dav_svn__make_base64_output_stream(apr_bucket_brigade *bb,
-                                   ap_filter_t *output,
+                                   dav_svn__output *output,
                                    apr_pool_t *pool);
 
 /* In INFO->r->subprocess_env set "SVN-ACTION" to LINE, "SVN-REPOS" to
@@ -1001,7 +1076,8 @@ dav_svn__operational_log(struct dav_resource_private *info, const char *line);
  */
 dav_error *
 dav_svn__final_flush_or_error(request_rec *r, apr_bucket_brigade *bb,
-                              ap_filter_t *output, dav_error *preferred_err,
+                              dav_svn__output *output,
+                              dav_error *preferred_err,
                               apr_pool_t *pool);
 
 /* Log a DAV error response.
@@ -1026,6 +1102,32 @@ int dav_svn__error_response_tag(request_rec *r, dav_error *err);
  */
 int dav_svn__parse_request_skel(svn_skel_t **skel, request_rec *r,
                                 apr_pool_t *pool);
+
+/* Set *YOUNGEST_P to the number of the youngest revision in REPOS.
+ *
+ * Youngest revision will be cached in REPOS->YOUNGEST_REV to avoid
+ * fetching the youngest revision multiple times during proccessing
+ * the request.
+ *
+ * Uses SCRATCH_POOL for temporary allocations.
+ */
+svn_error_t *
+dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
+                          dav_svn_repos *repos,
+                          apr_pool_t *scratch_pool);
+
+/* Return the liveprop-encoded form of AUTHOR, allocated in RESULT_POOL.
+ * If IS_SVN_CLIENT is set, assume that the data will be sent to a SVN
+ * client.  This mainly sanitizes AUTHOR strings with control chars in
+ * them without converting them to escape sequences etc.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+const char *
+dav_svn__fuzzy_escape_author(const char *author,
+                             svn_boolean_t is_svn_client,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /*** mirror.c ***/
 

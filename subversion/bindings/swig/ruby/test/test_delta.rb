@@ -174,8 +174,8 @@ class SvnDeltaTest < Test::Unit::TestCase
     source = StringIO.new(source_text)
     target = StringIO.new(target_text)
     stream = Svn::Delta::TextDeltaStream.new(source, target)
-    
-    if RUBY_VERSION > '1.9' 
+
+    if RUBY_VERSION > '1.9'
       output = StringIO.new("".encode('ASCII-8BIT'))
     else
       output = StringIO.new("")
@@ -185,7 +185,7 @@ class SvnDeltaTest < Test::Unit::TestCase
     Svn::Delta.send(target_text, handler)
     output.rewind
     result = output.read
-    if RUBY_VERSION > '1.9' 
+    if RUBY_VERSION > '1.9'
       regex = get_regex("\\ASVN.*#{target_text}\\Z".encode('utf-8'),result.encoding,16)
       assert_match(regex, result)
     else

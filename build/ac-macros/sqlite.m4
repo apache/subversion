@@ -78,6 +78,10 @@ AC_DEFUN(SVN_LIB_SQLITE,
     SVN_SQLITE_FILE_CONFIG($abs_srcdir/sqlite-amalgamation/sqlite3.c)
 
     if test -z "$svn_lib_sqlite"; then
+      SVN_SQLITE_FILE_CONFIG($abs_builddir/sqlite-amalgamation/sqlite3.c)
+    fi
+
+    if test -z "$svn_lib_sqlite"; then
       dnl check the "standard" location of /usr
       SVN_SQLITE_DIR_CONFIG()
     fi
@@ -243,9 +247,13 @@ AC_DEFUN(SVN_DOWNLOAD_SQLITE,
   echo ""
   echo "get the sqlite ${SQLITE_RECOMMENDED_VER} amalgamation from:"
   echo "    ${SQLITE_URL}"
-  echo "unpack the archive using tar/gunzip and rename the"
-  echo "resulting directory to:"
+  echo "unpack the archive using unzip and rename the resulting"
+  echo "directory to:"
   echo "$abs_srcdir/sqlite-amalgamation"
+  if test x"$abs_srcdir" != x"$abs_builddir"; then
+    echo "or to:"
+    echo "$abs_builddir/sqlite-amalgamation"
+  fi
   echo ""
   AC_MSG_ERROR([Subversion requires SQLite])
 ])

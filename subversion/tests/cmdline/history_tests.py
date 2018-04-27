@@ -70,16 +70,13 @@ def cat_traces_renames(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # rename pi to rho.  commit r3.
   svntest.main.run_svn(None, 'mv', pi_path, rho_path)
 
   # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn(None,
-                                     [ "This is the file 'pi'.\n"], [],
+  svntest.actions.run_and_verify_svn([ "This is the file 'pi'.\n"], [],
                                      'cat',  '-r', '1', rho_path)
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -94,9 +91,7 @@ def cat_traces_renames(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # update whole wc to HEAD
   expected_output = svntest.wc.State(wc_dir, { }) # no output
@@ -115,28 +110,24 @@ def cat_traces_renames(sbox):
                                         expected_status)
 
   # 'svn cat bloo' --> should show rho's contents.
-  svntest.actions.run_and_verify_svn(None,
-                                     [ "This is the file 'rho'.\n"], [],
+  svntest.actions.run_and_verify_svn([ "This is the file 'rho'.\n"], [],
                                      'cat',  bloo_path)
 
   # svn cat -r1 bloo --> should still show rho's contents.
-  svntest.actions.run_and_verify_svn(None,
-                                     [ "This is the file 'rho'.\n"], [],
+  svntest.actions.run_and_verify_svn([ "This is the file 'rho'.\n"], [],
                                      'cat',  '-r', '1', bloo_path)
 
   # svn cat -r1 rho  --> should show pi's contents.
-  svntest.actions.run_and_verify_svn(None,
-                                     [ "This is the file 'pi'.\n"], [],
+  svntest.actions.run_and_verify_svn([ "This is the file 'pi'.\n"], [],
                                      'cat',  '-r', '1', rho_path)
 
   # svn up -r1
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', '-r', '1', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', '-r', '1', wc_dir)
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # svn cat -rHEAD rho --> should see 'unrelated object' error.
-  svntest.actions.run_and_verify_svn("unrelated object",
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'cat',  '-r', 'HEAD', rho_path)
 
 @Issue(1970)
@@ -189,26 +180,23 @@ def cat_avoids_false_identities(sbox):
   svntest.main.run_svn(None, 'del', iota_path)
   svntest.main.file_append(iota_path, "YOU SHOULD NOT SEE THIS\n")
   svntest.main.run_svn(None, 'add', iota_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       wc_dir)
+  sbox.simple_commit(message='log msg')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r3
   svntest.main.run_svn(None, 'del', iota_path)
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       wc_dir)
+  sbox.simple_commit(message='log msg')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # r4
   svntest.main.run_svn(None, 'cp', iota_url + '@1', wc_dir)
-  svntest.main.run_svn(None, 'ci', '-m', 'log msg',
-                       wc_dir)
+  sbox.simple_commit(message='log msg')
   svntest.main.run_svn(None, 'up', wc_dir)
 
   # 'svn cat -r2 iota' should error, because the line of history
   # currently identified by /iota did not exist in r2, even though a
   # totally unrelated file of the same name did.
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'cat', '-r', '2', iota_path)
 
 

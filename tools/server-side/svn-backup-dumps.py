@@ -255,8 +255,8 @@ class SvnBackupOutputCommand(SvnBackupOutput):
         try:
             proc = Popen(cmd, stdin=PIPE, stdout=self.__ofd, shell=False)
         except:
-            print (256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
-                    str(sys.exc_info()[1])))
+            print((256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
+                  str(sys.exc_info()[1]))))
             sys.exit(256)
         self.__proc  = proc
         self.__stdin = proc.stdin
@@ -471,7 +471,7 @@ class SvnBackup:
             ftp.quit()
             rc = len(ifd.read(1)) == 0
             ifd.close()
-        except Exception, e:
+        except Exception as e:
             raise SvnBackupException("ftp transfer failed:\n  file:  '%s'\n  error: %s" % \
                     (absfilename, str(e)))
         return rc
@@ -680,7 +680,7 @@ if __name__ == "__main__":
     try:
         backup = SvnBackup(options, args)
         rc = backup.execute()
-    except SvnBackupException, e:
+    except SvnBackupException as e:
         print("svn-backup-dumps.py: %s" % e)
     if rc:
         print("Everything OK.")

@@ -117,7 +117,7 @@ svn_wc__adm_child(const char *path,
                               path,
                               adm_dir_name,
                               child,
-                              NULL);
+                              SVN_VA_NULL);
 }
 
 
@@ -171,7 +171,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *checksum;
 
   SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
@@ -180,7 +180,7 @@ svn_wc__text_base_path_to_read(const char **result_abspath,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_kind_file)
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),
@@ -224,7 +224,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const svn_checksum_t *sha1_checksum;
 
   if (size)
@@ -236,7 +236,7 @@ svn_wc__get_pristine_contents(svn_stream_t **contents,
                                         scratch_pool, scratch_pool));
 
   /* Sanity */
-  if (kind != svn_kind_file)
+  if (kind != svn_node_file)
     return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
                              _("Can only get the pristine contents of files; "
                                "'%s' is not a file"),
@@ -295,38 +295,6 @@ svn_wc__open_adm_stream(svn_stream_t **stream,
 }
 
 
-svn_error_t *
-svn_wc__open_writable_base(svn_stream_t **stream,
-                           const char **temp_base_abspath,
-                           svn_checksum_t **md5_checksum,
-                           svn_checksum_t **sha1_checksum,
-                           svn_wc__db_t *db,
-                           const char *wri_abspath,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool)
-{
-  const char *temp_dir_abspath;
-  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-
-  SVN_ERR(svn_wc__db_pristine_get_tempdir(&temp_dir_abspath, db, wri_abspath,
-                                          scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_open_unique(stream,
-                                 temp_base_abspath,
-                                 temp_dir_abspath,
-                                 svn_io_file_del_none,
-                                 result_pool, scratch_pool));
-  if (md5_checksum)
-    *stream = svn_stream_checksummed2(*stream, NULL, md5_checksum,
-                                      svn_checksum_md5, FALSE, result_pool);
-  if (sha1_checksum)
-    *stream = svn_stream_checksummed2(*stream, NULL, sha1_checksum,
-                                      svn_checksum_sha1, FALSE, result_pool);
-
-  return SVN_NO_ERROR;
-}
-
-
-
 /*** Checking for and creating administrative subdirs. ***/
 
 
@@ -460,15 +428,18 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                              &db_repos_relpath,
                                              &db_repos_root_url,
                                              &db_repos_uuid,
-                                             NULL, NULL, NULL, NULL, NULL,
-                                             NULL, db, local_abspath,
+                                             NULL, NULL, NULL, NULL,
+                                             db, local_abspath,
                                              scratch_pool, scratch_pool));
           else
-            SVN_ERR(svn_wc__db_scan_base_repos(&db_repos_relpath,
-                                               &db_repos_root_url,
-                                               &db_repos_uuid,
-                                               db, local_abspath,
-                                               scratch_pool, scratch_pool));
+            SVN_ERR(svn_wc__db_base_get_info(NULL, NULL, NULL,
+                                             &db_repos_relpath,
+                                             &db_repos_root_url,
+                                             &db_repos_uuid, NULL, NULL, NULL,
+                                             NULL, NULL, NULL, NULL, NULL,
+                                             NULL, NULL,
+                                             db, local_abspath,
+                                             scratch_pool, scratch_pool));
         }
 
       /* The caller gives us a URL which should match the entry. However,
@@ -569,40 +540,6 @@ svn_wc__adm_cleanup_tmp_area(svn_wc__db_t *db,
   return svn_error_trace(init_adm_tmp_area(adm_abspath, scratch_pool));
 }
 
-
-
-svn_error_t *
-svn_wc_create_tmp_file2(apr_file_t **fp,
-                        const char **new_name,
-                        const char *path,
-                        svn_io_file_del_t delete_when,
-                        apr_pool_t *pool)
-{
-  svn_wc__db_t *db;
-  const char *local_abspath;
-  const char *temp_dir;
-  svn_error_t *err;
-
-  SVN_ERR_ASSERT(fp || new_name);
-
-  SVN_ERR(svn_wc__db_open(&db,
-                          NULL /* config */,
-                          FALSE /* auto_upgrade */,
-                          TRUE /* enforce_empty_wq */,
-                          pool, pool));
-
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
-  err = svn_wc__db_temp_wcroot_tempdir(&temp_dir, db, local_abspath,
-                                       pool, pool);
-  err = svn_error_compose_create(err, svn_wc__db_close(db));
-  if (err)
-    return svn_error_trace(err);
-
-  SVN_ERR(svn_io_open_unique_file3(fp, new_name, temp_dir,
-                                   delete_when, pool, pool));
-
-  return SVN_NO_ERROR;
-}
 
 svn_error_t *
 svn_wc__get_tmpdir(const char **tmpdir_abspath,

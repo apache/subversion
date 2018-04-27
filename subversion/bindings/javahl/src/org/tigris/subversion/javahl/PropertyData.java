@@ -138,7 +138,7 @@ public class PropertyData
     }
 
     /**
-     * this contructor is used when building a thin wrapper around other
+     * this constructor is used when building a thin wrapper around other
      * property retrieval methods
      * @param p     the path of the item owning this property
      * @param n     the name of the property

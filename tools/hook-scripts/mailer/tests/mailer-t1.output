@@ -1,3 +1,30 @@
+Group: file
+Subject: r1 -  dir1 dir2
+
+Author: mailer test
+Date: Sun Sep  9 01:46:40 2001
+New Revision: 1
+
+Log:
+initial load
+
+Added:
+   file1
+   file2
+
+Added: file1
+==============================================================================
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file1	Sun Sep  9 01:46:40 2001	(r1)
+@@ -0,0 +1 @@
++file1
+
+Added: file2
+==============================================================================
+--- /dev/null	00:00:00 1970	(empty, because file is newly added)
++++ file2	Sun Sep  9 01:46:40 2001	(r1)
+@@ -0,0 +1 @@
++file2
 Group: file plus other areas
 Subject: r1 -  dir1 dir2
 
@@ -126,32 +153,26 @@ Added: file2
 @@ -0,0 +1 @@
 +file2
 Group: file
-Subject: r1 -  dir1 dir2
+Subject: r2 -  dir1 dir2
 
 Author: mailer test
-Date: Sun Sep  9 01:46:40 2001
-New Revision: 1
+Date: Sun Sep  9 04:33:20 2001
+New Revision: 2
 
 Log:
-initial load
+two file changes.  Fixes Blah#123
 
-Added:
-   file1
-   file2
+Modified:
+   file1   (props changed)
+   file2   (contents, props changed)
 
-Added: file1
+Modified: file2
 ==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
-+++ file1	Sun Sep  9 01:46:40 2001	(r1)
-@@ -0,0 +1 @@
-+file1
-
-Added: file2
-==============================================================================
---- /dev/null	00:00:00 1970	(empty, because file is newly added)
-+++ file2	Sun Sep  9 01:46:40 2001	(r1)
-@@ -0,0 +1 @@
-+file2
+--- file2	Sun Sep  9 01:46:40 2001	(r1)
++++ file2	Sun Sep  9 04:33:20 2001	(r2)
+@@ -1 +1,2 @@
+ file2
++change C1
 Group: bugtracker
 Subject: Fix for Blah#123: r2 -  dir1 dir2
 
@@ -250,27 +271,6 @@ Modified: dir2/file5
 @@ -1 +1,2 @@
  file5
 +change C2
-Group: file
-Subject: r2 -  dir1 dir2
-
-Author: mailer test
-Date: Sun Sep  9 04:33:20 2001
-New Revision: 2
-
-Log:
-two file changes.  Fixes Blah#123
-
-Modified:
-   file1   (props changed)
-   file2   (contents, props changed)
-
-Modified: file2
-==============================================================================
---- file2	Sun Sep  9 01:46:40 2001	(r1)
-+++ file2	Sun Sep  9 04:33:20 2001	(r2)
-@@ -1 +1,2 @@
- file2
-+change C1
 Group: All
 Subject: r3 - dir2 dir3
 
@@ -314,6 +314,18 @@ Copied and modified: dir3/file8 (from r2, file1)
 @@ -1 +1,2 @@
  file1
 +change C3
+Group: file
+Subject: r5 -  dir1 dir3
+
+Author: mailer test
+Date: Sun Sep  9 12:53:20 2001
+New Revision: 5
+
+Log:
+changes and deletes of properties
+
+Modified:
+   file2   (props changed)
 Group: file plus other areas
 Subject: r5 -  dir1 dir3
 
@@ -344,18 +356,6 @@ changes and deletes of properties
 Modified:
    dir1/   (props changed)
    dir3/   (props changed)
-   file2   (props changed)
-Group: file
-Subject: r5 -  dir1 dir3
-
-Author: mailer test
-Date: Sun Sep  9 12:53:20 2001
-New Revision: 5
-
-Log:
-changes and deletes of properties
-
-Modified:
    file2   (props changed)
 Group: file
 Subject: r6 -  dir1 dir4
@@ -411,8 +411,8 @@ Modified: dir1/file3
 @@ -1 +1,2 @@
  file3
 +change C4
-Group: All
-Subject: r6 -  dir1 dir4
+Group: bugtracker
+Subject: Fix for Blaz#456: r6 -  dir1 dir4
 
 Author: mailer test
 Date: Sun Sep  9 15:40:00 2001
@@ -471,8 +471,8 @@ Added: file9
 +++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
-Group: bugtracker
-Subject: Fix for Blaz#456: r6 -  dir1 dir4
+Group: All
+Subject: r6 -  dir1 dir4
 
 Author: mailer test
 Date: Sun Sep  9 15:40:00 2001
@@ -501,6 +501,26 @@ Added: file9
 +++ file9	Sun Sep  9 15:40:00 2001	(r6)
 @@ -0,0 +1 @@
 +file9
+Group: file
+Subject: r7 -  dir1 dir2 dir3 dir3/dir5
+
+Author: mailer test
+Date: Sun Sep  9 18:26:40 2001
+New Revision: 7
+
+Log:
+adds, deletes, and a change
+
+Deleted:
+   file2
+
+Deleted: file2
+==============================================================================
+--- file2	Sun Sep  9 18:26:40 2001	(r6)
++++ /dev/null	00:00:00 1970	(deleted)
+@@ -1,2 +0,0 @@
+-file2
+-change C1
 Group: file plus other areas
 Subject: r7 -  dir1 dir2 dir3 dir3/dir5
 
@@ -588,26 +608,6 @@ Deleted: file2
 @@ -1,2 +0,0 @@
 -file2
 -change C1
-Group: file
-Subject: r7 -  dir1 dir2 dir3 dir3/dir5
-
-Author: mailer test
-Date: Sun Sep  9 18:26:40 2001
-New Revision: 7
-
-Log:
-adds, deletes, and a change
-
-Deleted:
-   file2
-
-Deleted: file2
-==============================================================================
---- file2	Sun Sep  9 18:26:40 2001	(r6)
-+++ /dev/null	00:00:00 1970	(deleted)
-@@ -1,2 +0,0 @@
--file2
--change C1
 Group: All
 Subject: r8 - in dir6: . dir5
 
@@ -644,6 +644,24 @@ Modified: dir6/file4
 @@ -1 +1,2 @@
  file4
 +change C6
+Group: file
+Subject: r9 - 
+
+Author: mailer test
+Date: Mon Sep 10 00:00:00 2001
+New Revision: 9
+
+Log:
+add binary file
+
+Added:
+   file11   (contents, props changed)
+Modified:
+   file9   (props changed)
+
+Added: file11
+==============================================================================
+Binary file. No diff available.
 Group: file plus other areas
 Subject: r9 - 
 
@@ -681,23 +699,22 @@ Added: file11
 ==============================================================================
 Binary file. No diff available.
 Group: file
-Subject: r9 - 
+Subject: r10 - 
 
 Author: mailer test
-Date: Mon Sep 10 00:00:00 2001
-New Revision: 9
+Date: Mon Sep 10 02:46:40 2001
+New Revision: 10
 
 Log:
-add binary file
+change binary file
 
-Added:
-   file11   (contents, props changed)
 Modified:
+   file11
    file9   (props changed)
 
-Added: file11
+Modified: file11
 ==============================================================================
-Binary file. No diff available.
+Binary file (source and/or target). No diff available.
 Group: file plus other areas
 Subject: r10 - 
 
@@ -716,23 +733,6 @@ Modified: file11
 ==============================================================================
 Binary file (source and/or target). No diff available.
 Group: All
-Subject: r10 - 
-
-Author: mailer test
-Date: Mon Sep 10 02:46:40 2001
-New Revision: 10
-
-Log:
-change binary file
-
-Modified:
-   file11
-   file9   (props changed)
-
-Modified: file11
-==============================================================================
-Binary file (source and/or target). No diff available.
-Group: file
 Subject: r10 - 
 
 Author: mailer test

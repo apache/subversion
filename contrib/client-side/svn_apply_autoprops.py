@@ -152,7 +152,7 @@ def filter_walk(autoprop_lines, dirname, filenames):
 def main():
   try:
     opts, args = getopt.getopt(sys.argv[1:], 'h', ['help', 'config='])
-  except getopt.GetoptError, e:
+  except getopt.GetoptError as e:
     usage()
     return 1
 

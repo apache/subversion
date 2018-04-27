@@ -32,6 +32,6 @@
 #include "svncxxhl/exception.hpp"
 #include "svncxxhl/tristate.hpp"
 
-namespace svn = ::subversion::cxxhl::version_1_9_dev;
+namespace SVN = ::apache::subversion::cxxhl;
 
 #endif  // SVN_CXXHL_HPP

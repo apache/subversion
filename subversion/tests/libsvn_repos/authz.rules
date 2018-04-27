@@ -1,0 +1,18 @@
+[/]
+~$anonymous = rw
+~$authenticated = r
+&x = r
+luser = rw
+
+[bloop:/]
+@x = r
+@y = rw
+
+[:glob:bloop:/*a\bc/def*/**/*/**/ghi?jkl/**/**/mno\/**]
+$anonymous =
+~luser =
+~@x = r
+luser = rw
+
+[aliases]
+x = luser

@@ -36,24 +36,27 @@ import xml
 import urllib
 import logging
 import hashlib
-from urlparse import urlparse
+import zipfile
+import codecs
 
 try:
   # Python >=3.0
   import queue
   from urllib.parse import quote as urllib_parse_quote
   from urllib.parse import unquote as urllib_parse_unquote
+  from urllib.parse import urlparse
 except ImportError:
   # Python <3.0
   import Queue as queue
   from urllib import quote as urllib_parse_quote
   from urllib import unquote as urllib_parse_unquote
+  from urlparse import urlparse
 
 import svntest
 from svntest import Failure
 from svntest import Skip
 
-SVN_VER_MINOR = 8
+SVN_VER_MINOR = 11
 
 ######################################################################
 #
@@ -111,7 +114,7 @@ class SVNRepositoryCreateFailure(Failure):
 # Windows specifics
 if sys.platform == 'win32':
   windows = True
-  file_scheme_prefix = 'file:'
+  file_scheme_prefix = 'file:///'
   _exe = '.exe'
   _bat = '.bat'
   os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
@@ -131,31 +134,67 @@ else:
 wc_author = 'jrandom'
 wc_passwd = 'rayjandom'
 
+# Username and password used by svnrdump in dump/load cross-checks
+crosscheck_username = '__dumpster__'
+crosscheck_password = '__loadster__'
+
 # Username and password used by the working copies for "second user"
 # scenarios
 wc_author2 = 'jconstant' # use the same password as wc_author
+
+stack_trace_regexp = r'(?:.*subversion[\\//].*\.c:[0-9]*,$|.*apr_err=.*)'
 
 # Set C locale for command line programs
 os.environ['LC_ALL'] = 'C'
 
 ######################################################################
-# The locations of the svn, svnadmin and svnlook binaries, relative to
-# the only scripts that import this file right now (they live in ../).
+# Permission constants used with e.g. chmod() and open().
+# Define them here at a central location, so people aren't tempted to
+# use octal literals which are not portable between Python 2 and 3.
+
+S_ALL_READ  = stat.S_IRUSR | stat.S_IRGRP | stat.S_IROTH
+S_ALL_WRITE = stat.S_IWUSR | stat.S_IWGRP | stat.S_IWOTH
+S_ALL_EXEC  = stat.S_IXUSR | stat.S_IXGRP | stat.S_IXOTH
+
+S_ALL_RW  = S_ALL_READ | S_ALL_WRITE
+S_ALL_RX  = S_ALL_READ | S_ALL_EXEC
+S_ALL_RWX = S_ALL_READ | S_ALL_WRITE | S_ALL_EXEC
+
+######################################################################
+# The locations of the svn binaries.
 # Use --bin to override these defaults.
-svn_binary = os.path.abspath('../../svn/svn' + _exe)
-svnadmin_binary = os.path.abspath('../../svnadmin/svnadmin' + _exe)
-svnlook_binary = os.path.abspath('../../svnlook/svnlook' + _exe)
-svnrdump_binary = os.path.abspath('../../svnrdump/svnrdump' + _exe)
-svnsync_binary = os.path.abspath('../../svnsync/svnsync' + _exe)
-svnversion_binary = os.path.abspath('../../svnversion/svnversion' + _exe)
-svndumpfilter_binary = os.path.abspath('../../svndumpfilter/svndumpfilter' + \
-                                       _exe)
-svnmucc_binary=os.path.abspath('../../svnmucc/svnmucc' + _exe)
-entriesdump_binary = os.path.abspath('entries-dump' + _exe)
-atomic_ra_revprop_change_binary = os.path.abspath('atomic-ra-revprop-change' + \
-                                                  _exe)
-wc_lock_tester_binary = os.path.abspath('../libsvn_wc/wc-lock-tester' + _exe)
-wc_incomplete_tester_binary = os.path.abspath('../libsvn_wc/wc-incomplete-tester' + _exe)
+def P(relpath,
+      head=os.path.dirname(os.path.dirname(os.path.abspath('.')))
+      ):
+  if sys.platform=='win32':
+    return os.path.join(head, relpath + '.exe')
+  else:
+    return os.path.join(head, relpath)
+svn_binary = P('svn/svn')
+svnadmin_binary = P('svnadmin/svnadmin')
+svnlook_binary = P('svnlook/svnlook')
+svnrdump_binary = P('svnrdump/svnrdump')
+svnsync_binary = P('svnsync/svnsync')
+svnversion_binary = P('svnversion/svnversion')
+svndumpfilter_binary = P('svndumpfilter/svndumpfilter')
+svnmucc_binary = P('svnmucc/svnmucc')
+svnfsfs_binary = P('svnfsfs/svnfsfs')
+entriesdump_binary = P('tests/cmdline/entries-dump')
+lock_helper_binary = P('tests/cmdline/lock-helper')
+atomic_ra_revprop_change_binary = P('tests/cmdline/atomic-ra-revprop-change')
+wc_lock_tester_binary = P('tests/libsvn_wc/wc-lock-tester')
+wc_incomplete_tester_binary = P('tests/libsvn_wc/wc-incomplete-tester')
+del P
+
+######################################################################
+# The location of svnauthz binary, relative to the only scripts that
+# import this file right now (they live in ../).
+# Use --tools to overide these defaults.
+svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
+svnauthz_validate_binary = os.path.abspath(
+    '../../../tools/server-side/svnauthz-validate' + _exe
+)
+svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
@@ -184,6 +223,10 @@ SVN_PROP_INHERITABLE_IGNORES = "svn:global-ignores"
 # Each test will have its own!
 general_repo_dir = os.path.join(work_dir, "repositories")
 general_wc_dir = os.path.join(work_dir, "working_copies")
+
+# Directories used for DAV tests
+other_dav_root_dir = os.path.join(work_dir, "fsdavroot")
+non_dav_root_dir = os.path.join(work_dir, "nodavroot")
 
 # temp directory in which we will create our 'pristine' local
 # repository and other scratch data.  This should be removed when we
@@ -234,7 +277,7 @@ def wrap_ex(func, output):
   def w(*args, **kwds):
     try:
       return func(*args, **kwds)
-    except Failure, ex:
+    except Failure as ex:
       if ex.__class__ != Failure or ex.args:
         ex_args = str(ex)
         if ex_args:
@@ -336,14 +379,29 @@ def get_fsfs_format_file_path(repo_dir):
 
   return os.path.join(repo_dir, "db", "format")
 
-def filter_dbg(lines):
-  excluded = filter(lambda line: line.startswith('DBG:'), lines)
-  included = filter(lambda line: not line.startswith('DBG:'), lines)
+def ensure_list(item):
+  "If ITEM is not already a list, convert it to a list."
+  if isinstance(item, list):
+    return item
+  elif isinstance(item, bytes) or isinstance(item, str):
+    return [ item ]
+  else:
+    return list(item)
+
+def filter_dbg(lines, binary = False):
+  if binary:
+    excluded = filter(lambda line: line.startswith(b'DBG:'), lines)
+    excluded = map(bytes.decode, excluded)
+    included = filter(lambda line: not line.startswith(b'DBG:'), lines)
+  else:
+    excluded = filter(lambda line: line.startswith('DBG:'), lines)
+    included = filter(lambda line: not line.startswith('DBG:'), lines)
+
   sys.stdout.write(''.join(excluded))
-  return included
+  return ensure_list(included)
 
 # Run any binary, logging the command line and return code
-def run_command(command, error_expected, binary_mode=0, *varargs):
+def run_command(command, error_expected, binary_mode=False, *varargs):
   """Run COMMAND with VARARGS. Return exit code as int; stdout, stderr
   as lists of lines (including line terminators).  See run_command_stdin()
   for details.  If ERROR_EXPECTED is None, any stderr output will be
@@ -352,6 +410,17 @@ def run_command(command, error_expected, binary_mode=0, *varargs):
 
   return run_command_stdin(command, error_expected, 0, binary_mode,
                            None, *varargs)
+
+# Frequently used constants:
+# If any of these relative path strings show up in a server response,
+# then we can assume that the on-disk repository path was leaked to the
+# client.  Having these here as constants means we don't need to construct
+# them over and over again.
+_repos_diskpath1 = os.path.join('cmdline', 'svn-test-work', 'repositories')
+_repos_diskpath2 = os.path.join('cmdline', 'svn-test-work', 'local_tmp',
+                                'repos')
+_repos_diskpath1_bytes = _repos_diskpath1.encode()
+_repos_diskpath2_bytes = _repos_diskpath2.encode()
 
 # A regular expression that matches arguments that are trivially safe
 # to pass on a command line without quoting on any supported operating
@@ -423,10 +492,17 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
   stdout, stderr = kid.communicate(stdin)
   exit_code = kid.returncode
 
-  # Normalize Windows line endings if in text mode.
-  if windows and not binary_mode:
-    stdout = stdout.replace('\r\n', '\n')
-    stderr = stderr.replace('\r\n', '\n')
+  # We always expect STDERR to be strings, not byte-arrays.
+  if not isinstance(stderr, str):
+    stderr = stderr.decode("utf-8")
+  if not binary_mode:
+    if not isinstance(stdout, str):
+      stdout = stdout.decode("utf-8")
+
+    # Normalize Windows line endings if in text mode.
+    if windows:
+      stdout = stdout.replace('\r\n', '\n')
+      stderr = stderr.replace('\r\n', '\n')
 
   # Convert output strings to lists.
   stdout_lines = stdout.splitlines(True)
@@ -451,17 +527,20 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
       logger.info("CMD: %s exited with %d" % (command_string, exit_code))
     return stdout_lines, stderr_lines, exit_code
 
-def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
+def spawn_process(command, bufsize=-1, binary_mode=False, stdin_lines=None,
                   *varargs):
   """Run any binary, supplying input text, logging the command line.
+
   BUFSIZE dictates the pipe buffer size used in communication with the
-  subprocess: 0 means unbuffered, 1 means line buffered, any other
-  positive value means use a buffer of (approximately) that size.
-  A negative bufsize means to use the system default, which usually
-  means fully buffered. The default value for bufsize is 0 (unbuffered).
+  subprocess: quoting from subprocess.Popen(), "0 means unbuffered,
+  1 means line buffered, any other positive value means use a buffer of
+  (approximately) that size. A negative bufsize means to use the system
+  default, which usually means fully buffered."
+
   Normalize Windows line endings of stdout and stderr if not BINARY_MODE.
   Return exit code as int; stdout, stderr as lists of lines (including
-  line terminators)."""
+  line terminators).
+  """
   if stdin_lines and not isinstance(stdin_lines, list):
     raise TypeError("stdin_lines should have list type")
 
@@ -484,7 +563,7 @@ def spawn_process(command, bufsize=-1, binary_mode=0, stdin_lines=None,
 
   return exit_code, stdout_lines, stderr_lines
 
-def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
+def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
                       stdin_lines=None, *varargs):
   """Run COMMAND with VARARGS; input STDIN_LINES (a list of strings
   which should include newline characters) to program via stdin - this
@@ -508,13 +587,14 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
                                                         *varargs)
 
   def _line_contains_repos_diskpath(line):
-    # ### Note: this assumes that either svn-test-work isn't a symlink, 
+    # ### Note: this assumes that either svn-test-work isn't a symlink,
     # ### or the diskpath isn't realpath()'d somewhere on the way from
     # ### the server's configuration and the client's stderr.  We could
     # ### check for both the symlinked path and the realpath.
-    return \
-         os.path.join('cmdline', 'svn-test-work', 'repositories') in line \
-      or os.path.join('cmdline', 'svn-test-work', 'local_tmp', 'repos') in line 
+    if isinstance(line, str):
+      return _repos_diskpath1 in line or _repos_diskpath2 in line
+    else:
+      return _repos_diskpath1_bytes in line or _repos_diskpath2_bytes in line
 
   for lines, name in [[stdout_lines, "stdout"], [stderr_lines, "stderr"]]:
     if is_ra_type_file() or 'svnadmin' in command or 'svnlook' in command:
@@ -525,6 +605,15 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
        and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
       raise Failure("Repository diskpath in %s: %r" % (name, lines))
 
+  valgrind_diagnostic = False
+  # A valgrind diagnostic will raise a failure if the command is
+  # expected to run without error.  When an error is expected any
+  # subsequent error pattern matching is usually lenient and will not
+  # detect the diagnostic so make sure a failure is raised here.
+  if error_expected and stderr_lines:
+    if any(map(lambda arg: re.match('==[0-9]+==', arg), stderr_lines)):
+      valgrind_diagnostic = True
+
   stop = time.time()
   logger.info('<TIME = %.6f>' % (stop - start))
   for x in stdout_lines:
@@ -532,17 +621,24 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=0,
   for x in stderr_lines:
     logger.info(x.rstrip())
 
-  if (not error_expected) and ((stderr_lines) or (exit_code != 0)):
+  if (((not error_expected) and ((stderr_lines) or (exit_code != 0)))
+      or valgrind_diagnostic):
     for x in stderr_lines:
       logger.warning(x.rstrip())
-    raise Failure
+    if len(varargs) <= 5:
+      brief_command = ' '.join((command,) + varargs)
+    else:
+      brief_command = ' '.join(((command,) + varargs)[:4]) + ' ...'
+    raise Failure('Command failed: "' + brief_command +
+                  '"; exit code ' + str(exit_code))
 
   return exit_code, \
-         filter_dbg(stdout_lines), \
+         filter_dbg(stdout_lines, binary_mode), \
          stderr_lines
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
-                      ssl_cert=None, ssl_url=None, http_proxy=None):
+                      ssl_cert=None, ssl_url=None, http_proxy=None,
+                      exclusive_wc_locks=None):
   "Create config directories and files"
 
   # config file names
@@ -563,25 +659,41 @@ password-stores =
 [miscellany]
 interactive-conflicts = false
 """
-
+    if exclusive_wc_locks:
+      config_contents += """
+[working-copy]
+exclusive-locking = true
+"""
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
     if options.http_library:
       http_library_str = "http-library=%s" % (options.http_library)
     http_proxy_str = ""
+    http_proxy_username_str = ""
+    http_proxy_password_str = ""
     if options.http_proxy:
       http_proxy_parsed = urlparse("//" + options.http_proxy)
       http_proxy_str = "http-proxy-host=%s\n" % (http_proxy_parsed.hostname) + \
                        "http-proxy-port=%d" % (http_proxy_parsed.port or 80)
+    if options.http_proxy_username:
+      http_proxy_username_str = "http-proxy-username=%s" % \
+                                     (options.http_proxy_username)
+    if options.http_proxy_password:
+      http_proxy_password_str = "http-proxy-password=%s" % \
+                                     (options.http_proxy_password)
+
     server_contents = """
 #
 [global]
 %s
 %s
+%s
+%s
 store-plaintext-passwords=yes
 store-passwords=yes
-""" % (http_library_str, http_proxy_str)
+""" % (http_library_str, http_proxy_str, http_proxy_username_str,
+       http_proxy_password_str)
 
   file_write(cfgfile_cfg, config_contents)
   file_write(cfgfile_srv, server_contents)
@@ -622,8 +734,7 @@ V %d
 %s
 END
 """ % (len(cert_rep), cert_rep, len(netloc_url), netloc_url)
-
-  file_write(md5_file, md5_file_contents)
+  file_write(md5_file, md5_file_contents, mode='wb')
 
 def copy_trust(dst_cfgdir, src_cfgdir):
   """Copy svn.ssl.server files from one config dir to another.
@@ -642,14 +753,25 @@ def _with_config_dir(args):
   else:
     return args + ('--config-dir', default_config_dir)
 
+class svnrdump_crosscheck_authentication:
+  pass
+
 def _with_auth(args):
   assert '--password' not in args
-  args = args + ('--password', wc_passwd,
+  if svnrdump_crosscheck_authentication in args:
+    args = filter(lambda x: x is not svnrdump_crosscheck_authentication, args)
+    auth_username = crosscheck_username
+    auth_password = crosscheck_password
+  else:
+    auth_username = wc_author
+    auth_password = wc_passwd
+
+  args = args + ('--password', auth_password,
                  '--no-auth-cache' )
   if '--username' in args:
     return args
   else:
-    return args + ('--username', wc_author )
+    return args + ('--username', auth_username )
 
 # For running subversion and returning the output
 def run_svn(error_expected, *varargs):
@@ -659,53 +781,90 @@ def run_svn(error_expected, *varargs):
   non-zero exit code will raise an exception.  If
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
-  return run_command(svn_binary, error_expected, 0,
+  return run_command(svn_binary, error_expected, False,
                      *(_with_auth(_with_config_dir(varargs))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
   """Run svnadmin with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnadmin_binary, 1, 0, *varargs)
+
+  use_binary = ('dump' in varargs) or ('dump-revprops' in varargs)
+
+  exit_code, stdout_lines, stderr_lines = \
+                       run_command(svnadmin_binary, 1, use_binary, *varargs)
+
+  if use_binary and sys.platform == 'win32':
+    # Callers don't expect binary output on stderr
+    stderr_lines = [x.replace('\r', '') for x in stderr_lines]
+
+  return exit_code, stdout_lines, stderr_lines
 
 # For running svnlook.  Ignores the output.
 def run_svnlook(*varargs):
   """Run svnlook with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnlook_binary, 1, 0, *varargs)
+  return run_command(svnlook_binary, 1, False, *varargs)
 
 def run_svnrdump(stdin_input, *varargs):
   """Run svnrdump with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
   if stdin_input:
-    return run_command_stdin(svnrdump_binary, 1, 1, 1, stdin_input,
+    return run_command_stdin(svnrdump_binary, 1, 1, True, stdin_input,
                              *(_with_auth(_with_config_dir(varargs))))
   else:
-    return run_command(svnrdump_binary, 1, 1,
+    return run_command(svnrdump_binary, 1, True,
                        *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnsync(*varargs):
   """Run svnsync with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators)."""
-  return run_command(svnsync_binary, 1, 0, *(_with_config_dir(varargs)))
+  return run_command(svnsync_binary, 1, False,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines (including line terminators)."""
-  return run_command(svnversion_binary, 1, 0, *varargs)
+  return run_command(svnversion_binary, 1, False, *varargs)
+
+def run_svnmover(*varargs):
+  """Run svnmover with VARARGS, returns exit code as int; stdout, stderr as
+  list of lines (including line terminators)."""
+  return run_command(svnmover_binary, 1, False,
+                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnmucc(*varargs):
   """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
   list of lines (including line terminators).  Use binary mode for output."""
-  return run_command(svnmucc_binary, 1, 1,
+  return run_command(svnmucc_binary, 1, True,
                      *(_with_auth(_with_config_dir(varargs))))
+
+def run_svnauthz(*varargs):
+  """Run svnauthz with VARARGS, returns exit code as int; stdout, stderr
+  as list of lines (including line terminators)."""
+  return run_command(svnauthz_binary, 1, False, *varargs)
+
+def run_svnauthz_validate(*varargs):
+  """Run svnauthz-validate with VARARGS, returns exit code as int; stdout,
+  stderr as list of lines (including line terminators)."""
+  return run_command(svnauthz_validate_binary, 1, False, *varargs)
+
+def run_svnfsfs(*varargs):
+  """Run svnfsfs with VARARGS, returns exit code as int; stdout, stderr
+  as list of lines (including line terminators)."""
+  return run_command(svnfsfs_binary, 1, False, *varargs)
+
+def run_lock_helper(repo, path, user, seconds):
+  """Run lock-helper to lock path in repo by username for seconds"""
+
+  return run_command(lock_helper_binary, 1, False, repo, path, user, seconds)
 
 def run_entriesdump(path):
   """Run the entries-dump helper, returning a dict of Entry objects."""
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, 0, None, path)
+                                                        0, False, None, path)
   if exit_code or stderr_lines:
     ### report on this? or continue to just skip it?
     return None
@@ -721,8 +880,25 @@ def run_entriesdump_subdirs(path):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-                                                        0, 0, None, '--subdirs', path)
+                                                        0, False, None, '--subdirs', path)
   return map(lambda line: line.strip(), filter_dbg(stdout_lines))
+
+def run_entriesdump_tree(path):
+  """Run the entries-dump helper, returning a dict of a dict of Entry objects."""
+  # use spawn_process rather than run_command to avoid copying all the data
+  # to stdout in verbose mode.
+  exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
+                                                        0, False, None,
+                                                        '--tree-dump', path)
+  if exit_code or stderr_lines:
+    ### report on this? or continue to just skip it?
+    return None
+
+  class Entry(object):
+    pass
+  dirs = { }
+  exec(''.join(filter_dbg(stdout_lines)))
+  return dirs
 
 def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   """Run the atomic-ra-revprop-change helper, returning its exit code, stdout,
@@ -730,16 +906,18 @@ def run_atomic_ra_revprop_change(url, revision, propname, skel, want_error):
   # use spawn_process rather than run_command to avoid copying all the data
   # to stdout in verbose mode.
   #exit_code, stdout_lines, stderr_lines = spawn_process(entriesdump_binary,
-  #                                                      0, 0, None, path)
+  #                                                      0, False, None, path)
 
   # This passes HTTP_LIBRARY in addition to our params.
   return run_command(atomic_ra_revprop_change_binary, True, False,
                      url, revision, propname, skel,
                      want_error and 1 or 0, default_config_dir)
 
-def run_wc_lock_tester(recursive, path):
+def run_wc_lock_tester(recursive, path, work_queue=False):
   "Run the wc-lock obtainer tool, returning its exit code, stdout and stderr"
-  if recursive:
+  if work_queue:
+    option = "-w"
+  elif recursive:
     option = "-r"
   else:
     option = "-1"
@@ -752,7 +930,7 @@ def run_wc_incomplete_tester(wc_dir, revision):
 
 def youngest(repos_path):
   "run 'svnlook youngest' on REPOS_PATH, returns revision as int"
-  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, 0,
+  exit_code, stdout_lines, stderr_lines = run_command(svnlook_binary, None, False,
                                                       'youngest', repos_path)
   if exit_code or stderr_lines:
     raise Failure("Unexpected failure of 'svnlook youngest':\n%s" % stderr_lines)
@@ -762,6 +940,8 @@ def youngest(repos_path):
 
 # Chmod recursively on a whole subtree
 def chmod_tree(path, mode, mask):
+  """For each node in the OS filesystem tree PATH, subtract MASK from its
+  permissions and add MODE to them."""
   for dirpath, dirs, files in os.walk(path):
     for name in dirs + files:
       fullname = os.path.join(dirpath, name)
@@ -774,7 +954,7 @@ def safe_rmtree(dirname, retry=0):
   """Remove the tree at DIRNAME, making it writable first.
      If DIRNAME is a symlink, only remove the symlink, not its target."""
   def rmtree(dirname):
-    chmod_tree(dirname, 0666, 0666)
+    chmod_tree(dirname, S_ALL_RW, S_ALL_RW)
     shutil.rmtree(dirname)
 
   if os.path.islink(dirname):
@@ -796,21 +976,37 @@ def safe_rmtree(dirname, retry=0):
   else:
     rmtree(dirname)
 
-# For making local mods to files
-def file_append(path, new_text):
-  "Append NEW_TEXT to file at PATH"
-  open(path, 'a').write(new_text)
-
-# Append in binary mode
-def file_append_binary(path, new_text):
-  "Append NEW_TEXT to file at PATH in binary mode"
-  open(path, 'ab').write(new_text)
-
 # For creating new files, and making local mods to existing files.
 def file_write(path, contents, mode='w'):
   """Write the CONTENTS to the file at PATH, opening file using MODE,
   which is (w)rite by default."""
-  open(path, mode).write(contents)
+
+  if sys.version_info < (3, 0):
+    open(path, mode).write(contents)
+  else:
+    # Python 3:  Write data in the format required by MODE, i.e. byte arrays
+    #            to 'b' files, utf-8 otherwise."""
+    if 'b' in mode:
+      if isinstance(contents, str):
+        contents = contents.encode()
+    else:
+      if not isinstance(contents, str):
+        contents = contents.decode("utf-8")
+
+    if isinstance(contents, str):
+      codecs.open(path, mode, "utf-8").write(contents)
+    else:
+      open(path, mode).write(contents)
+
+# For making local mods to files
+def file_append(path, new_text):
+  "Append NEW_TEXT to file at PATH"
+  file_write(path, new_text, 'a')
+
+# Append in binary mode
+def file_append_binary(path, new_text):
+  "Append NEW_TEXT to file at PATH in binary mode"
+  file_write(path, new_text, 'ab')
 
 # For replacing parts of contents in an existing file, with new content.
 def file_substitute(path, contents, new_contents):
@@ -818,31 +1014,11 @@ def file_substitute(path, contents, new_contents):
   fcontent = open(path, 'r').read().replace(contents, new_contents)
   open(path, 'w').write(fcontent)
 
-# For creating blank new repositories
-def create_repos(path, minor_version = None):
-  """Create a brand-new SVN repository at PATH.  If PATH does not yet
-  exist, create it."""
-
-  if not os.path.exists(path):
-    os.makedirs(path) # this creates all the intermediate dirs, if neccessary
-
-  opts = ("--bdb-txn-nosync",)
-  if not minor_version or minor_version > options.server_minor_version:
-    minor_version = options.server_minor_version
-  opts += ("--compatible-version=1.%d" % (minor_version),)
-  if options.fs_type is not None:
-    opts += ("--fs-type=" + options.fs_type,)
-  exit_code, stdout, stderr = run_command(svnadmin_binary, 1, 0, "create",
-                                          path, *opts)
-
-  # Skip tests if we can't create the repository.
-  if stderr:
-    for line in stderr:
-      if line.find('Unknown FS type') != -1:
-        raise Skip
-    # If the FS type is known, assume the repos couldn't be created
-    # (e.g. due to a missing 'svnadmin' binary).
-    raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+# For setting up authz, hooks and making other tweaks to created repos
+def _post_create_repos(path, minor_version = None):
+  """Set default access right configurations for svnserve and mod_dav,
+  install hooks and perform other various tweaks according to the test
+  options in the SVN repository at PATH."""
 
   # Require authentication to write to the repos, for ra_svn testing.
   file_write(get_svnserve_conf_file_path(path),
@@ -855,13 +1031,42 @@ def create_repos(path, minor_version = None):
     # This actually creates TWO [users] sections in the file (one of them is
     # uncommented in `svnadmin create`'s template), so we exercise the .ini
     # files reading code's handling of duplicates, too. :-)
-    file_append(os.path.join(path, "conf", "passwd"),
-                "[users]\njrandom = rayjandom\njconstant = rayjandom\n");
+    users = ("[users]\n"
+             "jrandom = rayjandom\n"
+             "jconstant = rayjandom\n")
+    if tests_verify_dump_load_cross_check():
+      # Insert a user for the dump/load cross-check.
+      users += (crosscheck_username + " = " + crosscheck_password + "\n")
+    file_append(os.path.join(path, "conf", "passwd"), users)
 
-  if options.fs_type is None or options.fs_type == 'fsfs':
+  if options.fs_type is None or options.fs_type == 'fsfs' or \
+     options.fs_type == 'fsx':
     # fsfs.conf file
-    if options.config_file is not None:
-      shutil.copy(options.config_file, get_fsfs_conf_file_path(path))
+    if (minor_version is None or minor_version >= 6):
+      confpath = get_fsfs_conf_file_path(path)
+      if options.config_file is not None:
+        shutil.copy(options.config_file, confpath)
+
+      if options.memcached_server is not None or \
+         options.fsfs_compression is not None or \
+         options.fsfs_dir_deltification is not None and \
+         os.path.exists(confpath):
+        with open(confpath, 'r') as conffile:
+          newlines = []
+          for line in conffile.readlines():
+            if line.startswith('# compression ') and \
+               options.fsfs_compression is not None:
+              line = 'compression = %s\n' % options.fsfs_compression
+            if line.startswith('# enable-dir-deltification ') and \
+               options.fsfs_dir_deltification is not None:
+              line = 'enable-dir-deltification = %s\n' % \
+                options.fsfs_dir_deltification
+            newlines += line
+            if options.memcached_server is not None and \
+               line == '[memcached-servers]\n':
+              newlines += ('key = %s\n' % options.memcached_server)
+        with open(confpath, 'w') as conffile:
+          conffile.writelines(newlines)
 
     # format file
     if options.fsfs_sharding is not None:
@@ -885,13 +1090,13 @@ def create_repos(path, minor_version = None):
         new_contents = new_contents[:-1]
 
       # replace it
-      os.chmod(format_file_path, 0666)
+      os.chmod(format_file_path, S_ALL_RW)
       file_write(format_file_path, new_contents, 'wb')
 
     # post-commit
     # Note that some tests (currently only commit_tests) create their own
     # post-commit hooks, which would override this one. :-(
-    if options.fsfs_packing:
+    if options.fsfs_packing and minor_version >=6:
       # some tests chdir.
       abs_path = os.path.abspath(path)
       create_python_hook_script(get_post_commit_hook_path(abs_path),
@@ -902,7 +1107,74 @@ def create_repos(path, minor_version = None):
           % repr([svnadmin_binary, 'pack', abs_path]))
 
   # make the repos world-writeable, for mod_dav_svn's sake.
-  chmod_tree(path, 0666, 0666)
+  chmod_tree(path, S_ALL_RW, S_ALL_RW)
+
+def _unpack_precooked_repos(path, template):
+  testdir = os.path.dirname(os.path.abspath(os.path.dirname(__file__)))
+  repozip = os.path.join(os.path.dirname(testdir), "templates", template)
+  zipfile.ZipFile(repozip, 'r').extractall(path)
+
+# For creating new, pre-cooked greek repositories
+def unpack_greek_repos(path):
+  template = "greek-fsfs-v%d.zip" % options.fsfs_version
+  _unpack_precooked_repos(path, template)
+  _post_create_repos(path, options.server_minor_version)
+
+# For creating blank new repositories
+def create_repos(path, minor_version = None):
+  """Create a brand-new SVN repository at PATH.  If PATH does not yet
+  exist, create it."""
+
+  if not os.path.exists(path):
+    os.makedirs(path) # this creates all the intermediate dirs, if necessary
+
+  if options.fsfs_version is None:
+    if options.fs_type == "bdb":
+      opts = ("--bdb-txn-nosync",)
+    else:
+      opts = ()
+    if minor_version is None or minor_version > options.server_minor_version:
+      minor_version = options.server_minor_version
+    opts += ("--compatible-version=1.%d" % (minor_version),)
+    if options.fs_type is not None:
+      opts += ("--fs-type=" + options.fs_type,)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "create", path, *opts)
+  else:
+    # Copy a pre-cooked FSFS repository
+    assert options.fs_type == "fsfs"
+    template = "empty-fsfs-v%d.zip" % options.fsfs_version
+    _unpack_precooked_repos(path, template)
+    exit_code, stdout, stderr = run_command(svnadmin_binary, 1, False,
+                                            "setuuid", path)
+
+  # Skip tests if we can't create the repository.
+  if stderr:
+    stderr_lines = 0
+    not_using_fsfs_backend = (options.fs_type != "fsfs")
+    backend_deprecation_warning = False
+    for line in stderr:
+      stderr_lines += 1
+      if line.find('Unknown FS type') != -1:
+        raise Skip
+      if not_using_fsfs_backend:
+        if 0 < line.find('repository back-end is deprecated, consider using'):
+          backend_deprecation_warning = True
+
+    # Creating BDB repositories will cause svnadmin to print a warning
+    # which should be ignored.
+    if (stderr_lines == 1
+        and not_using_fsfs_backend
+        and backend_deprecation_warning):
+      pass
+    else:
+      # If the FS type is known and we noticed more than just the
+      # BDB-specific warning, assume the repos couldn't be created
+      # (e.g. due to a missing 'svnadmin' binary).
+      raise SVNRepositoryCreateFailure("".join(stderr).rstrip())
+
+  # Configure the new repository.
+  _post_create_repos(path, minor_version)
 
 # For copying a repository
 def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
@@ -967,12 +1239,12 @@ def copy_repos(src_path, dst_path, head_revision, ignore_uuid = 1,
     logger.warn('ERROR:  dump failed; did not see revision %s', head_revision)
     raise SVNRepositoryCopyFailure
 
-  load_re = re.compile(r'^------- Committed revision (\d+) >>>\r?$')
+  load_re = re.compile(b'^------- Committed revision (\\d+) >>>\\r?$')
   expect_revision = 1
-  for load_line in filter_dbg(load_stdout):
+  for load_line in filter_dbg(load_stdout, True):
     match = load_re.match(load_line)
     if match:
-      if match.group(1) != str(expect_revision):
+      if match.group(1).decode() != str(expect_revision):
         logger.warn('ERROR:  load failed: %s', load_line.strip())
         raise SVNRepositoryCopyFailure
       expect_revision += 1
@@ -1012,7 +1284,35 @@ def create_python_hook_script(hook_path, hook_script_code,
   else:
     # For all other platforms
     file_write(hook_path, "#!%s\n%s" % (sys.executable, hook_script_code))
-    os.chmod(hook_path, 0755)
+    os.chmod(hook_path, S_ALL_RW | stat.S_IXUSR)
+
+def create_http_connection(url, debuglevel=9):
+  """Create an http(s) connection to the host specified by URL.
+     Set the debugging level (the amount of debugging output printed when
+     working with this connection) to DEBUGLEVEL.  By default, all debugging
+     output is printed. """
+
+  if sys.version_info < (3, 0):
+    # Python <3.0
+    import httplib
+  else:
+    # Python >=3.0
+    import http.client as httplib
+
+  loc = urlparse(url)
+  if loc.scheme == 'http':
+    h = httplib.HTTPConnection(loc.hostname, loc.port)
+  else:
+    try:
+      import ssl # new in python 2.6
+      c = ssl.create_default_context()
+      c.check_hostname = False
+      c.verify_mode = ssl.CERT_NONE
+      h = httplib.HTTPSConnection(loc.hostname, loc.port, context=c)
+    except:
+      h = httplib.HTTPSConnection(loc.hostname, loc.port)
+  h.set_debuglevel(debuglevel)
+  return h
 
 def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   "Create a restrictive authz file ( no anynomous access )."
@@ -1020,6 +1320,19 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
   fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
   fp.write("[general]\nanon-access = %s\nauth-access = write\n"
            "authz-db = authz\n" % anon_access)
+  if options.enable_sasl:
+    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+  else:
+    fp.write("password-db = passwd\n")
+  fp.close()
+
+def write_restrictive_svnserve_conf_with_groups(repo_dir,
+                                                anon_access="none"):
+  "Create a restrictive configuration with groups stored in a separate file."
+
+  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
+  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
+           "authz-db = authz\ngroups-db = groups\n" % anon_access)
   if options.enable_sasl:
     fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
   else:
@@ -1034,7 +1347,7 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
 # parallel execution at the bottom like so
 #   if __name__ == '__main__':
 #     svntest.main.run_tests(test_list, serial_only = True)
-def write_authz_file(sbox, rules, sections=None):
+def write_authz_file(sbox, rules, sections=None, prefixed_rules=None):
   """Write an authz file to SBOX, appropriate for the RA method used,
 with authorizations rules RULES mapping paths to strings containing
 the rules. You can add sections SECTIONS (ex. groups, aliases...) with
@@ -1042,23 +1355,49 @@ an appropriate list of mappings.
 """
   fp = open(sbox.authz_file, 'w')
 
-  # When the sandbox repository is read only it's name will be different from
+  # When the sandbox repository is read only its name will be different from
   # the repository name.
-  repo_name = sbox.repo_dir
-  while repo_name[-1] == '/':
-    repo_name = repo_name[:-1]
-  repo_name = os.path.basename(repo_name)
+  repo_name = os.path.basename(sbox.repo_dir.rstrip('/'))
 
   if sbox.repo_url.startswith("http"):
-    prefix = repo_name + ":"
+    default_prefix = repo_name + ":"
   else:
-    prefix = ""
+    default_prefix = ""
+
   if sections:
     for p, r in sections.items():
       fp.write("[%s]\n%s\n" % (p, r))
 
-  for p, r in rules.items():
-    fp.write("[%s%s]\n%s\n" % (prefix, p, r))
+  if not prefixed_rules:
+    prefixed_rules = dict()
+
+  if rules:
+    for p, r in rules.items():
+      prefixed_rules[default_prefix + p] = r
+
+  for p, r in prefixed_rules.items():
+    fp.write("[%s]\n%s\n" % (p, r))
+    if tests_verify_dump_load_cross_check():
+      # Insert an ACE that lets the dump/load cross-check bypass
+      # authz restrictions.
+      fp.write(crosscheck_username + " = rw\n")
+
+  if tests_verify_dump_load_cross_check() and '/' not in prefixed_rules:
+    # We need a repository-root ACE for the dump/load cross-check
+    fp.write("[/]\n" + crosscheck_username + " = rw\n")
+
+  fp.close()
+
+# See the warning about parallel test execution in write_authz_file
+# method description.
+def write_groups_file(sbox, groups):
+  """Write a groups file to SBOX, appropriate for the RA method used,
+with group contents set to GROUPS."""
+  fp = open(sbox.groups_file, 'w')
+  fp.write("[groups]\n")
+  if groups:
+    for p, r in groups.items():
+      fp.write("%s = %s\n" % (p, r))
   fp.close()
 
 def use_editor(func):
@@ -1122,6 +1461,48 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
       return "--- Merging %sr%ld through r%ld into '%s':\n" \
              % (from_foreign_phrase, revstart, revend, target_re)
 
+def summary_of_conflicts(text_conflicts=0,
+                         prop_conflicts=0,
+                         tree_conflicts=0,
+                         text_resolved=0,
+                         prop_resolved=0,
+                         tree_resolved=0,
+                         skipped_paths=0,
+                         as_regex=False):
+  """Return a list of lines corresponding to the summary of conflicts and
+     skipped paths that is printed by merge and update and switch.  If all
+     parameters are zero, return an empty list.
+  """
+  lines = []
+  if (text_conflicts or prop_conflicts or tree_conflicts
+      or text_resolved or prop_resolved or tree_resolved
+      or skipped_paths):
+    lines.append("Summary of conflicts:\n")
+    if text_conflicts or text_resolved:
+      if text_resolved == 0:
+        lines.append("  Text conflicts: %d\n" % text_conflicts)
+      else:
+        lines.append("  Text conflicts: %d remaining (and %d already resolved)\n"
+                     % (text_conflicts, text_resolved))
+    if prop_conflicts or prop_resolved:
+      if prop_resolved == 0:
+        lines.append("  Property conflicts: %d\n" % prop_conflicts)
+      else:
+        lines.append("  Property conflicts: %d remaining (and %d already resolved)\n"
+                     % (prop_conflicts, prop_resolved))
+    if tree_conflicts or tree_resolved:
+      if tree_resolved == 0:
+        lines.append("  Tree conflicts: %d\n" % tree_conflicts)
+      else:
+        lines.append("  Tree conflicts: %d remaining (and %d already resolved)\n"
+                     % (tree_conflicts, tree_resolved))
+    if skipped_paths:
+      lines.append("  Skipped paths: %d\n" % skipped_paths)
+
+  if as_regex:
+    lines = map(re.escape, lines)
+  return lines
+
 
 def make_log_msg():
   "Conjure up a log message based on the calling test."
@@ -1155,6 +1536,12 @@ def make_log_msg():
 # Functions which check the test configuration
 # (useful for conditional XFails)
 
+def tests_use_prepackaged_repository():
+  return options.fsfs_version is not None
+
+def tests_verify_dump_load_cross_check():
+  return options.dump_load_cross_check
+
 def is_ra_type_dav():
   return options.test_area_url.startswith('http')
 
@@ -1182,8 +1569,29 @@ def is_fs_type_fsfs():
   # This assumes that fsfs is the default fs implementation.
   return options.fs_type == 'fsfs' or options.fs_type is None
 
+def is_fs_type_fsx():
+  return options.fs_type == 'fsx'
+
 def is_fs_type_bdb():
   return options.fs_type == 'bdb'
+
+def is_fs_log_addressing():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 9)
+
+def fs_has_sha1():
+  return fs_has_rep_sharing()
+
+def fs_has_rep_sharing():
+  return options.server_minor_version >= 6
+
+def fs_has_pack():
+  return is_fs_type_fsx() or \
+        (is_fs_type_fsfs() and options.server_minor_version >= 6)
+
+def fs_has_unique_freeze():
+  return (is_fs_type_fsfs() and options.server_minor_version >= 9
+          or is_fs_type_bdb())
 
 def is_os_windows():
   return os.name == 'nt'
@@ -1207,25 +1615,28 @@ def server_has_mergeinfo():
   return options.server_minor_version >= 5
 
 def server_has_revprop_commit():
-  return options.server_minor_version >= 5
+  return options.server_caps.has_revprop_commit
 
 def server_authz_has_aliases():
-  return options.server_minor_version >= 5
+  return options.server_caps.authz_has_aliases
 
 def server_gets_client_capabilities():
-  return options.server_minor_version >= 5
+  return options.server_caps.gets_client_capabilities
 
 def server_has_partial_replay():
-  return options.server_minor_version >= 5
+  return options.server_caps.has_partial_replay
 
 def server_enforces_UTF8_fspaths_in_verify():
-  return options.server_minor_version >= 6
+  return options.server_caps.enforces_UTF8_fspaths_in_verify
 
 def server_enforces_date_syntax():
-  return options.server_minor_version >= 5
+  return options.server_caps.enforces_date_syntax
 
 def server_has_atomic_revprop():
-  return options.server_minor_version >= 7
+  return options.server_caps.has_atomic_revprop
+
+def server_has_reverse_get_file_revs():
+  return options.server_caps.has_reverse_get_file_revs
 
 def is_plaintext_password_storage_disabled():
   try:
@@ -1237,6 +1648,30 @@ def is_plaintext_password_storage_disabled():
   except:
     return False
   return True
+
+
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
+# https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
+__mod_dav_url_quoting_broken_versions = frozenset([
+    '2.2.27',
+    '2.2.26',
+    '2.2.25',
+    '2.4.9',
+    '2.4.8',
+    '2.4.7',
+    '2.4.6',
+    '2.4.5',
+])
+def is_mod_dav_url_quoting_broken():
+    if is_ra_type_dav() and options.httpd_version != options.httpd_whitelist:
+        return (options.httpd_version in __mod_dav_url_quoting_broken_versions)
+    return None
+
+def is_httpd_authz_provider_enabled():
+    if is_ra_type_dav():
+      v = options.httpd_version.split('.')
+      return (v[0] == '2' and int(v[1]) >= 3) or int(v[0]) > 2
+    return None
 
 ######################################################################
 
@@ -1272,13 +1707,12 @@ class TestSpawningThread(threading.Thread):
     args = []
     args.append(str(index))
     args.append('-c')
+    args.append('--set-log-level=%s' % logger.getEffectiveLevel())
     # add some startup arguments from this process
     if options.fs_type:
       args.append('--fs-type=' + options.fs_type)
     if options.test_area_url:
       args.append('--url=' + options.test_area_url)
-    if logger.getEffectiveLevel() <= logging.DEBUG:
-      args.append('-v')
     if options.cleanup:
       args.append('--cleanup')
     if options.enable_sasl:
@@ -1295,8 +1729,34 @@ class TestSpawningThread(threading.Thread):
       args.append('--ssl-cert=' + options.ssl_cert)
     if options.http_proxy:
       args.append('--http-proxy=' + options.http_proxy)
+    if options.http_proxy_username:
+      args.append('--http-proxy-username=' + options.http_proxy_username)
+    if options.http_proxy_password:
+      args.append('--http-proxy-password=' + options.http_proxy_password)
+    if options.httpd_version:
+      args.append('--httpd-version=' + options.httpd_version)
+    if options.httpd_whitelist:
+      args.append('--httpd-whitelist=' + options.httpd_whitelist)
+    if options.exclusive_wc_locks:
+      args.append('--exclusive-wc-locks')
+    if options.memcached_server:
+      args.append('--memcached-server=' + options.memcached_server)
+    if options.fsfs_sharding:
+      args.append('--fsfs-sharding=' + str(options.fsfs_sharding))
+    if options.fsfs_packing:
+      args.append('--fsfs-packing')
+    if options.fsfs_version:
+      args.append('--fsfs-version=' + str(options.fsfs_version))
+    if options.dump_load_cross_check:
+      args.append('--dump-load-cross-check')
+    if options.fsfs_compression:
+      args.append('--fsfs-compression=' + options.fsfs_compression)
+    if options.fsfs_dir_deltification:
+      args.append('--fsfs-dir-deltification=' + options.fsfs_dir_deltification)
+    if options.svn_bin:
+      args.append('--bin=' + options.svn_bin)
 
-    result, stdout_lines, stderr_lines = spawn_process(command, 0, 0, None,
+    result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
     self.results.append((index, result, stdout_lines, stderr_lines))
 
@@ -1424,9 +1884,9 @@ class TestRunner:
         print('Test driver returned a status code.')
         sys.exit(255)
       result = svntest.testcase.RESULT_OK
-    except Skip, ex:
+    except Skip as ex:
       result = svntest.testcase.RESULT_SKIP
-    except Failure, ex:
+    except Failure as ex:
       result = svntest.testcase.RESULT_FAIL
       msg = ''
       # We captured Failure and its subclasses. We don't want to print
@@ -1444,7 +1904,7 @@ class TestRunner:
     except KeyboardInterrupt:
       logger.error('Interrupted')
       sys.exit(0)
-    except SystemExit, ex:
+    except SystemExit as ex:
       logger.error('EXCEPTION: SystemExit(%d), skipping cleanup' % ex.code)
       self._print_name(ex.code and 'FAIL: ' or 'PASS: ')
       raise
@@ -1554,14 +2014,48 @@ def _internal_run_tests(test_list, testnums, parallel, srcdir, progress_func):
   return exit_code
 
 
-def create_default_options():
-  """Set the global options to the defaults, as provided by the argument
-     parser."""
-  _parse_options([])
+class AbbreviatedFormatter(logging.Formatter):
+  """A formatter with abbreviated loglevel indicators in the output.
 
+  Use %(levelshort)s in the format string to get a single character
+  representing the loglevel..
+  """
 
-def _create_parser():
+  _level_short = {
+    logging.CRITICAL : 'C',
+    logging.ERROR : 'E',
+    logging.WARNING : 'W',
+    logging.INFO : 'I',
+    logging.DEBUG : 'D',
+    logging.NOTSET : '-',
+    }
+
+  def format(self, record):
+    record.levelshort = self._level_short[record.levelno]
+    return logging.Formatter.format(self, record)
+
+def _create_parser(usage=None):
   """Return a parser for our test suite."""
+
+  global logger
+
+  # Initialize the LOGGER global variable so the option parsing can set
+  # its loglevel, as appropriate.
+  logger = logging.getLogger()
+
+  # Did some chucklehead log something before we configured it? If they
+  # did, then a default handler/formatter would get installed. We want
+  # to be the one to install the first (and only) handler.
+  for handler in logger.handlers:
+    if not isinstance(handler.formatter, AbbreviatedFormatter):
+      raise Exception('Logging occurred before configuration. Some code'
+                      ' path needs to be fixed. Examine the log output'
+                      ' to find what/where logged something.')
+
+  # Set a sane default log level
+  if logger.getEffectiveLevel() == logging.NOTSET:
+    logger.setLevel(logging.WARN)
+
   def set_log_level(option, opt, value, parser, level=None):
     if level:
       # called from --verbose
@@ -1570,9 +2064,18 @@ def _create_parser():
       # called from --set-log-level
       logger.setLevel(getattr(logging, value, None) or int(value))
 
-  # set up the parser
+  # Set up the parser.
+  # If you add new options, consider adding them in
+  #
+  #     .../build/run_tests.py:main()
+  #
+  # and handling them in
+  #
+  #     .../build/run_tests.py:TestHarness._init_py_tests()
+  #
   _default_http_library = 'serf'
-  usage = 'usage: %prog [options] [<test> ...]'
+  if usage is None:
+    usage = 'usage: %prog [options] [<test> ...]'
   parser = optparse.OptionParser(usage=usage)
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
@@ -1587,6 +2090,9 @@ def _create_parser():
   parser.add_option('-p', '--parallel', action='store_const',
                     const=default_num_threads, dest='parallel',
                     help='Run the tests in parallel')
+  parser.add_option('--parallel-instances', action='store',
+                    type='int', dest='parallel',
+                    help='Run the given number of tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
                          'child process')
@@ -1596,7 +2102,7 @@ def _create_parser():
   parser.add_option('--url', action='store',
                     help='Base url to the repos (e.g. svn://localhost)')
   parser.add_option('--fs-type', action='store',
-                    help='Subversion file system type (fsfs or bdb)')
+                    help='Subversion file system type (fsfs, bdb or fsx)')
   parser.add_option('--cleanup', action='store_true',
                     help='Whether to clean up')
   parser.add_option('--enable-sasl', action='store_true',
@@ -1617,6 +2123,13 @@ def _create_parser():
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
                     help='Default shard size (for fsfs)')
+  parser.add_option('--fsfs-version', type='int', action='store',
+                    help='FSFS version (fsfs)')
+  parser.add_option('--dump-load-cross-check', action='store_true',
+                    help="After every test, run a series of dump and load " +
+                         "tests with svnadmin, svnrdump and svndumpfilter " +
+                         " on the testcase repositories to cross-check " +
+                         " dump file compatibility.")
   parser.add_option('--config-file', action='store',
                     help="Configuration file for tests.")
   parser.add_option('--set-log-level', action='callback', type='str',
@@ -1640,43 +2153,119 @@ def _create_parser():
                     help='Path to SSL server certificate.')
   parser.add_option('--http-proxy', action='store',
                     help='Use the HTTP Proxy at hostname:port.')
+  parser.add_option('--http-proxy-username', action='store',
+                    help='Username for the HTTP Proxy.')
+  parser.add_option('--http-proxy-password', action='store',
+                    help='Password for the HTTP Proxy.')
+  parser.add_option('--httpd-version', action='store',
+                    help='Assume HTTPD is this version.')
+  parser.add_option('--httpd-whitelist', action='store',
+                    help='httpd whitelist version.')
+  parser.add_option('--tools-bin', action='store', dest='tools_bin',
+                    help='Use the svn tools installed in this path')
+  parser.add_option('--exclusive-wc-locks', action='store_true',
+                    help='Use sqlite exclusive locking for working copies')
+  parser.add_option('--memcached-server', action='store',
+                    help='Use memcached server at specified URL (FSFS only)')
+  parser.add_option('--fsfs-compression', action='store', type='str',
+                    help='Set compression type (for fsfs)')
+  parser.add_option('--fsfs-dir-deltification', action='store', type='str',
+                    help='Set directory deltification option (for fsfs)')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
         url=file_scheme_prefix + \
-                        urllib.pathname2url(os.path.abspath(os.getcwd())),
+                        svntest.wc.svn_uri_quote(
+                           os.path.abspath(
+                               os.getcwd()).replace(os.path.sep, '/')),
         http_library=_default_http_library)
 
   return parser
 
+class ServerCaps():
+  """A simple struct that contains the actual server capabilities that don't
+     depend on other settings like FS versions."""
 
-def _parse_options(arglist=sys.argv[1:]):
+  def __init__(self, options):
+    self.has_revprop_commit = options.server_minor_version >= 5
+    self.authz_has_aliases = options.server_minor_version >= 5
+    self.gets_client_capabilities = options.server_minor_version >= 5
+    self.has_partial_replay = options.server_minor_version >= 5
+    self.enforces_UTF8_fspaths_in_verify = options.server_minor_version >= 6
+    self.enforces_date_syntax = options.server_minor_version >= 5
+    self.has_atomic_revprop = options.server_minor_version >= 7
+    self.has_reverse_get_file_revs = options.server_minor_version >= 8
+
+def parse_options(arglist=sys.argv[1:], usage=None):
   """Parse the arguments in arg_list, and set the global options object with
      the results"""
 
   global options
 
-  parser = _create_parser()
+  parser = _create_parser(usage)
   (options, args) = parser.parse_args(arglist)
 
-  # some sanity checking
-  if options.fsfs_packing and not options.fsfs_sharding:
-    parser.error("--fsfs-packing requires --fsfs-sharding")
+  # Peg the actual server capabilities.
+  # We tweak the server_minor_version later to accommodate FS restrictions,
+  # but we don't want them to interfere with expectations towards the "pure"
+  # server code.
+  options.server_caps = ServerCaps(options)
 
-  # If you change the below condition then change
-  # ../../../../build/run_tests.py too.
-  if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
-    parser.error("test harness only supports server minor versions 3-%d"
-                 % SVN_VER_MINOR)
+  # If there are no logging handlers registered yet, then install our
+  # own with our custom formatter. (anything currently installed *is*
+  # our handler as tested above, in _create_parser)
+  if not logger.handlers:
+    # Now that we have some options, let's get the logger configured before
+    # doing anything more
+    if options.log_with_timestamps:
+      formatter = AbbreviatedFormatter('%(levelshort)s:'
+                                       ' [%(asctime)s] %(message)s',
+                                       datefmt='%Y-%m-%d %H:%M:%S')
+    else:
+      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
+    handler = logging.StreamHandler(sys.stdout)
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
 
+  # Normalize url to have no trailing slash
   if options.url:
-    if options.url[-1:] == '/': # Normalize url to have no trailing slash
+    if options.url[-1:] == '/':
       options.test_area_url = options.url[:-1]
     else:
       options.test_area_url = options.url
 
+  # Some sanity checking
+  if options.fsfs_packing and not options.fsfs_sharding:
+    parser.error("--fsfs-packing requires --fsfs-sharding")
+
+  if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
+    parser.error("test harness only supports server minor versions 3-%d"
+                 % SVN_VER_MINOR)
+
+  pass
+
   return (parser, args)
+
+def tweak_options_for_precooked_repos():
+  """Make sure the server-minor-version matches the fsfs-version parameter
+     for pre-cooked repositories."""
+
+  global options
+
+  # Server versions that introduced the respective FSFS formats:
+  introducing_version = { 1:1, 2:4, 3:5, 4:6, 6:8, 7:9 }
+  if options.fsfs_version:
+    if options.fsfs_version in introducing_version:
+      introduced_in = introducing_version[options.fsfs_version]
+      if options.server_minor_version \
+        and options.server_minor_version != introduced_in \
+        and options.server_minor_version != SVN_VER_MINOR:
+        parser.error("--fsfs-version=%d requires --server-minor-version=%d" \
+                     % (options.fsfs_version, introduced_in))
+      options.server_minor_version = introduced_in
+    # ### Add more tweaks here if and when we support pre-cooked versions
+    # ### of FSFS repositories.
 
 
 def run_tests(test_list, serial_only = False):
@@ -1713,8 +2302,8 @@ def get_issue_details(issue_numbers):
     # Parse the xml for ISSUE_NO from the issue tracker into a Document.
     issue_xml_f = urllib.urlopen(xml_url)
   except:
-    print "WARNING: Unable to contact issue tracker; " \
-          "milestones defaulting to 'unknown'."
+    print("WARNING: Unable to contact issue tracker; " \
+          "milestones defaulting to 'unknown'.")
     return issue_dict
 
   try:
@@ -1733,31 +2322,10 @@ def get_issue_details(issue_numbers):
       assignment = assignment_element[0].childNodes[0].nodeValue
       issue_dict[issue_id] = [milestone, assignment]
   except:
-    print "ERROR: Unable to parse target milestones from issue tracker"
+    print("ERROR: Unable to parse target milestones from issue tracker")
     raise
 
   return issue_dict
-
-
-class AbbreviatedFormatter(logging.Formatter):
-  """A formatter with abbreviated loglevel indicators in the output.
-
-  Use %(levelshort)s in the format string to get a single character
-  representing the loglevel..
-  """
-
-  _level_short = {
-    logging.CRITICAL : 'C',
-    logging.ERROR : 'E',
-    logging.WARNING : 'W',
-    logging.INFO : 'I',
-    logging.DEBUG : 'D',
-    logging.NOTSET : '-',
-    }
-
-  def format(self, record):
-    record.levelshort = self._level_short[record.levelno]
-    return logging.Formatter.format(self, record)
 
 
 # Main func.  This is the "entry point" that all the test scripts call
@@ -1770,16 +2338,21 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   exiting the process.  This function can be used when a caller doesn't
   want the process to die."""
 
-  global logger
   global pristine_url
   global pristine_greek_repos_url
+  global other_dav_root_url
+  global non_dav_root_url
   global svn_binary
   global svnadmin_binary
   global svnlook_binary
+  global svnrdump_binary
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
+  global svnmover_binary
   global svnmucc_binary
+  global svnauthz_binary
+  global svnauthz_validate_binary
   global options
 
   if test_name:
@@ -1787,41 +2360,13 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   testnums = []
 
-  # Initialize the LOGGER global variable so the option parsing can set
-  # its loglevel, as appropriate.
-  logger = logging.getLogger()
-
-  # Did some chucklehead log something before we configured it? If they
-  # did, then a default handler/formatter would get installed. We want
-  # to be the one to install the first (and only) handler.
-  for handler in logger.handlers:
-    if not isinstance(handler.formatter, AbbreviatedFormatter):
-      raise Exception('Logging occurred before configuration. Some code'
-                      ' path needs to be fixed. Examine the log output'
-                      ' to find what/where logged something.')
-
   if not options:
     # Override which tests to run from the commandline
-    (parser, args) = _parse_options()
+    (parser, args) = parse_options()
+    tweak_options_for_precooked_repos()
     test_selection = args
   else:
     parser = _create_parser()
-
-  # If there are no handlers registered yet, then install our own with
-  # our custom formatter. (anything currently installed *is* our handler
-  # as tested above)
-  if not logger.handlers:
-    # Now that we have some options, let's get the logger configured before
-    # doing anything more
-    if options.log_with_timestamps:
-      formatter = AbbreviatedFormatter('%(levelshort)s:'
-                                       ' [%(asctime)s] %(message)s',
-                                       datefmt='%Y-%m-%d %H:%M:%S')
-    else:
-      formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
-    handler = logging.StreamHandler(sys.stdout)
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
 
   # parse the positional arguments (test nums, names)
   for arg in test_selection:
@@ -1859,7 +2404,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
         # it to a number if possible
         for testnum in list(range(1, len(test_list))):
           test_case = TestRunner(test_list[testnum], testnum)
-          if test_case.get_function_name() == str(arg):
+          if test_case.get_function_name() == str(arg).rstrip(','):
             testnums.append(testnum)
             appended = True
             break
@@ -1872,7 +2417,13 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   # Calculate pristine_greek_repos_url from test_area_url.
   pristine_greek_repos_url = options.test_area_url + '/' + \
-                                urllib.pathname2url(pristine_greek_repos_dir)
+                                svntest.wc.svn_uri_quote(
+                                  pristine_greek_repos_dir.replace(
+                                      os.path.sep, '/'))
+
+  other_dav_root_url = options.test_area_url + '/fsdavroot'
+  non_dav_root_url = options.test_area_url + '/nodavroot'
+
 
   if options.use_jsvn:
     if options.svn_bin is None:
@@ -1891,11 +2442,18 @@ def execute_tests(test_list, serial_only = False, test_name = None,
       svn_binary = os.path.join(options.svn_bin, 'svn' + _exe)
       svnadmin_binary = os.path.join(options.svn_bin, 'svnadmin' + _exe)
       svnlook_binary = os.path.join(options.svn_bin, 'svnlook' + _exe)
+      svnrdump_binary = os.path.join(options.svn_bin, 'svnrdump' + _exe)
       svnsync_binary = os.path.join(options.svn_bin, 'svnsync' + _exe)
       svndumpfilter_binary = os.path.join(options.svn_bin,
                                           'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
       svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
+
+  if options.tools_bin:
+    svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
+    svnauthz_validate_binary = os.path.join(options.tools_bin,
+                                            'svnauthz-validate' + _exe)
+    svnmover_binary = os.path.join(options.tools_bin, 'svnmover' + _exe)
 
   ######################################################################
 
@@ -1938,35 +2496,44 @@ def execute_tests(test_list, serial_only = False, test_name = None,
          or options.mode_filter.upper() == test_mode \
          or (options.mode_filter.upper() == 'PASS' and test_mode == ''):
         if not printed_header:
-          print header
+          print(header)
           printed_header = True
         TestRunner(test_list[testnum], testnum).list(milestones_dict)
     # We are simply listing the tests so always exit with success.
     return 0
 
-  # don't run tests in parallel when the tests don't support it or there
-  # are only a few tests to run.
+  # don't run tests in parallel when the tests don't support it or
+  # there are only a few tests to run.
+  options_parallel = options.parallel
   if serial_only or len(testnums) < 2:
     options.parallel = 0
 
-  if not options.is_child_process:
-    # Build out the default configuration directory
-    create_config_dir(default_config_dir,
-                      ssl_cert=options.ssl_cert,
-                      ssl_url=options.test_area_url,
-                      http_proxy=options.http_proxy)
+  try:
+    if not options.is_child_process:
+      # Build out the default configuration directory
+      create_config_dir(default_config_dir,
+                        ssl_cert=options.ssl_cert,
+                        ssl_url=options.test_area_url,
+                        http_proxy=options.http_proxy,
+                        exclusive_wc_locks=options.exclusive_wc_locks)
 
-    # Setup the pristine repository
-    svntest.actions.setup_pristine_greek_repository()
+      # Setup the pristine repository
+      svntest.actions.setup_pristine_greek_repository()
 
-  # Run the tests.
-  exit_code = _internal_run_tests(test_list, testnums, options.parallel,
-                                  options.srcdir, progress_func)
+    # Run the tests.
+    exit_code = _internal_run_tests(test_list, testnums, options.parallel,
+                                    options.srcdir, progress_func)
+  finally:
+    options.parallel = options_parallel
 
   # Remove all scratchwork: the 'pristine' repository, greek tree, etc.
   # This ensures that an 'import' will happen the next time we run.
   if not options.is_child_process and not options.keep_local_tmp:
-    safe_rmtree(temp_dir, 1)
+    try:
+      safe_rmtree(temp_dir, 1)
+    except:
+      logger.error("ERROR: cleanup of '%s' directory failed." % temp_dir)
+      exit_code = 1
 
   # Cleanup after ourselves.
   svntest.sandbox.cleanup_deferred_test_paths()

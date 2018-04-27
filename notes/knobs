@@ -5,7 +5,7 @@
 2 Condensed list of defines and environment variables
 3 Defines tweaking SVN defaults
 4 Defines enabling or disabling features
-5 Defines controling debug support
+5 Defines controlling debug support
 6 Defines that affect unit tests
 7 Environment variables
 
@@ -18,12 +18,13 @@ In particular, interface naming rules do not apply here. I.e. even
 SVN_* identifiers are not part of the public API unless declared
 as public in some public header file.
 
-The SVN source code boasts a number of enviroment variable or C pre-
+The SVN source code boasts a number of environment variable or C pre-
 processor enabled tweaks that are mainly aimed at developer support.
 If you introduce new ones, please document them here.
 
 Macros documented in the configure-generated ../subversion/svn_private_config.h
 file are not repeated here.
+
 
 2 Defines and Environment Variables
 ===================================
@@ -52,6 +53,9 @@ SVN_FS_FS_DELTIFY_DIRECTORIES
 SVN_FS_FS_DELTIFY_PROPS
 SVN_SQLITE_MIN_VERSION_NUMBER
 SVN_SQLITE_MIN_VERSION
+SVN_SERF_NO_LOGGING
+SVN_ALLOW_SHORT_INTS
+SVN_ALLOW_NON_8_BIT_CHARS
 
 2.3 Debugging Support
 
@@ -62,12 +66,15 @@ SVN_DEBUG_CACHE_DUMP_STATS
 SVN_DEBUG_CACHE_MEMBUFFER
 SVN_DEBUG_DSO
 SVN_DEBUG_WORK_QUEUE
-PACK_AFTER_EVERY_COMMIT
+PACK_AFTER_EVERY_COMMIT [removed]
 DEBUG_DOUBLE_FREE
 SERF_VERBOSE
 SSL_VERBOSE
 SVN_DEPRECATED
 SVN_FS__TRAIL_DEBUG
+SVN_FS_FS__LOG_ACCESS
+SVN_FS_EMULATE_PATHS_CHANGED
+SVN_FS_EMULATE_REPORT_CHANGES
 
 2.4 Test-only
 
@@ -79,6 +86,7 @@ TEST16K_ADD
 
 SVNSYNC_UNSUPPORTED_STRIP_MERGEINFO
 SVNSYNC_UNSUPPORTED_MIGRATE_SVNMERGE
+SVN_CMDLINE_DISABLE_CRASH_HANDLER
 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
 SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
@@ -272,8 +280,32 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   SQLITE_VERSION
   Suggested: not defined (to use default)
 
+4.11 SVN_ALLOW_SHORT_INTS
 
-5 Defines controling debug support
+  Scope:     global
+  Purpose:   Disables the size check for the 'int' type.  We assume ints to
+             be large enough (32 bits) to index various container objects.
+             16 ints will break that assumption.  Defining this option will
+             allow SVN to be compiled even if the size check would fail for
+             some reason.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined (to ensure correct behaviour)
+
+4.12 SVN_ALLOW_NON_8_BIT_CHARS
+
+  Scope:     global
+  Purpose:   Disables the size check for the 'char' type.  We assume char
+             has exactly 8 bits.  Other values may break the code reading,
+             interpreting and writing repository files.  Defining this option
+             will allow SVN to be compiled even if the size check would fail
+             for some reason.
+  Range:     definedness
+  Default:   not defined
+  Suggested: not defined (to ensure correct behaviour)
+
+
+5 Defines controlling debug support
 ==================================
 
 5.1 SVN_DBG_QUIET
@@ -346,7 +378,9 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
-5.8 PACK_AFTER_EVERY_COMMIT
+5.8 PACK_AFTER_EVERY_COMMIT [removed]
+
+  *** REMOVED in r1602871 (1.9-dev) ***
 
   Scope:     libsvn_fs (only affects libsvn_fs_fs)
   Purpose:   stress test 
@@ -394,6 +428,37 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: defined, not defined
 
+5.14 SVN_FS_FS__LOG_ACCESS
+  
+  Scope:     libsvn_fs_fs/cached_data.c
+  Purpose:   logs type and location info for any fsfs data access above the
+             cache layer to console (i.e. what data gets requested from FSFS
+             rather than disk)
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
+
+5.15 SVN_FS_EMULATE_PATHS_CHANGED
+  
+  Scope:     libsvn_fs/fs-loader.c
+  Purpose:   Force svn_fs_paths_changed2 to be emulated through
+             svn_fs_paths_changed3 even if the FS provides an implementation
+             of the former.
+  Range:     TRUE, FALSE
+  Default:   TRUE (local default if macro has not been defined)
+  Suggested: FALSE
+
+5.16 SVN_FS_EMULATE_REPORT_CHANGES
+  
+  Scope:     libsvn_fs/fs-loader.c
+  Purpose:   Force svn_fs_paths_changed3 to be emulated through
+             svn_fs_paths_changed2 even if the FS provides an implementation
+             of the former.
+  Range:     TRUE, FALSE
+  Default:   TRUE (local default if macro has not been defined)
+  Suggested: FALSE
+
+
 6 Defines that affect unit tests
 ================================
 
@@ -438,32 +503,44 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Scope:     
   Purpose:   
 
-7.3 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
+7.3. SVN_CMDLINE_DISABLE_CRASH_HANDLER
+
+  Scope:     All command line executables. Windows specific.
+  Purpose:   Setting any value disables internal Subversion crash handler
+             for creating minidump and stack trace information on failure on
+             Windows.
+
+7.4 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION
 
   Scope:     
   Purpose:   
 
-7.4 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
+7.5 SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_SLEEP_FOR_TIMESTAMPS
 
   Scope:     
   Purpose:   
 
-7.5 SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
+7.6 SVN_I_LOVE_PANGALACTIC_GARGLE_BLASTERS
 
   Scope:     
   Purpose:   
 
-7.6 SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
+7.7 SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 
   Scope:     libsvn_ra_neon and libsvn_ra_serf, if SVN_DEBUG
   Purpose:   A "yes" value causes the RA modules to ignore the server's
              advertisement of HTTPv2 protocol support (if any), effectively
              causing them to only speak our original HTTP protocol.
 
-7.7 SVN_SVNMUCC_IS_SVNSYITF
+7.8 SVN_SVNMUCC_IS_SVNSYITF
 
   Scope:     'make install-tools'
   Purpose:   Symlinks $prefix/bin/svnsyitf to $prefix/bin/svnmucc
+
+7.9 SVN_X_DOES_NOT_MARK_THE_SPOT
+
+  Scope:     svn_cache__t subsystem (used by FSFS, svnserve, etc)
+  Purpose:   Disable the subsystem.  Requires -D SVN_DEBUG.
 
 * (TODO: others)
 

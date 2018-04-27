@@ -21,7 +21,9 @@
 #
 [end]Microsoft Visual Studio Solution File, Format Version [version]
 # Visual Studio [vs_version]
-[for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
+[is version "12.00"]VisualStudioVersion = 12.3.4.5
+MinimumVisualStudioVersion = 10.0.40219.1
+[end][for targets]Project("{8BC9CEB8-8B4A-11D0-8D11-00A0C91BC942}") = "[targets.name]", "[targets.path]", "[targets.guid]"
 [is dependency_location "solution"]	ProjectSection(ProjectDependencies) = postProject
 [for targets.depends]		[targets.depends.guid] = [targets.depends.guid]
 [end]	EndProjectSection

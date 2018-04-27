@@ -38,7 +38,7 @@ public class SVNAdmin
     private org.apache.subversion.javahl.SVNRepos aSVNAdmin;
 
     /**
-     * Standard empty contructor, builds just the native peer.
+     * Standard empty constructor, builds just the native peer.
      */
     public SVNAdmin()
     {

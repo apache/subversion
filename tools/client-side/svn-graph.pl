@@ -43,7 +43,6 @@ use Getopt::Std;
 $|=1;
 
 require SVN::Core;
-require SVN::Ra;
 require SVN::Client;
 
 # The URL of the Subversion repository we wish to graph
@@ -59,17 +58,6 @@ my $startpath;
 
 # Set the variables declared above.
 parse_commandline();
-
-# Point at the root of a repository so we get can look at
-# every revision.
-my $auth = (new SVN::Client())->auth;
-my $ra = SVN::Ra->new(url => $repos_url, auth => $auth);
-
-# Handle identifier for the aboslutely youngest revision.
-if ($youngest eq 'HEAD')
-{
-  $youngest = $ra->get_latest_revnum();
-}
 
 # The "interesting" nodes are potential sources for copies.  This list
 #   grows as we move through time.
@@ -110,7 +98,7 @@ usage: svn-graph.pl [-r START_REV:END_REV] [-p PATH] REPOS_URL
   getopts('r:p:h', \%cmd_opts) or die $usage;
 
   die $usage if scalar(@ARGV) < 1;
-  $repos_url = $ARGV[0];
+  $repos_url = SVN::Core::uri_canonicalize($ARGV[0]);
 
   $cmd_opts{'r'} =~ m/(\d+)(:(.+))?/;
   if ($3)
@@ -207,6 +195,7 @@ sub process_revision
 # Write a descriptor for the graph in GraphViz .dot format to stdout.
 sub write_graph_descriptor
 {
+  my $client = SVN::Client->new;
   # Begin writing the graph descriptor.
   print "digraph tree {\n";
   print "\tgraph [bgcolor=white];\n";
@@ -215,7 +204,7 @@ sub write_graph_descriptor
   print "\n";
 
   # Retrieve the requested history.
-  $ra->get_log(['/'], $startrev, $youngest, 0, 1, 0, \&process_revision);
+  $client->log($repos_url, $startrev, $youngest, 1, 0, \&process_revision);
 
   # Now ensure that everything is linked.
   foreach my $codeline_change (keys %codeline_changes_forward)

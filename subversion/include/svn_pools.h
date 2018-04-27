@@ -90,14 +90,17 @@ svn_pool_create_ex_debug(pool, allocator, APR_POOL__FILE_LINE__)
  * new allocator to #SVN_ALLOCATOR_RECOMMENDED_MAX_FREE and ensures
  * proper synchronization if the allocator is used by multiple threads.
  *
- * If your application uses multiple threads, creating a separate allocator
- * for each of these threads may not be feasible. Set the @a thread_safe
- * parameter to @c TRUE in that case.  Pools will still not thread-safe, i.e.
- * access to them may require explicit serialization.  Set the parameter to
- * @c FALSE, otherwise, to maximize performance.
+ * If your application uses multiple threads, creating a separate
+ * allocator for each of these threads may not be feasible.  Set the
+ * @a thread_safe parameter to @c TRUE in that case; otherwise, set @a
+ * thread_safe to @c FALSE to maximize performance.
  *
- * To access the owner pool, which can also serve as the root pool for your
- * sub-pools, call @c apr_allocator_get_owner().
+ * @note Even if @a thread_safe is @c TRUE, pools themselves will
+ * still not be thread-safe and their access may require explicit
+ * serialization.
+ *
+ * To access the owner pool, which can also serve as the root pool for
+ * your sub-pools, call @c apr_allocator_get_owner().
  *
  * @since: New in 1.8
  */

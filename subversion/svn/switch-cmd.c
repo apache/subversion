@@ -96,8 +96,11 @@ svn_cl__switch(apr_getopt_t *os,
   svn_error_t *err = SVN_NO_ERROR;
   svn_error_t *externals_err = SVN_NO_ERROR;
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
+  svn_cl__conflict_stats_t *conflict_stats =
+    ((svn_cl__cmd_baton_t *) baton)->conflict_stats;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets;
+  apr_array_header_t *conflicted_paths;
   const char *target, *switch_url;
   svn_opt_revision_t peg_revision;
   svn_depth_t depth;
@@ -157,9 +160,6 @@ svn_cl__switch(apr_getopt_t *os,
   ctx->notify_func2 = svn_cl__check_externals_failed_notify_wrapper;
   ctx->notify_baton2 = &nwb;
 
-  /* Postpone conflict resolution during the switch operation.
-   * If any conflicts occur we'll run the conflict resolver later. */
-
   /* Do the 'switch' update. */
   err = svn_client_switch3(NULL, target, switch_url, &peg_revision,
                            &(opt_state->start_revision), depth,
@@ -176,6 +176,12 @@ svn_cl__switch(apr_getopt_t *os,
                                    "disable this check."),
                                    svn_dirent_local_style(target,
                                                           scratch_pool));
+      if (err->apr_err == SVN_ERR_RA_UUID_MISMATCH
+          || err->apr_err == SVN_ERR_WC_INVALID_SWITCH)
+        return svn_error_quick_wrap(
+                 err,
+                 _("'svn switch' does not support switching a working copy to "
+                   "a different repository"));
       return err;
     }
 
@@ -185,18 +191,19 @@ svn_cl__switch(apr_getopt_t *os,
                                      _("Failure occurred processing one or "
                                        "more externals definitions"));
 
+  /* Run the interactive resolver if conflicts were raised. */
+  SVN_ERR(svn_cl__conflict_stats_get_paths(&conflicted_paths, conflict_stats,
+                                           scratch_pool, scratch_pool));
+  if (conflicted_paths)
+    SVN_ERR(svn_cl__walk_conflicts(conflicted_paths, conflict_stats,
+                                   opt_state, ctx, scratch_pool));
+
   if (! opt_state->quiet)
     {
-      err = svn_cl__print_conflict_stats(nwb.wrapped_baton, scratch_pool);
+      err = svn_cl__notifier_print_conflict_stats(nwb.wrapped_baton, scratch_pool);
       if (err)
         return svn_error_compose_create(externals_err, err);
     }
-
-  err = svn_cl__resolve_postponed_conflicts(ctx->conflict_baton2,
-                                            opt_state->depth,
-                                            opt_state->accept_which,
-                                            opt_state->editor_cmd,
-                                            ctx, scratch_pool);
 
   return svn_error_compose_create(externals_err, err);
 }

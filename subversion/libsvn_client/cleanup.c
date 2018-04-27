@@ -32,6 +32,7 @@
 #include "svn_client.h"
 #include "svn_config.h"
 #include "svn_dirent_uri.h"
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "client.h"
@@ -43,327 +44,222 @@
 
 /*** Code. ***/
 
-svn_error_t *
-svn_client_cleanup(const char *path,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *scratch_pool)
+struct cleanup_status_walk_baton
 {
-  const char *local_abspath;
-  svn_error_t *err;
+  svn_boolean_t break_locks;
+  svn_boolean_t fix_timestamps;
+  svn_boolean_t clear_dav_cache;
+  svn_boolean_t vacuum_pristines;
+  svn_boolean_t remove_unversioned_items;
+  svn_boolean_t remove_ignored_items;
+  svn_boolean_t include_externals;
+  svn_client_ctx_t *ctx;
+};
 
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"), path);
+/* Forward declararion. */
+static svn_error_t *
+cleanup_status_walk(void *baton,
+                    const char *local_abspath,
+                    const svn_wc_status3_t *status,
+                    apr_pool_t *scratch_pool);
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
+static svn_error_t *
+do_cleanup(const char *local_abspath,
+           svn_boolean_t break_locks,
+           svn_boolean_t fix_timestamps,
+           svn_boolean_t clear_dav_cache,
+           svn_boolean_t vacuum_pristines,
+           svn_boolean_t remove_unversioned_items,
+           svn_boolean_t remove_ignored_items,
+           svn_boolean_t include_externals,
+           svn_client_ctx_t *ctx,
+           apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc_cleanup4(ctx->wc_ctx,
+                          local_abspath,
+                          break_locks,
+                          fix_timestamps,
+                          clear_dav_cache,
+                          vacuum_pristines,
+                          ctx->cancel_func, ctx->cancel_baton,
+                          ctx->notify_func2, ctx->notify_baton2,
+                          scratch_pool));
 
-  err = svn_wc_cleanup3(ctx->wc_ctx, local_abspath, ctx->cancel_func,
-                        ctx->cancel_baton, scratch_pool);
-  svn_io_sleep_for_timestamps(path, scratch_pool);
-  return svn_error_trace(err);
+  if (fix_timestamps)
+    svn_io_sleep_for_timestamps(local_abspath, scratch_pool);
+
+  if (remove_unversioned_items || remove_ignored_items || include_externals)
+    {
+      struct cleanup_status_walk_baton b;
+      apr_array_header_t *ignores;
+
+      b.break_locks = break_locks;
+      b.fix_timestamps = fix_timestamps;
+      b.clear_dav_cache = clear_dav_cache;
+      b.vacuum_pristines = vacuum_pristines;
+      b.remove_unversioned_items = remove_unversioned_items;
+      b.remove_ignored_items = remove_ignored_items;
+      b.include_externals = include_externals;
+      b.ctx = ctx;
+
+      SVN_ERR(svn_wc_get_default_ignores(&ignores, ctx->config, scratch_pool));
+
+      SVN_WC__CALL_WITH_WRITE_LOCK(
+              svn_wc_walk_status(ctx->wc_ctx, local_abspath,
+                                 svn_depth_infinity,
+                                 TRUE,  /* get all */
+                                 remove_ignored_items,
+                                 TRUE,  /* ignore textmods */
+                                 ignores,
+                                 cleanup_status_walk, &b,
+                                 ctx->cancel_func,
+                                 ctx->cancel_baton,
+                                 scratch_pool),
+              ctx->wc_ctx,
+              local_abspath,
+              FALSE /* lock_anchor */,
+              scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
-/* callback baton for fetch_repos_info */
-struct repos_info_baton
-{
-  apr_pool_t *state_pool;
-  svn_client_ctx_t *ctx;
-  const char *last_repos;
-  const char *last_uuid;
-};
-
-/* svn_wc_upgrade_get_repos_info_t implementation for calling
-   svn_wc_upgrade() from svn_client_upgrade() */
+/* An implementation of svn_wc_status_func4_t. */
 static svn_error_t *
-fetch_repos_info(const char **repos_root,
-                 const char **repos_uuid,
-                 void *baton,
-                 const char *url,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
+cleanup_status_walk(void *baton,
+                    const char *local_abspath,
+                    const svn_wc_status3_t *status,
+                    apr_pool_t *scratch_pool)
 {
-  struct repos_info_baton *ri = baton;
-  apr_pool_t *subpool;
-  svn_ra_session_t *ra_session;
+  struct cleanup_status_walk_baton *b = baton;
+  svn_node_kind_t kind_on_disk;
+  svn_wc_notify_t *notify;
 
-  /* The same info is likely to retrieved multiple times (e.g. externals) */
-  if (ri->last_repos && svn_uri__is_ancestor(ri->last_repos, url))
+  if (status->node_status == svn_wc_status_external && b->include_externals)
     {
-      *repos_root = apr_pstrdup(result_pool, ri->last_repos);
-      *repos_uuid = apr_pstrdup(result_pool, ri->last_uuid);
+      svn_error_t *err;
+
+      SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk, scratch_pool));
+      if (kind_on_disk == svn_node_dir)
+        {
+          if (b->ctx->notify_func2)
+            {
+              notify = svn_wc_create_notify(local_abspath,
+                                            svn_wc_notify_cleanup_external,
+                                            scratch_pool);
+              b->ctx->notify_func2(b->ctx->notify_baton2, notify,
+                                   scratch_pool);
+            }
+
+          err = do_cleanup(local_abspath,
+                           b->break_locks,
+                           b->fix_timestamps,
+                           b->clear_dav_cache,
+                           b->vacuum_pristines,
+                           b->remove_unversioned_items,
+                           b->remove_ignored_items,
+                           TRUE /* include_externals */,
+                           b->ctx, scratch_pool);
+          if (err && err->apr_err == SVN_ERR_WC_NOT_WORKING_COPY)
+            {
+              svn_error_clear(err);
+              return SVN_NO_ERROR;
+            }
+          else
+            SVN_ERR(err);
+        }
+
       return SVN_NO_ERROR;
     }
 
-  subpool = svn_pool_create(scratch_pool);
+  if (status->node_status == svn_wc_status_ignored)
+    {
+      if (!b->remove_ignored_items)
+        return SVN_NO_ERROR;
+    }
+  else if (status->node_status == svn_wc_status_unversioned)
+    {
+      if (!b->remove_unversioned_items)
+        return SVN_NO_ERROR;
+    }
+  else
+    return SVN_NO_ERROR;
 
-  SVN_ERR(svn_client_open_ra_session(&ra_session, url, ri->ctx, subpool));
+  SVN_ERR(svn_io_check_path(local_abspath, &kind_on_disk, scratch_pool));
+  switch (kind_on_disk)
+    {
+      case svn_node_file:
+      case svn_node_symlink:
+        SVN_ERR(svn_io_remove_file2(local_abspath, FALSE, scratch_pool));
+        break;
+      case svn_node_dir:
+        SVN_ERR(svn_io_remove_dir2(local_abspath, FALSE,
+                                   b->ctx->cancel_func, b->ctx->cancel_baton,
+                                   scratch_pool));
+        break;
+      case svn_node_none:
+      default:
+        return SVN_NO_ERROR;
+    }
 
-  SVN_ERR(svn_ra_get_repos_root2(ra_session, repos_root, result_pool));
-  SVN_ERR(svn_ra_get_uuid2(ra_session, repos_uuid, result_pool));
-
-  /* Store data for further calls */
-  ri->last_repos = apr_pstrdup(ri->state_pool, *repos_root);
-  ri->last_uuid = apr_pstrdup(ri->state_pool, *repos_uuid);
-
-  svn_pool_destroy(subpool);
+  if (b->ctx->notify_func2)
+    {
+      notify = svn_wc_create_notify(local_abspath, svn_wc_notify_delete,
+                                    scratch_pool);
+      notify->kind = kind_on_disk;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_upgrade(const char *path,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *scratch_pool)
+svn_client_cleanup2(const char *dir_abspath,
+                    svn_boolean_t break_locks,
+                    svn_boolean_t fix_recorded_timestamps,
+                    svn_boolean_t clear_dav_cache,
+                    svn_boolean_t vacuum_pristines,
+                    svn_boolean_t include_externals,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool)
 {
-  const char *local_abspath;
-  apr_hash_t *externals;
-  apr_hash_index_t *hi;
-  apr_pool_t *iterpool;
-  apr_pool_t *iterpool2;
-  svn_opt_revision_t rev = {svn_opt_revision_unspecified, {0}};
-  struct repos_info_baton info_baton;
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
-  info_baton.state_pool = scratch_pool;
-  info_baton.ctx = ctx;
-  info_baton.last_repos = NULL;
-  info_baton.last_uuid = NULL;
+  SVN_ERR(do_cleanup(dir_abspath,
+                     break_locks,
+                     fix_recorded_timestamps,
+                     clear_dav_cache,
+                     vacuum_pristines,
+                     FALSE /* remove_unversioned_items */,
+                     FALSE /* remove_ignored_items */,
+                     include_externals,
+                     ctx, scratch_pool));
 
-  if (svn_path_is_url(path))
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"), path);
+  return SVN_NO_ERROR;
+}
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath,
-                         fetch_repos_info, &info_baton,
-                         ctx->cancel_func, ctx->cancel_baton,
-                         ctx->notify_func2, ctx->notify_baton2,
-                         scratch_pool));
+svn_error_t *
+svn_client_vacuum(const char *dir_abspath,
+                  svn_boolean_t remove_unversioned_items,
+                  svn_boolean_t remove_ignored_items,
+                  svn_boolean_t fix_recorded_timestamps,
+                  svn_boolean_t vacuum_pristines,
+                  svn_boolean_t include_externals,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dir_abspath));
 
-  /* Now it's time to upgrade the externals too. We do it after the wc
-     upgrade to avoid that errors in the externals causes the wc upgrade to
-     fail. Thanks to caching the performance penalty of walking the wc a
-     second time shouldn't be too severe */
-  SVN_ERR(svn_client_propget5(&externals, NULL, SVN_PROP_EXTERNALS,
-                              local_abspath, &rev, &rev, NULL,
-                              svn_depth_infinity, NULL, ctx,
-                              scratch_pool, scratch_pool));
-
-  iterpool = svn_pool_create(scratch_pool);
-  iterpool2 = svn_pool_create(scratch_pool);
-
-  for (hi = apr_hash_first(scratch_pool, externals); hi;
-       hi = apr_hash_next(hi))
-    {
-      int i;
-      const char *externals_parent_abspath;
-      const char *externals_parent_url;
-      const char *externals_parent_repos_root_url;
-      const char *externals_parent = svn__apr_hash_index_key(hi);
-      svn_string_t *external_desc = svn__apr_hash_index_val(hi);
-      apr_array_header_t *externals_p;
-      svn_error_t *err;
-
-      svn_pool_clear(iterpool);
-      externals_p = apr_array_make(iterpool, 1,
-                                   sizeof(svn_wc_external_item2_t*));
-
-      /* In this loop, an error causes the respective externals definition, or
-       * the external (inner loop), to be skipped, so that upgrade carries on
-       * with the other externals. */
-
-      err = svn_dirent_get_absolute(&externals_parent_abspath,
-                                    externals_parent, iterpool);
-
-      if (!err)
-        err = svn_wc__node_get_url(&externals_parent_url, ctx->wc_ctx,
-                                   externals_parent_abspath,
-                                   iterpool, iterpool);
-      if (!err)
-        err = svn_wc__node_get_repos_info(&externals_parent_repos_root_url,
-                                          NULL,
-                                          ctx->wc_ctx,
-                                          externals_parent_abspath,
-                                          iterpool, iterpool);
-      if (!err)
-        err = svn_wc_parse_externals_description3(
-                  &externals_p, svn_dirent_dirname(path, iterpool),
-                  external_desc->data, FALSE, iterpool);
-      if (err)
-        {
-          svn_wc_notify_t *notify =
-              svn_wc_create_notify(externals_parent,
-                                   svn_wc_notify_failed_external,
-                                   scratch_pool);
-          notify->err = err;
-
-          ctx->notify_func2(ctx->notify_baton2,
-                            notify, scratch_pool);
-
-          svn_error_clear(err);
-
-          /* Next externals definition, please... */
-          continue;
-        }
-
-      for (i = 0; i < externals_p->nelts; i++)
-        {
-          svn_wc_external_item2_t *item;
-          const char *resolved_url;
-          const char *external_abspath;
-          const char *repos_relpath;
-          const char *repos_root_url;
-          const char *repos_uuid;
-          svn_node_kind_t external_kind;
-          svn_revnum_t peg_revision;
-          svn_revnum_t revision;
-
-          item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
-
-          svn_pool_clear(iterpool2);
-          external_abspath = svn_dirent_join(externals_parent_abspath,
-                                             item->target_dir,
-                                             iterpool2);
-
-          err = svn_wc__resolve_relative_external_url(
-                                              &resolved_url,
-                                              item,
-                                              externals_parent_repos_root_url,
-                                              externals_parent_url,
-                                              scratch_pool, scratch_pool);
-          if (err)
-            goto handle_error;
-
-          /* This is a hack. We only need to call svn_wc_upgrade() on external
-           * dirs, as file externals are upgraded along with their defining
-           * WC.  Reading the kind will throw an exception on an external dir,
-           * saying that the wc must be upgraded.  If it's a file, the lookup
-           * is done in an adm_dir belonging to the defining wc (which has
-           * already been upgraded) and no error is returned.  If it doesn't
-           * exist (external that isn't checked out yet), we'll just get
-           * svn_node_none. */
-          err = svn_wc_read_kind(&external_kind, ctx->wc_ctx,
-                                 external_abspath, FALSE, iterpool2);
-          if (err && err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED)
-            {
-              svn_error_clear(err);
-
-              err = svn_client_upgrade(external_abspath, ctx, iterpool2);
-              if (err)
-                goto handle_error;
-            }
-          else if (err)
-            goto handle_error;
-
-          /* The upgrade of any dir should be done now, get the now reliable
-           * kind. */
-          err = svn_wc_read_kind(&external_kind, ctx->wc_ctx, external_abspath,
-                                 FALSE, iterpool2);
-          if (err)
-            goto handle_error;
-
-          /* Update the EXTERNALS table according to the root URL,
-           * relpath and uuid known in the upgraded external WC. */
-
-          /* We should probably have a function that provides all three
-           * of root URL, repos relpath and uuid at once, but here goes... */
-
-          /* First get the relpath, as that returns SVN_ERR_WC_PATH_NOT_FOUND
-           * when the node is not present in the file system.
-           * svn_wc__node_get_repos_info() would try to derive the URL. */
-          err = svn_wc__node_get_repos_relpath(&repos_relpath,
-                                               ctx->wc_ctx,
-                                               external_abspath,
-                                               iterpool2, iterpool2);
-          if (! err)
-            {
-              /* We got a repos relpath from a WC. So also get the root. */
-              err = svn_wc__node_get_repos_info(&repos_root_url,
-                                                &repos_uuid,
-                                                ctx->wc_ctx,
-                                                external_abspath,
-                                                iterpool2, iterpool2);
-              if (err)
-                goto handle_error;
-            }
-          else if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-            {
-              /* The external is not currently checked out. Try to figure out
-               * the URL parts via the defined URL and fetch_repos_info(). */
-              svn_error_clear(err);
-              repos_relpath = NULL;
-              repos_root_url = NULL;
-              repos_uuid = NULL;
-            }
-          else if (err)
-            goto handle_error;
-
-          /* If we haven't got any information from the checked out external,
-           * or if the URL information mismatches the external's definition,
-           * ask fetch_repos_info() to find out the repos root. */
-          if (! repos_relpath || ! repos_root_url
-              || 0 != strcmp(resolved_url,
-                             svn_path_url_add_component2(repos_root_url,
-                                                         repos_relpath,
-                                                         scratch_pool)))
-            {
-              err = fetch_repos_info(&repos_root_url,
-                                     &repos_uuid,
-                                     &info_baton,
-                                     resolved_url,
-                                     scratch_pool, scratch_pool);
-              if (err)
-                goto handle_error;
-
-              repos_relpath = svn_uri_skip_ancestor(repos_root_url,
-                                                    resolved_url,
-                                                    iterpool2);
-
-              /* There's just the URL, no idea what kind the external is.
-               * That's fine, as the external isn't even checked out yet.
-               * The kind will be set during the next 'update'. */
-              external_kind = svn_node_unknown;
-            }
-
-          if (err)
-            goto handle_error;
-
-          peg_revision = (item->peg_revision.kind == svn_opt_revision_number
-                          ? item->peg_revision.value.number
-                          : SVN_INVALID_REVNUM);
-
-          revision = (item->revision.kind == svn_opt_revision_number
-                      ? item->revision.value.number
-                      : SVN_INVALID_REVNUM);
-
-          err = svn_wc__upgrade_add_external_info(ctx->wc_ctx,
-                                                  external_abspath,
-                                                  external_kind,
-                                                  externals_parent,
-                                                  repos_relpath,
-                                                  repos_root_url,
-                                                  repos_uuid,
-                                                  peg_revision,
-                                                  revision,
-                                                  iterpool2);
-handle_error:
-          if (err)
-            {
-              svn_wc_notify_t *notify =
-                  svn_wc_create_notify(external_abspath,
-                                       svn_wc_notify_failed_external,
-                                       scratch_pool);
-              notify->err = err;
-              ctx->notify_func2(ctx->notify_baton2,
-                                notify, scratch_pool);
-              svn_error_clear(err);
-              /* Next external node, please... */
-            }
-        }
-    }
-
-  svn_pool_destroy(iterpool);
-  svn_pool_destroy(iterpool2);
+  SVN_ERR(do_cleanup(dir_abspath,
+                     FALSE /* break_locks */,
+                     fix_recorded_timestamps,
+                     FALSE /* clear_dav_cache */,
+                     vacuum_pristines,
+                     remove_unversioned_items,
+                     remove_ignored_items,
+                     include_externals,
+                     ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }

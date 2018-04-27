@@ -168,7 +168,7 @@ class WCTestCase(unittest.TestCase):
         path = "%s/branches/0.x/README.txt" % wc_location
         diffstring="""Index: """+path+"""
 ===================================================================
---- """+path+"""\t(revision 0)
+--- """+path+"""\t(nonexistent)
 +++ """+path+"""\t(revision 5)
 @@ -0,0 +1,9 @@
 +This repository is for test purposes only. Any resemblance to any other
@@ -233,7 +233,7 @@ class WCTestCase(unittest.TestCase):
         self.wc.info(path="trunk/README.txt",
             info_func=self._info_receiver)
         if not self.last_info.lock:
-            self.fail("Lock not aquired")
+            self.fail("Lock not acquired")
 
     def test_unlock(self):
         path = "%s/trunk/README.txt" % wc_location
@@ -241,7 +241,7 @@ class WCTestCase(unittest.TestCase):
         self.wc.info(path=path,
             info_func=self._info_receiver)
         if not self.last_info.lock:
-            self.fail("Lock not aquired")
+            self.fail("Lock not acquired")
         self.wc.unlock([path])
 
         self.wc.info(path="trunk/README.txt",

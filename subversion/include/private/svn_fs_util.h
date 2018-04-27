@@ -29,34 +29,37 @@
 
 #include "svn_types.h"
 #include "svn_error.h"
+#include "svn_version.h"
 #include "svn_fs.h"
-#include "svn_dirent_uri.h"
-#include "svn_path.h"
 
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
 
-/* Return a canonicalized version of a filesystem PATH, allocated in
-   POOL.  While the filesystem API is pretty flexible about the
-   incoming paths (they must be UTF-8 with '/' as separators, but they
-   don't have to begin with '/', and multiple contiguous '/'s are
-   ignored) we want any paths that are physically stored in the
-   underlying database to look consistent.  Specifically, absolute
-   filesystem paths should begin with '/', and all redundant and trailing '/'
-   characters be removed.
+/* Get libsvn_fs_util version information. */
+const svn_version_t *
+svn_fs_util__version(void);
+
+/* Returns whether PATH is in canonical form as defined by
+   svn_fs__canonicalize_abspath().
+ */
+svn_boolean_t
+svn_fs__is_canonical_abspath(const char *path);
+
+/* Return a canonicalized version of a filesystem PATH, allocated in POOL.
+
+   While the filesystem API is pretty flexible about the incoming paths
+   (they must be UTF-8 with '/' as separators, but they don't have to
+   begin with '/', and multiple contiguous '/'s are ignored) we want any
+   paths that are physically stored in the underlying database to look
+   consistent.  Specifically, absolute filesystem paths should begin with
+   '/', and all redundant and trailing '/' characters be removed.
 
    This is similar to svn_fspath__canonicalize() but doesn't treat "."
    segments as special.
 */
 const char *
 svn_fs__canonicalize_abspath(const char *path, apr_pool_t *pool);
-
-/* Return FALSE, if a svn_fs__canonicalize_abspath will return a
-   different value than PATH (despite creating a copy).
-*/
-svn_boolean_t
-svn_fs__is_canonical_abspath(const char *path);
 
 /* If EXPECT_OPEN, verify that FS refers to an open database;
    otherwise, verify that FS refers to an unopened database.  Return
@@ -203,6 +206,15 @@ svn_fs__path_change_create_internal(const svn_fs_id_t *node_rev_id,
                                     svn_fs_path_change_kind_t change_kind,
                                     apr_pool_t *pool);
 
+/* Allocate an svn_fs_path_change3_t structure in RESULT_POOL, initialize
+   and return it.
+
+   Set the change_kind to CHANGE_KIND.  Set all other fields to their
+   _unknown, NULL or invalid value, respectively. */
+svn_fs_path_change3_t *
+svn_fs__path_change_create_internal2(svn_fs_path_change_kind_t change_kind,
+                                     apr_pool_t *result_pool);
+
 /* Append REL_PATH (which may contain slashes) to each path that exists in
    the mergeinfo INPUT, and return a new mergeinfo in *OUTPUT.  Deep
    copies the values.  Perform all allocations in POOL. */
@@ -211,6 +223,26 @@ svn_fs__append_to_merged_froms(svn_mergeinfo_t *output,
                                svn_mergeinfo_t input,
                                const char *rel_path,
                                apr_pool_t *pool);
+
+/* Given the FS creation options in CONFIG, return the oldest version that
+   we shall be compatible with in *COMPATIBLE_VERSION.  The patch level
+   is always set to 0 and the tag to "".   Allocate the result in POOL.
+
+   Note that the result will always be compatible to the current tool
+   version, i.e. will be a version number not more recent than this tool. */
+svn_error_t *
+svn_fs__compatible_version(svn_version_t **compatible_version,
+                           apr_hash_t *config,
+                           apr_pool_t *pool);
+
+/* Compare the property lists A and B using POOL for temporary allocations.
+   Return true iff both lists contain the same properties with the same
+   values.  A and B may be NULL in which case they will be equal to and
+   empty list. */
+svn_boolean_t
+svn_fs__prop_lists_equal(apr_hash_t *a,
+                         apr_hash_t *b,
+                         apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

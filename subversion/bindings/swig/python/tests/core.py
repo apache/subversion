@@ -80,7 +80,7 @@ class SubversionCoreTestCase(unittest.TestCase):
       # It must remain unchanged through the process.
       try:
         svn.client.info2(*args)
-      except svn.core.SubversionException, exc:
+      except svn.core.SubversionException as exc:
         # find the original exception
         while exc.file != rec.e.file: exc = exc.child
 
@@ -135,7 +135,7 @@ class SubversionCoreTestCase(unittest.TestCase):
 
     def enumerator(name, value, pool):
       raise Exception
-    
+
     # the exception will be swallowed, but enumeration must be stopped
     self.assertEqual(
       svn.core.svn_config_enumerate2(cfg, "section", enumerator), 1)

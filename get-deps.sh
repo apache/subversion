@@ -23,26 +23,47 @@
 # get-deps.sh -- download the dependencies useful for building Subversion
 #
 
-APR=apr-1.4.6
-APR_UTIL=apr-util-1.5.1
-SERF=serf-1.1.1
-ZLIB=zlib-1.2.7
-SQLITE_VERSION=3.7.15.1
-SQLITE=sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo $SQLITE_VERSION | sed -e 's/\./ /g'))
-GTEST_VERSION=1.6.0
-GTEST=gtest-${GTEST_VERSION}
-GTEST_URL=http://googletest.googlecode.com/files/
+# If changing this file please take care to try to make your changes as
+# portable as possible.  That means at a minimum only use POSIX supported
+# features and functions.  However, it may be desirable to use an even
+# more narrow set of features than POSIX, e.g. Solaris /bin/sh only has
+# a subset of the POSIX shell features.  If in doubt, limit yourself to
+# features already used in the file.  Reviewing the history of changes
+# may be useful as well.
 
-HTTPD=httpd-2.4.3
-APR_ICONV=apr-iconv-1.2.1
+APR_VERSION=${APR_VERSION:-"1.4.6"}
+APU_VERSION=${APU_VERSION:-"1.5.1"}
+SERF_VERSION=${SERF_VERSION:-"1.3.8"}
+ZLIB_VERSION=${ZLIB_VERSION:-"1.2.8"}
+SQLITE_VERSION=${SQLITE_VERSION:-"3.8.11.1"}
+# Used to construct the SQLite download URL.
+SQLITE_VERSION_REL_YEAR=2015
+GTEST_VERSION=${GMOCK_VERSION:-"1.7.0"}
+GMOCK_VERSION=${GMOCK_VERSION:-"1.7.0"}
+HTTPD_VERSION=${HTTPD_VERSION:-"2.4.10"}
+APR_ICONV_VERSION=${APR_ICONV_VERSION:-"1.2.1"}
+
+APR=apr-${APR_VERSION}
+APR_UTIL=apr-util-${APU_VERSION}
+SERF=serf-${SERF_VERSION}
+ZLIB=zlib-${ZLIB_VERSION}
+SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
+SQLITE=sqlite-amalgamation-`printf %d%02d%02d%02d $SQLITE_VERSION_LIST`
+GTEST=release-${GTEST_VERSION}
+GTEST_URL=https://github.com/google/googletest/archive
+GMOCK=release-${GMOCK_VERSION}
+GMOCK_URL=https://github.com/google/googlemock/archive
+
+HTTPD=httpd-${HTTPD_VERSION}
+APR_ICONV=apr-iconv-${APR_ICONV_VERSION}
 
 BASEDIR=`pwd`
 TEMPDIR=$BASEDIR/temp
 
 HTTP_FETCH=
-[ -z "$HTTP_FETCH" ] && type wget  >/dev/null 2>&1 && HTTP_FETCH="wget -nc"
-[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -O"
-[ -z "$HTTP_FETCH" ] && type fetch >/dev/null 2>&1 && HTTP_FETCH="fetch"
+[ -z "$HTTP_FETCH" ] && type wget  >/dev/null 2>&1 && HTTP_FETCH="wget -q -nc"
+[ -z "$HTTP_FETCH" ] && type curl  >/dev/null 2>&1 && HTTP_FETCH="curl -sOL"
+[ -z "$HTTP_FETCH" ] && type fetch >/dev/null 2>&1 && HTTP_FETCH="fetch -q"
 
 # Need this uncommented if any of the specific versions of the ASF tarballs to
 # be downloaded are no longer available on the general mirrors.
@@ -51,7 +72,7 @@ APACHE_MIRROR=http://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | serf | zlib | sqlite | gtest ] ..."
+    echo "Usage: $0 [ apr | serf | zlib | sqlite | googlemock ] ..."
     exit $1
 }
 
@@ -73,7 +94,7 @@ get_serf() {
     test -d $BASEDIR/serf && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://serf.googlecode.com/files/$SERF.tar.bz2
+    $HTTP_FETCH https://archive.apache.org/dist/serf/$SERF.tar.bz2
     cd $BASEDIR
 
     bzip2 -dc $TEMPDIR/$SERF.tar.bz2 | tar -xf -
@@ -85,10 +106,10 @@ get_zlib() {
     test -d $BASEDIR/zlib && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://www.zlib.net/$ZLIB.tar.bz2
+    $HTTP_FETCH http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VERSION/$ZLIB.tar.gz
     cd $BASEDIR
 
-    bzip2 -dc $TEMPDIR/$ZLIB.tar.bz2 | tar -xf -
+    gzip -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
 
     mv $ZLIB zlib
 }
@@ -97,7 +118,7 @@ get_sqlite() {
     test -d $BASEDIR/sqlite-amalgamation && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://www.sqlite.org/$SQLITE.zip
+    $HTTP_FETCH https://www.sqlite.org/$SQLITE_VERSION_REL_YEAR/$SQLITE.zip
     cd $BASEDIR
 
     unzip -q $TEMPDIR/$SQLITE.zip
@@ -106,30 +127,36 @@ get_sqlite() {
 
 }
 
-get_gtest() {
-    test -d $BASEDIR/gtest && return
+get_googlemock() {
+    test -d $BASEDIR/googlemock && return
 
     cd $TEMPDIR
     $HTTP_FETCH ${GTEST_URL}/${GTEST}.zip
+    unzip -q ${GTEST}.zip
+    rm -f ${GTEST}.zip
+
+    $HTTP_FETCH ${GMOCK_URL}/${GMOCK}.zip
+    unzip -q ${GMOCK}.zip
+    rm -f ${GMOCK}.zip
+
     cd $BASEDIR
-
-    unzip -q $TEMPDIR/$GTEST.zip
-
-    mv $GTEST gtest
+    mkdir googlemock
+    mv $TEMPDIR/googletest-release-${GTEST_VERSION} googlemock/googletest
+    mv $TEMPDIR/googlemock-release-${GMOCK_VERSION} googlemock/googlemock
 }
 
 # main()
 get_deps() {
     mkdir -p $TEMPDIR
 
-    for i in zlib serf sqlite-amalgamation apr apr-util gtest; do
+    for i in zlib serf sqlite-amalgamation apr apr-util gmock-fused; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi
     done
 
     if [ $# -gt 0 ]; then
-      for target; do
+      for target in "$@"; do
         if [ "$target" != "deps" ]; then
           get_$target || usage
         else

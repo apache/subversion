@@ -26,9 +26,6 @@
 
 
 /*** Includes. ***/
-#define APR_WANT_STDIO
-#include <apr_want.h>
-
 #include "svn_path.h"
 #include "svn_client.h"
 #include "svn_error.h"

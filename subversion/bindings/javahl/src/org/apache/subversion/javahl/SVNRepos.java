@@ -29,6 +29,8 @@ import java.io.InputStream;
 import java.io.File;
 
 import org.apache.subversion.javahl.callback.ReposNotifyCallback;
+import org.apache.subversion.javahl.callback.ReposVerifyCallback;
+import org.apache.subversion.javahl.callback.ReposFreezeAction;
 import org.apache.subversion.javahl.types.*;
 
 /**
@@ -46,7 +48,7 @@ public class SVNRepos implements ISVNRepos
     }
 
     /**
-     * Standard empty contructor, builds just the native peer.
+     * Standard empty constructor, builds just the native peer.
      */
     public SVNRepos()
     {
@@ -121,22 +123,22 @@ public class SVNRepos implements ISVNRepos
                             boolean useDeltas, ReposNotifyCallback callback)
             throws ClientException;
 
-    /**
-     * make a hot copy of the repository
-     * @param path              the path to the source repository
-     * @param targetPath        the path to the target repository
-     * @param cleanLogs         clean the unused log files in the source
-     *                          repository
-     * @throws ClientException  throw in case of problem
-     */
     public native void hotcopy(File path, File targetPath,
-                               boolean cleanLogs, boolean incremental)
+                               boolean cleanLogs, boolean incremental,
+                               ReposNotifyCallback callback)
             throws ClientException;
+
+    public void hotcopy(File path, File targetPath,
+                        boolean cleanLogs, boolean incremental)
+            throws ClientException
+    {
+        hotcopy(path, targetPath, cleanLogs, incremental, null);
+    }
 
     public void hotcopy(File path, File targetPath,
                         boolean cleanLogs) throws ClientException
     {
-        hotcopy(path, targetPath, cleanLogs, false);
+        hotcopy(path, targetPath, cleanLogs, false, null);
     }
 
     /**
@@ -157,9 +159,48 @@ public class SVNRepos implements ISVNRepos
     public native void listUnusedDBLogs(File path, ISVNRepos.MessageReceiver receiver)
             throws ClientException;
 
+    public void load(File path, InputStream dataInput,
+                     boolean ignoreUUID, boolean forceUUID,
+                     boolean usePreCommitHook, boolean usePostCommitHook,
+                     String relativePath, ReposNotifyCallback callback)
+        throws ClientException
+    {
+        load(path, dataInput, Revision.START, Revision.HEAD,
+             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
+             false, false, false, relativePath, callback);
+    }
+
+    public void load(File path, InputStream dataInput,
+                     Revision start, Revision end,
+                     boolean ignoreUUID, boolean forceUUID,
+                     boolean usePreCommitHook, boolean usePostCommitHook,
+                     String relativePath, ReposNotifyCallback callback)
+            throws ClientException
+    {
+        load(path, dataInput, start, end,
+             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
+             false, false, false, relativePath, callback);
+    }
+
+    public void load(File path, InputStream dataInput,
+                     Revision start, Revision end,
+                     boolean ignoreUUID, boolean forceUUID,
+                     boolean usePreCommitHook, boolean usePostCommitHook,
+                     boolean validateProps, boolean ignoreDates,
+                     String relativePath, ReposNotifyCallback callback)
+        throws ClientException
+    {
+        load(path, dataInput, start, end,
+             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
+             validateProps, ignoreDates, false, relativePath, callback);
+    }
+
     public native void load(File path, InputStream dataInput,
+                            Revision start, Revision end,
                             boolean ignoreUUID, boolean forceUUID,
                             boolean usePreCommitHook, boolean usePostCommitHook,
+                            boolean validateProps, boolean ignoreDates,
+                            boolean normalizeProps,
                             String relativePath, ReposNotifyCallback callback)
             throws ClientException;
 
@@ -173,6 +214,9 @@ public class SVNRepos implements ISVNRepos
             throws ClientException;
 
     public native long recover(File path, ReposNotifyCallback callback)
+            throws ClientException;
+
+    public native void freeze(ReposFreezeAction action, File... paths)
             throws ClientException;
 
     /**
@@ -205,8 +249,18 @@ public class SVNRepos implements ISVNRepos
                                   boolean usePostRevPropChangeHook)
             throws SubversionException;
 
+    public void verify(File path, Revision start, Revision end,
+                       ReposNotifyCallback callback)
+            throws ClientException
+    {
+        verify(path, start, end, false, false, callback, null);
+    }
+
     public native void verify(File path, Revision start, Revision end,
-                              ReposNotifyCallback callback)
+                       boolean checkNormalization,
+                       boolean metadataOnly,
+                       ReposNotifyCallback notifyCallback,
+                       ReposVerifyCallback verifyCallback)
             throws ClientException;
 
     /**

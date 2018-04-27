@@ -251,6 +251,30 @@
 
 %ignore svn_opt_args_to_target_array;
 
+/* svn_cmdline.h */
+%ignore svn_cmdline_auth_plaintext_passphrase_prompt;
+%ignore svn_cmdline_auth_plaintext_prompt;
+%ignore svn_cmdline_auth_simple_prompt;
+%ignore svn_cmdline_auth_ssl_client_cert_prompt;
+%ignore svn_cmdline_auth_ssl_client_cert_pw_prompt;
+%ignore svn_cmdline_auth_ssl_server_trust_prompt;
+%ignore svn_cmdline_auth_username_prompt;
+%ignore svn_cmdline_cstring_from_utf8;
+%ignore svn_cmdline_cstring_from_utf8_fuzzy;
+%ignore svn_cmdline_cstring_to_utf8;
+%ignore svn_cmdline_fflush;
+%ignore svn_cmdline_fprintf;
+%ignore svn_cmdline_fputs;
+%ignore svn_cmdline_handle_exit_error;
+%ignore svn_cmdline_output_encoding;
+%ignore svn_cmdline_path_local_style_from_utf8;
+%ignore svn_cmdline_printf;
+%ignore svn_cmdline_prompt_baton2_t;
+%ignore svn_cmdline_prompt_baton_t;
+%ignore svn_cmdline_prompt_user2;
+%ignore svn_cmdline_prompt_user;
+%ignore svn_cmdline_setup_auth_baton;
+
 /* Ugliness because the constants are typedefed and SWIG ignores them
    as a result. */
 %constant svn_revnum_t SWIG_SVN_INVALID_REVNUM = -1;
@@ -331,19 +355,22 @@
 };
 #endif
 
-
 /* -----------------------------------------------------------------------
-   handle the default value of svn_config_get().and the
-   config directory of svn_config_read_auth_data() and
-   svn_config_write_auth_data().
+   allowable null values
 */
 %apply const char *MAY_BE_NULL {
+    /* svn_config_get */
     const char *default_value,
-    const char *config_dir,
+    /* svn_config_read_auth_data */
+    const char *config_dir, 
+    /* svn_diff_file_output_merge */
     const char *conflict_original,
     const char *conflict_modified,
     const char *conflict_latest,
-    const char *conflict_separator
+    const char *conflict_separator,
+    /* svn_cmdline_create_auth_baton */
+    const char *username,
+    const char *password
 };
 
 /* -----------------------------------------------------------------------
@@ -352,19 +379,19 @@
 #ifdef SWIGPYTHON
 %typemap(in) (char *buffer, apr_size_t *len) ($*2_type temp) {
     if (PyLong_Check($input)) {
-        temp = PyLong_AsLong($input);
+        temp = PyLong_AsUnsignedLong($input);
     }
     else if (PyInt_Check($input)) {
-        temp = PyInt_AsLong($input);
+        /* wish there was a PyInt_AsUnsignedLong but there isn't
+           the mask version doesn't do bounds checking for us.
+           I can't see a good way to do the bounds checking ourselves
+           so just stick our head in the sand.  With Python3 this
+           problem goes away because PyInt is gone anyway. */
+        temp = PyInt_AsUnsignedLongMask($input);
     }
     else {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
-        SWIG_fail;
-    }
-    if (temp < 0) {
-        PyErr_SetString(PyExc_ValueError,
-                        "buffer size must be a positive integer");
         SWIG_fail;
     }
     $1 = malloc(temp);
@@ -487,11 +514,32 @@
     else if ($input == Py_None) {
         $1 = NULL;
     }
-    else if (svn_swig_ConvertPtr($input, (void **)&$1, $descriptor(svn_auth_ssl_server_cert_info_t *)) == 0) {
+    else if (svn_swig_py_convert_ptr($input, (void **)&$1,
+                                     $descriptor(svn_auth_ssl_server_cert_info_t *)) == 0) {
     }
     else {
         PyErr_SetString(PyExc_TypeError, "not a known type");
         SWIG_fail;
+    }
+}
+#endif
+
+#ifdef SWIGPERL
+%typemap(in) const void *value 
+  (apr_pool_t *_global_pool = NULL)
+{
+    if (!SvOK($input) || $input == &PL_sv_undef) {
+        $1 = NULL;
+    }
+    else if (SvPOK($input)) {
+        if (_global_pool == NULL) {
+            _global_pool = svn_swig_pl_make_pool((SV *)NULL);
+            SPAGAIN;
+        }
+        $1 = apr_pstrdup(_global_pool, SvPV_nolen($input));
+    }
+    else {
+        croak("Value is not a string (or undef)");
     }
 }
 #endif
@@ -617,28 +665,20 @@ typedef int apr_status_t;
 #ifdef SWIGPERL
 apr_pool_t *current_pool;
 
-#if SWIG_VERSION <= 0x010324
-%{
-#define SVN_SWIGEXPORT(t) SWIGEXPORT(t)
-%}
-#else
-%{
-#define SVN_SWIGEXPORT(t) SWIGEXPORT t
-%}
-#endif
-
 %{
 
+/* ### Eventually this should go away. This is not thread safe and a very
+   ### good example on HOW NOT TO USE pools */
 static apr_pool_t *current_pool = 0;
 
-SVN_SWIGEXPORT(apr_pool_t *)
-svn_swig_pl_get_current_pool (void)
+static apr_pool_t *
+core_get_current_pool (void)
 {
   return current_pool;
 }
 
-SVN_SWIGEXPORT(void)
-svn_swig_pl_set_current_pool (apr_pool_t *pool)
+static void
+core_set_current_pool (apr_pool_t *pool)
 {
   current_pool = pool;
 }
@@ -705,6 +745,15 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %authprompt_callback_typemap(ssl_client_cert_pw)
 %authprompt_callback_typemap(gnome_keyring_unlock)
 
+#ifdef SWIGPYTHON
+/* pl and rb aren't yet implemented */
+%callback_typemap_maybenull(svn_config_auth_walk_func_t walk_func,
+                            void *walk_baton,
+                            svn_swig_py_config_auth_walk_func,
+                            svn_swig_pl_config_auth_walk_func,
+                            svn_swig_rb_config_auth_walk_func)
+#endif
+
 /* -----------------------------------------------------------------------
  * For all the various functions that set a callback baton create a reference
  * for the baton (which in this case is an SV pointing to the callback)
@@ -753,10 +802,11 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #endif
 
 #ifdef SWIGPYTHON
-# The auth baton depends on the providers, so we preserve a
-# reference to them inside the wrapper. This way, if all external
-# references to the providers are gone, they will still be alive,
-# keeping the baton valid.
+/* The auth baton depends on the providers, so we preserve a
+   reference to them inside the wrapper. This way, if all external
+   references to the providers are gone, they will still be alive,
+   keeping the baton valid.
+ */
 %feature("pythonappend") svn_auth_open %{
   val.__dict__["_deps"] = list(args[0])
 %}
@@ -778,6 +828,7 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 #pragma SWIG nowarn=+305
 
 %include svn_opt_h.swg
+%include svn_cmdline_h.swg
 %include svn_auth_h.swg
 %include svn_config_h.swg
 %include svn_utf_h.swg
@@ -787,10 +838,10 @@ svn_swig_pl_set_current_pool (apr_pool_t *pool)
 %include svn_mergeinfo_h.swg
 %include svn_io_h.swg
 %include svn_checksum_h.swg
+%include svn_cache_config_h.swg
 
 
 
-#ifdef SVN_AUTH_PARAM_GNOME_KEYRING_UNLOCK_PROMPT_FUNC
 %inline %{
 /* Helper function to set the gnome-keyring unlock prompt function. This
  * C function accepts an auth baton, a function and a prompt baton, but
@@ -814,7 +865,6 @@ static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
                            prompt_baton);
 }
 %}
-#endif
 
 #if defined(SWIGPERL) || defined(SWIGRUBY)
 %include svn_md5_h.swg
@@ -832,10 +882,8 @@ static void svn_auth_set_gnome_keyring_unlock_prompt_func(svn_auth_baton_t *ab,
 #include "svn_private_config.h"
 %}
 %init %{
-#if defined(SVN_AVOID_CIRCULAR_LINKAGE_AT_ALL_COSTS_HACK)
-  svn_swig_pl_bind_current_pool_fns (&svn_swig_pl_get_current_pool,
-                                     &svn_swig_pl_set_current_pool);
-#endif
+  svn_swig_pl__bind_current_pool_fns(&core_get_current_pool,
+                                     &core_set_current_pool);
 %}
 #endif
 

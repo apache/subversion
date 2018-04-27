@@ -27,6 +27,6 @@ echo "========= unmount RAM disc"
 test -e ../unmount-ramdrive && ../unmount-ramdrive
 
 echo "========= make extraclean"
-test -e Makefile && (make extraclean || exit $?)
+test -e Makefile && { make extraclean || exit $?; }
 
 exit 0

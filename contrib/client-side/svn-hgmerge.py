@@ -38,7 +38,7 @@ def do_hgmerge(base, repo, local, merged):
   shutil.copyfile(local, temp_file)
   args = [HGMERGE_BINARY, temp_file, base, repo]
   status = os.spawnvp(os.P_WAIT, HGMERGE_BINARY, args)
-  print status
+  print(status)
   if status == 0:
     os.unlink(merged)
     shutil.copyfile(temp_file, merged)

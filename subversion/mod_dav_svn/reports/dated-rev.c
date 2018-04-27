@@ -50,7 +50,7 @@
 dav_error *
 dav_svn__dated_rev_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output)
+                          dav_svn__output *output)
 {
   apr_xml_elem *child;
   int ns;
@@ -58,7 +58,6 @@ dav_svn__dated_rev_report(const dav_resource *resource,
   svn_revnum_t rev;
   apr_bucket_brigade *bb;
   svn_error_t *err;
-  apr_status_t apr_err;
   dav_error *derr = NULL;
 
   /* Find the DAV:creationdate element and get the requested time from it. */
@@ -80,7 +79,7 @@ dav_svn__dated_rev_report(const dav_resource *resource,
 
   if (tm == (apr_time_t) -1)
     {
-      return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                 "The request does not contain a valid "
                                 "'DAV:" SVN_DAV__CREATIONDATE "' element.");
     }
@@ -90,19 +89,21 @@ dav_svn__dated_rev_report(const dav_resource *resource,
                                       resource->pool)) != SVN_NO_ERROR)
     {
       svn_error_clear(err);
-      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR, 0,
+      return dav_svn__new_error(resource->pool, HTTP_INTERNAL_SERVER_ERROR,
+                                0, 0,
                                 "Could not access revision times.");
     }
 
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
-  apr_err = ap_fprintf(output, bb,
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
+  err = dav_svn__brigade_printf(bb, output,
                        DAV_XML_HEADER DEBUG_CR
                        "<S:dated-rev-report xmlns:S=\"" SVN_XML_NAMESPACE "\" "
                        "xmlns:D=\"DAV:\">" DEBUG_CR
                        "<D:" SVN_DAV__VERSION_NAME ">%ld</D:"
                        SVN_DAV__VERSION_NAME ">""</S:dated-rev-report>", rev);
-  if (apr_err)
-    derr = dav_svn__convert_err(svn_error_create(apr_err, 0, NULL),
+  if (err)
+    derr = dav_svn__convert_err(err,
                                 HTTP_INTERNAL_SERVER_ERROR,
                                 "Error writing REPORT response.",
                                 resource->pool);

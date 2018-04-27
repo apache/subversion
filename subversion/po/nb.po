@@ -87,7 +87,7 @@
 #
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.7\n"
+"Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
 "POT-Creation-Date: 2010-11-12 08:49-0600\n"
 "PO-Revision-Date: 2009-10-14 16:21+0200\n"
@@ -10226,13 +10226,11 @@ msgid "local %s, incoming %s upon %s"
 msgstr "lokal %s, innkommende %s på %s"
 
 #: ../svn/util.c:74
-#, fuzzy, c-format
+#, c-format
 msgid ""
-"\n"
 "Committed revision %ld%s.\n"
 msgstr ""
-"\n"
-"La inn revisjon %ld.\n"
+"La inn revisjon %ld%s.\n"
 
 #: ../svn/util.c:78
 msgid " (the answer to life, the universe, and everything)"

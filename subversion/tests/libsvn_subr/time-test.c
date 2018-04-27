@@ -29,10 +29,10 @@
 #include "../svn_test.h"
 
 /* All these variables should refer to the same point in time. */
-apr_time_t test_timestamp = APR_TIME_C(1021316450966679);
-const char *test_timestring =
+static apr_time_t test_timestamp = APR_TIME_C(1021316450966679);
+static const char *test_timestring =
 "2002-05-13T19:00:50.966679Z";
-const char *test_old_timestring =
+static const char *test_old_timestring =
 "Mon 13 May 2002 22:00:50.966679 (day 133, dst 1, gmt_off 010800)";
 
 
@@ -339,7 +339,9 @@ test_parse_date(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_time_to_cstring,
@@ -354,3 +356,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test svn_parse_date"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

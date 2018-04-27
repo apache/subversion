@@ -27,6 +27,7 @@
 
 /*** Includes. ***/
 
+#include "svn_hash.h"
 #include "svn_client.h"
 #include "svn_string.h"
 #include "svn_error.h"
@@ -67,7 +68,9 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 
   SVN_ERR_ASSERT(SVN_CLIENT__REVKIND_IS_LOCAL_TO_WC(revision->kind));
 
-  SVN_ERR(svn_wc_read_kind(&kind, wc_ctx, local_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc_read_kind2(&kind, wc_ctx, local_abspath,
+                            (revision->kind != svn_opt_revision_working),
+                            FALSE, scratch_pool));
 
   if (kind == svn_node_unknown || kind == svn_node_none)
     return svn_error_createf(SVN_ERR_UNVERSIONED_RESOURCE, NULL,
@@ -86,7 +89,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
                                             result_pool, scratch_pool));
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                 _("'%s' has no base revision until it is committed"),
+                 _("'%s' has no pristine version until it is committed"),
                  svn_dirent_local_style(local_abspath, scratch_pool));
 
       SVN_ERR(svn_wc_get_pristine_props(&props, wc_ctx, local_abspath,
@@ -107,12 +110,9 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
         local_mod = TRUE;
     }
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE,
-                           APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS,
-                          APR_HASH_KEY_STRING);
-  special = apr_hash_get(props, SVN_PROP_SPECIAL,
-                         APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
+  special = svn_hash_gets(props, SVN_PROP_SPECIAL);
 
   if (eol_style)
     svn_subst_eol_style_from_value(&style, &eol, eol_style->data);
@@ -124,12 +124,18 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
       const char *author;
       const char *url;
       apr_time_t tm;
+      const char *repos_root_url;
+      const char *repos_relpath;
 
       SVN_ERR(svn_wc__node_get_changed_info(&changed_rev, &tm, &author, wc_ctx,
                                             local_abspath, scratch_pool,
                                             scratch_pool));
-      SVN_ERR(svn_wc__node_get_url(&url, wc_ctx, local_abspath, scratch_pool,
-                                   scratch_pool));
+      SVN_ERR(svn_wc__node_get_repos_info(NULL, &repos_relpath, &repos_root_url,
+                                          NULL,
+                                          wc_ctx, local_abspath, scratch_pool,
+                                          scratch_pool));
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
 
       if (local_mod)
         {
@@ -152,8 +158,9 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
           rev_str = apr_psprintf(scratch_pool, "%ld", changed_rev);
         }
 
-      SVN_ERR(svn_subst_build_keywords2(&kw, keywords->data, rev_str, url, tm,
-                                        author, scratch_pool));
+      SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data, rev_str, url,
+                                        repos_root_url, tm, author,
+                                        scratch_pool));
     }
 
   /* Wrap the output stream if translation is needed. */
@@ -169,18 +176,22 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 }
 
 svn_error_t *
-svn_client_cat2(svn_stream_t *out,
+svn_client_cat3(apr_hash_t **returned_props,
+                svn_stream_t *out,
                 const char *path_or_url,
                 const svn_opt_revision_t *peg_revision,
                 const svn_opt_revision_t *revision,
+                svn_boolean_t expand_keywords,
                 svn_client_ctx_t *ctx,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *ra_session;
   svn_client__pathrev_t *loc;
   svn_string_t *eol_style;
   svn_string_t *keywords;
-  apr_hash_t *props;
+  apr_hash_t *props = NULL;
+  const char *repos_root_url;
   svn_stream_t *output = out;
   svn_error_t *err;
 
@@ -193,8 +204,6 @@ svn_client_cat2(svn_stream_t *out,
     }
   else
     {
-      peg_revision = svn_cl__rev_default_to_head_or_working(peg_revision,
-                                                            path_or_url);
       revision = svn_cl__rev_default_to_peg(revision, peg_revision);
     }
 
@@ -205,29 +214,39 @@ svn_client_cat2(svn_stream_t *out,
       const char *local_abspath;
       svn_stream_t *normal_stream;
 
-      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url, pool));
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
+                                      scratch_pool));
       SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
-                                            local_abspath, revision, TRUE, FALSE,
+                                            local_abspath, revision,
+                                            expand_keywords, FALSE,
                                             ctx->cancel_func, ctx->cancel_baton,
-                                            pool, pool));
+                                            scratch_pool, scratch_pool));
 
       /* We don't promise to close output, so disown it to ensure we don't. */
-      output = svn_stream_disown(output, pool);
+      output = svn_stream_disown(output, scratch_pool);
+
+      if (returned_props)
+        SVN_ERR(svn_wc_prop_list2(returned_props, ctx->wc_ctx, local_abspath,
+                                  result_pool, scratch_pool));
 
       return svn_error_trace(svn_stream_copy3(normal_stream, output,
                                               ctx->cancel_func,
-                                              ctx->cancel_baton, pool));
+                                              ctx->cancel_baton, scratch_pool));
     }
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
                                             path_or_url, NULL,
                                             peg_revision,
-                                            revision, ctx, pool));
+                                            revision, ctx, scratch_pool));
+
+  /* Find the repos root URL */
+  SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, scratch_pool));
 
   /* Grab some properties we need to know in order to figure out if anything
      special needs to be done with this file. */
-  err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, &props, pool);
+  err = svn_ra_get_file(ra_session, "", loc->rev, NULL, NULL, &props,
+                        result_pool);
   if (err)
     {
       if (err->apr_err == SVN_ERR_FS_NOT_FILE)
@@ -242,8 +261,8 @@ svn_client_cat2(svn_stream_t *out,
         }
     }
 
-  eol_style = apr_hash_get(props, SVN_PROP_EOL_STYLE, APR_HASH_KEY_STRING);
-  keywords = apr_hash_get(props, SVN_PROP_KEYWORDS, APR_HASH_KEY_STRING);
+  eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
+  keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
 
   if (eol_style || keywords)
     {
@@ -261,37 +280,54 @@ svn_client_cat2(svn_stream_t *out,
         }
 
 
-      if (keywords)
+      if (keywords && expand_keywords)
         {
           svn_string_t *cmt_rev, *cmt_date, *cmt_author;
           apr_time_t when = 0;
 
-          cmt_rev = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_REV,
-                                 APR_HASH_KEY_STRING);
-          cmt_date = apr_hash_get(props, SVN_PROP_ENTRY_COMMITTED_DATE,
-                                  APR_HASH_KEY_STRING);
-          cmt_author = apr_hash_get(props, SVN_PROP_ENTRY_LAST_AUTHOR,
-                                    APR_HASH_KEY_STRING);
+          cmt_rev = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_REV);
+          cmt_date = svn_hash_gets(props, SVN_PROP_ENTRY_COMMITTED_DATE);
+          cmt_author = svn_hash_gets(props, SVN_PROP_ENTRY_LAST_AUTHOR);
           if (cmt_date)
-            SVN_ERR(svn_time_from_cstring(&when, cmt_date->data, pool));
+            SVN_ERR(svn_time_from_cstring(&when, cmt_date->data, scratch_pool));
 
-          SVN_ERR(svn_subst_build_keywords2
-                  (&kw, keywords->data,
-                   cmt_rev->data,
-                   loc->url,
-                   when,
-                   cmt_author ? cmt_author->data : NULL,
-                   pool));
+          SVN_ERR(svn_subst_build_keywords3(&kw, keywords->data,
+                                            cmt_rev->data, loc->url,
+                                            repos_root_url, when,
+                                            cmt_author ?
+                                              cmt_author->data : NULL,
+                                            scratch_pool));
         }
       else
         kw = NULL;
 
       /* Interject a translating stream */
-      output = svn_subst_stream_translated(svn_stream_disown(out, pool),
-                                           eol_str, FALSE, kw, TRUE, pool);
+      output = svn_subst_stream_translated(svn_stream_disown(out,
+                                                             scratch_pool),
+                                           eol_str, FALSE, kw, TRUE,
+                                           scratch_pool);
     }
 
-  SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev, output, NULL, NULL, pool));
+  if (returned_props)
+    {
+      /* filter entry and WC props */
+      apr_hash_index_t *hi;
+      const void *key;
+      apr_ssize_t klen;
+
+      for (hi = apr_hash_first(scratch_pool, props);
+           hi; hi = apr_hash_next(hi))
+        {
+          apr_hash_this(hi, &key, &klen, NULL);
+          if (!svn_wc_is_normal_prop(key))
+            apr_hash_set(props, key, klen, NULL);
+        }
+
+      *returned_props = props;
+    }
+
+  SVN_ERR(svn_ra_get_file(ra_session, "", loc->rev, output, NULL, NULL,
+                          scratch_pool));
 
   if (out != output)
     /* Close the interjected stream */

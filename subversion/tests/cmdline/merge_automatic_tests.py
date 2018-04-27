@@ -43,10 +43,10 @@ Wimp = svntest.testcase.Wimp_deco
 
 from svntest.main import SVN_PROP_MERGEINFO
 from svntest.main import server_has_mergeinfo
-from merge_tests import local_path
-from merge_tests import expected_merge_output
-from merge_tests import svn_merge
-from merge_tests import set_up_branch
+from svntest.mergetrees import local_path
+from svntest.mergetrees import expected_merge_output
+from svntest.mergetrees import svn_merge
+from svntest.mergetrees import set_up_branch
 
 #----------------------------------------------------------------------
 
@@ -188,7 +188,7 @@ def logical_changes_in_branch(sbox, branch):
 def get_mergeinfo_change(sbox, target):
   """Return a list of revision numbers representing the mergeinfo change
   on TARGET (working version against base).  Non-recursive."""
-  exit, out, err = actions.run_and_verify_svn(None, None, [],
+  exit, out, err = actions.run_and_verify_svn(None, [],
                                               'diff', '--depth=empty',
                                               sbox.ospath(target))
   merged_revs = []
@@ -213,7 +213,7 @@ def get_3ways_from_output(output):
 
   merges = []
   for line in output:
-    print "## " + line,
+    sys.stdout.write("## " + line + " ")
     # Extract "A1" from a line like "DBG: merge.c:11336: base  svn://.../A@1"
     match = re.search(r'merge\.c:.* base .* /(\w+)@([0-9-]+)', line)
     if match:
@@ -302,7 +302,7 @@ def automatic_merge(sbox, source, target, args=[],
   before_changes = logical_changes_in_branch(sbox, target)
 
   exp_out = expected_automatic_merge_output(target, expect_3ways)
-  exit, out, err = svntest.actions.run_and_verify_svn(None, exp_out, [],
+  exit, out, err = svntest.actions.run_and_verify_svn(exp_out, [],
                                      'merge',
                                      '^/' + source, target,
                                      *args)
@@ -334,7 +334,6 @@ def three_way_merge_no_op(base_node, source_right_node):
 def cherry_pick(sbox, rev, source, target):
   """Cherry-pick merge revision REV from branch SOURCE to branch TARGET
   (both WC-relative paths), and commit."""
-  sbox.simple_update(target)
   svn_merge(rev, source, target)
   sbox.simple_commit()
 
@@ -691,6 +690,7 @@ def cherry1_fwd(sbox):
   #     2  34  5  67  8  9  0  1
 
   init_mod_merge_mod(sbox, mod_6=True, mod_7=False)
+  sbox.simple_update()
   modify_branch(sbox, 'A', 8)
   cherry_pick(sbox, 8, 'A', 'B')
   modify_branch(sbox, 'A', 10)
@@ -757,7 +757,6 @@ def cherry3_fwd(sbox):
 #----------------------------------------------------------------------
 # Automatic merges ignore subtree mergeinfo during reintegrate.
 @SkipUnless(server_has_mergeinfo)
-@XFail()
 @Issue(4258)
 def subtree_to_and_fro(sbox):
   "reintegrate considers source subtree mergeinfo"
@@ -783,26 +782,26 @@ def subtree_to_and_fro(sbox):
 
   # r7 - Edit a file on the branch.
   svntest.main.file_write(A_COPY_gamma_path, "Branch edit to 'gamma'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir,
                                      '-m', 'Edit a file on our branch')
 
   # r8 - Do a subtree sync merge from ^/A/D to A_COPY/D.
   # Note that among other things this changes A_COPY/D/H/psi.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A/D', A_COPY_D_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir,
                                      '-m', 'Automatic subtree merge')
 
   # r9 - Make an edit to A/D/H/psi.
   svntest.main.file_write(psi_path, "Trunk Edit to 'psi'.\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir,
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir,
                                      '-m', 'Edit a file on our trunk')
 
-  # Now reintegrate ^/A_COPY back to A.  To the automatic merge code the
-  # subtree merge to A_COPY/D just looks like any other branch edit, it is
-  # not considered a merge.  So the changes which exist on A/D and were
-  # merged to A_COPY/D, are merged *back* to A, resulting in a conflict:
+  # Now reintegrate ^/A_COPY back to A.  Prior to issue #4258's fix, the
+  # the subtree merge to A_COPY/D just looks like any other branch edit and
+  # was not considered a merge.  So the changes which exist on A/D and were
+  # merged to A_COPY/D, were merged *back* to A, resulting in a conflict:
   #
   #   C:\...\working_copies\merge_automatic_tests-18>svn merge ^^/A_COPY A
   #   DBG: merge.c:11461: base on source: ^/A@1
@@ -821,13 +820,13 @@ def subtree_to_and_fro(sbox):
   #    U   A
   #   Summary of conflicts:
   #     Text conflicts: 1
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   exit_code, out, err = svntest.actions.run_and_verify_svn(
-    None, [], svntest.verify.AnyOutput,
+    [], svntest.verify.AnyOutput,
     'merge', sbox.repo_url + '/A_COPY', A_path)
 
-  # The 'old' merge produced a warning that reintegrate could not be used.
-  # Not claiming this is perfect, but it's better(?) than a conflict:
+  # Better to produce the same warning that explicitly using the
+  # --reintegrate option would produce:
   svntest.verify.verify_outputs("Automatic Reintegrate failed, but not "
                                 "in the way expected",
                                 err, None,
@@ -838,9 +837,9 @@ def subtree_to_and_fro(sbox):
                                 "|(  A_COPY\n)"
                                 "|(    Missing ranges: /A:5\n)"
                                 "|(\n)"
-                                "|(.*apr_err.*)", # In case of debug build
+                                "|" + svntest.main.stack_trace_regexp,
                                 None,
-                                True) # Match *all* lines of stdout  
+                                True) # Match *all* lines of stdout
 
 #----------------------------------------------------------------------
 # Automatic merges ignore subtree mergeinfo gaps older than the last rev
@@ -877,19 +876,19 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   #   Properties on 'A_COPY\B':
   #     svn:mergeinfo
   #       /A/B:2-4,6
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge',
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'merge',
                                      sbox.repo_url + '/A', A_COPY_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'merge', '-c-5',
+  svntest.actions.run_and_verify_svn(None, [], 'merge', '-c-5',
                                      sbox.repo_url + '/A/B',
                                      A_COPY_B_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', wc_dir, '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', wc_dir, '-m',
                                      'sync merge and reverse subtree merge')
 
   # Try an automatic sync merge from ^/A to A_COPY.  Revision 5 should be
   # merged to A_COPY/B as its subtree mergeinfo reveals that rev is missing,
   # like so:
-  # 
+  #
   #   >svn merge ^/A A_COPY
   #   --- Merging r5 into 'A_COPY\B':
   #   U    A_COPY\B\E\beta
@@ -918,7 +917,7 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
   #   ___________________________________________________________________
   #   Modified: svn:mergeinfo
   #      Merged /A:r7
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
   expected_output = wc.State(A_COPY_path, {
     'B/E/beta'   : Item(status='U '),
     })
@@ -981,8 +980,424 @@ def merge_to_reverse_cherry_subtree_to_merge_to(sbox):
                                        expected_disk,
                                        expected_status,
                                        expected_skip,
-                                       None, None, None, None,
-                                       None, 1, 0, A_COPY_path)
+                                       [], True, False,
+                                       A_COPY_path)
+
+#----------------------------------------------------------------------
+# Automatic merges should notice ancestory for replaced files
+@SkipUnless(server_has_mergeinfo)
+def merge_replacement(sbox):
+  "notice ancestory for replaced files"
+
+  A_path = sbox.ospath('A')
+  A_COPY_path = sbox.ospath('A_copy')
+  A_COPY_mu_path = sbox.ospath('A_copy/mu')
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_copy('A', 'A_copy')
+  # Commit as r2
+  sbox.simple_commit()
+
+  sbox.simple_rm('A_copy/B/lambda')
+  sbox.simple_copy('A_copy/D/gamma', 'A_copy/B/lambda')
+
+  sbox.simple_rm('A_copy/mu')
+  svntest.main.file_write(A_COPY_mu_path, "Branch edit to 'mu'.\n")
+  sbox.simple_add('A_copy/mu')
+
+  # Commit as r3
+  sbox.simple_commit()
+
+  expected_output = wc.State(A_path, {
+    'B/lambda'   : Item(status='R '),
+    'mu'         : Item(status='R '),
+    })
+  expected_mergeinfo_output = wc.State(A_path, {
+    ''  : Item(status=' U'),
+    })
+  expected_elision_output = wc.State(A_path, {
+    })
+
+  expected_status = wc.State(A_path, {
+    ''           : Item(status=' M', wc_rev='1'),
+    'B'          : Item(status='  ', wc_rev='1'),
+    'mu'         : Item(status='R ', copied='+', wc_rev='-'),
+    'B/E'        : Item(status='  ', wc_rev='1'),
+    'B/E/alpha'  : Item(status='  ', wc_rev='1'),
+    'B/E/beta'   : Item(status='  ', wc_rev='1'),
+    'B/lambda'   : Item(status='R ', copied='+', wc_rev='-'),
+    'B/F'        : Item(status='  ', wc_rev='1'),
+    'C'          : Item(status='  ', wc_rev='1'),
+    'D'          : Item(status='  ', wc_rev='1'),
+    'D/G'        : Item(status='  ', wc_rev='1'),
+    'D/G/pi'     : Item(status='  ', wc_rev='1'),
+    'D/G/rho'    : Item(status='  ', wc_rev='1'),
+    'D/G/tau'    : Item(status='  ', wc_rev='1'),
+    'D/gamma'    : Item(status='  ', wc_rev='1'),
+    'D/H'        : Item(status='  ', wc_rev='1'),
+    'D/H/chi'    : Item(status='  ', wc_rev='1'),
+    'D/H/psi'    : Item(status='  ', wc_rev='1'),
+    'D/H/omega'  : Item(status='  ', wc_rev='1'),
+    })
+
+  expected_disk = wc.State('', {
+    ''           : Item(props={SVN_PROP_MERGEINFO : '/A_copy:2-3'}),
+    'B'          : Item(),
+    'mu'         : Item("Branch edit to 'mu'.\n"),
+    'B/E'        : Item(),
+    'B/E/alpha'  : Item("This is the file 'alpha'.\n"),
+    'B/E/beta'   : Item("This is the file 'beta'.\n"),
+    'B/lambda'   : Item("This is the file 'gamma'.\n"),
+    'B/F'        : Item(),
+    'C'          : Item(),
+    'D'          : Item(),
+    'D/G'        : Item(),
+    'D/G/pi'     : Item("This is the file 'pi'.\n"),
+    'D/G/rho'    : Item("This is the file 'rho'.\n"),
+    'D/G/tau'    : Item("This is the file 'tau'.\n"),
+    'D/gamma'    : Item("This is the file 'gamma'.\n"),
+    'D/H'        : Item(),
+    'D/H/chi'    : Item("This is the file 'chi'.\n"),
+    'D/H/psi'    : Item("This is the file 'psi'.\n"),
+    'D/H/omega'  : Item("This is the file 'omega'.\n"),
+    })
+
+  expected_skip = wc.State(A_COPY_path, { })
+
+  svntest.actions.run_and_verify_merge(A_path, None, None,
+                                       sbox.repo_url + '/A_copy', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       [], True, False,
+                                       A_path)
+
+@SkipUnless(server_has_mergeinfo)
+@Issue(4313)
+
+# Test for issue #4313 'replaced merges source causes assertion during
+# automatic merge'
+def auto_merge_handles_replacements_in_merge_source(sbox):
+  "automerge handles replacements in merge source"
+
+  sbox.build()
+
+  A_path = sbox.ospath('A')
+  branch1_path = sbox.ospath('branch-1')
+  branch2_path = sbox.ospath('branch-2')
+
+  # r2 - Make two branches.
+  sbox.simple_copy('A', 'branch-1')
+  sbox.simple_copy('A', 'branch-2')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # r3 - Replace 'A' with 'branch-1'.
+  svntest.main.run_svn(None, 'del', A_path)
+  svntest.main.run_svn(None, 'copy', branch1_path, A_path)
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Merge^/A to branch-2, it should be a no-op but for mergeinfo changes,
+  # but it *should* work.  Previously this failed because automatic merges
+  # weren't adhering to the merge source normalization rules, resulting in
+  # this assertion:
+  #
+  #   >svn merge ^/A branch-2
+  #   ..\..\..\subversion\libsvn_client\merge.c:4568: (apr_err=235000)
+  #   svn: E235000: In file '..\..\..\subversion\libsvn_client\merge.c'
+  #     line 4568: assertion failed (apr_hash_count(implicit_src_mergeinfo)
+  #     == 1)
+  #
+  #   This application has requested the Runtime to terminate it in an
+  #   unusual way.
+  #   Please contact the application's support team for more information.
+  svntest.actions.run_and_verify_svn(
+    ["--- Recording mergeinfo for merge of r2 into '" + branch2_path + "':\n",
+     " U   " + branch2_path + "\n",
+     "--- Recording mergeinfo for merge of r3 into '" + branch2_path + "':\n",
+     " G   " + branch2_path + "\n"],
+    [], 'merge', sbox.repo_url + '/A', branch2_path)
+
+# Test for issue #4329 'automatic merge uses reintegrate type merge if
+# source is fully synced'
+@SkipUnless(server_has_mergeinfo)
+@Issue(4329)
+def effective_sync_results_in_reintegrate(sbox):
+  "an effectively synced branch gets reintegrated"
+
+  sbox.build()
+
+  iota_path = sbox.ospath('iota')
+  A_path = sbox.ospath('A')
+  psi_path = sbox.ospath('A/D/H/psi')
+  mu_path = sbox.ospath('A/mu')
+  branch_path = sbox.ospath('branch')
+  psi_branch_path = sbox.ospath('branch/D/H/psi')
+
+  # r2 - Make a branch.
+  sbox.simple_copy('A', 'branch')
+  sbox.simple_commit()
+
+  # r3 - An edit to a file on the trunk.
+  sbox.simple_append('A/mu', "Trunk edit to 'mu'\n", True)
+  sbox.simple_commit()
+
+  # r4 - An edit to a file on the branch
+  sbox.simple_append('branch/D/H/psi', "Branch edit to 'psi'\n", True)
+  sbox.simple_commit()
+
+  # r5 - Effectively sync all changes on trunk to the branch.  We do this
+  # not via an automatic sync merge, but with a cherry pick that effectively
+  # merges the same changes (i.e. r3).
+  sbox.simple_update()
+  cherry_pick(sbox, 3, A_path, branch_path)
+
+  # r6 - Make another edit to the file on the trunk.
+  sbox.simple_append('A/mu', "2nd trunk edit to 'mu'\n", True)
+  sbox.simple_commit()
+
+  # Now try an explicit --reintegrate merge from ^/branch to A.
+  # This should work because since the resolution of
+  # https://issues.apache.org/jira/browse/SVN-3577
+  # if B is *effectively* synced with A, then B can be reintegrated
+  # to A.
+  sbox.simple_update()
+  expected_output = [
+    "--- Merging differences between repository URLs into '" +
+    A_path + "':\n",
+    "U    " + psi_path + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '" +
+    A_path + "':\n",
+    " U   " + A_path + "\n"]
+  svntest.actions.run_and_verify_svn(expected_output, [], 'merge',
+                                     sbox.repo_url + '/branch', A_path,
+                                     '--reintegrate')
+
+  # Revert the merge and try it again, this time without the --reintegrate
+  # option.  The merge should still work with the same results.
+  #
+  # Previously this failed because the reintegrate code path is not followed,
+  # rather the automatic merge attempts a sync style merge of the yca (^/A@1)
+  # through the HEAD of the branch (^/branch@7).  This results in a spurious
+  # conflict on A/mu as the edit made in r3 is reapplied.
+  #
+  # >svn merge ^/branch A
+  # --- Merging r2 through r6 into 'A':
+  # C    A\mu
+  # U    A\D\H\psi
+  # --- Recording mergeinfo for merge of r2 through r6 into 'A':
+  #  U   A
+  # Summary of conflicts:
+  #   Text conflicts: 1
+  # Conflict discovered in file 'A\mu'.
+  # Select: (p) postpone, (df) diff-full, (e) edit, (m) merge,
+  #         (mc) mine-conflict, (tc) theirs-conflict, (s) show all options: p
+  svntest.actions.run_and_verify_svn(None, [], 'revert', A_path, '-R')
+  svntest.actions.run_and_verify_svn(expected_output, [], 'merge',
+                                     sbox.repo_url + '/branch', A_path)
+
+@Issue(4481)
+def reintegrate_subtree_not_updated(sbox):
+  "reintegrate subtree not updated"
+
+  sbox.build()
+
+  # Create change on branch 'D_1'
+  sbox.simple_copy('A/D', 'D_1')
+  sbox.simple_commit()
+  sbox.simple_append('D_1/G/pi', "D_1/G pi edit\n")
+  sbox.simple_append('D_1/H/chi', "D_1/H chi edit\n")
+  sbox.simple_commit()
+
+  # Merge back to 'D' with two subtree merges
+  expected_output = [
+    "--- Merging r2 through r3 into '"
+    + sbox.ospath('A/D/G') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/G/pi') + "\n",
+    "--- Recording mergeinfo for merge of r2 through r3 into '"
+    + sbox.ospath('A/D/G') + "':\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n"]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_1/G',
+                                     sbox.ospath('A/D/G'))
+  expected_output = [
+    "--- Merging r2 through r3 into '"
+    + sbox.ospath('A/D/H') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/H/chi') + "\n",
+    "--- Recording mergeinfo for merge of r2 through r3 into '"
+    + sbox.ospath('A/D/H') + "':\n",
+    " U   "
+    + sbox.ospath('A/D/H') + "\n"]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_1/H',
+                                     sbox.ospath('A/D/H'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create branch 'D_2'
+  sbox.simple_copy('A/D', 'D_2')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create change on 'D_2'
+  sbox.simple_append('D_2/G/pi', "D_2/G pi edit\n")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create change on 'D'
+  sbox.simple_append('A/D/G/rho', "D/G rho edit\n")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Sync merge to 'D_2' (doesn't record mergeinfo on 'D_2/H' subtree)
+  expected_output = [
+    "--- Merging r5 through r7 into '"
+    + sbox.ospath('D_2') + "':\n",
+    "U    "
+    + sbox.ospath('D_2/G/rho') + "\n",
+    "--- Recording mergeinfo for merge of r5 through r7 into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2') + "\n",
+    "--- Recording mergeinfo for merge of r5 through r7 into '"
+    + sbox.ospath('D_2/G') + "':\n",
+    " U   "
+    + sbox.ospath('D_2/G') + "\n"]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/A/D',
+                                     sbox.ospath('D_2'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Reintegrate 'D_2' to 'D'
+  expected_output = [
+    "--- Merging differences between repository URLs into '"
+    + sbox.ospath('A/D') + "':\n",
+    "U    "
+    + sbox.ospath('A/D/G/pi') + "\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '"
+    + sbox.ospath('A/D') + "':\n",
+    " U   "
+    + sbox.ospath('A/D') + "\n",
+    " U   "
+    + sbox.ospath('A/D/G') + "\n"]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/D_2',
+                                     sbox.ospath('A/D'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # merge to 'D_2'. This merge previously failed with this error:
+  #
+  # svn: E195016: Reintegrate can only be used if revisions 5 through 9 were
+  # previously merged from [URL]/D_2 to the reintegrate source, but this is
+  # not the case:
+  #   A/D/G
+  #       Missing ranges: /A/D/G:7
+  #
+  expected_output = [
+    "--- Merging differences between repository URLs into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2/G') + "\n",
+    "--- Recording mergeinfo for merge between repository URLs into '"
+    + sbox.ospath('D_2') + "':\n",
+    " U   "
+    + sbox.ospath('D_2') + "\n",
+    " G   "
+    + sbox.ospath('D_2/G') + "\n"]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge',
+                                     sbox.repo_url + '/A/D',
+                                     sbox.ospath('D_2'))
+  sbox.simple_commit()
+  sbox.simple_update()
+
+def merge_to_copy_and_add(sbox):
+  "merge peg to a copy and add"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'AA')
+  sbox.simple_append('A/mu', 'A/mu')
+  sbox.simple_commit('A')
+
+  # This is the scenario the code is supposed to support; a copy
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+
+  sbox.simple_mkdir('A3')
+  # And this case currently segfaults, because merge doesn't check
+  # if the path has a repository location
+  expected_err = ".*svn: E195012: Can't perform .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'merge', '^/A', sbox.ospath('A3'))
+  # Try the same merge with --reintegrate, for completeness' sake.
+  expected_err = ".*svn: E195012: Can't reintegrate into .*A3'.*added.*"
+  svntest.actions.run_and_verify_svn(None, expected_err,
+                                     'merge', '--reintegrate', '^/A',
+                                     sbox.ospath('A3'))
+
+def merge_delete_crlf_file(sbox):
+  "merge the deletion of a strict CRLF file"
+
+  sbox.build()
+
+  sbox.simple_copy('A', 'AA')
+
+  # Let commit fix the eols
+  sbox.simple_add_text('with\rCRLF\rhere!', 'A/crlf')
+  sbox.simple_add_text('with\rnative\r\eol', 'A/native')
+  sbox.simple_add_text('with\rCR\r\eol', 'A/cr')
+  sbox.simple_add_text('with\rLF\r\eol', 'A/lf')
+
+  # And apply the magic property
+  sbox.simple_propset('svn:eol-style', 'CRLF',   'A/crlf')
+  sbox.simple_propset('svn:eol-style', 'native', 'A/native')
+  sbox.simple_propset('svn:eol-style', 'CR',     'A/cr')
+  sbox.simple_propset('svn:eol-style', 'LF',     'A/lf')
+
+  sbox.simple_commit('A') # r2
+
+  # Merge the addition of the files
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
+  sbox.simple_commit('AA') # r3
+
+  sbox.simple_rm('A/D', 'A/mu', 'A/crlf', 'A/native', 'A/cr', 'A/lf')
+  sbox.simple_commit('A') # r4
+
+  sbox.simple_update('') # Make single revision r4
+
+  # And now merge the deletes
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Merging r3 through r4 into \'%s\':\n' % sbox.ospath('AA'),
+    'D    %s\n' % sbox.ospath('AA/cr'),
+    'D    %s\n' % sbox.ospath('AA/crlf'),
+    'D    %s\n' % sbox.ospath('AA/lf'),
+    'D    %s\n' % sbox.ospath('AA/native'),
+    'D    %s\n' % sbox.ospath('AA/mu'),
+    'D    %s\n' % sbox.ospath('AA/D'),
+    '--- Recording mergeinfo for merge of r3 through r4 into \'%s\':\n'
+                % sbox.ospath('AA'),
+    ' U   %s\n' % sbox.ospath('AA')
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'merge', '^/A', sbox.ospath('AA'))
 
 ########################################################################
 # Run the tests
@@ -1009,6 +1424,12 @@ test_list = [ None,
               cherry3_fwd,
               subtree_to_and_fro,
               merge_to_reverse_cherry_subtree_to_merge_to,
+              merge_replacement,
+              auto_merge_handles_replacements_in_merge_source,
+              effective_sync_results_in_reintegrate,
+              reintegrate_subtree_not_updated,
+              merge_to_copy_and_add,
+              merge_delete_crlf_file,
              ]
 
 if __name__ == '__main__':

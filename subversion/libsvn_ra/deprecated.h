@@ -28,7 +28,8 @@
 
 #include <apr_hash.h>
 
-#include "svn_editor.h"
+#include "private/svn_editor.h"
+
 
 #ifdef __cplusplus
 extern "C" {

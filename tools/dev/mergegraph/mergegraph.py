@@ -242,7 +242,7 @@ class MergeDot(MergeGraph, pydot.Dot):
                                              'annotations': '[]' })
     files_read = config.read(config_filename)
     if len(files_read) == 0:
-      print >> sys.stderr, 'graph: unable to read graph config from "' + config_filename + '"'
+      sys.stderr.write('graph: unable to read graph config from "' + config_filename + '"\n')
       sys.exit(1)
     graph.basename = config.get('graph', 'basename')
     graph.title = config.get('graph', 'title')

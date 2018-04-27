@@ -71,7 +71,7 @@ public class RunTests
                     try
                     {
                         Class<?> clazz = Class.forName(className);
-                        final Class<?>[] argTypes = new Class[] { String.class };
+                        final Class<?>[] argTypes = new Class<?>[] { String.class };
                         Constructor<?> ctor =
                             clazz.getDeclaredConstructor(argTypes);
                         methodName = methodName.substring(i + 1);
@@ -91,8 +91,11 @@ public class RunTests
             if (testCases == null || testCases.length == 0)
             {
                 // Add default test suites.
-                suite.addTestSuite(SVNReposTests.class);
                 suite.addTestSuite(BasicTests.class);
+                suite.addTestSuite(UtilTests.class);
+                suite.addTestSuite(SVNRemoteTests.class);
+                suite.addTestSuite(SVNReposTests.class);
+                suite.addTestSuite(ExceptionTests.class);
             }
             else
             {

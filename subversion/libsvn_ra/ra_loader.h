@@ -38,6 +38,17 @@
 extern "C" {
 #endif
 
+/* Prototype of most recent version of svn_ra_openX() api, optionally
+   handed to the ra api to allow opening other ra sessions. */
+typedef svn_error_t * (*svn_ra__open_func_t)(svn_ra_session_t **session_p,
+                                              const char **corrected_url,
+                                              const char *repos_URL,
+                                              const char *uuid,
+                                              const svn_ra_callbacks2_t *callbacks,
+                                              void *callback_baton,
+                                              apr_hash_t *config,
+                                              apr_pool_t *pool);
+
 /* The RA layer vtable. */
 typedef struct svn_ra__vtable_t {
   /* This field should always remain first in the vtable. */
@@ -45,7 +56,7 @@ typedef struct svn_ra__vtable_t {
 
   /* Return a short description of the RA implementation, as a localized
    * string. */
-  const char *(*get_description)(void);
+  const char *(*get_description)(apr_pool_t *pool);
 
   /* Return a list of actual URI schemes supported by this implementation.
    * The returned array is NULL-terminated. */
@@ -61,8 +72,16 @@ typedef struct svn_ra__vtable_t {
                                const char *session_URL,
                                const svn_ra_callbacks2_t *callbacks,
                                void *callback_baton,
+                               svn_auth_baton_t *auth_baton,
                                apr_hash_t *config,
-                               apr_pool_t *pool);
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
+  /* Backs svn_ra_dup_session */
+  svn_error_t * (*dup_session)(svn_ra_session_t *new_session,
+                               svn_ra_session_t *old_session,
+                               const char *new_session_url,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
   /* See svn_ra_reparent(). */
   /* URL is guaranteed to have what get_repos_root() returns as a prefix. */
   svn_error_t *(*reparent)(svn_ra_session_t *session,
@@ -135,7 +154,7 @@ typedef struct svn_ra__vtable_t {
                                 svn_mergeinfo_inheritance_t inherit,
                                 svn_boolean_t include_merged_revisions,
                                 apr_pool_t *pool);
-  /* See svn_ra_do_update2(). */
+  /* See svn_ra_do_update3(). */
   svn_error_t *(*do_update)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
                             void **report_baton,
@@ -143,10 +162,12 @@ typedef struct svn_ra__vtable_t {
                             const char *update_target,
                             svn_depth_t depth,
                             svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry,
                             const svn_delta_editor_t *update_editor,
                             void *update_baton,
-                            apr_pool_t *pool);
-  /* See svn_ra_do_switch2(). */
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
+  /* See svn_ra_do_switch3(). */
   svn_error_t *(*do_switch)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
                             void **report_baton,
@@ -154,9 +175,12 @@ typedef struct svn_ra__vtable_t {
                             const char *switch_target,
                             svn_depth_t depth,
                             const char *switch_url,
+                            svn_boolean_t send_copyfrom_args,
+                            svn_boolean_t ignore_ancestry,
                             const svn_delta_editor_t *switch_editor,
                             void *switch_baton,
-                            apr_pool_t *pool);
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
   /* See svn_ra_do_status2(). */
   svn_error_t *(*do_status)(svn_ra_session_t *session,
                             const svn_ra_reporter3_t **reporter,
@@ -295,10 +319,6 @@ typedef struct svn_ra__vtable_t {
                                   svn_revnum_t end_revision,
                                   svn_revnum_t *revision_deleted,
                                   apr_pool_t *pool);
-
-  /* See svn_ra__register_editor_shim_callbacks() */
-  svn_error_t *(*register_editor_shim_callbacks)(svn_ra_session_t *session,
-                                    svn_delta_shim_callbacks_t *callbacks);
   /* See svn_ra_get_inherited_props(). */
   svn_error_t *(*get_inherited_props)(svn_ra_session_t *session,
                                       apr_array_header_t **iprops,
@@ -306,6 +326,28 @@ typedef struct svn_ra__vtable_t {
                                       svn_revnum_t revision,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
+  /* If not NULL, receives a pointer to svn_ra_open, to alllow opening
+     a new ra session from inside the ra layer without a circular
+     library dependency*/
+  svn_error_t *(*set_svn_ra_open)(svn_ra_session_t *session,
+                                  svn_ra__open_func_t func);
+
+  /* See svn_ra_list(). */
+  svn_error_t *(*list)(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t revision,
+                       const apr_array_header_t *patterns,
+                       svn_depth_t depth,
+                       apr_uint32_t dirent_fields,
+                       svn_ra_dirent_receiver_t receiver,
+                       void *receiver_baton,
+                       apr_pool_t *scratch_pool);
+
+  /* Experimental support below here */
+
+  /* See svn_ra__register_editor_shim_callbacks() */
+  svn_error_t *(*register_editor_shim_callbacks)(svn_ra_session_t *session,
+                                                 svn_delta_shim_callbacks_t *callbacks);
   /* See svn_ra__get_commit_ev2()  */
   svn_error_t *(*get_commit_ev2)(
     svn_editor_t **editor,
@@ -496,11 +538,11 @@ svn_ra__get_deleted_rev_from_log(svn_ra_session_t *session,
 
 
 /**
- * Fallback logic for svn_ra_get_fileX and svn_ra_get_dirX when those APIs
+ * Fallback logic for svn_ra_get_inherited_props() when that API
  * need to find PATH's inherited properties on a legacy server that
  * doesn't have the SVN_RA_CAPABILITY_INHERITED_PROPS capability.
  *
- * All arguments are as per the two aforementioned APIs.
+ * All arguments are as per svn_ra_get_inherited_props().
  */
 svn_error_t *
 svn_ra__get_inherited_props_walk(svn_ra_session_t *session,

@@ -43,7 +43,7 @@ struct file_rev_baton {
   apr_bucket_brigade *bb;
 
   /* where to deliver the output */
-  ap_filter_t *output;
+  dav_svn__output *output;
 
   /* Whether we've written the <S:file-revs-report> header.  Allows for lazy
      writes to support mod_dav-based error handling. */
@@ -149,7 +149,7 @@ file_rev_handler(void *baton,
                  apr_pool_t *pool)
 {
   struct file_rev_baton *frb = baton;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   apr_hash_index_t *hi;
   int i;
 
@@ -169,11 +169,11 @@ file_rev_handler(void *baton,
       const char *pname;
       const svn_string_t *pval;
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       apr_hash_this(hi, &key, NULL, &val);
       pname = key;
       pval = val;
-      SVN_ERR(send_prop(frb, "rev-prop", pname, pval, subpool));
+      SVN_ERR(send_prop(frb, "rev-prop", pname, pval, iterpool));
     }
 
   /* Send file prop changes. */
@@ -181,17 +181,17 @@ file_rev_handler(void *baton,
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(props, i, svn_prop_t);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       if (prop->value)
         SVN_ERR(send_prop(frb, "set-prop", prop->name, prop->value,
-                          subpool));
+                          iterpool));
       else
         {
           /* Property was removed. */
           SVN_ERR(dav_svn__brigade_printf(frb->bb, frb->output,
                                           "<S:remove-prop name=\"%s\"/>"
                                           DEBUG_CR,
-                                          apr_xml_quote_string(subpool,
+                                          apr_xml_quote_string(iterpool,
                                                                prop->name,
                                                                1)));
         }
@@ -223,7 +223,7 @@ file_rev_handler(void *baton,
     SVN_ERR(dav_svn__brigade_puts(frb->bb, frb->output,
                                   "</S:file-rev>" DEBUG_CR));
 
-  svn_pool_destroy(subpool);
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
@@ -234,7 +234,7 @@ file_rev_handler(void *baton,
 dav_error *
 dav_svn__file_revs_report(const dav_resource *resource,
                           const apr_xml_doc *doc,
-                          ap_filter_t *output)
+                          dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
@@ -254,17 +254,18 @@ dav_svn__file_revs_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   /* ### This is done on other places, but the document element is
      in this namespace, so is this necessary at all? */
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   /* Get request information. */
@@ -299,13 +300,11 @@ dav_svn__file_revs_report(const dav_resource *resource,
 
   /* Check that all parameters are present and valid. */
   if (! abs_path)
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
-                                  "Not all parameters passed.",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                                  "Not all parameters passed");
 
   frb.bb = apr_brigade_create(resource->pool,
-                              output->c->bucket_alloc);
+                              dav_svn__output_get_bucket_alloc(output));
   frb.output = output;
   frb.needs_header = TRUE;
   frb.svndiff_version = resource->info->svndiff_version;
@@ -328,7 +327,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
          right then, so r->status remains 0, hence HTTP status 200
          would be misleadingly returned. */
       return (dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                   serr->message, resource->pool));
+                                   NULL, resource->pool));
     }
 
   if ((serr = maybe_send_header(&frb)))

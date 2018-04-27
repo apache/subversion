@@ -80,6 +80,17 @@ class SVNTests extends TestCase
     protected static int testCounter;
 
     /**
+     * Set to true if tests should clean up after themselves.
+     */
+    protected boolean cleanupAfterTests = false;
+
+    /**
+     * this list contains the names of all repository and working copy
+     * directories created by one test case.
+     */
+    protected static List<File> testDirs;
+
+    /**
      * the file in which the sample repository has been dumped.
      */
     protected File greekDump;
@@ -148,12 +159,12 @@ class SVNTests extends TestCase
      * Username to use in tests
      */
     protected final static String USERNAME = "jrandom";
-    
+
     /**
      * Password to use in tests
      */
     protected final static String PASSWORD = "rayjandom";
-    
+
     /**
      * Create a JUnit <code>TestCase</code> instance.
      */
@@ -173,7 +184,22 @@ class SVNTests extends TestCase
 
     private void init()
     {
-        // if not already set, get a usefull value for rootDir
+        String cleanupProp = System.getProperty("test.cleanup");
+        if (cleanupProp != null)
+            cleanupAfterTests = (0 < cleanupProp.trim().length());
+
+        String disableCredStore = System.getProperty("test.disablecredstore");
+        if (disableCredStore != null)
+        {
+            try {
+                SVNUtil.disableNativeCredentialsStore();
+            } catch(Throwable ex) {
+                System.err.println("*** ERROR: Could not disable" +
+                                   " the native credentials store");
+            }
+        }
+
+        // if not already set, get a useful value for rootDir
         if (rootDirectoryName == null)
             rootDirectoryName = System.getProperty("test.rootdir");
         if (rootDirectoryName == null)
@@ -246,10 +272,11 @@ class SVNTests extends TestCase
         greekRepos = new File(localTmp, "repos");
         greekDump = new File(localTmp, "greek_dump");
         admin.create(greekRepos, true,false, null, this.fsType);
-        addExpectedCommitItem(greekFiles.getAbsolutePath(), null, null,
-                              NodeKind.none, CommitItemStateFlags.Add);
+        addExpectedCommitItem(greekFiles.getAbsolutePath(),
+                              makeReposUrl(greekRepos).toString(), null,
+                              NodeKind.dir, CommitItemStateFlags.Add);
         client.doImport(greekFiles.getAbsolutePath(),
-                       makeReposUrl(greekRepos).toString(),
+                        makeReposUrl(greekRepos).toString(),
                         Depth.infinity, false, false, null,
                         new MyCommitMessage(), null);
         admin.dump(greekRepos, new FileOutputStream(greekDump),
@@ -285,66 +312,140 @@ class SVNTests extends TestCase
     {
         this.client = new SVNClient();
         this.client.notification2(new MyNotifier());
-        this.client.setPrompt(new DefaultPromptUserPassword());
+        if (DefaultAuthn.useDeprecated())
+            this.client.setPrompt(DefaultAuthn.getDeprecated());
+        else
+            this.client.setPrompt(DefaultAuthn.getDefault());
         this.client.username(USERNAME);
         this.client.setProgressCallback(new DefaultProgressListener());
         this.client.setConfigDirectory(this.conf.getAbsolutePath());
         this.expectedCommitItems = new HashMap<String, MyCommitItem>();
     }
     /**
-     * the default prompt : never prompts the user, provides defaults answers
+     * the default prompts : never prompt the user, provide default answers
      */
-    protected static class DefaultPromptUserPassword implements UserPasswordCallback
+    protected static class DefaultAuthn
     {
-
-        public int askTrustSSLServer(String info, boolean allowPermanently)
+        public static boolean useDeprecated()
         {
-            return UserPasswordCallback.AcceptTemporary;
+            String prop = System.getProperty("test.authn.deprecated");
+            return (prop != null && !prop.isEmpty());
         }
 
-        public String askQuestion(String realm, String question, boolean showAnswer)
+        public static AuthnCallback getDefault()
         {
-            return "";
+            return new DefaultAuthnCallback();
         }
 
-        public boolean askYesNo(String realm, String question, boolean yesIsDefault)
+        @SuppressWarnings("deprecation")
+        public static UserPasswordCallback getDeprecated()
         {
-            return yesIsDefault;
+            return new DeprecatedAuthnCallback();
         }
 
-        public String getPassword()
+        private static class DefaultAuthnCallback
+            implements AuthnCallback
         {
-            return PASSWORD;
+            public UsernameResult
+                usernamePrompt(String realm, boolean maySave)
+            {
+                return new UsernameResult(USERNAME);
+            }
+
+            public UserPasswordResult
+                userPasswordPrompt(String realm, String username,
+                                   boolean maySave)
+            {
+                return new UserPasswordResult(USERNAME, PASSWORD);
+            }
+
+            public SSLServerTrustResult
+                sslServerTrustPrompt(String realm,
+                                     SSLServerCertFailures failures,
+                                     SSLServerCertInfo info,
+                                     boolean maySave)
+            {
+                return SSLServerTrustResult.acceptTemporarily();
+            }
+
+            public SSLClientCertResult
+                sslClientCertPrompt(String realm, boolean maySave)
+            {
+                return null;
+            }
+
+            public SSLClientCertPassphraseResult
+                sslClientCertPassphrasePrompt(String realm, boolean maySave)
+            {
+                return null;
+            }
+
+            public boolean allowStorePlaintextPassword(String realm)
+            {
+                return false;
+            }
+
+            public boolean allowStorePlaintextPassphrase(String realm)
+            {
+                return false;
+            }
         }
 
-        public String getUsername()
+        @SuppressWarnings("deprecation")
+        private static class DeprecatedAuthnCallback
+            implements UserPasswordCallback
         {
-            return USERNAME;
-        }
+            public int askTrustSSLServer(String info, boolean allowPermanently)
+            {
+                return UserPasswordCallback.AcceptTemporary;
+            }
 
-        public boolean prompt(String realm, String username)
-        {
-            return false;
-        }
+            public String askQuestion(String realm, String question,
+                                      boolean showAnswer)
+            {
+                return "";
+            }
 
-        public boolean prompt(String realm, String username, boolean maySave)
-        {
-            return false;
-        }
+            public boolean askYesNo(String realm, String question,
+                                    boolean yesIsDefault)
+            {
+                return yesIsDefault;
+            }
 
-        public String askQuestion(String realm, String question,
-                boolean showAnswer, boolean maySave)
-        {
-            return "";
-        }
+            public String getPassword()
+            {
+                return PASSWORD;
+            }
 
-        public boolean userAllowedSave()
-        {
-            return false;
+            public String getUsername()
+            {
+                return USERNAME;
+            }
+
+            public boolean prompt(String realm, String username)
+            {
+                return true;
+            }
+
+            public boolean prompt(String realm, String username, boolean maySave)
+            {
+                return true;
+            }
+
+            public String askQuestion(String realm, String question,
+                                      boolean showAnswer, boolean maySave)
+            {
+                return "";
+            }
+
+            public boolean userAllowedSave()
+            {
+                return false;
+            }
         }
     }
 
-    private static class DefaultProgressListener implements ProgressCallback
+    protected static class DefaultProgressListener implements ProgressCallback
     {
 
         public void onProgress(ProgressEvent event)
@@ -424,6 +525,16 @@ class SVNTests extends TestCase
         client.dispose();
         // remove the temporary directory
         removeDirOrFile(localTmp);
+
+        // optionally remove the test directories
+        List<File> td = testDirs;
+        testDirs = null;
+        if (cleanupAfterTests && td != null)
+        {
+            for(File f: td)
+                removeDirOrFile(f);
+        }
+
         super.tearDown();
     }
 
@@ -702,6 +813,13 @@ class SVNTests extends TestCase
             return wc;
         }
 
+        private void trackDir(File dir)
+        {
+            if (testDirs == null)
+                testDirs = new ArrayList<File>();
+            testDirs.add(dir);
+        }
+
         /**
          * Create the repository for the beginning of the test.
          * Assumes that {@link #testName} has been set.
@@ -718,6 +836,7 @@ class SVNTests extends TestCase
             // build a clean repository directory
             File repos = new File(repositories, this.testName);
             removeDirOrFile(repos);
+            trackDir(repos);
             // create and load the repository from the default repository dump
             admin.create(repos, true, false, conf, fsType);
             if (loadGreek)
@@ -743,6 +862,7 @@ class SVNTests extends TestCase
             URI uri = makeReposUrl(repos);
             workingCopy = new File(workingCopies, this.testName);
             removeDirOrFile(workingCopy);
+            trackDir(workingCopy);
             // checkout the repository
             client.checkout(uri.toString(), workingCopy.getAbsolutePath(),
                    null, null, Depth.infinity, false, false);
@@ -782,7 +902,8 @@ class SVNTests extends TestCase
         {
             MyStatusCallback statusCallback = new MyStatusCallback();
             client.status(workingCopy.getAbsolutePath(), Depth.unknown,
-                          checkRepos, true, true, false, null, statusCallback);
+                          checkRepos, false, true, true, false, false,
+                          null, statusCallback);
             wc.check(statusCallback.getStatusArray(),
                     workingCopy.getAbsolutePath(), checkRepos);
         }
@@ -916,7 +1037,7 @@ class SVNTests extends TestCase
 
         public Status[] getStatusArray()
         {
-            return (Status[]) statuses.toArray(new Status[statuses.size()]);
+            return statuses.toArray(new Status[statuses.size()]);
         }
     }
 }

@@ -42,9 +42,9 @@ object.
 
 =over
 
-=item $repos-E<gt>dump_fs($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $cancel_func, $cancel_baton)
+=item $repos-E<gt>dump_fs($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $cancel_callback)
 
-=item $repos-E<gt>dump_fs2($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $deltify, $cancel_func, $cancel_baton)
+=item $repos-E<gt>dump_fs2($dump_fh, $feedback_fh, $start_rev, $end_rev, $incremental, $deltify, $cancel_callback)
 
 Create a dump file of the repository from revision C<$start_rev> to C<$end_rev>
 , store it into the filehandle C<$dump_fh>, and write feedback on the progress
@@ -61,10 +61,9 @@ this flag is set, the first revision of a non-incremental dump will
 be done with full plain text.  A dump with @a use_deltas set cannot
 be loaded by Subversion 1.0.x.
 
-According to svn_repos.h, the C<$cancel_func> is a function that is called
-periodically and given C<$cancel_baton> as a parameter to determine whether
-the client wishes to cancel the dump.  You must supply C<undef> at the very
-least.
+If C<$cancel_callback> is not C<undef>, it must be a code reference
+that is called periodically to determine whether the client wishes 
+to cancel the dump.  See L<SVN::Client/"CANCELLATION CALLBACK"> for details.
 
 Example:
 
@@ -83,13 +82,13 @@ Example:
     $repos->dump_fs2($fh, \*STDOUT,          # Dump file => $fh, Feedback => STDOUT
                      $start_rev, $end_rev,   # Revision Range
                      $incremental, $deltify, # Options
-                     undef, undef);          # Cancel Function
+                     undef);                 # Cancel Callback
 
     close $fh;
 
-=item $repos-E<gt>load_fs($dumpfile_fh, $feedback_fh, $uuid_action, $parent_dir, $cancel_func, $cancel_baton);
+=item $repos-E<gt>load_fs($dumpfile_fh, $feedback_fh, $uuid_action, $parent_dir, $cancel_callback);
 
-=item $repos-E<gt>load_fs2($dumpfile_fh, $feedback_fh, $uuid_action, $parent_dir, $use_pre_commit_hook, $use_post_commit_hook, $cancel_func, $cancel_baton);
+=item $repos-E<gt>load_fs2($dumpfile_fh, $feedback_fh, $uuid_action, $parent_dir, $use_pre_commit_hook, $use_post_commit_hook, $cancel_callback);
 
 Loads a dumpfile specified by the C<$dumpfile_fh> filehandle into the repository.
 If the dumpstream contains copy history that is unavailable in the repository,
@@ -113,11 +112,11 @@ hook before committing each loaded revision.
 If C<$use_post_commit_hook> is set, call the repository's
 post-commit hook after committing each loaded revision.
 
-If C<$cancel_func> is not NULL, it is called periodically with
-C<$cancel_baton> as argument to see if the client wishes to cancel
-the load.
+If C<$cancel_callback> is not C<undef>, it must be a code reference 
+that is called periodically to determine whether the client wishes
+to cancel the load.  See L<SVN::Client/"CANCELLATION CALLBACK"> for details.
 
-You must at least provide undef for these parameters for the method call
+You must at least provide C<undef> for these parameters for the method call
 to work.
 
 Example:

@@ -140,6 +140,126 @@ def redirected_update(sbox):
   verify_url(wc_dir, sbox.repo_url)
 
 #----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_nonroot_update(sbox):
+  "redirected update of non-repos-root wc"
+
+  sbox.build(create_wc=False)
+  wc_dir = sbox.wc_dir
+  checkout_url = sbox.repo_url + '/A'
+  relocate_url = sbox.redirected_root_url() + '/A'
+
+  # Checkout a subdir of the repository root.
+  exit_code, out, err = svntest.main.run_svn(None, 'co',
+                                             checkout_url, wc_dir)
+  if err:
+    raise svntest.Failure
+
+  # Relocate (by cheating) the working copy to the redirect URL.  When
+  # we then update, we'll expect to find ourselves automagically back
+  # to the original URL.  (This is because we can't easily introduce a
+  # redirect to the Apache configuration from the test suite here.)
+  svntest.actions.no_relocate_validation()
+  exit_code, out, err = svntest.main.run_svn(None, 'sw', '--relocate',
+                                             checkout_url, relocate_url,
+                                             wc_dir)
+  svntest.actions.do_relocate_validation()
+
+  # Now update the working copy.
+  exit_code, out, err = svntest.main.run_svn(None, 'up', wc_dir)
+  if err:
+    raise svntest.Failure
+  if not re.match("^Updating '.*':", out[0]):
+    raise svntest.Failure
+  if not redirect_regex.match(out[1]):
+    raise svntest.Failure
+
+  # Verify that we have the expected URL.
+  verify_url(wc_dir, checkout_url)
+
+#----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_externals(sbox):
+  "redirected externals"
+
+  sbox.build()
+
+  sbox.simple_propset('svn:externals',
+                      '^/A/B/E/alpha fileX\n'
+                      '^/A/B/F dirX',
+                      'A/C')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  wc_dir = sbox.add_wc_path("my")
+  co_url = sbox.redirected_root_url()
+  exit_code, out, err = svntest.main.run_svn(None, 'co', co_url, wc_dir)
+  if err:
+    raise svntest.Failure
+  if not redirect_regex.match(out[0]):
+    raise svntest.Failure
+
+  verify_url(wc_dir, sbox.repo_url)
+  verify_url(sbox.ospath('A/C/fileX'), sbox.repo_url + '/A/B/E/alpha',
+             wc_path_is_file=True)
+  verify_url(sbox.ospath('A/C/dirX'), sbox.repo_url + '/A/B/F')
+
+#----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_copy(sbox):
+  "redirected copy"
+
+  sbox.build(create_wc=False)
+
+  # E170011 = SVN_ERR_RA_SESSION_URL_MISMATCH
+  expected_error = "svn: E170011: Repository moved permanently"
+
+  # This tests the actual copy handling
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url() + '/A',
+                                     sbox.redirected_root_url() + '/A_copied')
+
+  # This tests the cmdline handling of '^/copy-of-A'
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url() + '/A',
+                                     '^/copy-of-A')
+
+  # E170011 = SVN_ERR_RA_SESSION_URL_MISMATCH
+  expected_error = "svn: E170011: Repository moved temporarily"
+
+  # This tests the actual copy handling
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url(temporary=True) + '/A',
+                                     sbox.redirected_root_url(temporary=True) + '/A_copied')
+
+  # This tests the cmdline handling of '^/copy-of-A'
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'cp', '-m', 'failed copy',
+                                     sbox.redirected_root_url(temporary=True) + '/A',
+                                     '^/copy-of-A')
+#----------------------------------------------------------------------
+@SkipUnless(svntest.main.is_ra_type_dav)
+def redirected_commands(sbox):
+  "redirected commands"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'log',
+                                     sbox.redirected_root_url() + '/A')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'ls',
+                                     sbox.redirected_root_url() + '/A')
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'info',
+                                     sbox.redirected_root_url() + '/A')
+
+#----------------------------------------------------------------------
 
 ########################################################################
 # Run the tests
@@ -149,6 +269,10 @@ test_list = [ None,
               temporary_redirect,
               redirected_checkout,
               redirected_update,
+              redirected_nonroot_update,
+              redirected_externals,
+              redirected_copy,
+              redirected_commands,
              ]
 
 if __name__ == '__main__':

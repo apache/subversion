@@ -85,7 +85,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                  void *validator_baton,
                  apr_pool_t *scratch_pool)
 {
-  svn_kind_t kind;
+  svn_node_kind_t kind;
   const char *repos_relpath;
   const char *old_repos_root, *old_url;
   const char *new_repos_root, *new_url;
@@ -131,7 +131,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
                                wc_ctx->db, local_abspath, scratch_pool,
                                scratch_pool));
 
-  if (kind != svn_kind_dir)
+  if (kind != svn_node_dir)
     return svn_error_create(SVN_ERR_CLIENT_INVALID_RELOCATION, NULL,
                             _("Cannot relocate a single file"));
 
@@ -148,7 +148,7 @@ svn_wc_relocate4(svn_wc_context_t *wc_ctx,
   if (old_url_len == from_len)
     new_url = to;
   else
-    new_url = apr_pstrcat(scratch_pool, to, old_url + from_len, (char *)NULL);
+    new_url = apr_pstrcat(scratch_pool, to, old_url + from_len, SVN_VA_NULL);
   if (! svn_path_is_url(new_url))
     return svn_error_createf(SVN_ERR_WC_INVALID_RELOCATION, NULL,
                              _("Invalid relocation destination: '%s' "

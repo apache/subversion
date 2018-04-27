@@ -25,7 +25,9 @@
 
 
 import os
+import traceback
 import sys
+
 import getopt
 try:
   my_getopt = getopt.gnu_getopt
@@ -46,7 +48,6 @@ sys.path.insert(1, 'build')
 
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
-  'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
 
@@ -64,6 +65,8 @@ def main(fname, gentype, verfname=None,
 
   generator.write()
   generator.write_sqlite_headers()
+  generator.write_errno_table()
+  generator.write_config_keys()
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
@@ -192,12 +195,6 @@ def _usage_exit(err=None):
   print("  --enable-nls")
   print("           add support for gettext localization")
   print("")
-  print("  --enable-bdb-in-apr-util")
-  print("           configure APR-Util to use Berkeley DB")
-  print("")
-  print("  --enable-ml")
-  print("           enable use of ML assembler with zlib")
-  print("")
   print("  --disable-shared")
   print("           only build static libraries")
   print("")
@@ -208,11 +205,17 @@ def _usage_exit(err=None):
   print("           Use static openssl")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2002, 2003, 2005, 2008, 2010 or 2012)")
+  print("           generate for VS.NET version VER (2005-2017 or 9.0-15.0)")
+  print("           [implies '-t vcproj']")
+  print("")
+  print(" -D NAME[=value]")
+  print("           define NAME macro during compilation")
   print("           [only valid in combination with '-t vcproj']")
   print("")
   print("  --with-apr_memcache=DIR")
   print("           the apr_memcache sources are in DIR")
+  print("  --disable-gmock")
+  print("           do not use Googlemock")
   sys.exit(1)
 
 
@@ -221,16 +224,17 @@ class Options:
     self.list = []
     self.dict = {}
 
-  def add(self, opt, val):
+  def add(self, opt, val, overwrite=True):
     if opt in self.dict:
-      self.list[self.dict[opt]] = (opt, val)
+      if overwrite:
+        self.list[self.dict[opt]] = (opt, val)
     else:
       self.dict[opt] = len(self.list)
       self.list.append((opt, val))
 
 if __name__ == '__main__':
   try:
-    opts, args = my_getopt(sys.argv[1:], 'st:',
+    opts, args = my_getopt(sys.argv[1:], 'st:D:',
                            ['debug',
                             'release',
                             'reload',
@@ -256,23 +260,17 @@ if __name__ == '__main__':
                             'enable-purify',
                             'enable-quantify',
                             'enable-nls',
-                            'enable-bdb-in-apr-util',
-                            'enable-ml',
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
-
-                            # Keep distributions that help by adding a path
-                            # working. On unix this would be filtered by
-                            # configure, but on Windows gen-make.py is used
-                            # directly.
-                            'with-neon=',
-                            'without-neon',
+                            'disable-gmock',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")
-  except getopt.GetoptError, e:
-    _usage_exit(str(e))
+  except getopt.GetoptError:
+    typ, val, tb = sys.exc_info()
+    msg = ''.join(traceback.format_exception_only(typ, val))
+    _usage_exit(msg)
 
   conf = 'build.conf'
   skip = 0
@@ -304,11 +302,16 @@ if __name__ == '__main__':
       skip = 1
     elif opt == '-t':
       gentype = val
+    elif opt == '--vsnet-version':
+      gentype = 'vcproj'
     else:
       if opt == '--with-httpd':
-        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'))
-        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'))
-        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'))
+        rest.add('--with-apr', os.path.join(val, 'srclib', 'apr'),
+                 overwrite=False)
+        rest.add('--with-apr-util', os.path.join(val, 'srclib', 'apr-util'),
+                 overwrite=False)
+        rest.add('--with-apr-iconv', os.path.join(val, 'srclib', 'apr-iconv'),
+                 overwrite=False)
 
   # Remember all options so that --reload and other scripts can use them
   opt_conf = open('gen-make.opts', 'w')

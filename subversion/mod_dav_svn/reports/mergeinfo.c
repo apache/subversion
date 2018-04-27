@@ -42,22 +42,100 @@
 
 #include "../dav_svn.h"
 
+/* Baton type to be used with mergeinfo_receiver. */
+typedef struct mergeinfo_receiver_baton_t
+{
+  /* Start path of the query; report paths relative to this one. */
+  const char *fs_path;
+
+  /* Allocate the BRIGADE contents here. */
+  apr_pool_t *resource_pool;
+
+  /* Attach the response to this brigade. */
+  apr_bucket_brigade *brigade;
+
+  /* Send the response out here. */
+  dav_svn__output *output;
+
+  /* Did we already send the opening sequence? */
+  svn_boolean_t starting_tuple_sent;
+} mergeinfo_receiver_baton_t;
+
+/* Utility method sending the start of the "get m/i" response once
+   over BATON. */
+static svn_error_t *
+send_mergeinfo_starting_sequence(mergeinfo_receiver_baton_t *baton,
+                                apr_pool_t *scratch_pool)
+{
+  if (baton->starting_tuple_sent)
+    return SVN_NO_ERROR;
+
+  /* Ideally, dav_svn__brigade_printf() would set a flag in bb (or rather,
+     in r->sent_bodyct, see dav_method_report()), and ap_fflush()
+     would not set that flag unless it actually sent something.  But
+     we are condemned to live in another universe, so we must keep
+     track ourselves of whether we've sent anything or not.  See the
+     long comment after the 'cleanup' label for more details. */
+  SVN_ERR(dav_svn__brigade_puts(baton->brigade, baton->output,
+                                DAV_XML_HEADER DEBUG_CR
+                                "<S:" SVN_DAV__MERGEINFO_REPORT " "
+                                "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
+                                "xmlns:D=\"DAV:\">" DEBUG_CR));
+  baton->starting_tuple_sent = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_repos_mergeinfo_receiver_t, sending the MERGEINFO
+ * out over the connection in the mergeinfo_receiver_baton_t * BATON. */
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  mergeinfo_receiver_baton_t *b = baton;
+  svn_string_t *mergeinfo_string;
+
+  /* Delay starting the response until we checked that the initial
+     request went through.  We are at that point now b/c we've got
+     the first results in. */
+  SVN_ERR(send_mergeinfo_starting_sequence(b, scratch_pool));
+
+  /* Adjust the path info and send the m/i. */
+  path = svn_fspath__skip_ancestor(b->fs_path, path);
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo,
+                                  scratch_pool));
+
+  SVN_ERR(dav_svn__brigade_printf
+        (b->brigade, b->output,
+         "<S:" SVN_DAV__MERGEINFO_ITEM ">"
+         DEBUG_CR
+         "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
+         DEBUG_CR
+         "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
+         DEBUG_CR
+         "</S:" SVN_DAV__MERGEINFO_ITEM ">",
+         apr_xml_quote_string(b->resource_pool, path, 0),
+         apr_xml_quote_string(b->resource_pool, mergeinfo_string->data, 0)));
+
+  return SVN_NO_ERROR;
+}
 
 dav_error *
 dav_svn__get_mergeinfo_report(const dav_resource *resource,
                               const apr_xml_doc *doc,
-                              ap_filter_t *output)
+                              dav_svn__output *output)
 {
   svn_error_t *serr;
   dav_error *derr = NULL;
   apr_xml_elem *child;
-  svn_mergeinfo_catalog_t catalog;
   svn_boolean_t include_descendants = FALSE;
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   int ns;
   apr_bucket_brigade *bb;
-  apr_hash_index_t *hi;
+  mergeinfo_receiver_baton_t receiver_baton;
 
   /* These get determined from the request document. */
   svn_revnum_t rev = SVN_INVALID_REVNUM;
@@ -67,15 +145,16 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
     = apr_array_make(resource->pool, 0, sizeof(const char *));
 
   /* Sanity check. */
+  if (!resource->info->repos_path)
+    return dav_svn__new_error(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                              "The request does not specify a repository path");
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
     {
-      return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                     "The request does not contain the 'svn:' "
                                     "namespace, so it is not going to have "
-                                    "certain required elements.",
-                                    SVN_DAV_ERROR_NAMESPACE,
-                                    SVN_DAV_ERROR_TAG);
+                                    "certain required elements");
     }
 
   for (child = doc->root->first_child; child != NULL; child = child->next)
@@ -123,87 +202,37 @@ dav_svn__get_mergeinfo_report(const dav_resource *resource,
   arb.repos = resource->info->repos;
 
   /* Build mergeinfo brigade */
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
-  serr = svn_repos_fs_get_mergeinfo(&catalog, repos->repos, paths, rev,
-                                    inherit, include_descendants,
-                                    dav_svn__authz_read_func(&arb),
-                                    &arb, resource->pool);
-  if (serr)
-    {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
-    }
+  receiver_baton.brigade = bb;
+  receiver_baton.output = output;
+  receiver_baton.fs_path = resource->info->repos_path;
+  receiver_baton.resource_pool = resource->pool;
+  receiver_baton.starting_tuple_sent = FALSE;
 
-  serr = svn_mergeinfo__remove_prefix_from_catalog(&catalog, catalog,
-                                                   resource->info->repos_path,
-                                                   resource->pool);
-  if (serr)
-    {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
-    }
-
-  /* Ideally, dav_svn__brigade_printf() would set a flag in bb (or rather,
-     in r->sent_bodyct, see dav_method_report()), and ap_fflush()
-     would not set that flag unless it actually sent something.  But
-     we are condemned to live in another universe, so we must keep
-     track ourselves of whether we've sent anything or not.  See the
-     long comment after the 'cleanup' label for more details. */
-  serr = dav_svn__brigade_puts(bb, output,
-                               DAV_XML_HEADER DEBUG_CR
-                               "<S:" SVN_DAV__MERGEINFO_REPORT " "
-                               "xmlns:S=\"" SVN_XML_NAMESPACE "\" "
-                               "xmlns:D=\"DAV:\">" DEBUG_CR);
-  if (serr)
-    {
-      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, serr->message,
-                                  resource->pool);
-      goto cleanup;
-    }
-
-  for (hi = apr_hash_first(resource->pool, catalog); hi;
-       hi = apr_hash_next(hi))
-    {
-      const void *key;
-      void *value;
-      const char *path;
-      svn_mergeinfo_t mergeinfo;
-      svn_string_t *mergeinfo_string;
-
-      apr_hash_this(hi, &key, NULL, &value);
-      path = key;
-      mergeinfo = value;
-      serr = svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo,
+  serr = svn_repos_fs_get_mergeinfo2(repos->repos, paths, rev,
+                                     inherit, include_descendants,
+                                     dav_svn__authz_read_func(&arb), &arb,
+                                     mergeinfo_receiver, &receiver_baton,
                                      resource->pool);
-      if (serr)
-        {
-          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error ending REPORT response.",
-                                      resource->pool);
-          goto cleanup;
-        }
-      serr = dav_svn__brigade_printf
-        (bb, output,
-         "<S:" SVN_DAV__MERGEINFO_ITEM ">"
-         DEBUG_CR
-         "<S:" SVN_DAV__MERGEINFO_PATH ">%s</S:" SVN_DAV__MERGEINFO_PATH ">"
-         DEBUG_CR
-         "<S:" SVN_DAV__MERGEINFO_INFO ">%s</S:" SVN_DAV__MERGEINFO_INFO ">"
-         DEBUG_CR
-         "</S:" SVN_DAV__MERGEINFO_ITEM ">",
-         apr_xml_quote_string(resource->pool, path, 0),
-         apr_xml_quote_string(resource->pool, mergeinfo_string->data, 0));
-      if (serr)
-        {
-          derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                      "Error ending REPORT response.",
-                                      resource->pool);
-          goto cleanup;
-        }
+  if (serr)
+    {
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
+                                  resource->pool);
+      goto cleanup;
     }
+
+  /* We might not have sent anything
+     => ensure to begin the response in any case. */
+  serr = send_mergeinfo_starting_sequence(&receiver_baton, resource->pool);
+  if (serr)
+    {
+      derr = dav_svn__convert_err(serr, HTTP_BAD_REQUEST, NULL,
+                                  resource->pool);
+      goto cleanup;
+    }
+
 
   if ((serr = dav_svn__brigade_puts(bb, output,
                                     "</S:" SVN_DAV__MERGEINFO_REPORT ">"

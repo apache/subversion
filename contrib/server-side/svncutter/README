@@ -1,5 +1,6 @@
-svncutter is a tool for performing various surgical operations on
-Subversion dump files.
+DEPRECATED
 
-This directory exists to hold svncutter and some unit tests that don't exist
-yet.
+The (deprecated) svncutter functionality is now part of "repocutter"
+in the reposurgeon distribution. Please see:
+
+    http://www.catb.org/esr/reposurgeon/

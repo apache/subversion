@@ -80,7 +80,7 @@ Step 1:  Install a suitable version of SWIG (which is
 
              --with-python=/path/to/correct/python/binary
 
-        to the configure script.  You need Python 2.5 or above.
+        to the configure script.  You need Python 2.7 or above.
 
         If you plan to build the Perl bindings, and have a system
         with more than one version of perl installed, you may need
@@ -109,7 +109,7 @@ Step 2:  Build and Install Subversion.
   python executable you used to configure SWIG as above.  If it does not then
   you can specify the correct path by adding PYTHON=/path/to/python or
   PERL=/path/to/perl onto the command line for configure.  For example:
-       ./configure PYTHON=/usr/bin/python2.5 PERL=/usr/bin/perl5.8.0
+       ./configure PYTHON=/usr/bin/python2.7 PERL=/usr/bin/perl5.8.0
 
   If Subversion's ./configure finds a SWIG that it's happy with, then
   it will build special glue libraries to link svn to the swig bindings:
@@ -121,18 +121,18 @@ Step 3:  Install Specific Language Bindings
 
 *  Python
 
-   1.  Run 'make swig-py' from the top of the Subversion source tree,
+   1.  Run 'make swig-py' from the top of the Subversion build tree,
        to build the bindings.
 
        (This will invoke SWIG on the *.i files, resulting in a collection
        of .c source files.  It will then compile and link those .c files into
        Python libraries.)
 
-   2.  Run 'make check-swig-py' from the top of the Subversion source
+   2.  Run 'make check-swig-py' from the top of the Subversion build
        tree, to test the bindings 
 
    3.  Run 'make install-swig-py' (as root, typically)
-       from the top of the Subversion source tree.  This will copy
+       from the top of the Subversion build tree.  This will copy
        your new Python libraries into the appropriate system location.
 
        Note: If you don't have access to install to Python's site-packages
@@ -167,18 +167,18 @@ Step 3:  Install Specific Language Bindings
    is the same one that you configured SWIG to run against during the
    SWIG configure (see above).
 
-   1.  Run `make swig-pl' from the top of the Subversion source tree.
+   1.  Run `make swig-pl' from the top of the Subversion build tree.
 
-   2.  Run `make check-swig-pl' from the top of the Subversion source
+   2.  Run `make check-swig-pl' from the top of the Subversion build
        tree, to test the bindings 
 
    3.  to install run `make install-swig-pl' from the top of the
-       Subversion source tree.
+       Subversion build tree.
 
    If you need to pass extra parameters to Perl build process (Makefile.PL),
    then you need to do this process somewhat different:
 
-   1.  Run `make swig-pl-lib' from the top of the Subversion source tree.
+   1.  Run `make swig-pl-lib' from the top of the Subversion build tree.
 
    2.  Run `make install-swig-pl-lib'
 
@@ -195,14 +195,14 @@ Step 3:  Install Specific Language Bindings
 
 * Ruby
   
-   1. Run `make swig-rb' from the top of the Subversion source tree,
+   1. Run `make swig-rb' from the top of the Subversion build tree,
       to build the bindings.
 
-   2. Run `make check-swig-rb' from the top of the Subversion source
+   2. Run `make check-swig-rb' from the top of the Subversion build
       tree, to test the bindings.
 
    3. To install, run `make install-swig-rb' from the top of the 
-      Subversion source tree.
+      Subversion build tree.
 
    You can specify the ruby binary by passing RUBY=/path/to/ruby as part 
    of the configure command in the top level of the Subversion source 
@@ -232,35 +232,15 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
              compile in Release mode.  (This is due to pyconfig.h using the
             _DEBUG flag too and setting a #pragma comment(lib) value.)
 
-       For Perl support, you also need to add the paths into Visual Studio.
-
-       In Visual C++ 6, go to Tools -> Options -> Directories.
-
-       In Visual C++ .NET, go to Tools -> Options -> Projects
-       -> VC++ Directories.
-
-       Add the following paths:
-
-           Executable Directories:
-
-               For Perl, path to perl.exe
-               (for example, C:\Program Files\Perl\bin)
-
-           Library Directories:
-
-               For Perl, path to perl##.lib
-               (for example, C:\Program Files\Perl\lib\CORE)
-
-           Include Directories:
-
-               For Perl, path to perl.h
-               (for example, C:\Program Files\Perl\lib\CORE)
+       Our project generator detects Perl, Ruby and Python installs and will
+       generate the swig projects for these languages if both swig and the
+       language is found.
 
    3.  Create the Visual Studio project files via gen-make.py, adding in
        the --with-swig parameter to the installed location for SWIG.
        Example:
 
-        > gen-make.py -t vcproj --with-swig="C:\Program Files\SWIG-2.0.2"
+        > gen-make.py <other options> --with-swig="C:\Program Files\SWIG-2.0.2"
 
    4.  If you haven't already built Subversion, you should do so now.
        Instructions are in the main INSTALL file.
@@ -271,6 +251,7 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
 
            __SWIG_PYTHON__
            __SWIG_PERL__
+           __SWIG_RUBY__
 
    6. Install the bindings. The procedure varies depending on the language.
 
@@ -332,12 +313,49 @@ BUILDING SWIG BINDINGS FOR SVN ON WINDOWS
         copy Release\subversion\bindings\swig\perl\_Wc.dll %PERL_LIBS%\auto\SVN\_Wc
         copy Release\subversion\bindings\swig\perl\_Wc.pdb %PERL_LIBS%\auto\SVN\_Wc
 
-TESTING AND USING SWIG BINDINGS
+
+TESTING SWIG BINDINGS
 
 *  Python
 
    You can exercise the Python bindings test suite by running 'make
    check-swig-py' as described in the install section.
+
+*  Perl
+
+   The Perl bindings are using the standard module testing facilities
+   to do regression tests. Simply run 'make check-swig-pl' as described in 
+   the install section.
+
+*  Ruby
+
+   To test the Ruby bindings, simply run `make check-swig-rb' as described 
+   in the install section.
+
+
+USING SWIG BINDINGS
+
+*  Python
+
+   1. Ensure Python's module search path includes the 'lib/svn-python'
+      subdirectory of the Subversion installation directory.  For example,
+      include that directory in the 'PYTHONPATH' environment variable or
+      insert it into 'sys.path' at run time.
+
+   2. Import the required modules into your Python program.  For example:
+
+        import svn.client, svn.repos
+
+   3. The APIs available within each module are broadly the same as the
+      corresponding C APIs except:
+
+        * you may omit the module prefix (for example, 'svn_client_')
+        * pool arguments are optional
+        * using Python exceptions instead of returning svn_error_t
+        * returning a tuple of outputs instead of return-by-pointer
+        * do not pass a baton along with a callback function
+
+      See python/README for more details on these differences.
 
    For examples of how to use the Python bindings, check out the
    sample/demo programs found in tools/examples/ in the Subversion
@@ -347,15 +365,10 @@ TESTING AND USING SWIG BINDINGS
 
 *  Perl
 
-   The Perl bindings are using the standard module testing facilities
-   to do regression tests. Simply run 'make check-swig-pl' as described in 
-   the install section.
+   ### TODO
 
-* Ruby
+*  Ruby
 
-   To test the Ruby bindings, simply run `make check-swig-rb' as described 
-   in the install section.
-   
    For examples of how to use the Ruby bindings, take a look at the .rb files
    in the following directory:
      subversion/bindings/swig/test

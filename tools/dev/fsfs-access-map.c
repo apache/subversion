@@ -34,7 +34,7 @@ typedef struct file_stats_t
   /* file name as found in the open() call */
   const char *name;
 
-  /* file size as determined during the this tool run.  Will be 0 for
+  /* file size as determined during the tool run.  Will be 0 for
    * files that no longer exist.  However, there may still be entries
    * in the read_map. */
   apr_int64_t size;
@@ -52,8 +52,14 @@ typedef struct file_stats_t
   /* number of lseek calls to clusters not previously read */
   apr_int64_t uncached_seek_count;
 
+  /* number of lseek counts not followed by a read */
+  apr_int64_t unnecessary_seeks;
+
   /* number of read() calls */
   apr_int64_t read_count;
+
+  /* number of read() calls that returned 0 bytes */
+  apr_int64_t empty_reads;
 
   /* total number of bytes returned by those reads */
   apr_int64_t read_size;
@@ -65,7 +71,7 @@ typedef struct file_stats_t
    * (i.e. number of non-zero entries in read_map). */
   apr_int64_t unique_clusters_read;
 
-  /* cluster -> read count mapping (1 byte per cluster, saturated at 255) */
+  /* cluster -> read count mapping (1 word per cluster, saturated at 64k) */
   apr_array_header_t *read_map;
 
 } file_stats_t;
@@ -86,10 +92,16 @@ typedef struct handle_info_t
   /* bytes read so far in the current series of reads started (default: 0) */
   apr_int64_t last_read_size;
 
+  /* number of read() calls in this series */
+  apr_int64_t read_count;
 } handle_info_t;
 
 /* useful typedef */
 typedef unsigned char byte;
+typedef unsigned short word;
+
+/* an RGB color */
+typedef byte color_t[3];
 
 /* global const char * file name -> *file_info_t map */
 static apr_hash_t *files = NULL;
@@ -121,19 +133,24 @@ store_read_info(handle_info_t *handle_info)
 
       /* auto-expand access map in case the file later shrunk or got deleted */
       while (handle_info->file->read_map->nelts <= last_cluster)
-        APR_ARRAY_PUSH(handle_info->file->read_map, byte) = 0;
+        APR_ARRAY_PUSH(handle_info->file->read_map, word) = 0;
 
       /* accumulate the accesses per cluster. Saturate and count first
        * (i.e. disjoint) accesses clusters */
       handle_info->file->clusters_read += last_cluster - first_cluster + 1;
       for (i = first_cluster; i <= last_cluster; ++i)
         {
-          byte *count = &APR_ARRAY_IDX(handle_info->file->read_map, i, byte);
+          word *count = &APR_ARRAY_IDX(handle_info->file->read_map, i, word);
           if (*count == 0)
             handle_info->file->unique_clusters_read++;
-          if (*count < 255)
+          if (*count < 0xffff)
             ++*count;
         }
+    }
+  else if (handle_info->read_count == 0)
+    {
+      /* two consecutive seeks */
+      handle_info->file->unnecessary_seeks++;
     }
 }
 
@@ -151,18 +168,18 @@ open_file(const char *name, int handle)
   if (!file)
     {
       apr_pool_t *pool = apr_hash_pool_get(files);
-      apr_pool_t *sub_pool = svn_pool_create(pool);
+      apr_pool_t *subpool = svn_pool_create(pool);
 
       apr_file_t *apr_file = NULL;
       apr_finfo_t finfo = { 0 };
-      apr_size_t cluster_count = 0;
+      int cluster_count = 0;
 
       /* determine file size (if file still exists) */
       apr_file_open(&apr_file, name,
-                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, sub_pool);
+                    APR_READ | APR_BUFFERED, APR_OS_DEFAULT, subpool);
       if (apr_file)
         apr_file_info_get(&finfo, APR_FINFO_SIZE, apr_file);
-      svn_pool_destroy(sub_pool);
+      svn_pool_destroy(subpool);
 
       file = apr_pcalloc(pool, sizeof(*file));
       file->name = apr_pstrdup(pool, name);
@@ -170,10 +187,10 @@ open_file(const char *name, int handle)
 
       /* pre-allocate cluster map accordingly
        * (will be auto-expanded later if necessary) */
-      cluster_count = (apr_size_t)(1 + (file->size - 1) / cluster_size);
+      cluster_count = (int)(1 + (file->size - 1) / cluster_size);
       file->read_map = apr_array_make(pool, file->size
                                           ? cluster_count
-                                          : 1, sizeof(byte));
+                                          : 1, sizeof(word));
 
       while (file->read_map->nelts < cluster_count)
         APR_ARRAY_PUSH(file->read_map, byte) = 0;
@@ -181,11 +198,19 @@ open_file(const char *name, int handle)
       /* determine first revision of rev / packed rev files */
       if (strstr(name, "/db/revs/") != NULL && strstr(name, "manifest") == NULL)
         if (strstr(name, ".pack/pack") != NULL)
-          file->rev_num = atoi(strstr(name, "/db/revs/") + 9);
+          file->rev_num = SVN_STR_TO_REV(strstr(name, "/db/revs/") + 9);
         else
-          file->rev_num = atoi(strrchr(name, '/') + 1);
+          file->rev_num = SVN_STR_TO_REV(strrchr(name, '/') + 1);
       else
         file->rev_num = -1;
+
+      /* filter out log/phys index files */
+      if (file->rev_num >= 0)
+        {
+          const char *suffix = name + strlen(name) - 4;
+          if (strcmp(suffix, ".l2p") == 0 || strcmp(suffix, ".p2l") == 0)
+            file->rev_num = -1;
+        }
 
       apr_hash_set(files, file->name, APR_HASH_KEY_STRING, file);
     }
@@ -200,7 +225,7 @@ open_file(const char *name, int handle)
       *key = handle;
 
       handle_info = apr_pcalloc(pool, sizeof(*handle_info));
-      apr_hash_set(handles, key, sizeof(handle), handle_info);
+      apr_hash_set(handles, key, sizeof(*key), handle_info);
     }
 
   /* link handle to file */
@@ -218,10 +243,14 @@ read_file(int handle, apr_int64_t count)
   if (handle_info)
     {
       /* known file handle -> expand current read sequence */
-      
+
+      handle_info->read_count++;
       handle_info->last_read_size += count;
       handle_info->file->read_count++;
       handle_info->file->read_size += count;
+
+      if (count == 0)
+        handle_info->file->empty_reads++;
     }
 }
 
@@ -238,16 +267,17 @@ seek_file(int handle, apr_int64_t location)
       apr_size_t cluster = (apr_size_t)(location / cluster_size);
 
       store_read_info(handle_info);
-      
+
       handle_info->last_read_size = 0;
       handle_info->last_read_start = location;
+      handle_info->read_count = 0;
       handle_info->file->seek_count++;
 
       /* if we seek to a location that had not been read from before,
        * there will probably be a real I/O seek on the following read.
        */
       if (   handle_info->file->read_map->nelts <= cluster
-          || APR_ARRAY_IDX(handle_info->file->read_map, cluster, byte) == 0)
+          || APR_ARRAY_IDX(handle_info->file->read_map, cluster, word) == 0)
         handle_info->file->uncached_seek_count++;
     }
 }
@@ -272,29 +302,48 @@ parse_line(svn_stringbuf_t *line)
   /* determine function name, first parameter and return value */
   char *func_end = strchr(line->data, '(');
   char *return_value = strrchr(line->data, ' ');
+  char *first_param_end;
+  apr_int64_t func_return = 0;
+  char *func_start = strchr(line->data, ' ');
 
-  char *first_param_end = strchr(func_end, ',');
+  if (func_end == NULL || return_value == NULL)
+    return;
+
+  if (func_start == NULL || func_start > func_end)
+    func_start = line->data;
+  else
+    while(*func_start == ' ')
+      func_start++;
+
+  first_param_end = strchr(func_end, ',');
   if (first_param_end == NULL)
     first_param_end = strchr(func_end, ')');
+
+  if (first_param_end == NULL)
+    return;
 
   *func_end++ = 0;
   *first_param_end = 0;
   ++return_value;
 
+  /* (try to) convert the return value into an integer.
+   * If that fails, continue anyway as defaulting to 0 will be safe for us. */
+  svn_error_clear(svn_cstring_atoi64(&func_return, return_value));
+
   /* process those operations that we care about */
-  if (strcmp(line->data, "open") == 0)
+  if (strcmp(func_start, "open") == 0)
     {
       /* remove double quotes from file name parameter */
       *func_end++ = 0;
       *--first_param_end = 0;
-      
-      open_file(func_end, atoi(return_value));
+
+      open_file(func_end, (int)func_return);
     }
-  else if (strcmp(line->data, "read") == 0)
-    read_file(atoi(func_end), atoi(return_value));
-  else if (strcmp(line->data, "lseek") == 0)
-    seek_file(atoi(func_end), atoi(return_value));
-  else if (strcmp(line->data, "close") == 0)
+  else if (strcmp(func_start, "read") == 0)
+    read_file(atoi(func_end), func_return);
+  else if (strcmp(func_start, "lseek") == 0)
+    seek_file(atoi(func_end), func_return);
+  else if (strcmp(func_start, "close") == 0)
     close_file(atoi(func_end));
 }
 
@@ -304,7 +353,7 @@ static void
 parse_file(apr_file_t *file)
 {
   apr_pool_t *pool = svn_pool_create(NULL);
-  apr_pool_t *iter_pool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
 
   /* limit lines to 4k (usually, we need less than 200 bytes) */
   svn_stringbuf_t *line = svn_stringbuf_create_ensure(4096, pool);
@@ -314,13 +363,13 @@ parse_file(apr_file_t *file)
       svn_error_t *err = NULL;
 
       line->len = line->blocksize-1;
-      err = svn_io_read_length_line(file, line->data, &line->len, iter_pool);
+      err = svn_io_read_length_line(file, line->data, &line->len, iterpool);
       svn_error_clear(err);
       if (err)
         break;
 
       parse_line(line);
-      svn_pool_clear(iter_pool);
+      svn_pool_clear(iterpool);
     }
   while (line->len > 0);
 }
@@ -390,33 +439,38 @@ interpolate(int y0, int x0, int y1, int x1, int x)
 /* Return the BMP-encoded 24 bit COLOR for the given value.
  */
 static void
-select_color(byte color[3], byte value)
+select_color(byte color[3], word value)
 {
+  enum { COLOR_COUNT = 10 };
+
   /* value -> color table. Missing values get interpolated.
    * { count, B - G - R } */
-  byte table[7][4] =
+  word table[COLOR_COUNT][4] =
     {
-      {   0, 255, 255, 255 },   /* unread -> white */
-      {   1, 128, 128,   0 },   /* read once -> turquoise  */
-      {   2,   0, 128,   0 },   /* twice  -> green */
-      {   4,   0, 192, 192 },   /*    4x  -> yellow */
-      {  16,   0,   0, 192 },   /*   16x  -> red */
-      {  64, 192,   0, 128 },   /*   64x  -> purple */
-      { 255,   0,   0,   0 }    /*   max  -> black */
+      {     0, 255, 255, 255 },   /* unread -> white */
+      {     1,  64, 128,   0 },   /* read once -> turquoise  */
+      {     2,   0, 128,   0 },   /* twice  -> green */
+      {     8,   0, 192, 192 },   /*    8x  -> yellow */
+      {    64,   0,   0, 192 },   /*   64x  -> red */
+      {   256,  64,  32, 230 },   /*  256x  -> bright red */
+      {   512, 192,   0, 128 },   /*  512x  -> purple */
+      {  1024,  96,  32,  96 },   /* 1024x  -> UV purple */
+      {  4096,  32,  16,  32 },   /* 4096x  -> EUV purple */
+      { 65535,   0,   0,   0 }    /*   max  -> black */
     };
 
   /* find upper limit entry for value */
   int i;
-  for (i = 0; i < 7; ++i)
+  for (i = 0; i < COLOR_COUNT; ++i)
     if (table[i][0] >= value)
       break;
 
   /* exact match? */
   if (table[i][0] == value)
     {
-      color[0] = table[i][1];
-      color[1] = table[i][2];
-      color[2] = table[i][3];
+      color[0] = (byte)table[i][1];
+      color[1] = (byte)table[i][2];
+      color[2] = (byte)table[i][3];
     }
   else
     {
@@ -433,10 +487,11 @@ select_color(byte color[3], byte value)
     }
 }
 
-/* write the cluster read map for all files in INFO as BMP image to FILE.
+/* Writes a BMP image header to FILE for a 24-bit color picture of the
+ * given XSIZE and YSIZE dimension.
  */
 static void
-write_bitmap(apr_array_header_t *info, apr_file_t *file)
+write_bitmap_header(apr_file_t *file, int xsize, int ysize)
 {
   /* BMP file header (some values need to filled in later)*/
   byte header[54] =
@@ -458,22 +513,11 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
       0, 0, 0, 0,      /* no colors in palette */
       0, 0, 0, 0       /* no colors to import */
     };
-  
-  int ysize = info->nelts;
-  int xsize = 0;
-  int x, y;
-  int row_size;
-  int padding;
+
   apr_size_t written;
 
-  /* xsize = max cluster number */
-  for (y = 0; y < ysize; ++y)
-    if (xsize < APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts)
-      xsize = APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts;
-
   /* rows in BMP files must be aligned to 4 bytes */
-  row_size = APR_ALIGN(xsize * 3, 4);
-  padding = row_size - xsize * 3;
+  int row_size = APR_ALIGN(xsize * 3, 4);
 
   /* write numbers to header */
   write_number(header + 2, ysize * row_size + 54);
@@ -484,30 +528,158 @@ write_bitmap(apr_array_header_t *info, apr_file_t *file)
   /* write header to file */
   written = sizeof(header);
   apr_file_write(file, header, &written);
+}
+
+/* To COLOR, add the fractional value of SOURCE from fractional indexes
+ * SOURCE_START to SOURCE_END and apply the SCALING_FACTOR.
+ */
+static void
+add_sample(color_t color,
+           color_t *source,
+           double source_start,
+           double source_end,
+           double scaling_factor)
+{
+  double factor = (source_end - source_start) / scaling_factor;
+
+  apr_size_t i;
+  for (i = 0; i < sizeof(color_t) / sizeof(*color); ++i)
+    color[i] += (source_end - source_start < 0.5) && source_start > 1.0
+              ? factor * source[(apr_size_t)source_start - 1][i]
+              : factor * source[(apr_size_t)source_start][i];
+}
+
+/* Scale the IN_LEN RGB values from IN to OUT_LEN RGB values in OUT.
+ */
+static void
+scale_line(color_t* out,
+           int out_len,
+           color_t *in,
+           int in_len)
+{
+  double scaling_factor = (double)(in_len) / (double)(out_len);
+
+  apr_size_t i;
+  memset(out, 0, out_len * sizeof(color_t));
+  for (i = 0; i < out_len; ++i)
+    {
+      color_t color = { 0 };
+
+      double source_start = i * scaling_factor;
+      double source_end = (i + 1) * scaling_factor;
+
+      if ((apr_size_t)source_start == (apr_size_t)source_end)
+        {
+          add_sample(color, in, source_start, source_end, scaling_factor);
+        }
+      else
+        {
+          apr_size_t k;
+          apr_size_t first_sample_end = (apr_size_t)source_start + 1;
+          apr_size_t last_sample_start = (apr_size_t)source_end;
+
+          add_sample(color, in, source_start, first_sample_end, scaling_factor);
+          for (k = first_sample_end; k < last_sample_start; ++k)
+            add_sample(color, in, k, k + 1, scaling_factor);
+
+          add_sample(color, in, last_sample_start, source_end, scaling_factor);
+        }
+
+      memcpy(out[i], color, sizeof(color));
+    }
+}
+
+/* Write the cluster read map for all files in INFO as BMP image to FILE.
+ * If MAX_X is not 0, scale all lines to MAX_X pixels.  Use POOL for
+ * allocations.
+ */
+static void
+write_bitmap(apr_array_header_t *info,
+             int max_x,
+             apr_file_t *file,
+             apr_pool_t *pool)
+{
+  int ysize = info->nelts;
+  int xsize = 0;
+  int x, y;
+  apr_size_t row_size;
+  apr_size_t written;
+  color_t *line, *scaled_line;
+  svn_boolean_t do_scale = max_x > 0;
+
+  /* xsize = max cluster number */
+  for (y = 0; y < ysize; ++y)
+    if (xsize < APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts)
+      xsize = APR_ARRAY_IDX(info, y, file_stats_t *)->read_map->nelts;
+
+  /* limit picture dimensions (16k pixels in each direction) */
+  if (xsize >= 0x4000)
+    xsize = 0x3fff;
+  if (ysize >= 0x4000)
+    ysize = 0x3fff;
+  if (max_x == 0)
+    max_x = xsize;
+
+  /* rows in BMP files must be aligned to 4 bytes */
+  row_size = APR_ALIGN(max_x * sizeof(color_t), 4);
+
+  /**/
+  line = apr_pcalloc(pool, xsize * sizeof(color_t));
+  scaled_line = apr_pcalloc(pool, row_size);
+
+  /* write header to file */
+  write_bitmap_header(file, max_x, ysize);
 
   /* write all rows */
   for (y = 0; y < ysize; ++y)
     {
       file_stats_t *file_info = APR_ARRAY_IDX(info, y, file_stats_t *);
+      int block_count = file_info->read_map->nelts;
       for (x = 0; x < xsize; ++x)
         {
-          byte color[3] = { 128, 128, 128 };
-          if (x < file_info->read_map->nelts)
+          color_t color = { 128, 128, 128 };
+          if (x < block_count)
             {
-              byte count = APR_ARRAY_IDX(file_info->read_map, x, byte);
+              word count = APR_ARRAY_IDX(file_info->read_map, x, word);
               select_color(color, count);
             }
 
-          written = sizeof(color);
-          apr_file_write(file, color, &written);
+          memcpy(line[x], color, sizeof(color));
         }
 
-      if (padding)
+      scale_line(scaled_line, max_x, line, block_count ? block_count : 1);
+
+      written = row_size;
+      apr_file_write(file, do_scale ? scaled_line : line, &written);
+    }
+}
+
+/* write a color bar with (roughly) logarithmic scale as BMP image to FILE.
+ */
+static void
+write_scale(apr_file_t *file)
+{
+  int x;
+  word value = 0, inc = 1;
+
+  /* write header to file */
+  write_bitmap_header(file, 64, 1);
+
+  for (x = 0; x < 64; ++x)
+    {
+      apr_size_t written;
+      byte color[3] = { 128, 128, 128 };
+
+      select_color(color, value);
+      if (value + (int)inc < 0x10000)
         {
-          char pad[3] = { 0 };
-          written = padding;
-          apr_file_write(file, pad, &written);
+          value += inc;
+          if (value >= 8 * inc)
+            inc *= 2;
         }
+
+      written = sizeof(color);
+      apr_file_write(file, color, &written);
     }
 }
 
@@ -524,14 +696,16 @@ print_stats(apr_pool_t *pool)
   apr_int64_t clusters_read = 0;
   apr_int64_t unique_clusters_read = 0;
   apr_int64_t uncached_seek_count = 0;
-  
+  apr_int64_t unnecessary_seek_count = 0;
+  apr_int64_t empty_read_count = 0;
+
   apr_hash_index_t *hi;
   for (hi = apr_hash_first(pool, files); hi; hi = apr_hash_next(hi))
     {
       const char *name = NULL;
       apr_ssize_t len = 0;
       file_stats_t *file = NULL;
-      
+
       apr_hash_this(hi, (const void **)&name, &len, (void**)&file);
 
       open_count += file->open_count;
@@ -541,13 +715,17 @@ print_stats(apr_pool_t *pool)
       clusters_read += file->clusters_read;
       unique_clusters_read += file->unique_clusters_read;
       uncached_seek_count += file->uncached_seek_count;
+      unnecessary_seek_count += file->unnecessary_seeks;
+      empty_read_count += file->empty_reads;
     }
 
   printf("%20s files\n", svn__i64toa_sep(apr_hash_count(files), ',', pool));
   printf("%20s files opened\n", svn__i64toa_sep(open_count, ',', pool));
   printf("%20s seeks\n", svn__i64toa_sep(seek_count, ',', pool));
+  printf("%20s unnecessary seeks\n", svn__i64toa_sep(unnecessary_seek_count, ',', pool));
   printf("%20s uncached seeks\n", svn__i64toa_sep(uncached_seek_count, ',', pool));
   printf("%20s reads\n", svn__i64toa_sep(read_count, ',', pool));
+  printf("%20s empty reads\n", svn__i64toa_sep(empty_read_count, ',', pool));
   printf("%20s unique clusters read\n", svn__i64toa_sep(unique_clusters_read, ',', pool));
   printf("%20s clusters read\n", svn__i64toa_sep(clusters_read, ',', pool));
   printf("%20s bytes read\n", svn__i64toa_sep(read_size, ',', pool));
@@ -561,7 +739,7 @@ print_usage(void)
   printf("Reads strace of some FSFS-based tool from <file>, prints some stats\n");
   printf("and writes a cluster access map to 'access.bmp' the current folder.\n");
   printf("Each pixel corresponds to one 64kB cluster and every line to a rev\n");
-  printf("or packed rev file in the repository.  Turquoise and greed indicate\n");
+  printf("or packed rev file in the repository.  Turquoise and green indicate\n");
   printf("1 and 2 hits, yellow to read-ish colors for up to 20, shares of\n");
   printf("for up to 100 and black for > 200 hits.\n\n");
   printf("A typical strace invocation looks like this:\n");
@@ -573,7 +751,7 @@ int main(int argc, const char *argv[])
 {
   apr_pool_t *pool = NULL;
   apr_file_t *file = NULL;
-  
+
   apr_initialize();
   atexit(apr_terminate);
 
@@ -593,11 +771,23 @@ int main(int argc, const char *argv[])
   apr_file_close(file);
 
   print_stats(pool);
-  
+
   apr_file_open(&file, "access.bmp",
                 APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
                 APR_OS_DEFAULT, pool);
-  write_bitmap(get_rev_files(pool), file);
+  write_bitmap(get_rev_files(pool), 0, file, pool);
+  apr_file_close(file);
+
+  apr_file_open(&file, "access_scaled.bmp",
+                APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
+                APR_OS_DEFAULT, pool);
+  write_bitmap(get_rev_files(pool), 1024, file, pool);
+  apr_file_close(file);
+
+  apr_file_open(&file, "scale.bmp",
+                APR_WRITE | APR_CREATE | APR_TRUNCATE | APR_BUFFERED,
+                APR_OS_DEFAULT, pool);
+  write_scale(file);
   apr_file_close(file);
 
   return 0;

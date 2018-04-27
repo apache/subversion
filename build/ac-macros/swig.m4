@@ -38,7 +38,7 @@ AC_DEFUN(SVN_CHECK_SWIG,
         SVN_FIND_SWIG(no)
       ;;
       "yes")
-        SVN_FIND_SWIG(check)
+        SVN_FIND_SWIG(required)
       ;;
       *)
         SVN_FIND_SWIG($withval)
@@ -56,8 +56,11 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   if test $where = no; then
     SWIG=none
-  elif test $where = check; then
+  elif test $where = required || test $where = check; then
     AC_PATH_PROG(SWIG, swig, none)
+    if test "$SWIG" = "none" && test $where = required; then
+      AC_MSG_ERROR([SWIG required, but not found])
+    fi
   else
     if test -f "$where"; then
       SWIG="$where"
@@ -88,16 +91,12 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
-    #   packages/rpm/redhat-8+/subversion.spec
-    #   packages/rpm/redhat-7.x/subversion.spec
-    #   packages/rpm/rhel-3/subversion.spec
-    #   packages/rpm/rhel-4/subversion.spec
     if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024"; then
       SWIG_SUITABLE=yes
     else
       SWIG_SUITABLE=no
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
-      AC_MSG_WARN([Subversion requires SWIG 1.3.24 or later])
+      AC_MSG_WARN([Subversion requires SWIG >= 1.3.24])
     fi
   fi
  
@@ -174,6 +173,8 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_RESULT([$PERL_VERSION])
     if test "$PERL_VERSION" -ge "5008000"; then
       SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
+      SWIG_PL_LINK="`$PERL -MExtUtils::Embed -e ldopts`"
+      SWIG_PL_LINK="`SVN_REMOVE_STANDARD_LIB_DIRS($SWIG_PL_LINK)`"
     else
       AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
     fi
@@ -185,7 +186,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     rbconfig="$RUBY -rrbconfig -e "
 
     for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
-                    rubyhdrdir sitedir sitelibdir sitearchdir libdir
+                    rubyhdrdir rubyarchhdrdir sitedir sitelibdir sitearchdir libdir
     do
       rbconfig_tmp=`$rbconfig "print RbConfig::CONFIG@<:@'$var_name'@:>@"`
       eval "rbconfig_$var_name=\"$rbconfig_tmp\""
@@ -196,7 +197,13 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
     if test -d "$rbconfig_rubyhdrdir"; then
       dnl Ruby >=1.9
-      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward -I$rbconfig_rubyhdrdir/$rbconfig_arch"
+      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward"
+      if test -d "$rbconfig_rubyarchhdrdir"; then
+        dnl Ruby >=2.0
+        svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyarchhdrdir"
+      else
+        svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyhdrdir/$rbconfig_arch"
+      fi
     else
       dnl Ruby 1.8
       svn_cv_ruby_includes="-I. -I$rbconfig_archdir"
@@ -294,6 +301,7 @@ int main()
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_LIBS)
   AC_SUBST(SWIG_PL_INCLUDES)
+  AC_SUBST(SWIG_PL_LINK)
   AC_SUBST(SWIG_RB_LINK)
   AC_SUBST(SWIG_RB_LIBS)
   AC_SUBST(SWIG_RB_INCLUDES)

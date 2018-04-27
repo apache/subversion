@@ -27,6 +27,7 @@
 #include <apr_hash.h>
 #include <apr_tables.h>
 #include <string.h>       /* for strncmp() */
+#include "svn_hash.h"
 #include "svn_string.h"
 #include "svn_props.h"
 #include "svn_error.h"
@@ -130,7 +131,6 @@ svn_boolean_t
 svn_prop_has_svn_prop(const apr_hash_t *props, apr_pool_t *pool)
 {
   apr_hash_index_t *hi;
-  const void *prop_name;
 
   if (! props)
     return FALSE;
@@ -138,8 +138,9 @@ svn_prop_has_svn_prop(const apr_hash_t *props, apr_pool_t *pool)
   for (hi = apr_hash_first(pool, (apr_hash_t *)props); hi;
        hi = apr_hash_next(hi))
     {
-      apr_hash_this(hi, &prop_name, NULL, NULL);
-      if (svn_prop_is_svn_prop((const char *) prop_name))
+      const char *prop_name = apr_hash_this_key(hi);
+
+      if (svn_prop_is_svn_prop(prop_name))
         return TRUE;
     }
 
@@ -331,7 +332,7 @@ svn_prop__patch(const apr_hash_t *original_props,
     {
       const svn_prop_t *p = &APR_ARRAY_IDX(prop_changes, i, svn_prop_t);
 
-      apr_hash_set(props, p->name, APR_HASH_KEY_STRING, p->value);
+      svn_hash_sets(props, p->name, p->value);
     }
   return props;
 }
@@ -429,7 +430,7 @@ svn_prop_array_to_hash(const apr_array_header_t *properties,
   for (i = 0; i < properties->nelts; i++)
     {
       const svn_prop_t *prop = &APR_ARRAY_IDX(properties, i, svn_prop_t);
-      apr_hash_set(prop_hash, prop->name, APR_HASH_KEY_STRING, prop->value);
+      svn_hash_sets(prop_hash, prop->name, prop->value);
     }
 
   return prop_hash;
@@ -497,7 +498,7 @@ svn_prop_get_value(const apr_hash_t *props,
   if (!props)
     return NULL;
 
-  str = apr_hash_get((apr_hash_t *)props, prop_name, APR_HASH_KEY_STRING);
+  str = svn_hash_gets((apr_hash_t *)props, prop_name);
 
   if (str)
     return str->data;

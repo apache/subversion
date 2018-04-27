@@ -30,11 +30,14 @@
 #include "JNIStringHolder.h"
 #include "EnumMapper.h"
 #include "RevisionRange.h"
+#include "RevisionRangeList.h"
 #include "CreateJ.h"
 #include "../include/org_apache_subversion_javahl_types_Revision.h"
 #include "../include/org_apache_subversion_javahl_CommitItemStateFlags.h"
 
 #include "svn_path.h"
+#include "svn_props.h"
+#include "svn_mergeinfo.h"
 #include "private/svn_wc_private.h"
 
 jobject
@@ -51,7 +54,7 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
     return NULL;
 
   // Create an instance of the conflict descriptor.
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/ConflictDescriptor");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ConflictDescriptor"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -59,16 +62,17 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
   if (ctor == 0)
     {
       ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Kind;"
-                              "L"JAVA_PACKAGE"/types/NodeKind;"
+                              JAVAHL_ARG("/ConflictDescriptor$Kind;")
+                              JAVAHL_ARG("/types/NodeKind;")
                               "Ljava/lang/String;ZLjava/lang/String;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Action;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Reason;"
-                              "L"JAVA_PACKAGE"/ConflictDescriptor$Operation;"
+                              JAVAHL_ARG("/ConflictDescriptor$Action;")
+                              JAVAHL_ARG("/ConflictDescriptor$Reason;")
+                              JAVAHL_ARG("/ConflictDescriptor$Operation;")
                               "Ljava/lang/String;Ljava/lang/String;"
                               "Ljava/lang/String;Ljava/lang/String;"
-                              "L"JAVA_PACKAGE"/types/ConflictVersion;"
-                              "L"JAVA_PACKAGE"/types/ConflictVersion;)V");
+                              JAVAHL_ARG("/types/ConflictVersion;")
+                              JAVAHL_ARG("/types/ConflictVersion;")
+                              "Ljava/lang/String;[B[B[B[B)V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
     }
@@ -115,6 +119,33 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
   jobject joperation = EnumMapper::mapOperation(desc->operation);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
+  jstring jpropRejectAbspath = JNIUtil::makeJString(desc->prop_reject_abspath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueBase = (
+      !desc->prop_value_base ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_base->data,
+                               int(desc->prop_value_base->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueWorking = (
+      !desc->prop_value_working ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_working->data,
+                               int(desc->prop_value_working->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingOld = (
+      !desc->prop_value_incoming_old ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_old->data,
+                               int(desc->prop_value_incoming_old->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jbyteArray jpropValueIncomingNew = (
+      !desc->prop_value_incoming_new ? NULL
+      :JNIUtil::makeJByteArray(desc->prop_value_incoming_new->data,
+                               int(desc->prop_value_incoming_new->len)));
+  if (JNIUtil::isExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   // Instantiate the conflict descriptor.
   jobject jdesc = env->NewObject(clazz, ctor, jpath, jconflictKind,
@@ -122,7 +153,10 @@ CreateJ::ConflictDescriptor(const svn_wc_conflict_description2_t *desc)
                                  (jboolean) desc->is_binary, jmimeType,
                                  jconflictAction, jconflictReason, joperation,
                                  jbasePath, jreposPath, juserPath,
-                                 jmergedPath, jsrcLeft, jsrcRight);
+                                 jmergedPath, jsrcLeft, jsrcRight,
+                                 jpropRejectAbspath, jpropValueBase,
+                                 jpropValueWorking, jpropValueIncomingOld,
+                                 jpropValueIncomingNew);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -143,22 +177,26 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
     return NULL;
 
   // Create an instance of the conflict version.
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/ConflictVersion");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/ConflictVersion"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
   static jmethodID ctor = 0;
   if (ctor == 0)
     {
-      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;J"
+      ctor = env->GetMethodID(clazz, "<init>", "(Ljava/lang/String;"
+                                               "Ljava/lang/String;J"
                                                "Ljava/lang/String;"
-                                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                                               JAVAHL_ARG("/types/NodeKind;")
                                                ")V");
       if (JNIUtil::isJavaExceptionThrown() || ctor == 0)
         POP_AND_RETURN_NULL;
     }
 
   jstring jreposURL = JNIUtil::makeJString(version->repos_url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+  jstring jreposUUID = JNIUtil::makeJString(version->repos_uuid);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
   jstring jpathInRepos = JNIUtil::makeJString(version->path_in_repos);
@@ -168,7 +206,7 @@ CreateJ::ConflictVersion(const svn_wc_conflict_version_t *version)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jobject jversion = env->NewObject(clazz, ctor, jreposURL,
+  jobject jversion = env->NewObject(clazz, ctor, jreposURL, jreposUUID,
                                     (jlong)version->peg_rev, jpathInRepos,
                                     jnodeKind);
   if (JNIUtil::isJavaExceptionThrown())
@@ -190,7 +228,7 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Checksum");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Checksum"));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -200,7 +238,7 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
     {
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "([B"
-                                        "L"JAVA_PACKAGE"/types/Checksum$Kind;"
+                                        JAVAHL_ARG("/types/Checksum$Kind;")
                                         ")V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -225,6 +263,61 @@ CreateJ::Checksum(const svn_checksum_t *checksum)
 }
 
 jobject
+CreateJ::DirEntry(const char *path, const char *absPath,
+                  const svn_dirent_t *dirent)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/DirEntry"));
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      mid = env->GetMethodID(clazz, "<init>",
+                             "(Ljava/lang/String;Ljava/lang/String;"
+                             JAVAHL_ARG("/types/NodeKind;")
+                             "JZJJLjava/lang/String;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jstring jPath = JNIUtil::makeJString(path);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jstring jAbsPath = JNIUtil::makeJString(absPath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject jNodeKind = EnumMapper::mapNodeKind(dirent->kind);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jlong jSize = dirent->size;
+  jboolean jHasProps = (dirent->has_props? JNI_TRUE : JNI_FALSE);
+  jlong jLastChangedRevision = dirent->created_rev;
+  jlong jLastChanged = dirent->time;
+  jstring jLastAuthor = JNIUtil::makeJString(dirent->last_author);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  jobject ret = env->NewObject(clazz, mid, jPath, jAbsPath, jNodeKind,
+                               jSize, jHasProps, jLastChangedRevision,
+                               jLastChanged, jLastAuthor);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  return env->PopLocalFrame(ret);
+}
+
+jobject
 CreateJ::Info(const char *path, const svn_client_info2_t *info)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -234,7 +327,7 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE "/types/Info");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Info"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -244,15 +337,16 @@ CreateJ::Info(const char *path, const svn_client_info2_t *info)
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;J"
-                             "L"JAVA_PACKAGE"/types/NodeKind;"
+                             JAVAHL_ARG("/types/NodeKind;")
                              "Ljava/lang/String;Ljava/lang/String;"
                              "JJLjava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/Lock;Z"
-                             "L"JAVA_PACKAGE"/types/Info$ScheduleKind;"
+                             JAVAHL_ARG("/types/Lock;Z")
+                             JAVAHL_ARG("/types/Info$ScheduleKind;")
                              "Ljava/lang/String;JJ"
-                             "L"JAVA_PACKAGE"/types/Checksum;"
+                             JAVAHL_ARG("/types/Checksum;")
                              "Ljava/lang/String;JJ"
-                             "L"JAVA_PACKAGE"/types/Depth;Ljava/util/Set;)V");
+                             JAVAHL_ARG("/types/Depth;Ljava/util/Set;")
+                             ")V");
       if (mid == 0 || JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -379,7 +473,7 @@ CreateJ::Lock(const svn_lock_t *lock)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Lock");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Lock"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -418,6 +512,72 @@ CreateJ::Lock(const svn_lock_t *lock)
 }
 
 jobject
+CreateJ::LockMap(const apr_hash_t *locks, apr_pool_t *pool)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  if (locks == NULL)
+    return NULL;
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass clazz = env->FindClass("java/util/HashMap");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  static jmethodID put_mid = 0;
+  if (put_mid == 0)
+    {
+      put_mid = env->GetMethodID(clazz, "put",
+                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
+                                 "Ljava/lang/Object;");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jobject map = env->NewObject(clazz, init_mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  apr_hash_index_t *hi;
+  int i = 0;
+  for (hi = apr_hash_first(pool, (apr_hash_t *) locks); hi;
+        hi = apr_hash_next(hi), ++i)
+    {
+      const char *key = (const char *) apr_hash_this_key(hi);
+      const svn_lock_t *lock = (const svn_lock_t *) apr_hash_this_val(hi);
+
+      jstring jpath = JNIUtil::makeJString(key);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject jlock = Lock(lock);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->CallObjectMethod(map, put_mid, jpath, jlock);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->DeleteLocalRef(jpath);
+      env->DeleteLocalRef(jlock);
+    }
+
+  return env->PopLocalFrame(map);
+}
+
+jobject
 CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -427,9 +587,9 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazzCP = env->FindClass(JAVA_PACKAGE"/types/ChangePath");
+  jclass clazzCP = env->FindClass(JAVAHL_CLASS("/types/ChangePath"));
   if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN(SVN_NO_ERROR);
+    POP_AND_RETURN_NULL;
 
   static jmethodID midCP = 0;
   if (midCP == 0)
@@ -437,12 +597,13 @@ CreateJ::ChangedPath(const char *path, svn_log_changed_path2_t *log_item)
       midCP = env->GetMethodID(clazzCP,
                                "<init>",
                                "(Ljava/lang/String;JLjava/lang/String;"
-                               "L"JAVA_PACKAGE"/types/ChangePath$Action;"
-                               "L"JAVA_PACKAGE"/types/NodeKind;"
-                               "L"JAVA_PACKAGE"/types/Tristate;"
-                               "L"JAVA_PACKAGE"/types/Tristate;)V");
+                               JAVAHL_ARG("/types/ChangePath$Action;")
+                               JAVAHL_ARG("/types/NodeKind;")
+                               JAVAHL_ARG("/types/Tristate;")
+                               JAVAHL_ARG("/types/Tristate;")
+                               ")V");
       if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN(SVN_NO_ERROR);
+        POP_AND_RETURN_NULL;
     }
 
   jstring jpath = JNIUtil::makeJString(path);
@@ -488,7 +649,7 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/types/Status");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Status"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -497,15 +658,19 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
     {
       mid = env->GetMethodID(clazz, "<init>",
                              "(Ljava/lang/String;Ljava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/NodeKind;"
+                             JAVAHL_ARG("/types/NodeKind;")
                              "JJJLjava/lang/String;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "L"JAVA_PACKAGE"/types/Status$Kind;"
-                             "ZZZZZL"JAVA_PACKAGE"/types/Lock;"
-                             "L"JAVA_PACKAGE"/types/Lock;"
-                             "JJL"JAVA_PACKAGE"/types/NodeKind;"
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             JAVAHL_ARG("/types/Status$Kind;")
+                             "ZZ" JAVAHL_ARG("/types/Depth;")
+                             "ZZZ" JAVAHL_ARG("/types/Lock;")
+                             JAVAHL_ARG("/types/Lock;")
+                             "JJ" JAVAHL_ARG("/types/NodeKind;")
+                             "Ljava/lang/String;Ljava/lang/String;"
                              "Ljava/lang/String;Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN_NULL;
@@ -525,28 +690,19 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
   jstring jLastCommitAuthor = NULL;
   jobject jLocalLock = NULL;
   jstring jChangelist = NULL;
+  jstring jMovedFromAbspath = NULL;
+  jstring jMovedToAbspath = NULL;
 
-  enum svn_wc_status_kind text_status = status->node_status;
-
-  /* Avoid using values that might come from prop changes */
-  if (text_status == svn_wc_status_modified
-      || text_status == svn_wc_status_conflicted)
-    text_status = status->text_status;
-
-  enum svn_wc_status_kind repos_text_status = status->repos_node_status;
-
-  if (repos_text_status == svn_wc_status_modified
-      || repos_text_status == svn_wc_status_conflicted)
-    repos_text_status = status->repos_text_status;
-
-  jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
-  jobject jTextType = EnumMapper::mapStatusKind(text_status);
+  jobject jNodeType = EnumMapper::mapStatusKind(status->node_status);
+  jobject jTextType = EnumMapper::mapStatusKind(status->text_status);
   jobject jPropType = EnumMapper::mapStatusKind(status->prop_status);
-  jobject jRepositoryTextType = EnumMapper::mapStatusKind(repos_text_status);
-  jobject jRepositoryPropType = EnumMapper::mapStatusKind(
-                                                  status->repos_prop_status);
-  jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+  jobject jRpNodeType = EnumMapper::mapStatusKind(status->repos_node_status);
+  jobject jRpTextType = EnumMapper::mapStatusKind(status->repos_text_status);
+  jobject jRpPropType = EnumMapper::mapStatusKind(status->repos_prop_status);
+  jobject jDepth = EnumMapper::mapDepth(status->depth);
   jboolean jIsLocked = (status->wc_is_locked == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsCopied = (status->copied == 1) ? JNI_TRUE: JNI_FALSE;
+  jboolean jIsConflicted = (status->conflicted == 1) ? JNI_TRUE : JNI_FALSE;
   jboolean jIsSwitched = (status->switched == 1) ? JNI_TRUE: JNI_FALSE;
   jboolean jIsFileExternal = (status->file_external == 1) ? JNI_TRUE
                                                           : JNI_FALSE;
@@ -596,15 +752,31 @@ CreateJ::Status(svn_wc_context_t *wc_ctx,
         POP_AND_RETURN_NULL;
     }
 
+  if (status->moved_from_abspath)
+    {
+      jMovedFromAbspath = JNIUtil::makeJString(status->moved_from_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  if (status->moved_to_abspath)
+    {
+      jMovedToAbspath = JNIUtil::makeJString(status->moved_to_abspath);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
   jobject ret = env->NewObject(clazz, mid, jPath, jUrl, jNodeKind, jRevision,
                                jLastChangedRevision, jLastChangedDate,
-                               jLastCommitAuthor, jTextType, jPropType,
-                               jRepositoryTextType, jRepositoryPropType,
-                               jIsLocked, jIsCopied, jIsConflicted,
+                               jLastCommitAuthor,
+                               jNodeType, jTextType, jPropType,
+                               jRpNodeType, jRpTextType, jRpPropType,
+                               jIsLocked, jIsCopied, jDepth, jIsConflicted,
                                jIsSwitched, jIsFileExternal, jLocalLock,
                                jReposLock,
                                jOODLastCmtRevision, jOODLastCmtDate,
-                               jOODKind, jOODLastCmtAuthor, jChangelist);
+                               jOODKind, jOODLastCmtAuthor, jChangelist,
+                               jMovedFromAbspath, jMovedToAbspath);
 
   return env->PopLocalFrame(ret);
 }
@@ -620,7 +792,7 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
     return NULL;
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ClientNotifyInformation");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ClientNotifyInformation"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -628,16 +800,17 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
     {
       midCT = env->GetMethodID(clazz, "<init>",
                                "(Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Action;"
-                               "L"JAVA_PACKAGE"/types/NodeKind;"
+                               JAVAHL_ARG("/ClientNotifyInformation$Action;")
+                               JAVAHL_ARG("/types/NodeKind;")
                                "Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/types/Lock;"
-                               "Ljava/lang/String;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$Status;"
-                               "L"JAVA_PACKAGE"/ClientNotifyInformation$LockStatus;"
+                               JAVAHL_ARG("/types/Lock;")
+                               "Ljava/lang/String;Ljava/util/List;"
+                               JAVAHL_ARG("/ClientNotifyInformation$Status;")
+                               JAVAHL_ARG("/ClientNotifyInformation$Status;")
+                               JAVAHL_ARG("/ClientNotifyInformation$LockStatus;")
                                "JLjava/lang/String;"
-                               "L"JAVA_PACKAGE"/types/RevisionRange;"
+                               JAVAHL_ARG("/types/RevisionRange;")
+                               "Ljava/lang/String;"
                                "Ljava/lang/String;Ljava/lang/String;"
                                "Ljava/util/Map;JJJJJJI)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
@@ -665,7 +838,9 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jErr = JNIUtil::makeSVNErrorMessage(wcNotify->err);
+  jstring jErr;
+  jobject jErrStack;
+  JNIUtil::makeSVNErrorMessage(wcNotify->err, &jErr, &jErrStack);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -693,6 +868,10 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
         POP_AND_RETURN_NULL;
     }
 
+  jstring jUrl = JNIUtil::makeJString(wcNotify->url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jstring jpathPrefix = JNIUtil::makeJString(wcNotify->path_prefix);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
@@ -711,14 +890,20 @@ CreateJ::ClientNotifyInformation(const svn_wc_notify_t *wcNotify)
   jlong jhunkModifiedStart = wcNotify->hunk_modified_start;
   jlong jhunkModifiedLength = wcNotify->hunk_modified_length;
   jlong jhunkMatchedLine = wcNotify->hunk_matched_line;
-  jint jhunkFuzz = wcNotify->hunk_fuzz;
+  jint jhunkFuzz = static_cast<jint>(wcNotify->hunk_fuzz);
+  if (jhunkFuzz < 0 || jhunkFuzz != wcNotify->hunk_fuzz)
+    {
+      env->ThrowNew(env->FindClass("java.lang.ArithmeticException"),
+                    "Overflow converting C svn_linenum_t to Java int");
+      POP_AND_RETURN_NULL;
+    }
 
   // call the Java method
   jobject jInfo = env->NewObject(clazz, midCT, jPath, jAction,
-                                 jKind, jMimeType, jLock, jErr,
+                                 jKind, jMimeType, jLock, jErr, jErrStack,
                                  jContentState, jPropState, jLockState,
                                  (jlong) wcNotify->revision, jChangelistName,
-                                 jMergeRange, jpathPrefix, jpropName,
+                                 jMergeRange, jUrl, jpathPrefix, jpropName,
                                  jrevProps, joldRevision,
                                  jhunkOriginalStart, jhunkOriginalLength,
                                  jhunkModifiedStart, jhunkModifiedLength,
@@ -740,16 +925,16 @@ CreateJ::ReposNotifyInformation(const svn_repos_notify_t *reposNotify)
     return NULL;
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/ReposNotifyInformation");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/ReposNotifyInformation"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
   if (midCT == 0)
     {
       midCT = env->GetMethodID(clazz, "<init>",
-                               "(L"JAVA_PACKAGE"/ReposNotifyInformation$Action;"
+                               "(" JAVAHL_ARG("/ReposNotifyInformation$Action;")
                                "JLjava/lang/String;JJJ"
-                               "L"JAVA_PACKAGE"/ReposNotifyInformation$NodeAction;"
+                               JAVAHL_ARG("/ReposNotifyInformation$NodeAction;")
                                "Ljava/lang/String;)V");
       if (JNIUtil::isJavaExceptionThrown() || midCT == 0)
         POP_AND_RETURN_NULL;
@@ -798,7 +983,7 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitItem");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/CommitItem"));
   if (JNIUtil::isExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -808,9 +993,10 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
     {
       midConstructor = env->GetMethodID(clazz, "<init>",
                                         "(Ljava/lang/String;"
-                                        "L"JAVA_PACKAGE"/types/NodeKind;"
+                                        JAVAHL_ARG("/types/NodeKind;")
                                         "ILjava/lang/String;"
-                                        "Ljava/lang/String;J)V");
+                                        "Ljava/lang/String;J"
+                                        "Ljava/lang/String;)V");
       if (JNIUtil::isExceptionThrown())
         POP_AND_RETURN_NULL;
     }
@@ -837,6 +1023,12 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY)
     jstateFlags |=
       org_apache_subversion_javahl_CommitItemStateFlags_IsCopy;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_LOCK_TOKEN)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_LockToken;
+  if (item->state_flags & SVN_CLIENT_COMMIT_ITEM_MOVED_HERE)
+    jstateFlags |=
+      org_apache_subversion_javahl_CommitItemStateFlags_MovedHere;
 
   jstring jurl = JNIUtil::makeJString(item->url);
   if (JNIUtil::isJavaExceptionThrown())
@@ -846,12 +1038,16 @@ CreateJ::CommitItem(svn_client_commit_item3_t *item)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
+  jstring jmovedFromPath = JNIUtil::makeJString(item->moved_from_abspath);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
   jlong jcopyRevision = item->revision;
 
   // create the Java object
   jobject jitem = env->NewObject(clazz, midConstructor, jpath,
                                  jnodeKind, jstateFlags, jurl,
-                                 jcopyUrl, jcopyRevision);
+                                 jcopyUrl, jcopyRevision, jmovedFromPath);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -869,7 +1065,7 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
     return NULL;
 
   static jmethodID midCT = 0;
-  jclass clazz = env->FindClass(JAVA_PACKAGE"/CommitInfo");
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/CommitInfo"));
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
@@ -911,59 +1107,7 @@ CreateJ::CommitInfo(const svn_commit_info_t *commit_info)
 }
 
 jobject
-CreateJ::RevisionRangeList(svn_rangelist_t *ranges)
-{
-  JNIEnv *env = JNIUtil::getEnv();
-
-  // Create a local frame for our references
-  env->PushLocalFrame(LOCAL_FRAME_SIZE);
-  if (JNIUtil::isJavaExceptionThrown())
-    return NULL;
-
-  jclass clazz = env->FindClass("java/util/ArrayList");
-  if (JNIUtil::isJavaExceptionThrown())
-    POP_AND_RETURN_NULL;
-
-  static jmethodID init_mid = 0;
-  if (init_mid == 0)
-    {
-      init_mid = env->GetMethodID(clazz, "<init>", "()V");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  static jmethodID add_mid = 0;
-  if (add_mid == 0)
-    {
-      add_mid = env->GetMethodID(clazz, "add", "(Ljava/lang/Object;)Z");
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-    }
-
-  jobject jranges = env->NewObject(clazz, init_mid);
-
-  for (int i = 0; i < ranges->nelts; ++i)
-    {
-      // Convert svn_merge_range_t *'s to Java RevisionRange objects.
-      svn_merge_range_t *range =
-          APR_ARRAY_IDX(ranges, i, svn_merge_range_t *);
-
-      jobject jrange = RevisionRange::makeJRevisionRange(range);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->CallBooleanMethod(jranges, add_mid, jrange);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->DeleteLocalRef(jrange);
-    }
-
-  return env->PopLocalFrame(jranges);
-}
-
-jobject
-CreateJ::StringSet(apr_array_header_t *strings)
+CreateJ::StringSet(const apr_array_header_t *strings)
 {
   std::vector<jobject> jstrs;
 
@@ -980,12 +1124,111 @@ CreateJ::StringSet(apr_array_header_t *strings)
   return CreateJ::Set(jstrs);
 }
 
-jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
+namespace {
+void fill_property_map(jobject map,
+                       apr_hash_t* prop_hash, apr_array_header_t* prop_diffs,
+                       apr_pool_t* scratch_pool, jmethodID put_mid)
 {
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
+
+  if (!map || (prop_hash == NULL && prop_diffs == NULL))
+    return;
+
   JNIEnv *env = JNIUtil::getEnv();
 
-  if (prop_hash == NULL)
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  // The caller may not know the concrete class of the map, so
+  // determine the "put" method identifier here.
+  if (put_mid == 0)
+    {
+      put_mid = env->GetMethodID(env->GetObjectClass(map), "put",
+                                 "(Ljava/lang/Object;Ljava/lang/Object;)"
+                                 "Ljava/lang/Object;");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NOTHING();
+    }
+
+  struct body
+  {
+    void operator()(const char* key, const svn_string_t* val)
+      {
+        jstring jpropName = JNIUtil::makeJString(key);
+        if (JNIUtil::isJavaExceptionThrown())
+          return;
+
+        jbyteArray jpropVal = (val ? JNIUtil::makeJByteArray(val) : NULL);
+        if (JNIUtil::isJavaExceptionThrown())
+          return;
+
+        jobject ret = m_env->CallObjectMethod(m_map, m_put_mid,
+                                              jpropName, jpropVal);
+        if (JNIUtil::isJavaExceptionThrown())
+          return;
+
+        m_env->DeleteLocalRef(ret);
+        m_env->DeleteLocalRef(jpropVal);
+        m_env->DeleteLocalRef(jpropName);
+      }
+
+    JNIEnv*& m_env;
+    jmethodID& m_put_mid;
+    jobject& m_map;
+
+    body(JNIEnv*& xenv, jmethodID& xput_mid, jobject& xmap)
+      : m_env(xenv), m_put_mid(xput_mid), m_map(xmap)
+      {}
+  } loop_body(env, put_mid, map);
+
+  if (prop_hash)
+    {
+      if (!scratch_pool)
+        scratch_pool = apr_hash_pool_get(prop_hash);
+
+      apr_hash_index_t *hi;
+      for (hi = apr_hash_first(scratch_pool, prop_hash);
+           hi; hi = apr_hash_next(hi))
+        {
+          const char* key;
+          svn_string_t* val;
+
+          const void* v_key;
+          void* v_val;
+
+          apr_hash_this(hi, &v_key, NULL, &v_val);
+          key = static_cast<const char*>(v_key);
+          val = static_cast<svn_string_t*>(v_val);
+
+          loop_body(key, val);
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NOTHING();
+        }
+    }
+  else
+    {
+      for (int i = 0; i < prop_diffs->nelts; ++i)
+        {
+          svn_prop_t* prop = &APR_ARRAY_IDX(prop_diffs, i, svn_prop_t);
+          loop_body(prop->name, prop->value);
+          if (JNIUtil::isJavaExceptionThrown())
+            POP_AND_RETURN_NOTHING();
+        }
+    }
+  POP_AND_RETURN_NOTHING();
+}
+
+jobject property_map(apr_hash_t *prop_hash, apr_array_header_t* prop_diffs,
+                     apr_pool_t* scratch_pool)
+{
+  SVN_ERR_ASSERT_NO_RETURN(!(prop_hash && prop_diffs));
+
+  if (prop_hash == NULL && prop_diffs == NULL)
     return NULL;
+
+  JNIEnv *env = JNIUtil::getEnv();
 
   // Create a local frame for our references
   env->PushLocalFrame(LOCAL_FRAME_SIZE);
@@ -1018,36 +1261,177 @@ jobject CreateJ::PropertyMap(apr_hash_t *prop_hash)
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  apr_hash_index_t *hi;
-  for (hi = apr_hash_first(apr_hash_pool_get(prop_hash), prop_hash);
-       hi; hi = apr_hash_next(hi))
-    {
-      const char *key;
-      svn_string_t *val;
-
-      apr_hash_this(hi,
-                    reinterpret_cast<const void **>(&key),
-                    NULL,
-                    reinterpret_cast<void **>(&val));
-
-      jstring jpropName = JNIUtil::makeJString(key);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      jbyteArray jpropVal = JNIUtil::makeJByteArray(val);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->CallObjectMethod(map, put_mid, jpropName, jpropVal);
-      if (JNIUtil::isJavaExceptionThrown())
-        POP_AND_RETURN_NULL;
-
-      env->DeleteLocalRef(jpropName);
-      env->DeleteLocalRef(jpropVal);
-    }
+  fill_property_map(map, prop_hash, prop_diffs, scratch_pool, put_mid);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
 
   return env->PopLocalFrame(map);
 }
+} // anonymous namespace
+
+jobject CreateJ::PropertyMap(apr_hash_t *prop_hash, apr_pool_t* scratch_pool)
+{
+  return property_map(prop_hash, NULL, scratch_pool);
+}
+
+jobject CreateJ::PropertyMap(apr_array_header_t* prop_diffs,
+                             apr_pool_t* scratch_pool)
+{
+  return property_map(NULL, prop_diffs, scratch_pool);
+}
+
+void CreateJ::FillPropertyMap(jobject map, apr_hash_t* prop_hash,
+                              apr_pool_t* scratch_pool, jmethodID put_mid)
+{
+  fill_property_map(map, prop_hash, NULL, scratch_pool, put_mid);
+}
+
+void CreateJ::FillPropertyMap(jobject map, apr_array_header_t* prop_diffs,
+                              apr_pool_t* scratch_pool, jmethodID put_mid)
+{
+  fill_property_map(map, NULL, prop_diffs, scratch_pool, put_mid);
+}
+
+jobject CreateJ::InheritedProps(apr_array_header_t *iprops)
+{
+  JNIEnv *env = JNIUtil::getEnv();
+
+  if (iprops == NULL)
+    return NULL;
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  jclass list_cls = env->FindClass("java/util/ArrayList");
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static volatile jmethodID init_mid = 0;
+  if (init_mid == 0)
+    {
+      init_mid = env->GetMethodID(list_cls, "<init>", "(I)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  static volatile jmethodID add_mid = 0;
+  if (add_mid == 0)
+    {
+      add_mid = env->GetMethodID(list_cls, "add",
+                                 "(Ljava/lang/Object;)Z");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jclass item_cls = env->FindClass(
+      JAVAHL_CLASS("/callback/InheritedProplistCallback$InheritedItem"));
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  static volatile jmethodID ctor_mid = 0;
+  if (ctor_mid == 0)
+    {
+      ctor_mid = env->GetMethodID(item_cls, "<init>",
+                                  "(Ljava/lang/String;Ljava/util/Map;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+    }
+
+  jobject array = env->NewObject(list_cls, init_mid, iprops->nelts);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN_NULL;
+
+  for (int i = 0; i < iprops->nelts; ++i)
+    {
+      svn_prop_inherited_item_t *iprop =
+        APR_ARRAY_IDX(iprops, i, svn_prop_inherited_item_t*);
+
+      jstring path_or_url = JNIUtil::makeJString(iprop->path_or_url);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject props = PropertyMap(iprop->prop_hash);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      jobject item = env->NewObject(item_cls, ctor_mid, path_or_url, props);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->CallBooleanMethod(array, add_mid, item);
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN_NULL;
+
+      env->DeleteLocalRef(item);
+      env->DeleteLocalRef(props);
+      env->DeleteLocalRef(path_or_url);
+    }
+
+  return env->PopLocalFrame(array);
+}
+
+jobject CreateJ::Mergeinfo(svn_mergeinfo_t mergeinfo, apr_pool_t* scratch_pool)
+{
+  if (mergeinfo == NULL)
+    return NULL;
+
+  // Transform mergeinfo into Java Mergeinfo object.
+  JNIEnv *env = JNIUtil::getEnv();
+  jclass clazz = env->FindClass(JAVAHL_CLASS("/types/Mergeinfo"));
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  static jmethodID ctor = 0;
+  if (ctor == 0)
+    {
+      ctor = env->GetMethodID(clazz, "<init>", "()V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  static jmethodID addRevisions = 0;
+  if (addRevisions == 0)
+    {
+      addRevisions = env->GetMethodID(clazz, "addRevisions",
+                                      "(Ljava/lang/String;"
+                                      "Ljava/util/List;)V");
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+    }
+
+  jobject jmergeinfo = env->NewObject(clazz, ctor);
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
+
+  apr_hash_index_t *hi;
+  for (hi = apr_hash_first(scratch_pool, mergeinfo);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      const void *path;
+      void *val;
+      apr_hash_this(hi, &path, NULL, &val);
+
+      jstring jpath =
+        JNIUtil::makeJString(static_cast<const char*>(path));
+      jobject jranges =
+        RevisionRangeList(static_cast<svn_rangelist_t*>(val)).toList();
+
+      env->CallVoidMethod(jmergeinfo, addRevisions, jpath, jranges);
+      if (JNIUtil::isJavaExceptionThrown())
+        return NULL;
+
+      env->DeleteLocalRef(jranges);
+      env->DeleteLocalRef(jpath);
+    }
+
+  env->DeleteLocalRef(clazz);
+
+  return jmergeinfo;
+}
+
 
 jobject CreateJ::Set(std::vector<jobject> &objects)
 {

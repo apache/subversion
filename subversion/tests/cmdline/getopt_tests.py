@@ -72,7 +72,17 @@ del_lines_res = [
                  re.compile(r"\* ra_(neon|local|svn|serf) :"),
                  re.compile(r"  - handles '(https?|file|svn)' scheme"),
                  re.compile(r"  - with Cyrus SASL authentication"),
+                 re.compile(r"  - using serf \d+\.\d+\.\d+"),
                  re.compile(r"\* fs_(base|fs) :"),
+
+                 # Remove 'svn --version' list of platform-specific
+                 # auth cache providers.
+                 re.compile(r"\* Wincrypt cache.*"),
+                 re.compile(r"\* Plaintext cache.*"),
+                 re.compile(r"\* Gnome Keyring"),
+                 re.compile(r"\* GPG-Agent"),
+                 re.compile(r"\* Mac OS X Keychain"),
+                 re.compile(r"\* KWallet \(KDE\)"),
                 ]
 
 # This is a list of lines to search and replace text on.
@@ -89,13 +99,6 @@ rep_lines_res = [
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
-                 # 'svn --help' has a line with the version number.
-                 # It can vary, for example:
-                 # "Subversion command-line client, version 1.1.0."
-                 # "Subversion command-line client, version 1.1.0-dev."
-                 (re.compile(r'Subversion command-line client, '
-                             'version \d+\.\d+\.\d+(.|-[a-zA-Z0-9]+\.)$'),
-                  'Subversion command-line client, version X.Y.Z.'),
                 ]
 
 # This is a trigger pattern that selects the secondary set of
@@ -172,7 +175,7 @@ def run_one_test(sbox, basename, *varargs):
     exit_code, actual_stdout, actual_stderr = svntest.main.run_svn(1, *varargs)
   else:
     exit_code, actual_stdout, actual_stderr = svntest.main.run_command(svntest.main.svn_binary,
-                                                                       1, 0, *varargs)
+                                                                       1, False, *varargs)
 
   # Delete and perform search and replaces on the lines from the
   # actual and expected output that may differ between build
@@ -220,6 +223,18 @@ def getopt_help_bogus_cmd(sbox):
   "run svn help bogus-cmd"
   run_one_test(sbox, 'svn_help_bogus-cmd', 'help', 'bogus-cmd')
 
+def getopt_config_option(sbox):
+  "--config-option's spell checking"
+  sbox.build(create_wc=False, read_only=True)
+  expected_stderr = '.*W205000.*did you mean.*'
+  expected_stdout = svntest.verify.AnyOutput
+  svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr, 0,
+                                      'info', 
+                                      '--config-option',
+                                      'config:miscellanous:diff-extensions=' +
+                                        '-u -p',
+                                      sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -234,6 +249,7 @@ test_list = [ None,
               getopt_help,
               getopt_help_bogus_cmd,
               getopt_help_log_switch,
+              getopt_config_option,
             ]
 
 if __name__ == '__main__':

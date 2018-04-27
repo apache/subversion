@@ -1,3 +1,4 @@
+# This file is used by which-error.py and gen_base.py:write_errno_table()
 APR_SUCCESS = 0
 SOCBASEERR = 10000
 SOCEPERM = 10001

@@ -26,6 +26,7 @@ import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.io.File;
+import java.io.FileWriter;
 import java.io.FileInputStream;
 import java.io.OutputStream;
 import java.io.InputStream;
@@ -34,23 +35,43 @@ import java.net.URI;
 import java.util.Map;
 
 /**
- * This class is used for testing the SVNAdmin class
+ * This class is used for testing the ISVNRepos interface
  *
  * More methodes for testing are still needed
  */
 public class SVNReposTests extends SVNTests
 {
+    /**
+     * Base name of all our tests.
+     */
+    public final static String testName = "repos_test";
+
     public SVNReposTests()
     {
+        init();
     }
 
     public SVNReposTests(String name)
     {
         super(name);
+        init();
     }
 
     /**
-     * Test the basic SVNAdmin.create functionality
+     * Initialize the testBaseName and the testCounter, if this is the
+     * first test of this class.
+     */
+    private void init()
+    {
+        if (!testName.equals(testBaseName))
+        {
+            testCounter = 0;
+            testBaseName = testName;
+        }
+    }
+
+    /**
+     * Test the basic ISVNRepos.create functionality
      * @throws SubversionException
      */
     public void testCreate()
@@ -79,12 +100,107 @@ public class SVNReposTests extends SVNTests
     public void testVerify()
         throws SubversionException, IOException
     {
-        OneTest thisTest = new OneTest(false);
+        OneTest thisTest = new OneTest(false, true);
         admin.verify(thisTest.getRepository(), Revision.getInstance(0),
                      Revision.HEAD, null);
     }
 
-    /* This test only tests the call down to the C++ layer. */
+    private class VerifyCallback implements ReposVerifyCallback
+    {
+        public int mderr = 0;
+        public int reverr = 0;
+        public boolean keepGoing = false;
+
+        public void onVerifyError(long revision, ClientException verifyError)
+            throws ClientException
+        {
+            if (revision == Revision.SVN_INVALID_REVNUM) {
+                ++mderr;
+            }
+            else {
+                ++reverr;
+            }
+            if (keepGoing) {
+                return;
+            }
+            else {
+                throw verifyError;
+            }
+        }
+
+    }
+
+    private boolean tryToBreakRepo(OneTest test) throws IOException
+    {
+        File repo = test.getRepository();
+
+        // Check for a sharded repo first
+        File rev1 = new File(repo, "db/revs/0/1");
+        if (!rev1.exists() || !rev1.setWritable(true))
+        {
+            // Try non-sharded
+            rev1 = new File(repo, "db/revs/1");
+        }
+        if (!rev1.exists() || !rev1.setWritable(true))
+            return false;
+
+        FileWriter fd = new FileWriter(rev1);
+        fd.write("inserting junk to corrupt the rev");
+        fd.close();
+        return true;
+    }
+
+    public void testVerifyBrokenRepo() throws Throwable
+    {
+        OneTest thisTest = new OneTest(false, true);
+
+        if (!tryToBreakRepo(thisTest)) {
+            // We don't support the repos format
+            System.err.print("Cannot break repository for verify test.");
+            return;
+        }
+
+        VerifyCallback cb = new VerifyCallback();
+        cb.keepGoing = false;
+
+        try {
+            admin.verify(thisTest.getRepository(),
+                         Revision.getInstance(0),
+                         Revision.HEAD,
+                         false, false, null, cb);
+        }
+        catch(ClientException ex) {
+            assertEquals(cb.mderr, 1);
+            assertEquals(cb.reverr, 0);
+            return;
+        }
+
+        assert("Verify did not catch repository corruption." == "");
+    }
+
+    public void testVerifyBrokenRepo_KeepGoing() throws Throwable
+    {
+        OneTest thisTest = new OneTest(false, true);
+
+        if (!tryToBreakRepo(thisTest)) {
+            // We don't support the repos format
+            System.err.print("Cannot break repository for verify test.");
+            return;
+        }
+
+        VerifyCallback cb = new VerifyCallback();
+        cb.keepGoing = true;
+
+        admin.verify(thisTest.getRepository(),
+                     Revision.getInstance(0),
+                     Revision.HEAD,
+                     false, false, null, cb);
+
+        assertEquals(cb.mderr, 1);
+        assertEquals(cb.reverr, 1);
+    }
+
+    /* this test only tests the call down to the C++ layer. */
     public void testUpgrade()
         throws SubversionException, IOException
     {
@@ -100,10 +216,26 @@ public class SVNReposTests extends SVNTests
         admin.pack(thisTest.getRepository(), null);
     }
 
+    /* Check that the freeze() callback gets invoked. */
+    private class FreezeAction implements ReposFreezeAction
+    {
+        int invoked = 0;
+        public void invoke() { ++invoked; }
+    }
+
+    public void testFreeze()
+        throws SubversionException, IOException
+    {
+        OneTest thisTest = new OneTest(false);
+        FreezeAction action = new FreezeAction();
+        admin.freeze(action, thisTest.getRepository());
+        assertEquals("expect freeze callback to be invoked once", 1, action.invoked);
+    }
+
     public void testLoadRepo()
         throws SubversionException, IOException
     {
-        /* Make sure SVNAdmin.load() works, with a repo dump file known
+        /* Make sure ISVNRepos.load() works, with a repo dump file known
          * to provoke bug 2979
          */
         // makes repos with nothing in it

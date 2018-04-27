@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import os, logging
+import os, logging, stat
 
 logger = logging.getLogger()
 
@@ -60,7 +60,7 @@ def check_proplist(path, exp_out):
 
 #----------------------------------------------------------------------
 
-def create_config(config_dir, enable_flag):
+def create_config(sbox, enable_flag):
   "create config directories and files"
 
   # contents of the file 'config'
@@ -82,7 +82,7 @@ quotetest = svn:keywords="Author Date Id Rev URL";
 * = auto=oui
 ''' % (enable_flag and 'yes' or 'no')
 
-  svntest.main.create_config_dir(config_dir, config_contents)
+  return sbox.create_config_dir(config_contents)
 
 #----------------------------------------------------------------------
 
@@ -102,9 +102,11 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
 
   # some directories
   wc_dir = sbox.wc_dir
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  tmp_dir = os.path.abspath(sbox.add_wc_path('autoprops'))
+  os.makedirs(tmp_dir)
   repos_url = sbox.repo_url
+
+  config_dir = create_config(sbox, cfgenable)
 
   # initialize parameters
   if cmd == 'import':
@@ -115,8 +117,6 @@ def autoprops_test(sbox, cmd, cfgenable, clienable, subdir):
     files_dir = wc_dir
 
   parameters = parameters + ['--config-dir', config_dir]
-
-  create_config(config_dir, cfgenable)
 
   # add comandline flags
   if clienable == 1:
@@ -318,7 +318,7 @@ def fail_add_mixed_eol_style(sbox):
   expected_stderr = "svn: E200009: File '.*" + filename + \
                     "' has inconsistent newlines" + \
                     "|" + "svn: E135000: Inconsistent line ending style\n"
-  run_and_verify_svn(None, [], expected_stderr,
+  run_and_verify_svn([], expected_stderr,
                      'add', filepath, *parameters)
 
   expected_status = svntest.wc.State(sbox.wc_dir,
@@ -327,7 +327,7 @@ def fail_add_mixed_eol_style(sbox):
 
 #----------------------------------------------------------------------
 
-def create_inherited_autoprops_config(config_dir, enable_flag):
+def create_inherited_autoprops_config(sbox, enable_flag):
   "create config stuffs for inherited autoprops tests"
 
   # contents of the file 'config'
@@ -342,7 +342,7 @@ enable-auto-props = %s
 *.c = svn:keywords=Author Date Id Rev URL;svn:eol-style=native;
 ''' % (enable_flag and 'yes' or 'no')
 
-  svntest.main.create_config_dir(config_dir, config_contents)
+  return sbox.create_config_dir(config_contents)
 
 #----------------------------------------------------------------------
 def check_inheritable_autoprops(sbox, auto_props_cfg_enabled,
@@ -415,9 +415,11 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
 
   # some directories
   wc_dir = sbox.wc_dir
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'autoprops_config_' + sbox.name)
+  tmp_dir = os.path.abspath(sbox.add_wc_path('iautoprops'))
+  os.makedirs(tmp_dir)
   repos_url = sbox.repo_url
+
+  config_dir = create_inherited_autoprops_config(sbox, cfgenable)
 
   # initialize parameters
   if cmd == 'import':
@@ -428,8 +430,6 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
     files_dir = wc_dir
 
   parameters = parameters + ['--config-dir', config_dir]
-
-  create_inherited_autoprops_config(config_dir, cfgenable)
 
   # add comandline flags
   inheritable_auto_props_enabled = 1
@@ -466,7 +466,7 @@ def inheritable_autoprops_test(sbox, cmd, cfgenable, clienable, subdir,
   sbox.simple_propset(SVN_PROP_INHERITABLE_AUTOPROPS,
                       '*.py = svn:mime-type=text/x-python',
                       'A/D')
-  svntest.actions.run_and_verify_svn(None, None, [], 'ci', '-m',
+  svntest.actions.run_and_verify_svn(None, [], 'ci', '-m',
                                      'Add some ' + SVN_PROP_INHERITABLE_AUTOPROPS +
                                      ' properties', wc_dir)
 
@@ -634,8 +634,9 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   # addition will notice the executable bits and set svn:executable
   # again, which is not what we are here to test.
   if os.name == 'posix':
-    os.chmod(os.path.join(sbox.wc_dir, 'D', 'rip.bat'), 0664)
-    
+    os.chmod(os.path.join(sbox.wc_dir, 'D', 'rip.bat'),
+                          svntest.main.S_ALL_READ | stat.S_IWUSR | stat.S_IWGRP)
+
   os.chdir(sbox.wc_dir)
   svntest.main.run_svn(None, 'add', '.', '--force', '--no-auto-props',
                        '--config-dir', config_dir)
@@ -646,10 +647,7 @@ def svn_prop_inheritable_autoprops_add_versioned_target(sbox):
   #
   # Then revert the previous additions and add again, only the
   # svn:auto-props should be applied.
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir,
-                            'autoprops_config_disabled_' + sbox.name)
-  create_inherited_autoprops_config(config_dir, False)
+  config_dir = create_inherited_autoprops_config(sbox, False)
 
   svntest.main.run_svn(None, 'revert', '-R', sbox.wc_dir)
   os.chdir(sbox.wc_dir)
@@ -674,7 +672,7 @@ def svn_prop_inheritable_autoprops_propset_file_target(sbox):
 
   sbox.build()
   svntest.actions.run_and_verify_svn(
-    None, None,
+    None,
     ".*Cannot set '" + SVN_PROP_INHERITABLE_AUTOPROPS + "' on a file.*",
     'ps', SVN_PROP_INHERITABLE_AUTOPROPS, '*.c=svn:eol-style=native',
     sbox.ospath('iota'))
@@ -695,8 +693,7 @@ def svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target(sbox):
                        '*.c=svn:eol-style=CR', sbox.ospath('A/B'))
   svntest.main.run_svn(None, 'ps', SVN_PROP_INHERITABLE_AUTOPROPS,
                        '*.c=svn:eol-style=native', sbox.ospath('A/D'))
-  svntest.main.run_svn(None, 'ci', '-m', 'Add inheritable autoprops',
-                       sbox.wc_dir)
+  sbox.simple_commit(message='Add inheritable autoprops')
 
   # Create two subtrees, each with one new file.
   os.mkdir(Z_path)
@@ -719,9 +716,9 @@ def svn_prop_inheritable_autoprops_unversioned_subtrees_versioned_target(sbox):
   os.chdir(saved_wd)
 
   # Check the resulting autoprops.
-  svntest.actions.run_and_verify_svn(None, 'native\n', [],
+  svntest.actions.run_and_verify_svn('native\n', [],
                                      'pg', 'svn:eol-style', foo_path)
-  svntest.actions.run_and_verify_svn(None, 'CR\n', [],
+  svntest.actions.run_and_verify_svn('CR\n', [],
                                      'pg', 'svn:eol-style', bar_path)
 
 ########################################################################

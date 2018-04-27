@@ -39,7 +39,7 @@ namespace SVN {
   {
   public:
     Pool();
-    Pool(const Pool &parent_pool);
+    explicit Pool(const Pool &parent_pool);
     Pool(apr_pool_t *parent_pool);
     ~Pool();
     apr_pool_t *getPool() const;

@@ -105,12 +105,12 @@ def iprops_authz(sbox):
   write_authz_file(sbox, {
     "/"          : svntest.main.wc_author + "=rw",
     "/A/D/H/psi" : svntest.main.wc_author + "=",})
-  if sbox.repo_url.startswith("http"):
+  if svntest.main.is_ra_type_dav():
     expected_err = ".*[Ff]orbidden.*"
   else:
     expected_err = ".*svn: E170001: Authorization failed.*"
   svntest.actions.run_and_verify_svn(
-    None, None, expected_err, 'proplist', '-v',
+    None, expected_err, 'proplist', '-v',
     '--show-inherited-props', sbox.repo_url + '/A/D/H/psi')
 
 ########################################################################

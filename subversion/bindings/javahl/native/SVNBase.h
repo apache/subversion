@@ -82,6 +82,11 @@ class SVNBase
    */
   void dispose(jobject jthis, jfieldID *fid, const char *className);
 
+  /**
+   * Instantiates java object attached to this base object
+   */
+  jobject createCppBoundObject(const char *clazzName);
+
  private:
   /**
    * If the value pointed to by @a fid is zero, find the @c jfieldID

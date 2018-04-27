@@ -29,6 +29,7 @@
 #include <httpd.h>
 #include <util_filter.h>
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_fs.h"
 #include "svn_props.h"
@@ -71,21 +72,20 @@ send_response(const dav_svn_repos *repos,
               svn_fs_root_t *root,
               const char *path,
               svn_boolean_t is_dir,
-              ap_filter_t *output,
+              dav_svn__output *output,
               apr_bucket_brigade *bb,
               apr_pool_t *pool)
 {
   const char *href;
   const char *vsn_url;
-  apr_status_t status;
   svn_revnum_t rev_to_use;
 
   href = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_PUBLIC,
                             SVN_IGNORED_REVNUM, path, 0 /* add_href */, pool);
   rev_to_use = dav_svn__get_safe_cr(root, path, pool);
   vsn_url = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VERSION,
-                               rev_to_use, path, 0 /* add_href */, pool);
-  status = ap_fputstrs(output, bb,
+                               rev_to_use, path, FALSE /* add_href */, pool);
+  SVN_ERR(dav_svn__brigade_putstrs(bb, output,
                        "<D:response>" DEBUG_CR
                        "<D:href>",
                        apr_xml_quote_string(pool, href, 1),
@@ -102,9 +102,7 @@ send_response(const dav_svn_repos *repos,
                        "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
                        "</D:propstat>" DEBUG_CR
                        "</D:response>" DEBUG_CR,
-                       NULL);
-  if (status != APR_SUCCESS)
-    return svn_error_wrap_apr(status, "Can't write response to output");
+                       SVN_VA_NULL));
 
   return SVN_NO_ERROR;
 }
@@ -114,35 +112,36 @@ static svn_error_t *
 do_resources(const dav_svn_repos *repos,
              svn_fs_root_t *root,
              svn_revnum_t revision,
-             ap_filter_t *output,
+             dav_svn__output *output,
              apr_bucket_brigade *bb,
              apr_pool_t *pool)
 {
-  apr_hash_t *changes;
-  apr_hash_t *sent = apr_hash_make(pool);
-  apr_hash_index_t *hi;
+  svn_fs_path_change_iterator_t *iterator;
+  svn_fs_path_change3_t *change;
+
+  /* Change lists can have >100000 entries, so we must make sure to release
+     any collection as soon as possible.  Allocate them in SUBPOOL. */
   apr_pool_t *subpool = svn_pool_create(pool);
+  apr_hash_t *sent = apr_hash_make(subpool);
+
+  /* Standard iteration pool. */
+  apr_pool_t *iterpool = svn_pool_create(subpool);
 
   /* Fetch the paths changed in this revision.  This will contain
      everything except otherwise-unchanged parent directories of added
      and deleted things.  Also, note that deleted things don't merit
      responses of their own -- they are considered modifications to
      their parent.  */
-  SVN_ERR(svn_fs_paths_changed2(&changes, root, pool));
+  SVN_ERR(svn_fs_paths_changed3(&iterator, root, subpool, subpool));
+  SVN_ERR(svn_fs_path_change_get(&change, iterator));
 
-  for (hi = apr_hash_first(pool, changes); hi; hi = apr_hash_next(hi))
+  while (change)
     {
-      const void *key;
-      void *val;
-      const char *path;
-      svn_fs_path_change2_t *change;
       svn_boolean_t send_self;
       svn_boolean_t send_parent;
+      const char *path = change->path.data;
 
-      svn_pool_clear(subpool);
-      apr_hash_this(hi, &key, NULL, &val);
-      path = key;
-      change = val;
+      svn_pool_clear(iterpool);
 
       /* Figure out who needs to get sent. */
       switch (change->change_kind)
@@ -169,30 +168,43 @@ do_resources(const dav_svn_repos *repos,
         {
           /* If we haven't already sent this path, send it (and then
              remember that we sent it). */
-          if (! apr_hash_get(sent, path, APR_HASH_KEY_STRING))
+          if (! apr_hash_get(sent, path, change->path.len))
             {
               svn_node_kind_t kind;
-              SVN_ERR(svn_fs_check_path(&kind, root, path, subpool));
-              SVN_ERR(send_response(repos, root, path,
+
+              if (change->node_kind == svn_node_unknown)
+                SVN_ERR(svn_fs_check_path(&kind, root, path, iterpool));
+              else
+                kind = change->node_kind;
+
+              SVN_ERR(send_response(repos, root, change->path.data,
                                     kind == svn_node_dir,
-                                    output, bb, subpool));
-              apr_hash_set(sent, path, APR_HASH_KEY_STRING, (void *)1);
+                                    output, bb, iterpool));
+
+              /* The paths in CHANGES are unique, i.e. they can only
+               * clash with those that we end in the SEND_PARENT case.
+               *
+               * Because file paths cannot be the parent of other paths,
+               * we only need to track non-file paths. */
+              if (change->node_kind != svn_node_file)
+                {
+                  path = apr_pstrmemdup(subpool, path, change->path.len);
+                  apr_hash_set(sent, path, change->path.len, (void *)1);
+                }
             }
         }
       if (send_parent)
         {
-          /* If it hasn't already been sent, send the parent directory
-             (and then remember that you sent it).  Allocate parent in
-             pool, not subpool, because it stays in the sent hash
-             afterwards. */
-          const char *parent = svn_fspath__dirname(path, pool);
-          if (! apr_hash_get(sent, parent, APR_HASH_KEY_STRING))
+          const char *parent = svn_fspath__dirname(path, iterpool);
+          if (! svn_hash_gets(sent, parent))
             {
               SVN_ERR(send_response(repos, root, parent,
-                                    TRUE, output, bb, subpool));
-              apr_hash_set(sent, parent, APR_HASH_KEY_STRING, (void *)1);
+                                    TRUE, output, bb, iterpool));
+              svn_hash_sets(sent, apr_pstrdup(subpool, parent), (void *)1);
             }
         }
+
+      SVN_ERR(svn_fs_path_change_get(&change, iterator));
     }
 
   svn_pool_destroy(subpool);
@@ -207,7 +219,7 @@ do_resources(const dav_svn_repos *repos,
 */
 
 dav_error *
-dav_svn__merge_response(ap_filter_t *output,
+dav_svn__merge_response(dav_svn__output *output,
                         const dav_svn_repos *repos,
                         svn_revnum_t new_rev,
                         const char *post_commit_err,
@@ -223,6 +235,7 @@ dav_svn__merge_response(ap_filter_t *output,
   svn_string_t *creationdate, *creator_displayname;
   const char *post_commit_err_elem = NULL,
              *post_commit_header_info = NULL;
+  apr_hash_t *revprops;
 
   serr = svn_fs_revision_root(&root, repos->fs, new_rev, pool);
   if (serr != NULL)
@@ -233,13 +246,14 @@ dav_svn__merge_response(ap_filter_t *output,
                                   repos->pool);
     }
 
-  bb = apr_brigade_create(pool, output->c->bucket_alloc);
+  bb = apr_brigade_create(pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   /* prep some strings */
 
   /* the HREF for the baseline is actually the VCC */
   vcc = dav_svn__build_uri(repos, DAV_SVN__BUILD_URI_VCC, SVN_IGNORED_REVNUM,
-                           NULL, 0 /* add_href */, pool);
+                           NULL, FALSE /* add_href */, pool);
 
   /* the version-name of the baseline is the revision number */
   rev = apr_psprintf(pool, "%ld", new_rev);
@@ -265,25 +279,19 @@ dav_svn__merge_response(ap_filter_t *output,
 
 
   /* get the creationdate and creator-displayname of the new revision, too. */
-  serr = svn_fs_revision_prop(&creationdate, repos->fs, new_rev,
-                              SVN_PROP_REVISION_DATE, pool);
+  serr = svn_fs_revision_proplist2(&revprops, repos->fs, new_rev,
+                                   TRUE, pool, pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Could not get date of newest revision",
-                                  repos->pool);
-    }
-  serr = svn_fs_revision_prop(&creator_displayname, repos->fs, new_rev,
-                              SVN_PROP_REVISION_AUTHOR, pool);
-  if (serr != NULL)
-    {
-      return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Could not get author of newest revision",
-                                  repos->pool);
+                                  "Could not get date and author of newest "
+                                  "revision", repos->pool);
     }
 
+  creationdate = svn_hash_gets(revprops, SVN_PROP_REVISION_DATE);
+  creator_displayname = svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR);
 
-  (void) ap_fputstrs(output, bb,
+  serr = dav_svn__brigade_putstrs(bb, output,
                      DAV_XML_HEADER DEBUG_CR
                      "<D:merge-response xmlns:D=\"DAV:\"",
                      post_commit_header_info,
@@ -302,31 +310,47 @@ dav_svn__merge_response(ap_filter_t *output,
                      "<D:resourcetype><D:baseline/></D:resourcetype>" DEBUG_CR,
                      post_commit_err_elem, DEBUG_CR
                      "<D:version-name>", rev, "</D:version-name>" DEBUG_CR,
-                     NULL);
+                     SVN_VA_NULL);
+  if (serr != NULL)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not write output",
+                                repos->pool);
+
   if (creationdate)
     {
-      (void) ap_fputstrs(output, bb,
+      serr = dav_svn__brigade_putstrs(bb, output,
                          "<D:creationdate>",
                          apr_xml_quote_string(pool, creationdate->data, 1),
                          "</D:creationdate>" DEBUG_CR,
-                         NULL);
+                         SVN_VA_NULL);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not write output",
+                                    repos->pool);
     }
   if (creator_displayname)
     {
-      (void) ap_fputstrs(output, bb,
+      serr = dav_svn__brigade_putstrs(bb, output,
                          "<D:creator-displayname>",
                          apr_xml_quote_string(pool,
                                               creator_displayname->data, 1),
                          "</D:creator-displayname>" DEBUG_CR,
-                         NULL);
+                         SVN_VA_NULL);
+      if (serr != NULL)
+        return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                    "Could not write output",
+                                    repos->pool);
     }
-  (void) ap_fputstrs(output, bb,
+  serr = dav_svn__brigade_putstrs(bb, output,
                      "</D:prop>" DEBUG_CR
                      "<D:status>HTTP/1.1 200 OK</D:status>" DEBUG_CR
                      "</D:propstat>" DEBUG_CR
                      "</D:response>" DEBUG_CR,
-
-                     NULL);
+                     SVN_VA_NULL);
+  if (serr != NULL)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not write output",
+                                repos->pool);
 
   /* ONLY have dir_delta drive the editor if the caller asked us to
      generate a full MERGE response.  svn clients can ask us to
@@ -355,12 +379,20 @@ dav_svn__merge_response(ap_filter_t *output,
     }
 
   /* wrap up the merge response */
-  (void) ap_fputs(output, bb,
-                  "</D:updated-set>" DEBUG_CR
-                  "</D:merge-response>" DEBUG_CR);
+  serr = dav_svn__brigade_puts(bb, output,
+                               "</D:updated-set>" DEBUG_CR
+                               "</D:merge-response>" DEBUG_CR);
+  if (serr != NULL)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not write output",
+                                repos->pool);
 
   /* send whatever is left in the brigade */
-  (void) ap_pass_brigade(output, bb);
+  serr = dav_svn__output_pass_brigade(output, bb);
+  if (serr != NULL)
+    return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
+                                "Could not write output",
+                                repos->pool);
 
   return NULL;
 }

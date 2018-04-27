@@ -157,7 +157,7 @@ is($ra->check_path('trunk', 1), $SVN::Node::dir, 'check_path');
     # TEST
     is($dirent->kind, $SVN::Node::dir, 'stat dir: kind');
     # TEST
-    is($dirent->size, 0, 'stat dir: size');
+    is($dirent->size, -1, 'stat dir: size');
     # TEST
     is($dirent->created_rev, 1, 'stat dir: created_rev');
     # TEST
@@ -201,12 +201,6 @@ is($ed->{trunk}{props}{'dir-prop'}, 'frob', 'replay: dir-prop');
 # TEST
 is($ed->{'trunk/filea'}{props}{'binary-prop'}, $BINARY_DATA,
    'replay: binary-prop');
-
-END {
-diag "cleanup";
-rmtree($repospath);
-}
-
 
 package MockEditor;
 

@@ -85,8 +85,10 @@ svn_cl__move(apr_getopt_t *os,
   SVN_ERR(svn_cl__eat_peg_revisions(&targets, targets, pool));
 
   err = svn_client_move7(targets, dst_path,
-                         TRUE, opt_state->parents,
-                         opt_state->allow_mixed_rev,
+                         TRUE /* move_as_child */,
+                         opt_state->parents /* make_parents */,
+                         opt_state->allow_mixed_rev /* allow_mixed_revisions*/,
+                         FALSE /* metadata_only */,
                          opt_state->revprop_table,
                          (opt_state->quiet ? NULL : svn_cl__print_commit_info),
                          NULL, ctx, pool);

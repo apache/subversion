@@ -36,6 +36,7 @@
 #include "svn_time.h"
 #include "svn_dav.h"
 #include "svn_props.h"
+#include "svn_ctype.h"
 
 #include "private/svn_dav_protocol.h"
 
@@ -238,7 +239,7 @@ get_last_modified_time(const char **datestring,
     }
 
   if (timeval)
-    memcpy(timeval, &timeval_tmp, sizeof(*timeval));
+    *timeval = timeval_tmp;
 
   if (! datestring)
     return 0;
@@ -422,7 +423,10 @@ insert_prop_internal(const dav_resource *resource,
         if (last_author == NULL)
           return DAV_PROP_INSERT_NOTDEF;
 
-        value = apr_xml_quote_string(scratch_pool, last_author->data, 1);
+        /* We need to sanitize the LAST_AUTHOR. */
+        value = dav_svn__fuzzy_escape_author(last_author->data,
+                                      resource->info->repos->is_svn_client,
+                                      scratch_pool, scratch_pool);
         break;
       }
 
@@ -436,7 +440,8 @@ insert_prop_internal(const dav_resource *resource,
         svn_filesize_t len = 0;
 
         /* our property, but not defined on collection resources */
-        if (resource->collection || resource->baselined)
+        if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY
+            || resource->collection || resource->baselined)
           return DAV_PROP_INSERT_NOTSUPP;
 
         serr = svn_fs_file_length(&len, resource->info->root.root,
@@ -466,7 +471,9 @@ insert_prop_internal(const dav_resource *resource,
         svn_string_t *pval;
         const char *mime_type = NULL;
 
-        if (resource->baselined && resource->type == DAV_RESOURCE_TYPE_VERSION)
+        if (resource->type == DAV_RESOURCE_TYPE_ACTIVITY
+            || (resource->baselined
+                && resource->type == DAV_RESOURCE_TYPE_VERSION))
           return DAV_PROP_INSERT_NOTSUPP;
 
         if (resource->type == DAV_RESOURCE_TYPE_PRIVATE
@@ -546,7 +553,7 @@ insert_prop_internal(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_BC,
                                  resource->info->root.rev, NULL,
-                                 1 /* add_href */, scratch_pool);
+                                 TRUE /* add_href */, scratch_pool);
       break;
 
     case DAV_PROPID_checked_in:
@@ -558,8 +565,8 @@ insert_prop_internal(const dav_resource *resource,
         {
           svn_revnum_t revnum;
 
-          serr = svn_fs_youngest_rev(&revnum, resource->info->repos->fs,
-                                     scratch_pool);
+          serr = dav_svn__get_youngest_rev(&revnum, resource->info->repos,
+                                           scratch_pool);
           if (serr != NULL)
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
@@ -575,7 +582,8 @@ insert_prop_internal(const dav_resource *resource,
             }
           s = dav_svn__build_uri(resource->info->repos,
                                  DAV_SVN__BUILD_URI_BASELINE,
-                                 revnum, NULL, 0 /* add_href */, scratch_pool);
+                                 revnum, NULL, FALSE /* add_href */,
+                                 scratch_pool);
           value = apr_psprintf(scratch_pool, "<D:href>%s</D:href>",
                                apr_xml_quote_string(scratch_pool, s, 1));
         }
@@ -593,7 +601,7 @@ insert_prop_internal(const dav_resource *resource,
           s = dav_svn__build_uri(resource->info->repos,
                                  DAV_SVN__BUILD_URI_VERSION,
                                  rev_to_use, resource->info->repos_path,
-                                0 /* add_href */, scratch_pool);
+                                 FALSE /* add_href */, scratch_pool);
           value = apr_psprintf(scratch_pool, "<D:href>%s</D:href>",
                                apr_xml_quote_string(scratch_pool, s, 1));
         }
@@ -607,7 +615,7 @@ insert_prop_internal(const dav_resource *resource,
         return DAV_PROP_INSERT_NOTSUPP;
       value = dav_svn__build_uri(resource->info->repos, DAV_SVN__BUILD_URI_VCC,
                                  SVN_IGNORED_REVNUM, NULL,
-                                 1 /* add_href */, scratch_pool);
+                                 TRUE /* add_href */, scratch_pool);
       break;
 
     case DAV_PROPID_version_name:
@@ -679,7 +687,6 @@ insert_prop_internal(const dav_resource *resource,
               || resource->type == DAV_RESOURCE_TYPE_WORKING
               || resource->type == DAV_RESOURCE_TYPE_VERSION))
         {
-          svn_node_kind_t kind;
           svn_checksum_t *checksum;
           svn_checksum_kind_t checksum_kind;
 
@@ -692,14 +699,20 @@ insert_prop_internal(const dav_resource *resource,
               checksum_kind = svn_checksum_sha1;
             }
 
-          serr = svn_fs_check_path(&kind, resource->info->root.root,
-                                   resource->info->repos_path, scratch_pool);
-          if (!serr && kind == svn_node_file)
-            serr = svn_fs_file_checksum(&checksum, checksum_kind,
-                                        resource->info->root.root,
-                                        resource->info->repos_path, TRUE,
-                                        scratch_pool);
-          if (serr != NULL)
+          serr = svn_fs_file_checksum(&checksum, checksum_kind,
+                                      resource->info->root.root,
+                                      resource->info->repos_path, TRUE,
+                                      scratch_pool);
+          if (serr && serr->apr_err == SVN_ERR_FS_NOT_FILE)
+            {
+              /* It should not happen since we're already checked
+                 RESOURCE->COLLECTION, but svn_fs_check_path() call
+                 was added in r1239596 for some reason. Keep it for
+                 now. */
+              svn_error_clear(serr);
+              return DAV_PROP_INSERT_NOTSUPP;
+            }
+          else if (serr)
             {
               ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
                             resource->info->r,
@@ -714,9 +727,6 @@ insert_prop_internal(const dav_resource *resource,
               value = error_value;
               break;
             }
-
-          if (kind != svn_node_file)
-            return DAV_PROP_INSERT_NOTSUPP;
 
           value = svn_checksum_to_cstring(checksum, scratch_pool);
 
@@ -746,20 +756,30 @@ insert_prop_internal(const dav_resource *resource,
 
     case SVN_PROPID_deadprop_count:
       {
-        unsigned int propcount;
-        apr_hash_t *proplist;
+        svn_boolean_t has_props;
 
         if (resource->type != DAV_RESOURCE_TYPE_REGULAR)
           return DAV_PROP_INSERT_NOTSUPP;
 
-        serr = svn_fs_node_proplist(&proplist,
-                                    resource->info->root.root,
-                                    resource->info->repos_path, scratch_pool);
+        /* Retrieving the actual properties is quite expensive while
+           svn clients only want to know if there are properties, by
+           using this svn defined property.
+
+           Our and and SvnKit's implementation of the ra layer check
+           for '> 0' to provide the boolean if the node has custom
+           properties or not, so starting with 1.9 we just provide
+           "1" or "0".
+         */
+        serr = svn_fs_node_has_props(&has_props,
+                                      resource->info->root.root,
+                                      resource->info->repos_path,
+                                      scratch_pool);
+
         if (serr != NULL)
           {
             ap_log_rerror(APLOG_MARK, APLOG_ERR, serr->apr_err,
                           resource->info->r,
-                          "Can't fetch proplist of '%s': "
+                          "Can't fetch has properties on '%s': "
                           "%s",
                           resource->info->repos_path,
                           serr->message);
@@ -768,8 +788,7 @@ insert_prop_internal(const dav_resource *resource,
             break;
           }
 
-        propcount = apr_hash_count(proplist);
-        value = apr_psprintf(scratch_pool, "%u", propcount);
+        value = has_props ? "1" : "0";
         break;
       }
 
@@ -831,10 +850,10 @@ insert_prop(const dav_resource *resource,
 static int
 is_writable(const dav_resource *resource, int propid)
 {
-  const dav_liveprop_spec *info;
+  const dav_liveprop_spec *info = NULL;
 
   (void) dav_get_liveprop_info(propid, &dav_svn__liveprop_group, &info);
-  return info->is_writable;
+  return info ? info->is_writable : FALSE;
 }
 
 

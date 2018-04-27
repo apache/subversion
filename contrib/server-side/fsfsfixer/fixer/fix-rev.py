@@ -30,7 +30,7 @@ fixed_ids = {}
 fixed_checksums = {}
 
 # Youngest FSFS format we know how to handle.
-MAX_FSFS_FORMAT = 5
+MAX_FSFS_FORMAT = 6
 
 # ----------------------------------------------------------------------
 # Functions
@@ -38,7 +38,7 @@ MAX_FSFS_FORMAT = 5
 # Print a message, only if 'verbose' mode is enabled.
 def verbose_print(str):
   if VERBOSE:
-    print str
+    print(str)
 
 # Echo the arguments to a log file, and also (if verbose) to standard output.
 def log(str):
@@ -52,21 +52,28 @@ def run_cmd_quiet(cmd, *args):
 # Execute the command given by CMD and ARGS, and also log it.
 def run_cmd(cmd, *args):
   log("CMD: " + cmd + ' ' + ' '.join(list(args)))
-  return run_cmd_quiet(cmd, *args)
+  exitcode = run_cmd_quiet(cmd, *args)
+  if exitcode != 0:
+    log("  exited with code " + str(exitcode))
+  return exitcode
 
 def replace_in_file(filename, old, new):
-  """Replace the string OLD with the string NEW in file FILE.
-     Replace all occurrences.  Raise an error if nothing changes."""
+  """Replace all occurrences of the string OLD with the string NEW in the
+     file at path FILENAME.  Raise an error if nothing changes."""
 
-  verbose_print("Replacing '" + old + "' in file '" + filename + "'\n" +
-                "    with  '" + new + "'")
   # Note: we can't use '/' as a delimiter in the substitution command.
-  run_cmd('perl', '-pi.bak', '-e', "s," + old + "," + new + ",", filename)
-  if run_cmd_quiet('cmp', '--quiet', filename, filename + '.bak') == 0:
-    raise FixError("'" + filename + "' is unchanged after sed substitution.")
+  if run_cmd('perl', '-pi.bak', '-e', "s," + old + "," + new + ",", filename) != 0:
+    raise FixError("failed to substitute '" + old + "' with '" + new + "' in file '" + filename + "'.")
+  if run_cmd_quiet('cmp', '--quiet', filename, filename + '.bak') != 1:
+    raise FixError("failed to substitute '" + old + "' with '" + new + "' in file '" + filename + "'.")
+  verbose_print("Replaced '" + old + "' in file '" + filename + "'\n" +
+                "    with '" + new + "'")
   os.remove(filename + '.bak')
 
 def replace_in_rev_file(repo_dir, rev, old, new):
+  """Replace all occurrences of the string OLD with the string NEW in the
+     revision file for revision REV in the repository at REPO_DIR.  Raise an
+     error if nothing changes."""
   rev_file = rev_file_path(repo_dir, rev)
   replace_in_file(rev_file, old, new)
 
@@ -93,8 +100,8 @@ def fix_id(repo_dir, rev, bad_id):
     raise FixError("The ID supplied is already correct: " +
                    "good id '" + good_id + "'")
 
-  print "Fixing id: " + bad_id + " -> " + good_id
   replace_in_rev_file(repo_dir, rev, bad_id, good_id)
+  print("Fixed id: " + bad_id + " -> " + good_id)
   fixed_ids[bad_id] = good_id
 
 def fix_checksum(repo_dir, rev, old_checksum, new_checksum):
@@ -104,23 +111,36 @@ def fix_checksum(repo_dir, rev, old_checksum, new_checksum):
   assert len(old_checksum) and len(new_checksum)
   assert old_checksum != new_checksum
 
-  print "Fixing checksum: " + old_checksum + " -> " + new_checksum
   replace_in_rev_file(repo_dir, rev, old_checksum, new_checksum)
+  print("Fixed checksum: " + old_checksum + " -> " + new_checksum)
   fixed_checksums[old_checksum] = new_checksum
 
-def fix_delta_ref(repo_dir, rev, bad_rev, bad_offset, bad_size):
-  """Fix a "DELTA <REV> <OFFSET> <SIZE>" line in the revision file for REV
-     in REPO_DIR, where <OFFSET> is wrong."""
-  good_offset = find_good_rep_header(repo_dir, bad_rev, bad_size)
-  old_line = ' '.join(['DELTA', bad_rev, bad_offset, bad_size])
-  new_line = ' '.join(['DELTA', bad_rev, good_offset, bad_size])
-  print "Fixing delta ref:", old_line, "->", new_line
+def fix_rep_ref(repo_dir, rev, prefix, rep_rev, bad_offset, rep_size):
+  """Fix a "DELTA <REP_REV> <BAD_OFFSET> <REP_SIZE>"
+        or "text: <REP_REV> <BAD_OFFSET> <REP_SIZE> ..."
+     line in the revision file for REV in REPO_DIR, where <BAD_OFFSET> is
+     wrong.  PREFIX is 'DELTA' or 'text:'.
+  """
+  good_offset = find_good_rep_header(repo_dir, rep_rev, rep_size)
+  old_line = ' '.join([prefix, rep_rev, bad_offset, rep_size])
+  new_line = ' '.join([prefix, rep_rev, good_offset, rep_size])
+  if good_offset == bad_offset:
+    raise FixError("Attempting to fix a rep ref that appears to be correct: " + old_line)
   replace_in_rev_file(repo_dir, rev, old_line, new_line)
+  print("Fixed rep ref:", old_line, "->", new_line)
 
 
 def handle_one_error(repo_dir, rev, error_lines):
   """If ERROR_LINES describes an error we know how to fix, then fix it.
      Return True if fixed, False if not fixed."""
+
+  for line in error_lines:
+    verbose_print(line)
+
+  match = re.match(r"svn.*: Filesystem is corrupt", error_lines[0])
+  if match:
+    # This is an additional line in v1.7+ error messages: skip it.
+    error_lines = error_lines[1:]
 
   line1 = error_lines[0]
 
@@ -147,9 +167,6 @@ def handle_one_error(repo_dir, rev, error_lines):
 
   match = re.match(r"svn.*: Checksum mismatch while reading representation:", line1)
   if match:
-    verbose_print(error_lines[0])
-    verbose_print(error_lines[1])
-    verbose_print(error_lines[2])
     expected = re.match(r' *expected: *([^ ]*)', error_lines[1]).group(1)
     actual   = re.match(r' *actual: *([^ ]*)',   error_lines[2]).group(1)
     fix_checksum(repo_dir, rev, expected, actual)
@@ -157,23 +174,41 @@ def handle_one_error(repo_dir, rev, error_lines):
 
   match = re.match(r"svn.*: Corrupt representation '([0-9]*) ([0-9]*) ([0-9]*) .*'", line1)
   if match:
-    # Extract the bad reference. We expect only 'offset' is actually bad, in
-    # the known kind of corruption that we're targetting.
-    bad_rev = match.group(1)
-    bad_offset = match.group(2)
-    bad_size = match.group(3)
-    fix_delta_ref(repo_dir, rev, bad_rev, bad_offset, bad_size)
+    # Here we are targetting one particular form of corruption that we have
+    # seen several times.  In this form, there are some references in which
+    # the 'offset' is wrong by a few hundred bytes.  Usually the bad offset
+    # and the correct offset have the same number of digits; if they don't,
+    # then fixing it is beyond the scope of this script.
+    #
+    # Although this form of corruption usually produces the 'Corrupt
+    # representation' error message, it could produce other error messages.
+    # A more systematic way to find and fix this form of corruption would be
+    # to extract all of the rep. ids in the repository, and all of the
+    # references to them, and match them up.
+
+    # Extract the bad reference from the error message.
+    bad_rev, bad_offset, bad_size = match.group(1, 2, 3)
+
+    # In several cases that we have seen, every bad reference has been in a
+    # 'DELTA' line, so we first try to fix such references.  Fixing this has
+    # a knock-on effect, invalidating the checksum of the rep so that all
+    # references to this rep will then need their checksums correcting.
+    try:
+      fix_rep_ref(repo_dir, rev, 'DELTA', bad_rev, bad_offset, bad_size)
+    except FixError:
+      # In at least one case of corruption, every bad reference has been in a
+      # 'text:' line.  Fixing this has no knock-on effect.
+      fix_rep_ref(repo_dir, rev, 'text:', bad_rev, bad_offset, bad_size)
+
     return True
 
   return False
 
 def grab_stderr(child_argv):
+  log("CMD: " + ' '.join(child_argv))
   p = Popen(child_argv, stdout=PIPE, stderr=PIPE)
   _, stderr = p.communicate()
-  child_err = []
-  for line in stderr.splitlines():
-    if '(apr_err=' not in line:
-      child_err.append(line)
+  child_err = [line for line in stderr.splitlines() if '(apr_err=' not in line]
   return child_err
 
 def fix_one_error(repo_dir, rev):
@@ -189,10 +224,11 @@ def fix_one_error(repo_dir, rev):
   try:
     if handle_one_error(repo_dir, rev, svnadmin_err):
       return True
-  except FixError, e:
-    print 'warning:', e
-    print "Trying 'svnlook' instead."
-    pass
+    else:
+      verbose_print("Unrecognized error message; trying 'svnlook' instead.")
+  except FixError as e:
+    print('warning:', e)
+    verbose_print("Trying 'svnlook' instead.")
 
   # At this point, we've got an 'svnadmin' error that we don't know how to
   # handle.  Before giving up, see if 'svnlook' gives a different error,
@@ -202,12 +238,14 @@ def fix_one_error(repo_dir, rev):
   svnlook_err = grab_stderr([SVNLOOK, 'tree', '-r'+rev, repo_dir])
 
   if svnlook_err == []:
-    print 'warning: svnlook did not find an error'
+    print('warning: svnlook did not find an error')
   else:
     if handle_one_error(repo_dir, rev, svnlook_err):
       return True
+    else:
+      verbose_print("Unrecognized error message.")
 
-  raise FixError("unfixable error:\n  " + "\n  ".join(svnadmin_err))
+  raise FixError("unable to fix r" + str(rev))
 
 def check_formats(repo_dir):
   """Check that REPO_DIR isn't newer than we know how to handle."""
@@ -243,13 +281,13 @@ def fix_rev(repo_dir, rev):
   # Keep looking for verification errors in r$REV and fixing them while we can.
   while fix_one_error(repo_dir, rev):
     pass
-  print "Revision " + rev + " verifies OK."
+  print("Revision " + rev + " verifies OK.")
 
 
 if __name__ == '__main__':
 
   if len(sys.argv) != 3:
-    print >>sys.stderr, usage
+    sys.stderr.write(usage + "\n")
     sys.exit(1)
 
   repo_dir = sys.argv[1]
@@ -257,6 +295,6 @@ if __name__ == '__main__':
 
   try:
     fix_rev(repo_dir, rev)
-  except FixError, e:
-    print 'error:', e
+  except FixError as e:
+    print('error:', e)
     sys.exit(1)

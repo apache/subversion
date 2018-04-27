@@ -110,7 +110,8 @@ class SvnFsTest < Test::Unit::TestCase
     FileUtils.mkdir_p(fs_path)
 
     make_context(log) do |ctx|
-      assert_raises(Svn::Error::RaLocalReposOpenFailed) do
+      # ### Verify Svn::Error::RaLocalReposOpenFailed in chain
+      assert_raises(Svn::Error::RaCannotCreateSession) do
         ctx.log_message(path, rev)
       end
 
@@ -209,8 +210,12 @@ class SvnFsTest < Test::Unit::TestCase
       ctx.commit(@wc_path)
     end
 
-    assert_raises(Svn::Error::FsNoSuchTransaction) do
+    assert_raises(Svn::Error::FsMalformedTxnId) do
       @fs.open_txn("NOT-EXIST")
+    end
+
+    assert_raises(Svn::Error::FsNoSuchTransaction) do
+      @fs.open_txn("9-9")
     end
 
     start_time = Time.now

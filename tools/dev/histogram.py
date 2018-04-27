@@ -42,7 +42,7 @@ def histogram(counts, width):
   for author, count in sorted(counts.items(),
                               key=operator.itemgetter(1),  # sort on count
                               reverse=True):
-    print "%-*s | %s" % (max_len, author, "X"*int(count/adjustor))
+    print("%-*s | %s" % (max_len, author, "X"*int(count/adjustor)))
 
 
 if __name__ == '__main__':

@@ -81,7 +81,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
   static jmethodID sm_mid = 0;
   if (sm_mid == 0)
     {
-      jclass clazz = env->FindClass(JAVA_PACKAGE"/callback/LogMessageCallback");
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/LogMessageCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
@@ -103,9 +103,9 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
            hi = apr_hash_next(hi))
         {
           const char *path =
-            reinterpret_cast<const char *>(svn__apr_hash_index_key(hi));
+            reinterpret_cast<const char *>(apr_hash_this_key(hi));
           svn_log_changed_path2_t *log_item =
-            reinterpret_cast<svn_log_changed_path2_t *>(svn__apr_hash_index_val(hi));
+            reinterpret_cast<svn_log_changed_path2_t *>(apr_hash_this_val(hi));
 
           jobject cp = CreateJ::ChangedPath(path, log_item);
 
@@ -117,7 +117,7 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
 
   jobject jrevprops = NULL;
   if (log_entry->revprops != NULL && apr_hash_count(log_entry->revprops) > 0)
-    jrevprops = CreateJ::PropertyMap(log_entry->revprops);
+    jrevprops = CreateJ::PropertyMap(log_entry->revprops, pool);
 
   env->CallVoidMethod(m_callback,
                       sm_mid,
@@ -125,8 +125,6 @@ LogMessageCallback::singleMessage(svn_log_entry_t *log_entry, apr_pool_t *pool)
                       (jlong)log_entry->revision,
                       jrevprops,
                       (jboolean)log_entry->has_children);
-  // No need to check for an exception here, because we return anyway.
 
-  env->PopLocalFrame(NULL);
-  return SVN_NO_ERROR;
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }

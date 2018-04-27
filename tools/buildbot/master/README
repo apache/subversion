@@ -1,0 +1,7 @@
+The BuildBot Master is managed by the ASF Infrastructure team.
+
+This was announced per this email:
+https://mail-archives.apache.org/mod_mbox/subversion-dev/201005.mbox/%3CAANLkTilvSpSwJHLlJVpKpGVAI2-JQyGqLqCn1Sjgo-Qf@mail.gmail.com%3E
+
+The new BuildBot Master configuration is maintained here:
+https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster/master1/

@@ -27,9 +27,7 @@ module Test
       # make an intermediary assertion block handler
       def _my_assert_block(&block)
        if RUBY_VERSION > '1.9'
-         assert_block do
-           yield
-         end
+         yield
        else
          _wrap_assertion do
            yield

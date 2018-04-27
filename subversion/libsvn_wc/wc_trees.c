@@ -225,13 +225,13 @@ wc_treen_read_dir(svn_tree_node_t *node,
       else if (tb->is_pristine)
         {
           SVN_ERR(svn_wc__node_get_children_of_working_node(
-                    &wc_children, tb->wc_ctx, abspath, FALSE /* show_hidden */,
+                    &wc_children, tb->wc_ctx, abspath,
                     result_pool, scratch_pool));
         }
       else
         {
-          SVN_ERR(svn_wc__node_get_children(
-                    &wc_children, tb->wc_ctx, abspath, FALSE /* show_hidden */,
+          SVN_ERR(svn_wc__node_get_children_of_working_node(
+                    &wc_children, tb->wc_ctx, abspath,
                     result_pool, scratch_pool));
         }
 

@@ -101,7 +101,7 @@ txn.mkdir("blahdir/dj/a/b/c/d/e/f")
 txn.mkdir("blahdir/dj/a/b/c/d/e/f/g")
 txn.upload("blahdir/dj/a/b/c/d/e/f/g/h.txt", "/tmp/contents.txt")
 
-rev = txn.commit("create blahdir and descendents")
+rev = txn.commit("create blahdir and descendants")
 print("Committed revision %d" % rev)
 
 def ignore(path, kind):

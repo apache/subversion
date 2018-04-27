@@ -30,7 +30,7 @@ import BaseHTTPServer
 
 PORT = 2069
 
-TEST_BODY = '<commit repository="12345678-1234-1234-1234-123456789012" revision="1234"><author>johndoe</author><date>2012-01-01 01:01:01 +0000 (Sun, 01 Jan 2012)</date><log>Frob the ganoozle with the snookish</log><dirs_changed><path>one/path/</path><path>some/other/directory/</path></dirs_changed></commit>'
+TEST_BODY = '{"svnpubsub": {"version": 1}}\n\0{"commit": {"type": "svn", "format": 1, "repository": "12345678-1234-1234-1234-123456789012", "id": "1234", "committer": "johndoe", "date": "2012-01-01 01:01:01 +0000 (Sun, 01 Jan 2012)", "log": "Frob the ganoozle with the snookish", "changed": {"one/path/alpha": {"flags": "U  "}, "some/other/directory/": {"flags": "_U "}}}}\n\0'
 
 SEND_KEEPALIVE = True
 

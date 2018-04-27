@@ -32,6 +32,7 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 
+from prop_tests import binary_mime_type_on_text_file_warning
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -48,10 +49,12 @@ Item = svntest.wc.StateItem
 # Convenience functions to make writing more tests easier
 
 def run_svnlook(*varargs):
-  """Run svnlook with VARARGS, returns stdout as list of lines.
-  Raises Failure if any stderr messages."""
+  """Run svnlook with VARARGS, returns exit code as int; stdout, stderr as
+  list of lines (including line terminators).
+  Raises Failure if any stderr messages.
+  """
   exit_code, output, dummy_errput = svntest.main.run_command(
-    svntest.main.svnlook_binary, 0, 0, *varargs)
+    svntest.main.svnlook_binary, 0, False, *varargs)
 
   return output
 
@@ -92,22 +95,20 @@ def test_misc(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # give the repo a new UUID
-  uuid = "01234567-89ab-cdef-89ab-cdef01234567"
-  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, 1,
-                           ["SVN-fs-dump-format-version: 2\n",
-                            "\n",
-                            "UUID: ", uuid, "\n",
+  uuid = b"01234567-89ab-cdef-89ab-cdef01234567"
+  svntest.main.run_command_stdin(svntest.main.svnadmin_binary, None, 0, True,
+                           [b"SVN-fs-dump-format-version: 2\n",
+                            b"\n",
+                            b"UUID: ", uuid, b"\n",
                            ],
                            'load', '--force-uuid', repo_dir)
 
   expect('youngest', [ '2\n' ], run_svnlook('youngest', repo_dir))
 
-  expect('uuid', [ uuid + '\n' ], run_svnlook('uuid', repo_dir))
+  expect('uuid', [ uuid.decode() + '\n' ], run_svnlook('uuid', repo_dir))
 
   # it would be nice to test the author too, but the current test framework
   # does not pull a username when testing over ra_neon or ra_svn,
@@ -206,9 +207,9 @@ def delete_file_in_moved_dir(sbox):
   # move E to E2 and delete E2/alpha
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   E2_path = os.path.join(wc_dir, 'A', 'B', 'E2')
-  svntest.actions.run_and_verify_svn(None, None, [], 'mv', E_path, E2_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mv', E_path, E2_path)
   alpha_path = os.path.join(E2_path, 'alpha')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', alpha_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', alpha_path)
 
   # commit
   expected_output = svntest.wc.State(wc_dir, {
@@ -231,9 +232,7 @@ def delete_file_in_moved_dir(sbox):
   ### in order to get this commit working again.
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("dirs-changed",
                                                        repo_dir)
@@ -260,16 +259,16 @@ def test_print_property_diffs(sbox):
 
   # Add a bogus property to iota
   iota_path = os.path.join(wc_dir, 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
                                      'bogus_prop', 'bogus_val', iota_path)
 
   # commit the change
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', iota_path)
 
   # Grab the diff
   exit_code, expected_output, err = svntest.actions.run_and_verify_svn(
-    None, None, [], 'diff', '-r', 'PREV', iota_path)
+    None, [], 'diff', '-r', 'PREV', iota_path)
 
   exit_code, output, errput = svntest.main.run_svnlook("diff", repo_dir)
   if errput:
@@ -302,7 +301,7 @@ def test_print_property_diffs(sbox):
 def info_bad_newlines(sbox):
   "svnlook info must allow inconsistent newlines"
 
-  dump_str = """SVN-fs-dump-format-version: 2
+  dump_str = b"""SVN-fs-dump-format-version: 2
 
 UUID: dc40867b-38f6-0310-9f5f-f81aa277e06e
 
@@ -367,7 +366,7 @@ def changed_copy_info(sbox):
   E_path = os.path.join(wc_dir, 'A', 'B', 'E')
   alpha_path = os.path.join(wc_dir, 'A', 'B', 'E', 'alpha')
   alpha2_path = os.path.join(wc_dir, 'A', 'alpha2')
-  svntest.actions.run_and_verify_svn(None, None, [], 'cp', alpha_path,
+  svntest.actions.run_and_verify_svn(None, [], 'cp', alpha_path,
                                      alpha2_path)
 
   # commit
@@ -380,9 +379,7 @@ def changed_copy_info(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   exit_code, output, errput = svntest.main.run_svnlook("changed", repo_dir)
   if errput:
@@ -443,10 +440,10 @@ def limit_history(sbox):
   "history --limit"
   sbox.build(create_wc=False)
   repo_url = sbox.repo_url
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mv', '-m', 'log msg',
                                      repo_url + "/iota", repo_url + "/iota2")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mv', '-m', 'log msg',
                                      repo_url + "/A/mu", repo_url + "/iota")
   history = run_svnlook("history", "--limit=1", sbox.repo_dir)
@@ -478,9 +475,7 @@ def diff_ignore_whitespace(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Check the output of 'svnlook diff -x --ignore-space-change' on mu.
   # It should not print anything.
@@ -504,6 +499,8 @@ def diff_ignore_eolstyle(sbox):
   repo_dir = sbox.repo_dir
   wc_dir = sbox.wc_dir
 
+  # CRLF is a string that will match a CRLF sequence read from a text file.
+  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
     crlf = '\n'
   else:
@@ -531,13 +528,11 @@ def diff_ignore_eolstyle(sbox):
 
     svntest.actions.run_and_verify_commit(wc_dir,
                                           expected_output,
-                                          expected_status,
-                                          None,
-                                          wc_dir)
+                                          expected_status)
 
     # Grab the diff
     exit_code, expected_output, err = svntest.actions.run_and_verify_svn(
-      None, None, [],
+      None, [],
       'diff', '-r', 'PREV', '-x', '--ignore-eol-style', mu_path)
 
 
@@ -574,7 +569,8 @@ def diff_binary(sbox):
   # Set A/mu to a binary mime-type, tweak its text, and commit.
   mu_path = os.path.join(wc_dir, 'A', 'mu')
   svntest.main.file_append(mu_path, 'new appended text for mu')
-  svntest.main.run_svn(None, 'propset', 'svn:mime-type',
+  svntest.main.run_svn(binary_mime_type_on_text_file_warning,
+                       'propset', 'svn:mime-type',
                        'application/octet-stream', mu_path)
   svntest.main.run_svn(None, 'ci', '-m', 'log msg', mu_path)
 
@@ -670,9 +666,9 @@ fp.close()"""
   svntest.main.file_append(rho_path, 'new appended text for rho')
 
   # commit, and check the hook's logfile
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', wc_dir)
 
   expected_data = [ 'U   A/D/G/rho\n', 'U   A/mu\n', 'A/\n', 'A/D/G/\n' ]
@@ -688,9 +684,9 @@ fp.close()"""
   svntest.main.create_python_hook_script(pre_commit_hook,
                                          hook_instance)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'propset',
+  svntest.actions.run_and_verify_svn(None, [], 'propset',
                                      'bogus_prop', 'bogus_val\n', A_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', 'log msg', wc_dir,
                                      '--with-revprop', 'bogus_rev_prop=bogus_rev_val\n')
   # Now check the logfile
@@ -699,16 +695,15 @@ fp.close()"""
                     "Properties on '/A':\n",
                     '  bogus_prop\n',
                     '  svn:log\n', '  svn:author\n',
-                    '  svn:check-locks\n', # internal prop, not really expected
                     '  bogus_rev_prop\n',
                     '  svn:date\n',
                     '  svn:txn-client-compat-version\n',
+                    '  svn:txn-user-agent\n',
                     ]
-  # ra_dav and ra_svn add the user-agent ephemeral property
-  if svntest.main.is_ra_type_dav() or svntest.main.is_ra_type_svn():
-    expected_data.append('  svn:txn-user-agent\n')
   verify_logfile(logfilepath, svntest.verify.UnorderedOutput(expected_data))
 
+# From r1293375 until fixed in r1303856, 'svnlook changed' and 'svnlook diff'
+# produced no output on a property delete.
 def property_delete(sbox):
   "property delete"
 
@@ -720,9 +715,7 @@ def property_delete(sbox):
   sbox.simple_propdel('foo', 'A/mu')
   sbox.simple_commit()
 
-  # XFail since r1293375, changed and diff produce no output on a
-  # property delete
-  svntest.actions.run_and_verify_svnlook(None, ["_U  A/mu\n"], [],
+  svntest.actions.run_and_verify_svnlook(["_U  A/mu\n"], [],
                                          'changed', repo_dir)
 
 

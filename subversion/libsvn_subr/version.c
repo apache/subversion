@@ -40,11 +40,13 @@ svn_subr_version(void)
 svn_boolean_t svn_ver_compatible(const svn_version_t *my_version,
                                  const svn_version_t *lib_version)
 {
-  /* With normal development builds the matching rules are strict, to
-     avoid inadvertantly using the wrong libraries.  For backward
-     compatibility testing use --disable-full-version-match to
-     configure 1.7 and then the libraries that get built can be used
-     to replace those in 1.6 or earlier builds.  */
+  /* With normal development builds the matching rules are stricter
+     that for release builds, to avoid inadvertantly using the wrong
+     libraries.  For backward compatibility testing of development
+     builds one can use --disable-full-version-match to cause a
+     development build to use the release build rules.  This allows
+     the libraries from the newer development build to be used by an
+     older development build. */
 
 #ifndef SVN_DISABLE_FULL_VERSION_MATCH
   if (lib_version->tag[0] != '\0')
@@ -75,21 +77,33 @@ svn_boolean_t svn_ver_equal(const svn_version_t *my_version,
 
 
 svn_error_t *
-svn_ver_check_list(const svn_version_t *my_version,
-                   const svn_version_checklist_t *checklist)
+svn_ver_check_list2(const svn_version_t *my_version,
+                    const svn_version_checklist_t *checklist,
+                    svn_boolean_t (*comparator)(const svn_version_t *,
+                                                const svn_version_t *))
 {
   svn_error_t *err = SVN_NO_ERROR;
   int i;
 
+#ifdef SVN_DISABLE_FULL_VERSION_MATCH
+  /* Force more relaxed check for --disable-full-version-match. */
+  comparator = svn_ver_compatible;
+#endif
+
   for (i = 0; checklist[i].label != NULL; ++i)
     {
       const svn_version_t *lib_version = checklist[i].version_query();
-      if (!svn_ver_compatible(my_version, lib_version))
+      if (!comparator(my_version, lib_version))
         err = svn_error_createf(SVN_ERR_VERSION_MISMATCH, err,
-                                _("Version mismatch in '%s':"
+                                _("Version mismatch in '%s'%s:"
                                   " found %d.%d.%d%s,"
                                   " expected %d.%d.%d%s"),
                                 checklist[i].label,
+                                comparator == svn_ver_equal
+                                ? _(" (expecting equality)")
+                                : comparator == svn_ver_compatible
+                                ? _(" (expecting compatibility)")
+                                : "",
                                 lib_version->major, lib_version->minor,
                                 lib_version->patch, lib_version->tag,
                                 my_version->major, my_version->minor,
@@ -129,7 +143,7 @@ svn_version_extended(svn_boolean_t verbose,
   info->build_time = __TIME__;
   info->build_host = SVN_BUILD_HOST;
   info->copyright = apr_pstrdup
-    (pool, _("Copyright (C) 2013 The Apache Software Foundation.\n"
+    (pool, _("Copyright (C) 2018 The Apache Software Foundation.\n"
              "This software consists of contributions made by many people;\n"
              "see the NOTICE file for more information.\n"
              "Subversion is open source software, see "
@@ -202,11 +216,13 @@ svn_version__parse_version_string(svn_version_t **version_p,
 {
   svn_error_t *err;
   svn_version_t *version;
-  apr_array_header_t *pieces = 
+  apr_array_header_t *pieces =
     svn_cstring_split(version_string, ".", FALSE, result_pool);
 
   if ((pieces->nelts < 2) || (pieces->nelts > 3))
-    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, NULL, NULL);
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, NULL,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
 
   version = apr_pcalloc(result_pool, sizeof(*version));
   version->tag = "";
@@ -215,11 +231,15 @@ svn_version__parse_version_string(svn_version_t **version_p,
   err = svn_cstring_atoi(&(version->major),
                          APR_ARRAY_IDX(pieces, 0, const char *));
   if (err)
-    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, err, NULL);
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
   err = svn_cstring_atoi(&(version->minor),
                          APR_ARRAY_IDX(pieces, 1, const char *));
   if (err)
-    return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING, err, NULL);
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
 
   /* If there's a third component, we'll parse it, too.  But we don't
      require that it be present. */
@@ -234,9 +254,16 @@ svn_version__parse_version_string(svn_version_t **version_p,
         }
       err = svn_cstring_atoi(&(version->patch), piece);
       if (err)
-        return svn_error_create(SVN_ERR_MALFORMED_VERSION_STRING,
-                                err, NULL);
+        return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                                 _("Failed to parse version number string '%s'"
+                                  ),
+                                 version_string);
     }
+
+  if (version->major < 0 || version->minor < 0 || version->patch < 0)
+    return svn_error_createf(SVN_ERR_MALFORMED_VERSION_STRING, err,
+                             _("Failed to parse version number string '%s'"),
+                             version_string);
 
   *version_p = version;
   return SVN_NO_ERROR;
@@ -244,7 +271,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
 
 
 svn_boolean_t
-svn_version__at_least(svn_version_t *version,
+svn_version__at_least(const svn_version_t *version,
                       int major,
                       int minor,
                       int patch)

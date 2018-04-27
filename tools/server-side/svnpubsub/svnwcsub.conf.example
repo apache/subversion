@@ -1,0 +1,16 @@
+[DEFAULT]
+svnbin: /usr/local/bin/svn
+streams: http://svn.example.org:2069/commits/svn
+# hook: /usr/bin/true
+
+## The values below are used by ConfigParser's interpolation syntax.
+## See http://docs.python.org/library/configparser
+SOME_REPOS: svn://svn.example.org/repos/chaos
+
+[env]
+HOME: /home/svn
+LANG: en_US.UTF-8
+
+[track]
+/usr/local/foo/prod: %(SOME_REPOS)s/foo/production
+/usr/local/foo/dev:  %(SOME_REPOS)s/foo/trunk

@@ -31,6 +31,8 @@
 #include <apr_mmap.h>
 #include <apr_getopt.h>
 
+#include <assert.h>
+
 #include "svn_error.h"
 #include "svn_diff.h"
 #include "svn_types.h"
@@ -137,16 +139,16 @@ datasource_to_index(svn_diff_datasource_e datasource)
  * *LENGTH.  The actual bytes read are stored in *LENGTH on return.
  */
 static APR_INLINE svn_error_t *
-read_chunk(apr_file_t *file, const char *path,
+read_chunk(apr_file_t *file,
            char *buffer, apr_off_t length,
-           apr_off_t offset, apr_pool_t *pool)
+           apr_off_t offset, apr_pool_t *scratch_pool)
 {
   /* XXX: The final offset may not be the one we asked for.
    * XXX: Check.
    */
-  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, pool));
+  SVN_ERR(svn_io_file_seek(file, APR_SET, &offset, scratch_pool));
   return svn_io_file_read_full2(file, buffer, (apr_size_t) length,
-                                NULL, NULL, pool);
+                                NULL, NULL, scratch_pool);
 }
 
 
@@ -166,25 +168,38 @@ read_chunk(apr_file_t *file, const char *path,
 static svn_error_t *
 map_or_read_file(apr_file_t **file,
                  MMAP_T_PARAM(mm)
-                 char **buffer, apr_off_t *size,
+                 char **buffer, apr_size_t *size_p,
                  const char *path, apr_pool_t *pool)
 {
   apr_finfo_t finfo;
   apr_status_t rv;
+  apr_size_t size;
 
   *buffer = NULL;
 
   SVN_ERR(svn_io_file_open(file, path, APR_READ, APR_OS_DEFAULT, pool));
   SVN_ERR(svn_io_file_info_get(&finfo, APR_FINFO_SIZE, *file, pool));
 
-#if APR_HAS_MMAP
-  if (finfo.size > APR_MMAP_THRESHOLD)
+  if (finfo.size > APR_SIZE_MAX)
     {
-      rv = apr_mmap_create(mm, *file, 0, (apr_size_t) finfo.size,
-                           APR_MMAP_READ, pool);
+      return svn_error_createf(APR_ENOMEM, NULL,
+                               _("File '%s' is too large to be read in "
+                                 "to memory"), path);
+    }
+
+  size = (apr_size_t) finfo.size;
+#if APR_HAS_MMAP
+  if (size > APR_MMAP_THRESHOLD)
+    {
+      rv = apr_mmap_create(mm, *file, 0, size, APR_MMAP_READ, pool);
       if (rv == APR_SUCCESS)
         {
           *buffer = (*mm)->mm;
+        }
+      else
+        {
+          /* Clear *MM because output parameters are undefined on error. */
+          *mm = NULL;
         }
 
       /* On failure we just fall through and try reading the file into
@@ -193,12 +208,11 @@ map_or_read_file(apr_file_t **file,
     }
 #endif /* APR_HAS_MMAP */
 
-   if (*buffer == NULL && finfo.size > 0)
+   if (*buffer == NULL && size > 0)
     {
-      *buffer = apr_palloc(pool, (apr_size_t) finfo.size);
+      *buffer = apr_palloc(pool, size);
 
-      SVN_ERR(svn_io_file_read_full2(*file, *buffer, (apr_size_t) finfo.size,
-                                     NULL, NULL, pool));
+      SVN_ERR(svn_io_file_read_full2(*file, *buffer, size, NULL, NULL, pool));
 
       /* Since we have the entire contents of the file we can
        * close it now.
@@ -208,7 +222,7 @@ map_or_read_file(apr_file_t **file,
       *file = NULL;
     }
 
-  *size = finfo.size;
+  *size_p = size;
 
   return SVN_NO_ERROR;
 }
@@ -274,7 +288,7 @@ increment_chunk(struct file_info *file, apr_pool_t *pool)
       file->chunk++;
       length = file->chunk == last_chunk ?
         offset_in_chunk(file->size) : CHUNK_SIZE;
-      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+      SVN_ERR(read_chunk(file->file, file->buffer,
                          length, chunk_to_offset(file->chunk),
                          pool));
       file->endp = file->buffer + length;
@@ -301,7 +315,7 @@ decrement_chunk(struct file_info *file, apr_pool_t *pool)
     {
       /* Read previous chunk and reset pointers. */
       file->chunk--;
-      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+      SVN_ERR(read_chunk(file->file, file->buffer,
                          CHUNK_SIZE, chunk_to_offset(file->chunk),
                          pool));
       file->endp = file->buffer + CHUNK_SIZE;
@@ -448,7 +462,7 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
             file[i].curp += delta;
 
           /* Skipped data without EOL markers, so last char was not a CR. */
-          had_cr = FALSE; 
+          had_cr = FALSE;
         }
 #endif
 
@@ -530,7 +544,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   int suffix_lines_to_keep = SUFFIX_LINES_TO_KEEP;
   svn_boolean_t is_match;
   apr_off_t lines = 0;
-  svn_boolean_t had_cr;
   svn_boolean_t had_nl;
   apr_size_t i;
 
@@ -544,6 +557,13 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
       file_for_suffix[i].chunk =
         (int) offset_to_chunk(file_for_suffix[i].size); /* last chunk */
       length[i] = offset_in_chunk(file_for_suffix[i].size);
+      if (length[i] == 0)
+        {
+          /* last chunk is an empty chunk -> start at next-to-last chunk */
+          file_for_suffix[i].chunk = file_for_suffix[i].chunk - 1;
+          length[i] = CHUNK_SIZE;
+        }
+
       if (file_for_suffix[i].chunk == file[i].chunk)
         {
           /* Prefix ended in last chunk, so we can reuse the prefix buffer */
@@ -554,7 +574,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
           /* There is at least more than 1 chunk,
              so allocate full chunk size buffer */
           file_for_suffix[i].buffer = apr_palloc(pool, CHUNK_SIZE);
-          SVN_ERR(read_chunk(file_for_suffix[i].file, file_for_suffix[i].path,
+          SVN_ERR(read_chunk(file_for_suffix[i].file,
                              file_for_suffix[i].buffer, length[i],
                              chunk_to_offset(file_for_suffix[i].chunk),
                              pool));
@@ -627,11 +647,10 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
         min_curp[0] += suffix_min_offset0;
 
       /* Scan quickly by reading with machine-word granularity. */
-      for (i = 0, can_read_word = TRUE; i < file_len; i++)
-        can_read_word = can_read_word
-                        && (  (file_for_suffix[i].curp + 1
-                                 - sizeof(apr_uintptr_t))
-                            > min_curp[i]);
+      for (i = 0, can_read_word = TRUE; can_read_word && i < file_len; i++)
+        can_read_word = ((file_for_suffix[i].curp + 1 - sizeof(apr_uintptr_t))
+                         > min_curp[i]);
+
       while (can_read_word)
         {
           apr_uintptr_t chunk;
@@ -645,9 +664,8 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
           if (contains_eol(chunk))
             break;
 
-          for (i = 1, is_match = TRUE; i < file_len; i++)
-            is_match = is_match
-                       && (   chunk
+          for (i = 1, is_match = TRUE; is_match && i < file_len; i++)
+            is_match = (chunk
                            == *(const apr_uintptr_t *)
                                     (file_for_suffix[i].curp + 1
                                        - sizeof(apr_uintptr_t)));
@@ -666,7 +684,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
 
           /* We skipped some bytes, so there are no closing EOLs */
           had_nl = FALSE;
-          had_cr = FALSE;
         }
 
       /* The > min_curp[i] check leaves at least one final byte for checking
@@ -693,7 +710,7 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
      one file reaches its end. */
   do
     {
-      had_cr = FALSE;
+      svn_boolean_t had_cr = FALSE;
       while (!is_one_at_eof(file_for_suffix, file_len)
              && *file_for_suffix[0].curp != '\n'
              && *file_for_suffix[0].curp != '\r')
@@ -760,9 +777,10 @@ datasources_open(void *baton,
 {
   svn_diff__file_baton_t *file_baton = baton;
   struct file_info files[4];
-  apr_finfo_t finfo[4];
   apr_off_t length[4];
+#ifndef SVN_DISABLE_PREFIX_SUFFIX_SCANNING
   svn_boolean_t reached_one_eof;
+#endif
   apr_size_t i;
 
   /* Make sure prefix_lines and suffix_lines are set correctly, even if we
@@ -773,16 +791,16 @@ datasources_open(void *baton,
   /* Open datasources and read first chunk */
   for (i = 0; i < datasources_len; i++)
     {
+      svn_filesize_t filesize;
       struct file_info *file
           = &file_baton->files[datasource_to_index(datasources[i])];
       SVN_ERR(svn_io_file_open(&file->file, file->path,
                                APR_READ, APR_OS_DEFAULT, file_baton->pool));
-      SVN_ERR(svn_io_file_info_get(&finfo[i], APR_FINFO_SIZE,
-                                   file->file, file_baton->pool));
-      file->size = finfo[i].size;
-      length[i] = finfo[i].size > CHUNK_SIZE ? CHUNK_SIZE : finfo[i].size;
+      SVN_ERR(svn_io_file_size_get(&filesize, file->file, file_baton->pool));
+      file->size = filesize;
+      length[i] = filesize > CHUNK_SIZE ? CHUNK_SIZE : filesize;
       file->buffer = apr_palloc(file_baton->pool, (apr_size_t) length[i]);
-      SVN_ERR(read_chunk(file->file, file->path, file->buffer,
+      SVN_ERR(read_chunk(file->file, file->buffer,
                          length[i], 0, file_baton->pool));
       file->endp = file->buffer + length[i];
       file->curp = file->buffer;
@@ -948,9 +966,9 @@ datasource_get_next_token(apr_uint32_t *hash, void **token, void *baton,
          function.
 
          When changing things here, make sure the whitespace settings are
-         applied, or we mught not reach the exact suffix boundary as token
+         applied, or we might not reach the exact suffix boundary as token
          boundary. */
-      SVN_ERR(read_chunk(file->file, file->path,
+      SVN_ERR(read_chunk(file->file,
                          curp, length,
                          chunk_to_offset(file->chunk),
                          file_baton->pool));
@@ -1092,7 +1110,6 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
                 COMPARE_CHUNK_SIZE : raw_length[i];
 
               SVN_ERR(read_chunk(file[i]->file,
-                                 file[i]->path,
                                  bufp[i], length[i], offset[i],
                                  file_baton->pool));
               offset[i] += length[i];
@@ -1175,13 +1192,18 @@ static const apr_getopt_option_t diff_options[] =
   /* ### For compatibility; we don't support the argument to -u, because
    * ### we don't have optional argument support. */
   { "unified", 'u', 0, NULL },
+  { "context", 'U', 1, NULL },
   { NULL, 0, 0, NULL }
 };
 
 svn_diff_file_options_t *
 svn_diff_file_options_create(apr_pool_t *pool)
 {
-  return apr_pcalloc(pool, sizeof(svn_diff_file_options_t));
+  svn_diff_file_options_t * opts = apr_pcalloc(pool, sizeof(*opts));
+
+  opts->context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+
+  return opts;
 }
 
 /* A baton for use with opt_parsing_error_func(). */
@@ -1220,17 +1242,20 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
 {
   apr_getopt_t *os;
   struct opt_parsing_error_baton_t opt_parsing_error_baton;
-  /* Make room for each option (starting at index 1) plus trailing NULL. */
-  const char **argv = apr_palloc(pool, sizeof(char*) * (args->nelts + 2));
+  apr_array_header_t *argv;
 
   opt_parsing_error_baton.err = NULL;
   opt_parsing_error_baton.pool = pool;
 
-  argv[0] = "";
-  memcpy((void *) (argv + 1), args->elts, sizeof(char*) * args->nelts);
-  argv[args->nelts + 1] = NULL;
+  /* Make room for each option (starting at index 1) plus trailing NULL. */
+  argv = apr_array_make(pool, args->nelts + 2, sizeof(char*));
+  APR_ARRAY_PUSH(argv, const char *) = "";
+  apr_array_cat(argv, args);
+  APR_ARRAY_PUSH(argv, const char *) = NULL;
 
-  apr_getopt_init(&os, pool, args->nelts + 1, argv);
+  apr_getopt_init(&os, pool, 
+                  argv->nelts - 1 /* Exclude trailing NULL */,
+                  (const char *const *) argv->elts);
 
   /* Capture any error message from apr_getopt_long().  This will typically
    * say which option is wrong, which we would not otherwise know. */
@@ -1269,6 +1294,9 @@ svn_diff_file_options_parse(svn_diff_file_options_t *options,
           break;
         case 'p':
           options->show_c_function = TRUE;
+          break;
+        case 'U':
+          SVN_ERR(svn_cstring_atoi(&options->context_size, opt_arg));
           break;
         default:
           break;
@@ -1388,6 +1416,12 @@ typedef struct svn_diff__file_output_baton_t
   svn_stringbuf_t *extra_context;
   /* Extra context for the current hunk. */
   char hunk_extra_context[SVN_DIFF__EXTRA_CONTEXT_LENGTH + 1];
+
+  int context_size;
+
+  /* Cancel handler */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   apr_pool_t *pool;
 } svn_diff__file_output_baton_t;
@@ -1566,12 +1600,31 @@ output_unified_line(svn_diff__file_output_baton_t *baton,
   return SVN_NO_ERROR;
 }
 
+static APR_INLINE svn_error_t *
+output_unified_diff_range(svn_diff__file_output_baton_t *output_baton,
+                          int source,
+                          svn_diff__file_output_unified_type_e type,
+                          apr_off_t until,
+                          svn_cancel_func_t cancel_func,
+                          void *cancel_baton)
+{
+  while (output_baton->current_line[source] < until)
+    {
+      if (cancel_func)
+        SVN_ERR(cancel_func(cancel_baton));
+
+      SVN_ERR(output_unified_line(output_baton, type, source));
+    }
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
 {
   apr_off_t target_line;
   apr_size_t hunk_len;
-  int i;
+  apr_off_t old_start;
+  apr_off_t new_start;
 
   if (svn_stringbuf_isempty(baton->hunk))
     {
@@ -1580,28 +1633,29 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
     }
 
   target_line = baton->hunk_start[0] + baton->hunk_length[0]
-                + SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+                + baton->context_size;
 
   /* Add trailing context to the hunk */
-  while (baton->current_line[0] < target_line)
-    {
-      SVN_ERR(output_unified_line
-              (baton, svn_diff__file_output_unified_context, 0));
-    }
+  SVN_ERR(output_unified_diff_range(baton, 0 /* original */,
+                                    svn_diff__file_output_unified_context,
+                                    target_line,
+                                    baton->cancel_func, baton->cancel_baton));
+
+  old_start = baton->hunk_start[0];
+  new_start = baton->hunk_start[1];
 
   /* If the file is non-empty, convert the line indexes from
      zero based to one based */
-  for (i = 0; i < 2; i++)
-    {
-      if (baton->hunk_length[i] > 0)
-        baton->hunk_start[i]++;
-    }
+  if (baton->hunk_length[0])
+    old_start++;
+  if (baton->hunk_length[1])
+    new_start++;
 
   /* Write the hunk header */
   SVN_ERR(svn_diff__unified_write_hunk_header(
             baton->output_stream, baton->header_encoding, "@@",
-            baton->hunk_start[0], baton->hunk_length[0],
-            baton->hunk_start[1], baton->hunk_length[1],
+            old_start, baton->hunk_length[0],
+            new_start, baton->hunk_length[1],
             baton->hunk_extra_context,
             baton->pool));
 
@@ -1613,6 +1667,8 @@ output_unified_flush_hunk(svn_diff__file_output_baton_t *baton)
   /* Prepare for the next hunk */
   baton->hunk_length[0] = 0;
   baton->hunk_length[1] = 0;
+  baton->hunk_start[0] = 0;
+  baton->hunk_start[1] = 0;
   svn_stringbuf_setempty(baton->hunk);
 
   return SVN_NO_ERROR;
@@ -1625,95 +1681,132 @@ output_unified_diff_modified(void *baton,
   apr_off_t latest_start, apr_off_t latest_length)
 {
   svn_diff__file_output_baton_t *output_baton = baton;
-  apr_off_t target_line[2];
-  int i;
+  apr_off_t context_prefix_length;
+  apr_off_t prev_context_end;
+  svn_boolean_t init_hunk = FALSE;
 
-  target_line[0] = original_start >= SVN_DIFF__UNIFIED_CONTEXT_SIZE
-                   ? original_start - SVN_DIFF__UNIFIED_CONTEXT_SIZE : 0;
-  target_line[1] = modified_start;
+  if (original_start > output_baton->context_size)
+    context_prefix_length = output_baton->context_size;
+  else
+    context_prefix_length = original_start;
 
-  /* If the changed ranges are far enough apart (no overlapping or connecting
-     context), flush the current hunk, initialize the next hunk and skip the
-     lines not in context.  Also do this when this is the first hunk.
-   */
-  if (output_baton->current_line[0] < target_line[0]
-      && (output_baton->hunk_start[0] + output_baton->hunk_length[0]
-          + SVN_DIFF__UNIFIED_CONTEXT_SIZE < target_line[0]
-          || output_baton->hunk_length[0] == 0))
+  /* Calculate where the previous hunk will end if we would write it now
+     (including the necessary context at the end) */
+  if (output_baton->hunk_length[0] > 0 || output_baton->hunk_length[1] > 0)
     {
-      SVN_ERR(output_unified_flush_hunk(output_baton));
+      prev_context_end = output_baton->hunk_start[0]
+                         + output_baton->hunk_length[0]
+                         + output_baton->context_size;
+    }
+  else
+    {
+      prev_context_end = -1;
 
-      output_baton->hunk_start[0] = target_line[0];
-      output_baton->hunk_start[1] = target_line[1] + target_line[0]
-                                    - original_start;
+      if (output_baton->hunk_start[0] == 0
+          && (original_length > 0 || modified_length > 0))
+        init_hunk = TRUE;
+    }
 
-      /* Skip lines until we are at the beginning of the context we want to
-         display */
-      while (output_baton->current_line[0] < target_line[0])
+  /* If the changed range is far enough from the previous range, flush the current
+     hunk. */
+  {
+    apr_off_t new_hunk_start = (original_start - context_prefix_length);
+
+    if (output_baton->current_line[0] < new_hunk_start
+          && prev_context_end <= new_hunk_start)
+      {
+        SVN_ERR(output_unified_flush_hunk(output_baton));
+        init_hunk = TRUE;
+      }
+    else if (output_baton->hunk_length[0] > 0
+             || output_baton->hunk_length[1] > 0)
+      {
+        /* We extend the current hunk */
+
+
+        /* Original: Output the context preceding the changed range */
+        SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                          svn_diff__file_output_unified_context,
+                                          original_start,
+                                          output_baton->cancel_func,
+                                          output_baton->cancel_baton));
+      }
+  }
+
+  /* Original: Skip lines until we are at the beginning of the context we want
+     to display */
+  SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                    svn_diff__file_output_unified_skip,
+                                    original_start - context_prefix_length,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
+
+  /* Note that the above skip stores data for the show_c_function support below */
+
+  if (init_hunk)
+    {
+      SVN_ERR_ASSERT(output_baton->hunk_length[0] == 0
+                     && output_baton->hunk_length[1] == 0);
+
+      output_baton->hunk_start[0] = original_start - context_prefix_length;
+      output_baton->hunk_start[1] = modified_start - context_prefix_length;
+    }
+
+  if (init_hunk && output_baton->show_c_function)
+    {
+      apr_size_t p;
+      const char *invalid_character;
+
+      /* Save the extra context for later use.
+       * Note that the last byte of the hunk_extra_context array is never
+       * touched after it is zero-initialized, so the array is always
+       * 0-terminated. */
+      strncpy(output_baton->hunk_extra_context,
+              output_baton->extra_context->data,
+              SVN_DIFF__EXTRA_CONTEXT_LENGTH);
+      /* Trim whitespace at the end, most notably to get rid of any
+       * newline characters. */
+      p = strlen(output_baton->hunk_extra_context);
+      while (p > 0
+             && svn_ctype_isspace(output_baton->hunk_extra_context[p - 1]))
         {
-          SVN_ERR(output_unified_line(output_baton,
-                                      svn_diff__file_output_unified_skip, 0));
+          output_baton->hunk_extra_context[--p] = '\0';
         }
-
-      if (output_baton->show_c_function)
+      invalid_character =
+        svn_utf__last_valid(output_baton->hunk_extra_context,
+                            SVN_DIFF__EXTRA_CONTEXT_LENGTH);
+      for (p = invalid_character - output_baton->hunk_extra_context;
+           p < SVN_DIFF__EXTRA_CONTEXT_LENGTH; p++)
         {
-          apr_size_t p;
-          const char *invalid_character;
-
-          /* Save the extra context for later use.
-           * Note that the last byte of the hunk_extra_context array is never
-           * touched after it is zero-initialized, so the array is always
-           * 0-terminated. */
-          strncpy(output_baton->hunk_extra_context,
-                  output_baton->extra_context->data,
-                  SVN_DIFF__EXTRA_CONTEXT_LENGTH);
-          /* Trim whitespace at the end, most notably to get rid of any
-           * newline characters. */
-          p = strlen(output_baton->hunk_extra_context);
-          while (p > 0
-                 && svn_ctype_isspace(output_baton->hunk_extra_context[p - 1]))
-            {
-              output_baton->hunk_extra_context[--p] = '\0';
-            }
-          invalid_character =
-            svn_utf__last_valid(output_baton->hunk_extra_context,
-                                SVN_DIFF__EXTRA_CONTEXT_LENGTH);
-          for (p = invalid_character - output_baton->hunk_extra_context;
-               p < SVN_DIFF__EXTRA_CONTEXT_LENGTH; p++)
-            {
-              output_baton->hunk_extra_context[p] = '\0';
-            }
+          output_baton->hunk_extra_context[p] = '\0';
         }
     }
 
-  /* Skip lines until we are at the start of the changed range */
-  while (output_baton->current_line[1] < target_line[1])
-    {
-      SVN_ERR(output_unified_line(output_baton,
-                                  svn_diff__file_output_unified_skip, 1));
-    }
+  /* Modified: Skip lines until we are at the start of the changed range */
+  SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
+                                    svn_diff__file_output_unified_skip,
+                                    modified_start,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
 
-  /* Output the context preceding the changed range */
-  while (output_baton->current_line[0] < original_start)
-    {
-      SVN_ERR(output_unified_line(output_baton,
-                                  svn_diff__file_output_unified_context, 0));
-    }
+  /* Original: Output the context preceding the changed range */
+  SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                    svn_diff__file_output_unified_context,
+                                    original_start,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
 
-  target_line[0] = original_start + original_length;
-  target_line[1] = modified_start + modified_length;
-
-  /* Output the changed range */
-  for (i = 0; i < 2; i++)
-    {
-      while (output_baton->current_line[i] < target_line[i])
-        {
-          SVN_ERR(output_unified_line
-                          (output_baton,
-                           i == 0 ? svn_diff__file_output_unified_delete
-                                  : svn_diff__file_output_unified_insert, i));
-        }
-    }
+  /* Both: Output the changed range */
+  SVN_ERR(output_unified_diff_range(output_baton, 0 /* original */,
+                                    svn_diff__file_output_unified_delete,
+                                    original_start + original_length,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
+  SVN_ERR(output_unified_diff_range(output_baton, 1 /* modified */,
+                                    svn_diff__file_output_unified_insert,
+                                    modified_start + modified_length,
+                                    output_baton->cancel_func,
+                                    output_baton->cancel_baton));
 
   return SVN_NO_ERROR;
 }
@@ -1753,7 +1846,7 @@ static const svn_diff_output_fns_t svn_diff__file_output_unified_vtable =
 };
 
 svn_error_t *
-svn_diff_file_output_unified3(svn_stream_t *output_stream,
+svn_diff_file_output_unified4(svn_stream_t *output_stream,
                               svn_diff_t *diff,
                               const char *original_path,
                               const char *modified_path,
@@ -1762,16 +1855,20 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
                               const char *header_encoding,
                               const char *relative_to_dir,
                               svn_boolean_t show_c_function,
+                              int context_size,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
                               apr_pool_t *pool)
 {
   if (svn_diff_contains_diffs(diff))
     {
       svn_diff__file_output_baton_t baton;
-      const char **c;
       int i;
 
       memset(&baton, 0, sizeof(baton));
       baton.output_stream = output_stream;
+      baton.cancel_func = cancel_func;
+      baton.cancel_baton = cancel_baton;
       baton.pool = pool;
       baton.header_encoding = header_encoding;
       baton.path[0] = original_path;
@@ -1779,14 +1876,17 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
       baton.hunk = svn_stringbuf_create_empty(pool);
       baton.show_c_function = show_c_function;
       baton.extra_context = svn_stringbuf_create_empty(pool);
-      baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
+      baton.context_size = (context_size >= 0) ? context_size
+                                              : SVN_DIFF__UNIFIED_CONTEXT_SIZE;
 
-      c = apr_array_push(baton.extra_skip_match);
-      *c = "public:*";
-      c = apr_array_push(baton.extra_skip_match);
-      *c = "private:*";
-      c = apr_array_push(baton.extra_skip_match);
-      *c = "protected:*";
+      if (show_c_function)
+        {
+          baton.extra_skip_match = apr_array_make(pool, 3, sizeof(char **));
+
+          APR_ARRAY_PUSH(baton.extra_skip_match, const char *) = "public:*";
+          APR_ARRAY_PUSH(baton.extra_skip_match, const char *) = "private:*";
+          APR_ARRAY_PUSH(baton.extra_skip_match, const char *) = "protected:*";
+        }
 
       SVN_ERR(svn_utf_cstring_from_utf8_ex2(&baton.context_str, " ",
                                             header_encoding, pool));
@@ -1810,7 +1910,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
               else
                 return svn_error_createf(
                                    SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                   _("Path '%s' must be an immediate child of "
+                                   _("Path '%s' must be inside "
                                      "the directory '%s'"),
                                    svn_dirent_local_style(original_path, pool),
                                    svn_dirent_local_style(relative_to_dir,
@@ -1826,7 +1926,7 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
               else
                 return svn_error_createf(
                                    SVN_ERR_BAD_RELATIVE_PATH, NULL,
-                                   _("Path '%s' must be an immediate child of "
+                                   _("Path '%s' must be inside "
                                      "the directory '%s'"),
                                    svn_dirent_local_style(modified_path, pool),
                                    svn_dirent_local_style(relative_to_dir,
@@ -1842,22 +1942,23 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
 
       if (original_header == NULL)
         {
-          SVN_ERR(output_unified_default_hdr
-                  (&original_header, original_path, pool));
+          SVN_ERR(output_unified_default_hdr(&original_header, original_path,
+                                             pool));
         }
 
       if (modified_header == NULL)
         {
-          SVN_ERR(output_unified_default_hdr
-                  (&modified_header, modified_path, pool));
+          SVN_ERR(output_unified_default_hdr(&modified_header, modified_path,
+                                             pool));
         }
 
-      SVN_ERR(svn_diff__unidiff_write_header(
-                output_stream, header_encoding,
-                original_header, modified_header, pool));
+      SVN_ERR(svn_diff__unidiff_write_header(output_stream, header_encoding,
+                                             original_header, modified_header,
+                                             pool));
 
-      SVN_ERR(svn_diff_output(diff, &baton,
-                              &svn_diff__file_output_unified_vtable));
+      SVN_ERR(svn_diff_output2(diff, &baton,
+                               &svn_diff__file_output_unified_vtable,
+                               cancel_func, cancel_baton));
       SVN_ERR(output_unified_flush_hunk(&baton));
 
       for (i = 0; i < 2; i++)
@@ -1877,10 +1978,11 @@ svn_diff_file_output_unified3(svn_stream_t *output_stream,
    *pointers! */
 typedef struct context_saver_t {
   svn_stream_t *stream;
-  const char *data[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
-  apr_size_t len[SVN_DIFF__UNIFIED_CONTEXT_SIZE];
+  int context_size;
+  const char **data; /* const char *data[context_size] */
+  apr_size_t *len;   /* apr_size_t len[context_size] */
   apr_size_t next_slot;
-  apr_size_t total_written;
+  apr_ssize_t total_writes;
 } context_saver_t;
 
 
@@ -1890,10 +1992,14 @@ context_saver_stream_write(void *baton,
                            apr_size_t *len)
 {
   context_saver_t *cs = baton;
-  cs->data[cs->next_slot] = data;
-  cs->len[cs->next_slot] = *len;
-  cs->next_slot = (cs->next_slot + 1) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
-  cs->total_written++;
+
+  if (cs->context_size > 0)
+    {
+      cs->data[cs->next_slot] = data;
+      cs->len[cs->next_slot] = *len;
+      cs->next_slot = (cs->next_slot + 1) % cs->context_size;
+      cs->total_writes++;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1918,6 +2024,11 @@ typedef struct svn_diff3__file_output_baton_t
   const char *marker_eol;
 
   svn_diff_conflict_display_style_t conflict_style;
+  int context_size;
+
+  /* cancel support */
+  svn_cancel_func_t cancel_func;
+  void *cancel_baton;
 
   /* The rest of the fields are for
      svn_diff_conflict_display_only_conflicts only.  Note that for
@@ -1937,9 +2048,9 @@ flush_context_saver(context_saver_t *cs,
                     svn_stream_t *output_stream)
 {
   int i;
-  for (i = 0; i < SVN_DIFF__UNIFIED_CONTEXT_SIZE; i++)
+  for (i = 0; i < cs->context_size; i++)
     {
-      apr_size_t slot = (i + cs->next_slot) % SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+      apr_size_t slot = (i + cs->next_slot) % cs->context_size;
       if (cs->data[slot])
         {
           apr_size_t len = cs->len[slot];
@@ -1954,6 +2065,8 @@ make_context_saver(svn_diff3__file_output_baton_t *fob)
 {
   context_saver_t *cs;
 
+  assert(fob->context_size > 0); /* Or nothing to save */
+
   svn_pool_clear(fob->pool);
   cs = apr_pcalloc(fob->pool, sizeof(*cs));
   cs->stream = svn_stream_empty(fob->pool);
@@ -1961,10 +2074,13 @@ make_context_saver(svn_diff3__file_output_baton_t *fob)
   svn_stream_set_write(cs->stream, context_saver_stream_write);
   fob->context_saver = cs;
   fob->output_stream = cs->stream;
+  cs->context_size = fob->context_size;
+  cs->data = apr_pcalloc(fob->pool, sizeof(*cs->data) * cs->context_size);
+  cs->len = apr_pcalloc(fob->pool, sizeof(*cs->len) * cs->context_size);
 }
 
 
-/* A stream which prints SVN_DIFF__UNIFIED_CONTEXT_SIZE lines to
+/* A stream which prints LINES_TO_PRINT (based on context size) lines to
    BATON->REAL_OUTPUT_STREAM, and then changes BATON->OUTPUT_STREAM to
    a context_saver; used for *trailing* context. */
 
@@ -1999,7 +2115,7 @@ make_trailing_context_printer(svn_diff3__file_output_baton_t *btn)
   svn_pool_clear(btn->pool);
 
   tcp = apr_pcalloc(btn->pool, sizeof(*tcp));
-  tcp->lines_to_print = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
+  tcp->lines_to_print = btn->context_size;
   tcp->fob = btn;
   s = svn_stream_empty(btn->pool);
   svn_stream_set_baton(s, tcp);
@@ -2129,7 +2245,25 @@ static const svn_diff_output_fns_t svn_diff3__file_output_vtable =
   output_conflict
 };
 
+static svn_error_t *
+output_conflict_with_context_marker(svn_diff3__file_output_baton_t *btn,
+                                    const char *label,
+                                    apr_off_t start,
+                                    apr_off_t length)
+{
+  if (length == 1)
+    SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                              "%s (%" APR_OFF_T_FMT ")",
+                              label, start + 1));
+  else
+    SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
+                              "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")",
+                              label, start + 1, length));
 
+  SVN_ERR(output_marker_eol(btn));
+
+  return SVN_NO_ERROR;
+}
 
 static svn_error_t *
 output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
@@ -2144,7 +2278,7 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
      trailing context)?  If so, flush it. */
   if (btn->output_stream == btn->context_saver->stream)
     {
-      if (btn->context_saver->total_written > SVN_DIFF__UNIFIED_CONTEXT_SIZE)
+      if (btn->context_saver->total_writes > btn->context_size)
         SVN_ERR(svn_stream_puts(btn->real_output_stream, "@@\n"));
       SVN_ERR(flush_context_saver(btn->context_saver, btn->real_output_stream));
     }
@@ -2153,34 +2287,19 @@ output_conflict_with_context(svn_diff3__file_output_baton_t *btn,
   btn->output_stream = btn->real_output_stream;
 
   /* Output the conflict itself. */
-  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
-                            (modified_length == 1
-                             ? "%s (%" APR_OFF_T_FMT ")"
-                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
-                            btn->conflict_modified,
-                            modified_start + 1, modified_length));
-  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_modified,
+                                              modified_start, modified_length));
   SVN_ERR(output_hunk(btn, 1/*modified*/, modified_start, modified_length));
 
-  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
-                            (original_length == 1
-                             ? "%s (%" APR_OFF_T_FMT ")"
-                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
-                            btn->conflict_original,
-                            original_start + 1, original_length));
-  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_original,
+                                              original_start, original_length));
   SVN_ERR(output_hunk(btn, 0/*original*/, original_start, original_length));
 
   SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
                             "%s%s", btn->conflict_separator, btn->marker_eol));
   SVN_ERR(output_hunk(btn, 2/*latest*/, latest_start, latest_length));
-  SVN_ERR(svn_stream_printf(btn->output_stream, btn->pool,
-                            (latest_length == 1
-                             ? "%s (%" APR_OFF_T_FMT ")"
-                             : "%s (%" APR_OFF_T_FMT ",%" APR_OFF_T_FMT ")"),
-                            btn->conflict_latest,
-                            latest_start + 1, latest_length));
-  SVN_ERR(output_marker_eol(btn));
+  SVN_ERR(output_conflict_with_context_marker(btn, btn->conflict_latest,
+                                              latest_start, latest_length));
 
   /* Go into print-trailing-context mode instead. */
   make_trailing_context_printer(btn);
@@ -2209,8 +2328,10 @@ output_conflict(void *baton,
   if (style == svn_diff_conflict_display_resolved_modified_latest)
     {
       if (diff)
-        return svn_diff_output(diff, baton,
-                               &svn_diff3__file_output_vtable);
+        return svn_diff_output2(diff, baton,
+                                &svn_diff3__file_output_vtable,
+                                file_baton->cancel_func,
+                                file_baton->cancel_baton);
       else
         style = svn_diff_conflict_display_modified_latest;
     }
@@ -2253,7 +2374,7 @@ output_conflict(void *baton,
 }
 
 svn_error_t *
-svn_diff_file_output_merge2(svn_stream_t *output_stream,
+svn_diff_file_output_merge3(svn_stream_t *output_stream,
                             svn_diff_t *diff,
                             const char *original_path,
                             const char *modified_path,
@@ -2263,7 +2384,9 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
                             const char *conflict_latest,
                             const char *conflict_separator,
                             svn_diff_conflict_display_style_t style,
-                            apr_pool_t *pool)
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            apr_pool_t *scratch_pool)
 {
   svn_diff3__file_output_baton_t baton;
   apr_file_t *file[3];
@@ -2276,9 +2399,10 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
     (style == svn_diff_conflict_display_only_conflicts);
 
   memset(&baton, 0, sizeof(baton));
+  baton.context_size = SVN_DIFF__UNIFIED_CONTEXT_SIZE;
   if (conflicts_only)
     {
-      baton.pool = svn_pool_create(pool);
+      baton.pool = svn_pool_create(scratch_pool);
       make_context_saver(&baton);
       baton.real_output_stream = output_stream;
     }
@@ -2289,33 +2413,33 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
   baton.path[2] = latest_path;
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_modified,
                                     conflict_modified ? conflict_modified
-                                    : apr_psprintf(pool, "<<<<<<< %s",
+                                    : apr_psprintf(scratch_pool, "<<<<<<< %s",
                                                    modified_path),
-                                    pool));
+                                    scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_original,
                                     conflict_original ? conflict_original
-                                    : apr_psprintf(pool, "||||||| %s",
+                                    : apr_psprintf(scratch_pool, "||||||| %s",
                                                    original_path),
-                                    pool));
+                                    scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_separator,
                                     conflict_separator ? conflict_separator
-                                    : "=======", pool));
+                                    : "=======", scratch_pool));
   SVN_ERR(svn_utf_cstring_from_utf8(&baton.conflict_latest,
                                     conflict_latest ? conflict_latest
-                                    : apr_psprintf(pool, ">>>>>>> %s",
+                                    : apr_psprintf(scratch_pool, ">>>>>>> %s",
                                                    latest_path),
-                                    pool));
+                                    scratch_pool));
 
   baton.conflict_style = style;
 
   for (idx = 0; idx < 3; idx++)
     {
-      apr_off_t size;
+      apr_size_t size;
 
       SVN_ERR(map_or_read_file(&file[idx],
                                MMAP_T_ARG(mm[idx])
                                &baton.buffer[idx], &size,
-                               baton.path[idx], pool));
+                               baton.path[idx], scratch_pool));
 
       baton.curp[idx] = baton.buffer[idx];
       baton.endp[idx] = baton.buffer[idx];
@@ -2333,8 +2457,12 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
     eol = APR_EOL_STR;
   baton.marker_eol = eol;
 
-  SVN_ERR(svn_diff_output(diff, &baton,
-                          &svn_diff3__file_output_vtable));
+  baton.cancel_func = cancel_func;
+  baton.cancel_baton = cancel_baton;
+
+  SVN_ERR(svn_diff_output2(diff, &baton,
+                          &svn_diff3__file_output_vtable,
+                          cancel_func, cancel_baton));
 
   for (idx = 0; idx < 3; idx++)
     {
@@ -2352,7 +2480,7 @@ svn_diff_file_output_merge2(svn_stream_t *output_stream,
 
       if (file[idx])
         {
-          SVN_ERR(svn_io_file_close(file[idx], pool));
+          SVN_ERR(svn_io_file_close(file[idx], scratch_pool));
         }
     }
 

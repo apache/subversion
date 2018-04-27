@@ -73,14 +73,14 @@ def parse_args(args):
 
 
 def prompt_func_ssl_unknown_cert(realm, failures, cert_info, may_save, pool):
-  print "The certficate details are as follows:"
-  print "--------------------------------------"
-  print "Issuer     : " + str(cert_info.issuer_dname)
-  print "Hostname   : " + str(cert_info.hostname)
-  print "ValidFrom  : " + str(cert_info.valid_from)
-  print "ValidUpto  : " + str(cert_info.valid_until)
-  print "Fingerprint: " + str(cert_info.fingerprint)
-  print ""
+  print( "The certficate details are as follows:")
+  print("--------------------------------------")
+  print("Issuer     : " + str(cert_info.issuer_dname))
+  print("Hostname   : " + str(cert_info.hostname))
+  print("ValidFrom  : " + str(cert_info.valid_from))
+  print("ValidUpto  : " + str(cert_info.valid_until))
+  print("Fingerprint: " + str(cert_info.fingerprint))
+  print("")
   ssl_trust = core.svn_auth_cred_ssl_server_trust_t()
   if may_save:
     choice = raw_input( "accept (t)temporarily   (p)permanently: ")
@@ -111,7 +111,7 @@ def prompt_func_gnome_keyring_prompt(keyring, pool):
 def main():
   try:
     url, peg_revision, start_revision, end_revision = parse_args(sys.argv[1:])
-  except Exception, e:
+  except Exception as e:
     sys.stderr.write("""Usage: %s URL[@PEG-REV] [START-REV[:END-REV]]
 
 Trace the history of URL@PEG-REV, printing the location(s) of its

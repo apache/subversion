@@ -63,7 +63,7 @@ typedef enum svn_sqlite__mode_e {
 typedef svn_error_t *(*svn_sqlite__func_t)(svn_sqlite__context_t *sctx,
                                            int argc,
                                            svn_sqlite__value_t *values[],
-                                           apr_pool_t *scatch_pool);
+                                           void *baton);
 
 
 /* Step the given statement; if it returns SQLITE_DONE, reset the statement.
@@ -117,12 +117,16 @@ svn_sqlite__read_schema_version(int *version,
    STATEMENTS itself may be NULL, in which case it has no impact.
    See svn_sqlite__get_statement() for how these strings are used.
 
+   TIMEOUT defines the SQLite busy timeout, values <= 0 cause a Subversion
+   default to be used.
+
    The statements will be finalized and the SQLite database will be closed
    when RESULT_POOL is cleaned up. */
 svn_error_t *
-svn_sqlite__open(svn_sqlite__db_t **db, const char *repos_path,
+svn_sqlite__open(svn_sqlite__db_t **db, const char *path,
                  svn_sqlite__mode_t mode, const char * const statements[],
                  int latest_schema, const char * const *upgrade_sql,
+                 apr_int32_t timeout,
                  apr_pool_t *result_pool, apr_pool_t *scratch_pool);
 
 /* Explicitly close the connection in DB. */
@@ -130,11 +134,16 @@ svn_error_t *
 svn_sqlite__close(svn_sqlite__db_t *db);
 
 /* Add a custom function to be used with this database connection.  The data
-   in BATON should live at least as long as the connection in DB. */
+   in BATON should live at least as long as the connection in DB.
+
+   Pass TRUE if the result of the function is constant within a statement with
+   a specific set of argument values and FALSE if not (or when in doubt). When
+   TRUE newer Sqlite versions use this knowledge for query optimizations. */
 svn_error_t *
 svn_sqlite__create_scalar_function(svn_sqlite__db_t *db,
                                    const char *func_name,
                                    int argc,
+                                   svn_boolean_t deterministic,
                                    svn_sqlite__func_t func,
                                    void *baton);
 
@@ -169,8 +178,8 @@ svn_sqlite__get_statement(svn_sqlite__stmt_t **stmt, svn_sqlite__db_t *db,
    b     const void *              Blob data
          apr_size_t                Blob length
    r     svn_revnum_t              Revision number
-   t     const svn_token_t *       Token mapping table
-         int value                 Token value
+   t     const svn_token_map_t *   Token mapping table
+         int                       Token value
 
   Each character in FMT maps to one SQL parameter, and one or two function
   parameters, in the order they appear.
@@ -246,17 +255,25 @@ svn_sqlite__bind_checksum(svn_sqlite__stmt_t *stmt,
 */
 
 /* Wrapper around sqlite3_column_blob and sqlite3_column_bytes. The return
-   value will be NULL if the column is null. If RESULT_POOL is not NULL,
-   allocate the return value (if any) in it. Otherwise, the value will
-   become invalid on the next invocation of svn_sqlite__column_* */
+   value will be NULL if the column is null.
+
+   If RESULT_POOL is not NULL, allocate the return value (if any) in it.
+   If RESULT_POOL is NULL, the return value will be valid until an
+   invocation of svn_sqlite__column_* performs a data type conversion (as
+   described in the SQLite documentation) or the statement is stepped or
+   reset or finalized. */
 const void *
 svn_sqlite__column_blob(svn_sqlite__stmt_t *stmt, int column,
                         apr_size_t *len, apr_pool_t *result_pool);
 
 /* Wrapper around sqlite3_column_text. If the column is null, then the
-   return value will be NULL. If RESULT_POOL is not NULL, allocate the
-   return value (if any) in it. Otherwise, the value will become invalid
-   on the next invocation of svn_sqlite__column_* */
+   return value will be NULL.
+
+   If RESULT_POOL is not NULL, allocate the return value (if any) in it.
+   If RESULT_POOL is NULL, the return value will be valid until an
+   invocation of svn_sqlite__column_* performs a data type conversion (as
+   described in the SQLite documentation) or the statement is stepped or
+   reset or finalized. */
 const char *
 svn_sqlite__column_text(svn_sqlite__stmt_t *stmt, int column,
                         apr_pool_t *result_pool);
@@ -298,7 +315,7 @@ svn_sqlite__column_token_null(svn_sqlite__stmt_t *stmt,
                               int null_val);
 
 /* Return the column as a hash of const char * => const svn_string_t *.
-   If the column is null, then NULL will be stored into *PROPS. The
+   If the column is null, then set *PROPS to NULL. The
    results will be allocated in RESULT_POOL, and any temporary allocations
    will be made in SCRATCH_POOL. */
 svn_error_t *
@@ -310,7 +327,7 @@ svn_sqlite__column_properties(apr_hash_t **props,
 
 /* Return the column as an array of depth-first ordered array of
    svn_prop_inherited_item_t * structures.  If the column is null, then
-   *props is set to NULL. The results will be allocated in RESULT_POOL,
+   set *IPROPS to NULL. The results will be allocated in RESULT_POOL,
    and any temporary allocations will be made in SCRATCH_POOL. */
 svn_error_t *
 svn_sqlite__column_iprops(apr_array_header_t **iprops,
@@ -336,6 +353,11 @@ svn_sqlite__column_is_null(svn_sqlite__stmt_t *stmt, int column);
    0 for NULL columns. */
 int
 svn_sqlite__column_bytes(svn_sqlite__stmt_t *stmt, int column);
+
+/* When Subversion is compiled in maintainer mode: enables the sqlite error
+   logging to SVN_DBG_OUTPUT. */
+void
+svn_sqlite__dbg_enable_errorlog(void);
 
 
 /* --------------------------------------------------------------------- */
@@ -363,6 +385,9 @@ svn_sqlite__result_null(svn_sqlite__context_t *sctx);
 
 void
 svn_sqlite__result_int64(svn_sqlite__context_t *sctx, apr_int64_t val);
+
+void
+svn_sqlite__result_error(svn_sqlite__context_t *sctx, const char *msg, int num);
 
 
 /* --------------------------------------------------------------------- */
@@ -476,6 +501,32 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
     SVN_ERR(svn_sqlite__finish_savepoint(svn_sqlite__db, svn_sqlite__err));   \
   } while (0)
 
+/* Evaluate the expression EXPR1..EXPR4 within a 'savepoint'.  Savepoints can
+ * be nested.
+ *
+ * Begin a savepoint in DB; evaluate the expression EXPR1, which would
+ * typically be a function call that does some work in DB; if no error occurred,
+ * run EXPR2; if no error occurred EXPR3; ... and finally release
+ * the savepoint if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * to the savepoint and then release it.
+ */
+#define SVN_SQLITE__WITH_LOCK4(expr1, expr2, expr3, expr4, db)                \
+  do {                                                                        \
+    svn_sqlite__db_t *svn_sqlite__db = (db);                                  \
+    svn_error_t *svn_sqlite__err;                                             \
+                                                                              \
+    SVN_ERR(svn_sqlite__begin_savepoint(svn_sqlite__db));                     \
+    svn_sqlite__err = (expr1);                                                \
+    if (!svn_sqlite__err)                                                     \
+      svn_sqlite__err = (expr2);                                              \
+    if (!svn_sqlite__err)                                                     \
+      svn_sqlite__err = (expr3);                                              \
+    if (!svn_sqlite__err)                                                     \
+      svn_sqlite__err = (expr4);                                              \
+    SVN_ERR(svn_sqlite__finish_savepoint(svn_sqlite__db, svn_sqlite__err));   \
+  } while (0)
+
+
 /* Helper function to handle several SQLite operations inside a shared lock.
    This callback is similar to svn_sqlite__with_transaction(), but can be
    nested (even with a transaction).
@@ -488,7 +539,7 @@ svn_sqlite__with_immediate_transaction(svn_sqlite__db_t *db,
    SCRATCH_POOL will be passed to the callback (NULL is valid).
 
    ### Since we now require SQLite >= 3.6.18, this function has the effect of
-       always behaving like a defered transaction.  Can it be combined with
+       always behaving like a deferred transaction.  Can it be combined with
        svn_sqlite__with_transaction()?
  */
 svn_error_t *
@@ -503,6 +554,15 @@ svn_error_t *
 svn_sqlite__hotcopy(const char *src_path,
                     const char *dst_path,
                     apr_pool_t *scratch_pool);
+
+/* Evaluate the expression EXPR.  If any error is returned, close
+ * the connection in DB. */
+#define SVN_SQLITE__ERR_CLOSE(expr, db) do                            \
+{                                                                     \
+  svn_error_t *svn__err = (expr);                                     \
+  if (svn__err)                                                       \
+    return svn_error_compose_create(svn__err, svn_sqlite__close(db)); \
+} while (0)
 
 #ifdef __cplusplus
 }

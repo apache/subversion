@@ -53,6 +53,12 @@ from gen_base import build_path_join, build_path_strip, build_path_splitfile, \
       build_path_basename, build_path_dirname, build_path_retreat, unique
 
 
+def _normstr(x):
+  if os.sep == '/':
+    return os.path.normpath(str(x))
+  else:
+    return os.path.normpath(str(x).replace('/', os.sep)).replace(os.sep, '/')
+
 class Generator(gen_base.GeneratorBase):
 
   _extension_map = {
@@ -62,6 +68,8 @@ class Generator(gen_base.GeneratorBase):
     ('lib', 'object'): '.lo',
     ('pyd', 'target'): '.la',
     ('pyd', 'object'): '.lo',
+    ('so', 'target'): '.la',
+    ('so', 'object'): '.lo',
     }
 
   def __init__(self, fname, verfname, options=None):
@@ -230,12 +238,14 @@ class Generator(gen_base.GeneratorBase):
 
       # get the source items (.o and .la) for the link unit
       objects = [ ]
+      objdeps = [ ]
       object_srcs = [ ]
       headers = [ ]
       header_classes = [ ]
       header_class_filenames = [ ]
       deps = [ ]
       libs = [ ]
+      add_deps = target_ob.add_deps.split()
 
       for link_dep in self.graph.get_sources(gen_base.DT_LINK, target_ob.name):
         if isinstance(link_dep, gen_base.TargetJava):
@@ -260,6 +270,7 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(link_dep, gen_base.ObjectFile):
           # link in the object file
           objects.append(link_dep.filename)
+          objdeps.append(_normstr(link_dep.filename))
           for dep in self.graph.get_sources(gen_base.DT_OBJECT, link_dep, gen_base.SourceFile):
             object_srcs.append(
               build_path_join('$(abs_srcdir)', dep.filename))
@@ -286,8 +297,9 @@ class Generator(gen_base.GeneratorBase):
                             varname=targ_varname,
                             path=path,
                             install=None,
-                            add_deps=target_ob.add_deps,
+                            add_deps=add_deps,
                             objects=objects,
+                            objdeps=objdeps,
                             deps=deps,
                             when=target_ob.when,
                             )
@@ -371,23 +383,29 @@ class Generator(gen_base.GeneratorBase):
       # get the output files for these targets, sorted in dependency order
       files = gen_base._sorted_files(self.graph, area)
 
-      ezt_area = _eztdata(type=area, files=[ ], apache_files=[ ],
-                          extra_install=None)
+      ezt_area_type = (area == 'apache-mod' and 'mods-shared' or area)
+      ezt_area = _eztdata(type=ezt_area_type, files=[], extra_install=None)
+
+      def file_to_eztdata(file):
+          # cd to dirname before install to work around libtool 1.4.2 bug.
+          dirname, fname = build_path_splitfile(file.filename)
+          return _eztdata(mode=None,
+                          dirname=dirname, fullname=file.filename,
+                          filename=fname, when=file.when,
+                          pc_fullname=None,
+                          pc_installdir=None,
+                          pc_install_fname=None,)
 
       def apache_file_to_eztdata(file):
           # cd to dirname before install to work around libtool 1.4.2 bug.
           dirname, fname = build_path_splitfile(file.filename)
           base, ext = os.path.splitext(fname)
           name = base.replace('mod_', '')
-          return _eztdata(fullname=file.filename, dirname=dirname,
+          return _eztdata(mode='apache-mod',
+                          fullname=file.filename, dirname=dirname,
                           name=name, filename=fname, when=file.when)
-      if area == 'apache-mod':
-        data.areas.append(ezt_area)
 
-        for file in files:
-          ezt_area.files.append(apache_file_to_eztdata(file))
-
-      elif area != 'test' and area != 'bdb-test':
+      if area != 'test' and area != 'bdb-test':
         data.areas.append(ezt_area)
 
         area_var = area.replace('-', '_')
@@ -395,29 +413,29 @@ class Generator(gen_base.GeneratorBase):
         ezt_area.varname = area_var
         ezt_area.uppervar = upper_var
 
-        # ### TODO: This is a hack.  See discussion here:
-        # ### http://mid.gmane.org/20120316191639.GA28451@daniel3.local
-        apache_files = [gen_base.FileInfo(t.filename, t.when)
-                        for t in inst_targets
-                        if isinstance(t, gen_base.TargetApacheMod)]
-
-        files = [f for f in files if f not in apache_files]
-        for file in apache_files:
-          ezt_area.apache_files.append(apache_file_to_eztdata(file))
         for file in files:
-          # cd to dirname before install to work around libtool 1.4.2 bug.
-          dirname, fname = build_path_splitfile(file.filename)
-          ezt_file = _eztdata(dirname=dirname, fullname=file.filename,
-                              filename=fname, when=file.when)
-          if area == 'locale':
-            lang, objext = os.path.splitext(fname)
-            installdir = '$(DESTDIR)$(%sdir)/%s/LC_MESSAGES' % (area_var, lang)
-            ezt_file.installdir = installdir
-            ezt_file.objext = objext
+          if isinstance(file.target, gen_base.TargetApacheMod):
+            ezt_file = apache_file_to_eztdata(file)
           else:
-            ezt_file.install_fname = build_path_join('$(%sdir)' % area_var,
-                                                     fname)
+            ezt_file = file_to_eztdata(file)
+            if area == 'locale':
+              lang, objext = os.path.splitext(ezt_file.filename)
+              installdir = ('$(DESTDIR)$(%sdir)/%s/LC_MESSAGES'
+                            % (area_var, lang))
+              ezt_file.installdir = installdir
+              ezt_file.objext = objext
+            else:
+              ezt_file.install_fname = build_path_join('$(%sdir)' % area_var,
+                                                       ezt_file.filename)
 
+          # Install pkg-config files
+          if (isinstance(file.target, gen_base.TargetLib) and
+              ezt_file.fullname.startswith('subversion/libsvn_')):
+            ezt_file.pc_fullname = ezt_file.fullname.replace('-1.la', '.pc')
+            ezt_file.pc_installdir = '$(pkgconfig_dir)'
+            pc_install_fname = ezt_file.filename.replace('-1.la', '.pc')
+            ezt_file.pc_install_fname = build_path_join(ezt_file.pc_installdir,
+                                                        pc_install_fname)
           ezt_area.files.append(ezt_file)
 
         # certain areas require hooks for extra install rules defined
@@ -458,16 +476,16 @@ class Generator(gen_base.GeneratorBase):
                       key=lambda t: t[0].filename)
 
     for objname, sources in obj_deps:
-      dep = _eztdata(name=str(objname),
+      dep = _eztdata(name=_normstr(objname),
                      when=objname.when,
-                     deps=list(map(str, sources)),
+                     deps=list(map(_normstr, sources)),
                      cmd=objname.compile_cmd,
-                     source=str(sources[0]))
+                     source=_normstr(sources[0]))
       data.deps.append(dep)
       dep.generated = ezt.boolean(getattr(objname, 'source_generated', 0))
 
     template = ezt.Template(os.path.join('build', 'generator', 'templates',
-                                         'makefile.ezt'),
+                                         'build-outputs.mk.ezt'),
                             compress_whitespace=False)
     template.generate(open('build-outputs.mk', 'w'), data)
 
@@ -475,11 +493,15 @@ class Generator(gen_base.GeneratorBase):
 
     self.write_transform_libtool_scripts(install_sources)
 
+    self.write_pkg_config_dot_in_files(install_sources)
+
   def write_standalone(self):
     """Write autogen-standalone.mk"""
 
     standalone = open("autogen-standalone.mk", "w")
-    standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
+    standalone.write('# DO NOT EDIT -- AUTOMATICALLY GENERATED '
+                     'BY build/generator/gen_make.py\n')
+    standalone.write('# FROM build-outputs.mk\n')
     standalone.write('abs_srcdir = %s\n' % os.getcwd())
     standalone.write('abs_builddir = %s\n' % os.getcwd())
     standalone.write('top_srcdir = .\n')
@@ -495,7 +517,7 @@ class Generator(gen_base.GeneratorBase):
     script = 'build/transform_libtool_scripts.sh'
     fd = open(script, 'w')
     fd.write('''#!/bin/sh
-# DO NOT EDIT -- AUTOMATICALLY GENERATED
+# DO NOT EDIT -- AUTOMATICALLY GENERATED BY build/generator/gen_make.py
 
 transform()
 {
@@ -583,6 +605,62 @@ DIR=`pwd`
         libs.update(('libsvn_auth_gnome_keyring', 'libsvn_auth_kwallet'))
       libdep_cache[target_name] = sorted(libs)
     return libdep_cache[target_name]
+
+  def write_pkg_config_dot_in_files(self, install_sources):
+    """Write pkg-config .pc.in files for Subversion libraries."""
+    for target_ob in install_sources:
+      if not (isinstance(target_ob, gen_base.TargetLib) and
+              target_ob.path.startswith('subversion/libsvn_')):
+        continue
+
+      lib_name = target_ob.name
+      lib_path = self.sections[lib_name].options.get('path')
+      lib_deps = self.sections[lib_name].options.get('libs')
+      lib_desc = self.sections[lib_name].options.get('description')
+      output_path = build_path_join(lib_path, lib_name + '.pc.in')
+      template = ezt.Template(os.path.join('build', 'generator', 'templates',
+                                           'pkg-config.in.ezt'),
+                              compress_whitespace=False)
+      class _eztdata(object):
+        def __init__(self, **kw):
+          vars(self).update(kw)
+
+      data = _eztdata(
+        lib_name=lib_name,
+        lib_desc=lib_desc,
+        lib_deps=[],
+        lib_required=[],
+        lib_required_private=[],
+        )
+      # libsvn_foo -> -lsvn_foo
+      data.lib_deps.append('-l%s' % lib_name.replace('lib', '', 1))
+      for lib_dep in lib_deps.split():
+        if lib_dep == 'apriconv':
+          # apriconv is part of apr-util, skip it
+          continue
+        external_lib = self.sections[lib_dep].options.get('external-lib')
+        if external_lib:
+          ### Some of Subversion's internal libraries can appear as external
+          ### libs to handle conditional compilation. Skip these for now.
+          if external_lib in ['$(SVN_RA_LIB_LINK)', '$(SVN_FS_LIB_LINK)']:
+            continue
+          # If the external library is known to support pkg-config,
+          # add it to the Required: or Required.private: section.
+          # Otherwise, add the external library to linker flags.
+          pkg_config = self.sections[lib_dep].options.get('pkg-config')
+          if pkg_config:
+            private = self.sections[lib_dep].options.get('pkg-config-private')
+            if private:
+              data.lib_required_private.append(pkg_config)
+            else:
+              data.lib_required.append(pkg_config)
+          else:
+            # $(EXTERNAL_LIB) -> @EXTERNAL_LIB@
+            data.lib_deps.append('@%s@' % external_lib[2:-1])
+        else:
+          data.lib_required_private.append(lib_dep)
+
+      template.generate(open(output_path, 'w'), data)
 
 class UnknownDependency(Exception):
   "We don't know how to deal with the dependent to link it in."

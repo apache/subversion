@@ -27,6 +27,7 @@
 
 #include <serf.h>
 
+#include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_ra.h"
@@ -42,7 +43,7 @@
  * This enum represents the current state of our XML parsing for a REPORT.
  */
 enum loc_state_e {
-  INITIAL = 0,
+  INITIAL = XML_STATE_INITIAL,
   REPORT,
   LOCATION
 };
@@ -89,11 +90,16 @@ getloc_closed(svn_ra_serf__xml_estate_t *xes,
 
   SVN_ERR_ASSERT(leaving_state == LOCATION);
 
-  revstr = apr_hash_get(attrs, "rev", APR_HASH_KEY_STRING);
-  path = apr_hash_get(attrs, "path", APR_HASH_KEY_STRING);
+  revstr = svn_hash_gets(attrs, "rev");
+  path = svn_hash_gets(attrs, "path");
   if (revstr != NULL && path != NULL)
     {
-      svn_revnum_t rev = SVN_STR_TO_REV(revstr);
+      apr_int64_t rev_val;
+      svn_revnum_t rev;
+
+      SVN_ERR(svn_cstring_atoi64(&rev_val, revstr));
+      rev = (svn_revnum_t)rev_val;
+
       apr_hash_set(loc_ctx->paths,
                    apr_pmemdup(loc_ctx->pool, &rev, sizeof(rev)), sizeof(rev),
                    apr_pstrdup(loc_ctx->pool, path));
@@ -108,7 +114,8 @@ static svn_error_t *
 create_get_locations_body(serf_bucket_t **body_bkt,
                           void *baton,
                           serf_bucket_alloc_t *alloc,
-                          apr_pool_t *pool)
+                          apr_pool_t *pool /* request pool */,
+                          apr_pool_t *scratch_pool)
 {
   serf_bucket_t *buckets;
   loc_context_t *loc_ctx = baton;
@@ -120,7 +127,7 @@ create_get_locations_body(serf_bucket_t **body_bkt,
                                     "S:get-locations",
                                     "xmlns:S", SVN_XML_NAMESPACE,
                                     "xmlns:D", "DAV:",
-                                    NULL);
+                                    SVN_VA_NULL);
 
   svn_ra_serf__add_tag_buckets(buckets,
                                "S:path", loc_ctx->path,
@@ -158,7 +165,6 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   svn_ra_serf__handler_t *handler;
   svn_ra_serf__xml_context_t *xmlctx;
   const char *req_url;
-  svn_error_t *err;
 
   loc_ctx = apr_pcalloc(pool, sizeof(*loc_ctx));
   loc_ctx->pool = pool;
@@ -170,31 +176,25 @@ svn_ra_serf__get_locations(svn_ra_session_t *ra_session,
   *locations = loc_ctx->paths;
 
   SVN_ERR(svn_ra_serf__get_stable_url(&req_url, NULL /* latest_revnum */,
-                                      session, NULL /* conn */,
-                                      NULL /* url */, peg_revision,
+                                      session,  NULL /* url */, peg_revision,
                                       pool, pool));
 
   xmlctx = svn_ra_serf__xml_context_create(getloc_ttable,
                                            NULL, getloc_closed, NULL,
                                            loc_ctx,
                                            pool);
-  handler = svn_ra_serf__create_expat_handler(xmlctx, pool);
+  handler = svn_ra_serf__create_expat_handler(session, xmlctx, NULL, pool);
 
   handler->method = "REPORT";
   handler->path = req_url;
   handler->body_delegate = create_get_locations_body;
   handler->body_delegate_baton = loc_ctx;
   handler->body_type = "text/xml";
-  handler->conn = session->conns[0];
-  handler->session = session;
 
-  err = svn_ra_serf__context_run_one(handler, pool);
+  SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
-  SVN_ERR(svn_error_compose_create(
-              svn_ra_serf__error_on_status(handler->sline.code,
-                                           req_url,
-                                           handler->location),
-              err));
+  if (handler->sline.code != 200)
+    SVN_ERR(svn_ra_serf__unexpected_status(handler));
 
   return SVN_NO_ERROR;
 }

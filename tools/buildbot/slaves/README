@@ -31,9 +31,6 @@ Current botnames include the OS+version, compiler and processor architecture.
 - username and password for the FTP server where you can send the test log-
   files.
 
-The buildmaster administrator for http://www.mobsol.be/buildbot/ can be 
-reached at lgo@mobsol.be.
-
 Make sure you fill in the info/host file with some information concerning your
 buildslave.
 

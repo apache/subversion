@@ -73,7 +73,6 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
     wc_empty = sbox.wc_dir + '-depth-empty'
     sbox.add_test_path(wc_empty, True)
     svntest.actions.run_and_verify_svn(
-      "Unexpected error from co --depth=empty",
       svntest.verify.AnyOutput, [],
       "co", "--depth", "empty", sbox.repo_url, wc_empty)
 
@@ -82,7 +81,6 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
     wc_files = sbox.wc_dir + '-depth-files'
     sbox.add_test_path(wc_files, True)
     svntest.actions.run_and_verify_svn(
-      "Unexpected error from co --depth=files",
       svntest.verify.AnyOutput, [],
       "co", "--depth", "files", sbox.repo_url, wc_files)
 
@@ -91,7 +89,6 @@ def set_up_depthy_working_copies(sbox, empty=False, files=False,
     wc_immediates = sbox.wc_dir + '-depth-immediates'
     sbox.add_test_path(wc_immediates, True)
     svntest.actions.run_and_verify_svn(
-      "Unexpected error from co --depth=immediates",
       svntest.verify.AnyOutput, [],
       "co", "--depth", "immediates",
       sbox.repo_url, wc_immediates)
@@ -102,7 +99,7 @@ def verify_depth(msg, depth, path="."):
   """Verifies that PATH has depth DEPTH.  MSG is the failure message."""
   if depth == "infinity":
     # Check for absence of depth line.
-    exit_code, out, err = svntest.actions.run_and_verify_svn(None, None,
+    exit_code, out, err = svntest.actions.run_and_verify_svn(None,
                                                              [], "info", path)
     for line in out:
       if line.startswith("Depth:"):
@@ -111,7 +108,7 @@ def verify_depth(msg, depth, path="."):
     expected_stdout = svntest.verify.ExpectedOutput("Depth: %s\n" % depth,
                                                     match_all=False)
     svntest.actions.run_and_verify_svn(
-      msg, expected_stdout, [], "info", path)
+      expected_stdout, [], "info", path)
 
 #----------------------------------------------------------------------
 # Ensure that 'checkout --depth=empty' results in a depth-empty working copy.
@@ -144,8 +141,7 @@ def depth_files_same_as_nonrecursive(sbox, opt):
   if os.path.exists(sbox.wc_dir):
     svntest.main.safe_rmtree(sbox.wc_dir)
 
-  svntest.actions.run_and_verify_svn("Unexpected error during co %s" % opt,
-                                     svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      "co", opt, sbox.repo_url, sbox.wc_dir)
 
   # Should create a depth-files top directory, so both iota and A
@@ -187,8 +183,7 @@ def depth_empty_update_bypass_single_file(sbox):
   expected_status.tweak('iota', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update the depth-empty wc, expecting not to receive the change to iota.
   expected_output = svntest.wc.State(wc_empty, { })
@@ -198,8 +193,7 @@ def depth_empty_update_bypass_single_file(sbox):
   svntest.actions.run_and_verify_update(wc_empty,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+                                        expected_status)
 
   # And the wc should still be depth-empty.
   verify_depth(None, "empty", wc_empty)
@@ -210,7 +204,7 @@ def depth_empty_update_bypass_single_file(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         "--depth=infinity", wc_empty)
 
   # And the wc should still be depth-empty.
@@ -239,8 +233,7 @@ def depth_immediates_get_top_file_mod_only(sbox):
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update the depth-immediates wc, expecting to receive only the
   # change to iota.
@@ -259,8 +252,7 @@ def depth_immediates_get_top_file_mod_only(sbox):
   svntest.actions.run_and_verify_update(wc_immediates,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+                                        expected_status)
   verify_depth(None, "immediates", wc_immediates)
 
 
@@ -275,7 +267,7 @@ def depth_empty_commit(sbox):
   wc_empty_iota = os.path.join(wc_empty, 'iota')
 
   # Update 'iota' in the depth-empty working copy and modify it
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', wc_empty_iota)
   svntest.main.file_write(wc_empty_iota, "iota modified")
 
@@ -290,9 +282,7 @@ def depth_empty_commit(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_empty,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_empty)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def depth_empty_with_file(sbox):
@@ -310,7 +300,7 @@ def depth_empty_with_file(sbox):
   ### minutes of trying to figure out how, I decided to compromise.
 
   # Update iota by name, expecting to receive it.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', iota_path)
+  svntest.actions.run_and_verify_svn(None, [], 'up', iota_path)
 
   # Test that we did receive it.
   if not os.path.exists(iota_path):
@@ -324,19 +314,17 @@ def depth_empty_with_file(sbox):
   expected_status.tweak('iota', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Delete iota in the "other" wc.
   other_iota_path = os.path.join(wc, 'iota')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_iota_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', other_iota_path)
   expected_output = svntest.wc.State(wc, { 'iota' : Item(verb='Deleting'), })
   expected_status = svntest.actions.get_virginal_state(wc, 1)
   expected_status.remove('iota')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update the depth-empty wc just a little, expecting to receive
   # the change in iota.
@@ -351,7 +339,7 @@ def depth_empty_with_file(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '-r2', wc_empty)
 
   # Update the depth-empty wc all the way, expecting to receive the deletion
@@ -364,8 +352,7 @@ def depth_empty_with_file(sbox):
   svntest.actions.run_and_verify_update(wc_empty,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+                                        expected_status)
 
 
 #----------------------------------------------------------------------
@@ -409,8 +396,7 @@ def depth_empty_with_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         A_path)
 
   # Commit a change to A/mu in the "other" wc.
@@ -421,8 +407,7 @@ def depth_empty_with_dir(sbox):
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update "A" by name in wc_empty, expect to receive the change to A/mu.
   expected_output = svntest.wc.State(wc_empty, { 'A/mu' : Item(status='U ') })
@@ -436,20 +421,18 @@ def depth_empty_with_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         A_path)
 
   # Commit the deletion of A/mu from the "other" wc.
   svntest.main.file_write(other_mu_path, "new text\n")
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', other_mu_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', other_mu_path)
   expected_output = svntest.wc.State(wc, { 'A/mu' : Item(verb='Deleting'), })
   expected_status = svntest.actions.get_virginal_state(wc, 1)
   expected_status.remove('A/mu')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
 
   # Update "A" by name in wc_empty, expect to A/mu to disappear.
@@ -465,8 +448,7 @@ def depth_empty_with_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         A_path)
 
 
@@ -499,31 +481,13 @@ def depth_immediates_bring_in_file(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, None,
+                                        [], False,
                                         A_mu_path)
 
   # Run 'svn up A/D/gamma' to test the edge case 'Skipped'.
-  expected_output = svntest.wc.State(wc_imm, {
-    'A/D/gamma'   : Item(verb='Skipped'),
-    })
-  expected_disk = svntest.main.greek_state.copy()
-  expected_disk.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
-                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
-                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
-  expected_status = svntest.actions.get_virginal_state(wc_imm, 1)
-  expected_status.remove('A/C', 'A/B/lambda', 'A/B/E', 'A/B/E/alpha',
-                       'A/B/E/beta', 'A/B/F', 'A/B', 'A/D/gamma', 'A/D/G',
-                       'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau', 'A/D/H/chi',
-                       'A/D/H/psi', 'A/D/H/omega', 'A/D/H', 'A/D')
-  svntest.actions.run_and_verify_update(wc_imm,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        None, None, None,
-                                        None, None, None,
-                                        gamma_path)
+  svntest.actions.run_and_verify_svn(["Skipped '"+gamma_path+"'\n", ],
+                       "svn: E155007: ", 'update', gamma_path)
+  svntest.actions.run_and_verify_status(wc_imm, expected_status)
 
 #----------------------------------------------------------------------
 def depth_immediates_fill_in_dir(sbox):
@@ -560,8 +524,7 @@ def depth_immediates_fill_in_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'infinity',
                                         A_path)
 
@@ -593,8 +556,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files',
                                         A_path)
   # Check that A was added at depth=files.
@@ -621,8 +583,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates',
                                         B_path)
   # Check that A/B was added at depth=immediates.
@@ -646,8 +607,7 @@ def depth_mixed_bring_in_dir(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'empty',
                                         C_path)
   # Check that A/C was added at depth=empty.
@@ -664,14 +624,13 @@ def depth_empty_unreceive_delete(sbox):
   iota_path = os.path.join(wc, 'iota')
 
   # Commit in the "other" wc.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', iota_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', iota_path)
   expected_output = svntest.wc.State(wc, { 'iota' : Item(verb='Deleting'), })
   expected_status = svntest.actions.get_virginal_state(wc, 1)
   expected_status.remove('iota')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update the depth-empty wc, expecting not to receive the deletion of iota.
   expected_output = svntest.wc.State(wc_empty, { })
@@ -681,8 +640,7 @@ def depth_empty_unreceive_delete(sbox):
   svntest.actions.run_and_verify_update(wc_empty,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+                                        expected_status)
 
 
 #----------------------------------------------------------------------
@@ -698,14 +656,13 @@ def depth_immediates_unreceive_delete(sbox):
   mu_path = os.path.join(wc, 'A', 'mu')
 
   # Commit in the "other" wc.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', mu_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', mu_path)
   expected_output = svntest.wc.State(wc, { 'A/mu' : Item(verb='Deleting'), })
   expected_status = svntest.actions.get_virginal_state(wc, 1)
   expected_status.remove('A/mu')
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update the depth-immediates wc, expecting not to receive the deletion
   # of A/mu.
@@ -722,8 +679,7 @@ def depth_immediates_unreceive_delete(sbox):
   svntest.actions.run_and_verify_update(wc_immed,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def depth_immediates_receive_delete(sbox):
@@ -738,7 +694,7 @@ def depth_immediates_receive_delete(sbox):
   A_path = os.path.join(wc, 'A')
 
   # Commit in the "other" wc.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', A_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', A_path)
   expected_output = svntest.wc.State(wc, { 'A' : Item(verb='Deleting'), })
   expected_status = svntest.wc.State(wc, {
     '' : Item(status='  ', wc_rev=1),
@@ -746,8 +702,7 @@ def depth_immediates_receive_delete(sbox):
     })
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update the depth-immediates wc, expecting to receive the deletion of A.
   expected_output = svntest.wc.State(wc_immed, {
@@ -763,8 +718,7 @@ def depth_immediates_receive_delete(sbox):
   svntest.actions.run_and_verify_update(wc_immed,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def depth_immediates_subdir_propset_1(sbox):
@@ -775,7 +729,7 @@ def depth_immediates_subdir_propset_1(sbox):
   A_path = os.path.join(wc_immediates, 'A')
 
   # Set a property on an immediate subdirectory of the working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'pset', 'foo', 'bar',
                                      A_path)
 
@@ -795,7 +749,7 @@ def depth_immediates_subdir_propset_1(sbox):
   svntest.actions.run_and_verify_commit(wc_immediates,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         A_path)
 
   # Create expected output tree for the update.
@@ -814,7 +768,7 @@ def depth_immediates_subdir_propset_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, 1)
+                                        check_props=True)
 
 #----------------------------------------------------------------------
 def depth_immediates_subdir_propset_2(sbox):
@@ -829,16 +783,15 @@ def depth_immediates_subdir_propset_2(sbox):
   A_path = sbox.ospath('A')
 
   # Set a property on an immediate subdirectory of the working copy.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'pset', 'foo', 'bar',
                                      A_path)
   # Commit.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit', '-m', 'logmsg', A_path)
 
   # Update at depth=immediates in the other wc, expecting to see no errors.
-  svntest.actions.run_and_verify_svn("Output on stderr where none expected",
-                                     svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      'update', '--depth', 'immediates',
                                      other_wc)
 
@@ -865,8 +818,7 @@ def depth_update_to_more_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files')
   verify_depth(None, "files")
 
@@ -887,8 +839,7 @@ def depth_update_to_more_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates')
   verify_depth(None, "immediates")
   verify_depth(None, "empty", "A")
@@ -912,8 +863,7 @@ def depth_update_to_more_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files', 'A')
   verify_depth(None, "immediates")
   verify_depth(None, "files", "A")
@@ -944,8 +894,7 @@ def depth_update_to_more_depth(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'infinity')
   verify_depth("Non-infinity depth detected after an upgrade to depth-infinity",
                "infinity")
@@ -969,13 +918,13 @@ def commit_propmods_with_depth_empty_helper(sbox, depth_arg):
   chi_path = os.path.join(H_path, 'chi')
 
   # Set some properties, modify some files.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'foo-val', wc_dir)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'bar', 'bar-val', D_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'baz', 'baz-val', G_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'qux', 'qux-val', H_path)
   svntest.main.file_append(iota_path, "new iota\n")
   svntest.main.file_append(gamma_path, "new gamma\n")
@@ -1003,7 +952,7 @@ def commit_propmods_with_depth_empty_helper(sbox, depth_arg):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         depth_arg,
                                         wc_dir, D_path)
 
@@ -1032,97 +981,79 @@ def diff_in_depthy_wc(sbox):
   gamma_path = os.path.join(wc, 'A', 'D', 'gamma')
 
   # Make some changes in the depth-infinity wc, and commit them
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'foo-val', wc)
   svntest.main.file_write(iota_path, "new text\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'bar', 'bar-val', A_path)
   svntest.main.file_write(mu_path, "new text\n")
   svntest.main.file_write(gamma_path, "new text\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit', '-m', '', wc)
 
-  diff = [
-    "Index: A/mu\n",
-    "===================================================================\n",
-    "--- A/mu\t(revision 2)\n",
-    "+++ A/mu\t(working copy)\n",
+  from svntest.verify import make_diff_header, make_diff_prop_header, \
+                             make_diff_prop_deleted, make_diff_prop_added
+  diff_mu = make_diff_header('A/mu', 'revision 2', 'working copy') + [
     "@@ -1 +1 @@\n",
     "-new text\n",
-    "+This is the file 'mu'.\n",
-    "Index: A\n",
-    "===================================================================\n",
-    "--- A\t(revision 2)\n",
-    "+++ A\t(working copy)\n",
-    "\n",
-    "Property changes on: A\n",
-    "___________________________________________________________________\n",
-    "Deleted: bar\n",
-    "## -1 +0,0 ##\n",
-    "-bar-val\n",
-    "Index: iota\n",
-    "===================================================================\n",
-    "--- iota\t(revision 2)\n",
-    "+++ iota\t(working copy)\n",
+    "+This is the file 'mu'.\n"]
+  diff_A = make_diff_header('A', 'revision 2', 'working copy') + \
+           make_diff_prop_header('A') + \
+           make_diff_prop_deleted('bar', 'bar-val')
+  diff_iota = make_diff_header('iota', 'revision 2', 'working copy') + [
     "@@ -1 +1 @@\n",
     "-new text\n",
-    "+This is the file 'iota'.\n",
-    "Index: .\n",
-    "===================================================================\n",
-    "--- .\t(revision 2)\n",
-    "+++ .\t(working copy)\n",
-    "\n",
-    "Property changes on: .\n",
-    "___________________________________________________________________\n",
-    "Deleted: foo\n",
-    "## -1 +0,0 ##\n",
-    "-foo-val\n",
-    "\\ No newline at end of property\n"]
+    "+This is the file 'iota'.\n"]
+  diff_dot = make_diff_header('.', 'revision 2', 'working copy') + \
+             make_diff_prop_header('.') + \
+             make_diff_prop_deleted('foo', 'foo-val')
 
   os.chdir(wc_empty)
 
-  expected_output = svntest.verify.UnorderedOutput(diff[24:])
+  expected_output = svntest.verify.UnorderedOutput(diff_dot)
   # The diff should contain only the propchange on '.'
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '-rHEAD')
 
   # Upgrade to depth-files.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--set-depth', 'files', '-r1')
   # The diff should contain only the propchange on '.' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[17:])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  expected_output = svntest.verify.UnorderedOutput(diff_iota + diff_dot)
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth empty.
-  expected_output = svntest.verify.UnorderedOutput(diff[24:])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  expected_output = svntest.verify.UnorderedOutput(diff_dot)
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '--depth', 'empty', '-rHEAD')
 
   # Upgrade to depth-immediates.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--set-depth', 'immediates', '-r1')
   # The diff should contain the propchanges on '.' and 'A' and the
   # contents change on iota.
-  expected_output = svntest.verify.UnorderedOutput(diff[7:])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  expected_output = svntest.verify.UnorderedOutput(diff_A + diff_iota +
+                                                   diff_dot)
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'diff', '-rHEAD')
   # Do a diff at --depth files.
-  expected_output = svntest.verify.UnorderedOutput(diff[17:])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  expected_output = svntest.verify.UnorderedOutput(diff_iota + diff_dot)
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '--depth', 'files', '-rHEAD')
 
   # Upgrade A to depth-files.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--set-depth', 'files', '-r1', 'A')
   # The diff should contain everything but the contents change on
   # gamma (which does not exist in this working copy).
-  expected_output = svntest.verify.UnorderedOutput(diff)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  expected_output = svntest.verify.UnorderedOutput(diff_mu + diff_A +
+                                                   diff_iota + diff_dot)
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '-rHEAD')
   # Do a diff at --depth immediates.
-  expected_output = svntest.verify.UnorderedOutput(diff[7:])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  expected_output = svntest.verify.UnorderedOutput(diff_A + diff_iota +                                                                                diff_dot)
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'diff', '--depth', 'immediates', '-rHEAD')
 
 @Issue(2882)
@@ -1142,7 +1073,7 @@ def commit_depth_immediates(sbox):
   #    Message-ID: <46968831.2070906@collab.net>
   #    Date: Thu, 12 Jul 2007 15:59:45 -0400
   #
-  # See also http://subversion.tigris.org/issues/show_bug.cgi?id=2882.
+  # See also https://issues.apache.org/jira/browse/SVN-2882.
   #
   # Outline of the test:
   # ====================
@@ -1169,6 +1100,7 @@ def commit_depth_immediates(sbox):
   #    Sending        A/D/G/rho
   #    Sending        iota
   #    Transmitting file data ..
+  #    Committing transaction...
   #    Committed revision 2.
 
   iota_path = sbox.ospath('iota')
@@ -1191,7 +1123,7 @@ def commit_depth_immediates(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         '--depth', 'immediates',
                                         wc_dir, G_path)
 
@@ -1210,7 +1142,7 @@ def depth_immediates_receive_new_dir(sbox):
   svntest.main.file_write(zeta_path, "This is the file 'zeta'.\n")
 
   # Commit in the "other" wc.
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', I_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', I_path)
   expected_output = svntest.wc.State(wc, {
     'I'      : Item(verb='Adding'),
     'I/zeta' : Item(verb='Adding'),
@@ -1222,8 +1154,7 @@ def depth_immediates_receive_new_dir(sbox):
     })
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
-                                        expected_status,
-                                        None, wc)
+                                        expected_status)
 
   # Update the depth-immediates wc, expecting to receive just the
   # new directory, without the file.
@@ -1244,8 +1175,7 @@ def depth_immediates_receive_new_dir(sbox):
   svntest.actions.run_and_verify_update(wc_immed,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None, None, None, None)
+                                        expected_status)
   # Check that the new directory was added at depth=empty.
   verify_depth(None, "empty", other_I_path)
 
@@ -1263,20 +1193,20 @@ def add_tree_with_depth(sbox):
   os.mkdir(new3_path)
   os.mkdir(new4_path)
   # Simple case, add new1 only, set depth to files
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      "add", "--depth", "files", new1_path)
   verify_depth(None, "infinity", new1_path)
 
   # Force add new1 at new1 again, should include new2 at empty, the depth of
   # new1 should not change
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      "add", "--depth", "immediates",
                                      "--force", new1_path)
   verify_depth(None, "infinity", new1_path)
   verify_depth(None, "infinity", new2_path)
 
   # add new4 with intermediate path, the intermediate path is added at empty
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      "add", "--depth", "immediates",
                                      "--parents", new4_path)
   verify_depth(None, "infinity", new3_path)
@@ -1320,8 +1250,8 @@ def upgrade_from_above(sbox):
                                           expected_output,
                                           expected_disk,
                                           expected_status,
-                                          None, None, None, None, None, None,
-                                          '--set-depth=files')
+                                          [], False,
+                                          '--set-depth=files', '.')
     verify_depth(None, "files")
   finally:
     os.chdir(saved_cwd)
@@ -1342,7 +1272,7 @@ def upgrade_from_above(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, None,
+                                        [], False,
                                         '--set-depth=files', wc)
   verify_depth(None, "files", wc)
 
@@ -1358,14 +1288,14 @@ def status_in_depthy_wc(sbox):
   gamma_path = os.path.join(wc, 'A', 'D', 'gamma')
 
   # Make some changes in the depth-infinity wc, and commit them
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'foo-val', wc)
   svntest.main.file_write(iota_path, "new text\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'bar', 'bar-val', A_path)
   svntest.main.file_write(mu_path, "new text\n")
   svntest.main.file_write(gamma_path, "new text\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'commit', '-m', '', wc)
 
   status = [
@@ -1380,44 +1310,44 @@ def status_in_depthy_wc(sbox):
 
   expected_output = svntest.verify.UnorderedOutput(status[:2])
   # The output should contain only the change on '.'.
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'st', '-u')
 
   # Upgrade to depth-files.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--set-depth', 'files', '-r1')
   # The output should contain only the changes on '.' and 'iota'.
   expected_output = svntest.verify.UnorderedOutput(status[:3])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'st', '-u')
   # Do a status -u at --depth empty.
   expected_output = svntest.verify.UnorderedOutput(status[:2])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'st', '-u', '--depth', 'empty')
 
   # Upgrade to depth-immediates.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--set-depth', 'immediates', '-r1')
   # The output should contain the changes on '.', 'A' and 'iota'.
   expected_output = svntest.verify.UnorderedOutput(status[:4])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'st', '-u')
   # Do a status -u at --depth files.
   expected_output = svntest.verify.UnorderedOutput(status[:3])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'st', '-u', '--depth', 'files')
 
   # Upgrade A to depth-files.
-  svntest.actions.run_and_verify_svn(None, None, [], 'up',
+  svntest.actions.run_and_verify_svn(None, [], 'up',
                                      '--set-depth', 'files', '-r1', 'A')
   # The output should contain everything but the change on
   # gamma (which does not exist in this working copy).
   expected_output = svntest.verify.UnorderedOutput(status)
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'st', '-u')
   # Do a status -u at --depth immediates.
   expected_output = svntest.verify.UnorderedOutput(status[:4])
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                     'st', '-u', '--depth', 'immediates')
 
 #----------------------------------------------------------------------
@@ -1435,7 +1365,7 @@ def depthy_update_above_dir_to_be_deleted(sbox):
     }
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-    None, None, [],
+    None, [],
     "delete", "-m", "Delete A.", sbox.repo_url + "/A")
 
   def empty_output(wc_dir):
@@ -1484,8 +1414,7 @@ def depthy_update_above_dir_to_be_deleted(sbox):
                                           expected_output_func(wc_dir),
                                           expected_disk,
                                           expected_status_func(wc_dir),
-                                          None, None, None, None, None,
-                                          False,
+                                          [], False,
                                           "--depth=%s" % depth, wc_dir)
 
 
@@ -1530,8 +1459,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', E_path)
   verify_depth(None, "immediates", E_path)
 
@@ -1541,8 +1469,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files', E_path)
   verify_depth(None, "files", E_path)
 
@@ -1558,8 +1485,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', B_path)
   verify_depth(None, "immediates", B_path)
   verify_depth(None, "empty", E_path)
@@ -1578,8 +1504,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'empty', H_path)
   verify_depth(None, "empty", H_path)
 
@@ -1596,8 +1521,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', D_path)
   verify_depth(None, "immediates", D_path)
   verify_depth(None, "empty", G_path)
@@ -1615,8 +1539,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'empty', D_path)
   verify_depth(None, "empty", D_path)
 
@@ -1633,8 +1556,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', A_path)
   verify_depth(None, "immediates", A_path)
   verify_depth(None, "empty", C_path)
@@ -1653,8 +1575,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files', A_path)
   verify_depth(None, "files", A_path)
 
@@ -1669,8 +1590,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'empty', A_path)
   verify_depth(None, "empty", A_path)
 
@@ -1685,8 +1605,7 @@ def depth_folding_clean_trees_1(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files', wc_dir)
   verify_depth(None, "files", wc_dir)
 
@@ -1711,13 +1630,13 @@ def depth_folding_clean_trees_2(sbox):
   G_path = os.path.join(D_path, 'G')
 
   # pull in directory A at immediates
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--depth', 'immediates', A_path)
   # check to see if it's really at immediates
   verify_depth(None, "immediates", A_path)
 
   # pull in directory D at infinity
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'infinity', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A/D.
@@ -1757,8 +1676,7 @@ def depth_folding_clean_trees_2(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', D_path)
   verify_depth(None, "immediates", D_path)
   verify_depth(None, "empty", G_path)
@@ -1777,14 +1695,13 @@ def depth_folding_clean_trees_2(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', A_path)
   verify_depth(None, "immediates", A_path)
   verify_depth(None, "empty", D_path)
 
   # pull in directory D at infinity
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'infinity', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A.
@@ -1798,14 +1715,13 @@ def depth_folding_clean_trees_2(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', A_path)
   verify_depth(None, "immediates", A_path)
   verify_depth(None, "empty", D_path)
 
   # pull in directory D at files
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'files', D_path)
 
   # Run 'svn up --set-depth=immediates' to directory A.
@@ -1817,8 +1733,7 @@ def depth_folding_clean_trees_2(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', A_path)
   verify_depth(None, "immediates", A_path)
   verify_depth(None, "empty", D_path)
@@ -1844,8 +1759,7 @@ def depth_folding_clean_trees_2(sbox):
 #                                        expected_output,
 #                                        expected_disk,
 #                                        expected_status,
-#                                        None, None,
-#                                        None, None, None, None,
+#                                        [], False,
 #                                        '--set-depth', 'empty', A_path)
 
 def depth_fold_expand_clean_trees(sbox):
@@ -1861,12 +1775,12 @@ def depth_fold_expand_clean_trees(sbox):
   D_path = os.path.join(A_path, 'D')
 
   # pull in directory A at empty
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--depth', 'empty', A_path)
   verify_depth(None, "empty", A_path)
 
   # pull in directory D at infinity
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', D_path)
 
   # Make the other working copy.
@@ -1902,8 +1816,7 @@ def depth_fold_expand_clean_trees(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', A_path)
   verify_depth(None, "immediates", A_path)
   verify_depth(None, "empty", B_path)
@@ -1930,8 +1843,7 @@ def depth_fold_expand_clean_trees(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files', Other_A_path)
   verify_depth(None, "files", Other_A_path)
 
@@ -1968,7 +1880,7 @@ def pull_in_tree_with_depth_option(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         "--depth=immediates", A_path)
 
   # Check that the A directory was pull ed in at depth=immediates.
@@ -1994,22 +1906,29 @@ def fold_tree_with_unversioned_modified_items(sbox):
   # Fold the A dir to empty, expect the modified & unversioned ones left
   # unversioned rather than removed, along with paths to those items.
 
-  # Even though the directory B and D is not deleted because of local
-  # modificatoin or unversioned items, there will be only one notification at
-  # B and D.
+  # Directories B and D won't be deleted, because that would remove their
+  # local modifications. Their unmodified descendants are deleted though.
   expected_output = svntest.wc.State(wc_dir, {
-    'A/B'            : Item(status='D '),
+    'A/B/E'          : Item(status='D '),
+    'A/B/F'          : Item(status='D '),
+    'A/B/lambda'     : Item(status='D '),
     'A/C'            : Item(status='D '),
-    'A/D'            : Item(status='D '),
-    'A/mu'           : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/gamma'      : Item(status='D '),
     })
   # unversioned items will be ignored in in the status tree, since the
   # run_and_verify_update() function uses a quiet version of svn status
-  # Dir A is still versioned, since the wc root is in depth-infinity
   expected_status = svntest.wc.State(wc_dir, {
     ''               : Item(status='  ', wc_rev=1),
     'iota'           : Item(status='  ', wc_rev=1),
-    'A'              : Item(status='  ', wc_rev=1)
+    'A'              : Item(status='  ', wc_rev=1),
+    'A/D'            : Item(status='  ', wc_rev='1'),
+    'A/D/G'          : Item(status='  ', wc_rev='1'),
+    'A/D/G/pi'       : Item(status='M ', wc_rev='1'),
+    'A/B'            : Item(status='  ', wc_rev='1'),
+    'A/mu'           : Item(status='M ', wc_rev='1'),
     })
   expected_disk = svntest.wc.State('', {
     'iota'           : Item(contents="This is the file 'iota'.\n"),
@@ -2025,8 +1944,7 @@ def fold_tree_with_unversioned_modified_items(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'empty', A_path)
   verify_depth(None, "empty", A_path)
 
@@ -2044,8 +1962,7 @@ def depth_empty_update_on_file(sbox):
   expected_status.tweak('iota', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None, wc_dir)
+                                        expected_status)
 
   # Update iota with depth=empty.
   expected_output = svntest.wc.State(wc_dir,
@@ -2056,7 +1973,7 @@ def depth_empty_update_on_file(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '--depth=empty', '-r1', iota_path)
 
   # Check the revision and created rev.
@@ -2092,8 +2009,7 @@ def excluded_path_update_operation(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'exclude', E_path)
   # verify_depth exclude? not implemented yet
 
@@ -2111,13 +2027,12 @@ def excluded_path_update_operation(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', B_path)
   verify_depth(None, "immediates", B_path)
 
   # Exclude A/B/E again
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'exclude', E_path)
 
   # Exclude path B totally, in which contains an excluded subtree.
@@ -2130,8 +2045,7 @@ def excluded_path_update_operation(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'exclude', B_path)
 
   # Explicitly pull in excluded path B.
@@ -2149,8 +2063,7 @@ def excluded_path_update_operation(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         B_path)
 
   # Test issue #
@@ -2164,8 +2077,7 @@ def excluded_path_update_operation(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'exclude', iota_path)
 
   # Update the whole WC to depth=infinity.
@@ -2181,8 +2093,7 @@ def excluded_path_update_operation(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'infinity', wc_dir)
 
 def excluded_path_misc_operation(sbox):
@@ -2210,13 +2121,12 @@ def excluded_path_misc_operation(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'exclude', E_path)
 
   # copy A/B to A/L, excluded entry should be copied too
   expected_output = ['A         '+L_path+'\n']
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'cp', B_path, L_path)
   # verify_depth exclude? not implemented yet
   #verify_depth(None, "empty", LE_path)
@@ -2227,16 +2137,16 @@ def excluded_path_misc_operation(sbox):
   expected_output = svntest.verify.UnorderedOutput([
     "Reverted '%s'\n" % path for path in revert_paths])
 
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'revert', '--depth=infinity', L_path)
 
   # copy A/B to A/L and then cp A/L to A/M, excluded entry should be
   # copied both times
   expected_output = ['A         '+L_path+'\n']
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'cp', B_path, L_path)
   expected_output = ['A         '+M_path+'\n']
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'cp', L_path, M_path)
 
   # commit this copy, with an excluded item.
@@ -2254,9 +2164,7 @@ def excluded_path_misc_operation(sbox):
     })
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Relocate wc, with excluded items in it.
   repo_dir = sbox.repo_dir
@@ -2264,17 +2172,17 @@ def excluded_path_misc_operation(sbox):
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
   svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 0)
   svntest.main.safe_rmtree(repo_dir, 1)
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
 
   # remove the new directory A/L, with an excluded item.
   # If successed, no error will be thrown
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', L_path)
 
   # revert the delete
   # If successed, no error will be thrown
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', '--depth=infinity', L_path)
 
 
@@ -2301,12 +2209,11 @@ def excluded_receive_remote_removal(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         "--set-depth", "exclude", B_path)
 
   # Remove path B in the repos.
-  svntest.actions.run_and_verify_svn(None, None, [], "delete", "-m",
+  svntest.actions.run_and_verify_svn(None, [], "delete", "-m",
                                      "Delete B.", sbox.repo_url + "/A/B")
 
   # Update wc, should receive the removal of excluded path B
@@ -2317,15 +2224,13 @@ def excluded_receive_remote_removal(sbox):
   svntest.actions.run_and_verify_update(wc,
                                         None,
                                         expected_disk,
-                                        expected_status,
-                                        None, None,
-                                        None, None, None, None)
+                                        expected_status)
 
   # Introduce a new path with the same name B.
   # This should succeed if the exclude entry is gone with the update,
   # otherwise a name conflict will rise up.
   expected_output = ['A         '+B_path+'\n']
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'cp', C_path, B_path)
 
 
@@ -2345,7 +2250,7 @@ def exclude_keeps_hidden_entries(sbox):
   # we could grep the 'entries' file, but...
   # or we could use 'info', but info_excluded() is XFail.
   expected_stderr = ".*svn: E150002: '.*C' is already under version control.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_stderr,
+  svntest.actions.run_and_verify_svn(None, expected_stderr,
                                      'mkdir', 'C')
 
 
@@ -2401,7 +2306,7 @@ def make_depth_tree_conflicts(sbox):
   g =      j(D, 'gamma')
 
   # Store node modifications as rev 2
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'propset', 'foo', 'foo-val', B)
   svntest.main.file_append(m, "Modified mu.\n")
   svntest.main.file_append(g, "Modified gamma.\n")
@@ -2419,7 +2324,7 @@ def make_depth_tree_conflicts(sbox):
   svntest.actions.run_and_verify_commit(wc,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         A)
 
   # Go back to rev 1
@@ -2434,12 +2339,12 @@ def make_depth_tree_conflicts(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '-r1', A)
 
   # Perform node deletions so that items become unversioned and
   # will have tree-conflicts upon update.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', m, B, g)
 
   # Update so that conflicts appear
@@ -2476,7 +2381,7 @@ def make_depth_tree_conflicts(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         wc)
 
 
@@ -2556,8 +2461,7 @@ def update_excluded_path_sticky_depths(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'exclude', B_path)
 
   # Update to depth 'empty' for the excluded path A/B
@@ -2574,8 +2478,7 @@ def update_excluded_path_sticky_depths(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'empty', B_path)
   verify_depth(None, "empty", B_path)
   expected_info = {
@@ -2587,7 +2490,7 @@ def update_excluded_path_sticky_depths(sbox):
   svntest.actions.run_and_verify_info([expected_info], B_path)
 
   # Exclude A/B again
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'exclude', B_path)
 
   # Update to depth 'files' for the excluded path A/B
@@ -2607,8 +2510,7 @@ def update_excluded_path_sticky_depths(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'files', B_path)
   verify_depth(None, "files", B_path)
   expected_info = {
@@ -2620,7 +2522,7 @@ def update_excluded_path_sticky_depths(sbox):
   svntest.actions.run_and_verify_info([expected_info], B_path)
 
   # Exclude A/B again
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'exclude', B_path)
 
   # Update to depth 'immediates' for the excluded path A/B
@@ -2646,8 +2548,7 @@ def update_excluded_path_sticky_depths(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'immediates', B_path)
   verify_depth(None, "immediates", B_path)
   expected_info = {
@@ -2659,7 +2560,7 @@ def update_excluded_path_sticky_depths(sbox):
   svntest.actions.run_and_verify_info([expected_info], B_path)
 
   # Exclude A/B again
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'exclude', B_path)
 
   # Update to depth 'infinity' for the excluded path A/B
@@ -2677,8 +2578,7 @@ def update_excluded_path_sticky_depths(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None,
-                                        None, None, None, None,
+                                        [], False,
                                         '--set-depth', 'infinity', B_path)
   verify_depth(None, "infinity", B_path)
   expected_info = {
@@ -2699,7 +2599,7 @@ def update_depth_empty_root_of_infinite_children(sbox):
   A_path = os.path.join(wc_dir, 'A')
 
   # Update A to depth 'infinity'
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'up', '--set-depth', 'infinity', A_path)
 
   # Tweak some files in the full working copy and commit.
@@ -2707,7 +2607,7 @@ def update_depth_empty_root_of_infinite_children(sbox):
                            "Modified alpha.\n")
   svntest.main.file_append(os.path.join(wc_other, 'A', 'D', 'G', 'rho'),
                            "Modified rho.\n")
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ci', '-m', '', wc_other)
 
   # Now update the original working copy and make sure we get those changes.
@@ -2724,9 +2624,7 @@ def update_depth_empty_root_of_infinite_children(sbox):
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
                                         expected_disk,
-                                        expected_status,
-                                        None, None,
-                                        None, None, None, None, wc_dir)
+                                        expected_status)
 
 def sparse_update_with_dash_dash_parents(sbox):
   """update --parents"""
@@ -2739,7 +2637,6 @@ def sparse_update_with_dash_dash_parents(sbox):
 
   # Start with a depth=empty root checkout.
   svntest.actions.run_and_verify_svn(
-      "Unexpected error from co --depth=empty",
       svntest.verify.AnyOutput, [],
       "co", "--depth", "empty", sbox.repo_url, sbox.wc_dir)
 
@@ -2767,7 +2664,7 @@ def sparse_update_with_dash_dash_parents(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '--parents', alpha_path)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
@@ -2789,7 +2686,7 @@ def sparse_update_with_dash_dash_parents(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '--parents', pi_path)
 
   expected_output = svntest.wc.State(sbox.wc_dir, {
@@ -2808,7 +2705,7 @@ def sparse_update_with_dash_dash_parents(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         '--parents', omega_path)
 
 def update_below_depth_empty(sbox):
@@ -2825,11 +2722,11 @@ def update_below_depth_empty(sbox):
       'A/D'               : Item(status='D '),
     })
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output, None,
-                                        None, None, None, None, None, None,
-                                        False,
+                                        None,
+                                        [], False,
                                         '--set-depth', 'empty', A)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cp', repo_url + '/iota',
                                            repo_url + '/A/B',
                                      '-m', 'remote copy')
@@ -2839,7 +2736,7 @@ def update_below_depth_empty(sbox):
 
   # This update should just update the revision of the working copy
   svntest.actions.run_and_verify_update(sbox.wc_dir, expected_output, None,
-                                        None, None)
+                                        None)
 
 # Test for issue #4136.
 @Issue(4136)
@@ -2860,9 +2757,7 @@ def commit_then_immediates_update(sbox):
   expected_status.tweak('A/mu', wc_rev=2, status='  ')
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Now, update --depth immediates in the root of the working copy.
   expected_output = svntest.wc.State(wc_dir, { })
@@ -2878,22 +2773,22 @@ def commit_then_immediates_update(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         "--depth=immediates", wc_dir)
 
 def revert_depth_files(sbox):
   "depth immediate+files should revert deleted files"
 
   sbox.build(read_only = True)
-  
+
   expected_output = "Reverted '" + re.escape(sbox.ospath('A/mu')) + "'"
-  
+
   # Apply an unrelated delete one level to deep
   sbox.simple_rm('A/D/gamma')
 
   sbox.simple_rm('A/mu')
   # Expect reversion of just 'mu'
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'revert', '--depth=immediates', sbox.ospath('A'))
 
   # Apply an unrelated directory delete
@@ -2901,7 +2796,7 @@ def revert_depth_files(sbox):
 
   sbox.simple_rm('A/mu')
   # Expect reversion of just 'mu'
-  svntest.actions.run_and_verify_svn(None, expected_output, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'revert', '--depth=files', sbox.ospath('A'))
 
 @Issue(4257)
@@ -2919,14 +2814,167 @@ def spurious_nodes_row(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None, False,
+                                        [], False,
                                         "--depth=empty", sbox.wc_dir)
   val2 = svntest.wc.sqlite_stmt(sbox.wc_dir, "select count(*) from nodes")
   if (val1 != val2):
     # ra_neon added a spurious not-present row that does not show up in status
     raise svntest.Failure("count changed from '%s' to '%s'" % (val1, val2))
 
+def commit_excluded(sbox):
+  "commit an excluded node"
 
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+  })
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_status.remove('A/D/G', 'A/D/G/pi', 'A/D/G/rho', 'A/D/G/tau')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        [], False,
+                                        "--set-depth=exclude",
+                                        sbox.ospath('A/D/G'))
+
+  sbox.simple_copy('A/D', 'D')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'D' : Item(verb='Adding'),
+  })
+  
+  expected_status.add({
+    'D'          : Item(status='  ', wc_rev='2'),
+    'D/H'        : Item(status='  ', wc_rev='2'),
+    'D/H/chi'    : Item(status='  ', wc_rev='2'),
+    'D/H/psi'    : Item(status='  ', wc_rev='2'),
+    'D/H/omega'  : Item(status='  ', wc_rev='2'),
+    'D/gamma'    : Item(status='  ', wc_rev='2')
+  })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status)
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G'     : Item(status='A '),
+    'A/D/G/pi'  : Item(status='A '),
+    'A/D/G/tau' : Item(status='A '),
+    'A/D/G/rho' : Item(status='A '),
+    'D/G'       : Item(status='A '),
+    'D/G/pi'    : Item(status='A '),
+    'D/G/tau'   : Item(status='A '),
+    'D/G/rho'   : Item(status='A ')
+  })
+
+  expected_status.tweak(wc_rev=2)
+
+  expected_status.add({
+    'D'         : Item(status='  ', wc_rev='2'),
+    'D/G'       : Item(status='  ', wc_rev='2'),
+    'D/G/pi'    : Item(status='  ', wc_rev='2'),
+    'D/G/rho'   : Item(status='  ', wc_rev='2'),
+    'D/G/tau'   : Item(status='  ', wc_rev='2'),
+    'D/H'       : Item(status='  ', wc_rev='2'),
+    'D/H/chi'   : Item(status='  ', wc_rev='2'),
+    'D/H/psi'   : Item(status='  ', wc_rev='2'),
+    'D/H/omega' : Item(status='  ', wc_rev='2'),
+    'D/gamma'   : Item(status='  ', wc_rev='2'),
+    'A/D/G'     : Item(status='  ', wc_rev='2'),
+    'A/D/G/rho' : Item(status='  ', wc_rev='2'),
+    'A/D/G/tau' : Item(status='  ', wc_rev='2'),
+    'A/D/G/pi'  : Item(status='  ', wc_rev='2')
+  })
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        None,
+                                        expected_status,
+                                        [], False,
+                                        "--set-depth=infinity", wc_dir)
+
+@Issue(4636)
+@XFail()
+def fold_tree_with_deleted_moved_items(sbox):
+  "deleted & moved items left untouched"
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+
+  A_path = sbox.ospath('A')
+
+  # Delete file lambda, move file pi and directory C
+  sbox.simple_rm('A/B/lambda')
+  sbox.simple_move('A/D/G/pi', 'A/D/G/pi_moved')
+  sbox.simple_move('A/C', 'A/C_moved')
+
+  # Fold the A dir to empty, expect the deleted & moved items ones left
+  # and visible in status, rather than gone without a trace.
+
+  # Directories B and D won't be deleted, because that would remove their
+  # local modifications. Their unmodified descendants are deleted though.
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/B/E'          : Item(status='D '),
+    'A/B/F'          : Item(status='D '),
+    'A/D/G/rho'      : Item(status='D '),
+    'A/D/G/tau'      : Item(status='D '),
+    'A/D/H'          : Item(status='D '),
+    'A/D/gamma'      : Item(status='D '),
+    'A/mu'           : Item(status='D '),
+    })
+  expected_status = svntest.wc.State(wc_dir, {
+    ''               : Item(status='  ', wc_rev=1),
+    'iota'           : Item(status='  ', wc_rev=1),
+    'A'              : Item(status='  ', wc_rev=1),
+    'A/B'            : Item(status='  ', wc_rev=1),
+    'A/B/lambda'     : Item(status='D ', wc_rev=1),
+    'A/C'            : Item(status='D ', wc_rev=1, moved_to='A/C_moved'),
+    'A/C_moved'      : Item(status='A ', wc_rev='-', copied='+',
+                            moved_from='A/C'),
+    'A/D'            : Item(status='  ', wc_rev=1),
+    'A/D/G'          : Item(status='  ', wc_rev=1),
+    'A/D/G/pi'       : Item(status='D ', wc_rev=1, moved_to='A/D/G/pi_moved'),
+    'A/D/G/pi_moved' : Item(status='A ', wc_rev='-', copied='+',
+                            moved_from='A/D/G/pi'),
+    })
+  expected_disk = svntest.wc.State('', {
+    'iota'           : Item(contents="This is the file 'iota'.\n"),
+    'A'              : Item(contents=None),
+    'A/B'            : Item(contents=None),
+    'A/C_moved'      : Item(contents=None),
+    'A/D'            : Item(contents=None),
+    'A/D/G'          : Item(contents=None),
+    'A/D/G/pi_moved' : Item(contents="This is the file 'pi'.\n"),
+    })
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], False,
+                                        '--set-depth', 'empty', A_path)
+  verify_depth(None, "empty", A_path)
+
+@Issue(4642)
+@XFail()
+def fold_tree_with_unversioned_items(sbox):
+  "unversioned files in excluded directory"
+  ign_a, ign_b, ign_c, wc_dir = set_up_depthy_working_copies(sbox,
+                                                             infinity=True)
+
+  # create an unversioned directory within a versioned one
+  A_path = sbox.ospath('A')
+  A_local_path = os.path.join(A_path, 'A_local')
+  os.mkdir(A_local_path)
+
+  # Set A to be excluded.
+  svntest.main.run_svn(None, 'update', '--set-depth=exclude', A_path)
+  
+  # try a simple update afterwards
+  sbox.simple_update()
+  
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,
@@ -2977,7 +3025,10 @@ test_list = [ None,
               commit_then_immediates_update,
               revert_depth_files,
               spurious_nodes_row,
-              ]
+              commit_excluded,
+              fold_tree_with_deleted_moved_items,
+              fold_tree_with_unversioned_items,
+             ]
 
 if __name__ == "__main__":
   svntest.main.run_tests(test_list)

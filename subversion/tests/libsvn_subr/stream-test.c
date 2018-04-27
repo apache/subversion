@@ -32,6 +32,7 @@
 
 #include "../svn_test.h"
 
+/*------------------------ Tests --------------------------- */
 
 static svn_error_t *
 test_stream_from_string(apr_pool_t *pool)
@@ -73,7 +74,7 @@ test_stream_from_string(apr_pool_t *pool)
       while (len == TEST_BUF_SIZE)
         {
           /* Read a chunk ... */
-          SVN_ERR(svn_stream_read(stream, buffer, &len));
+          SVN_ERR(svn_stream_read_full(stream, buffer, &len));
 
           /* ... and append the chunk to the stringbuf. */
           svn_stringbuf_appendbytes(outbuf, buffer, len);
@@ -206,7 +207,7 @@ test_stream_compressed(apr_pool_t *pool)
       while (len >= TEST_BUF_SIZE)
         {
           len = TEST_BUF_SIZE;
-          SVN_ERR(svn_stream_read(stream, buf, &len));
+          SVN_ERR(svn_stream_read_full(stream, buf, &len));
           if (len > 0)
             svn_stringbuf_appendbytes(inbuf, buf, len);
         }
@@ -332,17 +333,17 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   stringbuf = svn_stringbuf_create("OneTwo", pool);
   stream = svn_stream_from_stringbuf(stringbuf, pool);
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[3] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "One");
   SVN_ERR(svn_stream_mark(stream, &mark, pool));
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[3] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "Two");
   SVN_ERR(svn_stream_seek(stream, mark));
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[3] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "Two");
 
@@ -351,7 +352,7 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   SVN_ERR(svn_stream_skip(stream, 2));
   /* The remaining line should be empty */
   len = 3;
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   buf[len] = '\0';
   SVN_TEST_ASSERT(len == 1);
   SVN_TEST_STRING_ASSERT(buf, "o");
@@ -381,7 +382,7 @@ test_stream_seek_translated(apr_pool_t *pool)
                                                   FALSE, keywords, TRUE, pool);
   /* Seek from outside of keyword to inside of keyword. */
   len = 25;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 25);
   buf[25] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "One$MyKeyword: my keyword");
@@ -389,7 +390,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_reset(translated_stream));
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 4;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 4);
   buf[4] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " was");
@@ -397,7 +398,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 2;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 2);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "as");
@@ -405,13 +406,13 @@ test_stream_seek_translated(apr_pool_t *pool)
   /* Seek from inside of keyword to inside of keyword. */
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   len = 9;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 9);
   buf[9] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " expanded");
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 9;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 9);
   buf[9] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " expanded");
@@ -419,7 +420,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 6));
   len = 3;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 3);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "ded");
@@ -427,13 +428,13 @@ test_stream_seek_translated(apr_pool_t *pool)
   /* Seek from inside of keyword to outside of keyword. */
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   len = 4;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 4);
   buf[4] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " $Tw");
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 4;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 4);
   buf[4] = '\0';
   SVN_TEST_STRING_ASSERT(buf, " $Tw");
@@ -441,7 +442,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 2;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 2);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "Tw");
@@ -449,13 +450,13 @@ test_stream_seek_translated(apr_pool_t *pool)
   /* Seek from outside of keyword to outside of keyword. */
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   len = 1;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 1);
   buf[1] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "o");
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 1;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 1);
   buf[1] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "o");
@@ -463,7 +464,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   SVN_ERR(svn_stream_skip(translated_stream, 2));
   len = 1;
-  SVN_ERR(svn_stream_read(translated_stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 0);
   buf[len] = '\0';
   SVN_TEST_STRING_ASSERT(buf, "");
@@ -490,7 +491,7 @@ test_readonly(apr_pool_t *pool)
   /* File should be writable */
   SVN_ERR(svn_io_stat(&finfo, path, wanted, pool));
   SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo, pool));
-  SVN_TEST_ASSERT(read_only == FALSE);
+  SVN_TEST_ASSERT(!read_only);
 
   /* Set read only */
   SVN_ERR(svn_io_set_file_read_only(path, FALSE, pool));
@@ -506,7 +507,7 @@ test_readonly(apr_pool_t *pool)
   /* File should be writable */
   SVN_ERR(svn_io_stat(&finfo, path, wanted, pool));
   SVN_ERR(svn_io__is_finfo_read_only(&read_only, &finfo, pool));
-  SVN_TEST_ASSERT(read_only == FALSE);
+  SVN_TEST_ASSERT(!read_only);
 
   return SVN_NO_ERROR;
 }
@@ -524,7 +525,7 @@ test_stream_compressed_empty_file(apr_pool_t *pool)
                                  pool, pool));
   stream = svn_stream_compressed(empty_file_stream, pool);
   len = sizeof(buf);
-  SVN_ERR(svn_stream_read(stream, buf, &len));
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
   if (len > 0)
     return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
                             "Got unexpected result.");
@@ -549,9 +550,27 @@ test_stream_base64(apr_pool_t *pool)
     NULL
   };
 
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
   stream = svn_stream_from_stringbuf(actual, pool);
   stream = svn_base64_decode(stream, pool);
-  stream = svn_base64_encode(stream, pool);
+  stream = svn_base64_encode2(stream, TRUE, pool);
+
+  for (i = 0; strings[i]; i++)
+    {
+      apr_size_t len = strlen(strings[i]);
+
+      svn_stringbuf_appendbytes(expected, strings[i], len);
+      SVN_ERR(svn_stream_write(stream, strings[i], &len));
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_TEST_STRING_ASSERT(actual->data, expected->data);
+
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
+  stream = svn_stream_from_stringbuf(actual, pool);
+  stream = svn_base64_decode(stream, pool);
+  stream = svn_base64_encode2(stream, FALSE, pool);
 
   for (i = 0; strings[i]; i++)
     {
@@ -700,6 +719,7 @@ test_stream_base64_2(apr_pool_t *pool)
   };
   int i;
 
+  /* Test svn_base64_encode2() with BREAK_LINES=TRUE. */
   for (i = 0; data[i].encoded1; i++)
     {
       apr_size_t len1 = strlen(data[i].encoded1);
@@ -708,7 +728,32 @@ test_stream_base64_2(apr_pool_t *pool)
       svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
       svn_stream_t *stream = svn_stream_from_stringbuf(actual, pool);
 
-      stream = svn_base64_encode(stream, pool);
+      stream = svn_base64_encode2(stream, TRUE, pool);
+      stream = svn_base64_decode(stream, pool);
+
+      SVN_ERR(svn_stream_write(stream, data[i].encoded1, &len1));
+      svn_stringbuf_appendbytes(expected, data[i].encoded1, len1);
+
+      if (data[i].encoded2)
+        {
+          apr_size_t len2 = strlen(data[i].encoded2);
+          SVN_ERR(svn_stream_write(stream, data[i].encoded2, &len2));
+          svn_stringbuf_appendbytes(expected, data[i].encoded2, len2);
+        }
+
+      SVN_ERR(svn_stream_close(stream));
+    }
+
+  /* Test svn_base64_encode2() with BREAK_LINES=FALSE. */
+  for (i = 0; data[i].encoded1; i++)
+    {
+      apr_size_t len1 = strlen(data[i].encoded1);
+
+      svn_stringbuf_t *actual = svn_stringbuf_create_empty(pool);
+      svn_stringbuf_t *expected = svn_stringbuf_create_empty(pool);
+      svn_stream_t *stream = svn_stream_from_stringbuf(actual, pool);
+
+      stream = svn_base64_encode2(stream, FALSE, pool);
       stream = svn_base64_decode(stream, pool);
 
       SVN_ERR(svn_stream_write(stream, data[i].encoded1, &len1));
@@ -727,9 +772,239 @@ test_stream_base64_2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stringbuf_from_stream(apr_pool_t *pool)
+{
+  const char *test_cases[] =
+    {
+      "",
+      "x",
+      "this string is longer than the default 64 minimum block size used"
+      "by the function under test",
+      NULL
+    };
+
+  const char **test_case;
+  for (test_case = test_cases; *test_case; ++test_case)
+    {
+      svn_stringbuf_t *result1, *result2, *result3, *result4;
+      svn_stringbuf_t *original = svn_stringbuf_create(*test_case, pool);
+
+      svn_stream_t *stream1 = svn_stream_from_stringbuf(original, pool);
+      svn_stream_t *stream2 = svn_stream_from_stringbuf(original, pool);
+
+      SVN_ERR(svn_stringbuf_from_stream(&result1, stream1, 0, pool));
+      SVN_ERR(svn_stringbuf_from_stream(&result2, stream1, 0, pool));
+      SVN_ERR(svn_stringbuf_from_stream(&result3, stream2, original->len,
+                                        pool));
+      SVN_ERR(svn_stringbuf_from_stream(&result4, stream2, original->len,
+                                        pool));
+
+      /* C-string contents must match */
+      SVN_TEST_STRING_ASSERT(result1->data, original->data);
+      SVN_TEST_STRING_ASSERT(result2->data, "");
+      SVN_TEST_STRING_ASSERT(result3->data, original->data);
+      SVN_TEST_STRING_ASSERT(result4->data, "");
+
+      /* assumed length must match */
+      SVN_TEST_ASSERT(result1->len == original->len);
+      SVN_TEST_ASSERT(result2->len == 0);
+      SVN_TEST_ASSERT(result3->len == original->len);
+      SVN_TEST_ASSERT(result4->len == 0);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+empty_read_full_fn(void *baton, char *buffer, apr_size_t *len)
+{
+    *len = 0;
+    return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_compressed_read_full(apr_pool_t *pool)
+{
+  svn_stream_t *stream, *empty_stream;
+  char buf[1];
+  apr_size_t len;
+
+  /* Reading an empty stream with read_full only support should not error. */
+  empty_stream = svn_stream_create(NULL, pool);
+
+  /* Create stream with only full read support. */
+  svn_stream_set_read2(empty_stream, NULL, empty_read_full_fn);
+
+  stream = svn_stream_compressed(empty_stream, pool);
+  len = sizeof(buf);
+  SVN_ERR(svn_stream_read_full(stream, buf, &len));
+  if (len > 0)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL,
+                            "Got unexpected result.");
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_checksum(apr_pool_t *pool)
+{
+  svn_string_t *str =
+    svn_string_create("The quick brown fox jumps over the lazy dog", pool);
+  svn_checksum_t *actual;
+
+  SVN_ERR(svn_stream_contents_checksum(&actual,
+                                       svn_stream_from_string(str, pool),
+                                       svn_checksum_md5, pool, pool));
+  SVN_TEST_STRING_ASSERT("9e107d9d372bb6826bd81d3542a419d6",
+                         svn_checksum_to_cstring(actual, pool));
+
+  SVN_ERR(svn_stream_contents_checksum(&actual,
+                                       svn_stream_from_string(str, pool),
+                                       svn_checksum_sha1, pool, pool));
+  SVN_TEST_STRING_ASSERT("2fd4e1c67a2d28fced849ee1bb76e7391b93eb12",
+                         svn_checksum_to_cstring(actual, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_readline_file(const char *testname,
+                          const char *eol,
+                          apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *tmp_file;
+  svn_stream_t *stream;
+  svn_stringbuf_t *line;
+  svn_boolean_t eof;
+  static const char long_line[] =
+    "The quick brown fox jumps over the lazy dog, and "
+    "jackdaws love my big sphinx of quartz, and "
+    "pack my box with five dozen liquor jugs.";
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, testname, pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  /* Test 1: Read empty file. */
+  tmp_file = svn_dirent_join(tmp_dir, "empty", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "", pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 2: Read empty line. */
+  tmp_file = svn_dirent_join(tmp_dir, "empty-line", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, eol, pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 3: Read two lines. */
+  tmp_file = svn_dirent_join(tmp_dir, "lines", pool);
+  SVN_ERR(svn_io_file_create(tmp_file,
+                             apr_pstrcat(pool,
+                                         "first", eol, "second", eol,
+                                         SVN_VA_NULL),
+                             pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 5);
+  SVN_TEST_STRING_ASSERT(line->data, "first");
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 6);
+  SVN_TEST_STRING_ASSERT(line->data, "second");
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 4: Content without end-of-line. */
+  tmp_file = svn_dirent_join(tmp_dir, "no-eol", pool);
+  SVN_ERR(svn_io_file_create(tmp_file, "text", pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 4);
+  SVN_TEST_STRING_ASSERT(line->data, "text");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  /* Test 5: Read long line. */
+  tmp_file = svn_dirent_join(tmp_dir, "long-line", pool);
+  SVN_ERR(svn_io_file_create(tmp_file,
+                             apr_pstrcat(pool, long_line, eol, SVN_VA_NULL),
+                             pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == strlen(long_line));
+  SVN_TEST_STRING_ASSERT(line->data, long_line);
+  SVN_TEST_ASSERT(!eof);
+
+  SVN_ERR(svn_stream_readline(stream, &line, eol, &eof, pool));
+  SVN_TEST_ASSERT(line->len == 0);
+  SVN_TEST_STRING_ASSERT(line->data, "");
+  SVN_TEST_ASSERT(eof);
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_readline_file_lf(apr_pool_t *pool)
+{
+  SVN_ERR(test_stream_readline_file("test_stream_readline_file_lf",
+                                    "\n", pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_readline_file_crlf(apr_pool_t *pool)
+{
+  SVN_ERR(test_stream_readline_file("test_stream_readline_file_crlf",
+                                    "\r\n", pool));
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_stream_from_string,
@@ -752,5 +1027,17 @@ struct svn_test_descriptor_t test_funcs[] =
                    "test base64 encoding/decoding streams"),
     SVN_TEST_PASS2(test_stream_base64_2,
                    "base64 decoding allocation problem"),
+    SVN_TEST_PASS2(test_stringbuf_from_stream,
+                   "test svn_stringbuf_from_stream"),
+    SVN_TEST_PASS2(test_stream_compressed_read_full,
+                   "test compression for streams without partial read"),
+    SVN_TEST_PASS2(test_stream_checksum,
+                   "test svn_stream_contents_checksum()"),
+    SVN_TEST_PASS2(test_stream_readline_file_lf,
+                   "test reading LF-terminated lines from file"),
+    SVN_TEST_PASS2(test_stream_readline_file_crlf,
+                   "test reading CRLF-terminated lines from file"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

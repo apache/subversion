@@ -28,10 +28,13 @@
 
 #include <assert.h>
 
+#include <apr_md5.h>
+
 /* We define this here to remove any further warnings about the usage of
    deprecated functions in this file. */
 #define SVN_DEPRECATED
 
+#include "svn_hash.h"
 #include "svn_subst.h"
 #include "svn_path.h"
 #include "svn_opt.h"
@@ -42,8 +45,11 @@
 #include "svn_mergeinfo.h"
 #include "svn_utf.h"
 #include "svn_xml.h"
+#include "svn_auth.h"
+#include "svn_base64.h"
 
 #include "opt.h"
+#include "auth.h"
 #include "private/svn_opt_private.h"
 #include "private/svn_mergeinfo_private.h"
 
@@ -72,38 +78,28 @@ kwstruct_to_kwhash(const svn_subst_keywords_t *kwstruct,
 
   if (kwstruct->revision)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_MEDIUM,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
-      apr_hash_set(kwhash, SVN_KEYWORD_REVISION_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->revision);
+      svn_hash_sets(kwhash, SVN_KEYWORD_REVISION_LONG, kwstruct->revision);
+      svn_hash_sets(kwhash, SVN_KEYWORD_REVISION_MEDIUM, kwstruct->revision);
+      svn_hash_sets(kwhash, SVN_KEYWORD_REVISION_SHORT, kwstruct->revision);
     }
   if (kwstruct->date)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_DATE_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->date);
-      apr_hash_set(kwhash, SVN_KEYWORD_DATE_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->date);
+      svn_hash_sets(kwhash, SVN_KEYWORD_DATE_LONG, kwstruct->date);
+      svn_hash_sets(kwhash, SVN_KEYWORD_DATE_SHORT, kwstruct->date);
     }
   if (kwstruct->author)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_AUTHOR_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->author);
-      apr_hash_set(kwhash, SVN_KEYWORD_AUTHOR_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->author);
+      svn_hash_sets(kwhash, SVN_KEYWORD_AUTHOR_LONG, kwstruct->author);
+      svn_hash_sets(kwhash, SVN_KEYWORD_AUTHOR_SHORT, kwstruct->author);
     }
   if (kwstruct->url)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_URL_LONG,
-                   APR_HASH_KEY_STRING, kwstruct->url);
-      apr_hash_set(kwhash, SVN_KEYWORD_URL_SHORT,
-                   APR_HASH_KEY_STRING, kwstruct->url);
+      svn_hash_sets(kwhash, SVN_KEYWORD_URL_LONG, kwstruct->url);
+      svn_hash_sets(kwhash, SVN_KEYWORD_URL_SHORT, kwstruct->url);
     }
   if (kwstruct->id)
     {
-      apr_hash_set(kwhash, SVN_KEYWORD_ID,
-                   APR_HASH_KEY_STRING, kwstruct->id);
+      svn_hash_sets(kwhash, SVN_KEYWORD_ID, kwstruct->id);
     }
 
   return kwhash;
@@ -364,7 +360,7 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
         {
           if (cmd->valid_options[i])
             {
-              if (have_options == FALSE)
+              if (!have_options)
                 {
                   SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
                                             stream, pool));
@@ -394,6 +390,30 @@ print_command_info(const svn_opt_subcommand_desc_t *cmd,
   return SVN_NO_ERROR;
 }
 
+const svn_opt_subcommand_desc2_t *
+svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
+                                  const char *cmd_name)
+{
+  int i = 0;
+
+  if (cmd_name == NULL)
+    return NULL;
+
+  while (table[i].name) {
+    int j;
+    if (strcmp(cmd_name, table[i].name) == 0)
+      return table + i;
+    for (j = 0; (j < SVN_OPT_MAX_ALIASES) && table[i].aliases[j]; j++)
+      if (strcmp(cmd_name, table[i].aliases[j]) == 0)
+        return table + i;
+
+    i++;
+  }
+
+  /* If we get here, there was no matching subcommand name or alias. */
+  return NULL;
+}
+
 const svn_opt_subcommand_desc_t *
 svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
                                  const char *cmd_name)
@@ -416,6 +436,344 @@ svn_opt_get_canonical_subcommand(const svn_opt_subcommand_desc_t *table,
 
   /* If we get here, there was no matching subcommand name or alias. */
   return NULL;
+}
+
+const apr_getopt_option_t *
+svn_opt_get_option_from_code2(int code,
+                              const apr_getopt_option_t *option_table,
+                              const svn_opt_subcommand_desc2_t *command,
+                              apr_pool_t *pool)
+{
+  apr_size_t i;
+
+  for (i = 0; option_table[i].optch; i++)
+    if (option_table[i].optch == code)
+      {
+        if (command)
+          {
+            int j;
+
+            for (j = 0; ((j < SVN_OPT_MAX_OPTIONS) &&
+                         command->desc_overrides[j].optch); j++)
+              if (command->desc_overrides[j].optch == code)
+                {
+                  apr_getopt_option_t *tmpopt =
+                      apr_palloc(pool, sizeof(*tmpopt));
+                  *tmpopt = option_table[i];
+                  tmpopt->description = command->desc_overrides[j].desc;
+                  return tmpopt;
+                }
+          }
+        return &(option_table[i]);
+      }
+
+  return NULL;
+}
+
+const apr_getopt_option_t *
+svn_opt_get_option_from_code(int code,
+                             const apr_getopt_option_t *option_table)
+{
+  apr_size_t i;
+
+  for (i = 0; option_table[i].optch; i++)
+    if (option_table[i].optch == code)
+      return &(option_table[i]);
+
+  return NULL;
+}
+
+/* Like svn_opt_get_option_from_code2(), but also, if CODE appears a second
+ * time in OPTION_TABLE with a different name, then set *LONG_ALIAS to that
+ * second name, else set it to NULL. */
+static const apr_getopt_option_t *
+get_option_from_code(const char **long_alias,
+                     int code,
+                     const apr_getopt_option_t *option_table,
+                     const svn_opt_subcommand_desc2_t *command,
+                     apr_pool_t *pool)
+{
+  const apr_getopt_option_t *i;
+  const apr_getopt_option_t *opt
+    = svn_opt_get_option_from_code2(code, option_table, command, pool);
+
+  /* Find a long alias in the table, if there is one. */
+  *long_alias = NULL;
+  for (i = option_table; i->optch; i++)
+    {
+      if (i->optch == code && i->name != opt->name)
+        {
+          *long_alias = i->name;
+          break;
+        }
+    }
+
+  return opt;
+}
+
+/* Print an option OPT nicely into a STRING allocated in POOL.
+ * If OPT has a single-character short form, then print OPT->name (if not
+ * NULL) as an alias, else print LONG_ALIAS (if not NULL) as an alias.
+ * If DOC is set, include the generic documentation string of OPT,
+ * localized to the current locale if a translation is available.
+ */
+static void
+format_option(const char **string,
+              const apr_getopt_option_t *opt,
+              const char *long_alias,
+              svn_boolean_t doc,
+              apr_pool_t *pool)
+{
+  char *opts;
+
+  if (opt == NULL)
+    {
+      *string = "?";
+      return;
+    }
+
+  /* We have a valid option which may or may not have a "short
+     name" (a single-character alias for the long option). */
+  if (opt->optch <= 255)
+    opts = apr_psprintf(pool, "-%c [--%s]", opt->optch, opt->name);
+  else if (long_alias)
+    opts = apr_psprintf(pool, "--%s [--%s]", opt->name, long_alias);
+  else
+    opts = apr_psprintf(pool, "--%s", opt->name);
+
+  if (opt->has_arg)
+    opts = apr_pstrcat(pool, opts, _(" ARG"), SVN_VA_NULL);
+
+  if (doc)
+    opts = apr_psprintf(pool, "%-24s : %s", opts, _(opt->description));
+
+  *string = opts;
+}
+
+/* Print the canonical command name for CMD, and all its aliases, to
+   STREAM.  If HELP is set, print CMD's help string too, in which case
+   obtain option usage from OPTIONS_TABLE. */
+static svn_error_t *
+print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
+                    const apr_getopt_option_t *options_table,
+                    const int *global_options,
+                    svn_boolean_t help,
+                    apr_pool_t *pool,
+                    FILE *stream)
+{
+  svn_boolean_t first_time;
+  apr_size_t i;
+
+  /* Print the canonical command name. */
+  SVN_ERR(svn_cmdline_fputs(cmd->name, stream, pool));
+
+  /* Print the list of aliases. */
+  first_time = TRUE;
+  for (i = 0; i < SVN_OPT_MAX_ALIASES; i++)
+    {
+      if (cmd->aliases[i] == NULL)
+        break;
+
+      if (first_time) {
+        SVN_ERR(svn_cmdline_fputs(" (", stream, pool));
+        first_time = FALSE;
+      }
+      else
+        SVN_ERR(svn_cmdline_fputs(", ", stream, pool));
+
+      SVN_ERR(svn_cmdline_fputs(cmd->aliases[i], stream, pool));
+    }
+
+  if (! first_time)
+    SVN_ERR(svn_cmdline_fputs(")", stream, pool));
+
+  if (help)
+    {
+      const apr_getopt_option_t *option;
+      const char *long_alias;
+      svn_boolean_t have_options = FALSE;
+
+      SVN_ERR(svn_cmdline_fprintf(stream, pool, ": %s", _(cmd->help)));
+
+      /* Loop over all valid option codes attached to the subcommand */
+      for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
+        {
+          if (cmd->valid_options[i])
+            {
+              if (!have_options)
+                {
+                  SVN_ERR(svn_cmdline_fputs(_("\nValid options:\n"),
+                                            stream, pool));
+                  have_options = TRUE;
+                }
+
+              /* convert each option code into an option */
+              option = get_option_from_code(&long_alias, cmd->valid_options[i],
+                                            options_table, cmd, pool);
+
+              /* print the option's docstring */
+              if (option && option->description)
+                {
+                  const char *optstr;
+                  format_option(&optstr, option, long_alias, TRUE, pool);
+                  SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
+                                              optstr));
+                }
+            }
+        }
+      /* And global options too */
+      if (global_options && *global_options)
+        {
+          SVN_ERR(svn_cmdline_fputs(_("\nGlobal options:\n"),
+                                    stream, pool));
+          have_options = TRUE;
+
+          for (i = 0; global_options[i]; i++)
+            {
+
+              /* convert each option code into an option */
+              option = get_option_from_code(&long_alias, global_options[i],
+                                            options_table, cmd, pool);
+
+              /* print the option's docstring */
+              if (option && option->description)
+                {
+                  const char *optstr;
+                  format_option(&optstr, option, long_alias, TRUE, pool);
+                  SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
+                                              optstr));
+                }
+            }
+        }
+
+      if (have_options)
+        SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* The body for svn_opt_print_generic_help2() function with standard error
+ * handling semantic. Handling of errors implemented at caller side. */
+static svn_error_t *
+print_generic_help_body(const char *header,
+                        const svn_opt_subcommand_desc2_t *cmd_table,
+                        const apr_getopt_option_t *opt_table,
+                        const char *footer,
+                        apr_pool_t *pool, FILE *stream)
+{
+  int i = 0;
+
+  if (header)
+    SVN_ERR(svn_cmdline_fputs(header, stream, pool));
+
+  while (cmd_table[i].name)
+    {
+      SVN_ERR(svn_cmdline_fputs("   ", stream, pool));
+      SVN_ERR(print_command_info2(cmd_table + i, opt_table,
+                                  NULL, FALSE,
+                                  pool, stream));
+      SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
+      i++;
+    }
+
+  SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
+
+  if (footer)
+    SVN_ERR(svn_cmdline_fputs(footer, stream, pool));
+
+  return SVN_NO_ERROR;
+}
+
+void
+svn_opt_print_generic_help2(const char *header,
+                            const svn_opt_subcommand_desc2_t *cmd_table,
+                            const apr_getopt_option_t *opt_table,
+                            const char *footer,
+                            apr_pool_t *pool, FILE *stream)
+{
+  svn_error_t *err;
+
+  err = print_generic_help_body(header, cmd_table, opt_table, footer, pool,
+                                stream);
+
+  /* Issue #3014:
+   * Don't print anything on broken pipes. The pipe was likely
+   * closed by the process at the other end. We expect that
+   * process to perform error reporting as necessary.
+   *
+   * ### This assumes that there is only one error in a chain for
+   * ### SVN_ERR_IO_PIPE_WRITE_ERROR. See svn_cmdline_fputs(). */
+  if (err && err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+    svn_handle_error2(err, stderr, FALSE, "svn: ");
+  svn_error_clear(err);
+}
+
+svn_boolean_t
+svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code,
+                                 const int *global_options)
+{
+  apr_size_t i;
+
+  for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
+    if (command->valid_options[i] == option_code)
+      return TRUE;
+
+  if (global_options)
+    for (i = 0; global_options[i]; i++)
+      if (global_options[i] == option_code)
+        return TRUE;
+
+  return FALSE;
+}
+
+svn_boolean_t
+svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
+                                 int option_code)
+{
+  return svn_opt_subcommand_takes_option3(command,
+                                          option_code,
+                                          NULL);
+}
+
+svn_boolean_t
+svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
+                                int option_code)
+{
+  apr_size_t i;
+
+  for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
+    if (command->valid_options[i] == option_code)
+      return TRUE;
+
+  return FALSE;
+}
+
+void
+svn_opt_subcommand_help3(const char *subcommand,
+                         const svn_opt_subcommand_desc2_t *table,
+                         const apr_getopt_option_t *options_table,
+                         const int *global_options,
+                         apr_pool_t *pool)
+{
+  const svn_opt_subcommand_desc2_t *cmd =
+    svn_opt_get_canonical_subcommand2(table, subcommand);
+  svn_error_t *err;
+
+  if (cmd)
+    err = print_command_info2(cmd, options_table, global_options,
+                              TRUE, pool, stdout);
+  else
+    err = svn_cmdline_fprintf(stderr, pool,
+                              _("\"%s\": unknown command.\n\n"), subcommand);
+
+  if (err) {
+    /* Issue #3014: Don't print anything on broken pipes. */
+    if (err->apr_err != SVN_ERR_IO_PIPE_WRITE_ERROR)
+      svn_handle_error2(err, stderr, FALSE, "svn: ");
+    svn_error_clear(err);
+  }
 }
 
 void
@@ -522,6 +880,56 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
     }
 
   *targets_p = output_targets;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt_print_help4(apr_getopt_t *os,
+                    const char *pgm_name,
+                    svn_boolean_t print_version,
+                    svn_boolean_t quiet,
+                    svn_boolean_t verbose,
+                    const char *version_footer,
+                    const char *header,
+                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const apr_getopt_option_t *option_table,
+                    const int *global_options,
+                    const char *footer,
+                    apr_pool_t *pool)
+{
+  apr_array_header_t *targets = NULL;
+
+  if (os)
+    SVN_ERR(svn_opt_parse_all_args(&targets, os, pool));
+
+  if (os && targets->nelts)  /* help on subcommand(s) requested */
+    {
+      int i;
+
+      for (i = 0; i < targets->nelts; i++)
+        {
+          svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
+                                   cmd_table, option_table,
+                                   global_options, pool);
+        }
+    }
+  else if (print_version)   /* just --version */
+    {
+      SVN_ERR(svn_opt__print_version_info(pgm_name, version_footer,
+                                          svn_version_extended(verbose, pool),
+                                          quiet, verbose, pool));
+    }
+  else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
+    svn_opt_print_generic_help2(header,
+                                cmd_table,
+                                option_table,
+                                footer,
+                                pool,
+                                stdout);
+  else                                       /* unknown option or cmd */
+    SVN_ERR(svn_cmdline_fprintf(stderr, pool,
+                                _("Type '%s help' for usage.\n"), pgm_name));
+
   return SVN_NO_ERROR;
 }
 
@@ -878,6 +1286,42 @@ svn_io_dir_walk(const char *dirname,
                                           &baton, pool));
 }
 
+svn_error_t *
+svn_io_stat_dirent(const svn_io_dirent2_t **dirent_p,
+                   const char *path,
+                   svn_boolean_t ignore_enoent,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+            svn_io_stat_dirent2(dirent_p,
+                                path,
+                                FALSE,
+                                ignore_enoent,
+                                result_pool,
+                                scratch_pool));
+}
+
+svn_error_t *
+svn_io_file_rename(const char *from_path, const char *to_path,
+                   apr_pool_t *pool)
+{
+  return svn_error_trace(svn_io_file_rename2(from_path, to_path,
+                                             FALSE, pool));
+}
+
+svn_error_t *
+svn_io_write_atomic(const char *final_path,
+                    const void *buf,
+                    apr_size_t nbytes,
+                    const char *copy_perms_path,
+                    apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_io_write_atomic2(final_path, buf, nbytes,
+                                              copy_perms_path, TRUE,
+                                              scratch_pool));
+}
+
 /*** From constructors.c ***/
 svn_log_changed_path_t *
 svn_log_changed_path_dup(const svn_log_changed_path_t *changed_path,
@@ -1047,6 +1491,12 @@ svn_stream_from_aprfile(apr_file_t *file, apr_pool_t *pool)
 }
 
 svn_error_t *
+svn_stream_for_stdin(svn_stream_t **in, apr_pool_t *pool)
+{
+  return svn_error_trace(svn_stream_for_stdin2(in, FALSE, pool));
+}
+
+svn_error_t *
 svn_stream_contents_same(svn_boolean_t *same,
                          svn_stream_t *stream1,
                          svn_stream_t *stream2,
@@ -1057,6 +1507,129 @@ svn_stream_contents_same(svn_boolean_t *same,
                            svn_stream_disown(stream1, pool),
                            svn_stream_disown(stream2, pool),
                            pool));
+}
+
+void
+svn_stream_set_read(svn_stream_t *stream,
+                    svn_read_fn_t read_fn)
+{
+  svn_stream_set_read2(stream, NULL /* only full read support */,
+                       read_fn);
+}
+
+svn_error_t *
+svn_stream_read(svn_stream_t *stream,
+                char *buffer,
+                apr_size_t *len)
+{
+  return svn_error_trace(svn_stream_read_full(stream, buffer, len));
+}
+
+struct md5_stream_baton
+{
+  const unsigned char **read_digest;
+  const unsigned char **write_digest;
+  svn_checksum_t *read_checksum;
+  svn_checksum_t *write_checksum;
+  svn_stream_t *proxy;
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+read_handler_md5(void *baton, char *buffer, apr_size_t *len)
+{
+  struct md5_stream_baton *btn = baton;
+  return svn_error_trace(svn_stream_read2(btn->proxy, buffer, len));
+}
+
+static svn_error_t *
+read_full_handler_md5(void *baton, char *buffer, apr_size_t *len)
+{
+  struct md5_stream_baton *btn = baton;
+  return svn_error_trace(svn_stream_read_full(btn->proxy, buffer, len));
+}
+
+static svn_error_t *
+skip_handler_md5(void *baton, apr_size_t len)
+{
+  struct md5_stream_baton *btn = baton;
+  return svn_error_trace(svn_stream_skip(btn->proxy, len));
+}
+
+static svn_error_t *
+write_handler_md5(void *baton, const char *buffer, apr_size_t *len)
+{
+  struct md5_stream_baton *btn = baton;
+  return svn_error_trace(svn_stream_write(btn->proxy, buffer, len));
+}
+
+static svn_error_t *
+close_handler_md5(void *baton)
+{
+  struct md5_stream_baton *btn = baton;
+
+  SVN_ERR(svn_stream_close(btn->proxy));
+
+  if (btn->read_digest)
+    *btn->read_digest
+      = apr_pmemdup(btn->pool, btn->read_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
+
+  if (btn->write_digest)
+    *btn->write_digest
+      = apr_pmemdup(btn->pool, btn->write_checksum->digest,
+                    APR_MD5_DIGESTSIZE);
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_stream_t *
+svn_stream_checksummed(svn_stream_t *stream,
+                       const unsigned char **read_digest,
+                       const unsigned char **write_digest,
+                       svn_boolean_t read_all,
+                       apr_pool_t *pool)
+{
+  svn_stream_t *s;
+  struct md5_stream_baton *baton;
+
+  if (! read_digest && ! write_digest)
+    return stream;
+
+  baton = apr_palloc(pool, sizeof(*baton));
+  baton->read_digest = read_digest;
+  baton->write_digest = write_digest;
+  baton->pool = pool;
+
+  /* Set BATON->proxy to a stream that will fill in BATON->read_checksum
+   * and BATON->write_checksum (if we want them) when it is closed. */
+  baton->proxy
+    = svn_stream_checksummed2(stream,
+                              read_digest ? &baton->read_checksum : NULL,
+                              write_digest ? &baton->write_checksum : NULL,
+                              svn_checksum_md5,
+                              read_all, pool);
+
+  /* Create a stream that will forward its read/write/close operations to
+   * BATON->proxy and will fill in *READ_DIGEST and *WRITE_DIGEST (if we
+   * want them) after it closes BATON->proxy. */
+  s = svn_stream_create(baton, pool);
+  svn_stream_set_read2(s, read_handler_md5, read_full_handler_md5);
+  svn_stream_set_skip(s, skip_handler_md5);
+  svn_stream_set_write(s, write_handler_md5);
+  svn_stream_set_close(s, close_handler_md5);
+  return s;
+}
+
+svn_error_t *
+svn_string_from_stream(svn_string_t **result,
+                       svn_stream_t *stream,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_string_from_stream2(result, stream, 0,
+                                                 result_pool));
 }
 
 /*** From path.c ***/
@@ -1127,7 +1700,7 @@ svn_rangelist_merge(svn_rangelist_t **rangelist,
                                pool, pool));
 
   return svn_error_trace(
-            svn_rangelist__combine_adjacent_ranges(*rangelist, pool));
+            svn_rangelist__canonicalize(*rangelist, pool));
 }
 
 svn_error_t *
@@ -1169,16 +1742,39 @@ svn_mergeinfo_intersect(svn_mergeinfo_t *mergeinfo,
 }
 
 /*** From config.c ***/
+svn_error_t *
+svn_config_create(svn_config_t **cfgp,
+                  svn_boolean_t section_names_case_sensitive,
+                  apr_pool_t *result_pool)
+{
+  return svn_error_trace(svn_config_create2(cfgp,
+                                            section_names_case_sensitive,
+                                            FALSE,
+                                            result_pool));
+}
+
+svn_error_t *
+svn_config_read2(svn_config_t **cfgp, const char *file,
+                 svn_boolean_t must_exist,
+                 svn_boolean_t section_names_case_sensitive,
+                 apr_pool_t *result_pool)
+{
+  return svn_error_trace(svn_config_read3(cfgp, file,
+                                          must_exist,
+                                          section_names_case_sensitive,
+                                          FALSE,
+                                          result_pool));
+}
 
 svn_error_t *
 svn_config_read(svn_config_t **cfgp, const char *file,
                 svn_boolean_t must_exist,
-                apr_pool_t *pool)
+                apr_pool_t *result_pool)
 {
-  return svn_error_trace(svn_config_read2(cfgp, file,
+  return svn_error_trace(svn_config_read3(cfgp, file,
                                           must_exist,
-                                          FALSE,
-                                          pool));
+                                          FALSE, FALSE,
+                                          result_pool));
 }
 
 #ifdef SVN_DISABLE_FULL_VERSION_MATCH
@@ -1222,8 +1818,198 @@ svn_xml_make_header(svn_stringbuf_t **str, apr_pool_t *pool)
   svn_xml_make_header2(str, NULL, pool);
 }
 
+
+/*** From utf.c ***/
 void
 svn_utf_initialize(apr_pool_t *pool)
 {
-  svn_utf_initialize2(pool, FALSE);
+  svn_utf_initialize2(FALSE, pool);
+}
+
+svn_error_t *
+svn_utf_cstring_from_utf8_ex(const char **dest,
+                             const char *src,
+                             const char *topage,
+                             const char *convset_key,
+                             apr_pool_t *pool)
+{
+  return svn_utf_cstring_from_utf8_ex2(dest, src, topage, pool);
+}
+
+/*** From error.c ***/
+void
+svn_handle_error(svn_error_t *err, FILE *stream, svn_boolean_t fatal)
+{
+  svn_handle_error2(err, stream, fatal, "svn: ");
+}
+
+void
+svn_handle_warning(FILE *stream, svn_error_t *err)
+{
+  svn_handle_warning2(stream, err, "svn: ");
+}
+
+
+/*** From subst.c ***/
+svn_error_t *
+svn_subst_build_keywords(svn_subst_keywords_t *kw,
+                         const char *keywords_val,
+                         const char *rev,
+                         const char *url,
+                         apr_time_t date,
+                         const char *author,
+                         apr_pool_t *pool)
+{
+  apr_hash_t *kwhash;
+  const svn_string_t *val;
+
+  SVN_ERR(svn_subst_build_keywords2(&kwhash, keywords_val, rev,
+                                    url, date, author, pool));
+
+  /* The behaviour of pre-1.3 svn_subst_build_keywords, which we are
+   * replicating here, is to write to a slot in the svn_subst_keywords_t
+   * only if the relevant keyword was present in keywords_val, otherwise
+   * leaving that slot untouched. */
+
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_REVISION_LONG);
+  if (val)
+    kw->revision = val;
+
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_DATE_LONG);
+  if (val)
+    kw->date = val;
+
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_AUTHOR_LONG);
+  if (val)
+    kw->author = val;
+
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_URL_LONG);
+  if (val)
+    kw->url = val;
+
+  val = svn_hash_gets(kwhash, SVN_KEYWORD_ID);
+  if (val)
+    kw->id = val;
+
+  return SVN_NO_ERROR;
+}
+
+/*** From version.c ***/
+svn_error_t *
+svn_ver_check_list(const svn_version_t *my_version,
+                   const svn_version_checklist_t *checklist)
+{
+  return svn_ver_check_list2(my_version, checklist, svn_ver_compatible);
+}
+
+/*** From win32_crypto.c ***/
+#if defined(WIN32) && !defined(__MINGW32__)
+void
+svn_auth_get_windows_simple_provider(svn_auth_provider_object_t **provider,
+                                     apr_pool_t *pool)
+{
+  svn_auth__get_windows_simple_provider(provider, pool);
+}
+
+void
+svn_auth_get_windows_ssl_client_cert_pw_provider
+   (svn_auth_provider_object_t **provider,
+    apr_pool_t *pool)
+{
+  svn_auth__get_windows_ssl_client_cert_pw_provider(provider, pool);
+}
+
+void
+svn_auth_get_windows_ssl_server_trust_provider
+  (svn_auth_provider_object_t **provider, apr_pool_t *pool)
+{
+  svn_auth__get_windows_ssl_server_trust_provider(provider, pool);
+}
+#endif /* WIN32 && !__MINGW32__ */
+
+/*** From macos_keychain.c ***/
+#if defined(DARWIN)
+void
+svn_auth_get_keychain_simple_provider(svn_auth_provider_object_t **provider,
+                                      apr_pool_t *pool)
+{
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+  svn_auth__get_keychain_simple_provider(provider, pool);
+#else
+  svn_auth__get_dummmy_simple_provider(provider, pool);
+#endif
+}
+
+void
+svn_auth_get_keychain_ssl_client_cert_pw_provider
+  (svn_auth_provider_object_t **provider,
+   apr_pool_t *pool)
+{
+#ifdef SVN_HAVE_KEYCHAIN_SERVICES
+  svn_auth__get_keychain_ssl_client_cert_pw_provider(provider, pool);
+#else
+  /* Not really the right type of dummy provider, but doesn't throw NULL
+     errors as just returning NULL would */
+  svn_auth__get_dummmy_simple_provider(provider, pool);
+#endif
+}
+#endif /* DARWIN */
+
+#if !defined(WIN32)
+void
+svn_auth_get_gpg_agent_simple_provider(svn_auth_provider_object_t **provider,
+                                       apr_pool_t *pool)
+{
+#ifdef SVN_HAVE_GPG_AGENT
+  svn_auth__get_gpg_agent_simple_provider(provider, pool);
+#else
+  svn_auth__get_dummmy_simple_provider(provider, pool);
+#endif /* SVN_HAVE_GPG_AGENT */
+}
+#endif /* !WIN32 */
+
+svn_error_t *
+svn_cmdline_create_auth_baton(svn_auth_baton_t **ab,
+                              svn_boolean_t non_interactive,
+                              const char *auth_username,
+                              const char *auth_password,
+                              const char *config_dir,
+                              svn_boolean_t no_auth_cache,
+                              svn_boolean_t trust_server_cert,
+                              svn_config_t *cfg,
+                              svn_cancel_func_t cancel_func,
+                              void *cancel_baton,
+                              apr_pool_t *pool)
+{
+  return svn_error_trace(svn_cmdline_create_auth_baton2(ab,
+                                                        non_interactive,
+                                                        auth_username,
+                                                        auth_password,
+                                                        config_dir,
+                                                        no_auth_cache,
+                                                        trust_server_cert,
+                                                        FALSE,
+                                                        FALSE,
+                                                        FALSE,
+                                                        FALSE,
+                                                        cfg,
+                                                        cancel_func,
+                                                        cancel_baton,
+                                                        pool));
+}
+
+/*** From base64.c ***/
+svn_stream_t *
+svn_base64_encode(svn_stream_t *output, apr_pool_t *pool)
+{
+  return svn_base64_encode2(output, TRUE, pool);
+}
+
+/*** From string.c ***/
+char *
+svn_cstring_join(const apr_array_header_t *strings,
+                 const char *separator,
+                 apr_pool_t *pool)
+{
+  return svn_cstring_join2(strings, separator, TRUE, pool);
 }

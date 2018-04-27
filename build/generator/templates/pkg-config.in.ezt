@@ -1,0 +1,12 @@
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+libdir=@libdir@
+includedir=@includedir@
+
+Name: [lib_name]
+Description: [lib_desc]
+Version: @PACKAGE_VERSION@
+Requires: [for lib_required] [lib_required][end]
+Requires.private: [for lib_required_private] [lib_required_private][end]
+Libs: -L${libdir} [for lib_deps] [lib_deps][end]
+Cflags: -I${includedir}

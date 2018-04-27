@@ -60,8 +60,7 @@ def basic_checkout(sbox):
 
   # Checkout of a different URL into a working copy fails
   A_url = sbox.repo_url + '/A'
-  svntest.actions.run_and_verify_svn("No error where some expected",
-                                      None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      # "Obstructed update",
                                      'co', A_url,
                                      wc_dir)
@@ -73,7 +72,7 @@ def basic_checkout(sbox):
   os.remove(lambda_path)
   G_path = sbox.ospath('A/D/G')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', G_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', G_path)
 
   expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_output.tweak('A/mu', status='M ')
@@ -88,7 +87,7 @@ def basic_checkout(sbox):
   # Repeat checkout of original URL into working copy with modifications
   url = sbox.repo_url
 
-  svntest.actions.run_and_verify_svn("Repeat checkout failed", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'co', url,
                                      wc_dir)
 
@@ -141,9 +140,7 @@ def basic_commit(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 
 #----------------------------------------------------------------------
@@ -177,7 +174,7 @@ def basic_update(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -204,16 +201,29 @@ def basic_update(sbox):
                                         expected_status)
 
   # Unversioned paths, those that are not immediate children of a versioned
-  # path, are skipped and do not raise an error
+  # path, are skipped and do raise an error if they are the only targets
   xx_path = sbox.ospath('xx/xx')
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx",
-    ["Skipped '"+xx_path+"'\n",
-    "Summary of conflicts:\n",
-    "  Skipped paths: 1\n"], [], 'update', xx_path)
-  exit_code, out, err = svntest.actions.run_and_verify_svn(
-    "update xx/xx", [], [],
+  expected_err = "svn: E155007: "
+  svntest.actions.run_and_verify_svn(
+    ["Skipped '"+xx_path+"'\n", ],
+    expected_err,
+    'update', xx_path)
+  svntest.actions.run_and_verify_svn(
+    [], expected_err,
     'update', '--quiet', xx_path)
+
+  # Unversioned paths, that are not the only targets of the command are
+  # skipped without an error
+  svntest.actions.run_and_verify_svn(
+    ["Updating '"+mu_path+"':\n",
+     "At revision 2.\n",
+     "Skipped '"+xx_path+"'\n",
+     "Summary of updates:\n",
+     "  Updated '"+mu_path+"' to r2.\n"
+    ] + svntest.main.summary_of_conflicts(skipped_paths=1),
+    [], 'update', mu_path, xx_path)
+  svntest.actions.run_and_verify_svn(
+    [], [], 'update', '--quiet', mu_path, xx_path)
 
 #----------------------------------------------------------------------
 def basic_mkdir_url(sbox):
@@ -224,8 +234,8 @@ def basic_mkdir_url(sbox):
   Y_url = sbox.repo_url + '/Y'
   Y_Z_url = sbox.repo_url + '/Y/Z'
 
-  svntest.actions.run_and_verify_svn("mkdir URL URL/subdir",
-                                     ["\n", "Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn(["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'mkdir', '-m', 'log_msg', Y_url, Y_Z_url)
 
   expected_output = wc.State(sbox.wc_dir, {
@@ -262,19 +272,18 @@ def basic_mkdir_url_with_parents(sbox):
   U_url = sbox.repo_url + '/U'
   U_V_url = sbox.repo_url + '/U/V'
   U_V_W_url = sbox.repo_url + '/U/V/W'
-  svntest.actions.run_and_verify_svn("erroneous mkdir sans --parents",
-                                     [],
+  svntest.actions.run_and_verify_svn(None,
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', '-m', 'log_msg',
                                      X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
 
-  svntest.actions.run_and_verify_svn("mkdir",
-                                     ["\n", "Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn(["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'mkdir', '-m', 'log_msg',
                                      X_url, U_url)
 
-  svntest.actions.run_and_verify_svn("mkdir --parents",
-                                     ["\n", "Committed revision 3.\n"], [],
+  svntest.actions.run_and_verify_svn(["Committing transaction...\n",
+                                      "Committed revision 3.\n"], [],
                                      'mkdir', '-m', 'log_msg', '--parents',
                                      X_Y_Z_url, X_Y_Z2_url, X_T_C_url, U_V_W_url)
 
@@ -328,11 +337,11 @@ def basic_mkdir_wc_with_parents(sbox):
 
   Y_Z_path = sbox.ospath('Y/Z')
 
-  svntest.actions.run_and_verify_svn("erroneous mkdir dir/subdir", [],
+  svntest.actions.run_and_verify_svn([],
                                      ".*Try 'svn mkdir --parents' instead.*",
                                      'mkdir', Y_Z_path)
 
-  svntest.actions.run_and_verify_svn("mkdir dir/subdir", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'mkdir', '--parents', Y_Z_path)
 
   # Verify the WC status, because there was a regression in which parts of
@@ -385,8 +394,9 @@ def basic_commit_corruption(sbox):
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
-  os.chmod(tb_dir_path, 0777)  ### What's a more portable way to do this?
-  os.chmod(mu_tb_path, 0666)   ### Would rather not use hardcoded numbers.
+  ### What's a more portable way to do this?
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   shutil.copyfile(mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append(mu_tb_path, 'Aaagggkkk, corruption!')
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -394,13 +404,12 @@ def basic_commit_corruption(sbox):
 
   # This commit should fail due to text base corruption.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status,
-                                        "svn: E200014: Checksum",
-                                        wc_dir)
+                                        None, # expected_status,
+                                        "svn: E200014: Checksum")
 
   # Restore the uncorrupted text base.
-  os.chmod(tb_dir_path, 0777)
-  os.chmod(mu_tb_path, 0666)
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   os.remove(mu_tb_path)
   os.rename(mu_saved_tb_path, mu_tb_path)
   os.chmod(tb_dir_path, tb_dir_saved_mode)
@@ -408,7 +417,7 @@ def basic_commit_corruption(sbox):
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
 #----------------------------------------------------------------------
 def basic_update_corruption(sbox):
@@ -432,7 +441,9 @@ def basic_update_corruption(sbox):
 
   # Make the "other" working copy
   other_wc = sbox.add_wc_path('other')
-  svntest.actions.duplicate_dir(wc_dir, other_wc)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'co', sbox.repo_url, other_wc)
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
@@ -450,7 +461,7 @@ def basic_update_corruption(sbox):
 
   # This commit should succeed.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the other_wc.
   expected_output = wc.State(other_wc, {
@@ -459,10 +470,6 @@ def basic_update_corruption(sbox):
 
   # Create expected disk tree for the update.
   expected_disk = svntest.main.greek_state.copy()
-  expected_disk.tweak('A/mu',
-                      contents=expected_disk.desc['A/mu'].contents
-                      + 'appended mu text')
-
   # Create expected status tree for the update.
   expected_status = svntest.actions.get_virginal_state(other_wc, 2)
 
@@ -474,30 +481,41 @@ def basic_update_corruption(sbox):
   mu_saved_tb_path = mu_tb_path + "-saved"
   tb_dir_saved_mode = os.stat(tb_dir_path)[stat.ST_MODE]
   mu_tb_saved_mode = os.stat(mu_tb_path)[stat.ST_MODE]
-  os.chmod(tb_dir_path, 0777)
-  os.chmod(mu_tb_path, 0666)
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   shutil.copyfile(mu_tb_path, mu_saved_tb_path)
   svntest.main.file_append(mu_tb_path, 'Aiyeeeee, corruption!\nHelp!\n')
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
-  # Do the update and check the results in three ways.
+  # Do the update and check the results in four ways.
+  fail_output = wc.State(other_wc, {
+  })
+  fail_status = svntest.actions.get_virginal_state(other_wc, 1)
+  fail_status.tweak('A', '', status='! ', wc_rev=2)
   svntest.actions.run_and_verify_update(other_wc,
-                                        expected_output,
+                                        fail_output,
                                         expected_disk,
-                                        expected_status,
-                                        "svn: E155017: Checksum", other_wc)
+                                        fail_status,
+                                        "svn: E155017: Checksum")
 
   # Restore the uncorrupted text base.
-  os.chmod(tb_dir_path, 0777)
-  os.chmod(mu_tb_path, 0666)
+  os.chmod(tb_dir_path, svntest.main.S_ALL_RWX)
+  os.chmod(mu_tb_path, svntest.main.S_ALL_RW)
   os.remove(mu_tb_path)
   os.rename(mu_saved_tb_path, mu_tb_path)
   os.chmod(tb_dir_path, tb_dir_saved_mode)
   os.chmod(mu_tb_path, mu_tb_saved_mode)
 
+  # Create expected status tree for the update.
+  expected_status = svntest.actions.get_virginal_state(other_wc, 2)
+
   # This update should succeed.  (Actually, I'm kind of astonished
   # that this works without even an intervening "svn cleanup".)
+  expected_disk.tweak('A/mu',
+                      contents=expected_disk.desc['A/mu'].contents
+                      + 'appended mu text')
+
   svntest.actions.run_and_verify_update(other_wc,
                                         expected_output,
                                         expected_disk,
@@ -536,7 +554,7 @@ def basic_merging_update(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir)
 
   # Make a backup copy of the working copy
@@ -562,7 +580,7 @@ def basic_merging_update(sbox):
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
                                         expected_status,
-                                        None,
+                                        [],
                                         wc_dir)
 
   # Make local mods to wc_backup by recreating mu and rho
@@ -643,7 +661,7 @@ def basic_conflict(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -657,6 +675,7 @@ def basic_conflict(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -665,6 +684,7 @@ def basic_conflict(sbox):
                       contents="\n".join(["This is the file 'rho'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for rho",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
@@ -685,9 +705,7 @@ def basic_conflict(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
+                                        extra_files=extra_files)
 
   # verify that the extra_files list is now empty.
   if len(extra_files) != 0:
@@ -744,7 +762,7 @@ def basic_cleanup(sbox):
     svntest.main.safe_rmtree(tmp_path)
 
   # Run cleanup (### todo: cleanup doesn't currently print anything)
-  svntest.actions.run_and_verify_svn("Cleanup command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'cleanup', wc_dir)
 
   # Verify unlocked status.
@@ -772,12 +790,12 @@ def basic_revert(sbox):
   svntest.main.file_append(rho_path, "Added some text to 'rho'.\n")
   svntest.main.file_append(zeta_path, "Added some text to 'zeta'.\n")
 
-  svntest.actions.run_and_verify_svn("Add command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'add', zeta_path)
-  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'random-prop', 'propvalue',
                                      gamma_path)
-  svntest.actions.run_and_verify_svn("Add prop command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'ps', 'random-prop', 'propvalue',
                                      iota_path)
 
@@ -793,19 +811,19 @@ def basic_revert(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # Run revert (### todo: revert doesn't currently print anything)
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', beta_path)
 
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', gamma_path)
 
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', iota_path)
 
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', rho_path)
 
-  svntest.actions.run_and_verify_svn("Revert command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'revert', zeta_path)
 
   # Verify unmodified status.
@@ -837,7 +855,7 @@ def basic_revert(sbox):
 
   # Finally, check that reverted file is not readonly
   os.remove(beta_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', beta_path)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', beta_path)
   if not (open(beta_path, 'r+')):
     raise svntest.Failure
 
@@ -845,7 +863,7 @@ def basic_revert(sbox):
   # removed, can be reverted.
   X_path = sbox.ospath('X')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', X_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', X_path)
 
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.add({
@@ -854,7 +872,7 @@ def basic_revert(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
   svntest.main.safe_rmtree(X_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', X_path)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', X_path)
 
   expected_status.remove('X')
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
@@ -866,7 +884,7 @@ def basic_revert(sbox):
 
   ### Most of the rest of this test is ineffective, due to the
   ### problems described in issue #1611.
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', E_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', E_path)
   svntest.main.safe_rmtree(E_path)
   expected_status.tweak('A/B/E', status='D ')
   expected_status.tweak('A/B/E', wc_rev='?')
@@ -907,7 +925,7 @@ def basic_revert(sbox):
   #    try updating instead."
   #
   # ...but due to test suite lossage, it'll still look like success.
-  svntest.actions.run_and_verify_svn(None, None, [], 'revert', E_path)
+  svntest.actions.run_and_verify_svn(None, [], 'revert', E_path)
 
   ### FIXME: Again, the problem described in issue #1611 bites us here.
   #
@@ -947,7 +965,7 @@ def basic_switch(sbox):
   # First, try the switch without the --ignore-ancestry flag,
   # expecting failure.
   expected_error = "svn: E195012: .*no common ancestry.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'switch', gamma_url, iota_path)
 
   # Now ignore ancestry so we can ge through this switch.
@@ -955,7 +973,7 @@ def basic_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
   ### Switch the directory `A/D/H' to `A/D/G'.
@@ -1007,7 +1025,7 @@ def basic_switch(sbox):
   # First, try the switch without the --ignore-ancestry flag,
   # expecting failure.
   expected_error = "svn: E195012: .*no common ancestry.*"
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'switch', ADG_url, ADH_path)
 
   # Do the switch and check the results in three ways.
@@ -1015,7 +1033,7 @@ def basic_switch(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None, None, None,
+                                        [],
                                         False, '--ignore-ancestry')
 
 #----------------------------------------------------------------------
@@ -1042,6 +1060,10 @@ def basic_delete(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  # Copies of unmodified
+  sbox.simple_copy('iota', 'iota-copied')
+  sbox.simple_copy('A/B/F', 'F-copied')
 
   # modify text of chi
   chi_parent_path = sbox.ospath('A/D/H')
@@ -1085,39 +1107,41 @@ def basic_delete(sbox):
   expected_output.tweak('A/D/G/rho', 'A/B/F', status=' M')
 #  expected_output.tweak('A/C/sigma', status='? ')
   expected_output.add({
-    'A/B/X' : Item(status='A ', wc_rev=0),
-    'A/B/X/xi' : Item(status='A ', wc_rev=0),
-    'A/D/Y' : Item(status='A ', wc_rev=0),
+    'A/B/X'       : Item(status='A ', wc_rev='-'),
+    'A/B/X/xi'    : Item(status='A ', wc_rev='-'),
+    'A/D/Y'       : Item(status='A ', wc_rev='-'),
+    'F-copied'    : Item(status='A ', copied='+', wc_rev='-'),
+    'iota-copied' : Item(status='A ', copied='+', wc_rev='-'),
     })
 
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
   # 'svn rm' that should fail
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', chi_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', chi_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', rho_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', rho_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', F_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', F_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', sigma_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', sigma_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'rm', X_path)
 
   # check status has not changed
@@ -1125,39 +1149,45 @@ def basic_delete(sbox):
 
   # 'svn rm' that should work
   E_path =  sbox.ospath('A/B/E')
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', E_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', E_path)
 
   # 'svn rm --force' that should work
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--force',
+  svntest.actions.run_and_verify_svn(None, [], 'rm', '--force',
                                      chi_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', rho_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', F_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', sigma_parent_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', X_path)
+
+  # Deleting an unchanged copy shouldn't error.
+  sbox.simple_mkdir('Z-added')
+  svntest.main.run_svn(None, 'rm', sbox.ospath('iota-copied'),
+                                   sbox.ospath('F-copied'),
+                                   sbox.ospath('Z-added'))
 
   # Deleting already removed from wc versioned item with --force
   iota_path = sbox.ospath('iota')
   os.remove(iota_path)
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', iota_path)
 
   # and without --force
   gamma_path = sbox.ospath('A/D/gamma')
   os.remove(gamma_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', gamma_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', gamma_path)
 
   # Deleting already scheduled for deletion doesn't require --force
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', gamma_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', gamma_path)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', E_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', E_path)
 
   # check status
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
@@ -1183,7 +1213,7 @@ def basic_delete(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # issue 687 delete directory with uncommitted directory child
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', Y_parent_path)
 
   expected_status.tweak('A/D', status='D ')
@@ -1216,21 +1246,21 @@ def basic_delete(sbox):
   # Deleting unversioned file explicitly
   foo_path = sbox.ospath('foo')
   svntest.main.file_append(foo_path, 'unversioned foo')
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force', foo_path)
   verify_file_deleted("Failed to remove unversioned file foo", foo_path)
 
   # At one stage deleting a URL dumped core
   iota_URL = sbox.repo_url + '/iota'
 
-  svntest.actions.run_and_verify_svn(None,
-                                     ["\n", "Committed revision 2.\n"], [],
+  svntest.actions.run_and_verify_svn(["Committing transaction...\n",
+                                      "Committed revision 2.\n"], [],
                                      'rm', '-m', 'delete iota URL',
                                      iota_URL)
 
   # Issue 4074, deleting a root url SEGV.
   expected_error = 'svn: E170000: .*not within a repository'
-  svntest.actions.run_and_verify_svn(None, [], expected_error,
+  svntest.actions.run_and_verify_svn([], expected_error,
                                      'rm', sbox.repo_url,
                                      '--message', 'delete root')
 
@@ -1244,8 +1274,7 @@ def basic_checkout_deleted(sbox):
 
   # Delete A/D and commit.
   D_path = sbox.ospath('A/D')
-  svntest.actions.run_and_verify_svn("error scheduling A/D for deletion",
-                                     None, [], 'rm', '--force', D_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', '--force', D_path)
 
   expected_output = wc.State(wc_dir, {
     'A/D' : Item(verb='Deleting'),
@@ -1257,14 +1286,12 @@ def basic_checkout_deleted(sbox):
                          'A/D/gamma')
 
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Now try to checkout revision 1 of A/D.
   url = sbox.repo_url + '/A/D'
   wc2 = sbox.ospath('new_D')
-  svntest.actions.run_and_verify_svn("error checking out r1 of A/D",
-                                     None, [], 'co', '-r', '1',
+  svntest.actions.run_and_verify_svn(None, [], 'co', '-r', '1',
                                      url + "@1", wc2)
 
 #----------------------------------------------------------------------
@@ -1288,7 +1315,7 @@ def basic_node_kind_change(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Try and fail to create a directory (file scheduled for deletion)
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', gamma_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', gamma_path)
 
   # Status is replaced
   expected_status.tweak('A/D/gamma', status='R ')
@@ -1301,23 +1328,21 @@ def basic_node_kind_change(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('A/D/gamma', status='  ', wc_rev='2')
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Try and fail to create a directory (file deleted)
-  svntest.actions.run_and_verify_svn(None,
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'mkdir', gamma_path)
 
   # Status is unchanged
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
   # Update to finally get rid of file
-  svntest.actions.run_and_verify_svn(None, None, [], 'up', wc_dir)
+  svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
   # mkdir should succeed
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', gamma_path)
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', gamma_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', gamma_path)
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', gamma_path)
 
   expected_status.tweak(wc_rev=2)
   expected_status.add({
@@ -1341,7 +1366,7 @@ def basic_import(sbox):
   # import new files into repository
   url = sbox.repo_url + "/dirA/dirB/new_file"
   exit_code, output, errput = svntest.actions.run_and_verify_svn(
-    'Cannot change node kind', None, [], 'import',
+    None, [], 'import',
     '-m', 'Log message for new import', new_path, url)
 
   lastline = output.pop().strip()
@@ -1381,8 +1406,7 @@ def basic_import(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None, None, None,
-                                        None, None, 1)
+                                        [], True)
 
 #----------------------------------------------------------------------
 
@@ -1396,7 +1420,7 @@ def basic_cat(sbox):
 
   # Get repository text even if wc is modified
   svntest.main.file_append(mu_path, "some text")
-  svntest.actions.run_and_verify_svn(None, ["This is the file 'mu'.\n"],
+  svntest.actions.run_and_verify_svn(["This is the file 'mu'.\n"],
                                      [], 'cat',
                                      ###TODO is user/pass really necessary?
                                      mu_path)
@@ -1415,33 +1439,27 @@ def basic_ls(sbox):
 
   cwd = os.getcwd()
   os.chdir(wc_dir)
-  svntest.actions.run_and_verify_svn("ls implicit current directory",
-                                     ["A/\n", "iota\n"],
+  svntest.actions.run_and_verify_svn(["A/\n", "iota\n"],
                                      [], 'ls')
   os.chdir(cwd)
 
-  svntest.actions.run_and_verify_svn('ls the root of working copy',
-                                     ['A/\n', 'iota\n'],
+  svntest.actions.run_and_verify_svn(['A/\n', 'iota\n'],
                                      [], 'ls',
                                      wc_dir)
 
-  svntest.actions.run_and_verify_svn('ls a working copy directory',
-                                     ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+  svntest.actions.run_and_verify_svn(['B/\n', 'C/\n', 'D/\n', 'mu\n'],
                                      [], 'ls',
                                      sbox.ospath('A'))
 
-  svntest.actions.run_and_verify_svn('ls working copy directory with -r BASE',
-                                     ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+  svntest.actions.run_and_verify_svn(['B/\n', 'C/\n', 'D/\n', 'mu\n'],
                                      [], 'ls', '-r', 'BASE',
                                      sbox.ospath('A'))
 
-  svntest.actions.run_and_verify_svn('ls a single file',
-                                     ['mu\n'],
+  svntest.actions.run_and_verify_svn(['mu\n'],
                                      [], 'ls',
                                      sbox.ospath('A/mu'))
 
-  svntest.actions.run_and_verify_svn('recursive ls',
-                                     ['E/\n', 'E/alpha\n', 'E/beta\n', 'F/\n',
+  svntest.actions.run_and_verify_svn(['E/\n', 'E/alpha\n', 'E/beta\n', 'F/\n',
                                       'lambda\n' ], [], 'ls', '-R',
                                      sbox.ospath('A/B'))
 
@@ -1476,11 +1494,11 @@ def nonexistent_repository(sbox):
   # the root directory, the test could fail, and that's just too bad :-).
 
   exit_code, output, errput = svntest.actions.run_and_verify_svn(
-    None, None, svntest.verify.AnyOutput,
+    None, svntest.verify.AnyOutput,
     'log', 'file:///nonexistent_path')
 
   for line in errput:
-    if re.match(".*Unable to open an ra_local session to URL.*", line):
+    if re.match(".*Unable to connect to a repository at URL.*", line):
       return
 
   # Else never matched the expected error output, so the test failed.
@@ -1504,18 +1522,18 @@ def basic_auth_cache(sbox):
   svntest.main.safe_rmtree(wc_dir)
 
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'checkout',
                                      repo_url, wc_dir)
 
   # Failed with "not locked" error on missing directory
   svntest.main.safe_rmtree(sbox.ospath('A/B/E'))
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'status', '-u',
                                      sbox.ospath('A/B'))
 
   # Failed with "already locked" error on new dir
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'copy',
                                      repo_url + '/A/B/E',
                                      sbox.ospath('A/D/G'))
@@ -1539,12 +1557,12 @@ def basic_add_ignores(sbox):
   foo_c_path = os.path.join(dir_path, 'foo.c')
   foo_o_path = os.path.join(dir_path, 'foo.o')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", svntest.verify.AnyOutput, [],
+    svntest.verify.AnyOutput, [],
     'add', dir_path)
 
   for line in output:
@@ -1568,11 +1586,11 @@ def basic_add_local_ignores(sbox):
   dir_path = sbox.ospath('dir')
   file_path = os.path.join(dir_path, 'app.lock')
 
-  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput, [],
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      'mkdir', dir_path)
   svntest.main.run_svn(None, 'propset', 'svn:ignore', '*.lock', dir_path)
   open(file_path, 'w')
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn([], [],
                                      'add', '--force', dir_path)
 
 #----------------------------------------------------------------------
@@ -1590,14 +1608,14 @@ def basic_add_no_ignores(sbox):
   foo_lo_path = os.path.join(dir_path, 'foo.lo')
   foo_rej_path = os.path.join(dir_path, 'foo.rej')
 
-  os.mkdir(dir_path, 0755)
+  os.mkdir(dir_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
   open(foo_c_path, 'w')
   open(foo_o_path, 'w')
   open(foo_lo_path, 'w')
   open(foo_rej_path, 'w')
 
   exit_code, output, err = svntest.actions.run_and_verify_svn(
-    "No output where some expected", svntest.verify.AnyOutput, [],
+    svntest.verify.AnyOutput, [],
     'add', '--no-ignore', dir_path)
 
   for line in output:
@@ -1619,9 +1637,9 @@ def basic_add_parents(sbox):
   omicron_path = os.path.join(Y_path, 'omicron')
 
   # Create some unversioned directories
-  os.mkdir(X_path, 0755)
-  os.mkdir(Y_path, 0755)
-  os.mkdir(Z_path, 0755)
+  os.mkdir(X_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
+  os.mkdir(Y_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
+  os.mkdir(Z_path, svntest.main.S_ALL_RX | stat.S_IWUSR)
 
   # Create new files
   z = open(zeta_path, 'w')
@@ -1632,7 +1650,7 @@ def basic_add_parents(sbox):
   o.close()
 
   # Add the file, with it's parents
-  svntest.actions.run_and_verify_svn(None, None, [], 'add', '--parents',
+  svntest.actions.run_and_verify_svn(None, [], 'add', '--parents',
                                      zeta_path)
 
   # Build expected state
@@ -1654,14 +1672,12 @@ def basic_add_parents(sbox):
   # Commit and verify
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', X_path, '--keep-local')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'add', '--parents', zeta_path)
 
 #----------------------------------------------------------------------
@@ -1675,8 +1691,7 @@ def uri_syntax(sbox):
   url = sbox.repo_url
   scheme = url[:url.find(":")]
   url = scheme + "://some_nonexistent_host_with_no_trailing_slash"
-  svntest.actions.run_and_verify_svn("No error where one expected",
-                                     None, svntest.verify.AnyOutput,
+  svntest.actions.run_and_verify_svn(None, svntest.verify.AnyOutput,
                                      'co', url, local_dir)
 
   # Different RA layers give different errors for failed checkouts;
@@ -1772,15 +1787,15 @@ def basic_peg_revision(sbox):
 
   # Without the trailing "@", expect failure.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', wc_file)
+    None, ".*Syntax error parsing peg revision 'abc'", 'cat', wc_file)
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*Syntax error parsing peg revision 'abc'", 'cat', url)
+    None, ".*Syntax error parsing peg revision 'abc'", 'cat', url)
 
   # With the trailing "@", expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', wc_file + '@')
+    ["xyz\n"], [], 'cat', wc_file + '@')
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', url + '@')
+    ["xyz\n"], [], 'cat', url + '@')
 
   # Test with leading @ character in filename.
   filename = '@abc'
@@ -1789,23 +1804,23 @@ def basic_peg_revision(sbox):
 
   svntest.main.file_append(wc_file, 'xyz\n')
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, [], 'add', wc_file + '@')
+    None, [], 'add', wc_file + '@')
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, [], 'ci', '-m', 'secret log msg',  wc_file + '@')
+    None, [], 'ci', '-m', 'secret log msg',  wc_file + '@')
 
   # With a leading "@" which isn't escaped, expect failure.
   # Note that we just test with filename starting with '@', because
   # wc_file + '@' + filename is a different situation where svn
   # will try to parse filename as a peg revision.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, None, ".*'%s' is just a peg revision.*" % filename,
+    None, ".*'%s' is just a peg revision.*" % filename,
     'cat', filename)
 
   # With a leading "@" which is escaped, expect success.
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', wc_file + '@')
+    ["xyz\n"], [], 'cat', wc_file + '@')
   exit_code, output, errlines = svntest.actions.run_and_verify_svn(
-    None, ["xyz\n"], [], 'cat', repos_dir + '/' + filename + '@')
+    ["xyz\n"], [], 'cat', repos_dir + '/' + filename + '@')
 
 def info_nonhead(sbox):
   "info on file not existing in HEAD"
@@ -1817,7 +1832,7 @@ def info_nonhead(sbox):
   furl = repo_url + "/iota"
 
   # Remove iota and commit.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      "delete", fname)
   expected_output = svntest.wc.State(wc_dir, {
     'iota' : Item(verb='Deleting'),
@@ -1826,9 +1841,7 @@ def info_nonhead(sbox):
   expected_status.remove("iota")
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
   # Get info for old iota at r1.
   expected_infos = [
       { 'URL' : '.*' },
@@ -1847,8 +1860,7 @@ def ls_nonhead(sbox):
 
   # Delete A/D/rho and commit.
   G_path = sbox.ospath('A/D/G')
-  svntest.actions.run_and_verify_svn("error scheduling A/D/G for deletion",
-                                     None, [], 'rm', G_path)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', G_path)
 
   expected_output = wc.State(wc_dir, {
     'A/D/G' : Item(verb='Deleting'),
@@ -1858,12 +1870,11 @@ def ls_nonhead(sbox):
   expected_status.remove('A/D/G', 'A/D/G/rho', 'A/D/G/pi', 'A/D/G/tau',)
 
   svntest.actions.run_and_verify_commit(wc_dir,
-                                        expected_output, expected_status,
-                                        None, wc_dir)
+                                        expected_output, expected_status)
 
   # Check that we can list a file in A/D/G at revision 1.
   rho_url = sbox.repo_url + "/A/D/G/rho"
-  svntest.actions.run_and_verify_svn(None, '.* rho\n', [],
+  svntest.actions.run_and_verify_svn('.* rho\n', [],
                                      'ls', '--verbose', rho_url + '@1')
 
 
@@ -1879,12 +1890,10 @@ def cat_added_PREV(sbox):
 
   # Create and add a file.
   svntest.main.file_append(f_path, 'new text')
-  svntest.actions.run_and_verify_svn("adding file",
-                                     None, [], 'add', f_path)
+  svntest.actions.run_and_verify_svn(None, [], 'add', f_path)
 
   # Cat'ing the previous version should fail.
-  svntest.actions.run_and_verify_svn("cat PREV version of file",
-                                     None, ".*has no committed revision.*",
+  svntest.actions.run_and_verify_svn(None, ".*has no committed revision.*",
                                      'cat', '-rPREV', f_path)
 
 # Issue #2612.
@@ -1895,8 +1904,7 @@ def ls_space_in_repo_name(sbox):
   sbox.build(name = "repo with spaces")
   wc_dir = sbox.wc_dir
 
-  svntest.actions.run_and_verify_svn('ls the root of the repository',
-                                     ['A/\n', 'iota\n'],
+  svntest.actions.run_and_verify_svn(['A/\n', 'iota\n'],
                                      [], 'ls',
                                      sbox.repo_url)
 
@@ -1910,11 +1918,11 @@ def delete_keep_local(sbox):
   C_path = sbox.ospath('A/C')
 
   # Remove file iota
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local',
+  svntest.actions.run_and_verify_svn(None, [], 'rm', '--keep-local',
                                      iota_path)
 
   # Remove directory 'A/C'
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local',
+  svntest.actions.run_and_verify_svn(None, [], 'rm', '--keep-local',
                                      C_path)
 
   # Commit changes
@@ -1929,9 +1937,7 @@ def delete_keep_local(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   # Update working copy to check disk state still greek tree
   expected_disk = svntest.main.greek_state.copy()
@@ -1951,31 +1957,72 @@ def delete_keep_local_twice(sbox):
 
   dir = sbox.ospath('dir')
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir', dir)
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir', dir)
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '--keep-local', dir)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', '--keep-local', dir)
+  svntest.actions.run_and_verify_svn(None, [], 'rm', '--keep-local', dir)
 
   if not os.path.isdir(dir):
     logger.warn('Directory was really deleted')
     raise svntest.Failure
 
-def windows_paths_in_repos(sbox):
+@XFail(svntest.main.is_mod_dav_url_quoting_broken)
+def special_paths_in_repos(sbox):
   "use folders with names like 'c:hi'"
 
   sbox.build(create_wc = False)
+  test_file_source = os.path.join(sbox.repo_dir, 'format')
   repo_url       = sbox.repo_url
 
-  chi_url = sbox.repo_url + '/c:hi'
+  test_urls = [ sbox.repo_url + '/c:hi',
+                sbox.repo_url + '/C:',
+                sbox.repo_url + '/C&',
+                sbox.repo_url + '/C<',
+                sbox.repo_url + '/C# hi',
+                sbox.repo_url + '/C?',
+                sbox.repo_url + '/C+',
+                sbox.repo_url + '/C%']
 
-  # do some manipulations on a folder containing a windows drive name.
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'mkdir', '-m', 'log_msg',
-                                     chi_url)
+  # On Windows Apache HTTPD breaks '\' for us :(
+  if not (svntest.main.is_os_windows() and
+          svntest.main.is_ra_type_dav()):
+    test_urls += [ sbox.repo_url + '/C\\ri' ]
 
-  svntest.actions.run_and_verify_svn(None, None, [],
-                                     'rm', '-m', 'log_msg',
-                                     chi_url)
+  for test_url in test_urls:
+    test_file_url = test_url + '/' + test_url[test_url.rindex('/')+1:]
+
+    # do some manipulations on a folder which problematic names
+    svntest.actions.run_and_verify_svn(None, [],
+                                       'mkdir', '-m', 'log_msg',
+                                       test_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, [],
+                                           '-m', 'log_msg',
+                                           'put', test_file_source,
+                                           test_file_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, [],
+                                       'propset', '-m', 'log_msg',
+                                       'propname', 'propvalue', test_url)
+
+    svntest.actions.run_and_verify_svn('propvalue', [],
+                                       'propget', 'propname', test_url)
+
+    svntest.actions.run_and_verify_svnmucc(None, [],
+                                       'propset', '-m', 'log_msg',
+                                       'propname', 'propvalue', test_file_url)
+
+    svntest.actions.run_and_verify_svn('propvalue', [],
+                                       'propget', 'propname', test_file_url)
+
+    svntest.actions.run_and_verify_svn(None, [],
+                                       'rm', '-m', 'log_msg',
+                                       test_file_url)
+
+    svntest.actions.run_and_verify_svn(None, [],
+                                       'rm', '-m', 'log_msg',
+                                       test_url)
+
 
 def basic_rm_urls_one_repo(sbox):
   "remotely remove directories from one repository"
@@ -1987,7 +2034,7 @@ def basic_rm_urls_one_repo(sbox):
   # Test 1: remotely delete one directory
   E_url = repo_url + '/A/B/E'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '-m', 'log_msg',
                                      E_url)
 
@@ -2010,7 +2057,7 @@ def basic_rm_urls_one_repo(sbox):
   F_url = repo_url + '/A/B/F'
   C_url = repo_url + '/A/C'
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '-m', 'log_msg',
                                      F_url, C_url)
 
@@ -2047,8 +2094,7 @@ def basic_rm_urls_multi_repos(sbox):
   other_repo_dir, other_repo_url = sbox.add_repo_path("other")
   svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
   other_wc_dir = sbox.add_wc_path("other")
-  svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                     svntest.verify.AnyOutput, [], "co",
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "co",
                                      other_repo_url,
                                      other_wc_dir)
 
@@ -2058,7 +2104,7 @@ def basic_rm_urls_multi_repos(sbox):
   F2_url = other_repo_url + '/A/B/F'
   C2_url = other_repo_url + '/A/C'
 
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm', '-m', 'log_msg',
+  svntest.actions.run_and_verify_svn(None, [], 'rm', '-m', 'log_msg',
                                      F_url, C_url, F2_url, C2_url)
 
   # Check that the two rm's to each of the repositories were handled in one
@@ -2146,7 +2192,7 @@ def automatic_conflict_resolution(sbox):
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                        expected_status, None, wc_dir)
+                                        expected_status)
 
   # Create expected output tree for an update of the wc_backup.
   expected_output = wc.State(wc_backup, {
@@ -2163,6 +2209,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'lambda'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for lambda",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for lambda",
                                           ">>>>>>> .r2",
@@ -2171,6 +2218,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'mu'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for mu",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for mu",
                                           ">>>>>>> .r2",
@@ -2179,6 +2227,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'rho'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for rho",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for rho",
                                           ">>>>>>> .r2",
@@ -2187,6 +2236,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'tau'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for tau",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for tau",
                                           ">>>>>>> .r2",
@@ -2195,6 +2245,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for omega",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for omega",
                                           ">>>>>>> .r2",
@@ -2220,66 +2271,49 @@ def automatic_conflict_resolution(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
-
-  # verify that the extra_files list is now empty.
-  if len(extra_files) != 0:
-    # Because we want to be a well-behaved test, we silently raise if
-    # the test fails.  However, these two print statements would
-    # probably reveal the cause for the failure, if they were
-    # uncommented:
-    #
-    # logger.warn("Not all extra reject files have been accounted for:")
-    # logger.warn(extra_files)
-    ### we should raise a less generic error here. which?
-    raise svntest.Failure
+                                        extra_files=extra_files)
 
   # So now lambda, mu and rho are all in a "conflicted" state.  Run 'svn
   # resolve' with the respective "--accept[mine|orig|repo]" flag.
 
   # But first, check --accept actions resolved does not accept.
-  svntest.actions.run_and_verify_svn(None,
-                                     # stdout, stderr
+  svntest.actions.run_and_verify_svn(# stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
                                      'resolve', '--accept=postpone')
-  svntest.actions.run_and_verify_svn(None,
-                                     # stdout, stderr
+  svntest.actions.run_and_verify_svn(# stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
                                      'resolve', '--accept=edit',
                                      '--force-interactive')
-  svntest.actions.run_and_verify_svn(None,
-                                     # stdout, stderr
+  svntest.actions.run_and_verify_svn(# stdout, stderr
                                      None,
                                      ".*invalid 'accept' ARG",
                                      'resolve', '--accept=launch',
                                      '--force-interactive')
   # Run 'svn resolved --accept=NOPE.  Using omega for the test.
-  svntest.actions.run_and_verify_svn("Resolve command", None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*NOPE' is not a valid --accept value",
                                      'resolve',
                                      '--accept=NOPE',
                                      omega_path_backup)
 
   # Resolve lambda, mu, and rho with different --accept options.
-  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'resolve', '--accept=base',
                                      lambda_path_backup)
-  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'resolve',
                                      '--accept=mine-full',
                                      mu_path_backup)
-  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'resolve',
                                      '--accept=theirs-full',
                                      rho_path_backup)
   fp = open(tau_path_backup, 'w')
   fp.write("Resolution text for 'tau'.\n")
   fp.close()
-  svntest.actions.run_and_verify_svn("Resolve command", None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'resolve',
                                      '--accept=working',
                                      tau_path_backup)
@@ -2297,6 +2331,7 @@ def automatic_conflict_resolution(sbox):
                       contents="\n".join(["This is the file 'omega'.",
                                           "<<<<<<< .mine",
                                           "Conflicting appended text for omega",
+                                          "||||||| .r1",
                                           "=======",
                                           "Original appended text for omega",
                                           ">>>>>>> .r2",
@@ -2324,9 +2359,7 @@ def automatic_conflict_resolution(sbox):
                                         expected_output,
                                         expected_disk,
                                         expected_status,
-                                        None,
-                                        svntest.tree.detect_conflict_files,
-                                        extra_files)
+                                        extra_files=extra_files)
 
 def info_nonexisting_file(sbox):
   "get info on a file not in the repo"
@@ -2369,8 +2402,7 @@ def basic_relative_url_using_current_dir(sbox):
   orig_dir = os.getcwd()
   os.chdir(sbox.wc_dir)
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
-                                expected_output, [],
+  exit_code, output, error = svntest.actions.run_and_verify_svn(expected_output, [],
                                 'blame', '^/iota')
 
   os.chdir(orig_dir)
@@ -2402,8 +2434,7 @@ def basic_relative_url_using_other_targets(sbox):
     "     3    jrandom New contents for mu\n",
     ]
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
-                                expected_output, [], 'blame',
+  exit_code, output, error = svntest.actions.run_and_verify_svn(expected_output, [], 'blame',
                                 '^/iota', mu_url)
 
 def basic_relative_url_multi_repo(sbox):
@@ -2417,8 +2448,7 @@ def basic_relative_url_multi_repo(sbox):
   repo_dir2, repo_url2 = sbox.add_repo_path("other")
   svntest.main.copy_repos(repo_dir1, repo_dir2, 1, 1)
   wc_dir2 = sbox.add_wc_path("other")
-  svntest.actions.run_and_verify_svn("Unexpected error during co",
-                                     svntest.verify.AnyOutput, [], "co",
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "co",
                                      repo_url2,
                                      wc_dir2)
 
@@ -2426,7 +2456,7 @@ def basic_relative_url_multi_repo(sbox):
   iota_url_repo1 = repo_url1 + '/iota'
   iota_url_repo2 = repo_url2 + '/iota'
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None, [],
+  exit_code, output, error = svntest.actions.run_and_verify_svn([],
                                 svntest.verify.AnyOutput, 'blame',
                                 '^/A/mu', iota_url_repo1, iota_url_repo2)
 
@@ -2445,12 +2475,10 @@ def basic_relative_url_non_canonical(sbox):
     "iota\n"
     ]
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
-                                expected_output, [], 'ls',
+  exit_code, output, error = svntest.actions.run_and_verify_svn(expected_output, [], 'ls',
                                 '^/A/', iota_url)
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
-                                expected_output, [], 'ls',
+  exit_code, output, error = svntest.actions.run_and_verify_svn(expected_output, [], 'ls',
                                 '^//A/', iota_url)
 
 def basic_relative_url_with_peg_revisions(sbox):
@@ -2485,13 +2513,11 @@ def basic_relative_url_with_peg_revisions(sbox):
     ]
 
   # Canonical version with peg revision
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
-                                expected_output, [], 'ls', '-r3',
+  exit_code, output, error = svntest.actions.run_and_verify_svn(expected_output, [], 'ls', '-r3',
                                 '^/A/@3', iota_url)
 
   # Non-canonical version with peg revision
-  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
-                                expected_output, [], 'ls', '-r3',
+  exit_code, output, error = svntest.actions.run_and_verify_svn(expected_output, [], 'ls', '-r3',
                                 '^//A/@3', iota_url)
 
 
@@ -2513,28 +2539,26 @@ def basic_auth_test(sbox):
   wc_dir = sbox.wc_dir
 
   # Set up a custom config directory
-  tmp_dir = os.path.abspath(svntest.main.temp_dir)
-  config_dir = os.path.join(tmp_dir, 'auth-test-config')
-  svntest.main.create_config_dir(config_dir, None)
+  config_dir = sbox.create_config_dir()
 
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--password', 'rayjandom',
     '--config-dir', config_dir)
 
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
   # Checkout with jconstant
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jconstant', '--password', 'rayjandom',
     '--config-dir', config_dir)
 
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, None, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jconstant', '--non-interactive',
     '--config-dir', config_dir)
 
@@ -2542,7 +2566,7 @@ def basic_auth_test(sbox):
   # a password and the above cached password belongs to jconstant
   expected_err = ["authorization failed: Could not authenticate to server:"]
   exit_code, output, errput = svntest.main.run_command(
-    svntest.main.svn_binary, expected_err, 1, 'co', sbox.repo_url, wc_dir,
+    svntest.main.svn_binary, expected_err, True, 'co', sbox.repo_url, wc_dir,
     '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
 
 def basic_add_svn_format_file(sbox):
@@ -2557,7 +2581,7 @@ def basic_add_svn_format_file(sbox):
 
   # The .svn directory and the format file should not be added as this
   # breaks the administrative area handling, so we expect some error here
-  svntest.actions.run_and_verify_svn(None, None,
+  svntest.actions.run_and_verify_svn(None,
                                      ".*reserved name.*",
                                      'add', '--parents', entries_path)
 
@@ -2574,7 +2598,7 @@ def basic_mkdir_mix_targets(sbox):
   Y_url = sbox.repo_url + '/Y'
   expected_error = "svn: E200009: Cannot mix repository and working copy targets"
 
-  svntest.actions.run_and_verify_svn(None, None, expected_error,
+  svntest.actions.run_and_verify_svn(None, expected_error,
                                      'mkdir', '-m', 'log_msg', Y_url, 'subdir')
 
 def delete_from_url_with_spaces(sbox):
@@ -2585,15 +2609,15 @@ def delete_from_url_with_spaces(sbox):
   sbox.simple_mkdir('Dir With')
   sbox.simple_mkdir('Dir With/Spaces')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                       'ci', sbox.wc_dir, '-m', 'Added dir')
 
   # This fails on 1.6.11 with an escaping error.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                       'rm', sbox.repo_url + '/Dir%20With%20Spaces',
                                       '-m', 'Deleted')
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                       'rm', sbox.repo_url + '/Dir%20With/Spaces',
                                       '-m', 'Deleted')
 
@@ -2602,8 +2626,7 @@ def meta_correct_library_being_used(sbox):
   "verify that neon/serf are compiled if tested"
   expected_re = (r'^\* ra_%s :' % svntest.main.options.http_library)
   expected_output = svntest.verify.RegexOutput(expected_re, match_all=False)
-  svntest.actions.run_and_verify_svn("is $http_library available",
-                                     expected_output, [], '--version')
+  svntest.actions.run_and_verify_svn(expected_output, [], '--version')
 
 def delete_and_add_same_file(sbox):
   "commit deletes a file and adds one with same text"
@@ -2632,9 +2655,7 @@ def delete_and_add_same_file(sbox):
   # not found".
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
 def delete_child_parent_update(sbox):
   "rm child, commit, rm parent"
@@ -2653,9 +2674,7 @@ def delete_child_parent_update(sbox):
 
   svntest.actions.run_and_verify_commit(wc_dir,
                                         expected_output,
-                                        expected_status,
-                                        None,
-                                        wc_dir)
+                                        expected_status)
 
   svntest.main.run_svn(wc_dir, 'rm', sbox.ospath('A/B/E'))
   expected_status.tweak('A/B/E', 'A/B/E/beta', status='D ')
@@ -2699,29 +2718,29 @@ def basic_relocate(sbox):
 
   # No-op relocation of just the scheme.
   scheme = repo_url[:repo_url.index('://')+3]
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'switch', '--relocate',
                                      scheme, scheme, wc_dir)
   _verify_url(wc_dir, repo_url)
 
   # No-op relocation of a bit more of the URL.
   substring = repo_url[:repo_url.index('://')+7]
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'switch', '--relocate',
                                      substring, substring, wc_dir)
   _verify_url(wc_dir, repo_url)
 
   # Real relocation to OTHER_REPO_URL.
-  svntest.actions.run_and_verify_svn(None, None, [], 'switch', '--relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'switch', '--relocate',
                                      repo_url, other_repo_url, wc_dir)
   _verify_url(wc_dir, other_repo_url)
 
   # ... and back again, using the newer 'svn relocate' subcommand.
-  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
                                      other_repo_url, repo_url, wc_dir)
   _verify_url(wc_dir, repo_url)
 
   # To OTHER_REPO_URL again, this time with the single-URL form of
   # 'svn relocate'.
-  svntest.actions.run_and_verify_svn(None, None, [], 'relocate',
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
                                      other_repo_url, wc_dir)
   _verify_url(wc_dir, other_repo_url)
 
@@ -2735,19 +2754,19 @@ def delete_urls_with_spaces(sbox):
   sbox.build(create_wc = False)
 
   # Create three directories with a space in their name
-  svntest.actions.run_and_verify_svn(None, None, [], 'mkdir',
+  svntest.actions.run_and_verify_svn(None, [], 'mkdir',
                                      sbox.repo_url + '/A spaced',
                                      sbox.repo_url + '/B spaced',
                                      sbox.repo_url + '/C spaced',
                                      '-m', 'Created dirs')
 
   # Try to delete the first
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+  svntest.actions.run_and_verify_svn(None, [], 'rm',
                                      sbox.repo_url + '/A spaced',
                                      '-m', 'Deleted A')
 
   # And then two at once
-  svntest.actions.run_and_verify_svn(None, None, [], 'rm',
+  svntest.actions.run_and_verify_svn(None, [], 'rm',
                                      sbox.repo_url + '/B spaced',
                                      sbox.repo_url + '/C spaced',
                                      '-m', 'Deleted B and C')
@@ -2760,8 +2779,7 @@ def ls_url_special_characters(sbox):
                   sbox.repo_url + '%2F' + 'A']
 
   for url in special_urls:
-    svntest.actions.run_and_verify_svn('ls URL with special characters',
-                                       ['B/\n', 'C/\n', 'D/\n', 'mu\n'],
+    svntest.actions.run_and_verify_svn(['B/\n', 'C/\n', 'D/\n', 'mu\n'],
                                        [], 'ls',
                                        url)
 
@@ -2776,7 +2794,7 @@ def ls_multiple_and_non_existent_targets(sbox):
     non_existent_path = sbox.ospath('non-existent')
 
     expected_err = ".*W155010.*"
-    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+    svntest.actions.run_and_verify_svn2(None, expected_err,
                                         1, 'ls', non_existent_path)
 
   def non_existent_url_target():
@@ -2784,7 +2802,7 @@ def ls_multiple_and_non_existent_targets(sbox):
     non_existent_url = sbox.repo_url + '/non-existent'
     expected_err = ".*W160013.*"
 
-    svntest.actions.run_and_verify_svn2(None, None, expected_err,
+    svntest.actions.run_and_verify_svn2(None, expected_err,
                                         1, 'ls', non_existent_url)
   def multiple_wc_targets():
     "multiple wc targets"
@@ -2794,7 +2812,7 @@ def ls_multiple_and_non_existent_targets(sbox):
     non_existent_path = sbox.ospath('non-existent')
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'ls', alpha, beta)
 
     # One non-existing target
@@ -2817,7 +2835,7 @@ def ls_multiple_and_non_existent_targets(sbox):
     non_existent_url = sbox.repo_url +  '/non-existent'
 
     # All targets are existing
-    svntest.actions.run_and_verify_svn2(None, None, [],
+    svntest.actions.run_and_verify_svn2(None, [],
                                         0, 'ls', alpha, beta)
 
     # One non-existing target
@@ -2872,7 +2890,7 @@ def add_multiple_targets(sbox):
   expected_status = svntest.verify.UnorderedOutput(
         ['A       ' + file1 + '\n',
          'A       ' + file2 + '\n'])
-  svntest.actions.run_and_verify_svn(None, expected_status, [],
+  svntest.actions.run_and_verify_svn(expected_status, [],
                                      'status', wc_dir)
 
 
@@ -2883,29 +2901,29 @@ def quiet_commits(sbox):
 
   svntest.main.file_append(sbox.ospath('A/mu'), 'xxx')
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn([], [],
                                      'commit', sbox.wc_dir,
                                      '--message', 'commit', '--quiet')
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn([], [],
                                      'mkdir', sbox.repo_url + '/X',
                                      '--message', 'mkdir URL', '--quiet')
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn([], [],
                                      'import', sbox.ospath('A/mu'),
                                      sbox.repo_url + '/f',
                                      '--message', 'import', '--quiet')
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn([], [],
                                      'rm', sbox.repo_url + '/f',
                                      '--message', 'rm URL', '--quiet')
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn([], [],
                                      'copy', sbox.repo_url + '/X',
                                      sbox.repo_url + '/Y',
                                      '--message', 'cp URL URL', '--quiet')
 
-  svntest.actions.run_and_verify_svn(None, [], [],
+  svntest.actions.run_and_verify_svn([], [],
                                      'move', sbox.repo_url + '/Y',
                                      sbox.repo_url + '/Z',
                                      '--message', 'mv URL URL', '--quiet')
@@ -2937,7 +2955,6 @@ def quiet_commits(sbox):
 # Regression test for issue #4023: on Windows, 'svn rm' incorrectly deletes
 # on-disk file if it is case-clashing with intended (non-on-disk) target.
 @Issue(4023)
-@XFail(svntest.main.is_fs_case_insensitive)
 def rm_missing_with_case_clashing_ondisk_item(sbox):
   """rm missing item with case-clashing ondisk item"""
 
@@ -2957,8 +2974,10 @@ def rm_missing_with_case_clashing_ondisk_item(sbox):
     })
   svntest.actions.run_and_verify_unquiet_status(wc_dir, expected_status)
 
+  # Verify that the casing is not updated, because the path is on-disk.
+  expected_output = [ 'D         %s\n' % iota_path ]
   # 'svn rm' iota, should leave IOTA alone.
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(expected_output, [],
                                      'rm', iota_path)
 
   # Test status: the unversioned IOTA should still be there.
@@ -2979,20 +2998,204 @@ def delete_conflicts_one_of_many(sbox):
   svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'new rho')
   sbox.simple_commit()
   svntest.main.file_append(sbox.ospath('A/D/G/rho'), 'conflict rho')
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'update', '-r1', '--accept', 'postpone',
                                      wc_dir)
 
   if not os.path.exists(sbox.ospath('A/D/G/rho.mine')):
     raise svntest.Failure("conflict file rho.mine missing")
 
-  svntest.actions.run_and_verify_svn(None, None, [],
+  svntest.actions.run_and_verify_svn(None, [],
                                      'rm', '--force',
                                      sbox.ospath('A/D/G/rho'),
                                      sbox.ospath('A/D/G/tau'))
 
   verify_file_deleted("failed to remove conflict file",
                       sbox.ospath('A/D/G/rho.mine'))
+
+@Issue(3231)
+@XFail()
+def peg_rev_on_non_existent_wc_path(sbox):
+  """peg rev resolution on non-existent wc paths"""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # setup some history
+  sbox.simple_move('A', 'A2')
+  sbox.simple_move('A2/mu', 'A2/mu2')
+  open(sbox.ospath('A2/mu2'), 'w').write('r2\n')
+  sbox.simple_commit(message='r2')
+  #
+  sbox.simple_move('A2/mu2', 'A2/mu3')
+  sbox.simple_move('A2', 'A3')
+  open(sbox.ospath('A3/mu3'), 'w').write('r3\n')
+  sbox.simple_commit(message='r3')
+  #
+  sbox.simple_move('A3/mu3', 'A3/mu4')
+  open(sbox.ospath('A3/mu4'), 'w').write('r4\n')
+  sbox.simple_move('A3', 'A4')
+  sbox.simple_commit(message='r4')
+
+  # test something.
+  sbox.simple_update()
+  # This currently fails with ENOENT on A/mu3.
+  svntest.actions.run_and_verify_svn(['r2\n'], [],
+                                     'cat', '-r2', sbox.ospath('A3/mu3') + '@3')
+  os.chdir(sbox.ospath('A4'))
+  svntest.actions.run_and_verify_svn(['r2\n'], [],
+                                     'cat', '-r2', sbox.ospath('mu3') + '@3')
+
+
+# With 'svn mkdir --parents' the target directory may already exist on disk.
+# In that case it was wrongly performing a recursive 'add' on its contents.
+def mkdir_parents_target_exists_on_disk(sbox):
+  "mkdir parents target exists on disk"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  Y_path = sbox.ospath('Y')
+  Y_Z_path = sbox.ospath('Y/Z')
+
+  os.mkdir(Y_path)
+  os.mkdir(Y_Z_path)
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'mkdir', '--parents', Y_path)
+
+  # Y should be added, and Z should not. There was a regression in which Z
+  # was also added.
+  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status.add({
+    'Y'      : Item(status='A ', wc_rev=0),
+    })
+  svntest.actions.run_and_verify_status(wc_dir, expected_status)
+
+
+@Skip(svntest.main.is_ra_type_file)
+def plaintext_password_storage_disabled(sbox):
+  "test store-plaintext-passwords = no"
+
+  sbox.build()
+
+  wc_dir = sbox.wc_dir
+  sbox.simple_append("iota", "New content for iota.")
+
+  config_dir_path = sbox.get_tempname(prefix="config-dir")
+  os.mkdir(config_dir_path)
+
+  # disable all encryped password stores
+  config_file = open(os.path.join(config_dir_path, "config"), "w")
+  config_file.write("[auth]\npassword-stores =\n")
+  config_file.close()
+
+  # disable plaintext password storage
+  servers_file = open(os.path.join(config_dir_path, "servers"), "w")
+  servers_file.write("[global]\nstore-plaintext-passwords=no\n")
+  servers_file.close()
+  
+  svntest.main.run_command(svntest.main.svn_binary, False, False,
+   "commit", "--config-dir", config_dir_path,
+    "-m", "committing with plaintext password storage disabled",
+    "--username", svntest.main.wc_author,
+    "--password", svntest.main.wc_passwd,
+    "--trust-server-cert-failures", "unknown-ca",
+    "--non-interactive", wc_dir)
+
+  # Verify that the password was not stored in plaintext
+  for root, dirs, files, in os.walk(os.path.join(config_dir_path, "auth")):
+    for file_name in files:
+      path = os.path.join(root, file_name)
+      f = open(path, "r")
+      for line in f.readlines():
+        if svntest.main.wc_passwd in line:
+          f.close()
+          raise svntest.Failure("password was found in '%s'" % path)
+      f.close()
+
+
+@Skip(svntest.main.is_os_windows)
+def filtered_ls(sbox):
+  "filtered 'svn ls'"
+
+  sbox.build(read_only=True)
+  path = sbox.repo_url + "/A/D"
+
+  # check plain info
+  expected = [ "H/omega\n",
+               "gamma\n" ]
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    expected, [], 'ls', path, '--depth=infinity', '--search=*a')
+
+  # check case-insensitivity
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    expected, [], 'ls', path, '--depth=infinity', '--search=*A')
+
+  expected = [ "H/\n" ]
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    expected, [], 'ls', path, '--depth=infinity', '--search=h')
+
+  # we don't match full paths
+  exit_code, output, error = svntest.actions.run_and_verify_svn(
+    [], [], 'ls', path, '--depth=infinity', '--search=*/*')
+
+@Issue(4700)
+@XFail(svntest.main.is_fs_type_fsx)
+def null_update_last_changed_revision(sbox):
+  "null 'update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2: Random text change.
+  old_contents = open(sbox.path("iota")).read()
+  sbox.simple_append("iota", "Line 2.\n")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: Revert r2.
+  sbox.simple_append("iota", old_contents, truncate=True)
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # Perform a null update.
+  #
+  # This used to say '3'; probably because iota@3 and iota@1 were textually
+  # identical. It seems this problem was introduced in r1760570.
+  sbox.simple_update(revision='1')
+  svntest.actions.run_and_verify_svn(["1\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
+
+@Issue(4700)
+@XFail(svntest.main.is_fs_type_bdb)
+@XFail(svntest.main.is_fs_type_fsx)
+def null_prop_update_last_changed_revision(sbox):
+  "null 'property update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: change the property
+  sbox.simple_propset("prop", "changed", "iota")
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # r4: Revert r3.
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r4')
+  sbox.simple_update()
+
+  # Perform a null update.
+  sbox.simple_update(revision='2')
+  svntest.actions.run_and_verify_svn(["2\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
 
 
 ########################################################################
@@ -3037,7 +3240,7 @@ test_list = [ None,
               ls_space_in_repo_name,
               delete_keep_local,
               delete_keep_local_twice,
-              windows_paths_in_repos,
+              special_paths_in_repos,
               basic_rm_urls_one_repo,
               basic_rm_urls_multi_repos,
               automatic_conflict_resolution,
@@ -3062,6 +3265,12 @@ test_list = [ None,
               quiet_commits,
               rm_missing_with_case_clashing_ondisk_item,
               delete_conflicts_one_of_many,
+              peg_rev_on_non_existent_wc_path,
+              mkdir_parents_target_exists_on_disk,
+              plaintext_password_storage_disabled,
+              filtered_ls,
+              null_update_last_changed_revision,
+              null_prop_update_last_changed_revision,
              ]
 
 if __name__ == '__main__':

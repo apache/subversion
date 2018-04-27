@@ -267,7 +267,7 @@ void
 svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
 {
   source_stack_t *old = context->source;
-  
+
   /* we may pop the original struct but not further */
   assert(context->source);
 
@@ -277,6 +277,26 @@ svn_temp_serializer__pop(svn_temp_serializer__context_t *context)
   /* put the old stack element into the recycler for later reuse */
   old->upper = context->recycler;
   context->recycler = old;
+}
+
+void
+svn_temp_serializer__add_leaf(svn_temp_serializer__context_t *context,
+                              const void * const * source_struct,
+                              apr_size_t struct_size)
+{
+  const void *source = *source_struct;
+
+  /* the serialized structure must be properly aligned */
+  if (source)
+    align_buffer_end(context);
+
+  /* Store the offset at which the struct data that will the appended.
+   * Write 0 for NULL pointers. */
+  store_current_end_pointer(context, source_struct);
+
+  /* finally, actually append the struct contents */
+  if (*source_struct)
+    svn_stringbuf_appendbytes(context->buffer, source, struct_size);
 }
 
 /* Serialize a string referenced from the current structure within the
@@ -292,7 +312,7 @@ svn_temp_serializer__add_string(svn_temp_serializer__context_t *context,
 
   /* Store the offset at which the string data that will the appended.
    * Write 0 for NULL pointers. Strings don't need special alignment. */
-  store_current_end_pointer(context, (const void **)s);
+  store_current_end_pointer(context, (const void *const *)s);
 
   /* append the string data */
   if (string)
@@ -346,7 +366,7 @@ svn_temp_serializer__get(svn_temp_serializer__context_t *context)
  * proper pointer value.
  */
 void
-svn_temp_deserializer__resolve(void *buffer, void **ptr)
+svn_temp_deserializer__resolve(const void *buffer, void **ptr)
 {
   /* All pointers are stored as offsets to the buffer start
    * (of the respective serialized sub-struct). */

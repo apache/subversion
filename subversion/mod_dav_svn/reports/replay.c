@@ -44,10 +44,11 @@
 
 typedef struct edit_baton_t {
   apr_bucket_brigade *bb;
-  ap_filter_t *output;
+  dav_svn__output *output;
   svn_boolean_t started;
   svn_boolean_t sending_textdelta;
   int compression_level;
+  int svndiff_version;
 } edit_baton_t;
 
 
@@ -108,7 +109,7 @@ add_file_or_directory(const char *file_or_directory,
 
   SVN_ERR(maybe_close_textdelta(eb));
 
-  *added_baton = (void *)eb;
+  *added_baton = eb;
 
   if (! copyfrom_path)
     SVN_ERR(dav_svn__brigade_printf(eb->bb, eb->output,
@@ -135,7 +136,7 @@ open_file_or_directory(const char *file_or_directory,
 {
   const char *qname = apr_xml_quote_string(pool, path, 1);
   SVN_ERR(maybe_close_textdelta(eb));
-  *opened_baton = (void *)eb;
+  *opened_baton = eb;
   return dav_svn__brigade_printf(eb->bb, eb->output,
                                  "<S:open-%s name=\"%s\" rev=\"%ld\"/>"
                                  DEBUG_CR,
@@ -326,7 +327,7 @@ apply_textdelta(void *file_baton,
                           dav_svn__make_base64_output_stream(eb->bb,
                                                              eb->output,
                                                              pool),
-                          0,
+                          eb->svndiff_version,
                           eb->compression_level,
                           pool);
 
@@ -367,8 +368,9 @@ static void
 make_editor(const svn_delta_editor_t **editor,
             void **edit_baton,
             apr_bucket_brigade *bb,
-            ap_filter_t *output,
+            dav_svn__output *output,
             int compression_level,
+            int svndiff_version,
             apr_pool_t *pool)
 {
   edit_baton_t *eb = apr_pcalloc(pool, sizeof(*eb));
@@ -379,6 +381,7 @@ make_editor(const svn_delta_editor_t **editor,
   eb->started = FALSE;
   eb->sending_textdelta = FALSE;
   eb->compression_level = compression_level;
+  eb->svndiff_version = svndiff_version;
 
   e->set_target_revision = set_target_revision;
   e->open_root = open_root;
@@ -401,28 +404,27 @@ make_editor(const svn_delta_editor_t **editor,
 static dav_error *
 malformed_element_error(const char *tagname, apr_pool_t *pool)
 {
-  return dav_svn__new_error_tag(pool, HTTP_BAD_REQUEST, 0,
+  return dav_svn__new_error_svn(pool, HTTP_BAD_REQUEST, 0, 0,
                                 apr_pstrcat(pool,
                                             "The request's '", tagname,
                                             "' element is malformed; there "
                                             "is a problem with the client.",
-                                            (char *)NULL),
-                                SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+                                            SVN_VA_NULL));
 }
 
 
 dav_error *
 dav_svn__replay_report(const dav_resource *resource,
                        const apr_xml_doc *doc,
-                       ap_filter_t *output)
+                       dav_svn__output *output)
 {
   dav_error *derr = NULL;
   svn_revnum_t low_water_mark = SVN_INVALID_REVNUM;
-  svn_revnum_t rev = SVN_INVALID_REVNUM;
+  svn_revnum_t rev;
   const svn_delta_editor_t *editor;
   svn_boolean_t send_deltas = TRUE;
   dav_svn__authz_read_baton arb;
-  const char *base_dir = resource->info->repos_path;
+  const char *base_dir;
   apr_bucket_brigade *bb;
   apr_xml_elem *child;
   svn_fs_root_t *root;
@@ -430,22 +432,37 @@ dav_svn__replay_report(const dav_resource *resource,
   void *edit_baton;
   int ns;
 
-  /* The request won't have a repos_path if it's for the root. */
-  if (! base_dir)
-    base_dir = "";
+  /* In Subversion 1.8, we allowed this REPORT to be issue against a
+     revision resource.  Doing so means the REV is part of the request
+     URL, and BASE_DIR is embedded in the request body.
+
+     The old-school (and incorrect, see issue #4287 --
+     https://issues.apache.org/jira/browse/SVN-4287) way was
+     to REPORT on the public URL of the BASE_DIR and embed the REV in
+     the report body.
+  */
+  if (resource->baselined
+      && (resource->type == DAV_RESOURCE_TYPE_VERSION))
+    {
+      rev = resource->info->root.rev;
+      base_dir = NULL;
+    }
+  else
+    {
+      rev = SVN_INVALID_REVNUM;
+      base_dir = resource->info->repos_path;
+    }
 
   arb.r = resource->info->r;
   arb.repos = resource->info->repos;
 
   ns = dav_svn__find_ns(doc->namespaces, SVN_XML_NAMESPACE);
   if (ns == -1)
-    return dav_svn__new_error_tag(resource->pool, HTTP_BAD_REQUEST, 0,
+    return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
                                   "The request does not contain the 'svn:' "
                                   "namespace, so it is not going to have an "
                                   "svn:revision element. That element is "
-                                  "required.",
-                                  SVN_DAV_ERROR_NAMESPACE,
-                                  SVN_DAV_ERROR_TAG);
+                                  "required");
 
   for (child = doc->root->first_child; child != NULL; child = child->next)
     {
@@ -455,9 +472,17 @@ dav_svn__replay_report(const dav_resource *resource,
 
           if (strcmp(child->name, "revision") == 0)
             {
+              if (SVN_IS_VALID_REVNUM(rev))
+                {
+                  /* Uh... we already have a revision to use, either
+                     because this tag is non-unique or because the
+                     request was submitted against a revision-bearing
+                     resource URL.  Either way, something's not
+                     right.  */
+                  return malformed_element_error("revision", resource->pool);
+                }
+
               cdata = dav_xml_get_cdata(child, resource->pool, 1);
-              if (! cdata)
-                return malformed_element_error("revision", resource->pool);
               rev = SVN_STR_TO_REV(cdata);
             }
           else if (strcmp(child->name, "low-water-mark") == 0)
@@ -481,24 +506,35 @@ dav_svn__replay_report(const dav_resource *resource,
                   svn_error_clear(err);
                   return malformed_element_error("send-deltas", resource->pool);
                 }
-              send_deltas = parsed_val ? TRUE : FALSE;
+              send_deltas = parsed_val != 0;
+            }
+          else if (strcmp(child->name, "include-path") == 0)
+            {
+              cdata = dav_xml_get_cdata(child, resource->pool, 1);
+              if ((derr = dav_svn__test_canonical(cdata, resource->pool)))
+                return derr;
+
+              /* Force BASE_DIR to be a relative path, not an fspath. */
+              base_dir = svn_relpath_canonicalize(cdata, resource->pool);
             }
         }
     }
 
   if (! SVN_IS_VALID_REVNUM(rev))
-    return dav_svn__new_error_tag
-             (resource->pool, HTTP_BAD_REQUEST, 0,
-              "Request was missing the revision argument.",
-              SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+    return dav_svn__new_error_svn
+             (resource->pool, HTTP_BAD_REQUEST, 0, 0,
+              "Request was missing the revision argument");
 
   if (! SVN_IS_VALID_REVNUM(low_water_mark))
-    return dav_svn__new_error_tag
-             (resource->pool, HTTP_BAD_REQUEST, 0,
-              "Request was missing the low-water-mark argument.",
-              SVN_DAV_ERROR_NAMESPACE, SVN_DAV_ERROR_TAG);
+    return dav_svn__new_error_svn
+             (resource->pool, HTTP_BAD_REQUEST, 0, 0,
+              "Request was missing the low-water-mark argument");
 
-  bb = apr_brigade_create(resource->pool, output->c->bucket_alloc);
+  if (! base_dir)
+    base_dir = "";
+
+  bb = apr_brigade_create(resource->pool,
+                          dav_svn__output_get_bucket_alloc(output));
 
   if ((err = svn_fs_revision_root(&root, resource->info->repos->fs, rev,
                                   resource->pool)))
@@ -511,6 +547,7 @@ dav_svn__replay_report(const dav_resource *resource,
 
   make_editor(&editor, &edit_baton, bb, output,
               dav_svn__get_compression_level(resource->info->r),
+              resource->info->svndiff_version,
               resource->pool);
 
   if ((err = svn_repos_replay2(root, base_dir, low_water_mark,

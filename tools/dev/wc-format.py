@@ -53,7 +53,7 @@ def print_format(wc_path):
   #   1.6.x: format 10
   #   1.7.x: format 29
   formatno = get_format(wc_path)
-  print '%s: %s' % (wc_path, formatno)
+  print('%s: %s' % (wc_path, formatno))
 
 
 if __name__ == '__main__':

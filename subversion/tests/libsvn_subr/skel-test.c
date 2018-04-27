@@ -59,7 +59,7 @@ get_empty_string(apr_pool_t *pool)
 {
   svn_pool_clear(pool);
 
-  return svn_stringbuf_ncreate(0, 0, pool);
+  return svn_stringbuf_create_empty(pool);
 }
 
 /* Parse a skeleton from a Subversion string.  */
@@ -886,7 +886,9 @@ unparse_list(apr_pool_t *pool)
 
 /* The test table.  */
 
-struct svn_test_descriptor_t test_funcs[] =
+static int max_threads = 1;
+
+static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
     SVN_TEST_PASS2(parse_implicit_length,
@@ -903,3 +905,5 @@ struct svn_test_descriptor_t test_funcs[] =
                    "unparse lists"),
     SVN_TEST_NULL
   };
+
+SVN_TEST_MAIN

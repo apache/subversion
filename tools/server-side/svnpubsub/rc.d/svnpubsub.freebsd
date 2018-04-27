@@ -26,7 +26,7 @@ pidfile="${svnpubsub_pidfile}"
 export PYTHON_EGG_CACHE="/home/svn/.python-eggs"
 
 command="/usr/local/bin/twistd"
-command_interpreter="/usr/local/bin/${svnwcsub_cmd_int}"
+command_interpreter="/usr/local/bin/${svnpubsub_cmd_int}"
 command_args="-y /usr/local/svnpubsub/svnpubsub.tac \
             --logfile=/var/log/vc/svnpubsub.log \
             --pidfile=${pidfile} \

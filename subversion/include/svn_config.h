@@ -62,6 +62,16 @@ typedef struct svn_config_t svn_config_t;
  * client configuration files.
  * @{
  */
+
+/* If you add a new SVN_CONFIG_* category/section/option macro to this group,
+ * you have to re-run gen-make.py manually.
+ *
+ * ### This should be fixed in the build system; see issue #4581.
+ */
+
+ /* This list of #defines is intentionally presented as a nested list
+    that matches the in-config hierarchy.  */
+
 #define SVN_CONFIG_CATEGORY_SERVERS        "servers"
 #define SVN_CONFIG_SECTION_GROUPS               "groups"
 #define SVN_CONFIG_SECTION_GLOBAL               "global"
@@ -72,18 +82,27 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_PROXY_EXCEPTIONS     "http-proxy-exceptions"
 #define SVN_CONFIG_OPTION_HTTP_TIMEOUT              "http-timeout"
 #define SVN_CONFIG_OPTION_HTTP_COMPRESSION          "http-compression"
+/** @deprecated Not used since 1.8. */
 #define SVN_CONFIG_OPTION_NEON_DEBUG_MASK           "neon-debug-mask"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_HTTP_AUTH_TYPES           "http-auth-types"
 #define SVN_CONFIG_OPTION_SSL_AUTHORITY_FILES       "ssl-authority-files"
 #define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
+/** @deprecated Not used since 1.8.
+ * @since New in 1.5. */
 #define SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER       "ssl-pkcs11-provider"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_HTTP_LIBRARY              "http-library"
+/** @since New in 1.1. */
 #define SVN_CONFIG_OPTION_STORE_PASSWORDS           "store-passwords"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_STORE_PLAINTEXT_PASSWORDS "store-plaintext-passwords"
 #define SVN_CONFIG_OPTION_STORE_AUTH_CREDS          "store-auth-creds"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP  "store-ssl-client-cert-pp"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_STORE_SSL_CLIENT_CERT_PP_PLAINTEXT \
                                           "store-ssl-client-cert-pp-plaintext"
 #define SVN_CONFIG_OPTION_USERNAME                  "username"
@@ -91,11 +110,22 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_HTTP_BULK_UPDATES         "http-bulk-updates"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_HTTP_MAX_CONNECTIONS      "http-max-connections"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS     "http-chunked-requests"
+
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_SERF_LOG_COMPONENTS       "serf-log-components"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_SERF_LOG_LEVEL            "serf-log-level"
+
 
 #define SVN_CONFIG_CATEGORY_CONFIG          "config"
 #define SVN_CONFIG_SECTION_AUTH                 "auth"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_PASSWORD_STORES           "password-stores"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_KWALLET_WALLET            "kwallet-wallet"
+/** @since New in 1.6. */
 #define SVN_CONFIG_OPTION_KWALLET_SVN_APPLICATION_NAME_WITH_PID "kwallet-svn-application-name-with-pid"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE_PROMPT "ssl-client-cert-file-prompt"
@@ -108,6 +138,7 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_DIFF_EXTENSIONS           "diff-extensions"
 #define SVN_CONFIG_OPTION_DIFF3_CMD                 "diff3-cmd"
 #define SVN_CONFIG_OPTION_DIFF3_HAS_PROGRAM_ARG     "diff3-has-program-arg"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MERGE_TOOL_CMD            "merge-tool-cmd"
 #define SVN_CONFIG_SECTION_MISCELLANY           "miscellany"
 #define SVN_CONFIG_OPTION_GLOBAL_IGNORES            "global-ignores"
@@ -116,17 +147,30 @@ typedef struct svn_config_t svn_config_t;
 /** @deprecated Not used by Subversion since 2003/r847039 (well before 1.0) */
 #define SVN_CONFIG_OPTION_TEMPLATE_ROOT             "template-root"
 #define SVN_CONFIG_OPTION_ENABLE_AUTO_PROPS         "enable-auto-props"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_ENABLE_MAGIC_FILE         "enable-magic-file"
+/** @since New in 1.2. */
 #define SVN_CONFIG_OPTION_NO_UNLOCK                 "no-unlock"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MIMETYPES_FILE            "mime-types-file"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_PRESERVED_CF_EXTS         "preserved-conflict-file-exts"
+/** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_INTERACTIVE_CONFLICTS     "interactive-conflicts"
+/** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE         "memory-cache-size"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_DIFF_IGNORE_CONTENT_TYPE  "diff-ignore-content-type"
 #define SVN_CONFIG_SECTION_TUNNELS              "tunnels"
 #define SVN_CONFIG_SECTION_AUTO_PROPS           "auto-props"
 /** @since New in 1.8. */
 #define SVN_CONFIG_SECTION_WORKING_COPY         "working-copy"
 /** @since New in 1.8. */
-#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE      "exclusive-locking"
+#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE          "exclusive-locking"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_SQLITE_EXCLUSIVE_CLIENTS  "exclusive-locking-clients"
+/** @since New in 1.9. */
+#define SVN_CONFIG_OPTION_SQLITE_BUSY_TIMEOUT       "busy-timeout"
 /** @} */
 
 /** @name Repository conf directory configuration files strings
@@ -141,13 +185,19 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_PASSWORD_DB               "password-db"
 #define SVN_CONFIG_OPTION_REALM                     "realm"
 #define SVN_CONFIG_OPTION_AUTHZ_DB                  "authz-db"
+/** @since New in 1.8. */
+#define SVN_CONFIG_OPTION_GROUPS_DB                 "groups-db"
 /** @since New in 1.7. */
 #define SVN_CONFIG_OPTION_FORCE_USERNAME_CASE       "force-username-case"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_HOOKS_ENV                 "hooks-env"
+/** @since New in 1.5. */
 #define SVN_CONFIG_SECTION_SASL                 "sasl"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_USE_SASL                  "use-sasl"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MIN_SSF                   "min-encryption"
+/** @since New in 1.5. */
 #define SVN_CONFIG_OPTION_MAX_SSF                   "max-encryption"
 
 /* For repository password database */
@@ -160,10 +210,12 @@ typedef struct svn_config_t svn_config_t;
 /* We want this to be printed on two lines in the generated config file,
  * but we don't want the # character to end up in the variable.
  */
+#ifndef DOXYGEN_SHOULD_SKIP_THIS
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 \
   "*.o *.lo *.la *.al .libs *.so *.so.[0-9]* *.a *.pyc *.pyo __pycache__"
 #define SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_2 \
-  "*.rej *~ #*# .#* .*.swp .DS_Store"
+  "*.rej *~ #*# .#* .*.swp .DS_Store [Tt]humbs.db"
+#endif
 
 #define SVN_CONFIG_DEFAULT_GLOBAL_IGNORES \
   SVN_CONFIG__DEFAULT_GLOBAL_IGNORES_LINE_1 " " \
@@ -203,15 +255,30 @@ svn_config_get_config(apr_hash_t **cfg_hash,
                       const char *config_dir,
                       apr_pool_t *pool);
 
-
 /** Set @a *cfgp to an empty @c svn_config_t structure,
  * allocated in @a result_pool.
  *
  * Pass TRUE to @a section_names_case_sensitive if
  * section names are to be populated case sensitively.
  *
- * @since New in 1.7.
+ * Pass TRUE to @a option_names_case_sensitive if
+ * option names are to be populated case sensitively.
+ *
+ * @since New in 1.8.
  */
+svn_error_t *
+svn_config_create2(svn_config_t **cfgp,
+                   svn_boolean_t section_names_case_sensitive,
+                   svn_boolean_t option_names_case_sensitive,
+                   apr_pool_t *result_pool);
+
+/** Similar to svn_config_create2, but always passes @c FALSE to
+ * @a option_names_case_sensitive.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_config_create(svn_config_t **cfgp,
                   svn_boolean_t section_names_case_sensitive,
@@ -223,21 +290,38 @@ svn_config_create(svn_config_t **cfgp,
  * If @a file does not exist, then if @a must_exist, return an error,
  * otherwise return an empty @c svn_config_t.
  *
- * If @a section_names_case_sensitive is TRUE, populate section name hashes
- * case sensitively, except for the default SVN_CONFIG__DEFAULT_SECTION.
+ * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
+ * case sensitively, except for the @c "DEFAULT" section.
+ *
+ * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
+ * case sensitively.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_read3(svn_config_t **cfgp,
+                 const char *file,
+                 svn_boolean_t must_exist,
+                 svn_boolean_t section_names_case_sensitive,
+                 svn_boolean_t option_names_case_sensitive,
+                 apr_pool_t *result_pool);
+
+/** Similar to svn_config_read3, but always passes @c FALSE to
+ * @a option_names_case_sensitive.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with 1.7 API.
  */
-
+SVN_DEPRECATED
 svn_error_t *
 svn_config_read2(svn_config_t **cfgp,
                  const char *file,
                  svn_boolean_t must_exist,
                  svn_boolean_t section_names_case_sensitive,
-                 apr_pool_t *pool);
+                 apr_pool_t *result_pool);
 
-/** Similar to svn_config_read2, but always passes FALSE to
- * section_names_case_sensitive.
+/** Similar to svn_config_read2, but always passes @c FALSE to
+ * @a section_names_case_sensitive.
  *
  * @deprecated Provided for backward compatibility with 1.6 API.
  */
@@ -246,13 +330,16 @@ svn_error_t *
 svn_config_read(svn_config_t **cfgp,
                 const char *file,
                 svn_boolean_t must_exist,
-                apr_pool_t *pool);
+                apr_pool_t *result_pool);
 
 /** Read configuration data from @a stream into @a *cfgp, allocated in
  * @a result_pool.
  *
- * If @a section_names_case_sensitive is TRUE, populate section name hashes
- * case sensitively, except for the default SVN_CONFIG__DEFAULT_SECTION.
+ * If @a section_names_case_sensitive is @c TRUE, populate section name hashes
+ * case sensitively, except for the @c "DEFAULT" section.
+ *
+ * If @a option_names_case_sensitive is @c TRUE, populate option name hashes
+ * case sensitively.
  *
  * @since New in 1.8.
  */
@@ -261,6 +348,7 @@ svn_error_t *
 svn_config_parse(svn_config_t **cfgp,
                  svn_stream_t *stream,
                  svn_boolean_t section_names_case_sensitive,
+                 svn_boolean_t option_names_case_sensitive,
                  apr_pool_t *result_pool);
 
 /** Like svn_config_read(), but merges the configuration data from @a file
@@ -331,12 +419,14 @@ svn_config_set_bool(svn_config_t *cfg,
                     const char *option,
                     svn_boolean_t value);
 
-/** Like svn_config_get(), but for 64 bit signed integers.
+/** Like svn_config_get(), but for 64-bit signed integers.
  *
- * Parses the option as an integer value. Returns an error if the option
- * could not be converted to an integer.
+ * Parses the @a option in @a section of @a cfg as an integer value,
+ * setting @a *valuep to the result.  If the option is not found, sets
+ * @a *valuep to @a default_value.  If the option is found but cannot
+ * be converted to an integer, returns an error.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 svn_error_t *
 svn_config_get_int64(svn_config_t *cfg,
@@ -345,11 +435,12 @@ svn_config_get_int64(svn_config_t *cfg,
                      const char *option,
                      apr_int64_t default_value);
 
-/** Like svn_config_set(), but for 64 bit signed integers.
+/** Like svn_config_set(), but for 64-bit signed integers.
  *
- * Sets the option to the signed decimal @a value.
+ * Sets the value of @a option in @a section of @a cfg to the signed
+ * decimal @a value.
  *
- * @since New in 1.8
+ * @since New in 1.8.
  */
 void
 svn_config_set_int64(svn_config_t *cfg,
@@ -379,6 +470,27 @@ svn_config_get_yes_no_ask(svn_config_t *cfg,
                           const char *section,
                           const char *option,
                           const char* default_value);
+
+/** Like svn_config_get_bool(), but for tristate values.
+ *
+ * Set @a *valuep to #svn_tristate_true, #svn_tristate_false, or
+ * #svn_tristate_unknown, depending on the value of @a option in @a
+ * section of @a cfg.  True and false values are the same as for
+ * svn_config_get_bool(); @a unknown_value specifies the option value
+ * allowed for third state (#svn_tristate_unknown).
+ *
+ * Use @a default_value as the default value if @a option cannot be
+ * found.
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_get_tristate(svn_config_t *cfg,
+                        svn_tristate_t *valuep,
+                        const char *section,
+                        const char *option,
+                        const char *unknown_value,
+                        svn_tristate_t default_value);
 
 /** Similar to @c svn_config_section_enumerator2_t, but is not
  * provided with a memory pool argument.
@@ -584,10 +696,66 @@ svn_config_ensure(const char *config_dir,
  */
 
 
-/** A hash-key pointing to a realmstring.  Every file containing
- * authentication data should have this key.
+/**
+ * Attributes of authentication credentials.
+ *
+ * The values of these keys are C strings.
+ *
+ * @note Some of these hash keys were also used in versions < 1.9 but were
+ *       not part of the public API (except #SVN_CONFIG_REALMSTRING_KEY which
+ *       has been present since 1.0).
+ *
+ * @defgroup cached_authentication_data_attributes Cached authentication data attributes
+ * @{
+ */
+
+/** A hash-key pointing to a realmstring.  This attribute is mandatory.
+ *
+ * @since New in 1.0.
  */
 #define SVN_CONFIG_REALMSTRING_KEY  "svn:realmstring"
+
+/** A hash-key for usernames.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_USERNAME_KEY           "username"
+
+/** A hash-key for passwords.
+ * The password may be in plaintext or encrypted form, depending on
+ * the authentication provider.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_PASSWORD_KEY           "password"
+
+/** A hash-key for passphrases,
+ * such as SSL client ceritifcate passphrases. The passphrase may be in
+ * plaintext or encrypted form, depending on the authentication provider.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_PASSPHRASE_KEY         "passphrase"
+
+/** A hash-key for the type of a password or passphrase.  The type
+ * indicates which provider owns the credential.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_PASSTYPE_KEY           "passtype"
+
+/** A hash-key for SSL certificates.   The value is the base64-encoded DER form
+ * certificate.
+ * @since New in 1.9.
+ * @note The value is not human readable.
+ */
+#define SVN_CONFIG_AUTHN_ASCII_CERT_KEY         "ascii_cert"
+
+/** A hash-key for recorded SSL certificate verification
+ * failures.  Failures encoded as an ASCII integer containing any of the
+ * SVN_AUTH_SSL_* SSL server certificate failure bits defined in svn_auth.h.
+ * @since New in 1.9.
+ */
+#define SVN_CONFIG_AUTHN_FAILURES_KEY           "failures"
+
+
+/** @} */
 
 /** Use @a cred_kind and @a realmstring to locate a file within the
  * ~/.subversion/auth/ area.  If the file exists, initialize @a *hash
@@ -630,6 +798,70 @@ svn_config_write_auth_data(apr_hash_t *hash,
                            const char *config_dir,
                            apr_pool_t *pool);
 
+
+/** Callback for svn_config_walk_auth_data().
+ *
+ * Called for each credential walked by that function (and able to be
+ * fully purged) to allow perusal and selective removal of credentials.
+ *
+ * @a cred_kind and @a realmstring specify the key of the credential.
+ * @a hash contains the hash data associated with the record. @a walk_baton
+ * is the baton passed to svn_config_walk_auth_data().
+ *
+ * Before returning set @a *delete_cred to TRUE to remove the credential from
+ * the cache; leave @a *delete_cred unchanged or set it to FALSE to keep the
+ * credential.
+ *
+ * Implementations may return #SVN_ERR_CEASE_INVOCATION to indicate
+ * that the callback should not be called again.  Note that when that
+ * error is returned, the value of @a delete_cred will still be
+ * honored and action taken if necessary.  (For other returned errors,
+ * @a delete_cred is ignored by svn_config_walk_auth_data().)
+ *
+ * @since New in 1.8.
+ */
+typedef svn_error_t *
+(*svn_config_auth_walk_func_t)(svn_boolean_t *delete_cred,
+                               void *walk_baton,
+                               const char *cred_kind,
+                               const char *realmstring,
+                               apr_hash_t *hash,
+                               apr_pool_t *scratch_pool);
+
+/** Call @a walk_func with @a walk_baton and information describing
+ * each credential cached within the Subversion auth store located
+ * under @a config_dir.  If the callback sets its delete_cred return
+ * flag, delete the associated credential.
+ *
+ * If @a config_dir is not NULL, it must point to an alternative
+ * config directory location. If it is NULL, the default location
+ * is used.
+ *
+ * @note @a config_dir may only be NULL in 1.8.2 and later.
+ *
+ * @note Removing credentials from the config-based disk store will
+ * not purge them from any open svn_auth_baton_t instance.  Consider
+ * using svn_auth_forget_credentials() -- from the @a walk_func,
+ * even -- for this purpose.
+ *
+ * @note Removing credentials from the config-based disk store will
+ * not also remove any related credentials from third-party password
+ * stores.  (Implementations of @a walk_func which delete credentials
+ * may wish to consult the "passtype" element of @a hash, if any, to
+ * see if a third-party store -- such as "gnome-keyring" or "kwallet"
+ * is being used to hold the most sensitive portion of the credentials
+ * for this @a cred_kind and @a realmstring.)
+ *
+ * @see svn_auth_forget_credentials()
+ *
+ * @since New in 1.8.
+ */
+svn_error_t *
+svn_config_walk_auth_data(const char *config_dir,
+                          svn_config_auth_walk_func_t walk_func,
+                          void *walk_baton,
+                          apr_pool_t *scratch_pool);
+
 /** Put the absolute path to the user's configuration directory,
  * or to a file within that directory, into @a *path.
  *
@@ -661,7 +893,7 @@ svn_config_get_user_config_path(const char **path,
  */
 svn_error_t *
 svn_config_dup(svn_config_t **cfgp,
-               svn_config_t *src,
+               const svn_config_t *src,
                apr_pool_t *pool);
 
 /** Create a deep copy of the config hash @a src_hash and return

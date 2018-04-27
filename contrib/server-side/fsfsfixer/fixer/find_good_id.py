@@ -14,6 +14,7 @@ Example:
 """
 
 import os, sys
+from fixer_config import *
 
 class FixError(Exception):
   """An exception for any kind of inablility to repair the repository."""
@@ -21,15 +22,23 @@ class FixError(Exception):
 
 def parse_id(id):
   """Return the (NODEREV, REV, OFFSET) of ID, where ID is of the form
-     "NODEREV/OFFSET", and NODEREV is of the form "SOMETHING.rREV".
+     "NODE_ID.COPY_ID.rREV/OFFSET" and NODEREV is "NODE_ID.COPY_ID.rREV".
   """
-  noderev, offset = id.split('/')
-  _, rev = noderev.split('.r')
+  node_id, copy_id, txn_id = id.split('.')
+  rev, offset = txn_id[1:].split('/')
+  noderev = node_id + '.' + copy_id + '.r' + rev
   return noderev, rev, offset
 
 def rev_file_path(repo_dir, rev):
-  # TODO: support shards
-  return os.path.join(repo_dir, 'db', 'revs', rev)
+  """Return the path to the revision file in the repository at REPO_DIR
+     (a path string) for revision number REV (int or string).
+     """
+  if REVS_PER_SHARD:
+    shard = int(rev) / REVS_PER_SHARD
+    path = os.path.join(repo_dir, 'db', 'revs', str(shard), str(rev))
+  else:
+    path = os.path.join(repo_dir, 'db', 'revs', str(rev))
+  return path
 
 def rev_file_indexes(repo_dir, rev):
   """Return (ids, texts), where IDS is a dictionary of all node-rev ids
@@ -92,11 +101,11 @@ if __name__ == '__main__':
     repo_dir = sys.argv[1]
     rev = sys.argv[2]
     size = sys.argv[3]
-    print "Good offset:", find_good_rep_header(repo_dir, rev, size)
+    print("Good offset:", find_good_rep_header(repo_dir, rev, size))
     sys.exit(0)
 
   if len(sys.argv) != 3:
-    print >>sys.stderr, usage
+    sys.stderr.write(usage + "\n")
     sys.exit(1)
 
   repo_dir = sys.argv[1]
@@ -108,7 +117,7 @@ if __name__ == '__main__':
   # reconstruct the file so as to preserve all offsets.
   # ### TODO: This check should be in the caller rather than here.
   if len(good_id) != len(bad_id):
-    print >>sys.stderr, "warning: the good ID has a different length: " + \
-                        "bad id '" + bad_id + "', good id '" + good_id + "'"
+    sys.stderr.write("warning: the good ID has a different length: " + \
+                     "bad id '" + bad_id + "', good id '" + good_id + "'\n")
 
-  print good_id
+  print(good_id)
