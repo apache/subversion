@@ -60,15 +60,16 @@ svn_tree_get_node_by_relpath(svn_tree_node_t **node_p,
  *
  * The callback receives one directory node being visited, @a dir_node, and
  * the closure @a dir_visit_baton.  It also receives two lists of nodes
- * which together contain all the children to be visited.  The
+ * which together contain all the child nodes to be visited: the
  * subdirectories are in @a subdirs, and the non-directory children in @a
- * files.
+ * files.  Each of these lists is in lexicographical order of child names.
  *
  * This is modeled on Python's 'os.walk' function.
  *
  * ### TODO? "The callback may modify the list of subdirs (in place) in
  * order to influence the order and scope of traversal: the walker will
  * recurse into the subdirs that are in the list when the callback returns."
+ * Altering @a files has no effect.
  *
  * @a scratch_pool is available for use within the function until it returns.
  */
@@ -257,6 +258,14 @@ svn_tree_node_read_dir(svn_tree_node_t *node,
                        apr_hash_t **props,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool);
+
+/** Fetch the 'dirent' information ...
+ */
+svn_error_t *
+svn_tree_node_get_dirent(svn_tree_node_t *node,
+                         svn_dirent_t **dirent_p,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool);
 
 
 #ifdef __cplusplus

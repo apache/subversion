@@ -157,9 +157,8 @@ walk_dirs(svn_tree_node_t *dir_node,
   /* Recurse */
   for (i = 0; i < dirs->nelts; i++)
     {
-      const svn_sort__item_t *item
-        = &APR_ARRAY_IDX(dirs, i, svn_sort__item_t);
-      svn_tree_node_t *child = item->value;
+      svn_tree_node_t *child
+        = APR_ARRAY_IDX(dirs, i, svn_tree_node_t *);
 
       svn_pool_clear(iterpool);
       SVN_ERR(walk_dirs(child,
@@ -247,7 +246,7 @@ svn_tree_walk(svn_tree_t *tree,
       SVN_ERR(walk_dirs(node, depth, per_dir_to_per_node_cb, &b,
                         cancel_func, cancel_baton, scratch_pool));
     }
-  else
+  else if (kind == svn_node_file)
     {
       SVN_ERR(walk_func(node, walk_baton, scratch_pool));
     }
@@ -471,4 +470,15 @@ svn_tree_node_read_dir(svn_tree_node_t *node,
 {
   return node->vtable->read_dir(node, children, props,
                                 result_pool, scratch_pool);
+}
+
+svn_error_t *
+svn_tree_node_get_dirent(svn_tree_node_t *node,
+                         svn_dirent_t **dirent_p,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  SVN_ERR(node->vtable->get_dirent(node, dirent_p,
+                                   result_pool, scratch_pool));
+  return SVN_NO_ERROR;
 }

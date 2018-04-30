@@ -61,6 +61,10 @@ typedef struct ra_tree_node_baton_t
   svn_tree_t *tree;
   ra_tree_baton_t *tb;
   const char *relpath;
+  svn_dirent_t *dirent;  /* null until fetched/known */
+  apr_hash_t *children;  /* null until fetched/known */
+  apr_hash_t *props;  /* null until fetched/known */
+  apr_pool_t *pool;
 } ra_tree_node_baton_t;
 
 /* Forward declaration */
@@ -77,7 +81,25 @@ ra_tree_get_node_by_relpath(svn_tree_node_t **node,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  *node = ra_tree_node_create(tree, relpath, result_pool);
+  *node = ra_tree_node_create(tree, apr_pstrdup(result_pool, relpath),
+                              result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+fetch_dirent(svn_tree_node_t *node,
+             apr_pool_t *scratch_pool)
+{
+  ra_tree_node_baton_t *nb = node->priv;
+
+  if (nb->dirent == NULL)
+    {
+      SVN_ERR(ra_unauthz_err(svn_ra_stat(nb->tb->ra_session, nb->relpath,
+                                         nb->tb->revnum, &nb->dirent,
+                                         nb->pool)));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -102,9 +124,11 @@ ra_treen_get_kind(svn_tree_node_t *node,
 {
   ra_tree_node_baton_t *nb = node->priv;
 
-  SVN_ERR(ra_unauthz_err(svn_ra_check_path(nb->tb->ra_session, nb->relpath,
-                                           nb->tb->revnum, kind,
-                                           scratch_pool)));
+  if (kind)
+    {
+      SVN_ERR(fetch_dirent(node, scratch_pool));
+      *kind = nb->dirent->kind;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -127,16 +151,23 @@ ra_treen_read_file(svn_tree_node_t *node,
                                      result_pool, scratch_pool));
       SVN_ERR(ra_unauthz_err(svn_ra_get_file(nb->tb->ra_session, nb->relpath,
                                              nb->tb->revnum, *stream,
-                                             NULL, props, result_pool)));
+                                             NULL,
+                                             nb->props ? NULL : &nb->props,
+                                             nb->pool)));
       SVN_ERR(svn_stream_reset(*stream));
     }
-  else
+  else if (props)
     {
       /* Just get the properties. */
-      SVN_ERR(ra_unauthz_err(svn_ra_get_file(nb->tb->ra_session, nb->relpath,
-                                             nb->tb->revnum, NULL,
-                                             NULL, props, result_pool)));
+      if (! nb->props)
+        {
+          SVN_ERR(ra_unauthz_err(svn_ra_get_file(nb->tb->ra_session, nb->relpath,
+                                                 nb->tb->revnum, NULL,
+                                                 NULL, &nb->props, nb->pool)));
+        }
     }
+  if (props)
+    *props = nb->props;
   return SVN_NO_ERROR;
 }
 
@@ -149,34 +180,63 @@ ra_treen_read_dir(svn_tree_node_t *node,
                   apr_pool_t *scratch_pool)
 {
   ra_tree_node_baton_t *nb = node->priv;
-  apr_hash_t *dirents;
 
-  SVN_ERR(ra_unauthz_err(svn_ra_get_dir2(nb->tb->ra_session,
-                                         children_p ? &dirents : NULL,
-                                         NULL, props,
-                                         nb->relpath, nb->tb->revnum,
-                                         0 /* dirent_fields */,
-                                         result_pool)));
-
-  /* Convert RA dirents to tree children */
-  if (children_p)
+  if ((children_p && ! nb->children)
+      || (props && ! nb->props))
     {
-      apr_hash_t *children = apr_hash_make(result_pool);
-      apr_hash_index_t *hi;
+      apr_hash_t *dirents = NULL;
 
-      for (hi = apr_hash_first(scratch_pool, dirents); hi;
-           hi = apr_hash_next(hi))
+      SVN_ERR(ra_unauthz_err(svn_ra_get_dir2(nb->tb->ra_session,
+                                             nb->children ? NULL : &dirents,
+                                             NULL, &nb->props,
+                                             nb->relpath, nb->tb->revnum,
+                                             SVN_DIRENT_ALL,
+                                             nb->pool)));
+
+      /* Convert RA dirents to tree children */
+      if (! nb->children)
         {
-          const char *name = apr_hash_this_key(hi);
-          const char *relpath = svn_relpath_join(nb->relpath, name, result_pool);
-          svn_tree_node_t *child;
+          apr_hash_index_t *hi;
 
-          child = ra_tree_node_create(nb->tree, relpath, result_pool);
-          apr_hash_set(children, name, APR_HASH_KEY_STRING, child);
+          nb->children = apr_hash_make(nb->pool);
+          for (hi = apr_hash_first(scratch_pool, dirents); hi;
+               hi = apr_hash_next(hi))
+            {
+              const char *name = apr_hash_this_key(hi);
+              svn_dirent_t *dirent = apr_hash_this_val(hi);
+              const char *relpath = svn_relpath_join(nb->relpath, name, nb->pool);
+              svn_tree_node_t *child;
+              ra_tree_node_baton_t *cb;
+
+              child = ra_tree_node_create(nb->tree, relpath, nb->pool);
+              cb = child->priv;
+              cb->dirent = dirent;
+              apr_hash_set(nb->children, name, APR_HASH_KEY_STRING, child);
+            }
         }
-      *children_p = children;
     }
+  if (children_p)
+    *children_p = nb->children;
+  if (props)
+    *props = nb->props;
 
+  return SVN_NO_ERROR;
+}
+
+/* */
+static svn_error_t *
+ra_treen_get_dirent(svn_tree_node_t *node,
+                    svn_dirent_t **dirent,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  ra_tree_node_baton_t *nb = node->priv;
+
+  if (dirent)
+    {
+      SVN_ERR(fetch_dirent(node, scratch_pool));
+      *dirent = nb->dirent;
+    }
   return SVN_NO_ERROR;
 }
 
@@ -192,10 +252,13 @@ static const svn_tree_node__vtable_t ra_tree_node_vtable =
   ra_treen_get_relpath,
   ra_treen_get_kind,
   ra_treen_read_file,
-  ra_treen_read_dir
+  ra_treen_read_dir,
+  ra_treen_get_dirent
 };
 
-/* */
+/* Return a new node in RESULT_POOL.
+ * RELPATH must be already allocated in RESULT_POOL.
+ */
 static svn_tree_node_t *
 ra_tree_node_create(svn_tree_t *tree,
                     const char *relpath,
@@ -206,6 +269,10 @@ ra_tree_node_create(svn_tree_t *tree,
   nb->tree = tree;
   nb->tb = tree->priv;
   nb->relpath = relpath;
+  nb->dirent = NULL;
+  nb->children = NULL;
+  nb->props = NULL;
+  nb->pool = result_pool;
   return svn_tree_node_create(&ra_tree_node_vtable, nb, result_pool);
 }
 

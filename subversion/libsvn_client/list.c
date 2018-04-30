@@ -31,6 +31,7 @@
 #include "svn_time.h"
 #include "svn_sorts.h"
 #include "svn_props.h"
+#include "svn_tree.h"
 
 #include "client.h"
 
@@ -53,22 +54,6 @@ list_externals(apr_hash_t *externals,
                svn_client_ctx_t *ctx,
                apr_pool_t *scratch_pool);
 
-static svn_error_t *
-list_internal(const char *path_or_url,
-              const svn_opt_revision_t *peg_revision,
-              const svn_opt_revision_t *revision,
-              const apr_array_header_t *patterns,
-              svn_depth_t depth,
-              apr_uint32_t dirent_fields,
-              svn_boolean_t fetch_locks,
-              svn_boolean_t include_externals,
-              const char *external_parent_url,
-              const char *external_target,
-              svn_client_list_func2_t list_func,
-              void *baton,
-              svn_client_ctx_t *ctx,
-              apr_pool_t *pool);
-
 /* Return TRUE if S matches any of the const char * in PATTERNS.
  * Note that any S will match if PATTERNS is empty.
  * Use SCRATCH_BUFFER for temporary string contents. */
@@ -80,142 +65,6 @@ match_patterns(const char *s,
   return patterns
        ? svn_utf__fuzzy_glob_match(s, patterns, scratch_buffer)
        : TRUE;
-}
-
-/* Get the directory entries of DIR at REV (relative to the root of
-   RA_SESSION), getting at least the fields specified by DIRENT_FIELDS.
-   Use the cancellation function/baton of CTX to check for cancellation.
-
-   If DEPTH is svn_depth_empty, return immediately.  If DEPTH is
-   svn_depth_files, invoke LIST_FUNC on the file entries with BATON;
-   if svn_depth_immediates, invoke it on file and directory entries;
-   if svn_depth_infinity, invoke it on file and directory entries and
-   recurse into the directory entries with the same depth.
-
-   If PATTERNS is not empty, the last path segments must match at least
-   one of const char * patterns in it or the respective dirent will not
-   be reported.
-
-   LOCKS, if non-NULL, is a hash mapping const char * paths to svn_lock_t
-   objects and FS_PATH is the absolute filesystem path of the RA session.
-   Use SCRATCH_POOL for temporary allocations.
-
-   If the caller passes EXTERNALS as non-NULL, populate the EXTERNALS
-   hash table whose keys are URLs of the directory which has externals
-   definitions, and whose values are the externals description text.
-   Allocate the hash's keys and values in RESULT_POOL.
-
-   EXTERNAL_PARENT_URL and EXTERNAL_TARGET are set when external items
-   are listed, otherwise both are set to NULL by the caller.
-
-   Use SCRATCH_BUFFER for temporary string contents.
-*/
-static svn_error_t *
-get_dir_contents(apr_uint32_t dirent_fields,
-                 const char *dir,
-                 svn_revnum_t rev,
-                 svn_ra_session_t *ra_session,
-                 apr_hash_t *locks,
-                 const char *fs_path,
-                 const apr_array_header_t *patterns,
-                 svn_depth_t depth,
-                 svn_client_ctx_t *ctx,
-                 apr_hash_t *externals,
-                 const char *external_parent_url,
-                 const char *external_target,
-                 svn_client_list_func2_t list_func,
-                 void *baton,
-                 svn_membuf_t *scratch_buffer,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  apr_hash_t *tmpdirents;
-  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  apr_array_header_t *array;
-  svn_error_t *err;
-  apr_hash_t *prop_hash = NULL;
-  const svn_string_t *prop_val = NULL;
-  int i;
-
-  if (depth == svn_depth_empty)
-    return SVN_NO_ERROR;
-
-  /* Get the directory's entries. If externals hash is non-NULL, get its
-     properties also. Ignore any not-authorized errors.  */
-  err = svn_ra_get_dir2(ra_session, &tmpdirents, NULL,
-                        externals ? &prop_hash : NULL,
-                        dir, rev, dirent_fields, scratch_pool);
-
-  if (err && ((err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED) ||
-              (err->apr_err == SVN_ERR_RA_DAV_FORBIDDEN)))
-    {
-      svn_error_clear(err);
-      return SVN_NO_ERROR;
-    }
-  SVN_ERR(err);
-
- /* Locks will often be empty.  Prevent pointless lookups in that case. */
- if (locks && apr_hash_count(locks) == 0)
-   locks = NULL;
-
- /* Filter out svn:externals from all properties hash. */
-  if (prop_hash)
-    prop_val = svn_hash_gets(prop_hash, SVN_PROP_EXTERNALS);
-  if (prop_val)
-    {
-      const char *url;
-
-      SVN_ERR(svn_ra_get_session_url(ra_session, &url, scratch_pool));
-
-      svn_hash_sets(externals,
-                    svn_path_url_add_component2(url, dir, result_pool),
-                    svn_string_dup(prop_val, result_pool));
-    }
-
-  if (ctx->cancel_func)
-    SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
-
-  /* Sort the hash, so we can call the callback in a "deterministic" order. */
-  array = svn_sort__hash(tmpdirents, svn_sort_compare_items_lexically,
-                         scratch_pool);
-  for (i = 0; i < array->nelts; ++i)
-    {
-      svn_sort__item_t *item = &APR_ARRAY_IDX(array, i, svn_sort__item_t);
-      const char *path;
-      svn_dirent_t *the_ent = item->value;
-      svn_lock_t *lock;
-
-      svn_pool_clear(iterpool);
-
-      path = svn_relpath_join(dir, item->key, iterpool);
-
-      if (locks)
-        {
-          const char *abs_path = svn_fspath__join(fs_path, path, iterpool);
-          lock = svn_hash_gets(locks, abs_path);
-        }
-      else
-        lock = NULL;
-
-      if (the_ent->kind == svn_node_file
-          || depth == svn_depth_immediates
-          || depth == svn_depth_infinity)
-        if (match_patterns(item->key, patterns, scratch_buffer))
-          SVN_ERR(list_func(baton, path, the_ent, lock, fs_path,
-                            external_parent_url, external_target, iterpool));
-
-      /* If externals is non-NULL, populate the externals hash table
-         recursively for all directory entries. */
-      if (depth == svn_depth_infinity && the_ent->kind == svn_node_dir)
-        SVN_ERR(get_dir_contents(dirent_fields, path, rev, ra_session,
-                                 locks, fs_path, patterns, depth, ctx,
-                                 externals, external_parent_url,
-                                 external_target, list_func, baton,
-                                 scratch_buffer, result_pool, iterpool));
-    }
-
-  svn_pool_destroy(iterpool);
-  return SVN_NO_ERROR;
 }
 
 /* Baton type to be used with list_receiver. */
@@ -262,6 +111,85 @@ list_receiver(const char *rel_path,
 
   SVN_ERR(b->list_func(b->list_baton, rel_path, dirent, lock,
                        b->fs_base_path, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Info for list_callback(). */
+struct list_baton_t
+{
+  /* The absolute filesystem path of the RA session. */
+  const char *fs_path;
+  apr_uint32_t dirent_fields;
+  /* If non-NULL, maps (const char *) paths to svn_lock_t objects. */
+  apr_hash_t *locks;
+  svn_client_list_func2_t list_func;
+  void *list_baton;
+  const apr_array_header_t *patterns;
+  svn_membuf_t *scratch_buffer;
+
+  const char *session_root_url;
+  apr_hash_t *externals;
+  const char *external_parent_url;
+  const char *external_target;
+
+  svn_boolean_t any_node_found;
+};
+
+/* List the entries in DIR_NODE.
+ * An svn_tree_walk_dir_callback function.
+ */
+static svn_error_t *list_callback(svn_tree_node_t *node,
+                                  void *baton,
+                                  apr_pool_t *scratch_pool)
+{
+  struct list_baton_t *lb = baton;
+  const char *relpath;
+  const char *basename;
+  svn_dirent_t *dirent;
+
+  lb->any_node_found = TRUE;
+
+  SVN_ERR(svn_tree_node_get_relpath(node, &relpath, scratch_pool, scratch_pool));
+  basename = svn_relpath_basename(relpath, scratch_pool);
+  SVN_ERR(svn_tree_node_get_dirent(node, &dirent, scratch_pool, scratch_pool));
+
+  if (match_patterns(basename, lb->patterns, lb->scratch_buffer))
+    {
+      svn_lock_t *lock = NULL;
+
+      if (lb->locks)
+        {
+          const char *abs_fspath = svn_fspath__join(lb->fs_path, relpath,
+                                                    scratch_pool);
+          lock = apr_hash_get(lb->locks, abs_fspath, APR_HASH_KEY_STRING);
+        }
+
+      SVN_ERR(lb->list_func(lb->list_baton, relpath, dirent, lock,
+                            lb->fs_path,
+                            lb->external_parent_url, lb->external_target,
+                            scratch_pool));
+    }
+
+  /* Collect any 'externals' definitions if this is a directory */
+  if (lb->externals && dirent->kind == svn_node_dir)
+    {
+      apr_hash_t *prop_hash = NULL;
+      const svn_string_t *prop_val = NULL;
+
+      SVN_ERR(svn_tree_node_read_dir(node, NULL /*children*/, &prop_hash,
+                                     scratch_pool, scratch_pool));
+      prop_val = svn_hash_gets(prop_hash, SVN_PROP_EXTERNALS);
+      if (prop_val)
+        {
+          apr_pool_t *pool = apr_hash_pool_get(lb->externals);
+
+          svn_hash_sets(lb->externals,
+                        svn_path_url_add_component2(lb->session_root_url,
+                                                    relpath, pool),
+                        svn_string_dup(prop_val, pool));
+        }
+    }
 
   return SVN_NO_ERROR;
 }
@@ -321,7 +249,6 @@ list_internal(const char *path_or_url,
 {
   svn_ra_session_t *ra_session;
   svn_client__pathrev_t *loc;
-  svn_dirent_t *dirent;
   const char *fs_path;
   svn_error_t *err;
   apr_hash_t *locks;
@@ -332,10 +259,6 @@ list_internal(const char *path_or_url,
     externals = apr_hash_make(pool);
   else
     externals = NULL;
-
-  /* We use the kind field to determine if we should recurse, so we
-     always need it. */
-  dirent_fields |= SVN_DIRENT_KIND;
 
   /* Get an RA plugin for this filesystem object. */
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
@@ -382,33 +305,37 @@ list_internal(const char *path_or_url,
         return svn_error_trace(err);
     }
 
-  /* Stat for the file / directory node itself. */
-  SVN_ERR(svn_ra_stat(ra_session, "", loc->rev, &dirent, pool));
-  if (! dirent)
-    return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
-                             _("URL '%s' non-existent in revision %ld"),
-                             loc->url, loc->rev);
-
   /* We need a scratch buffer for temporary string data.
    * Create one with a reasonable initial size. */
   svn_membuf__create(&scratch_buffer, 256, pool);
 
-  /* Report the dirent for the target. */
-  if (match_patterns(svn_dirent_dirname(fs_path, pool), patterns,
-                     &scratch_buffer))
-    SVN_ERR(list_func(baton, "", dirent, locks
-                      ? (svn_hash_gets(locks, fs_path))
-                      : NULL, fs_path, external_parent_url,
-                      external_target, pool));
+  /* Walk the tree */
+  {
+    struct list_baton_t lb;
+    svn_tree_t *tree;
 
-  if (dirent->kind == svn_node_dir
-      && (depth == svn_depth_files
-          || depth == svn_depth_immediates
-          || depth == svn_depth_infinity))
-    SVN_ERR(get_dir_contents(dirent_fields, "", loc->rev, ra_session, locks,
-                             fs_path, patterns, depth, ctx, externals,
-                             external_parent_url, external_target, list_func,
-                             baton, &scratch_buffer, pool, pool));
+    lb.fs_path = fs_path;
+    lb.dirent_fields = dirent_fields;
+    lb.locks = locks;
+    lb.list_func = list_func;
+    lb.list_baton = baton;
+    lb.patterns = patterns;
+    lb.scratch_buffer = &scratch_buffer;
+    lb.session_root_url = loc->url;
+    lb.externals = externals;
+    lb.external_parent_url = external_parent_url;
+    lb.external_target = external_target;
+    lb.any_node_found = FALSE;
+
+    SVN_ERR(svn_ra__open_tree(&tree, ra_session, loc->rev, pool));
+
+    SVN_ERR(svn_tree_walk(tree, depth, list_callback, &lb,
+                          ctx->cancel_func, ctx->cancel_baton, pool));
+    if (!lb.any_node_found)
+      return svn_error_createf(SVN_ERR_FS_NOT_FOUND, NULL,
+                               _("URL '%s' non-existent in revision %ld"),
+                               loc->url, loc->rev);
+  }
 
   /* We handle externals after listing entries under path_or_url, so that
      handling external items (and any errors therefrom) doesn't delay

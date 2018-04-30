@@ -94,6 +94,12 @@ typedef struct svn_tree_node__vtable_t
                            apr_hash_t **props,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool);
+
+  /* See svn_tree_node_get_dirent(). */
+  svn_error_t *(*get_dirent)(svn_tree_node_t *node,
+                             svn_dirent_t **dirent,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 } svn_tree_node__vtable_t;
 
 /** The implementation of the typedef #svn_tree_t. */
