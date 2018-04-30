@@ -2,6 +2,10 @@ Version 1.11.0
 (?? ??? 20XX, from /branches/1.11.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
+ User-visible changes:
+  - Client-side and server-side bugfixes:
+    * Fix pattern-matching of top level path in listing with search (r1830599)
+
 
 Version 1.10.0
 (13 Apr 2018, from /branches/1.10.x)
