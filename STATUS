@@ -44,6 +44,13 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1829344
+   Make configure --without-lz4 or --without-utf8proc into explicit errors.
+   Justification:
+     LZ4 and UTF8PROC are not optional and configure should produce an error.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
