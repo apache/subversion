@@ -467,10 +467,6 @@ update_internal(svn_revnum_t *result_rev,
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
-  /* Try to reuse the RA session by reparenting it to the anchor_url.
-   * This code is probably overly cautious since we only use this
-   * currently when parents are missing and so all the anchor_urls
-   * have to be in the same repo. */
   SVN_ERR(reuse_ra_session(ra_session_p, &corrected_url, anchor_url,
                            anchor_abspath, ctx, result_pool, scratch_pool));
   ra_session = *ra_session_p;
