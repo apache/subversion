@@ -54,6 +54,7 @@ AC_DEFUN(SVN_LIB_SECRET,
                           [Is libsecret support enabled?])
                 SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags libsecret-1`"
                 SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs libsecret-1`"
+                SVN_GNOME_KEYRING_PCLIBS="libsecret-1"
                 found_gnome_keyring="yes"
               else
                 if test "$with_gnome_keyring" = "yes"; then
@@ -90,4 +91,5 @@ AC_DEFUN(SVN_LIB_SECRET,
   fi
   AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
   AC_SUBST(SVN_GNOME_KEYRING_LIBS)
+  AC_SUBST(SVN_GNOME_KEYRING_PCLIBS)
 ])
