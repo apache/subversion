@@ -507,7 +507,7 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('top_srcdir = .\n')
     standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
-    standalone.write('PYTHON = python\n')
+    standalone.write('PYTHON = ' + sys.executable + '\n')
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
     standalone.close()
