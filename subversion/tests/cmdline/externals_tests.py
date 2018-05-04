@@ -4400,7 +4400,6 @@ def invalid_uris_in_repo(sbox):
 
 # Like issue #3741 'externals not removed when working copy is made shallow'
 # but with --set-depth=exclude instead of --set-depth=empty.
-@XFail()
 def update_dir_external_exclude(sbox):
   "exclude update should remove externals"
 
