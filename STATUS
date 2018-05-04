@@ -51,6 +51,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1830883,r1830900,r1830901
+   Prune externals from excluded subtrees after 'update --set-depth=exclude'
+   Justification:
+     Current behaviour is inconsistent: Setting depth to 'empty' prunes
+     externals while excluding a subtree does not.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
