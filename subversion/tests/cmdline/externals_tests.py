@@ -4398,6 +4398,46 @@ def invalid_uris_in_repo(sbox):
                                             "-r", revision)
     svntest.main.safe_rmtree(sbox.wc_dir)
 
+# Like issue #3741 'externals not removed when working copy is made shallow'
+# but with --set-depth=exclude instead of --set-depth=empty.
+@XFail()
+def update_dir_external_exclude(sbox):
+  "exclude update should remove externals"
+
+  sbox.build()
+
+  # Create an external in r2
+  sbox.simple_propset('svn:externals', '^/A/D/H X', 'A/B/E')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Now make A/B/E shallow by updating with "--set-depth exclude"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E'       : Item(status='D '),
+    'A/B/E/X'     : Item(verb='Removed external'),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        [], False,
+                                        '--set-depth=exclude',
+                                        sbox.ospath('A/B/E'))
+
+  # And bring the external back by updating with "--set-depth infinity"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E'         : Item(status='A '),
+    'A/B/E/alpha'   : Item(status='A '),
+    'A/B/E/beta'    : Item(status='A '),
+    'A/B/E/X/chi'   : Item(status='A '),
+    'A/B/E/X/omega' : Item(status='A '),
+    'A/B/E/X/psi'   : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        [], False,
+                                        '--set-depth=infinity',
+                                        sbox.ospath('A/B/E'))
+
+
 ########################################################################
 # Run the tests
 
@@ -4474,6 +4514,7 @@ test_list = [ None,
               file_external_recorded_info,
               external_externally_removed,
               invalid_uris_in_repo,
+              update_dir_external_exclude,
              ]
 
 if __name__ == '__main__':
