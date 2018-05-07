@@ -28,7 +28,7 @@ Candidate changes:
    Justification:
      Fix build of pre-generated Swig bindings when swig is not installed
    Votes:
-     +1: jamessan
+     +1: jamessan, stsp
 
  * r1829344
    Make configure --without-lz4 or --without-utf8proc into explicit errors.
