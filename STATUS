@@ -35,7 +35,7 @@ Candidate changes:
    Justification:
      LZ4 and UTF8PROC are not optional and configure should produce an error.
    Votes:
-     +1: philip
+     +1: philip, stsp
 
  * r1830883,r1830900,r1830901
    Prune externals from excluded subtrees after 'update --set-depth=exclude'
