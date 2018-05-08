@@ -45,15 +45,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1831110, 1831112
-   Fix issue 4741: authz group cannot refer to multiple groups
-   Justification:
-     Regression from 1.9.
-   Votes:
-     +1: philip, stsp
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1831110, 1831112
+   Fix issue 4741: authz group cannot refer to multiple groups
+   Justification:
+     Regression from 1.9.
+   Votes:
+     +1: philip, stsp, brane
