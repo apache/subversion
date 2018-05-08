@@ -58,13 +58,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r1829012, r1829015
-  Correctly claim to offer Gnome Keyring support with libsecret
-  Justification:
-    New feature, would cause confusion if missing from svn --version
-  Votes:
-    +1: astieger, brane, stsp
-
 * r1828613
   Fix a JavaHL local refs capacity warning when unparsing externals.
   Justification:
