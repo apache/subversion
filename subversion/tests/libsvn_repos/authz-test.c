@@ -444,6 +444,40 @@ test_global_rights(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+issue_4741_groups(apr_pool_t *pool)
+{
+   const char rules[] =
+     "[groups]"      NL
+     "g1 = userA"    NL
+     "g2 = userB"    NL
+     "g = @g1, @g2"  NL
+     ""              NL
+     "[/]"           NL
+     "* ="           NL
+     "@g = rw"       NL
+     ;
+
+   svn_stringbuf_t *buf = svn_stringbuf_create(rules, pool);
+   svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
+   svn_authz_t *authz;
+   svn_boolean_t access_granted;
+
+   SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+
+   SVN_ERR(svn_repos_authz_check_access(authz, "repo", "/", "userA",
+                                        svn_authz_write, &access_granted,
+                                        pool));
+   SVN_TEST_ASSERT(access_granted == TRUE);
+
+   SVN_ERR(svn_repos_authz_check_access(authz, "repo", "/", "userB",
+                                        svn_authz_write, &access_granted,
+                                        pool));
+   SVN_TEST_ASSERT(access_granted == TRUE);
+
+   return SVN_NO_ERROR;
+}
+
 static int max_threads = 4;
 
 static struct svn_test_descriptor_t test_funcs[] =
@@ -453,6 +487,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_authz__parse"),
     SVN_TEST_PASS2(test_global_rights,
                    "test svn_authz__get_global_rights"),
+    SVN_TEST_PASS2(issue_4741_groups,
+                   "issue 4741 groups"),
     SVN_TEST_NULL
   };
 
