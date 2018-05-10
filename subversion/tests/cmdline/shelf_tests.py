@@ -302,12 +302,18 @@ def shelve_binary_file_mod(sbox):
   "shelve binary file mod"
 
   sbox.build(empty=True)
-  sbox.simple_add_text('\0\1\2\3\4\5', 'bin')
+
+  existing_files = ['A/B/existing']
+  mod_files = ['bin', 'A/B/bin']
+
+  sbox.simple_mkdir('A', 'A/B')
+  for f in existing_files + mod_files:
+    sbox.simple_add_text('\0\1\2\3\4\5', f)
   sbox.simple_commit()
-  sbox.simple_update()
 
   def modifier(sbox):
-    sbox.simple_append('bin', '\5\4\3\2\1\0', truncate=True)
+    for f in mod_files:
+      sbox.simple_append(f, '\5\4\3\2\1\0', truncate=True)
 
   shelve_unshelve(sbox, modifier)
 
@@ -316,8 +322,19 @@ def shelve_binary_file_mod(sbox):
 def shelve_binary_file_add(sbox):
   "shelve binary file add"
 
+  sbox.build(empty=True)
+
+  existing_files = ['A/B/existing']
+  mod_files = ['bin', 'A/B/bin']
+
+  sbox.simple_mkdir('A', 'A/B')
+  for f in existing_files:
+    sbox.simple_add_text('\0\1\2\3\4\5', f)
+  sbox.simple_commit()
+
   def modifier(sbox):
-    sbox.simple_add_text('\0\1\2\3\4\5', 'bin')
+    for f in mod_files:
+      sbox.simple_add_text('\0\1\2\3\4\5', f)
 
   shelve_unshelve(sbox, modifier)
 
@@ -327,12 +344,18 @@ def shelve_binary_file_del(sbox):
   "shelve binary file del"
 
   sbox.build(empty=True)
-  sbox.simple_add_text('\0\1\2\3\4\5', 'bin')
+
+  existing_files = ['A/B/existing']
+  mod_files = ['bin', 'A/B/bin']
+
+  sbox.simple_mkdir('A', 'A/B')
+  for f in existing_files + mod_files:
+    sbox.simple_add_text('\0\1\2\3\4\5', f)
   sbox.simple_commit()
-  sbox.simple_update()
 
   def modifier(sbox):
-    sbox.simple_rm('bin')
+    for f in mod_files:
+      sbox.simple_rm(f)
 
   shelve_unshelve(sbox, modifier)
 
