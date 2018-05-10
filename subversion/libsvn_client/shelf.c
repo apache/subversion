@@ -420,7 +420,6 @@ walk_shelved_files(svn_client_shelf_version_t *shelf_version,
 
 /* A baton for use with walk_callback(). */
 typedef struct walk_baton_t {
-  apr_hash_t *changelist_hash;
   const char *wc_root_abspath;
   const char *files_dir_abspath;
   svn_stream_t *outstream;
@@ -502,16 +501,6 @@ walk_callback(void *baton,
   svn_opt_revision_t end_revision = {svn_opt_revision_working, {0}};
   const char *wc_relpath = svn_dirent_skip_ancestor(wb->wc_root_abspath,
                                                     local_abspath);
-
-  /* If the status item has an entry, but doesn't belong to one of the
-     changelists our caller is interested in, we filter out this status
-     transmission.  */
-  if (wb->changelist_hash
-      && (! status->changelist
-          || ! svn_hash_gets(wb->changelist_hash, status->changelist)))
-    {
-      return SVN_NO_ERROR;
-    }
 
   switch (status->node_status)
     {
@@ -596,21 +585,60 @@ walk_callback(void *baton,
   return SVN_NO_ERROR;
 }
 
+/* A baton for use with changelist_filter_func(). */
+struct changelist_filter_baton_t {
+  apr_hash_t *changelist_hash;
+  svn_wc_status_func4_t status_func;
+  void *status_baton;
+};
+
+/* Filter out paths that are not in the requested changelist(s).
+ * Implements svn_wc_status_func4_t. */
+static svn_error_t *
+changelist_filter_func(void *baton,
+                       const char *local_abspath,
+                       const svn_wc_status3_t *status,
+                       apr_pool_t *scratch_pool)
+{
+  struct changelist_filter_baton_t *b = baton;
+
+  if (b->changelist_hash
+      && (! status->changelist
+          || ! svn_hash_gets(b->changelist_hash, status->changelist)))
+    {
+      return SVN_NO_ERROR;
+    }
+
+  SVN_ERR(b->status_func(b->status_baton, local_abspath, status,
+                         scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 /*
- * Walk the tree rooted at PATHS, to depth DEPTH.
+ * Walk the WC tree(s) rooted at PATHS, to depth DEPTH, omitting paths that
+ * are not in one of the CHANGELISTS (if not null).
+ *
+ * Call STATUS_FUNC(STATUS_BATON, ...) for each visited path.
  *
  * PATHS are absolute, or relative to CWD.
  */
 static svn_error_t *
 wc_walk_status_multi(const apr_array_header_t *paths,
                      svn_depth_t depth,
-                     /*const apr_array_header_t *changelists,*/
+                     const apr_array_header_t *changelists,
                      svn_wc_status_func4_t status_func,
                      void *status_baton,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *scratch_pool)
 {
+  struct changelist_filter_baton_t cb = {0};
   int i;
+
+  if (changelists && changelists->nelts)
+    SVN_ERR(svn_hash_from_cstring_keys(&cb.changelist_hash,
+                                       changelists, scratch_pool));
+  cb.status_func = status_func;
+  cb.status_baton = status_baton;
 
   for (i = 0; i < paths->nelts; i++)
     {
@@ -625,7 +653,7 @@ wc_walk_status_multi(const apr_array_header_t *paths,
                                  FALSE /*get_all*/, FALSE /*no_ignore*/,
                                  FALSE /*ignore_text_mods*/,
                                  NULL /*ignore_patterns*/,
-                                 status_func, status_baton,
+                                 changelist_filter_func, &cb,
                                  ctx->cancel_func, ctx->cancel_baton,
                                  scratch_pool));
     }
@@ -660,10 +688,6 @@ write_patch(svn_boolean_t *any_shelved,
   apr_int32_t flag;
   apr_file_t *outfile;
 
-  if (changelists && changelists->nelts)
-    SVN_ERR(svn_hash_from_cstring_keys(&walk_baton.changelist_hash,
-                                       changelists, scratch_pool));
-
   walk_baton.wc_root_abspath = wc_root_abspath;
   walk_baton.files_dir_abspath = files_dir_abspath;
   walk_baton.ctx = ctx;
@@ -683,7 +707,7 @@ write_patch(svn_boolean_t *any_shelved,
   walk_baton.errstream = svn_stream_empty(scratch_pool);
 
   /* Walk the WC */
-  SVN_ERR(wc_walk_status_multi(paths, depth, /*changelists,*/
+  SVN_ERR(wc_walk_status_multi(paths, depth, changelists,
                                walk_callback, &walk_baton,
                                ctx, scratch_pool));
 
