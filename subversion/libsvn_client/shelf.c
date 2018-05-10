@@ -176,17 +176,25 @@ get_existing_patch_abspath(const char **abspath,
   return SVN_NO_ERROR;
 }
 
+/* Delete the storage for SHELF:VERSION. */
 static svn_error_t *
-shelf_delete_patch_file(svn_client_shelf_t *shelf,
-                        int version,
-                        apr_pool_t *scratch_pool)
+shelf_version_delete(svn_client_shelf_t *shelf,
+                     int version,
+                     apr_pool_t *scratch_pool)
 {
   const char *patch_abspath;
+  const char *files_dir_abspath;
 
   SVN_ERR(get_existing_patch_abspath(&patch_abspath, shelf, version,
                                      scratch_pool, scratch_pool));
   SVN_ERR(svn_io_remove_file2(patch_abspath, TRUE /*ignore_enoent*/,
                               scratch_pool));
+  SVN_ERR(shelf_version_files_dir_abspath(&files_dir_abspath,
+                                          shelf, version,
+                                          scratch_pool, scratch_pool));
+  SVN_ERR(svn_io_remove_dir2(files_dir_abspath, TRUE /*ignore_enoent*/,
+                             NULL, NULL, /*cancel*/
+                             scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -816,7 +824,7 @@ svn_client_shelf_delete(const char *name,
   /* Remove the patches. */
   for (i = shelf->max_version; i > 0; i--)
     {
-      SVN_ERR(shelf_delete_patch_file(shelf, i, scratch_pool));
+      SVN_ERR(shelf_version_delete(shelf, i, scratch_pool));
     }
 
   /* Remove the other files */
@@ -1184,7 +1192,7 @@ svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
   /* Delete any newer checkpoints */
   for (i = shelf->max_version; i > previous_version; i--)
     {
-      SVN_ERR(shelf_delete_patch_file(shelf, i, scratch_pool));
+      SVN_ERR(shelf_version_delete(shelf, i, scratch_pool));
     }
 
   shelf->max_version = previous_version;
