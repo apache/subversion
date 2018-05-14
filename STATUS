@@ -30,13 +30,6 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
- * r1829344
-   Make configure --without-lz4 or --without-utf8proc into explicit errors.
-   Justification:
-     LZ4 and UTF8PROC are not optional and configure should produce an error.
-   Votes:
-     +1: philip, stsp
-
  * r1830883,r1830900,r1830901
    Prune externals from excluded subtrees after 'update --set-depth=exclude'
    Justification:
@@ -44,6 +37,7 @@ Candidate changes:
      externals while excluding a subtree does not.
    Votes:
      +1: stsp
+     +0: rhuijben (in concept, not reviewed)
 
  * r1830885,r1831540
    Ensure consistent use of $PYTHON during build and test.
@@ -51,7 +45,7 @@ Candidate changes:
      Fixes potential build issues when multiple Python interpreters are
      installed, and aids with Python 2 to 3 migration.
    Votes:
-     +1: jorton
+     +1: jorton, rhuijben
 
  * r1830882
    Fix libsvn_auth_gnome_keyring.pc when built using libsecret.
@@ -66,3 +60,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1829344
+   Make configure --without-lz4 or --without-utf8proc into explicit errors.
+   Justification:
+     LZ4 and UTF8PROC are not optional and configure should produce an error.
+   Votes:
+     +1: philip, stsp, rhuijben
