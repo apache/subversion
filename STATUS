@@ -45,6 +45,22 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1830885,r1831540
+   Ensure consistent use of $PYTHON during build and test.
+   Justification:
+     Fixes potential build issues when multiple Python interpreters are
+     installed, and aids with Python 2 to 3 migration.
+   Votes:
+     +1: jorton
+
+ * r1830882
+   Fix libsvn_auth_gnome_keyring.pc when built using libsecret.
+   Justification:
+     The generated .pc file references files libgnome-keyring, which
+     is not used and may not exist.
+   Votes:
+     +1: jorton
+
 Veto-blocked changes:
 =====================
 
