@@ -6883,7 +6883,7 @@ typedef struct svn_client_shelf_version_t
   apr_time_t mtime;  /** time-stamp of this version */
 
   /* Private fields */
-  const char *patch_abspath;  /** abspath of the patch file */
+  const char *files_dir_abspath;  /** abspath of the storage area */
   int version_number;  /** version number starting from 1 */
 } svn_client_shelf_version_t;
 
