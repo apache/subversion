@@ -414,6 +414,29 @@ def shelve_with_log_message(sbox):
 
   os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+
+def shelf_status(sbox):
+  "shelf status"
+
+  sbox.build(empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  sbox.simple_add_text('New file', 'f')
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelve', 'foo')
+  expected_output = svntest.verify.RegexListOutput(
+    ["",
+     "--- Changelist 'svn:shelf:foo':",
+     "A       f",
+    ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'status', '--cl=svn:shelf:foo')
+
+  os.chdir(was_cwd)
+
 
 ########################################################################
 # Run the tests
@@ -436,6 +459,7 @@ test_list = [ None,
               shelve_binary_file_del,
               shelve_binary_file_replace,
               shelve_with_log_message,
+              shelf_status,
              ]
 
 if __name__ == '__main__':
