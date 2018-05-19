@@ -485,7 +485,7 @@ wc_status_serialize(svn_stream_t *stream,
 static svn_error_t *
 wc_status_unserialize(svn_wc_status3_t *status,
                       svn_stream_t *stream,
-                      apr_pool_t *scratch_pool)
+                      apr_pool_t *result_pool)
 {
   char string[5];
   apr_size_t len = 5;
@@ -527,9 +527,10 @@ static svn_error_t *
 status_read(svn_wc_status3_t **status,
             svn_client_shelf_version_t *shelf_version,
             const char *relpath,
+            apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  svn_wc_status3_t *s = apr_pcalloc(scratch_pool, sizeof(*s));
+  svn_wc_status3_t *s = apr_pcalloc(result_pool, sizeof(*s));
   char *file_abspath;
   svn_stream_t *stream;
 
@@ -537,9 +538,11 @@ status_read(svn_wc_status3_t **status,
                                scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_open_readonly(&stream, file_abspath,
                                    scratch_pool, scratch_pool));
-  SVN_ERR(wc_status_unserialize(s, stream, scratch_pool));
+  SVN_ERR(wc_status_unserialize(s, stream, result_pool));
   SVN_ERR(svn_stream_close(stream));
 
+  s->changelist = apr_psprintf(result_pool, "svn:shelf:%s",
+                               shelf_version->shelf->name);
   *status = s;
   return SVN_NO_ERROR;
 }
@@ -557,6 +560,7 @@ typedef svn_error_t *(*shelf_status_visitor_t)(void *baton,
 struct shelf_status_baton_t
 {
   svn_client_shelf_version_t *shelf_version;
+  const char *top_relpath;
   const char *walk_root_abspath;
   shelf_status_visitor_t walk_func;
   void *walk_baton;
@@ -581,7 +585,11 @@ shelf_status_visitor(void *baton,
       svn_wc_status3_t *s;
 
       relpath = apr_pstrndup(scratch_pool, relpath, strlen(relpath) - 5);
-      SVN_ERR(status_read(&s, b->shelf_version, relpath, scratch_pool));
+      if (!svn_relpath_skip_ancestor(b->top_relpath, relpath))
+        return SVN_NO_ERROR;
+
+      SVN_ERR(status_read(&s, b->shelf_version, relpath,
+                          scratch_pool, scratch_pool));
       SVN_ERR(b->walk_func(b->walk_baton, relpath, s, scratch_pool));
     }
   return SVN_NO_ERROR;
@@ -602,6 +610,7 @@ shelf_status_visit_path(svn_client_shelf_version_t *shelf_version,
   apr_finfo_t finfo;
 
   baton.shelf_version = shelf_version;
+  baton.top_relpath = wc_relpath;
   baton.walk_root_abspath = shelf_version->files_dir_abspath;
   baton.walk_func = walk_func;
   baton.walk_baton = walk_baton;
@@ -617,6 +626,7 @@ shelf_status_visit_path(svn_client_shelf_version_t *shelf_version,
  */
 static svn_error_t *
 shelf_status_walk(svn_client_shelf_version_t *shelf_version,
+                  const char *wc_relpath,
                   shelf_status_visitor_t walk_func,
                   void *walk_baton,
                   apr_pool_t *scratch_pool)
@@ -625,6 +635,7 @@ shelf_status_walk(svn_client_shelf_version_t *shelf_version,
   svn_error_t *err;
 
   baton.shelf_version = shelf_version;
+  baton.top_relpath = wc_relpath;
   baton.walk_root_abspath = shelf_version->files_dir_abspath;
   baton.walk_func = walk_func;
   baton.walk_baton = walk_baton;
@@ -636,6 +647,45 @@ shelf_status_walk(svn_client_shelf_version_t *shelf_version,
   else
     SVN_ERR(err);
 
+  return SVN_NO_ERROR;
+}
+
+typedef struct wc_status_baton_t
+{
+  svn_client_shelf_version_t *shelf_version;
+  svn_wc_status_func4_t walk_func;
+  void *walk_baton;
+} wc_status_baton_t;
+
+static svn_error_t *
+wc_status_visitor(void *baton,
+                      const char *relpath,
+                      svn_wc_status3_t *status,
+                      apr_pool_t *scratch_pool)
+{
+  struct wc_status_baton_t *b = baton;
+  svn_client_shelf_t *shelf = b->shelf_version->shelf;
+  const char *abspath = svn_dirent_join(shelf->wc_root_abspath, relpath,
+                                        scratch_pool);
+  SVN_ERR(b->walk_func(b->walk_baton, abspath, status, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_version_status_walk(svn_client_shelf_version_t *shelf_version,
+                                     const char *wc_relpath,
+                                     svn_wc_status_func4_t walk_func,
+                                     void *walk_baton,
+                                     apr_pool_t *scratch_pool)
+{
+  wc_status_baton_t baton;
+
+  baton.shelf_version = shelf_version;
+  baton.walk_func = walk_func;
+  baton.walk_baton = walk_baton;
+  SVN_ERR(shelf_status_walk(shelf_version, wc_relpath,
+                            wc_status_visitor, &baton,
+                            scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1158,7 +1208,7 @@ shelf_paths_changed(apr_hash_t **paths_hash_p,
   baton.as_abspath = as_abspath;
   baton.wc_root_abspath = shelf->wc_root_abspath;
   baton.pool = result_pool;
-  SVN_ERR(shelf_status_walk(shelf_version,
+  SVN_ERR(shelf_status_walk(shelf_version, "",
                             paths_changed_visitor, &baton,
                             scratch_pool));
 
@@ -1508,7 +1558,7 @@ svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
 
   baton.shelf_version = shelf_version;
   baton.ctx = shelf_version->shelf->ctx;
-  SVN_ERR(shelf_status_walk(shelf_version,
+  SVN_ERR(shelf_status_walk(shelf_version, "",
                             apply_file_visitor, &baton,
                             scratch_pool));
 
@@ -1579,7 +1629,7 @@ svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
 
   baton.shelf_version = shelf_version;
   baton.outstream = outstream;
-  SVN_ERR(shelf_status_walk(shelf_version,
+  SVN_ERR(shelf_status_walk(shelf_version, "",
                             diff_visitor, &baton,
                             scratch_pool));
   return SVN_NO_ERROR;

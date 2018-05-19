@@ -7274,6 +7274,15 @@ svn_client_shelf_list(apr_hash_t **shelf_infos,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
+/* Report the shelved status of all the shelved paths in SHELF_VERSION
+ * via WALK_FUNC(WALK_BATON, ...).
+ */
+svn_error_t *
+svn_client_shelf_version_status_walk(svn_client_shelf_version_t *shelf_version,
+                                     const char *wc_relpath,
+                                     svn_wc_status_func4_t walk_func,
+                                     void *walk_baton,
+                                     apr_pool_t *scratch_pool);
 /** @} */
 
 /** Changelist commands
