@@ -139,6 +139,18 @@ def shelve_deletes(sbox):
 
 #----------------------------------------------------------------------
 
+def shelve_replace(sbox):
+  "shelve replace"
+
+  def modifier(sbox):
+    sbox.simple_rm('A/mu')
+    sbox.simple_add_text('Replacement\n', 'A/mu')
+    sbox.simple_propset('p', 'v', 'A/mu')
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
 def shelve_empty_adds(sbox):
   "shelve empty adds"
   sbox.build(empty=True)
@@ -359,6 +371,28 @@ def shelve_binary_file_del(sbox):
 
 #----------------------------------------------------------------------
 
+def shelve_binary_file_replace(sbox):
+  "shelve binary file replace"
+
+  sbox.build(empty=True)
+
+  existing_files = ['A/B/existing']
+  mod_files = ['bin', 'A/B/bin']
+
+  sbox.simple_mkdir('A', 'A/B')
+  for f in existing_files + mod_files:
+    sbox.simple_add_text('\0\1\2\3\4\5', f)
+  sbox.simple_commit()
+
+  def modifier(sbox):
+    for f in mod_files:
+      sbox.simple_rm(f)
+      sbox.simple_add_text('\5\4\3\2\1\0', f)
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
 def shelve_with_log_message(sbox):
   "shelve with log message"
 
@@ -390,6 +424,7 @@ test_list = [ None,
               shelve_prop_changes,
               shelve_adds,
               shelve_deletes,
+              shelve_replace,
               shelve_empty_adds,
               shelve_empty_deletes,
               shelve_from_inner_path,
@@ -399,6 +434,7 @@ test_list = [ None,
               shelve_binary_file_mod,
               shelve_binary_file_add,
               shelve_binary_file_del,
+              shelve_binary_file_replace,
               shelve_with_log_message,
              ]
 

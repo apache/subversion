@@ -1357,12 +1357,15 @@ apply_file_visitor(void *baton,
       || s->node_status == svn_wc_status_replaced)
     {
       SVN_ERR(wc_node_delete(to_wc_abspath, b->ctx, scratch_pool));
-      SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_delete,
-                                s->kind,
-                                svn_wc_notify_state_inapplicable,
-                                svn_wc_notify_state_inapplicable,
-                                b->ctx->notify_func2, b->ctx->notify_baton2,
-                                scratch_pool));
+      if (s->node_status != svn_wc_status_replaced)
+        {
+          SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_delete,
+                                    s->kind,
+                                    svn_wc_notify_state_inapplicable,
+                                    svn_wc_notify_state_inapplicable,
+                                    b->ctx->notify_func2, b->ctx->notify_baton2,
+                                    scratch_pool));
+        }
     }
 
   /* If we can merge a file, do so. */
@@ -1394,7 +1397,8 @@ apply_file_visitor(void *baton,
     }
 
   /* For an added file, copy it into the WC and ensure it's versioned. */
-  if (s->node_status == svn_wc_status_added)
+  if (s->node_status == svn_wc_status_added
+      || s->node_status == svn_wc_status_replaced)
     {
       if (s->kind == svn_node_dir)
         {
@@ -1407,7 +1411,10 @@ apply_file_visitor(void *baton,
                                    TRUE /*copy_perms*/, scratch_pool));
         }
       SVN_ERR(wc_node_add(to_wc_abspath, work_props, b->ctx, scratch_pool));
-      SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_add,
+      SVN_ERR(send_notification(to_wc_abspath,
+                                (s->node_status == svn_wc_status_replaced)
+                                  ? svn_wc_notify_update_replace
+                                  : svn_wc_notify_update_add,
                                 s->kind,
                                 svn_wc_notify_state_inapplicable,
                                 svn_wc_notify_state_inapplicable,
