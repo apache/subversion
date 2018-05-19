@@ -386,6 +386,8 @@ shelves_status(const apr_array_header_t *changelists,
   static const int PREFIX_LEN = 10;
   int i;
 
+  if (! changelists)
+    return SVN_NO_ERROR;
   for (i = 0; i < changelists->nelts; i++)
     {
       const char *cl = APR_ARRAY_IDX(changelists, i, const char *);
