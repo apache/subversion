@@ -7078,11 +7078,11 @@ svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
                        svn_boolean_t dry_run,
                        apr_pool_t *scratch_pool);
 
-/** Test whether we can successfully apply the patch for @a file_relpath
+/** Test whether we can successfully apply the changes for @a file_relpath
  * in @a shelf_version to the WC.
  *
- * Try applying the shelf-version to the WC and set @a *conflict_p to
- * true if any conflict occurs, else to false.
+ * Set @a *conflict_p to true if the changes conflict with the WC state,
+ * else to false.
  *
  * If @a file_relpath is not found in @a shelf_version, set @a *conflict_p
  * to FALSE.
