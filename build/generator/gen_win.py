@@ -375,7 +375,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
           cbuild = ("%s -g -Xlint -Xlint:-options " +
                     per_project_flags +
-                    " -target 1.5 -source 1.5 -classpath "
+                    " -target 1.8 -source 1.8 -classpath "
                     " %s -d %s "
                     " -sourcepath %s $(InputPath)") \
                    % tuple(map(self.quote, (javac_exe, classes,
