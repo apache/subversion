@@ -114,7 +114,7 @@ shelf_name_from_filename(char **name,
   return SVN_NO_ERROR;
 }
 
-/* Set *PATCH_ABSPATH to the abspath of the file storage dir for SHELF
+/* Set *ABSPATH to the abspath of the file storage dir for SHELF
  * version VERSION, no matter whether it exists.
  */
 static svn_error_t *
@@ -154,7 +154,9 @@ shelf_version_create(svn_client_shelf_version_t **new_version_p,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Set *ABSPATH to the abspath of the metadata file for SHELF_VERSION
+ * node at RELPATH, no matter whether it exists.
+ */
 static svn_error_t *
 get_metadata_abspath(char **abspath,
                      svn_client_shelf_version_t *shelf_version,
@@ -168,7 +170,25 @@ get_metadata_abspath(char **abspath,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Set *ABSPATH to the abspath of the base text file for SHELF_VERSION
+ * node at RELPATH, no matter whether it exists.
+ */
+static svn_error_t *
+get_base_file_abspath(char **base_abspath,
+                      svn_client_shelf_version_t *shelf_version,
+                      const char *wc_relpath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  wc_relpath = apr_psprintf(scratch_pool, "%s.base", wc_relpath);
+  *base_abspath = svn_dirent_join(shelf_version->files_dir_abspath, wc_relpath,
+                                  result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* Set *ABSPATH to the abspath of the working text file for SHELF_VERSION
+ * node at RELPATH, no matter whether it exists.
+ */
 static svn_error_t *
 get_working_file_abspath(char **work_abspath,
                          svn_client_shelf_version_t *shelf_version,
@@ -182,19 +202,35 @@ get_working_file_abspath(char **work_abspath,
   return SVN_NO_ERROR;
 }
 
-/* Set *PATCH_ABSPATH to the abspath of the patch file for SHELF_VERSION
+/* Set *ABSPATH to the abspath of the base props file for SHELF_VERSION
  * node at RELPATH, no matter whether it exists.
  */
 static svn_error_t *
-get_patch_abspath(const char **abspath,
-                  svn_client_shelf_version_t *shelf_version,
-                  const char *wc_relpath,
-                  apr_pool_t *result_pool,
-                  apr_pool_t *scratch_pool)
+get_base_props_abspath(char **base_abspath,
+                       svn_client_shelf_version_t *shelf_version,
+                       const char *wc_relpath,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  wc_relpath = apr_psprintf(scratch_pool, "%s.patch", wc_relpath);
-  *abspath = svn_dirent_join(shelf_version->files_dir_abspath, wc_relpath,
-                             result_pool);
+  wc_relpath = apr_psprintf(scratch_pool, "%s.base-props", wc_relpath);
+  *base_abspath = svn_dirent_join(shelf_version->files_dir_abspath, wc_relpath,
+                                  result_pool);
+  return SVN_NO_ERROR;
+}
+
+/* Set *ABSPATH to the abspath of the working props file for SHELF_VERSION
+ * node at RELPATH, no matter whether it exists.
+ */
+static svn_error_t *
+get_working_props_abspath(char **work_abspath,
+                          svn_client_shelf_version_t *shelf_version,
+                          const char *wc_relpath,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  wc_relpath = apr_psprintf(scratch_pool, "%s.work-props", wc_relpath);
+  *work_abspath = svn_dirent_join(shelf_version->files_dir_abspath, wc_relpath,
+                                  result_pool);
   return SVN_NO_ERROR;
 }
 
@@ -581,48 +617,128 @@ note_shelved(apr_array_header_t *shelved,
   return SVN_NO_ERROR;
 }
 
-/* Set *IS_BINARY to true iff the pristine or working version of
- * LOCAL_ABSPATH has a MIME-type that we regard as 'binary'.
+/* Read BASE_PROPS and WORK_PROPS from the WC, setting each to null if
+ * the node has no base or working version (respectively).
  */
 static svn_error_t *
-is_binary_file(svn_boolean_t *is_binary,
-               const char *local_abspath,
-               svn_client_ctx_t *ctx,
-               apr_pool_t *scratch_pool)
+read_props_from_wc(apr_hash_t **base_props,
+                   apr_hash_t **work_props,
+                   enum svn_wc_status_kind node_status,
+                   const char *from_wc_abspath,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
 {
-  apr_hash_t *props;
-  const svn_string_t *value;
+  if (node_status != svn_wc_status_added)
+    SVN_ERR(svn_wc_get_pristine_props(base_props, ctx->wc_ctx, from_wc_abspath,
+                                      result_pool, scratch_pool));
+  else
+    *base_props = NULL;
+  if (node_status != svn_wc_status_deleted)
+    SVN_ERR(svn_wc_prop_list2(work_props, ctx->wc_ctx, from_wc_abspath,
+                              result_pool, scratch_pool));
+  else
+    *work_props = NULL;
+  return SVN_NO_ERROR;
+}
 
-  SVN_ERR(svn_wc_get_pristine_props(&props, ctx->wc_ctx,
-                                    local_abspath,
-                                    scratch_pool, scratch_pool));
-  value = props ? svn_hash_gets(props, SVN_PROP_MIME_TYPE)
-                : NULL;
-  *is_binary = value && svn_mime_type_is_binary(value->data);
+/* Write BASE_PROPS and WORK_PROPS to storage in SHELF_VERSION:WC_RELPATH.
+ */
+static svn_error_t *
+write_props_to_shelf(svn_client_shelf_version_t *shelf_version,
+                     const char *wc_relpath,
+                     apr_hash_t *base_props,
+                     apr_hash_t *work_props,
+                     apr_pool_t *scratch_pool)
+{
+  char *stored_props_abspath;
+  svn_stream_t *stream;
 
-  SVN_ERR(svn_wc_prop_get2(&value, ctx->wc_ctx, local_abspath,
-                           SVN_PROP_MIME_TYPE,
-                           scratch_pool, scratch_pool));
-  if (value && svn_mime_type_is_binary(value->data))
-    *is_binary = TRUE;
+  if (base_props)
+    {
+      SVN_ERR(get_base_props_abspath(&stored_props_abspath,
+                                     shelf_version, wc_relpath,
+                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_open_writable(&stream, stored_props_abspath,
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_hash_write2(base_props, stream, NULL, scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
+    }
+
+  if (work_props)
+    {
+      SVN_ERR(get_working_props_abspath(&stored_props_abspath,
+                                        shelf_version, wc_relpath,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_open_writable(&stream, stored_props_abspath,
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_hash_write2(work_props, stream, NULL, scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
+    }
 
   return SVN_NO_ERROR;
 }
 
-/* Copy the WC working file at FROM_WC_ABSPATH to a storage location within
- * the shelf-version storage area in SHELF_VERSION.
- * If STORE_WHOLE_FILE is true, we will store the whole file (and we will
- * not be storing a patch of the file text).
+/* Read BASE_PROPS and WORK_PROPS from storage in SHELF_VERSION:WC_RELPATH.
+ */
+static svn_error_t *
+read_props_from_shelf(apr_hash_t **base_props,
+                      apr_hash_t **work_props,
+                      enum svn_wc_status_kind node_status,
+                      svn_client_shelf_version_t *shelf_version,
+                      const char *wc_relpath,
+                      apr_pool_t *result_pool,
+                      apr_pool_t *scratch_pool)
+{
+  char *stored_props_abspath;
+  svn_stream_t *stream;
+
+  if (node_status != svn_wc_status_added)
+    {
+      *base_props = apr_hash_make(result_pool);
+      SVN_ERR(get_base_props_abspath(&stored_props_abspath,
+                                     shelf_version, wc_relpath,
+                                     scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_open_readonly(&stream, stored_props_abspath,
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_hash_read2(*base_props, stream, NULL, scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
+    }
+  else
+    *base_props = NULL;
+
+  if (node_status != svn_wc_status_deleted)
+    {
+      *work_props = apr_hash_make(result_pool);
+      SVN_ERR(get_working_props_abspath(&stored_props_abspath,
+                                        shelf_version, wc_relpath,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(svn_stream_open_readonly(&stream, stored_props_abspath,
+                                       scratch_pool, scratch_pool));
+      SVN_ERR(svn_hash_read2(*work_props, stream, NULL, scratch_pool));
+      SVN_ERR(svn_stream_close(stream));
+    }
+  else
+    *work_props = NULL;
+
+  return SVN_NO_ERROR;
+}
+
+/* Store metadata for any node, and base and working files if it's a file.
+ *
+ * Copy the WC base and working files at FROM_WC_ABSPATH to the storage
+ * area in SHELF_VERSION.
  */
 static svn_error_t *
 store_file(const char *from_wc_abspath,
            const char *wc_relpath,
            svn_client_shelf_version_t *shelf_version,
            const svn_wc_status3_t *status,
-           svn_boolean_t store_whole_file,
+           svn_client_ctx_t *ctx,
            apr_pool_t *scratch_pool)
 {
   char *stored_abspath;
+  apr_hash_t *base_props, *work_props;
 
   SVN_ERR(get_working_file_abspath(&stored_abspath,
                                    shelf_version, wc_relpath,
@@ -633,10 +749,47 @@ store_file(const char *from_wc_abspath,
   SVN_ERR(status_write(shelf_version, wc_relpath,
                        status, scratch_pool));
 
-  if (store_whole_file)
+  /* properties */
+  SVN_ERR(read_props_from_wc(&base_props, &work_props,
+                             status->node_status,
+                             from_wc_abspath, ctx,
+                             scratch_pool, scratch_pool));
+  SVN_ERR(write_props_to_shelf(shelf_version, wc_relpath,
+                               base_props, work_props,
+                               scratch_pool));
+
+  /* file text */
+  if (status->kind == svn_node_file)
     {
-      SVN_ERR(svn_io_copy_file(from_wc_abspath, stored_abspath,
-                               TRUE /*copy_perms*/, scratch_pool));
+      svn_stream_t *wc_base_stream;
+      svn_node_kind_t work_kind;
+
+      /* Copy the base file (copy-from base, if copied/moved), if present */
+      SVN_ERR(svn_wc_get_pristine_contents2(&wc_base_stream,
+                                            ctx->wc_ctx, from_wc_abspath,
+                                            scratch_pool, scratch_pool));
+      if (wc_base_stream)
+        {
+          char *stored_base_abspath;
+          svn_stream_t *stored_base_stream;
+
+          SVN_ERR(get_base_file_abspath(&stored_base_abspath,
+                                        shelf_version, wc_relpath,
+                                        scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_open_writable(&stored_base_stream,
+                                           stored_base_abspath,
+                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_stream_copy3(wc_base_stream, stored_base_stream,
+                                   NULL, NULL, scratch_pool));
+        }
+
+      /* Copy the working file, if present */
+      SVN_ERR(svn_io_check_path(from_wc_abspath, &work_kind, scratch_pool));
+      if (work_kind == svn_node_file)
+        {
+          SVN_ERR(svn_io_copy_file(from_wc_abspath, stored_abspath,
+                                   TRUE /*copy_perms*/, scratch_pool));
+        }
     }
   return SVN_NO_ERROR;
 }
@@ -649,9 +802,6 @@ walk_callback(void *baton,
               apr_pool_t *scratch_pool)
 {
   walk_baton_t *wb = baton;
-  svn_opt_revision_t peg_revision = {svn_opt_revision_unspecified, {0}};
-  svn_opt_revision_t start_revision = {svn_opt_revision_base, {0}};
-  svn_opt_revision_t end_revision = {svn_opt_revision_working, {0}};
   const char *wc_relpath = svn_dirent_skip_ancestor(wb->wc_root_abspath,
                                                     local_abspath);
 
@@ -662,68 +812,9 @@ walk_callback(void *baton,
       case svn_wc_status_added:
       case svn_wc_status_replaced:
       {
-        svn_boolean_t binary = FALSE;
-        svn_boolean_t store_whole_file = FALSE;
-
-        if (status->kind == svn_node_file)
-          {
-            SVN_ERR(is_binary_file(&binary, local_abspath,
-                                   wb->ctx, scratch_pool));
-            if (status->node_status == svn_wc_status_added
-                || (binary && status->node_status != svn_wc_status_deleted))
-              {
-                store_whole_file = TRUE;
-              }
-          }
-        /* Store all files (working version, for now) as complete files. */
+        /* Store metadata, and base and working versions if it's a file */
         SVN_ERR(store_file(local_abspath, wc_relpath, wb->shelf_version,
-                           status, store_whole_file, scratch_pool));
-        /* Store a patch */
-        {
-          const char *patch_abspath;
-          apr_int32_t flag;
-          apr_file_t *outfile;
-          svn_stream_t *outstream;
-          svn_stream_t *errstream;
-
-          SVN_ERR(get_patch_abspath(&patch_abspath,
-                                    wb->shelf_version, wc_relpath,
-                                    scratch_pool, scratch_pool));
-
-          /* Get streams for the output and any error output of the diff. */
-          /* ### svn_stream_open_writable() doesn't work here: the buffering
-                 goes wrong so that diff headers appear after their hunks.
-                 For now, fix by opening the file without APR_BUFFERED. */
-          flag = APR_FOPEN_WRITE | APR_FOPEN_CREATE | APR_FOPEN_TRUNCATE;
-          SVN_ERR(svn_io_file_open(&outfile, patch_abspath,
-                                   flag, APR_FPROT_OS_DEFAULT, scratch_pool));
-          outstream = svn_stream_from_aprfile2(outfile, FALSE /*disown*/,
-                                               scratch_pool);
-          errstream = svn_stream_empty(scratch_pool);
-
-          SVN_ERR(svn_client_diff_peg7(NULL /*options*/,
-                                       local_abspath,
-                                       &peg_revision,
-                                       &start_revision,
-                                       &end_revision,
-                                       wb->wc_root_abspath,
-                                       svn_depth_empty,
-                                       TRUE /*notice_ancestry*/,
-                                       FALSE /*no_diff_added*/,
-                                       FALSE /*no_diff_deleted*/,
-                                       TRUE /*show_copies_as_adds*/,
-                                       FALSE /*ignore_content_type*/,
-                                       FALSE /*ignore_properties*/,
-                                       store_whole_file /*properties_only*/,
-                                       binary /*use_git_diff_format*/,
-                                       FALSE /*pretty_print_mergeinfo*/,
-                                       SVN_APR_LOCALE_CHARSET,
-                                       outstream, errstream,
-                                       NULL /*changelists*/,
-                                       wb->ctx, scratch_pool));
-          SVN_ERR(svn_stream_close(outstream));
-          SVN_ERR(svn_stream_close(errstream));
-        }
+                           status, wb->ctx, scratch_pool));
         wb->any_shelved = TRUE;
         break;
       }
@@ -837,11 +928,7 @@ wc_walk_status_multi(const apr_array_header_t *paths,
  *
  * @a paths, @a depth, @a changelists: The selection of local paths to diff.
  *
- * @a paths are relative to CWD (or absolute). Paths in patch are relative
- * to WC root (@a wc_root_abspath).
- *
- * ### TODO: Ignore any external diff cmd as configured in config file.
- *     This might also solve the buffering problem.
+ * @a paths are relative to CWD (or absolute).
  */
 static svn_error_t *
 shelf_write_changes(svn_boolean_t *any_shelved,
@@ -968,7 +1055,7 @@ svn_client_shelf_delete(const char *name,
   SVN_ERR(svn_client_shelf_open_existing(&shelf, name,
                                          local_abspath, ctx, scratch_pool));
 
-  /* Remove the patches. */
+  /* Remove the versions. */
   for (i = shelf->max_version; i > 0; i--)
     {
       SVN_ERR(shelf_version_delete(shelf, i, scratch_pool));
@@ -1053,6 +1140,147 @@ svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
   return SVN_NO_ERROR;
 }
 
+/* Send a notification */
+static svn_error_t *
+send_notification(const char *local_abspath,
+                  svn_wc_notify_action_t action,
+                  svn_node_kind_t kind,
+                  svn_wc_notify_state_t content_state,
+                  svn_wc_notify_state_t prop_state,
+                  svn_wc_notify_func2_t notify_func,
+                  void *notify_baton,
+                  apr_pool_t *scratch_pool)
+{
+  if (notify_func)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(local_abspath, action, scratch_pool);
+
+      notify->kind = kind;
+      notify->content_state = content_state;
+      notify->prop_state = prop_state;
+      notify_func(notify_baton, notify, scratch_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Merge a shelved change into WC_ABSPATH.
+ */
+static svn_error_t *
+wc_file_merge(const char *wc_abspath,
+              const char *left_file,
+              const char *right_file,
+              /*const*/ apr_hash_t *left_props,
+              /*const*/ apr_hash_t *right_props,
+              svn_client_ctx_t *ctx,
+              apr_pool_t *scratch_pool)
+{
+  svn_wc_notify_state_t property_state;
+  svn_boolean_t has_local_mods;
+  enum svn_wc_merge_outcome_t content_outcome;
+  const char *target_label, *left_label, *right_label;
+  apr_array_header_t *prop_changes;
+
+  /* xgettext: the '.working', '.merge-left' and '.merge-right' strings
+     are used to tag onto a file name in case of a merge conflict */
+  target_label = apr_psprintf(scratch_pool, _(".working"));
+  left_label = apr_psprintf(scratch_pool, _(".merge-left"));
+  right_label = apr_psprintf(scratch_pool, _(".merge-right"));
+
+  SVN_ERR(svn_prop_diffs(&prop_changes, right_props, left_props, scratch_pool));
+  SVN_ERR(svn_wc_text_modified_p2(&has_local_mods, ctx->wc_ctx,
+                                  wc_abspath, FALSE, scratch_pool));
+
+  /* Do property merge and text merge in one step so that keyword expansion
+     takes into account the new property values. */
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
+                  left_file, right_file, wc_abspath,
+                  left_label, right_label, target_label,
+                  NULL, NULL, /*left, right conflict-versions*/
+                  FALSE /*dry_run*/, NULL /*diff3_cmd*/,
+                  NULL /*merge_options*/,
+                  left_props, prop_changes,
+                  NULL, NULL,
+                  ctx->cancel_func, ctx->cancel_baton,
+                  scratch_pool),
+    ctx->wc_ctx, wc_abspath,
+    FALSE /*lock_anchor*/, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Merge a shelved change (of properties) into the dir at WC_ABSPATH.
+ */
+static svn_error_t *
+wc_dir_props_merge(const char *wc_abspath,
+                   /*const*/ apr_hash_t *left_props,
+                   /*const*/ apr_hash_t *right_props,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *prop_changes;
+  svn_wc_notify_state_t property_state;
+
+  SVN_ERR(svn_prop_diffs(&prop_changes, right_props, left_props, scratch_pool));
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    svn_wc_merge_props3(&property_state, ctx->wc_ctx,
+                        wc_abspath,
+                        NULL, NULL, /*left, right conflict-versions*/
+                        left_props, prop_changes,
+                        FALSE /*dry_run*/,
+                        NULL, NULL,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        scratch_pool),
+    ctx->wc_ctx, wc_abspath,
+    FALSE /*lock_anchor*/, scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Apply a shelved "delete" to TO_WC_ABSPATH.
+ */
+static svn_error_t *
+wc_node_delete(const char *to_wc_abspath,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
+{
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    svn_wc_delete4(ctx->wc_ctx,
+                   to_wc_abspath,
+                   FALSE /*keep_local*/,
+                   TRUE /*delete_unversioned_target*/,
+                   NULL, NULL, NULL, NULL, /*cancel, notify*/
+                   scratch_pool),
+    ctx->wc_ctx, to_wc_abspath,
+    TRUE /*lock_anchor*/, scratch_pool);
+  return SVN_NO_ERROR;
+}
+
+/* Apply a shelved "add" to TO_WC_ABSPATH.
+ * The node must already exist on disk, in a versioned parent dir.
+ */
+static svn_error_t *
+wc_node_add(const char *to_wc_abspath,
+            apr_hash_t *work_props,
+            svn_client_ctx_t *ctx,
+            apr_pool_t *scratch_pool)
+{
+  /* If it was not already versioned, schedule the node for addition.
+     (Do not apply autoprops, because this isn't a user-facing "add" but
+     restoring a previously saved state.) */
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    svn_wc_add_from_disk3(ctx->wc_ctx,
+                          to_wc_abspath, work_props,
+                          FALSE /* skip checks */,
+                          NULL, NULL, scratch_pool),
+    ctx->wc_ctx, to_wc_abspath,
+    TRUE /*lock_anchor*/, scratch_pool);
+  return SVN_NO_ERROR;
+}
+
 /* Baton for apply_file_visitor(). */
 struct apply_files_baton_t
 {
@@ -1083,15 +1311,23 @@ apply_file_visitor(void *baton,
 {
   struct apply_files_baton_t *b = baton;
   const char *wc_root_abspath = b->shelf_version->shelf->wc_root_abspath;
-  char *stored_abspath;
+  char *stored_base_abspath, *stored_work_abspath;
+  apr_hash_t *base_props, *work_props;
   const char *to_wc_abspath = svn_dirent_join(wc_root_abspath, relpath,
                                               scratch_pool);
   const char *to_dir_abspath = svn_dirent_dirname(to_wc_abspath, scratch_pool);
-  svn_node_kind_t kind;
 
-  SVN_ERR(get_working_file_abspath(&stored_abspath,
+  SVN_ERR(get_base_file_abspath(&stored_base_abspath,
+                                b->shelf_version, relpath,
+                                scratch_pool, scratch_pool));
+  SVN_ERR(get_working_file_abspath(&stored_work_abspath,
                                    b->shelf_version, relpath,
                                    scratch_pool, scratch_pool));
+  SVN_ERR(read_props_from_shelf(&base_props, &work_props,
+                                s->node_status,
+                                b->shelf_version, relpath,
+                                scratch_pool, scratch_pool));
+
   if (b->file_relpath && strcmp(relpath, b->file_relpath) != 0)
     {
       return SVN_NO_ERROR;
@@ -1116,44 +1352,67 @@ apply_file_visitor(void *baton,
       return SVN_NO_ERROR;
     }
 
-  /* If we stored a whole file, copy it into the WC and ensure it's versioned.
-     ### TODO: merge it if possible
-     ### TODO: handle deletes
-     ### TODO: handle directories
-     ### TODO: handle props
-   */
-  SVN_ERR(svn_io_check_path(stored_abspath, &kind, scratch_pool));
-  if (kind == svn_node_file
-      && s->kind == svn_node_file
-      && s->node_status != svn_wc_status_deleted)
+  /* Handle 'delete' and the delete half of 'replace' */
+  if (s->node_status == svn_wc_status_deleted
+      || s->node_status == svn_wc_status_replaced)
     {
-      SVN_ERR(svn_io_make_dir_recursively(to_dir_abspath, scratch_pool));
-      SVN_ERR(svn_io_copy_file(stored_abspath, to_wc_abspath,
-                               TRUE /*copy_perms*/, scratch_pool));
-      /* If it was not already versioned, schedule the file for addition.
-         (Do not apply autoprops, because this isn't a user-facing "add" but
-         restoring a previously saved state.) */
-      SVN_ERR(svn_client_add5(to_wc_abspath, svn_depth_infinity,
-                              TRUE /*force: ok if already versioned*/,
-                              TRUE /*no_ignore*/,
-                              TRUE /*no_autoprops*/,
-                              TRUE /*add_parents*/,
-                              b->ctx, scratch_pool));
+      SVN_ERR(wc_node_delete(to_wc_abspath, b->ctx, scratch_pool));
+      SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_delete,
+                                s->kind,
+                                svn_wc_notify_state_inapplicable,
+                                svn_wc_notify_state_inapplicable,
+                                b->ctx->notify_func2, b->ctx->notify_baton2,
+                                scratch_pool));
     }
-  /* Apply the changes stored in the per-node patch file */
-    {
-      const char *patch_abspath;
 
-      SVN_ERR(get_patch_abspath(&patch_abspath,
-                                b->shelf_version, relpath,
-                                scratch_pool, scratch_pool));
-      SVN_ERR(svn_client_patch(patch_abspath,
-                               wc_root_abspath,
-                               FALSE /*dry_run*/, 0 /*strip*/,
-                               FALSE /*reverse*/,
-                               FALSE /*ignore_whitespace*/,
-                               TRUE /*remove_tempfiles*/, NULL, NULL,
-                               b->ctx, scratch_pool));
+  /* If we can merge a file, do so. */
+  if (s->node_status == svn_wc_status_modified)
+    {
+      if (s->kind == svn_node_dir)
+        {
+          SVN_ERR(wc_dir_props_merge(to_wc_abspath,
+                                     base_props, work_props,
+                                     b->ctx, scratch_pool, scratch_pool));
+        }
+      else if (s->kind == svn_node_file)
+        {
+          SVN_ERR(wc_file_merge(to_wc_abspath,
+                                stored_base_abspath, stored_work_abspath,
+                                base_props, work_props,
+                                b->ctx, scratch_pool));
+        }
+      SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_update,
+                                s->kind,
+                                (s->kind == svn_node_dir)
+                                  ? svn_wc_notify_state_inapplicable
+                                  : svn_wc_notify_state_merged,
+                                (s->kind == svn_node_dir)
+                                  ? svn_wc_notify_state_merged
+                                  : svn_wc_notify_state_unknown,
+                                b->ctx->notify_func2, b->ctx->notify_baton2,
+                                scratch_pool));
+    }
+
+  /* For an added file, copy it into the WC and ensure it's versioned. */
+  if (s->node_status == svn_wc_status_added)
+    {
+      if (s->kind == svn_node_dir)
+        {
+          SVN_ERR(svn_io_make_dir_recursively(to_wc_abspath, scratch_pool));
+        }
+      else if (s->kind == svn_node_file)
+        {
+          SVN_ERR(svn_io_make_dir_recursively(to_dir_abspath, scratch_pool));
+          SVN_ERR(svn_io_copy_file(stored_work_abspath, to_wc_abspath,
+                                   TRUE /*copy_perms*/, scratch_pool));
+        }
+      SVN_ERR(wc_node_add(to_wc_abspath, work_props, b->ctx, scratch_pool));
+      SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_add,
+                                s->kind,
+                                svn_wc_notify_state_inapplicable,
+                                svn_wc_notify_state_inapplicable,
+                                b->ctx->notify_func2, b->ctx->notify_baton2,
+                                scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -1174,18 +1433,8 @@ diff_visitor(void *baton,
              svn_wc_status3_t *s,
              apr_pool_t *scratch_pool)
 {
-  struct diff_baton_t *b = baton;
-  const char *patch_abspath;
-  svn_stream_t *instream;
+  /* ### TODO */
 
-  SVN_ERR(get_patch_abspath(&patch_abspath,
-                            b->shelf_version, relpath,
-                            scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_open_readonly(&instream, patch_abspath,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_copy3(instream,
-                           svn_stream_disown(b->outstream, scratch_pool),
-                           NULL, NULL, scratch_pool));
   return SVN_NO_ERROR;
 }
 

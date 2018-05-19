@@ -152,7 +152,6 @@ def shelve_empty_adds(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 def shelve_empty_deletes(sbox):
   "shelve empty deletes"
   sbox.build(empty=True)
