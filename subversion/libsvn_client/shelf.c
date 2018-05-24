@@ -413,6 +413,48 @@ shelf_write_current(svn_client_shelf_t *shelf,
   return SVN_NO_ERROR;
 }
 
+/* Create a status struct with all fields initialized to valid values
+ * representing 'uninteresting' or 'unknown' status.
+ */
+static svn_wc_status3_t *
+status_create(apr_pool_t *result_pool)
+{
+  svn_wc_status3_t *s = apr_pcalloc(result_pool, sizeof(*s));
+
+  s->filesize = SVN_INVALID_FILESIZE;
+  s->versioned = TRUE;
+  s->node_status = svn_wc_status_none;
+  s->text_status = svn_wc_status_none;
+  s->prop_status = svn_wc_status_none;
+  s->revision = SVN_INVALID_REVNUM;
+  s->changed_rev = SVN_INVALID_REVNUM;
+  s->repos_node_status = svn_wc_status_none;
+  s->repos_text_status = svn_wc_status_none;
+  s->repos_prop_status = svn_wc_status_none;
+  s->ood_changed_rev = SVN_INVALID_REVNUM;
+  return s;
+}
+
+/* Convert from svn_node_kind_t to a single character representation. */
+static char
+kind_to_char(svn_node_kind_t kind)
+{
+  return (kind == svn_node_dir ? 'd'
+            : kind == svn_node_file ? 'f'
+                : kind == svn_node_symlink ? 'l'
+                    : '?');
+}
+
+/* Convert to svn_node_kind_t from a single character representation. */
+static svn_node_kind_t
+char_to_kind(char kind)
+{
+  return (kind == 'd' ? svn_node_dir
+            : kind == 'f' ? svn_node_file
+                : kind == 'l' ? svn_node_symlink
+                    : svn_node_unknown);
+}
+
 /* Return the single character representation of STATUS.
  * (Similar to subversion/svn/status.c:generate_status_code()
  * and subversion/tests/libsvn_client/client-test.c:status_to_char().) */
@@ -469,14 +511,12 @@ wc_status_serialize(svn_stream_t *stream,
                     const svn_wc_status3_t *status,
                     apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream_printf(stream, scratch_pool, "%c %c%c%c",
-                            status->kind == svn_node_dir ? 'd'
-                              : status->kind == svn_node_file ? 'f'
-                                : status->kind == svn_node_symlink ? 'l'
-                                  : '?',
+  SVN_ERR(svn_stream_printf(stream, scratch_pool, "%c %c%c%c %ld",
+                            kind_to_char(status->kind),
                             status_to_char(status->node_status),
                             status_to_char(status->text_status),
-                            status_to_char(status->prop_status)));
+                            status_to_char(status->prop_status),
+                            status->revision));
   return SVN_NO_ERROR;
 }
 
@@ -487,17 +527,16 @@ wc_status_unserialize(svn_wc_status3_t *status,
                       svn_stream_t *stream,
                       apr_pool_t *result_pool)
 {
-  char string[5];
-  apr_size_t len = 5;
+  svn_stringbuf_t *sb;
+  char *string;
 
-  SVN_ERR(svn_stream_read_full(stream, string, &len));
-  status->kind = (string[0] == 'd' ? svn_node_dir
-                  : string[0] == 'f' ? svn_node_file
-                    : string[0] == 'l' ? svn_node_symlink
-                      : svn_node_unknown);
+  SVN_ERR(svn_stringbuf_from_stream(&sb, stream, 100, result_pool));
+  string = sb->data;
+  status->kind = char_to_kind(string[0]);
   status->node_status = char_to_status(string[2]);
   status->text_status = char_to_status(string[3]);
   status->prop_status = char_to_status(string[4]);
+  sscanf(string + 6, "%ld", &status->revision);
   return SVN_NO_ERROR;
 }
 
@@ -530,7 +569,7 @@ status_read(svn_wc_status3_t **status,
             apr_pool_t *result_pool,
             apr_pool_t *scratch_pool)
 {
-  svn_wc_status3_t *s = apr_pcalloc(result_pool, sizeof(*s));
+  svn_wc_status3_t *s = status_create(result_pool);
   char *file_abspath;
   svn_stream_t *stream;
 
