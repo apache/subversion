@@ -419,19 +419,32 @@ def shelve_with_log_message(sbox):
 def shelf_status(sbox):
   "shelf status"
 
-  sbox.build(empty=True)
+  sbox.build()
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
 
   sbox.simple_add_text('New file', 'f')
+  sbox.simple_append('iota', 'New text')
+  sbox.simple_propset('p', 'v', 'A/mu')
+  sbox.simple_rm('A/B/E', 'A/B/lambda')
+  expected_status = [
+    "D       A/B/E",
+    "D       A/B/lambda",
+    " M      A/mu",
+    "A       f",
+    "M       iota",
+    ]
+  expected_output = svntest.verify.UnorderedRegexListOutput(expected_status)
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'status')
+
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelve', 'foo')
-  expected_output = svntest.verify.RegexListOutput(
+  expected_output = svntest.verify.UnorderedRegexListOutput(
     ["",
      "--- Changelist 'svn:shelf:foo':",
-     "A       f",
-    ])
+    ] + expected_status)
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'status', '--cl=svn:shelf:foo')
 
