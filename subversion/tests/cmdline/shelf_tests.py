@@ -44,9 +44,16 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 
-def state_from_status(wc_dir):
-  _, output, _ = svntest.main.run_svn(None, 'status', '-v', '-u', '-q',
-                                      wc_dir)
+def state_from_status(wc_dir,
+                      v=True, u=True, q=True):
+  opts = ()
+  if v:
+    opts += ('-v',)
+  if u:
+    opts += ('-u',)
+  if q:
+    opts += ('-q',)
+  _, output, _ = svntest.main.run_svn(None, 'status', wc_dir, *opts)
   return svntest.wc.State.from_status(output, wc_dir)
 
 def shelve_unshelve_verify(sbox, modifier):
@@ -416,6 +423,32 @@ def shelve_with_log_message(sbox):
 
 #----------------------------------------------------------------------
 
+def run_and_verify_status(wc_dir_name, status_tree, changelists=[]):
+  """Run 'status' on WC_DIR_NAME and compare it with the
+  expected STATUS_TREE.
+  Returns on success, raises on failure."""
+
+  if not isinstance(status_tree, wc.State):
+    raise TypeError('wc.State tree expected')
+
+  cl_opts = ('--cl=' + cl for cl in changelists)
+  exit_code, output, errput = svntest.main.run_svn(None, 'status', '-q',
+                                                   wc_dir_name, *cl_opts)
+
+  actual_status = svntest.wc.State.from_status(output, wc_dir=wc_dir_name)
+
+  # Verify actual output against expected output.
+  try:
+    status_tree.compare_and_display('status', actual_status)
+  except svntest.tree.SVNTreeError:
+    svntest.actions._log_tree_state("ACTUAL STATUS TREE:", actual_status.old_tree(),
+                                    wc_dir_name)
+    raise
+
+def run_and_verify_shelf_status(wc_dir, expected_status, shelf):
+  run_and_verify_status(wc_dir, expected_status,
+                        changelists=['svn:shelf:' + shelf])
+
 def shelf_status(sbox):
   "shelf status"
 
@@ -428,25 +461,12 @@ def shelf_status(sbox):
   sbox.simple_append('iota', 'New text')
   sbox.simple_propset('p', 'v', 'A/mu')
   sbox.simple_rm('A/B/E', 'A/B/lambda')
-  expected_status = [
-    "D       A/B/E",
-    "D       A/B/lambda",
-    " M      A/mu",
-    "A       f",
-    "M       iota",
-    ]
-  expected_output = svntest.verify.UnorderedRegexListOutput(expected_status)
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'status')
+  expected_status = state_from_status(sbox.wc_dir, v=False, u=False, q=False)
+  run_and_verify_status(sbox.wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelve', 'foo')
-  expected_output = svntest.verify.UnorderedRegexListOutput(
-    ["",
-     "--- Changelist 'svn:shelf:foo':",
-    ] + expected_status)
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'status', '--cl=svn:shelf:foo')
+  run_and_verify_shelf_status(sbox.wc_dir, expected_status, shelf='foo')
 
   os.chdir(was_cwd)
 
