@@ -450,6 +450,33 @@ def shelf_status(sbox):
 
   os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+
+@XFail()
+def shelve_mkdir(sbox):
+  "shelve mkdir"
+
+  sbox.build()
+
+  def modifier(sbox):
+    sbox.simple_mkdir('D', 'D/D2')
+    sbox.simple_propset('p', 'v', 'D', 'D/D2')
+
+  shelve_unshelve(sbox, modifier)
+
+#----------------------------------------------------------------------
+
+@XFail()
+def shelve_rmdir(sbox):
+  "shelve rmdir"
+
+  sbox.build()
+
+  def modifier(sbox):
+    sbox.simple_rm('A/C', 'A/D/G')
+
+  shelve_unshelve(sbox, modifier)
+
 
 ########################################################################
 # Run the tests
@@ -473,6 +500,8 @@ test_list = [ None,
               shelve_binary_file_replace,
               shelve_with_log_message,
               shelf_status,
+              shelve_mkdir,
+              shelve_rmdir,
              ]
 
 if __name__ == '__main__':
