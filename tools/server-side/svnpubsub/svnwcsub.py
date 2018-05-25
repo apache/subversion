@@ -32,7 +32,7 @@
 
 # TODO:
 # - bulk update at startup time to avoid backlog warnings
-# - fold BDEC into Daemon
+# - fold BigDoEverythingClasss ("BDEC") into Daemon
 # - fold WorkingCopy._get_match() into __init__
 # - remove wc_ready(). assume all WorkingCopy instances are usable.
 #   place the instances into .watch at creation. the .update_applies()
