@@ -465,7 +465,9 @@ def shelf_status(sbox):
   sbox.simple_add_text('New file', 'f')
   sbox.simple_append('iota', 'New text')
   sbox.simple_propset('p', 'v', 'A/mu')
-  sbox.simple_rm('A/B/E', 'A/B/lambda')
+  sbox.simple_rm('A/B/lambda')
+  # Not yet supported:
+  #sbox.simple_rm('A/B/E')
   expected_status = state_from_status(sbox.wc_dir, v=False, u=False, q=False)
   run_and_verify_status(sbox.wc_dir, expected_status)
 
