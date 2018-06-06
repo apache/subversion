@@ -938,10 +938,16 @@ write_changes_visitor(void *baton,
 
   switch (status->node_status)
     {
-      case svn_wc_status_modified:
       case svn_wc_status_deleted:
       case svn_wc_status_added:
       case svn_wc_status_replaced:
+        if (status->kind != svn_node_file)
+          {
+            SVN_ERR(note_shelved(wb->unshelvable, wc_relpath, wb->pool));
+            break;
+          }
+        /* fall through */
+      case svn_wc_status_modified:
       {
         /* Store metadata, and base and working versions if it's a file */
         SVN_ERR(store_file(local_abspath, wc_relpath, wb->shelf_version,

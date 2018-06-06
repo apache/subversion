@@ -56,7 +56,7 @@ def state_from_status(wc_dir,
   _, output, _ = svntest.main.run_svn(None, 'status', wc_dir, *opts)
   return svntest.wc.State.from_status(output, wc_dir)
 
-def shelve_unshelve_verify(sbox, modifier):
+def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
   """Round-trip: shelve; verify all changes are reverted;
      unshelve; verify all changes are restored.
   """
@@ -70,6 +70,11 @@ def shelve_unshelve_verify(sbox, modifier):
   # Save the modified state
   modified_state = state_from_status(wc_dir)
 
+  if cannot_shelve:
+    svntest.actions.run_and_verify_svn(None, '.* could not be shelved.*',
+                                       'shelve', 'foo')
+    return
+
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelve', 'foo')
@@ -82,7 +87,7 @@ def shelve_unshelve_verify(sbox, modifier):
 
 #----------------------------------------------------------------------
 
-def shelve_unshelve(sbox, modifier):
+def shelve_unshelve(sbox, modifier, cannot_shelve=False):
   """Round-trip: build 'sbox'; apply changes by calling 'modifier(sbox)';
      shelve and unshelve; verify changes are fully reverted and restored.
   """
@@ -93,7 +98,7 @@ def shelve_unshelve(sbox, modifier):
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
 
-  shelve_unshelve_verify(sbox, modifier)
+  shelve_unshelve_verify(sbox, modifier, cannot_shelve)
 
   os.chdir(was_cwd)
 
@@ -472,7 +477,6 @@ def shelf_status(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 def shelve_mkdir(sbox):
   "shelve mkdir"
 
@@ -482,20 +486,36 @@ def shelve_mkdir(sbox):
     sbox.simple_mkdir('D', 'D/D2')
     sbox.simple_propset('p', 'v', 'D', 'D/D2')
 
-  shelve_unshelve(sbox, modifier)
+  shelve_unshelve(sbox, modifier, cannot_shelve=True)
 
 #----------------------------------------------------------------------
 
-@XFail()
 def shelve_rmdir(sbox):
   "shelve rmdir"
 
   sbox.build()
+  sbox.simple_propset('p', 'v', 'A/C')
+  sbox.simple_commit()
 
   def modifier(sbox):
     sbox.simple_rm('A/C', 'A/D/G')
 
-  shelve_unshelve(sbox, modifier)
+  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+
+#----------------------------------------------------------------------
+
+def shelve_replace_dir(sbox):
+  "shelve replace dir"
+
+  sbox.build()
+  sbox.simple_propset('p', 'v', 'A/C')
+  sbox.simple_commit()
+
+  def modifier(sbox):
+    sbox.simple_rm('A/C', 'A/D/G')
+    sbox.simple_mkdir('A/C', 'A/C/D2')
+
+  shelve_unshelve(sbox, modifier, cannot_shelve=True)
 
 
 ########################################################################
@@ -522,6 +542,7 @@ test_list = [ None,
               shelf_status,
               shelve_mkdir,
               shelve_rmdir,
+              shelve_replace_dir,
              ]
 
 if __name__ == '__main__':
