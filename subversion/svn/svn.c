@@ -2039,7 +2039,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  The kinds of change you can shelve are those supported by 'svn diff'\n"
      "  and 'svn patch'. The following are currently NOT supported:\n"
      "     copies, moves, mkdir, rmdir,\n"
-     "     'binary' content, uncommittable states\n"
+     "     uncommittable states\n"
      "\n"), N_(
      "  To bring back shelved changes, use 'svn unshelve NAME'.\n"
      "\n"), N_(
