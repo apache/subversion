@@ -564,6 +564,32 @@ shelve(int *new_version_p,
   return SVN_NO_ERROR;
 }
 
+/* Return the single character representation of STATUS.
+ * (Similar to subversion/svn/status.c:generate_status_code()
+ * and subversion/tests/libsvn_client/client-test.c:status_to_char().) */
+static char
+status_to_char(enum svn_wc_status_kind status)
+{
+  switch (status)
+    {
+    case svn_wc_status_none:        return '.';
+    case svn_wc_status_unversioned: return '?';
+    case svn_wc_status_normal:      return ' ';
+    case svn_wc_status_added:       return 'A';
+    case svn_wc_status_missing:     return '!';
+    case svn_wc_status_deleted:     return 'D';
+    case svn_wc_status_replaced:    return 'R';
+    case svn_wc_status_modified:    return 'M';
+    case svn_wc_status_merged:      return 'G';
+    case svn_wc_status_conflicted:  return 'C';
+    case svn_wc_status_ignored:     return 'I';
+    case svn_wc_status_obstructed:  return '~';
+    case svn_wc_status_external:    return 'X';
+    case svn_wc_status_incomplete:  return ':';
+    default:                        return '*';
+    }
+}
+
 /* Throw an error if any path affected by SHELF_VERSION gives a conflict
  * when applied (as a dry-run) to the WC. */
 static svn_error_t *
@@ -584,9 +610,19 @@ test_apply(svn_client_shelf_version_t *shelf_version,
       SVN_ERR(svn_client_shelf_test_apply_file(&conflict, shelf_version, path,
                                                scratch_pool));
       if (conflict)
-        return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                                 _("Conflict in applying shelf '%s' path '%s'"),
-                                 shelf_version->shelf->name, path);
+        {
+          char *to_wc_abspath
+            = svn_dirent_join(shelf_version->shelf->wc_root_abspath, path,
+                              scratch_pool);
+          svn_wc_status3_t *status;
+
+          SVN_ERR(svn_wc_status3(&status, ctx->wc_ctx, to_wc_abspath,
+                                 scratch_pool, scratch_pool));
+          return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                                   _("Shelved path '%s' already has "
+                                     "status '%c' in the working copy"),
+                                   path, status_to_char(status->node_status));
+        }
     }
   return SVN_NO_ERROR;
 }
@@ -644,8 +680,9 @@ shelf_restore(const char *name,
   if (! force_if_conflict)
     {
       SVN_ERR_W(test_apply(shelf_version, ctx, scratch_pool),
-                _("Cannot unshelve/restore, as at least one "
-                  "path would conflict"));
+                _("Cannot unshelve/restore, as at least one shelved "
+                  "path would conflict with a local modification "
+                  "or other status in the working copy"));
     }
 
   SVN_ERR(svn_client_shelf_apply(shelf_version,
