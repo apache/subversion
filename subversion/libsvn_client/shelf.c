@@ -941,7 +941,8 @@ write_changes_visitor(void *baton,
       case svn_wc_status_deleted:
       case svn_wc_status_added:
       case svn_wc_status_replaced:
-        if (status->kind != svn_node_file)
+        if (status->kind != svn_node_file
+            || status->copied)
           {
             SVN_ERR(note_shelved(wb->unshelvable, wc_relpath, wb->pool));
             break;

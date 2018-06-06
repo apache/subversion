@@ -519,6 +519,32 @@ def shelve_replace_dir(sbox):
 
   shelve_unshelve(sbox, modifier, cannot_shelve=True)
 
+#----------------------------------------------------------------------
+
+def shelve_file_copy(sbox):
+  "shelve file copy"
+
+  sbox.build()
+
+  def modifier(sbox):
+    sbox.simple_copy('iota', 'A/ii')
+    sbox.simple_propset('p', 'v', 'A/ii')
+
+  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+
+#----------------------------------------------------------------------
+
+def shelve_dir_copy(sbox):
+  "shelve dir copy"
+
+  sbox.build()
+
+  def modifier(sbox):
+    sbox.simple_copy('A/B', 'BB')
+    sbox.simple_propset('p', 'v', 'BB')
+
+  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+
 
 ########################################################################
 # Run the tests
@@ -545,6 +571,8 @@ test_list = [ None,
               shelve_mkdir,
               shelve_rmdir,
               shelve_replace_dir,
+              shelve_file_copy,
+              shelve_dir_copy,
              ]
 
 if __name__ == '__main__':
