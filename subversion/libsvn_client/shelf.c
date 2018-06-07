@@ -728,23 +728,61 @@ svn_client_shelf_version_status_walk(svn_client_shelf_version_t *shelf_version,
   return SVN_NO_ERROR;
 }
 
-/* A baton for use with walk_callback(). */
+/* A baton for use with write_changes_visitor(). */
 typedef struct write_changes_baton_t {
   const char *wc_root_abspath;
   svn_client_shelf_version_t *shelf_version;
   svn_client_ctx_t *ctx;
   svn_boolean_t any_shelved;  /* were any paths successfully shelved? */
-  apr_array_header_t *unshelvable;  /* paths unshelvable */
+  svn_client_status_func_t was_shelved_func;
+  void *was_shelved_baton;
+  svn_client_status_func_t was_not_shelved_func;
+  void *was_not_shelved_baton;
   apr_pool_t *pool;  /* pool for data in 'unshelvable', etc. */
 } write_changes_baton_t;
 
 /*  */
 static svn_error_t *
-note_shelved(apr_array_header_t *shelved,
-             const char *relpath,
-             apr_pool_t *pool)
+notify_shelved(write_changes_baton_t *wb,
+               const char *wc_relpath,
+               const char *local_abspath,
+               const svn_wc_status3_t *wc_status,
+               apr_pool_t *scratch_pool)
 {
-  APR_ARRAY_PUSH(shelved, const char *) = apr_pstrdup(pool, relpath);
+  if (wb->was_shelved_func)
+    {
+      svn_client_status_t *cst;
+
+      SVN_ERR(svn_client__create_status(&cst, wb->ctx->wc_ctx, local_abspath,
+                                        wc_status,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(wb->was_shelved_func(wb->was_shelved_baton,
+                                   wc_relpath, cst, scratch_pool));
+    }
+
+  wb->any_shelved = TRUE;
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+notify_not_shelved(write_changes_baton_t *wb,
+                   const char *wc_relpath,
+                   const char *local_abspath,
+                   const svn_wc_status3_t *wc_status,
+                   apr_pool_t *scratch_pool)
+{
+  if (wb->was_not_shelved_func)
+    {
+      svn_client_status_t *cst;
+
+      SVN_ERR(svn_client__create_status(&cst, wb->ctx->wc_ctx, local_abspath,
+                                        wc_status,
+                                        scratch_pool, scratch_pool));
+      SVN_ERR(wb->was_not_shelved_func(wb->was_not_shelved_baton,
+                                       wc_relpath, cst, scratch_pool));
+    }
+
   return SVN_NO_ERROR;
 }
 
@@ -944,7 +982,8 @@ write_changes_visitor(void *baton,
         if (status->kind != svn_node_file
             || status->copied)
           {
-            SVN_ERR(note_shelved(wb->unshelvable, wc_relpath, wb->pool));
+            SVN_ERR(notify_not_shelved(wb, wc_relpath, local_abspath,
+                                       status, scratch_pool));
             break;
           }
         /* fall through */
@@ -953,7 +992,8 @@ write_changes_visitor(void *baton,
         /* Store metadata, and base and working versions if it's a file */
         SVN_ERR(store_file(local_abspath, wc_relpath, wb->shelf_version,
                            status, wb->ctx, scratch_pool));
-        wb->any_shelved = TRUE;
+        SVN_ERR(notify_shelved(wb, wc_relpath, local_abspath,
+                               status, scratch_pool));
         break;
       }
 
@@ -964,14 +1004,16 @@ write_changes_visitor(void *baton,
                 && status->prop_status != svn_wc_status_none))
           {
             /* Incomplete, but local modifications */
-            SVN_ERR(note_shelved(wb->unshelvable, wc_relpath, wb->pool));
+            SVN_ERR(notify_not_shelved(wb, wc_relpath, local_abspath,
+                                       status, scratch_pool));
           }
         break;
 
       case svn_wc_status_conflicted:
       case svn_wc_status_missing:
       case svn_wc_status_obstructed:
-        SVN_ERR(note_shelved(wb->unshelvable, wc_relpath, wb->pool));
+        SVN_ERR(notify_not_shelved(wb, wc_relpath, local_abspath,
+                                   status, scratch_pool));
         break;
 
       case svn_wc_status_normal:
@@ -1070,11 +1112,14 @@ wc_walk_status_multi(const apr_array_header_t *paths,
  */
 static svn_error_t *
 shelf_write_changes(svn_boolean_t *any_shelved,
-                    apr_array_header_t **unshelvable,
                     svn_client_shelf_version_t *shelf_version,
                     const apr_array_header_t *paths,
                     svn_depth_t depth,
                     const apr_array_header_t *changelists,
+                    svn_client_status_func_t shelved_func,
+                    void *shelved_baton,
+                    svn_client_status_func_t not_shelved_func,
+                    void *not_shelved_baton,
                     const char *wc_root_abspath,
                     svn_client_ctx_t *ctx,
                     apr_pool_t *result_pool,
@@ -1086,7 +1131,10 @@ shelf_write_changes(svn_boolean_t *any_shelved,
   wb.shelf_version = shelf_version;
   wb.ctx = ctx;
   wb.any_shelved = FALSE;
-  wb.unshelvable = apr_array_make(result_pool, 0, sizeof(char *));
+  wb.was_shelved_func = shelved_func;
+  wb.was_shelved_baton = shelved_baton;
+  wb.was_not_shelved_func = not_shelved_func;
+  wb.was_not_shelved_baton = not_shelved_baton;
   wb.pool = result_pool;
 
   /* Walk the WC */
@@ -1095,7 +1143,6 @@ shelf_write_changes(svn_boolean_t *any_shelved,
                                ctx, scratch_pool));
 
   *any_shelved = wb.any_shelved;
-  *unshelvable = wb.unshelvable;
   return SVN_NO_ERROR;
 }
 
@@ -1682,34 +1729,30 @@ svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
 }
 
 svn_error_t *
-svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
+svn_client_shelf_save_new_version3(svn_client_shelf_version_t **new_version_p,
                                    svn_client_shelf_t *shelf,
                                    const apr_array_header_t *paths,
                                    svn_depth_t depth,
                                    const apr_array_header_t *changelists,
+                                   svn_client_status_func_t shelved_func,
+                                   void *shelved_baton,
+                                   svn_client_status_func_t not_shelved_func,
+                                   void *not_shelved_baton,
                                    apr_pool_t *scratch_pool)
 {
   int next_version = shelf->max_version + 1;
   svn_client_shelf_version_t *new_shelf_version;
   svn_boolean_t any_shelved;
-  apr_array_header_t *unshelvable;
 
   SVN_ERR(shelf_version_create(&new_shelf_version,
                                shelf, next_version, scratch_pool));
-  SVN_ERR(shelf_write_changes(&any_shelved, &unshelvable,
+  SVN_ERR(shelf_write_changes(&any_shelved,
                               new_shelf_version,
                               paths, depth, changelists,
+                              shelved_func, shelved_baton,
+                              not_shelved_func, not_shelved_baton,
                               shelf->wc_root_abspath,
                               shelf->ctx, scratch_pool, scratch_pool));
-
-  if (unshelvable->nelts > 0)
-    {
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               Q_("%d path could not be shelved",
-                                  "%d paths could not be shelved",
-                                  unshelvable->nelts),
-                               unshelvable->nelts);
-    }
 
   if (any_shelved)
     {
@@ -1728,6 +1771,66 @@ svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
   return SVN_NO_ERROR;
 }
 
+/* A compatibility callback for counting not-shelved paths. */
+static svn_error_t *
+was_not_shelved(void *baton,
+                const char *path,
+                const svn_client_status_t *status,
+                apr_pool_t *scratch_pool)
+{
+  int *num_paths_not_shelved = baton;
+
+  ++(*num_paths_not_shelved);
+  return SVN_NO_ERROR;
+}
+
+/* A compatibility wrapper. */
+static svn_error_t *
+save_new_version2(svn_client_shelf_version_t **new_version_p,
+                  svn_client_shelf_t *shelf,
+                  const apr_array_header_t *paths,
+                  svn_depth_t depth,
+                  const apr_array_header_t *changelists,
+                  apr_pool_t *scratch_pool)
+{
+  svn_client_shelf_version_t *previous_version;
+  int num_paths_not_shelved = 0;
+
+  SVN_ERR(svn_client_shelf_get_newest_version(&previous_version, shelf,
+                                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_shelf_save_new_version3(new_version_p, shelf,
+                                             paths, depth, changelists,
+                                             NULL, NULL,
+                                             was_not_shelved, &num_paths_not_shelved,
+                                             scratch_pool));
+  if (num_paths_not_shelved)
+    {
+      SVN_ERR(svn_client_shelf_delete_newer_versions(shelf, previous_version,
+                                                     scratch_pool));
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               Q_("%d path could not be shelved",
+                                  "%d paths could not be shelved",
+                                  num_paths_not_shelved),
+                               num_paths_not_shelved);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
+                                   svn_client_shelf_t *shelf,
+                                   const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   apr_pool_t *scratch_pool)
+{
+  SVN_ERR(save_new_version2(new_version_p, shelf,
+                            paths, depth, changelists,
+                            scratch_pool));
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
                                   const apr_array_header_t *paths,
@@ -1735,9 +1838,9 @@ svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
                                   const apr_array_header_t *changelists,
                                   apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_client_shelf_save_new_version2(NULL, shelf,
-                                             paths, depth, changelists,
-                                             scratch_pool));
+  SVN_ERR(save_new_version2(NULL, shelf,
+                            paths, depth, changelists,
+                            scratch_pool));
   return SVN_NO_ERROR;
 }
 
