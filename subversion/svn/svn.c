@@ -2057,17 +2057,26 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "Copy shelved changes back into the WC.\n"
      "usage: x-unshelve [--drop] [NAME [VERSION]]\n"
      "\n"), N_(
-     "  Apply the shelf named NAME to the working copy.\n"
+     "  Apply the changes stored in shelf NAME to the working copy.\n"
      "  NAME defaults to the newest shelf.\n"
      "\n"), N_(
-     "  Unshelve normally refuses to run if any of the files are already\n"
-     "  modified in the WC. With --force, it does not check. In that case,\n"
-     "  any conflict between the change being unshelved and a change\n"
-     "  already in the WC is handled the same way as by 'svn patch',\n"
-     "  creating a 'reject' file.\n"
+     "  Apply the newest version of the shelf, by default. If VERSION is\n"
+     "  specified, apply that version and discard all versions newer than that.\n"
+     "  In any case, retain the unshelved version and versions older than that\n"
+     "  (unless --drop is specified).\n"
      "\n"), N_(
-     "  With --drop, delete the shelf (like shelf-drop) after successfully\n"
-     "  unshelving with no conflicts.\n"
+     "  With --drop, delete the entire shelf (like 'svn shelf-drop') after\n"
+     "  successfully unshelving with no conflicts.\n"
+     "\n"), N_(
+     "  The working files involved should be in a clean, unmodified state\n"
+     "  before using this command. To roll back to an older version of the\n"
+     "  shelf, first ensure any current working changes are removed, such as\n"
+     "  by shelving or reverting them, and then unshelve the desired version.\n"
+     "\n"), N_(
+     "  Unshelve normally refuses to apply any changes if any path involved is\n"
+     "  already modified (or has any other abnormal status) in the WC. With\n"
+     "  --force, it does not check and may error out and/or produce partial or\n"
+     "  unexpected results.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
