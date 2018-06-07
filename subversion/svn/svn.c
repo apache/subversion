@@ -1951,9 +1951,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelf-diff", svn_cl__shelf_diff, {"shelf-diff"}, {N_(
      "Show shelved changes as a diff.\n"
-     "usage: x-shelf-diff NAME [VERSION]\n"
+     "usage: x-shelf-diff SHELF [VERSION]\n"
      "\n"), N_(
-     "  Show the changes in shelf NAME:VERSION (default: latest) as a diff.\n"
+     "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
@@ -1962,9 +1962,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelf-drop", svn_cl__shelf_drop, {"shelf-drop"}, {N_(
      "Delete a shelf.\n"
-     "usage: x-shelf-drop NAME\n"
+     "usage: x-shelf-drop SHELF\n"
      "\n"), N_(
-     "  Delete the shelf named NAME.\n"
+     "  Delete the shelf named SHELF.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
@@ -1998,9 +1998,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelf-log", svn_cl__shelf_log, {"shelf-log"}, {N_(
      "Show the versions of a shelf.\n"
-     "usage: x-shelf-log NAME\n"
+     "usage: x-shelf-log SHELF\n"
      "\n"), N_(
-     "  Show all versions of shelf NAME.\n"
+     "  Show all versions of SHELF.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
@@ -2010,9 +2010,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelf-save", svn_cl__shelf_save, {"shelf-save"}, {N_(
      "Copy local changes onto a new version of a shelf.\n"
-     "usage: x-shelf-save NAME [PATH...]\n"
+     "usage: x-shelf-save SHELF [PATH...]\n"
      "\n"), N_(
-     "  Save local changes in the given PATHs as a new version of shelf NAME.\n"
+     "  Save local changes in the given PATHs as a new version of SHELF.\n"
      "  The shelf's log message can be set with -m, -F, etc.\n"
      "\n"), N_(
      "  The same as 'svn shelve --keep-local'.\n"
@@ -2028,9 +2028,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelve", svn_cl__shelf_shelve, {"shelve"}, {N_(
      "Move local changes onto a shelf.\n"
-     "usage: x-shelve [--keep-local] NAME [PATH...]\n"
+     "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
      "\n"), N_(
-     "  Save the local changes in the given PATHs to a shelf named NAME.\n"
+     "  Save the local changes in the given PATHs to a new or existing SHELF.\n"
      "  Revert those changes from the WC unless '--keep-local' is given.\n"
      "  The shelf's log message can be set with -m, -F, etc.\n"
      "\n"), N_(
@@ -2041,7 +2041,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "     copies, moves, mkdir, rmdir,\n"
      "     uncommittable states\n"
      "\n"), N_(
-     "  To bring back shelved changes, use 'svn unshelve NAME'.\n"
+     "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
      "\n"), N_(
      "  Shelves are stored in <WC>/.svn/shelves/\n"
      "\n"), N_(
@@ -2055,10 +2055,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-unshelve", svn_cl__shelf_unshelve, {"unshelve"}, {N_(
      "Copy shelved changes back into the WC.\n"
-     "usage: x-unshelve [--drop] [NAME [VERSION]]\n"
+     "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
      "\n"), N_(
-     "  Apply the changes stored in shelf NAME to the working copy.\n"
-     "  NAME defaults to the newest shelf.\n"
+     "  Apply the changes stored in SHELF to the working copy.\n"
+     "  SHELF defaults to the newest shelf.\n"
      "\n"), N_(
      "  Apply the newest version of the shelf, by default. If VERSION is\n"
      "  specified, apply that version and discard all versions newer than that.\n"
