@@ -974,7 +974,14 @@ write_changes_visitor(void *baton,
   const char *wc_relpath = svn_dirent_skip_ancestor(wb->wc_root_abspath,
                                                     local_abspath);
 
-  switch (status->node_status)
+  /* Catch any conflict, even a tree conflict on a path that has
+     node-status 'unversioned'. */
+  if (status->conflicted)
+    {
+      SVN_ERR(notify_not_shelved(wb, wc_relpath, local_abspath,
+                                 status, scratch_pool));
+    }
+  else switch (status->node_status)
     {
       case svn_wc_status_deleted:
       case svn_wc_status_added:
