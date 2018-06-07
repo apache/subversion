@@ -545,6 +545,45 @@ def shelve_dir_copy(sbox):
 
   shelve_unshelve(sbox, modifier, cannot_shelve=True)
 
+#----------------------------------------------------------------------
+
+def list_shelves(sbox):
+  "list_shelves"
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # an empty list
+  svntest.actions.run_and_verify_svn([], [],
+                                     'shelf-list', '-q')
+
+  # make two shelves
+  sbox.simple_append('A/mu', 'appended mu text')
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelf-save', 'foo')
+  sbox.simple_append('A/mu', 'appended more text')
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelf-save', 'foo', '-m', 'log msg')
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelf-save', 'bar', '-m', 'log msg')
+
+  # a quiet list
+  expected_out = svntest.verify.RegexListOutput(['foo', 'bar'])
+  svntest.actions.run_and_verify_svn(expected_out, [],
+                                     'shelf-list', '-q')
+
+  # a detailed list
+  expected_out = svntest.verify.RegexListOutput(['foo .* 1 path.*',
+                                                 ' log msg',
+                                                 'bar .* 1 path.*',
+                                                 ' log msg'])
+  svntest.actions.run_and_verify_svn(expected_out, [],
+                                     'shelf-list')
+
+  os.chdir(was_cwd)
+
 
 ########################################################################
 # Run the tests
@@ -573,6 +612,7 @@ test_list = [ None,
               shelve_replace_dir,
               shelve_file_copy,
               shelve_dir_copy,
+              list_shelves,
              ]
 
 if __name__ == '__main__':
