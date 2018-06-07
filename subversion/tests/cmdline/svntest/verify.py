@@ -181,12 +181,36 @@ class AnyOutput(ExpectedOutput):
       logger.warn(message)
 
 
+def re_fullmatch(pattern, string, flags=0):
+  """If the whole STRING matches the regular expression PATTERN,
+     return a corresponding match object.
+     Based on re.fullmatch() in Python 3.4.
+  """
+  if pattern.endswith('$'):
+    return re.match(pattern, string, flags)
+
+  return re.match(pattern + '$', string, flags)
+
+def regex_fullmatch(rx, string):
+  """If the whole STRING matches the compiled regular expression RX,
+     return a corresponding match object.
+     Based on regex.fullmatch() in Python 3.4.
+  """
+  if rx.pattern.endswith('$'):
+    return rx.match(string)
+
+  return re_fullmatch(rx.pattern, string, rx.flags)
+
 class RegexOutput(ExpectedOutput):
   """Matches a single regular expression.
 
      If MATCH_ALL is true, every actual line must match the RE.  If
      MATCH_ALL is false, at least one actual line must match the RE.  In
      any case, there must be at least one line of actual output.
+
+     The RE must match a prefix of the actual line, in contrast to the
+     RegexListOutput and UnorderedRegexListOutput classes which match
+     whole lines.
   """
 
   def __init__(self, expected, match_all=True):
@@ -228,6 +252,9 @@ class RegexListOutput(ExpectedOutput):
      ones.
 
      In any case, there must be at least one line of actual output.
+
+     The REs must match whole actual lines, in contrast to the RegexOutput
+     class which matches a prefix of the actual line.
   """
 
   def __init__(self, expected, match_all=True):
@@ -243,11 +270,11 @@ class RegexListOutput(ExpectedOutput):
 
     if self.match_all:
       return (len(self.expected_res) == len(actual) and
-              all(e.match(a) for e, a in zip(self.expected_res, actual)))
+              all(regex_fullmatch(e, a) for e, a in zip(self.expected_res, actual)))
 
     i_expected = 0
     for actual_line in actual:
-      if self.expected_res[i_expected].match(actual_line):
+      if regex_fullmatch(self.expected_res[i_expected], actual_line):
         i_expected += 1
         if i_expected == len(self.expected_res):
           return True
@@ -266,13 +293,13 @@ class RegexListOutput(ExpectedOutput):
         logger.warn('# Expected %d lines; actual %d lines' %
                     (len(self.expected), len(actual)))
       for e, a in map(None, self.expected_res, actual):
-        if e is not None and a is not None and e.match(a):
+        if e is not None and a is not None and regex_fullmatch(e, a):
           logger.warn("|  " + a.rstrip())
         else:
           if e is not None:
-            logger.warn("| -" + e.pattern.rstrip())
+            logger.warn("| -" + repr(e.pattern))
           if a is not None:
-            logger.warn("| +" + a.rstrip())
+            logger.warn("| +" + repr(a))
 
   def insert(self, index, line):
     self.expected.insert(index, line)
@@ -313,6 +340,9 @@ class UnorderedRegexListOutput(ExpectedOutput):
      expressions.  The implementation matches each expression in turn to
      the first unmatched actual line that it can match, and does not try
      all the permutations when there are multiple possible matches.
+
+     The REs must match whole actual lines, in contrast to the RegexOutput
+     class which matches a prefix of the actual line.
   """
 
   def __init__(self, expected):
@@ -332,7 +362,7 @@ class UnorderedRegexListOutput(ExpectedOutput):
     for e in self.expected:
       expect_re = re.compile(e)
       for actual_line in actual:
-        if expect_re.match(actual_line):
+        if regex_fullmatch(expect_re, actual_line):
           actual.remove(actual_line)
           break
       else:
@@ -358,7 +388,7 @@ class UnorderedRegexListOutput(ExpectedOutput):
     for e in self.expected:
       expect_re = re.compile(e)
       for actual_line in actual:
-        if expect_re.match(actual_line):
+        if regex_fullmatch(expect_re, actual_line):
           actual.remove(actual_line)
           break
       else:
