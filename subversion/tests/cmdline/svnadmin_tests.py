@@ -1633,9 +1633,9 @@ text
   sbox.build(empty=True)
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
-  exp_err = svntest.verify.RegexListOutput(['svnadmin: E125005',
-                                            'svnadmin: E125005',
-                                            'svnadmin: E125017'],
+  exp_err = svntest.verify.RegexListOutput(['svnadmin: E125005:.*',
+                                            'svnadmin: E125005:.*',
+                                            'svnadmin: E125017:.*'],
                                            match_all=False)
   load_and_verify_dumpstream(sbox, [], exp_err, dumpfile_revisions,
                              False, dump_str, '--ignore-uuid')
@@ -1764,10 +1764,10 @@ def test_lslocks_and_rmlocks(sbox):
   def expected_output_list(path):
     return [
       "Path: " + path,
-      "UUID Token: opaquelocktoken",
+      "UUID Token: opaquelocktoken:.*",
       "Owner: jrandom",
-      "Created:",
-      "Expires:",
+      "Created:.*",
+      "Expires:.*",
       "Comment \(1 line\):",
       "Locking files",
       "\n", # empty line
@@ -2169,7 +2169,7 @@ def verify_keep_going(sbox):
                                                         sbox.repo_dir)
 
   if (svntest.main.is_fs_log_addressing()):
-    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0"])
+    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0.*"])
   else:
     exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
                                               ".*Verified revision 1."])
