@@ -331,45 +331,6 @@ name_of_youngest(const char **name_p,
   return SVN_NO_ERROR;
 }
 
-/*
- * PATHS are relative to WC_ROOT_ABSPATH.
- */
-static svn_error_t *
-run_status_on_wc_paths(const char *paths_base_abspath,
-                       const apr_array_header_t *paths,
-                       svn_depth_t depth,
-                       const apr_array_header_t *changelists,
-                       svn_client_status_func_t status_func,
-                       void *status_baton,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *scratch_pool)
-{
-  int i;
-
-  for (i = 0; i < paths->nelts; i++)
-    {
-      const char *path = APR_ARRAY_IDX(paths, i, const char *);
-      const char *abspath = svn_dirent_join(paths_base_abspath, path,
-                                            scratch_pool);
-
-      SVN_ERR(svn_client_status6(NULL /*result_rev*/,
-                                 ctx, abspath,
-                                 NULL /*revision*/,
-                                 depth,
-                                 FALSE /*get_all*/,
-                                 FALSE /*check_out_of_date*/,
-                                 TRUE /*check_working_copy*/,
-                                 TRUE /*no_ignore*/,
-                                 TRUE /*ignore_externals*/,
-                                 FALSE /*depth_as_sticky*/,
-                                 changelists,
-                                 status_func, status_baton,
-                                 scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 struct status_baton
 {
   /* These fields correspond to the ones in the
@@ -377,9 +338,9 @@ struct status_baton
   const char *target_abspath;
   const char *target_path;
 
-  const char *header;
-  svn_boolean_t quiet;  /* don't display statuses while checking them */
-  svn_boolean_t modified;  /* set to TRUE when any modification is found */
+  svn_boolean_t quiet;  /* don't display statuses while shelving them */
+  int num_paths_shelved;
+  int num_paths_not_shelved;
   svn_client_ctx_t *ctx;
 };
 
@@ -388,7 +349,7 @@ static svn_error_t *
 print_status(void *baton,
              const char *path,
              const svn_client_status_t *status,
-             apr_pool_t *pool)
+             apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
   unsigned int conflicts;
@@ -402,37 +363,39 @@ print_status(void *baton,
                               FALSE /*repos_locks*/,
                               &conflicts, &conflicts, &conflicts,
                               sb->ctx,
-                              pool);
+                              scratch_pool);
 }
 
-/* Set BATON->modified to true if TARGET has any local modification or
- * any status that means we should not attempt to apply changes to it.
- *
- * A callback of type svn_client_status_func_t. */
+/* A callback function for shelved paths. */
 static svn_error_t *
-modification_checker(void *baton,
-                     const char *target,
-                     const svn_client_status_t *status,
-                     apr_pool_t *scratch_pool)
+was_shelved(void *baton,
+            const char *path,
+            const svn_client_status_t *status,
+            apr_pool_t *scratch_pool)
 {
   struct status_baton *sb = baton;
 
-  if (status->conflicted
-      || ! (status->node_status == svn_wc_status_none
-            || status->node_status == svn_wc_status_unversioned
-            || status->node_status == svn_wc_status_normal))
+  if (!sb->quiet)
     {
-      if (!sb->quiet)
-        {
-          if (!sb->modified)  /* print the header only once */
-            {
-              SVN_ERR(svn_cmdline_printf(scratch_pool, "%s", sb->header));
-            }
-          SVN_ERR(print_status(baton, target, status, scratch_pool));
-        }
-
-      sb->modified = TRUE;
+      SVN_ERR(print_status(baton, path, status, scratch_pool));
     }
+
+  ++sb->num_paths_shelved;
+  return SVN_NO_ERROR;
+}
+
+/* A callback function for not-shelved paths. */
+static svn_error_t *
+was_not_shelved(void *baton,
+                const char *path,
+                const svn_client_status_t *status,
+                apr_pool_t *scratch_pool)
+{
+  struct status_baton *sb = baton;
+
+  SVN_ERR(print_status(baton, path, status, scratch_pool));
+  SVN_ERR(svn_cmdline_printf(scratch_pool, "      >   not shelved\n"));
+  ++sb->num_paths_not_shelved;
   return SVN_NO_ERROR;
 }
 
@@ -466,7 +429,6 @@ shelve(int *new_version_p,
   svn_client_shelf_t *shelf;
   svn_client_shelf_version_t *previous_version;
   svn_client_shelf_version_t *new_version;
-  const char *cwd_abspath;
   struct status_baton sb;
 
   SVN_ERR(svn_client_shelf_open_or_create(&shelf,
@@ -485,37 +447,40 @@ shelve(int *new_version_p,
                     TRUE /*with_logmsg*/, scratch_pool));
     }
 
-  sb.header = (keep_local
-               ? _("--- Modifications to save:\n")
-               : _("--- Modifications to shelve:\n"));
+  sb.target_abspath = shelf->wc_root_abspath;
+  sb.target_path = "";
   sb.quiet = quiet;
-  sb.modified = FALSE;
+  sb.num_paths_shelved = 0;
+  sb.num_paths_not_shelved = 0;
   sb.ctx = ctx;
-  SVN_ERR(svn_dirent_get_absolute(&cwd_abspath, "", scratch_pool));
-  SVN_ERR(run_status_on_wc_paths(cwd_abspath, paths, depth, changelists,
-                                 modification_checker, &sb,
-                                 ctx, scratch_pool));
-
-  if (!sb.modified)
-    {
-      SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
-      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                               _("No local modifications found"));
-    }
 
   if (! quiet)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                keep_local ? _("--- Saving...\n")
                                           : _("--- Shelving...\n")));
-  SVN_ERR(svn_client_shelf_save_new_version2(&new_version, shelf,
+  SVN_ERR(svn_client_shelf_save_new_version3(&new_version, shelf,
                                              paths, depth, changelists,
+                                             was_shelved, &sb,
+                                             was_not_shelved, &sb,
                                              scratch_pool));
-  if (! new_version)
+  if (sb.num_paths_not_shelved > 0)
+    {
+      SVN_ERR(svn_client_shelf_delete_newer_versions(shelf, previous_version,
+                                                     scratch_pool));
+      SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               Q_("%d path could not be shelved",
+                                  "%d paths could not be shelved",
+                                  sb.num_paths_not_shelved),
+                               sb.num_paths_not_shelved);
+    }
+  if (sb.num_paths_shelved == 0
+      || ! new_version)
     {
       SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
       return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-        keep_local ? _("None of the local modifications could be saved")
-                   : _("None of the local modifications could be shelved"));
+        keep_local ? _("No local modifications could be saved")
+                   : _("No local modifications could be shelved"));
     }
 
   /* Un-apply the changes, if required. */

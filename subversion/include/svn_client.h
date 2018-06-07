@@ -6954,21 +6954,51 @@ svn_client_shelf_delete(const char *name,
 /** Save the local modifications found by @a paths, @a depth,
  * @a changelists as a new version of @a shelf.
  *
- * Return the new shelf-version in @a *new_version_p.
+ * If any paths are shelved, create a new shelf-version and return the new
+ * shelf-version in @a *new_version_p, else set @a *new_version_p to null.
+ * @a new_version_p may be null if that output is not wanted; a new shelf-
+ * version is still saved and may be found through @a shelf.
  *
  * @a paths are relative to the CWD, or absolute.
+ *
+ * For each successfully shelved path: call @a shelved_func (if not null)
+ * with @a shelved_baton.
+ *
+ * If any paths cannot be shelved: if @a not_shelved_func is given, call
+ * it with @a not_shelved_baton for each such path, and still create a new
+ * shelf-version if any paths are shelved.
+ *
+ * This function does not revert the changes from the WC; use
+ * svn_client_shelf_unapply() for that.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client_shelf_save_new_version3(svn_client_shelf_version_t **new_version_p,
+                                   svn_client_shelf_t *shelf,
+                                   const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   svn_client_status_func_t shelved_func,
+                                   void *shelved_baton,
+                                   svn_client_status_func_t not_shelved_func,
+                                   void *not_shelved_baton,
+                                   apr_pool_t *scratch_pool);
+
+/** @deprecated Use svn_client_shelf_save_new_version3() instead.
+ *
+ * If any paths cannot be shelved, throw an error.
  *
  * If there are no local modifications in the specified locations, do not
  * create a new version of @a shelf; set @a *new_version_p to null and
  * return SVN_NO_ERROR. In this case @a shelf->max_version after the call
  * is the same as before the call.
  *
- * @a *new_version_p may be null if that output is not wanted.
- *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
-SVN_EXPERIMENTAL
+SVN_DEPRECATED
 svn_error_t *
 svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
                                    svn_client_shelf_t *shelf,
