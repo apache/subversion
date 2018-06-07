@@ -2036,10 +2036,12 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
      "\n"), N_(
-     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
-     "  and 'svn patch'. The following are currently NOT supported:\n"
-     "     copies, moves, mkdir, rmdir,\n"
-     "     uncommittable states\n"
+     "  The kinds of change you can shelve are committable changes to files and\n"
+     "  properties, except the following kinds which are not yet supported:\n"
+     "     * copies and moves\n"
+     "     * mkdir and rmdir\n"
+     "  Uncommittable states such as conflicts, unversioned and missing cannot\n"
+     "  be shelved.\n"
      "\n"), N_(
      "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
      "\n"), N_(
