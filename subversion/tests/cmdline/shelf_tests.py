@@ -584,6 +584,45 @@ def list_shelves(sbox):
 
   os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+
+def refuse_to_shelve_conflict(sbox):
+  "refuse to shelve conflict"
+
+  sbox.build(empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # create a tree conflict victim at an unversioned path
+  sbox.simple_mkdir('topdir')
+  sbox.simple_commit()
+  sbox.simple_mkdir('topdir/subdir')
+  sbox.simple_commit()
+  sbox.simple_update()
+  sbox.simple_rm('topdir')
+  sbox.simple_commit()
+  sbox.simple_update()
+  svntest.actions.run_and_verify_svn(
+    None, [],
+    'merge', '-c2', '.', '--ignore-ancestry', '--accept', 'postpone')
+  svntest.actions.run_and_verify_svn(
+    None, 'svn: E155015:.*existing.*conflict.*',
+    'merge', '-c1', '.', '--ignore-ancestry', '--accept', 'postpone')
+
+  # attempt to shelve
+  expected_out = svntest.verify.RegexListOutput([
+    r'--- .*',
+    r'--- .*',
+    r'\?     C topdir',
+    r'      > .*',
+    r'      >   not shelved'])
+  svntest.actions.run_and_verify_svn(expected_out,
+                                     '.* 1 path could not be shelved',
+                                     'shelf-save', 'foo')
+
+  os.chdir(was_cwd)
+
 
 ########################################################################
 # Run the tests
@@ -613,6 +652,7 @@ test_list = [ None,
               shelve_file_copy,
               shelve_dir_copy,
               list_shelves,
+              refuse_to_shelve_conflict,
              ]
 
 if __name__ == '__main__':
