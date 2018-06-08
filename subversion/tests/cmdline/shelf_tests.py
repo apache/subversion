@@ -56,19 +56,54 @@ def state_from_status(wc_dir,
   _, output, _ = svntest.main.run_svn(None, 'status', wc_dir, *opts)
   return svntest.wc.State.from_status(output, wc_dir)
 
+def get_wc_state(wc_dir):
+  """Return a description of the WC state. Include as much info as shelving
+     should be capable of restoring.
+  """
+  return (state_from_status(wc_dir),
+          svntest.wc.State.from_wc(wc_dir, load_props=True),
+          )
+
+def check_wc_state(wc_dir, expected):
+  """Check a description of the WC state. Include as much info as shelving
+     should be capable of restoring.
+  """
+  expect_st, expect_wc = expected
+  actual_st, actual_wc = get_wc_state(wc_dir)
+
+  # Verify actual status against expected status.
+  try:
+    expect_st.compare_and_display('status', actual_st)
+  except svntest.tree.SVNTreeError:
+    svntest.actions._log_tree_state("EXPECT STATUS TREE:", expect_st.old_tree(),
+                                    wc_dir)
+    svntest.actions._log_tree_state("ACTUAL STATUS TREE:", actual_st.old_tree(),
+                                    wc_dir)
+    raise
+
+  # Verify actual WC against expected WC.
+  try:
+    expect_wc.compare_and_display('status', actual_wc)
+  except svntest.tree.SVNTreeError:
+    svntest.actions._log_tree_state("EXPECT WC TREE:", expect_wc.old_tree(),
+                                    wc_dir)
+    svntest.actions._log_tree_state("ACTUAL WC TREE:", actual_wc.old_tree(),
+                                    wc_dir)
+    raise
+
 def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
   """Round-trip: shelve; verify all changes are reverted;
      unshelve; verify all changes are restored.
   """
 
   wc_dir = sbox.wc_dir
-  virginal_state = state_from_status(wc_dir)
+  virginal_state = get_wc_state(wc_dir)
 
   # Make some changes to the working copy
   modifier(sbox)
 
   # Save the modified state
-  modified_state = state_from_status(wc_dir)
+  modified_state = get_wc_state(wc_dir)
 
   if cannot_shelve:
     svntest.actions.run_and_verify_svn(None, '.* could not be shelved.*',
@@ -78,12 +113,12 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelve', 'foo')
-  svntest.actions.run_and_verify_status(wc_dir, virginal_state)
+  check_wc_state(wc_dir, virginal_state)
 
   # Unshelve; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
                                      'unshelve', 'foo')
-  svntest.actions.run_and_verify_status(wc_dir, modified_state)
+  check_wc_state(wc_dir, modified_state)
 
 #----------------------------------------------------------------------
 
@@ -217,34 +252,35 @@ def save_revert_restore(sbox, modifier1, modifier2):
   sbox.wc_dir = ''
   wc_dir = ''
 
+  initial_state = get_wc_state(wc_dir)
+
   # Make some changes to the working copy
   modifier1(sbox)
 
   # Remember the modified state
-  modified_state1 = state_from_status(wc_dir)
+  modified_state1 = get_wc_state(wc_dir)
 
   # Save a checkpoint; check nothing changed
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelf-save', 'foo')
-  svntest.actions.run_and_verify_status(wc_dir, modified_state1)
+  check_wc_state(wc_dir, modified_state1)
 
   # Modify again; remember the state; save a checkpoint
   modifier2(sbox)
-  modified_state2 = state_from_status(wc_dir)
+  modified_state2 = get_wc_state(wc_dir)
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelf-save', 'foo')
-  svntest.actions.run_and_verify_status(wc_dir, modified_state2)
+  check_wc_state(wc_dir, modified_state2)
 
   # Revert
   svntest.actions.run_and_verify_svn(None, [],
                                      'revert', '-R', '.')
-  virginal_state = svntest.actions.get_virginal_state(wc_dir, 1)
-  svntest.actions.run_and_verify_status(wc_dir, virginal_state)
+  check_wc_state(wc_dir, initial_state)
 
   # Restore; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
                                      'unshelve', 'foo', '1')
-  svntest.actions.run_and_verify_status(wc_dir, modified_state1)
+  check_wc_state(wc_dir, modified_state1)
 
   os.chdir(was_cwd)
 
@@ -295,27 +331,27 @@ def unshelve_refuses_if_conflicts(sbox):
   sbox.simple_add_text('A\nB\nC\nD\n', 'alpha')
   sbox.simple_add_text('A\nB\nC\nD\n', 'beta')
   sbox.simple_commit()
-  initial_state = state_from_status(wc_dir)
+  initial_state = get_wc_state(wc_dir)
 
   # Make initial mods; remember this modified state
   modifier1(sbox)
-  modified_state1 = state_from_status(wc_dir)
+  modified_state1 = get_wc_state(wc_dir)
   assert modified_state1 != initial_state
 
   # Shelve; check there are no longer any local mods
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelve', 'foo')
-  svntest.actions.run_and_verify_status(wc_dir, initial_state)
+  check_wc_state(wc_dir, initial_state)
 
   # Make a different local mod that will conflict with the shelf
   modifier2(sbox)
-  modified_state2 = state_from_status(wc_dir)
+  modified_state2 = get_wc_state(wc_dir)
 
   # Try to unshelve; check it fails with an error about a conflict
   svntest.actions.run_and_verify_svn(None, '.*[Cc]onflict.*',
                                      'unshelve', 'foo')
   # Check nothing changed in the attempt
-  svntest.actions.run_and_verify_status(wc_dir, modified_state2)
+  check_wc_state(wc_dir, modified_state2)
 
 #----------------------------------------------------------------------
 
