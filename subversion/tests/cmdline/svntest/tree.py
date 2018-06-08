@@ -267,19 +267,8 @@ class SVNTreeNode:
     line += "%-20s: Item(" % ("'%s'" % path.replace(os.sep, '/'))
     comma = False
 
-    mime_type = self.props.get("svn:mime-type")
-    if not mime_type or mime_type.startswith("text/"):
-      if self.contents is not None:
-        # Escape some characters for nicer script and readability.
-        # (This is error output. I guess speed is no consideration here.)
-        line += "contents=\"%s\"" % (self.contents
-                                     .replace('\n','\\n')
-                                     .replace('"','\\"')
-                                     .replace('\r','\\r')
-                                     .replace('\t','\\t'))
-        comma = True
-    else:
-      line += 'content is binary data'
+    if self.contents is not None:
+      line += "contents=" + repr(self.contents)
       comma = True
 
     if self.props:
