@@ -659,6 +659,120 @@ def refuse_to_shelve_conflict(sbox):
 
   os.chdir(was_cwd)
 
+#----------------------------------------------------------------------
+
+def unshelve_text_mod_merge(sbox):
+  "unshelve mod merge"
+
+  orig_contents='A\nB\nC\nD\nE\n'
+  left_contents='A\nBB\nC\nD\nE\n'
+  right_contents='A\nB\nC\nDD\nE\n'
+  merged_contents='A\nBB\nC\nDD\nE\n'
+
+  def setup(sbox):
+    sbox.simple_append('A/mu', orig_contents, truncate=True)
+
+  def modifier1(sbox):
+    sbox.simple_append('A/mu', left_contents, truncate=True)
+
+  def modifier2(sbox):
+    sbox.simple_append('A/mu', right_contents, truncate=True)
+
+  def tweak_expected_state(modified_state):
+    modified_state[1].tweak('A/mu', contents=merged_contents)
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = sbox.wc_dir
+
+  setup(sbox)
+  sbox.simple_commit()
+  initial_state = get_wc_state(wc_dir)
+
+  # Make some changes to the working copy
+  modifier1(sbox)
+  modified_state = get_wc_state(wc_dir)
+
+  # Shelve; check there are no longer any modifications
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelve', 'foo')
+  check_wc_state(wc_dir, initial_state)
+
+  # Make a different change, with which we shall merge
+  modifier2(sbox)
+  sbox.simple_commit()
+  modified_state[0].tweak('A/mu', wc_rev='3')
+
+  # Unshelve; check the expected result of the merge
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'unshelve', 'foo')
+  tweak_expected_state(modified_state)
+  check_wc_state(wc_dir, modified_state)
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
+
+def unshelve_text_mod_conflict(sbox):
+  "unshelve text mod conflict"
+
+  orig_contents='A\nB\nC\nD\nE\n'
+  left_contents='A\nBB\nC\nD\nE\n'
+  right_contents='A\nBCD\nC\nD\nE\n'
+  merged_contents = 'A\n<<<<<<< .working\nBCD\n||||||| .merge-left\nB\n=======\nBB\n>>>>>>> .merge-right\nC\nD\nE\n'
+
+  def setup(sbox):
+    sbox.simple_append('A/mu', orig_contents, truncate=True)
+
+  def modifier1(sbox):
+    sbox.simple_append('A/mu', left_contents, truncate=True)
+
+  def modifier2(sbox):
+    sbox.simple_append('A/mu', right_contents, truncate=True)
+
+  def tweak_expected_state(modified_state):
+    modified_state[0].tweak('A/mu', status='C ')
+    modified_state[1].tweak('A/mu', contents=merged_contents)
+    modified_state[1].add({
+      'A/mu.merge-left':  Item(contents=orig_contents),
+      'A/mu.merge-right': Item(contents=left_contents),
+      'A/mu.working':     Item(contents=right_contents),
+      })
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = sbox.wc_dir
+
+  setup(sbox)
+  sbox.simple_commit()
+  initial_state = get_wc_state(wc_dir)
+
+  # Make some changes to the working copy
+  modifier1(sbox)
+  modified_state = get_wc_state(wc_dir)
+
+  # Shelve; check there are no longer any modifications
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelve', 'foo')
+  check_wc_state(wc_dir, initial_state)
+
+  # Make a different change, with which we shall merge
+  modifier2(sbox)
+  sbox.simple_commit()
+  modified_state[0].tweak('A/mu', wc_rev='3')
+
+  # Unshelve; check the expected result of the merge
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'unshelve', 'foo')
+  tweak_expected_state(modified_state)
+  check_wc_state(wc_dir, modified_state)
+
+  os.chdir(was_cwd)
+
 
 ########################################################################
 # Run the tests
@@ -689,6 +803,8 @@ test_list = [ None,
               shelve_dir_copy,
               list_shelves,
               refuse_to_shelve_conflict,
+              unshelve_text_mod_merge,
+              unshelve_text_mod_conflict,
              ]
 
 if __name__ == '__main__':
