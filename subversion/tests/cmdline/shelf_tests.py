@@ -661,26 +661,7 @@ def refuse_to_shelve_conflict(sbox):
 
 #----------------------------------------------------------------------
 
-def unshelve_text_mod_merge(sbox):
-  "unshelve mod merge"
-
-  orig_contents='A\nB\nC\nD\nE\n'
-  left_contents='A\nBB\nC\nD\nE\n'
-  right_contents='A\nB\nC\nDD\nE\n'
-  merged_contents='A\nBB\nC\nDD\nE\n'
-
-  def setup(sbox):
-    sbox.simple_append('A/mu', orig_contents, truncate=True)
-
-  def modifier1(sbox):
-    sbox.simple_append('A/mu', left_contents, truncate=True)
-
-  def modifier2(sbox):
-    sbox.simple_append('A/mu', right_contents, truncate=True)
-
-  def tweak_expected_state(modified_state):
-    modified_state[1].tweak('A/mu', contents=merged_contents)
-
+def unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state):
   sbox.build()
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
@@ -712,6 +693,28 @@ def unshelve_text_mod_merge(sbox):
   check_wc_state(wc_dir, modified_state)
 
   os.chdir(was_cwd)
+
+def unshelve_text_mod_merge(sbox):
+  "unshelve mod merge"
+
+  orig_contents='A\nB\nC\nD\nE\n'
+  left_contents='A\nBB\nC\nD\nE\n'
+  right_contents='A\nB\nC\nDD\nE\n'
+  merged_contents='A\nBB\nC\nDD\nE\n'
+
+  def setup(sbox):
+    sbox.simple_append('A/mu', orig_contents, truncate=True)
+
+  def modifier1(sbox):
+    sbox.simple_append('A/mu', left_contents, truncate=True)
+
+  def modifier2(sbox):
+    sbox.simple_append('A/mu', right_contents, truncate=True)
+
+  def tweak_expected_state(modified_state):
+    modified_state[1].tweak('A/mu', contents=merged_contents)
+
+  unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
 #----------------------------------------------------------------------
 
@@ -741,37 +744,63 @@ def unshelve_text_mod_conflict(sbox):
       'A/mu.working':     Item(contents=right_contents),
       })
 
-  sbox.build()
-  was_cwd = os.getcwd()
-  os.chdir(sbox.wc_dir)
-  sbox.wc_dir = ''
-  wc_dir = sbox.wc_dir
+  unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
-  setup(sbox)
-  sbox.simple_commit()
-  initial_state = get_wc_state(wc_dir)
+#----------------------------------------------------------------------
 
-  # Make some changes to the working copy
-  modifier1(sbox)
-  modified_state = get_wc_state(wc_dir)
+def unshelve_text_prop_merge(sbox):
+  "unshelve mod merge"
 
-  # Shelve; check there are no longer any modifications
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo')
-  check_wc_state(wc_dir, initial_state)
+  def setup(sbox):
+    sbox.simple_propset('p1', 'v', 'A/mu')
+    sbox.simple_propset('p2', 'v', 'A/mu')
 
-  # Make a different change, with which we shall merge
-  modifier2(sbox)
-  sbox.simple_commit()
-  modified_state[0].tweak('A/mu', wc_rev='3')
+  def modifier1(sbox):
+    sbox.simple_propset('p1', 'changed', 'A/mu')
 
-  # Unshelve; check the expected result of the merge
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'unshelve', 'foo')
-  tweak_expected_state(modified_state)
-  check_wc_state(wc_dir, modified_state)
+  def modifier2(sbox):
+    sbox.simple_propset('p2', 'changed', 'A/mu')
 
-  os.chdir(was_cwd)
+  def tweak_expected_state(wc_state):
+    wc_state[1].tweak('A/mu', props={'p1':'changed',
+                                     'p2':'changed'})
+
+  unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
+
+#----------------------------------------------------------------------
+
+def unshelve_text_prop_conflict(sbox):
+  "unshelve text mod conflict"
+
+  orig_contents='A'
+  left_contents='B'
+  right_contents='C'
+  merged_contents='C'
+  prej_contents='''Trying to change property 'p'
+but the local property value conflicts with the incoming change.
+<<<<<<< (local property value)
+C||||||| (incoming 'changed from' value)
+A=======
+B>>>>>>> (incoming 'changed to' value)
+'''
+
+  def setup(sbox):
+    sbox.simple_propset('p', orig_contents, 'A/mu')
+
+  def modifier1(sbox):
+    sbox.simple_propset('p', left_contents, 'A/mu')
+
+  def modifier2(sbox):
+    sbox.simple_propset('p', right_contents, 'A/mu')
+
+  def tweak_expected_state(wc_state):
+    wc_state[0].tweak('A/mu', status=' C')
+    wc_state[1].tweak('A/mu', props={'p':merged_contents})
+    wc_state[1].add({
+      'A/mu.prej':     Item(contents=prej_contents),
+      })
+
+  unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
 
 ########################################################################
@@ -805,6 +834,8 @@ test_list = [ None,
               refuse_to_shelve_conflict,
               unshelve_text_mod_merge,
               unshelve_text_mod_conflict,
+              unshelve_text_prop_merge,
+              unshelve_text_prop_conflict,
              ]
 
 if __name__ == '__main__':
