@@ -748,6 +748,65 @@ def unshelve_text_mod_conflict(sbox):
 
 #----------------------------------------------------------------------
 
+def unshelve_undeclared_binary_mod_conflict(sbox):
+  "unshelve undeclared binary mod conflict"
+
+  orig_contents='\1\2\3\4\5'
+  mod1_contents='\1\6\3\4\5'
+  mod2_contents='\1\7\3\4\5'
+  merged_contents = '<<<<<<< .working\n' + mod2_contents + '||||||| .merge-left\n' + orig_contents + '=======\n' + mod1_contents + '>>>>>>> .merge-right\n'
+
+  def setup(sbox):
+    sbox.simple_append('A/mu', orig_contents, truncate=True)
+
+  def modifier1(sbox):
+    sbox.simple_append('A/mu', mod1_contents, truncate=True)
+
+  def modifier2(sbox):
+    sbox.simple_append('A/mu', mod2_contents, truncate=True)
+
+  def tweak_expected_state(modified_state):
+    modified_state[0].tweak('A/mu', status='C ')
+    modified_state[1].tweak('A/mu', contents=merged_contents)
+    modified_state[1].add({
+      'A/mu.merge-left':  Item(contents=orig_contents),
+      'A/mu.merge-right': Item(contents=mod1_contents),
+      'A/mu.working':     Item(contents=mod2_contents),
+      })
+
+  unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
+
+#----------------------------------------------------------------------
+
+def unshelve_binary_mod_conflict(sbox):
+  "unshelve binary mod conflict"
+
+  orig_contents='\1\2\3\4\5'
+  mod1_contents='\1\6\3\4\5'
+  mod2_contents='\1\7\3\4\5'
+
+  def setup(sbox):
+    sbox.simple_append('A/mu', orig_contents, truncate=True)
+    sbox.simple_propset('svn:mime-type', 'application/octet-stream', 'A/mu')
+
+  def modifier1(sbox):
+    sbox.simple_append('A/mu', mod1_contents, truncate=True)
+
+  def modifier2(sbox):
+    sbox.simple_append('A/mu', mod2_contents, truncate=True)
+
+  def tweak_expected_state(modified_state):
+    modified_state[0].tweak('A/mu', status='C ')
+    modified_state[1].tweak('A/mu', contents=mod2_contents)
+    modified_state[1].add({
+      'A/mu.merge-left':  Item(contents=orig_contents),
+      'A/mu.merge-right': Item(contents=mod1_contents),
+      })
+
+  unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
+
+#----------------------------------------------------------------------
+
 def unshelve_text_prop_merge(sbox):
   "unshelve text prop merge"
 
@@ -834,6 +893,8 @@ test_list = [ None,
               refuse_to_shelve_conflict,
               unshelve_text_mod_merge,
               unshelve_text_mod_conflict,
+              unshelve_undeclared_binary_mod_conflict,
+              unshelve_binary_mod_conflict,
               unshelve_text_prop_merge,
               unshelve_text_prop_conflict,
              ]
