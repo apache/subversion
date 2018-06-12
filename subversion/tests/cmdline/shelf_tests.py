@@ -695,21 +695,21 @@ def unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
   os.chdir(was_cwd)
 
 def unshelve_text_mod_merge(sbox):
-  "unshelve mod merge"
+  "unshelve text mod merge"
 
   orig_contents='A\nB\nC\nD\nE\n'
-  left_contents='A\nBB\nC\nD\nE\n'
-  right_contents='A\nB\nC\nDD\nE\n'
+  mod1_contents='A\nBB\nC\nD\nE\n'
+  mod2_contents='A\nB\nC\nDD\nE\n'
   merged_contents='A\nBB\nC\nDD\nE\n'
 
   def setup(sbox):
     sbox.simple_append('A/mu', orig_contents, truncate=True)
 
   def modifier1(sbox):
-    sbox.simple_append('A/mu', left_contents, truncate=True)
+    sbox.simple_append('A/mu', mod1_contents, truncate=True)
 
   def modifier2(sbox):
-    sbox.simple_append('A/mu', right_contents, truncate=True)
+    sbox.simple_append('A/mu', mod2_contents, truncate=True)
 
   def tweak_expected_state(modified_state):
     modified_state[1].tweak('A/mu', contents=merged_contents)
@@ -722,26 +722,26 @@ def unshelve_text_mod_conflict(sbox):
   "unshelve text mod conflict"
 
   orig_contents='A\nB\nC\nD\nE\n'
-  left_contents='A\nBB\nC\nD\nE\n'
-  right_contents='A\nBCD\nC\nD\nE\n'
+  mod1_contents='A\nBB\nC\nD\nE\n'
+  mod2_contents='A\nBCD\nC\nD\nE\n'
   merged_contents = 'A\n<<<<<<< .working\nBCD\n||||||| .merge-left\nB\n=======\nBB\n>>>>>>> .merge-right\nC\nD\nE\n'
 
   def setup(sbox):
     sbox.simple_append('A/mu', orig_contents, truncate=True)
 
   def modifier1(sbox):
-    sbox.simple_append('A/mu', left_contents, truncate=True)
+    sbox.simple_append('A/mu', mod1_contents, truncate=True)
 
   def modifier2(sbox):
-    sbox.simple_append('A/mu', right_contents, truncate=True)
+    sbox.simple_append('A/mu', mod2_contents, truncate=True)
 
   def tweak_expected_state(modified_state):
     modified_state[0].tweak('A/mu', status='C ')
     modified_state[1].tweak('A/mu', contents=merged_contents)
     modified_state[1].add({
       'A/mu.merge-left':  Item(contents=orig_contents),
-      'A/mu.merge-right': Item(contents=left_contents),
-      'A/mu.working':     Item(contents=right_contents),
+      'A/mu.merge-right': Item(contents=mod1_contents),
+      'A/mu.working':     Item(contents=mod2_contents),
       })
 
   unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
@@ -749,7 +749,7 @@ def unshelve_text_mod_conflict(sbox):
 #----------------------------------------------------------------------
 
 def unshelve_text_prop_merge(sbox):
-  "unshelve mod merge"
+  "unshelve text prop merge"
 
   def setup(sbox):
     sbox.simple_propset('p1', 'v', 'A/mu')
@@ -770,11 +770,11 @@ def unshelve_text_prop_merge(sbox):
 #----------------------------------------------------------------------
 
 def unshelve_text_prop_conflict(sbox):
-  "unshelve text mod conflict"
+  "unshelve text prop conflict"
 
   orig_contents='A'
-  left_contents='B'
-  right_contents='C'
+  mod1_contents='B'
+  mod2_contents='C'
   merged_contents='C'
   prej_contents='''Trying to change property 'p'
 but the local property value conflicts with the incoming change.
@@ -788,10 +788,10 @@ B>>>>>>> (incoming 'changed to' value)
     sbox.simple_propset('p', orig_contents, 'A/mu')
 
   def modifier1(sbox):
-    sbox.simple_propset('p', left_contents, 'A/mu')
+    sbox.simple_propset('p', mod1_contents, 'A/mu')
 
   def modifier2(sbox):
-    sbox.simple_propset('p', right_contents, 'A/mu')
+    sbox.simple_propset('p', mod2_contents, 'A/mu')
 
   def tweak_expected_state(wc_state):
     wc_state[0].tweak('A/mu', status=' C')
