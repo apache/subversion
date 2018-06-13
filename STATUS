@@ -15,14 +15,6 @@ Status of 1.10.1:
 Candidate changes:
 ==================
 
- * r1829260
-   Revert r1751167, since it broke use of pre-generated Swig bindings in
-   release builds.
-   Justification:
-     Fix build of pre-generated Swig bindings when swig is not installed
-   Votes:
-     +1: jamessan, stsp
-
  * r1830883,r1830900,r1830901
    Prune externals from excluded subtrees after 'update --set-depth=exclude'
    Justification:
@@ -60,3 +52,11 @@ Approved changes:
      installed, and aids with Python 2 to 3 migration.
    Votes:
      +1: jorton, rhuijben, philip
+
+ * r1829260
+   Revert r1751167, since it broke use of pre-generated Swig bindings in
+   release builds.
+   Justification:
+     Fix build of pre-generated Swig bindings when swig is not installed
+   Votes:
+     +1: jamessan, stsp, philip
