@@ -32,14 +32,6 @@ Candidate changes:
      +1: stsp
      +0: rhuijben (in concept, not reviewed)
 
- * r1830885,r1831540
-   Ensure consistent use of $PYTHON during build and test.
-   Justification:
-     Fixes potential build issues when multiple Python interpreters are
-     installed, and aids with Python 2 to 3 migration.
-   Votes:
-     +1: jorton, rhuijben
-
  * r1830882
    Fix libsvn_auth_gnome_keyring.pc when built using libsecret.
    Justification:
@@ -60,3 +52,11 @@ Approved changes:
      A regression in 1.10.0. Broke 'make install-swig-rb-doc'.
    Votes:
      +1: julianfoad, stsp, philip
+
+ * r1830885,r1831540
+   Ensure consistent use of $PYTHON during build and test.
+   Justification:
+     Fixes potential build issues when multiple Python interpreters are
+     installed, and aids with Python 2 to 3 migration.
+   Votes:
+     +1: jorton, rhuijben, philip
