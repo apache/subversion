@@ -21,7 +21,7 @@ Candidate changes:
      Current behaviour is inconsistent: Setting depth to 'empty' prunes
      externals while excluding a subtree does not.
    Votes:
-     +1: stsp
+     +1: stsp, philip
      +0: rhuijben (in concept, not reviewed)
 
  * r1830882
