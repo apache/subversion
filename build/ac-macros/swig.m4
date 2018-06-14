@@ -98,202 +98,202 @@ AC_DEFUN(SVN_FIND_SWIG,
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([Subversion requires SWIG >= 1.3.24])
     fi
+  fi
+ 
+  SWIG_PY_COMPILE="none"
+  SWIG_PY_LINK="none"
+  if test "$PYTHON" != "none"; then
+    AC_MSG_NOTICE([Configuring python swig binding])
 
-    SWIG_PY_COMPILE="none"
-    SWIG_PY_LINK="none"
-    if test "$PYTHON" != "none"; then
-      AC_MSG_NOTICE([Configuring python swig binding])
+    AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
+      ac_cv_python_includes="`$PYTHON ${abs_srcdir}/build/get-py-info.py --includes`"
+    ])
+    SWIG_PY_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_python_includes"
 
-      AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
-        ac_cv_python_includes="`$PYTHON ${abs_srcdir}/build/get-py-info.py --includes`"
-      ])
-      SWIG_PY_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_python_includes"
+    if test "$ac_cv_python_includes" = "none"; then
+      AC_MSG_WARN([python bindings cannot be built without distutils module])
+    fi
 
-      if test "$ac_cv_python_includes" = "none"; then
-        AC_MSG_WARN([python bindings cannot be built without distutils module])
-      fi
+    AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
+      ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
+    ])
+    SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
 
-      AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
-        ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
-      ])
-      SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
+    AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
+      ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
+    ])
+    SWIG_PY_LINK="$ac_cv_python_link"
 
-      AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
-        ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
-      ])
-      SWIG_PY_LINK="$ac_cv_python_link"
+    AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
+      ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
+    ])
+    SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
 
-      AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
-        ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
-      ])
-      SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
-
-      dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
-      dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
-      dnl thus the egrep patterns have a + in them.
-      SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
-      CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-      AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
-                     [svn_cv_pycfmt_apr_int64_t], [
-        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-          AC_EGREP_CPP([MaTcHtHiS +\"lld\" +EnDeNd],
-                       [#include <apr.h>
-                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                       [svn_cv_pycfmt_apr_int64_t="L"])
-        fi
-        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-          AC_EGREP_CPP([MaTcHtHiS +\"ld\" +EnDeNd],r
-                       [#include <apr.h>
-                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                       [svn_cv_pycfmt_apr_int64_t="l"])
-        fi
-        if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-          AC_EGREP_CPP([MaTcHtHiS +\"d\" +EnDeNd],
-                       [#include <apr.h>
-                        MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                       [svn_cv_pycfmt_apr_int64_t="i"])
-        fi
-      ])
-      CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
+    dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
+    dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
+    dnl thus the egrep patterns have a + in them.
+    SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
+    CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
+    AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
+                   [svn_cv_pycfmt_apr_int64_t], [
       if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-        AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
+        AC_EGREP_CPP([MaTcHtHiS +\"lld\" +EnDeNd],
+                     [#include <apr.h>
+                      MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                     [svn_cv_pycfmt_apr_int64_t="L"])
       fi
-      AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
-                         ["$svn_cv_pycfmt_apr_int64_t"],
-                         [Define to the Python/C API format character suitable]
-                         [ for apr_int64_t])
+      if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+        AC_EGREP_CPP([MaTcHtHiS +\"ld\" +EnDeNd],r
+                     [#include <apr.h>
+                      MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                     [svn_cv_pycfmt_apr_int64_t="l"])
+      fi
+      if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+        AC_EGREP_CPP([MaTcHtHiS +\"d\" +EnDeNd],
+                     [#include <apr.h>
+                      MaTcHtHiS APR_INT64_T_FMT EnDeNd],
+                     [svn_cv_pycfmt_apr_int64_t="i"])
+      fi
+    ])
+    CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
+    if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
+      AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
     fi
+    AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
+                       ["$svn_cv_pycfmt_apr_int64_t"],
+                       [Define to the Python/C API format character suitable]
+                       [ for apr_int64_t])
+  fi
 
-    if test "$PERL" != "none"; then
-      AC_MSG_CHECKING([perl version])
-      dnl Note that the q() bit is there to avoid unbalanced brackets
-      dnl which m4 really doesn't like.
-      PERL_VERSION="`$PERL -e 'q([[); print $]] * 1000000,$/;'`"
-      AC_MSG_RESULT([$PERL_VERSION])
-      if test "$PERL_VERSION" -ge "5008000"; then
-        SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
-        SWIG_PL_LINK="`$PERL -MExtUtils::Embed -e ldopts`"
-        SWIG_PL_LINK="`SVN_REMOVE_STANDARD_LIB_DIRS($SWIG_PL_LINK)`"
-      else
-        AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
-      fi
+  if test "$PERL" != "none"; then
+    AC_MSG_CHECKING([perl version])
+    dnl Note that the q() bit is there to avoid unbalanced brackets
+    dnl which m4 really doesn't like.
+    PERL_VERSION="`$PERL -e 'q([[); print $]] * 1000000,$/;'`"
+    AC_MSG_RESULT([$PERL_VERSION])
+    if test "$PERL_VERSION" -ge "5008000"; then
+      SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
+      SWIG_PL_LINK="`$PERL -MExtUtils::Embed -e ldopts`"
+      SWIG_PL_LINK="`SVN_REMOVE_STANDARD_LIB_DIRS($SWIG_PL_LINK)`"
+    else
+      AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
     fi
+  fi
 
-    SWIG_RB_COMPILE="none"
-    SWIG_RB_LINK="none"
-    if test "$RUBY" != "none"; then
-      rbconfig="$RUBY -rrbconfig -e "
+  SWIG_RB_COMPILE="none"
+  SWIG_RB_LINK="none"
+  if test "$RUBY" != "none"; then
+    rbconfig="$RUBY -rrbconfig -e "
 
-      for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
-                      rubyhdrdir rubyarchhdrdir sitedir sitelibdir sitearchdir libdir
-      do
-        rbconfig_tmp=`$rbconfig "print RbConfig::CONFIG@<:@'$var_name'@:>@"`
-        eval "rbconfig_$var_name=\"$rbconfig_tmp\""
-      done
+    for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
+                    rubyhdrdir rubyarchhdrdir sitedir sitelibdir sitearchdir libdir
+    do
+      rbconfig_tmp=`$rbconfig "print RbConfig::CONFIG@<:@'$var_name'@:>@"`
+      eval "rbconfig_$var_name=\"$rbconfig_tmp\""
+    done
 
-      AC_MSG_NOTICE([Configuring Ruby SWIG binding])
+    AC_MSG_NOTICE([Configuring Ruby SWIG binding])
 
-      AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
-      if test -d "$rbconfig_rubyhdrdir"; then
-        dnl Ruby >=1.9
-        svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward"
-        if test -d "$rbconfig_rubyarchhdrdir"; then
-          dnl Ruby >=2.0
-          svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyarchhdrdir"
-        else
-          svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyhdrdir/$rbconfig_arch"
-        fi
+    AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
+    if test -d "$rbconfig_rubyhdrdir"; then
+      dnl Ruby >=1.9
+      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward"
+      if test -d "$rbconfig_rubyarchhdrdir"; then
+        dnl Ruby >=2.0
+        svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyarchhdrdir"
       else
-        dnl Ruby 1.8
-        svn_cv_ruby_includes="-I. -I$rbconfig_archdir"
+        svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyhdrdir/$rbconfig_arch"
       fi
-      ])
-      SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
+    else
+      dnl Ruby 1.8
+      svn_cv_ruby_includes="-I. -I$rbconfig_archdir"
+    fi
+    ])
+    SWIG_RB_INCLUDES="\$(SWIG_INCLUDES) $svn_cv_ruby_includes"
 
-      AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
-        svn_cv_ruby_compile="$rbconfig_CC $CFLAGS"
-      ])
-      SWIG_RB_COMPILE="$svn_cv_ruby_compile"
-      SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-ansi])
-      SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-std=c89])
-      SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-std=c90])
-      dnl FIXME: Check that the compiler for Ruby actually supports this flag
-      SWIG_RB_COMPILE="$SWIG_RB_COMPILE -Wno-int-to-pointer-cast"
+    AC_CACHE_CHECK([how to compile Ruby extensions], [svn_cv_ruby_compile],[
+      svn_cv_ruby_compile="$rbconfig_CC $CFLAGS"
+    ])
+    SWIG_RB_COMPILE="$svn_cv_ruby_compile"
+    SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-ansi])
+    SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-std=c89])
+    SVN_STRIP_FLAG([SWIG_RB_COMPILE], [-std=c90])
+    dnl FIXME: Check that the compiler for Ruby actually supports this flag
+    SWIG_RB_COMPILE="$SWIG_RB_COMPILE -Wno-int-to-pointer-cast"
 
-      AC_CACHE_CHECK([how to link Ruby extensions], [svn_cv_ruby_link],[
-        svn_cv_ruby_link="`$RUBY -e 'ARGV.shift; print ARGV.join(%q( ))' \
-                             $rbconfig_LDSHARED`"
-        svn_cv_ruby_link="$rbconfig_CC $svn_cv_ruby_link"
-        svn_cv_ruby_link="$svn_cv_ruby_link -shrext .$rbconfig_DLEXT"
-      ])
-      SWIG_RB_LINK="$svn_cv_ruby_link"
+    AC_CACHE_CHECK([how to link Ruby extensions], [svn_cv_ruby_link],[
+      svn_cv_ruby_link="`$RUBY -e 'ARGV.shift; print ARGV.join(%q( ))' \
+                           $rbconfig_LDSHARED`"
+      svn_cv_ruby_link="$rbconfig_CC $svn_cv_ruby_link"
+      svn_cv_ruby_link="$svn_cv_ruby_link -shrext .$rbconfig_DLEXT"
+    ])
+    SWIG_RB_LINK="$svn_cv_ruby_link"
 
-      AC_CACHE_CHECK([how to link Ruby libraries], [ac_cv_ruby_libs], [
-        ac_cv_ruby_libs="$rbconfig_LIBRUBYARG $rbconfig_LIBS"
-      ])
-      SWIG_RB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_ruby_libs)`"
+    AC_CACHE_CHECK([how to link Ruby libraries], [ac_cv_ruby_libs], [
+      ac_cv_ruby_libs="$rbconfig_LIBRUBYARG $rbconfig_LIBS"
+    ])
+    SWIG_RB_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_ruby_libs)`"
 
-      AC_MSG_CHECKING([for rb_errinfo])
-      old_CFLAGS="$CFLAGS"
-      old_LIBS="$LIBS"
-      CFLAGS="$CFLAGS $svn_cv_ruby_includes"
-      SVN_STRIP_FLAG([CFLAGS], [-ansi])
-      SVN_STRIP_FLAG([CFLAGS], [-std=c89])
-      SVN_STRIP_FLAG([CFLAGS], [-std=c90])
-      LIBS="$SWIG_RB_LIBS"
-      AC_LINK_IFELSE([AC_LANG_SOURCE([[
+    AC_MSG_CHECKING([for rb_errinfo])
+    old_CFLAGS="$CFLAGS"
+    old_LIBS="$LIBS"
+    CFLAGS="$CFLAGS $svn_cv_ruby_includes"
+    SVN_STRIP_FLAG([CFLAGS], [-ansi])
+    SVN_STRIP_FLAG([CFLAGS], [-std=c89])
+    SVN_STRIP_FLAG([CFLAGS], [-std=c90])
+    LIBS="$SWIG_RB_LIBS"
+    AC_LINK_IFELSE([AC_LANG_SOURCE([[
 #include <ruby.h>
 int main()
 {rb_errinfo();}]])], have_rb_errinfo="yes", have_rb_errinfo="no")
-      if test "$have_rb_errinfo" = "yes"; then
-        AC_MSG_RESULT([yes])
-        AC_DEFINE([HAVE_RB_ERRINFO], [1],
-                  [Define to 1 if you have the `rb_errinfo' function.])
-      else
-        AC_MSG_RESULT([no])
-      fi
-      CFLAGS="$old_CFLAGS"
-      LIBS="$old_LIBS"
-
-      AC_CACHE_VAL([svn_cv_ruby_sitedir],[
-        svn_cv_ruby_sitedir="$rbconfig_sitedir"
-      ])
-      AC_ARG_WITH([ruby-sitedir],
-      AS_HELP_STRING([--with-ruby-sitedir=SITEDIR],
-                                 [install Ruby bindings in SITEDIR
-                                  (default is same as ruby's one)]),
-      [svn_ruby_installdir="$withval"],
-      [svn_ruby_installdir="$svn_cv_ruby_sitedir"])
-
-      AC_MSG_CHECKING([where to install Ruby scripts])
-      AC_CACHE_VAL([svn_cv_ruby_sitedir_libsuffix],[
-        svn_cv_ruby_sitedir_libsuffix="`echo "$rbconfig_sitelibdir" | \
-                                          $SED -e "s,^$rbconfig_sitedir,,"`"
-      ])
-      SWIG_RB_SITE_LIB_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_libsuffix}"
-      AC_MSG_RESULT([$SWIG_RB_SITE_LIB_DIR])
-
-      AC_MSG_CHECKING([where to install Ruby extensions])
-      AC_CACHE_VAL([svn_cv_ruby_sitedir_archsuffix],[
-        svn_cv_ruby_sitedir_archsuffix="`echo "$rbconfig_sitearchdir" | \
-                                          $SED -e "s,^$rbconfig_sitedir,,"`"
-      ])
-      SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
-      AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])
-
-      AC_MSG_CHECKING([how to use output level for Ruby bindings tests])
-      AC_CACHE_VAL([svn_cv_ruby_test_verbose],[
-        svn_cv_ruby_test_verbose="normal"
-      ])
-      AC_ARG_WITH([ruby-test-verbose],
-      AS_HELP_STRING([--with-ruby-test-verbose=LEVEL],
-                                 [how to use output level for Ruby bindings tests
-                                  (default is normal)]),
-      [svn_ruby_test_verbose="$withval"],
-                    [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
-        SWIG_RB_TEST_VERBOSE="$svn_ruby_test_verbose"
-        AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
+    if test "$have_rb_errinfo" = "yes"; then
+      AC_MSG_RESULT([yes])
+      AC_DEFINE([HAVE_RB_ERRINFO], [1],
+                [Define to 1 if you have the `rb_errinfo' function.])
+    else
+      AC_MSG_RESULT([no])
     fi
+    CFLAGS="$old_CFLAGS"
+    LIBS="$old_LIBS"
+
+    AC_CACHE_VAL([svn_cv_ruby_sitedir],[
+      svn_cv_ruby_sitedir="$rbconfig_sitedir"
+    ])
+    AC_ARG_WITH([ruby-sitedir],
+    AS_HELP_STRING([--with-ruby-sitedir=SITEDIR],
+                               [install Ruby bindings in SITEDIR
+                                (default is same as ruby's one)]),
+    [svn_ruby_installdir="$withval"],
+    [svn_ruby_installdir="$svn_cv_ruby_sitedir"])
+
+    AC_MSG_CHECKING([where to install Ruby scripts])
+    AC_CACHE_VAL([svn_cv_ruby_sitedir_libsuffix],[
+      svn_cv_ruby_sitedir_libsuffix="`echo "$rbconfig_sitelibdir" | \
+                                        $SED -e "s,^$rbconfig_sitedir,,"`"
+    ])
+    SWIG_RB_SITE_LIB_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_libsuffix}"
+    AC_MSG_RESULT([$SWIG_RB_SITE_LIB_DIR])
+
+    AC_MSG_CHECKING([where to install Ruby extensions])
+    AC_CACHE_VAL([svn_cv_ruby_sitedir_archsuffix],[
+      svn_cv_ruby_sitedir_archsuffix="`echo "$rbconfig_sitearchdir" | \
+                                        $SED -e "s,^$rbconfig_sitedir,,"`"
+    ])
+    SWIG_RB_SITE_ARCH_DIR="${svn_ruby_installdir}${svn_cv_ruby_sitedir_archsuffix}"
+    AC_MSG_RESULT([$SWIG_RB_SITE_ARCH_DIR])
+
+    AC_MSG_CHECKING([how to use output level for Ruby bindings tests])
+    AC_CACHE_VAL([svn_cv_ruby_test_verbose],[
+      svn_cv_ruby_test_verbose="normal"
+    ])
+    AC_ARG_WITH([ruby-test-verbose],
+    AS_HELP_STRING([--with-ruby-test-verbose=LEVEL],
+                               [how to use output level for Ruby bindings tests
+                                (default is normal)]),
+    [svn_ruby_test_verbose="$withval"],
+                  [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
+      SWIG_RB_TEST_VERBOSE="$svn_ruby_test_verbose"
+      AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
   fi
   AC_SUBST(SWIG)
   AC_SUBST(SWIG_PY_INCLUDES)
