@@ -730,7 +730,8 @@ def unrelated_changed_special_status(sbox):
 
   os.chdir(os.path.join(sbox.wc_dir, 'A/D/H'))
 
-  open('chi', 'a').write('random local mod')
+  with open('chi', 'a') as f:
+    f.write('random local mod')
   os.unlink('psi')
   os.symlink('omega', 'psi') # omega is versioned!
   svntest.main.run_svn(None, 'changelist', 'chi cl', 'chi')

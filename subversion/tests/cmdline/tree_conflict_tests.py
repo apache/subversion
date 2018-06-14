@@ -1096,13 +1096,15 @@ def at_directory_external(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # r3: modify ^/A/B/E/alpha
-  open(sbox.ospath('A/B/E/alpha'), 'a').write('This is still A/B/E/alpha.\n')
+  with open(sbox.ospath('A/B/E/alpha'), 'a') as f:
+    f.write('This is still A/B/E/alpha.\n')
   svntest.main.run_svn(None, 'commit', '-m', 'file mod', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
   merge_rev = svntest.main.youngest(sbox.repo_dir)
 
   # r4: create ^/A/B/E/alpha2
-  open(sbox.ospath('A/B/E/alpha2'), 'a').write("This is the file 'alpha2'.\n")
+  with open(sbox.ospath('A/B/E/alpha2'), 'a') as f:
+    f.write("This is the file 'alpha2'.\n")
   svntest.main.run_svn(None, 'add', sbox.ospath('A/B/E/alpha2'))
   svntest.main.run_svn(None, 'commit', '-m', 'file add', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)

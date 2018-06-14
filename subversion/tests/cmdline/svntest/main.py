@@ -982,7 +982,8 @@ def file_write(path, contents, mode='w'):
   which is (w)rite by default."""
 
   if sys.version_info < (3, 0):
-    open(path, mode).write(contents)
+    with open(path, mode) as f:
+      f.write(contents)
   else:
     # Python 3:  Write data in the format required by MODE, i.e. byte arrays
     #            to 'b' files, utf-8 otherwise."""
@@ -994,9 +995,11 @@ def file_write(path, contents, mode='w'):
         contents = contents.decode("utf-8")
 
     if isinstance(contents, str):
-      codecs.open(path, mode, "utf-8").write(contents)
+      with codecs.open(path, mode, "utf-8") as f:
+        f.write(contents)
     else:
-      open(path, mode).write(contents)
+      with open(path, mode) as f:
+        f.write(contents)
 
 # For making local mods to files
 def file_append(path, new_text):
@@ -1012,7 +1015,8 @@ def file_append_binary(path, new_text):
 def file_substitute(path, contents, new_contents):
   """Replace the CONTENTS in the file at PATH using the NEW_CONTENTS"""
   fcontent = open(path, 'r').read().replace(contents, new_contents)
-  open(path, 'w').write(fcontent)
+  with open(path, 'w') as f:
+    f.write(fcontent)
 
 # For setting up authz, hooks and making other tweaks to created repos
 def _post_create_repos(path, minor_version = None):
