@@ -1662,6 +1662,8 @@ svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
                             apply_file_visitor, &baton,
                             scratch_pool));
 
+  svn_io_sleep_for_timestamps(shelf_version->shelf->wc_root_abspath,
+                              scratch_pool);
   return SVN_NO_ERROR;
 }
 
