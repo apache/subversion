@@ -371,7 +371,7 @@ def shelve_binary_file_mod(sbox):
 
   def modifier(sbox):
     for f in mod_files:
-      sbox.simple_append(f, '\5\4\3\2\1\0', truncate=True)
+      sbox.simple_append(f, '\6\5\4\3\2\1\0', truncate=True)
 
   shelve_unshelve(sbox, modifier)
 
@@ -435,7 +435,7 @@ def shelve_binary_file_replace(sbox):
   def modifier(sbox):
     for f in mod_files:
       sbox.simple_rm(f)
-      sbox.simple_add_text('\5\4\3\2\1\0', f)
+      sbox.simple_add_text('\6\5\4\3\2\1\0', f)
 
   shelve_unshelve(sbox, modifier)
 
@@ -756,8 +756,8 @@ def unshelve_undeclared_binary_mod_conflict(sbox):
   "unshelve undeclared binary mod conflict"
 
   orig_contents='\1\2\3\4\5'
-  mod1_contents='\1\6\3\4\5'
-  mod2_contents='\1\7\3\4\5'
+  mod1_contents='\1\2\2\3\4\5'
+  mod2_contents='\1\2\3\4\3\4\5'
   merged_contents = '<<<<<<< .working\n' + mod2_contents + '||||||| .merge-left\n' + orig_contents + '=======\n' + mod1_contents + '>>>>>>> .merge-right\n'
 
   def setup(sbox):
@@ -786,8 +786,8 @@ def unshelve_binary_mod_conflict(sbox):
   "unshelve binary mod conflict"
 
   orig_contents='\1\2\3\4\5'
-  mod1_contents='\1\6\3\4\5'
-  mod2_contents='\1\7\3\4\5'
+  mod1_contents='\1\2\2\3\4\5'
+  mod2_contents='\1\2\3\4\3\4\5'
 
   def setup(sbox):
     sbox.simple_append('A/mu', orig_contents, truncate=True)
