@@ -168,7 +168,8 @@ class Sandbox:
                or open(self.authz_file,'r').read() != default_authz)):
 
         tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
-        open(tmp_authz_file, 'w').write(default_authz)
+        with open(tmp_authz_file, 'w') as f:
+          f.write(default_authz)
         shutil.move(tmp_authz_file, self.authz_file)
 
   def authz_name(self, repo_dir=None):

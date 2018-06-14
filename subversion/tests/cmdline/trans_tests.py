@@ -814,7 +814,8 @@ def props_only_file_update(sbox):
                       ]
 
   # Create r2 with iota's contents and svn:keywords modified
-  open(iota_path, 'w').writelines(content)
+  with open(iota_path, 'w') as f:
+    f.writelines(content)
   svntest.main.run_svn(None, 'propset', 'svn:keywords', 'Author', iota_path)
 
   expected_output = wc.State(wc_dir, {
@@ -831,7 +832,8 @@ def props_only_file_update(sbox):
   # Create r3 that drops svn:keywords
 
   # put the content back to its untranslated form
-  open(iota_path, 'w').writelines(content)
+  with open(iota_path, 'w') as f:
+    f.writelines(content)
 
   svntest.main.run_svn(None, 'propdel', 'svn:keywords', iota_path)
 

@@ -1949,7 +1949,8 @@ def modified_modulo_translation(sbox):
   sbox.simple_commit()
 
   # CRLF it.
-  open(sbox.ospath('iota'), 'wb').write("This is the file 'iota'.\r\n")
+  with open(sbox.ospath('iota'), 'wb') as f:
+    f.write("This is the file 'iota'.\r\n")
 
   # Run status.  Expect some output.
   # TODO: decide how such files should show in the output; whether they

@@ -256,7 +256,8 @@ def patch_format(repo_dir, shard_size):
 
   new_contents = b"\n".join(processed_lines)
   os.chmod(format_path, svntest.main.S_ALL_RW)
-  open(format_path, 'wb').write(new_contents)
+  with open(format_path, 'wb') as f:
+    f.write(new_contents)
 
 def is_sharded(repo_dir):
   """Return whether the FSFS repository REPO_DIR is sharded."""
@@ -3459,7 +3460,8 @@ def load_from_file(sbox):
   sbox.build(empty=True)
 
   file = sbox.get_tempname()
-  open(file, 'wb').writelines(clean_dumpfile())
+  with open(file, 'wb') as f:
+    f.writelines(clean_dumpfile())
   svntest.actions.run_and_verify_svnadmin2(None, [],
                                            0, 'load', '--file', file,
                                            '--ignore-uuid', sbox.repo_dir)

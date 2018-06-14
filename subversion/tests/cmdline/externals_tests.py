@@ -3871,12 +3871,14 @@ def copy_pin_externals_whitespace_dir(sbox):
   extdef = sbox.get_tempname('extdef')
   info = sbox.get_tempname('info')
 
-  open(extdef, 'w').write(
+  with open(extdef, 'w') as f:
+    f.write(
       '"' + ss_path +'/deps/sqlite"  ext/sqlite\n' +
       '"^/deps/A P R" \'ext/A P R\'\n' +
       '^/deps/B\ D\ B\' ext/B\ D\ B\'\n' +
       repo_url + '/deps/wors%23+t ext/wors#+t')
-  open(info, 'w').write('info\n')
+  with open(info, 'w') as f:
+    f.write('info\n')
 
   svntest.actions.run_and_verify_svnmucc(None, [], '-U', repo_url,
                                          'mkdir', 'trunk',

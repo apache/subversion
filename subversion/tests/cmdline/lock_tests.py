@@ -1571,7 +1571,8 @@ def cp_isnt_ro(sbox):
   mu2_path = sbox.ospath('A/mu2')
   mu3_path = sbox.ospath('A/mu3')
   kappa_path = sbox.ospath('kappa')
-  open(kappa_path, 'w').write("This is the file 'kappa'.\n")
+  with open(kappa_path, 'w') as f:
+    f.write("This is the file 'kappa'.\n")
 
   ## added file
   sbox.simple_add('kappa')

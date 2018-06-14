@@ -1550,11 +1550,14 @@ def revert_with_unversioned_targets(sbox):
   psi_contents = "modified psi\n"
 
   # touch delta
-  open(delta_path, 'w').write(delta_contents)
+  with open(delta_path, 'w') as f:
+    f.write(delta_contents)
 
   # modify chi psi
-  open(chi_path, 'w').write(chi_contents)
-  open(psi_path, 'w').write(psi_contents)
+  with open(chi_path, 'w') as f:
+    f.write(chi_contents)
+  with open(psi_path, 'w') as f:
+    f.write(psi_contents)
 
   # revert
   expected_output = svntest.verify.UnorderedOutput([
