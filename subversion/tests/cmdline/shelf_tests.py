@@ -662,6 +662,10 @@ def refuse_to_shelve_conflict(sbox):
 #----------------------------------------------------------------------
 
 def unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state):
+  """Run a test scenario in which 'unshelve' needs to merge some shelved
+     changes made by modifier1() with some committed changes made by
+     modifier2(). tweak_expected_state() must produce the expected WC state.
+  """
   sbox.build()
   was_cwd = os.getcwd()
   os.chdir(sbox.wc_dir)
