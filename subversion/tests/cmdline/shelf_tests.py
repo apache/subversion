@@ -605,16 +605,19 @@ def list_shelves(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelf-save', 'bar', '-m', 'log msg')
 
+  # We don't check for time-ordering of the shelves. If we want to do so, we
+  # would need to sleep for timestamps to differ, between creating them.
+
   # a quiet list
-  expected_out = svntest.verify.RegexListOutput(['foo', 'bar'])
+  expected_out = svntest.verify.UnorderedRegexListOutput(['foo', 'bar'])
   svntest.actions.run_and_verify_svn(expected_out, [],
                                      'shelf-list', '-q')
 
   # a detailed list
-  expected_out = svntest.verify.RegexListOutput(['foo .* 1 path.*',
-                                                 ' log msg',
-                                                 'bar .* 1 path.*',
-                                                 ' log msg'])
+  expected_out = svntest.verify.UnorderedRegexListOutput(['foo .* 1 path.*',
+                                                          ' log msg',
+                                                          'bar .* 1 path.*',
+                                                          ' log msg'])
   svntest.actions.run_and_verify_svn(expected_out, [],
                                      'shelf-list')
 
