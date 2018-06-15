@@ -140,11 +140,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1816365
-   Duplicate proxy_password to the correct member of the new session, instead of
-   overwriting proxy_username.
-   Justification:
-     Incorrect proxy settings can block user's access to the repo
-   Votes:
-     +1: jamessan, stsp, philip
