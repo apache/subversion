@@ -5348,9 +5348,9 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_OPTS_XFAIL(test_cherry_pick_post_move_edit,
                         "cherry-pick edit from moved file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir_across_branches,
-                        "merge incoming dir move across branches"),
-    SVN_TEST_OPTS_XFAIL(test_update_incoming_delete_locally_deleted_file,
-                        "update incoming delete to deleted file (#4739)"),
+                       "merge incoming dir move across branches"),
+    SVN_TEST_OPTS_PASS(test_update_incoming_delete_locally_deleted_file,
+                       "update incoming delete to deleted file (#4739)"),
     SVN_TEST_NULL
   };
 
