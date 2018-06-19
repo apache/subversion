@@ -14,6 +14,7 @@ Status of 1.10.1:
 
 Candidate changes:
 ==================
+
  * r1833621
    Since on Windows Subversion does not handle symlinks, never check for reparse points.
    Justification:
@@ -36,7 +37,7 @@ Candidate changes:
      The generated .pc file references files libgnome-keyring, which
      is not used and may not exist.
    Votes:
-     +1: jorton
+     +1: jorton, stsp
 
 Veto-blocked changes:
 =====================
