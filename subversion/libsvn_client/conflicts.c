@@ -2684,10 +2684,10 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
    {
      end_rev = yca_loc->rev;
 
-    /* END_REV must be smaller than RELATED_PEG_REV, else the call
-       to find_moves_in_natural_history() below will error out. */
-    if (end_rev >= related_peg_rev)
-      end_rev = related_peg_rev > 0 ? related_peg_rev - 1 : 0;
+    /* END_REV must be smaller than PARENT_PEG_REV, else the call to
+     * find_revision_for_suspected_deletion() below will abort. */
+    if (end_rev >= parent_peg_rev)
+      end_rev = parent_peg_rev > 0 ? parent_peg_rev - 1 : 0;
    }
   else
     end_rev = 0; /* ### We might walk through all of history... */
@@ -2708,6 +2708,18 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
        * should do we something else for reverse-merges? */
 
       victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+
+      if (yca_loc)
+       {
+          end_rev = yca_loc->rev;
+
+          /* END_REV must be smaller than RELATED_PEG_REV, else the call
+             to find_moves_in_natural_history() below will error out. */
+          if (end_rev >= related_peg_rev)
+            end_rev = related_peg_rev > 0 ? related_peg_rev - 1 : 0;
+       }
+      else
+        end_rev = 0; /* ### We might walk through all of history... */
 
       SVN_ERR(svn_ra_check_path(ra_session, "", related_peg_rev,
                                 &related_node_kind, scratch_pool));
