@@ -52,6 +52,18 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1830083, r1833864, r1833866
+   Fix issue #4739, "Accept incoming deletion" option doing nothing
+   for a locally deleted file
+   Justification:
+     Fixes undesirable conflict resolver behaviour.
+   Notes:
+     r1830083 adds a regression test
+     r1833864 fixes the issue
+     r1833866 is a small follow-up fix
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
