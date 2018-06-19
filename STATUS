@@ -39,6 +39,19 @@ Candidate changes:
    Votes:
      +1: jorton, stsp
 
+ * r1833836
+   Fix issue #4740, "conflict resolver searches too far back ..."
+   Justification:
+     The current behaviour is hard-coded to traverse all of history in
+     a "local missing vs incoming edit" situation. This is impractical
+     on repositories with a large number of revisions.
+     Easy fix which just runs an already existing YCA search a bit
+     earlier, falling back to full traversal if no YCA can be found.
+     User complained and provided a reproduction script:
+     https://svn.haxx.se/users/archive-2018-04/0060.shtml
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
