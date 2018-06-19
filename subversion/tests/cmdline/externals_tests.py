@@ -4410,7 +4410,17 @@ def update_dir_external_exclude(sbox):
   # Create an external in r2
   sbox.simple_propset('svn:externals', '^/A/D/H X', 'A/B/E')
   sbox.simple_commit()
-  sbox.simple_update()
+
+  # Update to fetch externals
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E/X/chi'       : Item(status='A '),
+    'A/B/E/X/omega'     : Item(status='A '),
+    'A/B/E/X/psi'       : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        [], False,
+                                        sbox.ospath('A/B/E'))
 
   # Now make A/B/E shallow by updating with "--set-depth exclude"
   expected_output = svntest.wc.State(sbox.wc_dir, {
