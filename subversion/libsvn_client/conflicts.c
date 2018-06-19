@@ -8169,7 +8169,7 @@ verify_local_state_for_incoming_delete(svn_client_conflict_t *conflict,
                                      conflict->local_abspath),
                                    scratch_pool));
 
-      if (local_change == svn_wc_conflict_action_edit)
+      if (local_change == svn_wc_conflict_reason_edited)
         SVN_ERR(ensure_local_edit_vs_incoming_deletion_copied_state(
                   details, operation, wcroot_abspath, conflict, ctx,
                   scratch_pool));
