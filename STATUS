@@ -39,7 +39,7 @@ Candidate changes:
    Votes:
      +1: jorton, stsp
 
- * r1833836
+ * r1833836, r1833842
    Fix issue #4740, "conflict resolver searches too far back ..."
    Justification:
      The current behaviour is hard-coded to traverse all of history in
