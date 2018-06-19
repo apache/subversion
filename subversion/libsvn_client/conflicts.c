@@ -4899,6 +4899,7 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
           const char *parent_repos_relpath;
           svn_revnum_t parent_peg_rev;
           svn_revnum_t deleted_rev;
+          svn_revnum_t end_rev;
           const char *deleted_rev_author;
           svn_node_kind_t replacing_node_kind;
           apr_array_header_t *moves;
@@ -4931,12 +4932,15 @@ conflict_tree_get_details_incoming_delete(svn_client_conflict_t *conflict,
               related_peg_rev = SVN_INVALID_REVNUM;
             }
 
+          end_rev = (new_kind == svn_node_none ? 0 : old_rev);
+          if (end_rev >= parent_peg_rev)
+            end_rev = (parent_peg_rev > 0 ? parent_peg_rev - 1 : 0);
+
           SVN_ERR(find_revision_for_suspected_deletion(
                     &deleted_rev, &deleted_rev_author, &replacing_node_kind,
                     &moves, conflict,
                     svn_dirent_basename(conflict->local_abspath, scratch_pool),
-                    parent_repos_relpath, parent_peg_rev,
-                    new_kind == svn_node_none ? 0 : old_rev,
+                    parent_repos_relpath, parent_peg_rev, end_rev,
                     related_repos_relpath, related_peg_rev,
                     ctx, conflict->pool, scratch_pool));
           if (deleted_rev == SVN_INVALID_REVNUM)
