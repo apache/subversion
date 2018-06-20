@@ -902,7 +902,7 @@ svn_cl__shelf_list(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   apr_array_header_t *targets = NULL;
-  apr_pool_t *subpool = svn_pool_create(pool);
+  apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
@@ -915,11 +915,13 @@ svn_cl__shelf_list(apr_getopt_t *os,
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
-      svn_pool_clear(subpool);
+      svn_pool_clear(iterpool);
       SVN_ERR(shelves_list(target,
                            opt_state->quiet,
-                           ctx, pool));
+                           ctx, iterpool));
     }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
