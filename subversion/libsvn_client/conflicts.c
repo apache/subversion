@@ -9551,13 +9551,18 @@ configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
                                  conflict->local_abspath, scratch_pool,
                                  scratch_pool));
       if (operation == svn_wc_operation_merge)
-        description =
-          apr_psprintf(scratch_pool, _("merge '^/%s@%ld' into '%s'"),
-            incoming_new_repos_relpath, incoming_new_pegrev,
-            svn_dirent_local_style(
-              svn_dirent_skip_ancestor(wcroot_abspath,
-                                       conflict->local_abspath),
-              scratch_pool));
+        {
+          if (conflict->tree_conflict_incoming_details == NULL)
+            return SVN_NO_ERROR;
+
+          description =
+            apr_psprintf(scratch_pool, _("merge '^/%s@%ld' into '%s'"),
+              incoming_new_repos_relpath, incoming_new_pegrev,
+              svn_dirent_local_style(
+                svn_dirent_skip_ancestor(wcroot_abspath,
+                                         conflict->local_abspath),
+                scratch_pool));
+        }
       else
         description =
           apr_psprintf(scratch_pool, _("merge local '%s' and '^/%s@%ld'"),
