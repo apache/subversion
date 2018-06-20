@@ -16578,12 +16578,12 @@ svn_wc__db_process_commit_queue(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
-                              svn_wc__db_t *db,
-                              const char *wri_abspath,
-                              const char *repos_relpath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
+svn_wc__db_find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
+                                 svn_wc__db_t *db,
+                                 const char *wri_abspath,
+                                 const char *repos_relpath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *wri_relpath;
