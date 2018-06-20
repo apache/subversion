@@ -1962,9 +1962,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelf-drop", svn_cl__shelf_drop, {"shelf-drop"}, {N_(
      "Delete a shelf.\n"
-     "usage: x-shelf-drop SHELF\n"
+     "usage: x-shelf-drop SHELF [PATH ...]\n"
      "\n"), N_(
-     "  Delete the shelf named SHELF.\n"
+     "  Delete the shelves named SHELF from the working copies containing PATH\n"
+     "  (default PATH is '.')\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
