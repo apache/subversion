@@ -5353,7 +5353,6 @@ test_merge_two_added_dirs_assertion_failure(const svn_test_opts_t *opts,
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
       svn_client_conflict_option_incoming_add_ignore,
-      svn_client_conflict_option_incoming_added_dir_merge,
       svn_client_conflict_option_incoming_added_dir_replace,
       svn_client_conflict_option_incoming_added_dir_replace_and_merge,
       -1 /* end of list */
@@ -5366,7 +5365,6 @@ test_merge_two_added_dirs_assertion_failure(const svn_test_opts_t *opts,
   {
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
-      svn_client_conflict_option_accept_current_wc_state,
       svn_client_conflict_option_accept_current_wc_state,
       svn_client_conflict_option_incoming_add_ignore,
       svn_client_conflict_option_incoming_added_dir_merge,
