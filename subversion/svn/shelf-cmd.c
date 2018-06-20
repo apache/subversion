@@ -1068,18 +1068,28 @@ svn_cl__shelf_drop(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *name;
-  const char *local_abspath;
+  apr_array_header_t *targets = NULL;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int i;
 
   SVN_ERR(get_next_argument(&name, os, pool, pool));
 
-  /* There should be no remaining arguments. */
-  if (os->ind < os->argc)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, 0, NULL);
+  SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
+                                                      opt_state->targets,
+                                                      ctx, FALSE, pool));
+  svn_opt_push_implicit_dot_target(targets, pool);
 
-  SVN_ERR(svn_dirent_get_absolute(&local_abspath, "", pool));
-  SVN_ERR(shelf_drop(name, local_abspath,
-                     opt_state->dry_run, opt_state->quiet,
-                     ctx, pool));
+  for (i = 0; i < targets->nelts; ++i)
+    {
+      const char *target = APR_ARRAY_IDX(targets, i, const char *);
+
+      svn_pool_clear(iterpool);
+      SVN_ERR(shelf_drop(name, target,
+                         opt_state->dry_run, opt_state->quiet,
+                         ctx, iterpool));
+    }
+
+  svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
 }
