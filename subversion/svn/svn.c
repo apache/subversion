@@ -1973,11 +1973,11 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelf-list", svn_cl__shelf_list, {"shelf-list", "shelves"}, {N_(
      "List shelves.\n"
-     "usage: x-shelf-list\n"
+     "usage: x-shelf-list [PATH ...]\n"
      "\n"), N_(
-     "  List shelves. Include the first line of any log message\n"
-     "  and some details about the contents of the shelf, unless '-q' is\n"
-     "  given.\n"
+     "  List shelves for each working copy containing PATH (default is '.')\n"
+     "  Include the first line of any log message and some details about the\n"
+     "  contents of the shelf, unless '-q' is given.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
