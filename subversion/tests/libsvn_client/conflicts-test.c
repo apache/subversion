@@ -5359,6 +5359,7 @@ test_merge_two_added_dirs_assertion_failure(const svn_test_opts_t *opts,
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
   }
 
+  /* This call used to run into an assertion failure (start_rev > end_rev). */
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, pool));
 
   {
@@ -5366,7 +5367,6 @@ test_merge_two_added_dirs_assertion_failure(const svn_test_opts_t *opts,
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
       svn_client_conflict_option_incoming_add_ignore,
-      svn_client_conflict_option_incoming_added_dir_merge,
       svn_client_conflict_option_incoming_added_dir_replace,
       svn_client_conflict_option_incoming_added_dir_replace_and_merge,
       -1 /* end of list */
@@ -5374,21 +5374,22 @@ test_merge_two_added_dirs_assertion_failure(const svn_test_opts_t *opts,
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
   }
 
-  /* Resolve the tree conflict ... */
+  /* Resolve the tree conflict by replace + merge. */
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
-            conflict, svn_client_conflict_option_incoming_add_ignore,
+            conflict,
+            svn_client_conflict_option_incoming_added_dir_replace_and_merge,
             ctx, pool));
 
   /* Check the status. */
   SVN_ERR(svn_wc_status3(&wc_status, ctx->wc_ctx, sbox_wc_path(b, new_dir_path),
                          pool, pool));
-  SVN_TEST_INT_ASSERT(wc_status->kind, svn_node_unknown);
-  SVN_TEST_ASSERT(!wc_status->versioned);
+  SVN_TEST_INT_ASSERT(wc_status->kind, svn_node_dir);
+  SVN_TEST_ASSERT(wc_status->versioned);
   SVN_TEST_ASSERT(!wc_status->conflicted);
-  SVN_TEST_INT_ASSERT(wc_status->node_status, svn_wc_status_none);
-  SVN_TEST_INT_ASSERT(wc_status->text_status, svn_wc_status_none);
+  SVN_TEST_INT_ASSERT(wc_status->node_status, svn_wc_status_replaced);
+  SVN_TEST_INT_ASSERT(wc_status->text_status, svn_wc_status_normal);
   SVN_TEST_INT_ASSERT(wc_status->prop_status, svn_wc_status_none);
-  SVN_TEST_INT_ASSERT(wc_status->actual_kind, svn_node_none);
+  SVN_TEST_INT_ASSERT(wc_status->actual_kind, svn_node_dir);
 
   return SVN_NO_ERROR;
 }
@@ -5485,8 +5486,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming dir move across branches"),
     SVN_TEST_OPTS_PASS(test_update_incoming_delete_locally_deleted_file,
                        "update incoming delete to deleted file (#4739)"),
-    SVN_TEST_OPTS_XFAIL(test_merge_two_added_dirs_assertion_failure,
-                        "merge two added dirs assertion failure (#4744)"),
+    SVN_TEST_OPTS_PASS(test_merge_two_added_dirs_assertion_failure,
+                       "merge two added dirs assertion failure (#4744)"),
     SVN_TEST_NULL
   };
 

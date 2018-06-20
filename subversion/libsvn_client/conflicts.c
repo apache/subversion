@@ -5073,7 +5073,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
   const char *repos_root_url;
   svn_revnum_t old_rev;
   svn_revnum_t new_rev;
-  struct conflict_tree_incoming_add_details *details;
+  struct conflict_tree_incoming_add_details *details = NULL;
   svn_wc_operation_t operation;
 
   SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
@@ -5166,7 +5166,8 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
             }
         }
     }
-  else if (operation == svn_wc_operation_merge)
+  else if (operation == svn_wc_operation_merge &&
+           strcmp(old_repos_relpath, new_repos_relpath) == 0)
     {
       if (old_rev < new_rev)
         {
@@ -5217,7 +5218,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
           details->deleted_rev = SVN_INVALID_REVNUM;
           details->deleted_rev_author = NULL;
         }
-      else
+      else if (old_rev > new_rev)
         {
           /* The merge operation was a reverse-merge.
            * This addition is in fact a deletion, applied in reverse,
@@ -5256,10 +5257,6 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
           details->added_rev_author = NULL;
           details->moves = moves;
         }
-    }
-  else
-    {
-      details = NULL;
     }
 
   conflict->tree_conflict_incoming_details = details;
