@@ -40,6 +40,25 @@
 #include "private/svn_sorts_private.h"
 
 
+/* Open the newest version of SHELF; error if no versions found. */
+static svn_error_t *
+get_newest_version_existing(svn_client_shelf_version_t **shelf_version_p,
+                            svn_client_shelf_t *shelf,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_client_shelf_get_newest_version(shelf_version_p, shelf,
+                                              result_pool, scratch_pool));
+  if (!*shelf_version_p)
+    {
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               _("Shelf '%s': no versions found"),
+                               shelf->name);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Fetch the next argument. */
 static svn_error_t *
 get_next_argument(const char **arg,
@@ -65,10 +84,10 @@ get_next_argument(const char **arg,
  */
 static svn_error_t *
 targets_relative_to_wcs(apr_hash_t **targets_by_wcroot_p,
-                         apr_array_header_t *targets,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *result_pool,
-                         apr_pool_t *scratch_pool)
+                        apr_array_header_t *targets,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool)
 {
   apr_hash_t *targets_by_wcroot = apr_hash_make(result_pool);
   int i;
@@ -167,7 +186,7 @@ compare_shelf_infos_by_mtime(const svn_sort__item_t *a,
   svn_client_shelf_info_t *b_val = b->value;
 
   return (a_val->mtime < b_val->mtime)
-           ? -1 : (a_val->mtime > b_val->mtime) ? 1 : 0;
+    ? -1 : (a_val->mtime > b_val->mtime) ? 1 : 0;
 }
 
 /* Return a list of shelves sorted by their mtime, oldest first.
@@ -268,8 +287,11 @@ shelves_list(const char *local_abspath,
                                              ctx, scratch_pool));
       SVN_ERR(svn_client_shelf_get_newest_version(&shelf_version, shelf,
                                                   scratch_pool, scratch_pool));
-      if (quiet || !shelf_version)
+      if (quiet)
         SVN_ERR(svn_cmdline_printf(scratch_pool, "%s\n", shelf->name));
+      else if (!shelf_version)
+        SVN_ERR(svn_cmdline_printf(scratch_pool, "%-30s no versions\n",
+                                   shelf->name));
       else
         SVN_ERR(stats(shelf, shelf->max_version, shelf_version, time_now,
                       TRUE /*with_logmsg*/, scratch_pool));
@@ -295,7 +317,7 @@ shelf_log(const char *name,
   SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
                                          ctx, scratch_pool));
   SVN_ERR(svn_client_shelf_get_all_versions(&versions, shelf,
-                                        scratch_pool, scratch_pool));
+                                            scratch_pool, scratch_pool));
   for (i = 0; i < versions->nelts; i++)
     {
       svn_client_shelf_version_t *shelf_version
@@ -441,9 +463,9 @@ shelve(int *new_version_p,
   if (! quiet)
     {
       SVN_ERR(svn_cmdline_printf(scratch_pool, keep_local
-        ? _("--- Save a new version of '%s' in WC root '%s'\n")
-        : _("--- Shelve '%s' in WC root '%s'\n"),
-        shelf->name, shelf->wc_root_abspath));
+                                 ? _("--- Save a new version of '%s' in WC root '%s'\n")
+                                 : _("--- Shelve '%s' in WC root '%s'\n"),
+                                 shelf->name, shelf->wc_root_abspath));
       SVN_ERR(stats(shelf, shelf->max_version, previous_version, apr_time_now(),
                     TRUE /*with_logmsg*/, scratch_pool));
     }
@@ -458,7 +480,7 @@ shelve(int *new_version_p,
   if (! quiet)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                keep_local ? _("--- Saving...\n")
-                                          : _("--- Shelving...\n")));
+                               : _("--- Shelving...\n")));
   SVN_ERR(svn_client_shelf_save_new_version3(&new_version, shelf,
                                              paths, depth, changelists,
                                              was_shelved, &sb,
@@ -480,8 +502,8 @@ shelve(int *new_version_p,
     {
       SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
       return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-        keep_local ? _("No local modifications could be saved")
-                   : _("No local modifications could be shelved"));
+                               keep_local ? _("No local modifications could be saved")
+                               : _("No local modifications could be shelved"));
     }
 
   /* Un-apply the changes, if required. */
@@ -631,8 +653,8 @@ shelf_restore(const char *name,
   else
     {
       version = shelf->max_version;
-      SVN_ERR(svn_client_shelf_get_newest_version(&shelf_version, shelf,
-                                                  scratch_pool, scratch_pool));
+      SVN_ERR(get_newest_version_existing(&shelf_version, shelf,
+                                          scratch_pool, scratch_pool));
     }
 
   if (! quiet)
@@ -664,10 +686,10 @@ shelf_restore(const char *name,
     {
       if (version < old_version)
         SVN_ERR(svn_cmdline_printf(scratch_pool,
-                  Q_("restored '%s' version %d and deleted %d newer version\n",
-                     "restored '%s' version %d and deleted %d newer versions\n",
-                     old_version - version),
-                  name, version, old_version - version));
+                                   Q_("restored '%s' version %d and deleted %d newer version\n",
+                                      "restored '%s' version %d and deleted %d newer versions\n",
+                                      old_version - version),
+                                   name, version, old_version - version));
       else
         SVN_ERR(svn_cmdline_printf(scratch_pool,
                                    _("restored '%s' version %d (the newest version)\n"),
@@ -703,8 +725,8 @@ shelf_diff(const char *name,
     }
   else
     {
-      SVN_ERR(svn_client_shelf_get_newest_version(&shelf_version, shelf,
-                                                  scratch_pool, scratch_pool));
+      SVN_ERR(get_newest_version_existing(&shelf_version, shelf,
+                                          scratch_pool, scratch_pool));
     }
 
   SVN_ERR(svn_stream_for_stdout(&stream, scratch_pool));
@@ -807,35 +829,35 @@ svn_cl__shelf_shelve(apr_getopt_t *os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));
   {
-      int new_version;
-      svn_error_t *err;
+    int new_version;
+    svn_error_t *err;
 
-      if (ctx->log_msg_func3)
-        SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
-                                           opt_state, NULL, ctx->config,
-                                           pool));
-      err = shelf_shelve(&new_version, name,
-                         targets, opt_state->depth, opt_state->changelists,
-                         opt_state->revprop_table,
-                         opt_state->keep_local, opt_state->dry_run,
-                         opt_state->quiet, ctx, pool);
-      if (ctx->log_msg_func3)
-        SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
-                                        err, pool));
-      else
-        SVN_ERR(err);
+    if (ctx->log_msg_func3)
+      SVN_ERR(svn_cl__make_log_msg_baton(&ctx->log_msg_baton3,
+                                         opt_state, NULL, ctx->config,
+                                         pool));
+    err = shelf_shelve(&new_version, name,
+                       targets, opt_state->depth, opt_state->changelists,
+                       opt_state->revprop_table,
+                       opt_state->keep_local, opt_state->dry_run,
+                       opt_state->quiet, ctx, pool);
+    if (ctx->log_msg_func3)
+      SVN_ERR(svn_cl__cleanup_log_msg(ctx->log_msg_baton3,
+                                      err, pool));
+    else
+      SVN_ERR(err);
 
       if (! opt_state->quiet)
-        {
-          if (opt_state->keep_local)
-            SVN_ERR(svn_cmdline_printf(pool,
-                                       _("saved '%s' version %d\n"),
-                                       name, new_version));
-          else
-            SVN_ERR(svn_cmdline_printf(pool,
-                                       _("shelved '%s' version %d\n"),
-                                       name, new_version));
-        }
+      {
+        if (opt_state->keep_local)
+          SVN_ERR(svn_cmdline_printf(pool,
+                                     _("saved '%s' version %d\n"),
+                                     name, new_version));
+        else
+          SVN_ERR(svn_cmdline_printf(pool,
+                                     _("shelved '%s' version %d\n"),
+                                     name, new_version));
+      }
   }
 
   return SVN_NO_ERROR;
@@ -970,6 +992,8 @@ shelf_list_by_paths(apr_array_header_t *target_relpaths,
                                              ctx, scratch_pool));
       SVN_ERR(svn_client_shelf_get_newest_version(&shelf_version, shelf,
                                                   scratch_pool, scratch_pool));
+      if (!shelf_version)
+        continue;
       SVN_ERR(svn_client_shelf_paths_changed(&shelf_paths,
                                              shelf_version,
                                              scratch_pool, scratch_pool));
