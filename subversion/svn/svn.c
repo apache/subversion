@@ -1999,9 +1999,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "x-shelf-log", svn_cl__shelf_log, {"shelf-log"}, {N_(
      "Show the versions of a shelf.\n"
-     "usage: x-shelf-log SHELF\n"
+     "usage: x-shelf-log SHELF [PATH...]\n"
      "\n"), N_(
-     "  Show all versions of SHELF.\n"
+     "  Show all versions of SHELF for each working copy containing PATH (the\n"
+     "  default PATH is '.').\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
