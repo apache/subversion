@@ -1694,10 +1694,13 @@ svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
                                      int version_number,
                                      apr_pool_t *scratch_pool)
 {
-  svn_client_shelf_version_t *shelf_version;
+  svn_client_shelf_version_t *shelf_version = NULL;
 
-  SVN_ERR(svn_client_shelf_version_open(&shelf_version, shelf, version_number,
-                                        scratch_pool, scratch_pool));
+  if (version_number > 0)
+    {
+      SVN_ERR(svn_client_shelf_version_open(&shelf_version, shelf, version_number,
+                                            scratch_pool, scratch_pool));
+    }
   SVN_ERR(svn_client_shelf_delete_newer_versions(shelf, shelf_version,
                                                  scratch_pool));
   return SVN_NO_ERROR;
@@ -1939,6 +1942,12 @@ svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
                               FALSE /*verify_truename*/,
                               TRUE /*ignore_enoent*/,
                               result_pool, scratch_pool));
+  if (dirent->kind == svn_node_none)
+    {
+      return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
+                               _("Shelf '%s' version %d not found"),
+                               shelf->name, version_number);
+    }
   shelf_version->mtime = dirent->mtime;
   *shelf_version_p = shelf_version;
   return SVN_NO_ERROR;
