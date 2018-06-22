@@ -78,6 +78,13 @@ Candidate changes:
   Votes:
     +1: stsp
 
+ * r1833465
+   Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
+   Justification:
+     Return an error when the client gets the protocol wrong.
+   Votes:
+     +1: philip
+
 Veto-blocked changes:
 =====================
 
