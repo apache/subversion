@@ -50,7 +50,7 @@ Candidate changes:
      User complained and provided a reproduction script:
      https://svn.haxx.se/users/archive-2018-04/0060.shtml
    Votes:
-     +1: stsp
+     +1: stsp, philip
 
  * r1830083, r1833864, r1833866
    Fix issue #4739, "Accept incoming deletion" option doing nothing
