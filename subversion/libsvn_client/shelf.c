@@ -1,5 +1,5 @@
 /*
- * shelve.c:  implementation of the 'shelve' commands
+ * shelf.c:  implementation of shelving
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
