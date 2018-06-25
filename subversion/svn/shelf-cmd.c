@@ -1,5 +1,5 @@
 /*
- * shelve-cmd.c -- Shelve commands.
+ * shelf-cmd.c -- Shelving commands.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
