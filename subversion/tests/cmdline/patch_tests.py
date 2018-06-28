@@ -7853,6 +7853,7 @@ def patch_mergeinfo_in_regular_prop_format(sbox):
                                        [], True, True,
                                        '--strip', strip_count)
 
+@XFail()
 def patch_empty_prop(sbox):
   "patch empty prop"
   sbox.build(empty=True)
