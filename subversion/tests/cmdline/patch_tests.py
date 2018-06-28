@@ -7853,6 +7853,65 @@ def patch_mergeinfo_in_regular_prop_format(sbox):
                                        [], True, True,
                                        '--strip', strip_count)
 
+def patch_empty_prop(sbox):
+  "patch empty prop"
+  sbox.build(empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = ''
+
+  # start with a file with an empty prop
+  sbox.simple_add_text('', 'f')
+  sbox.simple_propset('p', '', 'f')
+  sbox.simple_commit()
+
+  # a patch that modifies the prop to a non-empty value
+  unidiff_patch = [
+    "--- f\n",
+    "+++ f\n",
+    "\n",
+    "Property changes on: f\n",
+    "___________________________________________________________________\n",
+    "Modified: p\n",
+    "## -0,0 +1 ##\n",
+    "+v\n",
+  ]
+
+  trailing_eol = False
+  if trailing_eol:
+    value = "v\n"
+  else:
+    value = "v"
+    unidiff_patch += ['\ No newline at end of property\n']
+
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
+
+  expected_output = [
+    ' U        %s\n' % sbox.ospath('f'),
+  ]
+
+  expected_disk = svntest.wc.State(wc_dir, {})
+  expected_disk.add({'f': Item(props={'p' : value})})
+  expected_status = svntest.wc.State(wc_dir, {})
+  expected_status.add({'f': Item(status=' M')})
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       False, # dry-run
+                                       )
+
+  svntest.actions.check_prop('p', wc_dir, [value.encode()])
+
+  os.chdir(was_cwd)
+
 ########################################################################
 #Run the tests
 
@@ -7937,6 +7996,7 @@ test_list = [ None,
               patch_missed_trail,
               patch_merge,
               patch_mergeinfo_in_regular_prop_format,
+              patch_empty_prop,
             ]
 
 if __name__ == '__main__':
