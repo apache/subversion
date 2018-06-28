@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import shutil, stat, re, os, logging
+import shutil, stat, re, os, sys, logging
 
 logger = logging.getLogger()
 
@@ -44,7 +44,7 @@ Item = wc.StateItem
 
 #----------------------------------------------------------------------
 
-def shelve_unshelve_verify(sbox):
+def shelve_unshelve_verify(sbox, global_opts=()):
   """Round-trip: shelve; verify all changes are reverted;
      unshelve; verify all changes are restored.
   """
@@ -58,18 +58,18 @@ def shelve_unshelve_verify(sbox):
 
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo')
+                                     'shelve', 'foo', *global_opts)
   virginal_state = svntest.actions.get_virginal_state(wc_dir, 1)
   svntest.actions.run_and_verify_status(wc_dir, virginal_state)
 
   # Unshelve; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
-                                     'unshelve', 'foo')
+                                     'unshelve', 'foo', *global_opts)
   svntest.actions.run_and_verify_status(wc_dir, modified_state)
 
 #----------------------------------------------------------------------
 
-def shelve_unshelve(sbox, modifier):
+def shelve_unshelve(sbox, modifier, global_opts=()):
   """Round-trip: build 'sbox'; apply changes by calling 'modifier(sbox)';
      shelve and unshelve; verify changes are fully reverted and restored.
   """
@@ -82,7 +82,7 @@ def shelve_unshelve(sbox, modifier):
   # Make some changes to the working copy
   modifier(sbox)
 
-  shelve_unshelve_verify(sbox)
+  shelve_unshelve_verify(sbox, global_opts)
 
   os.chdir(was_cwd)
 
@@ -156,6 +156,35 @@ def shelve_from_inner_path(sbox):
 
 #----------------------------------------------------------------------
 
+def shelve_ignores_external_diff(sbox):
+  "shelve ignores external diff"
+
+  def modifier(sbox):
+    sbox.simple_append('A/mu', 'appended mu text')
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.ospath('A'))
+  sbox.wc_dir = '..'
+
+  # Configure an external 'diff-cmd' that doesn't print a diff to stdout.
+  # (This path needs an explicit directory component to avoid searching.)
+  diff_script_path = os.path.join('.', 'diff')
+  svntest.main.create_python_hook_script(diff_script_path, 'import sys\n'
+    'for arg in sys.argv[1:]:\n  print(arg)\n')
+  if sys.platform == 'win32':
+    diff_script_path = "%s.bat" % diff_script_path
+  config_dir_path = sbox.get_tempname(prefix="config-dir")
+  os.mkdir(config_dir_path)
+  with open(os.path.join(config_dir_path, "config"), "w") as config_file:
+    config_file.write("[helpers]\n"
+                      "diff-cmd = %s\n" % diff_script_path)
+
+  modifier(sbox)
+  shelve_unshelve_verify(sbox, global_opts=("--config-dir", config_dir_path))
+
+  os.chdir(was_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -166,6 +195,7 @@ test_list = [ None,
               shelve_adds,
               shelve_deletes,
               shelve_from_inner_path,
+              shelve_ignores_external_diff,
              ]
 
 if __name__ == '__main__':
