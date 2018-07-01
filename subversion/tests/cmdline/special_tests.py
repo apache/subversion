@@ -535,7 +535,7 @@ def diff_symlink_to_dir(sbox):
     "+++ link\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+link A/D\n",
-    "\ No newline at end of file\n",
+    "\\ No newline at end of file\n",
     "\n",
     "Property changes on: link\n",
     "___________________________________________________________________\n",

@@ -4246,7 +4246,7 @@ def patch_git_with_index_line(sbox):
     "+++ b/src/tools/ConsoleRunner/hi.txt\n",
     "@@ -0,0 +1 @@\n",
     "+hihihihihihi\n",
-    "\ No newline at end of file\n",
+    "\\ No newline at end of file\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
@@ -4413,7 +4413,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
     "+++ A/D\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+New file\n",
-    "\ No newline at end of file\n",
+    "\\ No newline at end of file\n",
 
   # Add iota as directory
     "Index: iota\n",
@@ -4426,7 +4426,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
     "Added: k\n",
     "## -0,0 +1 ##\n",
     "+v\n",
-    "\ No newline at end of property\n",
+    "\\ No newline at end of property\n",
   ]))
 
   expected_output = wc.State(wc_dir, {
@@ -6541,7 +6541,7 @@ def patch_prop_madness(sbox):
                                        "Property: del_n\n"
                                        "## -1,1 +0,0 ##\n"
                                        "-no-eol\n"
-                                       "\ No newline at end of property\n"
+                                       "\\ No newline at end of property\n"
                                        % (sbox.path('iota'),
                                           sbox.path('iota'))),
   })

@@ -3765,7 +3765,7 @@ def dump_exclude_all_rev_changes(sbox):
   # Check log. Revision properties ('svn:log' etc.) should be empty for r2.
   expected_output = svntest.verify.RegexListOutput([
     '-+\\n',
-    'r3\ |\ jrandom\ |\ .*\ |\ 1\ line\\n',
+    'r3 | jrandom | .* | 1 line\\n',
     re.escape('Changed paths:'),
     re.escape('   A /r3a'),
     re.escape('   A /r3b'),
@@ -3777,7 +3777,7 @@ def dump_exclude_all_rev_changes(sbox):
     '',
     '',
     '-+\\n',
-    'r1\ |\ jrandom\ |\ .*\ |\ 1\ line\\n',
+    'r1 | jrandom | .* | 1 line\\n',
     re.escape('Changed paths:'),
     re.escape('   A /r1a'),
     re.escape('   A /r1b'),
