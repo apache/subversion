@@ -1146,7 +1146,7 @@ def external_into_path_with_spaces(sbox):
   repo_url = sbox.repo_url
 
   ext = '^/A/D        "A/copy of D"\n' +\
-        '^/A/D        A/another\ copy\ of\ D'
+        '^/A/D        A/another\\ copy\\ of\\ D'
   change_external(wc_dir, ext)
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -3875,7 +3875,7 @@ def copy_pin_externals_whitespace_dir(sbox):
     f.write(
       '"' + ss_path +'/deps/sqlite"  ext/sqlite\n' +
       '"^/deps/A P R" \'ext/A P R\'\n' +
-      '^/deps/B\ D\ B\' ext/B\ D\ B\'\n' +
+      '^/deps/B\\ D\\ B\' ext/B\\ D\\ B\'\n' +
       repo_url + '/deps/wors%23+t ext/wors#+t')
   with open(info, 'w') as f:
     f.write('info\n')

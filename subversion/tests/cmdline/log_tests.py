@@ -2166,13 +2166,13 @@ def log_diff(sbox):
                + [ "@@ -1 +1,2 @@\n",
                    " This is the file 'beta'.\n",
                    "+9\n",
-                   "\ No newline at end of file\n",
+                   "\\ No newline at end of file\n",
                  ]
            ]
   r8diff = [ make_diff_header('A2/D/G/rho', 'nonexistent', 'revision 8')
               + [ "@@ -0,0 +1 @@\n",
                   "+88\n",
-                  "\ No newline at end of file\n",
+                  "\\ No newline at end of file\n",
                 ]
            ]
   log_chain = parse_log_output(output, with_diffs=True)

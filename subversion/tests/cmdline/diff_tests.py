@@ -2712,7 +2712,7 @@ def diff_ignore_eolstyle(sbox):
     " Bb\n",
     "-Cc\n",
     "+Cc\n",
-    "\ No newline at end of file\n" ]
+    "\\ No newline at end of file\n" ]
 
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '-x', '--ignore-eol-style',
