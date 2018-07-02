@@ -935,10 +935,14 @@ svn_cl__shelf_list(apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; ++i)
     {
+      const char *local_abspath;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(shelves_list(target,
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+
+      SVN_ERR(shelves_list(local_abspath,
                            opt_state->quiet,
                            ctx, iterpool));
     }
@@ -1105,10 +1109,13 @@ svn_cl__shelf_drop(apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; ++i)
     {
+      const char *local_abspath;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(shelf_drop(name, target,
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+      SVN_ERR(shelf_drop(name, local_abspath,
                          opt_state->dry_run, opt_state->quiet,
                          ctx, iterpool));
     }
@@ -1140,11 +1147,13 @@ svn_cl__shelf_log(apr_getopt_t *os,
 
   for (i = 0; i < targets->nelts; ++i)
     {
+      const char *local_abspath;
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
 
       svn_pool_clear(iterpool);
-      SVN_ERR(shelf_log(name, target,
-                        ctx, pool));
+
+      SVN_ERR(svn_dirent_get_absolute(&local_abspath, target, iterpool));
+      SVN_ERR(shelf_log(name, local_abspath, ctx, iterpool));
     }
 
   svn_pool_destroy(iterpool);

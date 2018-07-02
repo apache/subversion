@@ -115,6 +115,13 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
                                      'shelve', 'foo')
   check_wc_state(wc_dir, virginal_state)
 
+  # List; ensure the shelf is listed
+  expected_output = svntest.verify.RegexListOutput(
+    ['foo\s*version \d+.*',
+     ' '
+    ])
+  svntest.actions.run_and_verify_svn(expected_output, [], 'shelves')
+
   # Unshelve; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
                                      'unshelve', 'foo')
