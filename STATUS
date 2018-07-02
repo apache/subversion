@@ -85,7 +85,7 @@ Candidate changes:
    Votes:
      +1: philip
 
- * r1834612
+ * r1834612, r1834835
    On the '1.10.x-issue4758' branch: Fix SVN-4758 "Unable to shelve changes
    when using custom diff-cmd".
    Justification:
