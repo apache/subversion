@@ -117,8 +117,8 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
 
   # List; ensure the shelf is listed
   expected_output = svntest.verify.RegexListOutput(
-    ['foo\s*version \d+.*',
-     ' '
+    [r'foo\s*version \d+.*',
+     r' ',
     ])
   svntest.actions.run_and_verify_svn(expected_output, [], 'shelves')
 
