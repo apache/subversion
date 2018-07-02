@@ -53,6 +53,12 @@ import sys
 
 @contextlib.contextmanager
 def chdir(dir):
+  """This is a context manager that saves the current working directory's
+  pathname.  Upon entry it chdir's to the argument DIR; upon exit it chdir's
+  back to the saved pathname.
+
+  The current working directory is restored using os.chdir(), not os.fchdir().
+  """
   try:
     saved_dir = os.getcwd()
     os.chdir(dir)
