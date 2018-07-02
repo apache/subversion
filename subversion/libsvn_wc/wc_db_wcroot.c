@@ -678,7 +678,7 @@ svn_wc__db_wcroot_parse_local_abspath(svn_wc__db_wcroot_t **wcroot,
           if (!moved_upwards || always_check)
             {
               SVN_ERR(get_old_version(&wc_format, local_abspath,
-                                      scratch_pool));
+                                      iterpool));
               if (wc_format != 0)
                 break;
             }
@@ -978,6 +978,7 @@ try_symlink_as_dir:
     }
   while (strcmp(scan_abspath, local_abspath) != 0);
 
+  svn_pool_destroy(iterpool);
   return SVN_NO_ERROR;
 }
 
