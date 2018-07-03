@@ -4636,7 +4636,7 @@ svn_io_dir_walk2(const char *dirname,
         }
       else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
-          /* some other directory. pass it to the callback. */
+          /* a regular file or a symlink. pass it to the callback. */
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
                                      subpool));
           full_path = svn_dirent_join(dirname, name_utf8, subpool);
