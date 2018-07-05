@@ -5171,7 +5171,7 @@ def diff_summary_repo_wc_local_copy(sbox):
   sbox.simple_copy('iota', 'iota2')
   sbox.simple_append('hello\n', 'iota2')
   expected_diff = svntest.wc.State(wc_dir, {
-    'iota2': Item(status='A '),
+    'iota': Item(status='M '),
     })
   svntest.actions.run_and_verify_diff_summarize(
                     expected_diff,
