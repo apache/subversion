@@ -5160,6 +5160,24 @@ def diff_unversioned_files_git(sbox):
                                      '--old', sbox.ospath('foo'),
                                      '--new', sbox.ospath('A/bar'))
 
+# Summary diff with a repository source side and a local copy target side.
+# This particular combination crashed in 1.10.0 and earlier releases.
+@XFail()
+def diff_summary_repo_wc_local_copy(sbox):
+  "diff summary repo wc local copy"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_copy('iota', 'iota2')
+  sbox.simple_append('hello\n', 'iota2')
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota2': Item(status='A '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(
+                    expected_diff,
+                    '--old=' + sbox.ospath('iota') + '@HEAD',
+                    '--new=' + sbox.ospath('iota2'))
+
 
 ########################################################################
 #Run the tests
@@ -5257,6 +5275,7 @@ test_list = [ None,
               diff_symlinks,
               diff_peg_resolve,
               diff_unversioned_files_git,
+              diff_summary_repo_wc_local_copy,
               ]
 
 if __name__ == '__main__':
