@@ -1808,17 +1808,11 @@ unsupported_diff_error(svn_error_t *child_err)
    For now, require PATH1=PATH2, REVISION1='base', REVISION2='working',
    otherwise return an error.
 
-   If DDI is null: anchor DIFF_PROCESSOR at the requested diff targets.
-
-   If DDI is non-null: Anchor DIFF_PROCESSOR at PATH1 if the working
-   version of PATH1 is a dir, else to the parent of PATH1, to match the
-   anchor chosen by svn_wc__diff7(). Set DDI->anchor to this anchor,
-   and set DDI->orig_path* to PATH*.
+   Anchor DIFF_PROCESSOR at the requested diff targets.
 
    All other options are the same as those passed to svn_client_diff7(). */
 static svn_error_t *
-diff_wc_wc(struct diff_driver_info_t *ddi,
-           const char *path1,
+diff_wc_wc(const char *path1,
            const svn_opt_revision_t *revision1,
            const char *path2,
            const svn_opt_revision_t *revision2,
@@ -1849,23 +1843,7 @@ diff_wc_wc(struct diff_driver_info_t *ddi,
                           "or between the working versions of two paths"
                           )));
 
-  if (ddi)
-    {
-      svn_node_kind_t kind;
-
-      SVN_ERR(svn_wc_read_kind2(&kind, ctx->wc_ctx, abspath1,
-                              TRUE, FALSE, scratch_pool));
-
-      if (kind != svn_node_dir)
-        ddi->anchor = svn_dirent_dirname(path1, scratch_pool);
-      else
-        ddi->anchor = path1;
-
-      ddi->orig_path_1 = path1;
-      ddi->orig_path_2 = path2;
-    }
-
-  SVN_ERR(svn_wc__diff7(!ddi,
+  SVN_ERR(svn_wc__diff7(TRUE,
                         ctx->wc_ctx, abspath1, depth,
                         ignore_ancestry, changelists,
                         diff_processor,
@@ -2452,8 +2430,14 @@ do_diff(diff_driver_info_t *ddi,
             }
           else
             {
-              SVN_ERR(diff_wc_wc(ddi,
-                                 path_or_url1, revision1,
+              if (ddi)
+                {
+                  ddi->anchor = path_or_url1;
+                  ddi->orig_path_1 = path_or_url1;
+                  ddi->orig_path_2 = path_or_url2;
+                }
+
+              SVN_ERR(diff_wc_wc(path_or_url1, revision1,
                                  path_or_url2, revision2,
                                  depth, ignore_ancestry, changelists,
                                  diff_processor, ctx,
