@@ -202,6 +202,7 @@ adjust_paths_for_diff_labels(const char **index_path,
     /* ### BH: We can now just construct the repos_relpath, etc. as the
            anchor is available. See also make_repos_relpath() */
 
+    /* Remove the common prefix of NEW_PATH1 and NEW_PATH2. */
     is_url1 = svn_path_is_url(new_path1);
     is_url2 = svn_path_is_url(new_path2);
 
