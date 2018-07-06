@@ -150,8 +150,9 @@ class ExpectedOutput(object):
        MESSAGE unless it is None, the expected lines, the ACTUAL lines,
        and a diff, all labeled with LABEL.
     """
-    display_lines(message, self.expected, actual, label, label)
-    display_lines_diff(self.expected, actual, label, label)
+    e_label = label + ' (match_all=%s)' % (match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
+    display_lines_diff(self.expected, actual, e_label, label)
 
 
 class AnyOutput(ExpectedOutput):
@@ -236,7 +237,8 @@ class RegexOutput(ExpectedOutput):
       return any(self.expected_re.match(line) for line in actual)
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (regexp)', label)
+    e_label = label + ' (regexp, match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
 
   def insert(self, index, line):
     self.expected.insert(index, line)
@@ -281,7 +283,8 @@ class RegexListOutput(ExpectedOutput):
     return False
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (regexp)', label)
+    e_label = label + ' (regexp, match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
 
     assert actual is not None
     if not isinstance(actual, list):
@@ -324,8 +327,9 @@ class UnorderedOutput(ExpectedOutput):
     return sorted(self.expected) == sorted(actual)
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (unordered)', label)
-    display_lines_diff(sorted(self.expected), sorted(actual), label + ' (unordered)', label)
+    e_label = label + ' (unordered)'
+    display_lines(message, self.expected, actual, e_label, label)
+    display_lines_diff(sorted(self.expected), sorted(actual), e_label, label)
 
 
 class UnorderedRegexListOutput(ExpectedOutput):
@@ -371,8 +375,8 @@ class UnorderedRegexListOutput(ExpectedOutput):
     return True
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual,
-                  label + ' (regexp) (unordered)', label)
+    e_label = label + ' (regexp) (unordered)'
+    display_lines(message, self.expected, actual, e_label, label)
 
     assert actual is not None
     if not isinstance(actual, list):
