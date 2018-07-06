@@ -3855,7 +3855,7 @@ def diff_arbitrary_files_and_dirs(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # diff iota with A/mu
+  # diff files (iota with A/mu)
   expected_output = make_diff_header("iota", "working copy", "working copy",
                                      "iota", "A/mu") + [
                       "@@ -1 +1 @@\n",
@@ -3866,7 +3866,11 @@ def diff_arbitrary_files_and_dirs(sbox):
                                      'diff', '--old', sbox.ospath('iota'),
                                      '--new', sbox.ospath('A/mu'))
 
-  # diff A/B/E with A/D
+  # diff dirs (A/B/E with A/D)
+  # .../gamma is to show as replaced; .../beta is to show as modified
+  sbox.simple_mkdir('A/B/E/gamma')
+  sbox.simple_propset('p', 'v', 'A/B/E/gamma')
+  sbox.simple_add_text("This is a different beta file.\n", 'A/D/beta')
   expected_output = make_diff_header("G/pi", "nonexistent", "working copy",
                                      "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
@@ -3896,11 +3900,16 @@ def diff_arbitrary_files_and_dirs(sbox):
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'alpha'.\n"
                     ] + make_diff_header("beta", "working copy",
-                                         "nonexistent", "B/E", "D") + [
-                      "@@ -1 +0,0 @@\n",
-                      "-This is the file 'beta'.\n"
-                    ] + make_diff_header("gamma", "nonexistent",
                                          "working copy", "B/E", "D") + [
+                      "@@ -1 +1 @@\n",
+                      "-This is the file 'beta'.\n",
+                      "+This is a different beta file.\n"
+                    ] + make_diff_header("gamma", "working copy",
+                                           "nonexistent", "B/E", "D") \
+                      + make_diff_prop_header("gamma") \
+                      + make_diff_prop_deleted("p", "v") \
+                      + make_diff_header("gamma", "nonexistent",
+                                       "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'gamma'.\n"
                     ]

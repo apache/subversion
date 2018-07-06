@@ -1120,35 +1120,16 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
  *
  * No copy or move information is reported to the diff processor.
  *
- * If ANCHOR_AT_GIVEN_PATHS is true:
- *
- *   Anchor the DIFF_PROCESSOR at the requested diff targets
- *   (LEFT_ABSPATH, RIGHT_ABSPATH).
- *
- * If ANCHOR_AT_GIVEN_PATHS is false:
- *
- *   If both LEFT_ABSPATH and RIGHT_ABSPATH are directories on disk:
- *
- *     Anchor the DIFF_PROCESSOR at the requested diff targets
- *     (LEFT_ABSPATH, RIGHT_ABSPATH).
- *
- *   else:
- *
- *     Anchor the DIFF_PROCESSOR at the parent of LEFT_ABSPATH
- *     (so the paths all start with a basename(LEFT_ABSPATH) component).
- *
- * As any children reached by recursion are matched by name, a diff
- * processor relpath applies equally to both sides of the diff, except
- * for its first component in the latter case above.
+ * Anchor the DIFF_PROCESSOR at the requested diff targets (LEFT_ABSPATH,
+ * RIGHT_ABSPATH). As any children reached by recursion are matched by
+ * name, a diff processor relpath applies equally to both sides of the diff.
  */
 svn_error_t *
-svn_client__arbitrary_nodes_diff(svn_boolean_t anchor_at_given_paths,
-                                 const char *left_abspath,
+svn_client__arbitrary_nodes_diff(const char *left_abspath,
                                  const char *right_abspath,
                                  svn_depth_t depth,
                                  const svn_diff_tree_processor_t *diff_processor,
                                  svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
 

@@ -2426,17 +2426,29 @@ do_diff(diff_driver_info_t *ddi,
 
               if (ddi)
                 {
+                  svn_node_kind_t kind1, kind2;
+
+                  SVN_ERR(svn_io_check_resolved_path(abspath1, &kind1,
+                                                     scratch_pool));
+                  SVN_ERR(svn_io_check_resolved_path(abspath2, &kind2,
+                                                     scratch_pool));
+                  if (kind1 == svn_node_dir && kind2 == svn_node_dir)
+                    {
+                      ddi->anchor = "";
+                    }
+                  else
+                    {
+                      ddi->anchor = svn_dirent_basename(abspath1, NULL);
+                    }
                   ddi->orig_path_1 = path_or_url1;
                   ddi->orig_path_2 = path_or_url2;
                 }
 
               /* Ignores changelists, ignore_ancestry */
-              SVN_ERR(svn_client__arbitrary_nodes_diff(!ddi,
-                                                       abspath1, abspath2,
+              SVN_ERR(svn_client__arbitrary_nodes_diff(abspath1, abspath2,
                                                        depth,
                                                        diff_processor,
-                                                       ctx,
-                                                       result_pool, scratch_pool));
+                                                       ctx, scratch_pool));
             }
           else
             {
