@@ -2158,7 +2158,7 @@ diff_repos_wc(const char **root_relpath,
 
       target_url = NULL;
     }
-  else /* is_copy && revision2->kind == svn_opt_revision_base */
+  else /* is_copy && revision2->kind != svn_opt_revision_base */
     {
 #if 0
       svn_node_kind_t kind;
