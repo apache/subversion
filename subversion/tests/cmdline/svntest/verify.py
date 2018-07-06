@@ -150,7 +150,7 @@ class ExpectedOutput(object):
        MESSAGE unless it is None, the expected lines, the ACTUAL lines,
        and a diff, all labeled with LABEL.
     """
-    e_label = label + ' (match_all=%s)' % (match_all,)
+    e_label = label + ' (match_all=%s)' % (self.match_all,)
     display_lines(message, self.expected, actual, e_label, label)
     display_lines_diff(self.expected, actual, e_label, label)
 
