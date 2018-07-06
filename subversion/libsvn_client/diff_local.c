@@ -687,10 +687,6 @@ svn_client__arbitrary_nodes_diff(svn_boolean_t anchor_at_given_paths,
                              diff_processor, left_target, scratch_pool);
         }
     }
-  SVN_DBG(("arbitrary_nodes_diff anchor relpath:'%s' -> '%s'",
-           svn_dirent_skip_ancestor(left_root_abspath, left_abspath),
-           anchor_at_given_paths ? "" :
-               svn_dirent_skip_ancestor(left_root_abspath, left_abspath)));
 
   if (left_kind == svn_node_dir && right_kind == svn_node_dir)
     {
