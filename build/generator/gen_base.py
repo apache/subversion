@@ -972,24 +972,24 @@ class TargetJavaClasses(TargetJava):
       sources.extend(_collect_paths(self.sources, p))
 
     for src, reldir in sources:
-      if src[-5:] == '.java':
-        objname = src[:-5] + self.objext
-
-        # As .class files are likely not generated into the same
-        # directory as the source files, the object path may need
-        # adjustment.  To this effect, take "target_ob.classes" into
-        # account.
-        dirs = build_path_split(objname)
-        sourcedirs = dirs[:-1]  # Last element is the .class file name.
-        while sourcedirs:
-          if sourcedirs.pop() in self.packages:
-            sourcepath = build_path_join(*sourcedirs)
-            objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
-            break
-        else:
-          raise GenError('Unable to find Java package root in path "%s"' % objname)
-      else:
+      if src[-5:] != '.java':
         raise GenError('ERROR: unknown file extension on "' + src + '"')
+
+      objname = src[:-5] + self.objext
+
+      # As .class files are likely not generated into the same
+      # directory as the source files, the object path may need
+      # adjustment.  To this effect, take "target_ob.classes" into
+      # account.
+      dirs = build_path_split(objname)
+      sourcedirs = dirs[:-1]  # Last element is the .class file name.
+      while sourcedirs:
+        if sourcedirs.pop() in self.packages:
+          sourcepath = build_path_join(*sourcedirs)
+          objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
+          break
+      else:
+        raise GenError('Unable to find Java package root in path "%s"' % objname)
 
       ofile = ObjectFile(objname, self.compile_cmd, self.when)
       sfile = SourceFile(src, reldir)
