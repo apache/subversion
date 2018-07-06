@@ -5177,6 +5177,22 @@ def diff_summary_repo_wc_local_copy(sbox):
                     '--old=' + sbox.ospath('iota') + '@HEAD',
                     '--new=' + sbox.ospath('iota2'))
 
+# Summary diff with a repository source side and a local copy target side.
+# Svn reported the unmodified copy as modified in 1.10.0 and earlier releases.
+@XFail()
+def diff_summary_repo_wc_local_copy_unmodified(sbox):
+  "diff summary repo wc local copy unmodified"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_copy('iota', 'iota2')
+  expected_diff = svntest.wc.State(wc_dir, {
+    })
+  svntest.actions.run_and_verify_diff_summarize(
+                    expected_diff,
+                    '--old=' + sbox.ospath('iota') + '@HEAD',
+                    '--new=' + sbox.ospath('iota2'))
+
 
 ########################################################################
 #Run the tests
@@ -5275,6 +5291,7 @@ test_list = [ None,
               diff_peg_resolve,
               diff_unversioned_files_git,
               diff_summary_repo_wc_local_copy,
+              diff_summary_repo_wc_local_copy_unmodified,
               ]
 
 if __name__ == '__main__':
