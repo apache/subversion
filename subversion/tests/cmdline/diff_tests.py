@@ -5162,7 +5162,6 @@ def diff_unversioned_files_git(sbox):
 
 # Summary diff with a repository source side and a local copy target side.
 # This particular combination crashed in 1.10.0 and earlier releases.
-@XFail()
 def diff_summary_repo_wc_local_copy(sbox):
   "diff summary repo wc local copy"
   sbox.build()

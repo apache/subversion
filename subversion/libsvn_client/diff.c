@@ -2150,11 +2150,6 @@ diff_repos_wc(const char **root_relpath,
           target = "";
         }
 
-      if (root_relpath)
-        *root_relpath = apr_pstrdup(result_pool, target);
-      if (root_is_dir)
-        *root_is_dir = (*target == '\0');
-
       /* Fetch the URL of the anchor directory. */
       SVN_ERR(svn_dirent_get_absolute(&anchor_abspath, anchor, scratch_pool));
       SVN_ERR(svn_wc__node_get_url(&anchor_url, ctx->wc_ctx, anchor_abspath,
@@ -2223,6 +2218,11 @@ diff_repos_wc(const char **root_relpath,
         }
 #endif
     }
+
+  if (root_relpath)
+    *root_relpath = apr_pstrdup(result_pool, target);
+  if (root_is_dir)
+    *root_is_dir = (*target == '\0');
 
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, scratch_pool));
 
