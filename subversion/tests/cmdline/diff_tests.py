@@ -5168,7 +5168,7 @@ def diff_summary_repo_wc_local_copy(sbox):
   wc_dir = sbox.wc_dir
 
   sbox.simple_copy('iota', 'iota2')
-  sbox.simple_append('hello\n', 'iota2')
+  sbox.simple_append('iota2', 'hello\n')
   expected_diff = svntest.wc.State(wc_dir, {
     'iota': Item(status='M '),
     })
