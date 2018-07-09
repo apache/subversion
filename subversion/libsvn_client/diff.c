@@ -2796,7 +2796,7 @@ svn_client_diff_summarize2(const char *path_or_url1,
                            svn_client_ctx_t *ctx,
                            apr_pool_t *pool)
 {
-  const svn_diff_tree_processor_t *diff_processor;
+  svn_diff_tree_processor_t *diff_processor;
   svn_opt_revision_t peg_revision;
 
   /* We will never do a pegged diff from here. */
@@ -2828,7 +2828,7 @@ svn_client_diff_summarize_peg2(const char *path_or_url,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *pool)
 {
-  const svn_diff_tree_processor_t *diff_processor;
+  svn_diff_tree_processor_t *diff_processor;
 
   SVN_ERR(svn_client__get_diff_summarize_callbacks(&diff_processor,
                      summarize_func, summarize_baton,

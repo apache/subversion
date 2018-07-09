@@ -705,6 +705,7 @@ static svn_error_t *
 shelf_diff(const char *name,
            const char *arg,
            const char *local_abspath,
+           svn_boolean_t summarize,
            svn_client_ctx_t *ctx,
            apr_pool_t *scratch_pool)
 {
@@ -734,22 +735,40 @@ shelf_diff(const char *name,
   SVN_ERR(svn_stream_for_stdout(&stream, scratch_pool));
   errstream = svn_stream_empty(scratch_pool);
 
-  SVN_ERR(svn_client__get_diff_writer_svn(
-            &diff_processor,
-            NULL /*anchor*/,
-            "", "", /*orig_path_1, orig_path_2,*/
-            NULL /*options*/,
-            "" /*relative_to_dir*/,
-            FALSE /*no_diff_added*/,
-            FALSE /*no_diff_deleted*/,
-            FALSE /*show_copies_as_adds*/,
-            FALSE /*ignore_content_type*/,
-            FALSE /*ignore_properties*/,
-            FALSE /*properties_only*/,
-            TRUE /*pretty_print_mergeinfo*/,
-            svn_cmdline_output_encoding(scratch_pool),
-            stream, errstream,
-            ctx, scratch_pool));
+  if (summarize)
+    {
+      svn_client_diff_summarize_func_t func;
+      void *baton;
+
+      SVN_ERR(svn_cl__get_diff_summary_writer(&func, &baton,
+                                              FALSE /*xml*/,
+                                              FALSE /*ignore_properties*/,
+                                              "" /*anchor/prefix*/,
+                                              scratch_pool, scratch_pool));
+      SVN_ERR(svn_client__get_diff_summarize_callbacks(&diff_processor,
+                                                       func, baton,
+                                                       scratch_pool,
+                                                       scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_client__get_diff_writer_svn(
+                &diff_processor,
+                NULL /*anchor*/,
+                "", "", /*orig_path_1, orig_path_2,*/
+                NULL /*options*/,
+                "" /*relative_to_dir*/,
+                FALSE /*no_diff_added*/,
+                FALSE /*no_diff_deleted*/,
+                FALSE /*show_copies_as_adds*/,
+                FALSE /*ignore_content_type*/,
+                FALSE /*ignore_properties*/,
+                FALSE /*properties_only*/,
+                TRUE /*pretty_print_mergeinfo*/,
+                svn_cmdline_output_encoding(scratch_pool),
+                stream, errstream,
+                ctx, scratch_pool));
+    }
 
   SVN_ERR(svn_client__shelf_diff(shelf_version, "", diff_processor,
                                  scratch_pool));
@@ -1086,6 +1105,7 @@ svn_cl__shelf_diff(apr_getopt_t *os,
                    void *baton,
                    apr_pool_t *pool)
 {
+  svn_cl__opt_state_t *opt_state = ((svn_cl__cmd_baton_t *) baton)->opt_state;
   svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
   const char *local_abspath;
   const char *name;
@@ -1103,7 +1123,9 @@ svn_cl__shelf_diff(apr_getopt_t *os,
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Too many arguments"));
 
-  SVN_ERR(shelf_diff(name, arg, local_abspath, ctx, pool));
+  SVN_ERR(shelf_diff(name, arg, local_abspath,
+                     opt_state->diff.summarize,
+                     ctx, pool));
 
   return SVN_NO_ERROR;
 }

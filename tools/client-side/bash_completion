@@ -1028,7 +1028,7 @@ _svn()
 		cmdOpts="$pOpts"
 		;;
 	shelf-diff)
-		cmdOpts="$pOpts"
+		cmdOpts="$pOpts --summarize"
 		;;
 	shelf-drop)
 		cmdOpts="$pOpts"

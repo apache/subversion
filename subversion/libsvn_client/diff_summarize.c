@@ -257,7 +257,7 @@ diff_file_deleted(const char *relpath,
 
 svn_error_t *
 svn_client__get_diff_summarize_callbacks(
-                        const svn_diff_tree_processor_t **diff_processor,
+                        svn_diff_tree_processor_t **diff_processor,
                         svn_client_diff_summarize_func_t summarize_func,
                         void *summarize_baton,
                         apr_pool_t *result_pool,

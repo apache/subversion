@@ -682,32 +682,6 @@ svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
 /* ---------------------------------------------------------------- */
 
 
-/*** Editor for diff summary ***/
-
-/* Set *DIFF_PROCESSOR to a diff processor that will report a diff summary
-   to SUMMARIZE_FUNC.
-
-   P_ROOT_RELPATH will return a pointer to a string that must be set,
-   before the processor is called, to a prefix that will be found on
-   every DIFF_PROCESSOR relpath, that will be removed before passing
-   the path to SUMMARIZE_FUNC.
-
-   ORIGINAL_TARGET is not used.
-
-   SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
-   created callbacks for each changed item.
-*/
-svn_error_t *
-svn_client__get_diff_summarize_callbacks(
-                        const svn_diff_tree_processor_t **diff_processor,
-                        svn_client_diff_summarize_func_t summarize_func,
-                        void *summarize_baton,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
-/* ---------------------------------------------------------------- */
-
-
 /*** Copy Stuff ***/
 
 /* This structure is used to associate a specific copy or move SRC with a
