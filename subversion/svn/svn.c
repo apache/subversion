@@ -1955,6 +1955,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
      "\n"), N_(
+     "  See also: 'svn diff --cl=svn:shelf:SHELF' which supports most options of\n"
+     "  'svn diff'.\n"
+     "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     )},
