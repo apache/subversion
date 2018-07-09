@@ -909,6 +909,7 @@ def shelf_diff_simple(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'shelf-save', 'foo')
 
+  # basic svn-style diff
   expected_output = make_diff_header('A/mu', 'revision 2', 'working copy') + [
                       "@@ -1 +1,2 @@\n",
                       " This is the file 'mu'.\n",
@@ -917,6 +918,11 @@ def shelf_diff_simple(sbox):
                     + make_diff_prop_modified('p1', 'v', 'changed')
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'shelf-diff', 'foo')
+
+  # basic summary diff
+  expected_output = [ 'MM      A/mu\n' ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'shelf-diff', '--summarize', 'foo')
 
 
 ########################################################################
