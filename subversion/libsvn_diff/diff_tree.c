@@ -241,7 +241,6 @@ svn_diff__tree_processor_create(void *baton,
 struct reverse_tree_baton_t
 {
   const svn_diff_tree_processor_t *processor;
-  const char *prefix_relpath;
 };
 
 static svn_error_t *
@@ -258,9 +257,6 @@ reverse_dir_opened(void **new_dir_baton,
                    apr_pool_t *scratch_pool)
 {
   struct reverse_tree_baton_t *rb = processor->baton;
-
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
 
   SVN_ERR(rb->processor->dir_opened(new_dir_baton, skip, skip_children,
                                     relpath,
@@ -284,9 +280,6 @@ reverse_dir_added(const char *relpath,
 {
   struct reverse_tree_baton_t *rb = processor->baton;
 
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
-
   SVN_ERR(rb->processor->dir_deleted(relpath,
                                      right_source,
                                      right_props,
@@ -306,9 +299,6 @@ reverse_dir_deleted(const char *relpath,
                     apr_pool_t *scratch_pool)
 {
   struct reverse_tree_baton_t *rb = processor->baton;
-
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
 
   SVN_ERR(rb->processor->dir_added(relpath,
                                    NULL,
@@ -334,9 +324,6 @@ reverse_dir_changed(const char *relpath,
 {
   struct reverse_tree_baton_t *rb = processor->baton;
   apr_array_header_t *reversed_prop_changes = NULL;
-
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
 
   if (prop_changes)
     {
@@ -367,9 +354,6 @@ reverse_dir_closed(const char *relpath,
 {
   struct reverse_tree_baton_t *rb = processor->baton;
 
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
-
   SVN_ERR(rb->processor->dir_closed(relpath,
                                     right_source,
                                     left_source,
@@ -392,9 +376,6 @@ reverse_file_opened(void **new_file_baton,
                     apr_pool_t *scratch_pool)
 {
   struct reverse_tree_baton_t *rb = processor->baton;
-
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
 
   SVN_ERR(rb->processor->file_opened(new_file_baton,
                                      skip,
@@ -423,9 +404,6 @@ reverse_file_added(const char *relpath,
 {
   struct reverse_tree_baton_t *rb = processor->baton;
 
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
-
   SVN_ERR(rb->processor->file_deleted(relpath,
                                       right_source,
                                       right_file,
@@ -446,9 +424,6 @@ reverse_file_deleted(const char *relpath,
                      apr_pool_t *scratch_pool)
 {
   struct reverse_tree_baton_t *rb = processor->baton;
-
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
 
   SVN_ERR(rb->processor->file_added(relpath,
                                     NULL /* copyfrom src */,
@@ -479,9 +454,6 @@ reverse_file_changed(const char *relpath,
 {
   struct reverse_tree_baton_t *rb = processor->baton;
   apr_array_header_t *reversed_prop_changes = NULL;
-
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
 
   if (prop_changes)
     {
@@ -515,9 +487,6 @@ reverse_file_closed(const char *relpath,
 {
   struct reverse_tree_baton_t *rb = processor->baton;
 
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
-
   SVN_ERR(rb->processor->file_closed(relpath,
                                      right_source,
                                      left_source,
@@ -536,9 +505,6 @@ reverse_node_absent(const char *relpath,
 {
   struct reverse_tree_baton_t *rb = processor->baton;
 
-  if (rb->prefix_relpath)
-    relpath = svn_relpath_join(rb->prefix_relpath, relpath, scratch_pool);
-
   SVN_ERR(rb->processor->node_absent(relpath,
                                     dir_baton,
                                     rb->processor,
@@ -549,7 +515,6 @@ reverse_node_absent(const char *relpath,
 
 const svn_diff_tree_processor_t *
 svn_diff__tree_processor_reverse_create(const svn_diff_tree_processor_t * processor,
-                                        const char *prefix_relpath,
                                         apr_pool_t *result_pool)
 {
   struct reverse_tree_baton_t *rb;
@@ -557,8 +522,6 @@ svn_diff__tree_processor_reverse_create(const svn_diff_tree_processor_t * proces
 
   rb = apr_pcalloc(result_pool, sizeof(*rb));
   rb->processor = processor;
-  if (prefix_relpath)
-    rb->prefix_relpath = apr_pstrdup(result_pool, prefix_relpath);
 
   reverse = svn_diff__tree_processor_create(rb, result_pool);
 

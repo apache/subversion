@@ -7542,7 +7542,6 @@ merge_newly_added_dir(const char *added_repos_relpath,
   diff_processor = processor;
   if (reverse_merge)
     diff_processor = svn_diff__tree_processor_reverse_create(diff_processor,
-                                                             NULL,
                                                              scratch_pool);
 
   /* Filter the first path component using a filter processor, until we fixed
