@@ -706,6 +706,8 @@ shelf_diff(const char *name,
            const char *arg,
            const char *local_abspath,
            svn_boolean_t summarize,
+           svn_depth_t depth,
+           svn_boolean_t ignore_ancestry,
            svn_client_ctx_t *ctx,
            apr_pool_t *scratch_pool)
 {
@@ -770,8 +772,9 @@ shelf_diff(const char *name,
                 ctx, scratch_pool));
     }
 
-  SVN_ERR(svn_client__shelf_diff(shelf_version, "", diff_processor,
-                                 scratch_pool));
+  SVN_ERR(svn_client__shelf_diff(shelf_version, "",
+                                 depth, ignore_ancestry,
+                                 diff_processor, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
   SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
@@ -1125,6 +1128,7 @@ svn_cl__shelf_diff(apr_getopt_t *os,
 
   SVN_ERR(shelf_diff(name, arg, local_abspath,
                      opt_state->diff.summarize,
+                     opt_state->depth, opt_state->ignore_ancestry,
                      ctx, pool));
 
   return SVN_NO_ERROR;
