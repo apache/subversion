@@ -38,6 +38,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_client_private.h"
 
 
 /* Open the newest version of SHELF; error if no versions found. */
@@ -709,7 +710,8 @@ shelf_diff(const char *name,
 {
   svn_client_shelf_t *shelf;
   svn_client_shelf_version_t *shelf_version;
-  svn_stream_t *stream;
+  svn_stream_t *stream, *errstream;
+  svn_diff_tree_processor_t *diff_processor;
 
   SVN_ERR(svn_client_shelf_open_existing(&shelf, name, local_abspath,
                                          ctx, scratch_pool));
@@ -730,8 +732,27 @@ shelf_diff(const char *name,
     }
 
   SVN_ERR(svn_stream_for_stdout(&stream, scratch_pool));
-  SVN_ERR(svn_client_shelf_export_patch(shelf_version, stream,
-                                        scratch_pool));
+  errstream = svn_stream_empty(scratch_pool);
+
+  SVN_ERR(svn_client__get_diff_writer_svn(
+            &diff_processor,
+            NULL /*anchor*/,
+            "", "", /*orig_path_1, orig_path_2,*/
+            NULL /*options*/,
+            "" /*relative_to_dir*/,
+            FALSE /*no_diff_added*/,
+            FALSE /*no_diff_deleted*/,
+            FALSE /*show_copies_as_adds*/,
+            FALSE /*ignore_content_type*/,
+            FALSE /*ignore_properties*/,
+            FALSE /*properties_only*/,
+            TRUE /*pretty_print_mergeinfo*/,
+            svn_cmdline_output_encoding(scratch_pool),
+            stream, errstream,
+            ctx, scratch_pool));
+
+  SVN_ERR(svn_client__shelf_diff(shelf_version, "", diff_processor,
+                                 scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
   SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
