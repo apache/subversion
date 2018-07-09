@@ -32,6 +32,10 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 from svntest import wc
+from svntest.verify import make_diff_header, make_no_diff_deleted_header, \
+                           make_git_diff_header, make_diff_prop_header, \
+                           make_diff_prop_val, make_diff_prop_deleted, \
+                           make_diff_prop_added, make_diff_prop_modified
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -874,6 +878,46 @@ B>>>>>>> (incoming 'changed to' value)
 
   unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
+#----------------------------------------------------------------------
+
+# Exercise a very basic case of shelf-diff.
+def shelf_diff_simple(sbox):
+  "shelf diff simple"
+
+  sbox.build()
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = sbox.wc_dir
+
+  def setup(sbox):
+    sbox.simple_propset('p1', 'v', 'A/mu')
+    sbox.simple_propset('p2', 'v', 'A/mu')
+
+  def modifier1(sbox):
+    sbox.simple_append('A/mu', 'New line.\n')
+    sbox.simple_propset('p1', 'changed', 'A/mu')
+
+  setup(sbox)
+  sbox.simple_commit()
+  initial_state = get_wc_state(wc_dir)
+
+  # Make some changes to the working copy
+  modifier1(sbox)
+  modified_state = get_wc_state(wc_dir)
+
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'shelf-save', 'foo')
+
+  expected_output = make_diff_header('A/mu', 'revision 2', 'working copy') + [
+                      "@@ -1 +1,2 @@\n",
+                      " This is the file 'mu'.\n",
+                      "+New line.\n",
+                    ] + make_diff_prop_header('A/mu') \
+                    + make_diff_prop_modified('p1', 'v', 'changed')
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'shelf-diff', 'foo')
+
 
 ########################################################################
 # Run the tests
@@ -910,6 +954,7 @@ test_list = [ None,
               unshelve_binary_mod_conflict,
               unshelve_text_prop_merge,
               unshelve_text_prop_conflict,
+              shelf_diff_simple,
              ]
 
 if __name__ == '__main__':

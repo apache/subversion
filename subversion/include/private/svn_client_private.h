@@ -341,6 +341,51 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
+/** Return a diff processor that will print a Subversion-style
+ * (not git-style) diff.
+ *
+ * @a anchor is optional (may be null), and is the 'anchor' path to prefix
+ * to the diff-processor paths before displaying.
+ *
+ * @a orig_path_1 and @a orig_path_2 are the two main root paths to be
+ * diffed; each may be a URL, a local WC path or a local unversioned path.
+ *
+ * Other arguments are as for svn_client_diff7() etc.
+ */
+svn_error_t *
+svn_client__get_diff_writer_svn(
+                svn_diff_tree_processor_t **diff_processor,
+                const char *anchor,
+                const char *orig_path_1,
+                const char *orig_path_2,
+                const apr_array_header_t *options,
+                const char *relative_to_dir,
+                svn_boolean_t no_diff_added,
+                svn_boolean_t no_diff_deleted,
+                svn_boolean_t show_copies_as_adds,
+                svn_boolean_t ignore_content_type,
+                svn_boolean_t ignore_properties,
+                svn_boolean_t properties_only,
+                svn_boolean_t pretty_print_mergeinfo,
+                const char *header_encoding,
+                svn_stream_t *outstream,
+                svn_stream_t *errstream,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/** Output the subtree of @a shelf_version rooted at @a shelf_relpath
+ * as a diff to @a diff_processor.
+ *
+ * @since New in 1.X.
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_diff(svn_client_shelf_version_t *shelf_version,
+                       const char *shelf_relpath,
+                       svn_diff_tree_processor_t *diff_processor,
+                       apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

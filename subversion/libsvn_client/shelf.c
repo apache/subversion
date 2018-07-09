@@ -413,6 +413,9 @@ shelf_write_current(svn_client_shelf_t *shelf,
   return SVN_NO_ERROR;
 }
 
+/*-------------------------------------------------------------------------*/
+/* Status Reporting */
+
 /* Create a status struct with all fields initialized to valid values
  * representing 'uninteresting' or 'unknown' status.
  */
@@ -727,6 +730,9 @@ svn_client_shelf_version_status_walk(svn_client_shelf_version_t *shelf_version,
                             scratch_pool));
   return SVN_NO_ERROR;
 }
+
+/*-------------------------------------------------------------------------*/
+/* Shelf Storage */
 
 /* A baton for use with write_changes_visitor(). */
 typedef struct write_changes_baton_t {
@@ -1609,23 +1615,204 @@ apply_file_visitor(void *baton,
   return SVN_NO_ERROR;
 }
 
+/*-------------------------------------------------------------------------*/
+/* Diff */
+
+/*  */
+static svn_error_t *
+file_changed(svn_client_shelf_version_t *shelf_version,
+             const char *relpath,
+             svn_wc_status3_t *s,
+             svn_diff_tree_processor_t *diff_processor,
+             svn_diff_source_t *left_source,
+             svn_diff_source_t *right_source,
+             const char *left_stored_abspath,
+             const char *right_stored_abspath,
+             void *dir_baton,
+             apr_pool_t *scratch_pool)
+{
+  void *fb;
+  svn_boolean_t skip = FALSE;
+
+  SVN_ERR(diff_processor->file_opened(&fb, &skip, relpath,
+                                      left_source, right_source,
+                                      NULL /*copyfrom*/,
+                                      dir_baton, diff_processor,
+                                      scratch_pool, scratch_pool));
+  if (!skip)
+    {
+      apr_hash_t *left_props, *right_props;
+      apr_array_header_t *prop_changes;
+
+      SVN_ERR(read_props_from_shelf(&left_props, &right_props,
+                                    s->node_status, shelf_version, relpath,
+                                    scratch_pool, scratch_pool));
+      SVN_ERR(svn_prop_diffs(&prop_changes, right_props, left_props,
+                             scratch_pool));
+      SVN_ERR(diff_processor->file_changed(
+                relpath,
+                left_source, right_source,
+                left_stored_abspath, right_stored_abspath,
+                left_props, right_props,
+                TRUE /*file_modified*/, prop_changes,
+                fb, diff_processor, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+file_deleted(svn_client_shelf_version_t *shelf_version,
+             const char *relpath,
+             svn_wc_status3_t *s,
+             svn_diff_tree_processor_t *diff_processor,
+             svn_diff_source_t *left_source,
+             const char *left_stored_abspath,
+             void *dir_baton,
+             apr_pool_t *scratch_pool)
+{
+  void *fb;
+  svn_boolean_t skip = FALSE;
+
+  SVN_ERR(diff_processor->file_opened(&fb, &skip, relpath,
+                                      left_source, NULL, NULL /*copyfrom*/,
+                                      dir_baton, diff_processor,
+                                      scratch_pool, scratch_pool));
+  if (!skip)
+    {
+      apr_hash_t *left_props, *right_props;
+
+      SVN_ERR(read_props_from_shelf(&left_props, &right_props,
+                                    s->node_status, shelf_version, relpath,
+                                    scratch_pool, scratch_pool));
+      SVN_ERR(diff_processor->file_deleted(relpath,
+                                           left_source,
+                                           left_stored_abspath,
+                                           left_props,
+                                           fb, diff_processor,
+                                           scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static svn_error_t *
+file_added(svn_client_shelf_version_t *shelf_version,
+           const char *relpath,
+           svn_wc_status3_t *s,
+           svn_diff_tree_processor_t *diff_processor,
+           svn_diff_source_t *right_source,
+           const char *right_stored_abspath,
+           void *dir_baton,
+           apr_pool_t *scratch_pool)
+{
+  void *fb;
+  svn_boolean_t skip = FALSE;
+
+  SVN_ERR(diff_processor->file_opened(&fb, &skip, relpath,
+                                      NULL, right_source, NULL /*copyfrom*/,
+                                      dir_baton, diff_processor,
+                                      scratch_pool, scratch_pool));
+  if (!skip)
+    {
+      apr_hash_t *left_props, *right_props;
+
+      SVN_ERR(read_props_from_shelf(&left_props, &right_props,
+                                    s->node_status, shelf_version, relpath,
+                                    scratch_pool, scratch_pool));
+      SVN_ERR(diff_processor->file_added(
+                relpath,
+                NULL /*copyfrom_source*/, right_source,
+                NULL /*copyfrom_abspath*/, right_stored_abspath,
+                NULL /*copyfrom_props*/, right_props,
+                fb, diff_processor, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Baton for diff_visitor(). */
 struct diff_baton_t
 {
   svn_client_shelf_version_t *shelf_version;
-  svn_stream_t *outstream;
+  const char *top_relpath;  /* top of diff, relative to shelf */
+  const char *walk_root_abspath;
+  svn_diff_tree_processor_t *diff_processor;
 };
 
-/* Write a diff to BATON->outstream.
- * Implements shelved_files_walk_func_t. */
+/* Drive BATON->diff_processor.
+ * Implements svn_io_walk_func_t. */
 static svn_error_t *
 diff_visitor(void *baton,
-             const char *relpath,
-             svn_wc_status3_t *s,
+             const char *abspath,
+             const apr_finfo_t *finfo,
              apr_pool_t *scratch_pool)
 {
-  /* ### TODO */
+  struct diff_baton_t *b = baton;
+  const char *relpath;
 
+  relpath = svn_dirent_skip_ancestor(b->walk_root_abspath, abspath);
+  if (finfo->filetype == APR_REG
+      && (strlen(relpath) >= 5 && strcmp(relpath+strlen(relpath)-5, ".meta") == 0))
+    {
+      svn_wc_status3_t *s;
+      void *db = NULL;
+      svn_diff_source_t *left_source;
+      svn_diff_source_t *right_source;
+      char *left_stored_abspath, *right_stored_abspath;
+
+      relpath = apr_pstrndup(scratch_pool, relpath, strlen(relpath) - 5);
+      if (!svn_relpath_skip_ancestor(b->top_relpath, relpath))
+        return SVN_NO_ERROR;
+
+      SVN_ERR(status_read(&s, b->shelf_version, relpath,
+                          scratch_pool, scratch_pool));
+
+      left_source = svn_diff__source_create(s->revision, scratch_pool);
+      right_source = svn_diff__source_create(SVN_INVALID_REVNUM, scratch_pool);
+      SVN_ERR(get_base_file_abspath(&left_stored_abspath,
+                                    b->shelf_version, relpath,
+                                    scratch_pool, scratch_pool));
+      SVN_ERR(get_working_file_abspath(&right_stored_abspath,
+                                       b->shelf_version, relpath,
+                                       scratch_pool, scratch_pool));
+
+      switch (s->node_status)
+        {
+        case svn_wc_status_modified:
+          SVN_ERR(file_changed(b->shelf_version, relpath, s,
+                               b->diff_processor,
+                               left_source, right_source,
+                               left_stored_abspath, right_stored_abspath,
+                               db, scratch_pool));
+          break;
+        case svn_wc_status_added:
+          SVN_ERR(file_added(b->shelf_version, relpath, s,
+                             b->diff_processor,
+                             right_source, right_stored_abspath,
+                             db, scratch_pool));
+          break;
+        case svn_wc_status_deleted:
+          SVN_ERR(file_deleted(b->shelf_version, relpath, s,
+                               b->diff_processor,
+                               left_source, left_stored_abspath,
+                               db, scratch_pool));
+          break;
+        case svn_wc_status_replaced:
+          SVN_ERR(file_deleted(b->shelf_version, relpath, s,
+                               b->diff_processor,
+                               left_source, left_stored_abspath,
+                               db, scratch_pool));
+          SVN_ERR(file_added(b->shelf_version, relpath, s,
+                             b->diff_processor,
+                             right_source, right_stored_abspath,
+                             db, scratch_pool));
+        default:
+          break;
+        }
+    }
   return SVN_NO_ERROR;
 }
 
@@ -1726,17 +1913,34 @@ svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
 }
 
 svn_error_t *
+svn_client__shelf_diff(svn_client_shelf_version_t *shelf_version,
+                       const char *shelf_relpath,
+                       svn_diff_tree_processor_t *diff_processor,
+                       apr_pool_t *scratch_pool)
+{
+  struct diff_baton_t baton;
+  svn_error_t *err;
+
+  baton.shelf_version = shelf_version;
+  baton.top_relpath = shelf_relpath;
+  baton.walk_root_abspath = shelf_version->files_dir_abspath;
+  baton.diff_processor = diff_processor;
+  err = svn_io_dir_walk2(baton.walk_root_abspath, 0 /*wanted*/,
+                         diff_visitor, &baton,
+                         scratch_pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    svn_error_clear(err);
+  else
+    SVN_ERR(err);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
                               svn_stream_t *outstream,
                               apr_pool_t *scratch_pool)
 {
-  struct diff_baton_t baton = {0};
-
-  baton.shelf_version = shelf_version;
-  baton.outstream = outstream;
-  SVN_ERR(shelf_status_walk(shelf_version, "",
-                            diff_visitor, &baton,
-                            scratch_pool));
   return SVN_NO_ERROR;
 }
 

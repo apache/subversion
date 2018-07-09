@@ -7152,12 +7152,10 @@ svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool);
 
-/** Output @a shelf_version as a patch to @a outstream.
- *
- * @since New in 1.X.
+/** @deprecated Use svn_client__shelf_diff() instead.
  * @warning EXPERIMENTAL.
  */
-SVN_EXPERIMENTAL
+SVN_DEPRECATED
 svn_error_t *
 svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
                               svn_stream_t *outstream,

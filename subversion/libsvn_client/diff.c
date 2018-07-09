@@ -2580,6 +2580,49 @@ get_diff_processor(svn_diff_tree_processor_t **diff_processor,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client__get_diff_writer_svn(
+                svn_diff_tree_processor_t **diff_processor,
+                const char *anchor,
+                const char *orig_path_1,
+                const char *orig_path_2,
+                const apr_array_header_t *options,
+                const char *relative_to_dir,
+                svn_boolean_t no_diff_added,
+                svn_boolean_t no_diff_deleted,
+                svn_boolean_t show_copies_as_adds,
+                svn_boolean_t ignore_content_type,
+                svn_boolean_t ignore_properties,
+                svn_boolean_t properties_only,
+                svn_boolean_t pretty_print_mergeinfo,
+                const char *header_encoding,
+                svn_stream_t *outstream,
+                svn_stream_t *errstream,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool)
+{
+  struct diff_driver_info_t *ddi;
+
+  SVN_ERR(get_diff_processor(diff_processor, &ddi,
+                             options,
+                             relative_to_dir,
+                             no_diff_added,
+                             no_diff_deleted,
+                             show_copies_as_adds,
+                             ignore_content_type,
+                             ignore_properties,
+                             properties_only,
+                             FALSE /*use_git_diff_format*/,
+                             pretty_print_mergeinfo,
+                             header_encoding,
+                             outstream, errstream,
+                             ctx, pool));
+  ddi->anchor = anchor;
+  ddi->orig_path_1 = orig_path_1;
+  ddi->orig_path_2 = orig_path_2;
+  return SVN_NO_ERROR;
+}
+
 /*----------------------------------------------------------------------- */
 
 /*** Public Interfaces. ***/
