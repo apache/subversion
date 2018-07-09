@@ -1977,7 +1977,6 @@ diff_repos_repos(struct diff_driver_info_t *ddi,
       target1 = str_tmp;
 
       diff_processor = svn_diff__tree_processor_reverse_create(diff_processor,
-                                                               NULL,
                                                                scratch_pool);
     }
 
@@ -2246,8 +2245,7 @@ diff_repos_wc(struct diff_driver_info_t *ddi,
     }
 
   if (reverse)
-    diff_processor = svn_diff__tree_processor_reverse_create(
-                              diff_processor, NULL, scratch_pool);
+    diff_processor = svn_diff__tree_processor_reverse_create(diff_processor, scratch_pool);
 
   /* Use the diff editor to generate the diff. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
