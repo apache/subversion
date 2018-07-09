@@ -23,6 +23,9 @@
 
 /* ==================================================================== */
 
+/* We define this here to remove any further warnings about the usage of
+   experimental functions in this file. */
+#define SVN_EXPERIMENTAL
 
 
 /*** Includes. ***/
@@ -2321,6 +2324,80 @@ diff_repos_wc(struct diff_driver_info_t *ddi,
   return SVN_NO_ERROR;
 }
 
+/* Run diff on shelf SHELF_NAME, if it exists.
+ */
+static svn_error_t *
+diff_shelf(const char *shelf_name,
+           const char *target_abspath,
+           svn_depth_t depth,
+           svn_boolean_t ignore_ancestry,
+           const svn_diff_tree_processor_t *diff_processor,
+           svn_client_ctx_t *ctx,
+           apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_client_shelf_t *shelf;
+  svn_client_shelf_version_t *shelf_version;
+  const char *wc_relpath;
+
+  err = svn_client_shelf_open_existing(&shelf,
+                                       shelf_name, target_abspath,
+                                       ctx, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
+    {
+      svn_error_clear(err);
+      return SVN_NO_ERROR;
+    }
+  else
+    SVN_ERR(err);
+
+  SVN_ERR(svn_client_shelf_version_open(&shelf_version,
+                                        shelf, shelf->max_version,
+                                        scratch_pool, scratch_pool));
+  wc_relpath = svn_dirent_skip_ancestor(shelf->wc_root_abspath, target_abspath);
+  SVN_ERR(svn_client__shelf_diff(shelf_version, wc_relpath,
+                                 depth, ignore_ancestry,
+                                 diff_processor, scratch_pool));
+  SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Run diff on all shelves named in CHANGELISTS by a changelist name
+ * of the form "svn:shelf:SHELF_NAME", if they exist.
+ */
+static svn_error_t *
+diff_shelves(const apr_array_header_t *changelists,
+             const char *target_abspath,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             const svn_diff_tree_processor_t *diff_processor,
+             svn_client_ctx_t *ctx,
+             apr_pool_t *scratch_pool)
+{
+  static const char PREFIX[] = "svn:shelf:";
+  static const int PREFIX_LEN = 10;
+  int i;
+
+  if (! changelists)
+    return SVN_NO_ERROR;
+  for (i = 0; i < changelists->nelts; i++)
+    {
+      const char *cl = APR_ARRAY_IDX(changelists, i, const char *);
+
+      if (strncmp(cl, PREFIX, PREFIX_LEN) == 0)
+        {
+          const char *shelf_name = cl + PREFIX_LEN;
+
+          SVN_ERR(diff_shelf(shelf_name, target_abspath,
+                             depth, ignore_ancestry,
+                             diff_processor, ctx, scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* This is basically just the guts of svn_client_diff[_summarize][_peg]6(). */
 static svn_error_t *
@@ -2436,6 +2513,15 @@ do_diff(diff_driver_info_t *ddi,
                   ddi->orig_path_2 = path_or_url2;
                 }
 
+              {
+                const char *abspath1;
+
+                SVN_ERR(svn_dirent_get_absolute(&abspath1, path_or_url1,
+                                                scratch_pool));
+                SVN_ERR(diff_shelves(changelists, abspath1,
+                                     depth, ignore_ancestry,
+                                     diff_processor, ctx, scratch_pool));
+              }
               SVN_ERR(diff_wc_wc(path_or_url1, revision1,
                                  path_or_url2, revision2,
                                  depth, ignore_ancestry, changelists,

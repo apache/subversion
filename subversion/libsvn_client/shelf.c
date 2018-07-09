@@ -1623,7 +1623,7 @@ static svn_error_t *
 file_changed(svn_client_shelf_version_t *shelf_version,
              const char *relpath,
              svn_wc_status3_t *s,
-             svn_diff_tree_processor_t *diff_processor,
+             const svn_diff_tree_processor_t *diff_processor,
              svn_diff_source_t *left_source,
              svn_diff_source_t *right_source,
              const char *left_stored_abspath,
@@ -1666,7 +1666,7 @@ static svn_error_t *
 file_deleted(svn_client_shelf_version_t *shelf_version,
              const char *relpath,
              svn_wc_status3_t *s,
-             svn_diff_tree_processor_t *diff_processor,
+             const svn_diff_tree_processor_t *diff_processor,
              svn_diff_source_t *left_source,
              const char *left_stored_abspath,
              void *dir_baton,
@@ -1702,7 +1702,7 @@ static svn_error_t *
 file_added(svn_client_shelf_version_t *shelf_version,
            const char *relpath,
            svn_wc_status3_t *s,
-           svn_diff_tree_processor_t *diff_processor,
+           const svn_diff_tree_processor_t *diff_processor,
            svn_diff_source_t *right_source,
            const char *right_stored_abspath,
            void *dir_baton,
@@ -1739,7 +1739,7 @@ struct diff_baton_t
   svn_client_shelf_version_t *shelf_version;
   const char *top_relpath;  /* top of diff, relative to shelf */
   const char *walk_root_abspath;
-  svn_diff_tree_processor_t *diff_processor;
+  const svn_diff_tree_processor_t *diff_processor;
 };
 
 /* Drive BATON->diff_processor.
@@ -1915,7 +1915,9 @@ svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
 svn_error_t *
 svn_client__shelf_diff(svn_client_shelf_version_t *shelf_version,
                        const char *shelf_relpath,
-                       svn_diff_tree_processor_t *diff_processor,
+                       svn_depth_t depth,
+                       svn_boolean_t ignore_ancestry,
+                       const svn_diff_tree_processor_t *diff_processor,
                        apr_pool_t *scratch_pool)
 {
   struct diff_baton_t baton;

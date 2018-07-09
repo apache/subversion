@@ -376,6 +376,8 @@ svn_client__get_diff_writer_svn(
 /** Output the subtree of @a shelf_version rooted at @a shelf_relpath
  * as a diff to @a diff_processor.
  *
+ * ### depth and ignore_ancestry are currently ignored.
+ *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
@@ -383,7 +385,9 @@ SVN_EXPERIMENTAL
 svn_error_t *
 svn_client__shelf_diff(svn_client_shelf_version_t *shelf_version,
                        const char *shelf_relpath,
-                       svn_diff_tree_processor_t *diff_processor,
+                       svn_depth_t depth,
+                       svn_boolean_t ignore_ancestry,
+                       const svn_diff_tree_processor_t *diff_processor,
                        apr_pool_t *scratch_pool);
 
 /*** Editor for diff summary ***/
