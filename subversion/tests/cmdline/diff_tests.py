@@ -36,7 +36,6 @@ from svntest import err, wc
 
 from prop_tests import binary_mime_type_on_text_file_warning
 from svntest.verify import make_diff_header, make_no_diff_deleted_header, \
-                           make_diff_header, make_no_diff_deleted_header, \
                            make_git_diff_header, make_diff_prop_header, \
                            make_diff_prop_val, make_diff_prop_deleted, \
                            make_diff_prop_added, make_diff_prop_modified
