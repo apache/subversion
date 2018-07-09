@@ -1755,7 +1755,7 @@ diff_visitor(void *baton,
 
   relpath = svn_dirent_skip_ancestor(b->walk_root_abspath, abspath);
   if (finfo->filetype == APR_REG
-      && (strlen(relpath) >= 5 && strcmp(relpath+strlen(relpath)-5, ".meta") == 0))
+           && (strlen(relpath) >= 5 && strcmp(relpath+strlen(relpath)-5, ".meta") == 0))
     {
       svn_wc_status3_t *s;
       void *db = NULL;
@@ -1919,19 +1919,17 @@ svn_client__shelf_diff(svn_client_shelf_version_t *shelf_version,
                        apr_pool_t *scratch_pool)
 {
   struct diff_baton_t baton;
-  svn_error_t *err;
+
+  if (shelf_version->version_number == 0)
+    return SVN_NO_ERROR;
 
   baton.shelf_version = shelf_version;
   baton.top_relpath = shelf_relpath;
   baton.walk_root_abspath = shelf_version->files_dir_abspath;
   baton.diff_processor = diff_processor;
-  err = svn_io_dir_walk2(baton.walk_root_abspath, 0 /*wanted*/,
-                         diff_visitor, &baton,
-                         scratch_pool);
-  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
-    svn_error_clear(err);
-  else
-    SVN_ERR(err);
+  SVN_ERR(svn_io_dir_walk2(baton.walk_root_abspath, 0 /*wanted*/,
+                           diff_visitor, &baton,
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
