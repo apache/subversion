@@ -71,13 +71,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1833621
-   Since on Windows Subversion does not handle symlinks, never check for reparse points.
-   Justification:
-     Without this, shell extensions like TSVN fail with files in OneDrive on Windows.
-   Votes:
-     +1: steveking, stsp, jcorvel
-
  * r1830883,r1830900,r1830901
    Prune externals from excluded subtrees after 'update --set-depth=exclude'
    Justification:
