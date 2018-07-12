@@ -23,19 +23,6 @@ Candidate changes:
    Votes:
      +1: jorton, stsp
 
- * r1833836, r1833842
-   Fix issue #4740, "conflict resolver searches too far back ..."
-   Justification:
-     The current behaviour is hard-coded to traverse all of history in
-     a "local missing vs incoming edit" situation. This is impractical
-     on repositories with a large number of revisions.
-     Easy fix which just runs an already existing YCA search a bit
-     earlier, falling back to full traversal if no YCA can be found.
-     User complained and provided a reproduction script:
-     https://svn.haxx.se/users/archive-2018-04/0060.shtml
-   Votes:
-     +1: stsp, philip
-
  * r1830083, r1833864, r1833866
    Fix issue #4739, "Accept incoming deletion" option doing nothing
    for a locally deleted file
@@ -99,3 +86,16 @@ Approved changes:
    Votes:
      +1: stsp, philip, jcorvel
      +0: rhuijben (in concept, not reviewed)
+
+ * r1833836, r1833842
+   Fix issue #4740, "conflict resolver searches too far back ..."
+   Justification:
+     The current behaviour is hard-coded to traverse all of history in
+     a "local missing vs incoming edit" situation. This is impractical
+     on repositories with a large number of revisions.
+     Easy fix which just runs an already existing YCA search a bit
+     earlier, falling back to full traversal if no YCA can be found.
+     User complained and provided a reproduction script:
+     https://svn.haxx.se/users/archive-2018-04/0060.shtml
+   Votes:
+     +1: stsp, philip, jcorvel
