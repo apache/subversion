@@ -34,7 +34,7 @@ Candidate changes:
      r1833866 is a small follow-up fix
      Issue #4744 fix should be merged after this to avoid merge conflicts.
    Votes:
-     +1: stsp
+     +1: stsp, jcorvel
 
  * r1833895, r1833897, r1833899, r1833901
    Fix issue #4744 "during merge: assertion failed (start_rev > end_rev)"
@@ -47,7 +47,7 @@ Candidate changes:
      r1833901 prevents the assertion failure and adjusts the test
      Issue #4739 fix should be merged before this to avoid merge conflicts.
   Votes:
-    +1: stsp
+    +1: stsp, jcorvel
 
  * r1833465
    Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
