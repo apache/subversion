@@ -15,14 +15,6 @@ Status of 1.10.1:
 Candidate changes:
 ==================
 
- * r1830882
-   Fix libsvn_auth_gnome_keyring.pc when built using libsecret.
-   Justification:
-     The generated .pc file references files libgnome-keyring, which
-     is not used and may not exist.
-   Votes:
-     +1: jorton, stsp
-
  * r1830083, r1833864, r1833866
    Fix issue #4739, "Accept incoming deletion" option doing nothing
    for a locally deleted file
@@ -54,7 +46,7 @@ Candidate changes:
    Justification:
      Return an error when the client gets the protocol wrong.
    Votes:
-     +1: philip
+     +1: philip, jamessan
 
  * r1834612, r1834835
    On the '1.10.x-issue4758' branch: Fix SVN-4758 "Unable to shelve changes
@@ -63,7 +55,21 @@ Candidate changes:
      User-reported breakage of 'svn shelve'.
    Branch: ^/subversion/branches/1.10.x-issue4758
    Votes:
-     +1: julianfoad
+     +1: julianfoad, jamessan
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1830882
+   Fix libsvn_auth_gnome_keyring.pc when built using libsecret.
+   Justification:
+     The generated .pc file references files libgnome-keyring, which
+     is not used and may not exist.
+   Votes:
+     +1: jorton, stsp, jamessan
 
  * r1835760
    Fix segfault in the gnome keyring password provider (libsecret version).
@@ -71,10 +77,5 @@ Candidate changes:
      Private API violation; fixes user-reported segfault due to uninitialized
      stack variable.
    Votes:
-     +1: danielsh, philip
+     +1: danielsh, philip, jamessan
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
