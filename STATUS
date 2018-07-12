@@ -66,10 +66,7 @@ Candidate changes:
      +1: julianfoad
 
  * r1835760
-   * subversion/libsvn_auth_gnome_keyring/gnome_keyring.c  
-   (password_get_gnome_keyring, password_set_gnome_keyring):	 [in the
-   SVN_HAVE_LIBSECRET version of these two functions]	  Always initialize
-   the output parameter.
+   Fix segfault in the gnome keyring password provider (libsecret version).
    Justification:
      Private API violation; fixes user-reported segfault due to uninitialized
      stack variable.
