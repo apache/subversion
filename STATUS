@@ -71,7 +71,7 @@ Candidate changes:
      Private API violation; fixes user-reported segfault due to uninitialized
      stack variable.
    Votes:
-     +1: danielsh
+     +1: danielsh, philip
 
 Veto-blocked changes:
 =====================
