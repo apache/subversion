@@ -880,6 +880,29 @@ B>>>>>>> (incoming 'changed to' value)
 
 #----------------------------------------------------------------------
 
+def run_and_verify_shelf_diff_summarize(output_tree, shelf, *args):
+  """Run 'svn shelf-diff --summarize' with the arguments *ARGS.
+
+  The subcommand output will be verified against OUTPUT_TREE.  Returns
+  on success, raises on failure.
+  """
+
+  if isinstance(output_tree, wc.State):
+    output_tree = output_tree.old_tree()
+
+  exit_code, output, errput = svntest.actions.run_and_verify_svn(
+                                None, [],
+                                'shelf-diff', '--summarize', shelf, *args)
+
+  actual = svntest.tree.build_tree_from_diff_summarize(output)
+
+  # Verify actual output against expected output.
+  try:
+    svntest.tree.compare_trees("output", actual, output_tree)
+  except svntest.tree.SVNTreeError:
+    svntest.verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
+    raise
+
 # Exercise a very basic case of shelf-diff.
 def shelf_diff_simple(sbox):
   "shelf diff simple"
@@ -920,9 +943,10 @@ def shelf_diff_simple(sbox):
                                      'shelf-diff', 'foo')
 
   # basic summary diff
-  expected_output = [ 'MM      ' + sbox.ospath('A/mu') + '\n' ]
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'shelf-diff', '--summarize', 'foo')
+  expected_diff = svntest.wc.State(wc_dir, {
+    'A/mu':           Item(status='MM'),
+  })
+  run_and_verify_shelf_diff_summarize(expected_diff, 'foo')
 
 
 ########################################################################
