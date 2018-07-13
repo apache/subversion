@@ -833,7 +833,7 @@ def create_tag(args):
                                args.version.patch + 1))
 
         HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
-                                        '--', url]).strip()
+                                        '--', branch]).strip()
         HEAD = int(HEAD)
         def file_object_for(relpath):
             fd = tempfile.NamedTemporaryFile()
