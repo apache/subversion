@@ -62,11 +62,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1835760
-   Fix segfault in the gnome keyring password provider (libsecret version).
-   Justification:
-     Private API violation; fixes user-reported segfault due to uninitialized
-     stack variable.
-   Votes:
-     +1: danielsh, philip, jamessan
