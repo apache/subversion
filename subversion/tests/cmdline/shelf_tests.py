@@ -920,7 +920,7 @@ def shelf_diff_simple(sbox):
                                      'shelf-diff', 'foo')
 
   # basic summary diff
-  expected_output = [ 'MM      A/mu\n' ]
+  expected_output = [ 'MM      ' + sbox.ospath('A/mu') + '\n' ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'shelf-diff', '--summarize', 'foo')
 
