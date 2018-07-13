@@ -14,6 +14,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.1
  User-visible changes:
   - Client-side bugfixes:
     * Correctly claim to offer Gnome Keyring support with libsecret (r1831142)
+    * Fix segfault using Gnome Keyring with libsecret (r1835782)
     * Fix JavaHL local refs capacity warning when unparsing externals (r1831143)
     * Since on Windows Subversion does not handle symlinks, never check for reparse points (r1835701)
     * Prune externals after 'update --set-depth=exclude' (r1835702)
@@ -27,6 +28,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.1
     * Explicit error on configure --without-lz4 or --without-utf8proc (r1831604)
     * configure.ac: Fix regression relating to path to 'rdoc' (r1833486)
     * Ensure consistent use of $PYTHON during build and test (r1833487)
+    * Fix libsvn_auth_gnome_keyring.pc when built using libsecret (r1835781)
   - Bindings:
     * Fix regression in use of pre-generated Swig bindings in release builds (r1833488)
 
