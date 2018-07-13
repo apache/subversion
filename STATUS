@@ -63,14 +63,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1830882
-   Fix libsvn_auth_gnome_keyring.pc when built using libsecret.
-   Justification:
-     The generated .pc file references files libgnome-keyring, which
-     is not used and may not exist.
-   Votes:
-     +1: jorton, stsp, jamessan
-
  * r1835760
    Fix segfault in the gnome keyring password provider (libsecret version).
    Justification:
@@ -78,4 +70,3 @@ Approved changes:
      stack variable.
    Votes:
      +1: danielsh, philip, jamessan
-
