@@ -1,6 +1,6 @@
-Version 1.9.8
+Version 1.9.9
 (?? ??? 2018, from /branches/1.9.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.9.8
+http://svn.apache.org/repos/asf/subversion/tags/1.9.9
 
  User-visible changes:
   - Client-side bugfixes:
@@ -27,6 +27,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.8
 
   - API changes:
     (none)
+
+
+Version 1.9.8
+(Not released; see changes for 1.9.9.)
 
 
 Version 1.9.7
