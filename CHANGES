@@ -7,9 +7,9 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Fix pattern-matching of top level path in listing with search (r1830599)
 
 
-Version 1.10.1
+Version 1.10.2
 (?? ??? 2018, from /branches/1.10.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.10.1
+http://svn.apache.org/repos/asf/subversion/tags/1.10.2
 
  User-visible changes:
   - Client-side bugfixes:
@@ -31,6 +31,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.1
     * Fix libsvn_auth_gnome_keyring.pc when built using libsecret (r1835781)
   - Bindings:
     * Fix regression in use of pre-generated Swig bindings in release builds (r1833488)
+
+
+Version 1.10.1
+(Not released; see changes for 1.10.2.)
 
 
 Version 1.10.0
@@ -321,9 +325,9 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Ruby: Detect versions up to 2.4 (r1806570)
 
 
-Version 1.9.8
+Version 1.9.9
 (?? ??? 2018, from /branches/1.9.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.9.8
+http://svn.apache.org/repos/asf/subversion/tags/1.9.9
 
  User-visible changes:
   - Client-side bugfixes:
@@ -350,6 +354,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.8
 
   - API changes:
     (none)
+
+
+Version 1.9.8
+(Not released; see changes for 1.9.9.)
 
 
 Version 1.9.7
