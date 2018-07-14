@@ -33,37 +33,6 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.1
     * Fix regression in use of pre-generated Swig bindings in release builds (r1833488)
 
 
-Version 1.9.8
-(?? ??? 2018, from /branches/1.9.x)
-http://svn.apache.org/repos/asf/subversion/tags/1.9.8
-
- User-visible changes:
-  - Client-side bugfixes:
-    * Fix SEGV for 'svn export -rN WC' with relative externals (r1803755)
-    * Fix issue #4677: 'svn up' after a directory replaced a file (r1814248)
-    * Fix segfault when no home directory is available (r1819199)
-    * Performance: Make 'svn info' fast on old repository revisions (r1827690)
-    * Fix RA-serf problem with proxy username and password (r1833571)
-
-  - Server-side bugfixes:
-    * svnadmin: Fix false errors on some valid LOCK_PATH arguments (r1803754)
-    * Fix crash when exiting 'svnserve --config-file' (r1824405)
-    * Fix issue #4722: false "filesystem is corrupt" error on commit (r1827688)
-    * Reword confusing "nested" wording in an httpd.conf warning (r1835700)
-
-  - Bindings bugfixes:
-    * swig-py: svn.core.Stream supports raw binary file-like objects (r1820620)
-    * swig-rb: Don't crash if svn_md5_digest_to_cstring returns NULL (r1823805)
-
- Developer-visible changes:
-  - General:
-    * Fix CVE-2017-9800: Malicious server can execute arbitrary command on client (r1804698)
-    * Fix test failure if compile- and run-time HTTPD versions differ (r1820523)
-
-  - API changes:
-    (none)
-
-
 Version 1.10.0
 (13 Apr 2018, from /branches/1.10.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.10.0
@@ -350,6 +319,37 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * JavaHL: Add missing exception checks (r1801108)
     * Ruby: Fix handling of NULL MD5 digests (r1811786)
     * Ruby: Detect versions up to 2.4 (r1806570)
+
+
+Version 1.9.8
+(?? ??? 2018, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.8
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix SEGV for 'svn export -rN WC' with relative externals (r1803755)
+    * Fix issue #4677: 'svn up' after a directory replaced a file (r1814248)
+    * Fix segfault when no home directory is available (r1819199)
+    * Performance: Make 'svn info' fast on old repository revisions (r1827690)
+    * Fix RA-serf problem with proxy username and password (r1833571)
+
+  - Server-side bugfixes:
+    * svnadmin: Fix false errors on some valid LOCK_PATH arguments (r1803754)
+    * Fix crash when exiting 'svnserve --config-file' (r1824405)
+    * Fix issue #4722: false "filesystem is corrupt" error on commit (r1827688)
+    * Reword confusing "nested" wording in an httpd.conf warning (r1835700)
+
+  - Bindings bugfixes:
+    * swig-py: svn.core.Stream supports raw binary file-like objects (r1820620)
+    * swig-rb: Don't crash if svn_md5_digest_to_cstring returns NULL (r1823805)
+
+ Developer-visible changes:
+  - General:
+    * Fix CVE-2017-9800: Malicious server can execute arbitrary command on client (r1804698)
+    * Fix test failure if compile- and run-time HTTPD versions differ (r1820523)
+
+  - API changes:
+    (none)
 
 
 Version 1.9.7
