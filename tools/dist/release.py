@@ -813,17 +813,20 @@ def create_tag(args):
         logging.info('Bumping revisions on the branch')
         def replace_in_place(fd, startofline, flat, spare):
             """In file object FD, replace FLAT with SPARE in the first line
-            starting with STARTOFLINE."""
+            starting with regex STARTOFLINE."""
 
+            pattern = r'^(%s)%s' % (startofline, re.escape(flat))
+            repl =    r'\g<1>%s' % (spare,)
             fd.seek(0, os.SEEK_SET)
             lines = fd.readlines()
             for i, line in enumerate(lines):
-                if line.startswith(startofline + flat):
-                    lines[i] = line.replace(flat, spare)
+                replacement = re.sub(pattern, repl, line)
+                if replacement != line:
+                    lines[i] = replacement
                     break
             else:
-                raise RuntimeError("Expected string %r not found in '%s'"
-                                   % (startofline + flat, fd.url))
+                raise RuntimeError("Could not replace r'%s' with r'%s' in '%s'"
+                                   % (pattern, repl, fd.url))
 
             fd.seek(0, os.SEEK_SET)
             fd.writelines(lines)
@@ -845,7 +848,7 @@ def create_tag(args):
             return fd
 
         svn_version_h = file_object_for('subversion/include/svn_version.h')
-        replace_in_place(svn_version_h, '#define SVN_VER_PATCH ',
+        replace_in_place(svn_version_h, '#define SVN_VER_PATCH  *',
                          str(args.version.patch), str(new_version.patch))
 
         STATUS = file_object_for('STATUS')
