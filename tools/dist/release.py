@@ -818,11 +818,12 @@ def create_tag(args):
             fd.seek(0, os.SEEK_SET)
             lines = fd.readlines()
             for i, line in enumerate(lines):
-                if line.startswith(startofline):
+                if line.startswith(startofline + flat):
                     lines[i] = line.replace(flat, spare)
                     break
             else:
-                raise RuntimeError('Definition of %r not found' % startofline)
+                raise RuntimeError("Expected string %r not found in '%s'"
+                                   % (startofline + flat, fd.url))
 
             fd.seek(0, os.SEEK_SET)
             fd.writelines(lines)
