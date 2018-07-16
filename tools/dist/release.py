@@ -777,8 +777,9 @@ def post_candidates(args):
 
 #----------------------------------------------------------------------
 # Create tag
+# Bump versions on branch
 
-def create_tag(args):
+def create_tag_only(args):
     'Create tag in the repository'
 
     target = get_target(args)
@@ -792,7 +793,7 @@ def create_tag(args):
 
     tag = secure_repos + '/tags/' + str(args.version)
 
-    svnmucc_cmd = ['svnmucc', '-m',
+    svnmucc_cmd = ['echo', 'svnmucc', '-m',
                    'Tagging release ' + str(args.version)]
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
@@ -809,63 +810,80 @@ def create_tag(args):
             logging.error("Do you need to pass --branch=trunk?")
         raise
 
+def bump_versions_on_branch(args):
+    'Bump version numbers on branch'
+
+    logging.info('Bumping version numbers on the branch')
+
+    if not args.branch:
+        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+
+    branch = secure_repos + '/' + args.branch.rstrip('/')
+
+    def replace_in_place(fd, startofline, flat, spare):
+        """In file object FD, replace FLAT with SPARE in the first line
+        starting with regex STARTOFLINE."""
+
+        pattern = r'^(%s)%s' % (startofline, re.escape(flat))
+        repl =    r'\g<1>%s' % (spare,)
+        fd.seek(0, os.SEEK_SET)
+        lines = fd.readlines()
+        for i, line in enumerate(lines):
+            replacement = re.sub(pattern, repl, line)
+            if replacement != line:
+                lines[i] = replacement
+                break
+        else:
+            raise RuntimeError("Could not replace r'%s' with r'%s' in '%s'"
+                               % (pattern, repl, fd.url))
+
+        fd.seek(0, os.SEEK_SET)
+        fd.writelines(lines)
+        fd.truncate() # for current callers, new value is never shorter.
+
+    new_version = Version('%d.%d.%d' %
+                          (args.version.major, args.version.minor,
+                           args.version.patch + 1))
+
+    HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
+                                    '--', branch]).strip()
+    HEAD = int(HEAD)
+    def file_object_for(relpath):
+        fd = tempfile.NamedTemporaryFile()
+        url = branch + '/' + relpath
+        fd.url = url
+        subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
+                              stdout=fd)
+        return fd
+
+    svn_version_h = file_object_for('subversion/include/svn_version.h')
+    replace_in_place(svn_version_h, '#define SVN_VER_PATCH  *',
+                     str(args.version.patch), str(new_version.patch))
+
+    STATUS = file_object_for('STATUS')
+    replace_in_place(STATUS, 'Status of ',
+                     str(args.version), str(new_version))
+
+    svn_version_h.seek(0, os.SEEK_SET)
+    STATUS.seek(0, os.SEEK_SET)
+    subprocess.check_call(['echo', 'svnmucc', '-r', str(HEAD),
+                           '-m', 'Post-release housekeeping: '
+                                 'bump the %s branch to %s.'
+                           % (branch.split('/')[-1], str(new_version)),
+                           'put', svn_version_h.name, svn_version_h.url,
+                           'put', STATUS.name, STATUS.url,
+                          ])
+    del svn_version_h
+    del STATUS
+
+def create_tag_and_bump_versions(args):
+    '''Create tag in the repository and, if not a prerelease version,
+       bump version numbers on the branch'''
+
+    create_tag_only(args)
+
     if not args.version.is_prerelease():
-        logging.info('Bumping revisions on the branch')
-        def replace_in_place(fd, startofline, flat, spare):
-            """In file object FD, replace FLAT with SPARE in the first line
-            starting with regex STARTOFLINE."""
-
-            pattern = r'^(%s)%s' % (startofline, re.escape(flat))
-            repl =    r'\g<1>%s' % (spare,)
-            fd.seek(0, os.SEEK_SET)
-            lines = fd.readlines()
-            for i, line in enumerate(lines):
-                replacement = re.sub(pattern, repl, line)
-                if replacement != line:
-                    lines[i] = replacement
-                    break
-            else:
-                raise RuntimeError("Could not replace r'%s' with r'%s' in '%s'"
-                                   % (pattern, repl, fd.url))
-
-            fd.seek(0, os.SEEK_SET)
-            fd.writelines(lines)
-            fd.truncate() # for current callers, new value is never shorter.
-
-        new_version = Version('%d.%d.%d' %
-                              (args.version.major, args.version.minor,
-                               args.version.patch + 1))
-
-        HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
-                                        '--', branch]).strip()
-        HEAD = int(HEAD)
-        def file_object_for(relpath):
-            fd = tempfile.NamedTemporaryFile()
-            url = branch + '/' + relpath
-            fd.url = url
-            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
-                                  stdout=fd)
-            return fd
-
-        svn_version_h = file_object_for('subversion/include/svn_version.h')
-        replace_in_place(svn_version_h, '#define SVN_VER_PATCH  *',
-                         str(args.version.patch), str(new_version.patch))
-
-        STATUS = file_object_for('STATUS')
-        replace_in_place(STATUS, 'Status of ',
-                         str(args.version), str(new_version))
-
-        svn_version_h.seek(0, os.SEEK_SET)
-        STATUS.seek(0, os.SEEK_SET)
-        subprocess.check_call(['svnmucc', '-r', str(HEAD),
-                               '-m', 'Post-release housekeeping: '
-                                     'bump the %s branch to %s.'
-                               % (branch.split('/')[-1], str(new_version)),
-                               'put', svn_version_h.name, svn_version_h.url,
-                               'put', STATUS.name, STATUS.url,
-                              ])
-        del svn_version_h
-        del STATUS
+        bump_versions_on_branch(args)
 
 #----------------------------------------------------------------------
 # Clean dist
@@ -1430,8 +1448,26 @@ def main():
 
     # Setup the parser for the create-tag subcommand
     subparser = subparsers.add_parser('create-tag',
-                    help='''Create the release tag.''')
-    subparser.set_defaults(func=create_tag)
+                    help='''Create the release tag and, if not a prerelease
+                            version, bump version numbers on the branch.''')
+    subparser.set_defaults(func=create_tag_and_bump_versions)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
+                    help='''The revision number to base the release on.''')
+    subparser.add_argument('--branch',
+                    help='''The branch to base the release on,
+                            relative to ^/subversion/.''')
+    subparser.add_argument('--username',
+                    help='''Username for ''' + secure_repos + '''.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
+
+    # Setup the parser for the bump-versions-on-branch subcommand
+    subparser = subparsers.add_parser('bump-versions-on-branch',
+                    help='''Bump version numbers on branch.''')
+    subparser.set_defaults(func=bump_versions_on_branch)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
