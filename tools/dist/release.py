@@ -793,7 +793,7 @@ def create_tag_only(args):
 
     tag = secure_repos + '/tags/' + str(args.version)
 
-    svnmucc_cmd = ['echo', 'svnmucc', '-m',
+    svnmucc_cmd = ['svnmucc', '-m',
                    'Tagging release ' + str(args.version)]
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
@@ -866,7 +866,7 @@ def bump_versions_on_branch(args):
 
     svn_version_h.seek(0, os.SEEK_SET)
     STATUS.seek(0, os.SEEK_SET)
-    subprocess.check_call(['echo', 'svnmucc', '-r', str(HEAD),
+    subprocess.check_call(['svnmucc', '-r', str(HEAD),
                            '-m', 'Post-release housekeeping: '
                                  'bump the %s branch to %s.'
                            % (branch.split('/')[-1], str(new_version)),
