@@ -51,6 +51,7 @@ import operator
 import itertools
 import subprocess
 import argparse       # standard in Python 2.7
+import io
 
 # Find ezt, using Subversion's copy, if there isn't one on the system.
 try:
@@ -977,7 +978,22 @@ def write_news(args):
 
     template = ezt.Template()
     template.parse(get_tmplfile(template_filename).read())
-    template.generate(sys.stdout, data)
+
+    # Insert the output into an existing file if requested, else print it
+    if args.edit_html_file:
+        tmp_name = args.edit_html_file + '.tmp'
+        with open(args.edit_html_file, 'r') as f, open(tmp_name, 'w') as g:
+            inserted = False
+            for line in f:
+                if not inserted and line.startswith('<div class="h3" id="news-'):
+                    template.generate(g, data)
+                    g.write('\n')
+                    inserted = True
+                g.write(line)
+        os.remove(args.edit_html_file)
+        os.rename(tmp_name, args.edit_html_file)
+    else:
+        template.generate(sys.stdout, data)
 
 
 def get_sha1info(args):
@@ -1510,6 +1526,9 @@ def main():
     subparser.set_defaults(func=write_news)
     subparser.add_argument('--announcement-url',
                     help='''The URL to the archived announcement email.''')
+    subparser.add_argument('--edit-html-file',
+                    help='''Insert the text into this file
+                            news.html, index.html).''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
