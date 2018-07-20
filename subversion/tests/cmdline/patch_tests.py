@@ -7913,6 +7913,58 @@ def patch_empty_prop(sbox):
 
   os.chdir(was_cwd)
 
+# Test that 'patch' can apply a patch that modifies properties on the root
+# of a WC and/or the root of a repository. This test uses the format of
+# diff output produced by 'svn diff --git' in svn <= 1.10.0: paths are given
+# as 'a/' and 'b/' and 'Property changes on: ' (with no following '.').
+#
+# See dev@ email thread 2018-07-09 from Dmitry Pavlenko,
+# '[PATCH] can't "svn patch" working copy root if the patch is in --git format',
+# https://lists.apache.org/thread.html/d1d9811ca36fac8cabb9339634840099e22811beac505be2ea59f19f@%3Cdev.subversion.apache.org%3E
+@XFail()
+def patch_git_wcroot(sbox):
+  "patch working copy root"
+  sbox.build(empty=True)
+  wc_dir = sbox.wc_dir
+
+  git_patch = [ "Index: .\n",
+                "===================================================================\n",
+                "diff --git a/ b/\n",
+                "--- a/	(revision 0)\n",
+                "+++ b/	(working copy)\n",
+                "Property changes on: \n",
+                "___________________________________________________________________\n",
+                "Added: p\n",
+                "## -0,0 +1 ##\n",
+                "+v\n",
+                "\\ No newline at end of property\n",
+  ]
+  value = 'v'
+
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join(git_patch), 'wb')
+
+  expected_output = wc.State(wc_dir, {
+    '.'                 : Item(status=' U'),
+  })
+  expected_disk = svntest.wc.State('', {})
+  expected_disk.add({'': Item(props={'p' : value })})
+  expected_status = svntest.wc.State(wc_dir, {})
+  expected_status.add({'': Item(status=' M', wc_rev='0')})
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       True, # check-props
+                                       False, # dry-run
+                                       )
+
+  svntest.actions.check_prop('p', wc_dir, [value.encode()])
+
 ########################################################################
 #Run the tests
 
@@ -7998,6 +8050,7 @@ test_list = [ None,
               patch_merge,
               patch_mergeinfo_in_regular_prop_format,
               patch_empty_prop,
+              patch_git_wcroot,
             ]
 
 if __name__ == '__main__':
