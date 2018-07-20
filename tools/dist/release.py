@@ -967,6 +967,7 @@ def write_news(args):
              'version_base' : args.version.base,
              'anchor': args.version.get_download_anchor(),
              'is_recommended': ezt_bool(args.version.is_recommended()),
+             'announcement_url': args.announcement_url,
            }
 
     if args.version.is_prerelease():
@@ -1507,6 +1508,8 @@ def main():
                     help='''Output to stdout template text for use in the news
                             section of the Subversion website.''')
     subparser.set_defaults(func=write_news)
+    subparser.add_argument('--announcement-url',
+                    help='''The URL to the archived announcement email.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 

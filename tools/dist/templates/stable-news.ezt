@@ -10,7 +10,7 @@
 [else]   This is the most complete release of the [major-minor].x line to date,
    and we encourage all users to upgrade as soon as reasonable.
 [end]   Please see the
-   <a href=""
+   <a href="[announcement_url]"
    >release announcement</a> and the
    <a href="/docs/release-notes/[major-minor]"
    >release notes</a> for more information about this release.</p> 

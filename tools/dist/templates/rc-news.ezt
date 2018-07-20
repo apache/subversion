@@ -8,7 +8,7 @@
    release is not intended for production use, but is provided as a milestone
    to encourage wider testing and feedback from intrepid users and maintainers.
    Please see the
-   <a href="">release
+   <a href="[announcement_url]">release
    announcement</a> for more information about this release, and the
    <a href="/docs/release-notes/[major-minor].html">release notes</a> and 
    <a href="https://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES"> 
