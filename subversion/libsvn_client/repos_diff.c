@@ -413,6 +413,7 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
                        = APR_ARRAY_IDX(changes, j+1, svn_prop_t);
                 }
               changes->nelts--;
+              i--;
             }
         }
     }
