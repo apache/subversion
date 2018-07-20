@@ -51,6 +51,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_editor.h"
+#include "private/svn_sorts_private.h"
 
 /* Overall crawler editor baton.  */
 struct edit_baton {
@@ -404,15 +405,8 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
 
           if (old_val && svn_string_compare(old_val, change->value))
             {
-              int j;
-
-              /* Remove the matching change by shifting the rest */
-              for (j = i; j < changes->nelts - 1; j++)
-                {
-                  APR_ARRAY_IDX(changes, j, svn_prop_t)
-                       = APR_ARRAY_IDX(changes, j+1, svn_prop_t);
-                }
-              changes->nelts--;
+              /* Remove the matching change and re-check the current index */
+              svn_sort__array_delete(changes, i, 1);
               i--;
             }
         }
