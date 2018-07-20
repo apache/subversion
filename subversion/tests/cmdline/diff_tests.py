@@ -5201,6 +5201,22 @@ def diff_summary_repo_wc_local_copy_unmodified(sbox):
                     '--old=' + sbox.ospath('iota') + '@HEAD',
                     '--new=' + sbox.ospath('iota2'))
 
+@XFail()
+def diff_file_replaced_by_symlink(sbox):
+  "diff base vs working: symlink replaces a file"
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  os.remove(iota_path)
+
+  # create a symlink pointing to itself
+  # alternatively it could point to a non-existing path
+  sbox.simple_symlink('iota', 'iota')
+
+  # TODO: add a full expected output
+  expected_output = svntest.verify.AnyOutput
+  svntest.actions.run_and_verify_svn(expected_output, [], 'diff', wc_dir)
 
 ########################################################################
 #Run the tests
@@ -5300,6 +5316,7 @@ test_list = [ None,
               diff_unversioned_files_git,
               diff_summary_repo_wc_local_copy,
               diff_summary_repo_wc_local_copy_unmodified,
+              diff_file_replaced_by_symlink,
               ]
 
 if __name__ == '__main__':
