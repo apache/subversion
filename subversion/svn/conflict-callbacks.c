@@ -1540,6 +1540,10 @@ build_tree_conflict_options(
                     possible_moved_to_abspaths, builtin_option,
                     result_pool, iterpool));
         }
+      else if (id == svn_client_conflict_option_local_move_file_text_merge)
+          SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+                    possible_moved_to_abspaths, builtin_option,
+                    result_pool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
@@ -1867,6 +1871,13 @@ handle_tree_conflict(svn_boolean_t *resolved,
             svn_client_conflict_option_find_by_id( 
               options,
               svn_client_conflict_option_incoming_move_file_text_merge);
+          if (conflict_option == NULL)
+            {
+              conflict_option =
+                svn_client_conflict_option_find_by_id( 
+                  options,
+                  svn_client_conflict_option_local_move_file_text_merge);
+            }
           if (conflict_option == NULL)
             {
               conflict_option =

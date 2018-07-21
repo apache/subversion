@@ -5487,7 +5487,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge incoming move file merge with CRLF eols"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_file_text_merge_native_eol,
                        "merge incoming move file merge with native eols"),
-    SVN_TEST_OPTS_XFAIL(test_cherry_pick_post_move_edit,
+    SVN_TEST_OPTS_PASS(test_cherry_pick_post_move_edit,
                         "cherry-pick edit from moved file"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_move_dir_across_branches,
                        "merge incoming dir move across branches"),

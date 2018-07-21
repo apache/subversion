@@ -615,6 +615,24 @@ svn_wc__node_get_base(svn_node_kind_t *kind,
                       apr_pool_t *scratch_pool);
 
 
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * have a basename matching BASENAME and have node kind KIND.
+ * If no such nodes exist, return an empty array.
+ *
+ * This function returns only paths to nodes which are present in the highest
+ * layer of the WC. In other words, paths to deleted and/or excluded nodes are
+ * never returned.
+ */
+svn_error_t *
+svn_wc__find_working_nodes_with_basename(apr_array_header_t **abspaths,
+                                         const char *wri_abspath,
+                                         const char *basename,
+                                         svn_node_kind_t kind,
+                                         svn_wc_context_t *wc_ctx,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
+
 /* Get the working revision of @a local_abspath using @a wc_ctx. If @a
  * local_abspath is not in the working copy, return @c
  * SVN_ERR_WC_PATH_NOT_FOUND.
