@@ -10006,20 +10006,33 @@ configure_option_local_move_file_merge(svn_client_conflict_t *conflict,
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
+  const char *incoming_old_repos_relpath;
+  svn_revnum_t incoming_old_pegrev;
+  svn_node_kind_t incoming_old_kind;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
+  svn_node_kind_t incoming_new_kind;
 
   operation = svn_client_conflict_get_operation(conflict);
   incoming_change = svn_client_conflict_get_incoming_change(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
+  SVN_ERR(svn_client_conflict_get_incoming_old_repos_location(
+            &incoming_old_repos_relpath, &incoming_old_pegrev,
+            &incoming_old_kind, conflict, scratch_pool,
+            scratch_pool));
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &incoming_new_repos_relpath, &incoming_new_pegrev,
-            NULL, conflict, scratch_pool,
+            &incoming_new_kind, conflict, scratch_pool,
             scratch_pool));
 
   if (operation == svn_wc_operation_merge &&
       incoming_change == svn_wc_conflict_action_edit &&
-      local_change == svn_wc_conflict_reason_missing)
+      local_change == svn_wc_conflict_reason_missing &&
+      /* We do not support this case for directories yet. */
+      (incoming_old_kind == svn_node_file ||
+       incoming_old_kind == svn_node_none) &&
+      (incoming_new_kind == svn_node_file ||
+       incoming_new_kind == svn_node_none))
     {
       struct conflict_tree_local_missing_details *details;
 
