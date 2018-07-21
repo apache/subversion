@@ -4580,7 +4580,8 @@ svn_client_conflict_option_set_merged_propval(
 
 /**
  * Get a list of possible repository paths which can be applied to the
- * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_file_text_merge, or
+ * svn_client_conflict_option_local_move_file_text_merge, or
  * svn_client_conflict_option_incoming_move_dir_merge resolution
  * @a option. (If a different option is passed in, this function will
  * raise an assertion failure.)
@@ -4631,7 +4632,8 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
 
 /**
  * Get a list of possible moved-to abspaths in the working copy which can be
- * applied to the svn_client_conflict_option_incoming_move_file_text_merge
+ * applied to the svn_client_conflict_option_incoming_move_file_text_merge,
+ * svn_client_conflict_option_local_move_file_text_merge,
  * or svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
  * (If a different option is passed in, this function will raise an assertion
  * failure.)
@@ -4660,6 +4662,7 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 /**
  * Set the preferred moved target abspath for the
  * svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_local_move_file_text_merge or
  * svn_client_conflict_option_incoming_move_dir_merge resolution option.
  * 
  * @a preferred_move_target_idx must be a valid index into the list
