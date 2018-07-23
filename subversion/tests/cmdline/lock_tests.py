@@ -2252,7 +2252,6 @@ def dav_lock_refresh(sbox):
   if r.status != httplib.OK:
     raise svntest.Failure('Lock refresh failed: %d %s' % (r.status, r.reason))
 
-@SkipUnless(svntest.main.is_ra_type_dav)
 def delete_locked_file_with_percent(sbox):
   "lock and delete a file called 'a %( ) .txt'"
 
