@@ -37,14 +37,6 @@
 #include "private/svn_diff_tree.h"
 #include "svn_private_config.h"
 
-typedef struct tree_processor_t
-{
-  svn_diff_tree_processor_t tp;
-
-  /* void *future_extension */
-} tree_processor_t;
-
-
 static svn_error_t *
 default_dir_opened(void **new_dir_baton,
                    svn_boolean_t *skip,
@@ -215,27 +207,25 @@ svn_diff_tree_processor_t *
 svn_diff__tree_processor_create(void *baton,
                                 apr_pool_t *result_pool)
 {
-  tree_processor_t *wrapper;
-  wrapper = apr_pcalloc(result_pool, sizeof(*wrapper));
+  svn_diff_tree_processor_t *tp = apr_pcalloc(result_pool, sizeof(*tp));
 
-  wrapper->tp.baton        = baton;
+  tp->baton        = baton;
 
-  wrapper->tp.dir_opened   = default_dir_opened;
-  wrapper->tp.dir_added    = default_dir_added;
-  wrapper->tp.dir_deleted  = default_dir_deleted;
-  wrapper->tp.dir_changed  = default_dir_changed;
-  wrapper->tp.dir_closed   = default_dir_closed;
+  tp->dir_opened   = default_dir_opened;
+  tp->dir_added    = default_dir_added;
+  tp->dir_deleted  = default_dir_deleted;
+  tp->dir_changed  = default_dir_changed;
+  tp->dir_closed   = default_dir_closed;
 
-  wrapper->tp.file_opened   = default_file_opened;
-  wrapper->tp.file_added    = default_file_added;
-  wrapper->tp.file_deleted  = default_file_deleted;
-  wrapper->tp.file_changed  = default_file_changed;
-  wrapper->tp.file_closed   = default_file_closed;
+  tp->file_opened  = default_file_opened;
+  tp->file_added   = default_file_added;
+  tp->file_deleted = default_file_deleted;
+  tp->file_changed = default_file_changed;
+  tp->file_closed  = default_file_closed;
 
-  wrapper->tp.node_absent   = default_node_absent;
+  tp->node_absent  = default_node_absent;
 
-
-  return &wrapper->tp;
+  return tp;
 }
 
 struct reverse_tree_baton_t
