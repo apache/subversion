@@ -988,6 +988,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                "Index: %s" APR_EOL_STR
                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
                index_path));
+      *wrote_header = TRUE;
 
       /* ### Do we want to add git diff headers here too? I'd say no. The
        * ### 'Index' and '===' line is something subversion has added. The rest
@@ -1040,10 +1041,6 @@ diff_content_changed(svn_boolean_t *wrote_header,
                                                              scratch_pool),
                                    NULL, NULL, scratch_pool));
         }
-
-      /* If we have printed a diff for this path, mark it as visited. */
-      if (exitcode == 1)
-        *wrote_header = TRUE;
     }
   else   /* use libsvn_diff to generate the diff  */
     {
@@ -1063,6 +1060,7 @@ diff_content_changed(svn_boolean_t *wrote_header,
                    "Index: %s" APR_EOL_STR
                    SVN_DIFF__EQUAL_STRING APR_EOL_STR,
                    index_path));
+          *wrote_header = TRUE;
 
           if (dwi->use_git_diff_format)
             {
@@ -1087,10 +1085,6 @@ diff_content_changed(svn_boolean_t *wrote_header,
                      dwi->options.for_internal->context_size,
                      dwi->cancel_func, dwi->cancel_baton,
                      scratch_pool));
-
-          /* If we have printed a diff for this path, mark it as visited. */
-          if (dwi->use_git_diff_format || svn_diff_contains_diffs(diff))
-            *wrote_header = TRUE;
         }
     }
 
