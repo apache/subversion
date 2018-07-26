@@ -148,25 +148,47 @@ make_repos_relpath(const char **repos_relpath,
   return SVN_NO_ERROR;
 }
 
-/* Adjust *INDEX_PATH, *ORIG_PATH_1 and *ORIG_PATH_2, representing the changed
- * node and the two original targets passed to the diff command, to handle the
- * case when we're dealing with different anchors. RELATIVE_TO_DIR is the
- * directory the diff target should be considered relative to.
- * ANCHOR is the local path where the diff editor is anchored. The resulting
- * values are allocated in RESULT_POOL and temporary allocations are performed
- * in SCRATCH_POOL. */
+/* Adjust paths to handle the case when we're dealing with different anchors.
+ *
+ * Set *INDEX_PATH to the new relative path. Set *LABEL_PATH1 and
+ * *LABEL_PATH2 to that path annotated with the unique parts of ORIG_PATH_1
+ * and ORIG_PATH_2 respectively, like this:
+ *
+ *   INDEX_PATH:  "path"
+ *   LABEL_PATH1: "path\t(.../branches/branch1)"
+ *   LABEL_PATH2: "path\t(.../trunk)"
+ *
+ * Make the output paths relative to RELATIVE_TO_DIR (if not null) by
+ * removing it from the beginning of (ANCHOR + RELPATH).
+ *
+ * ANCHOR (if not null) is the local path where the diff editor is anchored.
+ * RELPATH is the path to the changed node within the diff editor, so
+ * relative to ANCHOR.
+ *
+ * RELATIVE_TO_DIR and ANCHOR are of the same form -- either absolute local
+ * paths or relative paths relative to the same base.
+ *
+ * ORIG_PATH_1 and ORIG_PATH_2 represent the two original target paths or
+ * URLs passed to the diff command.
+ *
+ * Allocate results in RESULT_POOL (or as a pointer to RELPATH) and
+ * temporary data in SCRATCH_POOL.
+ */
 static svn_error_t *
 adjust_paths_for_diff_labels(const char **index_path,
-                             const char **orig_path_1,
-                             const char **orig_path_2,
+                             const char **label_path1,
+                             const char **label_path2,
                              const char *relative_to_dir,
                              const char *anchor,
+                             const char *relpath,
+                             const char *orig_path_1,
+                             const char *orig_path_2,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  const char *new_path = *index_path;
-  const char *new_path1 = *orig_path_1;
-  const char *new_path2 = *orig_path_2;
+  const char *new_path = relpath;
+  const char *new_path1 = orig_path_1;
+  const char *new_path2 = orig_path_2;
 
   if (anchor)
     new_path = svn_dirent_join(anchor, new_path, result_pool);
@@ -249,8 +271,8 @@ adjust_paths_for_diff_labels(const char **index_path,
     new_path2 = apr_psprintf(result_pool, "%s\t(.../%s)", new_path, new_path2);
 
   *index_path = new_path;
-  *orig_path_1 = new_path1;
-  *orig_path_2 = new_path2;
+  *label_path1 = new_path1;
+  *label_path2 = new_path2;
 
   return SVN_NO_ERROR;
 }
@@ -541,6 +563,24 @@ print_git_diff_header(svn_stream_t *os,
   return SVN_NO_ERROR;
 }
 
+/* Print the "Index:" and "=====" lines.
+ * Show the paths in platform-independent format ('/' separators)
+ */
+static svn_error_t *
+print_diff_index_header(svn_stream_t *outstream,
+                        const char *header_encoding,
+                        const char *index_path,
+                        const char *suffix,
+                        apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_stream_printf_from_utf8(outstream,
+                                      header_encoding, scratch_pool,
+                                      "Index: %s%s" APR_EOL_STR
+                                      SVN_DIFF__EQUAL_STRING APR_EOL_STR,
+                                      index_path, suffix));
+  return SVN_NO_ERROR;
+}
+
 /* A helper func that writes out verbal descriptions of property diffs
    to OUTSTREAM.   Of course, OUTSTREAM will probably be whatever was
    passed to svn_client_diff7(), which is probably stdout.
@@ -576,9 +616,8 @@ display_prop_diffs(const apr_array_header_t *propchanges,
                    apr_pool_t *scratch_pool)
 {
   const char *repos_relpath1 = NULL;
-  const char *index_path = diff_relpath;
-  const char *adjusted_path1 = ddi->orig_path_1;
-  const char *adjusted_path2 = ddi->orig_path_2;
+  const char *index_path;
+  const char *label_path1, *label_path2;
 
   if (use_git_diff_format)
     {
@@ -588,9 +627,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
     }
 
   /* If we're creating a diff on the wc root, path would be empty. */
-  SVN_ERR(adjust_paths_for_diff_labels(&index_path, &adjusted_path1,
-                                       &adjusted_path2,
+  SVN_ERR(adjust_paths_for_diff_labels(&index_path,
+                                       &label_path1, &label_path2,
                                        relative_to_dir, ddi->anchor,
+                                       diff_relpath,
+                                       ddi->orig_path_1, ddi->orig_path_2,
                                        scratch_pool, scratch_pool));
 
   if (show_diff_header)
@@ -598,16 +639,11 @@ display_prop_diffs(const apr_array_header_t *propchanges,
       const char *label1;
       const char *label2;
 
-      label1 = diff_label(adjusted_path1, rev1, scratch_pool);
-      label2 = diff_label(adjusted_path2, rev2, scratch_pool);
+      label1 = diff_label(label_path1, rev1, scratch_pool);
+      label2 = diff_label(label_path2, rev2, scratch_pool);
 
-      /* ### Should we show the paths in platform specific format,
-       * ### diff_content_changed() does not! */
-
-      SVN_ERR(svn_stream_printf_from_utf8(outstream, encoding, scratch_pool,
-                                          "Index: %s" APR_EOL_STR
-                                          SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-                                          index_path));
+      SVN_ERR(print_diff_index_header(outstream, encoding,
+                                      index_path, "", scratch_pool));
 
       if (use_git_diff_format)
         SVN_ERR(print_git_diff_header(outstream, &label1, &label2,
@@ -845,9 +881,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
   svn_stream_t *outstream = dwi->outstream;
   const char *label1, *label2;
   svn_boolean_t mt1_binary = FALSE, mt2_binary = FALSE;
-  const char *index_path = diff_relpath;
-  const char *path1 = dwi->ddi.orig_path_1;
-  const char *path2 = dwi->ddi.orig_path_2;
+  const char *index_path;
+  const char *label_path1, *label_path2;
   const char *mimetype1 = svn_prop_get_value(left_props, SVN_PROP_MIME_TYPE);
   const char *mimetype2 = svn_prop_get_value(right_props, SVN_PROP_MIME_TYPE);
   const char *index_shas = NULL;
@@ -857,12 +892,15 @@ diff_content_changed(svn_boolean_t *wrote_header,
     return SVN_NO_ERROR;
 
   /* Generate the diff headers. */
-  SVN_ERR(adjust_paths_for_diff_labels(&index_path, &path1, &path2,
+  SVN_ERR(adjust_paths_for_diff_labels(&index_path,
+                                       &label_path1, &label_path2,
                                        rel_to_dir, dwi->ddi.anchor,
+                                       diff_relpath,
+                                       dwi->ddi.orig_path_1, dwi->ddi.orig_path_2,
                                        scratch_pool, scratch_pool));
 
-  label1 = diff_label(path1, rev1, scratch_pool);
-  label2 = diff_label(path2, rev2, scratch_pool);
+  label1 = diff_label(label_path1, rev1, scratch_pool);
+  label2 = diff_label(label_path2, rev2, scratch_pool);
 
   /* Possible easy-out: if either mime-type is binary and force was not
      specified, don't attempt to generate a viewable diff at all.
@@ -902,12 +940,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
   if (! dwi->force_binary && (mt1_binary || mt2_binary))
     {
       /* Print out the diff header. */
-      SVN_ERR(svn_stream_printf_from_utf8(outstream,
-               dwi->header_encoding, scratch_pool,
-               "Index: %s" APR_EOL_STR
-               SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-               index_path));
-
+      SVN_ERR(print_diff_index_header(outstream, dwi->header_encoding,
+                                      index_path, "", scratch_pool));
       *wrote_header = TRUE;
 
       /* ### Print git diff headers. */
@@ -983,11 +1017,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
       int exitcode;
 
       /* Print out the diff header. */
-      SVN_ERR(svn_stream_printf_from_utf8(outstream,
-               dwi->header_encoding, scratch_pool,
-               "Index: %s" APR_EOL_STR
-               SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-               index_path));
+      SVN_ERR(print_diff_index_header(outstream, dwi->header_encoding,
+                                      index_path, "", scratch_pool));
       *wrote_header = TRUE;
 
       /* ### Do we want to add git diff headers here too? I'd say no. The
@@ -1055,11 +1086,8 @@ diff_content_changed(svn_boolean_t *wrote_header,
           || svn_diff_contains_diffs(diff))
         {
           /* Print out the diff header. */
-          SVN_ERR(svn_stream_printf_from_utf8(outstream,
-                   dwi->header_encoding, scratch_pool,
-                   "Index: %s" APR_EOL_STR
-                   SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-                   index_path));
+          SVN_ERR(print_diff_index_header(outstream, dwi->header_encoding,
+                                          index_path, "", scratch_pool));
           *wrote_header = TRUE;
 
           if (dwi->use_git_diff_format)
@@ -1159,11 +1187,9 @@ diff_file_added(const char *relpath,
         index_path = svn_dirent_join(dwi->ddi.anchor, relpath,
                                      scratch_pool);
 
-      SVN_ERR(svn_stream_printf_from_utf8(dwi->outstream,
-                dwi->header_encoding, scratch_pool,
-                "Index: %s (added)" APR_EOL_STR
-                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-                index_path));
+      SVN_ERR(print_diff_index_header(dwi->outstream, dwi->header_encoding,
+                                      index_path, " (added)",
+                                      scratch_pool));
       wrote_header = TRUE;
       return SVN_NO_ERROR;
     }
@@ -1249,11 +1275,9 @@ diff_file_deleted(const char *relpath,
         index_path = svn_dirent_join(dwi->ddi.anchor, relpath,
                                      scratch_pool);
 
-      SVN_ERR(svn_stream_printf_from_utf8(dwi->outstream,
-                dwi->header_encoding, scratch_pool,
-                "Index: %s (deleted)" APR_EOL_STR
-                SVN_DIFF__EQUAL_STRING APR_EOL_STR,
-                index_path));
+      SVN_ERR(print_diff_index_header(dwi->outstream, dwi->header_encoding,
+                                      index_path, " (deleted)",
+                                      scratch_pool));
     }
   else
     {
