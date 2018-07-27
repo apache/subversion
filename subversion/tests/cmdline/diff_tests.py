@@ -5218,6 +5218,38 @@ def diff_file_replaced_by_symlink(sbox):
   expected_output = svntest.verify.AnyOutput
   svntest.actions.run_and_verify_svn(expected_output, [], 'diff', wc_dir)
 
+# Test 'svn diff --git' with a copy.
+#
+# When this diff is rooted at a path below the repository root directory,
+# it errored out while printing the git diff header, due to confusion of
+# diff-relative and repository-relative copyfrom paths.
+@XFail()
+def diff_git_format_copy(sbox):
+  "diff git format copy"
+  sbox.build(create_wc=False)
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
+                                     sbox.repo_url + '/A/B',
+                                     sbox.wc_dir)
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  sbox.simple_copy('E/alpha', 'alpha_copied')
+  sbox.simple_append('alpha_copied', "This is a copy of 'alpha'.\n")
+
+  expected_output = \
+    make_git_diff_header('alpha_copied', 'A/B/alpha_copied',
+                         "revision 1", "working copy",
+                         copyfrom_path="A/B/E/alpha",
+                         copyfrom_rev='1', cp=True,
+                         text_changes=True) + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+This is a copy of 'alpha'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(expected_output, [], 'diff',
+                                     '--git', '.')
+
 ########################################################################
 #Run the tests
 
@@ -5317,6 +5349,7 @@ test_list = [ None,
               diff_summary_repo_wc_local_copy,
               diff_summary_repo_wc_local_copy_unmodified,
               diff_file_replaced_by_symlink,
+              diff_git_format_copy,
               ]
 
 if __name__ == '__main__':
