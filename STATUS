@@ -15,19 +15,6 @@ Status of 1.10.3:
 Candidate changes:
 ==================
 
- * r1830083, r1833864, r1833866
-   Fix issue #4739, "Accept incoming deletion" option doing nothing
-   for a locally deleted file
-   Justification:
-     Fixes undesirable conflict resolver behaviour.
-   Notes:
-     r1830083 adds a regression test
-     r1833864 fixes the issue
-     r1833866 is a small follow-up fix
-     Issue #4744 fix should be merged after this to avoid merge conflicts.
-   Votes:
-     +1: stsp, jcorvel
-
  * r1833895, r1833897, r1833899, r1833901
    Fix issue #4744 "during merge: assertion failed (start_rev > end_rev)"
    Justification:
@@ -76,3 +63,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1830083, r1833864, r1833866
+   Fix issue #4739, "Accept incoming deletion" option doing nothing
+   for a locally deleted file
+   Justification:
+     Fixes undesirable conflict resolver behaviour.
+   Notes:
+     r1830083 adds a regression test
+     r1833864 fixes the issue
+     r1833866 is a small follow-up fix
+     Issue #4744 fix should be merged after this to avoid merge conflicts.
+   Votes:
+     +1: stsp, jcorvel, philip
