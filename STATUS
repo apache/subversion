@@ -64,7 +64,7 @@ Candidate changes:
    Votes:
      +1: philip, danielsh
 
- * r1836762
+ * r1836762, r1836802
    Store the HTTPS client cert password.
    Justification:
      Restores a feature lost when we switched from neon to serf.
