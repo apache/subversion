@@ -5588,6 +5588,102 @@ test_merge_incoming_delete_file_unrelated_move(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_cherry_pick_post_move_edit_dir(const svn_test_opts_t *opts,
+                                    apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  const char *trunk_url;
+  svn_opt_revision_t peg_rev;
+  apr_array_header_t *ranges_to_merge;
+  svn_opt_revision_range_t merge_range;
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  svn_boolean_t tree_conflicted;
+  svn_stringbuf_t *buf;
+
+  SVN_ERR(svn_test__sandbox_create(b,
+                                   "test_cherry_pick_post_move_edit_dir",
+                                   opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b)); /* r1 */
+  /* Create a copy of node "A". */
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r2 */
+  /* On "trunk", move the directory B. */
+  SVN_ERR(sbox_wc_move(b, "A/B", "A/B-moved"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
+  /* On "trunk", edit B-moved/lambda. This will be r4. */
+  SVN_ERR(sbox_file_write(b, "A/B-moved/lambda", "Modified content."
+                          APR_EOL_STR));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Perform a cherry-pick merge of r4 from A to A1. */
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  trunk_url = apr_pstrcat(b->pool, b->repos_url, "/A", SVN_VA_NULL);
+  peg_rev.kind = svn_opt_revision_number;
+  peg_rev.value.number = 4;
+  merge_range.start.kind = svn_opt_revision_number;
+  merge_range.start.value.number = 3;
+  merge_range.end.kind = svn_opt_revision_number;
+  merge_range.end.value.number = 4;
+  ranges_to_merge = apr_array_make(b->pool, 1,
+                                   sizeof(svn_opt_revision_range_t *));
+  APR_ARRAY_PUSH(ranges_to_merge, svn_opt_revision_range_t *) = &merge_range;
+  /* This should raise a "local missing vs incoming edit" conflict. */
+  SVN_ERR(svn_client_merge_peg5(trunk_url, ranges_to_merge, &peg_rev,
+                                sbox_wc_path(b, "A1"), svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, b->pool));
+
+  SVN_ERR(svn_client_conflict_get(&conflict,
+                                  sbox_wc_path(b, "A1/B-moved"),
+                                  ctx, b->pool, b->pool));
+  SVN_ERR(svn_client_conflict_get_conflicted(NULL, NULL, &tree_conflicted,
+                                             conflict, b->pool, b->pool));
+  SVN_TEST_ASSERT(tree_conflicted);
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_local_move_dir_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  /* Try to resolve the conflict. */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_local_move_dir_merge,
+            ctx, b->pool));
+
+  /* The node "B-moved" should no longer exist. */
+  SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(&conflict,
+                                                sbox_wc_path(b, "A/B-moved"),
+                                                ctx, pool, pool),
+                        SVN_ERR_WC_PATH_NOT_FOUND);
+
+  /* And "A/B/lambda" should have expected contents. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A/B/lambda"), pool));
+  SVN_TEST_STRING_ASSERT(buf->data, "Modified content." APR_EOL_STR);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -5684,6 +5780,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge two added dirs assertion failure (#4744)"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_delete_file_unrelated_move,
                        "do not suggest unrelated move targets (#4766)"),
+    SVN_TEST_OPTS_XFAIL(test_cherry_pick_post_move_edit_dir,
+                       "cherry-pick edit from moved directory"),
     SVN_TEST_NULL
   };
 
