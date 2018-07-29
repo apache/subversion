@@ -214,7 +214,7 @@ file_rev_handler(void *baton,
                               frb->compression_level, pool);
       *window_handler = delta_window_handler;
       *window_baton = frb;
-      /* Start the txdelta element wich will be terminated by the window
+      /* Start the txdelta element which will be terminated by the window
          handler together with the file-rev element. */
       SVN_ERR(dav_svn__brigade_puts(frb->bb, frb->output, "<S:txdelta>"));
     }
