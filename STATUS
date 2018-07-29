@@ -64,6 +64,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1836976
+   Fix "relpath is canonical" assertion failure in conflict resolver.
+   Justification:
+     Assertion can be triggered by cherry-pick merge with a moved directory.
+   Notes:
+     To reproduce, undo r1836976 locally and run the test added in r1836977.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
