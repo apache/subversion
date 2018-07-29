@@ -473,6 +473,7 @@ def ensure_tree_conflict(sbox, operation,
         run_and_verify_svn(expected_stdout, [],
                            'merge',
                            '--allow-mixed-revisions',
+                           '--accept=postpone',
                            '-r', str(source_left_rev) + ':' + str(source_right_rev),
                            source_url, target_path)
       else:
