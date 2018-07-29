@@ -5682,7 +5682,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "update incoming delete to deleted file (#4739)"),
     SVN_TEST_OPTS_PASS(test_merge_two_added_dirs_assertion_failure,
                        "merge two added dirs assertion failure (#4744)"),
-    SVN_TEST_OPTS_XFAIL(test_merge_incoming_delete_file_unrelated_move,
+    SVN_TEST_OPTS_PASS(test_merge_incoming_delete_file_unrelated_move,
                        "do not suggest unrelated move targets (#4766)"),
     SVN_TEST_NULL
   };
