@@ -2099,33 +2099,6 @@ trace_moved_node_backwards(apr_hash_t *moves_table,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-reparent_session_and_fetch_node_kind(svn_node_kind_t *node_kind,
-                                     svn_ra_session_t *ra_session,
-                                     const char *url,
-                                     svn_revnum_t peg_rev,
-                                     apr_pool_t *scratch_pool)
-{
-  svn_error_t *err;
-
-  err = svn_ra_reparent(ra_session, url, scratch_pool);
-  if (err)
-    {
-      if (err->apr_err == SVN_ERR_RA_ILLEGAL_URL)
-        {
-          svn_error_clear(err);
-          *node_kind = svn_node_unknown;
-          return SVN_NO_ERROR;
-        }
-    
-      return svn_error_trace(err);
-    }
-
-  SVN_ERR(svn_ra_check_path(ra_session, "", peg_rev, node_kind, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Scan MOVES_TABLE for moves which affect a particular deleted node, and
  * build a set of new move information for this node.
  * Return heads of all possible move chains in *MOVES.
@@ -2172,22 +2145,29 @@ find_operative_moves(apr_array_header_t **moves,
       svn_pool_clear(iterpool);
 
       move = APR_ARRAY_IDX(moves_in_deleted_rev, i, struct repos_move_info *);
-      relpath = svn_relpath_skip_ancestor(move->moved_from_repos_relpath,
+      if (strcmp(move->moved_from_repos_relpath, deleted_repos_relpath) == 0)
+        {
+          APR_ARRAY_PUSH(*moves, struct repos_move_info *) = move;
+          continue;
+        }
+
+      /* Test for an operative nested move. */
+      relpath = svn_relpath_skip_ancestor(move->moved_to_repos_relpath,
                                           deleted_repos_relpath);
       if (relpath && relpath[0] != '\0')
         {
-          svn_node_kind_t node_kind;
+          struct repos_move_info *nested_move;
+          const char *actual_deleted_repos_relpath;
 
-          url = svn_path_url_add_component2(repos_root_url,
-                                            deleted_repos_relpath,
-                                            iterpool);
-          SVN_ERR(reparent_session_and_fetch_node_kind(&node_kind,
-                                                       ra_session, url,
-                                                       rev_below(deleted_rev),
-                                                       iterpool));
-          move = new_path_adjusted_move(move, relpath, node_kind, result_pool);
+          actual_deleted_repos_relpath =
+              svn_relpath_join(move->moved_from_repos_relpath, relpath,
+                               iterpool);
+          nested_move = map_deleted_path_to_move(actual_deleted_repos_relpath,
+                                                 moves_in_deleted_rev,
+                                                 iterpool);
+          if (nested_move)
+            APR_ARRAY_PUSH(*moves, struct repos_move_info *) = nested_move;
         }
-      APR_ARRAY_PUSH(*moves, struct repos_move_info *) = move;
     }
 
   if (url != NULL)
