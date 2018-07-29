@@ -45,6 +45,14 @@ Candidate changes:
    Votes:
      +1: philip
 
+ * r1836963
+   Fix potential NULL deref in conflict resolver.
+   Justification:
+     Real-world impact unknown. Found during code inspection.
+     Let us better be safe than sorry.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
