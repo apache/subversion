@@ -53,6 +53,17 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1836960, r1836968
+   Fix issue #4766, "resolver adds unrelated moves to move target list"
+   Justification:
+     Undesirable resolver behaviour: If an item was moved, all other items
+     moved within the same revision will be considered viable merge targets.
+   Notes:
+     r1836960 adds a regression test
+     r1836968 fixes the bug
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
