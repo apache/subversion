@@ -5833,7 +5833,10 @@ find_modified_rev(void *baton,
 
           if (log_item->copyfrom_path)
             b->repos_relpath = apr_pstrdup(b->scratch_pool,
-                                           log_item->copyfrom_path);
+                                          /* ### remove leading slash */
+                                           svn_relpath_canonicalize(
+                                               log_item->copyfrom_path,
+                                               iterpool));
         }
       else if (b->node_kind == svn_node_dir &&
                svn_relpath_skip_ancestor(b->repos_relpath, path) != NULL)
