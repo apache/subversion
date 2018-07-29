@@ -806,18 +806,20 @@ map_deleted_path_to_move(const char *deleted_relpath,
   if (closest_move)
     {
       const char *relpath;
-      const char *moved_along_path;
-      struct repos_move_info *move;
       
       /* See if we can find an even closer move for this moved-along path. */
       relpath = svn_relpath_skip_ancestor(closest_move->moved_to_repos_relpath,
                                           deleted_relpath);
-      moved_along_path =
-        svn_relpath_join(closest_move->moved_from_repos_relpath, relpath,
-                         scratch_pool);
-      move = map_deleted_path_to_move(moved_along_path, moves, scratch_pool);
-      if (move)
-        return move;
+      if (relpath && relpath[0] != '\0')
+        {
+          struct repos_move_info *move;
+          const char *moved_along_path =
+            svn_relpath_join(closest_move->moved_from_repos_relpath, relpath,
+                             scratch_pool);
+          move = map_deleted_path_to_move(moved_along_path, moves, scratch_pool);
+          if (move)
+            return move;
+        }
     }
 
   return closest_move;
