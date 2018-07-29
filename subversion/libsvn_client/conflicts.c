@@ -4913,11 +4913,9 @@ init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
   svn_node_kind_t victim_node_kind;
   const char *incoming_new_repos_relpath;
   svn_revnum_t incoming_new_pegrev;
-  svn_wc_operation_t operation;
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   victim_node_kind = svn_client_conflict_tree_get_victim_node_kind(conflict);
-  operation = svn_client_conflict_get_operation(conflict);
   /* ### Should we get the old location in case of reverse-merges? */
   SVN_ERR(svn_client_conflict_get_incoming_new_repos_location(
             &incoming_new_repos_relpath, &incoming_new_pegrev,
@@ -4943,11 +4941,8 @@ init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
     get_moved_to_repos_relpath(details, scratch_pool);
   details->wc_move_target_idx = 0;
 
-  /* If only one move target exists after an update or switch,
-   * recommend a resolution option which follows the incoming move. */
-  if (apr_hash_count(details->wc_move_targets) == 1 &&
-      (operation == svn_wc_operation_update ||
-       operation == svn_wc_operation_switch))
+  /* If only one move target exists recommend a resolution option. */
+  if (apr_hash_count(details->wc_move_targets) == 1)
     {
       apr_array_header_t *wc_abspaths;
 
