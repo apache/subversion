@@ -50,16 +50,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1833895, r1833897, r1833899, r1833901
-   Fix issue #4744 "during merge: assertion failed (start_rev > end_rev)"
-   Justification:
-     Fixes undesirable conflict resolver behaviour.
-   Notes:
-     r1833895 adds a regression test
-     r1833897 prevents offer of a non-working resolution option
-     r1833899 fixes accidental test breakage introduced by r1833897
-     r1833901 prevents the assertion failure and adjusts the test
-     Issue #4739 fix should be merged before this to avoid merge conflicts.
-  Votes:
-    +1: stsp, jcorvel, philip
