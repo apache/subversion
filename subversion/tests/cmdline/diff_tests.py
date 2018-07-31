@@ -5201,7 +5201,10 @@ def diff_summary_repo_wc_local_copy_unmodified(sbox):
                     '--old=' + sbox.ospath('iota') + '@HEAD',
                     '--new=' + sbox.ospath('iota2'))
 
+# Fails with "Can't open file '.../iota': Too many levels of symbolic links"
+# on Unix.
 @XFail()
+@Skip(svntest.main.is_os_windows)
 def diff_file_replaced_by_symlink(sbox):
   "diff base vs working: symlink replaces a file"
   sbox.build(read_only=True)
