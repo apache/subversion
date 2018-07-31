@@ -493,7 +493,8 @@ class Sandbox:
                        if not svnrdump_headers_always.match(l)]
     # Ignore differences in number of blank lines between node records,
     # as svnrdump puts 3 whereas svnadmin puts 2 after a replace-with-copy.
-    svntest.verify.compare_dump_files(None, None,
+    svntest.verify.compare_dump_files('svnadmin dump, tweaked',
+                                      'svnrdump dump, tweaked',
                                       dumpfile_a_d_cmp,
                                       dumpfile_r_d_cmp,
                                       ignore_number_of_blank_lines=True)
@@ -524,20 +525,22 @@ class Sandbox:
     reloaded_dumpfile_a_n = svntest.actions.run_and_verify_dump(repo_dir_a_n)
     reloaded_dumpfile_a_d = svntest.actions.run_and_verify_dump(repo_dir_a_d)
     reloaded_dumpfile_r_d = svntest.actions.run_and_verify_dump(repo_dir_r_d)
-    svntest.verify.compare_dump_files(None, None,
+    svntest.verify.compare_dump_files('svnadmin dump no delta, loaded, dumped',
+                                      'svnadmin dump --deltas, loaded, dumped',
                                       reloaded_dumpfile_a_n,
                                       reloaded_dumpfile_a_d,
                                       ignore_uuid=True)
-    svntest.verify.compare_dump_files(None, None,
+    svntest.verify.compare_dump_files('svnadmin dump, loaded, dumped',
+                                      'svnrdump dump, loaded, dumped',
                                       reloaded_dumpfile_a_d,
                                       reloaded_dumpfile_r_d,
                                       ignore_uuid=True)
 
     # Run each dump through svndumpfilter and check for no further change.
-    for dumpfile in [dumpfile_a_n,
-                     dumpfile_a_d,
-                     dumpfile_r_d
-                     ]:
+    for dumpfile, dumpfile_desc in [(dumpfile_a_n, 'svnadmin dump'),
+                                    (dumpfile_a_d, 'svnadmin dump --deltas'),
+                                    (dumpfile_r_d, 'svnrdump dump'),
+                                    ]:
       ### No buffer size seems to work for update_tests-2. So skip that test?
       ### (Its dumpfile size is ~360 KB non-delta, ~180 KB delta.)
       if len(''.join(dumpfile)) > 100000:
@@ -551,7 +554,9 @@ class Sandbox:
       # svndumpfilter strips them.
       # Ignore differences in number of blank lines between node records,
       # as svndumpfilter puts 3 instead of 2 after an add or delete record.
-      svntest.verify.compare_dump_files(None, None, dumpfile, dumpfile2,
+      svntest.verify.compare_dump_files(dumpfile_desc,
+                                        'after svndumpfilter include /',
+                                        dumpfile, dumpfile2,
                                         expect_content_length_always=True,
                                         ignore_empty_prop_sections=True,
                                         ignore_number_of_blank_lines=True)
