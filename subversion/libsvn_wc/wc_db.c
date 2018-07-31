@@ -16651,11 +16651,9 @@ svn_wc__db_find_working_nodes_with_basename(apr_array_header_t **local_abspaths,
 
   while (have_row)
     {
-      svn_wc__db_status_t presence;
       const char *local_relpath;
       const char *local_abspath;
 
-      presence = svn_sqlite__column_token(stmt, 0, presence_map);
       local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
       local_abspath = svn_dirent_join(wcroot->abspath, local_relpath,
                                       result_pool);
