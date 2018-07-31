@@ -10446,30 +10446,30 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 
       details = conflict->tree_conflict_incoming_details;
       if (details == NULL || details->wc_move_targets == NULL)
-       return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                _("Getting a list of possible move targets "
-                                  "requires details for tree conflict at '%s' "
-                                  "to be fetched from the repository first"),
-                               svn_dirent_local_style(victim_abspath,
-                                                      scratch_pool));
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Getting a list of possible move targets "
+                                   "requires details for tree conflict at '%s' "
+                                   "to be fetched from the repository first"),
+                                 svn_dirent_local_style(victim_abspath,
+                                                        scratch_pool));
 
-       move_target_wc_abspaths =
+      move_target_wc_abspaths =
          svn_hash_gets(details->wc_move_targets,
                        get_moved_to_repos_relpath(details, scratch_pool));
 
-       /* Return a copy of the option's move target candidate list. */
-       *possible_moved_to_abspaths =
+      /* Return a copy of the option's move target candidate list. */
+      *possible_moved_to_abspaths =
          apr_array_make(result_pool, move_target_wc_abspaths->nelts,
                         sizeof (const char *));
-       for (i = 0; i < move_target_wc_abspaths->nelts; i++)
-         {
-           const char *moved_to_abspath;
+      for (i = 0; i < move_target_wc_abspaths->nelts; i++)
+        {
+          const char *moved_to_abspath;
 
-           moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths, i,
-                                            const char *);
-           APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
+          moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths, i,
+                                           const char *);
+          APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
              apr_pstrdup(result_pool, moved_to_abspath);
-         }
+        }
     }
 
   return SVN_NO_ERROR;
