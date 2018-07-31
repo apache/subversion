@@ -806,7 +806,8 @@ class DumpParser:
     self.parse_all_revisions()
     return self.parsed
 
-def compare_dump_files(message, label, expected, actual,
+def compare_dump_files(label_expected, label_actual,
+                       expected, actual,
                        ignore_uuid=False,
                        expect_content_length_always=False,
                        ignore_empty_prop_sections=False,
@@ -848,6 +849,8 @@ def compare_dump_files(message, label, expected, actual,
 
   if parsed_expected != parsed_actual:
     print('DIFF of raw dumpfiles (including expected differences)')
+    print('--- ' + (label_expected or 'expected'))
+    print('+++ ' + (label_actual or 'actual'))
     print(''.join(ndiff(expected, actual)))
     raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
                           + '\n'.join(ndiff(
