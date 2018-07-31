@@ -1936,25 +1936,11 @@ write_revision_record(svn_stream_t *stream,
                       apr_pool_t *pool)
 {
   apr_hash_t *props;
-  apr_time_t timetemp;
-  svn_string_t *datevalue;
 
   if (include_revprops)
     {
       SVN_ERR(svn_repos_fs_revision_proplist(&props, repos, rev,
                                              authz_func, authz_baton, pool));
-
-      /* Run revision date properties through the time conversion to
-        canonicalize them. */
-      /* ### Remove this when it is no longer needed for sure. */
-      datevalue = svn_hash_gets(props, SVN_PROP_REVISION_DATE);
-      if (datevalue)
-        {
-          SVN_ERR(svn_time_from_cstring(&timetemp, datevalue->data, pool));
-          datevalue = svn_string_create(svn_time_to_cstring(timetemp, pool),
-                                        pool);
-          svn_hash_sets(props, SVN_PROP_REVISION_DATE, datevalue);
-        }
     }
    else
     {

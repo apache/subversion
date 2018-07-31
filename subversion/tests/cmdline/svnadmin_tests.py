@@ -3826,6 +3826,23 @@ def load_issue4725(sbox):
   sbox2.build(create_wc=False, empty=True)
   load_and_verify_dumpstream(sbox2, None, [], None, False, dump, '-M100')
 
+@Issue(4767)
+def dump_no_canonicalize_svndate(sbox):
+  "svnadmin dump shouldn't canonicalize svn:date"
+
+  sbox.build(create_wc=False, empty=True)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+
+  # set svn:date in a non-canonical format (not six decimal places)
+  propval = "2015-01-01T00:00:00.0Z"
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
+                                     "propset", "--revprop", "-r0", "svn:date",
+                                     propval,
+                                     sbox.repo_url)
+
+  dump_lines = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+  assert propval + '\n' in dump_lines
+
 ########################################################################
 # Run the tests
 
@@ -3900,6 +3917,7 @@ test_list = [ None,
               dump_exclude_all_rev_changes,
               dump_invalid_filtering_option,
               load_issue4725,
+              dump_no_canonicalize_svndate,
              ]
 
 if __name__ == '__main__':
