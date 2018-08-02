@@ -287,6 +287,9 @@ typedef struct dir_baton_t
 
   svn_revnum_t base_rev;                /* base revision or NULL for Add */
 
+  const char *copyfrom_path;            /* NULL for open */
+  svn_revnum_t copyfrom_rev;            /* SVN_INVALID_REVNUM for open */
+
   /* controlling dir baton - this is only created in ensure_dir_opened() */
   svn_boolean_t dir_opened;
   void *dir_baton;
@@ -325,6 +328,9 @@ typedef struct file_baton_t
   const char *lock_token;
 
   svn_revnum_t base_rev;                /* SVN_INVALID_REVNUM for Add */
+
+  const char *copyfrom_path;            /* NULL for open */
+  svn_revnum_t copyfrom_rev;            /* SVN_INVALID_REVNUM for open */
 
   /* controlling dir baton - this is only created in ensure_file_opened() */
   svn_boolean_t file_opened;
@@ -491,6 +497,7 @@ create_dir_baton(dir_baton_t **new_dir,
     }
 
   dir->base_rev = SVN_INVALID_REVNUM;
+  dir->copyfrom_rev = SVN_INVALID_REVNUM;
 
   dir->ref_count = 1;
 
@@ -528,6 +535,7 @@ create_file_baton(file_baton_t **new_file,
 
   /* Sane defaults */
   file->base_rev = SVN_INVALID_REVNUM;
+  file->copyfrom_rev = SVN_INVALID_REVNUM;
 
   *new_file = file;
 
@@ -686,7 +694,8 @@ ensure_dir_opened(dir_baton_t *dir,
         {
           SVN_ERR(ctx->editor->add_directory(dir->relpath,
                                              dir->parent_dir->dir_baton,
-                                             NULL, SVN_INVALID_REVNUM,
+                                             dir->copyfrom_path,
+                                             dir->copyfrom_rev,
                                              dir->pool,
                                              &dir->dir_baton));
         }
@@ -761,7 +770,8 @@ ensure_file_opened(file_baton_t *file,
     {
       SVN_ERR(editor->add_file(file->relpath,
                                file->parent_dir->dir_baton,
-                               NULL, SVN_INVALID_REVNUM,
+                               file->copyfrom_path,
+                               file->copyfrom_rev,
                                file->pool,
                                &file->file_baton));
     }
@@ -1284,6 +1294,17 @@ fetch_for_file(file_baton_t *file,
                                                           file->repos_relpath,
                                                           scratch_pool));
                 }
+              else if (file->copyfrom_path)
+                {
+                  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(file->copyfrom_rev));
+
+                  fetch_ctx->delta_base = apr_psprintf(file->pool, "%s/%ld/%s",
+                                                       ctx->sess->rev_root_stub,
+                                                       file->copyfrom_rev,
+                                                       svn_path_uri_encode(
+                                                          file->copyfrom_path+1,
+                                                          scratch_pool));
+                }
             }
           else if (ctx->sess->wc_callbacks->get_wc_prop)
             {
@@ -1516,10 +1537,28 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
             }
           else
             {
-              /* We told the server not to send copyfrom args and delta
-                 against the copy source. Issue #3711, "Drop client support
-                 for copyfrom-over-update". */
-              SVN_ERR_ASSERT(! svn_hash_gets(attrs, "copyfrom-path"));
+              dir->copyfrom_path = svn_hash_gets(attrs, "copyfrom-path");
+
+              if (dir->copyfrom_path)
+                {
+                  apr_int64_t copyfrom_rev;
+                  const char *copyfrom_rev_str;
+                  dir->copyfrom_path = svn_fspath__canonicalize(
+                                                        dir->copyfrom_path,
+                                                        dir->pool);
+
+                  copyfrom_rev_str = svn_hash_gets(attrs, "copyfrom-rev");
+
+                  if (!copyfrom_rev_str)
+                    return svn_error_createf(SVN_ERR_XML_ATTRIB_NOT_FOUND,
+                                             NULL,
+                                            _("Missing '%s' attribute"),
+                                            "copyfrom-rev");
+
+                  SVN_ERR(svn_cstring_atoi64(&copyfrom_rev, copyfrom_rev_str));
+
+                  dir->copyfrom_rev = (svn_revnum_t)copyfrom_rev;
+                }
 
               if (! ctx->add_props_included)
                 dir->fetch_props = TRUE;
@@ -1547,9 +1586,29 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
           else
             {
               const char *sha1_checksum;
+              file->copyfrom_path = svn_hash_gets(attrs, "copyfrom-path");
 
-              /* Same as in ADD_DIR case above. */
-              SVN_ERR_ASSERT(! svn_hash_gets(attrs, "copyfrom-path"));
+              if (file->copyfrom_path)
+                {
+                  apr_int64_t copyfrom_rev;
+                  const char *copyfrom_rev_str;
+
+                  file->copyfrom_path = svn_fspath__canonicalize(
+                                                        file->copyfrom_path,
+                                                        file->pool);
+
+                  copyfrom_rev_str = svn_hash_gets(attrs, "copyfrom-rev");
+
+                  if (!copyfrom_rev_str)
+                    return svn_error_createf(SVN_ERR_XML_ATTRIB_NOT_FOUND,
+                                             NULL,
+                                            _("Missing '%s' attribute"),
+                                            "copyfrom-rev");
+
+                  SVN_ERR(svn_cstring_atoi64(&copyfrom_rev, copyfrom_rev_str));
+
+                  file->copyfrom_rev = (svn_revnum_t)copyfrom_rev;
+                }
 
               sha1_checksum = svn_hash_gets(attrs, "sha1-checksum");
               if (sha1_checksum)
