@@ -2257,14 +2257,15 @@ subcommand_verify(apr_getopt_t *os, void *baton, apr_pool_t *pool)
                                check_cancel, NULL, pool));
 
   /* Show the --keep-going error summary. */
-  if (!opt_state->quiet
-      && opt_state->keep_going
-      && verify_baton.error_summary->nelts > 0)
+  if (opt_state->keep_going && verify_baton.error_summary->nelts > 0)
     {
       int rev_maxlength;
       svn_revnum_t end_revnum;
       apr_pool_t *iterpool;
       int i;
+
+      if (feedback_stream == NULL) /* happens when we are in --quiet mode */
+        feedback_stream = recode_stream_create(stdout, pool);
 
       svn_error_clear(
         svn_stream_puts(feedback_stream,
