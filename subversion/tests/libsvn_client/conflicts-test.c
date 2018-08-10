@@ -5780,7 +5780,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "merge two added dirs assertion failure (#4744)"),
     SVN_TEST_OPTS_PASS(test_merge_incoming_delete_file_unrelated_move,
                        "do not suggest unrelated move targets (#4766)"),
-    SVN_TEST_OPTS_XFAIL(test_cherry_pick_post_move_edit_dir,
+    SVN_TEST_OPTS_PASS(test_cherry_pick_post_move_edit_dir,
                        "cherry-pick edit from moved directory"),
     SVN_TEST_NULL
   };
