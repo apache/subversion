@@ -5673,12 +5673,12 @@ test_cherry_pick_post_move_edit_dir(const svn_test_opts_t *opts,
 
   /* The node "B-moved" should no longer exist. */
   SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(&conflict,
-                                                sbox_wc_path(b, "A/B-moved"),
+                                                sbox_wc_path(b, "A1/B-moved"),
                                                 ctx, pool, pool),
                         SVN_ERR_WC_PATH_NOT_FOUND);
 
-  /* And "A/B/lambda" should have expected contents. */
-  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A/B/lambda"), pool));
+  /* And "A1/B/lambda" should have expected contents. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/B/lambda"), pool));
   SVN_TEST_STRING_ASSERT(buf->data, "Modified content." APR_EOL_STR);
 
   return SVN_NO_ERROR;
