@@ -713,6 +713,13 @@ def roll_tarballs(args):
         filepath = os.path.join(get_tempdir(args.base_dir), filename)
         shutil.move(filepath, get_deploydir(args.base_dir))
         filepath = os.path.join(get_deploydir(args.base_dir), filename)
+        if args.version < Version("1.11.0-alpha1"):
+            # 1.10 and earlier generate *.sha1 files for compatibility reasons.
+            # They are deprecated, however, so we don't publicly link them in
+            # the announcements any more.
+            m = hashlib.sha1()
+            m.update(open(filepath, 'r').read())
+            open(filepath + '.sha1', 'w').write(m.hexdigest())
         m = hashlib.sha512()
         m.update(open(filepath, 'r').read())
         open(filepath + '.sha512', 'w').write(m.hexdigest())
