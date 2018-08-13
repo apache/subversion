@@ -2,13 +2,11 @@
 <table class="centered">
 <tr>
   <th>File</th>
-  <th>Checksum (SHA1)</th>
   <th>Checksum (SHA512)</th>
   <th>Signatures</th>
 </tr>
 [for fileinfo]<tr>
   <td><a href="[[]preferred]subversion/[fileinfo.filename]">[fileinfo.filename]</a></td>
-  <td class="checksum">[fileinfo.sha1]</td>
   <!-- The sha512 line does not have a class="checksum" since the link needn't
        be rendered in monospace. -->
   <td>[<a href="https://www.apache.org/dist/subversion/[fileinfo.filename].sha512">SHA-512</a>]</td>

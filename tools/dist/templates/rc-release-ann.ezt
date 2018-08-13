@@ -7,10 +7,6 @@ Please choose the mirror closest to you by visiting:
 
     https://subversion.apache.org/download.cgi#[anchor]
 
-The SHA1 checksums are:
-
-[for sha1info]    [sha1info.sha1] [sha1info.filename]
-[end]
 SHA-512 checksums are available at:
 
     https://www.apache.org/dist/subversion/subversion-[version].tar.bz2.sha512

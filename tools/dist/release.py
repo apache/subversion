@@ -713,9 +713,6 @@ def roll_tarballs(args):
         filepath = os.path.join(get_tempdir(args.base_dir), filename)
         shutil.move(filepath, get_deploydir(args.base_dir))
         filepath = os.path.join(get_deploydir(args.base_dir), filename)
-        m = hashlib.sha1()
-        m.update(open(filepath, 'r').read())
-        open(filepath + '.sha1', 'w').write(m.hexdigest())
         m = hashlib.sha512()
         m.update(open(filepath, 'r').read())
         open(filepath + '.sha512', 'w').write(m.hexdigest())
@@ -996,35 +993,32 @@ def write_news(args):
         template.generate(sys.stdout, data)
 
 
-def get_sha1info(args):
-    'Return a list of sha1 info for the release'
+def get_fileinfo(args):
+    'Return a list of file info (filenames) for the release tarballs'
 
     target = get_target(args)
 
-    sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
-    sha1s.sort()
+    files = glob.glob(os.path.join(target, 'subversion*-%s*.asc' % args.version))
+    files.sort()
 
     class info(object):
         pass
 
-    sha1info = []
-    for s in sha1s:
+    fileinfo = []
+    for f in files:
         i = info()
-        # strip ".sha1"
-        i.filename = os.path.basename(s)[:-5]
-        i.sha1 = open(s, 'r').read()
-        sha1info.append(i)
+        # strip ".asc"
+        i.filename = os.path.basename(f)[:-4]
+        fileinfo.append(i)
 
-    return sha1info
+    return fileinfo
 
 
 def write_announcement(args):
     'Write the release announcement.'
-    sha1info = get_sha1info(args)
     siginfo = "\n".join(get_siginfo(args, True)) + "\n"
 
     data = { 'version'              : str(args.version),
-             'sha1info'             : sha1info,
              'siginfo'              : siginfo,
              'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
@@ -1054,10 +1048,10 @@ def write_announcement(args):
 
 def write_downloads(args):
     'Output the download section of the website.'
-    sha1info = get_sha1info(args)
+    fileinfo = get_fileinfo(args)
 
     data = { 'version'              : str(args.version),
-             'fileinfo'             : sha1info,
+             'fileinfo'             : fileinfo,
            }
 
     template = ezt.Template(compress_whitespace = False)
