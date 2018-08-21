@@ -1208,7 +1208,8 @@ while (defined (my $load_dir = &get_next_load_dir))
                                   $property_name,
                                   '--file',
                                   $tmpfile,
-                                  $add_file);
+                                  '--',
+                                  $add_file . "@");
               }
           }
       }
