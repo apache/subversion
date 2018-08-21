@@ -1205,10 +1205,10 @@ while (defined (my $load_dir = &get_next_load_dir))
 
                 read_from_process($svn,
                                   'propset',
-                                  $property_name,
                                   '--file',
                                   $tmpfile,
                                   '--',
+                                  $property_name,
                                   $add_file . "@");
               }
           }
