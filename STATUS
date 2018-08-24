@@ -123,6 +123,7 @@ Candidate changes:
      Can potentially lead to data loss.
    Votes:
      +1: julianfoad
+     +0: danielsh (haven't reviewed the regression test)
 
 Veto-blocked changes:
 =====================
