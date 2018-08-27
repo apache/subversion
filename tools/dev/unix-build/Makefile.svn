@@ -72,6 +72,12 @@ endif # 2.2
 endif # 2.3
 endif # 2.4
 
+ifeq ($(UNAME),OpenBSD)
+# Pick the correct base compiler (ie. clang rather than ancient gcc 4.2.1)
+CC = cc
+CXX = c++
+endif
+
 TAG		?= none
 ifeq ($(TAG),none)
 BRANCH		?= trunk
@@ -337,6 +343,7 @@ $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
 $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 	cd $(BDB_SRCDIR)/build_unix \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) \
 		../dist/configure \
 		--prefix=$(PREFIX)/bdb \
 		--enable-debug
@@ -395,6 +402,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+		CC=$(CC) CXX=$(CXX) \
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -443,6 +451,7 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 	$(APR_OBJDIR)/.installed
 	cd $(APR_ICONV_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(APR_ICONV_SRCDIR)/configure \
@@ -601,6 +610,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
 			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CC=$(CC) CXX=$(CXX) \
 			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
@@ -735,6 +745,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 	cd $(HTTPD_SRCDIR) && ./buildconf
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(HTTPD_SRCDIR)/configure \
@@ -821,6 +832,7 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	fi
 	cd $(NEON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(NEON_SRCDIR)/configure \
 		PATH=$(NEON_OBJDIR):$$PATH \
@@ -882,6 +894,7 @@ $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 	cd $(SERF_SRCDIR) && \
 		scons -j${MAKE_JOBS} DEBUG=1 \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CC=$(CC) CXX=$(CXX) \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
 			PREFIX=$(PREFIX)/serf \
@@ -926,6 +939,7 @@ $(SERF_OLD_OBJDIR)/.compiled: $(SERF_OLD_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_OLD_SRCDIR) && \
 		env CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CC=$(CC) CXX=$(CXX) \
 			./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf-old \
 			build
@@ -978,6 +992,7 @@ $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+		CC=$(CC) CXX=$(CXX) \
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
 		$(THREADSAFE_FLAG)
@@ -1047,6 +1062,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 	cd $(CYRUS_SASL_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
 		CPPFLAGS="-I/usr/include/kerberosV" \
+		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(CYRUS_SASL_SRCDIR)/configure \
@@ -1100,6 +1116,7 @@ $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
 $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 	cd $(LIBMAGIC_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(LIBMAGIC_SRCDIR)/configure \
 		--enable-fsect-man5 \
@@ -1195,6 +1212,7 @@ endif
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
@@ -1243,7 +1261,8 @@ $(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
 
 # compile bz2
 $(BZ2_OBJDIR)/.compiled: $(BZ2_OBJDIR)/.retrieved
-	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CFLAGS="-g $(PROFILE_CFLAGS) -fPIC" -j${MAKE_JOBS})
+	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CC=$(CC) CXX=$(CXX) \
+		CFLAGS="-g $(PROFILE_CFLAGS) -fPIC" -j${MAKE_JOBS})
 	touch $@
 
 # install bz2
@@ -1303,6 +1322,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 	$(BZ2_OBJDIR)/.installed
 	cd $(PYTHON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
@@ -1373,6 +1393,7 @@ $(GETTEXT_OBJDIR)/.retrieved: $(DISTDIR)/$(GETTEXT_DIST)
 $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 	cd $(GETTEXT_SRCDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
 		LDFLAGS="-L$(PREFIX)/iconv/lib" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GETTEXT_SRCDIR)/configure \
@@ -1433,7 +1454,8 @@ $(LZ4_OBJDIR)/.configured: $(LZ4_OBJDIR)/.retrieved
 # compile lz4
 $(LZ4_OBJDIR)/.compiled: $(LZ4_OBJDIR)/.configured
 	(cd $(LZ4_SRCDIR)/lib && \
-		env MAKEFLAGS= $(MAKE) -j${MAKE_JOBS} PREFIX=$(PREFIX)/lz4)
+		env MAKEFLAGS= $(MAKE) CC=$(CC) CXX=$(CXX) \
+			-j${MAKE_JOBS} PREFIX=$(PREFIX)/lz4)
 	touch $@
 
 # install lz4
@@ -1584,6 +1606,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(SWIG_PL_LINK_HACK)
 	cd $(svn_builddir) && \
 		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+			CC=$(CC) CXX=$(CXX) \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
