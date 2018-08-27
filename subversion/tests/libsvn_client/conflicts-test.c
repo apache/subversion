@@ -2904,10 +2904,13 @@ test_merge_incoming_edit_file_moved_away(const svn_test_opts_t *opts,
   svn_client_ctx_t *ctx;
   svn_opt_revision_t opt_rev;
   svn_client_conflict_t *conflict;
+  apr_array_header_t *options;
+  svn_client_conflict_option_t *option;
   svn_boolean_t text_conflicted;
   apr_array_header_t *props_conflicted;
   svn_boolean_t tree_conflicted;
   svn_stringbuf_t *buf;
+  apr_array_header_t *possible_moved_to_abspaths;
 
   SVN_ERR(svn_test__sandbox_create(
             b, "merge_incoming_edit_file_moved_away", opts, pool));
@@ -2968,6 +2971,19 @@ test_merge_incoming_edit_file_moved_away(const svn_test_opts_t *opts,
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts, pool));
   }
+
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options, conflict,
+                                                          ctx, b->pool,
+                                                          b->pool));
+  option = svn_client_conflict_option_find_by_id(
+             options, svn_client_conflict_option_local_move_file_text_merge);
+  SVN_TEST_ASSERT(option != NULL);
+  SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+            &possible_moved_to_abspaths, option, b->pool, b->pool));
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 1);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
+    sbox_wc_path(b, "A1/mu-moved"));
 
   /* Resolve the tree conflict by applying the incoming edit to the local
    * move destination "mu-moved". */
