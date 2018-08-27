@@ -81,24 +81,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1836406, r1836408, r1836409, r1836410, r1836972, r1836975
-   Partly fix issue #4694 "cherry-pick edit after file was moved"
-   Justification:
-     Improved resolver support for merges to stable branches.
-   Notes:
-     This fix is incomplete: It works if the file itself was renamed
-     or moved to another directory, but we do not yet handle cases
-     where a parent directory of the file was moved.
-     Summary of proposed revisions:
-     r1836406 fixes wrong assumptions in existing test case
-     r1836408 ensures this resolution option is only applied to files
-     r1836409 partly fixes issue #4694
-     r1836410 fixes test fallout
-     r1836972 removes now unnecessary resolver prompt
-     r1836975 fixes test fallout
-   Votes:
-     +1: stsp
-
  * r1838813
    Let 'svnadmin recover' prune the rep-cache even if it is disabled.
    Justification:
