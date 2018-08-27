@@ -4982,7 +4982,7 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
-      svn_client_conflict_option_local_move_file_text_merge,
+      svn_client_conflict_option_sibling_move_file_text_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
@@ -4992,7 +4992,7 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
   /* Try to resolve the conflict. */
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_local_move_file_text_merge,
+            svn_client_conflict_option_sibling_move_file_text_merge,
             ctx, b->pool));
 
   /* The node "A1/mu-moved" should no longer exist. */
@@ -5658,7 +5658,7 @@ test_cherry_pick_post_move_edit_dir(const svn_test_opts_t *opts,
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
-      svn_client_conflict_option_local_move_dir_merge,
+      svn_client_conflict_option_sibling_move_dir_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
@@ -5668,7 +5668,7 @@ test_cherry_pick_post_move_edit_dir(const svn_test_opts_t *opts,
   /* Try to resolve the conflict. */
   SVN_ERR(svn_client_conflict_tree_resolve_by_id(
             conflict,
-            svn_client_conflict_option_local_move_dir_merge,
+            svn_client_conflict_option_sibling_move_dir_merge,
             ctx, b->pool));
 
   /* The node "B-moved" should no longer exist. */

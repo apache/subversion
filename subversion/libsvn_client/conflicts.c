@@ -2862,10 +2862,10 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
 
       if (kind == svn_node_file)
           conflict->recommended_option_id =
-              svn_client_conflict_option_local_move_file_text_merge;
+              svn_client_conflict_option_sibling_move_file_text_merge;
       else if (kind == svn_node_dir)
           conflict->recommended_option_id =
-            svn_client_conflict_option_local_move_dir_merge;
+            svn_client_conflict_option_sibling_move_dir_merge;
     }
                                          
   conflict->tree_conflict_local_details = details;
@@ -4958,6 +4958,8 @@ init_wc_move_targets(struct conflict_tree_incoming_delete_details *details,
               svn_client_conflict_option_incoming_move_dir_merge,
               svn_client_conflict_option_local_move_file_text_merge,
               svn_client_conflict_option_local_move_dir_merge,
+              svn_client_conflict_option_sibling_move_file_text_merge,
+              svn_client_conflict_option_sibling_move_dir_merge,
             };
           apr_array_header_t *options;
 
@@ -8963,7 +8965,9 @@ unlock_wc:
   return SVN_NO_ERROR;
 }
 
-/* Implements conflict_option_resolve_func_t. */
+/* Implements conflict_option_resolve_func_t.
+ * Handles svn_client_conflict_option_local_move_file_text_merge
+ * and svn_client_conflict_option_sibling_move_file_text_merge. */
 static svn_error_t *
 resolve_local_move_file_merge(svn_client_conflict_option_t *option,
                               svn_client_conflict_t *conflict,
@@ -9007,11 +9011,11 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
             NULL, conflict, scratch_pool,
             scratch_pool));
 
-  if (details->wc_siblings)
+  if (details->wc_siblings) /* local missing */
     merge_target_abspath = APR_ARRAY_IDX(details->wc_siblings,
                                          details->preferred_sibling_idx,
                                          const char *);
-  else
+  else /* local move */
     merge_target_abspath = details->moved_to_abspath;
 
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx,
@@ -10407,11 +10411,9 @@ configure_option_sibling_move_merge(svn_client_conflict_t *conflict,
               (incoming_new_kind == svn_node_file ||
                incoming_new_kind == svn_node_none))
             {
-              /* ### This is actually a 'sibling move', not a 'local move'.
-               * ### Does this case need a separate resolution option? */
               add_resolution_option(
                 options, conflict,
-                svn_client_conflict_option_local_move_file_text_merge,
+                svn_client_conflict_option_sibling_move_file_text_merge,
                 _("Apply to corresponding local location"),
                 description, resolve_local_move_file_merge);
             }
@@ -10419,9 +10421,7 @@ configure_option_sibling_move_merge(svn_client_conflict_t *conflict,
             {
               add_resolution_option(
                 options, conflict,
-                /* ### This is actually a 'sibling move', not a 'local move'.
-                 * ### Does this case need a separate resolution option? */
-                svn_client_conflict_option_local_move_dir_merge,
+                svn_client_conflict_option_sibling_move_dir_merge,
                 _("Apply to corresponding local location"),
                 description, resolve_sibling_move_dir_merge);
             }
@@ -10580,7 +10580,9 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
                  svn_client_conflict_option_get_id(option) ==
                  svn_client_conflict_option_incoming_move_dir_merge ||
                  svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_local_move_dir_merge);
+                 svn_client_conflict_option_sibling_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_sibling_move_dir_merge);
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
@@ -10671,7 +10673,11 @@ svn_client_conflict_option_set_moved_to_abspath(
                  svn_client_conflict_option_get_id(option) ==
                  svn_client_conflict_option_local_move_file_text_merge ||
                  svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_dir_merge);
+                 svn_client_conflict_option_incoming_move_dir_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_sibling_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_sibling_move_dir_merge);
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
