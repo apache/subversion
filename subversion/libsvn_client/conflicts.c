@@ -10596,7 +10596,8 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
       struct conflict_tree_local_missing_details *details;
 
       details = conflict->tree_conflict_local_details;
-      if (details == NULL || details->wc_siblings == NULL)
+      if (details == NULL ||
+          (details->moved_to_abspath == NULL && details->wc_siblings == NULL))
        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                 _("Getting a list of possible move siblings "
                                   "requires details for tree conflict at '%s' "
@@ -10604,19 +10605,25 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
                                svn_dirent_local_style(victim_abspath,
                                                       scratch_pool));
 
+       *possible_moved_to_abspaths = apr_array_make(result_pool, 1,
+                                                    sizeof (const char *));
+      if (details->moved_to_abspath)
+         APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
+           apr_pstrdup(result_pool, details->moved_to_abspath);
+
       /* ### Siblings are actually 'corresponding nodes', not 'move targets'.
          ### But we provide them here to avoid another API function. */
-       *possible_moved_to_abspaths =
-         apr_array_make(result_pool, details->wc_siblings->nelts,
-                        sizeof (const char *));
-      for (i = 0; i < details->wc_siblings->nelts; i++)
+      if (details->wc_siblings)
         {
-           const char *sibling_abspath;
+          for (i = 0; i < details->wc_siblings->nelts; i++)
+            {
+               const char *sibling_abspath;
 
-           sibling_abspath = APR_ARRAY_IDX(details->wc_siblings, i,
-                                           const char *);
-           APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
-             apr_pstrdup(result_pool, sibling_abspath);
+               sibling_abspath = APR_ARRAY_IDX(details->wc_siblings, i,
+                                               const char *);
+               APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
+                 apr_pstrdup(result_pool, sibling_abspath);
+            }
         }
     }
   else
