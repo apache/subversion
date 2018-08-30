@@ -89,6 +89,14 @@ Candidate changes:
      +1: julianfoad
      +0: danielsh (haven't reviewed the regression test)
 
+ * r1839662
+   For 'local missing' conflcits, scan for moves only if a YCA is known.
+   Justification:
+     Prevents long-runing history scan which serves no useful purpose.
+     User complained: https://svn.haxx.se/users/archive-2018-08/0038.shtml
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
