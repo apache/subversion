@@ -5019,14 +5019,15 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
 
   /* And "A1/mu" should have expected contents. */
   SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu"), pool));
+  //DebugBreak();
   SVN_TEST_STRING_ASSERT(buf->data, 
-    "<<<<<<< .working" APR_EOL_STR
-    "This is the file 'mu'." APR_EOL_STR
-    "||||||| .old" APR_EOL_STR
+    "<<<<<<< .working" "\n"
+    "This is the file 'mu'." "\n"
+    "||||||| .old" "\n"
     "Modified content." APR_EOL_STR
-    "=======" APR_EOL_STR
+    "=======" "\n"
     "More modified content." APR_EOL_STR
-    ">>>>>>> .new" APR_EOL_STR);
+    ">>>>>>> .new" "\n");
 
   return SVN_NO_ERROR;
 }
