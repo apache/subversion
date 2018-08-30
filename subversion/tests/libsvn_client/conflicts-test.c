@@ -5019,7 +5019,6 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
 
   /* And "A1/mu" should have expected contents. */
   SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu"), pool));
-  //DebugBreak();
   SVN_TEST_STRING_ASSERT(buf->data, 
     "<<<<<<< .working" "\n"
     "This is the file 'mu'." "\n"
