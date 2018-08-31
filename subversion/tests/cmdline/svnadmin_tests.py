@@ -38,7 +38,6 @@ logger = logging.getLogger()
 
 # Our testing module
 import svntest
-from svntest import wc
 from svntest.verify import SVNExpectedStdout, SVNExpectedStderr
 from svntest.verify import SVNUnexpectedStderr
 from svntest.verify import UnorderedOutput
@@ -3897,8 +3896,7 @@ def check_recover_prunes_rep_cache(sbox, enable_rep_sharing):
   assert rep_cache_recovered == rep_cache_r1
 
 @Issue(4077)
-@SkipUnless(svntest.main.is_fs_type_fsfs)
-@SkipUnless(svntest.wc.python_sqlite_can_read_wc)
+@SkipUnless(svntest.main.is_fs_type_fsfs_and_sqlite_can_read_our_db)
 def recover_prunes_rep_cache_when_enabled(sbox):
   "recover prunes rep cache when enabled"
   sbox.build()
@@ -3906,8 +3904,7 @@ def recover_prunes_rep_cache_when_enabled(sbox):
   check_recover_prunes_rep_cache(sbox, enable_rep_sharing=True)
 
 @Issue(4077)
-@SkipUnless(svntest.main.is_fs_type_fsfs)
-@SkipUnless(svntest.wc.python_sqlite_can_read_wc)
+@SkipUnless(svntest.main.is_fs_type_fsfs_and_sqlite_can_read_our_db)
 def recover_prunes_rep_cache_when_disabled(sbox):
   "recover prunes rep cache when disabled"
   sbox.build()
