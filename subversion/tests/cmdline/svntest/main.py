@@ -1642,13 +1642,14 @@ def server_has_atomic_revprop():
 def server_has_reverse_get_file_revs():
   return options.server_caps.has_reverse_get_file_revs
 
-def python_sqlite_can_read_our_db():
+def python_sqlite_can_read_our_wc_db():
   """Check if the Python builtin is capable enough to peek into wc.db"""
   # Currently enough (1.7-1.9)
   return svntest.sqlite3.sqlite_version_info >= (3, 6, 18)
 
-def is_fs_type_fsfs_and_sqlite_can_read_our_db():
-  return is_fs_type_fsfs() and python_sqlite_can_read_our_db()
+def python_sqlite_can_read_without_rowid():
+  """Check if the Python builtin is capable enough to read new rep-cache"""
+  return svntest.sqlite3.sqlite_version_info >= (3, 8, 2)
 
 def is_plaintext_password_storage_disabled():
   try:

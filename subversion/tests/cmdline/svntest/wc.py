@@ -1092,7 +1092,7 @@ def svn_uri_quote(url):
 
 def python_sqlite_can_read_wc():
   """Check if the Python builtin is capable enough to peek into wc.db"""
-  return svntest.main.python_sqlite_can_read_our_db()
+  return svntest.main.python_sqlite_can_read_our_wc_db()
 
 def open_wc_db(local_path):
   """Open the SQLite DB for the WC path LOCAL_PATH.
