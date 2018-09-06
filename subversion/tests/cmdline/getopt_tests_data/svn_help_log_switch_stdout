@@ -84,6 +84,10 @@ usage: 1. log [PATH][@REV]
     was created:
       svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo
 
+    Show all log messages for commits between the tags ^/tags/2.0 and
+    ^/tags/3.0; assuming that tag 2.0 was created in revision 100:
+      svn log -rHEAD:100 ^/tags/3.0
+
     If ^/trunk/foo.c was moved to ^/trunk/bar.c' in revision 22, 'svn log -v'
     shows a deletion and a copy in its changed paths list, such as:
        D /trunk/foo.c
