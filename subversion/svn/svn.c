@@ -986,6 +986,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "    was created:\n"
      "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"
      "\n"), N_(
+     "    Show all log messages for commits between the tags ^/tags/2.0 and\n"
+     "    ^/tags/3.0; assuming that tag 2.0 was created in revision 100:\n"
+     "      svn log -rHEAD:100 ^/tags/3.0\n"
+     "\n"), N_(
      "    If ^/trunk/foo.c was moved to ^/trunk/bar.c' in revision 22, 'svn log -v'\n"
      "    shows a deletion and a copy in its changed paths list, such as:\n"
      "       D /trunk/foo.c\n"
