@@ -4,7 +4,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
  User-visible changes:
   - Major new features:
-    * Shelving no longer based on patch files (experimental) (issue #3625)
+    * Shelving is no longer based on patch files (experimental) (issue #3625)
     * Checkpointing (experimental) (issue #3626)
     * Viewspec output command (experimental) (r1826864)
 
@@ -27,7 +27,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
   - Client-side and server-side bugfixes:
     * Fix pattern-matching of top level path in listing with search (r1830599)
-    * Allow cmds like 'svn ci --file X' to work when X is a FIFO (r1836306)
+    * Allow commands like 'svn ci --file X' to work when X is a FIFO (r1836306)
 
   - Other tool improvements and bugfixes:
     * tools/client-side/bash_completion: Add '--password-from-stdin' (r1820045)
