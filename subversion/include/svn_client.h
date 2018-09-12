@@ -1570,7 +1570,7 @@ typedef svn_error_t * (*svn_client_layout_func_t)(
  *
  * @warning EXPERIMENTAL.
  */
-/*SVN_EXPERIMENTAL*/ /*commented out during development to avoid a warning*/
+SVN_EXPERIMENTAL
 svn_error_t *
 svn_client_layout_list(const char *local_abspath,
                        svn_client_layout_func_t layout,
