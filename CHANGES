@@ -18,7 +18,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
   - Client-side bugfixes:
     * Fix a crash in a repo:WC summary diff of a local copy (r1835218)
     * Fix double diff headers (r1836746)
-    * Tree conflict resolver: avoid endless scan when no known YCA (r1839662)
+    * Tree conflict resolver: avoid endless scan in some cases (r1839662)
 
   - Server-side bugfixes:
     * svnadmin dump shouldn't canonicalize svn:date (issue #4767)
