@@ -4434,8 +4434,8 @@ svn_client_revert4(const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_revert4(), but with @a remove_added_from_disk set to
- * FALSE.
+/** Similar to svn_client_revert4(), but with @a added_keep_local set to
+ * TRUE.
  *
  * @since New in 1.9.
  * @deprecated Provided for backwards compatibility with the 1.10 API.
