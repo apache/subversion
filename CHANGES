@@ -3,8 +3,50 @@ Version 1.11.0
 http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
  User-visible changes:
+  - Major new features:
+    * Shelving no longer based on patch files (experimental) (issue #3625)
+    * Checkpointing (experimental) (issue #3626)
+    * Viewspec output command (experimental) (r1826864)
+
+  - Minor new features and improvements:
+    * Improvements to tree conflict resolution (issue #4694 #4766 ...)
+    * 'patch' can now read non-pretty-printed svn:mergeinfo diffs (r1822151)
+    * Better error when http:// URL is not a Subversion repository (r1825302)
+    * Add 'schedule' and 'depth' items to 'svn info --show-item' (r1827032)
+    * Allow the client cert password to be saved (r1836762)
+
+  - Client-side bugfixes:
+    * Fix a crash in a repo:WC summary diff of a local copy (r1835218)
+    * Fix double diff headers (r1836746)
+    * Tree conflict resolver: avoid endless scan when no known YCA (r1839662)
+
+  - Server-side bugfixes:
+    * svnadmin dump shouldn't canonicalize svn:date (issue #4767)
+    * 'svnadmin verify --keep-going --quiet' shows an error summary (r1837790)
+    * Let 'svnadmin recover' prune the rep-cache even if disabled (r1838813)
+
   - Client-side and server-side bugfixes:
     * Fix pattern-matching of top level path in listing with search (r1830599)
+    * Allow cmds like 'svn ci --file X' to work when X is a FIFO (r1836306)
+
+  - Other tool improvements and bugfixes:
+    * tools/client-side/bash_completion: Add '--password-from-stdin' (r1820045)
+
+ Developer-visible changes:
+  - General:
+    * new tool to automate steps in branching a minor release (r1817962...)
+    * Add write-changelog command to release.py (r1818988)
+    * new tool: tools/dist/edit-N-log-messages (r1819207)
+    * tools/dev/unix-build/Makefile.svn: various fixes
+    * Expose the diff option 'pretty_print_mergeinfo' in APIs (r1822014)
+    * In 'revert' APIs, choose whether to delete schedule-add nodes (r1822534)
+    * Split long help strings into paragraphs to ease translation (r1826352)
+
+  - Bindings:
+    * Fix Python binding fs.FileDiff behaviour with python-future (r1823802)
+    * Fix Python unit test, fs.SubversionFSTestCase, on Windows (r1824410)
+    * Bump minimum JDK version required for JavaHL to 1.8 (r1831895)
+    * Fix a potential crash in JavaHL (issue #4764)
 
 
 Version 1.10.2
