@@ -34,13 +34,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
  Developer-visible changes:
   - General:
-    * new tool to automate steps in branching a minor release (r1817962...)
-    * Add write-changelog command to release.py (r1818988)
     * new tool: tools/dist/edit-N-log-messages (r1819207)
     * tools/dev/unix-build/Makefile.svn: various fixes
     * Expose the diff option 'pretty_print_mergeinfo' in APIs (r1822014)
     * In 'revert' APIs, choose whether to delete schedule-add nodes (r1822534)
-    * Split long help strings into paragraphs to ease translation (r1826352)
 
   - Bindings:
     * Fix Python binding fs.FileDiff behaviour with python-future (r1823802)
