@@ -56,7 +56,7 @@ import svntest
 from svntest import Failure
 from svntest import Skip
 
-SVN_VER_MINOR = 11
+SVN_VER_MINOR = 12
 
 ######################################################################
 #
