@@ -218,7 +218,6 @@ COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPF
 # special compilation for files destined for javahl (i.e. C++)
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFLAGS) $(JAVAHL_INCLUDES) -o $@ -c
 COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
-COMPILE_JAVAHL_JAVAH = $(JAVAH)
 COMPILE_JAVAHL_COMPAT_JAVAC = $(JAVAC) $(JAVAC_COMPAT_FLAGS)
 
 # On Mac OS X, export an env variable so that the tests can run without
@@ -393,7 +392,6 @@ JAVAC = @JAVAC@
 JAVADOC = @JAVADOC@
 JAVAC_FLAGS = @JAVAC_FLAGS@
 JAVAC_COMPAT_FLAGS = @JAVAC_COMPAT_FLAGS@
-JAVAH = @JAVAH@
 JAR = @JAR@
 
 JAVA_CLASSPATH=$(abs_srcdir)/subversion/bindings/javahl/src:@JAVA_CLASSPATH@
@@ -494,8 +492,8 @@ revision-install:
 install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
-javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-remote-javah javahl-types-javah javahl-util-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
-install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
+javahl: mkdir-init javahl-java javahl-callback-java javahl-remote-java javahl-types-java javahl-util-java javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
+install-javahl: javahl install-javahl-java install-javahl-lib
 javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
 clean-javahl:

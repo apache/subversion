@@ -102,13 +102,9 @@ install-[target.install]: [target.install_deps][end]
 [target.varname]_OBJECTS = [for target.objects][if-index target.objects first][else] [end][target.objects][end]
 [target.varname]_DEPS = $([target.varname]_HEADERS) $([target.varname]_OBJECTS)[for target.add_deps] [target.add_deps][end][for target.deps][if-index target.deps first][else] [end][target.deps][end]
 [target.name]: $([target.varname]_DEPS)
-[if-any target.headers][target.varname]_CLASS_FILENAMES =[for target.header_class_filenames] [target.header_class_filenames][end]
-[target.varname]_CLASSES =[for target.header_classes] [target.header_classes][end]
-$([target.varname]_HEADERS): $([target.varname]_CLASS_FILENAMES)
-	[target.link_cmd] -d [target.output_dir] -classpath [target.classes]:$([target.varname]_CLASSPATH) $([target.varname]_CLASSES)
-[end][if-any target.sources][target.varname]_SRC =[for target.sources] [target.sources][end]
-$([target.varname]_OBJECTS): $([target.varname]_SRC)
-	[target.link_cmd] -d [target.output_dir] -classpath [target.classes]:$([target.varname]_CLASSPATH) $([target.varname]_SRC)
+[if-any target.sources][target.varname]_SRC =[for target.sources] [target.sources][end]
+$([target.varname]_HEADERS) $([target.varname]_OBJECTS): $([target.varname]_SRC)
+	[target.link_cmd][if-any target.headers] -h [target.headers_dir][end] -d [target.output_dir] -classpath [target.classes]:$([target.varname]_CLASSPATH) $([target.varname]_SRC)
 [if-any target.jar]
 	$(JAR) cf [target.jar_path] -C [target.classes][for target.packages] [target.packages][end][end][end]
 [else][is target.type "i18n"][target.varname]_DEPS =[for target.add_deps] [target.add_deps][end][for target.objects] [target.objects][end][for target.deps] [target.deps][end]
