@@ -1534,21 +1534,16 @@ build_tree_conflict_options(
           id != svn_client_conflict_option_accept_current_wc_state)
         *all_options_are_dumb = FALSE;
 
-      if (id == svn_client_conflict_option_incoming_move_file_text_merge ||
-          id == svn_client_conflict_option_incoming_move_dir_merge ||
-          id == svn_client_conflict_option_local_move_file_text_merge ||
-          id == svn_client_conflict_option_local_move_dir_merge ||
-          id == svn_client_conflict_option_sibling_move_file_text_merge ||
-          id == svn_client_conflict_option_sibling_move_dir_merge)
-        {
+        if (*possible_moved_to_repos_relpaths == NULL)
           SVN_ERR(
-            svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+            svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
               possible_moved_to_repos_relpaths, builtin_option,
               result_pool, iterpool));
-          SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+
+        if (*possible_moved_to_abspaths == NULL)
+          SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates2(
                     possible_moved_to_abspaths, builtin_option,
                     result_pool, iterpool));
-        }
     }
 
   svn_pool_destroy(iterpool);
@@ -1679,6 +1674,69 @@ prompt_move_target_path(int *preferred_move_target_idx,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+find_conflict_option_with_repos_move_targets(
+  svn_client_conflict_option_t **option_with_move_targets,
+  apr_array_header_t *options,
+  apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+  apr_array_header_t *possible_moved_to_repos_relpaths = NULL;
+  
+  *option_with_move_targets = NULL;
+
+  for (i = 0; i < options->nelts; i++)
+    {
+      svn_client_conflict_option_t *option;
+
+      svn_pool_clear(iterpool);
+      option = APR_ARRAY_IDX(options, i, svn_client_conflict_option_t *);
+      SVN_ERR(svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
+        &possible_moved_to_repos_relpaths, option, iterpool, iterpool));
+      if (possible_moved_to_repos_relpaths)
+        {
+          *option_with_move_targets = option;
+          break;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+find_conflict_option_with_working_copy_move_targets(
+  svn_client_conflict_option_t **option_with_move_targets,
+  apr_array_header_t *options,
+  apr_pool_t *scratch_pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+  int i;
+  apr_array_header_t *possible_moved_to_abspaths = NULL;
+  
+  *option_with_move_targets = NULL;
+
+  for (i = 0; i < options->nelts; i++)
+    {
+      svn_client_conflict_option_t *option;
+
+      svn_pool_clear(iterpool);
+      option = APR_ARRAY_IDX(options, i, svn_client_conflict_option_t *);
+      SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates2(
+              &possible_moved_to_abspaths, option, scratch_pool,
+              iterpool));
+      if (possible_moved_to_abspaths)
+        {
+          *option_with_move_targets = option;
+          break;
+        }
+    }
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Ask the user what to do about the tree conflict described by CONFLICT
  * and either resolve the conflict accordingly or postpone resolution.
  * SCRATCH_POOL is used for temporary allocations. */
@@ -1806,7 +1864,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
         {
           int preferred_move_target_idx;
           apr_array_header_t *options;
-          svn_client_conflict_option_t *conflict_option;
+          svn_client_conflict_option_t *option;
 
           SVN_ERR(prompt_move_target_path(&preferred_move_target_idx,
                                           possible_moved_to_repos_relpaths,
@@ -1819,45 +1877,12 @@ handle_tree_conflict(svn_boolean_t *resolved,
                                                                   ctx,
                                                                   iterpool,
                                                                   iterpool));
-          conflict_option =
-            svn_client_conflict_option_find_by_id( 
-              options,
-              svn_client_conflict_option_incoming_move_file_text_merge);
-          if (conflict_option == NULL)
+          SVN_ERR(find_conflict_option_with_repos_move_targets(
+            &option, options, iterpool));
+          if (option)
             {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options, svn_client_conflict_option_incoming_move_dir_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options, svn_client_conflict_option_local_move_file_text_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options, svn_client_conflict_option_local_move_dir_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options, svn_client_conflict_option_sibling_move_file_text_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options, svn_client_conflict_option_sibling_move_dir_merge);
-            }
-          if (conflict_option)
-            {
-              SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(
-                        conflict_option, preferred_move_target_idx,
-                        ctx, iterpool));
+              SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath2(
+                        option, preferred_move_target_idx, ctx, iterpool));
               repos_move_target_chosen = TRUE;
               wc_move_target_chosen = FALSE;
 
@@ -1883,7 +1908,7 @@ handle_tree_conflict(svn_boolean_t *resolved,
         {
           int preferred_move_target_idx;
           apr_array_header_t *options;
-          svn_client_conflict_option_t *conflict_option;
+          svn_client_conflict_option_t *option;
 
           SVN_ERR(prompt_move_target_path(&preferred_move_target_idx,
                                            possible_moved_to_abspaths, TRUE,
@@ -1895,50 +1920,12 @@ handle_tree_conflict(svn_boolean_t *resolved,
                                                                   ctx,
                                                                   iterpool,
                                                                   iterpool));
-          conflict_option =
-            svn_client_conflict_option_find_by_id( 
-              options,
-              svn_client_conflict_option_incoming_move_file_text_merge);
-          if (conflict_option == NULL)
+          SVN_ERR(find_conflict_option_with_working_copy_move_targets(
+            &option, options, iterpool));
+          if (option)
             {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options,
-                  svn_client_conflict_option_local_move_file_text_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options,
-                  svn_client_conflict_option_local_move_dir_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options,
-                  svn_client_conflict_option_sibling_move_file_text_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options,
-                  svn_client_conflict_option_sibling_move_dir_merge);
-            }
-          if (conflict_option == NULL)
-            {
-              conflict_option =
-                svn_client_conflict_option_find_by_id( 
-                  options, svn_client_conflict_option_incoming_move_dir_merge);
-            }
-
-          if (conflict_option)
-            {
-              SVN_ERR(svn_client_conflict_option_set_moved_to_abspath(
-                        conflict_option, preferred_move_target_idx, ctx,
-                        iterpool));
+              SVN_ERR(svn_client_conflict_option_set_moved_to_abspath2(
+                        option, preferred_move_target_idx, ctx, iterpool));
               wc_move_target_chosen = TRUE;
 
               /* Update option description. */

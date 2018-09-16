@@ -10527,7 +10527,7 @@ get_repos_relpath_candidates(
 }
 
 svn_error_t *
-svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
   apr_array_header_t **possible_moved_to_repos_relpaths,
   svn_client_conflict_option_t *option,
   apr_pool_t *result_pool,
@@ -10538,17 +10538,20 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
+  svn_client_conflict_option_id_t id;
 
-  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_local_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_dir_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_dir_merge);
+  id = svn_client_conflict_option_get_id(option);
+  if (id != svn_client_conflict_option_incoming_move_file_text_merge &&
+      id != svn_client_conflict_option_incoming_move_dir_merge &&
+      id != svn_client_conflict_option_local_move_file_text_merge &&
+      id != svn_client_conflict_option_local_move_dir_merge &&
+      id != svn_client_conflict_option_sibling_move_file_text_merge &&
+      id != svn_client_conflict_option_sibling_move_dir_merge)
+    {
+      /* We cannot operate on this option. */
+      *possible_moved_to_repos_relpaths = NULL;
+      return SVN_NO_ERROR;
+    }
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
@@ -10593,6 +10596,22 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
     }
 
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  /* The only difference to API version 2 is an assertion failure if
+   * an unexpected option is passed.
+   * We do not emulate this old behaviour since clients written against
+   * the previous API will just keep working. */
+  return svn_error_trace(
+    svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
+      possible_moved_to_repos_relpaths, option, result_pool, scratch_pool));
 }
 
 static svn_error_t *
@@ -10646,7 +10665,7 @@ set_wc_move_target(const char **new_hash_key,
 }
 
 svn_error_t *
-svn_client_conflict_option_set_moved_to_repos_relpath(
+svn_client_conflict_option_set_moved_to_repos_relpath2(
   svn_client_conflict_option_t *option,
   int preferred_move_target_idx,
   svn_client_ctx_t *ctx,
@@ -10657,17 +10676,16 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
+  svn_client_conflict_option_id_t id;
 
-  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_local_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_dir_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_dir_merge);
+  id = svn_client_conflict_option_get_id(option);
+  if (id != svn_client_conflict_option_incoming_move_file_text_merge &&
+      id != svn_client_conflict_option_incoming_move_dir_merge &&
+      id != svn_client_conflict_option_local_move_file_text_merge &&
+      id != svn_client_conflict_option_local_move_dir_merge &&
+      id != svn_client_conflict_option_sibling_move_file_text_merge &&
+      id != svn_client_conflict_option_sibling_move_dir_merge)
+    return SVN_NO_ERROR; /* We cannot operate on this option. Nothing to do. */
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
@@ -10732,7 +10750,23 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
 }
 
 svn_error_t *
-svn_client_conflict_option_get_moved_to_abspath_candidates(
+svn_client_conflict_option_set_moved_to_repos_relpath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool)
+{
+  /* The only difference to API version 2 is an assertion failure if
+   * an unexpected option is passed.
+   * We do not emulate this old behaviour since clients written against
+   * the previous API will just keep working. */
+  return svn_error_trace(
+    svn_client_conflict_option_set_moved_to_repos_relpath2(option,
+      preferred_move_target_idx, ctx, scratch_pool));
+}
+
+svn_error_t *
+svn_client_conflict_option_get_moved_to_abspath_candidates2(
   apr_array_header_t **possible_moved_to_abspaths,
   svn_client_conflict_option_t *option,
   apr_pool_t *result_pool,
@@ -10744,17 +10778,20 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
   int i;
+  svn_client_conflict_option_id_t id;
 
-  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_local_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_dir_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_dir_merge);
+  id = svn_client_conflict_option_get_id(option);
+  if (id != svn_client_conflict_option_incoming_move_file_text_merge &&
+      id != svn_client_conflict_option_incoming_move_dir_merge &&
+      id != svn_client_conflict_option_local_move_file_text_merge &&
+      id != svn_client_conflict_option_local_move_dir_merge &&
+      id != svn_client_conflict_option_sibling_move_file_text_merge &&
+      id != svn_client_conflict_option_sibling_move_dir_merge)
+    {
+      /* We cannot operate on this option. */
+      *possible_moved_to_abspaths = NULL;
+      return NULL;
+    }
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
@@ -10848,7 +10885,23 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 }
 
 svn_error_t *
-svn_client_conflict_option_set_moved_to_abspath(
+svn_client_conflict_option_get_moved_to_abspath_candidates(
+  apr_array_header_t **possible_moved_to_abspaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool)
+{
+  /* The only difference to API version 2 is an assertion failure if
+   * an unexpected option is passed.
+   * We do not emulate this old behaviour since clients written against
+   * the previous API will just keep working. */
+  return svn_error_trace(
+    svn_client_conflict_option_get_moved_to_abspath_candidates2(
+      possible_moved_to_abspaths, option, result_pool, scratch_pool));
+}
+
+svn_error_t *
+svn_client_conflict_option_set_moved_to_abspath2(
   svn_client_conflict_option_t *option,
   int preferred_move_target_idx,
   svn_client_ctx_t *ctx,
@@ -10859,17 +10912,16 @@ svn_client_conflict_option_set_moved_to_abspath(
   svn_wc_operation_t operation;
   svn_wc_conflict_action_t incoming_change;
   svn_wc_conflict_reason_t local_change;
+  svn_client_conflict_option_id_t id;
 
-  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_local_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_dir_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_sibling_move_dir_merge);
+  id = svn_client_conflict_option_get_id(option);
+  if (id != svn_client_conflict_option_incoming_move_file_text_merge &&
+      id != svn_client_conflict_option_incoming_move_dir_merge &&
+      id != svn_client_conflict_option_local_move_file_text_merge &&
+      id != svn_client_conflict_option_local_move_dir_merge &&
+      id != svn_client_conflict_option_sibling_move_file_text_merge &&
+      id != svn_client_conflict_option_sibling_move_dir_merge)
+    return NULL; /* We cannot operate on this option. Nothing to do. */
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
   operation = svn_client_conflict_get_operation(conflict);
@@ -10987,6 +11039,22 @@ svn_client_conflict_option_set_moved_to_abspath(
                                                            scratch_pool));
     }
   return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_conflict_option_set_moved_to_abspath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool)
+{
+  /* The only difference to API version 2 is an assertion failure if
+   * an unexpected option is passed.
+   * We do not emulate this old behaviour since clients written against
+   * the previous API will just keep working. */
+  return svn_error_trace(
+    svn_client_conflict_option_set_moved_to_abspath2(option,
+      preferred_move_target_idx, ctx, scratch_pool));
 }
 
 svn_error_t *
