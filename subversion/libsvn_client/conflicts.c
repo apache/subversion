@@ -9381,13 +9381,13 @@ svn_client_conflict_text_get_resolution_options(apr_array_header_t **options,
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_incoming_text_where_conflicted,
         _("Accept incoming for conflicts"),
-        _("accept changes only where they conflict"),
+        _("accept incoming changes only where they conflict"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
         svn_client_conflict_option_working_text_where_conflicted,
         _("Reject conflicts"),
-        _("reject changes which conflict and accept the rest"),
+        _("reject incoming changes which conflict and accept the rest"),
         resolve_text_conflict);
 
       add_resolution_option(*options, conflict,
