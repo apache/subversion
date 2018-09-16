@@ -2350,6 +2350,8 @@ struct conflict_tree_local_missing_details
   /* If not SVN_INVALID_REVNUM, the node was deleted in DELETED_REV. */
   svn_revnum_t deleted_rev;
 
+  /* ### Add 'added_rev', like in conflict_tree_incoming_delete_details? */
+
   /* Author who committed DELETED_REV. */
   const char *deleted_rev_author;
 
@@ -2357,17 +2359,38 @@ struct conflict_tree_local_missing_details
   const char *deleted_repos_relpath;
 
   /* Move information about the conflict victim. If not NULL, this is an
-   * array of repos_move_info elements. Each element is the head of a
-   * move chain which starts in DELETED_REV. */
+   * array of 'struct repos_move_info *' elements. Each element is the
+   * head of a move chain which starts in DELETED_REV. */
   apr_array_header_t *moves;
 
-  /* If not NULL, this is the move target abspath. */
-  const char *moved_to_abspath;
+  /* If moves is not NULL, a map of repos_relpaths and working copy nodes.
+  *
+   * Each key is a "const char *" repository relpath corresponding to a
+   * possible repository-side move destination node in the revision which
+   * is the merge-right revision in case of a merge.
+   *
+   * Each value is an apr_array_header_t *.
+   * Each array consists of "const char *" absolute paths to working copy
+   * nodes which correspond to the repository node selected by the map key.
+   * Each such working copy node is a potential local move target which can
+   * be chosen to find a suitable merge target when resolving a tree conflict.
+   *
+   * This may be an empty hash map in case if there is no move target path
+   * in the working copy. */
+  apr_hash_t *wc_move_targets;
+
+  /* If not NULL, the preferred move target repository relpath. This is our key
+   * into the WC_MOVE_TARGETS map above (can be overridden by the user). */
+  const char *move_target_repos_relpath;
+
+  /* The current index into the list of working copy nodes corresponding to
+   * MOVE_TARGET_REPOS_REPLATH (can be overridden by the user). */
+  int wc_move_target_idx;
 
   /* Move information about siblings. Siblings are nodes which share
    * a youngest common ancestor with the conflict victim. E.g. in case
    * of a merge operation they are part of the merge source branch.
-   * If not NULL, this is an array of repos_move_info elements.
+   * If not NULL, this is an array of 'struct repos_move_info *' elements.
    * Each element is the head of a move chain, which starts at some
    * point in history after siblings and conflict victim forked off
    * their common ancestor. */
@@ -2635,6 +2658,133 @@ collect_sibling_move_candidates(apr_array_header_t *candidates,
   return SVN_NO_ERROR;
 }
 
+/* Follow each move chain starting a MOVE all the way to the end to find
+ * the possible working copy locations for VICTIM_ABSPATH which corresponds
+ * to VICTIM_REPOS_REPLATH@VICTIM_REVISION.
+ * Add each such location to the WC_MOVE_TARGETS hash table, keyed on the
+ * repos_relpath which is the corresponding move destination in the repository.
+ * This function is recursive. */
+static svn_error_t *
+follow_move_chains(apr_hash_t *wc_move_targets,
+                   struct repos_move_info *move,
+                   svn_client_ctx_t *ctx,
+                   const char *victim_abspath,
+                   svn_node_kind_t victim_node_kind,
+                   const char *victim_repos_relpath,
+                   svn_revnum_t victim_revision,
+                   apr_pool_t *result_pool,
+                   apr_pool_t *scratch_pool)
+{
+  /* If this is the end of a move chain, look for matching paths in
+   * the working copy and add them to our collection if found. */
+  if (move->next == NULL)
+    {
+      apr_array_header_t *candidate_abspaths;
+
+      /* Gather candidate nodes which represent this moved_to_repos_relpath. */
+      SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
+                &candidate_abspaths, ctx->wc_ctx,
+                victim_abspath, victim_node_kind,
+                move->moved_to_repos_relpath,
+                scratch_pool, scratch_pool));
+      if (candidate_abspaths->nelts > 0)
+        {
+          apr_array_header_t *moved_to_abspaths;
+          int i;
+          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
+
+          moved_to_abspaths = apr_array_make(result_pool, 1,
+                                             sizeof (const char *));
+
+          for (i = 0; i < candidate_abspaths->nelts; i++)
+            {
+              const char *candidate_abspath;
+              const char *repos_root_url;
+              const char *repos_uuid;
+              const char *candidate_repos_relpath;
+              svn_revnum_t candidate_revision;
+
+              svn_pool_clear(iterpool);
+
+              candidate_abspath = APR_ARRAY_IDX(candidate_abspaths, i,
+                                                const char *);
+              SVN_ERR(svn_wc__node_get_origin(NULL, &candidate_revision,
+                                              &candidate_repos_relpath,
+                                              &repos_root_url,
+                                              &repos_uuid,
+                                              NULL, NULL,
+                                              ctx->wc_ctx,
+                                              candidate_abspath,
+                                              FALSE,
+                                              iterpool, iterpool));
+
+              if (candidate_revision == SVN_INVALID_REVNUM)
+                continue;
+
+              /* If the conflict victim and the move target candidate
+               * are not from the same revision we must ensure that
+               * they are related. */
+               if (candidate_revision != victim_revision)
+                {
+                  svn_client__pathrev_t *yca_loc;
+                  svn_error_t *err;
+
+                  err = find_yca(&yca_loc, victim_repos_relpath,
+                                 victim_revision,
+                                 candidate_repos_relpath,
+                                 candidate_revision,
+                                 repos_root_url, repos_uuid,
+                                 NULL, ctx, iterpool, iterpool);
+                  if (err)
+                    {
+                      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
+                        {
+                          svn_error_clear(err);
+                          yca_loc = NULL;
+                        }
+                      else
+                        return svn_error_trace(err);
+                    }
+
+                  if (yca_loc == NULL)
+                    continue;
+                }
+
+              APR_ARRAY_PUSH(moved_to_abspaths, const char *) =
+                apr_pstrdup(result_pool, candidate_abspath);
+            }
+          svn_pool_destroy(iterpool);
+
+          svn_hash_sets(wc_move_targets, move->moved_to_repos_relpath,
+                        moved_to_abspaths);
+        }
+    }
+  else
+    {
+      int i;
+      apr_pool_t *iterpool;
+
+      /* Recurse into each of the possible move chains. */
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < move->next->nelts; i++)
+        {
+          struct repos_move_info *next_move;
+
+          svn_pool_clear(iterpool);
+
+          next_move = APR_ARRAY_IDX(move->next, i, struct repos_move_info *);
+          SVN_ERR(follow_move_chains(wc_move_targets, next_move,
+                                     ctx, victim_abspath, victim_node_kind,
+                                     victim_repos_relpath, victim_revision,
+                                     result_pool, iterpool));
+                                        
+        }
+      svn_pool_destroy(iterpool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements tree_conflict_get_details_func_t. */
 static svn_error_t *
 conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
@@ -2862,6 +3012,51 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                                       deleted_basename,
                                                       conflict->pool); 
   details->moves = moves;
+  if (details->moves != NULL)
+    {
+      apr_pool_t *iterpool;
+      int i;
+
+      details->wc_move_targets = apr_hash_make(conflict->pool);
+      iterpool = svn_pool_create(scratch_pool);
+      for (i = 0; i < details->moves->nelts; i++)
+        {
+          struct repos_move_info *move;
+
+          svn_pool_clear(iterpool);
+          move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
+          SVN_ERR(follow_move_chains(details->wc_move_targets, move, ctx,
+                                     conflict->local_abspath,
+                                     svn_node_file,
+                                     new_repos_relpath,
+                                     new_rev,
+                                     scratch_pool, iterpool));
+        }
+      svn_pool_destroy(iterpool);
+
+      if (apr_hash_count(details->wc_move_targets) > 0)
+        {
+          apr_array_header_t *move_target_repos_relpaths;
+          const svn_sort__item_t *item;
+
+          /* Initialize to the first possible move target. Hopefully,
+           * in most cases there will only be one candidate anyway. */
+          move_target_repos_relpaths = svn_sort__hash(
+                                         details->wc_move_targets,
+                                         svn_sort_compare_items_as_paths,
+                                         scratch_pool);
+          item = &APR_ARRAY_IDX(move_target_repos_relpaths,
+                                0, svn_sort__item_t);
+          details->move_target_repos_relpath = item->key;
+          details->wc_move_target_idx = 0;
+        }
+      else
+        {
+          details->move_target_repos_relpath = NULL;
+          details->wc_move_target_idx = 0;
+        }
+    }
+                                         
   details->sibling_moves = sibling_moves;
   details->wc_siblings = wc_siblings;
   if (details->wc_siblings && details->wc_siblings->nelts == 1)
@@ -2875,7 +3070,7 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
           conflict->recommended_option_id =
             svn_client_conflict_option_sibling_move_dir_merge;
     }
-                                         
+
   conflict->tree_conflict_local_details = details;
 
   return SVN_NO_ERROR;
@@ -4779,133 +4974,6 @@ get_incoming_delete_details_for_reverse_addition(
         SVN_ERR(svn_ra_check_path(ra_session, "", (*details)->added_rev,
                                   &(*details)->replacing_node_kind,
                                   scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-/* Follow each move chain starting a MOVE all the way to the end to find
- * the possible working copy locations for VICTIM_ABSPATH which corresponds
- * to VICTIM_REPOS_REPLATH@VICTIM_REVISION.
- * Add each such location to the WC_MOVE_TARGETS hash table, keyed on the
- * repos_relpath which is the corresponding move destination in the repository.
- * This function is recursive. */
-static svn_error_t *
-follow_move_chains(apr_hash_t *wc_move_targets,
-                   struct repos_move_info *move,
-                   svn_client_ctx_t *ctx,
-                   const char *victim_abspath,
-                   svn_node_kind_t victim_node_kind,
-                   const char *victim_repos_relpath,
-                   svn_revnum_t victim_revision,
-                   apr_pool_t *result_pool,
-                   apr_pool_t *scratch_pool)
-{
-  /* If this is the end of a move chain, look for matching paths in
-   * the working copy and add them to our collection if found. */
-  if (move->next == NULL)
-    {
-      apr_array_header_t *candidate_abspaths;
-
-      /* Gather candidate nodes which represent this moved_to_repos_relpath. */
-      SVN_ERR(svn_wc__guess_incoming_move_target_nodes(
-                &candidate_abspaths, ctx->wc_ctx,
-                victim_abspath, victim_node_kind,
-                move->moved_to_repos_relpath,
-                scratch_pool, scratch_pool));
-      if (candidate_abspaths->nelts > 0)
-        {
-          apr_array_header_t *moved_to_abspaths;
-          int i;
-          apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-          moved_to_abspaths = apr_array_make(result_pool, 1,
-                                             sizeof (const char *));
-
-          for (i = 0; i < candidate_abspaths->nelts; i++)
-            {
-              const char *candidate_abspath;
-              const char *repos_root_url;
-              const char *repos_uuid;
-              const char *candidate_repos_relpath;
-              svn_revnum_t candidate_revision;
-
-              svn_pool_clear(iterpool);
-
-              candidate_abspath = APR_ARRAY_IDX(candidate_abspaths, i,
-                                                const char *);
-              SVN_ERR(svn_wc__node_get_origin(NULL, &candidate_revision,
-                                              &candidate_repos_relpath,
-                                              &repos_root_url,
-                                              &repos_uuid,
-                                              NULL, NULL,
-                                              ctx->wc_ctx,
-                                              candidate_abspath,
-                                              FALSE,
-                                              iterpool, iterpool));
-
-              if (candidate_revision == SVN_INVALID_REVNUM)
-                continue;
-
-              /* If the conflict victim and the move target candidate
-               * are not from the same revision we must ensure that
-               * they are related. */
-               if (candidate_revision != victim_revision)
-                {
-                  svn_client__pathrev_t *yca_loc;
-                  svn_error_t *err;
-
-                  err = find_yca(&yca_loc, victim_repos_relpath,
-                                 victim_revision,
-                                 candidate_repos_relpath,
-                                 candidate_revision,
-                                 repos_root_url, repos_uuid,
-                                 NULL, ctx, iterpool, iterpool);
-                  if (err)
-                    {
-                      if (err->apr_err == SVN_ERR_FS_NOT_FOUND)
-                        {
-                          svn_error_clear(err);
-                          yca_loc = NULL;
-                        }
-                      else
-                        return svn_error_trace(err);
-                    }
-
-                  if (yca_loc == NULL)
-                    continue;
-                }
-
-              APR_ARRAY_PUSH(moved_to_abspaths, const char *) =
-                apr_pstrdup(result_pool, candidate_abspath);
-            }
-          svn_pool_destroy(iterpool);
-
-          svn_hash_sets(wc_move_targets, move->moved_to_repos_relpath,
-                        moved_to_abspaths);
-        }
-    }
-  else
-    {
-      int i;
-      apr_pool_t *iterpool;
-
-      /* Recurse into each of the possible move chains. */
-      iterpool = svn_pool_create(scratch_pool);
-      for (i = 0; i < move->next->nelts; i++)
-        {
-          struct repos_move_info *next_move;
-
-          svn_pool_clear(iterpool);
-
-          next_move = APR_ARRAY_IDX(move->next, i, struct repos_move_info *);
-          SVN_ERR(follow_move_chains(wc_move_targets, next_move,
-                                     ctx, victim_abspath, victim_node_kind,
-                                     victim_repos_relpath, victim_revision,
-                                     result_pool, iterpool));
-                                        
-        }
-      svn_pool_destroy(iterpool);
     }
 
   return SVN_NO_ERROR;
@@ -9004,6 +9072,11 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
   apr_array_header_t *propdiffs;
   struct conflict_tree_local_missing_details *details;
   const char *merge_target_abspath;
+  const char *wcroot_abspath;
+
+  SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, ctx->wc_ctx,
+                             conflict->local_abspath, scratch_pool,
+                             scratch_pool));
 
   details = conflict->tree_conflict_local_details;
 
@@ -9019,12 +9092,28 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
             NULL, conflict, scratch_pool,
             scratch_pool));
 
-  if (details->wc_siblings) /* local missing */
-    merge_target_abspath = APR_ARRAY_IDX(details->wc_siblings,
-                                         details->preferred_sibling_idx,
-                                         const char *);
-  else /* local move */
-    merge_target_abspath = details->moved_to_abspath;
+  if (details->wc_siblings)
+    {
+      merge_target_abspath = APR_ARRAY_IDX(details->wc_siblings,
+                                           details->preferred_sibling_idx,
+                                           const char *);
+    }
+  else if (details->wc_move_targets && details->move_target_repos_relpath)
+    {
+      apr_array_header_t *moves;
+      moves = svn_hash_gets(details->wc_move_targets,
+                            details->move_target_repos_relpath);
+      merge_target_abspath = APR_ARRAY_IDX(moves, details->wc_move_target_idx,
+                                           const char *);
+    }
+  else
+    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                             _("Corresponding working copy node not found "
+                               "for '%s'"),
+                             svn_dirent_local_style(
+                               svn_dirent_skip_ancestor(
+                                 wcroot_abspath, conflict->local_abspath),
+                             scratch_pool));
 
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx,
                              merge_target_abspath,
@@ -10291,64 +10380,30 @@ configure_option_local_move_file_merge(svn_client_conflict_t *conflict,
                                  scratch_pool, scratch_pool));
 
       details = conflict->tree_conflict_local_details;
-      if (details != NULL && details->moves != NULL)
+      if (details != NULL && details->moves != NULL &&
+          details->move_target_repos_relpath != NULL)
         {
-          apr_hash_t *wc_move_targets = apr_hash_make(scratch_pool);
-          apr_pool_t *iterpool;
-          int i;
+          apr_array_header_t *moves;
+          const char *moved_to_abspath;
+          const char *description;
 
-          iterpool = svn_pool_create(scratch_pool);
-          for (i = 0; i < details->moves->nelts; i++)
-            {
-              struct repos_move_info *move;
+          moves = svn_hash_gets(details->wc_move_targets,
+                                details->move_target_repos_relpath);
+          moved_to_abspath =
+            APR_ARRAY_IDX(moves, details->wc_move_target_idx, const char *);
 
-              svn_pool_clear(iterpool);
-              move = APR_ARRAY_IDX(details->moves, i, struct repos_move_info *);
-              SVN_ERR(follow_move_chains(wc_move_targets, move, ctx,
-                                         conflict->local_abspath,
-                                         svn_node_file,
-                                         incoming_new_repos_relpath,
-                                         incoming_new_pegrev,
-                                         scratch_pool, iterpool));
-            }
-          svn_pool_destroy(iterpool);
+          description =
+            apr_psprintf(
+              scratch_pool, _("apply changes to move destination '%s'"),
+              svn_dirent_local_style(
+                svn_dirent_skip_ancestor(wcroot_abspath, moved_to_abspath),
+                scratch_pool));
 
-          if (apr_hash_count(wc_move_targets) > 0)
-            {
-              apr_array_header_t *move_target_repos_relpaths;
-              const svn_sort__item_t *item;
-              apr_array_header_t *moved_to_abspaths;
-              const char *description;
-
-              /* Initialize to the first possible move target. Hopefully,
-               * in most cases there will only be one candidate anyway. */
-              move_target_repos_relpaths = svn_sort__hash(
-                                             wc_move_targets,
-                                             svn_sort_compare_items_as_paths,
-                                             scratch_pool);
-              item = &APR_ARRAY_IDX(move_target_repos_relpaths,
-                                    0, svn_sort__item_t);
-              moved_to_abspaths = item->value;
-              details->moved_to_abspath =
-                apr_pstrdup(conflict->pool,
-                            APR_ARRAY_IDX(moved_to_abspaths, 0, const char *));
-
-              description =
-                apr_psprintf(
-                  scratch_pool, _("apply changes to move destination '%s'"),
-                  svn_dirent_local_style(
-                    svn_dirent_skip_ancestor(wcroot_abspath,
-                                             details->moved_to_abspath),
-                    scratch_pool));
-
-              add_resolution_option(
-                options, conflict,
-                svn_client_conflict_option_local_move_file_text_merge,
-                _("Apply to move destination"),
-                description, resolve_local_move_file_merge);
-            }
-          else
-            details->moved_to_abspath = NULL;
+          add_resolution_option(
+            options, conflict,
+            svn_client_conflict_option_local_move_file_text_merge,
+            _("Apply to move destination"),
+            description, resolve_local_move_file_merge);
         }
     }
 
@@ -10439,43 +10494,24 @@ configure_option_sibling_move_merge(svn_client_conflict_t *conflict,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+/* Return a copy of the repos replath candidate list. */
+static svn_error_t *
+get_repos_relpath_candidates(
   apr_array_header_t **possible_moved_to_repos_relpaths,
-  svn_client_conflict_option_t *option,
+  apr_hash_t *wc_move_targets,
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
-  svn_client_conflict_t *conflict = option->conflict;
-  struct conflict_tree_incoming_delete_details *details;
-  const char *victim_abspath;
   apr_array_header_t *sorted_repos_relpaths;
   int i;
 
-  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_dir_merge);
-
-  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-  details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->wc_move_targets == NULL)
-    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                             _("Getting a list of possible move targets "
-                               "requires details for tree conflict at '%s' "
-                               "to be fetched from the repository first"),
-                            svn_dirent_local_style(victim_abspath,
-                                                   scratch_pool));
-
-  /* Return a copy of the repos replath candidate list. */
-  sorted_repos_relpaths = svn_sort__hash(details->wc_move_targets,
+  sorted_repos_relpaths = svn_sort__hash(wc_move_targets,
                                          svn_sort_compare_items_as_paths,
                                          scratch_pool);
 
-  *possible_moved_to_repos_relpaths = apr_array_make(
-                                        result_pool,
-                                        sorted_repos_relpaths->nelts,
-                                        sizeof (const char *));
+  *possible_moved_to_repos_relpaths =
+    apr_array_make(result_pool, sorted_repos_relpaths->nelts,
+                   sizeof (const char *));
   for (i = 0; i < sorted_repos_relpaths->nelts; i++)
     {
       svn_sort__item_t item;
@@ -10491,37 +10527,88 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
 }
 
 svn_error_t *
-svn_client_conflict_option_set_moved_to_repos_relpath(
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+  apr_array_header_t **possible_moved_to_repos_relpaths,
   svn_client_conflict_option_t *option,
-  int preferred_move_target_idx,
-  svn_client_ctx_t *ctx,
+  apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
   svn_client_conflict_t *conflict = option->conflict;
-  struct conflict_tree_incoming_delete_details *details;
   const char *victim_abspath;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+
+  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_local_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_dir_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_sibling_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_sibling_move_dir_merge);
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+
+  if (operation == svn_wc_operation_merge &&
+      incoming_change == svn_wc_conflict_action_edit &&
+      local_change == svn_wc_conflict_reason_missing)
+    {
+      struct conflict_tree_local_missing_details *details;
+
+      details = conflict->tree_conflict_local_details;
+      if (details == NULL || details->wc_move_targets == NULL)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Getting a list of possible move targets "
+                                   "requires details for tree conflict at '%s' "
+                                   "to be fetched from the repository first"),
+                                svn_dirent_local_style(victim_abspath,
+                                                       scratch_pool));
+
+      SVN_ERR(get_repos_relpath_candidates(possible_moved_to_repos_relpaths,
+                                           details->wc_move_targets,
+                                           result_pool, scratch_pool));
+    }
+  else
+    {
+      struct conflict_tree_incoming_delete_details *details;
+
+      details = conflict->tree_conflict_incoming_details;
+      if (details == NULL || details->wc_move_targets == NULL)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Getting a list of possible move targets "
+                                   "requires details for tree conflict at '%s' "
+                                   "to be fetched from the repository first"),
+                                svn_dirent_local_style(victim_abspath,
+                                                       scratch_pool));
+
+      SVN_ERR(get_repos_relpath_candidates(possible_moved_to_repos_relpaths,
+                                           details->wc_move_targets,
+                                           result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+set_wc_move_target(const char **new_hash_key,
+                   apr_hash_t *wc_move_targets,
+                   int preferred_move_target_idx,
+                   const char *victim_abspath,
+                   apr_pool_t *scratch_pool)
+{
   apr_array_header_t *move_target_repos_relpaths;
   svn_sort__item_t item;
   const char *move_target_repos_relpath;
   apr_hash_index_t *hi;
 
-  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_file_text_merge ||
-                 svn_client_conflict_option_get_id(option) ==
-                 svn_client_conflict_option_incoming_move_dir_merge);
-
-  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-  details = conflict->tree_conflict_incoming_details;
-  if (details == NULL || details->wc_move_targets == NULL)
-    return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                             _("Setting a move target requires details "
-                               "for tree conflict at '%s' to be fetched "
-                               "from the repository first"),
-                            svn_dirent_local_style(victim_abspath,
-                                                   scratch_pool));
-
   if (preferred_move_target_idx < 0 ||
-      preferred_move_target_idx >= apr_hash_count(details->wc_move_targets))
+      preferred_move_target_idx >= apr_hash_count(wc_move_targets))
     return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
                              _("Index '%d' is out of bounds of the possible "
                                "move target list for '%s'"),
@@ -10530,15 +10617,14 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
                                                    scratch_pool));
 
   /* Translate the index back into a hash table key. */
-  move_target_repos_relpaths =
-    svn_sort__hash(details->wc_move_targets,
-                   svn_sort_compare_items_as_paths,
-                   scratch_pool);
+  move_target_repos_relpaths = svn_sort__hash(wc_move_targets,
+                                              svn_sort_compare_items_as_paths,
+                                              scratch_pool);
   item = APR_ARRAY_IDX(move_target_repos_relpaths, preferred_move_target_idx,
                        svn_sort__item_t);
   move_target_repos_relpath = item.key;
   /* Find our copy of the hash key and remember the user's preference. */
-  for (hi = apr_hash_first(scratch_pool, details->wc_move_targets);
+  for (hi = apr_hash_first(scratch_pool, wc_move_targets);
        hi != NULL;
        hi = apr_hash_next(hi))
     {
@@ -10546,16 +10632,7 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
 
       if (strcmp(move_target_repos_relpath, repos_relpath) == 0)
         {
-          details->move_target_repos_relpath = repos_relpath;
-          details->wc_move_target_idx = 0;
-          /* Update option description. */
-          SVN_ERR(describe_incoming_move_merge_conflict_option(
-                    &option->description,
-                    conflict, ctx,
-                    details,
-                    conflict->pool,
-                    scratch_pool));
-
+          *new_hash_key = repos_relpath;
           return SVN_NO_ERROR;
         }
     }
@@ -10566,6 +10643,92 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
                            move_target_repos_relpath,
                            svn_dirent_local_style(victim_abspath,
                                                   scratch_pool));
+}
+
+svn_error_t *
+svn_client_conflict_option_set_moved_to_repos_relpath(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool)
+{
+  svn_client_conflict_t *conflict = option->conflict;
+  const char *victim_abspath;
+  svn_wc_operation_t operation;
+  svn_wc_conflict_action_t incoming_change;
+  svn_wc_conflict_reason_t local_change;
+
+  SVN_ERR_ASSERT(svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_local_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_incoming_move_dir_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_sibling_move_file_text_merge ||
+                 svn_client_conflict_option_get_id(option) ==
+                 svn_client_conflict_option_sibling_move_dir_merge);
+
+  victim_abspath = svn_client_conflict_get_local_abspath(conflict);
+  operation = svn_client_conflict_get_operation(conflict);
+  incoming_change = svn_client_conflict_get_incoming_change(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
+  
+  if (operation == svn_wc_operation_merge &&
+      incoming_change == svn_wc_conflict_action_edit &&
+      local_change == svn_wc_conflict_reason_missing)
+    {
+      struct conflict_tree_local_missing_details *details;
+
+      details = conflict->tree_conflict_local_details;
+      if (details == NULL || details->wc_move_targets == NULL)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Setting a move target requires details "
+                                   "for tree conflict at '%s' to be fetched "
+                                   "from the repository first"),
+                                svn_dirent_local_style(victim_abspath,
+                                                       scratch_pool));
+
+      SVN_ERR(set_wc_move_target(&details->move_target_repos_relpath,
+                                 details->wc_move_targets,
+                                 preferred_move_target_idx,
+                                 victim_abspath, scratch_pool));
+      details->wc_move_target_idx = 0;
+
+      /* Update option description. */
+      SVN_ERR(conflict_tree_get_description_local_missing(
+                &option->description, conflict, ctx,
+                conflict->pool, scratch_pool));
+    }
+  else
+    {
+      struct conflict_tree_incoming_delete_details *details;
+
+      details = conflict->tree_conflict_incoming_details;
+      if (details == NULL || details->wc_move_targets == NULL)
+        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
+                                 _("Setting a move target requires details "
+                                   "for tree conflict at '%s' to be fetched "
+                                   "from the repository first"),
+                                svn_dirent_local_style(victim_abspath,
+                                                       scratch_pool));
+
+      SVN_ERR(set_wc_move_target(&details->move_target_repos_relpath,
+                                 details->wc_move_targets,
+                                 preferred_move_target_idx,
+                                 victim_abspath, scratch_pool));
+      details->wc_move_target_idx = 0;
+
+      /* Update option description. */
+      SVN_ERR(describe_incoming_move_merge_conflict_option(
+                &option->description,
+                conflict, ctx,
+                details,
+                conflict->pool,
+                scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -10606,7 +10769,7 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 
       details = conflict->tree_conflict_local_details;
       if (details == NULL ||
-          (details->moved_to_abspath == NULL && details->wc_siblings == NULL))
+          (details->wc_move_targets == NULL && details->wc_siblings == NULL))
        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                 _("Getting a list of possible move siblings "
                                   "requires details for tree conflict at '%s' "
@@ -10616,9 +10779,22 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 
        *possible_moved_to_abspaths = apr_array_make(result_pool, 1,
                                                     sizeof (const char *));
-      if (details->moved_to_abspath)
-         APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
-           apr_pstrdup(result_pool, details->moved_to_abspath);
+      if (details->wc_move_targets)
+        {
+          apr_array_header_t *move_target_wc_abspaths;
+          move_target_wc_abspaths =
+            svn_hash_gets(details->wc_move_targets,
+                          details->move_target_repos_relpath);
+          for (i = 0; i < move_target_wc_abspaths->nelts; i++)
+            {
+              const char *moved_to_abspath;
+
+              moved_to_abspath = APR_ARRAY_IDX(move_target_wc_abspaths, i,
+                                               const char *);
+              APR_ARRAY_PUSH(*possible_moved_to_abspaths, const char *) =
+                apr_pstrdup(result_pool, moved_to_abspath);
+            }
+        }
 
       /* ### Siblings are actually 'corresponding nodes', not 'move targets'.
          ### But we provide them here to avoid another API function. */
@@ -10715,35 +10891,63 @@ svn_client_conflict_option_set_moved_to_abspath(
                                  scratch_pool));
 
       details = conflict->tree_conflict_local_details;
-      if (details == NULL || details->wc_siblings == NULL)
+      if (details == NULL || (details->wc_siblings == NULL &&
+          details->wc_move_targets == NULL))
        return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                                _("Setting a move sibling requires details "
+                                _("Setting a move target requires details "
                                   "for tree conflict at '%s' to be fetched "
                                   "from the repository first"),
                                 svn_dirent_local_style(victim_abspath,
                                                        scratch_pool));
 
-      if (preferred_move_target_idx < 0 ||
-          preferred_move_target_idx > details->wc_siblings->nelts)
-        return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
-                                 _("Index '%d' is out of bounds of the possible "
-                                   "move sibling list for '%s'"),
-                                preferred_move_target_idx,
-                                svn_dirent_local_style(victim_abspath,
-                                                       scratch_pool));
-      /* Record the user's preference. */
-      details->preferred_sibling_idx = preferred_move_target_idx;
+      if (details->wc_siblings)
+        {
+          if (preferred_move_target_idx < 0 ||
+              preferred_move_target_idx > details->wc_siblings->nelts)
+            return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                     _("Index '%d' is out of bounds of the "
+                                       "possible move sibling list for '%s'"),
+                                    preferred_move_target_idx,
+                                    svn_dirent_local_style(victim_abspath,
+                                                           scratch_pool));
+          /* Record the user's preference. */
+          details->preferred_sibling_idx = preferred_move_target_idx;
 
-      /* Update option description. */
-      preferred_sibling = APR_ARRAY_IDX(details->wc_siblings,
-                                        details->preferred_sibling_idx,
-                                        const char *);
-      option->description =
-        apr_psprintf(
-          conflict->pool, _("apply changes to '%s'"),
-          svn_dirent_local_style(
-            svn_dirent_skip_ancestor(wcroot_abspath, preferred_sibling),
-            scratch_pool));
+          /* Update option description. */
+          preferred_sibling = APR_ARRAY_IDX(details->wc_siblings,
+                                            details->preferred_sibling_idx,
+                                            const char *);
+          option->description =
+            apr_psprintf(
+              conflict->pool, _("apply changes to '%s'"),
+              svn_dirent_local_style(
+                svn_dirent_skip_ancestor(wcroot_abspath, preferred_sibling),
+                scratch_pool));
+        }
+      else if (details->wc_move_targets)
+       {
+          apr_array_header_t *move_target_wc_abspaths;
+          move_target_wc_abspaths =
+            svn_hash_gets(details->wc_move_targets,
+                          details->move_target_repos_relpath);
+
+          if (preferred_move_target_idx < 0 ||
+              preferred_move_target_idx > move_target_wc_abspaths->nelts)
+            return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                                     _("Index '%d' is out of bounds of the possible "
+                                       "move target list for '%s'"),
+                                    preferred_move_target_idx,
+                                    svn_dirent_local_style(victim_abspath,
+                                                           scratch_pool));
+
+          /* Record the user's preference. */
+          details->wc_move_target_idx = preferred_move_target_idx;
+
+          /* Update option description. */
+          SVN_ERR(conflict_tree_get_description_local_missing(
+                    &option->description, conflict, ctx,
+                    conflict->pool, scratch_pool));
+       }
     }
   else
     {
