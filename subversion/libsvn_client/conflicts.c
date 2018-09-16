@@ -10547,6 +10547,7 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
       if (strcmp(move_target_repos_relpath, repos_relpath) == 0)
         {
           details->move_target_repos_relpath = repos_relpath;
+          details->wc_move_target_idx = 0;
           /* Update option description. */
           SVN_ERR(describe_incoming_move_merge_conflict_option(
                     &option->description,
