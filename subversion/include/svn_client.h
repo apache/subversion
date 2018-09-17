@@ -6942,12 +6942,12 @@ typedef struct svn_client_shelf_t
 {
     /* Public fields (read-only for public use) */
     const char *name;
-    int max_version;  /** @deprecated */
+    int max_version;  /**< @deprecated */
 
     /* Private fields */
     const char *wc_root_abspath;
     const char *shelves_dir;
-    apr_hash_t *revprops;  /* non-null; allocated in POOL */
+    apr_hash_t *revprops;  /**< non-null; allocated in POOL */
     svn_client_ctx_t *ctx;
     apr_pool_t *pool;
 } svn_client_shelf_t;
@@ -6961,11 +6961,11 @@ typedef struct svn_client_shelf_version_t
 {
   /* Public fields (read-only for public use) */
   svn_client_shelf_t *shelf;
-  apr_time_t mtime;  /** time-stamp of this version */
+  apr_time_t mtime;  /**< time-stamp of this version */
 
   /* Private fields */
-  const char *files_dir_abspath;  /** abspath of the storage area */
-  int version_number;  /** version number starting from 1 */
+  const char *files_dir_abspath;  /**< abspath of the storage area */
+  int version_number;  /**< version number starting from 1 */
 } svn_client_shelf_version_t;
 
 /** Open an existing shelf or create a new shelf.
@@ -7314,7 +7314,7 @@ svn_client_shelf_get_log_message(char **log_message,
  */
 typedef struct svn_client_shelf_info_t
 {
-  apr_time_t mtime;  /* mtime of the latest change */
+  apr_time_t mtime;  /**< mtime of the latest change */
 } svn_client_shelf_info_t;
 
 /** Set @a *shelf_infos to a hash, keyed by shelf name, of pointers to
@@ -7334,8 +7334,8 @@ svn_client_shelf_list(apr_hash_t **shelf_infos,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
-/* Report the shelved status of all the shelved paths in SHELF_VERSION
- * via WALK_FUNC(WALK_BATON, ...).
+/** Report the shelved status of all the shelved paths in @a shelf_version
+ * via @a walk_func(@a walk_baton, ...).
  *
  * @since New in 1.X.
  * @warning EXPERIMENTAL.
