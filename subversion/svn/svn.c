@@ -1953,7 +1953,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
     { 'q' } },
 
-  { "x-shelf-diff", svn_cl__shelf_diff, {"shelf-diff"}, {N_(
+  { "x-shelf-diff", svn_cl__shelf_diff, {0}, {N_(
      "Show shelved changes as a diff.\n"
      "usage: x-shelf-diff SHELF [VERSION]\n"
      "\n"), N_(
@@ -1968,7 +1968,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {opt_summarize},
   },
 
-  { "x-shelf-drop", svn_cl__shelf_drop, {"shelf-drop"}, {N_(
+  { "x-shelf-drop", svn_cl__shelf_drop, {0}, {N_(
      "Delete a shelf.\n"
      "usage: x-shelf-drop SHELF [PATH ...]\n"
      "\n"), N_(
@@ -1980,7 +1980,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
   },
 
-  { "x-shelf-list", svn_cl__shelf_list, {"shelf-list", "shelves"}, {N_(
+  { "x-shelf-list", svn_cl__shelf_list, {"x-shelves"}, {N_(
      "List shelves.\n"
      "usage: x-shelf-list [PATH ...]\n"
      "\n"), N_(
@@ -1994,7 +1994,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {'q', 'v'}
   },
 
-  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {"shelf-list-by-paths"}, {N_(
+  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {0}, {N_(
      "List which shelf affects each path.\n"
      "usage: x-shelf-list-by-paths [PATH...]\n"
      "\n"), N_(
@@ -2005,7 +2005,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
   },
 
-  { "x-shelf-log", svn_cl__shelf_log, {"shelf-log"}, {N_(
+  { "x-shelf-log", svn_cl__shelf_log, {0}, {N_(
      "Show the versions of a shelf.\n"
      "usage: x-shelf-log SHELF [PATH...]\n"
      "\n"), N_(
@@ -2018,7 +2018,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {'q', 'v'}
   },
 
-  { "x-shelf-save", svn_cl__shelf_save, {"shelf-save"}, {N_(
+  { "x-shelf-save", svn_cl__shelf_save, {0}, {N_(
      "Copy local changes onto a new version of a shelf.\n"
      "usage: x-shelf-save SHELF [PATH...]\n"
      "\n"), N_(
@@ -2036,7 +2036,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     }
   },
 
-  { "x-shelve", svn_cl__shelf_shelve, {"shelve"}, {N_(
+  { "x-shelve", svn_cl__shelf_shelve, {0}, {N_(
      "Move local changes onto a shelf.\n"
      "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
      "\n"), N_(
@@ -2065,7 +2065,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      SVN_CL__LOG_MSG_OPTIONS,
     } },
 
-  { "x-unshelve", svn_cl__shelf_unshelve, {"unshelve"}, {N_(
+  { "x-unshelve", svn_cl__shelf_unshelve, {0}, {N_(
      "Copy shelved changes back into the WC.\n"
      "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
      "\n"), N_(
