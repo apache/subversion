@@ -347,8 +347,8 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           if self.junit_path is not None:
             classes = "%s;%s" % (classes, self.junit_path)
           headers = ''
-          if self.headers is not None:
-            headers = '-h %s' % self.quote(self.path(self.headers))
+          if target.headers is not None:
+            headers = '-h %s' % self.quote(self.path(target.headers))
 
           sourcepath = self.path(source.sourcepath)
 
