@@ -193,7 +193,7 @@ svn_wc__get_shelves_dir(char **dir,
 
   SVN_ERR(svn_wc__get_wcroot(&wcroot_abspath, wc_ctx, local_abspath,
                              scratch_pool, scratch_pool));
-  *dir = svn_dirent_join(wcroot_abspath, ".svn/shelves", result_pool);
+  *dir = svn_dirent_join(wcroot_abspath, ".svn/x/shelves/v2", result_pool);
   
   /* Ensure the directory exists. (Other versions of svn don't create it.) */
   SVN_ERR(svn_io_make_dir_recursively(*dir, scratch_pool));
