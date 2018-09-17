@@ -480,7 +480,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"drop", opt_drop, 0,
                        N_("drop shelf after successful unshelve")},
 
-  {"viewspec", opt_viewspec, 0,
+  {"x-viewspec", opt_viewspec, 0,
                        N_("print the working copy layout")},
 
   /* Long-opt Aliases
@@ -823,7 +823,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  about TARGET.\n"
      "\n"), N_(
      "  EXPERIMENTAL:\n"
-     "  With --viewspec, print the working copy layout.\n"
+     "  With --x-viewspec, print the working copy layout.\n"
     )},
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline,
