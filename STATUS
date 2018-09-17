@@ -29,6 +29,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1841059
+   Shelving: fix SVN-4774 "presence of old 1.10 shelves breaks shelf-list".
+   Justification:
+     A cleaner upgrade path for those testing experimental shelving. Changes
+     the shelf storage dir to '.svn/x/shelves/v2'.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
