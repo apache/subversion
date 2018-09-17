@@ -7090,7 +7090,7 @@ svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
                                        apr_pool_t *scratch_pool);
 
 /** Return in @a shelf_version an existing version of @a shelf, given its
- * @a version_number. Error if that version doesn't exist.
+ * @a version_number (starting from 1). Error if that version doesn't exist.
  *
  * There is no need to "close" it after use.
  *
