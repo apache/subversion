@@ -37,7 +37,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1841091
+ * r1841091, r1841136
    Fix SVN-4776: Shelving: remove non-x-prefixed command aliases.
    Justification:
      Leaves the command-line UI clear for a future stable version.
