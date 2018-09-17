@@ -7068,37 +7068,6 @@ svn_client_shelf_save_new_version3(svn_client_shelf_version_t **new_version_p,
                                    void *not_shelved_baton,
                                    apr_pool_t *scratch_pool);
 
-/** @deprecated Use svn_client_shelf_save_new_version3() instead.
- *
- * If any paths cannot be shelved, throw an error.
- *
- * If there are no local modifications in the specified locations, do not
- * create a new version of @a shelf; set @a *new_version_p to null and
- * return SVN_NO_ERROR. In this case @a shelf->max_version after the call
- * is the same as before the call.
- *
- * @warning EXPERIMENTAL.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_client_shelf_save_new_version2(svn_client_shelf_version_t **new_version_p,
-                                   svn_client_shelf_t *shelf,
-                                   const apr_array_header_t *paths,
-                                   svn_depth_t depth,
-                                   const apr_array_header_t *changelists,
-                                   apr_pool_t *scratch_pool);
-
-/** @deprecated Use svn_client_shelf_save_new_version2() instead.
- * @warning EXPERIMENTAL.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
-                                  const apr_array_header_t *paths,
-                                  svn_depth_t depth,
-                                  const apr_array_header_t *changelists,
-                                  apr_pool_t *scratch_pool);
-
 /** Delete all newer versions of @a shelf newer than @a shelf_version.
  *
  * If @a shelf_version is null, delete all versions of @a shelf. (The
@@ -7119,15 +7088,6 @@ svn_error_t *
 svn_client_shelf_delete_newer_versions(svn_client_shelf_t *shelf,
                                        svn_client_shelf_version_t *shelf_version,
                                        apr_pool_t *scratch_pool);
-
-/** @deprecated Use svn_client_shelf_delete_newer_versions() instead.
- * @warning EXPERIMENTAL.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
-                                     int version_number,
-                                     apr_pool_t *scratch_pool);
 
 /** Return in @a shelf_version an existing version of @a shelf, given its
  * @a version_number. Error if that version doesn't exist.
@@ -7232,15 +7192,6 @@ svn_error_t *
 svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool);
-
-/** @deprecated Use svn_client__shelf_diff() instead.
- * @warning EXPERIMENTAL.
- */
-SVN_DEPRECATED
-svn_error_t *
-svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
-                              svn_stream_t *outstream,
-                              apr_pool_t *scratch_pool);
 
 /** Set @a *affected_paths to a hash with one entry for each path affected
  * by the @a shelf_version.
