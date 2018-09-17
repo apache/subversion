@@ -44,6 +44,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1841098
+   Rename --viewspec to --x-viewspec.  See SVN-4776.
+   Justification:
+     Move experimental interfaces to a separate namespace.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
