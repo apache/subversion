@@ -358,14 +358,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             per_project_flags += "-Xlint:-deprecation -Xlint:-dep-ann" \
                                  " -Xlint:-rawtypes"
 
-          cbuild = ("%s -g -Xlint -Xlint:-options " +
-                    per_project_flags +
-                    headers + 
+          cbuild = ("%s -g -Xlint -Xlint:-options %s %s "
                     " -target 1.8 -source 1.8 -classpath "
                     " %s -d %s "
                     " -sourcepath %s $(InputPath)") \
-                   % tuple(map(self.quote, (javac_exe, classes,
-                                            targetdir, sourcepath)))
+                   % (self.quote(javac_exe), per_project_flags, headers,
+                      self.quote(classes), self.quote(targetdir),
+                      self.quote(sourcepath))
 
 
           if isinstance(object, gen_base.HeaderFile):
