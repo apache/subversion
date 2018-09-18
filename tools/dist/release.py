@@ -75,6 +75,14 @@ tool_versions = {
             'swig'     : ['3.0.12',
             '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
   },
+  '1.11' : {
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['3.0.12',
+            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
+  },
   '1.10' : {
             'autoconf' : ['2.69',
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
@@ -103,7 +111,9 @@ tool_versions = {
 
 # The version that is our current recommended release
 # ### TODO: derive this from svn_version.h; see ../../build/getversion.py
-recommended_release = '1.10'
+recommended_release = '1.11'
+# For clean-dist, a whitelist of artifacts to keep, by version.
+supported_release_lines = frozenset({"1.9", "1.10", "1.11", "1.12"})
 
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
@@ -906,15 +916,15 @@ def clean_dist(args):
     filenames = stdout.split('\n')
     filenames = filter(lambda x: x.startswith('subversion-'), filenames)
     versions = set(map(Version, filenames))
-    minor_lines = set(map(minor, versions))
     to_keep = set()
-    # Keep 3 minor lines: 1.10.0-alpha3, 1.9.7, 1.8.19.
     # TODO: When we release 1.A.0 GA we'll have to manually remove 1.(A-2).* artifacts.
-    for recent_line in sorted(minor_lines, reverse=True)[:3]:
-        to_keep.add(max(
+    for line_to_keep in [minor(Version(x + ".0")) for x in supported_release_lines]:
+        candidates = list(
             x for x in versions
-            if minor(x) == recent_line
-        ))
+            if minor(x) == line_to_keep
+        )
+        if candidates:
+            to_keep.add(max(candidates))
     for i in sorted(to_keep):
         logging.info("Saving release '%s'", i)
 
