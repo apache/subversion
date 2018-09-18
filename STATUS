@@ -51,6 +51,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1841272
+   'svn info --x-viewspec': Expose both output backends.
+   Justification:
+     Expose both output forms while the API is experimental to get better
+     feedback.	(Or possibly just fall prey to the sunk cost fallacy.)
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
