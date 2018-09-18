@@ -56,6 +56,7 @@ Candidate changes:
    Justification:
      Expose both output forms while the API is experimental to get better
      feedback.	(Or possibly just fall prey to the sunk cost fallacy.)
+   Depends: r1841098
    Votes:
      +1: danielsh
 
