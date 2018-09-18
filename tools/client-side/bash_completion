@@ -248,8 +248,8 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
-	cmds="$cmds shelf-list-by-paths shelf-diff shelf-drop shelf-list shelf-log shelf-save"
-	cmds="$cmds shelve shelves unshelve"
+	cmds="$cmds x-shelf-diff x-shelf-drop x-shelf-list x-shelf-list-by-paths"
+	cmds="$cmds x-shelf-log x-shelf-save x-shelve x-shelves x-unshelve"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -1024,34 +1024,34 @@ _svn()
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
 		;;
-	shelf-list-by-paths)
+	x-shelf-list-by-paths)
 		cmdOpts="$pOpts"
 		;;
-	shelf-diff)
+	x-shelf-diff)
 		cmdOpts="$pOpts --summarize"
 		;;
-	shelf-drop)
+	x-shelf-drop)
 		cmdOpts="$pOpts"
 		;;
-	shelf-list|shelves)
+	x-shelf-list|x-shelves)
 		cmdOpts="$qOpts $pOpts"
 		;;
-	shelf-log)
+	x-shelf-log)
 		cmdOpts="$qOpts $pOpts"
 		;;
-	shelf-save)
+	x-shelf-save)
 		cmdOpts="--dry-run \
                          --depth --targets $cOpts \
                          $mOpts \
                          $qOpts $pOpts"
 		;;
-	shelve)
+	x-shelve)
 		cmdOpts="--keep-local --dry-run \
                          --depth --targets $cOpts \
                          $mOpts \
                          $qOpts $pOpts"
 		;;
-	unshelve)
+	x-unshelve)
 		cmdOpts="--drop --dry-run \
                          $qOpts $pOpts"
 		;;

@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  shelve_tests.py:  testing shelving
+#  shelf_tests.py:  testing shelving
 #
 #  Subversion is a tool for revision control.
 #  See http://subversion.apache.org for more information.
@@ -111,12 +111,12 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
 
   if cannot_shelve:
     svntest.actions.run_and_verify_svn(None, '.* could not be shelved.*',
-                                       'shelve', 'foo')
+                                       'x-shelve', 'foo')
     return
 
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo')
+                                     'x-shelve', 'foo')
   check_wc_state(wc_dir, virginal_state)
 
   # List; ensure the shelf is listed
@@ -124,11 +124,11 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
     [r'foo\s*version \d+.*',
      r' ',
     ])
-  svntest.actions.run_and_verify_svn(expected_output, [], 'shelves')
+  svntest.actions.run_and_verify_svn(expected_output, [], 'x-shelves')
 
   # Unshelve; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
-                                     'unshelve', 'foo')
+                                     'x-unshelve', 'foo')
   check_wc_state(wc_dir, modified_state)
 
 #----------------------------------------------------------------------
@@ -273,14 +273,14 @@ def save_revert_restore(sbox, modifier1, modifier2):
 
   # Save a checkpoint; check nothing changed
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelf-save', 'foo')
+                                     'x-shelf-save', 'foo')
   check_wc_state(wc_dir, modified_state1)
 
   # Modify again; remember the state; save a checkpoint
   modifier2(sbox)
   modified_state2 = get_wc_state(wc_dir)
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelf-save', 'foo')
+                                     'x-shelf-save', 'foo')
   check_wc_state(wc_dir, modified_state2)
 
   # Revert
@@ -290,7 +290,7 @@ def save_revert_restore(sbox, modifier1, modifier2):
 
   # Restore; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
-                                     'unshelve', 'foo', '1')
+                                     'x-unshelve', 'foo', '1')
   check_wc_state(wc_dir, modified_state1)
 
   os.chdir(was_cwd)
@@ -351,7 +351,7 @@ def unshelve_refuses_if_conflicts(sbox):
 
   # Shelve; check there are no longer any local mods
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo')
+                                     'x-shelve', 'foo')
   check_wc_state(wc_dir, initial_state)
 
   # Make a different local mod that will conflict with the shelf
@@ -360,7 +360,7 @@ def unshelve_refuses_if_conflicts(sbox):
 
   # Try to unshelve; check it fails with an error about a conflict
   svntest.actions.run_and_verify_svn(None, '.*[Cc]onflict.*',
-                                     'unshelve', 'foo')
+                                     'x-unshelve', 'foo')
   # Check nothing changed in the attempt
   check_wc_state(wc_dir, modified_state2)
 
@@ -462,13 +462,13 @@ def shelve_with_log_message(sbox):
   sbox.simple_add_text('New file', 'f')
   log_message = 'Log message for foo'
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo', '-m', log_message)
+                                     'x-shelve', 'foo', '-m', log_message)
   expected_output = svntest.verify.RegexListOutput(
     ['foo .*',
      ' ' + log_message
     ])
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'shelf-list')
+                                     'x-shelf-list')
 
   os.chdir(was_cwd)
 
@@ -518,7 +518,7 @@ def shelf_status(sbox):
   run_and_verify_status(sbox.wc_dir, expected_status)
 
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo')
+                                     'x-shelve', 'foo')
   run_and_verify_shelf_status(sbox.wc_dir, expected_status, shelf='foo')
 
   os.chdir(was_cwd)
@@ -603,17 +603,17 @@ def list_shelves(sbox):
 
   # an empty list
   svntest.actions.run_and_verify_svn([], [],
-                                     'shelf-list', '-q')
+                                     'x-shelf-list', '-q')
 
   # make two shelves
   sbox.simple_append('A/mu', 'appended mu text')
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelf-save', 'foo')
+                                     'x-shelf-save', 'foo')
   sbox.simple_append('A/mu', 'appended more text')
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelf-save', 'foo', '-m', 'log msg')
+                                     'x-shelf-save', 'foo', '-m', 'log msg')
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelf-save', 'bar', '-m', 'log msg')
+                                     'x-shelf-save', 'bar', '-m', 'log msg')
 
   # We don't check for time-ordering of the shelves. If we want to do so, we
   # would need to sleep for timestamps to differ, between creating them.
@@ -621,7 +621,7 @@ def list_shelves(sbox):
   # a quiet list
   expected_out = svntest.verify.UnorderedRegexListOutput(['foo', 'bar'])
   svntest.actions.run_and_verify_svn(expected_out, [],
-                                     'shelf-list', '-q')
+                                     'x-shelf-list', '-q')
 
   # a detailed list
   expected_out = svntest.verify.UnorderedRegexListOutput(['foo .* 1 path.*',
@@ -629,7 +629,7 @@ def list_shelves(sbox):
                                                           'bar .* 1 path.*',
                                                           ' log msg'])
   svntest.actions.run_and_verify_svn(expected_out, [],
-                                     'shelf-list')
+                                     'x-shelf-list')
 
   os.chdir(was_cwd)
 
@@ -668,7 +668,7 @@ def refuse_to_shelve_conflict(sbox):
     r'      >   not shelved'])
   svntest.actions.run_and_verify_svn(expected_out,
                                      '.* 1 path could not be shelved',
-                                     'shelf-save', 'foo')
+                                     'x-shelf-save', 'foo')
 
   os.chdir(was_cwd)
 
@@ -695,7 +695,7 @@ def unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
   # Shelve; check there are no longer any modifications
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelve', 'foo')
+                                     'x-shelve', 'foo')
   check_wc_state(wc_dir, initial_state)
 
   # Make a different change, with which we shall merge
@@ -705,7 +705,7 @@ def unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
   # Unshelve; check the expected result of the merge
   svntest.actions.run_and_verify_svn(None, [],
-                                     'unshelve', 'foo')
+                                     'x-unshelve', 'foo')
   tweak_expected_state(modified_state)
   check_wc_state(wc_dir, modified_state)
 
@@ -892,7 +892,7 @@ def run_and_verify_shelf_diff_summarize(output_tree, shelf, *args):
 
   exit_code, output, errput = svntest.actions.run_and_verify_svn(
                                 None, [],
-                                'shelf-diff', '--summarize', shelf, *args)
+                                'x-shelf-diff', '--summarize', shelf, *args)
 
   actual = svntest.tree.build_tree_from_diff_summarize(output)
 
@@ -930,7 +930,7 @@ def shelf_diff_simple(sbox):
   modified_state = get_wc_state(wc_dir)
 
   svntest.actions.run_and_verify_svn(None, [],
-                                     'shelf-save', 'foo')
+                                     'x-shelf-save', 'foo')
 
   # basic svn-style diff
   expected_output = make_diff_header('A/mu', 'revision 2', 'working copy') + [
@@ -940,7 +940,7 @@ def shelf_diff_simple(sbox):
                     ] + make_diff_prop_header('A/mu') \
                     + make_diff_prop_modified('p1', 'v', 'changed')
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'shelf-diff', 'foo')
+                                     'x-shelf-diff', 'foo')
 
   # basic summary diff
   expected_diff = svntest.wc.State(wc_dir, {

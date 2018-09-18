@@ -7644,8 +7644,8 @@ svn_wc_revert6(svn_wc_context_t *wc_ctx,
                void *notify_baton,
                apr_pool_t *scratch_pool);
 
-/** Similar to svn_wc_revert6() but with @a remove_added_from_disk always
- * set to FALSE.
+/** Similar to svn_wc_revert6() but with @a added_keep_local always
+ * set to TRUE.
  *
  * @since New in 1.9.
  * @deprecated Provided for backward compatibility with the 1.10 API.
