@@ -217,7 +217,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     if 'java_sdk' not in self._libraries:
       install_targets = [x for x in install_targets
                                      if not (isinstance(x, gen_base.TargetJava)
-                                             or isinstance(x, gen_base.TargetJavaHeaders)
                                              or x.name == '__JAVAHL__'
                                              or x.name == '__JAVAHL_TESTS__'
                                              or x.name == 'libsvnjavahl')]
@@ -332,11 +331,9 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     sources = [ ]
 
     javac_exe = "javac"
-    javah_exe = "javah"
     jar_exe = "jar"
     if self.jdk_path:
       javac_exe = os.path.join(self.jdk_path, "bin", javac_exe)
-      javah_exe = os.path.join(self.jdk_path, "bin", javah_exe)
       jar_exe = os.path.join(self.jdk_path, "bin", jar_exe)
 
     if not isinstance(target, gen_base.TargetProject):
@@ -345,25 +342,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         ctarget = None
         cdesc = None
         cignore = None
-        if isinstance(target, gen_base.TargetJavaHeaders):
-          classes = self.path(target.classes)
-          if self.junit_path is not None:
-            classes = "%s;%s" % (classes, self.junit_path)
-
-          headers = self.path(target.headers)
-          classname = target.package + "." + source.class_name
-
-          cbuild = "%s -verbose -force -classpath %s -d %s %s" \
-                   % (self.quote(javah_exe), self.quote(classes),
-                      self.quote(headers), classname)
-
-          ctarget = self.path(object.filename_win)
-          cdesc = "Generating %s" % (object.filename_win)
-
-        elif isinstance(target, gen_base.TargetJavaClasses):
+        if isinstance(target, gen_base.TargetJava):
           classes = targetdir = self.path(target.classes)
           if self.junit_path is not None:
             classes = "%s;%s" % (classes, self.junit_path)
+          headers = ''
+          if target.headers is not None:
+            headers = '-h %s' % self.quote(self.path(target.headers))
 
           sourcepath = self.path(source.sourcepath)
 
@@ -373,17 +358,21 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             per_project_flags += "-Xlint:-deprecation -Xlint:-dep-ann" \
                                  " -Xlint:-rawtypes"
 
-          cbuild = ("%s -g -Xlint -Xlint:-options " +
-                    per_project_flags +
+          cbuild = ("%s -g -Xlint -Xlint:-options %s %s "
                     " -target 1.8 -source 1.8 -classpath "
                     " %s -d %s "
                     " -sourcepath %s $(InputPath)") \
-                   % tuple(map(self.quote, (javac_exe, classes,
-                                            targetdir, sourcepath)))
+                   % (self.quote(javac_exe), per_project_flags, headers,
+                      self.quote(classes), self.quote(targetdir),
+                      self.quote(sourcepath))
 
 
-          ctarget = self.path(object.filename)
-          cdesc = "Compiling %s" % (source)
+          if isinstance(object, gen_base.HeaderFile):
+            ctarget = self.path(object.filename_win)
+            cdesc = "Generating %s" % (object.filename_win)
+          else:
+            ctarget = self.path(object.filename)
+            cdesc = "Compiling %s" % (source)
 
         rsrc = self.path(str(source))
         if quote_path and '-' in rsrc:
@@ -403,7 +392,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
                                    custom_desc=cdesc, ignored = cignore,
                                    extension=os.path.splitext(rsrc)[1]))
 
-    if isinstance(target, gen_base.TargetJavaClasses) and target.jar:
+    if isinstance(target, gen_base.TargetJava) and target.jar:
       classdir = self.path(target.classes)
       jarfile = msvc_path_join(classdir, target.jar)
       cbuild = "%s cf %s -C %s %s" \
@@ -507,9 +496,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     return name[0] + '.pdb'
 
   def get_output_dir(self, target):
-    if isinstance(target, gen_base.TargetJavaHeaders):
-      return msvc_path("../" + target.headers)
-    elif isinstance(target, gen_base.TargetJavaClasses):
+    if isinstance(target, gen_base.TargetJava):
       return msvc_path("../" + target.classes)
     else:
       return msvc_path(target.path)
