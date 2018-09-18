@@ -15,13 +15,6 @@ Status of 1.10.3:
 Candidate changes:
 ==================
 
- * r1833465
-   Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
-   Justification:
-     Return an error when the client gets the protocol wrong.
-   Votes:
-     +1: philip, jamessan
-
  * r1834612, r1834835
    On the '1.10.x-issue4758' branch: Fix SVN-4758 "Unable to shelve changes
    when using custom diff-cmd".
@@ -31,19 +24,12 @@ Candidate changes:
    Votes:
      +1: julianfoad, jamessan
 
- * r1836306
-   Ignore stat() reporting size zero when reading from pipe/fifo.
-   Justification:
-     Makes things like 'svn ci -F <(echo foo)' work.
-   Votes:
-     +1: philip, danielsh
-
  * r1836762, r1836802
    Store the HTTPS client cert password.
    Justification:
      Restores a feature lost when we switched from neon to serf.
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1836963
    Fix potential NULL deref in conflict resolver.
@@ -51,7 +37,7 @@ Candidate changes:
      Real-world impact unknown. Found during code inspection.
      Let us better be safe than sorry.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1836960, r1836968
    Fix issue #4766, "resolver adds unrelated moves to move target list"
@@ -68,10 +54,11 @@ Candidate changes:
    Fix "relpath is canonical" assertion failure in conflict resolver.
    Justification:
      Assertion can be triggered by cherry-pick merge with a moved directory.
+     As copyfrom typically starts with a '/'
    Notes:
      To reproduce, undo r1836976 locally and run the test added in r1836977.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1837790
    Make 'svnadmin verify --keep-going' always show an error summary. 
@@ -88,6 +75,8 @@ Candidate changes:
    Votes:
      +1: julianfoad
      +0: danielsh (haven't reviewed the regression test)
+     +0: rhuijben (please add the fix to allow the regression tests to
+                   run on old python versions. +1 on the fix)
 
  * r1839662
    For 'local missing' conflicts, scan for moves only if a YCA is known.
@@ -103,10 +92,24 @@ Candidate changes:
      User can trigger a segfault by selecting conflict menu options in a
      particular order. See commit message for details.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1833465
+   Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
+   Justification:
+     Return an error when the client gets our v1 protocol wrong.
+   Votes:
+     +1: philip, jamessan, rhuijben
+
+ * r1836306
+   Ignore stat() reporting size zero when reading from pipe/fifo.
+   Justification:
+     Makes things like 'svn ci -F <(echo foo)' work.
+   Votes:
+     +1: philip, danielsh, rhuijben
