@@ -900,49 +900,58 @@ class TargetJava(TargetLinked):
   def __init__(self, name, options, gen_obj):
     TargetLinked.__init__(self, name, options, gen_obj)
     self.link_cmd = options.get('link-cmd')
-    self.packages = options.get('package-roots', '').split()
+    self.package = options.get('package')
     self.jar = options.get('jar')
     self.deps = [ ]
-
-class TargetJavaHeaders(TargetJava):
-  def __init__(self, name, options, gen_obj):
-    TargetJava.__init__(self, name, options, gen_obj)
     self.objext = '.class'
-    self.javah_objext = '.h'
     self.headers = options.get('headers')
     self.classes = options.get('classes')
-    self.package = options.get('package')
-    self.output_dir = self.headers
+    self.native = options.get('native', '')
+    self.output_dir = self.classes
+    self.headers_dir = self.headers
 
   def add_dependencies(self):
     sources = _collect_paths(self.sources, self.path)
+    native = _collect_paths(self.native, self.path)
+
+    class_pkg_list = self.package.split('.')
+    sourcepath = build_path_split(self.path)[:-len(class_pkg_list)]
+    sourcepath = build_path_join(*sourcepath)
 
     for src, reldir in sources:
       if src[-5:] != '.java':
         raise GenError('ERROR: unknown file extension on ' + src)
 
+      sfile = SourceFile(src, reldir)
+      sfile.sourcepath = sourcepath
+
       class_name = build_path_basename(src[:-5])
 
-      class_header = build_path_join(self.headers, class_name + '.h')
-      class_header_win = build_path_join(self.headers,
-                                         self.package.replace(".", "_")
-                                         + "_" + class_name + '.h')
-      class_pkg_list = self.package.split('.')
       class_pkg = build_path_join(*class_pkg_list)
       class_file = ObjectFile(build_path_join(self.classes, class_pkg,
                                               class_name + self.objext),
-                              self.when)
+                              self.compile_cmd, self.when)
       class_file.source_generated = 1
       class_file.class_name = class_name
-      hfile = HeaderFile(class_header, self.package + '.' + class_name,
-                         self.compile_cmd)
-      hfile.filename_win = class_header_win
-      hfile.source_generated = 1
-      self.gen_obj.graph.add(DT_OBJECT, hfile, class_file)
-      self.deps.append(hfile)
 
-      # target (a linked item) depends upon object
-      self.gen_obj.graph.add(DT_LINK, self.name, hfile)
+      self.gen_obj.graph.add(DT_OBJECT, class_file, sfile)
+      self.gen_obj.graph.add(DT_LINK, self.name, class_file)
+      self.deps.append(class_file)
+
+      if (src, reldir) in native:
+        class_header = build_path_join(self.headers, class_name + '.h')
+        class_header_win = build_path_join(self.headers,
+                                           self.package.replace(".", "_")
+                                           + "_" + class_name + '.h')
+        hfile = HeaderFile(class_header, self.package + '.' + class_name,
+                           self.compile_cmd)
+        hfile.filename_win = class_header_win
+        hfile.source_generated = 1
+        self.gen_obj.graph.add(DT_OBJECT, hfile, sfile)
+        self.deps.append(hfile)
+
+        # target (a linked item) depends upon object
+        self.gen_obj.graph.add(DT_LINK, self.name, hfile)
 
 
     # collect all the paths where stuff might get built
@@ -950,65 +959,8 @@ class TargetJavaHeaders(TargetJava):
     ### the sources. "what dir are you going to put yourself into?"
     self.gen_obj.target_dirs.append(self.path)
     self.gen_obj.target_dirs.append(self.classes)
-    self.gen_obj.target_dirs.append(self.headers)
-    for pattern in self.sources.split():
-      dirname = build_path_dirname(pattern)
-      if dirname:
-        self.gen_obj.target_dirs.append(build_path_join(self.path, dirname))
-
-    self.gen_obj.graph.add(DT_INSTALL, self.name, self)
-
-class TargetJavaClasses(TargetJava):
-  def __init__(self, name, options, gen_obj):
-    TargetJava.__init__(self, name, options, gen_obj)
-    self.objext = '.class'
-    self.lang = 'java'
-    self.classes = options.get('classes')
-    self.output_dir = self.classes
-
-  def add_dependencies(self):
-    sources = []
-    for p in self.path.split():
-      sources.extend(_collect_paths(self.sources, p))
-
-    for src, reldir in sources:
-      if src[-5:] != '.java':
-        raise GenError('ERROR: unknown file extension on "' + src + '"')
-
-      objname = src[:-5] + self.objext
-
-      # As .class files are likely not generated into the same
-      # directory as the source files, the object path may need
-      # adjustment.  To this effect, take "target_ob.classes" into
-      # account.
-      dirs = build_path_split(objname)
-      sourcedirs = dirs[:-1]  # Last element is the .class file name.
-      while sourcedirs:
-        if sourcedirs.pop() in self.packages:
-          sourcepath = build_path_join(*sourcedirs)
-          objname = build_path_join(self.classes, *dirs[len(sourcedirs):])
-          break
-      else:
-        raise GenError('Unable to find Java package root in path "%s"' % objname)
-
-      ofile = ObjectFile(objname, self.compile_cmd, self.when)
-      sfile = SourceFile(src, reldir)
-      sfile.sourcepath = sourcepath
-
-      # object depends upon source
-      self.gen_obj.graph.add(DT_OBJECT, ofile, sfile)
-
-      # target (a linked item) depends upon object
-      self.gen_obj.graph.add(DT_LINK, self.name, ofile)
-
-      # Add the class file to the dependency tree for this target
-      self.deps.append(ofile)
-
-    # collect all the paths where stuff might get built
-    ### we should collect this from the dependency nodes rather than
-    ### the sources. "what dir are you going to put yourself into?"
-    self.gen_obj.target_dirs.extend(self.path.split())
-    self.gen_obj.target_dirs.append(self.classes)
+    if self.headers:
+      self.gen_obj.target_dirs.append(self.headers)
     for pattern in self.sources.split():
       dirname = build_path_dirname(pattern)
       if dirname:
@@ -1057,8 +1009,7 @@ _build_types = {
   'apache-mod': TargetApacheMod,
   'shared-only-lib': TargetSharedOnlyLib,
   'shared-only-cxx-lib': TargetSharedOnlyCxxLib,
-  'javah' : TargetJavaHeaders,
-  'java' : TargetJavaClasses,
+  'java' : TargetJava,
   'i18n' : TargetI18N,
   'sql-header' : TargetSQLHeader,
   }
