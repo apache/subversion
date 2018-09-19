@@ -99,10 +99,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1836306
-   Ignore stat() reporting size zero when reading from pipe/fifo.
-   Justification:
-     Makes things like 'svn ci -F <(echo foo)' work.
-   Votes:
-     +1: philip, danielsh, rhuijben
