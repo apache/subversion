@@ -110,8 +110,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2018-09-19 13:13+0200\n"
-"PO-Revision-Date: 2018-03-12 16:58+0100\n"
+"POT-Creation-Date: 2018-09-19 11:06+0200\n"
+"PO-Revision-Date: 2018-09-19 13:05+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Swedish <dev@subversion.apache.org>\n"
 "Language: sv\n"
@@ -3314,7 +3314,7 @@ msgid "%s r%ld by %s%s"
 msgstr "%s r%ld av %s%s"
 
 #: ../libsvn_client/conflicts.c:6159
-#, fuzzy, c-format
+#, c-format
 msgid ""
 "%s\n"
 " [%d revision omitted for brevity],\n"
@@ -3323,7 +3323,7 @@ msgid_plural ""
 " [%d revisions omitted for brevity],\n"
 msgstr[0] ""
 "%s\n"
-" [%d revisioner utelämnade],\n"
+" [%d revision utelämnad],\n"
 msgstr[1] ""
 "%s\n"
 " [%d revisioner utelämnade],\n"
@@ -3792,14 +3792,13 @@ msgid "Apply to move destination"
 msgstr "Utför ändringar på flyttmålet"
 
 #: ../libsvn_client/conflicts.c:10467 ../libsvn_client/conflicts.c:10974
-#, fuzzy, c-format
+#, c-format
 msgid "apply changes to '%s'"
-msgstr "utför ändringar på flyttmålet \"%s\""
+msgstr "utför ändringar på \"%s\""
 
 #: ../libsvn_client/conflicts.c:10480 ../libsvn_client/conflicts.c:10488
-#, fuzzy
 msgid "Apply to corresponding local location"
-msgstr "Utför ändringar på flyttmålet"
+msgstr "Utför ändringar på motsvarande lokalt ställe"
 
 #: ../libsvn_client/conflicts.c:10570 ../libsvn_client/conflicts.c:10587
 #: ../libsvn_client/conflicts.c:10859
@@ -3825,14 +3824,19 @@ msgid "Setting a move target requires details for tree conflict at '%s' to be fe
 msgstr "För att ange ett flyttmål måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
 
 #: ../libsvn_client/conflicts.c:10811
-#, fuzzy, c-format
+#, c-format
 msgid "Getting a list of possible move siblings requires details for tree conflict at '%s' to be fetched from the repository first"
-msgstr "För att räkna upp möjliga flyttmål måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
+msgstr "För att få en lista på möjliga syskon att flytta måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
 
 #: ../libsvn_client/conflicts.c:10960
-#, fuzzy, c-format
+#, c-format
+msgid "Setting a move sibling requires details for tree conflict at '%s' to be fetched from the repository first"
+msgstr "För att ange ett syskon att flytta måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
+
+#: ../libsvn_client/conflicts.c:10728
+#, c-format
 msgid "Index '%d' is out of bounds of the possible move sibling list for '%s'"
-msgstr "Index \"%d\" är utanför listan av möjliga flyttmål för \"%s\""
+msgstr "Index \"%d\" är utanför listan av möjliga syskon att flytta för \"%s\""
 
 #: ../libsvn_client/conflicts.c:11261 ../libsvn_client/conflicts.c:11310
 #: ../libsvn_client/conflicts.c:11363
@@ -4559,10 +4563,10 @@ msgid "Can't commit to '%s' because it is not a directory"
 msgstr "Kan inte arkivera till \"%s\" eftersom det inte är en katalog"
 
 #: ../libsvn_client/patch.c:346
-#, fuzzy, c-format
+#, c-format
 msgid "Cannot strip %u component from '%s'"
 msgid_plural "Cannot strip %u components from '%s'"
-msgstr[0] "Kan inte ta bort %u sökvägsdelar från \"%s\""
+msgstr[0] "Kan inte ta bort %u sökvägsdel från \"%s\""
 msgstr[1] "Kan inte ta bort %u sökvägsdelar från \"%s\""
 
 #: ../libsvn_client/patch.c:1298 ../libsvn_client/patch.c:1344
@@ -4705,19 +4709,24 @@ msgid ".working"
 msgstr ".arbetskopia"
 
 #: ../libsvn_client/shelf.c:1386
-#, fuzzy
 msgid ".merge-left"
-msgstr ".sammanslagning-vänster.r%ld%s%s"
+msgstr ".sammanslagning-vänster"
 
 #: ../libsvn_client/shelf.c:1387
-#, fuzzy
 msgid ".merge-right"
-msgstr ".sammanslagning-höger.r%ld%s%s"
+msgstr ".sammanslagning-höger"
 
 #: ../libsvn_client/shelf.c:2054
-#, fuzzy, c-format
+#, c-format
+msgid "%d path could not be shelved"
+msgid_plural "%d paths could not be shelved"
+msgstr[0] "%d sökväg kunde inte läggas på hyllan"
+msgstr[1] "%d sökvägar kunde inte läggas på hyllan"
+
+#: ../libsvn_client/shelf.c:2152
+#, c-format
 msgid "Shelf '%s' version %d not found"
-msgstr "Hylla \"%s\" finns inte"
+msgstr "Post \"%s\" med version %d finns inte"
 
 #: ../libsvn_client/status.c:498 ../libsvn_client/status.c:680
 #: ../libsvn_wc/lock.c:564 ../libsvn_wc/lock.c:856 ../libsvn_wc/lock.c:1542
@@ -6008,9 +6017,9 @@ msgid "svndiff window length is corrupt"
 msgstr "Fönsterlängd i svndiff är trasig"
 
 #: ../libsvn_fs_fs/cached_data.c:2164
-#, fuzzy, c-format
+#, c-format
 msgid "Length mismatch while reading representation: expected %s, got %s"
-msgstr "Felaktig kontrollsumma vid läsning av representation"
+msgstr "Längden stämde inte vid läsning av representation: väntade %s, fick %s"
 
 #: ../libsvn_fs_fs/cached_data.c:2197 ../libsvn_fs_x/cached_data.c:2095
 msgid "Checksum mismatch while reading representation"
@@ -11087,7 +11096,7 @@ msgstr "Okänt sätt att markera radslut \"%s\" för \"%s\""
 
 #. scratch_
 #: ../libsvn_wc/props.c:2239
-#, fuzzy, c-format
+#, c-format
 msgid " (%d more duplicate target found)"
 msgid_plural " (%d more duplicate targets found)"
 msgstr[0] " (ytterligare %d mål förekommer flera gånger)"
@@ -11757,24 +11766,24 @@ msgid "Credentials cache in '%s' contains no matching credentials"
 msgstr "Klientreferenscache i \"%s\" innehåller inga passande klientreferenser"
 
 #: ../svn/auth-cmd.c:458
-#, fuzzy, c-format
+#, c-format
 msgid "Credentials cache in '%s' contains %d credential\n"
 msgid_plural "Credentials cache in '%s' contains %d credentials\n"
-msgstr[0] "Klientreferenscache i \"%s\" innehåller %d klientreferenser\n"
+msgstr[0] "Klientreferenscache i \"%s\" innehåller %d klientreferens\n"
 msgstr[1] "Klientreferenscache i \"%s\" innehåller %d klientreferenser\n"
 
 #: ../svn/auth-cmd.c:464
-#, fuzzy, c-format
+#, c-format
 msgid "Credentials cache in '%s' contains %d matching credential\n"
 msgid_plural "Credentials cache in '%s' contains %d matching credentials\n"
-msgstr[0] "Klientreferenscache i \"%s\" innehåller %d passande klientreferenser\n"
+msgstr[0] "Klientreferenscache i \"%s\" innehåller %d passande klientreferens\n"
 msgstr[1] "Klientreferenscache i \"%s\" innehåller %d passande klientreferenser\n"
 
 #: ../svn/auth-cmd.c:481
-#, fuzzy, c-format
+#, c-format
 msgid "Deleted %d matching credential from '%s'\n"
 msgid_plural "Deleted %d matching credentials from '%s'\n"
-msgstr[0] "Raderade %d passande klientreferenser från \"%s\"\n"
+msgstr[0] "Raderade %d passande klientreferens från \"%s\"\n"
 msgstr[1] "Raderade %d passande klientreferenser från \"%s\"\n"
 
 #: ../svn/blame-cmd.c:314 ../svn/list-cmd.c:310
@@ -12524,12 +12533,12 @@ msgstr "Ogiltig URL \"%s\""
 #: ../svn/info-cmd.c:219
 #, c-format
 msgid "svn-viewspec.py format 1 does not support the 'not-present' state found at '%s'"
-msgstr ""
+msgstr "svn-viewspec.py format 1 stöder inte \"not-present\"-tillståndet som finns vid \"%s\""
 
 #: ../svn/info-cmd.c:228
 #, c-format
 msgid "svn-viewspec.py format 1 does not support the 'switched' state found at '%s'"
-msgstr ""
+msgstr "svn-viewspect.py format 1 stöder inte \"switched\"-tillståndet som fanns vid \"%s\""
 
 #: ../svn/info-cmd.c:466
 #, c-format
@@ -13745,34 +13754,34 @@ msgid "Try 'svn revert --depth infinity' instead?"
 msgstr "Försök med \"svn revert --depth infinity\" istället?"
 
 #: ../svn/shelf-cmd.c:56
-#, fuzzy, c-format
+#, c-format
 msgid "Shelf '%s': no versions found"
-msgstr "Hylla \"%s\" finns inte"
+msgstr "Hylla \"%s\": inga versioner funna"
 
 #: ../svn/shelf-cmd.c:144
 msgid "All targets must be in the same WC"
 msgstr "Alla mål måste vara i samma arbetskopia"
 
 #: ../svn/shelf-cmd.c:164
-#, fuzzy, c-format
+#, c-format
 msgid "%d day ago"
 msgid_plural "%d days ago"
-msgstr[0] "%d dagar"
-msgstr[1] "%d dagar"
+msgstr[0] "för %d dag sedan"
+msgstr[1] "för %d dagar sedan"
 
 #: ../svn/shelf-cmd.c:169
-#, fuzzy, c-format
+#, c-format
 msgid "%d hour ago"
 msgid_plural "%d hours ago"
-msgstr[0] "%d timmar"
-msgstr[1] "%d timmar"
+msgstr[0] "för %d timme sedan"
+msgstr[1] "för %d timmar sedan"
 
 #: ../svn/shelf-cmd.c:174
-#, fuzzy, c-format
+#, c-format
 msgid "%d minute ago"
 msgid_plural "%d minutes ago"
-msgstr[0] "%d minuter"
-msgstr[1] "%d minuter"
+msgstr[0] "för %d minut sedan"
+msgstr[1] "för %d minuter sedan"
 
 #: ../svn/shelf-cmd.c:233
 #, c-format
@@ -13780,17 +13789,17 @@ msgid "version %d"
 msgstr "version %d"
 
 #: ../svn/shelf-cmd.c:236
-#, fuzzy, c-format
+#, c-format
 msgid "version %d of %d"
 msgid_plural "version %d of %d"
 msgstr[0] "version %d av %d"
 msgstr[1] "version %d av %d"
 
 #: ../svn/shelf-cmd.c:242
-#, fuzzy, c-format
+#, c-format
 msgid "%d path changed"
 msgid_plural "%d paths changed"
-msgstr[0] ", %d sökvägar ändrade"
+msgstr[0] ", %d sökväg ändrade"
 msgstr[1] ", %d sökvägar ändrade"
 
 #: ../svn/shelf-cmd.c:258
@@ -13830,19 +13839,19 @@ msgstr[0] "[Felutskrift kunde inte läsas.]"
 msgstr[1] "[Felutskrift kunde inte läsas.]"
 
 #: ../svn/shelf-cmd.c:506
-#, fuzzy, c-format
+#, c-format
 msgid "No local modifications could be saved"
 msgstr "Inga lokala ändringar kunde sparas"
 
 #: ../svn/shelf-cmd.c:507
-#, fuzzy, c-format
+#, c-format
 msgid "No local modifications could be shelved"
 msgstr "Inga lokala ändringar kunde läggas på hyllan"
 
 #: ../svn/shelf-cmd.c:611
-#, fuzzy, c-format
+#, c-format
 msgid "Shelved path '%s' already has status '%c' in the working copy"
-msgstr "Sökvägen \"%s\" finns inte i arbetskopian \"%s\""
+msgstr "Sökvägen \"%s\" på hyllan är redan i redan tillstånd \"%c\" i arbetskopian"
 
 #: ../svn/shelf-cmd.c:664
 #, c-format
@@ -13850,15 +13859,14 @@ msgid "--- Unshelve '%s' in WC root '%s'\n"
 msgstr "--- Ta \"%s\" från hyllan i arbetskopian med rot \"%s\"\n"
 
 #: ../svn/shelf-cmd.c:672
-#, fuzzy
 msgid "Cannot unshelve/restore, as at least one shelved path would conflict with a local modification or other status in the working copy"
-msgstr "Kan inte ta från hyllan eller återställa; minst en sökväg har ändrats på hyllan och i arbetskopian"
+msgstr "Kan inte ta från hyllan eller återställa, eftersom minst en sökväg skulle strida mot en lokal ändring eller annat tillstånd i arbetskopian"
 
 #: ../svn/shelf-cmd.c:690
-#, fuzzy, c-format
+#, c-format
 msgid "restored '%s' version %d and deleted %d newer version\n"
 msgid_plural "restored '%s' version %d and deleted %d newer versions\n"
-msgstr[0] "återställde \"%s\" version %d och raderade %d nyare versioner\n"
+msgstr[0] "återställde \"%s\" version %d och raderade %d nyare version\n"
 msgstr[1] "återställde \"%s\" version %d och raderade %d nyare versioner\n"
 
 #: ../svn/shelf-cmd.c:696
@@ -14487,7 +14495,6 @@ msgstr ""
 "                             vid märkning)"
 
 #: ../svn/svn.c:430
-#, fuzzy
 msgid ""
 "print only the item identified by ARG:\n"
 "                                'kind'       node kind of TARGET\n"
@@ -14524,7 +14531,11 @@ msgstr ""
 "                                     datum för \"last-changed-revision\"\n"
 "                                \"last-changed-author\"\n"
 "                                     författare till \"last-changed-revision\"\n"
-"                                \"wc-root\"         rot för MÅLets arbetskopia"
+"                                \"wc-root\"         rot för MÅLets arbetskopia\n"
+"                                \"schedule\"        \"normal\", \"add\", \"delete\",\n"
+"                                                  \"replace\"\n"
+"                                \"depth\"           hämtningsdjup av MÅL i\n"
+"                                                  arbetskopia"
 
 #: ../svn/svn.c:469
 msgid ""
@@ -14549,10 +14560,8 @@ msgid "drop shelf after successful unshelve"
 msgstr "ta bort hyllan efter lyckad återställning"
 
 #: ../svn/svn.c:484
-msgid ""
-"print the working copy layout, formatted according\n"
-"                             to ARG: 'classic' or 'svn11'"
-msgstr ""
+msgid "print the working copy layout"
+msgstr "visa arbetskopians omfattning"
 
 #: ../svn/svn.c:536
 msgid ""
@@ -15188,7 +15197,6 @@ msgstr ""
 "\n"
 
 #: ../svn/svn.c:824
-#, fuzzy
 msgid ""
 "  With --show-item, print only the value of one item of information\n"
 "  about TARGET.\n"
@@ -15196,12 +15204,15 @@ msgid ""
 msgstr ""
 "  Med --show-item, skriv bara ut värdet på en specifik sorts information\n"
 "  om MÅL.\n"
+"\n"
 
 #: ../svn/svn.c:827
 msgid ""
 "  EXPERIMENTAL:\n"
 "  With --x-viewspec, print the working copy layout.\n"
 msgstr ""
+"  EXPERIMENTELLT:\n"
+"  Med --viewspec, visa arbetskopians omfattning.\n"
 
 #: ../svn/svn.c:838 ../svn/svn.c:864
 msgid ""
@@ -15555,6 +15566,10 @@ msgid ""
 "      svn log -rHEAD:100 ^/tags/3.0\n"
 "\n"
 msgstr ""
+"     Visa alla loggmeddelanden för arkiveringar mellan märkena ^/tags/2.0\n"
+"     och ^/tags/3.0, med antagandet att märket 2.0 skapades i revision 100:\n"
+"       svn log -rHEAD:100 ^/tags/3.0\n"
+"\n"
 
 #: ../svn/svn.c:995
 msgid ""
@@ -17947,23 +17962,21 @@ msgid "  Local modifications are preserved.\n"
 msgstr "  Lokala ändringar behålls som de är.\n"
 
 #: ../svn/svn.c:1959
-#, fuzzy
 msgid ""
 "Show shelved changes as a diff.\n"
 "usage: x-shelf-diff SHELF [VERSION]\n"
 "\n"
 msgstr ""
 "Visa ändringar på hyllan som en ändringsfil.\n"
-"användning: shelf-diff NAMN [VERSION]\n"
+"användning: x-shelf-diff HYLLA [VERSION]\n"
 "\n"
 
 #: ../svn/svn.c:1962
-#, fuzzy
 msgid ""
 "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
 "\n"
 msgstr ""
-"  Visa ändringarna på hyllan NAMN:VERSION (skönsvärde: senaste) som en\n"
+"  Visa ändringarna i HYLLA:VERSION (skönsvärde: senaste) som en\n"
 "  ändringsfil.\n"
 "\n"
 
@@ -17973,6 +17986,9 @@ msgid ""
 "  'svn diff'.\n"
 "\n"
 msgstr ""
+"   Se även: \"svn diff --cl=svn:shelf:HYLLA\" som tillåter de flesta av\n"
+"   väljarna för \"svn diff\".\n"
+"\n"
 
 #: ../svn/svn.c:1967 ../svn/svn.c:1980 ../svn/svn.c:1993 ../svn/svn.c:2005
 #: ../svn/svn.c:2017 ../svn/svn.c:2032 ../svn/svn.c:2062 ../svn/svn.c:2095
@@ -17984,59 +18000,55 @@ msgstr ""
 "  ändras i nästa utgåva, och ingen bakåtkompatibilitet utlovas.\n"
 
 #: ../svn/svn.c:1974
-#, fuzzy
 msgid ""
 "Delete a shelf.\n"
 "usage: x-shelf-drop SHELF [PATH ...]\n"
 "\n"
 msgstr ""
 "Radera en hylla.\n"
-"användning: shelf-drop NAMN\n"
+"användning: x-shelf-drop HYLLA [SÖKVÄG ...]\n"
 "\n"
 
 #: ../svn/svn.c:1977
-#, fuzzy
 msgid ""
 "  Delete the shelves named SHELF from the working copies containing PATH\n"
 "  (default PATH is '.')\n"
 "\n"
 msgstr ""
-"  Anbringa ändringar från hyllan NAMN till arbetskopian.\n"
-"  Den nyaste hyllan används om NAMN inte anges.\n"
+"   Radera hyllorna med namn HYLLA från arbetskopiorna som innehåller SÖKVÄG\n"
+"   (\".\" om ingen anges)\n"
 "\n"
 
 #: ../svn/svn.c:1986
-#, fuzzy
 msgid ""
 "List shelves.\n"
 "usage: x-shelf-list [PATH ...]\n"
 "\n"
 msgstr ""
 "Lista hyllor.\n"
-"användning: shelf-list\n"
+"användning: x-shelf-list [SÖKVÄG ...]\n"
 "\n"
 
 #: ../svn/svn.c:1989
-#, fuzzy
 msgid ""
 "  List shelves for each working copy containing PATH (default is '.')\n"
 "  Include the first line of any log message and some details about the\n"
 "  contents of the shelf, unless '-q' is given.\n"
 "\n"
 msgstr ""
-"  Lista hyllor: Ta med den första raden av loggmeddelanden och en del\n"
-"  detaljer om hyllans innehåll, om inte väljaren \"-q\" används.\n"
+"  Lista hyllor för varje arbetskopia som innehåller SÖKVÄG (\".\" om ej angiven).\n"
+"  Ta med den första raden av loggmeddelanden och en del detaljer om hyllans\n"
+"  innehåll, om inte väljaren \"-q\" anges.\n"
 "\n"
 
 #: ../svn/svn.c:2000
-#, fuzzy
 msgid ""
 "List which shelf affects each path.\n"
 "usage: x-shelf-list-by-paths [PATH...]\n"
 "\n"
 msgstr ""
 "Lista hyllor som påverkar givna sökvägar.\n"
-"användning: shelf-list-by-paths [SÖKVÄG...]\n"
+"användning: x-shelf-list-by-paths [SÖKVÄG...]\n"
 "\n"
 
 #: ../svn/svn.c:2003
@@ -18048,14 +18060,13 @@ msgstr ""
 "\n"
 
 #: ../svn/svn.c:2011
-#, fuzzy
 msgid ""
 "Show the versions of a shelf.\n"
 "usage: x-shelf-log SHELF [PATH...]\n"
 "\n"
 msgstr ""
 "Visa en hyllas versioner.\n"
-"användning: shelf-log NAMN\n"
+"användning: x-shelf-log HYLLA [SÖKVÄG...]\n"
 "\n"
 
 #: ../svn/svn.c:2014
@@ -18064,26 +18075,27 @@ msgid ""
 "  default PATH is '.').\n"
 "\n"
 msgstr ""
+"  Visa alla versioner på HYLLA för varje arbetskopia som innehåller SÖKVÄG\n"
+"  (\".\" om ingen anges).\n"
+"\n"
 
 #: ../svn/svn.c:2024
-#, fuzzy
 msgid ""
 "Copy local changes onto a new version of a shelf.\n"
 "usage: x-shelf-save SHELF [PATH...]\n"
 "\n"
 msgstr ""
 "Kopiera lokala ändringar till en ny version av en hylla.\n"
-"användning: shelf-save NAMN [SÖKVÄG...]\n"
+"användning: x-shelf-save HYLLA [SÖKVÄG...]\n"
 "\n"
 
 #: ../svn/svn.c:2027
-#, fuzzy
 msgid ""
 "  Save local changes in the given PATHs as a new version of SHELF.\n"
 "  The shelf's log message can be set with -m, -F, etc.\n"
 "\n"
 msgstr ""
-"  Spara lokala ändringar i givna SÖKVÄGar som en ny version av hyllan NAMN.\n"
+"  Spara lokala ändringar i givna SÖKVÄGar som en ny version av HYLLA.\n"
 "  Hyllans loggmeddelande kan anges med -m, -F, osv.\n"
 "\n"
 
@@ -18096,25 +18108,23 @@ msgstr ""
 "\n"
 
 #: ../svn/svn.c:2042
-#, fuzzy
 msgid ""
 "Move local changes onto a shelf.\n"
 "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
 "\n"
 msgstr ""
 "Flytta lokala ändringar till en hylla.\n"
-"användning: shelve [--keep-local] NAMN [SÖKVÄG...]\n"
+"användning: x-shelve [--keep-local] HYLLA [SÖKVÄG...]\n"
 "\n"
 
 #: ../svn/svn.c:2045
-#, fuzzy
 msgid ""
 "  Save the local changes in the given PATHs to a new or existing SHELF.\n"
 "  Revert those changes from the WC unless '--keep-local' is given.\n"
 "  The shelf's log message can be set with -m, -F, etc.\n"
 "\n"
 msgstr ""
-"  Spara lokala ändringar i angivna SÖKVÄGar i en hylla kallad NAMN.\n"
+"  Spara lokala ändringar i angivna SÖKVÄGar i en ny eller befintlig HYLLA.\n"
 "  Återställ dessa ändringar från arbetskopian om inte \"--keep-local\" anges.\n"
 "  Hyllans loggmeddelande kan anges med -m, -F, osv.\n"
 "\n"
@@ -18137,15 +18147,19 @@ msgid ""
 "  be shelved.\n"
 "\n"
 msgstr ""
+"  Ändringar som kan läggas på hyllan är arkiveringsbara ändringar till filer\n"
+"  och egenskaper, förutom följande som inte stöds än:\n"
+"     * kopieringar och flyttningar\n"
+"     * mkdir och rmdir\n"
+"  Ej arkiveringsbara tillstånd som konflikter, ej versionshanterade eller\n"
+"  saknade filer kan inte läggas på hyllan.\n"
+"\n"
 
 #: ../svn/svn.c:2058
-#, fuzzy
 msgid ""
 "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
 "\n"
-msgstr ""
-"  För att återfå ändringar från hyllan, använd \"svn unshelve NAMN\".\n"
-"\n"
+msgstr "  För att återfå ändringar från hyllan, använd \"svn unshelve HYLLA\".\n\n"
 
 #: ../svn/svn.c:2060
 msgid ""
@@ -18156,25 +18170,23 @@ msgstr ""
 "\n"
 
 #: ../svn/svn.c:2071
-#, fuzzy
 msgid ""
 "Copy shelved changes back into the WC.\n"
 "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
 "\n"
 msgstr ""
 "Kopiera tillbaka ändringar från hyllan till arbetskopian.\n"
-"användning: unshelve [--drop] [NAMN [VERSION]]\n"
+"användning: x-unshelve [--drop] [HYLLA [VERSION]]\n"
 "\n"
 
 #: ../svn/svn.c:2074
-#, fuzzy
 msgid ""
 "  Apply the changes stored in SHELF to the working copy.\n"
 "  SHELF defaults to the newest shelf.\n"
 "\n"
 msgstr ""
-"  Anbringa ändringar från hyllan NAMN till arbetskopian.\n"
-"  Den nyaste hyllan används om NAMN inte anges.\n"
+"  Anbringa ändringar från HYLLA till arbetskopian.\n"
+"  Den nyaste hyllan används om HYLLA inte anges.\n"
 "\n"
 
 #: ../svn/svn.c:2077
@@ -18185,16 +18197,20 @@ msgid ""
 "  (unless --drop is specified).\n"
 "\n"
 msgstr ""
+"  Anbringa normalt ändringar från den nyaste versionen av hyllan. Om VERSION\n"
+"  anges, använd den versionen och släng bort alla nyare versioner.\n"
+"  I båda fallen behålls versionen som användes från hyllan och alla äldre\n"
+"  versioner (såvida inte --drop anges).\n"
+"\n"
 
 #: ../svn/svn.c:2082
-#, fuzzy
 msgid ""
 "  With --drop, delete the entire shelf (like 'svn shelf-drop') after\n"
 "  successfully unshelving with no conflicts.\n"
 "\n"
 msgstr ""
-"  Med --drop, radera hyllan (som shelf-drop) efter att ha lyckats anbringa\n"
-"  ändringen utan konflikter.\n"
+"  Med --drop, radera hela hyllan (som med \"svn shelf-drop\") efter att ha\n"
+"  lyckats anbringa ändringen utan konflikter.\n"
 "\n"
 
 #: ../svn/svn.c:2085
@@ -18205,6 +18221,12 @@ msgid ""
 "  by shelving or reverting them, and then unshelve the desired version.\n"
 "\n"
 msgstr ""
+"  Filerna i arbetskopian bör vara i ett rent och oförändrat tillstånd innan\n"
+"  detta kommando används. För att återgå till en äldre version av hyllan,\n"
+"  se först till att eventuella ändringar i arbetskopian tas bort, genom att\n"
+"  återställa dem eller lägga dem på hyllan, och återställ därefter den\n"
+"  önskade versionen från hyllan.\n"
+"\n"
 
 #: ../svn/svn.c:2090
 msgid ""
@@ -18214,6 +18236,10 @@ msgid ""
 "  unexpected results.\n"
 "\n"
 msgstr ""
+"  Kopiering från hyllan kräver vanligen att ingen inblandad sökväg redan har\n"
+"  ändrats (eller är i annat onormalt tillstånd) i arbetskopian. Med --force\n"
+"  tas denna kontroll bort och kommandot kan gå fel och/eller ge upphov till\n"
+"  halvfärdiga eller oväntade resultat."
 
 #: ../svn/svn.c:2176
 #, fuzzy, c-format
@@ -18924,14 +18950,13 @@ msgstr ""
 "anges kommer bara egenskaperna för den enda revisionen skrivas ut.\n"
 
 #: ../svnadmin/svnadmin.c:388
-#, fuzzy
 msgid ""
 "usage: 1. svnadmin freeze REPOS_PATH -- PROGRAM [ARG...]\n"
 "               2. svnadmin freeze -F FILE -- PROGRAM [ARG...]\n"
 "\n"
 msgstr ""
-"användning: 1. svnadmin freeze ARKIVSÖKVÄG PROGRAM [ARGUMENT...]\n"
-"                    2. svnadmin freeze -F FIL PROGRAM [ARGUMENT...]\n"
+"användning: 1. svnadmin freeze ARKIVSÖKVÄG -- PROGRAM [ARGUMENT...]\n"
+"                    2. svnadmin freeze -F FIL -- PROGRAM [ARGUMENT...]\n"
 "\n"
 
 #: ../svnadmin/svnadmin.c:391
@@ -18946,7 +18971,6 @@ msgstr ""
 "\n"
 
 #: ../svnadmin/svnadmin.c:394
-#, fuzzy
 msgid ""
 "2. Like 1 except all repositories listed in FILE are locked. The file\n"
 "   format is repository paths separated by newlines.  Repositories are\n"
@@ -18958,6 +18982,9 @@ msgstr ""
 "2. Som i 1, men alla arkiv listade i FIL hålls låsta. Filens format är en\n"
 "   arkivsökväg på varje rad. Arkiven låses i samma ordning som de står\n"
 "   i filen.\n"
+"\n"
+"Argumentet \"--\" markerar slutet av väljare för svnadmin; resterande\n"
+"argument skickas direkt till PROGRAM även om de börjar med \"-\".\n"
 
 #: ../svnadmin/svnadmin.c:405
 msgid ""
@@ -22371,71 +22398,3 @@ msgstr "\"%s\" är av okänd typ\n"
 #, c-format
 msgid "Uncommitted local addition, copy or move%s"
 msgstr "Oarkiverad lokalt tillagd, kopierad eller flyttad fil eller katalog%s"
-
-#~ msgid "accept changes only where they conflict"
-#~ msgstr "godta ändringar bara där konflikter uppstår"
-
-#~ msgid "shelf '%s': no versions available"
-#~ msgstr "hylla \"%s\": inga versioner tillgängliga"
-
-#~ msgid "shelf '%s' has no version %d: max version is %d"
-#~ msgstr "hylla \"%s\" har ingen version %d: högsta version är %d"
-
-#~ msgid "Could not run external command '%s'"
-#~ msgstr "Kunde inte köra externa kommandot \"%s\""
-
-#~ msgid "%s, %s ago%s\n"
-#~ msgstr "%s, %s sedan%s\n"
-
-#~ msgid "--- Modifications to save:\n"
-#~ msgstr "--- Ändringar att spara:\n"
-
-#~ msgid "--- Modifications to shelve:\n"
-#~ msgstr "--- Ändringar att lägga på hyllan:\n"
-
-#~ msgid "No local modifications found"
-#~ msgstr "Inga lokala ändringar hittades"
-
-#~ msgid "--- Paths modified in shelf and in WC:\n"
-#~ msgstr "--- Sökvägar ändrade på hyllan och i arbetskopian:\n"
-
-#~ msgid "Unshelve/restore failed due to conflicts"
-#~ msgstr "Återställning från hyllan misslyckades på grund av konflikter"
-
-#~ msgid ""
-#~ "  Delete the shelf named NAME.\n"
-#~ "\n"
-#~ msgstr ""
-#~ "  Radera hyllan NAMN.\n"
-#~ "\n"
-
-#~ msgid ""
-#~ "  Show all versions of shelf NAME.\n"
-#~ "\n"
-#~ msgstr ""
-#~ "  Visa alla hyllan NAMNs versioner.\n"
-#~ "\n"
-
-#~ msgid ""
-#~ "  The kinds of change you can shelve are those supported by 'svn diff'\n"
-#~ "  and 'svn patch'. The following are currently NOT supported:\n"
-#~ "     copies, moves, mkdir, rmdir,\n"
-#~ "     'binary' content, uncommittable states\n"
-#~ "\n"
-#~ msgstr ""
-#~ "  Ändringar som kan läggas på hyllan är de som stöds av \"svn diff\" och\n"
-#~ "  \"svn patch\". Följande slag av ändringar stöds för närvarande INTE:\n"
-#~ "    kopiering, flytt, mkdir, rmdir,\n"
-#~ "    \"binärt\" innehåll, ej arkiverbara tillstånd\n"
-#~ "\n"
-
-#~ msgid ""
-#~ "  Any conflict between the change being unshelved and a change\n"
-#~ "  already in the WC is handled the same way as by 'svn patch',\n"
-#~ "  creating a 'reject' file.\n"
-#~ "\n"
-#~ msgstr ""
-#~ "  Konflikter mellan ändringen som tas från hyllan och en ändring som\n"
-#~ "  redan finns i arbetskopian hanteras på samma sätt som av \"svn patch\",\n"
-#~ "  och orsakar en \"reject\"-fil.\n"
-#~ "\n"
