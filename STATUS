@@ -100,13 +100,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1833465
-   Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
-   Justification:
-     Return an error when the client gets our v1 protocol wrong.
-   Votes:
-     +1: philip, jamessan, rhuijben
-
  * r1836306
    Ignore stat() reporting size zero when reading from pipe/fifo.
    Justification:
