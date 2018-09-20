@@ -60,7 +60,7 @@ struct layout_list_baton_t
 
 /* Output as 'svn' command-line commands.
  *
- * Implements svn_client_layout_func_t
+ * Implements svn_client__layout_func_t
  */
 static svn_error_t *
 output_svn_command_line(void *layout_baton,
@@ -163,7 +163,7 @@ depth_to_viewspec_py(svn_depth_t depth,
 
 /* Output in the format used by 'tools/client-side/viewspec.py'
  *
- * Implements svn_client_layout_func_t
+ * Implements svn_client__layout_func_t
  */
 static svn_error_t *
 output_svn_viewspec_py(void *layout_baton,
@@ -243,7 +243,7 @@ output_svn_viewspec_py(void *layout_baton,
 }
 
 /*
- * Call svn_client_layout_list(), using a receiver function decided
+ * Call svn_client__layout_list(), using a receiver function decided
  * by VIEWSPEC.
  */
 static svn_error_t *
@@ -280,15 +280,15 @@ cl_layout_list(apr_array_header_t *targets,
       /* svn-viewspec.py format */
       llb.vs_py_format = 2;
 
-      SVN_ERR(svn_client_layout_list(list_abspath,
-                                     output_svn_viewspec_py, &llb,
-                                     ctx, scratch_pool));
+      SVN_ERR(svn_client__layout_list(list_abspath,
+                                      output_svn_viewspec_py, &llb,
+                                      ctx, scratch_pool));
       break;
     case svn_cl__viewspec_svn11:
       /* svn command-line format */
-      SVN_ERR(svn_client_layout_list(list_abspath,
-                                     output_svn_command_line, &llb,
-                                     ctx, scratch_pool));
+      SVN_ERR(svn_client__layout_list(list_abspath,
+                                      output_svn_command_line, &llb,
+                                      ctx, scratch_pool));
       break;
     default:
       SVN_ERR_MALFUNCTION();

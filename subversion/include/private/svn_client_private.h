@@ -383,7 +383,7 @@ svn_client__get_diff_writer_svn(
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client__shelf_diff(svn_client_shelf_version_t *shelf_version,
+svn_client__shelf_diff(svn_client__shelf_version_t *shelf_version,
                        const char *shelf_relpath,
                        svn_depth_t depth,
                        svn_boolean_t ignore_ancestry,
