@@ -35,21 +35,21 @@ Candidate changes:
      A cleaner upgrade path for those testing experimental shelving. Changes
      the shelf storage dir to '.svn/x/shelves/v2'.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, jamessan
 
  * r1841091, r1841136
    Fix SVN-4776: Shelving: remove non-x-prefixed command aliases.
    Justification:
      Leaves the command-line UI clear for a future stable version.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, jamessan
 
  * r1841098
    Rename --viewspec to --x-viewspec.  See SVN-4776.
    Justification:
      Move experimental interfaces to a separate namespace.
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
 
  * r1841272
    'svn info --x-viewspec': Expose both output backends.
@@ -58,11 +58,10 @@ Candidate changes:
      feedback.	(Or possibly just fall prey to the sunk cost fallacy.)
    Depends: r1841098
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
 
 Veto-blocked changes:
 =====================
-
 
 Approved changes:
 =================
