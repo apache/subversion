@@ -2354,11 +2354,11 @@ diff_shelf(const char *shelf_name,
            apr_pool_t *scratch_pool)
 {
   svn_error_t *err;
-  svn_client_shelf_t *shelf;
-  svn_client_shelf_version_t *shelf_version;
+  svn_client__shelf_t *shelf;
+  svn_client__shelf_version_t *shelf_version;
   const char *wc_relpath;
 
-  err = svn_client_shelf_open_existing(&shelf,
+  err = svn_client__shelf_open_existing(&shelf,
                                        shelf_name, target_abspath,
                                        ctx, scratch_pool);
   if (err && err->apr_err == SVN_ERR_ILLEGAL_TARGET)
@@ -2369,14 +2369,14 @@ diff_shelf(const char *shelf_name,
   else
     SVN_ERR(err);
 
-  SVN_ERR(svn_client_shelf_version_open(&shelf_version,
+  SVN_ERR(svn_client__shelf_version_open(&shelf_version,
                                         shelf, shelf->max_version,
                                         scratch_pool, scratch_pool));
   wc_relpath = svn_dirent_skip_ancestor(shelf->wc_root_abspath, target_abspath);
   SVN_ERR(svn_client__shelf_diff(shelf_version, wc_relpath,
                                  depth, ignore_ancestry,
                                  diff_processor, scratch_pool));
-  SVN_ERR(svn_client_shelf_close(shelf, scratch_pool));
+  SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
 
   return SVN_NO_ERROR;
 }
