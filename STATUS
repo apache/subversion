@@ -30,7 +30,7 @@ Candidate changes:
      +0: julianfoad (only r1840990,r1840991)
      +1: stsp
 
- * r1841059,r1841606
+ * r1841059,r1841600,r1841601,r1841602,r1841606
    Change the shelf storage dir from ".svn/shelves" to
    ".svn/experimental/shelves/v2".
    Justification:
@@ -41,7 +41,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
      -0: jamessan (svn_wc__get_shelves_dir is still using .svn/x/)
-     +1: steveking
+     +1: steveking (only r1841059,r1841606)
 
  * r1841079,r1841481,r1841567
    Move all experimental APIs to the private namespace.
