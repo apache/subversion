@@ -37,6 +37,7 @@ Candidate changes:
      Instead use an "x" subdir, intended for anything experimental/unstable.
      Also fixes SVN-4774 "presence of old 1.10 shelves breaks shelf-list",
      giving a cleaner upgrade path for those testing experimental shelving.
+   Notes: Brane suggested the subdir name should be 'experimental' not 'x'.
    Votes:
      +1: julianfoad, jamessan
 
