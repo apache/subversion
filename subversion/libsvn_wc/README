@@ -94,6 +94,8 @@ copies.
   .svn/wc.db                    /* SQLite database containing node metadata. */
        pristine/                /* Sharded directory containing base files. */
        tmp/                     /* Local tmp area. */
+       entries                  /* Stub file. */
+       format                   /* Stub file. */
 
 `wc.db':
    A self-contained SQLite database containing all the metadata Subversion
@@ -108,6 +110,10 @@ copies.
    multiple identical files can share the same pristine representation.
 
    Pristines are used for sending diffs back to the server, etc.
+
+`entries', `format':
+   These stub files exist only to enable a pre-1.7 client to yield a clearer
+   error message.
 
 
 How the client applies an update delta
