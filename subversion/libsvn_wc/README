@@ -94,7 +94,7 @@ copies.
   .svn/wc.db                    /* SQLite database containing node metadata. */
        pristine/                /* Sharded directory containing base files. */
        tmp/                     /* Local tmp area. */
-       x/                       /* Data for experimental features. */
+       experimental/            /* Data for experimental features. */
        entries                  /* Stub file. */
        format                   /* Stub file. */
 
@@ -112,7 +112,7 @@ copies.
 
    Pristines are used for sending diffs back to the server, etc.
 
-`x':
+`experimental':
    Experimental (unstable) features store their data here.
 
 `entries', `format':
