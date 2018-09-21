@@ -41,6 +41,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
      +1: jamessan (r1841059 only)
+     +1: steveking
 
  * r1841180, r1841524, r1841525
    Merge the 'java10-compat' branch to trunk
