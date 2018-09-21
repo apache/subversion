@@ -40,17 +40,8 @@ Candidate changes:
      giving a cleaner upgrade path for those testing experimental shelving.
    Votes:
      +1: julianfoad
-     +1: jamessan (r1841059 only)
+     -0: jamessan (svn_wc__get_shelves_dir is still using .svn/x/)
      +1: steveking
-
- * r1841180, r1841524, r1841525
-   Merge the 'java10-compat' branch to trunk
-   Justification:
-     Enables building against Java 10 which is becoming the default JDK in
-     many distributions
-   Votes:
-     +1 (without r1841524, r1841525): jamessan
-     +1: jcorvel
 
  * r1841079,r1841481,r1841567
    Move all experimental APIs to the private namespace.
@@ -68,3 +59,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1841180, r1841524, r1841525
+   Merge the 'java10-compat' branch to trunk
+   Justification:
+     Enables building against Java 10 which is becoming the default JDK in
+     many distributions
+   Votes:
+     +1 (without r1841524, r1841525): jamessan
+     +1: jcorvel, jamessan
+
