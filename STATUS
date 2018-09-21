@@ -59,13 +59,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1841098
-   Rename --viewspec to --x-viewspec.  See SVN-4776.
-   Justification:
-     Move experimental interfaces to a separate namespace.
-   Votes:
-     +1: danielsh, jamessan, julianfoad
-
  * r1841272
    'svn info --x-viewspec': Expose both output backends.
    Justification:
