@@ -53,10 +53,13 @@ Candidate changes:
      +1 (without r1841524, r1841525): jamessan
      +1: jcorvel
 
- * r1841481
+ * r1841079,r1841481
    Move all experimental APIs to the private namespace.
    Justification:
      Unblock the 1.11 release
+   Notes: r1841481 is the main change, renaming the symbols to include "__".
+     r1841079 is included here to avoid merge conflicts: it removes older
+     experimental APIs that were 'deprecated' but did not exist in 1.10.
    Votes:
      +1: julianfoad
 
