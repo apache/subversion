@@ -53,7 +53,7 @@ Candidate changes:
      +1 (without r1841524, r1841525): jamessan
      +1: jcorvel
 
- * r1841079,r1841481,1841567
+ * r1841079,r1841481,r1841567
    Move all experimental APIs to the private namespace.
    Justification:
      Unblock the 1.11 release
@@ -62,7 +62,7 @@ Candidate changes:
      experimental APIs that were 'deprecated' but did not exist in 1.10.
      1841567 removes bogus '@since 1.X' annotations.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, brane
 
 Veto-blocked changes:
 =====================
