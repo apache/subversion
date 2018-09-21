@@ -480,8 +480,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"drop", opt_drop, 0,
                        N_("drop shelf after successful unshelve")},
 
-  {"x-viewspec", opt_viewspec, 0,
-                       N_("print the working copy layout")},
+  {"x-viewspec", opt_viewspec, 1,
+                       N_("print the working copy layout, formatted according\n"
+                          "                             "
+                          "to ARG: 'classic' or 'svn11'")},
 
   /* Long-opt Aliases
    *
@@ -2160,6 +2162,22 @@ add_search_pattern_to_latest_group(svn_cl__opt_state_t *opt_state,
   APR_ARRAY_PUSH(group, const char *) = pattern;
 }
 
+/* Parse the argument to the --x-viewspec option. */
+static svn_error_t *
+viewspec_from_word(enum svn_cl__viewspec_t *viewspec,
+                   const char *utf8_opt_arg)
+{
+  if (!strcmp(utf8_opt_arg, "classic"))
+    *viewspec = svn_cl__viewspec_classic;
+  else if (!strcmp(utf8_opt_arg, "svn11"))
+    *viewspec = svn_cl__viewspec_svn11;
+  else
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a valid --x-viewspec value"),
+                             utf8_opt_arg);
+  return SVN_NO_ERROR;
+}
+
 
 /*** Main. ***/
 
@@ -2769,6 +2787,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_viewspec:
         opt_state.viewspec = TRUE;
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(viewspec_from_word(&opt_state.viewspec, utf8_opt_arg));
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
