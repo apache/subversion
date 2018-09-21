@@ -6935,7 +6935,6 @@ svn_client_cat(svn_stream_t *out,
 
 /** A shelf.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 typedef struct svn_client__shelf_t
@@ -6954,7 +6953,6 @@ typedef struct svn_client__shelf_t
 
 /** One version of a shelved change-set.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 typedef struct svn_client__shelf_version_t
@@ -6977,7 +6975,6 @@ typedef struct svn_client__shelf_version_t
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -6994,7 +6991,6 @@ svn_client__shelf_open_or_create(svn_client__shelf_t **shelf_p,
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7009,7 +7005,6 @@ svn_client__shelf_open_existing(svn_client__shelf_t **shelf_p,
  *
  * If @a shelf is NULL, do nothing; otherwise @a shelf must be an open shelf.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7021,7 +7016,6 @@ svn_client__shelf_close(svn_client__shelf_t *shelf,
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7052,7 +7046,6 @@ svn_client__shelf_delete(const char *name,
  * This function does not revert the changes from the WC; use
  * svn_client_shelf_unapply() for that.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7080,7 +7073,6 @@ svn_client__shelf_save_new_version3(svn_client__shelf_version_t **new_version_p,
  * will become invalid: attempting to use it will give undefined behaviour.
  * The given @a shelf_version will remain valid.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7094,7 +7086,6 @@ svn_client__shelf_delete_newer_versions(svn_client__shelf_t *shelf,
  *
  * There is no need to "close" it after use.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7109,7 +7100,6 @@ svn_client__shelf_version_open(svn_client__shelf_version_t **shelf_version_p,
  *
  * Set @a shelf_version to null if no versions exist.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7124,7 +7114,6 @@ svn_client__shelf_get_newest_version(svn_client__shelf_version_t **shelf_version
  *
  * The versions will be in chronological order, oldest to newest.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7140,7 +7129,6 @@ svn_client__shelf_get_all_versions(apr_array_header_t **versions_p,
  * report the full set of notifications about successes and conflicts,
  * but leave the WC untouched.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7172,7 +7160,6 @@ svn_client__shelf_apply(svn_client__shelf_version_t *shelf_version,
  *
  * Leave the WC untouched.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7184,7 +7171,6 @@ svn_client__shelf_test_apply_file(svn_boolean_t *conflict_p,
 
 /** Reverse-apply @a shelf_version to the WC.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7201,7 +7187,6 @@ svn_client__shelf_unapply(svn_client__shelf_version_t *shelf_version,
  * (Future possibility: When moves and copies are supported, the hash key
  * is the old path and value is the new path.)
  *
- * @since New in 1.10, changed in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7218,7 +7203,6 @@ svn_client__shelf_paths_changed(apr_hash_t **affected_paths,
  *
  * If @a prop_val is NULL, delete the property (if present).
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7232,7 +7216,6 @@ svn_client__shelf_revprop_set(svn_client__shelf_t *shelf,
  *
  * This deletes all previous revprops.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7251,7 +7234,6 @@ svn_client__shelf_revprop_set_all(svn_client__shelf_t *shelf,
  * The lifetime of the result is limited to that of @a shelf and/or
  * of @a result_pool.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7266,7 +7248,6 @@ svn_client__shelf_revprop_get(svn_string_t **prop_val,
  * The lifetime of the result is limited to that of @a shelf and/or
  * of @a result_pool.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7281,7 +7262,6 @@ svn_client__shelf_revprop_list(apr_hash_t **props,
  *
  * Similar to svn_client_shelf_revprop_set(... SVN_PROP_REVISION_LOG ...).
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7298,7 +7278,6 @@ svn_client__shelf_set_log_message(svn_client__shelf_t *shelf,
  *
  * The result is allocated in @a result_pool.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7309,7 +7288,6 @@ svn_client__shelf_get_log_message(char **log_message,
 
 /** Information about a shelf.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 typedef struct svn_client__shelf_info_t
@@ -7323,7 +7301,6 @@ typedef struct svn_client__shelf_info_t
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
@@ -7337,7 +7314,6 @@ svn_client__shelf_list(apr_hash_t **shelf_infos,
 /** Report the shelved status of all the shelved paths in @a shelf_version
  * via @a walk_func(@a walk_baton, ...).
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL

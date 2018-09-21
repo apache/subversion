@@ -353,6 +353,8 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  * the directory exists.
  *
  * @a local_abspath is any path in the WC, and is used to find the WC root.
+ *
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *

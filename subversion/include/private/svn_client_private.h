@@ -378,7 +378,6 @@ svn_client__get_diff_writer_svn(
  *
  * ### depth and ignore_ancestry are currently ignored.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
