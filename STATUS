@@ -27,13 +27,16 @@ Candidate changes:
      - r1840997 improves resolver API semantics
      Ideally, these should be merged before 1.11.0 is released.
    Votes:
+     +0: julianfoad (only r1840990,r1840991)
      +1: stsp
 
  * r1841059
-   Shelving: fix SVN-4774 "presence of old 1.10 shelves breaks shelf-list".
+   Change the shelf storage dir from ".svn/shelves" to ".svn/x".
    Justification:
-     A cleaner upgrade path for those testing experimental shelving. Changes
-     the shelf storage dir to '.svn/x/shelves/v2'.
+     Stop polluting the ".svn/" namespace with an experimental "shelves" subdir.
+     Instead use an "x" subdir, intended for anything experimental/unstable.
+     Also fixes SVN-4774 "presence of old 1.10 shelves breaks shelf-list",
+     giving a cleaner upgrade path for those testing experimental shelving.
    Votes:
      +1: julianfoad, jamessan
 
