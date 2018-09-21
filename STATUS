@@ -53,6 +53,13 @@ Candidate changes:
      +1 (without r1841524, r1841525): jamessan
      +1: jcorvel
 
+ * r1841481
+   Move all experimental APIs to the private namespace.
+   Justification:
+     Unblock the 1.11 release
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
