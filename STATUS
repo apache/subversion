@@ -40,13 +40,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, jamessan
 
- * r1841091, r1841136
-   Fix SVN-4776: Shelving: remove non-x-prefixed command aliases.
-   Justification:
-     Leaves the command-line UI clear for a future stable version.
-   Votes:
-     +1: julianfoad, jamessan
-
  * r1841180, r1841524, r1841525
    Merge the 'java10-compat' branch to trunk
    Justification:
@@ -72,3 +65,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1841091, r1841136
+   Fix SVN-4776: Shelving: remove non-x-prefixed command aliases.
+   Justification:
+     Leaves the command-line UI clear for a future stable version.
+   Votes:
+     +1: julianfoad, jamessan, danielsh
+
