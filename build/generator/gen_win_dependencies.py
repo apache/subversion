@@ -1067,11 +1067,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       return
 
     try:
-      outfp = subprocess.Popen([os.path.join(jdk_path, 'bin', 'javah.exe'),
-                               '-version'], stdout=subprocess.PIPE).stdout
+	  # Apparently a 1.8 javac writes its version output to stderr, while
+	  # a 1.10 javac writes it to stdout. To catch them all, we redirect
+	  # stderr to stdout.
+      outfp = subprocess.Popen([os.path.join(jdk_path, 'bin', 'javac.exe'),
+                               '-version'], stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT).stdout
       line = outfp.read()
       if line:
-        vermatch = re.search(r'"(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)"', line, re.M)
+        vermatch = re.search(r'(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)', line, re.M)
       else:
         vermatch = None
 
