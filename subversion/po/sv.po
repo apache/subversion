@@ -18239,7 +18239,8 @@ msgstr ""
 "  Kopiering från hyllan kräver vanligen att ingen inblandad sökväg redan har\n"
 "  ändrats (eller är i annat onormalt tillstånd) i arbetskopian. Med --force\n"
 "  tas denna kontroll bort och kommandot kan gå fel och/eller ge upphov till\n"
-"  halvfärdiga eller oväntade resultat."
+"  halvfärdiga eller oväntade resultat.\n"
+"\n"
 
 #: ../svn/svn.c:2176
 #, fuzzy, c-format
