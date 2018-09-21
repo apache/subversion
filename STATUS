@@ -54,18 +54,17 @@ Candidate changes:
    Votes:
      +1: julianfoad, brane
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
-
  * r1841180, r1841524, r1841525
    Merge the 'java10-compat' branch to trunk
    Justification:
      Enables building against Java 10 which is becoming the default JDK in
      many distributions
    Votes:
-     +1 (without r1841524, r1841525): jamessan
      +1: jcorvel, jamessan
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
 
