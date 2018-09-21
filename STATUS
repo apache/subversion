@@ -41,7 +41,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
      -0: jamessan (only r1841059,r1841606) (svn_wc__get_shelves_dir is still using .svn/x/)
-     +1: steveking (only r1841059,r1841606)
+     +1: steveking
 
  * r1841079,r1841481,r1841567
    Move all experimental APIs to the private namespace.
