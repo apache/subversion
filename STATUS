@@ -28,7 +28,7 @@ Candidate changes:
      Ideally, these should be merged before 1.11.0 is released.
    Votes:
      +0: julianfoad (only r1840990,r1840991)
-     +1: stsp
+     +1: stsp, brane
 
  * r1841079,r1841481,r1841567
    Move all experimental APIs to the private namespace.
