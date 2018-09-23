@@ -6068,13 +6068,6 @@ test_file_vs_dir_move_merge_assertion_failure(const svn_test_opts_t *opts,
   svn_client_conflict_t *conflict;
   apr_array_header_t *options;
   svn_client_conflict_option_t *option;
-  #if 0
-  apr_array_header_t *possible_moved_to_repos_relpaths;
-  apr_array_header_t *possible_moved_to_abspaths;
-  struct status_baton sb;
-  struct svn_client_status_t *status;
-  svn_stringbuf_t *buf;
-#endif
   const char *wc_path;
 
   SVN_ERR(svn_test__sandbox_create(b,
@@ -6177,7 +6170,7 @@ test_file_vs_dir_move_merge_assertion_failure(const svn_test_opts_t *opts,
                                          b->pool));
   }
 
-  /* BUG: This triggers an assertion failure:
+  /* This used to trigger an assertion failure:
    * svn_tests: E235000: In file 'subversion/libsvn_client/conflicts.c' \
    *    line 2242: assertion failed (start_rev > end_rev) */
   SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
@@ -6185,12 +6178,13 @@ test_file_vs_dir_move_merge_assertion_failure(const svn_test_opts_t *opts,
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
-      svn_client_conflict_option_incoming_move_dir_merge,
       -1 /* end of list */
     };
     SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
                                          b->pool));
   }
+
+  /* Subversion is not yet smart enough to resolve this tree conflict. */
 
   return SVN_NO_ERROR;
 }
@@ -6297,7 +6291,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "local missing conflict with ambiguous moves"),
     SVN_TEST_OPTS_PASS(test_local_missing_abiguous_moves_dir,
                        "local missing conflict with ambiguous dir moves"),
-    SVN_TEST_OPTS_XFAIL(test_file_vs_dir_move_merge_assertion_failure,
+    SVN_TEST_OPTS_PASS(test_file_vs_dir_move_merge_assertion_failure,
                        "file v dir move merge assertion failure"),
     SVN_TEST_NULL
   };
