@@ -2248,11 +2248,14 @@ svn_cl__resolve_conflict(svn_boolean_t *quit,
       svn_boolean_t postponed = FALSE;
       svn_boolean_t printed_description = FALSE;
       svn_error_t *err;
+      apr_pool_t *iterpool;
 
       *quit = FALSE;
 
+      iterpool = svn_pool_create(scratch_pool);
       while (!resolved && !postponed && !*quit)
         {
+          svn_pool_clear(iterpool);
           err = resolve_conflict_interactively(&resolved, &postponed, quit,
                                                external_failed,
                                                printed_summary,
@@ -2261,7 +2264,7 @@ svn_cl__resolve_conflict(svn_boolean_t *quit,
                                                editor_cmd, ctx->config,
                                                path_prefix, pb,
                                                conflict_stats, ctx,
-                                               scratch_pool, scratch_pool);
+                                               iterpool, iterpool);
           if (err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE)
             {
               /* Conflict resolution has failed. Let the user try again.
@@ -2273,6 +2276,7 @@ svn_cl__resolve_conflict(svn_boolean_t *quit,
             }
           SVN_ERR(err);
         }
+      svn_pool_destroy(iterpool);
     }
   else if (option_id != svn_client_conflict_option_postpone)
     SVN_ERR(mark_conflict_resolved(conflict, option_id,
