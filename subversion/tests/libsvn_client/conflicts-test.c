@@ -6058,6 +6058,143 @@ test_local_missing_abiguous_moves_dir(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_file_vs_dir_move_merge_assertion_failure(const svn_test_opts_t *opts,
+                                              apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_opt_revision_t opt_rev, peg_rev;
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  apr_array_header_t *options;
+  svn_client_conflict_option_t *option;
+  #if 0
+  apr_array_header_t *possible_moved_to_repos_relpaths;
+  apr_array_header_t *possible_moved_to_abspaths;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_stringbuf_t *buf;
+#endif
+  const char *wc_path;
+
+  SVN_ERR(svn_test__sandbox_create(b,
+                                   "file_vs_dir_move_merge_assertion_failure",
+                                   opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b)); /* r1 */
+
+  /* Create a copy of node "A" (the "trunk") to "A1" (the "branch"). */
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r2 */
+
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  /* Move and modify file on the "branch" */
+  SVN_ERR(sbox_wc_move(b, "A1/B/lambda", "A1/B/lambda-moved"));
+  SVN_ERR(sbox_file_write(b, "A1/B/lambda-moved",
+                          "Modified content." APR_EOL_STR));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
+
+  /* Move a directory and modify a file inside of it on the "trunk". */
+  SVN_ERR(sbox_wc_move(b, "A/B", "A/B-moved"));
+  SVN_ERR(sbox_file_write(b, "A/B-moved/lambda",
+                          "Modified content." APR_EOL_STR));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Create a fresh working copy for "A1" ("branch"). */
+  wc_path = svn_test_data_path("file_vs_dir_move_merge_assertion_failure2",
+                               pool);
+  SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(wc_path, pool));
+  svn_test_add_dir_cleanup(wc_path);
+
+  /* Merge "A" ("trunk") into a fresh working copy of "A1" ("branch"). */
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  peg_rev.kind = svn_opt_revision_unspecified;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+  SVN_ERR(svn_client_checkout3(NULL, svn_path_url_add_component2(b->repos_url,
+                                                                 "A1", pool),
+                               wc_path, &peg_rev, &opt_rev, svn_depth_infinity,
+                               TRUE, FALSE, ctx, pool));
+
+  SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",
+                                                            pool),
+                                NULL, &opt_rev, wc_path, svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, pool));
+
+  SVN_ERR(svn_client_conflict_get(&conflict,
+                                  svn_dirent_join(wc_path, "B", b->pool),
+                                  ctx, b->pool, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_move_dir_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options, conflict,
+                                                          ctx, b->pool,
+                                                          b->pool));
+  option = svn_client_conflict_option_find_by_id(
+             options, svn_client_conflict_option_incoming_move_dir_merge);
+  SVN_TEST_ASSERT(option != NULL);
+
+  /* Resolve this conflict. Another one will be raised. */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_incoming_move_dir_merge, ctx,
+            b->pool));
+
+  SVN_ERR(svn_client_conflict_get(&conflict,
+                                  svn_dirent_join_many(b->pool,
+                                   wc_path, "B-moved", "lambda", NULL),
+                                  ctx, b->pool, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  /* BUG: This triggers an assertion failure:
+   * svn_tests: E235000: In file 'subversion/libsvn_client/conflicts.c' \
+   *    line 2242: assertion failed (start_rev > end_rev) */
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_move_dir_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -6160,6 +6297,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "local missing conflict with ambiguous moves"),
     SVN_TEST_OPTS_PASS(test_local_missing_abiguous_moves_dir,
                        "local missing conflict with ambiguous dir moves"),
+    SVN_TEST_OPTS_XFAIL(test_file_vs_dir_move_merge_assertion_failure,
+                       "file v dir move merge assertion failure"),
     SVN_TEST_NULL
   };
 
