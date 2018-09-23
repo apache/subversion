@@ -10565,7 +10565,8 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
       struct conflict_tree_local_missing_details *details;
 
       details = conflict->tree_conflict_local_details;
-      if (details == NULL || details->wc_move_targets == NULL)
+      if (details == NULL ||
+          (details->wc_move_targets == NULL && details->wc_siblings == NULL))
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Getting a list of possible move targets "
                                    "requires details for tree conflict at '%s' "
@@ -10573,9 +10574,12 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
                                 svn_dirent_local_style(victim_abspath,
                                                        scratch_pool));
 
-      SVN_ERR(get_repos_relpath_candidates(possible_moved_to_repos_relpaths,
-                                           details->wc_move_targets,
-                                           result_pool, scratch_pool));
+      if (details->wc_move_targets)
+        SVN_ERR(get_repos_relpath_candidates(possible_moved_to_repos_relpaths,
+                                             details->wc_move_targets,
+                                             result_pool, scratch_pool));
+      else
+        *possible_moved_to_repos_relpaths = NULL;
     }
   else
     {
