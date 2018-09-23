@@ -6051,7 +6051,7 @@ test_local_missing_abiguous_moves_dir(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
 
   /* And it should have expected contents. */
-  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A/mu-moved/lambda"),
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A/B-moved/lambda"),
                                    pool));
   SVN_TEST_STRING_ASSERT(buf->data, "Modified content." APR_EOL_STR);
 
@@ -6158,7 +6158,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "cherry-pick edit from moved directory"),
     SVN_TEST_OPTS_PASS(test_local_missing_abiguous_moves,
                        "local missing conflict with ambiguous moves"),
-    SVN_TEST_OPTS_XFAIL(test_local_missing_abiguous_moves_dir,
+    SVN_TEST_OPTS_PASS(test_local_missing_abiguous_moves_dir,
                        "local missing conflict with ambiguous dir moves"),
     SVN_TEST_NULL
   };
