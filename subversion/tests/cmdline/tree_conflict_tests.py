@@ -1518,7 +1518,7 @@ def local_missing_dir_endless_loop(sbox):
   sbox.simple_move('A/B', 'A/B2')
   sbox.simple_commit()
   sbox.simple_update()
-  main.file_append(sbox.ospath("A/B2/lambda"), "This is more content.")
+  main.file_append_binary(sbox.ospath("A/B2/lambda"), "This is more content.\n")
   sbox.simple_commit()
   sbox.simple_update()
 
@@ -1544,7 +1544,7 @@ interactive-conflicts = true
   contents = open(sbox.ospath('A1/B/lambda'), 'rb').readlines()
   svntest.verify.compare_and_display_lines(
     "A1/B/lambda has unexpectected contents", sbox.ospath("A1/B/lambda"),
-    [ "This is the file 'lambda'.\n", "This is more content."], contents)
+    [ "This is the file 'lambda'.\n", "This is more content.\n"], contents)
 
 
 #######################################################################
