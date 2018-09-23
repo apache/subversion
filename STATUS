@@ -59,6 +59,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1841753, r1841754
+   Fix an assertion failure in the conflict resolver.
+   Justification:
+     Assertions should not get triggered by particular tree conflicts.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
