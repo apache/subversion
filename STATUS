@@ -26,6 +26,13 @@ Candidate changes:
    Votes:
      +1: julianfoad, brane
 
+ * r1841716, r1841717
+   Fix duplicate message IDs in Swedish (and future) translation files.
+   Justification:
+     Duplicate entries in .po files cause build failures.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
