@@ -309,6 +309,8 @@ class Generator(gen_base.GeneratorBase):
         ezt_target.link_cmd = target_ob.link_cmd
       if hasattr(target_ob, 'output_dir'):
         ezt_target.output_dir = target_ob.output_dir
+      if hasattr(target_ob, 'headers_dir'):
+        ezt_target.headers_dir = target_ob.headers_dir
 
       # Add additional install dependencies if necessary
       if target_ob.add_install_deps:
