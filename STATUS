@@ -15,21 +15,6 @@ Status of 1.11.0:
 Candidate changes:
 ==================
 
- * r1840990, r1840991, r1840995, r1840997
-   Various conflict resolver improvements.
-   Notes:
-     I am proposing these in a batch because merging them out of order would
-     result in conflicts, and because I was planning to make these changes
-     before 1.11 was branched in the first place but didn't get around to it.
-     - r1840990 is a cosmetic output change
-     - r1840991 prevents an out-of-bounds array access
-     - r1840995 implements support for ambiguous moves in 'local missing' cases
-     - r1840997 improves resolver API semantics
-     Ideally, these should be merged before 1.11.0 is released.
-   Votes:
-     +0: julianfoad (only r1840990,r1840991)
-     +1: stsp, brane
-
  * r1841079,r1841481,r1841567
    Move all experimental APIs to the private namespace.
    Justification:
@@ -69,4 +54,19 @@ Approved changes:
      +1: danielsh (confirmed the buildsystem parts won't affect anything other
                    than the java bindings; this counts as three +1s for the
                    build system changes)
+
+ * r1840990, r1840991, r1840995, r1840997
+   Various conflict resolver improvements.
+   Notes:
+     I am proposing these in a batch because merging them out of order would
+     result in conflicts, and because I was planning to make these changes
+     before 1.11 was branched in the first place but didn't get around to it.
+     - r1840990 is a cosmetic output change
+     - r1840991 prevents an out-of-bounds array access
+     - r1840995 implements support for ambiguous moves in 'local missing' cases
+     - r1840997 improves resolver API semantics
+     Ideally, these should be merged before 1.11.0 is released.
+   Votes:
+     +0: julianfoad (only r1840990,r1840991)
+     +1: stsp, brane, jcorvel
 
