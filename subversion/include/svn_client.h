@@ -4585,27 +4585,45 @@ svn_client_conflict_option_set_merged_propval(
   const svn_string_t *merged_propval);
 
 /**
- * Get a list of possible repository paths which can be applied to the
- * svn_client_conflict_option_incoming_move_file_text_merge, or
- * svn_client_conflict_option_local_move_file_text_merge, or
- * svn_client_conflict_option_incoming_move_dir_merge resolution
- * @a option. (If a different option is passed in, this function will
- * raise an assertion failure.)
+ * Get a list of possible repository paths which can be applied to @a option.
  *
- * In some situations, there can be multiple possible destinations for an
- * incoming move. One such situation is where a file was copied and moved
- * in the same revision: svn cp a b; svn mv a c; svn commit
+ * In some situations, there can be multiple possible destinations for a move.
+ * One such situation is where a file was copied and moved in the same revision:
+ *   svn cp a b; svn mv a c; svn commit
  * When this move is merged elsewhere, both b and c will appear as valid move
  * destinations to the conflict resolver. To resolve such ambiguity, the client
  * may call this function to obtain a list of possible destinations the user
  * may choose from.
  *
+ * @a *possible_moved_to_repos_relpaths is set to NULL if the @a option does
+ * not support multiple move targets. API users may assume that only one option
+ * among those which can be applied to a conflict supports move targets.
+ *
  * The array is allocated in @a result_pool and will have "const char *"
  * elements pointing to strings also allocated in @a result_pool.
  * All paths are relpaths, and relative to the repository root.
  *
- * @see svn_client_conflict_option_set_moved_to_repos_relpath()
+ * @see svn_client_conflict_option_set_moved_to_repos_relpath2()
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Get a list of possible repository paths which can be applied to the
+ * svn_client_conflict_option_incoming_move_file_text_merge, or the
+ * svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
+ *
+ * In SVN 1.10, if a different option is passed in, this function will
+ * raise an assertion failure. Otherwise this function behaves just like
+ * svn_client_conflict_option_get_moved_to_repos_relpath_candidates2().
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_get_moved_to_repos_relpath_candidates2()
  */
 svn_error_t *
 svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
@@ -4615,10 +4633,9 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
   apr_pool_t *scratch_pool);
 
 /**
- * Set the preferred moved target repository path for the
- * svn_client_conflict_option_incoming_move_file_text_merge or
- * svn_client_conflict_option_incoming_move_dir_merge resolution option.
- * 
+ * Set the preferred moved target repository path. If @a option is not
+ * applicable to a moved target repository path, do nothing.
+ *
  * @a preferred_move_target_idx must be a valid index into the list returned
  * by svn_client_conflict_option_get_moved_to_repos_relpath_candidates().
  * 
@@ -4627,7 +4644,23 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
  * svn_client_conflict_option_get_description(). Call these functions again
  * to get updated descriptions containing the newly selected move target.
  *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_repos_relpath2(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_conflict_option_set_moved_to_repos_relpath2(), except
+ * that in SVN 1.10 it raises an assertion failure if an option other
+ * than svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge is passed.
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_set_moved_to_repos_relpath2()
  */
 svn_error_t *
 svn_client_conflict_option_set_moved_to_repos_relpath(
@@ -4638,25 +4671,45 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
 
 /**
  * Get a list of possible moved-to abspaths in the working copy which can be
- * applied to the svn_client_conflict_option_incoming_move_file_text_merge,
- * svn_client_conflict_option_local_move_file_text_merge,
- * or svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
- * (If a different option is passed in, this function will raise an assertion
- * failure.)
+ * applied to @a option.
  *
- * All paths in the returned list correspond to the repository path which
- * is assumed to be the destination of the incoming move operation.
- * To support cases where this destination path is ambiguous, the client may
- * call svn_client_conflict_option_get_moved_to_repos_relpath_candidates()
- * before calling this function to let the user select a repository path first.
+ * All working copy paths in the returned list correspond to one repository
+ * path which is be one of the possible destinations of a move operation.
+ * More than one repository-side move target candidate may exist; call
+ * svn_client_conflict_option_get_moved_to_repos_relpath_candidates() before
+ * calling this function to let the user select a repository path first.
+ * Otherwise, one of the repository-side paths will be selected internally.
  * 
+ * @a *possible_moved_to_abspaths is set to NULL if the @a option does not
+ * support multiple move targets. API users may assume that only one option
+ * among those which can be applied to a conflict supports move targets.
+ *
  * If no possible moved-to paths can be found, return an empty array.
  * This doesn't mean that no move happened in the repository. It is possible
  * that the move destination is outside the scope of the current working copy,
  * for example, in which case the conflict must be resolved in some other way.
  *
- * @see svn_client_conflict_option_set_moved_to_abspath()
+ * @see svn_client_conflict_option_set_moved_to_abspath2()
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_abspath_candidates2(
+  apr_array_header_t **possible_moved_to_abspaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Get a list of possible moved-to abspaths in the working copy which can be
+ * svn_client_conflict_option_incoming_move_file_text_merge, or the
+ * svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
+ *
+ * In SVN 1.10, if a different option is passed in, this function will
+ * raise an assertion failure. Otherwise this function behaves just like
+ * svn_client_conflict_option_get_moved_to_abspath_candidates2().
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_get_moved_to_abspath_candidates2()
  */
 svn_error_t *
 svn_client_conflict_option_get_moved_to_abspath_candidates(
@@ -4666,15 +4719,34 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
   apr_pool_t *scratch_pool);
 
 /**
- * Set the preferred moved target abspath for the
- * svn_client_conflict_option_incoming_move_file_text_merge or
- * svn_client_conflict_option_local_move_file_text_merge or
- * svn_client_conflict_option_incoming_move_dir_merge resolution option.
+ * Set the preferred moved target working copy path. If @a option is not
+ * applicable to a moved target working copy path, do nothing.
  * 
  * @a preferred_move_target_idx must be a valid index into the list
- * returned by svn_client_conflict_option_get_moved_to_abspath_candidates().
+ * returned by svn_client_conflict_option_get_moved_to_abspath_candidates2().
  * 
+ * This function can be called multiple times.
+ * It affects the output of svn_client_conflict_tree_get_description() and
+ * svn_client_conflict_option_get_description(). Call these functions again
+ * to get updated descriptions containing the newly selected move target.
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_abspath2(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_conflict_option_set_moved_to_abspath2(), except that
+ * in SVN 1.10 this function raises an assertion failure if an option
+ * other than svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge is passed.
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_set_moved_to_abspath2()
  */
 svn_error_t *
 svn_client_conflict_option_set_moved_to_abspath(
