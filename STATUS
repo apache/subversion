@@ -54,18 +54,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1841059,r1841600,r1841601,r1841602,r1841606
-   Change the shelf storage dir from ".svn/shelves" to
-   ".svn/experimental/shelves/v2".
-   Justification:
-     Stop polluting the ".svn/" namespace with an experimental "shelves" subdir.
-     Instead use a subdir intended for anything experimental/unstable.
-     Also fixes SVN-4774 "presence of old 1.10 shelves breaks shelf-list",
-     giving a cleaner upgrade path for those testing experimental shelving.
-   Votes:
-     +1: julianfoad, jamessan
-     +1: steveking
-
  * r1841180, r1841524, r1841525
    Merge the 'java10-compat' branch to trunk
    Justification:
