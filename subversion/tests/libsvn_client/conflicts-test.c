@@ -5879,6 +5879,185 @@ test_local_missing_abiguous_moves(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_local_missing_abiguous_moves_dir(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_opt_revision_t opt_rev;
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  apr_array_header_t *options;
+  svn_client_conflict_option_t *option;
+  apr_array_header_t *possible_moved_to_repos_relpaths;
+  apr_array_header_t *possible_moved_to_abspaths;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_stringbuf_t *buf;
+
+  SVN_ERR(svn_test__sandbox_create(b, "local_missing_ambiguous_moves_dir",
+                                   opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b)); /* r1 */
+
+  /* Create a copy of node "A" (the "trunk") to "A1" (the "branch"). */
+  SVN_ERR(sbox_wc_copy(b, "A", "A1"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r2 */
+
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+  /* Copy a dir across branch boundaries (gives ambiguous WC targets later). */
+  SVN_ERR(sbox_wc_copy(b, "A/B", "A1/B-copied-from-A"));
+  /* Create an ambiguous move with the "trunk". */
+  SVN_ERR(sbox_wc_copy(b, "A/B", "A/B-copied"));
+  SVN_ERR(sbox_wc_move(b, "A/B", "A/B-moved"));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r3 */
+
+  /* Modify a file in the moved directory on the "branch". */
+  SVN_ERR(sbox_file_write(b, "A1/B/lambda", "Modified content." APR_EOL_STR));
+  SVN_ERR(sbox_wc_commit(b, "")); /* r4 */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  /* Merge "A1" ("branch") into "A" ("trunk"). */
+  opt_rev.kind = svn_opt_revision_head;
+  opt_rev.value.number = SVN_INVALID_REVNUM;
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
+  SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A1",
+                                                            pool),
+                                NULL, &opt_rev, sbox_wc_path(b, "A"),
+                                svn_depth_infinity,
+                                FALSE, FALSE, FALSE, FALSE, FALSE, FALSE,
+                                NULL, ctx, pool));
+
+  SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, "A/B"),
+                                  ctx, b->pool, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+  SVN_ERR(svn_client_conflict_tree_get_details(conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_local_move_dir_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options, conflict,
+                                                          ctx, b->pool,
+                                                          b->pool));
+  option = svn_client_conflict_option_find_by_id(
+             options, svn_client_conflict_option_local_move_dir_merge);
+  SVN_TEST_ASSERT(option != NULL);
+
+	/*
+	 * Possible repository destinations for moved-away 'A/mu' are:
+	 *  (1): '^/A/B-copied'
+	 *  (2): '^/A/B-moved'
+	 *  (3): '^/A1/B-copied-from-A'
+	 */
+  SVN_ERR(svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
+            &possible_moved_to_repos_relpaths, option, b->pool, b->pool));
+  SVN_TEST_INT_ASSERT(possible_moved_to_repos_relpaths->nelts, 3);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_repos_relpaths, 0, const char *),
+    "A/B-copied");
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_repos_relpaths, 1, const char *),
+    "A/B-moved");
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_repos_relpaths, 2, const char *),
+    "A1/B-copied-from-A");
+
+  /* Move target for "A/B-copied" (selected by default) is not ambiguous. */
+  SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+            &possible_moved_to_abspaths, option, b->pool, b->pool));
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 1);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
+    sbox_wc_path(b, "A/B-copied"));
+
+  /* Move target for "A/mu-moved" is not ambiguous. */
+  SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(option, 1,
+                                                                ctx, b->pool));
+  SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+            &possible_moved_to_abspaths, option, b->pool, b->pool));
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 1);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
+    sbox_wc_path(b, "A/B-moved"));
+
+  /* Select move target "A1/mu-copied-from-A". */
+  SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(option, 2,
+                                                                ctx, b->pool));
+
+  /*
+	 * Possible working copy destinations for moved-away 'A/mu' are:
+	 *  (1): 'A/B-copied-from-A'
+	 *  (2): 'A1/B-copied-from-A'
+   */
+  SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+            &possible_moved_to_abspaths, option, b->pool, b->pool));
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 2);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
+    sbox_wc_path(b, "A/B-copied-from-A"));
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 1, const char *),
+    sbox_wc_path(b, "A1/B-copied-from-A"));
+
+  /* Select move target "A/B-moved". */
+  SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(option, 1,
+                                                                ctx, b->pool));
+
+  /* Resolve the tree conflict. */
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_local_move_dir_merge, ctx,
+            b->pool));
+
+  /* The node "A/mu" should no longer exist. */
+  SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(&conflict,
+                                                sbox_wc_path(b, "A/B"),
+                                                ctx, pool, pool),
+                        SVN_ERR_WC_PATH_NOT_FOUND);
+
+  /* Ensure that the merged file has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, "A/B-moved/lambda"),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_modified);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* And it should have expected contents. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A/mu-moved/lambda"),
+                                   pool));
+  SVN_TEST_STRING_ASSERT(buf->data, "Modified content." APR_EOL_STR);
+
+  return SVN_NO_ERROR;
+}
+
 /* ========================================================================== */
 
 
@@ -5979,6 +6158,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "cherry-pick edit from moved directory"),
     SVN_TEST_OPTS_PASS(test_local_missing_abiguous_moves,
                        "local missing conflict with ambiguous moves"),
+    SVN_TEST_OPTS_XFAIL(test_local_missing_abiguous_moves_dir,
+                       "local missing conflict with ambiguous dir moves"),
     SVN_TEST_NULL
   };
 
