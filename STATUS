@@ -33,6 +33,21 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1841725
+   Use an iterpool during interactive conflict resolution.
+   Justification:
+     Reduces the chance of resource exhaustion in case the resolver goes
+     into an endless loop due to a bug (see r1841731 for an example).
+   Votes:
+     +1: stsp
+
+ * r1841731
+   Fix endless loop in the conflict resolver.
+   Justification:
+     'local missing' conflicts with directories can trigger an endless loop.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
