@@ -52,6 +52,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1841719, r1841742
+   Add support for 'local missing' conflicts with directories.
+   Justification:
+     This case already works with files. Now also works with directories.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
