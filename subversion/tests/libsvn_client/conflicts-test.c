@@ -5959,7 +5959,7 @@ test_local_missing_abiguous_moves_dir(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(option != NULL);
 
 	/*
-	 * Possible repository destinations for moved-away 'A/mu' are:
+	 * Possible repository destinations for moved-away 'A/B' are:
 	 *  (1): '^/A/B-copied'
 	 *  (2): '^/A/B-moved'
 	 *  (3): '^/A1/B-copied-from-A'
@@ -5985,7 +5985,7 @@ test_local_missing_abiguous_moves_dir(const svn_test_opts_t *opts,
     APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
     sbox_wc_path(b, "A/B-copied"));
 
-  /* Move target for "A/mu-moved" is not ambiguous. */
+  /* Move target for "A/B-moved" is not ambiguous. */
   SVN_ERR(svn_client_conflict_option_set_moved_to_repos_relpath(option, 1,
                                                                 ctx, b->pool));
   SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
@@ -6000,7 +6000,7 @@ test_local_missing_abiguous_moves_dir(const svn_test_opts_t *opts,
                                                                 ctx, b->pool));
 
   /*
-	 * Possible working copy destinations for moved-away 'A/mu' are:
+	 * Possible working copy destinations for moved-away 'A/B-copied-from-A' are:
 	 *  (1): 'A/B-copied-from-A'
 	 *  (2): 'A1/B-copied-from-A'
    */
@@ -6024,7 +6024,7 @@ test_local_missing_abiguous_moves_dir(const svn_test_opts_t *opts,
             svn_client_conflict_option_local_move_dir_merge, ctx,
             b->pool));
 
-  /* The node "A/mu" should no longer exist. */
+  /* The node "A/B" should no longer exist. */
   SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(&conflict,
                                                 sbox_wc_path(b, "A/B"),
                                                 ctx, pool, pool),
