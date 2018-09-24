@@ -31,13 +31,6 @@ Candidate changes:
    Votes:
      +1: stsp, jcorvel
 
- * r1841753, r1841754
-   Fix an assertion failure in the conflict resolver.
-   Justification:
-     Assertions should not get triggered by particular tree conflicts.
-   Votes:
-     +1: stsp, jcorvel
-
 Veto-blocked changes:
 =====================
 
@@ -73,3 +66,10 @@ Approved changes:
      1841567 removes bogus '@since 1.X' annotations.
    Votes:
      +1: julianfoad, brane, rhuijben
+
+ * r1841753, r1841754
+   Fix an assertion failure in the conflict resolver.
+   Justification:
+     Assertions should not get triggered by particular tree conflicts.
+   Votes:
+     +1: stsp, jcorvel, julianfoad
