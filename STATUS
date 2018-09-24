@@ -26,13 +26,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, brane
 
- * r1841716, r1841717
-   Fix duplicate message IDs in Swedish (and future) translation files.
-   Justification:
-     Duplicate entries in .po files cause build failures.
-   Votes:
-     +1: stsp
-
  * r1841725
    Use an iterpool during interactive conflict resolution.
    Justification:
