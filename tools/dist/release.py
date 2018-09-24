@@ -904,7 +904,8 @@ def create_tag_and_bump_versions(args):
 # Clean dist
 
 def clean_dist(args):
-    'Clean the distribution directory of all but the most recent artifacts.'
+    '''Clean the distribution directory of release artifacts of
+    no-longer-supported minor lines.'''
 
     stdout = subprocess.check_output(['svn', 'list', dist_release_url])
 
@@ -1511,8 +1512,7 @@ def main():
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
-                    help='''Clean the distribution directory (and mirrors) of
-                            all but the most recent MAJOR.MINOR release.''')
+                    help=clean_dist.__doc__.split('\n\n')[0])
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
