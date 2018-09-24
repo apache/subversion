@@ -29,11 +29,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1841719, r1841742
-   Add support for 'local missing' conflicts with directories.
-   Justification:
-     This case already works with files. Now also works with directories.
-   Notes: merge needs --accept=12
-   Votes:
-     +1: stsp, jcorvel, julianfoad
