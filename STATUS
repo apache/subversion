@@ -39,7 +39,7 @@ Candidate changes:
      Reduces the chance of resource exhaustion in case the resolver goes
      into an endless loop due to a bug (see r1841731 for an example).
    Votes:
-     +1: stsp
+     +1: stsp, jcorvel
 
  * r1841731, r1841736, r1841743
    Fix endless loop in the conflict resolver.
@@ -50,21 +50,21 @@ Candidate changes:
      r1841736 is a follow-up fix to make the test pass on Windows
      r1841743 is a follow-up fix for the follow-up fix :)
    Votes:
-     +1: stsp
+     +1: stsp, jcorvel
 
  * r1841719, r1841742
    Add support for 'local missing' conflicts with directories.
    Justification:
      This case already works with files. Now also works with directories.
    Votes:
-     +1: stsp
+     +1: stsp, jcorvel
 
  * r1841753, r1841754
    Fix an assertion failure in the conflict resolver.
    Justification:
      Assertions should not get triggered by particular tree conflicts.
    Votes:
-     +1: stsp
+     +1: stsp, jcorvel
 
 Veto-blocked changes:
 =====================
