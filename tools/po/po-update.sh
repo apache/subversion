@@ -32,7 +32,6 @@ set -e
 
 XGETTEXT=${XGETTEXT:-xgettext}
 MSGMERGE=${MSGMERGE:-msgmerge}
-MSGUNIQ=${MSGUNIQ:-msguniq}
 
 svn_base=
 for i in . .. ../..; do
@@ -90,8 +89,6 @@ update_po()
   (cd $svn_base/subversion/po &&
   for i in $1.po; do
     echo "Updating $i..."
-    # Prevent duplicate entries which would cause msgmerge and msgfmt errors.
-    $MSGUNIQ -o $i $i
     # In a display of truly bizarre behaviour, msgmerge (at least, the
     # GNU gettext-tools 0.14.6 implementation) inverts the order of obsolete
     # messages every time it is run. Therefore, run it twice, to invert and
