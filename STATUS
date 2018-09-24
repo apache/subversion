@@ -37,17 +37,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1841079,r1841481,r1841567
-   Move all experimental APIs to the private namespace.
-   Justification:
-     Unblock the 1.11 release
-   Notes: r1841481 is the main change, renaming the symbols to include "__".
-     r1841079 is included here to avoid merge conflicts: it removes older
-     experimental APIs that were 'deprecated' but did not exist in 1.10.
-     1841567 removes bogus '@since 1.X' annotations.
-   Votes:
-     +1: julianfoad, brane, rhuijben
-
  * r1841753, r1841754
    Fix an assertion failure in the conflict resolver.
    Justification:
