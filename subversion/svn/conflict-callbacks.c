@@ -1977,7 +1977,6 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
                                svn_cmdline_prompt_baton_t *pb,
                                svn_cl__conflict_stats_t *conflict_stats,
                                svn_client_ctx_t *ctx,
-                               apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool)
 {
   svn_boolean_t text_conflicted;
@@ -2011,7 +2010,7 @@ resolve_conflict_interactively(svn_boolean_t *resolved,
   if (props_conflicted->nelts > 0)
     SVN_ERR(handle_prop_conflicts(resolved, postponed, quit, &merged_propval,
                                   path_prefix, pb, editor_cmd, config, conflict,
-                                  conflict_stats, ctx, result_pool, scratch_pool));
+                                  conflict_stats, ctx, scratch_pool, scratch_pool));
   if (tree_conflicted)
     SVN_ERR(handle_tree_conflict(resolved, postponed, quit, printed_description,
                                  conflict, path_prefix, pb, conflict_stats, ctx,
@@ -2264,7 +2263,7 @@ svn_cl__resolve_conflict(svn_boolean_t *quit,
                                                editor_cmd, ctx->config,
                                                path_prefix, pb,
                                                conflict_stats, ctx,
-                                               iterpool, iterpool);
+                                               iterpool);
           if (err && err->apr_err == SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE)
             {
               /* Conflict resolution has failed. Let the user try again.
