@@ -9,14 +9,14 @@ Version 1.12.0
 https://svn.apache.org/repos/asf/subversion/tags/1.12.0
 
 Version 1.11.0
-(17 Oct 2018, from /branches/1.11.x)
+(24 Oct 2018, from /branches/1.11.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
  User-visible changes:
   - Major new features:
     * Shelving is no longer based on patch files (experimental) (issue #3625)
     * Checkpointing (experimental) (issue #3626)
-    * Viewspec output command (experimental) (r1826864)
+    * Viewspec output command (experimental) (issue #4753)
 
   - Minor new features and improvements:
     * Improvements to tree conflict resolution (issue #4694 #4766 ...)
@@ -53,6 +53,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Fix Python binding fs.FileDiff behaviour with python-future (r1823802)
     * Fix Python unit test, fs.SubversionFSTestCase, on Windows (r1824410)
     * Bump minimum JDK version required for JavaHL to 1.8 (r1831895)
+    * Enable building against Java 10 (r1841180 et al)
     * Fix a potential crash in JavaHL (issue #4764)
 
 
