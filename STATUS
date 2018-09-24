@@ -22,7 +22,7 @@ Candidate changes:
      into an endless loop due to a bug (see r1841731 for an example).
    Votes:
      +1: stsp, jcorvel (without r1841850)
-     +1: rhuijben
+     +1: rhuijben, julianfoad
 
  * r1841719, r1841742
    Add support for 'local missing' conflicts with directories.
