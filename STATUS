@@ -36,10 +36,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1841753, r1841754
-   Fix an assertion failure in the conflict resolver.
-   Justification:
-     Assertions should not get triggered by particular tree conflicts.
-   Votes:
-     +1: stsp, jcorvel, julianfoad

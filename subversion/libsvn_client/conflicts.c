@@ -2836,6 +2836,11 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                       scratch_pool,
                                       scratch_pool));
 
+  /* If the parent is not part of the repository-side tree checked out
+   * into this working copy, then bail. We do not support this case yet. */
+  if (parent_peg_rev == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
+
   /* Pick the younger incoming node as our 'related node' which helps
    * pin-pointing the deleted conflict victim in history. */
   related_repos_relpath = 
