@@ -2057,7 +2057,11 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
      "\n"), N_(
-     "  Shelves are stored in <WC>/.svn/shelves/\n"
+     "  Shelves are currently stored under <WC>/.svn/experimental/shelves/ .\n"
+     "  (In Subversion 1.10, shelves were stored under <WC>/.svn/shelves/ as\n"
+     "  patch files. To recover a shelf created by 1.10, either use a 1.10\n"
+     "  client to find and unshelve it, or find the patch file and use any\n"
+     "  1.10 or later 'svn patch' to apply it.)\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
