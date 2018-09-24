@@ -37,17 +37,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1841731, r1841736, r1841743
-   Fix endless loop in the conflict resolver.
-   Justification:
-     'local missing' conflicts with directories can trigger an endless loop.
-   Notes:
-     r1841731 is the actual fix and test
-     r1841736 is a follow-up fix to make the test pass on Windows
-     r1841743 is a follow-up fix for the follow-up fix :)
-   Votes:
-     +1: stsp, jcorvel, brane
-
  * r1841822
    Shelving: update the command-line help about the storage directory and say
    how to recover a 1.10 shelf.
