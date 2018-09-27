@@ -15,13 +15,13 @@ Status of 1.11.0:
 Candidate changes:
 ==================
 
- * r1842107
+ * r1842107, r1842112
    Teach the Ruby bindings to handle experimental class names like
    svn_client__shelf_t.
    Justification:
      Unbreak the Ruby bindings following the __ patch.
    Votes:
-     +1: julianfoad
+     +1: julianfoad (without r1842112)
 
 Veto-blocked changes:
 =====================
