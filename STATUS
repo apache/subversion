@@ -15,13 +15,6 @@ Status of 1.11.0:
 Candidate changes:
 ==================
 
- * r1842090
-   Warn on the combination of swig-3.0.8 --with-ruby due to a known issue.
-   Justification:
-     Help users identify a known-broken configuration.
-   Votes:
-     +1: danielsh, julianfoad
-
 Veto-blocked changes:
 =====================
 
@@ -36,3 +29,11 @@ Approved changes:
    Votes:
      +1: stsp (without r1841850)
      +1: rhuijben, julianfoad, jcorvel
+
+ * r1842090
+   Warn on the combination of swig-3.0.8 --with-ruby due to a known issue.
+   Justification:
+     Help users identify a known-broken configuration.
+   Votes:
+     +1: danielsh, julianfoad, jamessan
+
