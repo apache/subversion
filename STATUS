@@ -29,19 +29,9 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1841725, r1841850
-   Use an iterpool during interactive conflict resolution.
-   Justification:
-     Reduces the chance of resource exhaustion in case the resolver goes
-     into an endless loop due to a bug (see r1841731 for an example).
-   Votes:
-     +1: stsp (without r1841850)
-     +1: rhuijben, julianfoad, jcorvel
-
  * r1842090
    Warn on the combination of swig-3.0.8 --with-ruby due to a known issue.
    Justification:
      Help users identify a known-broken configuration.
    Votes:
      +1: danielsh, julianfoad, jamessan
-
