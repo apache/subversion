@@ -85,7 +85,6 @@ module Svn
 #           puts const
         end
         unless target_name.nil?
-          puts "### " + target_mod.name + ":: " + target_name
           target_mod.const_set(target_name, ext_mod.const_get(const))
         end
       end
