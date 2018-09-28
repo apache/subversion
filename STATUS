@@ -15,7 +15,7 @@ Status of 1.11.0:
 Candidate changes:
 ==================
 
- * r1842107, r1842112, r1842114, r1842222, r1842223
+ * r1842222, r1842223
    Teach the Ruby bindings not to choke on type names like svn_client__shelf_t.
    Justification:
      Unbreak the Ruby bindings following the __ patch.
