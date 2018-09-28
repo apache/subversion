@@ -21,7 +21,7 @@ Candidate changes:
      Unbreak the Ruby bindings following the __ patch.
    Notes: r1842222 is the main functional change.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
 Veto-blocked changes:
 =====================
