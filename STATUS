@@ -20,11 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1842222, r1842223
-   Teach the Ruby bindings not to choke on type names like svn_client__shelf_t.
-   Justification:
-     Unbreak the Ruby bindings following the __ patch.
-   Notes: r1842222 is the main functional change.
-   Votes:
-     +1: julianfoad, stsp, brane

@@ -70,6 +70,8 @@ module Svn
           target_name = $POSTMATCH
         when /^SWIG_SVN_/
           target_name = $POSTMATCH
+        when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?_(.+)_t$/
+          # ignore private types
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?(.+)_t$/
           target_name = to_ruby_class_name($1)
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?/
