@@ -183,6 +183,11 @@ AC_DEFUN(SVN_FIND_SWIG,
   SWIG_RB_COMPILE="none"
   SWIG_RB_LINK="none"
   if test "$RUBY" != "none"; then
+    if test x"$SWIG_VERSION" = x"3""00""008"; then
+      # Use a local variable to escape the '#' sign.
+      ruby_swig_issue_602='https://subversion.apache.org/docs/release-notes/1.11#ruby-swig-issue-602'
+      AC_MSG_WARN([Ruby bindings are known not to support swig 3.0.8; see $ruby_swig_issue_602])
+    fi
     rbconfig="$RUBY -rrbconfig -e "
 
     for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
