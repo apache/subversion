@@ -1122,42 +1122,70 @@ value_from_dict(CFDictionaryRef plist, CFStringRef key, apr_pool_t *pool)
   return value;
 }
 
-/* Return the commercial name of the OS, given the version number in
+/* Return the minor version the operating system, given the number in
    a format that matches the regular expression /^10\.\d+(\..*)?$/ */
-static const char *
-release_name_from_version(const char *osver)
+static int
+macos_minor_version(const char *osver)
 {
   char *end = NULL;
   unsigned long num = strtoul(osver, &end, 10);
 
   if (!end || *end != '.' || num != 10)
-    return NULL;
+    return -1;
 
   osver = end + 1;
   end = NULL;
   num = strtoul(osver, &end, 10);
   if (!end || (*end && *end != '.'))
-    return NULL;
+    return -1;
 
-  /* See http://en.wikipedia.org/wiki/History_of_OS_X#Release_timeline */
-  switch(num)
+  return (int)num;
+}
+
+/* Return the product name of the operating system. */
+static const char *
+product_name_from_minor_version(int minor, const char* product_name)
+{
+  /* We can only do this if we know the official product name. */
+  if (0 != strcmp(product_name, "Mac OS X"))
+    return product_name;
+
+  if (minor <= 7)
+    return product_name;
+
+  if (minor <= 11)
+    return "OS X";
+
+  return "macOS";
+}
+
+/* Return the commercial name of the operating system. */
+static const char *
+release_name_from_minor_version(int minor, const char* product_name)
+{
+  /* We can only do this if we know the official product name. */
+  if (0 == strcmp(product_name, "Mac OS X"))
     {
-    case  0: return "Cheetah";
-    case  1: return "Puma";
-    case  2: return "Jaguar";
-    case  3: return "Panther";
-    case  4: return "Tiger";
-    case  5: return "Leopard";
-    case  6: return "Snow Leopard";
-    case  7: return "Lion";
-    case  8: return "Mountain Lion";
-    case  9: return "Mavericks";
-    case 10: return "Yosemite";
-    case 11: return "El Capitan";
-    case 12: return "Sierra";
-    case 13: return "High Sierra";
+      /* See https://en.wikipedia.org/wiki/MacOS_version_history#Releases */
+      switch(minor)
+        {
+        case  0: return "Cheetah";
+        case  1: return "Puma";
+        case  2: return "Jaguar";
+        case  3: return "Panther";
+        case  4: return "Tiger";
+        case  5: return "Leopard";
+        case  6: return "Snow Leopard";
+        case  7: return "Lion";
+        case  8: return "Mountain Lion";
+        case  9: return "Mavericks";
+        case 10: return "Yosemite";
+        case 11: return "El Capitan";
+        case 12: return "Sierra";
+        case 13: return "High Sierra";
+        case 14: return "Mojave";
+        }
     }
-
   return NULL;
 }
 
@@ -1180,20 +1208,23 @@ macos_release_name(apr_pool_t *pool)
                                           CFSTR("ProductBuildVersion"),
                                           pool);
       const char *release;
+      int minor_version;
 
       if (!osver)
         osver = value_from_dict(plist, CFSTR("ProductVersion"), pool);
-      release = release_name_from_version(osver);
+      minor_version = macos_minor_version(osver);
+      release = release_name_from_minor_version(minor_version, osname);
+      osname = product_name_from_minor_version(minor_version, osname);
 
       CFRelease(plist);
       return apr_psprintf(pool, "%s%s%s%s%s%s%s%s",
                           (osname ? osname : ""),
-                          (osver ? (osname ? " " : "") : ""),
-                          (osver ? osver : ""),
-                          (release ? (osname||osver ? " " : "") : ""),
+                          (release ? (osname ? " " : "") : ""),
                           (release ? release : ""),
+                          (osver ? (osname||release ? " " : "") : ""),
+                          (osver ? osver : ""),
                           (build
-                           ? (osname||osver||release ? ", " : "")
+                           ? (osname||release||osver ? ", " : "")
                            : ""),
                           (build
                            ? (server ? "server build " : "build ")
