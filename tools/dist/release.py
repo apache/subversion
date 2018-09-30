@@ -51,6 +51,7 @@ import operator
 import itertools
 import subprocess
 import argparse       # standard in Python 2.7
+import io
 
 # Find ezt, using Subversion's copy, if there isn't one on the system.
 try:
@@ -67,6 +68,14 @@ except ImportError:
 # Our required / recommended release tool versions by release branch
 tool_versions = {
   'trunk' : {
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['3.0.12',
+            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
+  },
+  '1.11' : {
             'autoconf' : ['2.69',
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
             'libtool'  : ['2.4.6',
@@ -102,7 +111,9 @@ tool_versions = {
 
 # The version that is our current recommended release
 # ### TODO: derive this from svn_version.h; see ../../build/getversion.py
-recommended_release = '1.10'
+recommended_release = '1.11'
+# For clean-dist, a whitelist of artifacts to keep, by version.
+supported_release_lines = frozenset({"1.9", "1.10", "1.11", "1.12"})
 
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
@@ -712,9 +723,13 @@ def roll_tarballs(args):
         filepath = os.path.join(get_tempdir(args.base_dir), filename)
         shutil.move(filepath, get_deploydir(args.base_dir))
         filepath = os.path.join(get_deploydir(args.base_dir), filename)
-        m = hashlib.sha1()
-        m.update(open(filepath, 'r').read())
-        open(filepath + '.sha1', 'w').write(m.hexdigest())
+        if args.version < Version("1.11.0-alpha1"):
+            # 1.10 and earlier generate *.sha1 files for compatibility reasons.
+            # They are deprecated, however, so we don't publicly link them in
+            # the announcements any more.
+            m = hashlib.sha1()
+            m.update(open(filepath, 'r').read())
+            open(filepath + '.sha1', 'w').write(m.hexdigest())
         m = hashlib.sha512()
         m.update(open(filepath, 'r').read())
         open(filepath + '.sha512', 'w').write(m.hexdigest())
@@ -777,8 +792,9 @@ def post_candidates(args):
 
 #----------------------------------------------------------------------
 # Create tag
+# Bump versions on branch
 
-def create_tag(args):
+def create_tag_only(args):
     'Create tag in the repository'
 
     target = get_target(args)
@@ -809,65 +825,87 @@ def create_tag(args):
             logging.error("Do you need to pass --branch=trunk?")
         raise
 
+def bump_versions_on_branch(args):
+    'Bump version numbers on branch'
+
+    logging.info('Bumping version numbers on the branch')
+
+    if not args.branch:
+        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+
+    branch = secure_repos + '/' + args.branch.rstrip('/')
+
+    def replace_in_place(fd, startofline, flat, spare):
+        """In file object FD, replace FLAT with SPARE in the first line
+        starting with regex STARTOFLINE."""
+
+        pattern = r'^(%s)%s' % (startofline, re.escape(flat))
+        repl =    r'\g<1>%s' % (spare,)
+        fd.seek(0, os.SEEK_SET)
+        lines = fd.readlines()
+        for i, line in enumerate(lines):
+            replacement = re.sub(pattern, repl, line)
+            if replacement != line:
+                lines[i] = replacement
+                break
+        else:
+            raise RuntimeError("Could not replace r'%s' with r'%s' in '%s'"
+                               % (pattern, repl, fd.url))
+
+        fd.seek(0, os.SEEK_SET)
+        fd.writelines(lines)
+        fd.truncate() # for current callers, new value is never shorter.
+
+    new_version = Version('%d.%d.%d' %
+                          (args.version.major, args.version.minor,
+                           args.version.patch + 1))
+
+    HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
+                                    '--', branch]).strip()
+    HEAD = int(HEAD)
+    def file_object_for(relpath):
+        fd = tempfile.NamedTemporaryFile()
+        url = branch + '/' + relpath
+        fd.url = url
+        subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
+                              stdout=fd)
+        return fd
+
+    svn_version_h = file_object_for('subversion/include/svn_version.h')
+    replace_in_place(svn_version_h, '#define SVN_VER_PATCH  *',
+                     str(args.version.patch), str(new_version.patch))
+
+    STATUS = file_object_for('STATUS')
+    replace_in_place(STATUS, 'Status of ',
+                     str(args.version), str(new_version))
+
+    svn_version_h.seek(0, os.SEEK_SET)
+    STATUS.seek(0, os.SEEK_SET)
+    subprocess.check_call(['svnmucc', '-r', str(HEAD),
+                           '-m', 'Post-release housekeeping: '
+                                 'bump the %s branch to %s.'
+                           % (branch.split('/')[-1], str(new_version)),
+                           'put', svn_version_h.name, svn_version_h.url,
+                           'put', STATUS.name, STATUS.url,
+                          ])
+    del svn_version_h
+    del STATUS
+
+def create_tag_and_bump_versions(args):
+    '''Create tag in the repository and, if not a prerelease version,
+       bump version numbers on the branch'''
+
+    create_tag_only(args)
+
     if not args.version.is_prerelease():
-        logging.info('Bumping revisions on the branch')
-        def replace_in_place(fd, startofline, flat, spare):
-            """In file object FD, replace FLAT with SPARE in the first line
-            starting with STARTOFLINE."""
-
-            fd.seek(0, os.SEEK_SET)
-            lines = fd.readlines()
-            for i, line in enumerate(lines):
-                if line.startswith(startofline):
-                    lines[i] = line.replace(flat, spare)
-                    break
-            else:
-                raise RuntimeError('Definition of %r not found' % startofline)
-
-            fd.seek(0, os.SEEK_SET)
-            fd.writelines(lines)
-            fd.truncate() # for current callers, new value is never shorter.
-
-        new_version = Version('%d.%d.%d' %
-                              (args.version.major, args.version.minor,
-                               args.version.patch + 1))
-
-        HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
-                                        '--', url]).strip()
-        HEAD = int(HEAD)
-        def file_object_for(relpath):
-            fd = tempfile.NamedTemporaryFile()
-            url = branch + '/' + relpath
-            fd.url = url
-            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
-                                  stdout=fd)
-            return fd
-
-        svn_version_h = file_object_for('subversion/include/svn_version.h')
-        replace_in_place(svn_version_h, '#define SVN_VER_PATCH ',
-                         str(args.version.patch), str(new_version.patch))
-
-        STATUS = file_object_for('STATUS')
-        replace_in_place(STATUS, 'Status of ',
-                         str(args.version), str(new_version))
-
-        svn_version_h.seek(0, os.SEEK_SET)
-        STATUS.seek(0, os.SEEK_SET)
-        subprocess.check_call(['svnmucc', '-r', str(HEAD),
-                               '-m', 'Post-release housekeeping: '
-                                     'bump the %s branch to %s.'
-                               % (branch.split('/')[-1], str(new_version)),
-                               'put', svn_version_h.name, svn_version_h.url,
-                               'put', STATUS.name, STATUS.url,
-                              ])
-        del svn_version_h
-        del STATUS
+        bump_versions_on_branch(args)
 
 #----------------------------------------------------------------------
 # Clean dist
 
 def clean_dist(args):
-    'Clean the distribution directory of all but the most recent artifacts.'
+    '''Clean the distribution directory of release artifacts of
+    no-longer-supported minor lines.'''
 
     stdout = subprocess.check_output(['svn', 'list', dist_release_url])
 
@@ -879,15 +917,15 @@ def clean_dist(args):
     filenames = stdout.split('\n')
     filenames = filter(lambda x: x.startswith('subversion-'), filenames)
     versions = set(map(Version, filenames))
-    minor_lines = set(map(minor, versions))
     to_keep = set()
-    # Keep 3 minor lines: 1.10.0-alpha3, 1.9.7, 1.8.19.
     # TODO: When we release 1.A.0 GA we'll have to manually remove 1.(A-2).* artifacts.
-    for recent_line in sorted(minor_lines, reverse=True)[:3]:
-        to_keep.add(max(
+    for line_to_keep in [minor(Version(x + ".0")) for x in supported_release_lines]:
+        candidates = list(
             x for x in versions
-            if minor(x) == recent_line
-        ))
+            if minor(x) == line_to_keep
+        )
+        if candidates:
+            to_keep.add(max(candidates))
     for i in sorted(to_keep):
         logging.info("Saving release '%s'", i)
 
@@ -945,6 +983,7 @@ def write_news(args):
              'version_base' : args.version.base,
              'anchor': args.version.get_download_anchor(),
              'is_recommended': ezt_bool(args.version.is_recommended()),
+             'announcement_url': args.announcement_url,
            }
 
     if args.version.is_prerelease():
@@ -954,38 +993,50 @@ def write_news(args):
 
     template = ezt.Template()
     template.parse(get_tmplfile(template_filename).read())
-    template.generate(sys.stdout, data)
+
+    # Insert the output into an existing file if requested, else print it
+    if args.edit_html_file:
+        tmp_name = args.edit_html_file + '.tmp'
+        with open(args.edit_html_file, 'r') as f, open(tmp_name, 'w') as g:
+            inserted = False
+            for line in f:
+                if not inserted and line.startswith('<div class="h3" id="news-'):
+                    template.generate(g, data)
+                    g.write('\n')
+                    inserted = True
+                g.write(line)
+        os.remove(args.edit_html_file)
+        os.rename(tmp_name, args.edit_html_file)
+    else:
+        template.generate(sys.stdout, data)
 
 
-def get_sha1info(args):
-    'Return a list of sha1 info for the release'
+def get_fileinfo(args):
+    'Return a list of file info (filenames) for the release tarballs'
 
     target = get_target(args)
 
-    sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
-    sha1s.sort()
+    files = glob.glob(os.path.join(target, 'subversion*-%s*.asc' % args.version))
+    files.sort()
 
     class info(object):
         pass
 
-    sha1info = []
-    for s in sha1s:
+    fileinfo = []
+    for f in files:
         i = info()
-        # strip ".sha1"
-        i.filename = os.path.basename(s)[:-5]
-        i.sha1 = open(s, 'r').read()
-        sha1info.append(i)
+        # strip ".asc"
+        i.filename = os.path.basename(f)[:-4]
+        fileinfo.append(i)
 
-    return sha1info
+    return fileinfo
 
 
 def write_announcement(args):
     'Write the release announcement.'
-    sha1info = get_sha1info(args)
     siginfo = "\n".join(get_siginfo(args, True)) + "\n"
 
     data = { 'version'              : str(args.version),
-             'sha1info'             : sha1info,
              'siginfo'              : siginfo,
              'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
@@ -1015,10 +1066,10 @@ def write_announcement(args):
 
 def write_downloads(args):
     'Output the download section of the website.'
-    sha1info = get_sha1info(args)
+    fileinfo = get_fileinfo(args)
 
     data = { 'version'              : str(args.version),
-             'fileinfo'             : sha1info,
+             'fileinfo'             : fileinfo,
            }
 
     template = ezt.Template(compress_whitespace = False)
@@ -1426,8 +1477,26 @@ def main():
 
     # Setup the parser for the create-tag subcommand
     subparser = subparsers.add_parser('create-tag',
-                    help='''Create the release tag.''')
-    subparser.set_defaults(func=create_tag)
+                    help='''Create the release tag and, if not a prerelease
+                            version, bump version numbers on the branch.''')
+    subparser.set_defaults(func=create_tag_and_bump_versions)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
+                    help='''The revision number to base the release on.''')
+    subparser.add_argument('--branch',
+                    help='''The branch to base the release on,
+                            relative to ^/subversion/.''')
+    subparser.add_argument('--username',
+                    help='''Username for ''' + secure_repos + '''.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
+
+    # Setup the parser for the bump-versions-on-branch subcommand
+    subparser = subparsers.add_parser('bump-versions-on-branch',
+                    help='''Bump version numbers on branch.''')
+    subparser.set_defaults(func=bump_versions_on_branch)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
@@ -1443,8 +1512,7 @@ def main():
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
-                    help='''Clean the distribution directory (and mirrors) of
-                            all but the most recent MAJOR.MINOR release.''')
+                    help=clean_dist.__doc__.split('\n\n')[0])
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
@@ -1467,6 +1535,11 @@ def main():
                     help='''Output to stdout template text for use in the news
                             section of the Subversion website.''')
     subparser.set_defaults(func=write_news)
+    subparser.add_argument('--announcement-url',
+                    help='''The URL to the archived announcement email.''')
+    subparser.add_argument('--edit-html-file',
+                    help='''Insert the text into this file
+                            news.html, index.html).''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 

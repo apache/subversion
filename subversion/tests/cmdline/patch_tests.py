@@ -4246,7 +4246,7 @@ def patch_git_with_index_line(sbox):
     "+++ b/src/tools/ConsoleRunner/hi.txt\n",
     "@@ -0,0 +1 @@\n",
     "+hihihihihihi\n",
-    "\ No newline at end of file\n",
+    "\\ No newline at end of file\n",
   ]
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
@@ -4413,7 +4413,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
     "+++ A/D\t(working copy)\n",
     "@@ -0,0 +1 @@\n",
     "+New file\n",
-    "\ No newline at end of file\n",
+    "\\ No newline at end of file\n",
 
   # Add iota as directory
     "Index: iota\n",
@@ -4426,7 +4426,7 @@ def patch_replace_dir_with_file_and_vv(sbox):
     "Added: k\n",
     "## -0,0 +1 ##\n",
     "+v\n",
-    "\ No newline at end of property\n",
+    "\\ No newline at end of property\n",
   ]))
 
   expected_output = wc.State(wc_dir, {
@@ -6541,7 +6541,7 @@ def patch_prop_madness(sbox):
                                        "Property: del_n\n"
                                        "## -1,1 +0,0 ##\n"
                                        "-no-eol\n"
-                                       "\ No newline at end of property\n"
+                                       "\\ No newline at end of property\n"
                                        % (sbox.path('iota'),
                                           sbox.path('iota'))),
   })
@@ -7853,6 +7853,163 @@ def patch_mergeinfo_in_regular_prop_format(sbox):
                                        [], True, True,
                                        '--strip', strip_count)
 
+@XFail()
+def patch_empty_prop(sbox):
+  "patch empty prop"
+  sbox.build(empty=True)
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+  wc_dir = ''
+
+  # start with a file with an empty prop
+  sbox.simple_add_text('', 'f')
+  sbox.simple_propset('p', '', 'f')
+  sbox.simple_commit()
+
+  # a patch that modifies the prop to a non-empty value
+  unidiff_patch = [
+    "--- f\n",
+    "+++ f\n",
+    "\n",
+    "Property changes on: f\n",
+    "___________________________________________________________________\n",
+    "Modified: p\n",
+    "## -0,0 +1 ##\n",
+    "+v\n",
+  ]
+
+  trailing_eol = False
+  if trailing_eol:
+    value = "v\n"
+  else:
+    value = "v"
+    unidiff_patch += ['\ No newline at end of property\n']
+
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
+
+  expected_output = [
+    ' U        %s\n' % sbox.ospath('f'),
+  ]
+
+  expected_disk = svntest.wc.State(wc_dir, {})
+  expected_disk.add({'f': Item(props={'p' : value})})
+  expected_status = svntest.wc.State(wc_dir, {})
+  expected_status.add({'f': Item(status=' M')})
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       1, # check-props
+                                       False, # dry-run
+                                       )
+
+  svntest.actions.check_prop('p', wc_dir, [value.encode()])
+
+  os.chdir(was_cwd)
+
+# Test that 'patch' can apply a patch that modifies properties on the root
+# of a WC and/or the root of a repository. This test uses the format of
+# diff output produced by 'svn diff --git' in svn <= 1.10.0: paths are given
+# as 'a/' and 'b/' and 'Property changes on: ' (with no following '.').
+#
+# See dev@ email thread 2018-07-09 from Dmitry Pavlenko,
+# '[PATCH] can't "svn patch" working copy root if the patch is in --git format',
+# https://lists.apache.org/thread.html/d1d9811ca36fac8cabb9339634840099e22811beac505be2ea59f19f@%3Cdev.subversion.apache.org%3E
+@XFail()
+def patch_git_wcroot(sbox):
+  "patch working copy root"
+  sbox.build(empty=True)
+  wc_dir = sbox.wc_dir
+
+  git_patch = [ "Index: .\n",
+                "===================================================================\n",
+                "diff --git a/ b/\n",
+                "--- a/	(revision 0)\n",
+                "+++ b/	(working copy)\n",
+                "Property changes on: \n",
+                "___________________________________________________________________\n",
+                "Added: p\n",
+                "## -0,0 +1 ##\n",
+                "+v\n",
+                "\\ No newline at end of property\n",
+  ]
+  value = 'v'
+
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join(git_patch), 'wb')
+
+  expected_output = wc.State(wc_dir, {
+    '.'                 : Item(status=' U'),
+  })
+  expected_disk = svntest.wc.State('', {})
+  expected_disk.add({'': Item(props={'p' : value })})
+  expected_status = svntest.wc.State(wc_dir, {})
+  expected_status.add({'': Item(status=' M', wc_rev='0')})
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       True, # check-props
+                                       False, # dry-run
+                                       )
+
+  svntest.actions.check_prop('p', wc_dir, [value.encode()])
+
+# Test that 'patch' can apply a patch that modifies properties on the root
+# of a WC and/or the root of a repository. This test performs a round-trip
+# through 'diff --git' and 'patch' rather than assuming any particular
+# variant of the patch format.
+#
+# See dev@ email thread 2018-07-09 from Dmitry Pavlenko,
+# '[PATCH] can't "svn patch" working copy root if the patch is in --git format',
+# https://lists.apache.org/thread.html/d1d9811ca36fac8cabb9339634840099e22811beac505be2ea59f19f@%3Cdev.subversion.apache.org%3E
+@XFail()
+def patch_git_wcroot2(sbox):
+  "patch working copy root"
+  sbox.build(empty=True)
+  wc_dir = sbox.wc_dir
+
+  value = 'v'
+  sbox.simple_propset('p', value, '')
+  exit_code, git_patch, err_output = svntest.main.run_svn(None, 'diff',
+                                                          '--git', wc_dir)
+
+  patch_file_path = sbox.get_tempname('my.patch')
+  svntest.main.file_write(patch_file_path, ''.join(git_patch), 'wb')
+
+  sbox.simple_revert('')
+
+  expected_output = wc.State(wc_dir, {
+    '.'                 : Item(status=' U'),
+  })
+  expected_disk = svntest.wc.State('', {})
+  expected_disk.add({'': Item(props={'p' : value })})
+  expected_status = svntest.wc.State(wc_dir, {})
+  expected_status.add({'': Item(status=' M', wc_rev='0')})
+  expected_skip = wc.State('', { })
+
+  svntest.actions.run_and_verify_patch(wc_dir, patch_file_path,
+                                       expected_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       None, # expected err
+                                       True, # check-props
+                                       False, # dry-run
+                                       )
+
+  svntest.actions.check_prop('p', wc_dir, [value.encode()])
+
 ########################################################################
 #Run the tests
 
@@ -7937,6 +8094,9 @@ test_list = [ None,
               patch_missed_trail,
               patch_merge,
               patch_mergeinfo_in_regular_prop_format,
+              patch_empty_prop,
+              patch_git_wcroot,
+              patch_git_wcroot2,
             ]
 
 if __name__ == '__main__':

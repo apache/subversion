@@ -18,10 +18,6 @@ open source version control system.
 This is a stable bugfix release of the Apache Subversion open source
 version control system.
 [end][end]
-The SHA1 checksums are:
-
-[for sha1info]    [sha1info.sha1] [sha1info.filename]
-[end]
 SHA-512 checksums are available at:
 
     https://www.apache.org/dist/subversion/subversion-[version].tar.bz2.sha512

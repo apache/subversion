@@ -36,8 +36,13 @@ module Svn
   module Util #:nodoc:
     module_function
     def to_ruby_class_name(name)
+      # Convert to CamelCase with 'X' for a leading/double/trailing underscore.
       name.to_s.split("_").collect do |x|
-        "#{x[0,1].upcase}#{x[1..-1].downcase}"
+        if x.empty?
+          "X"
+        else
+          x.capitalize
+        end
       end.join("")
     end
 
@@ -70,6 +75,8 @@ module Svn
           target_name = $POSTMATCH
         when /^SWIG_SVN_/
           target_name = $POSTMATCH
+        when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?_(.+)_t$/
+          # ignore private types
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?(.+)_t$/
           target_name = to_ruby_class_name($1)
         when /^Svn_(?:#{target_mod.name.split("::").last.downcase}_)?/

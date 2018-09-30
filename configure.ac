@@ -593,6 +593,7 @@ if test "$with_old_gnome_keyring" != "no"; then
                         [Is GNOME Keyring support enabled?])
               CPPFLAGS="$old_CPPFLAGS"
               SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
+              SVN_GNOME_KEYRING_PCLIBS="glib-2.0 gnome-keyring-1"
             else
               AC_MSG_RESULT([no])
               if test "$with_old_gnome_keyring" = "yes"; then
@@ -1305,7 +1306,7 @@ fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
 # The minimum version for the JVM runtime for our Java bytecode.
-JAVA_OLDEST_WORKING_VER='1.6'
+JAVA_OLDEST_WORKING_VER='1.8'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 

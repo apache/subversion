@@ -58,7 +58,7 @@ struct client_layout_baton_t
   struct layout_item_t *stack;
   apr_pool_t *root_pool;
 
-  svn_client_layout_func_t layout;
+  svn_client__layout_func_t layout;
   void *layout_baton;
 };
 
@@ -256,11 +256,11 @@ static const svn_ra_reporter3_t layout_reporter =
 };
 
 svn_error_t *
-svn_client_layout_list(const char *local_abspath,
-                       svn_client_layout_func_t layout,
-                       void *layout_baton,
-                       svn_client_ctx_t *ctx,
-                       apr_pool_t *scratch_pool)
+svn_client__layout_list(const char *local_abspath,
+                        svn_client__layout_func_t layout,
+                        void *layout_baton,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool)
 {
   struct client_layout_baton_t lb;
 

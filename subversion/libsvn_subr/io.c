@@ -342,8 +342,13 @@ io_check_path(const char *path,
   /* Not using svn_io_stat() here because we want to check the
      apr_err return explicitly. */
   SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
-
+#ifdef WIN32
+  /* on Windows, svn does not handle reparse points or hard links.
+     So ignore the 'resolve_symlinks' flag. */
+  flags = APR_FINFO_MIN;
+#else
   flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
+#endif
   apr_err = apr_stat(&finfo, path_apr, flags, pool);
 
   if (APR_STATUS_IS_ENOENT(apr_err))
@@ -2541,9 +2546,10 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
     {
       apr_finfo_t finfo = { 0 };
 
-      /* In some cases we get size 0 and no error for non files,
-          so we also check for the name. (= cached in apr_file_t) */
-      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file) && finfo.fname)
+      /* In some cases we get size 0 and no error for non files, so we
+         also check for the name. (= cached in apr_file_t) and for FIFOs */
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE | APR_FINFO_TYPE, file)
+          && finfo.fname && finfo.filetype != APR_PIPE)
         {
           /* we've got the file length. Now, read it in one go. */
           svn_boolean_t eof;
@@ -4631,7 +4637,7 @@ svn_io_dir_walk2(const char *dirname,
         }
       else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
-          /* some other directory. pass it to the callback. */
+          /* a regular file or a symlink. pass it to the callback. */
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
                                      subpool));
           full_path = svn_dirent_join(dirname, name_utf8, subpool);

@@ -682,34 +682,6 @@ svn_client__get_diff_editor2(const svn_delta_editor_t **editor,
 /* ---------------------------------------------------------------- */
 
 
-/*** Editor for diff summary ***/
-
-/* Set *DIFF_PROCESSOR to a diff processor that will report a diff summary
-   to SUMMARIZE_FUNC.
-
-   P_ROOT_RELPATH will return a pointer to a string that must be set to
-   the root of the operation before the processor is called.
-
-   ORIGINAL_PATH specifies the original path and will be used with
-   **ANCHOR_PATH to create paths as the user originally provided them
-   to the diff function.
-
-   SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
-   created callbacks for each changed item.
-*/
-svn_error_t *
-svn_client__get_diff_summarize_callbacks(
-                        const svn_diff_tree_processor_t **diff_processor,
-                        const char ***p_root_relpath,
-                        svn_client_diff_summarize_func_t summarize_func,
-                        void *summarize_baton,
-                        const char *original_target,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
-/* ---------------------------------------------------------------- */
-
-
 /*** Copy Stuff ***/
 
 /* This structure is used to associate a specific copy or move SRC with a
@@ -1122,34 +1094,16 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
  *
  * No copy or move information is reported to the diff processor.
  *
- * If both LEFT_ABSPATH and RIGHT_ABSPATH are directories on disk:
- *   set *ROOT_RELPATH to "" and
- *   set *ROOT_IS_DIR to TRUE and
- *   send diff processor relpaths relative to LEFT_ABSPATH
- *   (which is the same as relative to RIGHT_ABSPATH);
- * else:
- *   set *ROOT_RELPATH to the basename of LEFT_ABSPATH and
- *   set *ROOT_IS_DIR to FALSE and
- *   send diff processor relpaths relative to the parent of LEFT_ABSPATH
- *   (so they all start with a basename(LEFT_ABSPATH) component).
- *
- * As any children reached by recursion are matched by name, a diff
- * processor relpath applies equally to both sides of the diff, except
- * for its first component in the latter case above.
- *
- * Assignments to *ROOT_RELPATH and *ROOT_IS_DIR are made before the first
- * call to DIFF_PROCESSOR. Each of ROOT_RELPATH and ROOT_IS_DIR may be NULL
- * if not wanted.
+ * Anchor the DIFF_PROCESSOR at the requested diff targets (LEFT_ABSPATH,
+ * RIGHT_ABSPATH). As any children reached by recursion are matched by
+ * name, a diff processor relpath applies equally to both sides of the diff.
  */
 svn_error_t *
-svn_client__arbitrary_nodes_diff(const char **root_relpath,
-                                 svn_boolean_t *root_is_dir,
-                                 const char *left_abspath,
+svn_client__arbitrary_nodes_diff(const char *left_abspath,
                                  const char *right_abspath,
                                  svn_depth_t depth,
                                  const svn_diff_tree_processor_t *diff_processor,
                                  svn_client_ctx_t *ctx,
-                                 apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
 

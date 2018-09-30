@@ -610,7 +610,8 @@ def export_file_overwrite_fails(sbox):
   os.mkdir(tmpdir)
 
   # Run it for source local
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn([], '.*exist.*',
                                      'export', iota_path, tmpdir)
 
@@ -621,7 +622,8 @@ def export_file_overwrite_fails(sbox):
   svntest.actions.verify_disk(tmpdir, expected_disk)
 
   # Run it for source URL
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn([], '.*exist.*',
                                      'export', iota_url, tmpdir)
 
@@ -904,14 +906,16 @@ def export_file_overwrite_with_force(sbox):
       })
 
   # Run it for WC export
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput,
                                      [], 'export', '--force',
                                      iota_path, tmpdir)
   svntest.actions.verify_disk(tmpdir, expected_disk)
 
   # Run it for URL export
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput,
                                      [], 'export', '--force',
                                      iota_url, tmpdir)

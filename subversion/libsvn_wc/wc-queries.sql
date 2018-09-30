@@ -117,6 +117,17 @@ WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth < ?3
 ORDER BY op_depth DESC
 LIMIT 1
 
+-- STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND
+SELECT presence, local_relpath
+FROM nodes n
+WHERE wc_id = ?1 AND local_relpath = RELPATH_JOIN(parent_relpath, ?2)
+  AND kind = ?3
+  AND presence in (MAP_NORMAL, MAP_INCOMPLETE)
+  AND op_depth = (SELECT MAX(op_depth)
+                  FROM NODES w
+                  WHERE w.wc_id = ?1
+                    AND w.local_relpath = n.local_relpath)
+
 -- STMT_SELECT_ACTUAL_NODE
 SELECT changelist, properties, conflict_data
 FROM actual_node

@@ -99,6 +99,7 @@ static const int slow_statements[] =
   STMT_SELECT_DELETE_LIST,
   STMT_SELECT_UPDATE_MOVE_LIST,
   STMT_FIND_REPOS_PATH_IN_WC,
+  STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND,
 
   /* Designed as slow to avoid penalty on other queries */
   STMT_SELECT_UNREFERENCED_PRISTINES,

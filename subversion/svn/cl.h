@@ -257,7 +257,11 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
   svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
   svn_boolean_t drop;             /* drop shelf after successful unshelve */
-  svn_boolean_t viewspec;
+  enum svn_cl__viewspec_t {
+      svn_cl__viewspec_unspecified = 0 /* default */,
+      svn_cl__viewspec_classic,
+      svn_cl__viewspec_svn11
+  } viewspec;                     /* value of --x-viewspec */
   svn_version_t *compatible_version; /* working copy compatibility version */
 } svn_cl__opt_state_t;
 
@@ -921,6 +925,20 @@ svn_cl__similarity_check(const char *key,
                          svn_cl__simcheck_t **tokens,
                          apr_size_t token_count,
                          apr_pool_t *scratch_pool);
+
+/* Return in FUNC_P and BATON_P a callback that prints a summary diff,
+ * according to the options XML and IGNORE_PROPERTIES.
+ *
+ * ANCHOR is a URL or local path to be prefixed to the printed paths.
+ */
+svn_error_t *
+svn_cl__get_diff_summary_writer(svn_client_diff_summarize_func_t *func_p,
+                                void **baton_p,
+                                svn_boolean_t xml,
+                                svn_boolean_t ignore_properties,
+                                const char *anchor,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

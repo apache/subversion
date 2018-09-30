@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl.callback;
 
+import java.lang.annotation.*;
+
 /**
  * <p>The interface for requesting authentication credentials from the
  * user.  Should the javahl bindings need the matching information,
@@ -40,16 +42,19 @@ public interface UserPasswordCallback
     /**
      * Reject the connection to the server.
      */
+    @Native
     public static final int Reject = 0;
 
     /**
      * Accept the connection to the server <i>once</i>.
      */
+    @Native
     public static final int AcceptTemporary = 1;
 
     /**
      * Accept the connection to the server <i>forever</i>.
      */
+    @Native
     public static final int AcceptPermanently = 2;
 
     /**

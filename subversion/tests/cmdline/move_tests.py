@@ -1261,7 +1261,7 @@ def nested_replaces(sbox):
     '   D /A/B/C/Y',
   ]))
   expected_output = svntest.verify.UnorderedRegexListOutput(escaped
-                    + [ '^-', '^r2', '^-', '^Changed paths:', ])
+                    + [ '^--*', '^r2.*', '^--*', '^Changed paths:', ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr2', repo_url)
 

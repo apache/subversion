@@ -481,8 +481,10 @@ const apr_getopt_option_t svn_cl__options[] =
   {"drop", opt_drop, 0,
    N_("drop shelf after successful unshelve")},
 
-  {"viewspec", opt_viewspec, 0,
-   N_("print the working copy layout")},
+  {"x-viewspec", opt_viewspec, 1,
+                       N_("print the working copy layout, formatted according\n"
+                          "                             "
+                          "to ARG: 'classic' or 'svn11'")},
 
   {"compatible-version", opt_compatible_version, 1,
                        N_("use working copy format compatible with Subversion\n"
@@ -830,7 +832,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  about TARGET.\n"
      "\n"), N_(
      "  EXPERIMENTAL:\n"
-     "  With --viewspec, print the working copy layout.\n"
+     "  With --x-viewspec, print the working copy layout.\n"
     )},
     {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline,
@@ -992,6 +994,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "    Show the log message for the revision in which /branches/foo\n"
      "    was created:\n"
      "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo\n"
+     "\n"), N_(
+     "    Show all log messages for commits between the tags ^/tags/2.0 and\n"
+     "    ^/tags/3.0; assuming that tag 2.0 was created in revision 100:\n"
+     "      svn log -rHEAD:100 ^/tags/3.0\n"
      "\n"), N_(
      "    If ^/trunk/foo.c was moved to ^/trunk/bar.c' in revision 22, 'svn log -v'\n"
      "    shows a deletion and a copy in its changed paths list, such as:\n"
@@ -1956,35 +1962,40 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
     { 'q', opt_compatible_version } },
 
-  { "x-shelf-diff", svn_cl__shelf_diff, {"shelf-diff"}, {N_(
+  { "x-shelf-diff", svn_cl__shelf_diff, {0}, {N_(
      "Show shelved changes as a diff.\n"
-     "usage: x-shelf-diff NAME [VERSION]\n"
+     "usage: x-shelf-diff SHELF [VERSION]\n"
      "\n"), N_(
-     "  Show the changes in shelf NAME:VERSION (default: latest) as a diff.\n"
+     "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
+     "\n"), N_(
+     "  See also: 'svn diff --cl=svn:shelf:SHELF' which supports most options of\n"
+     "  'svn diff'.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     )},
+    {opt_summarize},
   },
 
-  { "x-shelf-drop", svn_cl__shelf_drop, {"shelf-drop"}, {N_(
+  { "x-shelf-drop", svn_cl__shelf_drop, {0}, {N_(
      "Delete a shelf.\n"
-     "usage: x-shelf-drop NAME\n"
+     "usage: x-shelf-drop SHELF [PATH ...]\n"
      "\n"), N_(
-     "  Delete the shelf named NAME.\n"
+     "  Delete the shelves named SHELF from the working copies containing PATH\n"
+     "  (default PATH is '.')\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
     )},
   },
 
-  { "x-shelf-list", svn_cl__shelf_list, {"shelf-list", "shelves"}, {N_(
+  { "x-shelf-list", svn_cl__shelf_list, {"x-shelves"}, {N_(
      "List shelves.\n"
-     "usage: x-shelf-list\n"
+     "usage: x-shelf-list [PATH ...]\n"
      "\n"), N_(
-     "  List shelves. Include the first line of any log message\n"
-     "  and some details about the contents of the shelf, unless '-q' is\n"
-     "  given.\n"
+     "  List shelves for each working copy containing PATH (default is '.')\n"
+     "  Include the first line of any log message and some details about the\n"
+     "  contents of the shelf, unless '-q' is given.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
@@ -1992,7 +2003,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {'q', 'v'}
   },
 
-  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {"shelf-list-by-paths"}, {N_(
+  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {0}, {N_(
      "List which shelf affects each path.\n"
      "usage: x-shelf-list-by-paths [PATH...]\n"
      "\n"), N_(
@@ -2003,11 +2014,12 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
   },
 
-  { "x-shelf-log", svn_cl__shelf_log, {"shelf-log"}, {N_(
+  { "x-shelf-log", svn_cl__shelf_log, {0}, {N_(
      "Show the versions of a shelf.\n"
-     "usage: x-shelf-log NAME\n"
+     "usage: x-shelf-log SHELF [PATH...]\n"
      "\n"), N_(
-     "  Show all versions of shelf NAME.\n"
+     "  Show all versions of SHELF for each working copy containing PATH (the\n"
+     "  default PATH is '.').\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
@@ -2015,11 +2027,11 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {'q', 'v'}
   },
 
-  { "x-shelf-save", svn_cl__shelf_save, {"shelf-save"}, {N_(
+  { "x-shelf-save", svn_cl__shelf_save, {0}, {N_(
      "Copy local changes onto a new version of a shelf.\n"
-     "usage: x-shelf-save NAME [PATH...]\n"
+     "usage: x-shelf-save SHELF [PATH...]\n"
      "\n"), N_(
-     "  Save local changes in the given PATHs as a new version of shelf NAME.\n"
+     "  Save local changes in the given PATHs as a new version of SHELF.\n"
      "  The shelf's log message can be set with -m, -F, etc.\n"
      "\n"), N_(
      "  The same as 'svn shelve --keep-local'.\n"
@@ -2033,24 +2045,30 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     }
   },
 
-  { "x-shelve", svn_cl__shelf_shelve, {"shelve"}, {N_(
+  { "x-shelve", svn_cl__shelf_shelve, {0}, {N_(
      "Move local changes onto a shelf.\n"
-     "usage: x-shelve [--keep-local] NAME [PATH...]\n"
+     "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
      "\n"), N_(
-     "  Save the local changes in the given PATHs to a shelf named NAME.\n"
+     "  Save the local changes in the given PATHs to a new or existing SHELF.\n"
      "  Revert those changes from the WC unless '--keep-local' is given.\n"
      "  The shelf's log message can be set with -m, -F, etc.\n"
      "\n"), N_(
      "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
      "\n"), N_(
-     "  The kinds of change you can shelve are those supported by 'svn diff'\n"
-     "  and 'svn patch'. The following are currently NOT supported:\n"
-     "     copies, moves, mkdir, rmdir,\n"
-     "     'binary' content, uncommittable states\n"
+     "  The kinds of change you can shelve are committable changes to files and\n"
+     "  properties, except the following kinds which are not yet supported:\n"
+     "     * copies and moves\n"
+     "     * mkdir and rmdir\n"
+     "  Uncommittable states such as conflicts, unversioned and missing cannot\n"
+     "  be shelved.\n"
      "\n"), N_(
-     "  To bring back shelved changes, use 'svn unshelve NAME'.\n"
+     "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
      "\n"), N_(
-     "  Shelves are stored in <WC>/.svn/shelves/\n"
+     "  Shelves are currently stored under <WC>/.svn/experimental/shelves/ .\n"
+     "  (In Subversion 1.10, shelves were stored under <WC>/.svn/shelves/ as\n"
+     "  patch files. To recover a shelf created by 1.10, either use a 1.10\n"
+     "  client to find and unshelve it, or find the patch file and use any\n"
+     "  1.10 or later 'svn patch' to apply it.)\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
@@ -2060,21 +2078,30 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      SVN_CL__LOG_MSG_OPTIONS,
     } },
 
-  { "x-unshelve", svn_cl__shelf_unshelve, {"unshelve"}, {N_(
+  { "x-unshelve", svn_cl__shelf_unshelve, {0}, {N_(
      "Copy shelved changes back into the WC.\n"
-     "usage: x-unshelve [--drop] [NAME [VERSION]]\n"
+     "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
      "\n"), N_(
-     "  Apply the shelf named NAME to the working copy.\n"
-     "  NAME defaults to the newest shelf.\n"
+     "  Apply the changes stored in SHELF to the working copy.\n"
+     "  SHELF defaults to the newest shelf.\n"
      "\n"), N_(
-     "  Unshelve normally refuses to run if any of the files are already\n"
-     "  modified in the WC. With --force, it does not check. In that case,\n"
-     "  any conflict between the change being unshelved and a change\n"
-     "  already in the WC is handled the same way as by 'svn patch',\n"
-     "  creating a 'reject' file.\n"
+     "  Apply the newest version of the shelf, by default. If VERSION is\n"
+     "  specified, apply that version and discard all versions newer than that.\n"
+     "  In any case, retain the unshelved version and versions older than that\n"
+     "  (unless --drop is specified).\n"
      "\n"), N_(
-     "  With --drop, delete the shelf (like shelf-drop) after successfully\n"
-     "  unshelving with no conflicts.\n"
+     "  With --drop, delete the entire shelf (like 'svn shelf-drop') after\n"
+     "  successfully unshelving with no conflicts.\n"
+     "\n"), N_(
+     "  The working files involved should be in a clean, unmodified state\n"
+     "  before using this command. To roll back to an older version of the\n"
+     "  shelf, first ensure any current working changes are removed, such as\n"
+     "  by shelving or reverting them, and then unshelve the desired version.\n"
+     "\n"), N_(
+     "  Unshelve normally refuses to apply any changes if any path involved is\n"
+     "  already modified (or has any other abnormal status) in the WC. With\n"
+     "  --force, it does not check and may error out and/or produce partial or\n"
+     "  unexpected results.\n"
      "\n"), N_(
      "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
      "  in the next release, and there is no promise of backward compatibility.\n"
@@ -2144,6 +2171,22 @@ add_search_pattern_to_latest_group(svn_cl__opt_state_t *opt_state,
                         opt_state->search_patterns->nelts - 1,
                         apr_array_header_t *);
   APR_ARRAY_PUSH(group, const char *) = pattern;
+}
+
+/* Parse the argument to the --x-viewspec option. */
+static svn_error_t *
+viewspec_from_word(enum svn_cl__viewspec_t *viewspec,
+                   const char *utf8_opt_arg)
+{
+  if (!strcmp(utf8_opt_arg, "classic"))
+    *viewspec = svn_cl__viewspec_classic;
+  else if (!strcmp(utf8_opt_arg, "svn11"))
+    *viewspec = svn_cl__viewspec_svn11;
+  else
+    return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                             _("'%s' is not a valid --x-viewspec value"),
+                             utf8_opt_arg);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -2833,6 +2876,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_viewspec:
         opt_state.viewspec = TRUE;
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        SVN_ERR(viewspec_from_word(&opt_state.viewspec, utf8_opt_arg));
         break;
       case opt_compatible_version:
         SVN_ERR(parse_compatible_version(&opt_state, opt_arg, pool));

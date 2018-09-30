@@ -47,14 +47,14 @@ Available subcommands:
    unlock
    update (up)
    upgrade
-   x-shelf-diff (shelf-diff)
-   x-shelf-drop (shelf-drop)
-   x-shelf-list (shelf-list, shelves)
-   x-shelf-list-by-paths (shelf-list-by-paths)
-   x-shelf-log (shelf-log)
-   x-shelf-save (shelf-save)
-   x-shelve (shelve)
-   x-unshelve (unshelve)
+   x-shelf-diff
+   x-shelf-drop
+   x-shelf-list (x-shelves)
+   x-shelf-list-by-paths
+   x-shelf-log
+   x-shelf-save
+   x-shelve
+   x-unshelve
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.apache.org/

@@ -21,6 +21,10 @@
  * ====================================================================
  */
 
+/* We define this here to remove any further warnings about the usage of
+   experimental functions in this file. */
+#define SVN_EXPERIMENTAL
+
 /* ==================================================================== */
 
 
@@ -56,7 +60,7 @@ struct layout_list_baton_t
 
 /* Output as 'svn' command-line commands.
  *
- * Implements svn_client_layout_func_t
+ * Implements svn_client__layout_func_t
  */
 static svn_error_t *
 output_svn_command_line(void *layout_baton,
@@ -159,7 +163,7 @@ depth_to_viewspec_py(svn_depth_t depth,
 
 /* Output in the format used by 'tools/client-side/viewspec.py'
  *
- * Implements svn_client_layout_func_t
+ * Implements svn_client__layout_func_t
  */
 static svn_error_t *
 output_svn_viewspec_py(void *layout_baton,
@@ -238,8 +242,13 @@ output_svn_viewspec_py(void *layout_baton,
   return SVN_NO_ERROR;
 }
 
+/*
+ * Call svn_client__layout_list(), using a receiver function decided
+ * by VIEWSPEC.
+ */
 static svn_error_t *
 cl_layout_list(apr_array_header_t *targets,
+               enum svn_cl__viewspec_t viewspec,
                void *baton,
                svn_client_ctx_t *ctx,
                apr_pool_t *scratch_pool)
@@ -265,22 +274,26 @@ cl_layout_list(apr_array_header_t *targets,
   llb.target_abspath = list_abspath;
   llb.with_revs = TRUE;
 
-  if (TRUE)
+  switch (viewspec)
     {
+    case svn_cl__viewspec_classic:
       /* svn-viewspec.py format */
       llb.vs_py_format = 2;
 
-      SVN_ERR(svn_client_layout_list(list_abspath,
-                                     output_svn_viewspec_py, &llb,
-                                     ctx, scratch_pool));
-    }
-  else
-    {
+      SVN_ERR(svn_client__layout_list(list_abspath,
+                                      output_svn_viewspec_py, &llb,
+                                      ctx, scratch_pool));
+      break;
+    case svn_cl__viewspec_svn11:
       /* svn command-line format */
-      SVN_ERR(svn_client_layout_list(list_abspath,
-                                     output_svn_command_line, &llb,
-                                     ctx, scratch_pool));
+      SVN_ERR(svn_client__layout_list(list_abspath,
+                                      output_svn_command_line, &llb,
+                                      ctx, scratch_pool));
+      break;
+    default:
+      SVN_ERR_MALFUNCTION();
     }
+
   return SVN_NO_ERROR;
 }
 
@@ -1177,7 +1190,7 @@ svn_cl__info(apr_getopt_t *os,
 
   if (opt_state->viewspec)
     {
-      SVN_ERR(cl_layout_list(targets, baton, ctx, pool));
+      SVN_ERR(cl_layout_list(targets, opt_state->viewspec, baton, ctx, pool));
       return SVN_NO_ERROR;
     }
 

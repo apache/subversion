@@ -80,7 +80,7 @@ def compare_repos_dumps(sbox, other_dumpfile,
 
   ### This call kind-of assumes EXPECTED is first and ACTUAL is second.
   svntest.verify.compare_dump_files(
-    "Dump files", "DUMP", other_dumpfile, sbox_dumpfile)
+    None, None, other_dumpfile, sbox_dumpfile)
 
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   subdir = None, bypass_prop_validation = False,

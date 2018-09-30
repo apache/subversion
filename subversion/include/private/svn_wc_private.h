@@ -353,6 +353,8 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  * the directory exists.
  *
  * @a local_abspath is any path in the WC, and is used to find the WC root.
+ *
+ * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
@@ -614,6 +616,24 @@ svn_wc__node_get_base(svn_node_kind_t *kind,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
+
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * have a basename matching BASENAME and have node kind KIND.
+ * If no such nodes exist, return an empty array.
+ *
+ * This function returns only paths to nodes which are present in the highest
+ * layer of the WC. In other words, paths to deleted and/or excluded nodes are
+ * never returned.
+ */
+svn_error_t *
+svn_wc__find_working_nodes_with_basename(apr_array_header_t **abspaths,
+                                         const char *wri_abspath,
+                                         const char *basename,
+                                         svn_node_kind_t kind,
+                                         svn_wc_context_t *wc_ctx,
+                                         apr_pool_t *result_pool,
+                                         apr_pool_t *scratch_pool);
 
 /* Get the working revision of @a local_abspath using @a wc_ctx. If @a
  * local_abspath is not in the working copy, return @c
@@ -2044,31 +2064,19 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
 
 /* The implemementation of svn_wc_diff6(), but reporting to a diff processor
  *
- * New mode: when ROOT_RELPATH is not NULL:
+ * New mode, when ANCHOR_AT_GIVEN_PATHS is true:
  *
- *   If LOCAL_ABSPATH is the WC root, set *ROOT_RELPATH to "" and send
- *   diff processor relpaths relative to LOCAL_ABSPATH; otherwise set
- *   *ROOT_RELPATH to the last component of LOCAL_ABSPATH and send diff
- *   processor relpaths relative to the parent of LOCAL_ABSPATH.
- *   (*ROOT_RELPATH will be either "" or a single path component.)
+ *   Anchor the DIFF_PROCESSOR at LOCAL_ABSPATH.
  *
- * Backward compatibility mode for svn_wc_diff6(): when ROOT_RELPATH is NULL:
+ * Backward compatibility mode for svn_wc_diff6(),
+ * when ANCHOR_AT_GIVEN_PATHS is false:
  *
  *   Send diff processor relpaths relative to LOCAL_ABSPATH if it is a
  *   directory; otherwise, relative to the parent of LOCAL_ABSPATH.
  *   This matches the "anchor and target" semantics of svn_wc_diff6().
- *
- * If ROOT_IS_DIR is not NULL:
- *
- *   Set *ROOT_IS_DIR to TRUE if the working version of LOCAL_ABSPATH is
- *   a directory, else to FALSE.
- *
- * Assignments to *ROOT_RELPATH and *ROOT_IS_DIR are made before the first
- * call to DIFF_PROCESSOR.
  */
 svn_error_t *
-svn_wc__diff7(const char **root_relpath,
-              svn_boolean_t *root_is_dir,
+svn_wc__diff7(svn_boolean_t anchor_at_given_paths,
               svn_wc_context_t *wc_ctx,
               const char *local_abspath,
               svn_depth_t depth,

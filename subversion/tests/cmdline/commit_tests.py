@@ -2823,7 +2823,8 @@ def commit_add_subadd(sbox):
 
   # prepare targets file
   targets = "A/D A/D/H A/D/H/chi A/D/H/omega A/D/H/psi".split()
-  open(targets_file, 'w').write("\n".join(targets))
+  with open(targets_file, 'w') as f:
+    f.write("\n".join(targets))
 
   # r2: rm A/D
   sbox.simple_rm('A/D')

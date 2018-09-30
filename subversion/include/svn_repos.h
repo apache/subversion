@@ -1036,7 +1036,10 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  *
  * @a send_copyfrom_args instructs the driver to send 'copyfrom'
  * arguments to the editor's add_file() and add_directory() methods,
- * whenever it deems feasible.
+ * and therefore to send their content as deltas against the copy source,
+ * whenever it deems feasible. The implementation only does so for
+ * add_file(), and only when the file itself is the copy root (not when
+ * the file is part of a copied subtree).
  *
  * Use @a authz_read_func and @a authz_read_baton (if not @c NULL) to
  * avoid sending data through @a editor/@a edit_baton which is not

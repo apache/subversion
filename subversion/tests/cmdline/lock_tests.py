@@ -1571,7 +1571,8 @@ def cp_isnt_ro(sbox):
   mu2_path = sbox.ospath('A/mu2')
   mu3_path = sbox.ospath('A/mu3')
   kappa_path = sbox.ospath('kappa')
-  open(kappa_path, 'w').write("This is the file 'kappa'.\n")
+  with open(kappa_path, 'w') as f:
+    f.write("This is the file 'kappa'.\n")
 
   ## added file
   sbox.simple_add('kappa')
@@ -2251,7 +2252,6 @@ def dav_lock_refresh(sbox):
   if r.status != httplib.OK:
     raise svntest.Failure('Lock refresh failed: %d %s' % (r.status, r.reason))
 
-@SkipUnless(svntest.main.is_ra_type_dav)
 def delete_locked_file_with_percent(sbox):
   "lock and delete a file called 'a %( ) .txt'"
 
