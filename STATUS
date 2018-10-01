@@ -34,16 +34,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1836976
-   Fix "relpath is canonical" assertion failure in conflict resolver.
-   Justification:
-     Assertion can be triggered by cherry-pick merge with a moved directory.
-     As copyfrom typically starts with a '/'
-   Notes:
-     To reproduce, undo r1836976 locally and run the test added in r1836977.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1837790
    Make 'svnadmin verify --keep-going' always show an error summary. 
    Justification:
@@ -98,5 +88,15 @@ Approved changes:
    Justification:
      User can trigger a segfault by selecting conflict menu options in a
      particular order. See commit message for details.
+   Votes:
+     +1: stsp, rhuijben, brane
+
+ * r1836976
+   Fix "relpath is canonical" assertion failure in conflict resolver.
+   Justification:
+     Assertion can be triggered by cherry-pick merge with a moved directory.
+     As copyfrom typically starts with a '/'
+   Notes:
+     To reproduce, undo r1836976 locally and run the test added in r1836977.
    Votes:
      +1: stsp, rhuijben, brane
