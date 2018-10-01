@@ -15,17 +15,6 @@ Status of 1.10.3:
 Candidate changes:
 ==================
 
- * r1836960, r1836968
-   Fix issue #4766, "resolver adds unrelated moves to move target list"
-   Justification:
-     Undesirable resolver behaviour: If an item was moved, all other items
-     moved within the same revision will be considered viable merge targets.
-   Notes:
-     r1836960 adds a regression test
-     r1836968 fixes the bug
-   Votes:
-     +1: stsp, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -98,3 +87,14 @@ Approved changes:
      User complained: https://svn.haxx.se/users/archive-2018-10/0003.shtml
    Votes:
      +1: stsp, julianfoad, jcorvel
+
+ * r1836960, r1836968
+   Fix issue #4766, "resolver adds unrelated moves to move target list"
+   Justification:
+     Undesirable resolver behaviour: If an item was moved, all other items
+     moved within the same revision will be considered viable merge targets.
+   Notes:
+     r1836960 adds a regression test
+     r1836968 fixes the bug
+   Votes:
+     +1: stsp, rhuijben, jcorvel
