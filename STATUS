@@ -15,15 +15,6 @@ Status of 1.10.3:
 Candidate changes:
 ==================
 
- * r1834612, r1834835
-   On the '1.10.x-issue4758' branch: Fix SVN-4758 "Unable to shelve changes
-   when using custom diff-cmd".
-   Justification:
-     User-reported breakage of 'svn shelve'.
-   Branch: ^/subversion/branches/1.10.x-issue4758
-   Votes:
-     +1: julianfoad, jamessan
-
  * r1836963
    Fix potential NULL deref in conflict resolver.
    Justification:
@@ -99,3 +90,12 @@ Approved changes:
      Restores a feature lost when we switched from neon to serf.
    Votes:
      +1: philip, rhuijben, stsp
+
+ * r1834612, r1834835
+   On the '1.10.x-issue4758' branch: Fix SVN-4758 "Unable to shelve changes
+   when using custom diff-cmd".
+   Justification:
+     User-reported breakage of 'svn shelve'.
+   Branch: ^/subversion/branches/1.10.x-issue4758
+   Votes:
+     +1: julianfoad, jamessan, stsp
