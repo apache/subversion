@@ -22,7 +22,7 @@ Candidate changes:
      do it right on macOS. Not critical for 1.11.0 but would be nice to have;
      the change has very minor impact.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
 Veto-blocked changes:
 =====================
