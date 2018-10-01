@@ -71,14 +71,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1840991
-   Prevent an out-of-bounds array access in the conflict resolver.
-   Justification:
-     User can trigger a segfault by selecting conflict menu options in a
-     particular order. See commit message for details.
-   Votes:
-     +1: stsp, rhuijben
-
 Veto-blocked changes:
 =====================
 
@@ -100,3 +92,11 @@ Approved changes:
    Branch: ^/subversion/branches/1.10.x-issue4758
    Votes:
      +1: julianfoad, jamessan, stsp
+
+ * r1840991
+   Prevent an out-of-bounds array access in the conflict resolver.
+   Justification:
+     User can trigger a segfault by selecting conflict menu options in a
+     particular order. See commit message for details.
+   Votes:
+     +1: stsp, rhuijben, brane
