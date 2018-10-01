@@ -26,15 +26,6 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
- * r1839662
-   For 'local missing' conflicts, scan for moves only if a YCA is known.
-   Justification:
-     Prevents long-runing history scan which serves no useful purpose.
-     User complained: https://svn.haxx.se/users/archive-2018-08/0038.shtml
-     User complained: https://svn.haxx.se/users/archive-2018-10/0003.shtml
-   Votes:
-     +1: stsp, julianfoad
-
 Veto-blocked changes:
 =====================
 
@@ -99,3 +90,11 @@ Approved changes:
      +1: julianfoad, rhuijben
      +1: danielsh (would prefer read_rep_cache() to check format numbers; see the "r1838813" thread on dev@) (without r1839703, r1839734)
 
+ * r1839662
+   For 'local missing' conflicts, scan for moves only if a YCA is known.
+   Justification:
+     Prevents long-runing history scan which serves no useful purpose.
+     User complained: https://svn.haxx.se/users/archive-2018-08/0038.shtml
+     User complained: https://svn.haxx.se/users/archive-2018-10/0003.shtml
+   Votes:
+     +1: stsp, julianfoad, jcorvel
