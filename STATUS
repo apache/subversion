@@ -15,14 +15,6 @@ Status of 1.10.3:
 Candidate changes:
 ==================
 
- * r1836963
-   Fix potential NULL deref in conflict resolver.
-   Justification:
-     Real-world impact unknown. Found during code inspection.
-     Let us better be safe than sorry.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1836960, r1836968
    Fix issue #4766, "resolver adds unrelated moves to move target list"
    Justification:
@@ -98,5 +90,13 @@ Approved changes:
      As copyfrom typically starts with a '/'
    Notes:
      To reproduce, undo r1836976 locally and run the test added in r1836977.
+   Votes:
+     +1: stsp, rhuijben, brane
+
+ * r1836963
+   Fix potential NULL deref in conflict resolver.
+   Justification:
+     Real-world impact unknown. Found during code inspection.
+     Let us better be safe than sorry.
    Votes:
      +1: stsp, rhuijben, brane
