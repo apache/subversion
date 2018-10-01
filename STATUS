@@ -15,6 +15,12 @@ Status of 1.11.0:
 Candidate changes:
 ==================
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1842334
    Update how we display the OS name on Mac in 'svn --version --verbose'.
    Justification:
@@ -22,10 +28,4 @@ Candidate changes:
      do it right on macOS. Not critical for 1.11.0 but would be nice to have;
      the change has very minor impact.
    Votes:
-     +1: brane, stsp
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: brane, stsp, rhuijben
