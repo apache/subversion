@@ -24,13 +24,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, jamessan
 
- * r1836762, r1836802
-   Store the HTTPS client cert password.
-   Justification:
-     Restores a feature lost when we switched from neon to serf.
-   Votes:
-     +1: philip, rhuijben
-
  * r1836963
    Fix potential NULL deref in conflict resolver.
    Justification:
@@ -99,3 +92,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1836762, r1836802
+   Store the HTTPS client cert password.
+   Justification:
+     Restores a feature lost when we switched from neon to serf.
+   Votes:
+     +1: philip, rhuijben, stsp
