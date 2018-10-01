@@ -47,7 +47,7 @@ Candidate changes:
  * r1837790
    Make 'svnadmin verify --keep-going' always show an error summary. 
    Justification:
-     Using --quite made the --keep-going option much less useful.
+     Using --quiet made the --keep-going option much less useful.
      The whole point of --keep-going is to get a summary of errors.
    Votes:
      +1: stsp
