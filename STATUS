@@ -34,15 +34,15 @@ Candidate changes:
    Votes:
      +1: stsp, brane
 
- * r1838813, r1842262, r1842264
+ * r1838813, r1839703, r1839734, r1842262, r1842264
    Let 'svnadmin recover' prune the rep-cache even if it is disabled.
    Justification:
      Can potentially lead to data loss.
    Votes:
      +1: julianfoad
-     +1: danielsh (would prefer read_rep_cache() to check format numbers; see the "r1838813" thread on dev@)
+     +1: danielsh (would prefer read_rep_cache() to check format numbers; see the "r1838813" thread on dev@) (without r1839703, r1839734)
      +0: rhuijben (please add the fix to allow the regression tests to
-                   run on old python versions. +1 on the fix) (without r1842264)
+                   run on old python versions. +1 on the fix) (without r1839703, r1839734, r1842264)
 
  * r1839662
    For 'local missing' conflicts, scan for moves only if a YCA is known.
