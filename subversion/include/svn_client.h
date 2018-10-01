@@ -1221,7 +1221,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *         #svn_opt_revision_date. <br>
  *         If no error occurred, return #SVN_NO_ERROR.
  *
- * @since New in 1.11.
+ * @since New in 1.12.
  *
  * @see #svn_depth_t <br> #svn_client_ctx_t <br> @ref clnt_revisions for
  *      a discussion of operative and peg revisions.
@@ -4338,7 +4338,7 @@ svn_client_cleanup(const char *dir,
  *
  * Use @a scratch_pool for any temporary allocations.
  *
- * @since New in 1.11.
+ * @since New in 1.12.
  */
 svn_error_t *
 svn_client_upgrade2(const char *wcroot_dir,
@@ -4351,7 +4351,7 @@ svn_client_upgrade2(const char *wcroot_dir,
  * supported format.
  *
  * @since New in 1.7.
- * @deprecated Provided for backward compatibility with the 1.10 API.
+ * @deprecated Provided for backward compatibility with the 1.11 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -4362,6 +4362,8 @@ svn_client_upgrade(const char *wcroot_dir,
 /**
  * Returns the version related to the earliest supported
  * working copy metadata format.
+ *
+ * @since New in 1.12.
  */
 const svn_version_t *
 svn_client_supported_wc_version(void);

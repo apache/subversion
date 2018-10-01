@@ -7448,7 +7448,7 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
  * with @a repos_info_baton to provide the missing information.
  *
  * @since New in 1.7
- * @deprecated Provided for backward compatibility with the 1.9 API.
+ * @deprecated Provided for backward compatibility with the 1.11 API.
  */
 SVN_DEPRECATED
 svn_error_t *

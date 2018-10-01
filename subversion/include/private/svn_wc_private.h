@@ -2117,7 +2117,7 @@ svn_wc__translated_stream(svn_stream_t **stream,
  *
  * Use @a scratch_pool for temporary allocations.
  *
- * @since New in 1.11.
+ * @since New in 1.12.
  */
 svn_error_t *
 svn_wc__format_from_version(int *format,
@@ -2142,7 +2142,7 @@ svn_wc__format_from_version(int *format,
  * repository uuid, @a repos_info_func (if non-NULL) will be called
  * with @a repos_info_baton to provide the missing information.
  *
- * @since New in 1.11.
+ * @since New in 1.12.
  */
 svn_error_t *
 svn_wc__upgrade(svn_wc_context_t *wc_ctx,

@@ -133,6 +133,7 @@ extern "C" {
 /** Complete version string */
 #define SVN_VERSION        SVN_VER_NUMBER SVN_VER_TAG
 
+
 
 /* Version queries and compatibility checks */
 

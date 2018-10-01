@@ -479,7 +479,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("remove unreferenced pristines from .svn directory")},
 
   {"drop", opt_drop, 0,
-   N_("drop shelf after successful unshelve")},
+                       N_("drop shelf after successful unshelve")},
 
   {"x-viewspec", opt_viewspec, 1,
                        N_("print the working copy layout, formatted according\n"
