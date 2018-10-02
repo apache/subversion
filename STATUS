@@ -20,7 +20,17 @@ Candidate changes:
    Justification:
      Attempt to fix 1.10.x tests on the macOS build slave.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
+
+ * r1839739
+   Fix failing recently added tests when running with an older python
+   Justification:
+     Upgrading the sqlite inside python 2.7 is not easy on several platforms
+     (including Windows). We shouldn't just fail the tests on this.
+   Notes:
+     This was a separate followup on changes that were already backported.
+   Votes:
+     +1: rhuijben
 
 Veto-blocked changes:
 =====================
