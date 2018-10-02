@@ -21,14 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1836963
-   Fix potential NULL deref in conflict resolver.
-   Justification:
-     Real-world impact unknown. Found during code inspection.
-     Let us better be safe than sorry.
-   Votes:
-     +1: stsp, rhuijben, brane
-
  * r1837790
    Make 'svnadmin verify --keep-going' always show an error summary. 
    Justification:
