@@ -21,14 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1840991
-   Prevent an out-of-bounds array access in the conflict resolver.
-   Justification:
-     User can trigger a segfault by selecting conflict menu options in a
-     particular order. See commit message for details.
-   Votes:
-     +1: stsp, rhuijben, brane
-
  * r1836976
    Fix "relpath is canonical" assertion failure in conflict resolver.
    Justification:
