@@ -21,14 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1837790
-   Make 'svnadmin verify --keep-going' always show an error summary. 
-   Justification:
-     Using --quiet made the --keep-going option much less useful.
-     The whole point of --keep-going is to get a summary of errors.
-   Votes:
-     +1: stsp, brane, julianfoad
-
  * r1838813, r1839703, r1839734, r1842262, r1842264
    Let 'svnadmin recover' prune the rep-cache even if it is disabled.
    Justification:
