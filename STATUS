@@ -21,15 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1839662
-   For 'local missing' conflicts, scan for moves only if a YCA is known.
-   Justification:
-     Prevents long-runing history scan which serves no useful purpose.
-     User complained: https://svn.haxx.se/users/archive-2018-08/0038.shtml
-     User complained: https://svn.haxx.se/users/archive-2018-10/0003.shtml
-   Votes:
-     +1: stsp, julianfoad, jcorvel
-
  * r1836960, r1836968
    Fix issue #4766, "resolver adds unrelated moves to move target list"
    Justification:
