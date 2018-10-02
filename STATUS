@@ -21,15 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1834612, r1834835
-   On the '1.10.x-issue4758' branch: Fix SVN-4758 "Unable to shelve changes
-   when using custom diff-cmd".
-   Justification:
-     User-reported breakage of 'svn shelve'.
-   Branch: ^/subversion/branches/1.10.x-issue4758
-   Votes:
-     +1: julianfoad, jamessan, stsp
-
  * r1840991
    Prevent an out-of-bounds array access in the conflict resolver.
    Justification:

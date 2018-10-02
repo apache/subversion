@@ -188,13 +188,18 @@ shelf_write_patch(const char *name,
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      apr_hash_t *old_config;
+      svn_error_t *err;
 
       if (svn_path_is_url(path))
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                  _("'%s' is not a local path"), path);
       SVN_ERR(svn_dirent_get_absolute(&path, path, scratch_pool));
 
-      SVN_ERR(svn_client_diff_peg6(
+      /* Ensure we use internal diff, not any configured external diff-cmd. */
+      old_config = ctx->config;
+      ctx->config = NULL;
+      err = svn_client_diff_peg6(
                      NULL /*options*/,
                      path,
                      &peg_revision,
@@ -214,8 +219,11 @@ shelf_write_patch(const char *name,
                      outstream,
                      errstream,
                      changelists,
-                     ctx, iterpool));
+                     ctx, iterpool);
+      ctx->config = old_config;
+      SVN_ERR(err);
     }
+
   SVN_ERR(svn_stream_close(outstream));
   SVN_ERR(svn_stream_close(errstream));
 
