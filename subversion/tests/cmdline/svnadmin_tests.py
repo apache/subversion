@@ -53,6 +53,24 @@ Wimp = svntest.testcase.Wimp_deco
 SkipDumpLoadCrossCheck = svntest.testcase.SkipDumpLoadCrossCheck_deco
 Item = svntest.wc.StateItem
 
+def read_rep_cache(repo_dir):
+  """Return the rep-cache contents as a dict {hash: (rev, index, ...)}.
+  """
+  db_path = os.path.join(repo_dir, 'db', 'rep-cache.db')
+  db1 = svntest.sqlite3.connect(db_path)
+  schema1 = db1.execute("pragma user_version").fetchone()[0]
+  # Can't test newer rep-cache schemas with an old built-in SQLite; see the
+  # documentation of STMT_CREATE_SCHEMA_V2 in ../../libsvn_fs_fs/rep-cache-db.sql
+  if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
+    raise svntest.Failure("Can't read rep-cache schema %d using old "
+                          "Python-SQLite version %s < (3,8,2)" %
+                           (schema1,
+                            svntest.sqlite3.sqlite_version_info))
+
+  content = { row[0]: row[1:] for row in
+              db1.execute("select * from rep_cache") }
+  return content
+
 def check_hotcopy_bdb(src, dst):
   "Verify that the SRC BDB repository has been correctly copied to DST."
   ### TODO: This function should be extended to verify all hotcopied files,
@@ -3823,6 +3841,63 @@ def load_issue4725(sbox):
   sbox2.build(create_wc=False, empty=True)
   load_and_verify_dumpstream(sbox2, None, [], None, False, dump, '-M100')
 
+def check_recover_prunes_rep_cache(sbox, enable_rep_sharing):
+  """Check 'recover' prunes the rep-cache while enable-rep-sharing is
+     true/false.
+  """
+  # Remember the initial rep cache content.
+  rep_cache_r1 = read_rep_cache(sbox.repo_dir)
+  #print '\n'.join([h + ": " + repr(ref) for h, ref in rep_cache_r1.items()])
+
+  # Commit one new rep and check the rep-cache is extended.
+  sbox.simple_append('iota', 'New line.\n')
+  sbox.simple_commit()
+  rep_cache_r2 = read_rep_cache(sbox.repo_dir)
+  if not (len(rep_cache_r2) == len(rep_cache_r1) + 1):
+    raise svntest.Failure
+
+  fsfs_conf = svntest.main.get_fsfs_conf_file_path(sbox.repo_dir)
+  svntest.main.file_append(fsfs_conf,
+                           # Add a newline in case the existing file doesn't
+                           # end with one.
+                           "\n"
+                           "[rep-sharing]\n"
+                           "enable-rep-sharing = %s\n"
+                           % (('true' if enable_rep_sharing else 'false'),))
+
+  # Break r2 in such a way that 'recover' will discard it
+  head_rev_path = fsfs_file(sbox.repo_dir, 'revs', '2')
+  os.remove(head_rev_path)
+  current_path = os.path.join(sbox.repo_dir, 'db', 'current')
+  svntest.main.file_write(current_path, '1\n')
+
+  # Recover back to r1.
+  svntest.actions.run_and_verify_svnadmin(None, [],
+                                          "recover", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnlook(['1\n'], [], 'youngest',
+                                         sbox.repo_dir)
+
+  # Check the rep-cache is pruned.
+  rep_cache_recovered = read_rep_cache(sbox.repo_dir)
+  if not (rep_cache_recovered == rep_cache_r1):
+    raise svntest.Failure
+
+@Issue(4077)
+@SkipUnless(svntest.main.is_fs_type_fsfs_and_sqlite_can_read_our_db)
+def recover_prunes_rep_cache_when_enabled(sbox):
+  "recover prunes rep cache when enabled"
+  sbox.build()
+
+  check_recover_prunes_rep_cache(sbox, enable_rep_sharing=True)
+
+@Issue(4077)
+@SkipUnless(svntest.main.is_fs_type_fsfs_and_sqlite_can_read_our_db)
+def recover_prunes_rep_cache_when_disabled(sbox):
+  "recover prunes rep cache when disabled"
+  sbox.build()
+
+  check_recover_prunes_rep_cache(sbox, enable_rep_sharing=False)
+
 ########################################################################
 # Run the tests
 
@@ -3897,6 +3972,8 @@ test_list = [ None,
               dump_exclude_all_rev_changes,
               dump_invalid_filtering_option,
               load_issue4725,
+              recover_prunes_rep_cache_when_enabled,
+              recover_prunes_rep_cache_when_disabled,
              ]
 
 if __name__ == '__main__':
