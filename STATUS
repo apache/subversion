@@ -15,17 +15,6 @@ Status of 1.10.3:
 Candidate changes:
 ==================
 
- * r1839739
-   Fix failing recently added tests when running with an older python
-   Justification:
-     Upgrading the sqlite inside python 2.7 is not easy on several platforms
-     (including Windows). We shouldn't just fail the tests on this.
-   Notes:
-     This was a separate followup on changes that were already backported.
-   Votes:
-     +1: rhuijben, brane, jcorvel
-     +0: danielsh
-
 Veto-blocked changes:
 =====================
 
