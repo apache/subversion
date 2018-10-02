@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1836762, r1836802
-   Store the HTTPS client cert password.
-   Justification:
-     Restores a feature lost when we switched from neon to serf.
-   Votes:
-     +1: philip, rhuijben, stsp
-
  * r1834612, r1834835
    On the '1.10.x-issue4758' branch: Fix SVN-4758 "Unable to shelve changes
    when using custom diff-cmd".
