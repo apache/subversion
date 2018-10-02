@@ -30,11 +30,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1842260
-   Use the current python executable for launching tests from run_tests.py.
-   Justification:
-     Attempt to fix 1.10.x tests on the macOS build slave.
-   Votes:
-     +1: brane, rhuijben, danielsh
-
