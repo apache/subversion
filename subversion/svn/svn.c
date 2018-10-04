@@ -536,25 +536,25 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "Put new files and directories under version control.\n"
      "usage: add PATH...\n"
      "\n"), N_(
-     "Schedule unversioned PATHs for addition, so they will become versioned and\n"
-     "be added to the repository in the next commit. Recurse into directories by\n"
-     "default (see the --depth option).\n"
+     "  Schedule unversioned PATHs for addition, so they will become versioned and\n"
+     "  be added to the repository in the next commit. Recurse into directories by\n"
+     "  default (see the --depth option).\n"
      "\n"), N_(
-     "The 'svn add' command is only necessary for files and directories that are\n"
-     "not yet under version control. Unversioned files and directories can be\n"
-     "identified with 'svn status' (see 'svn help status').\n"
+     "  The 'svn add' command is only necessary for files and directories that are\n"
+     "  not yet under version control. Unversioned files and directories can be\n"
+     "  identified with 'svn status' (see 'svn help status').\n"
      "\n"
-     "The effects of 'svn add' can be undone with 'svn revert' before the addition\n"
-     "has been committed. Once committed, a path can be removed from version\n"
-     "control with 'svn delete', and in some circumstances by running a reverse-\n"
-     "merge (see 'svn help merge' for details).\n"
+     "  The effects of 'svn add' can be undone with 'svn revert' before the addition\n"
+     "  has been committed. Once committed, a path can be removed from version\n"
+     "  control with 'svn delete', and in some circumstances by running a reverse-\n"
+     "  merge (see 'svn help merge' for details).\n"
      "\n"), N_(
-     "With --force, add all the unversioned paths found in PATHs and ignore the\n"
-     "rest; otherwise, error out if any specified paths are already versioned.\n"
+     "  With --force, add all the unversioned paths found in PATHs and ignore the\n"
+     "  rest; otherwise, error out if any specified paths are already versioned.\n"
      "\n"), N_(
-     "The selection of items to add may be influenced by the 'ignores' feature.\n"
-     "Properties may be attached to the items as configured by the 'auto-props'\n"
-     "feature.\n"
+     "  The selection of items to add may be influenced by the 'ignores' feature.\n"
+     "  Properties may be attached to the items as configured by the 'auto-props'\n"
+     "  feature.\n"
     )},
     {opt_targets, 'N', opt_depth, 'q', opt_force, opt_no_ignore, opt_autoprops,
      opt_no_autoprops, opt_parents },
