@@ -545,7 +545,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
   { "auth", svn_cl__auth, {0}, {N_(
      "Manage cached authentication credentials.\n"
      "usage: 1. svn auth [PATTERN ...]\n"
-     "usage: 2. svn auth --remove PATTERN [PATTERN ...]\n"
+     "       2. svn auth --remove PATTERN [PATTERN ...]\n"
      "\n"), N_(
      "  With no arguments, list all cached authentication credentials.\n"
      "  Authentication credentials include usernames, passwords,\n"
