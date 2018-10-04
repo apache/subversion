@@ -165,7 +165,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"message",       'm', 1, N_("specify log message ARG")},
   {"quiet",         'q', 0, N_("print nothing, or only summary information")},
   {"recursive",     'R', 0, N_("descend recursively, same as --depth=infinity")},
-  {"non-recursive", 'N', 0, N_("obsolete; try --depth=files or --depth=immediates")},
+  {"non-recursive", 'N', 0, N_("obsolete")},
   {"change",        'c', 1,
                     N_("the change made by revision ARG (like -r ARG-1:ARG)\n"
                        "                             "
@@ -539,7 +539,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
     {opt_targets, 'N', opt_depth, 'q', opt_force, opt_no_ignore, opt_autoprops,
      opt_no_autoprops, opt_parents },
-     {{opt_parents, N_("add intermediate parents")}} },
+    {{opt_parents, N_("add intermediate parents")},
+     {'N', N_("obsolete; same as --depth=empty")}} },
 
   { "auth", svn_cl__auth, {0}, {N_(
      "Manage cached authentication credentials.\n"
@@ -635,7 +636,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  See also 'svn help update' for a list of possible characters\n"
      "  reporting the action taken.\n"
     )},
-    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals} },
+    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals},
+    {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "cleanup", svn_cl__cleanup, {0}, {N_(
      "Either recover from an interrupted operation that left the working copy locked,\n"
@@ -684,7 +686,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  fixed revision.\n"
     )},
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
-     opt_changelist, opt_keep_changelists, opt_include_externals} },
+     opt_changelist, opt_keep_changelists, opt_include_externals},
+    {{'N', N_("obsolete; same as --depth=empty")}} },
 
   { "copy", svn_cl__copy, {"cp"}, {N_(
      "Copy files and directories in a working copy or repository.\n"
@@ -766,7 +769,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      opt_internal_diff, 'x', opt_no_diff_added, opt_no_diff_deleted,
      opt_ignore_properties, opt_properties_only,
      opt_show_copies_as_adds, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible} },
+     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible},
+    {{'N', N_("obsolete; same as --depth=files")}} },
+
   { "export", svn_cl__export, {0}, {N_(
      "Create an unversioned copy of a tree.\n"
      "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -788,7 +793,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  looked up.\n"
     )},
     {'r', 'q', 'N', opt_depth, opt_force, opt_native_eol, opt_ignore_externals,
-     opt_ignore_keywords} },
+     opt_ignore_keywords},
+    {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "help", svn_cl__help, {"?", "h"}, {N_(
      "Describe the usage of this program or its subcommands.\n"
@@ -810,7 +816,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  if --force is specified.\n"
     )},
     {'q', 'N', opt_depth, opt_autoprops, opt_force, opt_no_autoprops,
-     SVN_CL__LOG_MSG_OPTIONS, opt_no_ignore} },
+     SVN_CL__LOG_MSG_OPTIONS, opt_no_ignore},
+    {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "info", svn_cl__info, {0}, {N_(
      "Display information about a local or remote item.\n"
@@ -1341,7 +1348,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {'r', 'c', 'N', opt_depth, 'q', opt_force, opt_dry_run, opt_merge_cmd,
      opt_record_only, 'x', opt_ignore_ancestry, opt_accept, opt_reintegrate,
      opt_allow_mixed_revisions, 'v'},
-    { { opt_force, N_("force deletions even if deleted contents don't match") } }
+    { { opt_force, N_("force deletions even if deleted contents don't match") },
+      {'N', N_("obsolete; same as --depth=files")} }
   },
 
   { "mergeinfo", svn_cl__mergeinfo, {0}, {N_(
@@ -1832,7 +1840,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
     { 'u', 'v', 'N', opt_depth, 'r', 'q', opt_no_ignore, opt_incremental,
       opt_xml, opt_ignore_externals, opt_changelist},
-    {{'q', N_("don't print unversioned items")}} },
+    {{'q', N_("don't print unversioned items")},
+     {'N', N_("obsolete; same as --depth=immediates")}} },
 
   { "switch", svn_cl__switch, {"sw"}, {N_(
      "Update the working copy to a different URL within the same repository.\n"
@@ -1882,7 +1891,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      N_("allow switching to a node with no common ancestor")},
      {opt_force,
       N_("handle unversioned obstructions as changes")},
-     {opt_relocate,N_("deprecated; use 'svn relocate'")}}
+     {opt_relocate, N_("deprecated; use 'svn relocate'")},
+     {'N', N_("obsolete; same as --depth=files")}}
   },
 
   { "unlock", svn_cl__unlock, {0}, {N_(
@@ -1945,7 +1955,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
      opt_parents, opt_adds_as_modification},
     { {opt_force,
-       N_("handle unversioned obstructions as changes")} } },
+       N_("handle unversioned obstructions as changes")},
+      {'N', N_("obsolete; same as --depth=files")} } },
 
   { "upgrade", svn_cl__upgrade, {0}, {N_(
      "Upgrade the metadata storage format for a working copy.\n"
