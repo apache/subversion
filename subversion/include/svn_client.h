@@ -6761,7 +6761,7 @@ svn_client_list2(const char *path_or_url,
 
 /**
  * Similar to svn_client_list2(), but with @a recurse instead of @a depth.
- * If @a recurse is TRUE, pass #svn_depth_files for @a depth; else
+ * If @a recurse is FALSE, pass #svn_depth_immediates for @a depth; else
  * pass #svn_depth_infinity.
  *
  * @since New in 1.4.
