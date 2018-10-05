@@ -15,6 +15,13 @@ Status of 1.11.0:
 Candidate changes:
 ==================
 
+ * r1842814, r1842827, r1842829, r1842877
+   Document the obsolete '-N' option more precisely in 'svn help'.
+   Justification:
+     Improve 'svn help add' and help for '-N' option.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
