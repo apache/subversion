@@ -1318,7 +1318,7 @@ def write_changelog(args):
         # comprehension extracts the revision number, as integer, from the
         # 'svn log' output.
         int(log_message.splitlines()[0].split()[0][1:]): log_message
-        # The [1:] ignores the empty first and last element of the split().
+        # The [1:-1] ignores the empty first and last element of the split().
         for log_message in mergeinfo.split(separator_line)[1:-1]
     }
     mergeinfo = mergeinfo.splitlines()
