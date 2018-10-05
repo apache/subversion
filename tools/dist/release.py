@@ -1362,10 +1362,10 @@ def write_changelog(args):
                     # ### paragraph-oriented but we're in a per-line loop.
                     this_log_message = log_messages_dict[revision]
                     status_paragraph = this_log_message.split('\n\n')[2]
-                    logsummarysummary = \
-                        backport.status.StatusEntry(status_paragraph).logsummarysummary()
+                    logsummary = \
+                        backport.status.StatusEntry(status_paragraph).logsummary
                     add_to_changes_dict(changes_dict, None, None,
-                                        logsummarysummary, revision)
+                                        ' '.join(logsummary), revision)
                 else:
                     add_to_changes_dict(changes_dict, None, None,
                                         unlabeled_summary, revision)
