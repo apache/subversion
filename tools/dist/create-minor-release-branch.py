@@ -39,6 +39,9 @@ repos = 'https://svn.apache.org/repos/asf/subversion'
 secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 buildbot_repos = 'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster'
 
+# Parameters
+dry_run = False
+
 # Local working copies
 base_dir = None  # set by main()
 
@@ -72,15 +75,21 @@ def run(cmd, dry_run=False):
     if not dry_run:
         stdout = subprocess.check_output(cmd)
         print(stdout)
+    else:
+        print('  ## dry-run; not executed')
 
 def run_svn(cmd, dry_run=False):
     run(['svn'] + cmd, dry_run)
 
 def svn_commit(cmd):
-    run_svn(['commit'] + cmd, dry_run=True)
+    run_svn(['commit'] + cmd, dry_run=dry_run)
 
-def svn_checkout(*args):
-    args = ['checkout'] + list(args) + ['--revision={2017-12-01}']
+def svn_copy_branch(src, dst, message):
+    args = ['copy', src, dst, '-m', message]
+    run_svn(args, dry_run=dry_run)
+
+def svn_checkout(url, wc, *args):
+    args = ['checkout', url, wc] + list(args)
     run_svn(args)
 
 #----------------------------------------------------------------------
@@ -100,18 +109,19 @@ def prepend_file(path, text):
     open(path, 'w').write(text + original)
 
 #----------------------------------------------------------------------
-def make_release_branch(ver):
-    run_svn(['copy', get_trunk_url(), get_branch_url(ver),
-             '-m', 'Create the ' + ver.branch + '.x release branch.'],
-             dry_run=True)
+def make_release_branch(ver, revnum):
+    svn_copy_branch(get_trunk_url() + '@' + (str(revnum) if revnum else ''),
+                    get_branch_url(ver),
+                    'Create the ' + ver.branch + '.x release branch.')
 
 #----------------------------------------------------------------------
-def update_minor_ver_in_trunk(ver):
+def update_minor_ver_in_trunk(ver, revnum):
     """Change the minor version in trunk to the next (future) minor version.
     """
     trunk_wc = get_trunk_wc_path()
     trunk_url = get_trunk_url()
-    svn_checkout(trunk_url, trunk_wc)
+    svn_checkout(trunk_url + '@' + (str(revnum) if revnum else ''),
+                 trunk_wc)
 
     prev_ver = Version('1.%d.0' % (ver.minor - 1,))
     next_ver = Version('1.%d.0' % (ver.minor + 1,))
@@ -242,14 +252,12 @@ Subversion: start monitoring the %s branch.
     svn_commit(commit_paths + ['-m', log_msg])
 
 #----------------------------------------------------------------------
-def steps(args):
-    ver = Version('1.10.0')
-
-    make_release_branch(ver)
-    update_minor_ver_in_trunk(ver)
-    create_status_file_on_branch(ver)
-    update_backport_bot(ver)
-    update_buildbot_config(ver)
+def create_release_branch(args):
+    make_release_branch(args.version, args.revnum)
+    update_minor_ver_in_trunk(args.version, args.revnum)
+    create_status_file_on_branch(args.version)
+    update_backport_bot(args.version)
+    update_buildbot_config(args.version)
 
 
 #----------------------------------------------------------------------
@@ -261,24 +269,37 @@ def main():
     # Setup our main parser
     parser = argparse.ArgumentParser(
                             description='Create an Apache Subversion release branch.')
-    parser.add_argument('--verbose', action='store_true', default=False,
+    subparsers = parser.add_subparsers(title='subcommands')
+
+    # Setup the parser for the create-release-branch subcommand
+    subparser = subparsers.add_parser('create-release-branch',
+                    help='''Create a minor release branch: branch from trunk,
+                            update version numbers on trunk, create status
+                            file on branch, update backport bot,
+                            update buildbot config.''')
+    subparser.set_defaults(func=create_release_branch)
+    subparser.add_argument('version', type=Version,
+                    help='''A version number to indicate the branch, such as
+                            '1.7.0' (the '.0' is required).''')
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
+                           nargs='?', default=None,
+                    help='''The trunk revision number to base the branch on.
+                            Default is HEAD.''')
+    subparser.add_argument('--dry-run', action='store_true', default=False,
+                   help='Avoid committing any changes to repositories.')
+    subparser.add_argument('--verbose', action='store_true', default=False,
                    help='Increase output verbosity')
-    parser.add_argument('--base-dir', default=os.getcwd(),
+    subparser.add_argument('--base-dir', default=os.getcwd(),
                    help='''The directory in which to create needed files and
                            folders.  The default is the current working
                            directory.''')
-    subparsers = parser.add_subparsers(title='subcommands')
-
-    # Setup the parser for the build-env subcommand
-    subparser = subparsers.add_parser('steps',
-                    help='''Run the release-branch-creation steps.''')
-    subparser.set_defaults(func=steps)
 
     # Parse the arguments
     args = parser.parse_args()
 
-    global base_dir
+    global base_dir, dry_run
     base_dir = args.base_dir
+    dry_run = args.dry_run
 
     # Set up logging
     logger = logging.getLogger()
