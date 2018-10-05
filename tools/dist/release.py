@@ -1358,8 +1358,6 @@ def write_changelog(args):
                     #      message.
                     
                     # 2. Parse the STATUS entry
-                    # ### This is a little roundabout since backport.status is
-                    # ### paragraph-oriented but we're in a per-line loop.
                     this_log_message = log_messages_dict[revision]
                     status_paragraph = this_log_message.split('\n\n')[2]
                     logsummary = \
