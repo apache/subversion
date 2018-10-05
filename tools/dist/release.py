@@ -53,6 +53,8 @@ import subprocess
 import argparse       # standard in Python 2.7
 import io
 
+import backport.status
+
 # Find ezt, using Subversion's copy, if there isn't one on the system.
 try:
     import ezt
@@ -1306,15 +1308,29 @@ def write_changelog(args):
     branch = secure_repos + '/' + args.branch
     previous = secure_repos + '/' + args.previous
     include_unlabeled = args.include_unlabeled
+    separator_line = ('-' * 72) + '\n'
     
     mergeinfo = subprocess.check_output(['svn', 'mergeinfo', '--show-revs',
-                    'eligible', '--log', branch, previous]).splitlines()
+                    'eligible', '--log', branch, previous])
+    log_messages_dict = {
+        # This is a dictionary mapping revision numbers to their respective
+        # log messages.  The expression in the "key:" part of the dict
+        # comprehension extracts the revision number, as integer, from the
+        # 'svn log' output.
+        int(log_message.splitlines()[0].split()[0][1:]): log_message
+        # The [1:] ignores the empty first and last element of the split().
+        for log_message in mergeinfo.split(separator_line)[1:-1]
+    }
+    mergeinfo = mergeinfo.splitlines()
     
     separator_pattern = re.compile('^-{72}$')
     revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
     changes_prefix_pattern = re.compile('^\[(U|D)?:?([^\]]+)?\](.+)$')
     changes_suffix_pattern = re.compile('^(.+)\[(U|D)?:?([^\]]+)?\]$')
-    
+    # TODO: push this into backport.status as a library function
+    auto_merge_pattern = \
+        re.compile(r'^Merge (r\d+,? |the r\d+ group |the \S+ branch:)')
+
     changes_dict = dict()  # audience -> (section -> (change -> set(revision)))
     revision = -1
     got_firstline = False
@@ -1330,8 +1346,29 @@ def write_changelog(args):
             # If there's an unlabeled summary from a previous section, and
             # include_unlabeled is True, put it into uncategorized_changes.
             if include_unlabeled and unlabeled_summary and not changes_ignore:
-                add_to_changes_dict(changes_dict, None, None,
-                                    unlabeled_summary, revision)
+                if auto_merge_pattern.match(unlabeled_summary):
+                    # 1. Parse revision numbers from the first line
+                    merged_revisions = [
+                        int(x) for x in
+                        re.compile(r'(?<=\br)\d+\b').findall(unlabeled_summary)
+                    ]
+                    # TODO pass each revnum in MERGED_REVISIONS through this
+                    #      logic, in order to extract CHANGES_PREFIX_PATTERN
+                    #      and CHANGES_SUFFIX_PATTERN lines from the trunk log
+                    #      message.
+                    
+                    # 2. Parse the STATUS entry
+                    # ### This is a little roundabout since backport.status is
+                    # ### paragraph-oriented but we're in a per-line loop.
+                    this_log_message = log_messages_dict[revision]
+                    status_paragraph = this_log_message.split('\n\n')[2]
+                    logsummarysummary = \
+                        backport.status.StatusEntry(status_paragraph).logsummarysummary()
+                    add_to_changes_dict(changes_dict, None, None,
+                                        logsummarysummary, revision)
+                else:
+                    add_to_changes_dict(changes_dict, None, None,
+                                        unlabeled_summary, revision)
             revision = -1
             got_firstline = False
             unlabeled_summary = None
