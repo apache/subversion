@@ -543,7 +543,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  The 'svn add' command is only necessary for files and directories that are\n"
      "  not yet under version control. Unversioned files and directories can be\n"
      "  identified with 'svn status' (see 'svn help status').\n"
-     "\n"
+     "\n"), N_(
      "  The effects of 'svn add' can be undone with 'svn revert' before the addition\n"
      "  has been committed. Once committed, a path can be removed from version\n"
      "  control with 'svn delete', and in some circumstances by running a reverse-\n"
