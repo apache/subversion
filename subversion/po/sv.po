@@ -110,8 +110,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2018-09-19 11:06+0200\n"
-"PO-Revision-Date: 2018-09-19 13:05+0200\n"
+"POT-Creation-Date: 2018-10-06 16:54+0200\n"
+"PO-Revision-Date: 2018-10-06 17:37+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Swedish <dev@subversion.apache.org>\n"
 "Language: sv\n"
@@ -1803,9 +1803,9 @@ msgid "Standard properties can't be set explicitly as revision properties"
 msgstr "Standardegenskaper kan inte sättas direkt som revisionsegenskaper"
 
 #: ../libsvn_client/conflicts.c:734 ../libsvn_client/conflicts.c:1100
-#: ../libsvn_client/conflicts.c:1693 ../libsvn_client/conflicts.c:4767
-#: ../libsvn_client/conflicts.c:5268 ../libsvn_client/conflicts.c:5290
-#: ../libsvn_client/conflicts.c:5342 ../libsvn_client/conflicts.c:5815
+#: ../libsvn_client/conflicts.c:1693 ../libsvn_client/conflicts.c:4985
+#: ../libsvn_client/conflicts.c:5359 ../libsvn_client/conflicts.c:5381
+#: ../libsvn_client/conflicts.c:5433 ../libsvn_client/conflicts.c:5906
 msgid "unknown author"
 msgstr "okänd författare"
 
@@ -1979,24 +1979,24 @@ msgstr ""
 "En katalog hade flyttats hit i arbetskopian från\n"
 "\"%s\"."
 
-#: ../libsvn_client/conflicts.c:2901
+#: ../libsvn_client/conflicts.c:3119
 msgid "An item containing uncommitted changes was found in the working copy."
 msgstr "Ett objekt med oarkiverade ändringar hittades i arbetskopian."
 
-#: ../libsvn_client/conflicts.c:2905
+#: ../libsvn_client/conflicts.c:3123
 msgid "An item which already occupies this path was found in the working copy."
 msgstr "Ett objekt som redan upptar denna sökväg hittades i arbetskopian."
 
-#: ../libsvn_client/conflicts.c:2909
+#: ../libsvn_client/conflicts.c:3127
 msgid "A deleted item was found in the working copy."
 msgstr "Ett raderat objekt hittades i arbetskopian."
 
-#: ../libsvn_client/conflicts.c:2914
+#: ../libsvn_client/conflicts.c:3132
 msgid "No such file or directory was found in the working copy."
 msgstr "Ingen sådan fil eller katalog hittades i arbetskopian."
 
 #. ### display deleted revision
-#: ../libsvn_client/conflicts.c:2919
+#: ../libsvn_client/conflicts.c:3137
 msgid ""
 "No such file or directory was found in the merge target working copy.\n"
 "The item may have been deleted or moved away in the repository's history."
@@ -2004,23 +2004,23 @@ msgstr ""
 "Ingen sådan fil eller katalog hittades i sammanslagningsmålets arbetskopia.\n"
 "Objektet kan ha raderats eller flyttats bort i arkivets historia."
 
-#: ../libsvn_client/conflicts.c:2926
+#: ../libsvn_client/conflicts.c:3144
 msgid "An unversioned item was found in the working copy."
 msgstr "Ett icke versionshanterat objekt hittades i arbetskopian."
 
-#: ../libsvn_client/conflicts.c:2931
+#: ../libsvn_client/conflicts.c:3149
 msgid "An item scheduled to be added to the repository in the next commit was found in the working copy."
 msgstr "Ett objekt schemalagt för att läggas till i nästa arkivering hittades i arbetskopian."
 
-#: ../libsvn_client/conflicts.c:2936
+#: ../libsvn_client/conflicts.c:3154
 msgid "The item in the working copy had been moved away at the time this conflict was recorded."
 msgstr "Objektet i arbetskopian hade flyttas bort när denna konflikt registrerades."
 
-#: ../libsvn_client/conflicts.c:2940
+#: ../libsvn_client/conflicts.c:3158
 msgid "An item had been moved here in the working copy at the time this conflict was recorded."
 msgstr "Ett objekt hade flyttats hit i arbetskopian när denna konflikt registrerades."
 
-#: ../libsvn_client/conflicts.c:2968
+#: ../libsvn_client/conflicts.c:3186
 #, c-format
 msgid ""
 "%s\n"
@@ -2029,41 +2029,41 @@ msgstr ""
 "%s\n"
 "Och sedan flyttats bort till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3033
+#: ../libsvn_client/conflicts.c:3251
 msgid "No such file or directory was found in the merge target working copy.\n"
 msgstr "Ingen sådan fil eller katalog hittades i sammanslagningsmålets arbetskopia.\n"
 
-#: ../libsvn_client/conflicts.c:3042
+#: ../libsvn_client/conflicts.c:3260
 #, c-format
 msgid "%sThe file was moved to '^/%s' in r%ld by %s."
 msgstr "%sFilen flyttades till \"^/%s\" i r%ld av %s."
 
-#: ../libsvn_client/conflicts.c:3048
+#: ../libsvn_client/conflicts.c:3266
 #, c-format
 msgid "%sThe directory was moved to '^/%s' in r%ld by %s."
 msgstr "%sKatalogen flyttades till \"^/%s\" i r%ld av %s."
 
-#: ../libsvn_client/conflicts.c:3055
+#: ../libsvn_client/conflicts.c:3273
 #, c-format
 msgid "%sThe item was moved to '^/%s' in r%ld by %s."
 msgstr "%sObjektet flyttades till \"^/%s\" i r%ld av %s."
 
-#: ../libsvn_client/conflicts.c:3071
+#: ../libsvn_client/conflicts.c:3289
 #, c-format
 msgid "%sThe file '^/%s' was moved to '^/%s' in r%ld by %s."
 msgstr "%sFilen \"^/%s\" flyttades till \"^/%s\" i r%ld av %s."
 
-#: ../libsvn_client/conflicts.c:3079
+#: ../libsvn_client/conflicts.c:3297
 #, c-format
 msgid "%sThe directory '^/%s' was moved to '^/%s' in r%ld by %s."
 msgstr "%sKatalogen \"^/%s\" flyttades till \"^/%s\" i r%ld av %s."
 
-#: ../libsvn_client/conflicts.c:3087
+#: ../libsvn_client/conflicts.c:3305
 #, c-format
 msgid "%sThe item '^/%s' was moved to '^/%s' in r%ld by %s."
 msgstr "%sObjektet \"^/%s\" flyttades till \"^/%s\" i r%ld av %s."
 
-#: ../libsvn_client/conflicts.c:3101
+#: ../libsvn_client/conflicts.c:3319
 #, c-format
 msgid ""
 "No such file or directory was found in the merge target working copy.\n"
@@ -2072,229 +2072,229 @@ msgstr ""
 "Ingen sådan fil eller katalog hittades i sammanslagningsmålets arbetskopia.\n"
 "\"^/%s\" raderades i r%ld av %s."
 
-#: ../libsvn_client/conflicts.c:3125
+#: ../libsvn_client/conflicts.c:3343
 msgid "An update operation tried to edit a file."
 msgstr "En uppdatering försökte ändra en fil."
 
-#: ../libsvn_client/conflicts.c:3127
+#: ../libsvn_client/conflicts.c:3345
 msgid "An update operation tried to add a file."
 msgstr "En uppdatering försökte lägga till en fil."
 
-#: ../libsvn_client/conflicts.c:3129
+#: ../libsvn_client/conflicts.c:3347
 msgid "An update operation tried to delete or move a file."
 msgstr "En uppdatering försökte radera eller flytta en fil."
 
-#: ../libsvn_client/conflicts.c:3132
+#: ../libsvn_client/conflicts.c:3350
 msgid "An update operation tried to replace a file."
 msgstr "En uppdatering försökte ersätta en fil."
 
-#: ../libsvn_client/conflicts.c:3140
+#: ../libsvn_client/conflicts.c:3358
 msgid "A switch operation tried to edit a file."
 msgstr "En växling försökte ändra en fil."
 
-#: ../libsvn_client/conflicts.c:3142
+#: ../libsvn_client/conflicts.c:3360
 msgid "A switch operation tried to add a file."
 msgstr "En växling försökte lägga till en fil."
 
-#: ../libsvn_client/conflicts.c:3144
+#: ../libsvn_client/conflicts.c:3362
 msgid "A switch operation tried to delete or move a file."
 msgstr "En växling försökte radera eller flytta en fil."
 
-#: ../libsvn_client/conflicts.c:3147
+#: ../libsvn_client/conflicts.c:3365
 msgid "A switch operation tried to replace a file."
 msgstr "En växling försökte ersätta en fil."
 
-#: ../libsvn_client/conflicts.c:3155
+#: ../libsvn_client/conflicts.c:3373
 msgid "A merge operation tried to edit a file."
 msgstr "En sammanslagning försökte ändra en fil."
 
-#: ../libsvn_client/conflicts.c:3157
+#: ../libsvn_client/conflicts.c:3375
 msgid "A merge operation tried to add a file."
 msgstr "En sammanslagning försökte lägga till en fil."
 
-#: ../libsvn_client/conflicts.c:3159
+#: ../libsvn_client/conflicts.c:3377
 msgid "A merge operation tried to delete or move a file."
 msgstr "En sammanslagning försökte radera eller flytta en fil."
 
-#: ../libsvn_client/conflicts.c:3162
+#: ../libsvn_client/conflicts.c:3380
 msgid "A merge operation tried to replace a file."
 msgstr "En sammanslagning försökte ersätta en fil."
 
-#: ../libsvn_client/conflicts.c:3172
+#: ../libsvn_client/conflicts.c:3390
 msgid "An update operation tried to change a directory."
 msgstr "En uppdatering försökte ändra en katalog."
 
-#: ../libsvn_client/conflicts.c:3174
+#: ../libsvn_client/conflicts.c:3392
 msgid "An update operation tried to add a directory."
 msgstr "En uppdatering försökte lägga till en katalog."
 
-#: ../libsvn_client/conflicts.c:3176
+#: ../libsvn_client/conflicts.c:3394
 msgid "An update operation tried to delete or move a directory."
 msgstr "En uppdatering försökte radera eller flytta en katalog."
 
-#: ../libsvn_client/conflicts.c:3179
+#: ../libsvn_client/conflicts.c:3397
 msgid "An update operation tried to replace a directory."
 msgstr "En uppdatering försökte ersätta en katalog."
 
-#: ../libsvn_client/conflicts.c:3187
+#: ../libsvn_client/conflicts.c:3405
 msgid "A switch operation tried to edit a directory."
 msgstr "En växling försökte ändra en katalog."
 
-#: ../libsvn_client/conflicts.c:3189
+#: ../libsvn_client/conflicts.c:3407
 msgid "A switch operation tried to add a directory."
 msgstr "En växling försökte lägga till en katalog."
 
-#: ../libsvn_client/conflicts.c:3191
+#: ../libsvn_client/conflicts.c:3409
 msgid "A switch operation tried to delete or move a directory."
 msgstr "En växling försökte radera eller flytta en katalog."
 
-#: ../libsvn_client/conflicts.c:3194
+#: ../libsvn_client/conflicts.c:3412
 msgid "A switch operation tried to replace a directory."
 msgstr "En växling försökte ersätta en katalog."
 
-#: ../libsvn_client/conflicts.c:3202
+#: ../libsvn_client/conflicts.c:3420
 msgid "A merge operation tried to edit a directory."
 msgstr "En sammanslagning försökte ändra en katalog."
 
-#: ../libsvn_client/conflicts.c:3204
+#: ../libsvn_client/conflicts.c:3422
 msgid "A merge operation tried to add a directory."
 msgstr "En sammanslagning försökte lägga till en katalog."
 
-#: ../libsvn_client/conflicts.c:3206
+#: ../libsvn_client/conflicts.c:3424
 msgid "A merge operation tried to delete or move a directory."
 msgstr "En sammanslagning försökte radera eller flytta en katalog."
 
-#: ../libsvn_client/conflicts.c:3209
+#: ../libsvn_client/conflicts.c:3427
 msgid "A merge operation tried to replace a directory."
 msgstr "En sammanslagning försökte ersätta en katalog."
 
-#: ../libsvn_client/conflicts.c:3220
+#: ../libsvn_client/conflicts.c:3438
 msgid "An update operation tried to edit an item."
 msgstr "En uppdatering försökte ändra ett objekt."
 
-#: ../libsvn_client/conflicts.c:3222
+#: ../libsvn_client/conflicts.c:3440
 msgid "An update operation tried to add an item."
 msgstr "En uppdatering försökte lägga till ett objekt."
 
-#: ../libsvn_client/conflicts.c:3224
+#: ../libsvn_client/conflicts.c:3442
 msgid "An update operation tried to delete or move an item."
 msgstr "En uppdatering försökte radera eller flytta ett objekt."
 
-#: ../libsvn_client/conflicts.c:3227
+#: ../libsvn_client/conflicts.c:3445
 msgid "An update operation tried to replace an item."
 msgstr "En uppdatering försökte ersätta ett objekt."
 
-#: ../libsvn_client/conflicts.c:3235
+#: ../libsvn_client/conflicts.c:3453
 msgid "A switch operation tried to edit an item."
 msgstr "En växling försökte ändra ett objekt."
 
-#: ../libsvn_client/conflicts.c:3237
+#: ../libsvn_client/conflicts.c:3455
 msgid "A switch operation tried to add an item."
 msgstr "En växling försökte lägga till ett objekt."
 
-#: ../libsvn_client/conflicts.c:3239
+#: ../libsvn_client/conflicts.c:3457
 msgid "A switch operation tried to delete or move an item."
 msgstr "En växling försökte radera eller flytta ett objekt."
 
-#: ../libsvn_client/conflicts.c:3242
+#: ../libsvn_client/conflicts.c:3460
 msgid "A switch operation tried to replace an item."
 msgstr "En växlig försökte ersätta ett objekt."
 
-#: ../libsvn_client/conflicts.c:3250
+#: ../libsvn_client/conflicts.c:3468
 msgid "A merge operation tried to edit an item."
 msgstr "En sammanslagning försökte ändra ett objekt."
 
-#: ../libsvn_client/conflicts.c:3252
+#: ../libsvn_client/conflicts.c:3470
 msgid "A merge operation tried to add an item."
 msgstr "En sammanslagning försökte lägga till ett objekt."
 
-#: ../libsvn_client/conflicts.c:3254
+#: ../libsvn_client/conflicts.c:3472
 msgid "A merge operation tried to delete or move an item."
 msgstr "En sammanslagning försökte radera eller flytta ett objekt."
 
-#: ../libsvn_client/conflicts.c:3257
+#: ../libsvn_client/conflicts.c:3475
 msgid "A merge operation tried to replace an item."
 msgstr "En sammanslagning försökte ersätta ett objekt."
 
-#: ../libsvn_client/conflicts.c:3273 ../svn/cl-conflicts.c:212
+#: ../libsvn_client/conflicts.c:3491 ../svn/cl-conflicts.c:212
 msgid "upon update"
 msgstr "vid uppdatering"
 
-#: ../libsvn_client/conflicts.c:3274 ../svn/cl-conflicts.c:213
+#: ../libsvn_client/conflicts.c:3492 ../svn/cl-conflicts.c:213
 msgid "upon switch"
 msgstr "vid växling"
 
-#: ../libsvn_client/conflicts.c:3275 ../svn/cl-conflicts.c:214
+#: ../libsvn_client/conflicts.c:3493 ../svn/cl-conflicts.c:214
 msgid "upon merge"
 msgstr "vid sammanslagning"
 
-#: ../libsvn_client/conflicts.c:3276 ../svn/cl-conflicts.c:215
+#: ../libsvn_client/conflicts.c:3494 ../svn/cl-conflicts.c:215
 msgid "upon none"
 msgstr "vid ingenting"
 
-#: ../libsvn_client/conflicts.c:3295 ../svn/cl-conflicts.c:127
+#: ../libsvn_client/conflicts.c:3513 ../svn/cl-conflicts.c:127
 #: ../svn/cl-conflicts.c:234
 msgid "local edit"
 msgstr "lokal ändring"
 
-#: ../libsvn_client/conflicts.c:3298 ../svn/cl-conflicts.c:140
+#: ../libsvn_client/conflicts.c:3516 ../svn/cl-conflicts.c:140
 #: ../svn/cl-conflicts.c:237
 msgid "local add"
 msgstr "lokalt tillägg"
 
-#: ../libsvn_client/conflicts.c:3301 ../svn/cl-conflicts.c:131
+#: ../libsvn_client/conflicts.c:3519 ../svn/cl-conflicts.c:131
 #: ../svn/cl-conflicts.c:240
 msgid "local delete"
 msgstr "lokal radering"
 
-#: ../libsvn_client/conflicts.c:3304 ../svn/cl-conflicts.c:129
+#: ../libsvn_client/conflicts.c:3522 ../svn/cl-conflicts.c:129
 #: ../svn/cl-conflicts.c:243
 msgid "local obstruction"
 msgstr "lokal blockering"
 
-#: ../libsvn_client/conflicts.c:3308 ../svn/cl-conflicts.c:247
+#: ../libsvn_client/conflicts.c:3526 ../svn/cl-conflicts.c:247
 #, c-format
 msgid "local %s"
 msgstr "lokal %s"
 
-#: ../libsvn_client/conflicts.c:3317 ../svn/cl-conflicts.c:192
+#: ../libsvn_client/conflicts.c:3535 ../svn/cl-conflicts.c:192
 #: ../svn/cl-conflicts.c:256
 msgid "incoming edit"
 msgstr "inkommande ändring"
 
-#: ../libsvn_client/conflicts.c:3320 ../svn/cl-conflicts.c:194
+#: ../libsvn_client/conflicts.c:3538 ../svn/cl-conflicts.c:194
 #: ../svn/cl-conflicts.c:259
 msgid "incoming add"
 msgstr "inkommande tillägg"
 
-#: ../libsvn_client/conflicts.c:3323 ../svn/cl-conflicts.c:262
+#: ../libsvn_client/conflicts.c:3541 ../svn/cl-conflicts.c:262
 msgid "incoming delete"
 msgstr "inkommande radering"
 
-#: ../libsvn_client/conflicts.c:3327 ../svn/cl-conflicts.c:266
+#: ../libsvn_client/conflicts.c:3545 ../svn/cl-conflicts.c:266
 #, c-format
 msgid "incoming %s"
 msgstr "inkommande %s"
 
-#: ../libsvn_client/conflicts.c:3335 ../svn/cl-conflicts.c:273
+#: ../libsvn_client/conflicts.c:3553 ../svn/cl-conflicts.c:273
 #: ../svn/cl-conflicts.c:326
 #, c-format
 msgid "%s, %s %s"
 msgstr "%s, %s %s"
 
-#: ../libsvn_client/conflicts.c:3394
+#: ../libsvn_client/conflicts.c:3612
 #, c-format
 msgid "incoming %s %s"
 msgstr "inkommande %s %s"
 
-#: ../libsvn_client/conflicts.c:3497
+#: ../libsvn_client/conflicts.c:3715
 #, c-format
 msgid "Directory updated from r%ld to r%ld was replaced with a file by %s in r%ld."
 msgstr "Katalog uppdaterad från r%ld till r%ld ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3508 ../libsvn_client/conflicts.c:3588
-#: ../libsvn_client/conflicts.c:3842 ../libsvn_client/conflicts.c:3929
-#: ../libsvn_client/conflicts.c:4229 ../libsvn_client/conflicts.c:4297
+#: ../libsvn_client/conflicts.c:3726 ../libsvn_client/conflicts.c:3806
+#: ../libsvn_client/conflicts.c:4060 ../libsvn_client/conflicts.c:4147
+#: ../libsvn_client/conflicts.c:4447 ../libsvn_client/conflicts.c:4515
 #, c-format
 msgid ""
 "%s\n"
@@ -2303,14 +2303,14 @@ msgstr ""
 "%s\n"
 "Den ersatta katalogen flyttades till \"^/%s\"."
 
-#: ../libsvn_client/conflicts.c:3523
+#: ../libsvn_client/conflicts.c:3741
 #, c-format
 msgid "File updated from r%ld to r%ld was replaced with a file from another line of history by %s in r%ld."
 msgstr "Fil uppdaterad från r%ld till r%ld ersattes av en fil från en annan historielinje av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3535 ../libsvn_client/conflicts.c:3614
-#: ../libsvn_client/conflicts.c:3871 ../libsvn_client/conflicts.c:3957
-#: ../libsvn_client/conflicts.c:4258 ../libsvn_client/conflicts.c:4325
+#: ../libsvn_client/conflicts.c:3753 ../libsvn_client/conflicts.c:3832
+#: ../libsvn_client/conflicts.c:4089 ../libsvn_client/conflicts.c:4175
+#: ../libsvn_client/conflicts.c:4476 ../libsvn_client/conflicts.c:4543
 #, c-format
 msgid ""
 "%s\n"
@@ -2319,14 +2319,14 @@ msgstr ""
 "%s\n"
 "Den ersatta filen flyttades till \"^/%s\"."
 
-#: ../libsvn_client/conflicts.c:3549
+#: ../libsvn_client/conflicts.c:3767
 #, c-format
 msgid "Item updated from r%ld to r%ld was replaced with a file by %s in r%ld."
 msgstr "Objekt uppdaterat från r%ld till r%ld ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3559 ../libsvn_client/conflicts.c:3638
-#: ../libsvn_client/conflicts.c:3898 ../libsvn_client/conflicts.c:3984
-#: ../libsvn_client/conflicts.c:4352
+#: ../libsvn_client/conflicts.c:3777 ../libsvn_client/conflicts.c:3856
+#: ../libsvn_client/conflicts.c:4116 ../libsvn_client/conflicts.c:4202
+#: ../libsvn_client/conflicts.c:4570
 #, c-format
 msgid ""
 "%s\n"
@@ -2335,97 +2335,97 @@ msgstr ""
 "%s\n"
 "Det ersatta objektet flyttades till \"^/%s\"."
 
-#: ../libsvn_client/conflicts.c:3576
+#: ../libsvn_client/conflicts.c:3794
 #, c-format
 msgid "Directory updated from r%ld to r%ld was replaced with a directory from another line of history by %s in r%ld."
 msgstr "Katalog uppdaterad från r%ld till r%ld ersattes av en katalog från en annan historielinje av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3603
+#: ../libsvn_client/conflicts.c:3821
 #, c-format
 msgid "File updated from r%ld to r%ld was replaced with a directory by %s in r%ld."
 msgstr "Fil uppdaterad från r%ld till r%ld ersattes av en katalog av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3628
+#: ../libsvn_client/conflicts.c:3846
 #, c-format
 msgid "Item updated from r%ld to r%ld was replaced by %s in r%ld."
 msgstr "Objekt uppdaterat från r%ld till r%ld ersattes av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3661
+#: ../libsvn_client/conflicts.c:3879
 #, c-format
 msgid "Directory updated from r%ld to r%ld was moved to '^/%s' by %s in r%ld."
 msgstr "Katalog uppdaterad från r%ld till r%ld flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3673
+#: ../libsvn_client/conflicts.c:3891
 #, c-format
 msgid "Directory updated from r%ld to r%ld was deleted by %s in r%ld."
 msgstr "Katalog uppdaterad från r%ld till r%ld raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3689
+#: ../libsvn_client/conflicts.c:3907
 #, c-format
 msgid "File updated from r%ld to r%ld was moved to '^/%s' by %s in r%ld."
 msgstr "Fil uppdaterad från r%ld till r%ld flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3700
+#: ../libsvn_client/conflicts.c:3918
 #, c-format
 msgid "File updated from r%ld to r%ld was deleted by %s in r%ld."
 msgstr "Fil uppdaterad från r%ld till r%ld raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3714
+#: ../libsvn_client/conflicts.c:3932
 #, c-format
 msgid "Item updated from r%ld to r%ld was moved to '^/%s' by %s in r%ld."
 msgstr "Objekt uppdaterat från r%ld till r%ld flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3725
+#: ../libsvn_client/conflicts.c:3943
 #, c-format
 msgid "Item updated from r%ld to r%ld was deleted by %s in r%ld."
 msgstr "Objekt uppdaterat från r%ld till r%ld raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3745
+#: ../libsvn_client/conflicts.c:3963
 #, c-format
 msgid "Directory updated backwards from r%ld to r%ld was a file before the replacement made by %s in r%ld."
 msgstr "Katalog uppdaterad bakåt från r%ld till r%ld var en fil före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3752
+#: ../libsvn_client/conflicts.c:3970
 #, c-format
 msgid "File updated backwards from r%ld to r%ld was a file from another line of history before the replacement made by %s in r%ld."
 msgstr "Fil uppdaterad bakåt från r%ld till r%ld var en fil från en annan historielinje före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3759
+#: ../libsvn_client/conflicts.c:3977
 #, c-format
 msgid "Item updated backwards from r%ld to r%ld was replaced with a file by %s in r%ld."
 msgstr "Objekt uppdaterat bakåt från r%ld till r%ld ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3768
+#: ../libsvn_client/conflicts.c:3986
 #, c-format
 msgid "Directory updated backwards from r%ld to r%ld was a directory from another line of history before the replacement made by %s in r%ld."
 msgstr "Katalog uppdaterad bakåt från r%ld till r%ld var en katalog från en annan historielinje före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3776
+#: ../libsvn_client/conflicts.c:3994
 #, c-format
 msgid "File updated backwards from r%ld to r%ld was a directory before the replacement made by %s in r%ld."
 msgstr "Fil uppdaterad bakåt från r%ld till r%ld var en katalog före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3782
+#: ../libsvn_client/conflicts.c:4000
 #, c-format
 msgid "Item updated backwards from r%ld to r%ld was replaced with a directory by %s in r%ld."
 msgstr "Objekt uppdaterat bakåt från r%ld till r%ld ersattes av en katalog av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3791
+#: ../libsvn_client/conflicts.c:4009
 #, c-format
 msgid "Directory updated backwards from r%ld to r%ld did not exist before it was added by %s in r%ld."
 msgstr "Katalog uppdaterad bakåt från r%ld till r%ld fanns inte innan den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3798
+#: ../libsvn_client/conflicts.c:4016
 #, c-format
 msgid "File updated backwards from r%ld to r%ld did not exist before it was added by %s in r%ld."
 msgstr "Fil uppdaterad bakåt från r%ld till r%ld fanns inte innan den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3804
+#: ../libsvn_client/conflicts.c:4022
 #, c-format
 msgid "Item updated backwards from r%ld to r%ld did not exist before it was added by %s in r%ld."
 msgstr "Objekt uppdaterat bakåt från r%ld till r%ld fanns inte innan det lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3829
+#: ../libsvn_client/conflicts.c:4047
 #, c-format
 msgid ""
 "Directory switched from\n"
@@ -2440,7 +2440,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3857
+#: ../libsvn_client/conflicts.c:4075
 #, c-format
 msgid ""
 "File switched from\n"
@@ -2455,7 +2455,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en fil från en annan historielinje av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3885 ../libsvn_client/conflicts.c:4128
+#: ../libsvn_client/conflicts.c:4103 ../libsvn_client/conflicts.c:4346
 #, c-format
 msgid ""
 "Item switched from\n"
@@ -2470,7 +2470,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3915
+#: ../libsvn_client/conflicts.c:4133
 #, c-format
 msgid ""
 "Directory switched from\n"
@@ -2485,7 +2485,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en katalog från en annan historielinje av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3944
+#: ../libsvn_client/conflicts.c:4162
 #, c-format
 msgid ""
 "File switched from\n"
@@ -2500,7 +2500,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en katalog av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:3971 ../libsvn_client/conflicts.c:4158
+#: ../libsvn_client/conflicts.c:4189 ../libsvn_client/conflicts.c:4376
 #, c-format
 msgid ""
 "Item switched from\n"
@@ -2515,7 +2515,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en katalog av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4007
+#: ../libsvn_client/conflicts.c:4225
 #, c-format
 msgid ""
 "Directory switched from\n"
@@ -2530,7 +2530,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4021
+#: ../libsvn_client/conflicts.c:4239
 #, c-format
 msgid ""
 "Directory switched from\n"
@@ -2545,7 +2545,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4039
+#: ../libsvn_client/conflicts.c:4257
 #, c-format
 msgid ""
 "File switched from\n"
@@ -2560,7 +2560,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4053
+#: ../libsvn_client/conflicts.c:4271
 #, c-format
 msgid ""
 "File switched from\n"
@@ -2575,7 +2575,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4070
+#: ../libsvn_client/conflicts.c:4288
 #, c-format
 msgid ""
 "Item switched from\n"
@@ -2590,7 +2590,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4084
+#: ../libsvn_client/conflicts.c:4302
 #, c-format
 msgid ""
 "Item switched from\n"
@@ -2605,7 +2605,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4109 ../libsvn_client/conflicts.c:4149
+#: ../libsvn_client/conflicts.c:4327 ../libsvn_client/conflicts.c:4367
 #, c-format
 msgid ""
 "Directory switched from\n"
@@ -2620,7 +2620,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "var en fil före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4119
+#: ../libsvn_client/conflicts.c:4337
 #, c-format
 msgid ""
 "File switched from\n"
@@ -2635,7 +2635,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "var en fil från en annan historielinje före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4139
+#: ../libsvn_client/conflicts.c:4357
 #, c-format
 msgid ""
 "Directory switched from\n"
@@ -2650,7 +2650,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "var en katalog från en annan historielinje före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4169
+#: ../libsvn_client/conflicts.c:4387
 #, c-format
 msgid ""
 "Directory switched from\n"
@@ -2665,7 +2665,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "fanns inte innan den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4179
+#: ../libsvn_client/conflicts.c:4397
 #, c-format
 msgid ""
 "File switched from\n"
@@ -2680,7 +2680,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "fanns inte innan den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4188
+#: ../libsvn_client/conflicts.c:4406
 #, c-format
 msgid ""
 "Item switched from\n"
@@ -2695,7 +2695,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "fanns inte innan det lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4216
+#: ../libsvn_client/conflicts.c:4434
 #, c-format
 msgid ""
 "Directory merged from\n"
@@ -2710,7 +2710,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4244
+#: ../libsvn_client/conflicts.c:4462
 #, c-format
 msgid ""
 "File merged from\n"
@@ -2725,7 +2725,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en fil från en annan historielinje av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4270
+#: ../libsvn_client/conflicts.c:4488
 #, c-format
 msgid ""
 "Item merged from\n"
@@ -2740,7 +2740,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4283
+#: ../libsvn_client/conflicts.c:4501
 #, c-format
 msgid ""
 "Directory merged from\n"
@@ -2755,7 +2755,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en katalog från en annan historielinje av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4312
+#: ../libsvn_client/conflicts.c:4530
 #, c-format
 msgid ""
 "File merged from\n"
@@ -2770,7 +2770,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en katalog av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4339
+#: ../libsvn_client/conflicts.c:4557
 #, c-format
 msgid ""
 "Item merged from\n"
@@ -2785,7 +2785,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en katalog av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4375
+#: ../libsvn_client/conflicts.c:4593
 #, c-format
 msgid ""
 "Directory merged from\n"
@@ -2800,7 +2800,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4389
+#: ../libsvn_client/conflicts.c:4607
 #, c-format
 msgid ""
 "Directory merged from\n"
@@ -2815,7 +2815,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4407
+#: ../libsvn_client/conflicts.c:4625
 #, c-format
 msgid ""
 "File merged from\n"
@@ -2830,7 +2830,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4421
+#: ../libsvn_client/conflicts.c:4639
 #, c-format
 msgid ""
 "File merged from\n"
@@ -2845,7 +2845,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4438
+#: ../libsvn_client/conflicts.c:4656
 #, c-format
 msgid ""
 "Item merged from\n"
@@ -2860,7 +2860,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "flyttades till \"^/%s\" av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4452
+#: ../libsvn_client/conflicts.c:4670
 #, c-format
 msgid ""
 "Item merged from\n"
@@ -2875,7 +2875,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4477 ../libsvn_client/conflicts.c:4516
+#: ../libsvn_client/conflicts.c:4695 ../libsvn_client/conflicts.c:4734
 #, c-format
 msgid ""
 "Directory reverse-merged from\n"
@@ -2886,7 +2886,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "till ^/%s@%ld var en fil före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4486
+#: ../libsvn_client/conflicts.c:4704
 #, c-format
 msgid ""
 "File reverse-merged from\n"
@@ -2901,7 +2901,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "var en fil från en annan historielinje före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4495
+#: ../libsvn_client/conflicts.c:4713
 #, c-format
 msgid ""
 "Item reverse-merged from\n"
@@ -2916,7 +2916,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en fil av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4506
+#: ../libsvn_client/conflicts.c:4724
 #, c-format
 msgid ""
 "Directory reverse-merged from\n"
@@ -2927,7 +2927,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "till ^/%s@%ld var en katalog från en annan historielinje före ersättningen gjord av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4524
+#: ../libsvn_client/conflicts.c:4742
 #, c-format
 msgid ""
 "Item reverse-merged from\n"
@@ -2942,7 +2942,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "ersattes av en katalog av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4535
+#: ../libsvn_client/conflicts.c:4753
 #, c-format
 msgid ""
 "Directory reverse-merged from\n"
@@ -2953,7 +2953,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "till ^/%s@%ld fanns inte innan den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4544
+#: ../libsvn_client/conflicts.c:4762
 #, c-format
 msgid ""
 "File reverse-merged from\n"
@@ -2968,7 +2968,7 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "fanns inte innan den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:4553
+#: ../libsvn_client/conflicts.c:4771
 #, c-format
 msgid ""
 "Item reverse-merged from\n"
@@ -2983,52 +2983,52 @@ msgstr ""
 "\"^/%s@%ld\"\n"
 "fanns inte innan det lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5404
+#: ../libsvn_client/conflicts.c:5495
 #, c-format
 msgid "A new directory appeared during update to r%ld; it was added by %s in r%ld and later deleted by %s in r%ld."
 msgstr "En ny katalog dök upp under uppdatering till r%ld; den lades till av %s i r%ld och raderades senare av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5411
+#: ../libsvn_client/conflicts.c:5502
 #, c-format
 msgid "A new directory appeared during update to r%ld; it was added by %s in r%ld."
 msgstr "En ny katalog dök upp under uppdatering till r%ld; den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5416
+#: ../libsvn_client/conflicts.c:5507
 #, c-format
 msgid "A new directory appeared during update to r%ld; it was deleted by %s in r%ld."
 msgstr "En ny katalog dök upp under uppdatering till r%ld; den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5426
+#: ../libsvn_client/conflicts.c:5517
 #, c-format
 msgid "A new file appeared during update to r%ld; it was added by %s in r%ld and later deleted by %s in r%ld."
 msgstr "En ny fil dök upp under uppdatering till r%ld; den lades till av %s i r%ld och raderades senare av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5433
+#: ../libsvn_client/conflicts.c:5524
 #, c-format
 msgid "A new file appeared during update to r%ld; it was added by %s in r%ld."
 msgstr "En ny fil dök upp under uppdatering till r%ld; den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5438
+#: ../libsvn_client/conflicts.c:5529
 #, c-format
 msgid "A new file appeared during update to r%ld; it was deleted by %s in r%ld."
 msgstr "En ny katalog dök upp under uppdatering till r%ld; den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5447
+#: ../libsvn_client/conflicts.c:5538
 #, c-format
 msgid "A new item appeared during update to r%ld; it was added by %s in r%ld and later deleted by %s in r%ld."
 msgstr "Ett nytt objekt dök upp under uppdatering till r%ld; det lades till av %s i r%ld och raderades senare av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5454
+#: ../libsvn_client/conflicts.c:5545
 #, c-format
 msgid "A new item appeared during update to r%ld; it was added by %s in r%ld."
 msgstr "Ett nytt objekt dök upp under uppdatering till r%ld; det lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5459
+#: ../libsvn_client/conflicts.c:5550
 #, c-format
 msgid "A new item appeared during update to r%ld; it was deleted by %s in r%ld."
 msgstr "Ett nytt objekt dök upp under uppdatering till r%ld; det raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5478
+#: ../libsvn_client/conflicts.c:5569
 #, c-format
 msgid ""
 "A new directory appeared during switch to\n"
@@ -3039,7 +3039,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Den lades till av %s i r%ld och raderades senare av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5486
+#: ../libsvn_client/conflicts.c:5577
 #, c-format
 msgid ""
 "A new directory appeared during switch to\n"
@@ -3050,7 +3050,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5492
+#: ../libsvn_client/conflicts.c:5583
 #, c-format
 msgid ""
 "A new directory appeared during switch to\n"
@@ -3061,7 +3061,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5503
+#: ../libsvn_client/conflicts.c:5594
 #, c-format
 msgid ""
 "A new file appeared during switch to\n"
@@ -3072,7 +3072,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Den lades till av %s i r%ld och raderades senare av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5511
+#: ../libsvn_client/conflicts.c:5602
 #, c-format
 msgid ""
 "A new file appeared during switch to\n"
@@ -3083,7 +3083,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5518
+#: ../libsvn_client/conflicts.c:5609
 #, c-format
 msgid ""
 "A new file appeared during switch to\n"
@@ -3094,7 +3094,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5529
+#: ../libsvn_client/conflicts.c:5620
 #, c-format
 msgid ""
 "A new item appeared during switch to\n"
@@ -3105,7 +3105,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Det lades till av %s i r%ld och raderades senare av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5537
+#: ../libsvn_client/conflicts.c:5628
 #, c-format
 msgid ""
 "A new item appeared during switch to\n"
@@ -3116,7 +3116,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Det lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5544
+#: ../libsvn_client/conflicts.c:5635
 #, c-format
 msgid ""
 "A new item appeared during switch to\n"
@@ -3127,7 +3127,7 @@ msgstr ""
 "\"^/%s@%ld\".\n"
 "Det raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5565
+#: ../libsvn_client/conflicts.c:5656
 #, c-format
 msgid ""
 "A new directory appeared during merge of\n"
@@ -3138,7 +3138,7 @@ msgstr ""
 "\"^/%s:%ld\".\n"
 "Den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5571
+#: ../libsvn_client/conflicts.c:5662
 #, c-format
 msgid ""
 "A new directory appeared during merge of\n"
@@ -3149,7 +3149,7 @@ msgstr ""
 "\"^/%s:%ld-%ld\".\n"
 "Den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5581
+#: ../libsvn_client/conflicts.c:5672
 #, c-format
 msgid ""
 "A new file appeared during merge of\n"
@@ -3160,7 +3160,7 @@ msgstr ""
 "\"^/%s:%ld\".\n"
 "Den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5587
+#: ../libsvn_client/conflicts.c:5678
 #, c-format
 msgid ""
 "A new file appeared during merge of\n"
@@ -3171,7 +3171,7 @@ msgstr ""
 "\"^/%s:%ld-%ld\".\n"
 "Den lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5596
+#: ../libsvn_client/conflicts.c:5687
 #, c-format
 msgid ""
 "A new item appeared during merge of\n"
@@ -3182,7 +3182,7 @@ msgstr ""
 "\"^/%s:%ld\".\n"
 "Det lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5602
+#: ../libsvn_client/conflicts.c:5693
 #, c-format
 msgid ""
 "A new item appeared during merge of\n"
@@ -3193,7 +3193,7 @@ msgstr ""
 "\"^/%s:%ld-%ld\".\n"
 "Det lades till av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5622
+#: ../libsvn_client/conflicts.c:5713
 #, c-format
 msgid ""
 "A new directory appeared during reverse-merge of\n"
@@ -3204,7 +3204,7 @@ msgstr ""
 "\"^/%s:%ld\".\n"
 "Den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5629
+#: ../libsvn_client/conflicts.c:5720
 #, c-format
 msgid ""
 "A new directory appeared during reverse-merge of\n"
@@ -3215,7 +3215,7 @@ msgstr ""
 "\"^/%s:%ld-%ld\".\n"
 "Den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5641
+#: ../libsvn_client/conflicts.c:5732
 #, c-format
 msgid ""
 "A new file appeared during reverse-merge of\n"
@@ -3226,7 +3226,7 @@ msgstr ""
 "\"^/%s:%ld\".\n"
 "Den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5648
+#: ../libsvn_client/conflicts.c:5739
 #, c-format
 msgid ""
 "A new file appeared during reverse-merge of\n"
@@ -3237,7 +3237,7 @@ msgstr ""
 "\"^/%s:%ld-%ld\".\n"
 "Den raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5658
+#: ../libsvn_client/conflicts.c:5749
 #, c-format
 msgid ""
 "A new item appeared during reverse-merge of\n"
@@ -3248,7 +3248,7 @@ msgstr ""
 "\"^/%s:%ld\".\n"
 "Det raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5665
+#: ../libsvn_client/conflicts.c:5756
 #, c-format
 msgid ""
 "A new item appeared during reverse-merge of\n"
@@ -3259,37 +3259,37 @@ msgstr ""
 "\"^/%s:%ld-%ld\".\n"
 "Det raderades av %s i r%ld."
 
-#: ../libsvn_client/conflicts.c:5979
+#: ../libsvn_client/conflicts.c:6070
 #, c-format
 msgid "Changes destined for a directory arrived via the following revisions during update from r%ld to r%ld."
 msgstr "Ändringar avsedda för en katalog kom genom följande revisioner under uppdatering från r%ld till r%ld."
 
-#: ../libsvn_client/conflicts.c:5985
+#: ../libsvn_client/conflicts.c:6076
 #, c-format
 msgid "Changes destined for a file arrived via the following revisions during update from r%ld to r%ld"
 msgstr "Ändringar avsedda för en fil kom genom följande revisioner under uppdatering från r%ld till r%ld"
 
-#: ../libsvn_client/conflicts.c:5990
+#: ../libsvn_client/conflicts.c:6081
 #, c-format
 msgid "Changes from the following revisions arrived during update from r%ld to r%ld"
 msgstr "Ändringar från följande revisioner kom under uppdatering från r%ld till r%ld"
 
-#: ../libsvn_client/conflicts.c:5998
+#: ../libsvn_client/conflicts.c:6089
 #, c-format
 msgid "Changes destined for a directory arrived via the following revisions during backwards update from r%ld to r%ld"
 msgstr "Ändringar avsedda för en katalog kom genom följande revisioner under uppdatering bakåt från r%ld till r%ld"
 
-#: ../libsvn_client/conflicts.c:6005
+#: ../libsvn_client/conflicts.c:6096
 #, c-format
 msgid "Changes destined for a file arrived via the following revisions during backwards update from r%ld to r%ld"
 msgstr "Ändringar avsedda för en fil kom genom följande revisioner under uppdatering bakåt från r%ld till r%ld"
 
-#: ../libsvn_client/conflicts.c:6011
+#: ../libsvn_client/conflicts.c:6102
 #, c-format
 msgid "Changes from the following revisions arrived during backwards update from r%ld to r%ld"
 msgstr "Ändringar från följande revisioner kom under uppdatering bakåt från r%ld till r%ld"
 
-#: ../libsvn_client/conflicts.c:6025 ../libsvn_client/conflicts.c:6032
+#: ../libsvn_client/conflicts.c:6116 ../libsvn_client/conflicts.c:6123
 #, c-format
 msgid ""
 "Changes destined for a directory arrived via the following revisions during switch to\n"
@@ -3298,7 +3298,7 @@ msgstr ""
 "Ändringar avsedda för en katalog kom genom följande revisioner under växling till\n"
 "\"^/%s@r%ld\""
 
-#: ../libsvn_client/conflicts.c:6038
+#: ../libsvn_client/conflicts.c:6129
 #, c-format
 msgid ""
 "Changes from the following revisions arrived during switch to\n"
@@ -3307,13 +3307,13 @@ msgstr ""
 "Ändringar från följande revisioner kom under växling till\n"
 "\"^/%s@r%ld\""
 
-#: ../libsvn_client/conflicts.c:6081 ../libsvn_client/conflicts.c:6098
-#: ../libsvn_client/conflicts.c:6104
+#: ../libsvn_client/conflicts.c:6172 ../libsvn_client/conflicts.c:6189
+#: ../libsvn_client/conflicts.c:6195
 #, c-format
 msgid "%s r%ld by %s%s"
 msgstr "%s r%ld av %s%s"
 
-#: ../libsvn_client/conflicts.c:6091
+#: ../libsvn_client/conflicts.c:6182
 #, c-format
 msgid ""
 "%s\n"
@@ -3328,7 +3328,7 @@ msgstr[1] ""
 "%s\n"
 " [%d revisioner utelämnade],\n"
 
-#: ../libsvn_client/conflicts.c:6163
+#: ../libsvn_client/conflicts.c:6254
 #, c-format
 msgid ""
 "Changes destined for a directory arrived during merge of\n"
@@ -3337,7 +3337,7 @@ msgstr ""
 "Ändringar avsedda för en katalog kom under sammanslagning av\n"
 "\"^/%s:%ld\"."
 
-#: ../libsvn_client/conflicts.c:6170
+#: ../libsvn_client/conflicts.c:6261
 #, c-format
 msgid ""
 "Changes destined for a file arrived during merge of\n"
@@ -3346,7 +3346,7 @@ msgstr ""
 "Ändringar avsedda för en fil kom under sammanslagning av\n"
 "\"^/%s:%ld\"."
 
-#: ../libsvn_client/conflicts.c:6176
+#: ../libsvn_client/conflicts.c:6267
 #, c-format
 msgid ""
 "Changes arrived during merge of\n"
@@ -3355,7 +3355,7 @@ msgstr ""
 "Ändringar kom under sammanslagning av\n"
 "\"^/%s:%ld\"."
 
-#: ../libsvn_client/conflicts.c:6188
+#: ../libsvn_client/conflicts.c:6279
 #, c-format
 msgid ""
 "Changes destined for a directory arrived via the following revisions during merge of\n"
@@ -3364,7 +3364,7 @@ msgstr ""
 "Ändringar avsedda för en katalog kom genom följande revisioner under sammanslagning av\n"
 "\"^/%s:%ld-%ld\""
 
-#: ../libsvn_client/conflicts.c:6195
+#: ../libsvn_client/conflicts.c:6286
 #, c-format
 msgid ""
 "Changes destined for a file arrived via the following revisions during merge of\n"
@@ -3373,7 +3373,7 @@ msgstr ""
 "Ändringar avsedda för en fil kom genom följande revisioner under sammanslagninv av\n"
 "\"^/%s:%ld-%ld\""
 
-#: ../libsvn_client/conflicts.c:6201
+#: ../libsvn_client/conflicts.c:6292
 #, c-format
 msgid ""
 "Changes from the following revisions arrived during merge of\n"
@@ -3382,7 +3382,7 @@ msgstr ""
 "Ändringar från följande revisioner kom under sammanslagning av\n"
 "\"^/%s:%ld-%ld\""
 
-#: ../libsvn_client/conflicts.c:6213
+#: ../libsvn_client/conflicts.c:6304
 #, c-format
 msgid ""
 "Changes destined for a directory arrived during reverse-merge of\n"
@@ -3391,7 +3391,7 @@ msgstr ""
 "Ändringar avsedda för en katalog kom under omvänd sammanslagning av\n"
 "\"^/%s:%ld\"."
 
-#: ../libsvn_client/conflicts.c:6220
+#: ../libsvn_client/conflicts.c:6311
 #, c-format
 msgid ""
 "Changes destined for a file arrived during reverse-merge of\n"
@@ -3400,7 +3400,7 @@ msgstr ""
 "Ändringar kom under omvänd sammanslagning av\n"
 "\"^/%s:%ld\"."
 
-#: ../libsvn_client/conflicts.c:6226
+#: ../libsvn_client/conflicts.c:6317
 #, c-format
 msgid ""
 "Changes arrived during reverse-merge of\n"
@@ -3409,7 +3409,7 @@ msgstr ""
 "Ändringar kom under omvänd sammanslagning av\n"
 "\"^/%s:%ld\"."
 
-#: ../libsvn_client/conflicts.c:6238
+#: ../libsvn_client/conflicts.c:6329
 #, c-format
 msgid ""
 "Changes destined for a directory arrived via the following revisions during reverse-merge of\n"
@@ -3418,7 +3418,7 @@ msgstr ""
 "Ändringar avsedda för en katalog kom genom följande revisioner under omvänd sammanslagning av\n"
 "\"^/%s:%ld-%ld\""
 
-#: ../libsvn_client/conflicts.c:6246
+#: ../libsvn_client/conflicts.c:6337
 #, c-format
 msgid ""
 "Changes destined for a file arrived via the following revisions during reverse-merge of\n"
@@ -3427,7 +3427,7 @@ msgstr ""
 "Ändringar avsedda för en fil kom genom följande revisioner under omvänd sammanslagning av\n"
 "\"^/%s:%ld-%ld\""
 
-#: ../libsvn_client/conflicts.c:6254
+#: ../libsvn_client/conflicts.c:6345
 #, c-format
 msgid ""
 "Changes from the following revisions arrived during reverse-merge of\n"
@@ -3436,411 +3436,414 @@ msgstr ""
 "Ändringar från följande revisioner kom under omvänd sammanslagning av\n"
 "\"^/%s:%ld-%ld\""
 
-#: ../libsvn_client/conflicts.c:6443
+#: ../libsvn_client/conflicts.c:6534
 #, c-format
 msgid "Tree conflict on '%s' can only be resolved to the current working copy state"
 msgstr "Trädkonflikt på \"%s\" kan endast lösas till tillståndet i nuvarande arbetskopia"
 
-#: ../libsvn_client/conflicts.c:6627 ../libsvn_client/conflicts.c:6633
+#: ../libsvn_client/conflicts.c:6718 ../libsvn_client/conflicts.c:6724
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected a base node but found none)"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (en basnod förväntades men hittades inte)"
 
-#: ../libsvn_client/conflicts.c:6638 ../libsvn_client/conflicts.c:6664
-#: ../libsvn_client/conflicts.c:6691 ../libsvn_client/conflicts.c:6714
+#: ../libsvn_client/conflicts.c:6729 ../libsvn_client/conflicts.c:6755
+#: ../libsvn_client/conflicts.c:6782 ../libsvn_client/conflicts.c:6805
 #, c-format
 msgid "Unexpected option id '%d'"
 msgstr "Oväntad options-ID \"%d\""
 
-#: ../libsvn_client/conflicts.c:6647 ../libsvn_client/conflicts.c:6656
+#: ../libsvn_client/conflicts.c:6738 ../libsvn_client/conflicts.c:6747
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected base node kind '%s', but found '%s')"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (basnodstyp \"%s\" förväntades, men \"%s\" hittades)"
 
-#: ../libsvn_client/conflicts.c:6672 ../libsvn_client/conflicts.c:6682
+#: ../libsvn_client/conflicts.c:6763 ../libsvn_client/conflicts.c:6773
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected base node from '^/%s@%ld', but found '^/%s@%ld')"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (basnod från \"^/%s@%ld\" förväntades, men \"^/%s@%ld\" hittades)"
 
-#: ../libsvn_client/conflicts.c:6700 ../libsvn_client/conflicts.c:6708
+#: ../libsvn_client/conflicts.c:6791 ../libsvn_client/conflicts.c:6799
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected an added item, but the item is not added)"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (tillagt objekt förväntades, men objektet är inte tillagt)"
 
-#: ../libsvn_client/conflicts.c:6879 ../libsvn_client/conflicts.c:8716
+#: ../libsvn_client/conflicts.c:6970 ../libsvn_client/conflicts.c:8807
 #, c-format
 msgid "If needed, a backup copy of '%s' can be found at '%s'"
 msgstr "Vid behov finns en säkerhetskopia av \"%s\" vid \"%s\""
 
-#: ../libsvn_client/conflicts.c:7741
+#: ../libsvn_client/conflicts.c:7832
 #, c-format
 msgid "Conflict resolution option '%d' requires details for tree conflict at '%s' to be fetched from the repository"
 msgstr "Konfliktlösningsvalet \"%d\" kräver att detaljer om trädkonflikten vid \"%s\" hämtas från arkivet"
 
-#: ../libsvn_client/conflicts.c:7765
+#: ../libsvn_client/conflicts.c:7856
 #, c-format
 msgid "Could not determine when '%s' was added the repository"
 msgstr "Kunde inte avgöra när \"%s\" lades till arkivet"
 
-#: ../libsvn_client/conflicts.c:7780
+#: ../libsvn_client/conflicts.c:7871
 #, c-format
 msgid "Could not determine when '%s' was deleted from the repository"
 msgstr "Kunde inte avgöra när \"%s\" raderades från arkivet"
 
-#: ../libsvn_client/conflicts.c:8069
+#: ../libsvn_client/conflicts.c:8160
 #, c-format
 msgid "Could not determine the revision in which '^/%s' was added to the repository.\n"
 msgstr "Kunde inte avgöra i vilken revision \"^/%s\" lades till arkivet.\n"
 
-#: ../libsvn_client/conflicts.c:8165
+#: ../libsvn_client/conflicts.c:8256
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected a copied item, but the item is not a copy)"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (förväntade ett kopierat objekt, men objektet är inte en kopia)"
 
-#: ../libsvn_client/conflicts.c:8176
+#: ../libsvn_client/conflicts.c:8267
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected an item copied from a revision smaller than r%ld, but the item was copied from r%ld)"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (förväntade ett objekt kopierat från en revision mindre än r%ld, men objektet kopierades från r%ld)"
 
-#: ../libsvn_client/conflicts.c:8188
+#: ../libsvn_client/conflicts.c:8279
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected an item copied from a revision larger than r%ld, but the item was copied from r%ld)"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (förväntade ett objekt kopierat från en revision större än r%ld, men objektet kopierades från r%ld)"
 
-#: ../libsvn_client/conflicts.c:8207
+#: ../libsvn_client/conflicts.c:8298
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected an item copied from '^/%s' or from '^/%s' but the item was copied from '^/%s@%ld')"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (förväntade ett objekt kopierat från \"^/%s\" eller från \"^/%s\" men objektet kopierades från \"^/%s@%ld\")"
 
-#: ../libsvn_client/conflicts.c:8229
+#: ../libsvn_client/conflicts.c:8320
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected an item copied from '^/%s', but the item was copied from '^/%s@%ld')"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (förväntade ett objekt kopierat från \"^/%s\", men objektet kopierades från \"^/%s@%ld\")"
 
-#: ../libsvn_client/conflicts.c:8278
+#: ../libsvn_client/conflicts.c:8369
 #, c-format
 msgid "Conflict resolution option '%d' requires details for tree conflict at '%s' to be fetched from the repository."
 msgstr "Konfliktlösningsvalet \"%d\" kräver att detaljer om trädkonflikten vid \"%s\" hämtas från arkivet."
 
-#: ../libsvn_client/conflicts.c:8288
+#: ../libsvn_client/conflicts.c:8379
 #, c-format
 msgid "Could not find the revision in which '%s' was deleted from the repository"
 msgstr "Kunde inte avgöra i vilken revision \"%s\" raderades från arkivet"
 
-#: ../libsvn_client/conflicts.c:8313
+#: ../libsvn_client/conflicts.c:8404
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected node kind '%s' but found '%s')"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (förväntade nodtyp \"%s\" men hittade \"%s\")"
 
-#: ../libsvn_client/conflicts.c:8480 ../libsvn_client/conflicts.c:8763
+#: ../libsvn_client/conflicts.c:8571 ../libsvn_client/conflicts.c:8854
 #, c-format
 msgid "The specified conflict resolution option requires details for tree conflict at '%s' to be fetched from the repository first."
 msgstr "Det angivna konfliktlösningsvalet kräver att detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet."
 
-#: ../libsvn_client/conflicts.c:8487
+#: ../libsvn_client/conflicts.c:8578
 #, c-format
 msgid "Invalid operation code '%d' recorded for conflict at '%s'"
 msgstr "Ogiltig operationskod \"%d\" registrerad för konflikten vid \"%s\""
 
-#: ../libsvn_client/conflicts.c:8824
+#: ../libsvn_client/conflicts.c:8915
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (expected a copied item at '%s', but the item is not a copy)"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (förväntade ett kopierat objekt vid \"%s\", men objektet är inte en kopia)"
 
-#: ../libsvn_client/conflicts.c:8837
+#: ../libsvn_client/conflicts.c:8928
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (could not determine origin of '%s')"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (kunde inte avgöra ursprunget för \"%s\")"
 
-#: ../libsvn_client/conflicts.c:8857
+#: ../libsvn_client/conflicts.c:8948
 #, c-format
 msgid "Cannot resolve tree conflict on '%s' (could not find common ancestor of '^/%s@%ld'  and '^/%s@%ld')"
 msgstr "Kan inte lösa trädkonflikten på \"%s\" (kunde inte hitta gemensamt ursprung för \"^/%s@%ld\" och \"^/%s@%ld\")"
 
-#: ../libsvn_client/conflicts.c:9334 ../libsvn_client/conflicts.c:9417
-#: ../libsvn_client/conflicts.c:10802
+#: ../libsvn_client/conflicts.c:9134
+#, c-format
+msgid "Corresponding working copy node not found for '%s'"
+msgstr "Motsvarande nod i arbetskopian fanns ej för \"%s\""
+
+#: ../libsvn_client/conflicts.c:9456 ../libsvn_client/conflicts.c:9539
+#: ../libsvn_client/conflicts.c:11122
 msgid "Postpone"
 msgstr "Lös senare"
 
-#: ../libsvn_client/conflicts.c:9335 ../libsvn_client/conflicts.c:9418
-#: ../libsvn_client/conflicts.c:10803
+#: ../libsvn_client/conflicts.c:9457 ../libsvn_client/conflicts.c:9540
+#: ../libsvn_client/conflicts.c:11123
 msgid "skip this conflict and leave it unresolved"
 msgstr "hoppa över denna konflikt och lämna den olöst"
 
-#: ../libsvn_client/conflicts.c:9344 ../libsvn_client/conflicts.c:9365
-#: ../libsvn_client/conflicts.c:9423
+#: ../libsvn_client/conflicts.c:9466 ../libsvn_client/conflicts.c:9487
+#: ../libsvn_client/conflicts.c:9545
 msgid "Accept base"
 msgstr "Godta basen"
 
-#: ../libsvn_client/conflicts.c:9345
+#: ../libsvn_client/conflicts.c:9467
 msgid "discard local and incoming changes for this binary file"
 msgstr "släng bort lokala och inkommande ändringar för denna binärfil"
 
-#: ../libsvn_client/conflicts.c:9350 ../libsvn_client/conflicts.c:9371
-#: ../libsvn_client/conflicts.c:9429
+#: ../libsvn_client/conflicts.c:9472 ../libsvn_client/conflicts.c:9493
+#: ../libsvn_client/conflicts.c:9551
 msgid "Accept incoming"
 msgstr "Godta inkommande"
 
-#: ../libsvn_client/conflicts.c:9351
+#: ../libsvn_client/conflicts.c:9473
 msgid "accept incoming version of binary file"
 msgstr "godta inkommande version av binärfil"
 
-#: ../libsvn_client/conflicts.c:9356 ../libsvn_client/conflicts.c:9395
-#: ../libsvn_client/conflicts.c:9435 ../libsvn_client/conflicts.c:9492
+#: ../libsvn_client/conflicts.c:9478 ../libsvn_client/conflicts.c:9517
+#: ../libsvn_client/conflicts.c:9557 ../libsvn_client/conflicts.c:9614
 msgid "Mark as resolved"
 msgstr "Markera som löst"
 
-#: ../libsvn_client/conflicts.c:9357
+#: ../libsvn_client/conflicts.c:9479
 msgid "accept binary file as it appears in the working copy"
 msgstr "godta binärfilen som den är i arbetskopian"
 
-#: ../libsvn_client/conflicts.c:9366
+#: ../libsvn_client/conflicts.c:9488
 msgid "discard local and incoming changes for this file"
 msgstr "släng bort lokala och inkommande ändringar för denna fil"
 
-#: ../libsvn_client/conflicts.c:9372
+#: ../libsvn_client/conflicts.c:9494
 msgid "accept incoming version of entire file"
 msgstr "godta inkommande version av hela filen"
 
-#: ../libsvn_client/conflicts.c:9377
+#: ../libsvn_client/conflicts.c:9499
 msgid "Reject incoming"
 msgstr "Avslå inkommande"
 
-#: ../libsvn_client/conflicts.c:9378
+#: ../libsvn_client/conflicts.c:9500
 msgid "reject all incoming changes for this file"
 msgstr "avslå alla inkommande ändringar för denna fil"
 
-#: ../libsvn_client/conflicts.c:9383 ../libsvn_client/conflicts.c:9441
+#: ../libsvn_client/conflicts.c:9505 ../libsvn_client/conflicts.c:9563
 msgid "Accept incoming for conflicts"
 msgstr "Godta inkommande för konflikter"
 
-#: ../libsvn_client/conflicts.c:9384
-msgid "accept changes only where they conflict"
-msgstr "godta ändringar bara där konflikter uppstår"
-
-#: ../libsvn_client/conflicts.c:9389 ../libsvn_client/conflicts.c:9447
-msgid "Reject conflicts"
-msgstr "Avslå konflikter"
-
-#: ../libsvn_client/conflicts.c:9390 ../libsvn_client/conflicts.c:9448
-msgid "reject changes which conflict and accept the rest"
-msgstr "avslå ändringar som orsakar konflikter och godta resten"
-
-#: ../libsvn_client/conflicts.c:9396
-msgid "accept the file as it appears in the working copy"
-msgstr "godta filen som den är i arbetskopian"
-
-#: ../libsvn_client/conflicts.c:9424
-msgid "discard local and incoming changes for this property"
-msgstr "släng bort lokala och inkommande ändringar för denna egenskap"
-
-#: ../libsvn_client/conflicts.c:9430
-msgid "accept incoming version of entire property value"
-msgstr "godta inkommande version av hela egenskapsvärdet"
-
-#: ../libsvn_client/conflicts.c:9436
-msgid "accept working copy version of entire property value"
-msgstr "godta arbetskopians version av hela egenskapsvärdet"
-
-#: ../libsvn_client/conflicts.c:9442
+#: ../libsvn_client/conflicts.c:9506 ../libsvn_client/conflicts.c:9564
 msgid "accept incoming changes only where they conflict"
 msgstr "godta inkommande ändringar bara där konflikter uppstår"
 
-#: ../libsvn_client/conflicts.c:9453
+#: ../libsvn_client/conflicts.c:9511 ../libsvn_client/conflicts.c:9569
+msgid "Reject conflicts"
+msgstr "Avslå konflikter"
+
+#: ../libsvn_client/conflicts.c:9512
+msgid "reject incoming changes which conflict and accept the rest"
+msgstr "avslå inkommande ändringar som orsakar konflikter och godta resten"
+
+#: ../libsvn_client/conflicts.c:9518
+msgid "accept the file as it appears in the working copy"
+msgstr "godta filen som den är i arbetskopian"
+
+#: ../libsvn_client/conflicts.c:9546
+msgid "discard local and incoming changes for this property"
+msgstr "släng bort lokala och inkommande ändringar för denna egenskap"
+
+#: ../libsvn_client/conflicts.c:9552
+msgid "accept incoming version of entire property value"
+msgstr "godta inkommande version av hela egenskapsvärdet"
+
+#: ../libsvn_client/conflicts.c:9558
+msgid "accept working copy version of entire property value"
+msgstr "godta arbetskopians version av hela egenskapsvärdet"
+
+#: ../libsvn_client/conflicts.c:9570
+msgid "reject changes which conflict and accept the rest"
+msgstr "avslå ändringar som orsakar konflikter och godta resten"
+
+#: ../libsvn_client/conflicts.c:9575
 msgid "Accept merged"
 msgstr "Godta sammanslaget"
 
-#: ../libsvn_client/conflicts.c:9454
+#: ../libsvn_client/conflicts.c:9576
 msgid "accept merged version of property value"
 msgstr "godta sammanslagen version av egenskapsvärde"
 
-#: ../libsvn_client/conflicts.c:9493
+#: ../libsvn_client/conflicts.c:9615
 msgid "accept current working copy state"
 msgstr "godta nuvarande tillstånd i arbetskopia"
 
-#: ../libsvn_client/conflicts.c:9520
+#: ../libsvn_client/conflicts.c:9642
 msgid "Update move destination"
 msgstr "Uppdatera flyttmålet"
 
-#: ../libsvn_client/conflicts.c:9521
+#: ../libsvn_client/conflicts.c:9643
 msgid "apply incoming changes to move destination"
 msgstr "utför inkommande ändringar på flyttmålet"
 
-#: ../libsvn_client/conflicts.c:9555
+#: ../libsvn_client/conflicts.c:9677
 msgid "Update any moved-away children"
 msgstr "Uppdatera bortflyttade barn om sådana finns"
 
-#: ../libsvn_client/conflicts.c:9556
+#: ../libsvn_client/conflicts.c:9678
 msgid "prepare for updating moved-away children, if any"
 msgstr "förbered för uppdatering av bortflyttade barn, om sådana finns"
 
-#: ../libsvn_client/conflicts.c:9601
+#: ../libsvn_client/conflicts.c:9723
 #, c-format
 msgid "ignore and do not add '^/%s@%ld' here"
 msgstr "hoppa över och lägg inte till \"^/%s@%ld\" här"
 
-#: ../libsvn_client/conflicts.c:9609
+#: ../libsvn_client/conflicts.c:9731
 #, c-format
 msgid "replace '^/%s@%ld' with the locally added file"
 msgstr "ersätt \"^/%s@%ld\" med den lokalt tillagda filen"
 
-#: ../libsvn_client/conflicts.c:9614
+#: ../libsvn_client/conflicts.c:9736
 #, c-format
 msgid "replace '^/%s@%ld' with the locally added directory"
 msgstr "ersätt \"^/%s@%ld\" med den lokalt tillagda katalogen"
 
-#: ../libsvn_client/conflicts.c:9620
+#: ../libsvn_client/conflicts.c:9742
 #, c-format
 msgid "replace '^/%s@%ld' with the locally added item"
 msgstr "ersätt \"^/%s@%ld\" med det lokalt tillagda objektet"
 
-#: ../libsvn_client/conflicts.c:9625
+#: ../libsvn_client/conflicts.c:9747
 #, c-format
 msgid "unexpected operation code '%d'"
 msgstr "oväntad operationskod \"%d\""
 
-#: ../libsvn_client/conflicts.c:9629
+#: ../libsvn_client/conflicts.c:9751
 msgid "Ignore incoming addition"
 msgstr "Hoppa över inkommande tillägg"
 
-#: ../libsvn_client/conflicts.c:9675 ../libsvn_client/conflicts.c:9804
+#: ../libsvn_client/conflicts.c:9797 ../libsvn_client/conflicts.c:9926
 #, c-format
 msgid "merge '^/%s@%ld' into '%s'"
 msgstr "slå samman \"^/%s@%ld\" in i \"%s\""
 
-#: ../libsvn_client/conflicts.c:9683 ../libsvn_client/conflicts.c:9813
+#: ../libsvn_client/conflicts.c:9805 ../libsvn_client/conflicts.c:9935
 #, c-format
 msgid "merge local '%s' and '^/%s@%ld'"
 msgstr "slå samman lokala \"%s\" och \"^/%s@%ld\""
 
-#: ../libsvn_client/conflicts.c:9693
+#: ../libsvn_client/conflicts.c:9815
 msgid "Merge the files"
 msgstr "Slå samman filerna"
 
-#: ../libsvn_client/conflicts.c:9742
+#: ../libsvn_client/conflicts.c:9864
 #, c-format
 msgid "delete '%s', copy '^/%s@%ld' here, and merge the files"
 msgstr "radera \"%s\", kopiera hit \"^/%s@%ld\", och slå samman filerna"
 
-#: ../libsvn_client/conflicts.c:9752 ../libsvn_client/conflicts.c:9935
+#: ../libsvn_client/conflicts.c:9874 ../libsvn_client/conflicts.c:10057
 msgid "Replace and merge"
 msgstr "Ersätt och slå samman"
 
-#: ../libsvn_client/conflicts.c:9822
+#: ../libsvn_client/conflicts.c:9944
 msgid "Merge the directories"
 msgstr "Slå samman katalogerna"
 
-#: ../libsvn_client/conflicts.c:9869
+#: ../libsvn_client/conflicts.c:9991
 #, c-format
 msgid "delete '%s' and copy '^/%s@%ld' here"
 msgstr "radera \"%s\" och kopiera hit \"^/%s@%ld\""
 
-#: ../libsvn_client/conflicts.c:9878
+#: ../libsvn_client/conflicts.c:10000
 msgid "Delete my directory and replace it with incoming directory"
 msgstr "Radera min katalog och ersätt den med inkommande katalog"
 
-#: ../libsvn_client/conflicts.c:9925
+#: ../libsvn_client/conflicts.c:10047
 #, c-format
 msgid "delete '%s', copy '^/%s@%ld' here, and merge the directories"
 msgstr "radera \"%s\", kopiera hit \"^/%s@%ld\", och slå samman katalogerna"
 
-#: ../libsvn_client/conflicts.c:10005
+#: ../libsvn_client/conflicts.c:10127
 #, c-format
 msgid "ignore the deletion of '^/%s@%ld'"
 msgstr "hoppa över raderingen av \"^/%s@%ld\""
 
-#: ../libsvn_client/conflicts.c:10010
+#: ../libsvn_client/conflicts.c:10132
 msgid "Ignore incoming deletion"
 msgstr "Hoppa över inkommande radering"
 
-#: ../libsvn_client/conflicts.c:10063
+#: ../libsvn_client/conflicts.c:10185
 #, c-format
 msgid "accept the deletion of '%s'"
 msgstr "godta borttagningen av \"%s\""
 
-#: ../libsvn_client/conflicts.c:10070
+#: ../libsvn_client/conflicts.c:10192
 msgid "Accept incoming deletion"
 msgstr "Godta inkommande radering"
 
-#: ../libsvn_client/conflicts.c:10109
+#: ../libsvn_client/conflicts.c:10231
 #, c-format
 msgid "move '%s' to '%s' and merge"
 msgstr "flytta \"%s\" till \"%s\" och slå samman"
 
-#: ../libsvn_client/conflicts.c:10119
+#: ../libsvn_client/conflicts.c:10241
 #, c-format
 msgid "move and merge local changes from '%s' into '%s'"
 msgstr "flytta och slå samman lokala ändringar från \"%s\" till \"%s\""
 
-#: ../libsvn_client/conflicts.c:10180 ../libsvn_client/conflicts.c:10240
+#: ../libsvn_client/conflicts.c:10302 ../libsvn_client/conflicts.c:10362
 msgid "Move and merge"
 msgstr "Flytta och slå samman"
 
-#: ../libsvn_client/conflicts.c:10338
+#: ../libsvn_client/conflicts.c:10426
 #, c-format
 msgid "apply changes to move destination '%s'"
 msgstr "utför ändringar på flyttmålet \"%s\""
 
-#: ../libsvn_client/conflicts.c:10347
+#: ../libsvn_client/conflicts.c:10439 ../libsvn_client/conflicts.c:10447
 msgid "Apply to move destination"
 msgstr "Utför ändringar på flyttmålet"
 
-#: ../libsvn_client/conflicts.c:10412 ../libsvn_client/conflicts.c:10742
+#: ../libsvn_client/conflicts.c:10510 ../libsvn_client/conflicts.c:11021
 #, c-format
 msgid "apply changes to '%s'"
 msgstr "utför ändringar på \"%s\""
 
-#: ../libsvn_client/conflicts.c:10425 ../libsvn_client/conflicts.c:10433
+#: ../libsvn_client/conflicts.c:10523 ../libsvn_client/conflicts.c:10531
 msgid "Apply to corresponding local location"
 msgstr "Utför ändringar på motsvarande lokalt ställe"
 
-#: ../libsvn_client/conflicts.c:10464 ../libsvn_client/conflicts.c:10645
+#: ../libsvn_client/conflicts.c:10614 ../libsvn_client/conflicts.c:10634
+#: ../libsvn_client/conflicts.c:10906
 #, c-format
 msgid "Getting a list of possible move targets requires details for tree conflict at '%s' to be fetched from the repository first"
 msgstr "För att räkna upp möjliga flyttmål måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
 
-#: ../libsvn_client/conflicts.c:10517 ../libsvn_client/conflicts.c:10755
-#, c-format
-msgid "Setting a move target requires details for tree conflict at '%s' to be fetched from the repository first"
-msgstr "För att ange ett flyttmål måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
-
-#: ../libsvn_client/conflicts.c:10526 ../libsvn_client/conflicts.c:10768
+#: ../libsvn_client/conflicts.c:10679 ../libsvn_client/conflicts.c:11036
+#: ../libsvn_client/conflicts.c:11072
 #, c-format
 msgid "Index '%d' is out of bounds of the possible move target list for '%s'"
 msgstr "Index \"%d\" är utanför listan av möjliga flyttmål för \"%s\""
 
-#: ../libsvn_client/conflicts.c:10563
+#: ../libsvn_client/conflicts.c:10707
 #, c-format
 msgid "Repository path '%s' not found in list of possible move targets for '%s'"
 msgstr "Arkivsökvägen \"%s\" fanns inte i listan av möjliga flyttmål för \"%s\""
 
-#: ../libsvn_client/conflicts.c:10610
+#: ../libsvn_client/conflicts.c:10751 ../libsvn_client/conflicts.c:10775
+#: ../libsvn_client/conflicts.c:10996 ../libsvn_client/conflicts.c:11059
+#, c-format
+msgid "Setting a move target requires details for tree conflict at '%s' to be fetched from the repository first"
+msgstr "För att ange ett flyttmål måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
+
+#: ../libsvn_client/conflicts.c:10858
 #, c-format
 msgid "Getting a list of possible move siblings requires details for tree conflict at '%s' to be fetched from the repository first"
 msgstr "För att få en lista på möjliga syskon att flytta måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
 
-#: ../libsvn_client/conflicts.c:10719
-#, c-format
-msgid "Setting a move sibling requires details for tree conflict at '%s' to be fetched from the repository first"
-msgstr "För att ange ett syskon att flytta måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
-
-#: ../libsvn_client/conflicts.c:10728
+#: ../libsvn_client/conflicts.c:11007
 #, c-format
 msgid "Index '%d' is out of bounds of the possible move sibling list for '%s'"
 msgstr "Index \"%d\" är utanför listan av möjliga syskon att flytta för \"%s\""
 
-#: ../libsvn_client/conflicts.c:10988 ../libsvn_client/conflicts.c:11037
-#: ../libsvn_client/conflicts.c:11090
+#: ../libsvn_client/conflicts.c:11309 ../libsvn_client/conflicts.c:11358
+#: ../libsvn_client/conflicts.c:11411
 #, c-format
 msgid "Inapplicable conflict resolution option given for conflicted path '%s'"
 msgstr "Ej tillämpbart konfliktlösningsval angivet för konfliktsökväg \"%s\""
 
-#: ../libsvn_client/conflicts.c:11310
+#: ../libsvn_client/conflicts.c:11631
 #, c-format
 msgid "Property '%s' is not in conflict."
 msgstr "Egenskapen \"%s\" är inte i konflikt"
 
-#: ../libsvn_client/conflicts.c:11700 ../libsvn_wc/conflicts.c:3327
+#: ../libsvn_client/conflicts.c:12021 ../libsvn_wc/conflicts.c:3327
 #, c-format
 msgid "Unable to resolve pending conflict on '%s'"
 msgstr "Kan inte lösa väntande konflikt på \"%s\""
@@ -4707,14 +4710,7 @@ msgstr ".sammanslagning-vänster"
 msgid ".merge-right"
 msgstr ".sammanslagning-höger"
 
-#: ../libsvn_client/shelf.c:2027 ../svn/shelf-cmd.c:496
-#, c-format
-msgid "%d path could not be shelved"
-msgid_plural "%d paths could not be shelved"
-msgstr[0] "%d sökväg kunde inte läggas på hyllan"
-msgstr[1] "%d sökvägar kunde inte läggas på hyllan"
-
-#: ../libsvn_client/shelf.c:2152
+#: ../libsvn_client/shelf.c:2054
 #, c-format
 msgid "Shelf '%s' version %d not found"
 msgstr "Post \"%s\" med version %d finns inte"
@@ -12256,7 +12252,7 @@ msgstr ""
 "Felaktigt val; redigera egenskapen först.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:1637
+#: ../svn/conflict-callbacks.c:1629
 #, c-format
 msgid ""
 "Possible working copy destinations for moved-away '%s' are:\n"
@@ -12267,7 +12263,7 @@ msgstr ""
 "%sBara ett mål kan vara en flytt; de andra är kopieringar.\n"
 "Ange numret för rätt sökväg för flyttmålet: "
 
-#: ../svn/conflict-callbacks.c:1646
+#: ../svn/conflict-callbacks.c:1638
 #, c-format
 msgid ""
 "Possible repository destinations for moved-away '%s' are:\n"
@@ -12278,7 +12274,7 @@ msgstr ""
 "%sBara ett mål kan vara en flytt; de andra är kopieringar.\n"
 "Ange numret för rätt sökväg för flyttmålet: "
 
-#: ../svn/conflict-callbacks.c:1728
+#: ../svn/conflict-callbacks.c:1783
 #, c-format
 msgid ""
 "Tree conflict on '%s':\n"
@@ -12287,12 +12283,12 @@ msgstr ""
 "Trädkonflikt på \"%s\":\n"
 "%s\n"
 
-#: ../svn/conflict-callbacks.c:1748
+#: ../svn/conflict-callbacks.c:1803
 #, c-format
 msgid "Applying recommended resolution '%s':\n"
 msgstr "Utför den rekommenderade lösningen \"%s\":\n"
 
-#: ../svn/conflict-callbacks.c:1773
+#: ../svn/conflict-callbacks.c:1828
 #, c-format
 msgid ""
 "\n"
@@ -12306,12 +12302,12 @@ msgstr ""
 "Se \"svn help resolve\" för vidare information.\n"
 "\n"
 
-#: ../svn/conflict-callbacks.c:1788
+#: ../svn/conflict-callbacks.c:1843
 #, c-format
 msgid "Ambiguous move destinations exist in the repository; try the 'd' option\n"
 msgstr "Flertydiga flyttmål finns i arkivet; försök med valet \"d\"\n"
 
-#: ../svn/conflict-callbacks.c:1793
+#: ../svn/conflict-callbacks.c:1848
 #, c-format
 msgid "Ambiguous move destinations exist in the working copy; try the 'w' option\n"
 msgstr "Flertydiga flyttmål finns i arbetskopian; försök med valet \"w\"\n"
@@ -12531,237 +12527,237 @@ msgstr "svn-viewspec.py format 1 stöder inte \"not-present\"-tillståndet som f
 msgid "svn-viewspec.py format 1 does not support the 'switched' state found at '%s'"
 msgstr "svn-viewspect.py format 1 stöder inte \"switched\"-tillståndet som fanns vid \"%s\""
 
-#: ../svn/info-cmd.c:457
+#: ../svn/info-cmd.c:466
 #, c-format
 msgid "'%s' is not a valid value for --show-item"
 msgstr "\"%s\" är inte ett giltigt värde för --show-item"
 
-#: ../svn/info-cmd.c:465
+#: ../svn/info-cmd.c:474
 #, c-format
 msgid "'%s' is not a valid value for --show-item; did you mean '%s'?"
 msgstr "\"%s\" är inget giltigt värde för --show-item; menade du \"%s\"?"
 
-#: ../svn/info-cmd.c:475
+#: ../svn/info-cmd.c:484
 #, c-format
 msgid "'%s' is not a valid value for --show-item; did you mean '%s' or '%s'?"
 msgstr "\"%s\" är inget giltigt värde för --show-item; menade du \"%s\" eller \"%s\"?"
 
-#: ../svn/info-cmd.c:486
+#: ../svn/info-cmd.c:495
 #, c-format
 msgid "'%s' is not a valid value for --show-item; did you mean '%s', '%s' or '%s'?"
 msgstr "\"%s\" är inget giltigt värde för --show-item; menade du \"%s\", \"%s\" eller \"%s\"?"
 
-#: ../svn/info-cmd.c:507
+#: ../svn/info-cmd.c:516
 msgid "Resource is not under version control."
 msgstr "Resursen är inte versionshanterad."
 
-#: ../svn/info-cmd.c:683 ../svnadmin/svnadmin.c:2371
+#: ../svn/info-cmd.c:692 ../svnadmin/svnadmin.c:2371
 #: ../svnadmin/svnadmin.c:2607
 #, c-format
 msgid "Path: %s\n"
 msgstr "Sökväg: %s\n"
 
-#: ../svn/info-cmd.c:690
+#: ../svn/info-cmd.c:699
 #, c-format
 msgid "Name: %s\n"
 msgstr "Namn: %s\n"
 
-#: ../svn/info-cmd.c:694
+#: ../svn/info-cmd.c:703
 #, c-format
 msgid "Working Copy Root Path: %s\n"
 msgstr "Sökväg till arbetskopians rot: %s\n"
 
-#: ../svn/info-cmd.c:700
+#: ../svn/info-cmd.c:709
 #, c-format
 msgid "URL: %s\n"
 msgstr "URL: %s\n"
 
-#: ../svn/info-cmd.c:703
+#: ../svn/info-cmd.c:712
 #, c-format
 msgid "Relative URL: %s\n"
 msgstr "Relativ URL: %s\n"
 
-#: ../svn/info-cmd.c:707
+#: ../svn/info-cmd.c:716
 #, c-format
 msgid "Repository Root: %s\n"
 msgstr "Arkivrot: %s\n"
 
-#: ../svn/info-cmd.c:711
+#: ../svn/info-cmd.c:720
 #, c-format
 msgid "Repository UUID: %s\n"
 msgstr "Arkivets UUID: %s\n"
 
-#: ../svn/info-cmd.c:715
+#: ../svn/info-cmd.c:724
 #, c-format
 msgid "Revision: %ld\n"
 msgstr "Revision: %ld\n"
 
-#: ../svn/info-cmd.c:720
+#: ../svn/info-cmd.c:729
 #, c-format
 msgid "Node Kind: file\n"
 msgstr "Nodtyp: fil\n"
 
-#: ../svn/info-cmd.c:724
+#: ../svn/info-cmd.c:733
 #, c-format
 msgid "Node Kind: directory\n"
 msgstr "Nodtyp: katalog\n"
 
-#: ../svn/info-cmd.c:728
+#: ../svn/info-cmd.c:737
 #, c-format
 msgid "Node Kind: none\n"
 msgstr "Nodtyp: ingen\n"
 
-#: ../svn/info-cmd.c:733
+#: ../svn/info-cmd.c:742
 #, c-format
 msgid "Node Kind: unknown\n"
 msgstr "Nodtyp: okänd\n"
 
-#: ../svn/info-cmd.c:742
+#: ../svn/info-cmd.c:751
 #, c-format
 msgid "Schedule: normal\n"
 msgstr "Schemalagd: normal\n"
 
-#: ../svn/info-cmd.c:746
+#: ../svn/info-cmd.c:755
 #, c-format
 msgid "Schedule: add\n"
 msgstr "Schemalagd: att läggas till\n"
 
-#: ../svn/info-cmd.c:750
+#: ../svn/info-cmd.c:759
 #, c-format
 msgid "Schedule: delete\n"
 msgstr "Schemalagd: att raderas\n"
 
-#: ../svn/info-cmd.c:754
+#: ../svn/info-cmd.c:763
 #, c-format
 msgid "Schedule: replace\n"
 msgstr "Schemalagd: att ersättas\n"
 
-#: ../svn/info-cmd.c:770
+#: ../svn/info-cmd.c:779
 #, c-format
 msgid "Depth: empty\n"
 msgstr "Djup: \"empty\"\n"
 
-#: ../svn/info-cmd.c:774
+#: ../svn/info-cmd.c:783
 #, c-format
 msgid "Depth: files\n"
 msgstr "Djup: \"files\"\n"
 
-#: ../svn/info-cmd.c:778
+#: ../svn/info-cmd.c:787
 #, c-format
 msgid "Depth: immediates\n"
 msgstr "Djup: \"immediates\"\n"
 
-#: ../svn/info-cmd.c:782
+#: ../svn/info-cmd.c:791
 #, c-format
 msgid "Depth: exclude\n"
 msgstr "Djup: \"exclude\"\n"
 
 #. Other depths should never happen here.
-#: ../svn/info-cmd.c:793
+#: ../svn/info-cmd.c:802
 #, c-format
 msgid "Depth: INVALID\n"
 msgstr "Djup: OGILTIGT\n"
 
-#: ../svn/info-cmd.c:797
+#: ../svn/info-cmd.c:806
 #, c-format
 msgid "Copied From URL: %s\n"
 msgstr "Kopierad från URL: %s\n"
 
-#: ../svn/info-cmd.c:801
+#: ../svn/info-cmd.c:810
 #, c-format
 msgid "Copied From Rev: %ld\n"
 msgstr "Kopierad från revision: %ld\n"
 
-#: ../svn/info-cmd.c:804
+#: ../svn/info-cmd.c:813
 #, c-format
 msgid "Moved From: %s\n"
 msgstr "Flyttad från: %s\n"
 
 # ###
-#: ../svn/info-cmd.c:811
+#: ../svn/info-cmd.c:820
 #, c-format
 msgid "Moved To: %s\n"
 msgstr "Flyttad till: %s\n"
 
-#: ../svn/info-cmd.c:819
+#: ../svn/info-cmd.c:828
 #, c-format
 msgid "Last Changed Author: %s\n"
 msgstr "Författare till senaste ändringen: %s\n"
 
-#: ../svn/info-cmd.c:823
+#: ../svn/info-cmd.c:832
 #, c-format
 msgid "Last Changed Rev: %ld\n"
 msgstr "Senast ändrad i revision: %ld\n"
 
-#: ../svn/info-cmd.c:828
+#: ../svn/info-cmd.c:837
 msgid "Last Changed Date"
 msgstr "Datum för senaste ändringen"
 
-#: ../svn/info-cmd.c:834
+#: ../svn/info-cmd.c:843
 msgid "Text Last Updated"
 msgstr "Innehållet senast uppdaterat"
 
-#: ../svn/info-cmd.c:837
+#: ../svn/info-cmd.c:846
 #, c-format
 msgid "Checksum: %s\n"
 msgstr "Kontrollsumma: %s\n"
 
-#: ../svn/info-cmd.c:871
+#: ../svn/info-cmd.c:880
 #, c-format
 msgid "Conflict Previous Base File: %s\n"
 msgstr "Konflikt: föregående basfil: %s\n"
 
-#: ../svn/info-cmd.c:879
+#: ../svn/info-cmd.c:888
 #, c-format
 msgid "Conflict Previous Working File: %s\n"
 msgstr "Konflikt: föregående arbetsfil: %s\n"
 
-#: ../svn/info-cmd.c:887
+#: ../svn/info-cmd.c:896
 #, c-format
 msgid "Conflict Current Base File: %s\n"
 msgstr "Konflikt: nuvarande basfil: %s\n"
 
-#: ../svn/info-cmd.c:923
+#: ../svn/info-cmd.c:932
 msgid "Tree conflict"
 msgstr "Trädkonflikt"
 
-#: ../svn/info-cmd.c:927
+#: ../svn/info-cmd.c:936
 #, c-format
 msgid "Conflicted Properties: %s\n"
 msgstr "Konfliktegenskaper: %s\n"
 
-#: ../svn/info-cmd.c:953
+#: ../svn/info-cmd.c:962
 msgid "Conflict Details"
 msgstr "Konfliktdetaljer"
 
-#: ../svn/info-cmd.c:974
+#: ../svn/info-cmd.c:983
 msgid "Source  left"
 msgstr "Källa vänster"
 
-#: ../svn/info-cmd.c:983
+#: ../svn/info-cmd.c:992
 msgid "Source right"
 msgstr "Källa   höger"
 
 # ###
-#: ../svn/info-cmd.c:992
+#: ../svn/info-cmd.c:1001
 #, c-format
 msgid "Lock Token: %s\n"
 msgstr "Låsidentifierare: %s\n"
 
-#: ../svn/info-cmd.c:996
+#: ../svn/info-cmd.c:1005
 #, c-format
 msgid "Lock Owner: %s\n"
 msgstr "Låsägare: %s\n"
 
-#: ../svn/info-cmd.c:1001
+#: ../svn/info-cmd.c:1010
 msgid "Lock Created"
 msgstr "Lås skapat"
 
-#: ../svn/info-cmd.c:1005
+#: ../svn/info-cmd.c:1014
 msgid "Lock Expires"
 msgstr "Låset går ut"
 
-#: ../svn/info-cmd.c:1013
+#: ../svn/info-cmd.c:1022
 #, c-format
 msgid ""
 "Lock Comment (%i line):\n"
@@ -12776,32 +12772,32 @@ msgstr[1] ""
 "Låskommentar (%i rader):\n"
 "%s\n"
 
-#: ../svn/info-cmd.c:1022
+#: ../svn/info-cmd.c:1031
 #, c-format
 msgid "Changelist: %s\n"
 msgstr "Ändringslista: %s\n"
 
-#: ../svn/info-cmd.c:1200
+#: ../svn/info-cmd.c:1209
 msgid "--show-item is not valid in --xml mode"
 msgstr "--show-item är inte giltig i läget --xml"
 
-#: ../svn/info-cmd.c:1204
+#: ../svn/info-cmd.c:1213
 msgid "--no-newline is not valid in --xml mode"
 msgstr "--new-newline är inte giltig i läget --xml"
 
-#: ../svn/info-cmd.c:1219 ../svn/info-cmd.c:1239
+#: ../svn/info-cmd.c:1228 ../svn/info-cmd.c:1248
 msgid "--incremental is only valid in --xml mode"
 msgstr "--incremental är endast tillåten i läget --xml"
 
-#: ../svn/info-cmd.c:1226
+#: ../svn/info-cmd.c:1235
 msgid "--no-newline is only available for single-target, non-recursive info operations"
 msgstr "--no-newline är endast tillgänglig för icke-rekursiva informationsoperationer på ett enda mål"
 
-#: ../svn/info-cmd.c:1243
+#: ../svn/info-cmd.c:1252
 msgid "--no-newline' is only valid with --show-item"
 msgstr "--no-newline är endast tillåten tillsammans med --show-item"
 
-#: ../svn/info-cmd.c:1316 ../svnbench/null-info-cmd.c:283
+#: ../svn/info-cmd.c:1325 ../svnbench/null-info-cmd.c:283
 msgid "Could not display info for all targets because some targets don't exist"
 msgstr "Kunde inte visa information för alla mål eftersom några mål inte finns"
 
@@ -12834,7 +12830,7 @@ msgstr "Låskommentaren innehåller en noll-byte"
 msgid "One or more locks could not be obtained"
 msgstr "Ett eller flera lås kunde inte tas"
 
-#: ../svn/log-cmd.c:111 ../svn/svn.c:1145 ../svn/svn.c:1217 ../svn/svn.c:1283
+#: ../svn/log-cmd.c:111 ../svn/svn.c:1147 ../svn/svn.c:1219 ../svn/svn.c:1285
 msgid "\n"
 msgstr "\n"
 
@@ -13822,6 +13818,13 @@ msgstr "--- Sparar...\n"
 msgid "--- Shelving...\n"
 msgstr "--- Lägger på hyllan...\n"
 
+#: ../svn/shelf-cmd.c:496
+#, c-format
+msgid "%d path could not be shelved"
+msgid_plural "%d paths could not be shelved"
+msgstr[0] "%d sökväg kunde inte läggas på hyllan"
+msgstr[1] "%d sökvägar kunde inte läggas på hyllan"
+
 #: ../svn/shelf-cmd.c:506
 #, c-format
 msgid "No local modifications could be saved"
@@ -14544,10 +14547,14 @@ msgid "drop shelf after successful unshelve"
 msgstr "ta bort hyllan efter lyckad återställning"
 
 #: ../svn/svn.c:484
-msgid "print the working copy layout"
-msgstr "visa arbetskopians omfattning"
+msgid ""
+"print the working copy layout, formatted according\n"
+"                             to ARG: 'classic' or 'svn11'"
+msgstr ""
+"visa arbetskopians omfattning, formaterad enligt\n"
+"                             ARG: \"classic\" eller \"svn11\""
 
-#: ../svn/svn.c:534
+#: ../svn/svn.c:536
 msgid ""
 "Put files and directories under version control, scheduling\n"
 "them for addition to repository.  They will be added in next commit.\n"
@@ -14557,11 +14564,11 @@ msgstr ""
 "läggas till i arkivet. De kommer att läggas till vid nästa arkivering.\n"
 "användning: add PATH...\n"
 
-#: ../svn/svn.c:540
+#: ../svn/svn.c:542
 msgid "add intermediate parents"
 msgstr "skapa mellanliggande föräldrakataloger"
 
-#: ../svn/svn.c:543
+#: ../svn/svn.c:545
 msgid ""
 "Manage cached authentication credentials.\n"
 "usage: 1. svn auth [PATTERN ...]\n"
@@ -14573,7 +14580,7 @@ msgstr ""
 "användning: 2. svn auth --remove MÖNSTER [MÖNSTER ...]\n"
 "\n"
 
-#: ../svn/svn.c:547
+#: ../svn/svn.c:549
 msgid ""
 "  With no arguments, list all cached authentication credentials.\n"
 "  Authentication credentials include usernames, passwords,\n"
@@ -14591,7 +14598,7 @@ msgstr ""
 "  autentiseringsreferenser som motsvarar ett eller flera mönster.\n"
 "\n"
 
-#: ../svn/svn.c:554
+#: ../svn/svn.c:556
 msgid ""
 "  If more than one pattern is specified credentials are considered only if they\n"
 "  match all specified patterns. Patterns are matched case-sensitively and may\n"
@@ -14612,11 +14619,11 @@ msgstr ""
 "  Observera att jokertecken vanligtvis behöver citeras på kommandoraden\n"
 "  eftersom många kommandoskal annars försöker expandera dem.\n"
 
-#: ../svn/svn.c:565
+#: ../svn/svn.c:567
 msgid "remove matching authentication credentials"
 msgstr "ta bort motsvarande autentiseringsreferenser"
 
-#: ../svn/svn.c:570
+#: ../svn/svn.c:572
 msgid ""
 "Show when each line of a file was last (or\n"
 "next) changed.\n"
@@ -14628,7 +14635,7 @@ msgstr ""
 "användning: blame [-rM:N] MÅL[@REV]...\n"
 "\n"
 
-#: ../svn/svn.c:574
+#: ../svn/svn.c:576
 msgid ""
 "  Annotate each line of a file with the revision number and author of the\n"
 "  last change (or optionally the next change) to that line.\n"
@@ -14638,7 +14645,7 @@ msgstr ""
 "  den senaste ändringen (eller nästa ändring) av raden.\n"
 "\n"
 
-#: ../svn/svn.c:577 ../svnbench/svnbench.c:222
+#: ../svn/svn.c:579 ../svnbench/svnbench.c:222
 msgid ""
 "  With no revision range (same as -r0:REV), or with '-r M:N' where M < N,\n"
 "  annotate each line that is present in revision N of the file, with\n"
@@ -14652,7 +14659,7 @@ msgstr ""
 "  gå längre bakåt i tiden än rM.\n"
 "\n"
 
-#: ../svn/svn.c:582 ../svnbench/svnbench.c:227
+#: ../svn/svn.c:584 ../svnbench/svnbench.c:227
 msgid ""
 "  With a reverse revision range '-r M:N' where M > N,\n"
 "  annotate each line that is present in revision N of the file, with\n"
@@ -14665,7 +14672,7 @@ msgstr ""
 "  eller raderade raden, utan att gå längre framåt i tiden än rM.\n"
 "\n"
 
-#: ../svn/svn.c:587 ../svnbench/svnbench.c:232
+#: ../svn/svn.c:589 ../svnbench/svnbench.c:232
 msgid ""
 "  If specified, REV determines in which revision the target is first\n"
 "  looked up.\n"
@@ -14674,11 +14681,11 @@ msgstr ""
 "  Om REV anges, bestämmer den i vilken revision målet först letas upp.\n"
 "\n"
 
-#: ../svn/svn.c:590 ../svnbench/svnbench.c:235
+#: ../svn/svn.c:592 ../svnbench/svnbench.c:235
 msgid "  Write the annotated result to standard output.\n"
 msgstr "  Det kommenterade resultatet skrivs till standardutmatningen.\n"
 
-#: ../svn/svn.c:595
+#: ../svn/svn.c:597
 msgid ""
 "Output the content of specified files or URLs.\n"
 "usage: cat TARGET[@REV]...\n"
@@ -14688,13 +14695,13 @@ msgstr ""
 "användning: cat MÅL[@REV]...\n"
 "\n"
 
-#: ../svn/svn.c:598
+#: ../svn/svn.c:600
 msgid ""
 "  If specified, REV determines in which revision the target is first\n"
 "  looked up.\n"
 msgstr "  Om REV anges, bestämmer den i vilken revision målet först letas upp.\n"
 
-#: ../svn/svn.c:604
+#: ../svn/svn.c:606
 msgid ""
 "Associate (or dissociate) changelist CLNAME with the named files.\n"
 "usage: 1. changelist CLNAME PATH...\n"
@@ -14705,7 +14712,7 @@ msgstr ""
 "användning: 1. changelist ÄLNAMN SÖKVÄG...\n"
 "            2. changelist --remove SÖKVÄG...\n"
 
-#: ../svn/svn.c:611
+#: ../svn/svn.c:613
 msgid ""
 "Check out a working copy from a repository.\n"
 "usage: checkout URL[@REV]... [PATH]\n"
@@ -14715,7 +14722,7 @@ msgstr ""
 "användning: checkout URL[@REV]... [SÖKVÄG]\n"
 "\n"
 
-#: ../svn/svn.c:614
+#: ../svn/svn.c:616
 msgid ""
 "  If specified, REV determines in which revision the URL is first\n"
 "  looked up.\n"
@@ -14724,7 +14731,7 @@ msgstr ""
 "  Om REV anges, bestämmer den i vilken revision målet först letas upp.\n"
 "\n"
 
-#: ../svn/svn.c:617
+#: ../svn/svn.c:619
 msgid ""
 "  If PATH is omitted, the basename of the URL will be used as\n"
 "  the destination. If multiple URLs are given each will be checked\n"
@@ -14737,7 +14744,7 @@ msgstr ""
 "  SÖKVÄG som får URL:ens basnamn som katalognamn.\n"
 "\n"
 
-#: ../svn/svn.c:622
+#: ../svn/svn.c:624
 msgid ""
 "  If --force is used, unversioned obstructing paths in the working\n"
 "  copy destination do not automatically cause the check out to fail.\n"
@@ -14763,7 +14770,7 @@ msgstr ""
 "  sökvägar som är i vägen.\n"
 "\n"
 
-#: ../svn/svn.c:633
+#: ../svn/svn.c:635
 msgid ""
 "  See also 'svn help update' for a list of possible characters\n"
 "  reporting the action taken.\n"
@@ -14771,7 +14778,7 @@ msgstr ""
 "  Se även \"svn help update\" för en lista av möjliga tecken i rapporten\n"
 "  om vilken åtgärd som utfördes.\n"
 
-#: ../svn/svn.c:639
+#: ../svn/svn.c:641
 msgid ""
 "Either recover from an interrupted operation that left the working copy locked,\n"
 "or remove unwanted files.\n"
@@ -14789,7 +14796,7 @@ msgstr ""
 "            3. cleanup --vacuum-pristines [AKSÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:646
+#: ../svn/svn.c:648
 msgid ""
 "  1. When none of the options --remove-unversioned, --remove-ignored, and\n"
 "    --vacuum-pristines is specified, remove all write locks (shown as 'L' by\n"
@@ -14805,7 +14812,7 @@ msgstr ""
 "     i ett oanvändbart tillstånd.\n"
 "\n"
 
-#: ../svn/svn.c:652
+#: ../svn/svn.c:654
 msgid ""
 "    WARNING: There is no mechanism that will protect write locks still\n"
 "             being used by other Subversion clients. Running this command\n"
@@ -14819,7 +14826,7 @@ msgstr ""
 "           utan möjlighet till reparation!\n"
 "\n"
 
-#: ../svn/svn.c:657
+#: ../svn/svn.c:659
 msgid ""
 "  2. If the --remove-unversioned option or the --remove-ignored option\n"
 "    is given, remove any unversioned or ignored items within WCPATH.\n"
@@ -14833,7 +14840,7 @@ msgstr ""
 "     som \"?\" och ej beaktade objekt som \"I\" om väljaren --no-ignore används.\n"
 "\n"
 
-#: ../svn/svn.c:662
+#: ../svn/svn.c:664
 msgid ""
 "  3. If the --vacuum-pristines option is given, remove pristine copies of\n"
 "    files which are stored inside the .svn directory and which are no longer\n"
@@ -14842,11 +14849,11 @@ msgstr ""
 "  3. Om väljaren --vacuum-pristines anges, ta bort orörda kopior av filer\n"
 "     i katalogen \".svn\" som inte längre används av någon fil i arbetskopian.\n"
 
-#: ../svn/svn.c:668
+#: ../svn/svn.c:670
 msgid "deprecated and ignored"
 msgstr "föråldrad och har ingen verkan"
 
-#: ../svn/svn.c:671
+#: ../svn/svn.c:673
 msgid ""
 "Send changes from your working copy to the repository.\n"
 "usage: commit [PATH...]\n"
@@ -14856,7 +14863,7 @@ msgstr ""
 "användning: commit [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:674
+#: ../svn/svn.c:676
 msgid ""
 "  A log message must be provided, but it can be empty.  If it is not\n"
 "  given by a --message or --file option, an editor will be started.\n"
@@ -14866,7 +14873,7 @@ msgstr ""
 "  med en --message- eller --file-flagga, startas en editor.\n"
 "\n"
 
-#: ../svn/svn.c:677
+#: ../svn/svn.c:679
 msgid ""
 "  If any targets are (or contain) locked items, those will be\n"
 "  unlocked after a successful commit, unless --no-unlock is given.\n"
@@ -14876,7 +14883,7 @@ msgstr ""
 "  låsas upp efter en lyckad arkivering, såvida inte --no-unlock anges.\n"
 "\n"
 
-#: ../svn/svn.c:680
+#: ../svn/svn.c:682
 msgid ""
 "  If --include-externals is given, also commit file and directory\n"
 "  externals reached by recursion. Do not commit externals with a\n"
@@ -14885,7 +14892,7 @@ msgstr ""
 "  Om --include-externals anges, arkivera också externa filer och kataloger\n"
 "  som nås rekursivt. Arkivera inte externa objekt med en fixerad revision.\n"
 
-#: ../svn/svn.c:688
+#: ../svn/svn.c:690
 msgid ""
 "Copy files and directories in a working copy or repository.\n"
 "usage: copy SRC[@REV]... DST\n"
@@ -14895,7 +14902,7 @@ msgstr ""
 "användning: copy KÄLLA[@REV]... MÅL\n"
 "\n"
 
-#: ../svn/svn.c:691
+#: ../svn/svn.c:693
 msgid ""
 "  SRC and DST can each be either a working copy (WC) path or URL:\n"
 "    WC  -> WC:   copy and schedule for addition (with history)\n"
@@ -14919,7 +14926,7 @@ msgstr ""
 "  måste MÅL vara en befintlig katalog.\n"
 "\n"
 
-#: ../svn/svn.c:700
+#: ../svn/svn.c:702
 msgid ""
 "  WARNING: For compatibility with previous versions of Subversion,\n"
 "  copies performed using two working copy paths (WC -> WC) will not\n"
@@ -14932,7 +14939,7 @@ msgstr ""
 "  (AK -> AK). Därför kommer normalt inte information för sammanslagnings-\n"
 "  följning överföras från kopieringens källa till dess mål.\n"
 
-#: ../svn/svn.c:710
+#: ../svn/svn.c:712
 msgid ""
 "Remove files and directories from version control.\n"
 "usage: 1. delete PATH...\n"
@@ -14944,7 +14951,7 @@ msgstr ""
 "            2. delete URL...\n"
 "\n"
 
-#: ../svn/svn.c:714
+#: ../svn/svn.c:716
 msgid ""
 "  1. Each item specified by a PATH is scheduled for deletion upon\n"
 "    the next commit.  Files, and directories that have not been\n"
@@ -14962,7 +14969,7 @@ msgstr ""
 "     --keep-local används.\n"
 "\n"
 
-#: ../svn/svn.c:721
+#: ../svn/svn.c:723
 msgid ""
 "  2. Each item specified by a URL is deleted from the repository\n"
 "    via an immediate commit.\n"
@@ -14970,7 +14977,7 @@ msgstr ""
 "  2. Varje objekt som anges med en URL raderas från arkivet genom en\n"
 "     omedelbar arkivering.\n"
 
-#: ../svn/svn.c:727
+#: ../svn/svn.c:729
 msgid ""
 "Display local changes or differences between two revisions or paths.\n"
 "usage: 1. diff\n"
@@ -14993,7 +15000,7 @@ msgstr ""
 "            6. diff GAMMAL-SÖKVÄG[@GAMMALREV] NY-URL[@NYREV]\n"
 "\n"
 
-#: ../svn/svn.c:736
+#: ../svn/svn.c:738
 msgid ""
 "  1. Use just 'svn diff' to display local modifications in a working copy.\n"
 "\n"
@@ -15001,7 +15008,7 @@ msgstr ""
 "  1. Använd bara \"svn diff\" för att visa lokala ändringar i en arbetskopia.\n"
 "\n"
 
-#: ../svn/svn.c:738
+#: ../svn/svn.c:740
 msgid ""
 "  2. Display the changes made to TARGETs as they are seen in REV between\n"
 "     two revisions.  TARGETs may be all working copy paths or all URLs.\n"
@@ -15021,7 +15028,7 @@ msgstr ""
 "     Det omvända fås med \"-c -M\", dvs \"-r M:N\" där N = M-1.\n"
 "\n"
 
-#: ../svn/svn.c:745
+#: ../svn/svn.c:747
 msgid ""
 "  3. Display the differences between OLD-TGT as it was seen in OLDREV and\n"
 "     NEW-TGT as it was seen in NEWREV.  PATHs, if given, are relative to\n"
@@ -15045,7 +15052,7 @@ msgstr ""
 "     WORKING för arbetskopior och HEAD för URL:er.\n"
 "\n"
 
-#: ../svn/svn.c:754
+#: ../svn/svn.c:756
 msgid ""
 "     Either or both OLD-TGT and NEW-TGT may also be paths to unversioned\n"
 "     targets. Revisions cannot be specified for unversioned targets.\n"
@@ -15060,7 +15067,7 @@ msgstr ""
 "     stöds ej.\n"
 "\n"
 
-#: ../svn/svn.c:759
+#: ../svn/svn.c:761
 msgid ""
 "  4. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-URL[@NEWREV]'\n"
 "  5. Shorthand for 'svn diff --old=OLD-URL[@OLDREV] --new=NEW-PATH[@NEWREV]'\n"
@@ -15073,7 +15080,7 @@ msgstr ""
 "  6. Kortare sätt att skriva\n"
 "     \"svn diff --old=GAMMAL-SÖKVÄG[@GAMMALREV] --new=NY-URL[@NYREV]\".\n"
 
-#: ../svn/svn.c:769
+#: ../svn/svn.c:771
 msgid ""
 "Create an unversioned copy of a tree.\n"
 "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
@@ -15085,7 +15092,7 @@ msgstr ""
 "            2. export [-r REV] SÖKVÄG1[@FIXREV] [SÖKVÄG2]\n"
 "\n"
 
-#: ../svn/svn.c:773
+#: ../svn/svn.c:775
 msgid ""
 "  1. Exports a clean directory tree from the repository specified by\n"
 "     URL, at revision REV if it is given, otherwise at HEAD, into\n"
@@ -15098,7 +15105,7 @@ msgstr ""
 "     utelämnas används den sista delen av URL som lokalt katalognamn.\n"
 "\n"
 
-#: ../svn/svn.c:778
+#: ../svn/svn.c:780
 msgid ""
 "  2. Exports a clean directory tree from the working copy specified by\n"
 "     PATH1, at revision REV if it is given, otherwise at WORKING, into\n"
@@ -15115,13 +15122,13 @@ msgstr ""
 "     versionshanterade kopieras inte.\n"
 "\n"
 
-#: ../svn/svn.c:785 ../svnbench/svnbench.c:246
+#: ../svn/svn.c:787 ../svnbench/svnbench.c:246
 msgid ""
 "  If specified, PEGREV determines in which revision the target is first\n"
 "  looked up.\n"
 msgstr "  Om FIXREV är angiven, anger den i vilken revision målet först letas upp.\n"
 
-#: ../svn/svn.c:792 ../svnbench/svnbench.c:212
+#: ../svn/svn.c:794 ../svnbench/svnbench.c:212
 msgid ""
 "Describe the usage of this program or its subcommands.\n"
 "usage: help [SUBCOMMAND...]\n"
@@ -15129,7 +15136,7 @@ msgstr ""
 "Visa hur detta program eller dess underkommandon används.\n"
 "användning: help [UNDERKOMMANDO...]\n"
 
-#: ../svn/svn.c:799
+#: ../svn/svn.c:801
 msgid ""
 "Commit an unversioned file or tree into the repository.\n"
 "usage: import [PATH] URL\n"
@@ -15139,7 +15146,7 @@ msgstr ""
 "användning: import [SÖKVÄG] URL\n"
 "\n"
 
-#: ../svn/svn.c:802
+#: ../svn/svn.c:804
 msgid ""
 "  Recursively commit a copy of PATH to URL.\n"
 "  If PATH is omitted '.' is assumed.\n"
@@ -15156,7 +15163,7 @@ msgstr ""
 "  Objekt som ej kan versionshanteras, såsom enhetsfiler och rörledningar,\n"
 "  hoppas över om --force anges.\n"
 
-#: ../svn/svn.c:814
+#: ../svn/svn.c:816
 msgid ""
 "Display information about a local or remote item.\n"
 "usage: info [TARGET[@REV]...]\n"
@@ -15166,7 +15173,7 @@ msgstr ""
 "användning: info [MÅL[@REV]...]\n"
 "\n"
 
-#: ../svn/svn.c:817
+#: ../svn/svn.c:819
 msgid ""
 "  Print information about each TARGET (default: '.').\n"
 "  TARGET may be either a working-copy path or a URL.  If specified, REV\n"
@@ -15180,7 +15187,7 @@ msgstr ""
 "  för en sökväg i en arbetskopia.\n"
 "\n"
 
-#: ../svn/svn.c:822
+#: ../svn/svn.c:824
 msgid ""
 "  With --show-item, print only the value of one item of information\n"
 "  about TARGET.\n"
@@ -15190,15 +15197,15 @@ msgstr ""
 "  om MÅL.\n"
 "\n"
 
-#: ../svn/svn.c:825
+#: ../svn/svn.c:827
 msgid ""
 "  EXPERIMENTAL:\n"
-"  With --viewspec, print the working copy layout.\n"
+"  With --x-viewspec, print the working copy layout.\n"
 msgstr ""
 "  EXPERIMENTELLT:\n"
-"  Med --viewspec, visa arbetskopians omfattning.\n"
+"  Med --x-viewspec, visa arbetskopians omfattning.\n"
 
-#: ../svn/svn.c:836 ../svn/svn.c:862
+#: ../svn/svn.c:838 ../svn/svn.c:864
 msgid ""
 "List directory entries in the repository.\n"
 "usage: list [TARGET[@REV]...]\n"
@@ -15208,7 +15215,7 @@ msgstr ""
 "användning: list [MÅL[@REV]...]\n"
 "\n"
 
-#: ../svn/svn.c:839 ../svn/svn.c:865 ../svnbench/svnbench.c:255
+#: ../svn/svn.c:841 ../svn/svn.c:867 ../svnbench/svnbench.c:255
 msgid ""
 "  List each TARGET file and the contents of each TARGET directory as\n"
 "  they exist in the repository.  If TARGET is a working copy path, the\n"
@@ -15221,7 +15228,7 @@ msgstr ""
 "  till arkivet. OM REV anges, avgör den var MÅL först letas upp.\n"
 "\n"
 
-#: ../svn/svn.c:844 ../svn/svn.c:870 ../svnbench/svnbench.c:260
+#: ../svn/svn.c:846 ../svn/svn.c:872 ../svnbench/svnbench.c:260
 msgid ""
 "  The default TARGET is '.', meaning the repository URL of the current\n"
 "  working directory.\n"
@@ -15231,7 +15238,7 @@ msgstr ""
 "  arbetskopian i aktuell katalog.\n"
 "\n"
 
-#: ../svn/svn.c:847
+#: ../svn/svn.c:849
 msgid ""
 "  Multiple --search patterns may be specified and the output will be\n"
 "  reduced to those paths whose last segment - i.e. the file or directory\n"
@@ -15244,7 +15251,7 @@ msgstr ""
 "  en delsträng som matchar minst ett av dessa mönster (endast Windows).\n"
 "\n"
 
-#: ../svn/svn.c:852 ../svn/svn.c:877
+#: ../svn/svn.c:854 ../svn/svn.c:879
 msgid ""
 "  With --verbose, the following fields will be shown for each item:\n"
 "\n"
@@ -15252,7 +15259,7 @@ msgstr ""
 "  Om --verbose används, visas status med följande fält:\n"
 "\n"
 
-#: ../svn/svn.c:854 ../svn/svn.c:879 ../svnbench/svnbench.c:265
+#: ../svn/svn.c:856 ../svn/svn.c:881 ../svnbench/svnbench.c:265
 msgid ""
 "    Revision number of the last commit\n"
 "    Author of the last commit\n"
@@ -15266,7 +15273,7 @@ msgstr ""
 "    Storlek (i byte)\n"
 "    Datum och tid för senaste arkiveringen\n"
 
-#: ../svn/svn.c:873
+#: ../svn/svn.c:875
 msgid ""
 "  Multiple --search patterns may be specified and the output will be\n"
 "  reduced to those paths whose last segment - i.e. the file or directory\n"
@@ -15278,7 +15285,7 @@ msgstr ""
 "  minst ett av dessa mönster.\n"
 "\n"
 
-#: ../svn/svn.c:890
+#: ../svn/svn.c:892
 msgid ""
 "Lock working copy paths or URLs in the repository, so that\n"
 "no other user can commit changes to them.\n"
@@ -15290,29 +15297,29 @@ msgstr ""
 "användning: lock MÅL...\n"
 "\n"
 
-#: ../svn/svn.c:894
+#: ../svn/svn.c:896
 msgid "  Use --force to steal a lock from another user or working copy.\n"
 msgstr ""
 "  Använd flaggan --force för att stjäla ett lås från en annan användare eller\n"
 "  arbetskopia.\n"
 
-#: ../svn/svn.c:897
+#: ../svn/svn.c:899
 msgid "read lock comment from file ARG"
 msgstr "läs låskommentar från filen ARG"
 
-#: ../svn/svn.c:898
+#: ../svn/svn.c:900
 msgid "specify lock comment ARG"
 msgstr "ange låskommentar ARG"
 
-#: ../svn/svn.c:899
+#: ../svn/svn.c:901
 msgid "force validity of lock comment source"
 msgstr "acceptera alltid den angivna låskommentaren"
 
-#: ../svn/svn.c:900
+#: ../svn/svn.c:902
 msgid "steal locks"
 msgstr "stjäl lås"
 
-#: ../svn/svn.c:903
+#: ../svn/svn.c:905
 msgid ""
 "Show the log messages for a set of revision(s) and/or path(s).\n"
 "usage: 1. log [PATH][@REV]\n"
@@ -15324,7 +15331,7 @@ msgstr ""
 "            2. log URL[@REV] [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:907
+#: ../svn/svn.c:909
 msgid ""
 "  1. Print the log messages for the URL corresponding to PATH\n"
 "     (default: '.'). If specified, REV is the revision in which the\n"
@@ -15340,7 +15347,7 @@ msgstr ""
 "     HEAD-revisionen.\n"
 "\n"
 
-#: ../svn/svn.c:913
+#: ../svn/svn.c:915
 msgid ""
 "  2. Print the log messages for the PATHs (default: '.') under URL.\n"
 "     If specified, REV is the revision in which the URL is first\n"
@@ -15355,7 +15362,7 @@ msgstr ""
 "     standardvärdet för revisionsområdet är HEAD:1.\n"
 "\n"
 
-#: ../svn/svn.c:919 ../svnbench/svnbench.c:290
+#: ../svn/svn.c:921 ../svnbench/svnbench.c:290
 msgid ""
 "  Multiple '-c' or '-r' options may be specified (but not a\n"
 "  combination of '-c' and '-r' options), and mixing of forward and\n"
@@ -15366,7 +15373,7 @@ msgstr ""
 "  och det går att blanda områden angivna framlänges och baklänges.\n"
 "\n"
 
-#: ../svn/svn.c:923
+#: ../svn/svn.c:925
 msgid ""
 "  With -v, also print all affected paths with each log message.\n"
 "  Each changed path is preceded with a symbol describing the change:\n"
@@ -15394,7 +15401,7 @@ msgstr ""
 "  kopierad från den gamla sökvägen vid en tidigare revision.\n"
 "\n"
 
-#: ../svn/svn.c:935
+#: ../svn/svn.c:937
 msgid ""
 "  With -q, don't print the log message body itself (note that this is\n"
 "  compatible with -v).\n"
@@ -15404,7 +15411,7 @@ msgstr ""
 "  -v).\n"
 "\n"
 
-#: ../svn/svn.c:938
+#: ../svn/svn.c:940
 msgid ""
 "  Each log message is printed just once, even if more than one of the\n"
 "  affected paths for that revision were explicitly requested.  Logs\n"
@@ -15418,7 +15425,7 @@ msgstr ""
 "  användbart för att avgöra förgreningspunkter.\n"
 "\n"
 
-#: ../svn/svn.c:943
+#: ../svn/svn.c:945
 msgid ""
 "  The --depth option is only valid in combination with the --diff option\n"
 "  and limits the scope of the displayed diff to the specified depth.\n"
@@ -15428,7 +15435,7 @@ msgstr ""
 "  omfattningen av den visade skillnaden till det angivna djupet.\n"
 "\n"
 
-#: ../svn/svn.c:946
+#: ../svn/svn.c:948
 msgid ""
 "  If the --search option is used, log messages are displayed only if the\n"
 "  provided search pattern matches any of the author, date, log message\n"
@@ -15464,7 +15471,7 @@ msgstr ""
 "  antal genomsökta loggmeddelanden och inte antal matchande.\n"
 "\n"
 
-#: ../svn/svn.c:963
+#: ../svn/svn.c:965
 msgid ""
 "  Examples:\n"
 "\n"
@@ -15472,7 +15479,7 @@ msgstr ""
 "  Exempel:\n"
 "\n"
 
-#: ../svn/svn.c:965
+#: ../svn/svn.c:967
 msgid ""
 "    Show the latest 5 log messages for the current working copy\n"
 "    directory and display paths changed in each commit:\n"
@@ -15484,7 +15491,7 @@ msgstr ""
 "      svn log -l 5 -v\n"
 "\n"
 
-#: ../svn/svn.c:969
+#: ../svn/svn.c:971
 msgid ""
 "    Show the log for bar.c as of revision 42:\n"
 "      svn log bar.c@42\n"
@@ -15494,7 +15501,7 @@ msgstr ""
 "      svn log fil.c@42\n"
 "\n"
 
-#: ../svn/svn.c:972
+#: ../svn/svn.c:974
 msgid ""
 "    Show log messages and diffs for each commit to foo.c:\n"
 "      svn log --diff http://www.example.com/repo/project/foo.c\n"
@@ -15507,7 +15514,7 @@ msgstr ""
 "    (Eftersom detta kommando anger en full URL behövs ingen arbetskopia.)\n"
 "\n"
 
-#: ../svn/svn.c:977
+#: ../svn/svn.c:979
 msgid ""
 "    Show log messages for the children foo.c and bar.c of the directory\n"
 "    '/trunk' as it appeared in revision 50, using the ^/ URL shortcut:\n"
@@ -15520,7 +15527,7 @@ msgstr ""
 "      svn log ^/trunk@50 adam.c bertil.c\n"
 "\n"
 
-#: ../svn/svn.c:981
+#: ../svn/svn.c:983
 msgid ""
 "    Show the log messages for any incoming changes to foo.c during the\n"
 "    next 'svn update':\n"
@@ -15532,7 +15539,7 @@ msgstr ""
 "      svn log -r BASE:HEAD fil.c\n"
 "\n"
 
-#: ../svn/svn.c:985
+#: ../svn/svn.c:987
 msgid ""
 "    Show the log message for the revision in which /branches/foo\n"
 "    was created:\n"
@@ -15543,19 +15550,19 @@ msgstr ""
 "      svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/gren\n"
 "\n"
 
-#: ../svn/svn.c:989
+#: ../svn/svn.c:991
 msgid ""
 "    Show all log messages for commits between the tags ^/tags/2.0 and\n"
 "    ^/tags/3.0; assuming that tag 2.0 was created in revision 100:\n"
 "      svn log -rHEAD:100 ^/tags/3.0\n"
 "\n"
 msgstr ""
-"     Visa alla loggmeddelanden för arkiveringar mellan märkena ^/tags/2.0\n"
-"     och ^/tags/3.0, med antagandet att märket 2.0 skapades i revision 100:\n"
-"       svn log -rHEAD:100 ^/tags/3.0\n"
+"    Visa alla loggmeddelanden för arkiveringar mellan märkena ^/tags/2.0\n"
+"    och ^/tags/3.0, med antagandet att märket 2.0 skapades i revision 100:\n"
+"      svn log -rHEAD:100 ^/tags/3.0\n"
 "\n"
 
-#: ../svn/svn.c:993
+#: ../svn/svn.c:995
 msgid ""
 "    If ^/trunk/foo.c was moved to ^/trunk/bar.c' in revision 22, 'svn log -v'\n"
 "    shows a deletion and a copy in its changed paths list, such as:\n"
@@ -15567,26 +15574,26 @@ msgstr ""
 "       D /trunk/adam.c\n"
 "       A /trunk/bertil.c (från /trunk/adam.c:21)\n"
 
-#: ../svn/svn.c:1002 ../svnbench/svnbench.c:305
+#: ../svn/svn.c:1004 ../svnbench/svnbench.c:305
 msgid "retrieve revision property ARG"
 msgstr "hämta revisionsegenskapen ARG"
 
-#: ../svn/svn.c:1003 ../svnbench/svnbench.c:306
+#: ../svn/svn.c:1005 ../svnbench/svnbench.c:306
 msgid "the change made in revision ARG"
 msgstr "ändringen gjord i revision ARG"
 
-#: ../svn/svn.c:1004
+#: ../svn/svn.c:1006
 msgid "also print all affected paths"
 msgstr "skriv även ut alla berörda sökvägar"
 
-#: ../svn/svn.c:1005
+#: ../svn/svn.c:1007
 msgid "do not print the log message"
 msgstr "skriv inte up loggmeddelandet"
 
 #. For this large section, let's keep it unindented for easier
 #. * viewing/editing. It has been vim-treated with a textwidth=75 and 'gw'
 #. * (with quotes and newlines removed).
-#: ../svn/svn.c:1011
+#: ../svn/svn.c:1013
 msgid ""
 "Merge changes into a working copy.\n"
 "usage: 1. merge SOURCE[@REV] [TARGET_WCPATH]\n"
@@ -15606,7 +15613,7 @@ msgstr ""
 "               (sammanslagning av skillnaden mellan 2 URL:er)\n"
 "\n"
 
-#: ../svn/svn.c:1019
+#: ../svn/svn.c:1021
 msgid ""
 "  1. This form, with one source path and no revision range, is called\n"
 "     a 'complete' merge:\n"
@@ -15616,7 +15623,7 @@ msgstr ""
 "     \"fullständig\" sammanslagning:\n"
 "\n"
 
-#: ../svn/svn.c:1022
+#: ../svn/svn.c:1024
 msgid ""
 "       svn merge SOURCE[@REV] [TARGET_WCPATH]\n"
 "\n"
@@ -15624,7 +15631,7 @@ msgstr ""
 "       svn merge KÄLLA[@REV] [AKSÖKVÄGSMÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1024
+#: ../svn/svn.c:1026
 msgid ""
 "     The complete merge is used for the 'sync' and 'reintegrate' merges\n"
 "     in the 'feature branch' pattern described below. It finds all the\n"
@@ -15640,7 +15647,7 @@ msgstr ""
 "     för att hålla reda på vilka ändringar som redan införts.\n"
 "\n"
 
-#: ../svn/svn.c:1030
+#: ../svn/svn.c:1032
 msgid ""
 "     SOURCE specifies the branch from where the changes will be pulled, and\n"
 "     TARGET_WCPATH specifies a working copy of the target branch to which\n"
@@ -15658,7 +15665,7 @@ msgstr ""
 "     inte för att undvika sammanslagningsinformation i delträd.)\n"
 "\n"
 
-#: ../svn/svn.c:1037
+#: ../svn/svn.c:1039
 msgid ""
 "     SOURCE is usually a URL. The optional '@REV' specifies both the peg\n"
 "     revision of the URL and the latest revision that will be considered\n"
@@ -15676,7 +15683,7 @@ msgstr ""
 "     arbetskopian senast uppdaterades till).\n"
 "\n"
 
-#: ../svn/svn.c:1044
+#: ../svn/svn.c:1046
 msgid ""
 "     TARGET_WCPATH is a working copy path; if omitted, '.' is generally\n"
 "     assumed. There are some special cases:\n"
@@ -15686,7 +15693,7 @@ msgstr ""
 "     används i allmänhet \".\". Det finns vissa särskilda fall:\n"
 "\n"
 
-#: ../svn/svn.c:1047
+#: ../svn/svn.c:1049
 msgid ""
 "       - If SOURCE is a URL:\n"
 "\n"
@@ -15694,7 +15701,7 @@ msgstr ""
 "       - Om KÄLLA är en URL:\n"
 "\n"
 
-#: ../svn/svn.c:1049
+#: ../svn/svn.c:1051
 msgid ""
 "           - If the basename of the URL and the basename of '.' are the\n"
 "             same, then the differences are applied to '.'. Otherwise,\n"
@@ -15710,7 +15717,7 @@ msgstr ""
 "             är målet \".\" om inget annat anges.\n"
 "\n"
 
-#: ../svn/svn.c:1055
+#: ../svn/svn.c:1057
 msgid ""
 "       - If SOURCE is a working copy path:\n"
 "\n"
@@ -15718,7 +15725,7 @@ msgstr ""
 "       - Om KÄLLA är en sökväg till en arbetskopia:\n"
 "\n"
 
-#: ../svn/svn.c:1057
+#: ../svn/svn.c:1059
 msgid ""
 "           - If the source is a file, then differences are applied to that\n"
 "             file (useful for reverse-merging earlier changes). Otherwise,\n"
@@ -15731,7 +15738,7 @@ msgstr ""
 "             om inget annat anges.\n"
 "\n"
 
-#: ../svn/svn.c:1061
+#: ../svn/svn.c:1063
 msgid ""
 "     In normal usage the working copy should be up to date, at a single\n"
 "     revision, with no local modifications and no switched subtrees.\n"
@@ -15741,7 +15748,7 @@ msgstr ""
 "     revision, utan lokala ändringar eller växlade delträd.\n"
 "\n"
 
-#: ../svn/svn.c:1064
+#: ../svn/svn.c:1066
 msgid ""
 "       - The 'Feature Branch' Merging Pattern -\n"
 "\n"
@@ -15749,7 +15756,7 @@ msgstr ""
 "       - Sammanslagningsmönstret för \"funktionsgrenar\" -\n"
 "\n"
 
-#: ../svn/svn.c:1066
+#: ../svn/svn.c:1068
 msgid ""
 "     In this commonly used work flow, known also as the 'development\n"
 "     branch' pattern, a developer creates a branch and commits a series of\n"
@@ -15768,7 +15775,7 @@ msgstr ""
 "     grenen till föräldragrenen för att återinföra ändringarna.\n"
 "\n"
 
-#: ../svn/svn.c:1074
+#: ../svn/svn.c:1076
 msgid ""
 "         parent --+----------o------o-o-------------o--\n"
 "                   \\            \\           \\      /\n"
@@ -15784,7 +15791,7 @@ msgstr ""
 "         funktion     +--o-o-------o----o-o----o-----------\n"
 "\n"
 
-#: ../svn/svn.c:1080
+#: ../svn/svn.c:1082
 msgid ""
 "     A merge from the parent branch to the feature branch is called a\n"
 "     'sync' or 'catch-up' merge, and a merge from the feature branch to the\n"
@@ -15796,7 +15803,7 @@ msgstr ""
 "     från funktionsgrenen till föräldragrenen kallas en \"återförening\".\n"
 "\n"
 
-#: ../svn/svn.c:1084
+#: ../svn/svn.c:1086
 msgid ""
 "       - Sync Merge Example -\n"
 "                                 ............\n"
@@ -15820,7 +15827,7 @@ msgstr ""
 "                             r100            r200\n"
 "\n"
 
-#: ../svn/svn.c:1094
+#: ../svn/svn.c:1096
 msgid ""
 "     Subversion will locate all the changes on 'trunk' that have not yet\n"
 "     been merged into the 'feature' branch. In this case that is a single\n"
@@ -15839,7 +15846,7 @@ msgstr ""
 "     utcheckning av hela grenen \"funktion\".\n"
 "\n"
 
-#: ../svn/svn.c:1102
+#: ../svn/svn.c:1104
 msgid ""
 "     To perform this sync merge, have a clean working copy of the feature\n"
 "     branch and run the following command in its top-level directory:\n"
@@ -15850,7 +15857,7 @@ msgstr ""
 "     rotkatalog:\n"
 "\n"
 
-#: ../svn/svn.c:1105
+#: ../svn/svn.c:1107
 msgid ""
 "         svn merge ^/trunk\n"
 "\n"
@@ -15858,7 +15865,7 @@ msgstr ""
 "         svn merge ^/trunk\n"
 "\n"
 
-#: ../svn/svn.c:1107
+#: ../svn/svn.c:1109
 msgid ""
 "     Note that the merge is now only in your local working copy and still\n"
 "     needs to be committed to the repository so that it can be seen by\n"
@@ -15872,7 +15879,7 @@ msgstr ""
 "     arkiveras.\n"
 "\n"
 
-#: ../svn/svn.c:1112
+#: ../svn/svn.c:1114
 msgid ""
 "       - Reintegrate Merge Example -\n"
 "\n"
@@ -15880,7 +15887,7 @@ msgstr ""
 "       - Exempel på återförening -\n"
 "\n"
 
-#: ../svn/svn.c:1114
+#: ../svn/svn.c:1116
 msgid ""
 "     The feature branch was last synced with trunk up to revision X. So the\n"
 "     difference between trunk@X and feature@HEAD contains the complete set\n"
@@ -15894,7 +15901,7 @@ msgstr ""
 "     \"trunk\".\n"
 "\n"
 
-#: ../svn/svn.c:1119
+#: ../svn/svn.c:1121
 msgid ""
 "                    rW                   rX\n"
 "         trunk ------+--------------------L------------------o\n"
@@ -15912,7 +15919,7 @@ msgstr ""
 "         funktion        +--------------------------------H\n"
 "\n"
 
-#: ../svn/svn.c:1126
+#: ../svn/svn.c:1128
 msgid ""
 "     In the diagram above, L marks the left side (trunk@X) and R marks the\n"
 "     right side (feature@HEAD) of the merge. The difference between the\n"
@@ -15924,7 +15931,7 @@ msgstr ""
 "     högra sidan införs i målet \"trunk\".\n"
 "\n"
 
-#: ../svn/svn.c:1130
+#: ../svn/svn.c:1132
 msgid ""
 "     To perform the merge, have a clean working copy of trunk and run the\n"
 "     following command in its top-level directory:\n"
@@ -15934,7 +15941,7 @@ msgstr ""
 "     Kör följande kommando i dess rotkatalog:\n"
 "\n"
 
-#: ../svn/svn.c:1133
+#: ../svn/svn.c:1135
 msgid ""
 "         svn merge ^/feature\n"
 "\n"
@@ -15942,7 +15949,7 @@ msgstr ""
 "         svn merge ^/funktion\n"
 "\n"
 
-#: ../svn/svn.c:1135
+#: ../svn/svn.c:1137
 msgid ""
 "     To prevent unnecessary merge conflicts, a reintegrate merge requires\n"
 "     that TARGET_WCPATH is not a mixed-revision working copy, has no local\n"
@@ -15954,7 +15961,7 @@ msgstr ""
 "     lokala ändringar och växlade delträd.\n"
 "\n"
 
-#: ../svn/svn.c:1139
+#: ../svn/svn.c:1141
 msgid ""
 "     A reintegrate merge also requires that the source branch is coherently\n"
 "     synced with the target -- in the above example, this means that all\n"
@@ -15970,7 +15977,7 @@ msgstr ""
 "     revisioner därimellan.\n"
 "\n"
 
-#: ../svn/svn.c:1146
+#: ../svn/svn.c:1148
 msgid ""
 "  2. This form is called a 'cherry-pick' merge:\n"
 "\n"
@@ -15978,7 +15985,7 @@ msgstr ""
 "  2. Denna form är en sammanslagning av utvalda ändringar:\n"
 "\n"
 
-#: ../svn/svn.c:1148
+#: ../svn/svn.c:1150
 msgid ""
 "       svn merge [-c M[,N...] | -r N:M ...] SOURCE[@REV] [TARGET_WCPATH]\n"
 "\n"
@@ -15986,7 +15993,7 @@ msgstr ""
 "       svn merge [-c M[,N...] | -r N:M ...] KÄLLA[@REV] [AKSÖKVÄGSMÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1150
+#: ../svn/svn.c:1152
 msgid ""
 "     A cherry-pick merge is used to merge specific revisions (or revision\n"
 "     ranges) from one branch to another. By default, this uses merge\n"
@@ -16002,7 +16009,7 @@ msgstr ""
 "     av denna automatik.\n"
 "\n"
 
-#: ../svn/svn.c:1156
+#: ../svn/svn.c:1158
 msgid ""
 "     SOURCE is usually a URL. The optional '@REV' specifies only the peg\n"
 "     revision of the URL and does not affect the merge range; if REV is not\n"
@@ -16019,7 +16026,7 @@ msgstr ""
 "     uppdateringen).\n"
 "\n"
 
-#: ../svn/svn.c:1162 ../svn/svn.c:1233
+#: ../svn/svn.c:1164 ../svn/svn.c:1235
 msgid ""
 "     TARGET_WCPATH is a working copy path; if omitted, '.' is generally\n"
 "     assumed. The special cases noted above in the 'complete' merge form\n"
@@ -16031,7 +16038,7 @@ msgstr ""
 "     gäller även här.\n"
 "\n"
 
-#: ../svn/svn.c:1166
+#: ../svn/svn.c:1168
 msgid ""
 "     The revision ranges to be merged are specified by the '-r' and/or '-c'\n"
 "     options. '-r N:M' refers to the difference in the history of the\n"
@@ -16047,7 +16054,7 @@ msgstr ""
 "     eller ändring anbringas i AKSÖKVÄGSMÅL.\n"
 "\n"
 
-#: ../svn/svn.c:1172
+#: ../svn/svn.c:1174
 msgid ""
 "     If the mergeinfo in TARGET_WCPATH indicates that revisions within the\n"
 "     range were already merged, changes made in those revisions are not\n"
@@ -16061,7 +16068,7 @@ msgstr ""
 "     behandlas separat.\n"
 "\n"
 
-#: ../svn/svn.c:1177
+#: ../svn/svn.c:1179
 msgid ""
 "     A 'reverse range' can be used to undo changes. For example, when\n"
 "     source and target refer to the same branch, a previously committed\n"
@@ -16079,7 +16086,7 @@ msgstr ""
 "     sätt kallas även \"omvänd sammanslagning\".\n"
 "\n"
 
-#: ../svn/svn.c:1184
+#: ../svn/svn.c:1186
 msgid ""
 "     Multiple '-c' and/or '-r' options may be specified and mixing of\n"
 "     forward and reverse ranges is allowed.\n"
@@ -16089,7 +16096,7 @@ msgstr ""
 "     att på samma gång ange raka och omvända revisionsområden.\n"
 "\n"
 
-#: ../svn/svn.c:1187
+#: ../svn/svn.c:1189
 msgid ""
 "       - Cherry-pick Merge Example -\n"
 "\n"
@@ -16097,7 +16104,7 @@ msgstr ""
 "       - Exempel på sammanslagning av utvalda ändringar -\n"
 "\n"
 
-#: ../svn/svn.c:1189
+#: ../svn/svn.c:1191
 msgid ""
 "     A bug has been fixed on trunk in revision 50. This fix needs to\n"
 "     be merged from trunk onto the release branch.\n"
@@ -16107,7 +16114,7 @@ msgstr ""
 "     införas i grenen för utgåvor.\n"
 "\n"
 
-#: ../svn/svn.c:1192
+#: ../svn/svn.c:1194
 msgid ""
 "            1.x-release  +-----------------------o-----\n"
 "                        /                        ^\n"
@@ -16125,7 +16132,7 @@ msgstr ""
 "                                                r50\n"
 "\n"
 
-#: ../svn/svn.c:1199
+#: ../svn/svn.c:1201
 msgid ""
 "     In the above diagram, L marks the left side (trunk@49) and R marks the\n"
 "     right side (trunk@50) of the merge. The difference between the left\n"
@@ -16137,7 +16144,7 @@ msgstr ""
 "     högra sidan anbringas i målets arbetskopia.\n"
 "\n"
 
-#: ../svn/svn.c:1203
+#: ../svn/svn.c:1205
 msgid ""
 "     Note that the difference between revision 49 and 50 is exactly those\n"
 "     changes that were committed in revision 50, not including changes\n"
@@ -16149,7 +16156,7 @@ msgstr ""
 "     revision 49.\n"
 "\n"
 
-#: ../svn/svn.c:1207
+#: ../svn/svn.c:1209
 msgid ""
 "     To perform the merge, have a clean working copy of the release branch\n"
 "     and run the following command in its top-level directory; remember\n"
@@ -16161,7 +16168,7 @@ msgstr ""
 "     Standardvärdet för målet är \".\":\n"
 "\n"
 
-#: ../svn/svn.c:1211
+#: ../svn/svn.c:1213
 msgid ""
 "         svn merge -c50 ^/trunk\n"
 "\n"
@@ -16169,7 +16176,7 @@ msgstr ""
 "         svn merge -c50 ^/trunk\n"
 "\n"
 
-#: ../svn/svn.c:1213
+#: ../svn/svn.c:1215
 msgid ""
 "     You can also cherry-pick several revisions and/or revision ranges:\n"
 "\n"
@@ -16177,7 +16184,7 @@ msgstr ""
 "     Det går också att plocka flera revisioner och/eller intervall:\n"
 "\n"
 
-#: ../svn/svn.c:1215
+#: ../svn/svn.c:1217
 msgid ""
 "         svn merge -c50,54,60 -r65:68 ^/trunk\n"
 "\n"
@@ -16185,7 +16192,7 @@ msgstr ""
 "         svn merge -c50,54,60 -r65:68 ^/trunk\n"
 "\n"
 
-#: ../svn/svn.c:1218
+#: ../svn/svn.c:1220
 msgid ""
 "  3. This form is called a '2-URL merge':\n"
 "\n"
@@ -16193,7 +16200,7 @@ msgstr ""
 "  3. Denna form är en sammanslagning av skillnaden mellan 2 URL:er:\n"
 "\n"
 
-#: ../svn/svn.c:1220
+#: ../svn/svn.c:1222
 msgid ""
 "       svn merge SOURCE1[@REV1] SOURCE2[@REV2] [TARGET_WCPATH]\n"
 "\n"
@@ -16201,7 +16208,7 @@ msgstr ""
 "       svn merge KÄLLA1[@REV1] KÄLLA2[@REV2] [AKSÖKVÄGSMÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1222
+#: ../svn/svn.c:1224
 msgid ""
 "     You should use this merge variant only if the other variants do not\n"
 "     apply to your situation, as this variant can be quite complex to\n"
@@ -16212,7 +16219,7 @@ msgstr ""
 "     aktuella situationen, eftersom den är förhållandevis komplicerad.\n"
 "\n"
 
-#: ../svn/svn.c:1226
+#: ../svn/svn.c:1228
 msgid ""
 "     Two source URLs are specified, identifying two trees on the same\n"
 "     branch or on different branches. The trees are compared and the\n"
@@ -16229,7 +16236,7 @@ msgstr ""
 "     De tre inblandade grenarna kan vara helt obesläktade.\n"
 "\n"
 
-#: ../svn/svn.c:1237
+#: ../svn/svn.c:1239
 msgid ""
 "     SOURCE1 and/or SOURCE2 can also be specified as a working copy path,\n"
 "     in which case the merge source URL is derived from the working copy.\n"
@@ -16239,7 +16246,7 @@ msgstr ""
 "     och då tas käll-URL:en för sammanslagningen från arbetskopian.\n"
 "\n"
 
-#: ../svn/svn.c:1240
+#: ../svn/svn.c:1242
 msgid ""
 "       - 2-URL Merge Example -\n"
 "\n"
@@ -16247,7 +16254,7 @@ msgstr ""
 "       - Exempel på sammanslagning med 2 URL:er -\n"
 "\n"
 
-#: ../svn/svn.c:1242
+#: ../svn/svn.c:1244
 msgid ""
 "     Two features have been developed on separate branches called 'foo' and\n"
 "     'bar'. It has since become clear that 'bar' should be combined with\n"
@@ -16259,7 +16266,7 @@ msgstr ""
 "     \"apelsin\" för vidare utveckling före återförening.\n"
 "\n"
 
-#: ../svn/svn.c:1246
+#: ../svn/svn.c:1248
 msgid ""
 "     Although both feature branches originate from trunk, they are not\n"
 "     directly related -- one is not a direct copy of the other. A 2-URL\n"
@@ -16271,7 +16278,7 @@ msgstr ""
 "     En sammanslagning med 2 URL:er krävs.\n"
 "\n"
 
-#: ../svn/svn.c:1250
+#: ../svn/svn.c:1252
 msgid ""
 "     The 'bar' branch has been synced with trunk up to revision 500.\n"
 "     (If this revision number is not known, it can be located using the\n"
@@ -16289,7 +16296,7 @@ msgstr ""
 "     ändringar anbringas i grenen \"apelsin\".\n"
 "\n"
 
-#: ../svn/svn.c:1257
+#: ../svn/svn.c:1259
 msgid ""
 "                           foo  +-----------------------------------o\n"
 "                               /                                    ^\n"
@@ -16313,7 +16320,7 @@ msgstr ""
 "                  banan  +-----------------------------------H\n"
 "\n"
 
-#: ../svn/svn.c:1267
+#: ../svn/svn.c:1269
 msgid ""
 "     In the diagram above, L marks the left side (trunk@500) and R marks\n"
 "     the right side (bar@HEAD) of the merge. The difference between the\n"
@@ -16327,7 +16334,7 @@ msgstr ""
 "     grenen \"apelsin\".\n"
 "\n"
 
-#: ../svn/svn.c:1272
+#: ../svn/svn.c:1274
 msgid ""
 "     To perform the merge, have a clean working copy of the 'foo' branch\n"
 "     and run the following command in its top-level directory:\n"
@@ -16337,7 +16344,7 @@ msgstr ""
 "     till en ren arbetskopia av grenen \"apelsin\":\n"
 "\n"
 
-#: ../svn/svn.c:1275
+#: ../svn/svn.c:1277
 msgid ""
 "         svn merge ^/trunk@500 ^/bar\n"
 "\n"
@@ -16345,7 +16352,7 @@ msgstr ""
 "         svn merge ^/trunk@500 ^/banan\n"
 "\n"
 
-#: ../svn/svn.c:1277
+#: ../svn/svn.c:1279
 msgid ""
 "     The exact changes applied by a 2-URL merge can be previewed with svn's\n"
 "     diff command, which is a good idea to verify if you do not have the\n"
@@ -16357,7 +16364,7 @@ msgstr ""
 "     I detta fall:\n"
 "\n"
 
-#: ../svn/svn.c:1281
+#: ../svn/svn.c:1283
 msgid ""
 "         svn diff ^/trunk@500 ^/bar@HEAD\n"
 "\n"
@@ -16365,7 +16372,7 @@ msgstr ""
 "         svn diff ^/trunk@500 ^/banan@HEAD\n"
 "\n"
 
-#: ../svn/svn.c:1284
+#: ../svn/svn.c:1286
 msgid ""
 "  The following applies to all types of merges:\n"
 "\n"
@@ -16373,7 +16380,7 @@ msgstr ""
 "  Följande gäller alla sorters sammanslagningar:\n"
 "\n"
 
-#: ../svn/svn.c:1286
+#: ../svn/svn.c:1288
 msgid ""
 "  To prevent unnecessary merge conflicts, svn merge requires that\n"
 "  TARGET_WCPATH is not a mixed-revision working copy. Running 'svn update'\n"
@@ -16387,7 +16394,7 @@ msgstr ""
 "  arbetskopian utgår från samma revision.\n"
 "\n"
 
-#: ../svn/svn.c:1291
+#: ../svn/svn.c:1293
 msgid ""
 "  If possible, you should have no local modifications in the merge's target\n"
 "  working copy prior to the merge, to keep things simpler. It will be\n"
@@ -16399,7 +16406,7 @@ msgstr ""
 "  åtgärden och att förstå grenens historik.\n"
 "\n"
 
-#: ../svn/svn.c:1295
+#: ../svn/svn.c:1297
 msgid ""
 "  Switched sub-paths should also be avoided during merging, as they may\n"
 "  cause incomplete merges and create subtree mergeinfo.\n"
@@ -16410,7 +16417,7 @@ msgstr ""
 "  slagningsinformation i delträd.\n"
 "\n"
 
-#: ../svn/svn.c:1298
+#: ../svn/svn.c:1300
 msgid ""
 "  For each merged item a line will be printed with characters reporting the\n"
 "  action taken. These characters have the following meaning:\n"
@@ -16420,7 +16427,7 @@ msgstr ""
 "  vad som gjordes. Dessa bokstäver betyder:\n"
 "\n"
 
-#: ../svn/svn.c:1301 ../svn/svn.c:1905
+#: ../svn/svn.c:1303 ../svn/svn.c:1907
 msgid ""
 "    A  Added\n"
 "    D  Deleted\n"
@@ -16440,7 +16447,7 @@ msgstr ""
 "    R  Ersatt\n"
 "\n"
 
-#: ../svn/svn.c:1309
+#: ../svn/svn.c:1311
 msgid ""
 "  Characters in the first column report about the item itself.\n"
 "  Characters in the second column report about properties of the item.\n"
@@ -16456,7 +16463,7 @@ msgstr ""
 "  egenskapsvärden.\n"
 "\n"
 
-#: ../svn/svn.c:1315
+#: ../svn/svn.c:1317
 msgid ""
 "    - Merge Tracking -\n"
 "\n"
@@ -16464,7 +16471,7 @@ msgstr ""
 "    - Sammanslagningsföljning -\n"
 "\n"
 
-#: ../svn/svn.c:1317
+#: ../svn/svn.c:1319
 msgid ""
 "  Subversion uses the svn:mergeinfo property to track merge history. This\n"
 "  property is considered at the start of a merge to determine what to merge\n"
@@ -16486,7 +16493,7 @@ msgstr ""
 "  återföreningar.\n"
 "\n"
 
-#: ../svn/svn.c:1326
+#: ../svn/svn.c:1328
 msgid ""
 "  The --ignore-ancestry option prevents merge tracking and thus ignores\n"
 "  mergeinfo, neither considering it nor recording it.\n"
@@ -16497,7 +16504,7 @@ msgstr ""
 "  uppdateras.\n"
 "\n"
 
-#: ../svn/svn.c:1329
+#: ../svn/svn.c:1331
 msgid ""
 "    - Merging from foreign repositories -\n"
 "\n"
@@ -16505,7 +16512,7 @@ msgstr ""
 "    - Sammanslagning från andra arkiv -\n"
 "\n"
 
-#: ../svn/svn.c:1331
+#: ../svn/svn.c:1333
 msgid ""
 "  Subversion does support merging from foreign repositories.\n"
 "  While all merge source URLs must point to the same repository, the merge\n"
@@ -16522,13 +16529,13 @@ msgstr ""
 "  Vidare stöds inte sammanslagningsföljning för sammanslagningar från\n"
 "  andra arkiv.\n"
 
-#: ../svn/svn.c:1342
+#: ../svn/svn.c:1344
 msgid "force deletions even if deleted contents don't match"
 msgstr ""
 "radera alltid även om raderat innehåll inte\n"
 "                             stämmer överens"
 
-#: ../svn/svn.c:1346
+#: ../svn/svn.c:1348
 msgid ""
 "Display merge-related information.\n"
 "usage: 1. mergeinfo SOURCE[@REV] [TARGET[@REV]]\n"
@@ -16540,7 +16547,7 @@ msgstr ""
 "            2. mergeinfo --show-revs=VILKA KÄLLA[@REV] [MÅL[@REV]]\n"
 "\n"
 
-#: ../svn/svn.c:1350
+#: ../svn/svn.c:1352
 msgid ""
 "  1. Summarize the history of merging between SOURCE and TARGET. The graph\n"
 "     shows, from left to right:\n"
@@ -16559,7 +16566,7 @@ msgstr ""
 "       arkivsökväg och revisionsnummer för varje grenspets.\n"
 "\n"
 
-#: ../svn/svn.c:1357
+#: ../svn/svn.c:1359
 msgid ""
 "  2. Print the revision numbers on SOURCE that have been merged to TARGET\n"
 "     (with --show-revs=merged), or that have not been merged to TARGET\n"
@@ -16573,7 +16580,7 @@ msgstr ""
 "     skedde i KÄLLA visas.\n"
 "\n"
 
-#: ../svn/svn.c:1362
+#: ../svn/svn.c:1364
 msgid ""
 "     If --revision (-r) is provided, filter the displayed information to\n"
 "     show only that which is associated with the revisions within the\n"
@@ -16586,7 +16593,7 @@ msgstr ""
 "     giltiga områdesvärden.\n"
 "\n"
 
-#: ../svn/svn.c:1367
+#: ../svn/svn.c:1369
 msgid ""
 "  SOURCE and TARGET are the source and target branch URLs, respectively.\n"
 "  (If a WC path is given, the corresponding base URL is used.) The default\n"
@@ -16603,11 +16610,11 @@ msgstr ""
 "  arbetskopia.\n"
 "\n"
 
-#: ../svn/svn.c:1373
+#: ../svn/svn.c:1375
 msgid "  The depth can be 'empty' or 'infinity'; the default is 'empty'.\n"
 msgstr "  Djupet kan vara \"empty\" eller \"infinity\"; standardvärdet är \"empty\".\n"
 
-#: ../svn/svn.c:1379
+#: ../svn/svn.c:1381
 msgid ""
 "Create a new directory under version control.\n"
 "usage: 1. mkdir PATH...\n"
@@ -16619,7 +16626,7 @@ msgstr ""
 "            2. mkdir URL...\n"
 "\n"
 
-#: ../svn/svn.c:1383
+#: ../svn/svn.c:1385
 msgid ""
 "  Create version controlled directories.\n"
 "\n"
@@ -16627,7 +16634,7 @@ msgstr ""
 "  Skapa versionshanterade kataloger.\n"
 "\n"
 
-#: ../svn/svn.c:1385
+#: ../svn/svn.c:1387
 msgid ""
 "  1. Each directory specified by a working copy PATH is created locally\n"
 "    and scheduled for addition upon the next commit.\n"
@@ -16637,7 +16644,7 @@ msgstr ""
 "     och schemaläggs att läggas till vid nästa arkivering.\n"
 "\n"
 
-#: ../svn/svn.c:1388
+#: ../svn/svn.c:1390
 msgid ""
 "  2. Each directory specified by a URL is created in the repository via\n"
 "    an immediate commit.\n"
@@ -16647,7 +16654,7 @@ msgstr ""
 "     genast.\n"
 "\n"
 
-#: ../svn/svn.c:1391
+#: ../svn/svn.c:1393
 msgid ""
 "  In both cases, all the intermediate directories must already exist,\n"
 "  unless the --parents option is given.\n"
@@ -16655,7 +16662,7 @@ msgstr ""
 "  I båda fallen måste katalogerna ovanför de angivna redan finnas,\n"
 "  såvida inte flaggan --parents anges.\n"
 
-#: ../svn/svn.c:1397
+#: ../svn/svn.c:1399
 msgid ""
 "Move (rename) an item in a working copy or repository.\n"
 "usage: move SRC... DST\n"
@@ -16666,7 +16673,7 @@ msgstr ""
 "användning: move KÄLLOR... MÅL\n"
 "\n"
 
-#: ../svn/svn.c:1400
+#: ../svn/svn.c:1402
 msgid ""
 "  SRC and DST can both be working copy (WC) paths or URLs:\n"
 "    WC  -> WC:  move an item in a working copy, as a local change to\n"
@@ -16689,7 +16696,7 @@ msgstr ""
 "  måste MÅL vara en befintlig katalog.\n"
 "\n"
 
-#: ../svn/svn.c:1409
+#: ../svn/svn.c:1411
 msgid ""
 "  SRC and DST of WC -> WC moves must be committed in the same revision.\n"
 "  Furthermore, WC -> WC moves will refuse to move a mixed-revision subtree.\n"
@@ -16704,7 +16711,7 @@ msgstr ""
 "  flyttas.\n"
 "  Flaggan --allow-mixed-revision finns till för bakåtkompatibilitet.\n"
 
-#: ../svn/svn.c:1420
+#: ../svn/svn.c:1422
 msgid ""
 "Apply a patch to a working copy.\n"
 "usage: patch PATCHFILE [WCPATH]\n"
@@ -16714,7 +16721,7 @@ msgstr ""
 "användning: patch PATCHFIL [AKSÖKVÄG]\n"
 "\n"
 
-#: ../svn/svn.c:1423
+#: ../svn/svn.c:1425
 msgid ""
 "  Apply a unidiff patch in PATCHFILE to the working copy WCPATH.\n"
 "  If WCPATH is omitted, '.' is assumed.\n"
@@ -16724,7 +16731,7 @@ msgstr ""
 "  arbetskopian AKSÖKVÄG. Om AKSÖKVÄG utelämnas så antas \".\".\n"
 "\n"
 
-#: ../svn/svn.c:1426
+#: ../svn/svn.c:1428
 msgid ""
 "  A unidiff patch suitable for application to a working copy can be\n"
 "  produced with the 'svn diff' command or third-party diffing tools.\n"
@@ -16738,7 +16745,7 @@ msgstr ""
 "  utom egenskapsändringar som genererades av \"svn diff\".\n"
 "\n"
 
-#: ../svn/svn.c:1431
+#: ../svn/svn.c:1433
 msgid ""
 "  Changes listed in the patch will either be applied or rejected.\n"
 "  If a change does not match at its exact line offset, it may be applied\n"
@@ -16760,7 +16767,7 @@ msgstr ""
 "  en konflikt och skrivs till en avslagsfil med suffixet \".svnpatch.rej\".\n"
 "\n"
 
-#: ../svn/svn.c:1440
+#: ../svn/svn.c:1442
 msgid ""
 "  For each patched file a line will be printed with characters reporting\n"
 "  the action taken. These characters have the following meaning:\n"
@@ -16770,7 +16777,7 @@ msgstr ""
 "  Dessa bokstäver betyder:\n"
 "\n"
 
-#: ../svn/svn.c:1443
+#: ../svn/svn.c:1445
 msgid ""
 "    A  Added\n"
 "    D  Deleted\n"
@@ -16786,7 +16793,7 @@ msgstr ""
 "    G  Sammanslagen (med lokala ändringar som inte har arkiverats)\n"
 "\n"
 
-#: ../svn/svn.c:1449
+#: ../svn/svn.c:1451
 msgid ""
 "  Changes applied with an offset or fuzz are reported on lines starting\n"
 "  with the '>' symbol. You should review such changes carefully.\n"
@@ -16796,7 +16803,7 @@ msgstr ""
 "  börjar med tecknet \">\". Sådana ändringar bör granskas noga.\n"
 "\n"
 
-#: ../svn/svn.c:1452
+#: ../svn/svn.c:1454
 msgid ""
 "  If the patch removes all content from a file, that file is scheduled\n"
 "  for deletion. If the patch creates a new file, that file is scheduled\n"
@@ -16810,7 +16817,7 @@ msgstr ""
 "  tillägg.\n"
 "\n"
 
-#: ../svn/svn.c:1457
+#: ../svn/svn.c:1459
 msgid ""
 "  Hint: If the patch file was created with Subversion, it will contain\n"
 "        the number of a revision N the patch will cleanly apply to\n"
@@ -16826,7 +16833,7 @@ msgstr ""
 "  anbringa ändringsfilen, och uppdatera sedan tillbaka till revisionen\n"
 "  HEAD. På så sätt kan konflikter lösas interaktivt.\n"
 
-#: ../svn/svn.c:1468
+#: ../svn/svn.c:1470
 msgid ""
 "Remove a property from files, dirs, or revisions.\n"
 "usage: 1. propdel PROPNAME [PATH...]\n"
@@ -16838,7 +16845,7 @@ msgstr ""
 "            2. propdel PROPNAMN --revprop -r REV [MÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1472
+#: ../svn/svn.c:1474
 msgid ""
 "  1. Removes versioned props in working copy.\n"
 "  2. Removes unversioned remote prop on repos revision.\n"
@@ -16851,13 +16858,13 @@ msgstr ""
 "     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 "\n"
 
-#: ../svn/svn.c:1476 ../svn/svn.c:1489 ../svn/svn.c:1513 ../svn/svn.c:1533
+#: ../svn/svn.c:1478 ../svn/svn.c:1491 ../svn/svn.c:1515 ../svn/svn.c:1535
 msgid "  See 'svn help propset' for descriptions of the svn:* special properties.\n"
 msgstr ""
 "  Se \"svn help propset\" för beskrivning av de speciella egenskaperna som\n"
 "  börjar med \"svn:\".\n"
 
-#: ../svn/svn.c:1481
+#: ../svn/svn.c:1483
 msgid ""
 "Edit a property with an external editor.\n"
 "usage: 1. propedit PROPNAME TARGET...\n"
@@ -16869,7 +16876,7 @@ msgstr ""
 "            2. propedit EGENSKAPSNAMN --revprop -r REV [MÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1485
+#: ../svn/svn.c:1487
 msgid ""
 "  1. Edits versioned prop in working copy or repository.\n"
 "  2. Edits unversioned remote prop on repos revision.\n"
@@ -16882,7 +16889,7 @@ msgstr ""
 "     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 "\n"
 
-#: ../svn/svn.c:1494
+#: ../svn/svn.c:1496
 msgid ""
 "Print the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
@@ -16895,7 +16902,7 @@ msgstr ""
 "            2. propget PROPNAMN --revprop -r REV [MÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1498
+#: ../svn/svn.c:1500
 msgid ""
 "  1. Prints versioned props. If specified, REV determines in which\n"
 "     revision the target is first looked up.\n"
@@ -16910,7 +16917,7 @@ msgstr ""
 "     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 "\n"
 
-#: ../svn/svn.c:1503
+#: ../svn/svn.c:1505
 msgid ""
 "  With --verbose, the target path and the property name are printed on\n"
 "  separate lines before each value, like 'svn proplist --verbose'.\n"
@@ -16924,7 +16931,7 @@ msgstr ""
 "  på samma rad framför varje värde.\n"
 "\n"
 
-#: ../svn/svn.c:1508
+#: ../svn/svn.c:1510
 msgid ""
 "  By default, an extra newline is printed after the property value so that\n"
 "  the output looks pretty.  With a single TARGET, depth 'empty' and without\n"
@@ -16938,15 +16945,15 @@ msgstr ""
 "  (bland annat användbart när binära egenskaper skickas till en fil).\n"
 "\n"
 
-#: ../svn/svn.c:1517 ../svn/svn.c:1537
+#: ../svn/svn.c:1519 ../svn/svn.c:1539
 msgid "print path, name and value on separate lines"
 msgstr "skriv sökväg, namn och värde på skilda rader"
 
-#: ../svn/svn.c:1518
+#: ../svn/svn.c:1520
 msgid "(deprecated; use --no-newline)"
 msgstr "(föråldrat; se --no-newline)"
 
-#: ../svn/svn.c:1521
+#: ../svn/svn.c:1523
 msgid ""
 "List all properties on files, dirs, or revisions.\n"
 "usage: 1. proplist [TARGET[@REV]...]\n"
@@ -16959,7 +16966,7 @@ msgstr ""
 "            2. proplist --revprop -r REV [MÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1525
+#: ../svn/svn.c:1527
 msgid ""
 "  1. Lists versioned props. If specified, REV determines in which\n"
 "     revision the target is first looked up.\n"
@@ -16974,7 +16981,7 @@ msgstr ""
 "     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 "\n"
 
-#: ../svn/svn.c:1530
+#: ../svn/svn.c:1532
 msgid ""
 "  With --verbose, the property values are printed as well, like 'svn propget\n"
 "  --verbose'.  With --quiet, the paths are not printed.\n"
@@ -16984,11 +16991,11 @@ msgstr ""
 "  --verbose\". Med --quiet skrivs inte sökvägarna ut.\n"
 "\n"
 
-#: ../svn/svn.c:1538
+#: ../svn/svn.c:1540
 msgid "don't print the path"
 msgstr "skriv inte sökvägen"
 
-#: ../svn/svn.c:1541
+#: ../svn/svn.c:1543
 msgid ""
 "Set the value of a property on files, dirs, or revisions.\n"
 "usage: 1. propset PROPNAME PROPVAL PATH...\n"
@@ -17001,7 +17008,7 @@ msgstr ""
 "            2. propset PROPNAMN --revprop -r REV VÄRDE [MÅL]\n"
 "\n"
 
-#: ../svn/svn.c:1545
+#: ../svn/svn.c:1547
 msgid ""
 "  1. Changes a versioned file or directory property in a working copy.\n"
 "  2. Changes an unversioned property on a repository revision.\n"
@@ -17015,7 +17022,7 @@ msgstr ""
 "     MÅL används endast för att avgöra vilket arkiv som ska användas.\n"
 "\n"
 
-#: ../svn/svn.c:1549
+#: ../svn/svn.c:1551
 msgid ""
 "  The value may be provided with the --file option instead of PROPVAL.\n"
 "\n"
@@ -17023,7 +17030,7 @@ msgstr ""
 "  Värdet kan tillhandahållas med flaggan --file istället för som VÄRDE.\n"
 "\n"
 
-#: ../svn/svn.c:1551
+#: ../svn/svn.c:1553
 msgid ""
 "  Property names starting with 'svn:' are reserved.  Subversion recognizes\n"
 "  the following special versioned properties on a file:\n"
@@ -17049,7 +17056,7 @@ msgstr ""
 "      Header                   - Som \"Id\" men med full URL.\n"
 "\n"
 
-#: ../svn/svn.c:1562
+#: ../svn/svn.c:1564
 msgid ""
 "      Custom keywords can be defined with a format string separated from\n"
 "      the keyword name with '='. Valid format substitutions are:\n"
@@ -17090,7 +17097,7 @@ msgstr ""
 "      inom den filen som vilket annat nyckelord som helst: $Mittnyckelord$\n"
 "\n"
 
-#: ../svn/svn.c:1580
+#: ../svn/svn.c:1582
 msgid ""
 "    svn:executable - If present, make the file executable.  Use\n"
 "      'svn propdel svn:executable PATH...' to clear.\n"
@@ -17118,7 +17125,7 @@ msgstr ""
 "        nollställa.\n"
 "\n"
 
-#: ../svn/svn.c:1592
+#: ../svn/svn.c:1594
 msgid ""
 "  Subversion recognizes the following special versioned properties on a\n"
 "  directory:\n"
@@ -17192,11 +17199,11 @@ msgstr ""
 "      \"relativ_URL relativ_sökväg\" med stöd för fixerad revision.\n"
 "      Rader som börjar med tecknet \"#\" hoppas över.\n"
 
-#: ../svn/svn.c:1629
+#: ../svn/svn.c:1631
 msgid "read property value from file ARG"
 msgstr "läs egenskapsvärde från filen ARG"
 
-#: ../svn/svn.c:1632
+#: ../svn/svn.c:1634
 msgid ""
 "Relocate the working copy to point to a different repository root URL.\n"
 "usage: 1. relocate FROM-PREFIX TO-PREFIX [PATH...]\n"
@@ -17208,7 +17215,7 @@ msgstr ""
 "            2. relocate TILL-URL [SÖKVÄG]\n"
 "\n"
 
-#: ../svn/svn.c:1636
+#: ../svn/svn.c:1638
 msgid ""
 "  Rewrite working copy URL metadata to reflect a syntactic change only.\n"
 "  This is used when a repository's root URL changes (such as a scheme\n"
@@ -17222,7 +17229,7 @@ msgstr ""
 "  samma arkiv.\n"
 "\n"
 
-#: ../svn/svn.c:1641
+#: ../svn/svn.c:1643
 msgid ""
 "  1. FROM-PREFIX and TO-PREFIX are initial substrings of the working\n"
 "     copy's current and new URLs, respectively.  (You may specify the\n"
@@ -17236,7 +17243,7 @@ msgstr ""
 "     arbetskopian.\n"
 "\n"
 
-#: ../svn/svn.c:1646
+#: ../svn/svn.c:1648
 msgid ""
 "  2. TO-URL is the (complete) new repository URL to use for PATH.\n"
 "\n"
@@ -17244,7 +17251,7 @@ msgstr ""
 "  2. TILL-URL är den (fullständiga) nya arkiv-URL:en att använda för SÖKVÄG.\n"
 "\n"
 
-#: ../svn/svn.c:1648
+#: ../svn/svn.c:1650
 msgid ""
 "  Examples:\n"
 "    svn relocate http:// svn:// project1 project2\n"
@@ -17256,7 +17263,7 @@ msgstr ""
 "    svn relocate http://www.exempel.se/arkiv/projekt \\\n"
 "                 svn://svn.exempel.se/arkiv/projekt\n"
 
-#: ../svn/svn.c:1656
+#: ../svn/svn.c:1658
 msgid ""
 "Resolve conflicts on working copy files or directories.\n"
 "usage: resolve [PATH...]\n"
@@ -17266,7 +17273,7 @@ msgstr ""
 "användning: resolve [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:1659
+#: ../svn/svn.c:1661
 msgid ""
 "  By default, perform interactive conflict resolution on PATH.\n"
 "  In this mode, the command is recursive by default (depth 'infinity').\n"
@@ -17276,7 +17283,7 @@ msgstr ""
 "  I detta läge är kommandot normalt rekursivt (djup \"infinity\").\n"
 "\n"
 
-#: ../svn/svn.c:1662
+#: ../svn/svn.c:1664
 msgid ""
 "  The --accept=ARG option prevents interactive prompting and forces\n"
 "  conflicts on PATH to be resolved in the manner specified by ARG.\n"
@@ -17288,7 +17295,7 @@ msgstr ""
 "  rekursivt (djup \"empty\").\n"
 "\n"
 
-#: ../svn/svn.c:1666
+#: ../svn/svn.c:1668
 msgid ""
 "  A conflicted path cannot be committed with 'svn commit' until it\n"
 "  has been marked as resolved with 'svn resolve'.\n"
@@ -17298,7 +17305,7 @@ msgstr ""
 "  lösts med \"svn resolve\".\n"
 "\n"
 
-#: ../svn/svn.c:1669
+#: ../svn/svn.c:1671
 msgid ""
 "  Subversion knows three types of conflicts:\n"
 "  Text conflicts, Property conflicts, and Tree conflicts.\n"
@@ -17308,7 +17315,7 @@ msgstr ""
 "  Textkonflikter, egenskapskonflikter och trädkonflikter.\n"
 "\n"
 
-#: ../svn/svn.c:1672
+#: ../svn/svn.c:1674
 msgid ""
 "  Text conflicts occur when overlapping changes to file contents were\n"
 "  made. Text conflicts are usually resolved by editing the conflicted\n"
@@ -17329,7 +17336,7 @@ msgstr ""
 "  eller inkommande ändringar helt och hållet.\n"
 "\n"
 
-#: ../svn/svn.c:1680
+#: ../svn/svn.c:1682
 msgid ""
 "  Property conflicts are usually resolved by editing the value of the\n"
 "  conflicted property (either from the interactive prompt, or with\n"
@@ -17344,7 +17351,7 @@ msgstr ""
 "  till förmån för andra.\n"
 "\n"
 
-#: ../svn/svn.c:1685
+#: ../svn/svn.c:1687
 msgid ""
 "  Tree conflicts occur when a change to the directory structure was\n"
 "  made, and when this change cannot be applied to the working copy\n"
@@ -17368,7 +17375,7 @@ msgstr ""
 "  när det går, istället för att lösa trädkonflikten manuellt.\n"
 "\n"
 
-#: ../svn/svn.c:1695
+#: ../svn/svn.c:1697
 msgid ""
 "  If a tree conflict cannot be resolved automatically, it is recommended\n"
 "  to figure out why the conflict occurred before attempting to resolve it.\n"
@@ -17394,7 +17401,7 @@ msgstr ""
 "  nödvändigt att slänga bort vissa lokala ändringar med \"svn revert\".\n"
 "  Filer eller kataloger kan behöva kopieras, raderas eller flyttas.\n"
 
-#: ../svn/svn.c:1708
+#: ../svn/svn.c:1710
 msgid ""
 "specify automatic conflict resolution source\n"
 "                             ('base', 'working', 'mine-conflict',\n"
@@ -17404,7 +17411,7 @@ msgstr ""
 "                             (\"base\", \"working\", \"mine-conflict\",\n"
 "                             \"theirs-conflict\", \"mine-full\", \"theirs-full\")"
 
-#: ../svn/svn.c:1715
+#: ../svn/svn.c:1717
 msgid ""
 "Remove 'conflicted' state on working copy files or directories.\n"
 "usage: resolved PATH...\n"
@@ -17414,7 +17421,7 @@ msgstr ""
 "användning: resolved SÖKVÄG...\n"
 "\n"
 
-#: ../svn/svn.c:1718
+#: ../svn/svn.c:1720
 msgid ""
 "  Note:  this subcommand does not semantically resolve conflicts or\n"
 "  remove conflict markers; it merely removes the conflict-related\n"
@@ -17426,7 +17433,7 @@ msgstr ""
 "  uppstod och gör så att det går att arkivera SÖKVÄG igen. Det rekommenderas\n"
 "  att använda \"svn resolve --accept working\" istället.\n"
 
-#: ../svn/svn.c:1726
+#: ../svn/svn.c:1728
 msgid ""
 "Restore pristine working copy state (undo local changes).\n"
 "usage: revert PATH...\n"
@@ -17436,7 +17443,7 @@ msgstr ""
 "användning: revert SÖKVÄG...\n"
 "\n"
 
-#: ../svn/svn.c:1729
+#: ../svn/svn.c:1731
 msgid ""
 "  Revert changes in the working copy at or within PATH, and remove\n"
 "  conflict markers as well, if any.\n"
@@ -17446,7 +17453,7 @@ msgstr ""
 "  konfliktmarkeringar om sådana finns.\n"
 "\n"
 
-#: ../svn/svn.c:1732
+#: ../svn/svn.c:1734
 msgid ""
 "  This subcommand does not revert already committed changes.\n"
 "  For information about undoing already committed changes, search\n"
@@ -17456,7 +17463,7 @@ msgstr ""
 "  För information om att göra det, kör \"svn help merge\" och sök efter\n"
 "  \"upphäva\".\n"
 
-#: ../svn/svn.c:1739
+#: ../svn/svn.c:1741
 msgid ""
 "Print the status of working copy files and directories.\n"
 "usage: status [PATH...]\n"
@@ -17466,7 +17473,7 @@ msgstr ""
 "användning: status [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:1742
+#: ../svn/svn.c:1744
 msgid ""
 "  With no args, print only locally modified items (no network access).\n"
 "  With -q, print only summary information about locally modified items.\n"
@@ -17481,7 +17488,7 @@ msgstr ""
 "  Med -v visas fullständig revisionsinformation för varje objekt.\n"
 "\n"
 
-#: ../svn/svn.c:1747
+#: ../svn/svn.c:1749
 msgid ""
 "  The first seven columns in the output are each one character wide:\n"
 "    First column: Says if item was added, deleted, or otherwise changed\n"
@@ -17576,7 +17583,7 @@ msgstr ""
 "    konflikten skrivas efter objektets statusrad.\n"
 "\n"
 
-#: ../svn/svn.c:1791
+#: ../svn/svn.c:1793
 msgid ""
 "  The out-of-date information appears in the ninth column (with -u):\n"
 "      '*' a newer revision exists on the server\n"
@@ -17589,7 +17596,7 @@ msgstr ""
 "      \" \" arbetskopian är aktuell\n"
 "\n"
 
-#: ../svn/svn.c:1795
+#: ../svn/svn.c:1797
 msgid ""
 "  Remaining fields are variable width and delimited by spaces:\n"
 "    The working revision (with -u or -v; '-' if the item is copied)\n"
@@ -17604,7 +17611,7 @@ msgstr ""
 "    Arbetskopians sökväg står alltid sist, så att den kan innehålla mellanslag.\n"
 "\n"
 
-#: ../svn/svn.c:1801
+#: ../svn/svn.c:1803
 msgid ""
 "  The presence of a question mark ('?') where a working revision, last\n"
 "  committed revision, or last committed author was expected indicates\n"
@@ -17620,7 +17627,7 @@ msgstr ""
 "  Frågetecknet fungerar som platshållare för att förenkla tolkning.\n"
 "\n"
 
-#: ../svn/svn.c:1807
+#: ../svn/svn.c:1809
 msgid ""
 "  Example output:\n"
 "    svn status wc\n"
@@ -17634,7 +17641,7 @@ msgstr ""
 "    A  +    ak/gamma.c\n"
 "\n"
 
-#: ../svn/svn.c:1812
+#: ../svn/svn.c:1814
 msgid ""
 "    svn status -u wc\n"
 "     M             965   wc/bar.c\n"
@@ -17650,7 +17657,7 @@ msgstr ""
 "    Status gentemot revision:   981\n"
 "\n"
 
-#: ../svn/svn.c:1818
+#: ../svn/svn.c:1820
 msgid ""
 "    svn status --show-updates --verbose wc\n"
 "     M             965      938 kfogel       wc/bar.c\n"
@@ -17668,7 +17675,7 @@ msgstr ""
 "    Status gentemot revision:   981\n"
 "\n"
 
-#: ../svn/svn.c:1825
+#: ../svn/svn.c:1827
 msgid ""
 "    svn status\n"
 "     M      wc/bar.c\n"
@@ -17682,11 +17689,11 @@ msgstr ""
 "          >   lokal fil saknas, inkommande fil ändrad vid uppdatering\n"
 "    D       ak/delta.c\n"
 
-#: ../svn/svn.c:1833
+#: ../svn/svn.c:1835
 msgid "don't print unversioned items"
 msgstr "visa inte icke versionshanterade objekt"
 
-#: ../svn/svn.c:1836
+#: ../svn/svn.c:1838
 msgid ""
 "Update the working copy to a different URL within the same repository.\n"
 "usage: 1. switch URL[@PEGREV] [PATH]\n"
@@ -17698,7 +17705,7 @@ msgstr ""
 "            2. switch --relocate FRÅN-PREFIX TILL-PREFIX [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:1840
+#: ../svn/svn.c:1842
 msgid ""
 "  1. Update the working copy to mirror a new URL within the repository.\n"
 "     This behavior is similar to 'svn update', and is the way to\n"
@@ -17714,7 +17721,7 @@ msgstr ""
 "     målet ursprunglingen slås upp.\n"
 "\n"
 
-#: ../svn/svn.c:1846
+#: ../svn/svn.c:1848
 msgid ""
 "     If --force is used, unversioned obstructing paths in the working\n"
 "     copy do not automatically cause a failure if the switch attempts to\n"
@@ -17740,7 +17747,7 @@ msgstr ""
 "     egenskaper i arkivet läggs till för sökvägar som är i vägen.\n"
 "\n"
 
-#: ../svn/svn.c:1857
+#: ../svn/svn.c:1859
 msgid ""
 "     Use the --set-depth option to set a new working copy depth on the\n"
 "     targets of this operation.\n"
@@ -17750,7 +17757,7 @@ msgstr ""
 "     målet för denna handling.\n"
 "\n"
 
-#: ../svn/svn.c:1860
+#: ../svn/svn.c:1862
 msgid ""
 "     By default, Subversion will refuse to switch a working copy path to\n"
 "     a new URL with which it shares no common version control ancestry.\n"
@@ -17762,7 +17769,7 @@ msgstr ""
 "     flaggan \"--ignore-ancestry\" för att kringgå denna kontroll.\n"
 "\n"
 
-#: ../svn/svn.c:1864
+#: ../svn/svn.c:1866
 msgid ""
 "  2. The '--relocate' option is deprecated. This syntax is equivalent to\n"
 "     'svn relocate FROM-PREFIX TO-PREFIX [PATH]'.\n"
@@ -17772,7 +17779,7 @@ msgstr ""
 "     \"svn relocate FRÅN-PREFIX TILL-PREFIX [SÖKVÄG]\".\n"
 "\n"
 
-#: ../svn/svn.c:1867
+#: ../svn/svn.c:1869
 msgid ""
 "  See also 'svn help update' for a list of possible characters\n"
 "  reporting the action taken.\n"
@@ -17782,7 +17789,7 @@ msgstr ""
 "  vad som gjorts.\n"
 "\n"
 
-#: ../svn/svn.c:1870
+#: ../svn/svn.c:1872
 msgid ""
 "  Examples:\n"
 "    svn switch ^/branches/1.x-release\n"
@@ -17796,21 +17803,21 @@ msgstr ""
 "    svn switch --relocate http://www.exempel.se/arkiv/projekt \\\n"
 "                          svn://svn.exempel.se/arkiv/projekt\n"
 
-#: ../svn/svn.c:1880
+#: ../svn/svn.c:1882
 msgid "allow switching to a node with no common ancestor"
 msgstr "tillåt växling till en nod utan gemensamt ursprung"
 
-#: ../svn/svn.c:1882 ../svn/svn.c:1946
+#: ../svn/svn.c:1884 ../svn/svn.c:1948
 msgid "handle unversioned obstructions as changes"
 msgstr ""
 "behandla ej versionshanterade blockeringar\n"
 "                             som ändringar"
 
-#: ../svn/svn.c:1883
+#: ../svn/svn.c:1885
 msgid "deprecated; use 'svn relocate'"
 msgstr "föråldrat; använd \"svn relocate\""
 
-#: ../svn/svn.c:1887
+#: ../svn/svn.c:1889
 msgid ""
 "Unlock working copy paths or URLs.\n"
 "usage: unlock TARGET...\n"
@@ -17820,17 +17827,17 @@ msgstr ""
 "användning: unlock MÅL...\n"
 "\n"
 
-#: ../svn/svn.c:1890
+#: ../svn/svn.c:1892
 msgid "  Use --force to break a lock held by another user or working copy.\n"
 msgstr ""
 "  Använd --force för att \"bryta upp\" ett lås som hålls av en annan användare\n"
 "  eller arbetskopia.\n"
 
-#: ../svn/svn.c:1893
+#: ../svn/svn.c:1895
 msgid "break locks"
 msgstr "bryt upp lås"
 
-#: ../svn/svn.c:1896
+#: ../svn/svn.c:1898
 msgid ""
 "Bring changes from the repository into the working copy.\n"
 "usage: update [PATH...]\n"
@@ -17840,7 +17847,7 @@ msgstr ""
 "användning: update [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:1899
+#: ../svn/svn.c:1901
 msgid ""
 "  If no revision is given, bring working copy up-to-date with HEAD rev.\n"
 "  Else synchronize working copy to revision given by -r.\n"
@@ -17850,7 +17857,7 @@ msgstr ""
 "  Annars synkroniseras arbetskopian med den revision som anges med -r.\n"
 "\n"
 
-#: ../svn/svn.c:1902
+#: ../svn/svn.c:1904
 msgid ""
 "  For each updated item a line will be printed with characters reporting\n"
 "  the action taken. These characters have the following meaning:\n"
@@ -17860,7 +17867,7 @@ msgstr ""
 "  vad som gjorts. Dessa tecken har följande innebörd:\n"
 "\n"
 
-#: ../svn/svn.c:1913
+#: ../svn/svn.c:1915
 msgid ""
 "  Characters in the first column report about the item itself.\n"
 "  Characters in the second column report about properties of the item.\n"
@@ -17879,7 +17886,7 @@ msgstr ""
 "  egenskaper.\n"
 "\n"
 
-#: ../svn/svn.c:1921
+#: ../svn/svn.c:1923
 msgid ""
 "  If --force is used, unversioned obstructing paths in the working\n"
 "  copy do not automatically cause a failure if the update attempts to\n"
@@ -17907,7 +17914,7 @@ msgstr ""
 "  kolumnen med ett \"E\".\n"
 "\n"
 
-#: ../svn/svn.c:1933
+#: ../svn/svn.c:1935
 msgid ""
 "  If the specified update target is missing from the working copy but its\n"
 "  immediate parent directory is present, checkout the target into its\n"
@@ -17923,7 +17930,7 @@ msgstr ""
 "  djupet \"empty\".\n"
 "\n"
 
-#: ../svn/svn.c:1939
+#: ../svn/svn.c:1941
 msgid ""
 "  Use the --set-depth option to set a new working copy depth on the\n"
 "  targets of this operation.\n"
@@ -17931,7 +17938,7 @@ msgstr ""
 "  Använd väljaren --set-depth för att ange ett nytt arbetskopiedjup för\n"
 "  målet för denna handling.\n"
 
-#: ../svn/svn.c:1949
+#: ../svn/svn.c:1951
 msgid ""
 "Upgrade the metadata storage format for a working copy.\n"
 "usage: upgrade [WCPATH...]\n"
@@ -17941,11 +17948,11 @@ msgstr ""
 "användning: upgrade [AKSÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:1952
+#: ../svn/svn.c:1954
 msgid "  Local modifications are preserved.\n"
 msgstr "  Lokala ändringar behålls som de är.\n"
 
-#: ../svn/svn.c:1957
+#: ../svn/svn.c:1959
 msgid ""
 "Show shelved changes as a diff.\n"
 "usage: x-shelf-diff SHELF [VERSION]\n"
@@ -17955,7 +17962,7 @@ msgstr ""
 "användning: x-shelf-diff HYLLA [VERSION]\n"
 "\n"
 
-#: ../svn/svn.c:1960
+#: ../svn/svn.c:1962
 msgid ""
 "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
 "\n"
@@ -17964,18 +17971,18 @@ msgstr ""
 "  ändringsfil.\n"
 "\n"
 
-#: ../svn/svn.c:1962
+#: ../svn/svn.c:1964
 msgid ""
 "  See also: 'svn diff --cl=svn:shelf:SHELF' which supports most options of\n"
 "  'svn diff'.\n"
 "\n"
 msgstr ""
-"   Se även: \"svn diff --cl=svn:shelf:HYLLA\" som tillåter de flesta av\n"
-"   väljarna för \"svn diff\".\n"
+"  Se även: \"svn diff --cl=svn:shelf:HYLLA\" som tillåter de flesta av\n"
+"  väljarna för \"svn diff\".\n"
 "\n"
 
-#: ../svn/svn.c:1965 ../svn/svn.c:1978 ../svn/svn.c:1991 ../svn/svn.c:2003
-#: ../svn/svn.c:2015 ../svn/svn.c:2030 ../svn/svn.c:2060 ../svn/svn.c:2093
+#: ../svn/svn.c:1967 ../svn/svn.c:1980 ../svn/svn.c:1993 ../svn/svn.c:2005
+#: ../svn/svn.c:2017 ../svn/svn.c:2032 ../svn/svn.c:2066 ../svn/svn.c:2099
 msgid ""
 "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
 "  in the next release, and there is no promise of backward compatibility.\n"
@@ -17983,7 +17990,7 @@ msgstr ""
 "  Hyllfunktionen är EXPERIMENTELL. Detta kommando kommer troligen\n"
 "  ändras i nästa utgåva, och ingen bakåtkompatibilitet utlovas.\n"
 
-#: ../svn/svn.c:1972
+#: ../svn/svn.c:1974
 msgid ""
 "Delete a shelf.\n"
 "usage: x-shelf-drop SHELF [PATH ...]\n"
@@ -17993,17 +18000,17 @@ msgstr ""
 "användning: x-shelf-drop HYLLA [SÖKVÄG ...]\n"
 "\n"
 
-#: ../svn/svn.c:1975
+#: ../svn/svn.c:1977
 msgid ""
 "  Delete the shelves named SHELF from the working copies containing PATH\n"
 "  (default PATH is '.')\n"
 "\n"
 msgstr ""
-"   Radera hyllorna med namn HYLLA från arbetskopiorna som innehåller SÖKVÄG\n"
-"   (\".\" om ingen anges)\n"
+"  Radera hyllorna med namn HYLLA från arbetskopiorna som innehåller SÖKVÄG\n"
+"  (\".\" om ingen anges)\n"
 "\n"
 
-#: ../svn/svn.c:1984
+#: ../svn/svn.c:1986
 msgid ""
 "List shelves.\n"
 "usage: x-shelf-list [PATH ...]\n"
@@ -18013,7 +18020,7 @@ msgstr ""
 "användning: x-shelf-list [SÖKVÄG ...]\n"
 "\n"
 
-#: ../svn/svn.c:1987
+#: ../svn/svn.c:1989
 msgid ""
 "  List shelves for each working copy containing PATH (default is '.')\n"
 "  Include the first line of any log message and some details about the\n"
@@ -18025,7 +18032,7 @@ msgstr ""
 "  innehåll, om inte väljaren \"-q\" anges.\n"
 "\n"
 
-#: ../svn/svn.c:1998
+#: ../svn/svn.c:2000
 msgid ""
 "List which shelf affects each path.\n"
 "usage: x-shelf-list-by-paths [PATH...]\n"
@@ -18035,7 +18042,7 @@ msgstr ""
 "användning: x-shelf-list-by-paths [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:2001
+#: ../svn/svn.c:2003
 msgid ""
 "  List which shelf most recently affects each path below the given PATHs.\n"
 "\n"
@@ -18043,7 +18050,7 @@ msgstr ""
 "  Lista hyllorna som senast påverkar varje sökväg under givna SÖKVÄGar.\n"
 "\n"
 
-#: ../svn/svn.c:2009
+#: ../svn/svn.c:2011
 msgid ""
 "Show the versions of a shelf.\n"
 "usage: x-shelf-log SHELF [PATH...]\n"
@@ -18053,7 +18060,7 @@ msgstr ""
 "användning: x-shelf-log HYLLA [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:2012
+#: ../svn/svn.c:2014
 msgid ""
 "  Show all versions of SHELF for each working copy containing PATH (the\n"
 "  default PATH is '.').\n"
@@ -18063,7 +18070,7 @@ msgstr ""
 "  (\".\" om ingen anges).\n"
 "\n"
 
-#: ../svn/svn.c:2022
+#: ../svn/svn.c:2024
 msgid ""
 "Copy local changes onto a new version of a shelf.\n"
 "usage: x-shelf-save SHELF [PATH...]\n"
@@ -18073,7 +18080,7 @@ msgstr ""
 "användning: x-shelf-save HYLLA [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:2025
+#: ../svn/svn.c:2027
 msgid ""
 "  Save local changes in the given PATHs as a new version of SHELF.\n"
 "  The shelf's log message can be set with -m, -F, etc.\n"
@@ -18083,7 +18090,7 @@ msgstr ""
 "  Hyllans loggmeddelande kan anges med -m, -F, osv.\n"
 "\n"
 
-#: ../svn/svn.c:2028
+#: ../svn/svn.c:2030
 msgid ""
 "  The same as 'svn shelve --keep-local'.\n"
 "\n"
@@ -18091,7 +18098,7 @@ msgstr ""
 "  Samma som \"svn shelve --keep-local\".\n"
 "\n"
 
-#: ../svn/svn.c:2040
+#: ../svn/svn.c:2042
 msgid ""
 "Move local changes onto a shelf.\n"
 "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
@@ -18101,7 +18108,7 @@ msgstr ""
 "användning: x-shelve [--keep-local] HYLLA [SÖKVÄG...]\n"
 "\n"
 
-#: ../svn/svn.c:2043
+#: ../svn/svn.c:2045
 msgid ""
 "  Save the local changes in the given PATHs to a new or existing SHELF.\n"
 "  Revert those changes from the WC unless '--keep-local' is given.\n"
@@ -18113,7 +18120,7 @@ msgstr ""
 "  Hyllans loggmeddelande kan anges med -m, -F, osv.\n"
 "\n"
 
-#: ../svn/svn.c:2047
+#: ../svn/svn.c:2049
 msgid ""
 "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
 "\n"
@@ -18121,7 +18128,7 @@ msgstr ""
 "  \"svn shelve --keep-local\" är samma som \"svn shelf-save\".\n"
 "\n"
 
-#: ../svn/svn.c:2049
+#: ../svn/svn.c:2051
 msgid ""
 "  The kinds of change you can shelve are committable changes to files and\n"
 "  properties, except the following kinds which are not yet supported:\n"
@@ -18139,21 +18146,31 @@ msgstr ""
 "  saknade filer kan inte läggas på hyllan.\n"
 "\n"
 
-#: ../svn/svn.c:2056
+#: ../svn/svn.c:2058
 msgid ""
 "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
 "\n"
-msgstr "  För att återfå ändringar från hyllan, använd \"svn unshelve HYLLA\".\n\n"
+msgstr ""
+"  För att återfå ändringar från hyllan, använd \"svn unshelve HYLLA\".\n"
+"\n"
 
-#: ../svn/svn.c:2058
+#: ../svn/svn.c:2060
 msgid ""
-"  Shelves are stored in <WC>/.svn/shelves/\n"
+"  Shelves are currently stored under <WC>/.svn/experimental/shelves/ .\n"
+"  (In Subversion 1.10, shelves were stored under <WC>/.svn/shelves/ as\n"
+"  patch files. To recover a shelf created by 1.10, either use a 1.10\n"
+"  client to find and unshelve it, or find the patch file and use any\n"
+"  1.10 or later 'svn patch' to apply it.)\n"
 "\n"
 msgstr ""
-"  Hyllor lagras i <ARBETSKOPIA>/.svn/shelves/\n"
+"  Hyllor lagras för närvarande under <ARBETSKOPIA>/.svn/experimental/shelves/.\n"
+"  (I Subversion 1.10 lagrades hyllor under <ARBETSKOPIA>/.svn/shelves/ som\n"
+"  ändringsfiler. För att återfå en hylla skapad av version 1.10, anbringa\n"
+"  antingen hyllan med klient version 1.10, eller hitta ändringsfilen och\n"
+"  anbringa den med \"svn patch\" med klient 1.10 eller senare.)\n"
 "\n"
 
-#: ../svn/svn.c:2069
+#: ../svn/svn.c:2075
 msgid ""
 "Copy shelved changes back into the WC.\n"
 "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
@@ -18163,7 +18180,7 @@ msgstr ""
 "användning: x-unshelve [--drop] [HYLLA [VERSION]]\n"
 "\n"
 
-#: ../svn/svn.c:2072
+#: ../svn/svn.c:2078
 msgid ""
 "  Apply the changes stored in SHELF to the working copy.\n"
 "  SHELF defaults to the newest shelf.\n"
@@ -18173,7 +18190,7 @@ msgstr ""
 "  Den nyaste hyllan används om HYLLA inte anges.\n"
 "\n"
 
-#: ../svn/svn.c:2075
+#: ../svn/svn.c:2081
 msgid ""
 "  Apply the newest version of the shelf, by default. If VERSION is\n"
 "  specified, apply that version and discard all versions newer than that.\n"
@@ -18187,7 +18204,7 @@ msgstr ""
 "  versioner (såvida inte --drop anges).\n"
 "\n"
 
-#: ../svn/svn.c:2080
+#: ../svn/svn.c:2086
 msgid ""
 "  With --drop, delete the entire shelf (like 'svn shelf-drop') after\n"
 "  successfully unshelving with no conflicts.\n"
@@ -18197,7 +18214,7 @@ msgstr ""
 "  lyckats anbringa ändringen utan konflikter.\n"
 "\n"
 
-#: ../svn/svn.c:2083
+#: ../svn/svn.c:2089
 msgid ""
 "  The working files involved should be in a clean, unmodified state\n"
 "  before using this command. To roll back to an older version of the\n"
@@ -18212,7 +18229,7 @@ msgstr ""
 "  önskade versionen från hyllan.\n"
 "\n"
 
-#: ../svn/svn.c:2088
+#: ../svn/svn.c:2094
 msgid ""
 "  Unshelve normally refuses to apply any changes if any path involved is\n"
 "  already modified (or has any other abnormal status) in the WC. With\n"
@@ -18226,108 +18243,113 @@ msgstr ""
 "  halvfärdiga eller oväntade resultat.\n"
 "\n"
 
-#: ../svn/svn.c:2270 ../svnbench/svnbench.c:474 ../svnlook/svnlook.c:2590
+#: ../svn/svn.c:2180
+#, c-format
+msgid "'%s' is not a valid --x-viewspec value"
+msgstr "\"%s\" är inte ett giltigt värde för --x-viewspec"
+
+#: ../svn/svn.c:2292 ../svnbench/svnbench.c:474 ../svnlook/svnlook.c:2590
 msgid "Non-numeric limit argument given"
 msgstr "Argumentet till limit-flaggan är inget tal"
 
-#: ../svn/svn.c:2275 ../svnbench/svnbench.c:479 ../svnlook/svnlook.c:2595
+#: ../svn/svn.c:2297 ../svnbench/svnbench.c:479 ../svnlook/svnlook.c:2595
 msgid "Argument to --limit must be positive"
 msgstr "Argumentet till --limit måste vara positivt"
 
-#: ../svn/svn.c:2295 ../svn/svn.c:2570
+#: ../svn/svn.c:2317 ../svn/svn.c:2592
 msgid "Can't specify -c with --old"
 msgstr "Kan inte ange -c med --old"
 
-#: ../svn/svn.c:2325 ../svnbench/svnbench.c:515
+#: ../svn/svn.c:2347 ../svnbench/svnbench.c:515
 #, c-format
 msgid "Negative number in range (%s) not supported with -c"
 msgstr "Negativt tal i område (%s) stöds ej med -c"
 
-#: ../svn/svn.c:2337 ../svnbench/svnbench.c:527
+#: ../svn/svn.c:2359 ../svnbench/svnbench.c:527
 #, c-format
 msgid "Non-numeric change argument (%s) given to -c"
 msgstr "Argumentet till flaggan -c (%s) är inget tal"
 
-#: ../svn/svn.c:2344 ../svnbench/svnbench.c:534
+#: ../svn/svn.c:2366 ../svnbench/svnbench.c:534
 msgid "There is no change 0"
 msgstr "Ändring 0 finns inte"
 
-#: ../svn/svn.c:2385 ../svnadmin/svnadmin.c:2932 ../svnbench/svnbench.c:576
+#: ../svn/svn.c:2407 ../svnadmin/svnadmin.c:2932 ../svnbench/svnbench.c:576
 #: ../svnfsfs/svnfsfs.c:303 ../svnrdump/svnrdump.c:861
 #: ../svnsync/svnsync.c:2146
 #, c-format
 msgid "Syntax error in revision argument '%s'"
 msgstr "Syntaxfel i revisionsargumentet \"%s\""
 
-#: ../svn/svn.c:2448 ../svn/svn.c:2465 ../svnbench/svnbench.c:615
+#: ../svn/svn.c:2470 ../svn/svn.c:2487 ../svnbench/svnbench.c:615
 #, c-format
 msgid "Error converting depth from locale to UTF-8"
 msgstr "Fel vid konvertering av djupet från lokal kodning till UTF-8"
 
-#: ../svn/svn.c:2455 ../svnbench/svnbench.c:622
+#: ../svn/svn.c:2477 ../svnbench/svnbench.c:622
 #, c-format
 msgid "'%s' is not a valid depth; try 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "\"%s\" är inget giltigt djup; försök med \"empty\", \"files\", \"immediates\" eller \"infinity\""
 
-#: ../svn/svn.c:2472
+#: ../svn/svn.c:2494
 #, c-format
 msgid "'%s' is not a valid depth; try 'exclude', 'empty', 'files', 'immediates', or 'infinity'"
 msgstr "\"%s\" är inget giltigt djup; försök med \"exclude\", \"empty\", \"files\", \"immediates\" eller \"infinity\""
 
-#: ../svn/svn.c:2607
+#: ../svn/svn.c:2629
 #, c-format
 msgid "Syntax error in native-eol argument '%s'"
 msgstr "Syntaxfel i native-eol-argumentet \"%s\""
 
-#: ../svn/svn.c:2628
+#: ../svn/svn.c:2650
 msgid "Changelist names must not be empty"
 msgstr "Ändringslistor får inte ha tomma namn"
 
-#: ../svn/svn.c:2661
+#: ../svn/svn.c:2683
 #, c-format
 msgid "'%s' is not a valid --accept value"
 msgstr "\"%s\" är inte ett giltigt värde för --accept"
 
-#: ../svn/svn.c:2669
+#: ../svn/svn.c:2691
 #, c-format
 msgid "'%s' is not a valid --show-revs value"
 msgstr "\"%s\" är inte ett giltigt värde för --show-revs"
 
-#: ../svn/svn.c:2685
+#: ../svn/svn.c:2707
 #, c-format
 msgid "Invalid strip count '%s'"
 msgstr "Ogiltigt antal att ta bort: \"%s\""
 
-#: ../svn/svn.c:2691
+#: ../svn/svn.c:2713
 msgid "Argument to --strip must be positive"
 msgstr "Argumentet till --strip måste vara positivt"
 
-#: ../svn/svn.c:2785 ../svnmucc/svnmucc.c:666 ../svnrdump/svnrdump.c:940
+#: ../svn/svn.c:2809 ../svnmucc/svnmucc.c:666 ../svnrdump/svnrdump.c:940
 #: ../svnsync/svnsync.c:2204
 msgid "--non-interactive and --force-interactive are mutually exclusive"
 msgstr "--non-interactive och --force-interactive kan inte användas samtidigt"
 
-#: ../svn/svn.c:2838 ../svnbench/svnbench.c:756
+#: ../svn/svn.c:2862 ../svnbench/svnbench.c:756
 #: ../svndumpfilter/svndumpfilter.c:1428 ../svnlook/svnlook.c:2694
 #, c-format
 msgid "Subcommand argument required\n"
 msgstr "Argument för underkommando krävs\n"
 
-#: ../svn/svn.c:2856 ../svnadmin/svnadmin.c:3158 ../svnbench/svnbench.c:774
+#: ../svn/svn.c:2880 ../svnadmin/svnadmin.c:3158 ../svnbench/svnbench.c:774
 #: ../svndumpfilter/svndumpfilter.c:1445 ../svnfsfs/svnfsfs.c:379
 #: ../svnlook/svnlook.c:2711 ../svnrdump/svnrdump.c:984
 #, c-format
 msgid "Unknown subcommand: '%s'\n"
 msgstr "Okänt underkommando: \"%s\"\n"
 
-#: ../svn/svn.c:2865
+#: ../svn/svn.c:2889
 #, c-format
 msgid "Undo is done using either the 'svn revert' or the 'svn merge' command.\n"
 msgstr ""
 "Återgång till tidigare tillstånd görs med antingen \"svn revert\"\n"
 "eller \"svn merge\".\n"
 
-#: ../svn/svn.c:2901
+#: ../svn/svn.c:2925
 #, c-format
 msgid ""
 "Subcommand '%s' doesn't accept option '%s'\n"
@@ -18336,99 +18358,99 @@ msgstr ""
 "Underkommandot \"%s\" tillåter inte flaggan \"%s\"\n"
 "Skriv \"svn help %s\" för användning.\n"
 
-#: ../svn/svn.c:2916 ../svnbench/svnbench.c:822
+#: ../svn/svn.c:2940 ../svnbench/svnbench.c:822
 msgid "Multiple revision arguments encountered; can't specify -c twice, or both -c and -r"
 msgstr "Flera revisionsargument påträffades; -c kan inte anges flera gånger; -c och -r kan inte användas samtidigt"
 
-#: ../svn/svn.c:2927
+#: ../svn/svn.c:2951
 msgid "--depth and --set-depth are mutually exclusive"
 msgstr "--depth och --set-depth kan inte användas samtidigt"
 
-#: ../svn/svn.c:2936 ../svnbench/svnbench.c:833
+#: ../svn/svn.c:2960 ../svnbench/svnbench.c:833
 msgid "--with-all-revprops and --with-no-revprops are mutually exclusive"
 msgstr "--with-all-revprops och --with-no-revprops kan inte användas samtidigt"
 
-#: ../svn/svn.c:2945 ../svnbench/svnbench.c:842
+#: ../svn/svn.c:2969 ../svnbench/svnbench.c:842
 msgid "--with-revprop and --with-no-revprops are mutually exclusive"
 msgstr "--with-revprop och --with-no-revprops kan inte användas samtidigt"
 
-#: ../svn/svn.c:2975
+#: ../svn/svn.c:2999
 msgid "--message (-m) and --file (-F) are mutually exclusive"
 msgstr "--message (-m) och --file (-F) kan inte användas samtidigt"
 
-#: ../svn/svn.c:2988 ../svnbench/svnbench.c:855 ../svnmucc/svnmucc.c:678
+#: ../svn/svn.c:3012 ../svnbench/svnbench.c:855 ../svnmucc/svnmucc.c:678
 #: ../svnrdump/svnrdump.c:1043
 msgid "--trust-server-cert-failures requires --non-interactive"
 msgstr "--trust-server-cert-failures kräver --non-interactive"
 
-#: ../svn/svn.c:2996 ../svnbench/svnbench.c:863 ../svnmucc/svnmucc.c:686
+#: ../svn/svn.c:3020 ../svnbench/svnbench.c:863 ../svnmucc/svnmucc.c:686
 #: ../svnrdump/svnrdump.c:1050
 msgid "--password-from-stdin requires --non-interactive"
 msgstr "--password-from-stdin kräver --non-interactive"
 
-#: ../svn/svn.c:3005
+#: ../svn/svn.c:3029
 msgid "--diff-cmd and --internal-diff are mutually exclusive"
 msgstr "--diff-cmd och --internal-diff kan inte användas samtidigt"
 
-#: ../svn/svn.c:3047
+#: ../svn/svn.c:3071
 msgid "--relocate and --depth are mutually exclusive"
 msgstr "--relocate och --depth kan inte användas samtidigt"
 
-#: ../svn/svn.c:3054
+#: ../svn/svn.c:3078
 msgid "--relocate and --non-recursive (-N) are mutually exclusive"
 msgstr "--relocate och --non-recursive (-N) kan inte användas samtidigt"
 
-#: ../svn/svn.c:3177
+#: ../svn/svn.c:3201
 msgid "Log message file is a versioned file; use '--force-log' to override"
 msgstr "Filen med loggmeddelandet är versionshanterad; använd --force-log för att kringgå"
 
-#: ../svn/svn.c:3184
+#: ../svn/svn.c:3208
 msgid "Lock comment file is a versioned file; use '--force-log' to override"
 msgstr "Filen med låskommentaren är versionshanterad; använd --force-log för att kringgå"
 
-#: ../svn/svn.c:3204
+#: ../svn/svn.c:3228
 msgid "The log message is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Loggmeddelandet är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
-#: ../svn/svn.c:3211
+#: ../svn/svn.c:3235
 msgid "The lock comment is a pathname (was -F intended?); use '--force-log' to override"
 msgstr "Låskommentaren är en sökväg (avsågs -F?); använd --force-log för att kringgå"
 
-#: ../svn/svn.c:3234
+#: ../svn/svn.c:3258
 msgid "--auto-props and --no-auto-props are mutually exclusive"
 msgstr "--auto-props och --no-auto-props kan inte användas samtidigt"
 
-#: ../svn/svn.c:3327 ../svn/svn.c:3334
+#: ../svn/svn.c:3351 ../svn/svn.c:3358
 #, c-format
 msgid "--accept=%s incompatible with --non-interactive"
 msgstr "--accept=%s kan inte användas med --non-interactive"
 
-#: ../svn/svn.c:3383
+#: ../svn/svn.c:3407
 #, c-format
 msgid "Try 'svn help %s' for more information"
 msgstr "Skriv \"svn help %s\" för vidare information"
 
-#: ../svn/svn.c:3389 ../svnbench/svnbench.c:1006
+#: ../svn/svn.c:3413 ../svnbench/svnbench.c:1006
 msgid "Please see the 'svn upgrade' command"
 msgstr "Se kommandot \"svn upgrade\""
 
-#: ../svn/svn.c:3395 ../svnmucc/svnmucc.c:971 ../svnrdump/svnrdump.c:1143
+#: ../svn/svn.c:3419 ../svnmucc/svnmucc.c:971 ../svnrdump/svnrdump.c:1143
 msgid "Authentication failed and interactive prompting is disabled; see the --force-interactive option"
 msgstr "Autentisering misslyckades och interaktiva frågor är avstängda; se flaggan --force-interactive"
 
-#: ../svn/svn.c:3400
+#: ../svn/svn.c:3424
 msgid "Reading file from standard input because of -F option; this can interfere with interactive prompting"
 msgstr "Läser filen från standardinmatningen eftersom flaggan -F angavs; detta kan påverka interaktiva frågor"
 
-#: ../svn/svn.c:3411 ../svnbench/svnbench.c:1014
+#: ../svn/svn.c:3435 ../svnbench/svnbench.c:1014
 msgid "Run 'svn cleanup' to remove locks (type 'svn help cleanup' for details)"
 msgstr "Kör \"svn cleanup\" för att ta bort lås (skriv \"svn help cleanup\" för mer information)"
 
-#: ../svn/svn.c:3418
+#: ../svn/svn.c:3442
 msgid "Another process is blocking the working copy database, or the underlying filesystem does not support file locking; if the working copy is on a network filesystem, make sure file locking has been enabled on the file server"
 msgstr "En annan process blockerar arbetskopians databas, eller så stöder det underliggande filsystemet inte fillåsning; om arbetskopian ligger på ett nätverksfilsystem, se till att filservern har fillåsning påslagen"
 
-#: ../svn/svn.c:3431
+#: ../svn/svn.c:3455
 msgid "When using svn+ssh:// URLs, keep in mind that the --username and --password options are ignored because authentication is performed by SSH, not Subversion"
 msgstr "När URL:er på formen svn+ssh:// används, kom ihåg att flaggorna --username och --password ej beaktas eftersom autentisering görs av SSH, inte av Subversion"
 
@@ -21257,9 +21279,7 @@ msgstr "Läs in en dumpfil från standard in till ett arkiv vid URL.\n"
 msgid ""
 "usage: svnrdump help [SUBCOMMAND...]\n"
 "\n"
-msgstr ""
-"användning: svnadmin help [UNDERKOMMANDO...]\n"
-"\n"
+msgstr "användning: svnrdump help [UNDERKOMMANDO...]\n\n"
 
 #: ../svnrdump/svnrdump.c:116
 msgid "dump incrementally"
