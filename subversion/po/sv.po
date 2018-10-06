@@ -110,8 +110,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2018-10-06 17:31+0200\n"
-"PO-Revision-Date: 2018-09-19 13:05+0200\n"
+"POT-Creation-Date: 2018-10-06 16:54+0200\n"
+"PO-Revision-Date: 2018-10-06 17:37+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Swedish <dev@subversion.apache.org>\n"
 "Language: sv\n"
@@ -3560,7 +3560,7 @@ msgstr "Kan inte lösa trädkonflikten på \"%s\" (kunde inte hitta gemensamt ur
 #: ../libsvn_client/conflicts.c:9134
 #, c-format
 msgid "Corresponding working copy node not found for '%s'"
-msgstr ""
+msgstr "Motsvarande nod i arbetskopian fanns ej för \"%s\""
 
 #: ../libsvn_client/conflicts.c:9456 ../libsvn_client/conflicts.c:9539
 #: ../libsvn_client/conflicts.c:11122
@@ -3628,9 +3628,8 @@ msgid "Reject conflicts"
 msgstr "Avslå konflikter"
 
 #: ../libsvn_client/conflicts.c:9512
-#, fuzzy
 msgid "reject incoming changes which conflict and accept the rest"
-msgstr "avslå ändringar som orsakar konflikter och godta resten"
+msgstr "avslå inkommande ändringar som orsakar konflikter och godta resten"
 
 #: ../libsvn_client/conflicts.c:9518
 msgid "accept the file as it appears in the working copy"
@@ -14552,6 +14551,8 @@ msgid ""
 "print the working copy layout, formatted according\n"
 "                             to ARG: 'classic' or 'svn11'"
 msgstr ""
+"visa arbetskopians omfattning, formaterad enligt\n"
+"                             ARG: \"classic\" eller \"svn11\""
 
 #: ../svn/svn.c:536
 msgid ""
@@ -15197,13 +15198,12 @@ msgstr ""
 "\n"
 
 #: ../svn/svn.c:827
-#, fuzzy
 msgid ""
 "  EXPERIMENTAL:\n"
 "  With --x-viewspec, print the working copy layout.\n"
 msgstr ""
 "  EXPERIMENTELLT:\n"
-"  Med --viewspec, visa arbetskopians omfattning.\n"
+"  Med --x-viewspec, visa arbetskopians omfattning.\n"
 
 #: ../svn/svn.c:838 ../svn/svn.c:864
 msgid ""
@@ -15557,9 +15557,9 @@ msgid ""
 "      svn log -rHEAD:100 ^/tags/3.0\n"
 "\n"
 msgstr ""
-"     Visa alla loggmeddelanden för arkiveringar mellan märkena ^/tags/2.0\n"
-"     och ^/tags/3.0, med antagandet att märket 2.0 skapades i revision 100:\n"
-"       svn log -rHEAD:100 ^/tags/3.0\n"
+"    Visa alla loggmeddelanden för arkiveringar mellan märkena ^/tags/2.0\n"
+"    och ^/tags/3.0, med antagandet att märket 2.0 skapades i revision 100:\n"
+"      svn log -rHEAD:100 ^/tags/3.0\n"
 "\n"
 
 #: ../svn/svn.c:995
@@ -17977,8 +17977,8 @@ msgid ""
 "  'svn diff'.\n"
 "\n"
 msgstr ""
-"   Se även: \"svn diff --cl=svn:shelf:HYLLA\" som tillåter de flesta av\n"
-"   väljarna för \"svn diff\".\n"
+"  Se även: \"svn diff --cl=svn:shelf:HYLLA\" som tillåter de flesta av\n"
+"  väljarna för \"svn diff\".\n"
 "\n"
 
 #: ../svn/svn.c:1967 ../svn/svn.c:1980 ../svn/svn.c:1993 ../svn/svn.c:2005
@@ -18006,8 +18006,8 @@ msgid ""
 "  (default PATH is '.')\n"
 "\n"
 msgstr ""
-"   Radera hyllorna med namn HYLLA från arbetskopiorna som innehåller SÖKVÄG\n"
-"   (\".\" om ingen anges)\n"
+"  Radera hyllorna med namn HYLLA från arbetskopiorna som innehåller SÖKVÄG\n"
+"  (\".\" om ingen anges)\n"
 "\n"
 
 #: ../svn/svn.c:1986
@@ -18163,6 +18163,12 @@ msgid ""
 "  1.10 or later 'svn patch' to apply it.)\n"
 "\n"
 msgstr ""
+"  Hyllor lagras för närvarande under <ARBETSKOPIA>/.svn/experimental/shelves/.\n"
+"  (I Subversion 1.10 lagrades hyllor under <ARBETSKOPIA>/.svn/shelves/ som\n"
+"  ändringsfiler. För att återfå en hylla skapad av version 1.10, anbringa\n"
+"  antingen hyllan med klient version 1.10, eller hitta ändringsfilen och\n"
+"  anbringa den med \"svn patch\" med klient 1.10 eller senare.)\n"
+"\n"
 
 #: ../svn/svn.c:2075
 msgid ""
@@ -18238,9 +18244,9 @@ msgstr ""
 "\n"
 
 #: ../svn/svn.c:2180
-#, fuzzy, c-format
+#, c-format
 msgid "'%s' is not a valid --x-viewspec value"
-msgstr "\"%s\" är inte ett giltigt värde för --accept"
+msgstr "\"%s\" är inte ett giltigt värde för --x-viewspec"
 
 #: ../svn/svn.c:2292 ../svnbench/svnbench.c:474 ../svnlook/svnlook.c:2590
 msgid "Non-numeric limit argument given"
@@ -21273,9 +21279,7 @@ msgstr "Läs in en dumpfil från standard in till ett arkiv vid URL.\n"
 msgid ""
 "usage: svnrdump help [SUBCOMMAND...]\n"
 "\n"
-msgstr ""
-"användning: svnadmin help [UNDERKOMMANDO...]\n"
-"\n"
+msgstr "användning: svnrdump help [UNDERKOMMANDO...]\n\n"
 
 #: ../svnrdump/svnrdump.c:116
 msgid "dump incrementally"
@@ -22394,19 +22398,3 @@ msgstr "\"%s\" är av okänd typ\n"
 #, c-format
 msgid "Uncommitted local addition, copy or move%s"
 msgstr "Oarkiverad lokalt tillagd, kopierad eller flyttad fil eller katalog%s"
-
-#~ msgid "accept changes only where they conflict"
-#~ msgstr "godta ändringar bara där konflikter uppstår"
-
-#~ msgid "Setting a move sibling requires details for tree conflict at '%s' to be fetched from the repository first"
-#~ msgstr "För att ange ett syskon att flytta måste detaljer om trädkonflikten vid \"%s\" först hämtas från arkivet"
-
-#~ msgid "print the working copy layout"
-#~ msgstr "visa arbetskopians omfattning"
-
-#~ msgid ""
-#~ "  Shelves are stored in <WC>/.svn/shelves/\n"
-#~ "\n"
-#~ msgstr ""
-#~ "  Hyllor lagras i <ARBETSKOPIA>/.svn/shelves/\n"
-#~ "\n"
