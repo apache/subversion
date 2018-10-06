@@ -57,6 +57,37 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Fix a potential crash in JavaHL (issue #4764)
 
 
+Version 1.10.3
+(?? Oct 2018, from /branches/1.10.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.10.3
+
+ User-visible changes:
+  - Minor new features and improvements:
+    * Store the HTTPS client cert password (r1842578)
+
+  - Client-side bugfixes:
+    * Fix shelving when custom diff command is configured (issue #4758)
+    * Fix conflict resolver crashes (issue #4744, r1842581, r1842582, r1842583)
+    * Fix conflict resolver endless scan in some cases (r1842586)
+    * Fix "Accept incoming deletion" on locally deleted file (issue #4739)
+    * Fix "resolver adds unrelated moves to move target list" (issue #4766)
+
+  - Server-side bugfixes:
+    * Reject bad PUT before CHECKOUT in v1 HTTP protocol (r1841281)
+    * Let 'svnadmin recover' prune the rep-cache even if disabled (r1842585)
+
+  - Client-side and server-side bugfixes:
+    * Allow commands like 'svn ci --file X' to work when X is a FIFO (r1841282)
+
+  - Other tool improvements and bugfixes:
+    * 'svnadmin verify --keep-going --quiet' shows an error summary (r1842584)
+    * Fix error in german translation for 'svn help merge' (r1837038)
+
+ Developer-visible changes:
+  - General:
+    * Python tests use the current python executable (r1842626)
+
+
 Version 1.10.2
 (20 Jul 2018, from /branches/1.10.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.10.2

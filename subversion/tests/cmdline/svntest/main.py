@@ -2108,7 +2108,7 @@ def _create_parser(usage=None):
                     help='Run the given number of tests in parallel')
   parser.add_option('-c', action='store_true', dest='is_child_process',
                     help='Flag if we are running this python test as a ' +
-                         'child process')
+                    'child process; used by build/run_tests.py:334')
   parser.add_option('--mode-filter', action='store', dest='mode_filter',
                     default='ALL',
                     help='Limit tests to those with type specified (e.g. XFAIL)')

@@ -209,7 +209,7 @@ Valid options:
                                 'BASE'       base rev of item's working copy
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
-  -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
+  -N [--non-recursive]     : obsolete; same as --depth=files
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
                              'immediates', or 'infinity')
   --set-depth ARG          : set new working copy depth to ARG ('exclude',
