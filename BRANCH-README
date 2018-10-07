@@ -1,6 +1,3 @@
-This branch (^/subversion/branches/better-pristines) will be used to
-implement two dependent features:
-
 Client support for multiple working copy versions
 -------------------------------------------------
 
@@ -51,23 +48,3 @@ OPTIONAL: The "svn upgrade" command may grow an option to only show
    Bad Thing, and b) defeat the purpose of this feature, which is
    support for multiple versions of the client in the same working
    copy.
-
-
-Compressed pristines and in-database pristine storage
------------------------------------------------------
-
-WC format 32 will get support for storing (small) pristine files
-directly in the WC-DB as blobs in the PRISTINES table, and also for
-compressing pristines with LZ4.
-
-The current WC format 31 will remain fully supported.
-
-The 'svn cleanup' command will grow a new option:
-
-    svn cleanup --compress-pristines
-
-that will, if compressed pristines are supported by the working copy
-format, compress any uncompressed pristine files, possibly removing
-them and storing their contents in the working copy database.
-
-Upgdading to format 32 will _not_ automatically compress pristines.
