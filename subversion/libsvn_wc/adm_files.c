@@ -38,6 +38,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_version.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -315,6 +316,7 @@ init_adm_tmp_area(const char *path, apr_pool_t *pool)
    unlock it when done. */
 static svn_error_t *
 init_adm(svn_wc__db_t *db,
+         int target_format,
          const char *local_abspath,
          const char *repos_relpath,
          const char *repos_root_url,
@@ -340,10 +342,9 @@ init_adm(svn_wc__db_t *db,
   SVN_ERR(init_adm_tmp_area(local_abspath, pool));
 
   /* Create the SDB. */
-  SVN_ERR(svn_wc__db_init(db, local_abspath,
+  SVN_ERR(svn_wc__db_init(db, target_format, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
-                          initial_rev, depth,
-                          pool));
+                          initial_rev, depth, pool));
 
   /* Stamp ENTRIES and FORMAT files for old clients.  */
   SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
@@ -362,6 +363,7 @@ init_adm(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
+                            int target_format,
                             const char *local_abspath,
                             const char *url,
                             const char *repos_root_url,
@@ -370,7 +372,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             svn_depth_t depth,
                             apr_pool_t *scratch_pool)
 {
-  int format;
+  int present_format;
   const char *original_repos_relpath;
   const char *original_root_url;
   svn_boolean_t is_op_root;
@@ -386,15 +388,30 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(repos_relpath != NULL);
 
-  SVN_ERR(svn_wc__internal_check_wc(&format, db, local_abspath, TRUE,
+  SVN_ERR(svn_wc__internal_check_wc(&present_format, db, local_abspath, TRUE,
                                     scratch_pool));
 
   /* Early out: we know we're not dealing with an existing wc, so
      just create one. */
-  if (format == 0)
-    return svn_error_trace(init_adm(db, local_abspath,
-                                    repos_relpath, repos_root_url, repos_uuid,
-                                    revision, depth, scratch_pool));
+  if (present_format == 0)
+    {
+
+      if (target_format < SVN_WC__SUPPORTED_VERSION)
+        return svn_error_createf(
+            SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+            _("Working copy format %d is not supported by client version %s."),
+            target_format, SVN_VER_NUM);
+
+      if (target_format > SVN_WC__VERSION)
+        return svn_error_createf(
+            SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+            _("Working copy format %d can't be created by client version %s."),
+            target_format, SVN_VER_NUM);
+
+      return svn_error_trace(init_adm(db, target_format, local_abspath,
+                                      repos_relpath, repos_root_url, repos_uuid,
+                                      revision, depth, scratch_pool));
+    }
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
                                &db_revision, &db_repos_relpath,
@@ -413,6 +430,13 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   if (status != svn_wc__db_status_deleted
       && status != svn_wc__db_status_not_present)
     {
+      /* Check that the existing format matches the requested format. */
+      if (present_format != target_format)
+        return svn_error_createf(
+            SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+            _("Format %d doesn't match existing format %d in '%s'"),
+            target_format, present_format, db_revision, local_abspath);
+
       /* ### Should we match copyfrom_revision? */
       if (db_revision != revision)
         return
@@ -473,7 +497,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
+svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
+                   int target_format,
                    const char *local_abspath,
                    const char *url,
                    const char *repos_root_url,
@@ -483,8 +508,9 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-    svn_wc__internal_ensure_adm(wc_ctx->db, local_abspath, url, repos_root_url,
-                                repos_uuid, revision, depth, scratch_pool));
+    svn_wc__internal_ensure_adm(wc_ctx->db, target_format, local_abspath,
+                                url, repos_root_url, repos_uuid, revision,
+                                depth, scratch_pool));
 }
 
 svn_error_t *

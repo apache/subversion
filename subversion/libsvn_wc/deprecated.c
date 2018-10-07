@@ -570,6 +570,22 @@ svn_wc_transmit_prop_deltas(const char *path,
 
 /*** From adm_files.c ***/
 svn_error_t *
+svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *url,
+                   const char *repos_root_url,
+                   const char *repos_uuid,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+      svn_wc__ensure_adm(wc_ctx, SVN_WC__VERSION, local_abspath,
+                         url, repos_root_url, repos_uuid, revision, depth,
+                         scratch_pool));
+}
+
+svn_error_t *
 svn_wc_ensure_adm3(const char *path,
                    const char *uuid,
                    const char *url,

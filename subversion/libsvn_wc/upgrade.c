@@ -2026,7 +2026,7 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
       /* Auto-upgrade worked! */
       SVN_ERR(svn_wc__db_close(db));
 
-      SVN_ERR_ASSERT(result_format == SVN_WC__VERSION);
+      SVN_ERR_ASSERT(result_format == target_format);
 
       if (bumped_format && notify_func)
         {
@@ -2080,7 +2080,7 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
   /* Create an empty sqlite database for this directory and store it in DB. */
   SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb,
                                    &data.repos_id, &data.wc_id,
-                                   db, data.root_abspath,
+                                   db, target_format, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
                                    scratch_pool));
 

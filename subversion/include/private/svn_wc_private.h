@@ -2110,7 +2110,6 @@ svn_wc__translated_stream(svn_stream_t **stream,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
-
 /**
  * Convert @a version to that version's characteristic working copy
  * format, returned in @a format.
@@ -2123,6 +2122,43 @@ svn_error_t *
 svn_wc__format_from_version(int *format,
                             const svn_version_t* version,
                             apr_pool_t *scratch_pool);
+
+/**
+ * Ensure that an administrative area exists for @a local_abspath, so that @a
+ * local_abspath is a working copy subdir with schema version @a target_format
+ * based on @a url at @a revision, with depth @a depth, and with repository UUID
+ * @a repos_uuid and repository root URL @a repos_root_url.
+ *
+ * @a depth must be a definite depth, it cannot be #svn_depth_unknown.
+ * @a repos_uuid and @a repos_root_url MUST NOT be @c NULL, and
+ * @a repos_root_url must be a prefix of @a url.
+ *
+ * If the administrative area does not exist, then create it and
+ * initialize it to an unlocked state.
+ *
+ * If the administrative area already exists then the given @a url
+ * must match the URL in the administrative area and the given
+ * @a revision must match the BASE of the working copy dir unless
+ * the admin directory is scheduled for deletion or the
+ * #SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
+ *
+ * Do not ensure existence of @a local_abspath itself; if @a local_abspath
+ * does not exist, return error.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
+                   int target_format,
+                   const char *local_abspath,
+                   const char *url,
+                   const char *repos_root_url,
+                   const char *repos_uuid,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *scratch_pool);
 
 /**
  * Upgrade the working copy at @a local_abspath to the metadata

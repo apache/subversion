@@ -516,6 +516,7 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
 /* Library-internal version of svn_wc_ensure_adm4(). */
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
+                            int target_format,
                             const char *local_abspath,
                             const char *url,
                             const char *repos_root_url,

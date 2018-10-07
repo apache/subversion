@@ -3522,7 +3522,8 @@ svn_wc_mark_missing_deleted(const char *path,
                             apr_pool_t *pool);
 
 
-/** Ensure that an administrative area exists for @a local_abspath, so
+/**
+ * Ensure that an administrative area exists for @a local_abspath, so
  * that @a local_abspath is a working copy subdir based on @a url at @a
  * revision, with depth @a depth, and with repository UUID @a repos_uuid
  * and repository root URL @a repos_root_url.
@@ -3532,7 +3533,8 @@ svn_wc_mark_missing_deleted(const char *path,
  * @a repos_root_url must be a prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
- * initialize it to an unlocked state.
+ * initialize it to an unlocked state. The format of the new
+ * administrative area will always be the newset supported format.
  *
  * If the administrative area already exists then the given @a url
  * must match the URL in the administrative area and the given
@@ -3546,7 +3548,9 @@ svn_wc_mark_missing_deleted(const char *path,
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.11 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    const char *local_abspath,

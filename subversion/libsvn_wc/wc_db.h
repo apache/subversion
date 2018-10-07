@@ -269,7 +269,8 @@ svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db);
 
 
-/* Initialize the SDB for LOCAL_ABSPATH, which should be a working copy path.
+/* Initialize the SDB with format TARGET_FORMAT for LOCAL_ABSPATH, which should
+   be a working copy path.
 
    A REPOSITORY row will be constructed for the repository identified by
    REPOS_ROOT_URL and REPOS_UUID. Neither of these may be NULL.
@@ -287,10 +288,13 @@ svn_wc__db_close(svn_wc__db_t *db);
    DEPTH is the initial depth of the working copy; it must be a definite
    depth, not svn_depth_unknown.
 
+   Create the working copy with the given TARGET_FORMAT.
+
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
 svn_wc__db_init(svn_wc__db_t *db,
+                int target_format,
                 const char *local_abspath,
                 const char *repos_relpath,
                 const char *repos_root_url,
@@ -2935,6 +2939,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
                          svn_wc__db_t *wc_db,
+                         int target_format,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,

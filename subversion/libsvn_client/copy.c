@@ -2419,6 +2419,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                 &pair->src_op_revision,
                                                 svn_depth_infinity,
                                                 ignore_externals, FALSE,
+                                                /* FIXME: WC FORMAT! */NULL,
                                                 ra_session, ctx, pool);
 
             ctx->notify_func2 = old_notify_func2;

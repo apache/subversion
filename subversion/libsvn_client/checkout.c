@@ -48,7 +48,8 @@
 /*** Public Interfaces. ***/
 
 static svn_error_t *
-initialize_area(const char *local_abspath,
+initialize_area(int target_format,
+                const char *local_abspath,
                 const svn_client__pathrev_t *pathrev,
                 svn_depth_t depth,
                 svn_client_ctx_t *ctx,
@@ -58,7 +59,8 @@ initialize_area(const char *local_abspath,
     depth = svn_depth_infinity;
 
   /* Make the unversioned directory into a versioned one.  */
-  SVN_ERR(svn_wc_ensure_adm4(ctx->wc_ctx, local_abspath, pathrev->url,
+  SVN_ERR(svn_wc__ensure_adm(ctx->wc_ctx,
+                             target_format, local_abspath, pathrev->url,
                              pathrev->repos_root_url, pathrev->repos_uuid,
                              pathrev->rev, depth, pool));
   return SVN_NO_ERROR;
@@ -75,10 +77,12 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
+                              const svn_version_t *wc_format_version,
                               svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
+  int target_format;
   svn_node_kind_t kind;
   svn_client__pathrev_t *pathrev;
   svn_opt_revision_t resolved_rev = { svn_opt_revision_number };
@@ -93,6 +97,9 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_date)
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
+
+  SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
+                                      scratch_pool));
 
   /* Get the RA connection, if needed. */
   if (ra_session)
@@ -144,21 +151,21 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
          entries file should only have an entry for THIS_DIR with a
          URL, revnum, and an 'incomplete' flag.  */
       SVN_ERR(svn_io_make_dir_recursively(local_abspath, scratch_pool));
-      SVN_ERR(initialize_area(local_abspath, pathrev, depth, ctx,
-                              scratch_pool));
+      SVN_ERR(initialize_area(target_format, local_abspath, pathrev, depth,
+                              ctx, scratch_pool));
     }
   else if (kind == svn_node_dir)
     {
-      int wc_format;
+      int present_format;
       const char *entry_url;
 
-      SVN_ERR(svn_wc_check_wc2(&wc_format, ctx->wc_ctx, local_abspath,
+      SVN_ERR(svn_wc_check_wc2(&present_format, ctx->wc_ctx, local_abspath,
                                scratch_pool));
 
-      if (! wc_format)
+      if (! present_format)
         {
-          SVN_ERR(initialize_area(local_abspath, pathrev, depth, ctx,
-                                  scratch_pool));
+          SVN_ERR(initialize_area(target_format, local_abspath, pathrev, depth,
+                                  ctx, scratch_pool));
         }
       else
         {
@@ -171,10 +178,18 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
              interrupted checkout.  Otherwise bail out. */
           if (strcmp(entry_url, pathrev->url) != 0)
             return svn_error_createf(
-                          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-                          _("'%s' is already a working copy for a"
-                            " different URL"),
-                          svn_dirent_local_style(local_abspath, scratch_pool));
+                SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                _("'%s' is already a working copy for a different URL"),
+                svn_dirent_local_style(local_abspath, scratch_pool));
+
+          /* Warn if the existing WC's format is different than requested. */
+          if (present_format != target_format)
+            return svn_error_createf(
+                SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+                _("'%s' is already a working copy for the same URL"
+                  " but its format is %d instead of the expected %d"),
+                svn_dirent_local_style(local_abspath, scratch_pool),
+                present_format, target_format);
         }
     }
   else
@@ -221,6 +236,7 @@ svn_client_checkout4(svn_revnum_t *result_rev,
                                       peg_revision, revision, depth,
                                       ignore_externals,
                                       allow_unver_obstructions,
+                                      wc_format_version,
                                       NULL /* ra_session */,
                                       ctx, pool);
   if (sleep_here)

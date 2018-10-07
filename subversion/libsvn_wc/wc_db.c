@@ -1360,6 +1360,7 @@ init_db(/* output values */
         apr_int64_t *wc_id,
         /* input values */
         svn_sqlite__db_t *db,
+        int target_format,
         const char *repos_root_url,
         const char *repos_uuid,
         const char *root_node_repos_relpath,
@@ -1373,10 +1374,8 @@ init_db(/* output values */
 
   /* Create the database's schema.  */
   SVN_ERR(svn_sqlite__exec_statements(db, STMT_CREATE_SCHEMA));
-
-  /* TODO: Parametrize the target format here. */
   SVN_ERR(svn_wc__update_schema(&result_format, wcroot_abspath, db,
-                                SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION,
+                                SVN_WC__SUPPORTED_VERSION, target_format,
                                 scratch_pool));
 
   SVN_ERR(svn_wc__db_install_schema_statistics(db, scratch_pool));
@@ -1417,10 +1416,9 @@ init_db(/* output values */
   return SVN_NO_ERROR;
 }
 
-/* Create an sqlite database at DIR_ABSPATH/SDB_FNAME and insert
-   records for REPOS_ID (using REPOS_ROOT_URL and REPOS_UUID) into
-   REPOSITORY and for WC_ID into WCROOT.  Return the DB connection
-   in *SDB.
+/* Create an sqlite database with schema TARGET_FORMAT at DIR_ABSPATH/SDB_FNAME
+   and insert records for REPOS_ID (using REPOS_ROOT_URL and REPOS_UUID) into
+   REPOSITORY and for WC_ID into WCROOT. Return the DB connection in *SDB.
 
    If ROOT_NODE_REPOS_RELPATH is not NULL, insert a BASE node at
    the working copy root with repository relpath ROOT_NODE_REPOS_RELPATH,
@@ -1430,6 +1428,7 @@ static svn_error_t *
 create_db(svn_sqlite__db_t **sdb,
           apr_int64_t *repos_id,
           apr_int64_t *wc_id,
+          int target_format,
           const char *dir_abspath,
           const char *repos_root_url,
           const char *repos_uuid,
@@ -1449,7 +1448,7 @@ create_db(svn_sqlite__db_t **sdb,
                                   result_pool, scratch_pool));
 
   SVN_SQLITE__WITH_LOCK(init_db(repos_id, wc_id,
-                                *sdb, repos_root_url, repos_uuid,
+                                *sdb, target_format, repos_root_url, repos_uuid,
                                 root_node_repos_relpath, root_node_revision,
                                 root_node_depth, dir_abspath, scratch_pool),
                         *sdb);
@@ -1460,6 +1459,7 @@ create_db(svn_sqlite__db_t **sdb,
 
 svn_error_t *
 svn_wc__db_init(svn_wc__db_t *db,
+                int target_format,
                 const char *local_abspath,
                 const char *repos_relpath,
                 const char *repos_root_url,
@@ -1476,6 +1476,8 @@ svn_wc__db_init(svn_wc__db_t *db,
   apr_int32_t sqlite_timeout = 0; /* default timeout */
   apr_hash_index_t *hi;
 
+  SVN_ERR_ASSERT(SVN_WC__SUPPORTED_VERSION <= target_format
+                 && target_format <= SVN_WC__VERSION);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(repos_relpath != NULL);
   SVN_ERR_ASSERT(depth == svn_depth_empty
@@ -1491,10 +1493,10 @@ svn_wc__db_init(svn_wc__db_t *db,
                               FALSE));
 
   /* Create the SDB and insert the basic rows.  */
-  SVN_ERR(create_db(&sdb, &repos_id, &wc_id, local_abspath, repos_root_url,
-                    repos_uuid, SDB_FILE,
-                    repos_relpath, initial_rev, depth, sqlite_exclusive,
-                    sqlite_timeout,
+  SVN_ERR(create_db(&sdb, &repos_id, &wc_id, target_format, local_abspath,
+                    repos_root_url, repos_uuid, SDB_FILE,
+                    repos_relpath, initial_rev, depth,
+                    sqlite_exclusive, sqlite_timeout,
                     db->state_pool, scratch_pool));
 
   /* Create the WCROOT for this directory.  */
@@ -13327,6 +13329,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
                          svn_wc__db_t *wc_db,
+                         int target_format,
                          const char *dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
@@ -13335,8 +13338,8 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
   svn_wc__db_wcroot_t *wcroot;
 
   /* Upgrade is inherently exclusive so specify exclusive locking. */
-  SVN_ERR(create_db(sdb, repos_id, wc_id, dir_abspath,
-                    repos_root_url, repos_uuid,
+  SVN_ERR(create_db(sdb, repos_id, wc_id, target_format,
+                    dir_abspath, repos_root_url, repos_uuid,
                     SDB_FILE,
                     NULL, SVN_INVALID_REVNUM, svn_depth_unknown,
                     TRUE /* exclusive */,
