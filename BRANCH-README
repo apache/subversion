@@ -1,60 +1,7 @@
-This branch (^/subversion/branches/better-pristines) will be used to
-implement two dependent features:
-
-Client support for multiple working copy versions
--------------------------------------------------
-
-Currently the working copy code can use exactly one WC version at a
-time. This limitation is a problem for users who, for one reason or
-another, have to use multiple client versions at the same time. The
-fact that 1.8.x and 1.9.x use the same WC version was a boon to such
-users, and there's no good reason that the WC implementation couldn't
-have some leeway.
-
-To this end, we'll introduce the concept of "supported version" to the
-working copy. This is the minimum WC format supported by a particular
-client. By default, the client will create new working copies with the
-latest format[*], but will support a small range of older versions as
-well.
-
-The client should be able to not only use but also create working
-copies in an older, non-current format. To this end, certain client
-commands will get a new option, "--compatible-version", which behaves
-analogously to the option in "svnadmin create".
-
-For example:
-
-    svn checkout --compatible-version=1.8
-
-will create a new working copy with format 31. However,
-
-    svn checkout --compatible-version=1.7
-
-will fail, because we (currently) do not support 1.7 working copies in
-newer clients.
-
-Analogously,
-
-    svn upgrade --compatible-version=1.9
-
-will upgrade an older working copy to format 31.
-
-The "svn --version" command will display a list of compatible working
-copy versions.
-
-OPTIONAL: The "svn upgrade" command may grow an option to only show
-          the current and target working copy versions.
-
-
-[*] New externals working copies must inherit the format from their
-   parent working copy, because mixed-format working copies are a) a
-   Bad Thing, and b) defeat the purpose of this feature, which is
-   support for multiple versions of the client in the same working
-   copy.
-
-
 Compressed pristines and in-database pristine storage
 -----------------------------------------------------
+
+NOTE: This branch depends on ^/subversion/branches/multi-wc-format.
 
 WC format 32 will get support for storing (small) pristine files
 directly in the WC-DB as blobs in the PRISTINES table, and also for
