@@ -192,6 +192,10 @@ svn_client_upgrade2(const char *path,
 {
   int wc_format;
 
+  /* A NULL wc_format_version translates to the current version. */
+  if (!wc_format_version)
+    wc_format_version = svn_client_version();
+
   SVN_ERR(svn_wc__format_from_version(&wc_format,
                                       wc_format_version,
                                       scratch_pool));

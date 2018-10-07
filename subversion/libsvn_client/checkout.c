@@ -98,8 +98,12 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
-                                      scratch_pool));
+  if (wc_format_version)
+    SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
+                                        scratch_pool));
+  else
+    SVN_ERR(svn_wc__format_from_context(&target_format, ctx->wc_ctx,
+                                        local_abspath, scratch_pool));
 
   /* Get the RA connection, if needed. */
   if (ra_session)
@@ -230,6 +234,10 @@ svn_client_checkout4(svn_revnum_t *result_rev,
   svn_boolean_t sleep_here = FALSE;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
+
+  /* A NULL wc_format_version translates to the current version. */
+  if (!wc_format_version)
+    wc_format_version = svn_client_version();
 
   err = svn_client__checkout_internal(result_rev, &sleep_here,
                                       URL, local_abspath,

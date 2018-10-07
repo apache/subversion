@@ -31,6 +31,9 @@
 #include "svn_pools.h"
 #include "svn_version.h"
 
+#include "private/svn_fspath.h"
+#include "private/svn_sorts_private.h"
+
 #include "wc.h"
 #include "adm_files.h"
 #include "wc_db_private.h"
@@ -1027,4 +1030,69 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
     return svn_error_wrap_apr(result, NULL);
 
   return SVN_NO_ERROR;
+}
+
+
+/*
+ * ### FIXME:
+ *
+ * There must surely be a better way to find the nearest enclosing wcroot of a
+ * path than by copying the hash keys to an array and sorting the array.
+ *
+ * TODO: Convert the svn_wc__db_t::dir_data hash to a sorted dictionary?.
+ */
+svn_error_t *
+svn_wc__format_from_context(int *format,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  apr_hash_t *const dir_data = wc_ctx->db->dir_data;
+  apr_array_header_t *keys;
+  int index;
+
+  /* Thsi is what we return if we don't find a concrete format version. */
+  SVN_ERR(svn_hash_keys(&keys, dir_data, scratch_pool));
+  if (0 == keys->nelts)
+    {
+      *format = SVN_WC__VERSION;
+      return SVN_NO_ERROR;
+    }
+
+  svn_sort__array(keys, svn_sort_compare_paths);
+  index = svn_sort__bsearch_lower_bound(keys, &local_abspath,
+                                        svn_sort_compare_paths);
+
+  /* If the previous key is a parent of the local_abspath, use its format. */
+  if (index > 0)
+    {
+      const char* const parent = APR_ARRAY_IDX(keys, index - 1, const char*);
+      const char* const common =
+        svn_fspath__get_longest_ancestor(parent, local_abspath, scratch_pool);
+
+      if (0 == strcmp(common, parent))
+        {
+          svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, parent);
+          *format = wcroot->format;
+          return SVN_NO_ERROR;
+        }
+    }
+
+  /* Find the oldest format recorded in the WC context. */
+  {
+    int oldest_format = SVN_WC__VERSION;
+    apr_hash_index_t *hi;
+
+    for (hi = apr_hash_first(scratch_pool, dir_data);
+         hi;
+         hi = apr_hash_next(hi))
+      {
+        svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
+        if (wcroot->format < oldest_format)
+          oldest_format = wcroot->format;
+      }
+
+    *format = oldest_format;
+    return SVN_NO_ERROR;
+  }
 }

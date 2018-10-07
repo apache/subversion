@@ -2124,6 +2124,21 @@ svn_wc__format_from_version(int *format,
                             apr_pool_t *scratch_pool);
 
 /**
+ * Set @a format to the format of the nearest parent working copy root of
+ * @a local_abspath in @a wc_ctx, or to the oldest format of any root stored
+ * there. If @a wc_ctx is empty, return the newset supported format.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_wc__format_from_context(int *format,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool);
+
+/**
  * Ensure that an administrative area exists for @a local_abspath, so that @a
  * local_abspath is a working copy subdir with schema version @a target_format
  * based on @a url at @a revision, with depth @a depth, and with repository UUID

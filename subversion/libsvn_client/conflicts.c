@@ -8053,7 +8053,7 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
                                       svn_depth_infinity,
                                       TRUE, /* we want to ignore externals */
                                       FALSE, /* we don't allow obstructions */
-                                      /* FIXME: WC FORMAT! */NULL,
+                                      NULL, /* default WC format */
                                       ra_session, ctx, scratch_pool);
 
   ctx->notify_func2 = old_notify_func2;
