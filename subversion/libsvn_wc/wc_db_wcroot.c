@@ -31,7 +31,6 @@
 #include "svn_pools.h"
 #include "svn_version.h"
 
-#include "private/svn_fspath.h"
 #include "private/svn_sorts_private.h"
 
 #include "wc.h"
@@ -1064,19 +1063,36 @@ svn_wc__format_from_context(int *format,
                                         svn_sort_compare_paths);
 
   /* If the previous key is a parent of the local_abspath, use its format. */
-  if (index > 0)
-    {
-      const char* const parent = APR_ARRAY_IDX(keys, index - 1, const char*);
-      const char* const common =
-        svn_fspath__get_longest_ancestor(parent, local_abspath, scratch_pool);
+  {
+    const char *const here = (index >= keys->nelts ? NULL
+                              : APR_ARRAY_IDX(keys, index, const char*));
+    const char *const prev = (index == 0 ? NULL
+                              : APR_ARRAY_IDX(keys, index - 1, const char*));
 
-      if (0 == strcmp(common, parent))
-        {
-          svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, parent);
-          *format = wcroot->format;
-          return SVN_NO_ERROR;
-        }
-    }
+    if (here)
+      {
+        const char *const child = svn_dirent_skip_ancestor(here, local_abspath);
+        if (child && !*child)
+          {
+            /* Found an exact match in the WC context. */
+            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, here);
+            *format = wcroot->format;
+            return SVN_NO_ERROR;
+          }
+      }
+
+    if (prev)
+      {
+        const char *const child = svn_dirent_skip_ancestor(prev, local_abspath);
+        if (child)
+          {
+            /* Found the parent path in the WC context. */
+            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, prev);
+            *format = wcroot->format;
+            return SVN_NO_ERROR;
+          }
+      }
+  }
 
   /* Find the oldest format recorded in the WC context. */
   {
