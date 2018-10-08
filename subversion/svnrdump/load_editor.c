@@ -1050,13 +1050,9 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   svn_repos_parse_fns3_t *parser;
   struct parse_baton *parse_baton;
   const svn_string_t *lock_string;
-  svn_boolean_t be_atomic;
   svn_error_t *err;
   const char *session_url, *root_url, *parent_dir;
 
-  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
-                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
-                                pool));
   SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
