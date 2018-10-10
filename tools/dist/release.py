@@ -1036,10 +1036,12 @@ def get_fileinfo(args):
 
 def write_announcement(args):
     'Write the release announcement.'
-    siginfo = "\n".join(get_siginfo(args, True)) + "\n"
+    siginfo = get_siginfo(args, True)
+    if not siginfo:
+      raise RuntimeError("No signatures found for %s at %s" % (args.version, args.target))
 
     data = { 'version'              : str(args.version),
-             'siginfo'              : siginfo,
+             'siginfo'              : "\n".join(siginfo) + "\n",
              'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
              'anchor'               : args.version.get_download_anchor(),
