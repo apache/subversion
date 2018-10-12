@@ -182,6 +182,11 @@ get_revision_mapping(apr_hash_t *rev_map,
 }
 
 
+/*
+ * - Notification of the commit.
+ * - Update the revision number mapping to take account of the actual
+ *   committed revision number.
+ */
 static svn_error_t *
 commit_callback(const svn_commit_info_t *commit_info,
                 void *baton,
