@@ -1037,23 +1037,31 @@ close_revision(void *baton)
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_rdump__load_dumpstream(svn_stream_t *stream,
-                           svn_ra_session_t *session,
-                           svn_ra_session_t *aux_session,
-                           svn_boolean_t quiet,
-                           apr_hash_t *skip_revprops,
-                           svn_cancel_func_t cancel_func,
-                           void *cancel_baton,
-                           apr_pool_t *pool)
+/* Return an implementation of the dumpstream parser API that will drive
+ * commits over the RA layer to the location described by SESSION.
+ *
+ * Use AUX_SESSION (which is opened to the same URL as SESSION)
+ * for any secondary, out-of-band RA communications required. This is
+ * needed when loading a non-deltas dump, and for Ev2.
+ *
+ * Print feedback to the console for each revision, unless QUIET is true.
+ *
+ * Ignore (don't set) any revision property whose name is a key in
+ * SKIP_REVPROPS. The values in the hash are unimportant.
+ */
+static svn_error_t *
+get_dumpstream_loader(svn_repos_parse_fns3_t **parser_p,
+                      void **parse_baton_p,
+                      svn_ra_session_t *session,
+                      svn_ra_session_t *aux_session,
+                      svn_boolean_t quiet,
+                      apr_hash_t *skip_revprops,
+                      apr_pool_t *pool)
 {
   svn_repos_parse_fns3_t *parser;
   struct parse_baton *parse_baton;
-  const svn_string_t *lock_string;
-  svn_error_t *err;
   const char *session_url, *root_url, *parent_dir;
 
-  SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
   SVN_ERR(svn_ra_get_repos_root2(session, &root_url, pool));
   SVN_ERR(svn_ra_get_session_url(session, &session_url, pool));
   SVN_ERR(svn_ra_get_path_relative_to_root(session, &parent_dir,
@@ -1083,6 +1091,33 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   parse_baton->last_rev_mapped = SVN_INVALID_REVNUM;
   parse_baton->oldest_dumpstream_rev = SVN_INVALID_REVNUM;
   parse_baton->skip_revprops = skip_revprops;
+
+  *parser_p = parser;
+  *parse_baton_p = parse_baton;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_rdump__load_dumpstream(svn_stream_t *stream,
+                           svn_ra_session_t *session,
+                           svn_ra_session_t *aux_session,
+                           svn_boolean_t quiet,
+                           apr_hash_t *skip_revprops,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool)
+{
+  svn_repos_parse_fns3_t *parser;
+  void *parse_baton;
+  const svn_string_t *lock_string;
+  svn_error_t *err;
+
+  SVN_ERR(get_lock(&lock_string, session, cancel_func, cancel_baton, pool));
+
+  SVN_ERR(get_dumpstream_loader(&parser, &parse_baton,
+                                session, aux_session,
+                                quiet, skip_revprops,
+                                pool));
 
   err = svn_repos_parse_dumpstream3(stream, parser, parse_baton, FALSE,
                                     cancel_func, cancel_baton, pool);

@@ -1,0 +1,530 @@
+--- subversion/libsvn_repos/dump.c
++++ subversion/libsvn_repos/dump.c
+@@ -1912,12 +1944,467 @@
+   SVN_ERR(svn_editor__insert_shims(editor, edit_baton, *editor, *edit_baton,
+                                    NULL, NULL, shim_callbacks, pool, pool));
+ 
+   return SVN_NO_ERROR;
+ }
+ 
++/* ========================================================== */
++/* A filtering editor that reports:
++   - invalid fspaths,
++   - old references in copyfrom,
++
++   ### TODO:
++   - old references in mergeinfo.
++ */
++
++struct rc_edit_baton
++{
++  const svn_delta_editor_t *wrapped_editor;
++  void *wrapped_edit_baton;
++
++  /* If not NULL, set to true if any references to revisions older than
++     OLDEST_DUMPED_REV were found in the dumpstream. */
++  svn_boolean_t *found_old_reference;
++
++  svn_boolean_t *found_old_mergeinfo;
++  svn_repos_notify_func_t notify_func;
++  void *notify_baton;
++  svn_revnum_t oldest_dumped_rev;
++};
++
++struct rc_dir_baton
++{
++  struct rc_edit_baton *edit_baton;
++  void *wrapped_dir_baton;
++};
++
++struct rc_file_baton
++{
++  struct rc_edit_baton *edit_baton;
++  void *wrapped_file_baton;
++};
++
++static svn_error_t *
++rc_set_target_revision(void *edit_baton,
++                       svn_revnum_t target_revision,
++                       apr_pool_t *pool)
++{
++  struct rc_edit_baton *eb = edit_baton;
++
++  return eb->wrapped_editor->set_target_revision(eb->wrapped_edit_baton,
++                                                 target_revision,
++                                                 pool);
++}
++
++static svn_error_t *
++rc_open_root(void *edit_baton,
++             svn_revnum_t base_revision,
++             apr_pool_t *pool,
++             void **root_baton)
++{
++  struct rc_edit_baton *eb = edit_baton;
++  struct rc_dir_baton *dir_baton = apr_palloc(pool, sizeof(*dir_baton));
++
++  SVN_ERR(eb->wrapped_editor->open_root(eb->wrapped_edit_baton,
++                                        base_revision,
++                                        pool,
++                                        &dir_baton->wrapped_dir_baton));
++
++  dir_baton->edit_baton = edit_baton;
++
++  *root_baton = dir_baton;
++
++  return SVN_NO_ERROR;
++}
++
++static svn_error_t *
++rc_delete_entry(const char *path,
++                svn_revnum_t base_revision,
++                void *parent_baton,
++                apr_pool_t *pool)
++{
++  struct rc_dir_baton *pb = parent_baton;
++  struct rc_edit_baton *eb = pb->edit_baton;
++
++  if (eb->notify_func)
++    {
++      svn_error_clear(verify_fspath(path, eb->notify_func, eb->notify_baton,
++                                    pool));
++    }
++
++  return eb->wrapped_editor->delete_entry(path,
++                                          base_revision,
++                                          pb->wrapped_dir_baton,
++                                          pool);
++}
++
++static svn_error_t *
++rc_add_directory(const char *path,
++                 void *parent_baton,
++                 const char *copyfrom_path,
++                 svn_revnum_t copyfrom_rev,
++                 apr_pool_t *pool,
++                 void **child_baton)
++{
++  struct rc_dir_baton *pb = parent_baton;
++  struct rc_edit_baton *eb = pb->edit_baton;
++  struct rc_dir_baton *b = apr_palloc(pool, sizeof(*b));
++  svn_boolean_t is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
++
++  if (eb->notify_func)
++    {
++      svn_error_clear(verify_fspath(path, eb->notify_func, eb->notify_baton,
++                                    pool));
++    }
++
++  if (is_copy)
++    {
++      SVN_ERR(check_for_old_copy_reference(eb->found_old_reference,
++                                           eb->notify_func, eb->notify_baton,
++                                           eb->oldest_dumped_rev,
++                                           copyfrom_rev, pool));
++    }
++
++  SVN_ERR(eb->wrapped_editor->add_directory(path,
++                                            pb->wrapped_dir_baton,
++                                            copyfrom_path,
++                                            copyfrom_rev,
++                                            pool,
++                                            &b->wrapped_dir_baton));
++
++  b->edit_baton = eb;
++  *child_baton = b;
++
++  return SVN_NO_ERROR;
++}
++
++static svn_error_t *
++rc_open_directory(const char *path,
++                  void *parent_baton,
++                  svn_revnum_t base_revision,
++                  apr_pool_t *pool,
++                  void **child_baton)
++{
++  struct rc_dir_baton *pb = parent_baton;
++  struct rc_edit_baton *eb = pb->edit_baton;
++  struct rc_dir_baton *db = apr_palloc(pool, sizeof(*db));
++
++  if (eb->notify_func)
++    {
++      svn_error_clear(verify_fspath(path, eb->notify_func, eb->notify_baton,
++                                    pool));
++    }
++
++  SVN_ERR(eb->wrapped_editor->open_directory(path,
++                                             pb->wrapped_dir_baton,
++                                             base_revision,
++                                             pool,
++                                             &db->wrapped_dir_baton));
++
++  db->edit_baton = eb;
++  *child_baton = db;
++
++  return SVN_NO_ERROR;
++}
++
++static svn_error_t *
++rc_add_file(const char *path,
++            void *parent_baton,
++            const char *copyfrom_path,
++            svn_revnum_t copyfrom_rev,
++            apr_pool_t *pool,
++            void **file_baton)
++{
++  struct rc_dir_baton *pb = parent_baton;
++  struct rc_edit_baton *eb = pb->edit_baton;
++  struct rc_file_baton *fb = apr_palloc(pool, sizeof(*fb));
++  svn_boolean_t is_copy = ARE_VALID_COPY_ARGS(copyfrom_path, copyfrom_rev);
++
++  if (eb->notify_func)
++    {
++      svn_error_clear(verify_fspath(path, eb->notify_func, eb->notify_baton,
++                                    pool));
++    }
++
++  if (is_copy)
++    {
++      SVN_ERR(check_for_old_copy_reference(eb->found_old_reference,
++                                           eb->notify_func, eb->notify_baton,
++                                           eb->oldest_dumped_rev,
++                                           copyfrom_rev, pool));
++    }
++
++  SVN_ERR(eb->wrapped_editor->add_file(path,
++                                       pb->wrapped_dir_baton,
++                                       copyfrom_path,
++                                       copyfrom_rev,
++                                       pool,
++                                       &fb->wrapped_file_baton));
++
++  fb->edit_baton = eb;
++  *file_baton = fb;
++
++  return SVN_NO_ERROR;
++}
++
++static svn_error_t *
++rc_open_file(const char *path,
++             void *parent_baton,
++             svn_revnum_t base_revision,
++             apr_pool_t *pool,
++             void **file_baton)
++{
++  struct rc_dir_baton *pb = parent_baton;
++  struct rc_edit_baton *eb = pb->edit_baton;
++  struct rc_file_baton *fb = apr_palloc(pool, sizeof(*fb));
++
++  if (eb->notify_func)
++    {
++      svn_error_clear(verify_fspath(path, eb->notify_func, eb->notify_baton,
++                                    pool));
++    }
++
++  SVN_ERR(eb->wrapped_editor->open_file(path,
++                                        pb->wrapped_dir_baton,
++                                        base_revision,
++                                        pool,
++                                        &fb->wrapped_file_baton));
++
++  fb->edit_baton = eb;
++  *file_baton = fb;
++
++  return SVN_NO_ERROR;
++}
++
++static svn_error_t *
++rc_apply_textdelta(void *file_baton,
++                   const char *base_checksum,
++                   apr_pool_t *pool,
++                   svn_txdelta_window_handler_t *handler,
++                   void **handler_baton)
++{
++  struct rc_file_baton *fb = file_baton;
++  struct rc_edit_baton *eb = fb->edit_baton;
++
++  return eb->wrapped_editor->apply_textdelta(fb->wrapped_file_baton,
++                                             base_checksum,
++                                             pool,
++                                             handler,
++                                             handler_baton);
++}
++
++static svn_error_t *
++rc_apply_textdelta_stream(const svn_delta_editor_t *editor,
++                          void *file_baton,
++                          const char *base_checksum,
++                          svn_txdelta_stream_open_func_t open_func,
++                          void *open_baton,
++                          apr_pool_t *scratch_pool)
++{
++  struct rc_file_baton *fb = file_baton;
++  struct rc_edit_baton *eb = fb->edit_baton;
++
++  return eb->wrapped_editor->apply_textdelta_stream(eb->wrapped_editor,
++                                                    fb->wrapped_file_baton,
++                                                    base_checksum,
++                                                    open_func, open_baton,
++                                                    scratch_pool);
++}
++
++static svn_error_t *
++rc_close_file(void *file_baton,
++              const char *text_checksum,
++              apr_pool_t *pool)
++{
++  struct rc_file_baton *fb = file_baton;
++  struct rc_edit_baton *eb = fb->edit_baton;
++
++  return eb->wrapped_editor->close_file(fb->wrapped_file_baton,
++                                        text_checksum, pool);
++}
++
++static svn_error_t *
++rc_absent_file(const char *path,
++               void *file_baton,
++               apr_pool_t *pool)
++{
++  struct rc_file_baton *fb = file_baton;
++  struct rc_edit_baton *eb = fb->edit_baton;
++
++  return eb->wrapped_editor->absent_file(path, fb->wrapped_file_baton,
++                                         pool);
++}
++
++static svn_error_t *
++rc_close_directory(void *dir_baton,
++                   apr_pool_t *pool)
++{
++  struct rc_dir_baton *db = dir_baton;
++  struct rc_edit_baton *eb = db->edit_baton;
++
++  return eb->wrapped_editor->close_directory(db->wrapped_dir_baton, pool);
++}
++
++static svn_error_t *
++rc_absent_directory(const char *path,
++                    void *dir_baton,
++                    apr_pool_t *pool)
++{
++  struct rc_dir_baton *db = dir_baton;
++  struct rc_edit_baton *eb = db->edit_baton;
++
++  return eb->wrapped_editor->absent_directory(path, db->wrapped_dir_baton,
++                                              pool);
++}
++
++static svn_error_t *
++rc_change_file_prop(void *file_baton,
++                    const char *name,
++                    const svn_string_t *value,
++                    apr_pool_t *pool)
++{
++  struct rc_file_baton *fb = file_baton;
++  struct rc_edit_baton *eb = fb->edit_baton;
++
++  return eb->wrapped_editor->change_file_prop(fb->wrapped_file_baton,
++                                              name, value, pool);
++}
++
++static svn_error_t *
++rc_change_dir_prop(void *dir_baton,
++                   const char *name,
++                   const svn_string_t *value,
++                   apr_pool_t *pool)
++{
++  struct rc_dir_baton *db = dir_baton;
++  struct rc_edit_baton *eb = db->edit_baton;
++
++  return eb->wrapped_editor->change_dir_prop(db->wrapped_dir_baton,
++                                             name, value, pool);
++}
++
++static svn_error_t *
++rc_close_edit(void *edit_baton,
++              apr_pool_t *pool)
++{
++  struct rc_edit_baton *eb = edit_baton;
++
++  return eb->wrapped_editor->close_edit(eb->wrapped_edit_baton, pool);
++}
++
++static svn_error_t *
++rc_abort_edit(void *edit_baton,
++              apr_pool_t *pool)
++{
++  struct rc_edit_baton *eb = edit_baton;
++
++  return eb->wrapped_editor->abort_edit(eb->wrapped_edit_baton, pool);
++}
++
++/* Check for references older than oldest_dumped_rev.
++   Notify warnings and set *found_old_reference / *found_old_mergeinfo.
++ */
++static svn_error_t *
++get_ref_checking_editor(const svn_delta_editor_t **editor_p,
++                        void **edit_baton,
++                        const svn_delta_editor_t *wrapped_editor,
++                        void *wrapped_edit_baton,
++                        svn_boolean_t *found_old_reference,
++                        svn_boolean_t *found_old_mergeinfo,
++                        svn_repos_notify_func_t notify_func,
++                        void *notify_baton,
++                        svn_revnum_t oldest_dumped_rev,
++                        apr_pool_t *pool)
++{
++  svn_delta_editor_t *editor = svn_delta_default_editor(pool);
++  struct rc_edit_baton *eb = apr_palloc(pool, sizeof (*eb));
++
++  editor->set_target_revision = rc_set_target_revision;
++  editor->open_root = rc_open_root;
++  editor->delete_entry = rc_delete_entry;
++  editor->add_directory = rc_add_directory;
++  editor->open_directory = rc_open_directory;
++  editor->change_dir_prop = rc_change_dir_prop;
++  editor->close_directory = rc_close_directory;
++  editor->absent_directory = rc_absent_directory;
++  editor->add_file = rc_add_file;
++  editor->open_file = rc_open_file;
++  editor->apply_textdelta = rc_apply_textdelta;
++  editor->apply_textdelta_stream = rc_apply_textdelta_stream;
++  editor->change_file_prop = rc_change_file_prop;
++  editor->close_file = rc_close_file;
++  editor->absent_file = rc_absent_file;
++  editor->close_edit = rc_close_edit;
++  editor->abort_edit = rc_abort_edit;
++
++  eb->wrapped_editor = wrapped_editor;
++  eb->wrapped_edit_baton = wrapped_edit_baton;
++  eb->found_old_reference = found_old_reference;
++  eb->found_old_mergeinfo = found_old_mergeinfo;
++  eb->notify_func = notify_func;
++  eb->notify_baton = notify_baton;
++  eb->oldest_dumped_rev = oldest_dumped_rev;
++
++  *editor_p = editor;
++  *edit_baton = eb;
++
++  return SVN_NO_ERROR;
++}
++
++/* Get a dump editor (for dump, not for verify). */
++static svn_error_t *
++get_dump_only_editor(const svn_delta_editor_t **editor,
++                     void **edit_baton,
++                     svn_fs_t *fs,
++                     svn_revnum_t to_rev,
++                     const char *root_relpath,
++                     svn_stream_t *stream,
++                     svn_boolean_t *found_old_reference,
++                     svn_boolean_t *found_old_mergeinfo,
++                     svn_repos_notify_func_t notify_func,
++                     void *notify_baton,
++                     svn_revnum_t oldest_dumped_rev,
++                     svn_boolean_t use_deltas,
++                     apr_pool_t *pool)
++{
++  /* ### For testing:
++         use new implementation for cases it supports (that is: delta mode);
++         use original implementation otherwise.
++   */
++  if (use_deltas)
++    {
++      /* For this editor implementation, FS and TO_REV are not required. */
++      SVN_ERR(svn_repos__get_dump_editor(editor, edit_baton,
++                                         stream, root_relpath, pool));
++    }
++  else
++    {
++      SVN_ERR(get_dump_editor(editor, edit_baton,
++                              fs, to_rev, root_relpath,
++                              stream,
++                              /*###*/found_old_mergeinfo,
++                              NULL /*custom_close_directory*/,
++                              /*###*/notify_func, notify_baton,
++                              /*###*/oldest_dumped_rev,
++                              use_deltas,
++                              FALSE /*verify*/, FALSE /*check_normalization*/,
++                              pool));
++    }
++
++  /* Check for invalid fspaths and for copyfrom or mergeinfo references to
++     revisions older than oldest_dumped_rev. When found, send a warning
++     notification and set *found_old_reference / *found_old_mergeinfo. */
++  SVN_ERR(get_ref_checking_editor(editor, edit_baton,
++                                  *editor, *edit_baton,
++                                  found_old_reference, found_old_mergeinfo,
++                                  notify_func, notify_baton,
++                                  oldest_dumped_rev,
++                                  pool));
++  return SVN_NO_ERROR;
++}
++
+ /*----------------------------------------------------------------------*/
+ 
+ /** The main dumping routine, svn_repos_dump_fs. **/
+ 
+ 
+ /* Helper for svn_repos_dump_fs.
+@@ -2096,17 +2583,17 @@
+         goto loop_end;
+ 
+       /* Fetch the editor which dumps nodes to a file.  Regardless of
+          what we've been told, don't use deltas for the first rev of a
+          non-incremental dump. */
+       use_deltas_for_rev = use_deltas && (incremental || rev != start_rev);
+-      SVN_ERR(get_dump_editor(&dump_editor, &dump_edit_baton, fs, rev,
++      SVN_ERR(get_dump_only_editor(&dump_editor, &dump_edit_baton, fs, rev,
+                               "", stream, &found_old_reference,
+-                              &found_old_mergeinfo, NULL,
++                              &found_old_mergeinfo,
+                               notify_func, notify_baton,
+-                              start_rev, use_deltas_for_rev, FALSE, FALSE,
++                              start_rev, use_deltas_for_rev,
+                               iterpool));
+ 
+       /* Drive the editor in one way or another. */
+       SVN_ERR(svn_fs_revision_root(&to_root, fs, rev, iterpool));
+ 
+       /* If this is the first revision of a non-incremental dump,
+@@ -2313,12 +2800,38 @@
+                                 &check_baton, pool));
+     }
+ 
+   return close_directory(dir_baton, pool);
+ }
+ 
++/* Get a verify editor... */
++static svn_error_t *
++get_verify_editor(const svn_delta_editor_t **editor,
++                  void **edit_baton,
++                  svn_fs_t *fs,
++                  svn_revnum_t rev,
++                  const char *root_relpath,
++                  svn_repos_notify_func_t notify_func,
++                  void *notify_baton,
++                  svn_revnum_t oldest_dumped_rev,
++                  svn_boolean_t check_normalization,
++                  apr_pool_t *pool)
++{
++  SVN_ERR(get_dump_editor(editor, edit_baton,
++                          fs, rev, root_relpath,
++                          svn_stream_empty(pool),
++                          NULL,
++                          verify_close_directory,
++                          notify_func, notify_baton,
++                          oldest_dumped_rev,
++                          FALSE /*use_deltas*/, TRUE /*verify*/,
++                          check_normalization,
++                          pool));
++  return SVN_NO_ERROR;
++}
++
+ /* Verify revision REV in file system FS. */
+ static svn_error_t *
+ verify_one_revision(svn_fs_t *fs,
+                     svn_revnum_t rev,
+                     svn_repos_notify_func_t notify_func,
+                     void *notify_baton,
