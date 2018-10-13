@@ -51,6 +51,14 @@
 #include "sysinfo.h"
 #include "svn_private_config.h"
 
+#if HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
 #if HAVE_SYS_UTSNAME_H
 #include <sys/utsname.h>
 #endif
@@ -92,6 +100,7 @@ static const apr_array_header_t *macos_shared_libs(apr_pool_t *pool);
 
 #if __linux__
 static const char *linux_release_name(apr_pool_t *pool);
+static const apr_array_header_t *linux_shared_libs(apr_pool_t *pool);
 #endif
 
 const char *
@@ -187,6 +196,8 @@ svn_sysinfo__loaded_libs(apr_pool_t *pool)
   return win32_shared_libs(pool);
 #elif defined(SVN_HAVE_MACHO_ITERATE)
   return macos_shared_libs(pool);
+#elif __linux__
+  return linux_shared_libs(pool);
 #else
   return NULL;
 #endif
@@ -300,6 +311,31 @@ release_name_from_uname(apr_pool_t *pool)
 
 
 #if __linux__
+/* Find the first whitespace character in a stringbuf.
+   Analogous to svn_stringbuf_first_non_whitespace. */
+static apr_size_t
+stringbuf_first_whitespace(const svn_stringbuf_t *str)
+{
+  apr_size_t i;
+  for (i = 0; i < str->len; ++i)
+    {
+      if (svn_ctype_isspace(str->data[i]))
+        return i;
+    }
+  return str->len;
+}
+
+/* Skip a whitespace-delimited field in a stringbuf. */
+static void
+stringbuf_skip_whitespace_field(svn_stringbuf_t *str)
+{
+  apr_size_t i;
+  i = stringbuf_first_whitespace(str);
+  svn_stringbuf_leftchop(str, i);
+  i = svn_stringbuf_first_non_whitespace(str);
+  svn_stringbuf_leftchop(str, i);
+}
+
 /* Split a stringbuf into a key/value pair.
    Return the key, leaving the stripped value in the stringbuf. */
 static const char *
@@ -634,6 +670,78 @@ linux_release_name(apr_pool_t *pool)
     return release_name;
 
   return apr_psprintf(pool, "%s [%s]", release_name, uname_release);
+}
+
+static const apr_array_header_t *
+linux_shared_libs(apr_pool_t *pool)
+{
+  /* Read the list of loaded modules from /proc/[pid]/maps
+    The format is described here:
+        http://man7.org/linux/man-pages/man5/proc.5.html
+  */
+
+  const char *maps = apr_psprintf(pool, "/proc/%ld/maps", (long)getpid());
+  apr_array_header_t *result = NULL;
+  svn_boolean_t eof = FALSE;
+  svn_stream_t *stream;
+  svn_error_t *err;
+
+  err = svn_stream_open_readonly(&stream, maps, pool, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+
+  /* Each line in /proc/<pid>/maps consists of whitespace-delimited fields. */
+  while (!eof)
+    {
+      svn_version_ext_loaded_lib_t *lib;
+      svn_stringbuf_t *line;
+      svn_node_kind_t kind;
+
+      err = svn_stream_readline(stream, &line, "\n", &eof, pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          return NULL;
+        }
+
+      /* Find the permissions of the mapped region. */
+      stringbuf_skip_whitespace_field(line); /* skip address */
+
+      /* Permissions: The memory region must be executable. */
+      if (line->len < 4 || line->data[2] != 'x')
+        continue;
+
+      stringbuf_skip_whitespace_field(line); /* skip perms */
+      stringbuf_skip_whitespace_field(line); /* skip offset */
+      stringbuf_skip_whitespace_field(line); /* skip device */
+
+      /* I-Node: If it is 0, there is no file associated with the region. */
+      if (line->len < 2
+          || (line->data[0] == '0' && svn_ctype_isspace(line->data[1])))
+        continue;
+
+      stringbuf_skip_whitespace_field(line); /* skip inode */
+
+      /* Check that the file exists. */
+      err = svn_io_check_path(line->data, &kind, pool);
+      svn_error_clear(err);
+      if (!err && kind == svn_node_file)
+        {
+          if (!result)
+            {
+              result = apr_array_make(pool, 32, sizeof(*lib));
+            }
+          lib = &APR_ARRAY_PUSH(result, svn_version_ext_loaded_lib_t);
+          lib->name = line->data;
+          lib->version = NULL;
+        }
+    }
+
+  svn_error_clear(svn_stream_close(stream));
+  return result;
 }
 #endif /* __linux__ */
 
