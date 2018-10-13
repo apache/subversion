@@ -696,9 +696,7 @@ linux_shared_libs(apr_pool_t *pool)
   /* Each line in /proc/<pid>/maps consists of whitespace-delimited fields. */
   while (!eof)
     {
-      svn_version_ext_loaded_lib_t *lib;
       svn_stringbuf_t *line;
-      svn_node_kind_t kind;
 
       err = svn_stream_readline(stream, &line, "\n", &eof, pool);
       if (err)
@@ -710,8 +708,8 @@ linux_shared_libs(apr_pool_t *pool)
       /* Find the permissions of the mapped region. */
       stringbuf_skip_whitespace_field(line); /* skip address */
 
-      /* Permissions: The memory region must be executable. */
-      if (line->len < 4 || line->data[2] != 'x')
+      /* Permissions: The memory region must be readable and executable. */
+      if (line->len < 4 || line->data[0] != 'r' || line->data[2] != 'x')
         continue;
 
       stringbuf_skip_whitespace_field(line); /* skip perms */
@@ -725,11 +723,13 @@ linux_shared_libs(apr_pool_t *pool)
 
       stringbuf_skip_whitespace_field(line); /* skip inode */
 
-      /* Check that the file exists. */
-      err = svn_io_check_path(line->data, &kind, pool);
-      svn_error_clear(err);
-      if (!err && kind == svn_node_file)
+      /* Record anything that looks like an absolute path.
+         Files that were removed since the process was created (due to an
+         upgrade, for example) are marked as '(deleted)'. */
+      if (line->data[0] == '/')
         {
+          svn_version_ext_loaded_lib_t *lib;
+
           if (!result)
             {
               result = apr_array_make(pool, 32, sizeof(*lib));
