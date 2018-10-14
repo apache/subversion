@@ -697,6 +697,8 @@ linux_shared_libs(apr_pool_t *pool)
   while (!eof)
     {
       svn_stringbuf_t *line;
+      const unsigned char *map_start;
+      const unsigned char *map_end;
 
       err = svn_stream_readline(stream, &line, "\n", &eof, pool);
       if (err)
@@ -705,7 +707,28 @@ linux_shared_libs(apr_pool_t *pool)
           return NULL;
         }
 
-      /* Find the permissions of the mapped region. */
+      /* Address: The mapped memory address range. */
+      {
+        const char *const limit = line->data + line->len;
+        const char *start;
+        apr_int64_t val;
+        char *end;
+
+        /* The start of the address range */
+        start = line->data;
+        val = apr_strtoi64(start, &end, 16);
+        if (end == start || end >= limit || *end != '-')
+          continue;
+        map_start = (const unsigned char*)val;
+
+        /* The end of the address range */
+        start = end + 1;
+        val = apr_strtoi64(start, &end, 16);
+        if (end == start || end >= limit || !svn_ctype_isspace(*end))
+          continue;
+        map_end = (const unsigned char*)val;
+      }
+
       stringbuf_skip_whitespace_field(line); /* skip address */
 
       /* Permissions: The memory region must be readable and executable. */
@@ -723,13 +746,39 @@ linux_shared_libs(apr_pool_t *pool)
 
       stringbuf_skip_whitespace_field(line); /* skip inode */
 
-      /* Record anything that looks like an absolute path.
+      /* Consider only things that look like absolute paths.
          Files that were removed since the process was created (due to an
          upgrade, for example) are marked as '(deleted)'. */
       if (line->data[0] == '/')
         {
           svn_version_ext_loaded_lib_t *lib;
 
+          /* Read the ELF header at the mapping position to check if this is
+             a shared library. We only look at the ELF identification and the
+             type. The format is described here:
+                 http://www.skyfree.org/linux/references/ELF_Format.pdf
+          */
+          if (map_end - map_start < 18 || memcmp(map_start, "\x7f" "ELF", 4))
+            continue;
+
+          /* The ELF Type is 0x0003 for shared object files. */
+          switch (map_start[5]) /* Data encoding */
+            {
+            case 1:             /* Little-Endian */
+              if (map_start[16] != 3 || map_start[17] != 0)
+                continue;
+              break;
+
+            case 2:             /* Big-Endian */
+              if (map_start[16] != 0 || map_start[17] != 3)
+                continue;
+              break;
+
+            default:
+              continue;
+            }
+
+          /* We've done our best to find a mapped shared library. */
           if (!result)
             {
               result = apr_array_make(pool, 32, sizeof(*lib));
