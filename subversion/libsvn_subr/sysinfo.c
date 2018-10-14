@@ -55,12 +55,16 @@
 #include <sys/types.h>
 #endif
 
+#if HAVE_SYS_UTSNAME_H
+#include <sys/utsname.h>
+#endif
+
 #if HAVE_UNISTD_H
 #include <unistd.h>
 #endif
 
-#if HAVE_SYS_UTSNAME_H
-#include <sys/utsname.h>
+#if HAVE_ELF_H
+#include <elf.h>
 #endif
 
 #ifdef SVN_HAVE_MACOS_PLIST
@@ -672,6 +676,7 @@ linux_release_name(apr_pool_t *pool)
   return apr_psprintf(pool, "%s [%s]", release_name, uname_release);
 }
 
+#if HAVE_ELF_H
 /* Parse a hexadecimal number as a pointer value. */
 static const unsigned char *
 parse_pointer_value(const char *start, const char *limit, char **end)
@@ -690,6 +695,48 @@ parse_pointer_value(const char *start, const char *limit, char **end)
 
   return ptr;
 }
+
+/* Read the ELF header at the mapping position to check if this is a shared
+   library. We only look at the ELF identification and the type. The format is
+   described here:
+       http://www.skyfree.org/linux/references/ELF_Format.pdf
+*/
+static svn_boolean_t
+check_elf_header(const unsigned char *map_start,
+                 const unsigned char *map_end)
+{
+  /* A union of all known ELF header types, for size checks. */
+  union max_elf_header_size_t
+  {
+    Elf32_Ehdr header_32;
+    Elf64_Ehdr header_64;
+  };
+
+  /* Check the size of the mapping and the ELF magic tag. */
+  if (map_end < map_start
+      || map_end - map_start < sizeof(union max_elf_header_size_t)
+      || memcmp(map_start, ELFMAG, SELFMAG))
+    {
+      return FALSE;
+    }
+
+  /* Check that this is an ELF shared library or executable file. This also
+     implicitly checks that the data encoding of the current process is the
+     same as in the loaded library. */
+  if (map_start[EI_CLASS] == ELFCLASS32)
+    {
+      const Elf32_Ehdr *hdr = (void*)map_start;
+      return (hdr->e_type == ET_DYN || hdr->e_type == ET_EXEC);
+    }
+  else if (map_start[EI_CLASS] == ELFCLASS64)
+    {
+      const Elf64_Ehdr *hdr = (void*)map_start;
+      return (hdr->e_type == ET_DYN || hdr->e_type == ET_EXEC);
+    }
+
+  return FALSE;
+}
+#endif  /* HAVE_ELF_H */
 
 static const apr_array_header_t *
 linux_shared_libs(apr_pool_t *pool)
@@ -716,8 +763,11 @@ linux_shared_libs(apr_pool_t *pool)
   while (!eof)
     {
       svn_stringbuf_t *line;
+
+#if HAVE_ELF_H
       const unsigned char *map_start;
       const unsigned char *map_end;
+#endif
 
       err = svn_stream_readline(stream, &line, "\n", &eof, pool);
       if (err)
@@ -726,6 +776,7 @@ linux_shared_libs(apr_pool_t *pool)
           return NULL;
         }
 
+#if HAVE_ELF_H
       /* Address: The mapped memory address range. */
       {
         const char *const limit = line->data + line->len;
@@ -741,6 +792,7 @@ linux_shared_libs(apr_pool_t *pool)
         if (!map_end || !svn_ctype_isspace(*end))
           continue;
       }
+#endif
 
       stringbuf_skip_whitespace_field(line); /* skip address */
 
@@ -766,31 +818,10 @@ linux_shared_libs(apr_pool_t *pool)
         {
           svn_version_ext_loaded_lib_t *lib;
 
-          /* Read the ELF header at the mapping position to check if this is
-             a shared library. We only look at the ELF identification and the
-             type. The format is described here:
-                 http://www.skyfree.org/linux/references/ELF_Format.pdf
-          */
-          if (map_end < map_start || map_end - map_start < 18
-              || memcmp(map_start, "\x7f" "ELF", 4))
+#if HAVE_ELF_H
+          if (!check_elf_header(map_start, map_end))
             continue;
-
-          /* The ELF Type is 0x0003 for shared object files. */
-          switch (map_start[5]) /* Data encoding */
-            {
-            case 1:             /* Little-Endian */
-              if (map_start[16] != 3 || map_start[17] != 0)
-                continue;
-              break;
-
-            case 2:             /* Big-Endian */
-              if (map_start[16] != 0 || map_start[17] != 3)
-                continue;
-              break;
-
-            default:
-              continue;
-            }
+#endif
 
           /* We've done our best to find a mapped shared library. */
           if (!result)
