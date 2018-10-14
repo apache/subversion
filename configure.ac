@@ -948,8 +948,9 @@ AC_FUNC_VPRINTF
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
-dnl check for uname
+dnl check for uname and ELF headers
 AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
+AC_CHECK_HEADERS(elf.h)
 
 dnl check for termios
 AC_CHECK_HEADER(termios.h,[
