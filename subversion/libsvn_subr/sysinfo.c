@@ -672,6 +672,25 @@ linux_release_name(apr_pool_t *pool)
   return apr_psprintf(pool, "%s [%s]", release_name, uname_release);
 }
 
+/* Parse a hexadecimal number as a pointer value. */
+static const unsigned char *
+parse_pointer_value(const char *start, const char *limit, char **end)
+{
+  const unsigned char *ptr;
+  const apr_uint64_t val = (apr_uint64_t)apr_strtoi64(start, end, 16);
+
+  if (errno                     /* overflow */
+      || *end == start          /* no valid digits */
+      || *end >= limit)         /* representation too long */
+    return NULL;
+
+  ptr = (const unsigned char*)val;
+  if (val != (apr_uint64_t)ptr)  /* truncated value */
+    return NULL;
+
+  return ptr;
+}
+
 static const apr_array_header_t *
 linux_shared_libs(apr_pool_t *pool)
 {
@@ -693,7 +712,7 @@ linux_shared_libs(apr_pool_t *pool)
       return NULL;
     }
 
-  /* Each line in /proc/<pid>/maps consists of whitespace-delimited fields. */
+  /* Each line in /proc/[pid]/maps consists of whitespace-delimited fields. */
   while (!eof)
     {
       svn_stringbuf_t *line;
@@ -710,23 +729,17 @@ linux_shared_libs(apr_pool_t *pool)
       /* Address: The mapped memory address range. */
       {
         const char *const limit = line->data + line->len;
-        const char *start;
-        apr_int64_t val;
         char *end;
 
         /* The start of the address range */
-        start = line->data;
-        val = apr_strtoi64(start, &end, 16);
-        if (end == start || end >= limit || *end != '-')
+        map_start = parse_pointer_value(line->data, limit, &end);
+        if (!map_start || *end != '-')
           continue;
-        map_start = (const unsigned char*)val;
 
         /* The end of the address range */
-        start = end + 1;
-        val = apr_strtoi64(start, &end, 16);
-        if (end == start || end >= limit || !svn_ctype_isspace(*end))
+        map_end = parse_pointer_value(end + 1, limit, &end);
+        if (!map_end || !svn_ctype_isspace(*end))
           continue;
-        map_end = (const unsigned char*)val;
       }
 
       stringbuf_skip_whitespace_field(line); /* skip address */
@@ -758,7 +771,8 @@ linux_shared_libs(apr_pool_t *pool)
              type. The format is described here:
                  http://www.skyfree.org/linux/references/ELF_Format.pdf
           */
-          if (map_end - map_start < 18 || memcmp(map_start, "\x7f" "ELF", 4))
+          if (map_end < map_start || map_end - map_start < 18
+              || memcmp(map_start, "\x7f" "ELF", 4))
             continue;
 
           /* The ELF Type is 0x0003 for shared object files. */
