@@ -3504,6 +3504,50 @@ def copy_make_parents_wc_wc(sbox):
                                         expected_output,
                                         expected_status)
 
+
+#----------------------------------------------------------------------
+# Test copying and creating parents in the wc with dst directory being
+# precreated and unversioned
+
+def copy_make_parents_wc_wc_existing_unversioned_dst(sbox):
+  "svn cp --parents WC_PATH WC_PATH (ex. unver. dst)"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  new_iota_path = sbox.ospath('X/Y/Z/iota')
+  os.makedirs(os.path.dirname(new_iota_path))
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'cp', '--parents',
+                                     iota_path, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'          : Item(verb='Adding'),
+    'X/Y'        : Item(verb='Adding'),
+    'X/Y/Z'      : Item(verb='Adding'),
+    'X/Y/Z/iota' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status)
+
+
 #----------------------------------------------------------------------
 # Test copying and creating parents from the repo to the wc
 
@@ -3515,6 +3559,49 @@ def copy_make_parents_repo_wc(sbox):
 
   iota_url = sbox.repo_url + '/iota'
   new_iota_path = sbox.ospath('X/Y/Z/iota')
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'cp', '--parents',
+                                     iota_url, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(verb='Adding'),
+    'X/Y'         : Item(verb='Adding'),
+    'X/Y/Z'       : Item(verb='Adding'),
+    'X/Y/Z/iota'  : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status)
+
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from the repo to the wc with dst
+# directory being precreated and unversioned
+
+def copy_make_parents_repo_wc_existing_unversioned_dst(sbox):
+  "svn cp --parents URL WC_PATH with (ex. unver. dst)"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_url = sbox.repo_url + '/iota'
+  new_iota_path = sbox.ospath('X/Y/Z/iota')
+  os.makedirs(os.path.dirname(new_iota_path))
 
   # Copy iota
   svntest.actions.run_and_verify_svn(None, [],
@@ -5904,7 +5991,9 @@ test_list = [ None,
               copy_peg_rev_url,
               old_dir_wc_to_wc,
               copy_make_parents_wc_wc,
+              copy_make_parents_wc_wc_existing_unversioned_dst,
               copy_make_parents_repo_wc,
+              copy_make_parents_repo_wc_existing_unversioned_dst,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
