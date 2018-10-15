@@ -497,12 +497,11 @@ replay_revisions(svn_ra_session_t *session,
   replay_baton->quiet = quiet;
 
   /* Write the magic header and UUID */
-  SVN_ERR(svn_stream_printf(output_stream, pool,
-                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                            SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+  SVN_ERR(svn_repos__dump_magic_header_record(output_stream,
+                                              SVN_REPOS_DUMPFILE_FORMAT_VERSION,
+                                              pool));
   SVN_ERR(svn_ra_get_uuid2(session, &uuid, pool));
-  SVN_ERR(svn_stream_printf(output_stream, pool,
-                            SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+  SVN_ERR(svn_repos__dump_uuid_header_record(output_stream, uuid, pool));
 
   /* Fake revision 0 if necessary */
   if (start_revision == 0)

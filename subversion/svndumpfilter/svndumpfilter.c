@@ -271,9 +271,7 @@ magic_header_record(int version, void *parse_baton, apr_pool_t *pool)
   if (version >= SVN_REPOS_DUMPFILE_FORMAT_VERSION_DELTAS)
     pb->allow_deltas = TRUE;
 
-  SVN_ERR(svn_stream_printf(pb->out_stream, pool,
-                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                            version));
+  SVN_ERR(svn_repos__dump_magic_header_record(pb->out_stream, version, pool));
 
   return SVN_NO_ERROR;
 }
@@ -446,8 +444,8 @@ static svn_error_t *
 uuid_record(const char *uuid, void *parse_baton, apr_pool_t *pool)
 {
   struct parse_baton_t *pb = parse_baton;
-  SVN_ERR(svn_stream_printf(pb->out_stream, pool,
-                            SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+
+  SVN_ERR(svn_repos__dump_uuid_header_record(pb->out_stream, uuid, pool));
   return SVN_NO_ERROR;
 }
 
