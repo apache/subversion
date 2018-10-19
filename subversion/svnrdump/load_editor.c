@@ -466,49 +466,6 @@ get_lock(const svn_string_t **lock_string_p,
 }
 
 static svn_error_t *
-new_revision_record(void **revision_baton,
-                    apr_hash_t *headers,
-                    void *parse_baton,
-                    apr_pool_t *pool)
-{
-  struct revision_baton *rb;
-  struct parse_baton *pb;
-  const char *rev_str;
-
-  rb = apr_pcalloc(pool, sizeof(*rb));
-  pb = parse_baton;
-  rb->pool = svn_pool_create(pool);
-  rb->pb = pb;
-  rb->db = NULL;
-
-  rev_str = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER);
-  if (rev_str)
-    rb->rev = SVN_STR_TO_REV(rev_str);
-
-  SVN_ERR(svn_ra_get_latest_revnum(pb->session, &rb->head_rev_before_commit,
-                                   pool));
-
-  /* FIXME: This is a lame fallback loading multiple segments of dump in
-     several separate operations. It is highly susceptible to race conditions.
-     Calculate the revision 'offset' for finding copyfrom sources.
-     It might be positive or negative. */
-  rb->rev_offset = (apr_int32_t) ((rb->rev) - (rb->head_rev_before_commit + 1));
-
-  /* Stash the oldest (non-zero) dumpstream revision seen. */
-  if ((rb->rev > 0) && (!SVN_IS_VALID_REVNUM(pb->oldest_dumpstream_rev)))
-    pb->oldest_dumpstream_rev = rb->rev;
-
-  /* Set the commit_editor/ commit_edit_baton to NULL and wait for
-     them to be created in new_node_record */
-  rb->commit_editor = NULL;
-  rb->commit_edit_baton = NULL;
-  rb->revprop_table = apr_hash_make(rb->pool);
-
-  *revision_baton = rb;
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 magic_header_record(int version,
             void *parse_baton,
             apr_pool_t *pool)
@@ -585,6 +542,48 @@ revision_start_edit(struct revision_baton *rb,
   /* child_baton corresponds to the root directory baton here */
   push_directory(rb, child_baton, "", TRUE /*is_added*/,
                  NULL, SVN_INVALID_REVNUM);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+new_revision_record(void **revision_baton,
+                    apr_hash_t *headers,
+                    void *parse_baton,
+                    apr_pool_t *pool)
+{
+  struct parse_baton *pb = parse_baton;
+  struct revision_baton *rb;
+  const char *rev_str;
+
+  rb = apr_pcalloc(pool, sizeof(*rb));
+  rb->pool = svn_pool_create(pool);
+  rb->pb = pb;
+  rb->db = NULL;
+
+  rev_str = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_REVISION_NUMBER);
+  if (rev_str)
+    rb->rev = SVN_STR_TO_REV(rev_str);
+
+  SVN_ERR(svn_ra_get_latest_revnum(pb->session, &rb->head_rev_before_commit,
+                                   pool));
+
+  /* FIXME: This is a lame fallback loading multiple segments of dump in
+     several separate operations. It is highly susceptible to race conditions.
+     Calculate the revision 'offset' for finding copyfrom sources.
+     It might be positive or negative. */
+  rb->rev_offset = (apr_int32_t) ((rb->rev) - (rb->head_rev_before_commit + 1));
+
+  /* Stash the oldest (non-zero) dumpstream revision seen. */
+  if ((rb->rev > 0) && (!SVN_IS_VALID_REVNUM(pb->oldest_dumpstream_rev)))
+    pb->oldest_dumpstream_rev = rb->rev;
+
+  /* Set the commit_editor/ commit_edit_baton to NULL and wait for
+     them to be created in new_node_record */
+  rb->commit_editor = NULL;
+  rb->commit_edit_baton = NULL;
+  rb->revprop_table = apr_hash_make(rb->pool);
+
+  *revision_baton = rb;
   return SVN_NO_ERROR;
 }
 
