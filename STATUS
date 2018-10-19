@@ -22,6 +22,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1843888
+   Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
+   Justification:
+     Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
