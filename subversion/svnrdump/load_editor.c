@@ -97,11 +97,6 @@ typedef struct loader_fns_t
  */
 struct parse_baton
 {
-  /* Commit editor and baton used to transfer loaded revisions to
-     the target repository. */
-  const svn_delta_editor_t *commit_editor;
-  void *commit_edit_baton;
-
   /* RA session(s) for committing to the target repository. */
   svn_ra_session_t *session;
   svn_ra_session_t *aux_session;
@@ -195,7 +190,13 @@ struct revision_baton
 {
   svn_revnum_t rev;
   apr_hash_t *revprop_table;
+  svn_revnum_t head_rev_before_commit;
   apr_int32_t rev_offset;
+
+  /* Commit editor and baton used to transfer loaded revisions to
+     the target repository. */
+  const svn_delta_editor_t *commit_editor;
+  void *commit_edit_baton;
 
   const svn_string_t *datestamp;
   const svn_string_t *author;
@@ -473,7 +474,6 @@ new_revision_record(void **revision_baton,
   struct revision_baton *rb;
   struct parse_baton *pb;
   const char *rev_str;
-  svn_revnum_t head_rev;
 
   rb = apr_pcalloc(pool, sizeof(*rb));
   pb = parse_baton;
@@ -485,13 +485,14 @@ new_revision_record(void **revision_baton,
   if (rev_str)
     rb->rev = SVN_STR_TO_REV(rev_str);
 
-  SVN_ERR(svn_ra_get_latest_revnum(pb->session, &head_rev, pool));
+  SVN_ERR(svn_ra_get_latest_revnum(pb->session, &rb->head_rev_before_commit,
+                                   pool));
 
   /* FIXME: This is a lame fallback loading multiple segments of dump in
      several separate operations. It is highly susceptible to race conditions.
      Calculate the revision 'offset' for finding copyfrom sources.
      It might be positive or negative. */
-  rb->rev_offset = (apr_int32_t) ((rb->rev) - (head_rev + 1));
+  rb->rev_offset = (apr_int32_t) ((rb->rev) - (rb->head_rev_before_commit + 1));
 
   /* Stash the oldest (non-zero) dumpstream revision seen. */
   if ((rb->rev > 0) && (!SVN_IS_VALID_REVNUM(pb->oldest_dumpstream_rev)))
@@ -499,8 +500,8 @@ new_revision_record(void **revision_baton,
 
   /* Set the commit_editor/ commit_edit_baton to NULL and wait for
      them to be created in new_node_record */
-  rb->pb->commit_editor = NULL;
-  rb->pb->commit_edit_baton = NULL;
+  rb->commit_editor = NULL;
+  rb->commit_edit_baton = NULL;
   rb->revprop_table = apr_hash_make(rb->pool);
 
   *revision_baton = rb;
@@ -571,16 +572,15 @@ revision_start_edit(struct revision_baton *rb,
                     apr_pool_t *scratch_pool)
 {
   struct parse_baton *pb = rb->pb;
-  svn_revnum_t head_rev_before_commit = rb->rev - rb->rev_offset - 1;
   void *child_baton;
 
   SVN_ERR(pb->callbacks->revstart(rb->rev,
                                   pb->cb_baton,
-                                  &pb->commit_editor, &pb->commit_edit_baton,
+                                  &rb->commit_editor, &rb->commit_edit_baton,
                                   rb->revprop_table,
                                   rb->pool));
-  SVN_ERR(pb->commit_editor->open_root(pb->commit_edit_baton,
-                                       head_rev_before_commit,
+  SVN_ERR(rb->commit_editor->open_root(rb->commit_edit_baton,
+                                       rb->head_rev_before_commit,
                                        rb->pool, &child_baton));
   /* child_baton corresponds to the root directory baton here */
   push_directory(rb, child_baton, "", TRUE /*is_added*/,
@@ -595,9 +595,8 @@ new_node_record(void **node_baton,
                 apr_pool_t *pool)
 {
   struct revision_baton *rb = revision_baton;
-  const struct svn_delta_editor_t *commit_editor = rb->pb->commit_editor;
+  const struct svn_delta_editor_t *commit_editor = rb->commit_editor;
   struct node_baton *nb;
-  svn_revnum_t head_rev_before_commit = rb->rev - rb->rev_offset - 1;
   apr_hash_index_t *hi;
   void *child_baton;
   const char *nb_dirname;
@@ -625,7 +624,7 @@ new_node_record(void **node_baton,
       svn_hash_sets(rb->revprop_table, SVN_PROP_REVISION_DATE, NULL);
 
       SVN_ERR(revision_start_edit(rb, pool));
-      commit_editor = rb->pb->commit_editor;
+      commit_editor = rb->commit_editor;
     }
 
   for (hi = apr_hash_first(rb->pool, headers); hi; hi = apr_hash_next(hi))
@@ -700,7 +699,7 @@ new_node_record(void **node_baton,
                              rb->pool);
           SVN_ERR(commit_editor->open_directory(relpath_compose,
                                                 rb->db->baton,
-                                                head_rev_before_commit,
+                                                rb->head_rev_before_commit,
                                                 rb->pool, &child_baton));
           push_directory(rb, child_baton, relpath_compose, TRUE /*is_added*/,
                          NULL, SVN_INVALID_REVNUM);
@@ -743,7 +742,7 @@ new_node_record(void **node_baton,
     case svn_node_action_delete:
     case svn_node_action_replace:
       SVN_ERR(commit_editor->delete_entry(nb->path,
-                                          head_rev_before_commit,
+                                          rb->head_rev_before_commit,
                                           rb->db->baton, rb->pool));
       if (nb->action == svn_node_action_delete)
         break;
@@ -781,7 +780,7 @@ new_node_record(void **node_baton,
           break;
         default:
           SVN_ERR(commit_editor->open_directory(nb->path, rb->db->baton,
-                                                head_rev_before_commit,
+                                                rb->head_rev_before_commit,
                                                 rb->pool, &child_baton));
           push_directory(rb, child_baton, nb->path, FALSE /*is_added*/,
                          NULL, SVN_INVALID_REVNUM);
@@ -970,7 +969,7 @@ set_fulltext(svn_stream_t **stream,
              void *node_baton)
 {
   struct node_baton *nb = node_baton;
-  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->commit_editor;
   svn_txdelta_window_handler_t handler;
   void *handler_baton;
   apr_pool_t *pool = nb->rb->pool;
@@ -988,7 +987,7 @@ apply_textdelta(svn_txdelta_window_handler_t *handler,
                 void *node_baton)
 {
   struct node_baton *nb = node_baton;
-  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->commit_editor;
   apr_pool_t *pool = nb->rb->pool;
 
   SVN_ERR(commit_editor->apply_textdelta(nb->file_baton, nb->base_checksum,
@@ -1001,7 +1000,7 @@ static svn_error_t *
 close_node(void *baton)
 {
   struct node_baton *nb = baton;
-  const struct svn_delta_editor_t *commit_editor = nb->rb->pb->commit_editor;
+  const struct svn_delta_editor_t *commit_editor = nb->rb->commit_editor;
   apr_pool_t *pool = nb->rb->pool;
   apr_hash_index_t *hi;
 
@@ -1042,8 +1041,8 @@ static svn_error_t *
 close_revision(void *baton)
 {
   struct revision_baton *rb = baton;
-  const svn_delta_editor_t *commit_editor = rb->pb->commit_editor;
-  void *commit_edit_baton = rb->pb->commit_edit_baton;
+  const svn_delta_editor_t *commit_editor = rb->commit_editor;
+  void *commit_edit_baton = rb->commit_edit_baton;
   svn_revnum_t committed_rev = SVN_INVALID_REVNUM;
 
   /* Fake revision 0 */
@@ -1070,8 +1069,8 @@ close_revision(void *baton)
     {
       /* Legitimate revision with no node information */
       SVN_ERR(revision_start_edit(rb, rb->pool));
-      commit_editor = rb->pb->commit_editor;
-      commit_edit_baton = rb->pb->commit_edit_baton;
+      commit_editor = rb->commit_editor;
+      commit_edit_baton = rb->commit_edit_baton;
 
       SVN_ERR(commit_editor->close_directory(rb->db->baton, rb->pool));
       SVN_ERR(commit_editor->close_edit(commit_edit_baton, rb->pool));
