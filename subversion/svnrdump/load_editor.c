@@ -809,7 +809,7 @@ set_revision_property(void *baton,
         svn_hash_sets(rb->revprop_table,
                       apr_pstrdup(rb->pool, name), value);
     }
-  else if (rb->rev_offset == -1
+  else if (rb->head_rev_before_commit == 0
            && ! svn_hash_gets(rb->pb->skip_revprops, name))
     {
       /* Special case: set revision 0 properties directly (which is
@@ -1083,7 +1083,7 @@ close_revision(void *baton)
     {
       committed_rev = get_revision_mapping(rb->pb->rev_map, rb->rev);
     }
-  else if (rb->rev_offset == -1)
+  else if (rb->head_rev_before_commit == 0)
     {
       committed_rev = 0;
     }
