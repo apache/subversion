@@ -1200,6 +1200,216 @@ get_dumpstream_loader(svn_repos_parse_fns3_t **parser_p,
   return SVN_NO_ERROR;
 }
 
+/*----------------------------------------------------------------------*/
+
+/* Dump-stream parser wrapper */
+
+struct filter_parse_baton_t
+{
+  const svn_repos_parse_fns3_t *wrapped_parser;
+  struct parse_baton *wrapped_pb;
+};
+
+struct filter_revision_baton_t
+{
+  struct filter_parse_baton_t *pb;
+  void *wrapped_rb;
+};
+
+struct filter_node_baton_t
+{
+  struct filter_revision_baton_t *rb;
+  void *wrapped_nb;
+};
+
+static svn_error_t *
+filter_magic_header_record(int version,
+                           void *parse_baton,
+                           apr_pool_t *pool)
+{
+  struct filter_parse_baton_t *pb = parse_baton;
+
+  SVN_ERR(pb->wrapped_parser->magic_header_record(version, pb->wrapped_pb,
+                                                  pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_uuid_record(const char *uuid,
+                   void *parse_baton,
+                   apr_pool_t *pool)
+{
+  struct filter_parse_baton_t *pb = parse_baton;
+
+  SVN_ERR(pb->wrapped_parser->uuid_record(uuid, pb->wrapped_pb, pool));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_new_revision_record(void **revision_baton,
+                           apr_hash_t *headers,
+                           void *parse_baton,
+                           apr_pool_t *pool)
+{
+  struct filter_parse_baton_t *pb = parse_baton;
+  struct filter_revision_baton_t *rb = apr_pcalloc(pool, sizeof (*rb));
+
+  rb->pb = pb;
+  SVN_ERR(pb->wrapped_parser->new_revision_record(&rb->wrapped_rb, headers,
+                                                  pb->wrapped_pb, pool));
+  *revision_baton = rb;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_new_node_record(void **node_baton,
+                       apr_hash_t *headers,
+                       void *revision_baton,
+                       apr_pool_t *pool)
+{
+  struct filter_revision_baton_t *rb = revision_baton;
+  struct filter_parse_baton_t *pb = rb->pb;
+  struct filter_node_baton_t *nb = apr_pcalloc(pool, sizeof (*nb));
+
+  nb->rb = rb;
+  SVN_ERR(pb->wrapped_parser->new_node_record(&nb->wrapped_nb, headers,
+                                              rb->wrapped_rb, pool));
+  *node_baton = nb;
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_set_revision_property(void *revision_baton,
+                             const char *name,
+                             const svn_string_t *value)
+{
+  struct filter_revision_baton_t *rb = revision_baton;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->set_revision_property(rb->wrapped_rb,
+                                                    name, value));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_set_node_property(void *node_baton,
+                         const char *name,
+                         const svn_string_t *value)
+{
+  struct filter_node_baton_t *nb = node_baton;
+  struct filter_revision_baton_t *rb = nb->rb;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->set_node_property(nb->wrapped_nb,
+                                                name, value));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_delete_node_property(void *node_baton,
+                            const char *name)
+{
+  struct filter_node_baton_t *nb = node_baton;
+  struct filter_revision_baton_t *rb = nb->rb;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->delete_node_property(nb->wrapped_nb, name));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_remove_node_props(void *node_baton)
+{
+  struct filter_node_baton_t *nb = node_baton;
+  struct filter_revision_baton_t *rb = nb->rb;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->remove_node_props(nb->wrapped_nb));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_set_fulltext(svn_stream_t **stream,
+                    void *node_baton)
+{
+  struct filter_node_baton_t *nb = node_baton;
+  struct filter_revision_baton_t *rb = nb->rb;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->set_fulltext(stream, nb->wrapped_nb));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_apply_textdelta(svn_txdelta_window_handler_t *handler,
+                       void **handler_baton,
+                       void *node_baton)
+{
+  struct filter_node_baton_t *nb = node_baton;
+  struct filter_revision_baton_t *rb = nb->rb;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->apply_textdelta(handler, handler_baton,
+                                              nb->wrapped_nb));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_close_node(void *node_baton)
+{
+  struct filter_node_baton_t *nb = node_baton;
+  struct filter_revision_baton_t *rb = nb->rb;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->close_node(nb->wrapped_nb));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+filter_close_revision(void *revision_baton)
+{
+  struct filter_revision_baton_t *rb = revision_baton;
+  struct filter_parse_baton_t *pb = rb->pb;
+
+  SVN_ERR(pb->wrapped_parser->close_revision(rb->wrapped_rb));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+get_dumpstream_filter(svn_repos_parse_fns3_t **parser_p,
+                      void **parse_baton_p,
+                      const svn_repos_parse_fns3_t *wrapped_parser,
+                      void *wrapped_baton,
+                      apr_pool_t *pool)
+{
+  svn_repos_parse_fns3_t *parser;
+  struct filter_parse_baton_t *b;
+
+  parser = apr_pcalloc(pool, sizeof(*parser));
+  parser->magic_header_record = filter_magic_header_record;
+  parser->uuid_record = filter_uuid_record;
+  parser->new_revision_record = filter_new_revision_record;
+  parser->new_node_record = filter_new_node_record;
+  parser->set_revision_property = filter_set_revision_property;
+  parser->set_node_property = filter_set_node_property;
+  parser->delete_node_property = filter_delete_node_property;
+  parser->remove_node_props = filter_remove_node_props;
+  parser->set_fulltext = filter_set_fulltext;
+  parser->apply_textdelta = filter_apply_textdelta;
+  parser->close_node = filter_close_node;
+  parser->close_revision = filter_close_revision;
+
+  b = apr_pcalloc(pool, sizeof(*b));
+  b->wrapped_parser = wrapped_parser;
+  b->wrapped_pb = wrapped_baton;
+
+  *parser_p = parser;
+  *parse_baton_p = b;
+  return SVN_NO_ERROR;
+}
+
+/*----------------------------------------------------------------------*/
+
 svn_error_t *
 svn_rdump__load_dumpstream(svn_stream_t *stream,
                            svn_ra_session_t *session,
@@ -1220,6 +1430,11 @@ svn_rdump__load_dumpstream(svn_stream_t *stream,
   SVN_ERR(get_dumpstream_loader(&parser, &parse_baton,
                                 session, aux_session,
                                 quiet, skip_revprops,
+                                pool));
+
+  /* Interpose a filtering layer: currently doing nothing */
+  SVN_ERR(get_dumpstream_filter(&parser, &parse_baton,
+                                parser, parse_baton,
                                 pool));
 
   err = svn_repos_parse_dumpstream3(stream, parser, parse_baton, FALSE,
