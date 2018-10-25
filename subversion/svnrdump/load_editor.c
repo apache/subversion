@@ -206,15 +206,6 @@ struct revision_baton
   apr_pool_t *pool;
 };
 
-/**
- * Baton used for commit callback (and Ev2 shims).
- */
-struct commit_baton_t
-{
-  svn_revnum_t rev;
-  struct parse_baton *pb;
-};
-
 
 
 /* Record the mapping of FROM_REV to TO_REV in REV_MAP, ensuring that
@@ -242,228 +233,6 @@ get_revision_mapping(apr_hash_t *rev_map,
   return to_rev ? *to_rev : SVN_INVALID_REVNUM;
 }
 
-
-/*
- * - Notification of the commit.
- * - Update the revision number mapping to take account of the actual
- *   committed revision number.
- */
-static svn_error_t *
-commit_callback(const svn_commit_info_t *commit_info,
-                void *baton,
-                apr_pool_t *pool)
-{
-  struct commit_baton_t *cb = baton;
-  struct parse_baton *pb = cb->pb;
-
-  /* ### Don't print directly; generate a notification. */
-  if (! pb->quiet)
-    SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld.\n",
-                               commit_info->revision));
-
-  /* Add the mapping of the dumpstream revision to the committed revision. */
-  set_revision_mapping(pb->rev_map, cb->rev, commit_info->revision);
-
-  /* If the incoming dump stream has non-contiguous revisions (e.g. from
-     using svndumpfilter --drop-empty-revs without --renumber-revs) then
-     we must account for the missing gaps in PB->REV_MAP.  Otherwise we
-     might not be able to map all mergeinfo source revisions to the correct
-     revisions in the target repos. */
-  if ((pb->last_rev_mapped != SVN_INVALID_REVNUM)
-      && (cb->rev != pb->last_rev_mapped + 1))
-    {
-      svn_revnum_t i;
-
-      for (i = pb->last_rev_mapped + 1; i < cb->rev; i++)
-        {
-          set_revision_mapping(pb->rev_map, i, pb->last_rev_mapped);
-        }
-    }
-
-  /* Update our "last revision mapped". */
-  pb->last_rev_mapped = cb->rev;
-
-  return SVN_NO_ERROR;
-}
-
-/* Implements `svn_ra__lock_retry_func_t'. */
-static svn_error_t *
-lock_retry_func(void *baton,
-                const svn_string_t *reposlocktoken,
-                apr_pool_t *pool)
-{
-  return svn_cmdline_printf(pool,
-                            _("Failed to get lock on destination "
-                              "repos, currently held by '%s'\n"),
-                            reposlocktoken->data);
-}
-
-
-static svn_error_t *
-fetch_base_func(const char **filename,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *result_pool,
-                apr_pool_t *scratch_pool)
-{
-  struct commit_baton_t *cb = baton;
-  svn_stream_t *fstream;
-  svn_error_t *err;
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = cb->rev - 1;
-
-  SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
-                                 svn_io_file_del_on_pool_cleanup,
-                                 result_pool, scratch_pool));
-
-  err = svn_ra_get_file(cb->pb->aux_session, path, base_revision,
-                        fstream, NULL, NULL, scratch_pool);
-  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
-    {
-      svn_error_clear(err);
-      SVN_ERR(svn_stream_close(fstream));
-
-      *filename = NULL;
-      return SVN_NO_ERROR;
-    }
-  else if (err)
-    return svn_error_trace(err);
-
-  SVN_ERR(svn_stream_close(fstream));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_props(apr_hash_t **props,
-            void *baton,
-            const char *path,
-            svn_revnum_t base_revision,
-            svn_node_kind_t node_kind,
-            apr_pool_t *result_pool,
-            apr_pool_t *scratch_pool)
-{
-  struct parse_baton *pb = baton;
-
-  if (node_kind == svn_node_file)
-    {
-      SVN_ERR(svn_ra_get_file(pb->aux_session, path, base_revision,
-                              NULL, NULL, props, result_pool));
-    }
-  else if (node_kind == svn_node_dir)
-    {
-      apr_array_header_t *tmp_props;
-
-      SVN_ERR(svn_ra_get_dir2(pb->aux_session, NULL, NULL, props, path,
-                              base_revision, 0 /* Dirent fields */,
-                              result_pool));
-      tmp_props = svn_prop_hash_to_array(*props, result_pool);
-      SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
-                                   result_pool));
-      *props = svn_prop_array_to_hash(tmp_props, result_pool);
-    }
-  else
-    {
-      *props = apr_hash_make(result_pool);
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_props_func(apr_hash_t **props,
-                 void *baton,
-                 const char *path,
-                 svn_revnum_t base_revision,
-                 apr_pool_t *result_pool,
-                 apr_pool_t *scratch_pool)
-{
-  struct commit_baton_t *cb = baton;
-  svn_node_kind_t node_kind;
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = cb->rev - 1;
-
-  SVN_ERR(svn_ra_check_path(cb->pb->aux_session, path, base_revision,
-                            &node_kind, scratch_pool));
-  SVN_ERR(fetch_props(props, cb->pb, path, base_revision, node_kind,
-                      result_pool, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-fetch_kind_func(svn_node_kind_t *kind,
-                void *baton,
-                const char *path,
-                svn_revnum_t base_revision,
-                apr_pool_t *scratch_pool)
-{
-  struct commit_baton_t *cb = baton;
-
-  if (! SVN_IS_VALID_REVNUM(base_revision))
-    base_revision = cb->rev - 1;
-
-  SVN_ERR(svn_ra_check_path(cb->pb->aux_session, path, base_revision,
-                            kind, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_delta_shim_callbacks_t *
-get_shim_callbacks(struct commit_baton_t *cb,
-                   apr_pool_t *pool)
-{
-  svn_delta_shim_callbacks_t *callbacks =
-                        svn_delta_shim_callbacks_default(pool);
-
-  callbacks->fetch_props_func = fetch_props_func;
-  callbacks->fetch_kind_func = fetch_kind_func;
-  callbacks->fetch_base_func = fetch_base_func;
-  callbacks->fetch_baton = cb;
-
-  return callbacks;
-}
-
-/* Acquire a lock (of sorts) on the repository associated with the
- * given RA SESSION. This lock is just a revprop change attempt in a
- * time-delay loop. This function is duplicated by svnsync in
- * svnsync/svnsync.c
- *
- * ### TODO: Make this function more generic and
- * expose it through a header for use by other Subversion
- * applications to avoid duplication.
- */
-static svn_error_t *
-get_lock(const svn_string_t **lock_string_p,
-         svn_ra_session_t *session,
-         svn_cancel_func_t cancel_func,
-         void *cancel_baton,
-         apr_pool_t *pool)
-{
-  svn_boolean_t be_atomic;
-
-  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
-                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
-                                pool));
-  if (! be_atomic)
-    {
-      /* Pre-1.7 servers can't lock without a race condition.  (Issue #3546) */
-      svn_error_t *err =
-        svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                         _("Target server does not support atomic revision "
-                           "property edits; consider upgrading it to 1.7."));
-      svn_handle_warning2(stderr, err, "svnrdump: ");
-      svn_error_clear(err);
-    }
-
-  return svn_ra__get_operational_lock(lock_string_p, NULL, session,
-                                      SVNRDUMP_PROP_LOCK, FALSE,
-                                      10 /* retries */, lock_retry_func, NULL,
-                                      cancel_func, cancel_baton, pool);
-}
 
 static svn_error_t *
 magic_header_record(int version,
@@ -1113,6 +882,188 @@ close_revision(void *baton)
   return SVN_NO_ERROR;
 }
 
+/*----------------------------------------------------------------------*/
+
+/**
+ * Baton used for commit callback (and Ev2 shims).
+ */
+struct commit_baton_t
+{
+  svn_revnum_t rev;
+  struct parse_baton *pb;
+};
+
+/*
+ * - Notification of the commit.
+ * - Update the revision number mapping to take account of the actual
+ *   committed revision number.
+ */
+static svn_error_t *
+commit_callback(const svn_commit_info_t *commit_info,
+                void *baton,
+                apr_pool_t *pool)
+{
+  struct commit_baton_t *cb = baton;
+  struct parse_baton *pb = cb->pb;
+
+  /* ### Don't print directly; generate a notification. */
+  if (! pb->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, "* Loaded revision %ld.\n",
+                               commit_info->revision));
+
+  /* Add the mapping of the dumpstream revision to the committed revision. */
+  set_revision_mapping(pb->rev_map, cb->rev, commit_info->revision);
+
+  /* If the incoming dump stream has non-contiguous revisions (e.g. from
+     using svndumpfilter --drop-empty-revs without --renumber-revs) then
+     we must account for the missing gaps in PB->REV_MAP.  Otherwise we
+     might not be able to map all mergeinfo source revisions to the correct
+     revisions in the target repos. */
+  if ((pb->last_rev_mapped != SVN_INVALID_REVNUM)
+      && (cb->rev != pb->last_rev_mapped + 1))
+    {
+      svn_revnum_t i;
+
+      for (i = pb->last_rev_mapped + 1; i < cb->rev; i++)
+        {
+          set_revision_mapping(pb->rev_map, i, pb->last_rev_mapped);
+        }
+    }
+
+  /* Update our "last revision mapped". */
+  pb->last_rev_mapped = cb->rev;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_base_func(const char **filename,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  struct commit_baton_t *cb = baton;
+  svn_stream_t *fstream;
+  svn_error_t *err;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = cb->rev - 1;
+
+  SVN_ERR(svn_stream_open_unique(&fstream, filename, NULL,
+                                 svn_io_file_del_on_pool_cleanup,
+                                 result_pool, scratch_pool));
+
+  err = svn_ra_get_file(cb->pb->aux_session, path, base_revision,
+                        fstream, NULL, NULL, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_stream_close(fstream));
+
+      *filename = NULL;
+      return SVN_NO_ERROR;
+    }
+  else if (err)
+    return svn_error_trace(err);
+
+  SVN_ERR(svn_stream_close(fstream));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props(apr_hash_t **props,
+            void *baton,
+            const char *path,
+            svn_revnum_t base_revision,
+            svn_node_kind_t node_kind,
+            apr_pool_t *result_pool,
+            apr_pool_t *scratch_pool)
+{
+  struct parse_baton *pb = baton;
+
+  if (node_kind == svn_node_file)
+    {
+      SVN_ERR(svn_ra_get_file(pb->aux_session, path, base_revision,
+                              NULL, NULL, props, result_pool));
+    }
+  else if (node_kind == svn_node_dir)
+    {
+      apr_array_header_t *tmp_props;
+
+      SVN_ERR(svn_ra_get_dir2(pb->aux_session, NULL, NULL, props, path,
+                              base_revision, 0 /* Dirent fields */,
+                              result_pool));
+      tmp_props = svn_prop_hash_to_array(*props, result_pool);
+      SVN_ERR(svn_categorize_props(tmp_props, NULL, NULL, &tmp_props,
+                                   result_pool));
+      *props = svn_prop_array_to_hash(tmp_props, result_pool);
+    }
+  else
+    {
+      *props = apr_hash_make(result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_props_func(apr_hash_t **props,
+                 void *baton,
+                 const char *path,
+                 svn_revnum_t base_revision,
+                 apr_pool_t *result_pool,
+                 apr_pool_t *scratch_pool)
+{
+  struct commit_baton_t *cb = baton;
+  svn_node_kind_t node_kind;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = cb->rev - 1;
+
+  SVN_ERR(svn_ra_check_path(cb->pb->aux_session, path, base_revision,
+                            &node_kind, scratch_pool));
+  SVN_ERR(fetch_props(props, cb->pb, path, base_revision, node_kind,
+                      result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+fetch_kind_func(svn_node_kind_t *kind,
+                void *baton,
+                const char *path,
+                svn_revnum_t base_revision,
+                apr_pool_t *scratch_pool)
+{
+  struct commit_baton_t *cb = baton;
+
+  if (! SVN_IS_VALID_REVNUM(base_revision))
+    base_revision = cb->rev - 1;
+
+  SVN_ERR(svn_ra_check_path(cb->pb->aux_session, path, base_revision,
+                            kind, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_delta_shim_callbacks_t *
+get_shim_callbacks(struct commit_baton_t *cb,
+                   apr_pool_t *pool)
+{
+  svn_delta_shim_callbacks_t *callbacks =
+                        svn_delta_shim_callbacks_default(pool);
+
+  callbacks->fetch_props_func = fetch_props_func;
+  callbacks->fetch_kind_func = fetch_kind_func;
+  callbacks->fetch_base_func = fetch_base_func;
+  callbacks->fetch_baton = cb;
+
+  return callbacks;
+}
+
 /*  */
 static svn_error_t *
 revstart(svn_revnum_t revision,
@@ -1410,6 +1361,56 @@ get_dumpstream_filter(svn_repos_parse_fns3_t **parser_p,
 
 /*----------------------------------------------------------------------*/
 
+/* Implements `svn_ra__lock_retry_func_t'. */
+static svn_error_t *
+lock_retry_func(void *baton,
+                const svn_string_t *reposlocktoken,
+                apr_pool_t *pool)
+{
+  return svn_cmdline_printf(pool,
+                            _("Failed to get lock on destination "
+                              "repos, currently held by '%s'\n"),
+                            reposlocktoken->data);
+}
+
+/* Acquire a lock (of sorts) on the repository associated with the
+ * given RA SESSION. This lock is just a revprop change attempt in a
+ * time-delay loop. This function is duplicated by svnsync in
+ * svnsync/svnsync.c
+ *
+ * ### TODO: Make this function more generic and
+ * expose it through a header for use by other Subversion
+ * applications to avoid duplication.
+ */
+static svn_error_t *
+get_lock(const svn_string_t **lock_string_p,
+         svn_ra_session_t *session,
+         svn_cancel_func_t cancel_func,
+         void *cancel_baton,
+         apr_pool_t *pool)
+{
+  svn_boolean_t be_atomic;
+
+  SVN_ERR(svn_ra_has_capability(session, &be_atomic,
+                                SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
+                                pool));
+  if (! be_atomic)
+    {
+      /* Pre-1.7 servers can't lock without a race condition.  (Issue #3546) */
+      svn_error_t *err =
+        svn_error_create(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                         _("Target server does not support atomic revision "
+                           "property edits; consider upgrading it to 1.7."));
+      svn_handle_warning2(stderr, err, "svnrdump: ");
+      svn_error_clear(err);
+    }
+
+  return svn_ra__get_operational_lock(lock_string_p, NULL, session,
+                                      SVNRDUMP_PROP_LOCK, FALSE,
+                                      10 /* retries */, lock_retry_func, NULL,
+                                      cancel_func, cancel_baton, pool);
+}
+
 svn_error_t *
 svn_rdump__load_dumpstream(svn_stream_t *stream,
                            svn_ra_session_t *session,
