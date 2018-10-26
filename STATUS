@@ -16,9 +16,14 @@ Candidate changes:
 ==================
 
  * r1842814, r1842827, r1842829, r1842877
-   Document the obsolete '-N' option more precisely in 'svn help'.
+   Improve 'svn help' for the 'add' command and for the '-N' option.
    Justification:
-     Improve 'svn help add' and help for '-N' option.
+     Proper documentation was lacking. Another newbie was recently surprised
+     by how 'svn add' behaves relative to 'git add'.
+   Notes:
+     r1842814: Document the obsolete '-N' option properly.
+     r1842827: Fully document 'svn add', and include some newbie tips.
+     r1842829, r1842877: tweaks to formatting.
    Votes:
      +1: julianfoad
 
