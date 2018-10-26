@@ -132,6 +132,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1844882
+   Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
+   Justification:
+     The option has no effect in some setups. User submitted the patch.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
