@@ -82,6 +82,49 @@ def compare_repos_dumps(sbox, other_dumpfile,
   svntest.verify.compare_dump_files(
     None, None, other_dumpfile, sbox_dumpfile)
 
+def run_and_verify_svnrdump_dump(dumpfile,
+                                 expected_stdout,
+                                 expected_stderr,
+                                 expected_exit,
+                                 *varargs):
+  """Run 'svnrdump dump' and return the dump as a list of strings.
+     Verify the results against EXPECTED_*.
+     DUMPFILE is a filename to write to, or None.
+  """
+  output = svntest.actions.run_and_verify_svnrdump(
+                                None,
+                                expected_stdout,
+                                expected_stderr,
+                                expected_exit,
+                                'dump',
+                                *varargs)
+  if dumpfile:
+    dump_fp = open(dumpfile, 'wb')
+    dump_fp.writelines(output)
+    dump_fp.close()
+  return output
+
+def run_and_verify_svnrdump_load(dumpfile,
+                                 expected_stdout,
+                                 expected_stderr,
+                                 expected_exit,
+                                 *varargs):
+  """Run 'svnrdump load' to load a dumpfile.
+     Verify the results against EXPECTED_*.
+     DUMPFILE is a filename or the dump content as a list of strings.
+  """
+  if isinstance(dumpfile, list):
+    dumpfile_content = dumpfile
+  else:
+    dumpfile_content = open(dumpfile, 'rb').readlines()
+  svntest.actions.run_and_verify_svnrdump(
+                                dumpfile_content,
+                                expected_stdout,
+                                expected_stderr,
+                                expected_exit,
+                                'load',
+                                *varargs)
+
 def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                   subdir = None, bypass_prop_validation = False,
                   ignore_base_checksums = False, extra_options = []):
@@ -112,10 +155,11 @@ def run_dump_test(sbox, dumpfile_name, expected_dumpfile_name = None,
     repo_url = repo_url + subdir
 
   # Create a dump file using svnrdump
-  opts = extra_options + ['-q', 'dump', repo_url]
+  opts = extra_options + ['-q', repo_url]
   svnrdump_dumpfile = \
-      svntest.actions.run_and_verify_svnrdump(None, svntest.verify.AnyOutput,
-                                              [], 0, *opts)
+      run_and_verify_svnrdump_dump(None,
+                                   svntest.verify.AnyOutput, [], 0,
+                                   *opts)
 
   if expected_dumpfile_name:
     expected_dumpfile = open(os.path.join(svnrdump_tests_dir,
@@ -170,9 +214,9 @@ def run_load_test(sbox, dumpfile_name, expected_dumpfile_name = None,
                                            'setuuid', sbox.repo_dir,
                                            uuid)
 
-  svntest.actions.run_and_verify_svnrdump(original_dumpfile,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
+  run_and_verify_svnrdump_load(original_dumpfile,
+                               svntest.verify.AnyOutput,
+                               [], 0, sbox.repo_url)
 
   # Re-dump the rdump-loaded repo using svnadmin dump
   resulted_dumpfile = svntest.actions.run_and_verify_dump(sbox.repo_dir,
@@ -199,9 +243,9 @@ def basic_dump(sbox):
   sbox.build(read_only = True, create_wc = False)
 
   out = \
-      svntest.actions.run_and_verify_svnrdump(None, svntest.verify.AnyOutput,
-                                              [], 0, '-q', 'dump',
-                                              sbox.repo_url)
+      run_and_verify_svnrdump_dump(None,
+                                   svntest.verify.AnyOutput, [], 0,
+                                   '-q', sbox.repo_url)
 
   if not out[0].startswith(b'SVN-fs-dump-format-version:'):
     raise svntest.Failure('No valid output')
@@ -408,17 +452,14 @@ def reflect_dropped_renumbered_revs(sbox):
 
   # Load the specified dump file into the sbox repository using
   # svnrdump load
-  dump_file = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                                'svnrdump_tests_data',
-                                                'with_merges.dump'),
-                   'rb')
-  svnrdump_dumpfile = dump_file.readlines()
-  dump_file.close()
+  dump_file = os.path.join(os.path.dirname(sys.argv[0]),
+                           'svnrdump_tests_data',
+                           'with_merges.dump')
 
   # svnrdump load the dump file.
-  svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
+  run_and_verify_svnrdump_load(dump_file,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
 
   # Create the 'toplevel' directory in repository and then load the same
   # dumpfile into that subtree.
@@ -426,10 +467,9 @@ def reflect_dropped_renumbered_revs(sbox):
                                             'Committed revision 10.\n'],
                                     [], "mkdir", sbox.repo_url + "/toplevel",
                                      "-m", "Create toplevel dir to load into")
-  svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load',
-                                          sbox.repo_url + "/toplevel")
+  run_and_verify_svnrdump_load(dump_file,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url + "/toplevel")
   # Verify the svn:mergeinfo properties
   url = sbox.repo_url
   expected_output = svntest.verify.UnorderedOutput([
@@ -515,16 +555,13 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   #   Properties on 'branches/B2':
   #     svn:mergeinfo
   #       /trunk:9
-  dump_fp = open(os.path.join(os.path.dirname(sys.argv[0]),
-                              'svnrdump_tests_data',
-                              'mergeinfo_included_full.dump'),
-                 'rb')
-  dumpfile_full = dump_fp.readlines()
-  dump_fp.close()
+  dumpfile_full = os.path.join(os.path.dirname(sys.argv[0]),
+                               'svnrdump_tests_data',
+                               'mergeinfo_included_full.dump')
 
-  svntest.actions.run_and_verify_svnrdump(dumpfile_full,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
+  run_and_verify_svnrdump_load(dumpfile_full,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
 
   # Check that the mergeinfo is as expected.
   url = sbox.repo_url + '/branches/'
@@ -542,33 +579,22 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   #
   # Incrementally dump the repository into three dump files:
   dump_file_r1_10 = sbox.get_tempname("r1-10-dump")
-  output = svntest.actions.run_and_verify_svnrdump(None,
-                                                   svntest.verify.AnyOutput,
-                                                   [], 0, '-q', 'dump', '-r1:10',
-                                                   sbox.repo_url)
-  dump_fp = open(dump_file_r1_10, 'wb')
-  dump_fp.writelines(output)
-  dump_fp.close()
+  output = run_and_verify_svnrdump_dump(dump_file_r1_10,
+                                        svntest.verify.AnyOutput, [], 0,
+                                        '-q', '-r1:10',
+                                        sbox.repo_url)
 
   dump_file_r11_13 = sbox.get_tempname("r11-13-dump")
-  output = svntest.actions.run_and_verify_svnrdump(None,
-                                                   svntest.verify.AnyOutput,
-                                                   [], 0, '-q', 'dump',
-                                                   '--incremental', '-r11:13',
-                                                   sbox.repo_url)
-  dump_fp = open(dump_file_r11_13, 'wb')
-  dump_fp.writelines(output)
-  dump_fp.close()
+  output = run_and_verify_svnrdump_dump(dump_file_r11_13,
+                                        svntest.verify.AnyOutput, [], 0,
+                                        '-q', '--incremental', '-r11:13',
+                                        sbox.repo_url)
 
   dump_file_r14_15 = sbox.get_tempname("r14-15-dump")
-  output = svntest.actions.run_and_verify_svnrdump(None,
-                                                   svntest.verify.AnyOutput,
-                                                   [], 0, '-q', 'dump',
-                                                   '--incremental', '-r14:15',
-                                                   sbox.repo_url)
-  dump_fp = open(dump_file_r14_15, 'wb')
-  dump_fp.writelines(output)
-  dump_fp.close()
+  output = run_and_verify_svnrdump_dump(dump_file_r14_15,
+                                        svntest.verify.AnyOutput, [], 0,
+                                        '-q', '--incremental', '-r14:15',
+                                        sbox.repo_url)
 
   # Blow away the current repos and create an empty one in its place.
   svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve
@@ -578,21 +604,15 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   # Load the three incremental dump files in sequence.
-  dump_fp = open(dump_file_r1_10, 'rb')
-  svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
-  dump_fp.close()
-  dump_fp = open(dump_file_r11_13, 'rb')
-  svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
-  dump_fp.close()
-  dump_fp = open(dump_file_r14_15, 'rb')
-  svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
-  dump_fp.close()
+  run_and_verify_svnrdump_load(dump_file_r1_10,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
+  run_and_verify_svnrdump_load(dump_file_r11_13,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
+  run_and_verify_svnrdump_load(dump_file_r14_15,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
 
   # Check the mergeinfo, we use the same expected output as before,
   # as it (duh!) should be exactly the same as when we loaded the
@@ -622,21 +642,17 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   #     Project-Z     (Added r5)
   #     docs/         (Added r6)
   #       README      (Added r6)
-  dump_fp = open(os.path.join(os.path.dirname(sys.argv[0]),
-                              'svnrdump_tests_data',
-                              'skeleton.dump'),
-                 'rb')
-  dumpfile_skeleton = dump_fp.readlines()
-  dump_fp.close()
-  svntest.actions.run_and_verify_svnrdump(dumpfile_skeleton,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
+  dumpfile_skeleton = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'svnrdump_tests_data',
+                                   'skeleton.dump')
+  run_and_verify_svnrdump_load(dumpfile_skeleton,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
 
   # Load 'svnadmin_tests_data/mergeinfo_included_full.dump' in one shot:
-  svntest.actions.run_and_verify_svnrdump(dumpfile_full,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load',
-                                          sbox.repo_url + '/Projects/Project-X')
+  run_and_verify_svnrdump_load(dumpfile_full,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url + '/Projects/Project-X')
 
   # Check that the mergeinfo is as expected.  This is exactly the
   # same expected mergeinfo we previously checked, except that the
@@ -676,31 +692,22 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
 
   # Load the skeleton repos into the empty target:
-  svntest.actions.run_and_verify_svnrdump(dumpfile_skeleton,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
+  run_and_verify_svnrdump_load(dumpfile_skeleton,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
 
   # Load the three incremental dump files in sequence.
   #
   # The first load fails the same as PART 3.
-  dump_fp = open(dump_file_r1_10, 'rb')
-  svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load',
-                                          sbox.repo_url + '/Projects/Project-X')
-  dump_fp.close()
-  dump_fp = open(dump_file_r11_13, 'rb')
-  svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load',
-                                          sbox.repo_url + '/Projects/Project-X')
-  dump_fp.close()
-  dump_fp = open(dump_file_r14_15, 'rb')
-  svntest.actions.run_and_verify_svnrdump(dump_fp.readlines(),
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load',
-                                          sbox.repo_url + '/Projects/Project-X')
-  dump_fp.close()
+  run_and_verify_svnrdump_load(dump_file_r1_10,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url + '/Projects/Project-X')
+  run_and_verify_svnrdump_load(dump_file_r11_13,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url + '/Projects/Project-X')
+  run_and_verify_svnrdump_load(dump_file_r14_15,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url + '/Projects/Project-X')
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
@@ -729,15 +736,12 @@ def svnrdump_load_partial_incremental_dump(sbox):
 
   # Load the specified dump file into the sbox repository using
   # svnrdump load
-  dump_file = open(os.path.join(os.path.dirname(sys.argv[0]),
-                                                'svnrdump_tests_data',
-                                                'partial_incremental.dump'),
-                   'rb')
-  svnrdump_dumpfile = dump_file.readlines()
-  dump_file.close()
-  svntest.actions.run_and_verify_svnrdump(svnrdump_dumpfile,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', sbox.repo_url)
+  dump_file = os.path.join(os.path.dirname(sys.argv[0]),
+                           'svnrdump_tests_data',
+                           'partial_incremental.dump')
+  run_and_verify_svnrdump_load(dump_file,
+                               svntest.verify.AnyOutput, [], 0,
+                               sbox.repo_url)
 
 
 #----------------------------------------------------------------------
@@ -789,9 +793,9 @@ def load_prop_change_in_non_deltas_dump(sbox):
   # Try to load that dump.
   sbox.build(create_wc=False, empty=True)
   svntest.actions.enable_revprop_changes(sbox.repo_dir)
-  svntest.actions.run_and_verify_svnrdump(dump,
-                                          [], [], 0,
-                                          '-q', 'load', sbox.repo_url)
+  run_and_verify_svnrdump_load(dump,
+                               [], [], 0,
+                               '-q', sbox.repo_url)
 
 #----------------------------------------------------------------------
 
@@ -852,9 +856,9 @@ def load_non_deltas_copy_with_props(sbox):
   new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
   svntest.main.create_repos(new_repo_dir)
   svntest.actions.enable_revprop_changes(new_repo_dir)
-  svntest.actions.run_and_verify_svnrdump(dumpfile,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', new_repo_url)
+  run_and_verify_svnrdump_load(dumpfile,
+                               svntest.verify.AnyOutput, [], 0,
+                               new_repo_url)
 
   # Check that property 'p' really was deleted on each copied node
   for tgt_path in ['A/mu_COPY', 'A/B_COPY', 'A/B_COPY/E',
@@ -899,9 +903,9 @@ def load_non_deltas_replace_copy_with_props(sbox):
   new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
   svntest.main.create_repos(new_repo_dir)
   svntest.actions.enable_revprop_changes(new_repo_dir)
-  svntest.actions.run_and_verify_svnrdump(dumpfile,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', new_repo_url)
+  run_and_verify_svnrdump_load(dumpfile,
+                               svntest.verify.AnyOutput, [], 0,
+                               new_repo_url)
 
   # Check that property 'p' really was deleted on each copied node
   # This used to fail, finding that property 'p' was still present
@@ -928,9 +932,10 @@ def dump_replace_with_copy(sbox):
   sbox.simple_commit()
 
   # Dump with 'svnrdump'
-  dumpfile = svntest.actions.run_and_verify_svnrdump(
-                               None, svntest.verify.AnyOutput, [], 0,
-                               'dump', '--quiet', '--incremental', '-r2',
+  dumpfile = run_and_verify_svnrdump_dump(
+                               None,
+                               svntest.verify.AnyOutput, [], 0,
+                               '--quiet', '--incremental', '-r2',
                                sbox.repo_url)
 
   # Check the 'delete' record headers: expect this parse to fail if headers
@@ -969,9 +974,9 @@ def load_non_deltas_with_props(sbox):
   new_repo_dir, new_repo_url = sbox.add_repo_path('new_repo')
   svntest.main.create_repos(new_repo_dir)
   svntest.actions.enable_revprop_changes(new_repo_dir)
-  svntest.actions.run_and_verify_svnrdump(dumpfile,
-                                          svntest.verify.AnyOutput,
-                                          [], 0, 'load', new_repo_url)
+  run_and_verify_svnrdump_load(dumpfile,
+                               svntest.verify.AnyOutput, [], 0,
+                               new_repo_url)
 
   # Check that property 'q' remains on each modified node
   for tgt_path in ['A/mu', 'A/B']:
