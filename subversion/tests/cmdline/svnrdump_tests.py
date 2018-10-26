@@ -87,22 +87,25 @@ def run_and_verify_svnrdump_dump(dumpfile,
                                  expected_stderr,
                                  expected_exit,
                                  *varargs):
-  """Run 'svnrdump dump' and return the dump as a list of strings.
+  """Run 'svnrdump dump'.
      Verify the results against EXPECTED_*.
-     DUMPFILE is a filename to write to, or None.
+     DUMPFILE is a filename to write to, or None to return the dump as a
+     list of strings.
   """
+  if dumpfile:
+    varargs += ('--file=' + dumpfile,)
+    exp_stdout = None
+  else:
+    exp_stdout = expected_stdout
   output = svntest.actions.run_and_verify_svnrdump(
                                 None,
-                                expected_stdout,
+                                exp_stdout,
                                 expected_stderr,
                                 expected_exit,
                                 'dump',
                                 *varargs)
-  if dumpfile:
-    dump_fp = open(dumpfile, 'wb')
-    dump_fp.writelines(output)
-    dump_fp.close()
-  return output
+  if not dumpfile:
+    return output
 
 def run_and_verify_svnrdump_load(dumpfile,
                                  expected_stdout,
@@ -116,7 +119,8 @@ def run_and_verify_svnrdump_load(dumpfile,
   if isinstance(dumpfile, list):
     dumpfile_content = dumpfile
   else:
-    dumpfile_content = open(dumpfile, 'rb').readlines()
+    dumpfile_content = None
+    varargs += ('--file=' + dumpfile,)
   svntest.actions.run_and_verify_svnrdump(
                                 dumpfile_content,
                                 expected_stdout,
@@ -579,22 +583,22 @@ def dont_drop_valid_mergeinfo_during_incremental_svnrdump_loads(sbox):
   #
   # Incrementally dump the repository into three dump files:
   dump_file_r1_10 = sbox.get_tempname("r1-10-dump")
-  output = run_and_verify_svnrdump_dump(dump_file_r1_10,
-                                        svntest.verify.AnyOutput, [], 0,
-                                        '-q', '-r1:10',
-                                        sbox.repo_url)
+  run_and_verify_svnrdump_dump(dump_file_r1_10,
+                               svntest.verify.AnyOutput, [], 0,
+                               '-q', '-r1:10',
+                               sbox.repo_url)
 
   dump_file_r11_13 = sbox.get_tempname("r11-13-dump")
-  output = run_and_verify_svnrdump_dump(dump_file_r11_13,
-                                        svntest.verify.AnyOutput, [], 0,
-                                        '-q', '--incremental', '-r11:13',
-                                        sbox.repo_url)
+  run_and_verify_svnrdump_dump(dump_file_r11_13,
+                               svntest.verify.AnyOutput, [], 0,
+                               '-q', '--incremental', '-r11:13',
+                               sbox.repo_url)
 
   dump_file_r14_15 = sbox.get_tempname("r14-15-dump")
-  output = run_and_verify_svnrdump_dump(dump_file_r14_15,
-                                        svntest.verify.AnyOutput, [], 0,
-                                        '-q', '--incremental', '-r14:15',
-                                        sbox.repo_url)
+  run_and_verify_svnrdump_dump(dump_file_r14_15,
+                               svntest.verify.AnyOutput, [], 0,
+                               '-q', '--incremental', '-r14:15',
+                               sbox.repo_url)
 
   # Blow away the current repos and create an empty one in its place.
   svntest.main.safe_rmtree(sbox.repo_dir, True) # Fix race with bdb in svnserve

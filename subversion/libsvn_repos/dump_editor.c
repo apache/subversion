@@ -969,7 +969,9 @@ close_file(void *file_baton,
 
       SVN_ERR(svn_io_file_seek(eb->delta_file, APR_SET, &offset, pool));
       delta_filestream = svn_stream_from_aprfile2(eb->delta_file, TRUE, pool);
-      SVN_ERR(svn_stream_copy3(delta_filestream, eb->stream, NULL, NULL, pool));
+      SVN_ERR(svn_stream_copy3(delta_filestream,
+                               svn_stream_disown(eb->stream, pool),
+                               NULL, NULL, pool));
 
       /* Cleanup */
       SVN_ERR(svn_stream_close(delta_filestream));
