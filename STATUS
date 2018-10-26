@@ -25,7 +25,7 @@ Candidate changes:
      r1842827: Fully document 'svn add', and include some newbie tips.
      r1842829, r1842877: tweaks to formatting.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
  * r1843888
    Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
