@@ -231,6 +231,9 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
       newconf->compression_level = child->compression_level;
     }
 
+  newconf->use_utf8 = INHERIT_VALUE(parent, child, use_utf8);                 
+  svn_utf_initialize2(newconf->use_utf8, p); 
+
   return newconf;
 }
 
