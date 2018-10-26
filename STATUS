@@ -32,7 +32,7 @@ Candidate changes:
    Justification:
      Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
  * r1844882
    Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
