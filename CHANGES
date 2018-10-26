@@ -13,6 +13,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
 
   - Minor new features and improvements:
     * 'svn --version --verbose' shows loaded libraries on Linux (r1843774)
+    * 'svnrdump' can read/write a file instead of stdin/stdout (r1844906)
 
   - Client-side bugfixes:
     * Repos-to-WC copy with --parents works with absent target (r1843888)
