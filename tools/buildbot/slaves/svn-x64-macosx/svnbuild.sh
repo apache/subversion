@@ -27,11 +27,13 @@ scripts=$(cd $(dirname "$0") && pwd)
 ${scripts}/mkramdisk.sh ${volume_name} ${ramconf}
 
 # These are the default APR and Serf config options
-serfconfig="--with-serf=${SVNBB_SERF} --with-apxs=/usr/sbin/apxs"
+serfconfig=" --with-serf=${SVNBB_SERF} --with-apxs=/usr/local/opt/httpd/bin/apxs"
 
 # An optional parameter tells build scripts which version of APR to use
 if [ ! -z "$1" ]; then
     aprdir=$(eval 'echo $SVNBB_'"$1")
+else
+    aprconfig="--with-apr=${SVNBB_APR} --with-apr-util=${SVNBB_APRUTIL}"
 fi
 if [ ! -z "${aprdir}" -a  -d "${aprdir}" ]; then
     aprconfig="--with-apr=${aprdir} --with-apr-util=${aprdir}"
@@ -91,6 +93,7 @@ ${abssrc}/configure \
     ${aprconfig}${serfconfig} \
     --with-swig="${SVNBB_SWIG}" \
     --with-berkeley-db=db.h:"${SVNBB_BDB}/include":${SVNBB_BDB}/lib:db \
+    --enable-bdb6 \
     --enable-javahl \
     --without-jikes \
     ${lz4config} \
