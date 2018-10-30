@@ -153,6 +153,14 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1845204
+   Fix issue SVN-4782: Do not use (const char*)1 in httpd modules as value for
+   r->notes.
+   Justification:
+     Prevents a crash in mod_http2.
+   Votes:
+     +1: rpluem
+
 Veto-blocked changes:
 =====================
 
