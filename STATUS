@@ -55,6 +55,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1845261
+   svndumpfilter: Include node path in error messages.
+   Justification:
+     User requested error message clarification.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
