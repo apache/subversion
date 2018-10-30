@@ -41,6 +41,12 @@
 #    endif
 #  endif
 #  ifdef __APPLE__
+     /* SQLite uses OSAtomicCompareAndSwapPtrBarrier from libkern/OSAtomic.h,
+        which has been deprecated since macOS 10.12. This will silence the
+        warning. */
+#    if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)
+#      pragma GCC diagnostic ignored "-Wdeprecated-declarations"
+#    endif
 #    include <Availability.h>
 #    if __MAC_OS_X_VERSION_MIN_REQUIRED < 1060
        /* <libkern/OSAtomic.h> is included on OS X by sqlite3.c, and
