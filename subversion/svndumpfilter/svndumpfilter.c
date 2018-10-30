@@ -528,7 +528,8 @@ new_node_record(void **node_baton,
             {
               return svn_error_createf
                 (SVN_ERR_INCOMPLETE_DATA, 0,
-                 _("Invalid copy source path '%s'"), copyfrom_path);
+                 _("Invalid copy source path '%s' for '%s'"),
+                 copyfrom_path, node_path);
             }
         }
 
@@ -609,7 +610,8 @@ new_node_record(void **node_baton,
               if (! (cf_renum_val && SVN_IS_VALID_REVNUM(cf_renum_val->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                   _("No valid copyfrom revision in filtered stream"));
+                   _("No valid copyfrom revision in filtered stream for '%s'"),
+                   node_path);
               svn_repos__dumpfile_header_pushf(
                 nb->headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
                 "%ld", cf_renum_val->rev);
