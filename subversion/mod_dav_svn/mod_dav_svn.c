@@ -1258,7 +1258,7 @@ static int dav_svn__translate_name(request_rec *r)
 
   /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */
-  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1);
+  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, "1");
   return OK;
 }
 
