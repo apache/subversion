@@ -43,6 +43,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1845261
+   * subversion/svndumpfilter/svndumpfilter.c
+   Justification:
+     User requested error message clarification.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
