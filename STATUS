@@ -48,6 +48,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1845212
+   Silence a deprecation warning from amalgamated SQLite on macOS.
+   Justification:
+     Keeps the macOS warnings checker buildslave clean.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
