@@ -44,7 +44,7 @@ Candidate changes:
      +1: brane
 
  * r1845261
-   * subversion/svndumpfilter/svndumpfilter.c
+   svndumpfilter: Include node path in error messages.
    Justification:
      User requested error message clarification.
    Votes:
