@@ -56,7 +56,7 @@ Candidate changes:
    Justification:
      Prevents a crash in mod_http2.
    Votes:
-     +1: rpluem
+     +1: rpluem, danielsh
 
 Veto-blocked changes:
 =====================
