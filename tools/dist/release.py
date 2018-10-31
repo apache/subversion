@@ -1327,8 +1327,8 @@ def write_changelog(args):
     
     separator_pattern = re.compile('^-{72}$')
     revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
-    changes_prefix_pattern = re.compile('^\[(U|D)?:?([^\]]+)?\](.+)$')
-    changes_suffix_pattern = re.compile('^(.+)\[(U|D)?:?([^\]]+)?\]$')
+    changes_prefix_pattern = re.compile(r'^\[(U|D)?:?([^\]]+)?\](.+)$')
+    changes_suffix_pattern = re.compile(r'^(.+)\[(U|D)?:?([^\]]+)?\]$')
     # TODO: push this into backport.status as a library function
     auto_merge_pattern = \
         re.compile(r'^Merge (r\d+,? |the r\d+ group |the \S+ branch:)')
@@ -1391,13 +1391,13 @@ def write_changelog(args):
 
         if not got_firstline:
             got_firstline = True
-            if (not re.search('status|changes|post-release housekeeping|follow-up|^\*',
+            if (not re.search(r'status|changes|post-release housekeeping|follow-up|^\*',
                               line, re.IGNORECASE)
                     and not changes_prefix_pattern.match(line)
                     and not changes_suffix_pattern.match(line)):
                 unlabeled_summary = line
 
-        if re.search('\[(c:)?(skip|ignore)\]', line, re.IGNORECASE):
+        if re.search(r'\[(c:)?(skip|ignore)\]', line, re.IGNORECASE):
             changes_ignore = True
             
         prefix_match = changes_prefix_pattern.match(line)
