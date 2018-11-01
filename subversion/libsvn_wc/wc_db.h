@@ -303,6 +303,15 @@ svn_wc__db_init(svn_wc__db_t *db,
                 svn_depth_t depth,
                 apr_pool_t *scratch_pool);
 
+/* Return the working copy format for LOCAL_ABSPATH in DB in *FORMAT.
+
+   Use SCRATCH_POOL for temporary allocations.
+*/
+svn_error_t *
+svn_wc__db_get_format(int *format,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
 
 /* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH, relative
    from wri_abspath.

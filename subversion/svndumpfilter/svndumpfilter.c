@@ -271,9 +271,7 @@ magic_header_record(int version, void *parse_baton, apr_pool_t *pool)
   if (version >= SVN_REPOS_DUMPFILE_FORMAT_VERSION_DELTAS)
     pb->allow_deltas = TRUE;
 
-  SVN_ERR(svn_stream_printf(pb->out_stream, pool,
-                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                            version));
+  SVN_ERR(svn_repos__dump_magic_header_record(pb->out_stream, version, pool));
 
   return SVN_NO_ERROR;
 }
@@ -446,8 +444,8 @@ static svn_error_t *
 uuid_record(const char *uuid, void *parse_baton, apr_pool_t *pool)
 {
   struct parse_baton_t *pb = parse_baton;
-  SVN_ERR(svn_stream_printf(pb->out_stream, pool,
-                            SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+
+  SVN_ERR(svn_repos__dump_uuid_header_record(pb->out_stream, uuid, pool));
   return SVN_NO_ERROR;
 }
 
@@ -530,7 +528,8 @@ new_node_record(void **node_baton,
             {
               return svn_error_createf
                 (SVN_ERR_INCOMPLETE_DATA, 0,
-                 _("Invalid copy source path '%s'"), copyfrom_path);
+                 _("Invalid copy source path '%s' for '%s'"),
+                 copyfrom_path, node_path);
             }
         }
 
@@ -611,7 +610,8 @@ new_node_record(void **node_baton,
               if (! (cf_renum_val && SVN_IS_VALID_REVNUM(cf_renum_val->rev)))
                 return svn_error_createf
                   (SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                   _("No valid copyfrom revision in filtered stream"));
+                   _("No valid copyfrom revision in filtered stream for '%s'"),
+                   node_path);
               svn_repos__dumpfile_header_pushf(
                 nb->headers, SVN_REPOS_DUMPFILE_NODE_COPYFROM_REV,
                 "%ld", cf_renum_val->rev);

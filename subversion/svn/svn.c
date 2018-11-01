@@ -464,7 +464,13 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                             "
                           "   'schedule'   'normal','add','delete','replace'\n"
                           "                             "
-                          "   'depth'      checkout depth of TARGET in WC")},
+                          "   'depth'      checkout depth of TARGET in WC\n"
+                          "                             "
+                          "   'wc-format'  TARGET's working copy format\n"
+                          "                             "
+                          "   'wc-format-min'   oldest supported WC format\n"
+                          "                             "
+                          "   'wc-format-min'   newest supported WC format\n")},
 
   {"adds-as-modification", opt_adds_as_modification, 0,
                        N_("Local additions are merged with incoming additions\n"

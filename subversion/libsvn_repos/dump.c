@@ -512,6 +512,30 @@ svn_repos__dump_headers(svn_stream_t *stream,
 }
 
 svn_error_t *
+svn_repos__dump_magic_header_record(svn_stream_t *dump_stream,
+                                    int version,
+                                    apr_pool_t *pool)
+{
+  SVN_ERR(svn_stream_printf(dump_stream, pool,
+                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
+                            version));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_repos__dump_uuid_header_record(svn_stream_t *dump_stream,
+                                   const char *uuid,
+                                   apr_pool_t *pool)
+{
+  if (uuid)
+    {
+      SVN_ERR(svn_stream_printf(dump_stream, pool, SVN_REPOS_DUMPFILE_UUID
+                                ": %s\n\n", uuid));
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_repos__dump_revision_record(svn_stream_t *dump_stream,
                                 svn_revnum_t revision,
                                 apr_hash_t *extra_headers,
@@ -2062,11 +2086,8 @@ svn_repos_dump_fs4(svn_repos_t *repos,
 
   /* Write out "general" metadata for the dumpfile.  In this case, a
      magic header followed by a dumpfile format version. */
-  SVN_ERR(svn_stream_printf(stream, pool,
-                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                            version));
-  SVN_ERR(svn_stream_printf(stream, pool, SVN_REPOS_DUMPFILE_UUID
-                            ": %s\n\n", uuid));
+  SVN_ERR(svn_repos__dump_magic_header_record(stream, version, pool));
+  SVN_ERR(svn_repos__dump_uuid_header_record(stream, uuid, pool));
 
   /* Create a notify object that we can reuse in the loop. */
   if (notify_func)

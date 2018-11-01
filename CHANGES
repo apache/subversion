@@ -8,8 +8,32 @@ Version 1.12.0
 (?? ??? 20XX, from /branches/1.12.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.12.0
 
+ User-visible changes:
+  - Major new features:
+
+  - Minor new features and improvements:
+    * 'svn --version --verbose' shows loaded libraries on Linux (r1843774)
+    * 'svnrdump' can read/write a file instead of stdin/stdout (r1844906)
+
+  - Client-side bugfixes:
+    * Repos-to-WC copy with --parents works with absent target (r1843888)
+
+  - Server-side bugfixes:
+
+  - Client-side and server-side bugfixes:
+
+  - Other tool improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+    * Storing passwords in plain text on disk is disabled by default (r1845377)
+
+  - Bindings:
+    * Fixed potential core dump in JavaHL's ISVNClient.diff (r1845408)
+
+
 Version 1.11.0
-(24 Oct 2018, from /branches/1.11.x)
+(30 Oct 2018, from /branches/1.11.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
  User-visible changes:
@@ -58,7 +82,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
 
 Version 1.10.3
-(?? Oct 2018, from /branches/1.10.x)
+(10 Oct 2018, from /branches/1.10.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.10.3
 
  User-visible changes:

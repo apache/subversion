@@ -3288,6 +3288,24 @@ typedef struct svn_wc_info_t
   /** The path the node was moved to, if it was moved away. Else NULL.
    * @since New in 1.8. */
   const char *moved_to_abspath;
+
+  /**
+   * The format of the working copy.
+   * @since New in 1.12.
+   */
+  int wc_format;
+
+  /**
+   * The oldest supporter working copy format.
+   * @since New in 1.12.
+   */
+  int wc_format_min;
+
+  /**
+   * The newest supporter working copy format.
+   * @since New in 1.12.
+   */
+  int wc_format_max;
 } svn_wc_info_t;
 
 /**

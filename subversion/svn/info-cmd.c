@@ -364,7 +364,10 @@ typedef enum
   /* Working copy information */
   info_item_wc_root,
   info_item_schedule,
-  info_item_depth
+  info_item_depth,
+  info_item_wc_format,
+  info_item_wc_format_min,
+  info_item_wc_format_max
 } info_item_t;
 
 /* Mapping between option keywords and info_item_t. */
@@ -390,6 +393,9 @@ static const info_item_map_t info_item_map[] =
     { MAKE_STRING("wc-root"),             info_item_wc_root },
     { MAKE_STRING("schedule"),            info_item_schedule },
     { MAKE_STRING("depth"),               info_item_depth },
+    { MAKE_STRING("wc-format"),           info_item_wc_format },
+    { MAKE_STRING("wc-format-min"),       info_item_wc_format_min },
+    { MAKE_STRING("wc-format-max"),       info_item_wc_format_max },
   };
 #undef MAKE_STRING
 
@@ -1036,6 +1042,20 @@ print_info(void *baton,
 }
 
 
+/* Helper for print_info_item(): Print the value NUMBER for TARGET_PATH,
+   which may be NULL. Use POOL for temporary allocation. */
+static svn_error_t *
+print_info_item_int(int number, const char *target_path,
+                    apr_pool_t *pool)
+{
+  if (target_path)
+    SVN_ERR(svn_cmdline_printf(pool, "%-10d %s", number, target_path));
+  else
+    SVN_ERR(svn_cmdline_printf(pool, "%d", number));
+
+  return SVN_NO_ERROR;
+}
+
 /* Helper for print_info_item(): Print the value TEXT for TARGET_PATH,
    either of which may be NULL. Use POOL for temporary allocation. */
 static svn_error_t *
@@ -1156,6 +1176,24 @@ print_info_item(void *baton,
                   ((info->wc_info && info->kind == svn_node_dir)
                    ? svn_depth_to_word(info->wc_info->depth) : NULL),
                   target_path, pool));
+      break;
+
+    case info_item_wc_format:
+      SVN_ERR(print_info_item_int((info->wc_info
+                                   ? info->wc_info->wc_format : -1),
+                                  target_path, pool));
+      break;
+
+    case info_item_wc_format_min:
+      SVN_ERR(print_info_item_int((info->wc_info
+                                   ? info->wc_info->wc_format_min : -1),
+                                  target_path, pool));
+      break;
+
+    case info_item_wc_format_max:
+      SVN_ERR(print_info_item_int((info->wc_info
+                                   ? info->wc_info->wc_format_max : -1),
+                                  target_path, pool));
       break;
 
     default:
