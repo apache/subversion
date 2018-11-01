@@ -24,6 +24,8 @@ run_tests() {
 
     echo "============ make check-${check}"
     cd ${absbld}
+    make -s install
+    make -s install-${check}
     make check-${check} ${cleanup} || exit 1
 }
 
