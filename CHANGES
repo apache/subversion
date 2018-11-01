@@ -29,6 +29,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
     * Storing passwords in plain text on disk is disabled by default (r1845377)
 
   - Bindings:
+    * Fixed potential core dump in JavaHL's ISVNClient.diff (r1845408)
 
 
 Version 1.11.0
