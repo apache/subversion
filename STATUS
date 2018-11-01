@@ -36,19 +36,11 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1845261
-   svndumpfilter: Include node path in error messages.
-   Justification:
-     User requested error message clarification.
-   Votes:
-     +1: danielsh, rhuijben
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
-
 
  * r1844882
    Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
@@ -65,6 +57,13 @@ Approved changes:
    Votes:
      +1: danielsh, brane, rhuijben
      +1 (non-binding): rpluem
+
+ * r1845261
+   svndumpfilter: Include node path in error messages.
+   Justification:
+     User requested error message clarification.
+   Votes:
+     +1: danielsh, rhuijben, brane
 
  * r1845408
    Prevent some coredumps when using JavaHL SVNClient::diff().
