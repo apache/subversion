@@ -106,6 +106,14 @@ test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 # Step 4: build
 #
 
+# An optional parameter tells build scripts how to parallelize the build
+if [ "$2" = "serial" ]; then
+    parallel=1
+else
+    parallel=${SVNBB_PARALLEL}
+fi
+
 echo "============ make"
 cd ${absbld}
-make -j${SVNBB_PARALLEL}
+make -j${parallel} 2>&1 \
+    | grep -v '^ld: [w]arning: text-based stub file.*Falling back to library file for linking. *$'
