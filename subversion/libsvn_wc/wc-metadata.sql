@@ -75,12 +75,11 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 /* ------------------------------------------------------------------------- */
 
-/* The PRISTINE table keeps track of pristine texts.  Each row describes a
-   single pristine text.  The text itself is stored in a file whose name is
-   derived from the 'checksum' column.  Each pristine text is referenced by
-   any number of rows in the NODES and ACTUAL_NODE tables.
-
-   In future, the pristine text file may be compressed.
+/* The PRISTINE table keeps track of pristine texts. Each row describes a
+   single pristine text. The text itself is stored in the database as a
+   (usually compressed) BLOB or in a file whose name is derived from the
+   'checksum' column. Each pristine text is referenced by any number of rows
+   in the NODES and ACTUAL_NODE tables.
  */
 CREATE TABLE PRISTINE (
   /* The SHA-1 checksum of the pristine text. This is a unique key. The
@@ -89,12 +88,16 @@ CREATE TABLE PRISTINE (
   checksum  TEXT NOT NULL PRIMARY KEY,
 
   /* Enumerated values specifying type of compression. The only value
-     supported so far is NULL, meaning that no compression has been applied
-     and the pristine text is stored verbatim in the file. */
+     supported up to format 31 is NULL, meaning that no compression has been
+     applied and the pristine text is stored verbatim in the pristine
+     storage.
+
+     Format 32 adds support for the following values:
+         0 - LZ4 compression
+   */
   compression  INTEGER,
 
-  /* The size in bytes of the file in which the pristine text is stored.
-     Used to verify the pristine file is "proper". */
+  /* The·size·of·uncompressed·pristine·content. */
   size  INTEGER NOT NULL,
 
   /* The number of rows in the NODES table that have a 'checksum' column
@@ -701,9 +704,17 @@ WHERE l.op_depth = 0
 
 
 /* ------------------------------------------------------------------------- */
-/* Format 32 ....  */
+
+/* Format 32 adds the 'contents' BLOB to the PRISTINES table. When its value
+   is NULL, the pristine text is stored in a file on disk. Otherwise, the
+   contents of the BLOB are the (possibly compressed) pristine text. */
 -- STMT_UPGRADE_TO_32
+ALTER TABLE PRISTINE ADD COLUMN contents BLOB;
 PRAGMA user_version = 32;
+
+
+/* ------------------------------------------------------------------------- */
+/* Format 33 ....  */
 
 
 /* ------------------------------------------------------------------------- */
