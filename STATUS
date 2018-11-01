@@ -58,6 +58,13 @@ Candidate changes:
    Votes:
      +1: rpluem, danielsh
 
+ * r1845408
+   Prevent some coredumps when using JavaHL SVNClient::diff().
+   Justification:
+     Fixes potential crash in client code.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
