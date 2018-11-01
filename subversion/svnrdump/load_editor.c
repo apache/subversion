@@ -861,16 +861,12 @@ close_revision(void *baton)
     {
       if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_DATE))
         {
-          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
-                                           rb->datestamp, rb->pool));
           SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
                                           SVN_PROP_REVISION_DATE,
                                           NULL, rb->datestamp, rb->pool));
         }
       if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_AUTHOR))
         {
-          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
-                                           rb->author, rb->pool));
           SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
                                           SVN_PROP_REVISION_AUTHOR,
                                           NULL, rb->author, rb->pool));
