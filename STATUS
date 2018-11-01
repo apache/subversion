@@ -27,26 +27,12 @@ Candidate changes:
    Votes:
      +1: julianfoad, stsp
 
- * r1843888
-   Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
-   Justification:
-     Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
-   Votes:
-     +1: brane, stsp
-
- * r1844882
-   Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
-   Justification:
-     The option has no effect in some setups. User submitted the patch.
-   Votes:
-     +1: stsp, brane
-
  * r1844987
    Raise an error if someone tries to use -rPREV on a working copy at r0.
    Justification:
      Fixes #4532, which is an assertion abort.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
  * r1845212
    Silence a deprecation warning from amalgamated SQLite on macOS.
@@ -60,23 +46,7 @@ Candidate changes:
    Justification:
      User requested error message clarification.
    Votes:
-     +1: danielsh
-
- * r1845204
-   Fix issue SVN-4782: Do not use (const char*)1 in httpd modules as value for
-   r->notes.
-   Justification:
-     Prevents a crash in mod_http2.
-   Votes:
-     +1: danielsh, brane
-     +1 (non-binding): rpluem
-
- * r1845408
-   Prevent some coredumps when using JavaHL SVNClient::diff().
-   Justification:
-     Fixes crash in client code when an external diff tool is used..
-   Votes:
-     +1: brane
+     +1: danielsh, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -92,3 +62,34 @@ Approved changes:
      the change has very minor impact.
    Votes:
      +1: brane, stsp, rhuijben
+
+ * r1843888
+   Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
+   Justification:
+     Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
+   Votes:
+     +1: brane, stsp, rhuijben
+
+ * r1844882
+   Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
+   Justification:
+     The option has no effect in some setups. User submitted the patch.
+   Votes:
+     +1: stsp, brane, rhuijben
+
+ * r1845204
+   Fix issue SVN-4782: Do not use (const char*)1 in httpd modules as value for
+   r->notes.
+   Justification:
+     Prevents a crash in mod_http2.
+   Votes:
+     +1: danielsh, brane, rhuijben
+     +1 (non-binding): rpluem
+
+ * r1845408
+   Prevent some coredumps when using JavaHL SVNClient::diff().
+   Justification:
+     Fixes crash in client code when an external diff tool is used..
+   Votes:
+     +1: brane
+     +0: rhuijben
