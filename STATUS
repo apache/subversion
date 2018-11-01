@@ -68,7 +68,8 @@ Candidate changes:
    Justification:
      Prevents a crash in mod_http2.
    Votes:
-     +1: rpluem, danielsh
+     +1: danielsh, brane
+     +1 (non-binding): rpluem
 
  * r1845408
    Prevent some coredumps when using JavaHL SVNClient::diff().
