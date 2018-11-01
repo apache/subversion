@@ -39,7 +39,7 @@ Candidate changes:
    Justification:
      The option has no effect in some setups. User submitted the patch.
    Votes:
-     +1: stsp
+     +1: stsp, brane
 
  * r1844987
    Raise an error if someone tries to use -rPREV on a working copy at r0.
