@@ -297,6 +297,23 @@ svn_repos__dump_headers(svn_stream_t *stream,
                         svn_repos__dumpfile_headers_t *headers,
                         apr_pool_t *scratch_pool);
 
+/* Write a magic header record to DUMP_STREAM specifying format version
+ * VERSION.
+ */
+svn_error_t *
+svn_repos__dump_magic_header_record(svn_stream_t *dump_stream,
+                                    int version,
+                                    apr_pool_t *pool);
+
+/* Write a UUID record to DUMP_STREAM.
+ *
+ * If UUID is NULL then write nothing at all.
+ */
+svn_error_t *
+svn_repos__dump_uuid_header_record(svn_stream_t *dump_stream,
+                                   const char *uuid,
+                                   apr_pool_t *pool);
+
 /* Write a revision record to DUMP_STREAM for revision REVISION with revision
  * properies REVPROPS, creating appropriate headers.
  *

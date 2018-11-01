@@ -708,9 +708,11 @@ WHERE l.op_depth = 0
 /* Format 32 adds the 'contents' BLOB to the PRISTINES table. When its value
    is NULL, the pristine text is stored in a file on disk. Otherwise, the
    contents of the BLOB are the (possibly compressed) pristine text. */
+#ifdef SVN_TEST_MULTI_WC_FORMAT
 -- STMT_UPGRADE_TO_32
 ALTER TABLE PRISTINE ADD COLUMN contents BLOB;
 PRAGMA user_version = 32;
+#endif
 
 
 /* ------------------------------------------------------------------------- */

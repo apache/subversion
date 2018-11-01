@@ -90,13 +90,15 @@ static const svn_opt_subcommand_desc3_t svnrdump__cmd_table[] =
        "in a 'dumpfile' portable format.  If only LOWER is given, dump that\n"
        "one revision.\n"
     )},
-    { 'r', 'q', opt_incremental, SVN_SVNRDUMP__BASE_OPTIONS } },
+    { 'r', 'q', opt_incremental, 'F', SVN_SVNRDUMP__BASE_OPTIONS },
+    {{'F', N_("write to file ARG instead of stdout")}} },
   { "load", load_cmd, { 0 }, {N_(
        "usage: svnrdump load URL\n"
        "\n"), N_(
        "Load a 'dumpfile' given on stdin to a repository at remote URL.\n"
     )},
-    { 'q', opt_skip_revprop, SVN_SVNRDUMP__BASE_OPTIONS } },
+    { 'q', opt_skip_revprop, 'F', SVN_SVNRDUMP__BASE_OPTIONS },
+    {{'F', N_("read from file ARG instead of stdin")}} },
   { "help", 0, { "?", "h" }, {N_(
        "usage: svnrdump help [SUBCOMMAND...]\n"
        "\n"), N_(
@@ -164,7 +166,8 @@ static const apr_getopt_option_t svnrdump__options[] =
                        "valid certificate) and 'other' (all other not\n"
                        "                             "
                        "separately classified certificate errors).")},
-    {"dumpfile", 'F', 1, N_("Read or write to a dumpfile instead of stdin/stdout")},
+    {"file",          'F', 1,
+                      N_("read/write file ARG instead of stdin/stdout")},
     {0, 0, 0, 0}
   };
 
@@ -497,12 +500,11 @@ replay_revisions(svn_ra_session_t *session,
   replay_baton->quiet = quiet;
 
   /* Write the magic header and UUID */
-  SVN_ERR(svn_stream_printf(output_stream, pool,
-                            SVN_REPOS_DUMPFILE_MAGIC_HEADER ": %d\n\n",
-                            SVN_REPOS_DUMPFILE_FORMAT_VERSION));
+  SVN_ERR(svn_repos__dump_magic_header_record(output_stream,
+                                              SVN_REPOS_DUMPFILE_FORMAT_VERSION,
+                                              pool));
   SVN_ERR(svn_ra_get_uuid2(session, &uuid, pool));
-  SVN_ERR(svn_stream_printf(output_stream, pool,
-                            SVN_REPOS_DUMPFILE_UUID ": %s\n\n", uuid));
+  SVN_ERR(svn_repos__dump_uuid_header_record(output_stream, uuid, pool));
 
   /* Fake revision 0 if necessary */
   if (start_revision == 0)
@@ -546,6 +548,7 @@ replay_revisions(svn_ra_session_t *session,
 #endif
     }
 
+  SVN_ERR(svn_stream_close(output_stream));
   return SVN_NO_ERROR;
 }
 
@@ -578,6 +581,7 @@ load_revisions(svn_ra_session_t *session,
                                      quiet, skip_revprops,
                                      check_cancel, NULL, pool));
 
+  SVN_ERR(svn_stream_close(output_stream));
   return SVN_NO_ERROR;
 }
 

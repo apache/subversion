@@ -26,13 +26,18 @@ run_tests() {
     case "${ra}" in
         local) check=check;             skipC=;;
         svn)   check=svnserveautocheck; skipC="SKIP_C_TESTS=1";;
-        dav)   check=davautocheck;      skipC="SKIP_C_TESTS=1";;
+        dav)   check=davautocheck;      skipC="SKIP_C_TESTS=1";
+               if [ "${fs}" == "bdb" ]; then
+                   mpm="APACHE_MPM=prefork"
+               else
+                   mpm="APACHE_MPM=event"
+               fi;;
         *)     exit 1;;
     esac
 
     echo "============ make check ${ra}+${fs}"
     cd ${absbld}
-    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC} || ok=false
+    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC} ${mpm} || ok=false
 
     # Move any log files to the buildbot work directory
     test -f tests.log && mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"

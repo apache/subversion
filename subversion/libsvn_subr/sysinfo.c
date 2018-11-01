@@ -51,8 +51,20 @@
 #include "sysinfo.h"
 #include "svn_private_config.h"
 
+#if HAVE_SYS_TYPES_H
+#include <sys/types.h>
+#endif
+
 #if HAVE_SYS_UTSNAME_H
 #include <sys/utsname.h>
+#endif
+
+#if HAVE_UNISTD_H
+#include <unistd.h>
+#endif
+
+#if HAVE_ELF_H
+#include <elf.h>
 #endif
 
 #ifdef SVN_HAVE_MACOS_PLIST
@@ -92,6 +104,7 @@ static const apr_array_header_t *macos_shared_libs(apr_pool_t *pool);
 
 #if __linux__
 static const char *linux_release_name(apr_pool_t *pool);
+static const apr_array_header_t *linux_shared_libs(apr_pool_t *pool);
 #endif
 
 const char *
@@ -187,6 +200,8 @@ svn_sysinfo__loaded_libs(apr_pool_t *pool)
   return win32_shared_libs(pool);
 #elif defined(SVN_HAVE_MACHO_ITERATE)
   return macos_shared_libs(pool);
+#elif __linux__
+  return linux_shared_libs(pool);
 #else
   return NULL;
 #endif
@@ -300,6 +315,31 @@ release_name_from_uname(apr_pool_t *pool)
 
 
 #if __linux__
+/* Find the first whitespace character in a stringbuf.
+   Analogous to svn_stringbuf_first_non_whitespace. */
+static apr_size_t
+stringbuf_first_whitespace(const svn_stringbuf_t *str)
+{
+  apr_size_t i;
+  for (i = 0; i < str->len; ++i)
+    {
+      if (svn_ctype_isspace(str->data[i]))
+        return i;
+    }
+  return str->len;
+}
+
+/* Skip a whitespace-delimited field in a stringbuf. */
+static void
+stringbuf_skip_whitespace_field(svn_stringbuf_t *str)
+{
+  apr_size_t i;
+  i = stringbuf_first_whitespace(str);
+  svn_stringbuf_leftchop(str, i);
+  i = svn_stringbuf_first_non_whitespace(str);
+  svn_stringbuf_leftchop(str, i);
+}
+
 /* Split a stringbuf into a key/value pair.
    Return the key, leaving the stripped value in the stringbuf. */
 static const char *
@@ -634,6 +674,168 @@ linux_release_name(apr_pool_t *pool)
     return release_name;
 
   return apr_psprintf(pool, "%s [%s]", release_name, uname_release);
+}
+
+#if HAVE_ELF_H
+/* Parse a hexadecimal number as a pointer value. */
+static const unsigned char *
+parse_pointer_value(const char *start, const char *limit, char **end)
+{
+  const unsigned char *ptr;
+  const apr_uint64_t val = (apr_uint64_t)apr_strtoi64(start, end, 16);
+
+  if (errno                     /* overflow */
+      || *end == start          /* no valid digits */
+      || *end >= limit)         /* representation too long */
+    return NULL;
+
+  ptr = (const unsigned char*)val;
+  if (val != (apr_uint64_t)ptr)  /* truncated value */
+    return NULL;
+
+  return ptr;
+}
+
+/* Read the ELF header at the mapping position to check if this is a shared
+   library. We only look at the ELF identification and the type. The format is
+   described here:
+       http://www.skyfree.org/linux/references/ELF_Format.pdf
+*/
+static svn_boolean_t
+check_elf_header(const unsigned char *map_start,
+                 const unsigned char *map_end)
+{
+  /* A union of all known ELF header types, for size checks. */
+  union max_elf_header_size_t
+  {
+    Elf32_Ehdr header_32;
+    Elf64_Ehdr header_64;
+  };
+
+  /* Check the size of the mapping and the ELF magic tag. */
+  if (map_end < map_start
+      || map_end - map_start < sizeof(union max_elf_header_size_t)
+      || memcmp(map_start, ELFMAG, SELFMAG))
+    {
+      return FALSE;
+    }
+
+  /* Check that this is an ELF shared library or executable file. This also
+     implicitly checks that the data encoding of the current process is the
+     same as in the loaded library. */
+  if (map_start[EI_CLASS] == ELFCLASS32)
+    {
+      const Elf32_Ehdr *hdr = (void*)map_start;
+      return (hdr->e_type == ET_DYN || hdr->e_type == ET_EXEC);
+    }
+  else if (map_start[EI_CLASS] == ELFCLASS64)
+    {
+      const Elf64_Ehdr *hdr = (void*)map_start;
+      return (hdr->e_type == ET_DYN || hdr->e_type == ET_EXEC);
+    }
+
+  return FALSE;
+}
+#endif  /* HAVE_ELF_H */
+
+static const apr_array_header_t *
+linux_shared_libs(apr_pool_t *pool)
+{
+  /* Read the list of loaded modules from /proc/[pid]/maps
+    The format is described here:
+        http://man7.org/linux/man-pages/man5/proc.5.html
+  */
+
+  const char *maps = apr_psprintf(pool, "/proc/%ld/maps", (long)getpid());
+  apr_array_header_t *result = NULL;
+  svn_boolean_t eof = FALSE;
+  svn_stream_t *stream;
+  svn_error_t *err;
+
+  err = svn_stream_open_readonly(&stream, maps, pool, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return NULL;
+    }
+
+  /* Each line in /proc/[pid]/maps consists of whitespace-delimited fields. */
+  while (!eof)
+    {
+      svn_stringbuf_t *line;
+
+#if HAVE_ELF_H
+      const unsigned char *map_start;
+      const unsigned char *map_end;
+#endif
+
+      err = svn_stream_readline(stream, &line, "\n", &eof, pool);
+      if (err)
+        {
+          svn_error_clear(err);
+          return NULL;
+        }
+
+#if HAVE_ELF_H
+      /* Address: The mapped memory address range. */
+      {
+        const char *const limit = line->data + line->len;
+        char *end;
+
+        /* The start of the address range */
+        map_start = parse_pointer_value(line->data, limit, &end);
+        if (!map_start || *end != '-')
+          continue;
+
+        /* The end of the address range */
+        map_end = parse_pointer_value(end + 1, limit, &end);
+        if (!map_end || !svn_ctype_isspace(*end))
+          continue;
+      }
+#endif
+
+      stringbuf_skip_whitespace_field(line); /* skip address */
+
+      /* Permissions: The memory region must be readable and executable. */
+      if (line->len < 4 || line->data[0] != 'r' || line->data[2] != 'x')
+        continue;
+
+      stringbuf_skip_whitespace_field(line); /* skip perms */
+      stringbuf_skip_whitespace_field(line); /* skip offset */
+      stringbuf_skip_whitespace_field(line); /* skip device */
+
+      /* I-Node: If it is 0, there is no file associated with the region. */
+      if (line->len < 2
+          || (line->data[0] == '0' && svn_ctype_isspace(line->data[1])))
+        continue;
+
+      stringbuf_skip_whitespace_field(line); /* skip inode */
+
+      /* Consider only things that look like absolute paths.
+         Files that were removed since the process was created (due to an
+         upgrade, for example) are marked as '(deleted)'. */
+      if (line->data[0] == '/')
+        {
+          svn_version_ext_loaded_lib_t *lib;
+
+#if HAVE_ELF_H
+          if (!check_elf_header(map_start, map_end))
+            continue;
+#endif
+
+          /* We've done our best to find a mapped shared library. */
+          if (!result)
+            {
+              result = apr_array_make(pool, 32, sizeof(*lib));
+            }
+          lib = &APR_ARRAY_PUSH(result, svn_version_ext_loaded_lib_t);
+          lib->name = line->data;
+          lib->version = NULL;
+        }
+    }
+
+  svn_error_clear(svn_stream_close(stream));
+  return result;
 }
 #endif /* __linux__ */
 

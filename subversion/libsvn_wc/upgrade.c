@@ -1426,6 +1426,7 @@ bump_to_31(void *baton,
   return SVN_NO_ERROR;
 }
 
+#ifdef SVN_TEST_MULTI_WC_FORMAT
 static svn_error_t *
 bump_to_32(void *baton,
            svn_sqlite__db_t *sdb,
@@ -1434,6 +1435,7 @@ bump_to_32(void *baton,
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_32));
   return SVN_NO_ERROR;
 }
+#endif
 
 static svn_error_t *
 upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
@@ -1636,7 +1638,9 @@ svn_wc__version_string_from_format(int wc_format)
       case SVN_WC__WC_NG_VERSION: return "1.7";
       case 29: return "1.7";
       case 31: return "1.8";
+#ifdef SVN_TEST_MULTI_WC_FORMAT
       case 32: return "1.12";
+#endif
     }
   return _("(unreleased development version)");
 }
@@ -1795,7 +1799,9 @@ svn_wc__update_schema(int *result_format,
         {
           UPDATE_TO_FORMAT(30);
           UPDATE_TO_FORMAT(31);
+#ifdef SVN_TEST_MULTI_WC_FORMAT
           UPDATE_TO_FORMAT(32);
+#endif
 
           /* ### future bumps go here.  */
 #if 0

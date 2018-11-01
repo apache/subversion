@@ -2547,27 +2547,36 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
       apr_finfo_t finfo = { 0 };
 
       /* In some cases we get size 0 and no error for non files, so we
-         also check for the name. (= cached in apr_file_t) and for FIFOs */
-      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE | APR_FINFO_TYPE, file)
-          && finfo.fname && finfo.filetype != APR_PIPE)
+         also check for the name. (= cached in apr_file_t) */
+      if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file) && finfo.fname)
         {
-          /* we've got the file length. Now, read it in one go. */
+          /* In general, there is no guarantee that the given file size is
+             correct, for instance, because the underlying handle could be
+             pointing to a pipe.  We don't know that in advance, so attempt
+             to read *one more* byte than necessary.  If we get an EOF, then
+             we're done and we have succesfully avoided reading the file chunk-
+             by-chunk.  If we don't, we fall through and do so to read the
+             remaining part of the file. */
           svn_boolean_t eof;
-          res_initial_len = (apr_size_t)finfo.size;
+          res_initial_len = (apr_size_t)finfo.size + 1;
           res = svn_stringbuf_create_ensure(res_initial_len, pool);
           SVN_ERR(svn_io_file_read_full2(file, res->data,
                                          res_initial_len, &res->len,
                                          &eof, pool));
           res->data[res->len] = 0;
 
-          *result = res;
-          return SVN_NO_ERROR;
+          if (eof)
+            {
+              *result = res;
+              return SVN_NO_ERROR;
+            }
         }
     }
 
   /* XXX: We should check the incoming data for being of type binary. */
   buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  res = svn_stringbuf_create_ensure(res_initial_len, pool);
+  if (!res)
+    res = svn_stringbuf_create_ensure(res_initial_len, pool);
 
   /* apr_file_read will not return data and eof in the same call. So this loop
    * is safe from missing read data.  */

@@ -160,15 +160,17 @@ extern "C" {
  * == 1.8.x shipped with format 31
  * == 1.9.x shipped with format 31
  * == 1.10.x shipped with format 31
- *
- * The bump to 32 added support for compressed pristines and pristine storage
- * within the working copy database.
+ * == 1.11.x shipped with format 31
  *
  * Please document any further format changes here.
  */
 
 /* The default WC version created by the client. */
-#define SVN_WC__VERSION 32
+#ifdef SVN_TEST_MULTI_WC_FORMAT
+#  define SVN_WC__VERSION 32
+#else
+#  define SVN_WC__VERSION 31
+#endif
 
 /* The minimum WC version supported by the client.
    IMPORTANT: Update the implementation of svn_client_supported_wc_version()
@@ -203,10 +205,6 @@ extern "C" {
 /* While we still have this DB version we should verify if there is
    sqlite_stat1 table on opening */
 #define SVN_WC__ENSURE_STAT1_TABLE 31
-
-/* In this version, we added support for compressed and in-database
-   pristine storage. */
-#define SVN_WC__COMPRESSED_PRISTINES 32
 
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other

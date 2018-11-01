@@ -168,8 +168,8 @@ AC_DEFUN(SVN_SERF_PKG_CONFIG,
         if $PKG_CONFIG $serf_pc_arg --atleast-version=$serf_check_version; then
           AC_MSG_RESULT([yes])
           serf_found=yes
-          SVN_SERF_INCLUDES=[`$PKG_CONFIG $serf_pc_arg --cflags | $SED -e 's/ -D[^ ]*//g' -e 's/^-D[^ ]*//g'`]
-          SVN_SERF_LIBS=`$PKG_CONFIG $serf_pc_arg --libs-only-l` 
+          SVN_SERF_INCLUDES=[`$PKG_CONFIG $serf_pc_arg --cflags-only-I`]
+          SVN_SERF_LIBS=[`$PKG_CONFIG $serf_pc_arg --libs-only-l`]
           dnl don't use --libs-only-L because then we might miss some options
           LDFLAGS=["$LDFLAGS `$PKG_CONFIG $serf_pc_arg --libs | $SED -e 's/-l[^ ]*//g'`"]
           break
