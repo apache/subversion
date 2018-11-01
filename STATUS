@@ -15,18 +15,6 @@ Status of 1.11.1:
 Candidate changes:
 ==================
 
- * r1842814, r1842827, r1842829, r1842877
-   Improve 'svn help' for the 'add' command and for the '-N' option.
-   Justification:
-     Proper documentation was lacking. Another newbie was recently surprised
-     by how 'svn add' behaves relative to 'git add'.
-   Notes:
-     r1842814: Document the obsolete '-N' option properly.
-     r1842827: Fully document 'svn add', and include some newbie tips.
-     r1842829, r1842877: tweaks to formatting.
-   Votes:
-     +1: julianfoad, stsp
-
  * r1844987
    Raise an error if someone tries to use -rPREV on a working copy at r0.
    Justification:
@@ -53,6 +41,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1842814, r1842827, r1842829, r1842877
+   Improve 'svn help' for the 'add' command and for the '-N' option.
+   Justification:
+     Proper documentation was lacking. Another newbie was recently surprised
+     by how 'svn add' behaves relative to 'git add'.
+   Notes:
+     r1842814: Document the obsolete '-N' option properly.
+     r1842827: Fully document 'svn add', and include some newbie tips.
+     r1842829, r1842877: tweaks to formatting.
+   Votes:
+     +1: julianfoad, stsp, brane
 
  * r1842334
    Update how we display the OS name on Mac in 'svn --version --verbose'.
