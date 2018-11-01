@@ -25,21 +25,17 @@ scripts=$(cd $(dirname "$0") && pwd)
 . ${scripts}/setenv.sh
 
 #
-# Step 4: build swig-py
+# Step 4: build bindings
 #
 
-echo "============ make swig-py"
-cd ${absbld}
-make swig-py
+build_bindings() {
+    echo "============ make $1"
+    cd ${absbld}
+    make $1 2>&1 \
+        | grep -v '^ld: [w]arning: text-based stub file.*Falling back to library file for linking. *$'
+}
 
-echo "============ make swig-pl"
-cd ${absbld}
-make swig-pl
-
-echo "============ make swig-rb"
-cd ${absbld}
-make swig-rb
-
-echo "============ make javahl"
-cd ${absbld}
-make javahl
+build_bindings swig-py
+build_bindings swig-pl
+build_bindings swig-rb
+build_bindings javahl
