@@ -120,42 +120,12 @@ Candidate changes:
    Justification:
      Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
    Votes:
-     +1: brane
-
- * r1844882
-   Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
-   Justification:
-     The option has no effect in some setups. User submitted the patch.
-   Votes:
-     +1: stsp, brane
-
- * r1844987
-   Raise an error if someone tries to use -rPREV on a working copy at r0.
-   Justification:
-     Fixes #4532, which is an assertion abort.
-   Votes:
-     +1: brane
+     +1: brane, rhuijben
 
  * r1845212
    Silence a deprecation warning from amalgamated SQLite on macOS.
    Justification:
      Keeps the macOS warnings checker buildslave clean.
-   Votes:
-     +1: brane
-
- * r1845204
-   Fix issue SVN-4782: Do not use (const char*)1 in httpd modules as value for
-   r->notes.
-   Justification:
-     Prevents a crash in mod_http2.
-   Votes:
-     +1: danielsh, brane
-     +1 (non-binding): rpluem
-
- * r1845408
-   Prevent some coredumps when using JavaHL SVNClient::diff().
-   Justification:
-     Fixes crash in client code when an external diff tool is used.
    Votes:
      +1: brane
 
@@ -180,3 +150,34 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1844882
+   Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
+   Justification:
+     The option has no effect in some setups. User submitted the patch.
+   Votes:
+     +1: stsp, brane, rhuijben
+
+ * r1844987
+   Raise an error if someone tries to use -rPREV on a working copy at r0.
+   Justification:
+     Fixes #4532, which is an assertion abort.
+   Votes:
+     +1: brane, rhuijben
+
+ * r1845204
+   Fix issue SVN-4782: Do not use (const char*)1 in httpd modules as value for
+   r->notes.
+   Justification:
+     Prevents a crash in mod_http2.
+   Votes:
+     +1: danielsh, brane, rhuijben
+     +1 (non-binding): rpluem
+
+ * r1845408
+   Prevent some coredumps when using JavaHL SVNClient::diff().
+   Justification:
+     Fixes crash in client code when an external diff tool is used.
+   Votes:
+     +1: brane
+     +0: rhuijben
