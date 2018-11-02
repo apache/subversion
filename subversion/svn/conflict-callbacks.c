@@ -1534,16 +1534,16 @@ build_tree_conflict_options(
           id != svn_client_conflict_option_accept_current_wc_state)
         *all_options_are_dumb = FALSE;
 
-        if (*possible_moved_to_repos_relpaths == NULL)
-          SVN_ERR(
-            svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
-              possible_moved_to_repos_relpaths, builtin_option,
-              result_pool, iterpool));
+      if (*possible_moved_to_repos_relpaths == NULL)
+        SVN_ERR(
+          svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
+            possible_moved_to_repos_relpaths, builtin_option,
+            result_pool, iterpool));
 
-        if (*possible_moved_to_abspaths == NULL)
-          SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates2(
-                    possible_moved_to_abspaths, builtin_option,
-                    result_pool, iterpool));
+      if (*possible_moved_to_abspaths == NULL)
+        SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates2(
+                  possible_moved_to_abspaths, builtin_option,
+                  result_pool, iterpool));
     }
 
   svn_pool_destroy(iterpool);
