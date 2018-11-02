@@ -29,20 +29,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1845556, r1845559
-   Fix (false positive) gcc 8.x -Wmisleading-indentation warnings.
-   Justification:
-     Cleaner build logs.
-   Votes:
-     +1: jorton, brane
-
- * r1845555
-   Use $PYTHON in configure.ac to run build/getversion.py
-   Justification:
-     Fixes build on systems without python in $PATH
-   Votes:
-     +1: jorton, brane
-
 Veto-blocked changes:
 =====================
 
@@ -107,3 +93,17 @@ Approved changes:
    Votes:
      +1: brane
      +0: rhuijben
+     
+ * r1845556, r1845559
+   Fix (false positive) gcc 8.x -Wmisleading-indentation warnings.
+   Justification:
+     Cleaner build logs.
+   Votes:
+     +1: jorton, brane, rhuijben
+
+ * r1845555
+   Use $PYTHON in configure.ac to run build/getversion.py
+   Justification:
+     Fixes build on systems without python in $PATH
+   Votes:
+     +1: jorton, brane, rhuijben
