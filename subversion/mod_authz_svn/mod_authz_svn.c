@@ -912,7 +912,7 @@ access_checker(request_rec *r)
         {
           /* Set the note to force authn regardless of what access_checker_ex
              hook requires */
-          apr_table_setn(r->notes, FORCE_AUTHN_NOTE, (const char*)1);
+          apr_table_setn(r->notes, FORCE_AUTHN_NOTE, "1");
 
           /* provide the proper return so the access_checker hook doesn't
            * prevent the code from continuing on to the other auth hooks */
@@ -978,7 +978,7 @@ access_checker(request_rec *r)
            * ap_some_authn_rquired() without triggering an infinite
            * loop since the call will trigger this function to be
            * called again. */
-          apr_table_setn(r->notes, IN_SOME_AUTHN_NOTE, (const char*)1);
+          apr_table_setn(r->notes, IN_SOME_AUTHN_NOTE, "1");
           authn_required = ap_some_authn_required(r);
           apr_table_unset(r->notes, IN_SOME_AUTHN_NOTE);
           if (authn_required)
@@ -1021,7 +1021,7 @@ check_user_id(request_rec *r)
   status = req_check_access(r, conf, &repos_path, &dest_repos_path);
   if (status == OK)
     {
-      apr_table_setn(r->notes, "authz_svn-anon-ok", (const char*)1);
+      apr_table_setn(r->notes, "authz_svn-anon-ok", "1");
       log_access_verdict(APLOG_MARK, r, 1, FALSE, repos_path, dest_repos_path);
       return OK;
     }
