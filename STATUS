@@ -36,6 +36,14 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1845577
+   Resolver support for 'added file vs unversioned file' with update/switch.
+   Justification:
+     We promised to ship new resolver options in patch releases if possible.
+     A user noted the lack of this feature, and the change is non-intrusive.
+   Votes;
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
