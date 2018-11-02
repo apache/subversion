@@ -58,14 +58,7 @@ Candidate changes:
      ^/subversion/branches/1.9.x-issue4700
    Votes:
      +0: danielsh
-     +1: stsp
-
- * r1820718
-   Fix JavaHL SSL server trust prompting to allow accepting temporarily.
-   Justification:
-     Cannot accept temporarily without this fix.
-   Votes:
-     +1: philip
+     +1: stsp, rhuijben
 
  * r1800754,r1800755,r1800803,r1801705,r1801722,r1823202,r1823203
    Fix issue #4686 "Unable to parse reversed revision range '19634-19631'"
@@ -83,21 +76,13 @@ Candidate changes:
      +1: philip
      +1: stefan2 (without r1827574)
 
- * r1830883,r1830900,r1830901
-   Prune externals from excluded subtrees after 'update --set-depth=exclude'
-   Justification:
-     Current behaviour is inconsistent: Setting depth to 'empty' prunes
-     externals while excluding a subtree does not.
-   Votes:
-     +1: stsp, jcorvel
-
  * r1833465
    Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
    Justification:
      Return an error when the client gets the protocol wrong.
    Branch: ^/subversion/branches/1.9.x-r1833465
    Votes:
-     +1: philip
+     +1: philip, rhuijben
 
  * r1838813
    Let 'svnadmin recover' prune the rep-cache even if it is disabled.
@@ -150,3 +135,19 @@ Approved changes:
      Backwards compatibility with 1.8.x tools/.
    Votes:
      +1: danielsh, jamessan, brane
+
+ * r1830883,r1830900,r1830901
+   Prune externals from excluded subtrees after 'update --set-depth=exclude'
+   Justification:
+     Current behaviour is inconsistent: Setting depth to 'empty' prunes
+     externals while excluding a subtree does not.
+   Votes:
+     +1: stsp, jcorvel, rhuijben
+
+ * r1820718
+   Fix JavaHL SSL server trust prompting to allow accepting temporarily.
+   Justification:
+     Cannot accept temporarily without this fix.
+   Votes:
+     +1: philip
+     +0: rhuijben
