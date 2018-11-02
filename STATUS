@@ -41,11 +41,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1845408
-   Prevent some coredumps when using JavaHL SVNClient::diff().
-   Justification:
-     Fixes crash in client code when an external diff tool is used.
-   Votes:
-     +1: brane
-     +0: rhuijben
