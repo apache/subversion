@@ -42,13 +42,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1845261
-   svndumpfilter: Include node path in error messages.
-   Justification:
-     User requested error message clarification.
-   Votes:
-     +1: danielsh, rhuijben, brane
-
  * r1845408
    Prevent some coredumps when using JavaHL SVNClient::diff().
    Justification:
