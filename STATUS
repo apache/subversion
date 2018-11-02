@@ -41,7 +41,7 @@ Candidate changes:
    Justification:
      Fixes build on systems without python in $PATH
    Votes:
-     +1: jorton
+     +1: jorton, brane
 
 Veto-blocked changes:
 =====================
