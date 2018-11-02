@@ -151,13 +151,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1844882
-   Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
-   Justification:
-     The option has no effect in some setups. User submitted the patch.
-   Votes:
-     +1: stsp, brane, rhuijben
-
  * r1844987
    Raise an error if someone tries to use -rPREV on a working copy at r0.
    Justification:
