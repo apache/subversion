@@ -35,7 +35,7 @@ Candidate changes:
      We promised to ship new resolver options in patch releases if possible.
      A user noted the lack of this feature, and the change is non-intrusive.
    Votes;
-     +1: stsp
+     +1: stsp, brane
 
 Veto-blocked changes:
 =====================
