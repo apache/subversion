@@ -28,20 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1813771, r1813783, r1813789, r1813794, r1813802, r1813898
-   Issue #4700: null updates don't update last-changed-revision.
-   Justification:
-     Corrects the output of 'svn info --show-item=last-changed-revision'.
-   Notes:
-     The first three revisions and r1813802 add regression tests.
-     r1813794 fixes the originally reported case.
-     r1813898 fixes the problem for versioned properties.
-   Branch:
-     ^/subversion/branches/1.9.x-issue4700
-   Votes:
-     +0: danielsh
-     +1: stsp, rhuijben
-
  * r1800754,r1800755,r1800803,r1801705,r1801722,r1823202,r1823203
    Fix issue #4686 "Unable to parse reversed revision range '19634-19631'"
    Justification:
@@ -137,3 +123,17 @@ Approved changes:
      particular way.
    Votes:
      +1: danielsh, stsp, brane
+
+ * r1813771, r1813783, r1813789, r1813794, r1813802, r1813898
+   Issue #4700: null updates don't update last-changed-revision.
+   Justification:
+     Corrects the output of 'svn info --show-item=last-changed-revision'.
+   Notes:
+     The first three revisions and r1813802 add regression tests.
+     r1813794 fixes the originally reported case.
+     r1813898 fixes the problem for versioned properties.
+   Branch:
+     ^/subversion/branches/1.9.x-issue4700
+   Votes:
+     +0: danielsh
+     +1: stsp, rhuijben, brane
