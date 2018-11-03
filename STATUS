@@ -44,14 +44,6 @@ Candidate changes:
      +1: philip
      +1: stefan2 (without r1827574)
 
- * r1833465
-   Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
-   Justification:
-     Return an error when the client gets the protocol wrong.
-   Branch: ^/subversion/branches/1.9.x-r1833465
-   Votes:
-     +1: philip, rhuijben
-
  * r1838813
    Let 'svnadmin recover' prune the rep-cache even if it is disabled.
    Justification:
@@ -137,3 +129,11 @@ Approved changes:
    Votes:
      +0: danielsh
      +1: stsp, rhuijben, brane
+
+ * r1833465
+   Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
+   Justification:
+     Return an error when the client gets the protocol wrong.
+   Branch: ^/subversion/branches/1.9.x-r1833465
+   Votes:
+     +1: philip, rhuijben, brane
