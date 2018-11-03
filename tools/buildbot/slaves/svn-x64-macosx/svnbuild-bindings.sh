@@ -31,8 +31,7 @@ scripts=$(cd $(dirname "$0") && pwd)
 build_bindings() {
     echo "============ make $1"
     cd ${absbld}
-    make $1 2>&1 \
-        | grep -v '^ld: [w]arning:.*Falling back to library file for linking. *$'
+    make $1
 }
 
 build_bindings swig-py
