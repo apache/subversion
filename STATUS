@@ -28,16 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1794166, r1795087
-   Search for gpg-agent sockets in (/var)/run.
-   Justification:
-     Improves GPG socket detection when $GPG_AGENT_INFO is unset or when gpg
-     >= 2.1.13 is used
-   Branch:
-     ^/subversion/branches/1.9.x-r1794166
-   Votes:
-     +1: jamessan, stsp
-
  * r1813771, r1813783, r1813789, r1813794, r1813802, r1813898
    Issue #4700: null updates don't update last-changed-revision.
    Justification:
@@ -129,6 +119,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1794166, r1795087
+   Search for gpg-agent sockets in (/var)/run.
+   Justification:
+     Improves GPG socket detection when $GPG_AGENT_INFO is unset or when gpg
+     >= 2.1.13 is used
+   Branch:
+     ^/subversion/branches/1.9.x-r1794166
+   Votes:
+     +1: jamessan, stsp, brane
 
  * r1804013
    'svnadmin upgrade' of BDB: Error out on too-new formats.
