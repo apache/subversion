@@ -49,7 +49,7 @@ Candidate changes:
    Justification:
      Can potentially lead to data loss.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, brane
      +0: danielsh (haven't reviewed the regression test)
 
  * r1843888
