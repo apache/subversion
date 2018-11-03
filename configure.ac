@@ -23,7 +23,7 @@ AC_PREREQ(2.59)
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
-     [esyscmd(python build/getversion.py SVN subversion/include/svn_version.h)],
+     [esyscmd($PYTHON build/getversion.py SVN subversion/include/svn_version.h)],
      [http://subversion.apache.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
