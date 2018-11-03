@@ -84,7 +84,7 @@ fi
 
 echo "============ configure"
 cd ${absbld}
-env CC=clang CXX=clang++ \
+env CC=clang CXX=clang++ LDFLAGS='-Wl,-w' \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
     --enable-debug${optimizeconfig} \
@@ -115,5 +115,4 @@ fi
 
 echo "============ make"
 cd ${absbld}
-make -j${parallel} 2>&1 \
-    | grep -v '^ld: [w]arning:.*Falling back to library file for linking. *$'
+make -j${parallel}
