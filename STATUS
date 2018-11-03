@@ -114,8 +114,7 @@ Candidate changes:
      - r1663609 fixes an old-style function definition.
      - r1666067 removes an unused variable.
    Votes:
-     +1: brane
-
+     +1: brane, danielsh
 
 Veto-blocked changes:
 =====================
