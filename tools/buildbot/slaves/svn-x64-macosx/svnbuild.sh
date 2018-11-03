@@ -45,13 +45,11 @@ fi
 if [ "$2" = "warnings" ]; then
     parallel=1
     maintainer_mode=' --enable-maintainer-mode'
-    config_cflags=" CFLAGS='"
-    config_cflags="${config_cflags} -Wno-deprecated-declarations"
+    config_cflags="-Wno-deprecated-declarations"
     config_cflags="${config_cflags} -DPACK_AFTER_EVERY_COMMIT"
     config_cflags="${config_cflags} -DSVN_UNALIGNED_ACCESS_IS_OK=0"
     config_cflags="${config_cflags} -DSUFFIX_LINES_TO_KEEP=0"
     config_cflags="${config_cflags} -DSVN_DEPRECATED="
-    config_cflags="${config_cflags}'"
 else
     parallel=${SVNBB_PARALLEL}
 fi
@@ -100,8 +98,8 @@ fi
 
 echo "============ configure"
 cd ${absbld}
-env CC=clang${config_cflags} \
-    CXX=clang++${config_cxxflags} \
+env CC=clang CFLAGS="${config_cflags}" \
+    CXX=clang++ CXXFLAGS="${config_cxxflags}" \
     LDFLAGS='-Wl,-w' \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
