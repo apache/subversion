@@ -40,6 +40,22 @@ if [ ! -z "${aprdir}" -a  -d "${aprdir}" ]; then
     serfconfig=" --without-serf --without-apxs"
 fi
 
+# An optional parameter tells us if this is a warnings-only build.
+# We run the warnings build with a number of additional options.
+if [ "$2" = "warnings" ]; then
+    parallel=1
+    maintainer_mode=' --enable-maintainer-mode'
+    config_cflags=" CFLAGS='"
+    config_cflags="${config_cflags} -Wno-deprecated-declarations"
+    config_cflags="${config_cflags} -DPACK_AFTER_EVERY_COMMIT"
+    config_cflags="${config_cflags} -DSVN_UNALIGNED_ACCESS_IS_OK=0"
+    config_cflags="${config_cflags} -DSUFFIX_LINES_TO_KEEP=0"
+    config_cflags="${config_cflags} -DSVN_DEPRECATED="
+    config_cflags="${config_cflags}'"
+else
+    parallel=${SVNBB_PARALLEL}
+fi
+
 #
 # Step 0: Create a directory for the test log files
 #
@@ -84,10 +100,12 @@ fi
 
 echo "============ configure"
 cd ${absbld}
-env CC=clang CXX=clang++ LDFLAGS='-Wl,-w' \
+env CC=clang${config_cflags} \
+    CXX=clang++${config_cxxflags} \
+    LDFLAGS='-Wl,-w' \
 ${abssrc}/configure \
     --prefix="${absbld}/.install-prefix" \
-    --enable-debug${optimizeconfig} \
+    --enable-debug${optimizeconfig}${maintainer_mode} \
     --disable-nls \
     --disable-mod-activation \
     ${aprconfig}${serfconfig} \
@@ -105,13 +123,6 @@ test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 #
 # Step 4: build
 #
-
-# An optional parameter tells build scripts how to parallelize the build
-if [ "$2" = "serial" ]; then
-    parallel=1
-else
-    parallel=${SVNBB_PARALLEL}
-fi
 
 echo "============ make"
 cd ${absbld}
