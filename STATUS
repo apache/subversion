@@ -43,13 +43,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1844882
-   Fix propagation of mod_dav_svn's SVNUseUTF8 configuration setting.
-   Justification:
-     The option has no effect in some setups. User submitted the patch.
-   Votes:
-     +1: stsp, brane, rhuijben
-
  * r1845204
    Fix issue SVN-4782: Do not use (const char*)1 in httpd modules as value for
    r->notes.
