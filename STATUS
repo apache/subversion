@@ -43,15 +43,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1845204
-   Fix issue SVN-4782: Do not use (const char*)1 in httpd modules as value for
-   r->notes.
-   Justification:
-     Prevents a crash in mod_http2.
-   Votes:
-     +1: danielsh, brane, rhuijben
-     +1 (non-binding): rpluem
-
  * r1845261
    svndumpfilter: Include node path in error messages.
    Justification:
