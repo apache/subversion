@@ -44,7 +44,7 @@ fi
 # We run the warnings build with a number of additional options.
 if [ "$2" = "warnings" ]; then
     parallel=1
-    maintainer_mode=' --enable-maintainer-mode'
+    maintainer_mode=' -q --enable-maintainer-mode'
     config_cflags="-Wno-deprecated-declarations"
     config_cflags="${config_cflags} -DPACK_AFTER_EVERY_COMMIT"
     config_cflags="${config_cflags} -DSVN_UNALIGNED_ACCESS_IS_OK=0"
@@ -101,9 +101,9 @@ cd ${absbld}
 env CC=clang CFLAGS="${config_cflags}" \
     CXX=clang++ CXXFLAGS="${config_cxxflags}" \
     LDFLAGS='-Wl,-w' \
-${abssrc}/configure \
+${abssrc}/configure${maintainer_mode} \
     --prefix="${absbld}/.install-prefix" \
-    --enable-debug${optimizeconfig}${maintainer_mode} \
+    --enable-debug${optimizeconfig} \
     --disable-nls \
     --disable-mod-activation \
     ${aprconfig}${serfconfig} \
