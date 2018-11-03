@@ -34,7 +34,7 @@ Candidate changes:
      Assertion failure during certain merges.
    Branch: ^/subversion/branches/1.9.x-issue4686
    Votes:
-     +1: julianfoad
+     +1: julianfoad, brane
 
  * r1826720, r1826721, r1827191, r1827574
    Regression test and FSFS checksum verification for issue #4722.
