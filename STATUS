@@ -128,14 +128,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1802032, r1803825
-   Install 'fsfs-stats' as a wrapper to 'svnfsfs', to which it was renamed in
-   r1618848.
-   Justification:
-     Backwards compatibility with 1.8.x tools/.
-   Votes:
-     +1: danielsh, jamessan, brane
-
  * r1830883,r1830900,r1830901
    Prune externals from excluded subtrees after 'update --set-depth=exclude'
    Justification:
