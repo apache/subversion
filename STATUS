@@ -43,14 +43,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1845408
-   Prevent some coredumps when using JavaHL SVNClient::diff().
-   Justification:
-     Fixes crash in client code when an external diff tool is used..
-   Votes:
-     +1: brane
-     +0: rhuijben
-
  * r1845556, r1845559
    Fix (false positive) gcc 8.x -Wmisleading-indentation warnings.
    Justification:
