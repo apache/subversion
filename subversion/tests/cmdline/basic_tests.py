@@ -3050,33 +3050,6 @@ def peg_rev_on_non_existent_wc_path(sbox):
                                      'cat', '-r2', sbox.ospath('mu3') + '@3')
 
 
-def do_move_with_at_signs(sbox, src, dst, dst_cmdline):
-  sbox.build()
-
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
-  expected_status.tweak(src, status='D ', moved_to=dst)
-  expected_status.add({dst: Item(status='A ', copied='+',
-                                 moved_from=src, wc_rev='-')})
-
-  sbox.simple_move(src, dst_cmdline)
-  svntest.actions.run_and_verify_status(sbox.wc_dir, expected_status)
-
-@Issue(4530)
-@XFail()
-def move_to_target_with_leading_at_sign(sbox):
-  "rename to dir/@file"
-
-  do_move_with_at_signs(sbox, 'iota', 'A/@upsilon', 'A/@upsilon')
-
-
-@Issue(4530)
-@XFail()
-def move_to_target_with_leading_and_trailing_at_sign(sbox):
-  "rename to dir/@file@"
-
-  do_move_with_at_signs(sbox, 'iota', 'A/@upsilon', 'A/@upsilon@')
-
-
 @Issue(4532)
 def diff_previous_revision_of_r0(sbox):
   """diff -rPREV on WC at revision 0"""
@@ -3338,8 +3311,6 @@ test_list = [ None,
               rm_missing_with_case_clashing_ondisk_item,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
-              move_to_target_with_leading_at_sign,
-              move_to_target_with_leading_and_trailing_at_sign,
               diff_previous_revision_of_r0,
               mkdir_parents_target_exists_on_disk,
               plaintext_password_storage_disabled,
