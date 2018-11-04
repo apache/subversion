@@ -3082,6 +3082,62 @@ def mkdir_parents_target_exists_on_disk(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_status)
 
 
+@Issue(4700)
+def null_update_last_changed_revision(sbox):
+  "null 'update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2: Random text change.
+  old_contents = open(sbox.path("iota")).read()
+  sbox.simple_append("iota", "Line 2.\n")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: Revert r2.
+  sbox.simple_append("iota", old_contents, truncate=True)
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # Perform a null update.
+  #
+  # This used to say '3'; probably because iota@3 and iota@1 were textually
+  # identical. It seems this problem was introduced in r1760570.
+  sbox.simple_update(revision='1')
+  svntest.actions.run_and_verify_svn(["1\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
+
+@Issue(4700)
+@XFail(svntest.main.is_fs_type_bdb)
+def null_prop_update_last_changed_revision(sbox):
+  "null 'property update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: change the property
+  sbox.simple_propset("prop", "changed", "iota")
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # r4: Revert r3.
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r4')
+  sbox.simple_update()
+
+  # Perform a null update.
+  sbox.simple_update(revision='2')
+  svntest.actions.run_and_verify_svn(["2\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
+
+
 ########################################################################
 # Run the tests
 
@@ -3152,6 +3208,8 @@ test_list = [ None,
               peg_rev_on_non_existent_wc_path,
               diff_previous_revision_of_r0,
               mkdir_parents_target_exists_on_disk,
+              null_update_last_changed_revision,
+              null_prop_update_last_changed_revision,
              ]
 
 if __name__ == '__main__':

@@ -98,20 +98,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1813771, r1813783, r1813789, r1813794, r1813802, r1813898
-   Issue #4700: null updates don't update last-changed-revision.
-   Justification:
-     Corrects the output of 'svn info --show-item=last-changed-revision'.
-   Notes:
-     The first three revisions and r1813802 add regression tests.
-     r1813794 fixes the originally reported case.
-     r1813898 fixes the problem for versioned properties.
-   Branch:
-     ^/subversion/branches/1.9.x-issue4700
-   Votes:
-     +0: danielsh
-     +1: stsp, rhuijben, brane
-
  * r1833465
    Enforce the v1 HTTP protocol when a client sends PUT before CHECKOUT.
    Justification:
