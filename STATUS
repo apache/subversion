@@ -98,14 +98,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1804013
-   'svnadmin upgrade' of BDB: Error out on too-new formats.
-   Justification:
-     Prevents random corruptions when the arguments are invalid in a
-     particular way.
-   Votes:
-     +1: danielsh, stsp, brane
-
  * r1813771, r1813783, r1813789, r1813794, r1813802, r1813898
    Issue #4700: null updates don't update last-changed-revision.
    Justification:
