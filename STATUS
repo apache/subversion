@@ -42,10 +42,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1845556, r1845559
-   Fix (false positive) gcc 8.x -Wmisleading-indentation warnings.
-   Justification:
-     Cleaner build logs.
-   Votes:
-     +1: jorton, brane, rhuijben

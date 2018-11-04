@@ -10861,8 +10861,8 @@ svn_client_conflict_option_get_moved_to_abspath_candidates2(
                                svn_dirent_local_style(victim_abspath,
                                                       scratch_pool));
 
-       *possible_moved_to_abspaths = apr_array_make(result_pool, 1,
-                                                    sizeof (const char *));
+      *possible_moved_to_abspaths = apr_array_make(result_pool, 1,
+                                                   sizeof (const char *));
       if (details->wc_move_targets)
         {
           apr_array_header_t *move_target_wc_abspaths;
