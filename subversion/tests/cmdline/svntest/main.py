@@ -282,9 +282,11 @@ trojan_state = svntest.wc.State('', {
   'lambda@'     : Item("This is the file 'lambda'.\n"),
   '@omicron@'   : Item("This is the file 'omicron'.\n"),
   '@'           : Item(),
+  '@@'          : Item(),
   '_@'          : Item(),
   '.@'          : Item(),
   'A'           : Item(),
+  'A/@@'        : Item("This is the file 'A/@@'.\n"),
   'A/alpha'     : Item("This is the file 'alpha'.\n"),
   'A/@omega@'   : Item("This is the file 'omega'.\n"),
   'B'           : Item(),
@@ -294,11 +296,9 @@ trojan_state = svntest.wc.State('', {
   'G'           : Item(),
   'G/_@'        : Item("This is the file 'G/_@'.\n"),
   'G/_@gamma'   : Item("This is the file 'gamma'.\n"),
-  'G/rho@_'     : Item("This is the file 'rho'.\n"),
   'D'           : Item(),
   'D/.@'        : Item("This is the file 'D/.@'.\n"),
   'D/.@delta'   : Item("This is the file 'delta'.\n"),
-  'D/tau@.'     : Item("This is the file 'tau'.\n"),
   'E'           : Item(),
   })
 
