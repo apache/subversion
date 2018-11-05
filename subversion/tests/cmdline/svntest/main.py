@@ -55,6 +55,7 @@ except ImportError:
 import svntest
 from svntest import Failure
 from svntest import Skip
+from svntest.wc import StateItem as Item
 
 SVN_VER_MINOR = 12
 
@@ -199,6 +200,7 @@ svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
+pristine_trojan_repos_url = None
 
 # Global variable to track all of our options
 options = None
@@ -235,7 +237,9 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 
 # (derivatives of the tmp dir.)
 pristine_greek_repos_dir = os.path.join(temp_dir, "repos")
+pristine_trojan_repos_dir = os.path.join(temp_dir, "trojan")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
+trojan_dump_dir = os.path.join(temp_dir, "trojanfiles")
 default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
 #
@@ -245,28 +249,57 @@ default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 # call main.greek_state.copy().  That method will return a copy of this
 # State object which can then be edited.
 #
-_item = svntest.wc.StateItem
 greek_state = svntest.wc.State('', {
-  'iota'        : _item("This is the file 'iota'.\n"),
-  'A'           : _item(),
-  'A/mu'        : _item("This is the file 'mu'.\n"),
-  'A/B'         : _item(),
-  'A/B/lambda'  : _item("This is the file 'lambda'.\n"),
-  'A/B/E'       : _item(),
-  'A/B/E/alpha' : _item("This is the file 'alpha'.\n"),
-  'A/B/E/beta'  : _item("This is the file 'beta'.\n"),
-  'A/B/F'       : _item(),
-  'A/C'         : _item(),
-  'A/D'         : _item(),
-  'A/D/gamma'   : _item("This is the file 'gamma'.\n"),
-  'A/D/G'       : _item(),
-  'A/D/G/pi'    : _item("This is the file 'pi'.\n"),
-  'A/D/G/rho'   : _item("This is the file 'rho'.\n"),
-  'A/D/G/tau'   : _item("This is the file 'tau'.\n"),
-  'A/D/H'       : _item(),
-  'A/D/H/chi'   : _item("This is the file 'chi'.\n"),
-  'A/D/H/psi'   : _item("This is the file 'psi'.\n"),
-  'A/D/H/omega' : _item("This is the file 'omega'.\n"),
+  'iota'        : Item("This is the file 'iota'.\n"),
+  'A'           : Item(),
+  'A/mu'        : Item("This is the file 'mu'.\n"),
+  'A/B'         : Item(),
+  'A/B/lambda'  : Item("This is the file 'lambda'.\n"),
+  'A/B/E'       : Item(),
+  'A/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+  'A/B/E/beta'  : Item("This is the file 'beta'.\n"),
+  'A/B/F'       : Item(),
+  'A/C'         : Item(),
+  'A/D'         : Item(),
+  'A/D/gamma'   : Item("This is the file 'gamma'.\n"),
+  'A/D/G'       : Item(),
+  'A/D/G/pi'    : Item("This is the file 'pi'.\n"),
+  'A/D/G/rho'   : Item("This is the file 'rho'.\n"),
+  'A/D/G/tau'   : Item("This is the file 'tau'.\n"),
+  'A/D/H'       : Item(),
+  'A/D/H/chi'   : Item("This is the file 'chi'.\n"),
+  'A/D/H/psi'   : Item("This is the file 'psi'.\n"),
+  'A/D/H/omega' : Item("This is the file 'omega'.\n"),
+  })
+
+# Likewise our pristine trojan-tree state (for peg revision parsing tests)
+# NOTE: We don't use precooked trojan repositories.
+trojan_state = svntest.wc.State('', {
+  'iota'        : Item("This is the file 'iota'.\n"),
+  '@zeta'       : Item("This is the file 'zeta'.\n"),
+  '_@theta'     : Item("This is the file 'theta'.\n"),
+  '.@kappa'     : Item("This is the file 'kappa'.\n"),
+  'lambda@'     : Item("This is the file 'lambda'.\n"),
+  '@omicron@'   : Item("This is the file 'omicron'.\n"),
+  '@'           : Item(),
+  '_@'          : Item(),
+  '.@'          : Item(),
+  'A'           : Item(),
+  'A/alpha'     : Item("This is the file 'alpha'.\n"),
+  'A/@omega@'   : Item("This is the file 'omega'.\n"),
+  'B'           : Item(),
+  'B/@'         : Item("This is the file 'B/@'.\n"),
+  'B/@beta'     : Item("This is the file 'beta'.\n"),
+  'B/pi@'       : Item("This is the file 'pi'.\n"),
+  'G'           : Item(),
+  'G/_@'        : Item("This is the file 'G/_@'.\n"),
+  'G/_@gamma'   : Item("This is the file 'gamma'.\n"),
+  'G/rho@_'     : Item("This is the file 'rho'.\n"),
+  'D'           : Item(),
+  'D/.@'        : Item("This is the file 'D/.@'.\n"),
+  'D/.@delta'   : Item("This is the file 'delta'.\n"),
+  'D/tau@.'     : Item("This is the file 'tau'.\n"),
+  'E'           : Item(),
   })
 
 
@@ -2353,6 +2386,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   global pristine_url
   global pristine_greek_repos_url
+  global pristine_trojan_repos_url
   global other_dav_root_url
   global non_dav_root_url
   global svn_binary
@@ -2432,6 +2466,12 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   pristine_greek_repos_url = options.test_area_url + '/' + \
                                 svntest.wc.svn_uri_quote(
                                   pristine_greek_repos_dir.replace(
+                                      os.path.sep, '/'))
+
+  # Calculate pristine_trojan_repos_url from test_area_url.
+  pristine_trojan_repos_url = options.test_area_url + '/' + \
+                                svntest.wc.svn_uri_quote(
+                                  pristine_trojan_repos_dir.replace(
                                       os.path.sep, '/'))
 
   other_dav_root_url = options.test_area_url + '/fsdavroot'
@@ -2530,8 +2570,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                         http_proxy=options.http_proxy,
                         exclusive_wc_locks=options.exclusive_wc_locks)
 
-      # Setup the pristine repository
-      svntest.actions.setup_pristine_greek_repository()
+      # Setup the pristine repositories
+      svntest.actions.setup_pristine_repositories()
 
     # Run the tests.
     exit_code = _internal_run_tests(test_list, testnums, options.parallel,

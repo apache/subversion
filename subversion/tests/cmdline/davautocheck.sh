@@ -583,6 +583,14 @@ cat >> "$HTTPD_CFG" <<__EOF__
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
+<Location /svn-test-work/local_tmp/trojan>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/trojan"
+  Require           valid-user
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
 <Location /authz-test-work/anon>
   DAV               svn
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
