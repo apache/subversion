@@ -32,6 +32,7 @@ logger = logging.getLogger()
 # Our testing module
 import svntest
 from svntest import wc
+from svntest import main
 
 # (abbreviation)
 Skip = svntest.testcase.Skip_deco
@@ -46,9 +47,9 @@ Item = wc.StateItem
 # Helper functions
 
 def do_move_with_at_signs(sbox, src, dst, dst_cmdline):
-  sbox.build()
+  sbox.build(tree='trojan')
 
-  expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  expected_status = main.trojan_state.copy()
   expected_status.tweak(src, status='D ', moved_to=dst)
   expected_status.add({dst: Item(status='A ', copied='+',
                                  moved_from=src, wc_rev='-')})

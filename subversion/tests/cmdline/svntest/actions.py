@@ -64,27 +64,15 @@ def no_relocate_validation():
 def do_relocate_validation():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'no'
 
-def setup_pristine_greek_repository():
-  """Create the pristine repository and 'svn import' the greek tree"""
-
-  # these directories don't exist out of the box, so we may have to create them
-  if not os.path.exists(main.general_wc_dir):
-    os.makedirs(main.general_wc_dir)
-
-  if not os.path.exists(main.general_repo_dir):
-    os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
-
-  if not os.path.exists(main.other_dav_root_dir):
-    os.makedirs(main.other_dav_root_dir)
-  if not os.path.exists(main.non_dav_root_dir):
-    os.makedirs(main.non_dav_root_dir)
-
+def _setup_pristine_repo(tree_state,
+                         repos_dir, dump_dir, repos_url,
+                         use_precooked=True):
   # If there's no pristine repos, create one.
-  if not os.path.exists(main.pristine_greek_repos_dir):
-    if main.options.fsfs_version is not None:
-      main.unpack_greek_repos(main.pristine_greek_repos_dir)
+  if not os.path.exists(repos_dir):
+    if use_precooked and main.options.fsfs_version is not None:
+      main.unpack_greek_repos(repos_dir)
     else:
-      main.create_repos(main.pristine_greek_repos_dir)
+      main.create_repos(repos_dir)
 
       # if this is dav, gives us access rights to import the greek tree.
       if main.is_ra_type_dav():
@@ -92,15 +80,14 @@ def setup_pristine_greek_repository():
         main.file_write(authz_file, "[/]\n* = rw\n")
 
       # dump the greek tree to disk.
-      main.greek_state.write_to_disk(main.greek_dump_dir)
+      tree_state.write_to_disk(dump_dir)
 
       # import the greek tree, using l:foo/p:bar
       ### todo: svn should not be prompting for auth info when using
       ### repositories with no auth/auth requirements
       _, output, _ = main.run_svn(None, 'import', '-m',
                                   'Log message for revision 1.',
-                                  main.greek_dump_dir,
-                                  main.pristine_greek_repos_url)
+                                  dump_dir, repos_url)
 
       # verify the printed output of 'svn import'.
       lastline = output.pop().strip()
@@ -112,7 +99,7 @@ def setup_pristine_greek_repository():
         sys.exit(1)
       output_tree = wc.State.from_commit(output)
 
-      expected_output_tree = main.greek_state.copy(main.greek_dump_dir)
+      expected_output_tree = tree_state.copy(dump_dir)
       expected_output_tree.tweak(verb='Adding',
                                  contents=None)
 
@@ -127,9 +114,36 @@ def setup_pristine_greek_repository():
 
     # Finally, disallow any changes to the "pristine" repos.
     error_msg = "Don't modify the pristine repository"
-    create_failing_hook(main.pristine_greek_repos_dir, 'start-commit', error_msg)
-    create_failing_hook(main.pristine_greek_repos_dir, 'pre-lock', error_msg)
-    create_failing_hook(main.pristine_greek_repos_dir, 'pre-revprop-change', error_msg)
+    create_failing_hook(repos_dir, 'start-commit', error_msg)
+    create_failing_hook(repos_dir, 'pre-lock', error_msg)
+    create_failing_hook(repos_dir, 'pre-revprop-change', error_msg)
+
+def setup_pristine_repositories():
+  """Create the pristine repository and 'svn import' the greek tree"""
+
+  # these directories don't exist out of the box, so we may have to create them
+  if not os.path.exists(main.general_wc_dir):
+    os.makedirs(main.general_wc_dir)
+
+  if not os.path.exists(main.general_repo_dir):
+    os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
+
+  if not os.path.exists(main.other_dav_root_dir):
+    os.makedirs(main.other_dav_root_dir)
+  if not os.path.exists(main.non_dav_root_dir):
+    os.makedirs(main.non_dav_root_dir)
+
+  _setup_pristine_repo(main.greek_state,
+                       main.pristine_greek_repos_dir,
+                       main.greek_dump_dir,
+                       main.pristine_greek_repos_url)
+
+  # NOTE: We don't use precooked trojan repositories.
+  _setup_pristine_repo(main.trojan_state,
+                       main.pristine_trojan_repos_dir,
+                       main.trojan_dump_dir,
+                       main.pristine_trojan_repos_url,
+                       use_precooked=False)
 
 
 ######################################################################
@@ -149,23 +163,19 @@ def guarantee_empty_repository(path, minor_version):
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
-# Note: make sure setup_pristine_greek_repository was called once before
-# using this function.
-def guarantee_greek_repository(path, minor_version):
-  """Guarantee that a local svn repository exists at PATH, containing
-  nothing but the greek-tree at revision 1."""
-
-  if path == main.pristine_greek_repos_dir:
+# Note: make sure setup_pristine_repositories was called once before
+# using these functions.
+def _guarantee_repos(path, repos_dir, minor_version, use_precooked=True):
+  if path == repos_dir:
     logger.error("attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if (main.options.fsfs_version is not None):
+  if (use_precooked and main.options.fsfs_version is not None):
     failed = main.unpack_greek_repos(path)
   else:
-    failed = main.copy_repos(main.pristine_greek_repos_dir,
-                             path, 1, 1, minor_version)
+    failed = main.copy_repos(repos_dir, path, 1, 1, minor_version)
   if failed:
     logger.error("copying repository failed.")
     sys.exit(1)
@@ -175,6 +185,18 @@ def guarantee_greek_repository(path, minor_version):
 
   # give the repository a unique UUID
   run_and_verify_svnadmin([], [], 'setuuid', path)
+
+def guarantee_greek_repository(path, minor_version):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing but the greek-tree at revision 1."""
+
+  _guarantee_repos(path, main.pristine_greek_repos_dir, minor_version)
+
+def guarantee_trojan_repository(path, minor_version):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing but the trojan-tree at revision 1."""
+
+  _guarantee_repos(path, main.pristine_trojan_repos_dir, minor_version, False)
 
 def run_and_verify_atomic_ra_revprop_change(expected_stdout,
                                             expected_stderr,
@@ -1942,7 +1964,7 @@ def run_and_verify_revert(expected_paths, *args):
 
 # This allows a test to *quickly* bootstrap itself.
 def make_repo_and_wc(sbox, create_wc=True, read_only=False, empty=False,
-                     minor_version=None):
+                     minor_version=None, tree=None):
   """Create a fresh repository and check out a WC from it.  If EMPTY is
   True, the repository and WC will be empty and at revision 0,
   otherwise they will contain the 'Greek Tree' at revision 1.
@@ -1967,9 +1989,17 @@ def make_repo_and_wc(sbox, create_wc=True, read_only=False, empty=False,
     guarantee_empty_repository(sbox.repo_dir, minor_version)
     expected_state = svntest.wc.State('', {})
   else:
-    if not read_only:
-      guarantee_greek_repository(sbox.repo_dir, minor_version)
-    expected_state = main.greek_state
+    if tree == 'greek':
+      if not read_only:
+        guarantee_greek_repository(sbox.repo_dir, minor_version)
+      expected_state = main.greek_state
+    elif tree == 'trojan':
+      if not read_only:
+        guarantee_trojan_repository(sbox.repo_dir, minor_version)
+      expected_state = main.trojan_state
+    else:
+      raise ValueError("'tree' must be 'greek' or 'trojan'"
+                       " but was '%s'" % str(tree))
 
   if create_wc:
     # Generate the expected output tree.

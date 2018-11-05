@@ -102,7 +102,7 @@ class Sandbox:
 
     self.was_cwd = os.getcwd()
 
-  def _set_name(self, name, read_only=False, empty=False):
+  def _set_name(self, name, read_only=False, empty=False, tree=None):
     """A convenience method for renaming a sandbox, useful when
     working with multiple repositories in the same unit test."""
     if not name is None:
@@ -117,8 +117,15 @@ class Sandbox:
                                 self.repo_dir.replace(os.path.sep, '/')))
       self.add_test_path(self.repo_dir)
     else:
-      self.repo_dir = svntest.main.pristine_greek_repos_dir
-      self.repo_url = svntest.main.pristine_greek_repos_url
+      if tree == 'greek':
+        self.repo_dir = svntest.main.pristine_greek_repos_dir
+        self.repo_url = svntest.main.pristine_greek_repos_url
+      elif tree == 'trojan':
+        self.repo_dir = svntest.main.pristine_trojan_repos_dir
+        self.repo_url = svntest.main.pristine_trojan_repos_url
+      else:
+        raise ValueError("'tree' must be 'greek' or 'trojan'"
+                         " but was '%s'" % str(tree))
 
     if self.repo_url.startswith("http"):
       self.authz_file = os.path.join(svntest.main.work_dir, "authz")
@@ -146,15 +153,15 @@ class Sandbox:
     return clone
 
   def build(self, name=None, create_wc=True, read_only=False, empty=False,
-            minor_version=None):
-    """Make a 'Greek Tree' repo (or refer to the central one if READ_ONLY),
-       or make an empty repo if EMPTY is true,
+            minor_version=None, tree='greek'):
+    """Make a 'Greek Tree' or 'Trojan Tree' repo (or refer to the central
+       one if READ_ONLY), or make an empty repo if EMPTY is true,
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
-    self._set_name(name, read_only, empty)
+    self._set_name(name, read_only, empty, tree)
     self._ensure_authz()
     svntest.actions.make_repo_and_wc(self, create_wc, read_only, empty,
-                                     minor_version)
+                                     minor_version, tree)
     self._is_built = True
 
   def _ensure_authz(self):
