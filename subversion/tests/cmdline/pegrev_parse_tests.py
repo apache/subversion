@@ -337,7 +337,13 @@ def make_dir_subdir_4_no_escape_peg(sbox):
 
 def make_dir_subdir_7_no_escape_peg(sbox):
   "create directory 'E/@' without pegrev escape"
-  do_make_dir(sbox, 'E/@', 'E/@', 'svn: E000017: ')
+
+  # With the trailing @ stripped off, the command fails with EEXIST
+  do_make_dir(sbox, 'E/@', 'E/@',
+              'svn: E'
+              '(' '000017'      # Unix
+              '|' '720183'      # Windows
+              '): ')
 
 #=====================================================================
 # Test for 'svn move' to a subdirectory
