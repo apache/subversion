@@ -2033,14 +2033,21 @@ def duplicate_dir(wc_name, wc_copy_name):
 
 
 
-def get_virginal_state(wc_dir, rev):
+def get_virginal_state(wc_dir, rev, tree='greek'):
   "Return a virginal greek tree state for a WC and repos at revision REV."
 
   rev = str(rev) ### maybe switch rev to an integer?
 
   # copy the greek tree, shift it to the new wc_dir, insert a root elem,
   # then tweak all values
-  state = main.greek_state.copy()
+  if tree == 'greek':
+    state = main.greek_state.copy()
+  elif tree == 'trojan':
+    state = main.trojan_state.copy()
+  else:
+    raise ValueError("'tree' must be 'greek' or 'trojan'"
+                     " but was '%s'" % str(tree))
+
   state.wc_dir = wc_dir
   state.desc[''] = wc.StateItem()
   state.tweak(contents=None, status='  ', wc_rev=rev)
