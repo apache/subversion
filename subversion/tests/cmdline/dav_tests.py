@@ -25,7 +25,10 @@
 ######################################################################
 
 # General modules
-import os, re
+import os, sys
+import re
+import socket
+import traceback
 
 # Our testing module
 import svntest
@@ -64,6 +67,31 @@ def connect_other_dav_server(sbox):
   svntest.actions.run_and_verify_svn([], svntest.verify.AnyOutput,
                                      'info', svntest.main.other_dav_root_url)
 
+#----------------------------------------------------------------------
+
+@XFail()
+@SkipUnless(svntest.main.is_remote_http_connection_allowed)
+def connect_to_github_server(sbox):
+  "connect to GitHub's SVN bridge"
+
+  github_mirror_url = 'https://github.com/apache/subversion/trunk'
+
+  # Skip this test if we can't connect to the GitHub server.
+  # We check this here instead of in a SkipUnless() predicate decorator,
+  # because the decorator's condition function is called seeveral times
+  # during test execution.
+  try:
+    s = socket.create_connection(('github.com', 443), 2)  # 2-second timeout
+    s.close()
+  except:
+    etype, value, _ = sys.exc_info()
+    reason = ''.join(traceback.format_exception_only(etype, value)).rstrip()
+    svntest.main.logger.warn('Connection to github.com failed: ' + reason)
+    raise svntest.Skip
+
+  svntest.actions.run_and_verify_svn(None, [], 'info', github_mirror_url)
+
+
 ########################################################################
 # Run the tests
 
@@ -72,6 +100,7 @@ def connect_other_dav_server(sbox):
 test_list = [ None,
               connect_plain_http_server,
               connect_other_dav_server,
+              connect_to_github_server,
              ]
 
 if __name__ == '__main__':

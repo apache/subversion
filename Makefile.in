@@ -601,6 +601,9 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(FSFS_DIR_DELTIFICATION)" != ""; then                    \
 	    flags="--fsfs-dir-deltification $(FSFS_DIR_DELTIFICATION) $$flags";\
 	  fi;                                                                \
+	  if test "$(ALLOW_REMOTE_HTTP_CONNECTION)" != ""; then              \
+	    flags="--allow-remote-http-connection $$flags";                  \
+	  fi;                                                                \
 	  if test "$(SVN_BIN_DIR)" != ""; then                               \
 	    flags="--bin $(SVN_BIN_DIR) $$flags";                            \
 	  fi;                                                                \

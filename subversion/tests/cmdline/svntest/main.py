@@ -1695,7 +1695,6 @@ def is_plaintext_password_storage_disabled():
     return False
   return True
 
-
 # https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
 # https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
 __mod_dav_url_quoting_broken_versions = frozenset([
@@ -1718,6 +1717,10 @@ def is_httpd_authz_provider_enabled():
       v = options.httpd_version.split('.')
       return (v[0] == '2' and int(v[1]) >= 3) or int(v[0]) > 2
     return None
+
+def is_remote_http_connection_allowed():
+  return options.allow_remote_http_connection
+
 
 ######################################################################
 
@@ -1799,6 +1802,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-compression=' + options.fsfs_compression)
     if options.fsfs_dir_deltification:
       args.append('--fsfs-dir-deltification=' + options.fsfs_dir_deltification)
+    if options.allow_remote_http_connection:
+      args.append('--allow-remote-http-connection')
     if options.svn_bin:
       args.append('--bin=' + options.svn_bin)
 
@@ -2217,6 +2222,8 @@ def _create_parser(usage=None):
                     help='Set compression type (for fsfs)')
   parser.add_option('--fsfs-dir-deltification', action='store', type='str',
                     help='Set directory deltification option (for fsfs)')
+  parser.add_option('--allow-remote-http-connection', action='store_true',
+                    help='Run tests that connect to remote HTTP(S) servers')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(

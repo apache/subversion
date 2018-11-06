@@ -34,6 +34,7 @@
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             [--fsfs-compression=<type>] [--fsfs-dir-deltification=<true|false>]
+            [--allow-remote-http-connection]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -280,6 +281,8 @@ class TestHarness:
       cmdline.append('--fsfs-compression=%s' % self.opts.fsfs_compression)
     if self.opts.fsfs_dir_deltification is not None:
       cmdline.append('--fsfs-dir-deltification=%s' % self.opts.fsfs_dir_deltification)
+    if self.opts.allow_remote_http_connection is not None:
+      cmdline.append('--allow-remote-http-connection')
 
     self.py_test_cmdline = cmdline
 
@@ -1033,6 +1036,8 @@ def create_parser():
                     help='Set compression type (for fsfs)')
   parser.add_option('--fsfs-dir-deltification', action='store', type='str',
                     help='Set directory deltification option (for fsfs)')
+  parser.add_option('--allow-remote-http-connection', action='store_true',
+                    help='Run tests that connect to remote HTTP(S) servers')
 
   parser.set_defaults(set_log_level=None)
   return parser
