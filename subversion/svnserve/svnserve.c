@@ -479,7 +479,7 @@ static svn_error_t * version(svn_boolean_t quiet, apr_pool_t *pool)
                            _("\nCyrus SASL authentication is available.\n"));
 #endif
 
-  return svn_opt_print_help4(NULL, "svnserve", TRUE, quiet, FALSE,
+  return svn_opt_print_help5(NULL, "svnserve", TRUE, quiet, FALSE,
                              version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
@@ -752,6 +752,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
 
+  /* Initialize the efficient Authz support. */
+  SVN_ERR(svn_repos_authz_initialize(pool));
+
   SVN_ERR(svn_cmdline__getopt_init(&os, argc, argv, pool));
 
   params.root = "/";
@@ -763,7 +766,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   params.compression_level = SVN_DELTA_COMPRESSION_LEVEL_DEFAULT;
   params.logger = NULL;
   params.config_pool = NULL;
-  params.authz_pool = NULL;
   params.fs_config = NULL;
   params.vhost = FALSE;
   params.username_case = CASE_ASIS;
@@ -899,7 +901,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
 
         case 'M':
-          params.memory_cache_size = 0x100000 * apr_strtoi64(arg, NULL, 0);
+          {
+            apr_uint64_t sz_val;
+            SVN_ERR(svn_cstring_atoui64(&sz_val, arg));
+
+            params.memory_cache_size = 0x100000 * sz_val;
+          }
           break;
 
         case SVNSERVE_OPT_CACHE_TXDELTAS:
@@ -1046,10 +1053,6 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   SVN_ERR(svn_repos__config_pool_create(&params.config_pool,
                                         is_multi_threaded,
                                         pool));
-  SVN_ERR(svn_repos__authz_pool_create(&params.authz_pool,
-                                       params.config_pool,
-                                       is_multi_threaded,
-                                       pool));
 
   /* If a configuration file is specified, load it and any referenced
    * password and authorization files. */
@@ -1057,11 +1060,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       params.base = svn_dirent_dirname(config_filename, pool);
 
-      SVN_ERR(svn_repos__config_pool_get(&params.cfg, NULL,
+      SVN_ERR(svn_repos__config_pool_get(&params.cfg,
                                          params.config_pool,
                                          config_filename,
                                          TRUE, /* must_exist */
-                                         FALSE, /* names_case_sensitive */
                                          NULL,
                                          pool));
     }

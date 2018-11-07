@@ -48,7 +48,6 @@ sys.path.insert(1, 'build')
 
 gen_modules = {
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
-  'dsp' : ('gen_msvc_dsp', 'MSVC 6.x project files'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
 
@@ -209,7 +208,7 @@ def _usage_exit(err=None):
   print("           Use static openssl")
   print("")
   print("  --vsnet-version=VER")
-  print("           generate for VS.NET version VER (2005-2015 or 9.0-14.0)")
+  print("           generate for VS.NET version VER (2005-2017 or 9.0-15.0)")
   print("           [implies '-t vcproj']")
   print("")
   print(" -D NAME[=value]")

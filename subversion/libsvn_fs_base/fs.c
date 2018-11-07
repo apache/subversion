@@ -957,6 +957,7 @@ base_upgrade(svn_fs_t *fs,
       err = SVN_NO_ERROR;
     }
   SVN_ERR(err);
+  SVN_ERR(check_format(old_format_number));
 
   /* Bump the format file's stored version number. */
   SVN_ERR(svn_io_write_version_file(version_file_path,

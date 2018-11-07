@@ -23,6 +23,7 @@
 
 package org.apache.subversion.javahl.types;
 
+import java.lang.annotation.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Locale;
@@ -179,6 +180,7 @@ public class Revision implements java.io.Serializable
     /**
      * Marker revision number for no real revision
      */
+    @Native
     public static final int SVN_INVALID_REVNUM = -1;
 
     /**

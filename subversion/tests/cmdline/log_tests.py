@@ -1592,7 +1592,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   # a merge results in added explicit mergeinfo on a path, but that
   # path previously inherited mergeinfo (rather than had no explicit
   # or inherited mergeinfo).  See issue #3235, specifically
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3235#desc8.
+  # https://issues.apache.org/jira/browse/SVN-3235#desc8.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1752,7 +1752,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
 def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   "log -g and simple propmod to merge-inheriting path"
 
-  # Issue #3285 (http://subversion.tigris.org/issues/show_bug.cgi?id=3285)
+  # Issue #3285 (https://issues.apache.org/jira/browse/SVN-3285)
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2166,13 +2166,13 @@ def log_diff(sbox):
                + [ "@@ -1 +1,2 @@\n",
                    " This is the file 'beta'.\n",
                    "+9\n",
-                   "\ No newline at end of file\n",
+                   "\\ No newline at end of file\n",
                  ]
            ]
   r8diff = [ make_diff_header('A2/D/G/rho', 'nonexistent', 'revision 8')
               + [ "@@ -0,0 +1 @@\n",
                   "+88\n",
-                  "\ No newline at end of file\n",
+                  "\\ No newline at end of file\n",
                 ]
            ]
   log_chain = parse_log_output(output, with_diffs=True)

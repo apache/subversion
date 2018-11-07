@@ -54,13 +54,15 @@ ListCallback::callback(void *baton,
                        const svn_dirent_t *dirent,
                        const svn_lock_t *lock,
                        const char *abs_path,
-                       const char * /* external_parent_url */,
-                       const char * /* external_target */,
+                       const char *external_parent_url,
+                       const char *external_target,
                        apr_pool_t *scratch_pool)
 {
   if (baton)
     return static_cast<ListCallback *>(baton)->doList(
-            path, dirent, lock, abs_path, scratch_pool);
+            path, dirent, lock, abs_path,
+            external_parent_url, external_target,
+            scratch_pool);
 
   return SVN_NO_ERROR;
 }
@@ -73,6 +75,8 @@ ListCallback::doList(const char *path,
                      const svn_dirent_t *dirent,
                      const svn_lock_t *lock,
                      const char *abs_path,
+                     const char *external_parent_url,
+                     const char *external_target,
                      apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -87,13 +91,17 @@ ListCallback::doList(const char *path,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ListCallback"));
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/ListItemCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "doEntry",
-                             "(" JAVAHL_ARG("/types/DirEntry;")
-                             JAVAHL_ARG("/types/Lock;") ")V");
+                             "("
+                             JAVAHL_ARG("/types/DirEntry;")
+                             JAVAHL_ARG("/types/Lock;")
+                             "Ljava/lang/String;"
+                             "Ljava/lang/String;"
+                             ")V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -111,8 +119,16 @@ ListCallback::doList(const char *path,
         POP_AND_RETURN(SVN_NO_ERROR);
     }
 
+  jstring jexternalParentURL = JNIUtil::makeJString(external_parent_url);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN(SVN_NO_ERROR);
+
+  jstring jexternalTarget = JNIUtil::makeJString(external_target);
+  if (JNIUtil::isJavaExceptionThrown())
+    POP_AND_RETURN(SVN_NO_ERROR);
+
   // call the Java method
-  env->CallVoidMethod(m_callback, mid, jdirentry, jlock);
+  env->CallVoidMethod(m_callback, mid, jdirentry, jlock, jexternalParentURL, jexternalTarget);
 
   POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }

@@ -2436,7 +2436,7 @@ do_put_file(svn_branch__txn_t *txn,
     else
       SVN_ERR(svn_stream_for_stdin2(&src, FALSE, scratch_pool));
 
-    svn_stringbuf_from_stream(&text, src, 0, scratch_pool);
+    SVN_ERR(svn_stringbuf_from_stream(&text, src, 0, scratch_pool));
   }
   payload = svn_element__payload_create_file(props, text, scratch_pool);
 
@@ -3921,7 +3921,8 @@ execute(svnmover_wc_t *wc,
           wc->list_of_commands
             = apr_psprintf(pool, "%s%s\n",
                            wc->list_of_commands ? wc->list_of_commands : "",
-                           svn_cstring_join(action->action_args, " ", pool));
+                           svn_cstring_join2(action->action_args, " ",
+                                             TRUE, pool));
         }
     }
   svn_pool_destroy(iterpool);
@@ -4041,7 +4042,7 @@ display_version(apr_getopt_t *os, svn_boolean_t _quiet, apr_pool_t *pool)
   version_footer = svn_stringbuf_create(ra_desc_start, pool);
   SVN_ERR(svn_ra_print_modules(version_footer, pool));
 
-  SVN_ERR(svn_opt_print_help4(NULL, "svnmover", TRUE, _quiet, FALSE,
+  SVN_ERR(svn_opt_print_help5(NULL, "svnmover", TRUE, _quiet, FALSE,
                               version_footer->data,
                               NULL, NULL, NULL, NULL, NULL, pool));
 
@@ -4331,7 +4332,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     trust_server_cert_opt,
     trust_server_cert_failures_opt,
     ui_opt,
-    colour_opt
+    colour_opt,
+    auth_password_from_stdin_opt
   };
   static const apr_getopt_option_t options[] = {
     {"verbose", 'v', 0, ""},
@@ -4340,6 +4342,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {"file", 'F', 1, ""},
     {"username", 'u', 1, ""},
     {"password", 'p', 1, ""},
+    {"password-from-stdin", auth_password_from_stdin_opt, 1, ""},
     {"root-url", 'U', 1, ""},
     {"revision", 'r', 1, ""},
     {"branch-id", 'B', 1, ""},
@@ -4386,6 +4389,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   const char *log_msg;
   svn_tristate_t coloured_output = svn_tristate_false;
   svnmover_wc_t *wc;
+  svn_boolean_t read_pass_from_stdin = FALSE;
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
@@ -4419,9 +4423,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case 'F':
           {
-            const char *arg_utf8;
-            SVN_ERR(svn_utf_cstring_to_utf8(&arg_utf8, arg, pool));
-            SVN_ERR(svn_stringbuf_from_file2(&filedata, arg, pool));
+            const char *filename;
+            SVN_ERR(svn_utf_cstring_to_utf8(&filename, arg, pool));
+            SVN_ERR(svn_stringbuf_from_file2(&filedata, filename, pool));
           }
           break;
         case 'u':
@@ -4429,6 +4433,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           break;
         case 'p':
           password = apr_pstrdup(pool, arg);
+          break;
+        case auth_password_from_stdin_opt:
+          read_pass_from_stdin = TRUE;
           break;
         case 'U':
           SVN_ERR(svn_utf_cstring_to_utf8(&anchor_url, arg, pool));
@@ -4460,7 +4467,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           SVN_ERR(svn_opt_parse_revprop(&revprops, arg, pool));
           break;
         case 'X':
-          extra_args_file = apr_pstrdup(pool, arg);
+          SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file, arg, pool));
           break;
         case non_interactive_opt:
           non_interactive = TRUE;
@@ -4552,6 +4559,13 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                   "--non-interactive"));
     }
 
+  /* --password-from-stdin can only be used with --non-interactive */
+  if (read_pass_from_stdin && !non_interactive)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--password-from-stdin requires "
+                                "--non-interactive"));
+    }
 
   /* Now initialize the client context */
 
@@ -4577,6 +4591,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       svn_error_clear(
           svn_cmdline__apply_config_options(cfg_hash, config_options,
                                             "svnmover: ", "--config-option"));
+    }
+
+  /* Get password from stdin if necessary */
+  if (read_pass_from_stdin)
+    {
+      SVN_ERR(svn_cmdline__stdin_readline(&password, pool, pool));
     }
 
   SVN_ERR(svn_client_create_context2(&ctx, cfg_hash, pool));
@@ -4633,12 +4653,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   action_args = apr_array_make(pool, opts->argc, sizeof(const char *));
   if (extra_args_file)
     {
-      const char *extra_args_file_utf8;
       svn_stringbuf_t *contents, *contents_utf8;
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&extra_args_file_utf8,
-                                      extra_args_file, pool));
-      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file_utf8, pool));
+      SVN_ERR(svn_stringbuf_from_file2(&contents, extra_args_file, pool));
       SVN_ERR(svn_utf_stringbuf_to_utf8(&contents_utf8, contents, pool));
       svn_cstring_split_append(action_args, contents_utf8->data, "\n\r",
                                FALSE, pool);

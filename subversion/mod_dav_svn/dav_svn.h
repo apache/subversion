@@ -359,10 +359,6 @@ svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
    master server version (if provided via SVNMasterVersion).  */
 svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
 
-/* For the repository referred to by this request, should ephemeral
-   txnprop support be advertised?  */
-svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
-
 
 
 /* SPECIAL URI
@@ -705,6 +701,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { SVN_XML_NAMESPACE, SVN_DAV__INHERITED_PROPS_REPORT },
+  { SVN_XML_NAMESPACE, "list-report" },
   { NULL, NULL },
 };
 
@@ -756,6 +753,11 @@ dav_error *
 dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
                                     dav_svn__output *output);
+
+dav_error *
+dav_svn__list_report(const dav_resource *resource,
+                     const apr_xml_doc *doc,
+                     dav_svn__output *output);
 
 /*** posts/ ***/
 
@@ -1113,6 +1115,19 @@ svn_error_t *
 dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
                           dav_svn_repos *repos,
                           apr_pool_t *scratch_pool);
+
+/* Return the liveprop-encoded form of AUTHOR, allocated in RESULT_POOL.
+ * If IS_SVN_CLIENT is set, assume that the data will be sent to a SVN
+ * client.  This mainly sanitizes AUTHOR strings with control chars in
+ * them without converting them to escape sequences etc.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+const char *
+dav_svn__fuzzy_escape_author(const char *author,
+                             svn_boolean_t is_svn_client,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /*** mirror.c ***/
 

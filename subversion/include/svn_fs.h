@@ -1756,7 +1756,7 @@ svn_fs_paths_changed3(svn_fs_path_change_iterator_t **iterator,
  *
  * Use @a pool for all allocations, including the hash and its values.
  *
- * @note Retrieving the #node_rev_id element of #svn_fs_path_change2_t may
+ * @note Retrieving the #svn_fs_path_change2_t.node_rev_id element may
  *       be expensive in some FS backends.
  *
  * @since New in 1.6.
@@ -1840,9 +1840,9 @@ svn_fs_node_history(svn_fs_history_t **history_p,
  * the same as the original.  This will happen if the original
  * location was an interesting one (where the node was modified, or
  * took place in a copy event).  This behavior allows looping callers
- * to avoid the calling svn_fs_history_location() on the object
- * returned by svn_fs_node_history(), and instead go ahead and begin
- * calling svn_fs_history_prev().
+ * to avoid calling svn_fs_history_location() on the object returned
+ * by svn_fs_node_history(), and instead go ahead and begin calling
+ * svn_fs_history_prev().
  *
  * @note This function uses node-id ancestry alone to determine
  * modifiedness, and therefore does NOT claim that in any of the
@@ -2174,11 +2174,23 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
                     const char *path,
                     apr_pool_t *pool);
 
+/** Receives parsed @a mergeinfo for the file system path @a path.
+ *
+ * The user-provided @a baton is being passed through by the retrieval
+ * function and @a scratch_pool will be cleared between invocations.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t *
+(*svn_fs_mergeinfo_receiver_t)(const char *path,
+                               svn_mergeinfo_t mergeinfo,
+                               void *baton,
+                               apr_pool_t *scratch_pool);
 
 /** Retrieve mergeinfo for multiple nodes.
  *
- * @a *catalog is a catalog for @a paths.  It will never be @c NULL,
- * but may be empty.
+ * For each node found with mergeinfo on it, invoke @a receiver with
+ * the provided @a baton.
  *
  * @a root is revision root to use when looking up paths.
  *
@@ -2188,7 +2200,7 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * explicit-or-inherited, or only inherited mergeinfo.
  *
  * If @a adjust_inherited_mergeinfo is @c TRUE, then any inherited
- * mergeinfo returned in @a *catalog is normalized to represent the
+ * mergeinfo reported to @a *receiver is normalized to represent the
  * inherited mergeinfo on the path which inherits it.  This adjusted
  * mergeinfo is keyed by the path which inherits it.  If
  * @a adjust_inherited_mergeinfo is @c FALSE, then any inherited
@@ -2203,13 +2215,31 @@ svn_fs_closest_copy(svn_fs_root_t **root_p,
  * the #SVN_PROP_MERGEINFO property explicitly set on it.  (Note
  * that inheritance is only taken into account for the elements in @a
  * paths; descendants of the elements in @a paths which get their
- * mergeinfo via inheritance are not included in @a *catalog.)
+ * mergeinfo via inheritance are not reported to @a receiver.)
  *
- * Allocate @a *catalog in result_pool.  Do any necessary temporary
- * allocations in @a scratch_pool.
+ * Do any necessary temporary allocations in @a scratch_pool.
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_fs_get_mergeinfo3(svn_fs_root_t *root,
+                      const apr_array_header_t *paths,
+                      svn_mergeinfo_inheritance_t inherit,
+                      svn_boolean_t include_descendants,
+                      svn_boolean_t adjust_inherited_mergeinfo,
+                      svn_fs_mergeinfo_receiver_t receiver,
+                      void *baton,
+                      apr_pool_t *scratch_pool);
+
+/**
+ * Same as svn_fs_get_mergeinfo3(), but all mergeinfo is being collected
+ * and returned in @a *catalog.  It will never be @c NULL, but may be empty.
  *
  * @since New in 1.8.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
                       svn_fs_root_t *root,
@@ -2474,7 +2504,7 @@ svn_fs_file_md5_checksum(unsigned char digest[],
  * svn_fs_file_contents().  In that case, the result of reading from
  * @a *contents is undefined.
  *
- * ### @todo kff: I am worried about lifetime issues with this pool vs
+ * @todo kff: I am worried about lifetime issues with this pool vs
  * the trail created farther down the call stack.  Trace this function
  * to investigate...
  */

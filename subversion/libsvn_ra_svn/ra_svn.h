@@ -125,12 +125,30 @@ struct svn_ra_svn_conn_st {
   apr_pool_t *pool;
 };
 
+/* The session's URL state for client and server side.
+ *
+ * This keeps track of the respective client-side and server-side "parent"
+ * URLs.  It tells us whether we may have to send reparent commands to the
+ * server and how to tweak path parameters when we decided to handle
+ * reparent requests on the client side only. */
+typedef struct svn_ra_svn__parent_t {
+  /* Client-side session base URL, i.e. client's parent path. */
+  svn_stringbuf_t *client_url;
+
+  /* Server-side base URL, i.e. server's parent path. */
+  svn_stringbuf_t *server_url;
+
+  /* Relative path to add to a client-side parameter to translate it for the
+   * server-side.  I.e. the relative path from SERVER_URL to CLIENT_URL. */
+  svn_stringbuf_t *path;
+} svn_ra_svn__parent_t;
+
 struct svn_ra_svn__session_baton_t {
   apr_pool_t *pool;
   svn_ra_svn_conn_t *conn;
   svn_boolean_t is_tunneled;
   svn_auth_baton_t *auth_baton;
-  const char *url;
+  svn_ra_svn__parent_t *parent;
   const char *user;
   const char *hostname; /* The remote hostname. */
   const char *realm_prefix;

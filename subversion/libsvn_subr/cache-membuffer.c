@@ -812,6 +812,11 @@ struct svn_membuffer_t
    */
   svn_boolean_t allow_blocking_writes;
 #endif
+
+  /* A write lock counter, must be either 0 or 1.
+   * This one is only used in debug assertions to verify that you used
+   * the correct multi-threading settings. */
+  svn_atomic_t write_lock_count;
 };
 
 /* Align integer VALUE to the next ITEM_ALIGNMENT boundary.
@@ -2039,6 +2044,8 @@ svn_cache__membuffer_cache_create(svn_membuffer_t **cache,
        */
       c[seg].allow_blocking_writes = allow_blocking_writes;
 #endif
+      /* No writers at the moment. */
+      c[seg].write_lock_count = 0;
     }
 
   /* done here
@@ -2198,6 +2205,10 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
   /* first, look for a previous entry for the given key */
   entry_t *entry = find_entry(cache, group_index, to_find, FALSE);
 
+  /* If this one fails, you are using multiple threads but created the
+   * membuffer in single-threaded mode. */
+  assert(0 == svn_atomic_inc(&cache->write_lock_count));
+
   /* Quick check make sure arithmetics will work further down the road. */
   size = item_size + to_find->entry_key.key_len;
   if (size < item_size)
@@ -2237,6 +2248,10 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
                item_size);
 
       cache->total_writes++;
+
+      /* Putting the decrement into an assert() to make it disappear
+       * in production code. */
+      assert(0 == svn_atomic_dec(&cache->write_lock_count));
       return SVN_NO_ERROR;
     }
 
@@ -2289,6 +2304,9 @@ membuffer_cache_set_internal(svn_membuffer_t *cache,
         drop_entry(cache, entry);
     }
 
+  /* Putting the decrement into an assert() to make it disappear
+   * in production code. */
+  assert(0 == svn_atomic_dec(&cache->write_lock_count));
   return SVN_NO_ERROR;
 }
 

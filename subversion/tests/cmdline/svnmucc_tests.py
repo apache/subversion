@@ -458,7 +458,7 @@ rm A/B/C/Y
     '   D /A/B/C/Y',
   ]))
   expected_output = svntest.verify.UnorderedRegexListOutput(excaped
-                    + ['^-', '^r3', '^-', '^Changed paths:',])
+                    + ['^--*', '^r3.*', '^--*', '^Changed paths:',])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr3', repo_url)
 

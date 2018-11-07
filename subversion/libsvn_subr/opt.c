@@ -55,8 +55,8 @@
 
 /*** Code. ***/
 
-const svn_opt_subcommand_desc2_t *
-svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
+const svn_opt_subcommand_desc3_t *
+svn_opt_get_canonical_subcommand3(const svn_opt_subcommand_desc3_t *table,
                                   const char *cmd_name)
 {
   int i = 0;
@@ -80,9 +80,9 @@ svn_opt_get_canonical_subcommand2(const svn_opt_subcommand_desc2_t *table,
 }
 
 const apr_getopt_option_t *
-svn_opt_get_option_from_code2(int code,
+svn_opt_get_option_from_code3(int code,
                               const apr_getopt_option_t *option_table,
-                              const svn_opt_subcommand_desc2_t *command,
+                              const svn_opt_subcommand_desc3_t *command,
                               apr_pool_t *pool)
 {
   apr_size_t i;
@@ -111,34 +111,19 @@ svn_opt_get_option_from_code2(int code,
   return NULL;
 }
 
-
-const apr_getopt_option_t *
-svn_opt_get_option_from_code(int code,
-                             const apr_getopt_option_t *option_table)
-{
-  apr_size_t i;
-
-  for (i = 0; option_table[i].optch; i++)
-    if (option_table[i].optch == code)
-      return &(option_table[i]);
-
-  return NULL;
-}
-
-
-/* Like svn_opt_get_option_from_code2(), but also, if CODE appears a second
+/* Like svn_opt_get_option_from_code3(), but also, if CODE appears a second
  * time in OPTION_TABLE with a different name, then set *LONG_ALIAS to that
  * second name, else set it to NULL. */
 static const apr_getopt_option_t *
-get_option_from_code(const char **long_alias,
-                     int code,
-                     const apr_getopt_option_t *option_table,
-                     const svn_opt_subcommand_desc2_t *command,
-                     apr_pool_t *pool)
+get_option_from_code3(const char **long_alias,
+                      int code,
+                      const apr_getopt_option_t *option_table,
+                      const svn_opt_subcommand_desc3_t *command,
+                      apr_pool_t *pool)
 {
   const apr_getopt_option_t *i;
   const apr_getopt_option_t *opt
-    = svn_opt_get_option_from_code2(code, option_table, command, pool);
+    = svn_opt_get_option_from_code3(code, option_table, command, pool);
 
   /* Find a long alias in the table, if there is one. */
   *long_alias = NULL;
@@ -205,7 +190,7 @@ svn_opt_format_option(const char **string,
 
 
 svn_boolean_t
-svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
+svn_opt_subcommand_takes_option4(const svn_opt_subcommand_desc3_t *command,
                                  int option_code,
                                  const int *global_options)
 {
@@ -223,35 +208,12 @@ svn_opt_subcommand_takes_option3(const svn_opt_subcommand_desc2_t *command,
   return FALSE;
 }
 
-svn_boolean_t
-svn_opt_subcommand_takes_option2(const svn_opt_subcommand_desc2_t *command,
-                                 int option_code)
-{
-  return svn_opt_subcommand_takes_option3(command,
-                                          option_code,
-                                          NULL);
-}
-
-
-svn_boolean_t
-svn_opt_subcommand_takes_option(const svn_opt_subcommand_desc_t *command,
-                                int option_code)
-{
-  apr_size_t i;
-
-  for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
-    if (command->valid_options[i] == option_code)
-      return TRUE;
-
-  return FALSE;
-}
-
 
 /* Print the canonical command name for CMD, and all its aliases, to
    STREAM.  If HELP is set, print CMD's help string too, in which case
    obtain option usage from OPTIONS_TABLE. */
 static svn_error_t *
-print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
+print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
                     const apr_getopt_option_t *options_table,
                     const int *global_options,
                     svn_boolean_t help,
@@ -290,7 +252,12 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
       const char *long_alias;
       svn_boolean_t have_options = FALSE;
 
-      SVN_ERR(svn_cmdline_fprintf(stream, pool, ": %s", _(cmd->help)));
+      SVN_ERR(svn_cmdline_fprintf(stream, pool, ": "));
+
+      for (i = 0; i < SVN_OPT_MAX_PARAGRAPHS && cmd->help[i]; i++)
+        {
+          SVN_ERR(svn_cmdline_fprintf(stream, pool, "%s", _(cmd->help[i])));
+        }
 
       /* Loop over all valid option codes attached to the subcommand */
       for (i = 0; i < SVN_OPT_MAX_OPTIONS; i++)
@@ -305,8 +272,8 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
                 }
 
               /* convert each option code into an option */
-              option = get_option_from_code(&long_alias, cmd->valid_options[i],
-                                            options_table, cmd, pool);
+              option = get_option_from_code3(&long_alias, cmd->valid_options[i],
+                                             options_table, cmd, pool);
 
               /* print the option's docstring */
               if (option && option->description)
@@ -329,8 +296,8 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
             {
 
               /* convert each option code into an option */
-              option = get_option_from_code(&long_alias, global_options[i],
-                                            options_table, cmd, pool);
+              option = get_option_from_code3(&long_alias, global_options[i],
+                                             options_table, cmd, pool);
 
               /* print the option's docstring */
               if (option && option->description)
@@ -350,14 +317,14 @@ print_command_info2(const svn_opt_subcommand_desc2_t *cmd,
   return SVN_NO_ERROR;
 }
 
-/* The body for svn_opt_print_generic_help2() function with standard error
+/* The body for svn_opt_print_generic_help3() function with standard error
  * handling semantic. Handling of errors implemented at caller side. */
 static svn_error_t *
-print_generic_help_body(const char *header,
-                        const svn_opt_subcommand_desc2_t *cmd_table,
-                        const apr_getopt_option_t *opt_table,
-                        const char *footer,
-                        apr_pool_t *pool, FILE *stream)
+print_generic_help_body3(const char *header,
+                         const svn_opt_subcommand_desc3_t *cmd_table,
+                         const apr_getopt_option_t *opt_table,
+                         const char *footer,
+                         apr_pool_t *pool, FILE *stream)
 {
   int i = 0;
 
@@ -367,7 +334,7 @@ print_generic_help_body(const char *header,
   while (cmd_table[i].name)
     {
       SVN_ERR(svn_cmdline_fputs("   ", stream, pool));
-      SVN_ERR(print_command_info2(cmd_table + i, opt_table,
+      SVN_ERR(print_command_info3(cmd_table + i, opt_table,
                                   NULL, FALSE,
                                   pool, stream));
       SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
@@ -383,16 +350,16 @@ print_generic_help_body(const char *header,
 }
 
 void
-svn_opt_print_generic_help2(const char *header,
-                            const svn_opt_subcommand_desc2_t *cmd_table,
+svn_opt_print_generic_help3(const char *header,
+                            const svn_opt_subcommand_desc3_t *cmd_table,
                             const apr_getopt_option_t *opt_table,
                             const char *footer,
                             apr_pool_t *pool, FILE *stream)
 {
   svn_error_t *err;
 
-  err = print_generic_help_body(header, cmd_table, opt_table, footer, pool,
-                                stream);
+  err = print_generic_help_body3(header, cmd_table, opt_table, footer, pool,
+                                 stream);
 
   /* Issue #3014:
    * Don't print anything on broken pipes. The pipe was likely
@@ -408,18 +375,18 @@ svn_opt_print_generic_help2(const char *header,
 
 
 void
-svn_opt_subcommand_help3(const char *subcommand,
-                         const svn_opt_subcommand_desc2_t *table,
+svn_opt_subcommand_help4(const char *subcommand,
+                         const svn_opt_subcommand_desc3_t *table,
                          const apr_getopt_option_t *options_table,
                          const int *global_options,
                          apr_pool_t *pool)
 {
-  const svn_opt_subcommand_desc2_t *cmd =
-    svn_opt_get_canonical_subcommand2(table, subcommand);
+  const svn_opt_subcommand_desc3_t *cmd =
+    svn_opt_get_canonical_subcommand3(table, subcommand);
   svn_error_t *err;
 
   if (cmd)
-    err = print_command_info2(cmd, options_table, global_options,
+    err = print_command_info3(cmd, options_table, global_options,
                               TRUE, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
@@ -1194,14 +1161,14 @@ svn_opt__print_version_info(const char *pgm_name,
 }
 
 svn_error_t *
-svn_opt_print_help4(apr_getopt_t *os,
+svn_opt_print_help5(apr_getopt_t *os,
                     const char *pgm_name,
                     svn_boolean_t print_version,
                     svn_boolean_t quiet,
                     svn_boolean_t verbose,
                     const char *version_footer,
                     const char *header,
-                    const svn_opt_subcommand_desc2_t *cmd_table,
+                    const svn_opt_subcommand_desc3_t *cmd_table,
                     const apr_getopt_option_t *option_table,
                     const int *global_options,
                     const char *footer,
@@ -1218,7 +1185,7 @@ svn_opt_print_help4(apr_getopt_t *os,
 
       for (i = 0; i < targets->nelts; i++)
         {
-          svn_opt_subcommand_help3(APR_ARRAY_IDX(targets, i, const char *),
+          svn_opt_subcommand_help4(APR_ARRAY_IDX(targets, i, const char *),
                                    cmd_table, option_table,
                                    global_options, pool);
         }
@@ -1230,7 +1197,7 @@ svn_opt_print_help4(apr_getopt_t *os,
                                           quiet, verbose, pool));
     }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
-    svn_opt_print_generic_help2(header,
+    svn_opt_print_generic_help3(header,
                                 cmd_table,
                                 option_table,
                                 footer,

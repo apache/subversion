@@ -89,7 +89,7 @@ struct fs_type_defn {
   const char *fs_type;
   const char *fsap_name;
   fs_init_func_t initfunc;
-  fs_library_vtable_t *vtable;
+  void * volatile vtable; /* fs_library_vtable_t */
   struct fs_type_defn *next;
 };
 
@@ -202,7 +202,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
   const svn_version_t *fs_version;
 
   /* most times, we get lucky */
-  *vtable = apr_atomic_casptr((volatile void **)&fst->vtable, NULL, NULL);
+  *vtable = svn_atomic_casptr(&fst->vtable, NULL, NULL);
   if (*vtable)
     return SVN_NO_ERROR;
 
@@ -245,7 +245,7 @@ get_library_vtable_direct(fs_library_vtable_t **vtable,
                              fs_version->patch, fs_version->tag);
 
   /* the vtable will not change.  Remember it */
-  apr_atomic_casptr((volatile void **)&fst->vtable, *vtable, NULL);
+  svn_atomic_casptr(&fst->vtable, *vtable, NULL);
 
   return SVN_NO_ERROR;
 }
@@ -1391,18 +1391,38 @@ svn_fs_closest_copy(svn_fs_root_t **root_p, const char **path_p,
 }
 
 svn_error_t *
-svn_fs_get_mergeinfo2(svn_mergeinfo_catalog_t *catalog,
-                      svn_fs_root_t *root,
+svn_fs_get_mergeinfo3(svn_fs_root_t *root,
                       const apr_array_header_t *paths,
                       svn_mergeinfo_inheritance_t inherit,
                       svn_boolean_t include_descendants,
                       svn_boolean_t adjust_inherited_mergeinfo,
-                      apr_pool_t *result_pool,
+                      svn_fs_mergeinfo_receiver_t receiver,
+                      void *baton,
                       apr_pool_t *scratch_pool)
 {
   return svn_error_trace(root->vtable->get_mergeinfo(
-    catalog, root, paths, inherit, include_descendants,
-    adjust_inherited_mergeinfo, result_pool, scratch_pool));
+    root, paths, inherit, include_descendants, adjust_inherited_mergeinfo,
+    receiver, baton, scratch_pool));
+}
+
+/* Baton type to be used with mergeinfo_receiver().  It provides some of
+ * the parameters passed to svn_fs__get_mergeinfo_for_path. */
+typedef struct mergeinfo_receiver_baton_t
+{
+  svn_mergeinfo_t *mergeinfo;
+  apr_pool_t *result_pool;
+} mergeinfo_receiver_baton_t;
+
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  mergeinfo_receiver_baton_t *b = baton;
+  *b->mergeinfo = svn_mergeinfo_dup(mergeinfo, b->result_pool);
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -1416,15 +1436,19 @@ svn_fs__get_mergeinfo_for_path(svn_mergeinfo_t *mergeinfo,
 {
   apr_array_header_t *paths
     = apr_array_make(scratch_pool, 1, sizeof(const char *));
-  svn_mergeinfo_catalog_t catalog;
+
+  mergeinfo_receiver_baton_t baton;
+  baton.mergeinfo = mergeinfo;
+  baton.result_pool = result_pool;
 
   APR_ARRAY_PUSH(paths, const char *) = path;
 
-  SVN_ERR(svn_fs_get_mergeinfo2(&catalog, root, paths,
+  *mergeinfo = NULL;
+  SVN_ERR(svn_fs_get_mergeinfo3(root, paths,
                                 inherit, FALSE /*include_descendants*/,
                                 adjust_inherited_mergeinfo,
-                                result_pool, scratch_pool));
-  *mergeinfo = svn_hash_gets(catalog, path);
+                                mergeinfo_receiver, &baton,
+                                scratch_pool));
 
   return SVN_NO_ERROR;
 }

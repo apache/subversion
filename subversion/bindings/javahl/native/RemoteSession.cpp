@@ -214,8 +214,9 @@ RemoteSession::RemoteSession(int retryAttempts,
           cycle_detected = true;
           break;
         }
-      /* ### Shouldn't url be updated for the next attempt?
-         ### There is no real cycle if we just do the same thing twice? */
+
+      url = corrected_url;
+      corrected_url = NULL;
     }
 
   if (cycle_detected)
@@ -645,6 +646,8 @@ build_string_array(const Iterator& iter,
     {
       const char* element;
       jstring jitem = (jstring)iter.next();
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
       if (contains_relpaths)
         {
           Relpath item(jitem, pool);
@@ -958,7 +961,10 @@ long_iterable_to_revnum_array(jobject jlong_iterable, apr_pool_t* pool)
   Iterator iter(jlong_iterable);
   while (iter.hasNext())
     {
-      const jlong entry = env->CallLongMethod(iter.next(), mid);
+      jobject next = iter.next();
+      if (JNIUtil::isExceptionThrown())
+        return NULL;
+      const jlong entry = env->CallLongMethod(next, mid);
       if (JNIUtil::isExceptionThrown())
         return NULL;
       APR_ARRAY_PUSH(array, svn_revnum_t) = svn_revnum_t(entry);
@@ -970,6 +976,8 @@ jobject
 location_hash_to_map(apr_hash_t* locations, apr_pool_t* scratch_pool)
 {
   JNIEnv* env = JNIUtil::getEnv();
+  if (JNIUtil::isExceptionThrown())
+    return NULL;
 
   jclass long_cls = env->FindClass("java/lang/Long");
   if (JNIUtil::isExceptionThrown())

@@ -71,16 +71,10 @@ _MIN_SVN_VERSION = [1, 5, 0]
 
 # Import the Subversion Python bindings, making sure they meet our
 # minimum version requirements.
-try:
-  import svn.fs
-  import svn.delta
-  import svn.repos
-  import svn.core
-except ImportError:
-  sys.stderr.write(
-    "You need version %s or better of the Subversion Python bindings.\n" \
-    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
-  sys.exit(1)
+import svn.fs
+import svn.delta
+import svn.repos
+import svn.core
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
@@ -291,7 +285,10 @@ class SMTPOutput(MailedOutput):
     self.write(self.mail_headers(group, params))
 
   def finish(self):
-    server = smtplib.SMTP(self.cfg.general.smtp_hostname)
+    if self.cfg.is_set('general.smtp_ssl') and self.cfg.general.smtp_ssl == 'yes':
+      server = smtplib.SMTP_SSL(self.cfg.general.smtp_hostname)
+    else:
+      server = smtplib.SMTP(self.cfg.general.smtp_hostname)
     if self.cfg.is_set('general.smtp_username'):
       server.login(self.cfg.general.smtp_username,
                    self.cfg.general.smtp_password)

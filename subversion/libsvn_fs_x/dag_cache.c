@@ -890,6 +890,16 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
     {
       svn_pool_clear(iterpool);
 
+      /* If the current node is not a directory and we are just here to
+       * check for the path's existence, then that's o.k.
+       * Otherwise, non-dir nodes will cause an error in dag_step. */
+      if (   (flags & svn_fs_x__dag_path_allow_null)
+          && (svn_fs_x__dag_node_kind(dag_path->node) != svn_node_dir))
+        {
+          dag_path = NULL;
+          break;
+        }
+
       /* Find the sub-node. */
       SVN_ERR(dag_step(&here, root, dag_path->node, entry, &path, change_set,
                        TRUE, iterpool));

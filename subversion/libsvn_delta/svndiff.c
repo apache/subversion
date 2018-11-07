@@ -38,13 +38,16 @@
 
 static const char SVNDIFF_V0[] = { 'S', 'V', 'N', 0 };
 static const char SVNDIFF_V1[] = { 'S', 'V', 'N', 1 };
+static const char SVNDIFF_V2[] = { 'S', 'V', 'N', 2 };
 
 #define SVNDIFF_HEADER_SIZE (sizeof(SVNDIFF_V0))
 
 static const char *
 get_svndiff_header(int version)
 {
-  if (version == 1)
+  if (version == 2)
+    return SVNDIFF_V2;
+  else if (version == 1)
     return SVNDIFF_V1;
   else
     return SVNDIFF_V0;
@@ -148,7 +151,7 @@ send_simple_insertion_window(svn_txdelta_window_t *window,
 }
 
 /* Encodes delta window WINDOW to svndiff-format.
-   The svndiff version is VERSION. COMPRESSION_LEVEL is the zlib
+   The svndiff version is VERSION. COMPRESSION_LEVEL is the
    compression level to use.
    Returned values will be allocated in POOL or refer to *WINDOW
    fields. */
@@ -195,21 +198,39 @@ encode_window(svn_stringbuf_t **instructions_p,
   append_encoded_int(header, window->sview_offset);
   append_encoded_int(header, window->sview_len);
   append_encoded_int(header, window->tview_len);
-  if (version == 1)
+  if (version == 2)
     {
       svn_stringbuf_t *compressed_instructions;
       compressed_instructions = svn_stringbuf_create_empty(pool);
-      SVN_ERR(svn__compress(instructions->data, instructions->len,
-                            compressed_instructions, compression_level));
+      SVN_ERR(svn__compress_lz4(instructions->data, instructions->len,
+                                compressed_instructions));
+      instructions = compressed_instructions;
+    }
+  else if (version == 1)
+    {
+      svn_stringbuf_t *compressed_instructions;
+      compressed_instructions = svn_stringbuf_create_empty(pool);
+      SVN_ERR(svn__compress_zlib(instructions->data, instructions->len,
+                                 compressed_instructions, compression_level));
       instructions = compressed_instructions;
     }
   append_encoded_int(header, instructions->len);
-  if (version == 1)
+
+  /* Encode the data. */
+  if (version == 2)
     {
       svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
 
-      SVN_ERR(svn__compress(window->new_data->data, window->new_data->len,
-                            compressed, compression_level));
+      SVN_ERR(svn__compress_lz4(window->new_data->data, window->new_data->len,
+                                compressed));
+      newdata = svn_stringbuf__morph_into_string(compressed);
+    }
+  else if (version == 1)
+    {
+      svn_stringbuf_t *compressed = svn_stringbuf_create_empty(pool);
+
+      SVN_ERR(svn__compress_zlib(window->new_data->data, window->new_data->len,
+                                 compressed, compression_level));
       newdata = svn_stringbuf__morph_into_string(compressed);
     }
   else
@@ -224,6 +245,8 @@ encode_window(svn_stringbuf_t **instructions_p,
   return SVN_NO_ERROR;
 }
 
+/* Note: When changing things here, check the related comment in
+   the svn_txdelta_to_svndiff_stream() function.  */
 static svn_error_t *
 window_handler(svn_txdelta_window_t *window, void *baton)
 {
@@ -542,15 +565,31 @@ decode_window(svn_txdelta_window_t *window, svn_filesize_t sview_offset,
 
   insend = data + inslen;
 
-  if (version == 1)
+  if (version == 2)
     {
       svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
       svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
 
-      SVN_ERR(svn__decompress(insend, newlen, ndout,
-                              SVN_DELTA_WINDOW_SIZE));
-      SVN_ERR(svn__decompress(data, insend - data, instout,
-                              MAX_INSTRUCTION_SECTION_LEN));
+      SVN_ERR(svn__decompress_lz4(insend, newlen, ndout,
+                                  SVN_DELTA_WINDOW_SIZE));
+      SVN_ERR(svn__decompress_lz4(data, insend - data, instout,
+                                  MAX_INSTRUCTION_SECTION_LEN));
+
+      newlen = ndout->len;
+      data = (unsigned char *)instout->data;
+      insend = (unsigned char *)instout->data + instout->len;
+
+      new_data = svn_stringbuf__morph_into_string(ndout);
+    }
+  else if (version == 1)
+    {
+      svn_stringbuf_t *instout = svn_stringbuf_create_empty(pool);
+      svn_stringbuf_t *ndout = svn_stringbuf_create_empty(pool);
+
+      SVN_ERR(svn__decompress_zlib(insend, newlen, ndout,
+                                   SVN_DELTA_WINDOW_SIZE));
+      SVN_ERR(svn__decompress_zlib(data, insend - data, instout,
+                                   MAX_INSTRUCTION_SECTION_LEN));
 
       newlen = ndout->len;
       data = (unsigned char *)instout->data;
@@ -612,6 +651,8 @@ write_handler(void *baton,
         db->version = 0;
       else if (memcmp(buffer, SVNDIFF_V1 + db->header_bytes, nheader) == 0)
         db->version = 1;
+      else if (memcmp(buffer, SVNDIFF_V2 + db->header_bytes, nheader) == 0)
+        db->version = 2;
       else
         return svn_error_create(SVN_ERR_SVNDIFF_INVALID_HEADER, NULL,
                                 _("Svndiff has invalid header"));
@@ -954,3 +995,107 @@ svn_txdelta__read_raw_window_len(apr_size_t *window_len,
   return SVN_NO_ERROR;
 }
 
+typedef struct svndiff_stream_baton_t
+{
+  apr_pool_t *scratch_pool;
+  svn_txdelta_stream_t *txstream;
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+  svn_stringbuf_t *window_buffer;
+  apr_size_t read_pos;
+  svn_boolean_t hit_eof;
+} svndiff_stream_baton_t;
+
+static svn_error_t *
+svndiff_stream_write_fn(void *baton, const char *data, apr_size_t *len)
+{
+  svndiff_stream_baton_t *b = baton;
+
+  /* The memory usage here is limited, as this buffer doesn't grow
+     beyond the (header size + max window size in svndiff format).
+     See the comment in svn_txdelta_to_svndiff_stream().  */
+  svn_stringbuf_appendbytes(b->window_buffer, data, *len);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svndiff_stream_read_fn(void *baton, char *buffer, apr_size_t *len)
+{
+  svndiff_stream_baton_t *b = baton;
+  apr_size_t left = *len;
+  apr_size_t read = 0;
+
+  while (left)
+    {
+      apr_size_t chunk_size;
+
+      if (b->read_pos == b->window_buffer->len && !b->hit_eof)
+        {
+          svn_txdelta_window_t *window;
+
+          svn_pool_clear(b->scratch_pool);
+          svn_stringbuf_setempty(b->window_buffer);
+          SVN_ERR(svn_txdelta_next_window(&window, b->txstream,
+                                          b->scratch_pool));
+          SVN_ERR(b->handler(window, b->handler_baton));
+          b->read_pos = 0;
+
+          if (!window)
+            b->hit_eof = TRUE;
+        }
+
+      if (left > b->window_buffer->len - b->read_pos)
+        chunk_size = b->window_buffer->len - b->read_pos;
+      else
+        chunk_size = left;
+
+      if (!chunk_size)
+          break;
+
+      memcpy(buffer, b->window_buffer->data + b->read_pos, chunk_size);
+      b->read_pos += chunk_size;
+      buffer += chunk_size;
+      read += chunk_size;
+      left -= chunk_size;
+    }
+
+  *len = read;
+  return SVN_NO_ERROR;
+}
+
+svn_stream_t *
+svn_txdelta_to_svndiff_stream(svn_txdelta_stream_t *txstream,
+                              int svndiff_version,
+                              int compression_level,
+                              apr_pool_t *pool)
+{
+  svndiff_stream_baton_t *baton;
+  svn_stream_t *push_stream;
+  svn_stream_t *pull_stream;
+
+  baton = apr_pcalloc(pool, sizeof(*baton));
+  baton->scratch_pool = svn_pool_create(pool);
+  baton->txstream = txstream;
+  baton->window_buffer = svn_stringbuf_create_empty(pool);
+  baton->hit_eof = FALSE;
+  baton->read_pos = 0;
+
+  push_stream = svn_stream_create(baton, pool);
+  svn_stream_set_write(push_stream, svndiff_stream_write_fn);
+
+  /* We rely on the implementation detail of the svn_txdelta_to_svndiff3()
+     function, namely, on how the window_handler() function behaves.
+     As long as it writes one svndiff window at a time to the target
+     stream, the memory usage of this function (in other words, how
+     much data can be accumulated in the internal 'window_buffer')
+     is limited.  */
+  svn_txdelta_to_svndiff3(&baton->handler, &baton->handler_baton,
+                          push_stream, svndiff_version,
+                          compression_level, pool);
+
+  pull_stream = svn_stream_create(baton, pool);
+  svn_stream_set_read2(pull_stream, NULL, svndiff_stream_read_fn);
+
+  return pull_stream;
+}

@@ -26,13 +26,18 @@ run_tests() {
     case "${ra}" in
         local) check=check;             skipC=;;
         svn)   check=svnserveautocheck; skipC="SKIP_C_TESTS=1";;
-        dav)   check=davautocheck;      skipC="SKIP_C_TESTS=1";;
+        dav)   check=davautocheck;      skipC="SKIP_C_TESTS=1";
+               if [ "${fs}" == "bdb" ]; then
+                   mpm="APACHE_MPM=prefork"
+               else
+                   mpm="APACHE_MPM=event"
+               fi;;
         *)     exit 1;;
     esac
 
     echo "============ make check ${ra}+${fs}"
     cd ${absbld}
-    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC} || ok=false
+    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC} ${mpm} || ok=false
 
     # Move any log files to the buildbot work directory
     test -f tests.log && mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"
@@ -63,6 +68,7 @@ scripts=$(cd $(dirname "$0") && pwd)
 . ${scripts}/setenv.sh
 
 # Parse arguments to find out which tests we should run
+use_python3=false
 check_local=false
 check_svn=false
 check_dav=false
@@ -74,6 +80,7 @@ check_bdb=false
 
 while [ ! -z "$1" ]; do
     case "$1" in
+        python3) use_python3=true;;
         local)   check_local=true;;
         svn)     check_svn=true;;
         dav)     check_dav=true;;
@@ -86,6 +93,8 @@ while [ ! -z "$1" ]; do
     esac
     shift
 done
+
+${use_python3} && test -n "${SVNBB_PYTHON3ENV}" && . ${SVNBB_PYTHON3ENV}/bin/activate
 
 ${check_local} && check_tests local
 ${check_svn} && check_tests svn

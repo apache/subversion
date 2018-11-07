@@ -277,6 +277,12 @@ initialize_pack_context(pack_context_t *context,
   context->end_rev = shard_rev;
   context->shard_end_rev = shard_rev + ffd->max_files_per_dir;
 
+  /* the pool used for temp structures */
+  context->info_pool = svn_pool_create(pool);
+  context->paths = svn_prefix_tree__create(context->info_pool);
+
+  context->flush_to_disk = flush_to_disk;
+
   /* Create the new directory and pack file. */
   context->shard_dir = shard_dir;
   context->pack_file_dir = pack_file_dir;
@@ -304,15 +310,18 @@ initialize_pack_context(pack_context_t *context,
   context->changes = apr_array_make(pool, max_items,
                                     sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->changes_file, NULL, temp_dir,
-                                   svn_io_file_del_on_close, pool, pool));
+                                   svn_io_file_del_on_close,
+                                   context->info_pool, pool));
   context->file_props = apr_array_make(pool, max_items,
                                        sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->file_props_file, NULL, temp_dir,
-                                   svn_io_file_del_on_close, pool, pool));
+                                   svn_io_file_del_on_close, 
+                                   context->info_pool, pool));
   context->dir_props = apr_array_make(pool, max_items,
                                       sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->dir_props_file, NULL, temp_dir,
-                                   svn_io_file_del_on_close, pool, pool));
+                                   svn_io_file_del_on_close, 
+                                   context->info_pool, pool));
 
   /* noderev and representation item bucket */
   context->rev_offsets = apr_array_make(pool, max_revs, sizeof(int));
@@ -324,12 +333,6 @@ initialize_pack_context(pack_context_t *context,
                                  sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->reps_file, NULL, temp_dir,
                                    svn_io_file_del_on_close, pool, pool));
-
-  /* the pool used for temp structures */
-  context->info_pool = svn_pool_create(pool);
-  context->paths = svn_prefix_tree__create(context->info_pool);
-
-  context->flush_to_disk = flush_to_disk;
 
   return SVN_NO_ERROR;
 }
@@ -2064,9 +2067,9 @@ pack_body(void *baton,
   if (fully_packed)
     {
       if (pb->notify_func)
-        (*pb->notify_func)(pb->notify_baton,
-                           ffd->min_unpacked_rev / ffd->max_files_per_dir,
-                           svn_fs_pack_notify_noop, pool);
+        SVN_ERR(pb->notify_func(pb->notify_baton,
+                                ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                                svn_fs_pack_notify_noop, pool));
 
       return SVN_NO_ERROR;
     }
@@ -2119,7 +2122,7 @@ svn_fs_fs__pack(svn_fs_t *fs,
   if (!ffd->max_files_per_dir)
     {
       if (notify_func)
-        (*notify_func)(notify_baton, -1, svn_fs_pack_notify_noop, pool);
+        SVN_ERR(notify_func(notify_baton, -1, svn_fs_pack_notify_noop, pool));
 
       return SVN_NO_ERROR;
     }
@@ -2129,9 +2132,9 @@ svn_fs_fs__pack(svn_fs_t *fs,
   if (fully_packed)
     {
       if (notify_func)
-        (*notify_func)(notify_baton,
-                       ffd->min_unpacked_rev / ffd->max_files_per_dir,
-                       svn_fs_pack_notify_noop, pool);
+        SVN_ERR(notify_func(notify_baton,
+                            ffd->min_unpacked_rev / ffd->max_files_per_dir,
+                            svn_fs_pack_notify_noop, pool));
 
       return SVN_NO_ERROR;
     }

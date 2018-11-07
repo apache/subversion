@@ -8,7 +8,7 @@ in use-cases.txt, for both files and directories.
 
 Issue reference:
 
-  http://subversion.tigris.org/issues/show_bug.cgi?id=2282
+  https://issues.apache.org/jira/browse/SVN-2282
 
 ==========
 USE CASE 1

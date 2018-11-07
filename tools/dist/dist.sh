@@ -21,7 +21,7 @@
 #
 
 # USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH
-#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|pre PRE_NUM]
+#                  [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM]
 #                  [-apr PATH-TO-APR ] [-apru PATH-TO-APR-UTIL]
 #                  [-apri PATH-TO-APR-ICONV] [-neon PATH-TO-NEON]
 #                  [-serf PATH-TO-SERF] [-zlib PATH-TO-ZLIB]
@@ -57,6 +57,7 @@
 #   To build a Windows zip file package, additionally pass -zip and the
 #   path to apr-iconv with -apri.
 
+set -e
 
 USAGE="USAGE: ./dist.sh -v VERSION -r REVISION -pr REPOS-PATH \
 [-alpha ALPHA_NUM|-beta BETA_NUM|-rc RC_NUM|-pre PRE_NUM] \
@@ -204,8 +205,8 @@ export TZ
 
 echo "Exporting $REPOS_PATH r$REVISION into sandbox..."
 (cd "$DIST_SANDBOX" && \
- ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS -r "$REVISION" \
-     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH" \
+ ${SVN:-svn} export -q $EXTRA_EXPORT_OPTIONS \
+     "https://svn.apache.org/repos/asf/subversion/$REPOS_PATH"@"$REVISION" \
      "$DISTNAME" --username none --password none)
 
 rm -f "$DISTPATH/STATUS"
@@ -242,7 +243,7 @@ fi
 # Instead of attempting to deal with various line ending issues, just export
 # the find_python script manually.
 ${svn:-svn} export -q -r "$REVISION"  \
-     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
+     "https://svn.apache.org/repos/asf/subversion/$REPOS_PATH/build/find_python.sh" \
      --username none --password none "$DIST_SANDBOX/find_python.sh"
 PYTHON="`$DIST_SANDBOX/find_python.sh`"
 if test -z "$PYTHON"; then
@@ -297,7 +298,7 @@ echo "Running po-update.sh in sandbox, to create subversion.pot..."
 # Can't use the po-update.sh in the packaged export since it might have CRLF
 # line endings, in which case it won't run.  So first we export it again.
 ${svn:-svn} export -q -r "$REVISION"  \
-     "http://svn.apache.org/repos/asf/subversion/$REPOS_PATH/tools/po/po-update.sh" \
+     "https://svn.apache.org/repos/asf/subversion/$REPOS_PATH/tools/po/po-update.sh" \
      --username none --password none "$DIST_SANDBOX/po-update.sh"
 (cd "$DISTPATH" && ../po-update.sh pot) || exit 1
 
@@ -369,9 +370,10 @@ sign_file()
   fi
 }
 
-# allow md5sum and sha1sum tool names to be overridden
+# allow md5sum, sha1sum, and sha512sum tool names to be overridden
 [ -n "$MD5SUM" ] || MD5SUM=md5sum
 [ -n "$SHA1SUM" ] || SHA1SUM=sha1sum
+[ -n "$SHA512SUM" ] || SHA512SUM=sha512sum
 
 echo ""
 echo "Done:"
@@ -387,6 +389,12 @@ if [ -z "$ZIP" ]; then
     echo "sha1sums:"
     $SHA1SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
   fi
+  type $SHA512SUM > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha512sums:"
+    $SHA512SUM "$DISTNAME.tar.bz2" "$DISTNAME.tar.gz"
+  fi
 else
   ls -l "$DISTNAME.zip"
   sign_file $DISTNAME.zip
@@ -398,5 +406,11 @@ else
     echo ""
     echo "sha1sum:"
     $SHA1SUM "$DISTNAME.zip"
+  fi
+  type $SHA512SUM > /dev/null 2>&1
+  if [ $? -eq 0 ]; then
+    echo ""
+    echo "sha512sum:"
+    $SHA512SUM "$DISTNAME.zip"
   fi
 fi

@@ -172,7 +172,7 @@ class SVNClient :public SVNBase
   void logMessages(const char *path, Revision &pegRevision,
                    std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
-                   StringArray &revProps,
+                   StringArray &revProps, bool allRevProps,
                    int limit, LogMessageCallback *callback);
   jobject getVersionExtended(bool verbose);
   jstring getAdminDirectoryName();
@@ -189,7 +189,8 @@ class SVNClient :public SVNBase
               bool depthAsSticky, StringArray &changelists,
               StatusCallback *callback);
   void list(const char *url, Revision &revision, Revision &pegRevision,
-            svn_depth_t depth, int direntFields, bool fetchLocks,
+            StringArray &patterns, svn_depth_t depth, int direntFields,
+            bool fetchLocks, bool includeExternals,
             ListCallback *callback);
   jbyteArray revProperty(const char *path, const char *name, Revision &rev);
   void setRevProperty(const char *path, const char *name,

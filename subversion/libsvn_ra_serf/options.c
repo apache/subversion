@@ -71,6 +71,9 @@ typedef struct options_context_t {
   svn_ra_serf__response_handler_t inner_handler;
   void *inner_baton;
 
+  /* Have we received any DAV headers at all? */
+  svn_boolean_t received_dav_header;
+
   const char *activity_collection;
   svn_revnum_t youngest_rev;
 
@@ -165,6 +168,8 @@ capabilities_headers_iterator_callback(void *baton,
       apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE,
                                                    opt_ctx->pool);
 
+      opt_ctx->received_dav_header = TRUE;
+
       /* Right now we only have a few capabilities to detect, so just
          seek for them directly.  This could be written slightly more
          efficiently, but that wouldn't be worth it until we have many
@@ -232,6 +237,20 @@ capabilities_headers_iterator_callback(void *baton,
              advertise this capability (Subversion 1.10 and greater). */
           session->supports_svndiff1 = TRUE;
         }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LIST, vals))
+        {
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_LIST, capability_yes);
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_SVNDIFF2, vals))
+        {
+          /* Same for svndiff2. */
+          session->supports_svndiff2 = TRUE;
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_PUT_RESULT_CHECKSUM, vals))
+        {
+          session->supports_put_result_checksum = TRUE;
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
@@ -248,21 +267,6 @@ capabilities_headers_iterator_callback(void *baton,
           session->supported_posts = apr_hash_make(session->pool);
           apr_hash_set(session->supported_posts, "create-txn", 10, (void *)1);
         }
-
-      /* Use compressed svndiff1 format for servers that speak HTTPv2,
-         in addition to servers that send SVN_DAV_NS_DAV_SVN_SVNDIFF1.
-
-         Apache HTTPd + mod_dav_svn servers support svndiff1, beginning
-         from Subversion 1.4, but they do not advertise this capability.
-         Compressing data can have a noticeable impact if the connection
-         is slow, and we want to use it even for existing servers, so we
-         send svndiff1 data to every HTTPv2 server (Subversion 1.7 and
-         greater).
-
-         The reasoning behind enabling it with HTTPv2 is that if the user
-         is stuck with the old Subversion's HTTPv1 protocol, she probably
-         doesn't really care about performance. */
-      session->supports_svndiff1 = TRUE;
 
       if (svn_cstring_casecmp(key, SVN_DAV_ROOT_URI_HEADER) == 0)
         {
@@ -371,6 +375,7 @@ options_response_handler(serf_request_t *request,
     {
       svn_ra_serf__session_t *session = opt_ctx->session;
       serf_bucket_t *hdrs = serf_bucket_response_get_headers(response);
+      serf_connection_t *conn;
 
       /* Start out assuming all capabilities are unsupported. */
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_PARTIAL_REPLAY,
@@ -389,16 +394,35 @@ options_response_handler(serf_request_t *request,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
                     capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_LIST,
+                    capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
                              opt_ctx);
+
+      /* Bail out early if we're not talking to a DAV server.
+         Note that this check is only valid if we've received a success
+         response; redirects and errors don't count. */
+      if (opt_ctx->handler->sline.code >= 200
+          && opt_ctx->handler->sline.code < 300
+          && !opt_ctx->received_dav_header)
+        {
+          return svn_error_createf
+            (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+             _("The server at '%s' does not support the HTTP/DAV protocol"),
+             session->session_url_str);
+        }
 
       /* Assume mergeinfo capability unsupported, if didn't receive information
          about server or repository mergeinfo capability. */
       if (!svn_hash_gets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO))
         svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_MERGEINFO,
                       capability_no);
+
+      /* Remember our latency. */
+      conn = serf_request_get_conn(request);
+      session->conn_latency = serf_connection_get_latency(conn);
 
       opt_ctx->headers_processed = TRUE;
     }

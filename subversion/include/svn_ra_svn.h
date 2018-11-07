@@ -49,6 +49,7 @@ extern "C" {
 /** Currently-defined capabilities. */
 #define SVN_RA_SVN_CAP_EDIT_PIPELINE "edit-pipeline"
 #define SVN_RA_SVN_CAP_SVNDIFF1 "svndiff1"
+#define SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED "accepts-svndiff2"
 #define SVN_RA_SVN_CAP_ABSENT_ENTRIES "absent-entries"
 /* maps to SVN_RA_CAPABILITY_COMMIT_REVPROPS: */
 #define SVN_RA_SVN_CAP_COMMIT_REVPROPS "commit-revprops"
@@ -143,7 +144,9 @@ typedef struct svn_ra_svn_cmd_entry_t
   svn_boolean_t terminate;
 } svn_ra_svn_cmd_entry_t;
 
-/** Data types defined by the svn:// protocol. */
+/** Data types defined by the svn:// protocol.
+ *
+ * @since The typedef name is new in 1.10; the enumerators are not. */
 typedef enum
 {
   SVN_RA_SVN_NUMBER,
@@ -176,7 +179,9 @@ typedef svn_error_t *(*svn_ra_svn_edit_callback)(void *baton);
  *
  * Either @a sock or @a in_stream/@a out_stream must be set, not both.
  * @a compression_level specifies the desired network data compression
- * level (zlib) from 0 (no compression) to 9 (best but slowest).
+ * level from 0 (no compression) to 9 (best but slowest). The effect
+ * of the parameter depends on the compression algorithm; for example,
+ * it is used verbatim by zlib/deflate but ignored by LZ4.
  *
  * If @a zero_copy_limit is not 0, cached file contents smaller than the
  * given limit may be sent directly to the network socket.  Otherwise,

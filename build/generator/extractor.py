@@ -69,4 +69,6 @@ if __name__ == '__main__':
     if os.path.basename(fname) == 'svn_ctype.h':
       print('svn_ctype_table = svn_ctype_table_internal CONSTANT')
     elif os.path.basename(fname) == 'svn_wc_private.h':
+      # svn_wc__internal_walk_children() is now internal to libsvn_wc
+      # but entries-dump.c still calls it
       print('svn_wc__internal_walk_children')

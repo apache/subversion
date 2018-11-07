@@ -1146,7 +1146,7 @@ def external_into_path_with_spaces(sbox):
   repo_url = sbox.repo_url
 
   ext = '^/A/D        "A/copy of D"\n' +\
-        '^/A/D        A/another\ copy\ of\ D'
+        '^/A/D        A/another\\ copy\\ of\\ D'
   change_external(wc_dir, ext)
 
   expected_output = svntest.wc.State(wc_dir, {
@@ -2818,7 +2818,7 @@ def remap_file_external_with_prop_del(sbox):
 
   # Now update to bring the new external down.
   # This previously segfaulted as described in
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=4093#desc1
+  # https://issues.apache.org/jira/browse/SVN-4093#desc1
   svntest.actions.run_and_verify_svn(None, [], 'up', wc_dir)
 
 
@@ -3871,12 +3871,14 @@ def copy_pin_externals_whitespace_dir(sbox):
   extdef = sbox.get_tempname('extdef')
   info = sbox.get_tempname('info')
 
-  open(extdef, 'w').write(
+  with open(extdef, 'w') as f:
+    f.write(
       '"' + ss_path +'/deps/sqlite"  ext/sqlite\n' +
       '"^/deps/A P R" \'ext/A P R\'\n' +
-      '^/deps/B\ D\ B\' ext/B\ D\ B\'\n' +
+      '^/deps/B\\ D\\ B\' ext/B\\ D\\ B\'\n' +
       repo_url + '/deps/wors%23+t ext/wors#+t')
-  open(info, 'w').write('info\n')
+  with open(info, 'w') as f:
+    f.write('info\n')
 
   svntest.actions.run_and_verify_svnmucc(None, [], '-U', repo_url,
                                          'mkdir', 'trunk',
@@ -4365,6 +4367,88 @@ def external_externally_removed(sbox):
   sbox.simple_propdel('svn:externals', '')
   sbox.simple_update() # Should succeed
 
+def invalid_uris_in_repo(sbox):
+  "invalid URIs in repo"
+
+  sbox.build(empty=True),
+
+  # Using a dump file because the client may not allow adding invalid URIs.
+  svntest.actions.load_repo(sbox,
+                            os.path.join(os.path.dirname(sys.argv[0]),
+                                         'externals_tests_data',
+                                         'invalid_uris_in_repo.dump'),
+                            create_wc=False)
+
+  # 'foo://host:-/D X'
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    '' : Item(status=' U')
+    })
+  expected_disk =  svntest.wc.State('', {
+    })
+  expected_error = ".*warning: W205011: Error handling externals definition.*"
+
+  # A repository might have invalid URIs and the client used to SEGV.
+  # r1 has 'foo://host:-/D X'
+  # r2 has 'foo://host::/D X'
+  # r3 has 'foo://host:123xx/D X'
+  # r4 has 'foo://host:123:123/D X'
+  for revision in range(1,4):
+    svntest.actions.run_and_verify_checkout(sbox.repo_url, sbox.wc_dir,
+                                            expected_output,
+                                            expected_disk,
+                                            expected_error,
+                                            "-r", revision)
+    svntest.main.safe_rmtree(sbox.wc_dir)
+
+# Like issue #3741 'externals not removed when working copy is made shallow'
+# but with --set-depth=exclude instead of --set-depth=empty.
+def update_dir_external_exclude(sbox):
+  "exclude update should remove externals"
+
+  sbox.build()
+
+  # Create an external in r2
+  sbox.simple_propset('svn:externals', '^/A/D/H X', 'A/B/E')
+  sbox.simple_commit()
+
+  # Update to fetch externals
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E/X/chi'       : Item(status='A '),
+    'A/B/E/X/omega'     : Item(status='A '),
+    'A/B/E/X/psi'       : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        [], False,
+                                        sbox.ospath('A/B/E'))
+
+  # Now make A/B/E shallow by updating with "--set-depth exclude"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E'       : Item(status='D '),
+    'A/B/E/X'     : Item(verb='Removed external'),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        [], False,
+                                        '--set-depth=exclude',
+                                        sbox.ospath('A/B/E'))
+
+  # And bring the external back by updating with "--set-depth infinity"
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'A/B/E'         : Item(status='A '),
+    'A/B/E/alpha'   : Item(status='A '),
+    'A/B/E/beta'    : Item(status='A '),
+    'A/B/E/X/chi'   : Item(status='A '),
+    'A/B/E/X/omega' : Item(status='A '),
+    'A/B/E/X/psi'   : Item(status='A '),
+  })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output, None, None,
+                                        [], False,
+                                        '--set-depth=infinity',
+                                        sbox.ospath('A/B/E'))
+
+
 ########################################################################
 # Run the tests
 
@@ -4440,6 +4524,8 @@ test_list = [ None,
               file_external_to_normal_file,
               file_external_recorded_info,
               external_externally_removed,
+              invalid_uris_in_repo,
+              update_dir_external_exclude,
              ]
 
 if __name__ == '__main__':

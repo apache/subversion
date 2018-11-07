@@ -50,7 +50,7 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
   SVN_ERR(svn_auth_get_platform_specific_client_providers(&providers, NULL,
                                                           pool));
 
-#ifdef SVN_HAVE_GNOME_KEYRING
+#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_LIBSECRET)
   number_of_providers += 2;
 #endif
 #ifdef SVN_HAVE_KWALLET
@@ -145,7 +145,7 @@ test_platform_specific_auth_providers(apr_pool_t *pool)
 #endif
 
   /* Test GNOME Keyring auth providers */
-#ifdef SVN_HAVE_GNOME_KEYRING
+#if defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_LIBSECRET)
   SVN_ERR(svn_auth_get_platform_specific_provider(&provider, "gnome_keyring",
                                                   "simple", pool));
 

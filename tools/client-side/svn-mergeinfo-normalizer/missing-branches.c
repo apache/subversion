@@ -223,7 +223,7 @@ remote_lookup(svn_boolean_t *deleted,
                              temp->len);
 
           /* Only add HASH_PATH.  Its parents are already in that hash. */
-          apr_hash_set(lookup->existing, hash_path, path->len, hash_path);
+          apr_hash_set(lookup->existing, hash_path, temp->len, hash_path);
         }
 
       /* Find the closest parent that does exist.

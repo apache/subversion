@@ -870,7 +870,7 @@ test_batch_fsync(const svn_test_opts_t *opts,
 
   /* Initialize infrastructure with a pool that lives as long as this
    * application. */
-  SVN_ERR(svn_fs_x__batch_fsync_init());
+  SVN_ERR(svn_fs_x__batch_fsync_init(pool));
 
   /* We use and re-use the same batch object throughout this test. */
   SVN_ERR(svn_fs_x__batch_fsync_create(&batch, TRUE, pool));

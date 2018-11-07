@@ -36,9 +36,6 @@
 
 #include "rep-cache-db.h"
 
-/* A few magic values */
-#define REP_CACHE_SCHEMA_FORMAT   1
-
 REP_CACHE_DB_SQL_DECLARE_STATEMENTS(statements);
 
 
@@ -102,13 +99,17 @@ open_rep_cache(void *baton,
 
   SVN_SQLITE__ERR_CLOSE(svn_sqlite__read_schema_version(&version, sdb, pool),
                         sdb);
-  if (version < REP_CACHE_SCHEMA_FORMAT)
+  /* If we have an uninitialized database, go ahead and create the schema. */
+  if (version <= 0)
     {
-      /* Must be 0 -- an uninitialized (no schema) database. Create
-         the schema. Results in schema version of 1.  */
-      SVN_SQLITE__ERR_CLOSE(svn_sqlite__exec_statements(sdb,
-                                                        STMT_CREATE_SCHEMA),
-                            sdb);
+      int stmt;
+
+      if (ffd->format >= SVN_FS_FS__MIN_REP_CACHE_SCHEMA_V2_FORMAT)
+        stmt = STMT_CREATE_SCHEMA_V2;
+      else
+        stmt = STMT_CREATE_SCHEMA_V1;
+
+      SVN_SQLITE__ERR_CLOSE(svn_sqlite__exec_statements(sdb, stmt), sdb);
     }
 
   /* This is used as a flag that the database is available so don't
@@ -125,7 +126,10 @@ svn_fs_fs__open_rep_cache(svn_fs_t *fs,
   fs_fs_data_t *ffd = fs->fsap_data;
   svn_error_t *err = svn_atomic__init_once(&ffd->rep_cache_db_opened,
                                            open_rep_cache, fs, pool);
-  return svn_error_quick_wrap(err, _("Couldn't open rep-cache database"));
+  return svn_error_quick_wrapf(err,
+                               _("Couldn't open rep-cache database '%s'"),
+                               svn_dirent_local_style(
+                                 path_rep_cache_db(fs->path, pool), pool));
 }
 
 svn_error_t *

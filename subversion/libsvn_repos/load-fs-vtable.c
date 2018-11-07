@@ -55,6 +55,7 @@ struct parse_baton
   svn_boolean_t use_history;
   svn_boolean_t validate_props;
   svn_boolean_t ignore_dates;
+  svn_boolean_t normalize_props;
   svn_boolean_t use_pre_commit_hook;
   svn_boolean_t use_post_commit_hook;
   enum svn_repos_load_uuid uuid_action;
@@ -74,7 +75,7 @@ struct parse_baton
      (svn_revnum_t *) in the dump stream to their corresponding revisions
      (svn_revnum_t *) in the loaded repository.  The hash and its
      contents are allocated in POOL. */
-  /* ### See http://subversion.tigris.org/issues/show_bug.cgi?id=3903
+  /* ### See https://issues.apache.org/jira/browse/SVN-3903
      ### for discussion about improving the memory costs of this mapping. */
   apr_hash_t *rev_map;
 
@@ -163,8 +164,12 @@ change_rev_prop(svn_repos_t *repos,
                 const char *name,
                 const svn_string_t *value,
                 svn_boolean_t validate_props,
+                svn_boolean_t normalize_props,
                 apr_pool_t *pool)
 {
+  if (normalize_props)
+    SVN_ERR(svn_repos__normalize_prop(&value, NULL, name, value, pool, pool));
+
   if (validate_props)
     return svn_repos_fs_change_rev_prop4(repos, revision, NULL, name,
                                          NULL, value, FALSE, FALSE,
@@ -248,7 +253,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
   SVN_ERR(svn_mergeinfo_parse(&mergeinfo, initial_val->data, subpool));
 
   /* Issue #3020
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16
+     https://issues.apache.org/jira/browse/SVN-3020#desc16
      Remove mergeinfo older than the oldest revision in the dump stream
      and adjust its revisions by the difference between the head rev of
      the target repository and the current dump stream rev. */
@@ -318,7 +323,7 @@ renumber_mergeinfo_revs(svn_string_t **final_val,
                  mergeinfo with a start rev > end rev.  If that gets into the
                  repository then a world of bustage breaks loose anytime that
                  bogus mergeinfo is parsed.  See
-                 http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
+                 https://issues.apache.org/jira/browse/SVN-3020#desc16.
                  */
               continue;
             }
@@ -1024,7 +1029,8 @@ close_revision(void *baton)
               const svn_prop_t *prop = &APR_ARRAY_IDX(diff, i, svn_prop_t);
 
               SVN_ERR(change_rev_prop(pb->repos, 0, prop->name, prop->value,
-                                      pb->validate_props, rb->pool));
+                                      pb->validate_props, pb->normalize_props,
+                                      rb->pool));
           }
         }
 
@@ -1040,6 +1046,23 @@ close_revision(void *baton)
       svn_prop_t *prop = &APR_ARRAY_PUSH(rb->revprops, svn_prop_t);
       prop->name = SVN_PROP_REVISION_DATE;
       prop->value = NULL;
+    }
+
+  if (rb->pb->normalize_props)
+    {
+      apr_pool_t *iterpool;
+      int i;
+
+      iterpool = svn_pool_create(rb->pool);
+      for (i = 0; i < rb->revprops->nelts; i++)
+        {
+          svn_prop_t *prop = &APR_ARRAY_IDX(rb->revprops, i, svn_prop_t);
+
+          svn_pool_clear(iterpool);
+          SVN_ERR(svn_repos__normalize_prop(&prop->value, NULL, prop->name,
+                                            prop->value, rb->pool, iterpool));
+        }
+      svn_pool_destroy(iterpool);
     }
 
   /* Apply revision property changes. */
@@ -1158,7 +1181,7 @@ close_revision(void *baton)
 
 
 svn_error_t *
-svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
+svn_repos_get_fs_build_parser6(const svn_repos_parse_fns3_t **callbacks,
                                void **parse_baton,
                                svn_repos_t *repos,
                                svn_revnum_t start_rev,
@@ -1170,6 +1193,7 @@ svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
                                svn_boolean_t use_pre_commit_hook,
                                svn_boolean_t use_post_commit_hook,
                                svn_boolean_t ignore_dates,
+                               svn_boolean_t normalize_props,
                                svn_repos_notify_func_t notify_func,
                                void *notify_baton,
                                apr_pool_t *pool)
@@ -1218,6 +1242,7 @@ svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
   pb->use_pre_commit_hook = use_pre_commit_hook;
   pb->use_post_commit_hook = use_post_commit_hook;
   pb->ignore_dates = ignore_dates;
+  pb->normalize_props = normalize_props;
 
   *callbacks = parser;
   *parse_baton = pb;
@@ -1226,7 +1251,7 @@ svn_repos_get_fs_build_parser5(const svn_repos_parse_fns3_t **callbacks,
 
 
 svn_error_t *
-svn_repos_load_fs5(svn_repos_t *repos,
+svn_repos_load_fs6(svn_repos_t *repos,
                    svn_stream_t *dumpstream,
                    svn_revnum_t start_rev,
                    svn_revnum_t end_rev,
@@ -1236,6 +1261,7 @@ svn_repos_load_fs5(svn_repos_t *repos,
                    svn_boolean_t use_post_commit_hook,
                    svn_boolean_t validate_props,
                    svn_boolean_t ignore_dates,
+                   svn_boolean_t normalize_props,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
                    svn_cancel_func_t cancel_func,
@@ -1247,7 +1273,7 @@ svn_repos_load_fs5(svn_repos_t *repos,
 
   /* This is really simple. */
 
-  SVN_ERR(svn_repos_get_fs_build_parser5(&parser, &parse_baton,
+  SVN_ERR(svn_repos_get_fs_build_parser6(&parser, &parse_baton,
                                          repos,
                                          start_rev, end_rev,
                                          TRUE, /* look for copyfrom revs */
@@ -1257,6 +1283,7 @@ svn_repos_load_fs5(svn_repos_t *repos,
                                          use_pre_commit_hook,
                                          use_post_commit_hook,
                                          ignore_dates,
+                                         normalize_props,
                                          notify_func,
                                          notify_baton,
                                          pool));
@@ -1345,7 +1372,8 @@ revprops_close_revision(void *baton)
       const svn_prop_t *prop = &APR_ARRAY_IDX(diff, i, svn_prop_t);
 
       SVN_ERR(change_rev_prop(pb->repos, rb->rev, prop->name, prop->value,
-                              pb->validate_props, rb->pool));
+                              pb->validate_props, pb->normalize_props,
+                              rb->pool));
     }
 
   if (pb->notify_func)
@@ -1386,6 +1414,11 @@ revprops_close_revision(void *baton)
  *
  * If IGNORE_DATES is set, ignore any revision datestamps found in
  * DUMPSTREAM, keeping whatever timestamps the revisions currently have.
+ *
+ * If NORMALIZE_PROPS is set, attempt to normalize invalid Subversion
+ * revision and node properties (those in the svn: namespace) so that
+ * their values would follow the established rules for them.  Currently,
+ * this means translating non-LF line endings in the property values to LF.
  */
 static svn_error_t *
 build_revprop_parser(const svn_repos_parse_fns3_t **callbacks,
@@ -1395,6 +1428,7 @@ build_revprop_parser(const svn_repos_parse_fns3_t **callbacks,
                      svn_revnum_t end_rev,
                      svn_boolean_t validate_props,
                      svn_boolean_t ignore_dates,
+                     svn_boolean_t normalize_props,
                      svn_repos_notify_func_t notify_func,
                      void *notify_baton,
                      apr_pool_t *result_pool)
@@ -1440,6 +1474,7 @@ build_revprop_parser(const svn_repos_parse_fns3_t **callbacks,
   pb->use_pre_commit_hook = FALSE;
   pb->use_post_commit_hook = FALSE;
   pb->ignore_dates = ignore_dates;
+  pb->normalize_props = normalize_props;
 
   *callbacks = parser;
   *parse_baton = pb;
@@ -1454,6 +1489,7 @@ svn_repos_load_fs_revprops(svn_repos_t *repos,
                            svn_revnum_t end_rev,
                            svn_boolean_t validate_props,
                            svn_boolean_t ignore_dates,
+                           svn_boolean_t normalize_props,
                            svn_repos_notify_func_t notify_func,
                            void *notify_baton,
                            svn_cancel_func_t cancel_func,
@@ -1470,6 +1506,7 @@ svn_repos_load_fs_revprops(svn_repos_t *repos,
                                start_rev, end_rev,
                                validate_props,
                                ignore_dates,
+                               normalize_props,
                                notify_func,
                                notify_baton,
                                scratch_pool));

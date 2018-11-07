@@ -882,7 +882,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "[sasl]"                                                                     NL
 "### This option specifies whether you want to use the Cyrus SASL"           NL
 "### library for authentication. Default is false."                          NL
-"### This section will be ignored if svnserve is not built with Cyrus"       NL
+"### Enabling this option requires svnserve to have been built with Cyrus"   NL
 "### SASL support; to check, run 'svnserve --version' and look for a line"   NL
 "### reading 'Cyrus SASL authentication is available.'"                      NL
 "# use-sasl = true"                                                          NL
@@ -1504,6 +1504,16 @@ static const char *capability_yes = "yes";
 /* Repository does not support the capability. */
 static const char *capability_no = "no";
 
+static svn_error_t *
+dummy_mergeinfo_receiver(const char *path,
+                         svn_mergeinfo_t mergeinfo,
+                         void *baton,
+                         apr_pool_t *scratch_pool)
+{
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_repos_has_capability(svn_repos_t *repos,
                          svn_boolean_t *has,
@@ -1525,14 +1535,13 @@ svn_repos_has_capability(svn_repos_t *repos,
     {
       svn_error_t *err;
       svn_fs_root_t *root;
-      svn_mergeinfo_catalog_t ignored;
       apr_array_header_t *paths = apr_array_make(pool, 1,
                                                  sizeof(char *));
 
       SVN_ERR(svn_fs_revision_root(&root, repos->fs, 0, pool));
       APR_ARRAY_PUSH(paths, const char *) = "";
-      err = svn_fs_get_mergeinfo2(&ignored, root, paths, FALSE, FALSE,
-                                  TRUE, pool, pool);
+      err = svn_fs_get_mergeinfo3(root, paths, FALSE, FALSE, TRUE,
+                                  dummy_mergeinfo_receiver, NULL, pool);
 
       if (err)
         {
@@ -1712,7 +1721,7 @@ svn_repos_recover4(const char *path,
 }
 
 struct freeze_baton_t {
-  apr_array_header_t *paths;
+  const apr_array_header_t *paths;
   int counter;
   svn_repos_freeze_func_t freeze_func;
   void *freeze_baton;
@@ -1779,7 +1788,7 @@ multi_freeze(void *baton,
    and an SQLite reserved lock which means the repository is readable
    while frozen. */
 svn_error_t *
-svn_repos_freeze(apr_array_header_t *paths,
+svn_repos_freeze(const apr_array_header_t *paths,
                  svn_repos_freeze_func_t freeze_func,
                  void *freeze_baton,
                  apr_pool_t *pool)

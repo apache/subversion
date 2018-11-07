@@ -250,10 +250,10 @@ svn_hash_from_cstring_keys(apr_hash_t **hash,
 
 #ifdef SVN_HASH__GETS_SETS
 void *
-svn_hash__gets(apr_hash_t *ht, const char *key);
+svn_hash__gets_debug(apr_hash_t *ht, const char *key);
 
 #define svn_hash_gets(ht, key) \
-            svn_hash__gets(ht, key)
+            svn_hash__gets_debug(ht, key)
 #else
 /** Shortcut for apr_hash_get() with a const char * key.
  *
@@ -265,10 +265,10 @@ svn_hash__gets(apr_hash_t *ht, const char *key);
 
 #ifdef SVN_HASH__GETS_SETS
 void
-svn_hash__sets(apr_hash_t *ht, const char *key, const void *value);
+svn_hash__sets_debug(apr_hash_t *ht, const char *key, const void *value);
 
 #define svn_hash_sets(ht, key, val) \
-            svn_hash__sets(ht, key, val)
+            svn_hash__sets_debug(ht, key, val)
 #else
 /** Shortcut for apr_hash_set() with a const char * key.
  *

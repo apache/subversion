@@ -325,7 +325,6 @@ svn_diff_diff3_2(svn_diff_t **diff,
   /* Produce a merged diff */
   {
     svn_diff_t **diff_ref = diff;
-    svn_diff_t *diff_last = NULL;
 
     apr_off_t original_start = 1;
     apr_off_t modified_start = 1;
@@ -435,7 +434,6 @@ svn_diff_diff3_2(svn_diff_t **diff,
 
         if (is_modified || is_latest)
           {
-            svn_boolean_t add_diff = TRUE;
             modified_length = modified_sync - modified_start;
             latest_length = latest_sync - latest_start;
 
@@ -456,41 +454,17 @@ svn_diff_diff3_2(svn_diff_t **diff,
                                            &position_list[2],
                                            num_tokens,
                                            pool);
-                /* add_diff = TRUE */
               }
-            else if (is_modified
-                     && (!diff_last
-                         || diff_last->type != svn_diff__type_diff_latest))
+            else if (is_modified)
               {
                 (*diff_ref)->type = svn_diff__type_diff_modified;
-                /* add_diff = TRUE */
-              }
-            else if (is_latest
-                     && (!diff_last
-                         || diff_last->type != svn_diff__type_diff_modified))
-              {
-                (*diff_ref)->type = svn_diff__type_diff_latest;
-                /* add_diff = TRUE */
               }
             else
               {
-                /* We have a latest and a modified region that touch each other,
-                   but not directly change the same location. Create a single
-                   conflict region to properly mark a conflict, and to ease
-                   resolving. */
-                diff_last->type = svn_diff__type_conflict;
-                diff_last->original_length += (*diff_ref)->original_length;
-                diff_last->modified_length += (*diff_ref)->modified_length;
-                diff_last->latest_length += (*diff_ref)->latest_length;
-
-                add_diff = FALSE;
+                (*diff_ref)->type = svn_diff__type_diff_latest;
               }
 
-            if (add_diff)
-              {
-                diff_last = *diff_ref;
-                diff_ref = &(*diff_ref)->next;
-              }
+            diff_ref = &(*diff_ref)->next;
           }
 
         /* Detect EOF */
@@ -516,7 +490,6 @@ svn_diff_diff3_2(svn_diff_t **diff,
             (*diff_ref)->latest_length = common_length;
             (*diff_ref)->resolved_diff = NULL;
 
-            diff_last = *diff_ref;
             diff_ref = &(*diff_ref)->next;
           }
 

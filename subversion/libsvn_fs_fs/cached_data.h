@@ -81,7 +81,7 @@ svn_fs_fs__rep_chain_length(int *chain_length,
                             svn_fs_t *fs,
                             apr_pool_t *scratch_pool);
 
-/* Set *CONTENTS to be a readable svn_stream_t that receives the text
+/* Set *CONTENTS_P to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is
    not set, bypass fulltext cache lookup for this rep and don't put the
    reconstructed fulltext into cache.
@@ -92,6 +92,18 @@ svn_fs_fs__get_contents(svn_stream_t **contents_p,
                         representation_t *rep,
                         svn_boolean_t cache_fulltext,
                         apr_pool_t *pool);
+
+/* Set *CONTENTS_P to be a readable svn_stream_t that receives the text
+   representation REP as seen in filesystem FS.  Read the latest element
+   of the delta chain from FILE at offset OFFSET.
+   Use POOL for allocations. */
+svn_error_t *
+svn_fs_fs__get_contents_from_file(svn_stream_t **contents_p,
+                                  svn_fs_t *fs,
+                                  representation_t *rep,
+                                  apr_file_t *file,
+                                  apr_off_t offset,
+                                  apr_pool_t *pool);
 
 /* Attempt to fetch the text representation of node-revision NODEREV as
    seen in filesystem FS and pass it along with the BATON to the PROCESSOR.
@@ -159,7 +171,7 @@ svn_fs_fs__get_proplist(apr_hash_t **proplist,
                         apr_pool_t *pool);
 
 /* Create a changes retrieval context object in *RESULT_POOL and return it
- * in *CONTEXT.  It will allow svn_fs_x__get_changes to fetch consecutive
+ * in *CONTEXT.  It will allow svn_fs_fs__get_changes to fetch consecutive
  * blocks (one per invocation) from REV's changed paths list in FS. */
 svn_error_t *
 svn_fs_fs__create_changes_context(svn_fs_fs__changes_context_t **context,

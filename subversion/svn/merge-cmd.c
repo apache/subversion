@@ -182,6 +182,7 @@ conflict_func_merge_cmd(svn_wc_conflict_result_t **result,
     case svn_cl__accept_postpone:
     case svn_cl__accept_invalid:
     case svn_cl__accept_unspecified:
+    case svn_cl__accept_recommended:
       /* Postpone or no valid --accept option, postpone the conflict. */
       choice = svn_wc_conflict_choose_postpone;
       break;
@@ -528,6 +529,7 @@ svn_cl__merge(apr_getopt_t *os,
       ctx->conflict_baton2 = b;
     }
 
+retry:
   merge_err = run_merge(two_sources_specified,
                         sourcepath1, peg_revision1,
                         sourcepath2,
@@ -543,12 +545,34 @@ svn_cl__merge(apr_getopt_t *os,
                  "fix invalid mergeinfo in target with 'svn propset'"));
     }
 
-  /* Run the interactive resolver if conflicts were raised. */
-  SVN_ERR(svn_cl__conflict_stats_get_paths(&conflicted_paths, conflict_stats,
-                                           pool, pool));
-  if (conflicted_paths)
-    SVN_ERR(svn_cl__walk_conflicts(conflicted_paths, conflict_stats,
-                                   opt_state, ctx, pool));
+  if (! opt_state->dry_run)
+    {
+      /* Run the interactive resolver if conflicts were raised. */
+      SVN_ERR(svn_cl__conflict_stats_get_paths(&conflicted_paths,
+                                               conflict_stats, pool, pool));
+      if (conflicted_paths)
+        {
+          SVN_ERR(svn_cl__walk_conflicts(conflicted_paths, conflict_stats,
+                                         opt_state, ctx, pool));
+          if (merge_err && svn_error_root_cause(merge_err)->apr_err ==
+              SVN_ERR_WC_FOUND_CONFLICT)
+            {
+              svn_error_t *err;
+
+              /* Check if all conflicts were resolved just now. */
+              err = svn_cl__conflict_stats_get_paths(&conflicted_paths,
+                                                     conflict_stats,
+                                                     pool, pool);
+              if (err)
+                merge_err = svn_error_compose_create(merge_err, err);
+              else if (conflicted_paths == NULL)
+                {
+                  svn_error_clear(merge_err);
+                  goto retry; /* ### conflicts resolved; continue merging */
+                }
+            }
+        }
+    }
 
   if (!opt_state->quiet)
     {

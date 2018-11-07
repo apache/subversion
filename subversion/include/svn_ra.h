@@ -572,9 +572,9 @@ typedef struct svn_ra_callbacks2_t
 
   /** Fetch working copy properties.
    *
-   *<pre> ### we might have a problem if the RA layer ever wants a property
-   * ### that corresponds to a different revision of the file than
-   * ### what is in the WC. we'll cross that bridge one day...</pre>
+   * @note we might have a problem if the RA layer ever wants a property
+   *       that corresponds to a different revision of the file than
+   *       what is in the WC. we'll cross that bridge one day...
    */
   svn_ra_get_wc_prop_func_t get_wc_prop;
 
@@ -1153,13 +1153,12 @@ svn_ra_get_dir(svn_ra_session_t *session,
                apr_pool_t *pool);
 
 /**
- * Callback type to be used with @c svn_repos_list.  It will be invoked for
+ * Callback type to be used with svn_ra_list().  It will be invoked for
  * every directory entry found.
  *
- * The full path of the entry is given in @a path and @a dirent contains
- * various additional information.  If @c svn_repos_list has been called
- * with @a path_info_only set, only the @a kind element of this struct
- * will be valid.
+ * The full path of the entry is given in @a rel_path and @a dirent contains
+ * various additional information. Only the elements of @a dirent specified
+ * by the @a dirent_fields argument to svn_ra_list() will be valid.
  *
  * @a baton is the user-provided receiver baton.  @a scratch_pool may be
  * used for temporary allocations.
@@ -1175,30 +1174,24 @@ typedef svn_error_t *(* svn_ra_dirent_receiver_t)(const char *rel_path,
  * Efficiently list everything within a sub-tree.  Specify a glob pattern
  * to search for specific files and folders.
  *
- * Walk the sub-tree starting at @a path under @a root up to the given
- * @a depth.  For each directory entry found, @a receiver will be called
- * with @a receiver_baton.  The starting @a path will be reported as well.
- * Because retrieving all elements of a @c svn_dirent_t can be expensive,
- * you may set @a path_info_only to receive only the path name and the node
- * kind.
+ * In @a session, walk the sub-tree starting at @a path at @a revision down
+ * to the given @a depth.  For each directory entry found, @a receiver will
+ * be called with @a receiver_baton.  The starting @a path will be reported
+ * as well.  Because retrieving elements of a #svn_dirent_t can be
+ * expensive, you need to select them individually via flags set in
+ * @a dirent_fields.
  *
  * @a patterns is an optional array of <tt>const char *</tt>.  If it is
  * not @c NULL, only those directory entries will be reported whose last
  * path segment matches at least one of these patterns.  This feature uses
- * @c apr_fnmatch for glob matching and requiring '.' to matched by dots
+ * apr_fnmatch() for glob matching and requiring '.' to matched by dots
  * in the path.
  *
- * If @a authz_read_func is not @c NULL, this function will neither report
- * entries nor recurse into directories that the user has no access to.
- *
- * Cancellation support is provided in the usual way through the optional
- * @a cancel_func and @a cancel_baton.
- *
  * @a path must point to a directory and @a depth must be at least
- * @c svn_depth_empty.
+ * #svn_depth_empty.
  *
  * If the server doesn't support the 'list' command, return
- * @c SVN_ERR_UNSUPPORTED_FEATURE in preference to any other error that
+ * #SVN_ERR_UNSUPPORTED_FEATURE in preference to any other error that
  * might otherwise be returned.
  *
  * Use @a scratch_pool for temporary memory allocation.
@@ -1209,7 +1202,7 @@ svn_error_t *
 svn_ra_list(svn_ra_session_t *session,
             const char *path,
             svn_revnum_t revision,
-            apr_array_header_t *patterns,
+            const apr_array_header_t *patterns,
             svn_depth_t depth,
             apr_uint32_t dirent_fields,
             svn_ra_dirent_receiver_t receiver,
@@ -1887,7 +1880,7 @@ svn_ra_get_location_segments(svn_ra_session_t *session,
  * @note Prior to Subversion 1.9, this function may request delta handlers
  * from @a handler even for empty text deltas.  Starting with 1.9, the
  * delta handler / baton return arguments passed to @a handler will be
- * #NULL unless there is an actual difference in the file contents between
+ * NULL unless there is an actual difference in the file contents between
  * the current and the previous call.
  *
  * @since New in 1.5.

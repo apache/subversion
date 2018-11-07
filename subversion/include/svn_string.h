@@ -294,6 +294,14 @@ svn_stringbuf_isempty(const svn_stringbuf_t *str);
 void
 svn_stringbuf_chop(svn_stringbuf_t *str, apr_size_t nbytes);
 
+/**
+ * Chop @a nbytes bytes off the start of @a str, but not more than @a str->len.
+ *
+ * @since New in 1.10.
+ */
+void
+svn_stringbuf_leftchop(svn_stringbuf_t *str, apr_size_t nbytes);
+
 /** Fill @a str with character @a c. */
 void
 svn_stringbuf_fillchar(svn_stringbuf_t *str, unsigned char c);
@@ -404,6 +412,16 @@ svn_stringbuf_replace(svn_stringbuf_t *str,
                       const char *bytes,
                       apr_size_t new_count);
 
+/** Replace all occurrences of @a to_find in @a str with @a replacement.
+ * Return the number of replacements made.
+ *
+ * @since New in 1.10.
+ */
+apr_size_t
+svn_stringbuf_replace_all(svn_stringbuf_t *str,
+                          const char *to_find,
+                          const char *replacement);
+
 /** Return a duplicate of @a original_string. */
 svn_stringbuf_t *
 svn_stringbuf_dup(const svn_stringbuf_t *original_string, apr_pool_t *pool);
@@ -512,12 +530,27 @@ svn_cstring_count_newlines(const char *msg);
 
 /**
  * Return a cstring which is the concatenation of @a strings (an array
- * of char *) each followed by @a separator (that is, @a separator
- * will also end the resulting string).  Allocate the result in @a pool.
+ * of char *) joined by @a separator.  Allocate the result in @a pool.
  * If @a strings is empty, then return the empty string.
+ * If @a trailing_separator is non-zero, also append the separator
+ * after the last joined element.
+ *
+ * @since New in 1.10.
+ */
+char *
+svn_cstring_join2(const apr_array_header_t *strings,
+                  const char *separator,
+                  svn_boolean_t trailing_separator,
+                  apr_pool_t *pool);
+
+/**
+ * Similar to svn_cstring_join2(), but always includes the trailing
+ * separator.
  *
  * @since New in 1.2.
+ * @deprecated Provided for backwards compatibility with the 1.9 API.
  */
+SVN_DEPRECATED
 char *
 svn_cstring_join(const apr_array_header_t *strings,
                  const char *separator,

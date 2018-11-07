@@ -1248,7 +1248,8 @@ svn_stream_compressed(svn_stream_t *stream,
  * The @a stream passed into this function is closed when the created
  * stream is closed.
  *
- * @since New in 1.6.
+ * @since New in 1.6.  Since 1.10, the resulting stream supports reset
+ * via stream_stream_reset().
  */
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
@@ -1383,6 +1384,14 @@ svn_stream_reset(svn_stream_t *stream);
  */
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream);
+
+/** Returns @c TRUE if the generic @a stream supports svn_stream_reset().
+ *
+ * @see svn_stream_reset()
+ * @since New in 1.10.
+ */
+svn_boolean_t
+svn_stream_supports_reset(svn_stream_t *stream);
 
 /** Set a @a mark at the current position of a generic @a stream,
  * which can later be sought back to using svn_stream_seek().
@@ -2401,10 +2410,12 @@ svn_io_write_atomic2(const char *final_path,
                      apr_pool_t *scratch_pool);
 
 /** Similar to svn_io_write_atomic2(), but with @a flush_to_disk set
-* to @c TRUE.
-*
-* @deprecated Provided for backward compatibility with the 1.9 API
-*/
+ * to @c TRUE.
+ *
+ * @since New in 1.9.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API
+ */
 SVN_DEPRECATED
 svn_error_t *
 svn_io_write_atomic(const char *final_path,

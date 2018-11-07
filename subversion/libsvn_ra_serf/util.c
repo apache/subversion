@@ -756,6 +756,9 @@ handle_client_cert_pw(void *data,
 
     if (creds)
       {
+        /* At this stage we are unable to check whether the password
+           is correct; if it is incorrect serf will fail to establish
+           an SSL connection and will return a generic SSL error. */
         svn_auth_cred_ssl_client_cert_pw_t *pw_creds;
         pw_creds = creds;
         *password = pw_creds->password;
@@ -1445,6 +1448,23 @@ handle_response(serf_request_t *request,
 
  process_body:
 
+  /* A client cert file password was obtained and worked (any HTTP
+     response means that the SSL connection was established.) */
+  if (handler->conn->ssl_client_pw_auth_state)
+    {
+      SVN_ERR(svn_auth_save_credentials(handler->conn->ssl_client_pw_auth_state,
+                                        handler->session->pool));
+      handler->conn->ssl_client_pw_auth_state = NULL;
+    }
+  if (handler->conn->ssl_client_auth_state)
+    {
+      /* The cert file provider doesn't have any code to save creds so
+         this is currently a no-op. */
+      SVN_ERR(svn_auth_save_credentials(handler->conn->ssl_client_auth_state,
+                                        handler->session->pool));
+      handler->conn->ssl_client_auth_state = NULL;
+    }
+
   /* We've been instructed to ignore the body. Drain whatever is present.  */
   if (handler->discard_body)
     {
@@ -1571,7 +1591,7 @@ setup_request(serf_request_t *request,
     {
       accept_encoding = NULL;
     }
-  else if (handler->session->using_compression)
+  else if (handler->session->using_compression != svn_tristate_false)
     {
       /* Accept gzip compression if enabled. */
       accept_encoding = "gzip";
@@ -2023,3 +2043,114 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
 
   return SVN_NO_ERROR;
 }
+
+void
+svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
+                                           svn_ra_serf__session_t *session)
+{
+  if (session->using_compression == svn_tristate_false)
+    {
+      /* Don't advertise support for compressed svndiff formats if
+         compression is disabled. */
+      serf_bucket_headers_setn(
+        headers, "Accept-Encoding", "svndiff");
+    }
+  else if (session->using_compression == svn_tristate_unknown &&
+           svn_ra_serf__is_low_latency_connection(session))
+    {
+      /* With http-compression=auto, advertise that we prefer svndiff2
+         to svndiff1 with a low latency connection (assuming the underlying
+         network has high bandwidth), as it is faster and in this case, we
+         don't care about worse compression ratio. */
+      serf_bucket_headers_setn(
+        headers, "Accept-Encoding",
+        "gzip,svndiff2;q=0.9,svndiff1;q=0.8,svndiff;q=0.7");
+    }
+  else
+    {
+      /* Otherwise, advertise that we prefer svndiff1 over svndiff2.
+         svndiff2 is not a reasonable substitute for svndiff1 with default
+         compression level, because, while it is faster, it also gives worse
+         compression ratio.  While we can use svndiff2 in some cases (see
+         above), we can't do this generally. */
+      serf_bucket_headers_setn(
+        headers, "Accept-Encoding",
+        "gzip,svndiff1;q=0.9,svndiff2;q=0.8,svndiff;q=0.7");
+    }
+}
+
+svn_boolean_t
+svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session)
+{
+  return session->conn_latency >= 0 &&
+         session->conn_latency < apr_time_from_msec(5);
+}
+
+apr_array_header_t *
+svn_ra_serf__get_dirent_props(apr_uint32_t dirent_fields,
+                              svn_ra_serf__session_t *session,
+                              apr_pool_t *result_pool)
+{
+  svn_ra_serf__dav_props_t *prop;
+  apr_array_header_t *props = apr_array_make
+    (result_pool, 7, sizeof(svn_ra_serf__dav_props_t));
+
+  if (session->supports_deadprop_count != svn_tristate_false
+      || ! (dirent_fields & SVN_DIRENT_HAS_PROPS))
+    {
+      if (dirent_fields & SVN_DIRENT_KIND)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = "resourcetype";
+        }
+
+      if (dirent_fields & SVN_DIRENT_SIZE)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = "getcontentlength";
+        }
+
+      if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = SVN_DAV_PROP_NS_DAV;
+          prop->name = "deadprop-count";
+        }
+
+      if (dirent_fields & SVN_DIRENT_CREATED_REV)
+        {
+          svn_ra_serf__dav_props_t *p = apr_array_push(props);
+          p->xmlns = "DAV:";
+          p->name = SVN_DAV__VERSION_NAME;
+        }
+
+      if (dirent_fields & SVN_DIRENT_TIME)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = SVN_DAV__CREATIONDATE;
+        }
+
+      if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = "creator-displayname";
+        }
+    }
+  else
+    {
+      /* We found an old subversion server that can't handle
+         the deadprop-count property in the way we expect.
+
+         The neon behavior is to retrieve all properties in this case */
+      prop = apr_array_push(props);
+      prop->xmlns = "DAV:";
+      prop->name = "allprop";
+    }
+
+  return props;
+}
+

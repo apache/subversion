@@ -117,6 +117,8 @@ extern "C" {
 #define CONFIG_OPTION_P2L_PAGE_SIZE      "p2l-page-size"
 #define CONFIG_SECTION_DEBUG             "debug"
 #define CONFIG_OPTION_PACK_AFTER_COMMIT  "pack-after-commit"
+#define CONFIG_OPTION_VERIFY_BEFORE_COMMIT "verify-before-commit"
+#define CONFIG_OPTION_COMPRESSION        "compression"
 
 /* The format number of this filesystem.
    This is independent of the repository format number, and
@@ -125,7 +127,7 @@ extern "C" {
    Note: If you bump this, please update the switch statement in
          svn_fs_fs__create() as well.
  */
-#define SVN_FS_FS__FORMAT_NUMBER   7
+#define SVN_FS_FS__FORMAT_NUMBER   8
 
 /* The minimum format number that supports svndiff version 1.  */
 #define SVN_FS_FS__MIN_SVNDIFF1_FORMAT 2
@@ -161,6 +163,9 @@ extern "C" {
  * issues with very old servers, restrict those options to the 1.6+ format*/
 #define SVN_FS_FS__MIN_DELTIFICATION_FORMAT 4
 
+/* The minimum format number that supports a configuration file (fsfs.conf) */
+#define SVN_FS_FS__MIN_CONFIG_FILE 4
+
 /* The 1.7-dev format, never released, that packed revprops into SQLite
    revprops.db . */
 #define SVN_FS_FS__PACKED_REVPROP_SQLITE_DEV_FORMAT 5
@@ -180,8 +185,20 @@ extern "C" {
 /* Minimum format number that supports per-instance filesystem IDs. */
 #define SVN_FS_FS__MIN_INSTANCE_ID_FORMAT 7
 
-/* The minimum format number that supports a configuration file (fsfs.conf) */
-#define SVN_FS_FS__MIN_CONFIG_FILE 4
+/* The minimum format number that supports svndiff version 2. */
+#define SVN_FS_FS__MIN_SVNDIFF2_FORMAT 8
+
+/* The minimum format number that supports the special notation ("-")
+   for optional values that are not present in the representation strings,
+   such as SHA1 or the uniquifier.  For example:
+
+     15 0 563 7809 28ef320a82e7bd11eebdf3502d69e608 - 14-g/_5
+ */
+#define SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT 8
+
+ /* The minimum format number that supports V2 schema of the rep-cache.db
+    database. */
+#define SVN_FS_FS__MIN_REP_CACHE_SCHEMA_V2_FORMAT 8
 
 /* On most operating systems apr implements file locks per process, not
    per file.  On Windows apr implements the locking as per file handle
@@ -293,6 +310,13 @@ typedef struct window_cache_key_t
   /* Item index of the representation */
   apr_uint64_t item_index;
 } window_cache_key_t;
+
+typedef enum compression_type_t
+{
+  compression_type_none,
+  compression_type_zlib,
+  compression_type_lz4
+} compression_type_t;
 
 /* Private (non-shared) FSFS-specific data for each svn_fs_t object.
    Any caches in here may be NULL. */
@@ -469,11 +493,17 @@ typedef struct fs_fs_data_t
    * deltification history after which skip deltas will be used. */
   apr_int64_t max_linear_deltification;
 
-  /* Compression level to use with txdelta storage format in new revs. */
+  /* Compression type to use with txdelta storage format in new revs. */
+  compression_type_t delta_compression_type;
+
+  /* Compression level (currently, only used with compression_type_zlib). */
   int delta_compression_level;
 
   /* Pack after every commit. */
   svn_boolean_t pack_after_commit;
+
+  /* Verify each new revision before commit. */
+  svn_boolean_t verify_before_commit;
 
   /* Per-instance filesystem ID, which provides an additional level of
      uniqueness for filesystems that share the same UUID, but should

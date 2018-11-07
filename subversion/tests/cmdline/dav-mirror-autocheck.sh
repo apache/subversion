@@ -31,7 +31,7 @@
 #
 # The set of changes sent through the system is currently
 # just the test case for issue 2939, using svnmucc
-# http://subversion.tigris.org/issues/show_bug.cgi?id=2939
+# https://issues.apache.org/jira/browse/SVN-2939
 # But of course, any svn traffic liable to break over
 # mirroring would be a good addition.
 #
@@ -100,6 +100,7 @@ function setup_config() {
 
   say "setting up config: " $1
 cat > "$1" <<__EOF__
+$LOAD_MOD_MPM
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_UNIXD
@@ -114,9 +115,30 @@ $LOAD_MOD_AUTHZ_CORE
 $LOAD_MOD_AUTHZ_USER
 $LOAD_MOD_AUTHZ_HOST
 
+__EOF__
+
+if "$HTTPD" -v | grep '/2\.[012]' >/dev/null; then
+  cat >> "$1" <<__EOF__
 LockFile            lock
 User                $(id -un)
 Group               $(id -gn)
+__EOF__
+else
+HTTPD_LOCK="$HTTPD_ROOT/lock"
+mkdir "$HTTPD_LOCK" \
+  || fail "couldn't create lock directory '$HTTPD_LOCK'"
+  cat >> "$1" <<__EOF__
+# worker and prefork MUST have a mpm-accept lockfile in 2.3.0+
+<IfModule worker.c>
+  Mutex "file:$HTTPD_LOCK" mpm-accept
+</IfModule>
+<IfModule prefork.c>
+  Mutex "file:$HTTPD_LOCK" mpm-accept
+</IfModule>
+__EOF__
+fi
+
+cat >> "$1" <<__EOF__
 Listen              ${TEST_PORT}
 ServerName          localhost
 PidFile             "${HTTPD_ROOT}/pid"
@@ -131,6 +153,9 @@ TypesConfig         "${HTTPD_ROOT}/mime.types"
 StartServers        4
 MaxRequestsPerChild 0
 <IfModule worker.c>
+  ThreadsPerChild   8
+</IfModule>
+<IfModule event.c>
   ThreadsPerChild   8
 </IfModule>
 MaxClients          16
@@ -202,6 +227,12 @@ function usage() {
 
 SCRIPT=$(basename $0)
 
+NO_TESTS=
+if [ "x$1" = 'x--no-tests' ]; then
+  NO_TESTS=1
+  shift
+fi
+
 if [ $# -ne 1 ] ; then
   usage
 fi
@@ -249,7 +280,7 @@ HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
 SVN=$ABS_BUILDDIR/subversion/svn/svn
 SVNADMIN=$ABS_BUILDDIR/subversion/svnadmin/svnadmin
 SVNSYNC=$ABS_BUILDDIR/subversion/svnsync/svnsync
-SVNMUCC=${SVNMUCC:-$ABS_BUILDDIR/tools/client-side/svnmucc/svnmucc}
+SVNMUCC=$ABS_BUILDDIR/subversion/svnmucc/svnmucc
 SVNLOOK=$ABS_BUILDDIR/subversion/svnlook/svnlook
 
 [ -x $HTTPD ] || fail "HTTPD '$HTTPD' not executable"
@@ -259,9 +290,7 @@ SVNLOOK=$ABS_BUILDDIR/subversion/svnlook/svnlook
 [ -x $SVNADMIN ] || fail "SVNADMIN $SVNADMIN not built"
 [ -x $SVNSYNC ] || fail "SVNSYNC $SVNSYNC not built"
 [ -x $SVNLOOK ] || fail "SVNLOOK $SVNLOOK not built"
-[ -x $SVNMUCC ] \
- || fail SVNMUCC $SVNMUCC executable not built, needed for test. \
-    \'cd $ABS_BUILDDIR\; make svnmucc\' to fix.
+[ -x $SVNMUCC ] || fail "SVNMUCC $SVNMUCC not built"
 
 say HTTPD: $HTTPD
 say SVN: $SVN
@@ -309,6 +338,10 @@ LOAD_MOD_AUTHN_FILE="$(get_loadmodule_config mod_authn_file)" \
 LOAD_MOD_AUTHZ_USER="$(get_loadmodule_config mod_authz_user)" \
     || fail "Authz_User module not found."
 }
+if [ ${APACHE_MPM:+set} ]; then
+    LOAD_MOD_MPM=$(get_loadmodule_config mod_mpm_$APACHE_MPM) \
+      || fail "MPM module not found"
+fi
 
 if [ ${MODULE_PATH:+set} ]; then
     MOD_DAV_SVN="$MODULE_PATH/mod_dav_svn.so"
@@ -365,7 +398,9 @@ $SVNADMIN create "$SLAVE_REPOS" || fail "create slave repos failed"
 $SVNADMIN dump "$MASTER_REPOS" | $SVNADMIN load "$SLAVE_REPOS" \
   || fail "duplicate repositories failed"
 # make sure uuid's match
-[ `cat "$SLAVE_REPOS/db/uuid"` = `cat "$MASTER_REPOS/db/uuid"` ] \
+read MASTER_UUID < "$MASTER_REPOS/db/uuid"
+read SLAVE_UUID < "$SLAVE_REPOS/db/uuid"
+[ "$SLAVE_UUID" = "$MASTER_UUID" ] \
   || fail "master/slave uuid mismatch"
 # setup hooks:
 #  slave allows revprop changes
@@ -397,12 +432,18 @@ $SVNSYNC initialize --non-interactive "$SYNC_URL" "$MASTER_URL" \
     --username=svnsync --password=svnsync \
     || fail "svnsync initialize failed"
 
+if [ $NO_TESTS ]; then
+  echo "MASTER_URL=$MASTER_URL"
+  echo "SLAVE_URL=$SLAVE_URL"
+  exit
+fi
+
 # OK, let's start testing! Commit changes to slave, expect
 # them to proxy through to the master, and then
 # svnsync back to the slave
 #
 # reproducible test case from:
-# http://subversion.tigris.org/issues/show_bug.cgi?id=2939
+# https://issues.apache.org/jira/browse/SVN-2939
 #
 BASE_URL="$SLAVE_URL"
 say running svnmucc test to $BASE_URL

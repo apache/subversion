@@ -1163,7 +1163,7 @@ def effective_sync_results_in_reintegrate(sbox):
 
   # Now try an explicit --reintegrate merge from ^/branch to A.
   # This should work because since the resolution of
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3577
+  # https://issues.apache.org/jira/browse/SVN-3577
   # if B is *effectively* synced with A, then B can be reintegrated
   # to A.
   sbox.simple_update()

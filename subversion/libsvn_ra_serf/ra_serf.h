@@ -113,8 +113,12 @@ struct svn_ra_serf__session_t {
   /* Are we using ssl */
   svn_boolean_t using_ssl;
 
-  /* Should we use compression for network transmissions? */
-  svn_boolean_t using_compression;
+  /* Tristate flag that indicates if we should use compression for
+     network transmissions.  If svn_tristate_true or svn_tristate_false,
+     the compression should be enabled and disabled, respectively.
+     If svn_tristate_unknown, determine this automatically based
+     on network parameters. */
+  svn_tristate_t using_compression;
 
   /* The user agent string */
   const char *useragent;
@@ -261,6 +265,15 @@ struct svn_ra_serf__session_t {
 
   /* Indicates whether the server can understand svndiff version 1. */
   svn_boolean_t supports_svndiff1;
+
+  /* Indicates whether the server can understand svndiff version 2. */
+  svn_boolean_t supports_svndiff2;
+
+  /* Indicates whether the server sends the result checksum in the response
+   * to a successful PUT request. */
+  svn_boolean_t supports_put_result_checksum;
+
+  apr_interval_time_t conn_latency;
 };
 
 #define SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(sess) ((sess)->me_resource != NULL)
@@ -1418,6 +1431,18 @@ svn_ra_serf__get_locks(svn_ra_session_t *ra_session,
                        svn_depth_t depth,
                        apr_pool_t *pool);
 
+/* Implements svn_ra__vtable_t.list(). */
+svn_error_t *
+svn_ra_serf__list(svn_ra_session_t *ra_session,
+                  const char *path,
+                  svn_revnum_t revision,
+                  const apr_array_header_t *patterns,
+                  svn_depth_t depth,
+                  apr_uint32_t dirent_fields,
+                  svn_ra_dirent_receiver_t receiver,
+                  void *receiver_baton,
+                  apr_pool_t *scratch_pool);
+
 /* Request a mergeinfo-report from the URL attached to SESSION,
    and fill in the MERGEINFO hash with the results.
 
@@ -1568,6 +1593,24 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
                        const char *url_str,
                        apr_pool_t *result_pool);
 
+/* Setup the "Accept-Encoding" header value for requests that expect
+   svndiff-encoded deltas, depending on the SESSION state. */
+void
+svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
+                                           svn_ra_serf__session_t *session);
+
+svn_boolean_t
+svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session);
+
+/* Return an APR array of svn_ra_serf__dav_props_t containing the
+ * properties (names and namespaces) corresponding to the flegs set
+ * in DIRENT_FIELDS.  If SESSION does not support deadprops, only
+ * the generic "DAV:allprop" will be returned.  Allocate the result
+ * in RESULT_POOL. */
+apr_array_header_t *
+svn_ra_serf__get_dirent_props(apr_uint32_t dirent_fields,
+                              svn_ra_serf__session_t *session,
+                              apr_pool_t *result_pool);
 
 /* Default limit for in-memory size of a request body. */
 #define SVN_RA_SERF__REQUEST_BODY_IN_MEM_SIZE 256 * 1024
@@ -1601,6 +1644,19 @@ svn_error_t *
 svn_ra_serf__request_body_cleanup(svn_ra_serf__request_body_t *body,
                                   apr_pool_t *scratch_pool);
 
+/* Callback used in svn_ra_serf__create_stream_bucket().  ERR will be
+   will be cleared and becomes invalid after the callback returns,
+   use svn_error_dup() to preserve it. */
+typedef void
+(*svn_ra_serf__stream_bucket_errfunc_t)(void *baton, svn_error_t *err);
+
+/* Create a bucket that wraps a generic readable STREAM.  This function
+   takes ownership of the passed-in stream, and will close it. */
+serf_bucket_t *
+svn_ra_serf__create_stream_bucket(svn_stream_t *stream,
+                                  serf_bucket_alloc_t *allocator,
+                                  svn_ra_serf__stream_bucket_errfunc_t errfunc,
+                                  void *errfunc_baton);
 
 #if defined(SVN_DEBUG)
 /* Wrapper macros to collect file and line information */

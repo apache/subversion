@@ -365,7 +365,7 @@ typedef struct fetch_ctx_t {
   /* The handler representing this particular fetch.  */
   svn_ra_serf__handler_t *handler;
 
-  svn_boolean_t using_compression;
+  svn_ra_serf__session_t *session;
 
   /* Stores the information for the file we want to fetch. */
   file_baton_t *file;
@@ -603,7 +603,7 @@ get_best_connection(report_context_t *ctx)
      ### simply can't handle the way ra_serf violates the editor v1
      ### drive ordering requirements.
      ###
-     ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
+     ### See https://issues.apache.org/jira/browse/SVN-4116.
   */
   if (ctx->report_received && (ctx->sess->max_connections > 2))
     first_conn = 0;
@@ -797,19 +797,9 @@ headers_fetch(serf_bucket_t *headers,
     {
       serf_bucket_headers_setn(headers, SVN_DAV_DELTA_BASE_HEADER,
                                fetch_ctx->delta_base);
-      if (fetch_ctx->using_compression)
-        {
-          serf_bucket_headers_setn(headers, "Accept-Encoding",
-                                   "svndiff1;q=0.9,svndiff;q=0.8");
-        }
-      else
-        {
-          /* Do not advertise svndiff1 support if we're not interested in
-             compression. */
-          serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
-        }
+      svn_ra_serf__setup_svndiff_accept_encoding(headers, fetch_ctx->session);
     }
-  else if (fetch_ctx->using_compression)
+  else if (fetch_ctx->session->using_compression != svn_tristate_false)
     {
       serf_bucket_headers_setn(headers, "Accept-Encoding", "gzip");
     }
@@ -1287,7 +1277,7 @@ fetch_for_file(file_baton_t *file,
 
           fetch_ctx = apr_pcalloc(file->pool, sizeof(*fetch_ctx));
           fetch_ctx->file = file;
-          fetch_ctx->using_compression = ctx->sess->using_compression;
+          fetch_ctx->session = ctx->sess;
 
           /* Can we somehow get away with just obtaining a DIFF? */
           if (SVN_RA_SERF__HAVE_HTTPV2_SUPPORT(ctx->sess))
@@ -2178,17 +2168,7 @@ setup_update_report_headers(serf_bucket_t *headers,
 {
   report_context_t *report = baton;
 
-  if (report->sess->using_compression)
-    {
-      serf_bucket_headers_setn(headers, "Accept-Encoding",
-                               "gzip,svndiff1;q=0.9,svndiff;q=0.8");
-    }
-  else
-    {
-      /* Do not advertise svndiff1 support if we're not interested in
-         compression. */
-      serf_bucket_headers_setn(headers, "Accept-Encoding", "svndiff");
-    }
+  svn_ra_serf__setup_svndiff_accept_encoding(headers, report->sess);
 
   return SVN_NO_ERROR;
 }

@@ -50,9 +50,16 @@ class Notification(object):
         CULPRIT_SERVER = 'server'
         CULPRIT_CLIENT = 'client'
 
-        __CULPRITS = ((CULPRIT_SERVER, CULPRIT_CLIENT,
-                      (CULPRIT_SERVER, CULPRIT_CLIENT),
-                      (CULPRIT_CLIENT, CULPRIT_SERVER)))
+        # For compatibility, 'client' and 'server' may be specified either with
+        # or without a tuple.
+        __CULPRITS = (
+            CULPRIT_SERVER,
+            CULPRIT_CLIENT,
+            (CULPRIT_SERVER,)
+            (CULPRIT_CLIENT,)
+            (CULPRIT_SERVER, CULPRIT_CLIENT),
+            (CULPRIT_CLIENT, CULPRIT_SERVER),
+        )
 
         def __init__(self, basedir, tracking_id,
                      title, culprit, advisory, patches):

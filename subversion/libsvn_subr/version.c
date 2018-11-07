@@ -143,7 +143,7 @@ svn_version_extended(svn_boolean_t verbose,
   info->build_time = __TIME__;
   info->build_host = SVN_BUILD_HOST;
   info->copyright = apr_pstrdup
-    (pool, _("Copyright (C) 2016 The Apache Software Foundation.\n"
+    (pool, _("Copyright (C) 2018 The Apache Software Foundation.\n"
              "This software consists of contributions made by many people;\n"
              "see the NOTICE file for more information.\n"
              "Subversion is open source software, see "
@@ -271,7 +271,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
 
 
 svn_boolean_t
-svn_version__at_least(svn_version_t *version,
+svn_version__at_least(const svn_version_t *version,
                       int major,
                       int minor,
                       int patch)

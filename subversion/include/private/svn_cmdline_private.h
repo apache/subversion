@@ -63,6 +63,7 @@ svn_cmdline__print_xml_prop(svn_stringbuf_t **outstr,
  * Expects a @c svn_cmdline_prompt_baton2_t to be passed as @a baton.
  *
  * @since New in 1.6.
+ * @deprecated Only used by old libgome-keyring implementation.
  */
 svn_error_t *
 svn_cmdline__auth_gnome_keyring_unlock_prompt(char **keyring_password,
@@ -267,6 +268,15 @@ svn_cmdline__disable_cancellation_handler(void);
    signal.  See http://www.cons.org/cracauer/sigint.html */
 void
 svn_cmdline__cancellation_exit(void);
+
+/** Reads a string from stdin until a newline or EOF is found
+ *
+ * @since New in 1.10.
+ */
+svn_error_t *
+svn_cmdline__stdin_readline(const char **result,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

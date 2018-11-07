@@ -474,6 +474,16 @@ svn_fs_x__rev_file_p2l_info(svn_fs_x__index_info_t *info,
 }
 
 svn_error_t *
+svn_fs_x__rev_file_data_size(svn_filesize_t *size,
+                             svn_fs_x__revision_file_t *file)
+{
+  SVN_ERR(auto_read_footer(file));
+  *size = file->l2p_info.start;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_fs_x__rev_file_seek(svn_fs_x__revision_file_t *file,
                         apr_off_t *buffer_start,
                         apr_off_t offset)

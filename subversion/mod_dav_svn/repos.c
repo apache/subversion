@@ -1739,6 +1739,18 @@ static int sort_encoding_pref(const void *accept_rec1, const void *accept_rec2)
   return (diff == 0 ? 0 : (diff > 0 ? -1 : 1));
 }
 
+static int get_svndiff_version(const struct accept_rec *rec)
+{
+  if (strcmp(rec->name, "svndiff2") == 0)
+    return 2;
+  else if (strcmp(rec->name, "svndiff1") == 0)
+    return 1;
+  else if (strcmp(rec->name, "svndiff") == 0)
+    return 0;
+  else
+    return -1;
+}
+
 /* Parse and handle any possible Accept-Encoding header that has been
    sent as part of the request.  */
 static void
@@ -1752,6 +1764,9 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
      necessary ones in this file. */
   int i;
   apr_array_header_t *encoding_prefs;
+  apr_array_header_t *svndiff_encodings;
+  svn_boolean_t accepts_svndiff2 = FALSE;
+
   encoding_prefs = do_header_line(r->pool,
                                   apr_table_get(r->headers_in,
                                                 "Accept-Encoding"));
@@ -1762,22 +1777,47 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
       return;
     }
 
-  *svndiff_version = 0;
-  svn_sort__array(encoding_prefs, sort_encoding_pref);
+  svndiff_encodings = apr_array_make(r->pool, 3, sizeof(struct accept_rec));
   for (i = 0; i < encoding_prefs->nelts; i++)
     {
-      struct accept_rec rec = APR_ARRAY_IDX(encoding_prefs, i,
-                                            struct accept_rec);
-      if (strcmp(rec.name, "svndiff1") == 0)
-        {
-          *svndiff_version = 1;
-          break;
-        }
-      else if (strcmp(rec.name, "svndiff") == 0)
-        {
-          *svndiff_version = 0;
-          break;
-        }
+      const struct accept_rec *rec = &APR_ARRAY_IDX(encoding_prefs, i,
+                                                    struct accept_rec);
+      int version = get_svndiff_version(rec);
+
+      if (version > 0)
+        APR_ARRAY_PUSH(svndiff_encodings, struct accept_rec) = *rec;
+
+      if (version == 2)
+        accepts_svndiff2 = TRUE;
+    }
+
+  if (dav_svn__get_compression_level(r) == 0)
+    {
+      /* If the compression is disabled on the server, use the uncompressed
+       * svndiff0 format, which we assume is always supported. */
+      *svndiff_version = 0;
+    }
+  else if (accepts_svndiff2 && dav_svn__get_compression_level(r) == 1)
+    {
+      /* Enable svndiff2 if the client can read it, and if the server-side
+       * compression level is set to 1.  Svndiff2 offers better speed and
+       * compression ratio comparable to svndiff1 with compression level 1,
+       * but not with other compression levels.
+       */
+      *svndiff_version = 2;
+    }
+  else if (svndiff_encodings->nelts > 0)
+    {
+      const struct accept_rec *rec;
+
+      /* Otherwise, use what the client prefers to see. */
+      svn_sort__array(svndiff_encodings, sort_encoding_pref);
+      rec = &APR_ARRAY_IDX(svndiff_encodings, 0, struct accept_rec);
+      *svndiff_version = get_svndiff_version(rec);
+    }
+  else
+    {
+      *svndiff_version = 0;
     }
 }
 
@@ -2821,6 +2861,13 @@ open_stream(const dav_resource *resource,
                                     "Resource body changes may only be made to "
                                     "working resources (at this time).");
         }
+      if (!resource->info->root.root)
+        {
+          return dav_svn__new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,
+                                    0, 0,
+                                    "Resource body changes may only be made to "
+                                    "checked-out resources (at this time).");
+        }
     }
 
   /* ### TODO:  Can we support range writes someday? */
@@ -2967,6 +3014,26 @@ close_stream(dav_stream *stream, int commit)
           (serr, HTTP_INTERNAL_SERVER_ERROR,
            "mod_dav_svn close_stream: error sending final (null) delta window",
            pool);
+    }
+
+  if (stream->wstream != NULL || stream->delta_handler != NULL)
+    {
+      request_rec *r = stream->res->info->r;
+      svn_checksum_t *checksum;
+
+      serr = svn_fs_file_checksum(&checksum, svn_checksum_md5,
+                                  stream->res->info->root.root,
+                                  stream->res->info->repos_path,
+                                  FALSE, pool);
+      if (serr)
+        return dav_svn__convert_err
+          (serr, HTTP_INTERNAL_SERVER_ERROR,
+            "mod_dav_svn close_stream: error getting file checksum",
+            pool);
+
+      if (checksum)
+        apr_table_set(r->headers_out, SVN_DAV_RESULT_FULLTEXT_MD5_HEADER,
+                      svn_checksum_to_cstring(checksum, pool));
     }
 
   return NULL;

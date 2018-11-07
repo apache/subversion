@@ -617,6 +617,10 @@ read_noderev(query_t *query,
   svn_stream_t *stream = svn_stream_from_stringbuf(noderev_str, scratch_pool);
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, stream, scratch_pool,
                                   scratch_pool));
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(query->fs, noderev->data_rep,
+                                         scratch_pool));
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(query->fs, noderev->prop_rep,
+                                         scratch_pool));
 
   if (noderev->data_rep)
     {

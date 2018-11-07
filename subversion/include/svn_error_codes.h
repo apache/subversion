@@ -243,6 +243,11 @@ SVN_ERROR_START
              SVN_ERR_BAD_CATEGORY_START + 16,
              "Invalid compression method")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_BAD_PROPERTY_VALUE_EOL,
+             SVN_ERR_BAD_CATEGORY_START + 17,
+             "Unexpected line ending in the property value")
+
   /* xml errors */
 
   SVN_ERRDEF(SVN_ERR_XML_ATTRIB_NOT_FOUND,
@@ -881,6 +886,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 65,
              "Property list is corrupt.")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP,
+             SVN_ERR_FS_CATEGORY_START + 67,
+             "Content checksums supposedly match but content does not.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,
@@ -1465,6 +1475,16 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 44,
              "SQLite transaction rollback failed")
 
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_LZ4_COMPRESSION_FAILED,
+             SVN_ERR_MISC_CATEGORY_START + 45,
+             "LZ4 compression failed")
+
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_LZ4_DECOMPRESSION_FAILED,
+             SVN_ERR_MISC_CATEGORY_START + 46,
+             "LZ4 decompression failed")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -1654,6 +1674,11 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_RA_SERF_WRAPPED_ERROR,
              SVN_ERR_RA_SERF_CATEGORY_START + 3,
              "While handling serf response:")
+
+  /** @since New in 1.10. */
+  SVN_ERRDEF(SVN_ERR_RA_SERF_STREAM_BUCKET_READ_ERROR,
+             SVN_ERR_RA_SERF_CATEGORY_START + 4,
+             "Can't read from stream")
 
   /* malfunctions such as assertion failures */
 

@@ -40,6 +40,7 @@
 #include "svn_version.h"
 
 #include "svn_private_config.h"
+#include "private/svn_cache.h"
 #include "private/svn_fs_util.h"
 #include "private/svn_fs_private.h"
 #include "private/svn_fspath.h"
@@ -7187,6 +7188,187 @@ commit_with_locked_rep_cache(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+
+static svn_error_t *
+test_cache_clear_during_stream(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root;
+  svn_revnum_t new_rev;
+  const char *fs_path;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_txdelta_window_handler_t consumer_func;
+  void *consumer_baton;
+  int i;
+  svn_stream_t *stream;
+  svn_stringbuf_t *buf;
+
+
+  fs_path = "test-repo-cache_clear_during_stream";
+  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, pool));
+
+  /* r1: Add a file. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", pool));
+
+  /* Make the file large enough to span multiple txdelta windows.
+   * Just to be sure, make it not too uniform to keep self-txdelta at bay. */
+  SVN_ERR(svn_fs_apply_textdelta(&consumer_func, &consumer_baton,
+                                 txn_root, "/foo", NULL, NULL, subpool));
+  stream = svn_txdelta_target_push(consumer_func, consumer_baton, 
+                                   svn_stream_empty(subpool), subpool);
+  for (i = 0; i < 10000; ++ i)
+    {
+      svn_string_t *text;
+
+      svn_pool_clear(iterpool);
+      text = svn_string_createf(iterpool, "some dummy text - %d\n", i);
+      SVN_ERR(svn_stream_write(stream, text->data, &text->len));
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+  svn_pool_destroy(subpool);
+
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  /* Read the file once to populate the fulltext cache. */
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 1, pool));
+  SVN_ERR(svn_fs_file_contents(&stream, rev_root, "/foo", pool));
+  SVN_ERR(svn_test__stream_to_string(&buf, stream, pool));
+
+  /* Start reading it again from cache, clear the cache and continue.
+   * Make sure we read more than one txdelta window before clearing
+   * the cache.  That gives the FS backend a chance to skip windows
+   * when continuing the read from disk. */
+  SVN_ERR(svn_fs_file_contents(&stream, rev_root, "/foo", pool));
+  buf->len = 2 * SVN_STREAM_CHUNK_SIZE;
+  SVN_ERR(svn_stream_read_full(stream, buf->data, &buf->len));
+  SVN_ERR(svn_cache__membuffer_clear(svn_cache__get_global_membuffer_cache()));
+  SVN_ERR(svn_test__stream_to_string(&buf, stream, pool));
+
+  svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rep_sharing_strict_content_check(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t new_rev;
+  const char *fs_path, *fs_path2;
+  apr_pool_t *subpool = svn_pool_create(pool);
+  svn_error_t *err;
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, SVN_FS_TYPE_BDB) == 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "BDB repositories don't support rep-sharing");
+
+  /* Create 2 repos with same structure & size but different contents */
+  fs_path = "test-rep-sharing-strict-content-check1";
+  fs_path2 = "test-rep-sharing-strict-content-check2";
+
+  SVN_ERR(svn_test__create_fs(&fs, fs_path, opts, subpool));
+
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/foo", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", "quite bad", subpool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  SVN_ERR(svn_test__create_fs(&fs, fs_path2, opts, subpool));
+
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 0, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  SVN_ERR(svn_fs_make_file(txn_root, "foo", subpool));
+  SVN_ERR(svn_test__set_file_contents(txn_root, "foo", "very good", subpool));
+  SVN_ERR(test_commit_txn(&new_rev, txn, NULL, subpool));
+  SVN_TEST_INT_ASSERT(new_rev, 1);
+
+  /* Close both repositories. */
+  svn_pool_clear(subpool);
+
+  /* Doctor the first repo such that it uses the wrong rep-cache. */
+  SVN_ERR(svn_io_copy_file(svn_relpath_join(fs_path2, "rep-cache.db", pool),
+                           svn_relpath_join(fs_path, "rep-cache.db", pool),
+                           FALSE, pool));
+
+  /* Changing the file contents such that rep-sharing would kick in if
+     the file contents was not properly compared. */
+  SVN_ERR(svn_fs_open2(&fs, fs_path, NULL, subpool, subpool));
+
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, 1, 0, subpool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, subpool));
+  err = svn_test__set_file_contents(txn_root, "foo", "very good", subpool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP);
+
+  svn_pool_destroy(subpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+closest_copy_test_svn_4677(const svn_test_opts_t *opts,
+                           apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root, *rev_root, *croot;
+  svn_revnum_t after_rev;
+  const char *cpath;
+  apr_pool_t *spool = svn_pool_create(pool);
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-repo-svn-4677",
+                              opts, pool));
+
+  /* In first txn, create file A/foo. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "A", spool));
+  SVN_ERR(svn_fs_make_file(txn_root, "A/foo", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
+
+  /* Move A to B, and commit. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_fs_copy(rev_root, "A", txn_root, "B", spool));
+  SVN_ERR(svn_fs_delete(txn_root, "A", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
+
+  /* Replace file B/foo with directory B/foo, add B/foo/bar, and commit. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, after_rev, spool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, spool));
+  SVN_ERR(svn_fs_delete(txn_root, "B/foo", spool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "B/foo", spool));
+  SVN_ERR(svn_fs_make_file(txn_root, "B/foo/bar", spool));
+  SVN_ERR(test_commit_txn(&after_rev, txn, NULL, spool));
+  svn_pool_clear(spool);
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, after_rev, spool));
+
+  /* B/foo/bar has been copied.
+     Issue 4677 was caused by returning an error in this situation. */
+  SVN_ERR(svn_fs_closest_copy(&croot, &cpath, rev_root, "B/foo/bar", spool));
+  SVN_TEST_ASSERT(cpath == NULL);
+  SVN_TEST_ASSERT(croot == NULL);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7325,6 +7507,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test reading a large changed paths list"),
     SVN_TEST_OPTS_PASS(commit_with_locked_rep_cache,
                        "test commit with locked rep-cache"),
+    SVN_TEST_OPTS_PASS(test_cache_clear_during_stream,
+                       "test clearing the cache while streaming a rep"),
+    SVN_TEST_OPTS_PASS(test_rep_sharing_strict_content_check,
+                       "test rep-sharing on content rather than SHA1"),
+    SVN_TEST_OPTS_PASS(closest_copy_test_svn_4677,
+                       "test issue SVN-4677 regression"),
     SVN_TEST_NULL
   };
 

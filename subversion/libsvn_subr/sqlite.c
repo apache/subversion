@@ -65,8 +65,8 @@ extern int (*const svn_sqlite3__api_config)(int, ...);
 #  include <sqlite3.h>
 #endif
 
-#if !SQLITE_VERSION_AT_LEAST(3,7,12)
-#error SQLite is too old -- version 3.7.12 is the minimum required version
+#if !SQLITE_VERSION_AT_LEAST(3,8,2)
+#error SQLite is too old -- version 3.8.2 is the minimum required version
 #endif
 
 #ifndef SQLITE_DETERMINISTIC

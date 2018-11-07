@@ -55,6 +55,8 @@ Array::init(jobjectArray jobjects)
   if (jobjects != NULL)
     {
       JNIEnv *env = JNIUtil::getEnv();
+      if (JNIUtil::isExceptionThrown())
+        return;
       jint arraySize = env->GetArrayLength(jobjects);
       if (JNIUtil::isExceptionThrown())
         return;

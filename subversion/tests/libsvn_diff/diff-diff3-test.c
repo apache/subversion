@@ -2407,8 +2407,6 @@ merge_with_part_already_present(apr_pool_t *pool)
 /* Merge is more "aggressive" about resolving conflicts than traditional
  * patch or diff3.  Some people consider this behaviour to be a bug, see
  * http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=35014
- *
- * The original behavior of this test (added in 2003) was tweaked in 2016.
  */
 static svn_error_t *
 merge_adjacent_changes(apr_pool_t *pool)
@@ -2430,13 +2428,8 @@ merge_adjacent_changes(apr_pool_t *pool)
 
                           "zig\n"
                           "foo\n"
-                          "<<<<<<< adj2\n"
                           "new_bar\n"
-                          "baz\n"
-                          "=======\n"
-                          "bar\n"
-                          "new_baz\n"
-                          ">>>>>>> adj3\n",
+                          "new_baz\n",
 
                           NULL,
                           svn_diff_conflict_display_modified_latest,
@@ -3003,8 +2996,6 @@ three_way_double_add(apr_pool_t *pool)
                           "D\n" /* New line 1a */
                           "E\n" /* New line 2a */
                           "F\n" /* New line 3a*/
-                          "||||||| doubleadd1\n"
-                          "C\n"
                           "=======\n"
                           "O\n"
                           "P\n" /* New line 1b */
@@ -3018,7 +3009,7 @@ three_way_double_add(apr_pool_t *pool)
                           svn_diff_conflict_display_modified_original_latest,
                           pool));
 
-  SVN_ERR(three_way_merge("doubleadd4", "doubleadd5", "doubleadd6",
+  SVN_ERR(three_way_merge("doubleadd1", "doubleadd2", "doubleadd3",
                           "A\n"
                           "B\n"
                           "C\n"
@@ -3053,21 +3044,18 @@ three_way_double_add(apr_pool_t *pool)
                           will be a PASS. */
                           "A\n"
                           "B\n"
-                          "<<<<<<< doubleadd5\n"
+                          "<<<<<<< doubleadd2\n"
                           "C\n"
                           "D\n" /* New line 1a */
                           "E\n" /* New line 2a */
                           "F\n" /* New line 3a*/
-                          "||||||| doubleadd4\n"
-                          "C\n"
-                          "J\n"
                           "=======\n"
                           "O\n"
                           "P\n" /* New line 1b */
                           "Q\n" /* New line 2b */
                           "R\n" /* New line 3b */
                           "J\n"
-                          ">>>>>>> doubleadd6\n"
+                          ">>>>>>> doubleadd3\n"
                           "K\n"
                           "L",
                           NULL,
@@ -3119,7 +3107,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "2-way issue #3362 test v1"),
     SVN_TEST_PASS2(two_way_issue_3362_v2,
                    "2-way issue #3362 test v2"),
-    SVN_TEST_PASS2(three_way_double_add,
+    SVN_TEST_XFAIL2(three_way_double_add,
                    "3-way merge, double add"),
     SVN_TEST_NULL
   };

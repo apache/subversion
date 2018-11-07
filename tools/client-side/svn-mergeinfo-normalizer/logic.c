@@ -135,7 +135,7 @@ show_reverse_ranges(const char *subtree_path,
                     svn_min__opt_state_t *opt_state,
                     apr_pool_t *scratch_pool)
 {
-  if (reverse_ranges->nelts)
+  if (!reverse_ranges->nelts)
     return SVN_NO_ERROR;
 
   if (opt_state->verbose || opt_state->run_analysis)
@@ -158,7 +158,7 @@ show_non_recursive_ranges(const char *subtree_path,
                           svn_min__opt_state_t *opt_state,
                           apr_pool_t *scratch_pool)
 {
-  if (non_recursive_ranges->nelts)
+  if (!non_recursive_ranges->nelts)
     return SVN_NO_ERROR;
 
   if (opt_state->verbose || opt_state->run_analysis)
@@ -754,6 +754,40 @@ remove_overlapping_history(svn_rangelist_t **removed,
   return SVN_NO_ERROR;
 }
 
+/* Scan RANGES for non-recursive ranges.  If there are any, remove all
+ * ranges that where the history of SOURCE_PATH@RANGE and TARGET_PATH@HEAD
+ * overlap.  Also remove all ranges that are not operative on OP_PATH.
+ *
+ * The remaining ranges are the ones actually relevant to a future merge.
+ * Return those in *NON_RECURSIVE_RANGES, allocated in RESULT_POOL.
+ * Use SCRATCH_POOL for temporary allocations.
+ *
+ * Note that SOURCE_PATH@RANGE may actually refer to different branches
+ * created or re-created and then deleted at different points in time.
+ */
+static svn_error_t *
+find_relevant_non_recursive_ranges(svn_rangelist_t **non_recursive_ranges,
+                                   svn_rangelist_t *ranges,
+                                   svn_min__log_t *log,
+                                   const char *source_path,
+                                   const char *target_path,
+                                   const char *op_path,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  apr_array_header_t *implied;
+  apr_array_header_t *result
+    = find_non_recursive_ranges(ranges, scratch_pool);
+
+  SVN_ERR(remove_overlapping_history(&implied, &result,
+                                     log, source_path, target_path,
+                                     scratch_pool, scratch_pool));
+  *non_recursive_ranges = svn_min__operative(log, op_path, result,
+                                             result_pool);
+
+  return SVN_NO_ERROR;
+}
+
 /* Show the results of an attempt at "misaligned branch elision".
  * SOURCE_BRANCH was to be elided because TARGET_BRANCH would cover it all.
  * There were MISSING revisions exclusively in SOURCE_BRANCH.  OPT_STATE
@@ -913,6 +947,11 @@ remove_redundant_misaligned_branches(svn_min__log_t *log,
  * possible using LOG and LOOKUP.  OPT_STATE determines if we may remove
  * deleted branches.  Elision happens by comparing the node's mergeinfo
  * with the PARENT_MERGEINFO using REL_PATH to match up the branch paths.
+ *
+ * SIBLING_MERGEINFO contains the mergeinfo of all nodes with mergeinfo
+ * immediately below the parent.  It can be used to "summarize" m/i over
+ * all sub-nodes and elide that to the parent.
+ *
  * Use SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
@@ -922,6 +961,7 @@ remove_lines(svn_min__log_t *log,
              const char *relpath,
              svn_mergeinfo_t parent_mergeinfo,
              svn_mergeinfo_t subtree_mergeinfo,
+             apr_array_header_t *sibling_mergeinfo,
              svn_min__opt_state_t *opt_state,
              apr_pool_t *scratch_pool)
 {
@@ -982,9 +1022,13 @@ remove_lines(svn_min__log_t *log,
         }
 
       /* We don't know how to handle non-recursive ranges (they are legal,
-       * though).  So, we must check for them - just to be sure. */
-      non_recursive_ranges = find_non_recursive_ranges(subtree_ranges,
-                                                       iterpool);
+       * though).  So, we must if there are any that would actually
+       * affect future merges. */
+      SVN_ERR(find_relevant_non_recursive_ranges(&non_recursive_ranges,
+                                                 subtree_ranges, log,
+                                                 subtree_path, fs_path,
+                                                 subtree_path,
+                                                 iterpool, iterpool));
       if (non_recursive_ranges->nelts)
         {
           /* We really found non-recursive merges?
@@ -1003,8 +1047,15 @@ remove_lines(svn_min__log_t *log,
 
       if (parent_ranges && parent_ranges->nelts)
         {
-          non_recursive_ranges = find_non_recursive_ranges(parent_ranges,
-                                                          iterpool);
+          /* Any non-recursive ranges at the parent node that are
+           * operative on the sub-node and not implicit part of the
+           * branch history? */
+          SVN_ERR(find_relevant_non_recursive_ranges(&non_recursive_ranges,
+                                                     parent_ranges, log,
+                                                     parent_path,
+                                                     parent_fs_path,
+                                                     subtree_path,
+                                                     iterpool, iterpool));
           if (non_recursive_ranges->nelts)
             {
               /* We really found non-recursive merges at the parent?
@@ -1122,6 +1173,26 @@ remove_lines(svn_min__log_t *log,
                                        iterpool));
           if (state == ds_deleted)
             continue;
+        }
+
+      /* Try harder:
+       * There are cases where a merge affected multiple sibling nodes, got
+       * recorded there but was not recorded at the parent.  Remove these
+       * from the list of revisions that couldn't be propagated to the
+       * parent node. */
+      if (operative_outside_subtree->nelts && sibling_mergeinfo->nelts > 1)
+        {
+          apr_hash_t *sibling_ranges;
+          SVN_ERR(svn_min__sibling_ranges(&sibling_ranges, sibling_mergeinfo,
+                                          parent_path,
+                                          operative_outside_subtree,
+                                          iterpool, iterpool));
+
+          operative_outside_subtree
+            = svn_min__operative_outside_all_subtrees(log, parent_path,
+                                                  operative_outside_subtree,
+                                                      sibling_ranges,
+                                                      iterpool, iterpool);
         }
 
       /* Log whether an elision was possible. */
@@ -1420,6 +1491,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
       svn_mergeinfo_t subtree_mergeinfo;
       svn_mergeinfo_t subtree_mergeinfo_copy;
       svn_mergeinfo_t mergeinfo_to_report;
+      apr_array_header_t *sibling_mergeinfo;
 
       svn_pool_clear(iterpool);
       progress.nodes_todo = i;
@@ -1427,7 +1499,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
       /* Get the relevant mergeinfo. */
       svn_min__get_mergeinfo_pair(&fs_path, &parent_path, &relpath,
                                   &parent_mergeinfo, &subtree_mergeinfo,
-                                  wc_mergeinfo, i);
+                                  &sibling_mergeinfo, wc_mergeinfo, i);
       SVN_ERR(show_elision_header(parent_path, relpath, opt_state,
                                   scratch_pool));
 
@@ -1455,7 +1527,7 @@ normalize(apr_array_header_t *wc_mergeinfo,
 
           SVN_ERR(remove_lines(log, lookup, fs_path, relpath,
                                parent_mergeinfo_copy, subtree_mergeinfo_copy,
-                               opt_state, iterpool));
+                               sibling_mergeinfo, opt_state, iterpool));
 
           /* If all sub-tree mergeinfo could be elided, clear it.  Update
              the parent mergeinfo in case we moved some up the tree. */

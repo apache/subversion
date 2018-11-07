@@ -508,7 +508,7 @@ x_pack(svn_fs_t *fs,
        apr_pool_t *common_pool)
 {
   SVN_ERR(x_open(fs, path, common_pool_lock, scratch_pool, common_pool));
-  return svn_fs_x__pack(fs, notify_func, notify_baton,
+  return svn_fs_x__pack(fs, 0, notify_func, notify_baton,
                         cancel_func, cancel_baton, scratch_pool);
 }
 
@@ -665,7 +665,7 @@ svn_fs_x__init(const svn_version_t *loader_version,
                              loader_version->major);
   SVN_ERR(svn_ver_check_list2(x_version(), checklist, svn_ver_equal));
 
-  SVN_ERR(svn_fs_x__batch_fsync_init());
+  SVN_ERR(svn_fs_x__batch_fsync_init(common_pool));
 
   *vtable = &library_vtable;
   return SVN_NO_ERROR;

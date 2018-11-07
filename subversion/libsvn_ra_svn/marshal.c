@@ -265,6 +265,24 @@ svn_ra_svn__set_capabilities(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+int
+svn_ra_svn__svndiff_version(svn_ra_svn_conn_t *conn)
+{
+  /* If we don't want to use compression, use the non-compressing
+   * "version 0" implementation. */
+  if (svn_ra_svn_compression_level(conn) <= 0)
+    return 0;
+
+  /* Prefer SVNDIFF2 over SVNDIFF1. */
+  if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED))
+    return 2;
+  if (svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_SVNDIFF1))
+    return 1;
+
+  /* The connection does not support SVNDIFF1/2; default to "version 0". */
+  return 0;
+}
+
 apr_pool_t *
 svn_ra_svn__get_pool(svn_ra_svn_conn_t *conn)
 {
@@ -1142,10 +1160,17 @@ static svn_error_t *vwrite_tuple(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
         SVN_ERR(opt ? vwrite_tuple_string_opt(conn, pool, ap)
                     : vwrite_tuple_string(conn, pool, ap));
       else if (*fmt == '(' && !opt)
-        SVN_ERR(write_tuple_start_list(conn, pool));
+        {
+          /* Optional sub-tuples are not supported.
+           * If OPT was set, we would fall through to the malfunction call. */
+          SVN_ERR(write_tuple_start_list(conn, pool));
+        }
       else if (*fmt == ')')
         {
           SVN_ERR(write_tuple_end_list(conn, pool));
+
+          /* OPT could not have been set when opening the list (see above),
+           * hence this is correct and handles nested tuples just fine. */
           opt = FALSE;
         }
       else if (*fmt == '?')
@@ -2921,7 +2946,7 @@ svn_ra_svn__write_dirent(svn_ra_svn_conn_t *conn,
                          apr_pool_t *pool,
                          const char *path,
                          svn_dirent_t *dirent,
-                         apr_uint64_t dirent_fields)
+                         apr_uint32_t dirent_fields)
 {
   const char *kind = (dirent_fields & SVN_DIRENT_KIND)
                    ? svn_node_kind_to_word(dirent->kind)

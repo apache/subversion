@@ -190,9 +190,7 @@ static APR_INLINE void*
 atomic_swap(void * volatile * mem, void *new_value)
 {
 #if APR_HAS_THREADS
-  /* Cast is necessary because of APR bug:
-     https://issues.apache.org/bugzilla/show_bug.cgi?id=50731 */
-   return apr_atomic_xchgptr((volatile void **)mem, new_value);
+   return svn_atomic_xchgptr(mem, new_value);
 #else
    /* no threads - no sync. necessary */
    void *old_value = (void*)*mem;
@@ -962,7 +960,7 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
 
   /* ### Check the client locale, maybe we can avoid that second
    * conversion!  See Ulrich Drepper's patch at
-   * http://subversion.tigris.org/issues/show_bug.cgi?id=807.
+   * https://issues.apache.org/jira/browse/SVN-807.
    */
 }
 

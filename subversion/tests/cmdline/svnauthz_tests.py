@@ -197,9 +197,8 @@ def svnauthz_validate_txn_test(sbox):
   svntest.main.create_python_hook_script(pre_commit_hook, hook_instance)
   svntest.main.file_append(authz_path, 'x')
   expected_status.tweak('A/authz', status='  ', wc_rev=4)
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
   expected_data = svntest.verify.ExpectedOutput("Exit 2\n", match_all=False)
   verify_logfile(logfilepath, expected_data)
 
@@ -275,9 +274,8 @@ def svnauthz_accessof_repo_test(sbox):
   expected_status.add({
     'A/authz'            :  Item(status='  ', wc_rev=2),
   })
-  if svntest.actions.run_and_verify_commit(wc_dir, expected_output,
-                                           expected_status):
-    raise svntest.Failure
+  svntest.actions.run_and_verify_commit(wc_dir, expected_output,
+                                        expected_status)
 
   # Anonymous access with no path, and no repository should be rw
   # since it returns the highest level of access granted anywhere.
@@ -590,7 +588,7 @@ def svnauthz_accessof_is_file_test(sbox):
   svntest.main.file_append(authz_path, "x\n")
   # Check that --is returns 1 when the syntax is invalid with a file..
   expected_out = svntest.verify.RegexOutput(
-      ".*Error while parsing config file:",
+      ".*Error while parsing authz file:",
       match_all=False
   )
   svntest.actions.run_and_verify_svnauthz(None, expected_out, 1, False,
@@ -753,7 +751,7 @@ def svnauthz_accessof_is_repo_test(sbox):
 
   # Check that --is returns 1 when the syntax is invalid with a url.
   expected_out = svntest.verify.RegexOutput(
-      ".*Error while parsing config file:",
+      ".*Error while parsing authz file:",
       match_all=False
   )
   svntest.actions.run_and_verify_svnauthz(None, expected_out, 1, False,

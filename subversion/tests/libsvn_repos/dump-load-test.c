@@ -79,9 +79,9 @@ test_dump_bad_props(svn_stringbuf_t **dump_data_p,
   SVN_ERR(svn_repos_dump_fs4(repos, stream, start_rev, end_rev,
                              FALSE, FALSE, TRUE, TRUE,
                              notify_func, notify_baton,
-                             NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* Check that the property appears in the dump data */
   expected_str = apr_psprintf(pool, "K %d\n%s\n"
@@ -120,17 +120,18 @@ test_load_bad_props(svn_stringbuf_t *dump_data,
   svn_revnum_t youngest_rev;
   svn_string_t *loaded_prop_val;
 
-  SVN_ERR(svn_repos_load_fs5(repos, stream,
+  SVN_ERR(svn_repos_load_fs6(repos, stream,
                              SVN_INVALID_REVNUM, SVN_INVALID_REVNUM,
                              svn_repos_load_uuid_default,
                              parent_fspath,
                              FALSE, FALSE, /*use_*_commit_hook*/
                              validate_props,
                              FALSE /*ignore_dates*/,
+                             FALSE /*normalize_props*/,
                              notify_func, notify_baton,
                              NULL, NULL, /*cancellation*/
                              pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* Check the loaded property */
   fs = svn_repos_fs(repos);

@@ -23,7 +23,7 @@ AC_PREREQ(2.59)
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
-     [esyscmd(python build/getversion.py SVN subversion/include/svn_version.h)],
+     [esyscmd($PYTHON build/getversion.py SVN subversion/include/svn_version.h)],
      [http://subversion.apache.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
@@ -155,9 +155,11 @@ SVN_FIND_APACHE(20051115, $apache_whitelist_ver)
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
 dnl the correct command to unpack the downloaded file.
-SQLITE_MINIMUM_VER="3.7.12"
-SQLITE_RECOMMENDED_VER="3.7.15.1"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
+SQLITE_MINIMUM_VER="3.8.2"
+SQLITE_RECOMMENDED_VER="3.8.11.1"
+dnl Used to construct the SQLite download URL.
+SQLITE_RECOMMENDED_VER_REL_YEAR="2015"
+SQLITE_URL="https://www.sqlite.org/$SQLITE_RECOMMENDED_VER_REL_YEAR/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -558,22 +560,22 @@ AC_SUBST(SVN_HAVE_GPG_AGENT)
 
 dnl GNOME Keyring -------------------
 
-AC_ARG_WITH(gnome_keyring,
-  AS_HELP_STRING([--with-gnome-keyring], 
-                 [Enable use of GNOME Keyring for auth credentials (enabled by default if found)]),
-                 [with_gnome_keyring="$withval"],
-                 [with_gnome_keyring=auto])
+AC_ARG_WITH(old_gnome_keyring,
+  AS_HELP_STRING([--with-old-gnome-keyring], 
+                 [Enable old GNOME Keyring for auth credentials (prefer --with-gnome-keyring)]),
+                 [with_old_gnome_keyring="$withval"],
+                 [with_old_gnome_keyring=no])
 
-found_gnome_keyring=no
-AC_MSG_CHECKING([whether to look for GNOME Keyring])
-if test "$with_gnome_keyring" != "no"; then
+found_old_gnome_keyring=no
+AC_MSG_CHECKING([whether to look for old GNOME Keyring])
+if test "$with_old_gnome_keyring" != "no"; then
   AC_MSG_RESULT([yes])
   case "$host" in
   *-*-darwin*)
-    if test "$with_gnome_keyring" = "yes"; then
-      AC_MSG_ERROR([--with-gnome-keyring is not supported on Mac OS X.])
+    if test "$with_old_gnome_keyring" = "yes"; then
+      AC_MSG_ERROR([--with-old-gnome-keyring is not supported on Mac OS X.])
     else
-      with_gnome_keyring=no
+      with_old_gnome_keyring=no
     fi
     ;;
   *)
@@ -586,47 +588,48 @@ if test "$with_gnome_keyring" != "no"; then
             old_CPPFLAGS="$CPPFLAGS"
             SVN_GNOME_KEYRING_INCLUDES="`$PKG_CONFIG --cflags glib-2.0 gnome-keyring-1`"
             CPPFLAGS="$CPPFLAGS $SVN_GNOME_KEYRING_INCLUDES"
-            AC_CHECK_HEADER(gnome-keyring.h, found_gnome_keyring=yes, found_gnome_keyring=no)
+            AC_CHECK_HEADER(gnome-keyring.h, found_old_gnome_keyring=yes, found_old_gnome_keyring=no)
             AC_MSG_CHECKING([for GNOME Keyring])
-            if test "$found_gnome_keyring" = "yes"; then
+            if test "$found_old_gnome_keyring" = "yes"; then
               AC_MSG_RESULT([yes])
               AC_DEFINE([SVN_HAVE_GNOME_KEYRING], [1], 
                         [Is GNOME Keyring support enabled?])
               CPPFLAGS="$old_CPPFLAGS"
               SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
+              SVN_GNOME_KEYRING_PCLIBS="glib-2.0 gnome-keyring-1"
             else
               AC_MSG_RESULT([no])
-              if test "$with_gnome_keyring" = "yes"; then
+              if test "$with_old_gnome_keyring" = "yes"; then
                 AC_MSG_ERROR([cannot find GNOME Keyring])
               fi
             fi
           else
             AC_MSG_RESULT([no])
-            if test "$with_gnome_keyring" = "yes"; then
+            if test "$with_old_gnome_keyring" = "yes"; then
               AC_MSG_ERROR([cannot find GLib and GNOME Keyring .pc files.])
             else
-              with_gnome_keyring=no
+              with_old_gnome_keyring=no
             fi
           fi
         else
-          if test "$with_gnome_keyring" = "yes"; then
+          if test "$with_old_gnome_keyring" = "yes"; then
             AC_MSG_ERROR([cannot find pkg-config. GNOME Keyring requires this.])
           else
-            with_gnome_keyring=no
+            with_old_gnome_keyring=no
           fi
         fi
       else
-        if test "$with_gnome_keyring" = "yes"; then
+        if test "$with_old_gnome_keyring" = "yes"; then
           AC_MSG_ERROR([APR does not have support for DSOs. GNOME Keyring requires this.])
         else
-          with_gnome_keyring=no
+          with_old_gnome_keyring=no
         fi
       fi
     else
-      if test "$with_gnome_keyring" = "yes"; then
-        AC_MSG_ERROR([--with-gnome-keyring conflicts with --disable-shared])
+      if test "$with_old_gnome_keyring" = "yes"; then
+        AC_MSG_ERROR([--with-old-gnome-keyring conflicts with --disable-shared])
       else
-        with_gnome_keyring=no
+        with_old_gnome_keyring=no
       fi
     fi
     ;;
@@ -636,6 +639,9 @@ else
 fi
 AC_SUBST(SVN_GNOME_KEYRING_INCLUDES)
 AC_SUBST(SVN_GNOME_KEYRING_LIBS)
+
+dnl LibSecret -------------------
+SVN_LIB_SECRET
 
 dnl Googlemock -----------------
 AC_ARG_ENABLE([googlemock],
@@ -864,18 +870,21 @@ fi
 
 dnl plaintext passwords -------------------
 AC_ARG_ENABLE(plaintext-password-storage,
-AS_HELP_STRING([--disable-plaintext-password-storage],
-               [Disable on-disk caching of plaintext passwords and passphrases.
-                (Leaving this functionality enabled will not force Subversion
+AS_HELP_STRING([--enable-plaintext-password-storage],
+               [Enable on-disk caching of plaintext passwords and passphrases.
+                (Enabling this functionality will not force Subversion
                 to store passwords in plaintext, but does permit users to
                 explicitly allow that behavior via runtime configuration.)]),
-[
-   if test "$enableval" = "no"; then
-      AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
-      AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
-                [Defined if plaintext password/passphrase storage is disabled])
-   fi
-])
+[plaintext_passwordd_storage="$enableval"],
+[plaintext_passwordd_storage="no"])
+
+if test "$plaintext_passwordd_storage" = "yes"; then
+  AC_MSG_WARN([Enabling plaintext password/passphrase storage])
+else
+  AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
+  AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
+            [Defined if plaintext password/passphrase storage is disabled])
+fi
 
 dnl Build and install rules -------------------
 
@@ -904,7 +913,7 @@ if test "$svn_lib_kwallet" = "yes"; then
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-kwallet-lib"
 fi
 
-if test "$found_gnome_keyring" = "yes"; then
+if test "$found_old_gnome_keyring" = "yes" || test "$found_gnome_keyring" = "yes"; then
   BUILD_RULES="$BUILD_RULES gnome-keyring-lib"
   INSTALL_RULES="`echo $INSTALL_RULES | $SED 's/install-lib/install-lib install-gnome-keyring-lib/'`"
   INSTALL_STATIC_RULES="$INSTALL_STATIC_RULES install-gnome-keyring-lib"
@@ -945,8 +954,9 @@ AC_FUNC_VPRINTF
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
-dnl check for uname
+dnl check for uname and ELF headers
 AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
+AC_CHECK_HEADERS(elf.h)
 
 dnl check for termios
 AC_CHECK_HEADER(termios.h,[
@@ -1005,6 +1015,7 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
     for library_dir in "$abs_srcdir/subversion/libsvn_"*; do
       eval "`basename $library_dir`_LDFLAGS=-Wl,--no-undefined"
     done
+    shared_only_LDFLAGS="-Wl,--no-undefined"
   else
     AC_MSG_RESULT([no])
     if test "$enable_disallowing_of_undefined_references" = "yes"; then
@@ -1012,8 +1023,6 @@ if test "$enable_disallowing_of_undefined_references" != "no"; then
     fi
   fi
 fi
-AC_SUBST([libsvn_auth_gnome_keyring_LDFLAGS])
-AC_SUBST([libsvn_auth_kwallet_LDFLAGS])
 AC_SUBST([libsvn_client_LDFLAGS])
 AC_SUBST([libsvn_delta_LDFLAGS])
 AC_SUBST([libsvn_diff_LDFLAGS])
@@ -1030,6 +1039,7 @@ AC_SUBST([libsvn_ra_git_LDFLAGS])
 AC_SUBST([libsvn_repos_LDFLAGS])
 AC_SUBST([libsvn_subr_LDFLAGS])
 AC_SUBST([libsvn_wc_LDFLAGS])
+AC_SUBST([shared_only_LDFLAGS])
 
 
 AC_ARG_ENABLE(maintainer-mode,
@@ -1218,6 +1228,10 @@ AS_HELP_STRING([--with-editor=PATH],
 
 SVN_LIB_Z
 
+SVN_LZ4
+
+SVN_UTF8PROC
+
 MOD_ACTIVATION=""
 AC_ARG_ENABLE(mod-activation,
 AS_HELP_STRING([--enable-mod-activation],
@@ -1301,7 +1315,7 @@ fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
 # The minimum version for the JVM runtime for our Java bytecode.
-JAVA_OLDEST_WORKING_VER='1.6'
+JAVA_OLDEST_WORKING_VER='1.8'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
@@ -1310,7 +1324,7 @@ AC_PATH_PROG(PERL, perl, none)
 if test -n "$RUBY"; then
   AC_PATH_PROG(RUBY, "$RUBY", none)
 else
-  AC_PATH_PROGS(RUBY, ruby ruby1.8 ruby18 ruby1.9 ruby1 ruby1.9.3 ruby193 ruby2.0 ruby2.1, none)
+  AC_PATH_PROGS(RUBY, ruby ruby1 ruby1.8 ruby18 ruby1.9 ruby19 ruby1.9.3 ruby193 ruby2 ruby2.0 ruby20 ruby2.1 ruby21 ruby2.2 ruby22 ruby2.3 ruby23 ruby2.4 ruby24, none)
 fi
 if test "$RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
@@ -1319,7 +1333,7 @@ if test "$RUBY" != "none"; then
     if test -n "$RDOC"; then
       AC_PATH_PROG(RDOC, "$RDOC", none)
     else
-      AC_PATH_PROGS(RDOC, rdoc rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2.0 rdoc2.1, none)
+      AC_PATH_PROGS(RDOC, rdoc rdoc1 rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2 rdoc2.0 rdoc20 rdoc2.1 rdoc21 rdoc2.2 rdoc22 rdoc2.3 rdoc23 rdoc2.4 rdoc24, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
@@ -1343,7 +1357,7 @@ if test "$RUBY" != "none"; then
       # Disallow Ruby between 1.8.7 and 1.9.3
       RUBY="none"
       AC_MSG_WARN([The detected Ruby is between 1.9 and 1.9.3])
-      AC_MSG_WARN([Only 1.8.x and 1.9.3 releases are supported at this time])
+      AC_MSG_WARN([Only 1.8.x and 1.9.3 or later are supported at this time])
     fi
   else
     AC_MSG_RESULT([no])
@@ -1356,6 +1370,10 @@ if test "$RUBY" != "none"; then
 fi
 
 SVN_CHECK_SWIG
+AC_ARG_VAR(SWIG_FEATURES, [SWIG feature flags common to all bindings])
+AC_ARG_VAR(SWIG_RB_FEATURES, [SWIG feature flags specific to Ruby bindings])
+AC_ARG_VAR(SWIG_PL_FEATURES, [SWIG feature flags specific to Perl bindings])
+AC_ARG_VAR(SWIG_PY_FEATURES, [SWIG feature flags specific to Python bindings])
 
 SVN_CHECK_CTYPESGEN
 
@@ -1547,12 +1565,6 @@ AC_CHECK_HEADERS([stdbool.h stdint.h])
 if test "$CC" = "clang"; then
   SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
-
-# Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
-SWIG_CPPFLAGS="$CPPFLAGS"
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-Wdate-time ])
-AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',

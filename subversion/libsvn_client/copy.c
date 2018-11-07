@@ -1057,10 +1057,24 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
                                 ctx->wc_ctx, pair->dst_parent_abspath,
                                 FALSE, TRUE,
                                 iterpool));
-      if (make_parents && dst_parent_kind == svn_node_none)
+      if (dst_parent_kind == svn_node_none)
         {
-          SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
-                                                 TRUE, ctx, iterpool));
+          if (make_parents)
+            SVN_ERR(svn_client__make_local_parents(pair->dst_parent_abspath,
+                                                   TRUE, ctx, iterpool));
+          else
+            {
+              SVN_ERR(svn_io_check_path(pair->dst_parent_abspath,
+                                        &dst_parent_kind, scratch_pool));
+              return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                                       (dst_parent_kind == svn_node_dir)
+                                         ? _("Directory '%s' is not under "
+                                             "version control")
+                                         : _("Path '%s' is not a directory"),
+                                       svn_dirent_local_style(
+                                         pair->dst_parent_abspath,
+                                         scratch_pool));
+            }
         }
       else if (dst_parent_kind != svn_node_dir)
         {
@@ -2727,6 +2741,16 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
         {
           SVN_ERR(svn_client__make_local_parents(dst_parent, TRUE, ctx,
                                                  iterpool));
+        }
+      else if (make_parents && dst_parent_kind == svn_node_dir)
+        {
+          SVN_ERR(svn_wc_read_kind2(&dst_parent_kind, ctx->wc_ctx, dst_parent,
+                                    FALSE, TRUE, iterpool));
+          if (dst_parent_kind == svn_node_none)
+            {
+              SVN_ERR(svn_client__make_local_parents(dst_parent, TRUE, ctx,
+                                                     iterpool));
+            }
         }
       else if (dst_parent_kind != svn_node_dir)
         {

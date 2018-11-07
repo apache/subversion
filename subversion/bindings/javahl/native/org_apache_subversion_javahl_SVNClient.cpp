@@ -156,8 +156,8 @@ Java_org_apache_subversion_javahl_SVNClient_getLastPath
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_list
 (JNIEnv *env, jobject jthis, jstring jurl, jobject jrevision,
- jobject jpegRevision, jobject jdepth, jint jdirentFields,
- jboolean jfetchLocks, jobject jcallback)
+ jobject jpegRevision, jobject jpatterns, jobject jdepth, jint jdirentFields,
+ jboolean jfetchLocks, jboolean jincludeExternals, jobject jcallback)
 {
   JNIEntry(SVNClient, list);
   SVNClient *cl = SVNClient::getCppObject(jthis);
@@ -176,9 +176,16 @@ Java_org_apache_subversion_javahl_SVNClient_list
   if (JNIUtil::isExceptionThrown())
     return;
 
+  StringArray patterns(jpatterns);
+  if (JNIUtil::isExceptionThrown())
+    return;
+
   ListCallback callback(jcallback);
-  cl->list(url, revision, pegRevision, EnumMapper::toDepth(jdepth),
-           static_cast<int>(jdirentFields), jfetchLocks ? true : false,
+  cl->list(url, revision, pegRevision, patterns,
+           EnumMapper::toDepth(jdepth),
+           static_cast<int>(jdirentFields),
+           jfetchLocks ? true : false,
+           jincludeExternals ? true : false,
            &callback);
 }
 
@@ -313,8 +320,9 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_logMessages
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jranges, jboolean jstopOnCopy, jboolean jdisoverPaths,
- jboolean jincludeMergedRevisions, jobject jrevProps, jlong jlimit,
- jobject jlogMessageCallback)
+ jboolean jincludeMergedRevisions,
+ jobject jrevProps, jboolean jallRevProps,
+ jlong jlimit, jobject jlogMessageCallback)
 {
   JNIEntry(SVNClient, logMessages);
 
@@ -366,7 +374,8 @@ Java_org_apache_subversion_javahl_SVNClient_logMessages
   cl->logMessages(path, pegRevision, revisionRanges,
                   jstopOnCopy ? true: false, jdisoverPaths ? true : false,
                   jincludeMergedRevisions ? true : false,
-                  revProps, int(jlimit), &callback);
+                  revProps, jallRevProps ? true : false,
+                  int(jlimit), &callback);
 }
 
 JNIEXPORT jlong JNICALL

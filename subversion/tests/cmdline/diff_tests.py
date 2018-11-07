@@ -36,7 +36,6 @@ from svntest import err, wc
 
 from prop_tests import binary_mime_type_on_text_file_warning
 from svntest.verify import make_diff_header, make_no_diff_deleted_header, \
-                           make_diff_header, make_no_diff_deleted_header, \
                            make_git_diff_header, make_diff_prop_header, \
                            make_diff_prop_val, make_diff_prop_deleted, \
                            make_diff_prop_added, make_diff_prop_modified
@@ -2712,7 +2711,7 @@ def diff_ignore_eolstyle(sbox):
     " Bb\n",
     "-Cc\n",
     "+Cc\n",
-    "\ No newline at end of file\n" ]
+    "\\ No newline at end of file\n" ]
 
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '-x', '--ignore-eol-style',
@@ -3531,7 +3530,7 @@ def diff_git_empty_files(sbox):
   expected_output = make_git_diff_header(new_path, "new", "nonexistent",
                                          "working copy",
                                          add=True, text_changes=False) + [
-  ] + make_git_diff_header(iota_path, "iota", "revision 2", "working copy",
+  ] + make_git_diff_header(iota_path, "iota", "revision 2", "nonexistent",
                            delete=True, text_changes=False)
 
   # Two files in diff may be in any order.
@@ -3855,7 +3854,7 @@ def diff_arbitrary_files_and_dirs(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # diff iota with A/mu
+  # diff files (iota with A/mu)
   expected_output = make_diff_header("iota", "working copy", "working copy",
                                      "iota", "A/mu") + [
                       "@@ -1 +1 @@\n",
@@ -3866,7 +3865,11 @@ def diff_arbitrary_files_and_dirs(sbox):
                                      'diff', '--old', sbox.ospath('iota'),
                                      '--new', sbox.ospath('A/mu'))
 
-  # diff A/B/E with A/D
+  # diff dirs (A/B/E with A/D)
+  # .../gamma is to show as replaced; .../beta is to show as modified
+  sbox.simple_mkdir('A/B/E/gamma')
+  sbox.simple_propset('p', 'v', 'A/B/E/gamma')
+  sbox.simple_add_text("This is a different beta file.\n", 'A/D/beta')
   expected_output = make_diff_header("G/pi", "nonexistent", "working copy",
                                      "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
@@ -3896,11 +3899,16 @@ def diff_arbitrary_files_and_dirs(sbox):
                       "@@ -1 +0,0 @@\n",
                       "-This is the file 'alpha'.\n"
                     ] + make_diff_header("beta", "working copy",
-                                         "nonexistent", "B/E", "D") + [
-                      "@@ -1 +0,0 @@\n",
-                      "-This is the file 'beta'.\n"
-                    ] + make_diff_header("gamma", "nonexistent",
                                          "working copy", "B/E", "D") + [
+                      "@@ -1 +1 @@\n",
+                      "-This is the file 'beta'.\n",
+                      "+This is a different beta file.\n"
+                    ] + make_diff_header("gamma", "working copy",
+                                           "nonexistent", "B/E", "D") \
+                      + make_diff_prop_header("gamma") \
+                      + make_diff_prop_deleted("p", "v") \
+                      + make_diff_header("gamma", "nonexistent",
+                                       "working copy", "B/E", "D") + [
                       "@@ -0,0 +1 @@\n",
                       "+This is the file 'gamma'.\n"
                     ]
@@ -5043,7 +5051,7 @@ def diff_symlinks(sbox):
     '===================================================================\n',
     'diff --git a/to-iota b/to-iota\n',
     'new file mode 120644\n',
-    '--- /dev/null\t(nonexistent)\n',
+    '--- a/to-iota\t(nonexistent)\n',
     '+++ b/to-iota\t(working copy)\n',
     '@@ -0,0 +1 @@\n',
     '+iota\n',
@@ -5140,6 +5148,110 @@ def diff_peg_resolve(sbox):
                                      repo_url + '/branches/A2',
                                      wc_dir, '-r1:2')
 
+@XFail()
+@Issue(4706)
+def diff_unversioned_files_git(sbox):
+  "diff unversioned files in git format"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.file_write(sbox.ospath('foo'), "foo\n")
+  svntest.main.file_write(sbox.ospath('A/bar'), "bar\n")
+  expected_output = make_diff_header("foo", "working copy", "working copy",
+                                     "foo", "A/bar") + [
+                      "@@ -1 +1 @@\n",
+                      "-foo\n",
+                      "+bar\n"
+                    ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'diff', '--git',
+                                     '--old', sbox.ospath('foo'),
+                                     '--new', sbox.ospath('A/bar'))
+
+# Summary diff with a repository source side and a local copy target side.
+# This particular combination crashed in 1.10.0 and earlier releases.
+def diff_summary_repo_wc_local_copy(sbox):
+  "diff summary repo wc local copy"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_copy('iota', 'iota2')
+  sbox.simple_append('iota2', 'hello\n')
+  expected_diff = svntest.wc.State(wc_dir, {
+    'iota': Item(status='M '),
+    })
+  svntest.actions.run_and_verify_diff_summarize(
+                    expected_diff,
+                    '--old=' + sbox.ospath('iota') + '@HEAD',
+                    '--new=' + sbox.ospath('iota2'))
+
+# Summary diff with a repository source side and a local copy target side.
+# Svn reported the unmodified copy as modified in 1.10.0 and earlier releases.
+@XFail()
+def diff_summary_repo_wc_local_copy_unmodified(sbox):
+  "diff summary repo wc local copy unmodified"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_copy('iota', 'iota2')
+  expected_diff = svntest.wc.State(wc_dir, {
+    })
+  svntest.actions.run_and_verify_diff_summarize(
+                    expected_diff,
+                    '--old=' + sbox.ospath('iota') + '@HEAD',
+                    '--new=' + sbox.ospath('iota2'))
+
+# Fails with "Can't open file '.../iota': Too many levels of symbolic links"
+# on Unix.
+@XFail()
+@Skip(svntest.main.is_os_windows)
+def diff_file_replaced_by_symlink(sbox):
+  "diff base vs working: symlink replaces a file"
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  os.remove(iota_path)
+
+  # create a symlink pointing to itself
+  # alternatively it could point to a non-existing path
+  sbox.simple_symlink('iota', 'iota')
+
+  # TODO: add a full expected output
+  expected_output = svntest.verify.AnyOutput
+  svntest.actions.run_and_verify_svn(expected_output, [], 'diff', wc_dir)
+
+# Test 'svn diff --git' with a copy.
+#
+# When this diff is rooted at a path below the repository root directory,
+# it errored out while printing the git diff header, due to confusion of
+# diff-relative and repository-relative copyfrom paths.
+@XFail()
+def diff_git_format_copy(sbox):
+  "diff git format copy"
+  sbox.build(create_wc=False)
+  svntest.actions.run_and_verify_svn(None, [], 'checkout',
+                                     sbox.repo_url + '/A/B',
+                                     sbox.wc_dir)
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  sbox.simple_copy('E/alpha', 'alpha_copied')
+  sbox.simple_append('alpha_copied', "This is a copy of 'alpha'.\n")
+
+  expected_output = \
+    make_git_diff_header('alpha_copied', 'A/B/alpha_copied',
+                         "revision 1", "working copy",
+                         copyfrom_path="A/B/E/alpha",
+                         copyfrom_rev='1', cp=True,
+                         text_changes=True) + [
+    "@@ -1 +1,2 @@\n",
+    " This is the file 'alpha'.\n",
+    "+This is a copy of 'alpha'.\n",
+  ]
+
+  svntest.actions.run_and_verify_svn(expected_output, [], 'diff',
+                                     '--git', '.')
 
 ########################################################################
 #Run the tests
@@ -5236,6 +5348,11 @@ test_list = [ None,
               diff_incomplete_props,
               diff_symlinks,
               diff_peg_resolve,
+              diff_unversioned_files_git,
+              diff_summary_repo_wc_local_copy,
+              diff_summary_repo_wc_local_copy_unmodified,
+              diff_file_replaced_by_symlink,
+              diff_git_format_copy,
               ]
 
 if __name__ == '__main__':

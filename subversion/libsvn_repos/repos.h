@@ -27,6 +27,7 @@
 #include <apr_hash.h>
 
 #include "svn_fs.h"
+#include "svn_config.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -360,32 +361,6 @@ svn_repos__hooks_post_unlock(svn_repos_t *repos,
                              const apr_array_header_t *paths,
                              const char *username,
                              apr_pool_t *pool);
-
-
-/*** Authz Functions ***/
-
-/* Read authz configuration data from PATH into *AUTHZ_P, allocated
-   in POOL.  If GROUPS_PATH is set, use the global groups parsed from it.
-
-   PATH and GROUPS_PATH may be a dirent or a registry path and iff ACCEPT_URLS
-   is set it may also be an absolute file url.
-
-   If PATH or GROUPS_PATH is not a valid authz rule file, then return
-   SVN_AUTHZ_INVALID_CONFIG.  The contents of *AUTHZ_P is then
-   undefined.  If MUST_EXIST is TRUE, a missing authz or global groups file
-   is also an error. */
-svn_error_t *
-svn_repos__authz_read(svn_authz_t **authz_p,
-                      const char *path,
-                      const char *groups_path,
-                      svn_boolean_t must_exist,
-                      svn_boolean_t accept_urls,
-                      apr_pool_t *pool);
-
-/* Walk the configuration in AUTHZ looking for any errors. */
-svn_error_t *
-svn_repos__authz_validate(svn_authz_t *authz,
-                          apr_pool_t *pool);
 
 
 /*** Utility Functions ***/

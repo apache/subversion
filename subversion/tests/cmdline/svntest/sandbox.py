@@ -102,7 +102,7 @@ class Sandbox:
 
     self.was_cwd = os.getcwd()
 
-  def _set_name(self, name, read_only=False, empty=False):
+  def _set_name(self, name, read_only=False, empty=False, tree=None):
     """A convenience method for renaming a sandbox, useful when
     working with multiple repositories in the same unit test."""
     if not name is None:
@@ -117,8 +117,15 @@ class Sandbox:
                                 self.repo_dir.replace(os.path.sep, '/')))
       self.add_test_path(self.repo_dir)
     else:
-      self.repo_dir = svntest.main.pristine_greek_repos_dir
-      self.repo_url = svntest.main.pristine_greek_repos_url
+      if tree == 'greek':
+        self.repo_dir = svntest.main.pristine_greek_repos_dir
+        self.repo_url = svntest.main.pristine_greek_repos_url
+      elif tree == 'trojan':
+        self.repo_dir = svntest.main.pristine_trojan_repos_dir
+        self.repo_url = svntest.main.pristine_trojan_repos_url
+      else:
+        raise ValueError("'tree' must be 'greek' or 'trojan'"
+                         " but was '%s'" % str(tree))
 
     if self.repo_url.startswith("http"):
       self.authz_file = os.path.join(svntest.main.work_dir, "authz")
@@ -146,15 +153,15 @@ class Sandbox:
     return clone
 
   def build(self, name=None, create_wc=True, read_only=False, empty=False,
-            minor_version=None):
-    """Make a 'Greek Tree' repo (or refer to the central one if READ_ONLY),
-       or make an empty repo if EMPTY is true,
+            minor_version=None, tree='greek'):
+    """Make a 'Greek Tree' or 'Trojan Tree' repo (or refer to the central
+       one if READ_ONLY), or make an empty repo if EMPTY is true,
        and check out a WC from it (unless CREATE_WC is false). Change the
        sandbox's name to NAME. See actions.make_repo_and_wc() for details."""
-    self._set_name(name, read_only, empty)
+    self._set_name(name, read_only, empty, tree)
     self._ensure_authz()
     svntest.actions.make_repo_and_wc(self, create_wc, read_only, empty,
-                                     minor_version)
+                                     minor_version, tree)
     self._is_built = True
 
   def _ensure_authz(self):
@@ -168,7 +175,8 @@ class Sandbox:
                or open(self.authz_file,'r').read() != default_authz)):
 
         tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
-        open(tmp_authz_file, 'w').write(default_authz)
+        with open(tmp_authz_file, 'w') as f:
+          f.write(default_authz)
         shutil.move(tmp_authz_file, self.authz_file)
 
   def authz_name(self, repo_dir=None):
@@ -492,7 +500,8 @@ class Sandbox:
                        if not svnrdump_headers_always.match(l)]
     # Ignore differences in number of blank lines between node records,
     # as svnrdump puts 3 whereas svnadmin puts 2 after a replace-with-copy.
-    svntest.verify.compare_dump_files(None, None,
+    svntest.verify.compare_dump_files('svnadmin dump, tweaked',
+                                      'svnrdump dump, tweaked',
                                       dumpfile_a_d_cmp,
                                       dumpfile_r_d_cmp,
                                       ignore_number_of_blank_lines=True)
@@ -523,20 +532,22 @@ class Sandbox:
     reloaded_dumpfile_a_n = svntest.actions.run_and_verify_dump(repo_dir_a_n)
     reloaded_dumpfile_a_d = svntest.actions.run_and_verify_dump(repo_dir_a_d)
     reloaded_dumpfile_r_d = svntest.actions.run_and_verify_dump(repo_dir_r_d)
-    svntest.verify.compare_dump_files(None, None,
+    svntest.verify.compare_dump_files('svnadmin dump no delta, loaded, dumped',
+                                      'svnadmin dump --deltas, loaded, dumped',
                                       reloaded_dumpfile_a_n,
                                       reloaded_dumpfile_a_d,
                                       ignore_uuid=True)
-    svntest.verify.compare_dump_files(None, None,
+    svntest.verify.compare_dump_files('svnadmin dump, loaded, dumped',
+                                      'svnrdump dump, loaded, dumped',
                                       reloaded_dumpfile_a_d,
                                       reloaded_dumpfile_r_d,
                                       ignore_uuid=True)
 
     # Run each dump through svndumpfilter and check for no further change.
-    for dumpfile in [dumpfile_a_n,
-                     dumpfile_a_d,
-                     dumpfile_r_d
-                     ]:
+    for dumpfile, dumpfile_desc in [(dumpfile_a_n, 'svnadmin dump'),
+                                    (dumpfile_a_d, 'svnadmin dump --deltas'),
+                                    (dumpfile_r_d, 'svnrdump dump'),
+                                    ]:
       ### No buffer size seems to work for update_tests-2. So skip that test?
       ### (Its dumpfile size is ~360 KB non-delta, ~180 KB delta.)
       if len(''.join(dumpfile)) > 100000:
@@ -550,7 +561,9 @@ class Sandbox:
       # svndumpfilter strips them.
       # Ignore differences in number of blank lines between node records,
       # as svndumpfilter puts 3 instead of 2 after an add or delete record.
-      svntest.verify.compare_dump_files(None, None, dumpfile, dumpfile2,
+      svntest.verify.compare_dump_files(dumpfile_desc,
+                                        'after svndumpfilter include /',
+                                        dumpfile, dumpfile2,
                                         expect_content_length_always=True,
                                         ignore_empty_prop_sections=True,
                                         ignore_number_of_blank_lines=True)

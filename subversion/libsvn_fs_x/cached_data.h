@@ -67,7 +67,7 @@ svn_fs_x__rep_chain_length(int *chain_length,
                            svn_fs_t *fs,
                            apr_pool_t *scratch_pool);
 
-/* Set *CONTENTS to be a readable svn_stream_t that receives the text
+/* Set *CONTENTS_P to be a readable svn_stream_t that receives the text
    representation REP as seen in filesystem FS.  If CACHE_FULLTEXT is
    not set, bypass fulltext cache lookup for this rep and don't put the
    reconstructed fulltext into cache.
@@ -78,6 +78,18 @@ svn_fs_x__get_contents(svn_stream_t **contents_p,
                        svn_fs_x__representation_t *rep,
                        svn_boolean_t cache_fulltext,
                        apr_pool_t *result_pool);
+
+/* Set *CONTENTS_P to be a readable svn_stream_t that receives the text
+   representation REP as seen in filesystem FS.  Read the latest element
+   of the delta chain from FILE at offset OFFSET.
+   Use POOL for allocations. */
+svn_error_t *
+svn_fs_x__get_contents_from_file(svn_stream_t **contents_p,
+                                 svn_fs_t *fs,
+                                 svn_fs_x__representation_t *rep,
+                                 apr_file_t *file,
+                                 apr_off_t offset,
+                                 apr_pool_t *pool);
 
 /* Determine on-disk and expanded sizes of the representation identified
  * by ENTRY in FS and return the result in PACKED_LEN and EXPANDED_LEN,

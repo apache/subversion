@@ -226,8 +226,8 @@ load_pwdb_config(repository_t *repository,
       pwdb_path = svn_dirent_internal_style(pwdb_path, pool);
       pwdb_path = svn_dirent_join(repository->base, pwdb_path, pool);
 
-      err = svn_repos__config_pool_get(&repository->pwdb, NULL, config_pool,
-                                       pwdb_path, TRUE, FALSE,
+      err = svn_repos__config_pool_get(&repository->pwdb, config_pool,
+                                       pwdb_path, TRUE,
                                        repository->repos, pool);
       if (err)
         {
@@ -285,8 +285,8 @@ canonicalize_access_file(const char **access_file, repository_t *repository,
   return SVN_NO_ERROR;
 }
 
-/* Load the authz database for the listening server through AUTHZ_POOL
-   based on the entries in the SERVER struct.
+/* Load the authz database for the listening server based on the entries
+   in the SERVER struct.
 
    SERVER and CONN must not be NULL. The real errors will be logged with
    SERVER and CONN but return generic errors to the client. */
@@ -294,7 +294,6 @@ static svn_error_t *
 load_authz_config(repository_t *repository,
                   const char *repos_root,
                   svn_config_t *cfg,
-                  svn_repos__authz_pool_t *authz_pool,
                   apr_pool_t *pool)
 {
   const char *authzdb_path;
@@ -322,9 +321,9 @@ load_authz_config(repository_t *repository,
                                        repos_root, pool);
 
       if (!err)
-        err = svn_repos__authz_pool_get(&repository->authzdb, authz_pool,
-                                        authzdb_path, groupsdb_path, TRUE,
-                                        repository->repos, pool);
+        err = svn_repos_authz_read3(&repository->authzdb, authzdb_path,
+                                    groupsdb_path, TRUE, repository->repos,
+                                    pool, pool);
 
       if (err)
         return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, err, NULL);
@@ -370,7 +369,7 @@ handle_config_error(svn_error_t *error,
 
       /* Now that we've logged the error, clear it and return a
        * nice, generic error to the user:
-       * http://subversion.tigris.org/issues/show_bug.cgi?id=2271 */
+       * https://issues.apache.org/jira/browse/SVN-2271 */
       svn_error_clear(error);
       return svn_error_create(apr_err, NULL, NULL);
     }
@@ -446,7 +445,7 @@ static svn_error_t *authz_check_access(svn_boolean_t *allowed,
      absolute path. Passing such a malformed path to the authz
      routines throws them into an infinite loop and makes them miss
      ACLs. */
-  if (path)
+  if (path && *path != '/')
     path = svn_fspath__canonicalize(path, pool);
 
   /* If we have a username, and we've not yet used it + any username
@@ -1682,7 +1681,7 @@ get_file(svn_ra_svn_conn_t *conn,
 /* Translate all the words in DIRENT_FIELDS_LIST into the flags in
  * DIRENT_FIELDS_P.  If DIRENT_FIELDS_LIST is NULL, set all flags. */
 static svn_error_t *
-parse_dirent_fields(apr_uint64_t *dirent_fields_p,
+parse_dirent_fields(apr_uint32_t *dirent_fields_p,
                     svn_ra_svn__list_t *dirent_fields_list)
 {
   static const svn_string_t str_kind
@@ -1698,7 +1697,7 @@ parse_dirent_fields(apr_uint64_t *dirent_fields_p,
   static const svn_string_t str_last_author
     = SVN__STATIC_STRING(SVN_RA_SVN_DIRENT_LAST_AUTHOR);
 
-  apr_uint64_t dirent_fields;
+  apr_uint32_t dirent_fields;
 
   if (! dirent_fields_list)
     {
@@ -1753,7 +1752,7 @@ get_dir(svn_ra_svn_conn_t *conn,
   apr_pool_t *subpool;
   svn_boolean_t want_props, want_contents;
   apr_uint64_t wants_inherited_props;
-  apr_uint64_t dirent_fields;
+  apr_uint32_t dirent_fields;
   svn_ra_svn__list_t *dirent_fields_list = NULL;
   int i;
   authz_baton_t ab;
@@ -2123,6 +2122,61 @@ diff(svn_ra_svn_conn_t *conn,
   return SVN_NO_ERROR;
 }
 
+/* Baton type to be used with mergeinfo_receiver. */
+typedef struct mergeinfo_receiver_baton_t
+{
+  /* Send the response over this connection. */
+  svn_ra_svn_conn_t *conn;
+
+  /* Start path of the query; report paths relative to this one. */
+  const char *fs_path;
+
+  /* Did we already send the opening sequence? */
+  svn_boolean_t starting_tuple_sent;
+} mergeinfo_receiver_baton_t;
+
+/* Utility method sending the start of the "get m/i" response once
+   over BATON->CONN. */
+static svn_error_t *
+send_mergeinfo_starting_tuple(mergeinfo_receiver_baton_t *baton,
+                              apr_pool_t *scratch_pool)
+{
+  if (baton->starting_tuple_sent)
+    return SVN_NO_ERROR;
+
+  SVN_ERR(svn_ra_svn__write_tuple(baton->conn, scratch_pool,
+                                  "w((!", "success"));
+  baton->starting_tuple_sent = TRUE;
+
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_repos_mergeinfo_receiver_t, sending the MERGEINFO
+ * out over the connection in the mergeinfo_receiver_baton_t * BATON. */
+static svn_error_t *
+mergeinfo_receiver(const char *path,
+                   svn_mergeinfo_t mergeinfo,
+                   void *baton,
+                   apr_pool_t *scratch_pool)
+{
+  mergeinfo_receiver_baton_t *b = baton;
+  svn_string_t *mergeinfo_string;
+
+  /* Delay starting the response until we checked that the initial
+     request went through.  We are at that point now b/c we've got
+     the first results in. */
+  SVN_ERR(send_mergeinfo_starting_tuple(b, scratch_pool));
+
+  /* Adjust the path info and send the m/i. */
+  path = svn_fspath__skip_ancestor(b->fs_path, path);
+  SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, mergeinfo,
+                                  scratch_pool));
+  SVN_ERR(svn_ra_svn__write_tuple(b->conn, scratch_pool, "cs", path,
+                                  mergeinfo_string));
+
+  return SVN_NO_ERROR;
+}
+
 /* Regardless of whether a client's capabilities indicate an
    understanding of this command (by way of SVN_RA_SVN_CAP_MERGEINFO),
    we provide a response.
@@ -2139,17 +2193,19 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
   svn_revnum_t rev;
   svn_ra_svn__list_t *paths;
   apr_array_header_t *canonical_paths;
-  svn_mergeinfo_catalog_t mergeinfo;
   int i;
-  apr_hash_index_t *hi;
   const char *inherit_word;
   svn_mergeinfo_inheritance_t inherit;
   svn_boolean_t include_descendants;
-  apr_pool_t *iterpool;
   authz_baton_t ab;
+  mergeinfo_receiver_baton_t mergeinfo_baton;
 
   ab.server = b;
   ab.conn = conn;
+
+  mergeinfo_baton.conn = conn;
+  mergeinfo_baton.fs_path = b->repository->fs_path->data;
+  mergeinfo_baton.starting_tuple_sent = FALSE;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, "l(?r)wb", &paths, &rev,
                                   &inherit_word, &include_descendants));
@@ -2176,29 +2232,19 @@ get_mergeinfo(svn_ra_svn_conn_t *conn,
                                              pool)));
 
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo(&mergeinfo, b->repository->repos,
-                                         canonical_paths, rev,
-                                         inherit,
-                                         include_descendants,
-                                         authz_check_access_cb_func(b), &ab,
-                                         pool));
-  SVN_ERR(svn_mergeinfo__remove_prefix_from_catalog(&mergeinfo, mergeinfo,
-                                      b->repository->fs_path->data, pool));
-  SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "w((!", "success"));
-  iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, mergeinfo); hi; hi = apr_hash_next(hi))
-    {
-      const char *key = apr_hash_this_key(hi);
-      svn_mergeinfo_t value = apr_hash_this_val(hi);
-      svn_string_t *mergeinfo_string;
 
-      svn_pool_clear(iterpool);
+  SVN_CMD_ERR(svn_repos_fs_get_mergeinfo2(b->repository->repos,
+                                          canonical_paths, rev,
+                                          inherit,
+                                          include_descendants,
+                                          authz_check_access_cb_func(b), &ab,
+                                          mergeinfo_receiver,
+                                          &mergeinfo_baton,
+                                          pool));
 
-      SVN_ERR(svn_mergeinfo_to_string(&mergeinfo_string, value, iterpool));
-      SVN_ERR(svn_ra_svn__write_tuple(conn, iterpool, "cs", key,
-                                      mergeinfo_string));
-    }
-  svn_pool_destroy(iterpool);
+  /* We might not have sent anything
+     => ensure to begin the response in any case. */
+  SVN_ERR(send_mergeinfo_starting_tuple(&mergeinfo_baton, pool));
   SVN_ERR(svn_ra_svn__write_tuple(conn, pool, "!))"));
 
   return SVN_NO_ERROR;
@@ -2775,15 +2821,9 @@ static svn_error_t *file_rev_handler(void *baton, const char *path,
       svn_stream_set_write(stream, svndiff_handler);
       svn_stream_set_close(stream, svndiff_close_handler);
 
-      /* If the connection does not support SVNDIFF1 or if we don't want to use
-       * compression, use the non-compressing "version 0" implementation */
-      if (   svn_ra_svn_compression_level(frb->conn) > 0
-          && svn_ra_svn_has_capability(frb->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 1,
-                                svn_ra_svn_compression_level(frb->conn), pool);
-      else
-        svn_txdelta_to_svndiff3(d_handler, d_baton, stream, 0,
-                                svn_ra_svn_compression_level(frb->conn), pool);
+      svn_txdelta_to_svndiff3(d_handler, d_baton, stream,
+                              svn_ra_svn__svndiff_version(frb->conn),
+                              svn_ra_svn_compression_level(frb->conn), pool);
     }
   else
     SVN_ERR(svn_ra_svn__write_cstring(frb->conn, pool, ""));
@@ -3545,7 +3585,7 @@ typedef struct list_receiver_baton_t
   svn_ra_svn_conn_t *conn;
 
   /* Send the field selected by these flags. */
-  apr_uint64_t dirent_fields;
+  apr_uint32_t dirent_fields;
 } list_receiver_baton_t;
 
 /* Implements svn_repos_dirent_receiver_t, sending DIRENT and PATH to the
@@ -3739,8 +3779,7 @@ repos_path_valid(const char *path)
  * and fs_path fields of REPOSITORY.  VHOST and READ_ONLY flags are the
  * same as in the server baton.
  *
- * CONFIG_POOL and AUTHZ_POOL shall be used to load any object of the
- * respective type.
+ * CONFIG_POOL shall be used to load config objects.
  *
  * Use SCRATCH_POOL for temporary allocations.
  *
@@ -3753,13 +3792,13 @@ find_repos(const char *url,
            svn_config_t *cfg,
            repository_t *repository,
            svn_repos__config_pool_t *config_pool,
-           svn_repos__authz_pool_t *authz_pool,
            apr_hash_t *fs_config,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
   const char *path, *full_path, *fs_path, *hooks_env;
   svn_stringbuf_t *url_buf;
+  svn_boolean_t sasl_requested;
 
   /* Skip past the scheme and authority part. */
   path = skip_scheme_part(url);
@@ -3822,25 +3861,27 @@ find_repos(const char *url,
     {
       repository->base = svn_repos_conf_dir(repository->repos, result_pool);
 
-      SVN_ERR(svn_repos__config_pool_get(&cfg, NULL, config_pool,
+      SVN_ERR(svn_repos__config_pool_get(&cfg, config_pool,
                                          svn_repos_svnserve_conf
                                             (repository->repos, result_pool),
-                                         FALSE, FALSE, repository->repos,
+                                         FALSE, repository->repos,
                                          result_pool));
     }
 
   SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
-                            authz_pool, result_pool));
+                            result_pool));
 
-#ifdef SVN_HAVE_SASL
+  /* Should we use Cyrus SASL? */
+  SVN_ERR(svn_config_get_bool(cfg, &sasl_requested,
+                              SVN_CONFIG_SECTION_SASL,
+                              SVN_CONFIG_OPTION_USE_SASL, FALSE));
+  if (sasl_requested)
     {
+#ifdef SVN_HAVE_SASL
       const char *val;
 
-      /* Should we use Cyrus SASL? */
-      SVN_ERR(svn_config_get_bool(cfg, &repository->use_sasl,
-                                  SVN_CONFIG_SECTION_SASL,
-                                  SVN_CONFIG_OPTION_USE_SASL, FALSE));
+      repository->use_sasl = sasl_requested;
 
       svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
                     SVN_CONFIG_OPTION_MIN_SSF, "0");
@@ -3849,8 +3890,18 @@ find_repos(const char *url,
       svn_config_get(cfg, &val, SVN_CONFIG_SECTION_SASL,
                     SVN_CONFIG_OPTION_MAX_SSF, "256");
       SVN_ERR(svn_cstring_atoui(&repository->max_ssf, val));
+#else /* !SVN_HAVE_SASL */
+      return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, NULL,
+                               _("SASL requested but not compiled in; "
+                                 "set '%s' to 'false' or recompile "
+                                 "svnserve with SASL support"),
+                               SVN_CONFIG_OPTION_USE_SASL);
+#endif /* SVN_HAVE_SASL */
     }
-#endif
+  else
+    {
+      repository->use_sasl = FALSE;
+    }
 
   /* Use the repository UUID as the default realm. */
   SVN_ERR(svn_fs_get_uuid(repository->fs, &repository->realm, scratch_pool));
@@ -4078,10 +4129,11 @@ construct_server_baton(server_baton_t **baton,
    * send an empty mechlist. */
   if (params->compression_level > 0)
     SVN_ERR(svn_ra_svn__write_cmd_response(conn, scratch_pool,
-                                           "nn()(wwwwwwwwwwww)",
+                                           "nn()(wwwwwwwwwwwww)",
                                            (apr_uint64_t) 2, (apr_uint64_t) 2,
                                            SVN_RA_SVN_CAP_EDIT_PIPELINE,
                                            SVN_RA_SVN_CAP_SVNDIFF1,
+                                           SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED,
                                            SVN_RA_SVN_CAP_ABSENT_ENTRIES,
                                            SVN_RA_SVN_CAP_COMMIT_REVPROPS,
                                            SVN_RA_SVN_CAP_DEPTH,
@@ -4165,7 +4217,7 @@ construct_server_baton(server_baton_t **baton,
   err = handle_config_error(find_repos(client_url, params->root, b->vhost,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
-                                       params->authz_pool, params->fs_config,
+                                       params->fs_config,
                                        conn_pool, scratch_pool),
                             b);
   if (!err)

@@ -235,6 +235,12 @@ svn_stream_supports_mark(svn_stream_t *stream)
   return stream->mark_fn != NULL;
 }
 
+svn_boolean_t
+svn_stream_supports_reset(svn_stream_t *stream)
+{
+  return stream->seek_fn != NULL;
+}
+
 svn_error_t *
 svn_stream_mark(svn_stream_t *stream, svn_stream_mark_t **mark,
                 apr_pool_t *pool)
@@ -670,6 +676,7 @@ svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 struct baton_apr {
   apr_file_t *file;
   apr_pool_t *pool;
+  svn_boolean_t truncate_on_seek;
 };
 
 /* svn_stream_mark_t for streams backed by APR files. */
@@ -790,7 +797,16 @@ seek_handler_apr(void *baton, const svn_stream_mark_t *mark)
   struct baton_apr *btn = baton;
   apr_off_t offset = (mark != NULL) ? ((const struct mark_apr *)mark)->off : 0;
 
-  SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
+  if (btn->truncate_on_seek)
+    {
+      /* The apr_file_trunc() function always does seek + trunc,
+       * and this is documented, so don't seek when truncating. */
+      SVN_ERR(svn_io_file_trunc(btn->file, offset, btn->pool));
+    }
+  else
+    {
+      SVN_ERR(svn_io_file_seek(btn->file, APR_SET, &offset, btn->pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1052,6 +1068,7 @@ static svn_stream_t *
 make_stream_from_apr_file(apr_file_t *file,
                           svn_boolean_t disown,
                           svn_boolean_t supports_seek,
+                          svn_boolean_t truncate_on_seek,
                           apr_pool_t *pool)
 {
   struct baton_apr *baton;
@@ -1063,6 +1080,7 @@ make_stream_from_apr_file(apr_file_t *file,
   baton = apr_palloc(pool, sizeof(*baton));
   baton->file = file;
   baton->pool = pool;
+  baton->truncate_on_seek = truncate_on_seek;
   stream = svn_stream_create(baton, pool);
   svn_stream_set_read2(stream, read_handler_apr, read_full_handler_apr);
   svn_stream_set_write(stream, write_handler_apr);
@@ -1085,11 +1103,20 @@ make_stream_from_apr_file(apr_file_t *file,
 }
 
 svn_stream_t *
+svn_stream__from_aprfile(apr_file_t *file,
+                         svn_boolean_t disown,
+                         svn_boolean_t truncate_on_seek,
+                         apr_pool_t *pool)
+{
+  return make_stream_from_apr_file(file, disown, TRUE, truncate_on_seek, pool);
+}
+
+svn_stream_t *
 svn_stream_from_aprfile2(apr_file_t *file,
                          svn_boolean_t disown,
                          apr_pool_t *pool)
 {
-  return make_stream_from_apr_file(file, disown, TRUE, pool);
+  return make_stream_from_apr_file(file, disown, TRUE, FALSE, pool);
 }
 
 apr_file_t *
@@ -1427,6 +1454,31 @@ close_handler_checksum(void *baton)
   return svn_error_trace(svn_stream_close(btn->proxy));
 }
 
+static svn_error_t *
+seek_handler_checksum(void *baton, const svn_stream_mark_t *mark)
+{
+  struct checksum_stream_baton *btn = baton;
+
+  /* Only reset support. */
+  if (mark)
+    {
+      return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
+                              NULL, NULL);
+    }
+  else
+    {
+      if (btn->read_ctx)
+        SVN_ERR(svn_checksum_ctx_reset(btn->read_ctx));
+
+      if (btn->write_ctx)
+        SVN_ERR(svn_checksum_ctx_reset(btn->write_ctx));
+
+      SVN_ERR(svn_stream_reset(btn->proxy));
+    }
+
+  return SVN_NO_ERROR;
+}
+
 
 svn_stream_t *
 svn_stream_checksummed2(svn_stream_t *stream,
@@ -1464,6 +1516,8 @@ svn_stream_checksummed2(svn_stream_t *stream,
   svn_stream_set_write(s, write_handler_checksum);
   svn_stream_set_data_available(s, data_available_handler_checksum);
   svn_stream_set_close(s, close_handler_checksum);
+  if (svn_stream_supports_reset(stream))
+    svn_stream_set_seek(s, seek_handler_checksum);
   return s;
 }
 
@@ -1842,7 +1896,7 @@ svn_stream_for_stdin2(svn_stream_t **in,
      it does not, or the behavior is implementation-specific.  Hence,
      we cannot safely advertise mark(), seek() and non-default skip()
      support. */
-  *in = make_stream_from_apr_file(stdin_file, TRUE, FALSE, pool);
+  *in = make_stream_from_apr_file(stdin_file, TRUE, FALSE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1862,7 +1916,7 @@ svn_stream_for_stdout(svn_stream_t **out, apr_pool_t *pool)
      it does not, or the behavior is implementation-specific.  Hence,
      we cannot safely advertise mark(), seek() and non-default skip()
      support. */
-  *out = make_stream_from_apr_file(stdout_file, TRUE, FALSE, pool);
+  *out = make_stream_from_apr_file(stdout_file, TRUE, FALSE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -1882,7 +1936,7 @@ svn_stream_for_stderr(svn_stream_t **err, apr_pool_t *pool)
      it does not, or the behavior is implementation-specific.  Hence,
      we cannot safely advertise mark(), seek() and non-default skip()
      support. */
-  *err = make_stream_from_apr_file(stderr_file, TRUE, FALSE, pool);
+  *err = make_stream_from_apr_file(stderr_file, TRUE, FALSE, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2247,7 +2301,9 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
                                    svn_io_file_del_none,
                                    result_pool, scratch_pool));
 #endif
-  *install_stream = svn_stream_from_aprfile2(file, FALSE, result_pool);
+  /* Set the temporary file to be truncated on seeks. */
+  *install_stream = svn_stream__from_aprfile(file, FALSE, TRUE,
+                                             result_pool);
 
   ib = apr_pcalloc(result_pool, sizeof(*ib));
   ib->baton_apr = *(struct baton_apr*)(*install_stream)->baton;
