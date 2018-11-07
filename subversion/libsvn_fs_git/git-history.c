@@ -265,6 +265,9 @@ fs_git_node_history_prev(svn_fs_history_t **prev_history_p,
   fs_git_node_history_t *gnh;
   apr_pool_t *cur_pool = svn_pool_create(result_pool);
   apr_pool_t *last_pool = svn_pool_create(result_pool);
+  const git_commit *commit;
+  const git_tree_entry *entry;
+  const char *relpath;
 
   /* ### cross_copies is still unused! */
 
@@ -274,9 +277,8 @@ fs_git_node_history_prev(svn_fs_history_t **prev_history_p,
       return SVN_NO_ERROR;
     }
 
-  const git_commit *commit = p_gnh->commit;
-  const git_tree_entry *entry;
-  const char *relpath = p_gnh->relpath;
+  commit = p_gnh->commit;
+  relpath = p_gnh->relpath;
 
   if (!p_gnh->first)
     SVN_ERR(svn_git__commit_parent(&commit, commit, 0, last_pool));

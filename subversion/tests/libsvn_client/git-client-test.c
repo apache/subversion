@@ -156,8 +156,8 @@ ls_recursive(apr_hash_t **entries,
   apr_hash_t *result = apr_hash_make(result_pool);
 
   head.kind = svn_opt_revision_head;
-  SVN_ERR(svn_client_list3(url_or_abspath, &head, &head,
-                           svn_depth_infinity,
+  SVN_ERR(svn_client_list4(url_or_abspath, &head, &head,
+                           NULL, svn_depth_infinity,
                            SVN_DIRENT_KIND, FALSE, FALSE,
                            ls_collect_names, result,
                            ctx, scratch_pool));
@@ -186,21 +186,21 @@ test_git_mkdir(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_client_create_context2(&ctx, NULL, pool));
 
   trunk_url = svn_path_url_add_component2(repos_url, "trunk", pool);
-  //head_rev.kind = svn_opt_revision_head;
-  //SVN_ERR(svn_client_checkout3(&rev, trunk_url,
-  //                             wc_dir, &head_rev, &head_rev, svn_depth_infinity,
-  //                             FALSE, FALSE, ctx, pool));
-  //
-  //
-  //{
-  //  apr_array_header_t *revs;
-  //  apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char *));
-  //  APR_ARRAY_PUSH(paths, const char *) = wc_dir;
-  //
-  //  SVN_ERR(svn_client_update4(&revs, paths, &head_rev, svn_depth_infinity, FALSE,
-  //                             FALSE, FALSE, FALSE, FALSE, ctx, pool));
-  //}
+#if 0
+  head_rev.kind = svn_opt_revision_head;
+  SVN_ERR(svn_client_checkout3(&rev, trunk_url,
+                               wc_dir, &head_rev, &head_rev, svn_depth_infinity,
+                               FALSE, FALSE, ctx, pool));
 
+  {
+    apr_array_header_t *revs;
+    apr_array_header_t *paths = apr_array_make(pool, 1, sizeof(const char *));
+    APR_ARRAY_PUSH(paths, const char *) = wc_dir;
+
+    SVN_ERR(svn_client_update4(&revs, paths, &head_rev, svn_depth_infinity, FALSE,
+                               FALSE, FALSE, FALSE, FALSE, ctx, pool));
+  }
+#endif
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 0, ctx, subpool, subpool));
 
   SVN_ERR(svn_client__mtcc_add_mkdir("trunk", mtcc, subpool));

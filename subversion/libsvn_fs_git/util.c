@@ -127,6 +127,7 @@ svn_fs_git__get_blob_stream(svn_stream_t **stream,
     {
       git_odb_object *ob;
       apr_pool_t *subpool;
+      apr_size_t size;
       char *data;
 
 #if 0
@@ -145,15 +146,15 @@ svn_fs_git__get_blob_stream(svn_stream_t **stream,
 
       subpool = svn_pool_create(result_pool);
 
-      apr_size_t sz = git_odb_object_size(ob);
-      data = apr_pmemdup(subpool, git_odb_object_data(ob), sz);
+      size = git_odb_object_size(ob);
+      data = apr_pmemdup(subpool, git_odb_object_data(ob), size);
 
       git_odb_object_free(ob);
 
       blob_stream = apr_pcalloc(result_pool, sizeof(*blob_stream));
       blob_stream->cleanup_pool = subpool;
       blob_stream->data = data;
-      blob_stream->data_left = sz;
+      blob_stream->data_left = size;
 
       git_odb_free(odb);
       odb = NULL;
