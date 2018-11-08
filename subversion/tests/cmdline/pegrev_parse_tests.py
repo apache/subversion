@@ -160,6 +160,10 @@ def add_file_here_6_escape_peg(sbox):
   "add file '@tau@' with pegrev escape"
   do_add_file_e(sbox, '@tau@', '@tau@@')
 
+def add_file_here_7_escape_peg(sbox):
+  "add file '@' with pegrev escape"
+  do_add_file_e(sbox, '@', '@@')
+
 #---------------------------------------------------------------------
 
 def add_file_here_1_no_escape_peg(sbox):
@@ -187,6 +191,10 @@ def add_file_here_6_no_escape_peg(sbox):
   "add file '@tau@' without pegrev escape"
   do_add_file_e(sbox, '@tau@', '@tau@', 'svn: E200009: ')
 
+def add_file_here_7_no_escape_peg(sbox):
+  "add file '@' without pegrev escape"
+  do_add_file_e(sbox, '@', '@', "svn: E125001: '@'")
+
 #=====================================================================
 # Tests for 'svn add' in a subdirectory
 
@@ -213,6 +221,10 @@ def add_file_subdir_5_escape_peg(sbox):
 def add_file_subdir_6_escape_peg(sbox):
   "add file 'E/@tau@' with pegrev escape"
   do_add_file(sbox, 'E/@tau@', 'E/@tau@@')
+
+def add_file_subdir_7_escape_peg(sbox):
+  "add file 'E/@' with pegrev escape"
+  do_add_file(sbox, 'E/@', 'E/@@')
 
 #---------------------------------------------------------------------
 
@@ -243,6 +255,11 @@ def add_file_subdir_6_no_escape_peg(sbox):
   "add file 'E/@tau@' without pegrev escape"
   do_add_file(sbox, 'E/@tau@', 'E/@tau@', 'svn: E200009: ')
 
+@Wimp("The error message is E200009 but should be E125001")
+def add_file_subdir_7_no_escape_peg(sbox):
+  "add file 'E/@' without pegrev escape"
+  do_add_file(sbox, 'E/@', 'E/@', "svn: E125001: 'E/@'")
+
 
 #=====================================================================
 # Tests for 'svn mkdir' in the current directory
@@ -271,6 +288,10 @@ def make_dir_here_6_escape_peg(sbox):
   "create directory '@T@' with pegrev escape"
   do_make_dir_e(sbox, '@T@', '@T@@')
 
+def make_dir_here_7_escape_peg(sbox):
+  "create directory '@' with pegrev escape"
+  do_make_dir_e(sbox, '@', '@@')
+
 #---------------------------------------------------------------------
 
 def make_dir_here_1_no_escape_peg(sbox):
@@ -295,6 +316,10 @@ def make_dir_here_4_no_escape_peg(sbox):
 # tested by:
 #   - make_dir_here_5_escape_peg
 #   - make_dir_here_6_escape_peg
+
+def make_dir_here_7_no_escape_peg(sbox):
+  "create directory '@' without pegrev escape"
+  do_make_dir_e(sbox, '@', '@', "svn: E125001: '@'")
 
 #=====================================================================
 # Tests for 'svn add' in a subdirectory
@@ -354,17 +379,10 @@ def make_dir_subdir_4_no_escape_peg(sbox):
 #   - make_dir_subdir_5_escape_peg
 #   - make_dir_subdir_6_escape_peg
 
+@Wimp("The error message is EEXIST but should be E125001")
 def make_dir_subdir_7_no_escape_peg(sbox):
   "create directory 'E/@' without pegrev escape"
-
-  # With the trailing @ stripped off, the command fails with EEXIST
-  if main.is_os_windows():
-    mnemonic = 'E720183'
-  else:
-    import errno
-    mnemonic = 'E{:06d}'.format(errno.EEXIST)
-
-  do_make_dir(sbox, 'E/@', 'E/@', 'svn: ' + mnemonic + ': ')
+  do_make_dir(sbox, 'E/@', 'E/@', "svn: E125001: 'E/@'")
 
 #=====================================================================
 # Test for 'svn move' to a subdirectory
@@ -399,6 +417,7 @@ test_list = [ None,
               add_file_here_4_escape_peg,
               add_file_here_5_escape_peg,
               add_file_here_6_escape_peg,
+              add_file_here_7_escape_peg,
 
               add_file_here_1_no_escape_peg,
               add_file_here_2_no_escape_peg,
@@ -406,6 +425,7 @@ test_list = [ None,
               add_file_here_4_no_escape_peg,
               add_file_here_5_no_escape_peg,
               add_file_here_6_no_escape_peg,
+              add_file_here_7_no_escape_peg,
 
               add_file_subdir_1_escape_peg,
               add_file_subdir_2_escape_peg,
@@ -413,6 +433,7 @@ test_list = [ None,
               add_file_subdir_4_escape_peg,
               add_file_subdir_5_escape_peg,
               add_file_subdir_6_escape_peg,
+              add_file_subdir_7_escape_peg,
 
               add_file_subdir_1_no_escape_peg,
               add_file_subdir_2_no_escape_peg,
@@ -420,6 +441,7 @@ test_list = [ None,
               add_file_subdir_4_no_escape_peg,
               add_file_subdir_5_no_escape_peg,
               add_file_subdir_6_no_escape_peg,
+              add_file_subdir_7_no_escape_peg,
 
               make_dir_here_1_escape_peg,
               make_dir_here_2_escape_peg,
@@ -427,6 +449,7 @@ test_list = [ None,
               make_dir_here_4_escape_peg,
               make_dir_here_5_escape_peg,
               make_dir_here_6_escape_peg,
+              make_dir_here_7_escape_peg,
 
               make_dir_here_1_no_escape_peg,
               make_dir_here_2_no_escape_peg,
@@ -434,6 +457,7 @@ test_list = [ None,
               make_dir_here_4_no_escape_peg,
               # skipped: make_dir_here_5_no_escape_peg
               # skipped: make_dir_here_6_no_escape_peg
+              make_dir_here_7_no_escape_peg,
 
               make_dir_subdir_1_escape_peg,
               make_dir_subdir_2_escape_peg,
