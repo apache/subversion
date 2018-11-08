@@ -66,44 +66,63 @@ def run_svn(sbox, expected_status, expected_stderr, *varargs):
   if expected_status is not None:
     actions.run_and_verify_status(sbox.wc_dir, expected_status)
 
-def get_trojan_virginal_state(sbox, rev=1):
-  return actions.get_virginal_state(sbox.wc_dir, rev, tree='trojan')
+def get_trojan_virginal_state(sbox):
+  return actions.get_virginal_state(sbox.wc_dir, '1', tree='trojan')
 
-def do_add_file(sbox, dst, dst_cmdline, expected_stderr=None):
+def build_trojan_sandbox(sbox, expected_stderr):
   sbox.build(tree='trojan')
-  main.file_write(sbox.ospath(dst), "This is file '"  + dst + "'.")
-
   if expected_stderr is None:
-    expected_status = get_trojan_virginal_state(sbox)
-    expected_status.add({dst: Item(status='A ', wc_rev='-')})
-  else:
-    expected_status = None
+    return get_trojan_virginal_state(sbox)
+  return None
 
+def build_empty_sandbox(sbox, expected_stderr):
+  sbox.build(empty=True)
+  if expected_stderr is None:
+    return svntest.wc.State(sbox.wc_dir, {
+      '': svntest.wc.StateItem(status='  ', wc_rev='0')
+    })
+  return None
+
+def build_sandbox(sbox, empty_sandbox, expected_stderr):
+  if not empty_sandbox:
+    return build_trojan_sandbox(sbox, expected_stderr)
+  else:
+    return build_empty_sandbox(sbox, expected_stderr)
+
+def do_add_file(sbox, dst, dst_cmdline,
+                expected_stderr=None, empty_sandbox=False):
+  expected_status = build_sandbox(sbox, empty_sandbox, expected_stderr)
+  if expected_status is not None:
+    expected_status.add({dst: Item(status='A ', wc_rev='-')})
+
+  main.file_write(sbox.ospath(dst), "This is file '"  + dst + "'.")
   run_svn(sbox, expected_status, expected_stderr,
           'add', dst_cmdline)
 
-def do_make_dir(sbox, dst, dst_cmdline, expected_stderr=None):
-  sbox.build(tree='trojan')
+def do_add_file_e(sbox, dst, dst_cmdline, expected_stderr=None):
+  "like do_add_file() but with an empty sandbox"
+  return do_add_file(sbox, dst, dst_cmdline, expected_stderr, True)
 
-  if expected_stderr is None:
-    expected_status = get_trojan_virginal_state(sbox)
+def do_make_dir(sbox, dst, dst_cmdline,
+                expected_stderr=None, empty_sandbox=False):
+  expected_status = build_sandbox(sbox, empty_sandbox, expected_stderr)
+  if expected_status is not None:
     expected_status.add({dst: Item(status='A ', wc_rev='-')})
-  else:
-    expected_status = None
 
   run_svn(sbox, expected_status, expected_stderr,
           'mkdir', dst_cmdline)
 
-def do_rename(sbox, src, src_cmdline, dst, dst_cmdline, expected_stderr=None):
-  sbox.build(tree='trojan')
+def do_make_dir_e(sbox, dst, dst_cmdline, expected_stderr=None):
+  "like do_make_dir() but with an empty sandbox"
+  return do_make_dir(sbox, dst, dst_cmdline, expected_stderr, True)
 
-  if expected_stderr is None:
-    expected_status = get_trojan_virginal_state(sbox)
+def do_rename(sbox, src, src_cmdline, dst, dst_cmdline,
+              expected_stderr=None):
+  expected_status = build_trojan_sandbox(sbox, expected_stderr)
+  if expected_status is not None:
     expected_status.tweak(src, status='D ', moved_to=dst)
     expected_status.add({dst: Item(status='A ', copied='+',
                                    moved_from=src, wc_rev='-')})
-  else:
-    expected_status = None
 
   run_svn(sbox, expected_status, expected_stderr,
           'rename', src_cmdline, dst_cmdline)
@@ -119,54 +138,54 @@ def do_rename(sbox, src, src_cmdline, dst, dst_cmdline, expected_stderr=None):
 
 def add_file_here_1_escape_peg(sbox):
   "add file 'tau' with pegrev escape"
-  do_add_file(sbox, 'tau', 'tau@')
+  do_add_file_e(sbox, 'tau', 'tau@')
 
 def add_file_here_2_escape_peg(sbox):
   "add file '@tau' with pegrev escape"
-  do_add_file(sbox, '@tau', '@tau@')
+  do_add_file_e(sbox, '@tau', '@tau@')
 
 def add_file_here_3_escape_peg(sbox):
   "add file '_@tau' with pegrev escape"
-  do_add_file(sbox, '_@tau', '_@tau@')
+  do_add_file_e(sbox, '_@tau', '_@tau@')
 
 def add_file_here_4_escape_peg(sbox):
   "add file '.@tau' with pegrev escape"
-  do_add_file(sbox, '.@tau', '.@tau@')
+  do_add_file_e(sbox, '.@tau', '.@tau@')
 
 def add_file_here_5_escape_peg(sbox):
   "add file 'tau@' with pegrev escape"
-  do_add_file(sbox, 'tau@', 'tau@@')
+  do_add_file_e(sbox, 'tau@', 'tau@@')
 
 def add_file_here_6_escape_peg(sbox):
   "add file '@tau@' with pegrev escape"
-  do_add_file(sbox, '@tau@', '@tau@@')
+  do_add_file_e(sbox, '@tau@', '@tau@@')
 
 #---------------------------------------------------------------------
 
 def add_file_here_1_no_escape_peg(sbox):
   "add file 'tau' without pegrev escape"
-  do_add_file(sbox, 'tau', 'tau')
+  do_add_file_e(sbox, 'tau', 'tau')
 
 def add_file_here_2_no_escape_peg(sbox):
   "add file '@tau' without pegrev escape"
-  do_add_file(sbox, '@tau', '@tau', "svn: E125001: '@tau'")
+  do_add_file_e(sbox, '@tau', '@tau', "svn: E125001: '@tau'")
 
 def add_file_here_3_no_escape_peg(sbox):
   "add file '_@tau' without pegrev escape"
-  do_add_file(sbox, '_@tau', '_@tau', "svn: E200009: '_@tau'")
+  do_add_file_e(sbox, '_@tau', '_@tau', "svn: E200009: '_@tau'")
 
 @Wimp("The error message mentions '@tau' instead of '.@tau'")
 def add_file_here_4_no_escape_peg(sbox):
   "add file '.@tau' without pegrev escape"
-  do_add_file(sbox, '.@tau', '.@tau', "svn: E200009: '.@tau'")
+  do_add_file_e(sbox, '.@tau', '.@tau', "svn: E200009: '.@tau'")
 
 def add_file_here_5_no_escape_peg(sbox):
   "add file 'tau@' without pegrev escape"
-  do_add_file(sbox, 'tau@', 'tau@', 'svn: E200009: ')
+  do_add_file_e(sbox, 'tau@', 'tau@', 'svn: E200009: ')
 
 def add_file_here_6_no_escape_peg(sbox):
   "add file '@tau@' without pegrev escape"
-  do_add_file(sbox, '@tau@', '@tau@', 'svn: E200009: ')
+  do_add_file_e(sbox, '@tau@', '@tau@', 'svn: E200009: ')
 
 #=====================================================================
 # Tests for 'svn add' in a subdirectory
@@ -230,11 +249,11 @@ def add_file_subdir_6_no_escape_peg(sbox):
 
 def make_dir_here_1_escape_peg(sbox):
   "create directory 'T' with pegrev escape"
-  do_make_dir(sbox, 'T', 'T@')
+  do_make_dir_e(sbox, 'T', 'T@')
 
 def make_dir_here_2_escape_peg(sbox):
   "create directory '@T' with pegrev escape"
-  do_make_dir(sbox, '@T', '@T@')
+  do_make_dir_e(sbox, '@T', '@T@')
 
 def make_dir_here_3_escape_peg(sbox):
   "create directory '_@T' with pegrev escape"
@@ -242,34 +261,34 @@ def make_dir_here_3_escape_peg(sbox):
 
 def make_dir_here_4_escape_peg(sbox):
   "create directory '.@T' with pegrev escape"
-  do_make_dir(sbox, '.@T', '.@T@')
+  do_make_dir_e(sbox, '.@T', '.@T@')
 
 def make_dir_here_5_escape_peg(sbox):
   "create directory 'T@' with pegrev escape"
-  do_make_dir(sbox, 'T@', 'T@@')
+  do_make_dir_e(sbox, 'T@', 'T@@')
 
 def make_dir_here_6_escape_peg(sbox):
   "create directory '@T@' with pegrev escape"
-  do_make_dir(sbox, '@T@', '@T@@')
+  do_make_dir_e(sbox, '@T@', '@T@@')
 
 #---------------------------------------------------------------------
 
 def make_dir_here_1_no_escape_peg(sbox):
   "create directory 'T' without pegrev escape"
-  do_make_dir(sbox, 'T', 'T')
+  do_make_dir_e(sbox, 'T', 'T')
 
 def make_dir_here_2_no_escape_peg(sbox):
   "create directory '@T' without pegrev escape"
-  do_make_dir(sbox, '@T', '@T', "svn: E125001: '@T'")
+  do_make_dir_e(sbox, '@T', '@T', "svn: E125001: '@T'")
 
 def make_dir_here_3_no_escape_peg(sbox):
   "create directory '_@T' without pegrev escape"
-  do_make_dir(sbox, '_@T', '_@T', "svn: E200009: '_@T'")
+  do_make_dir_e(sbox, '_@T', '_@T', "svn: E200009: '_@T'")
 
 @Wimp("The error message mentions '@T' instead of '.@T'")
 def make_dir_here_4_no_escape_peg(sbox):
   "create directory '.@T' without pegrev escape"
-  do_make_dir(sbox, '.@T', '.@T', "svn: E200009: '.@T'")
+  do_make_dir_e(sbox, '.@T', '.@T', "svn: E200009: '.@T'")
 
 # Skip tests 5 and 6 that create a directory with a trailing @ in the name
 # because is correctly interpreted as a peg revision escape. This is already
@@ -339,11 +358,13 @@ def make_dir_subdir_7_no_escape_peg(sbox):
   "create directory 'E/@' without pegrev escape"
 
   # With the trailing @ stripped off, the command fails with EEXIST
-  do_make_dir(sbox, 'E/@', 'E/@',
-              'svn: E'
-              '(' '000017'      # Unix
-              '|' '720183'      # Windows
-              '): ')
+  if main.is_os_windows():
+    mnemonic = 'E720183'
+  else:
+    import errno
+    mnemonic = 'E{:06d}'.format(errno.EEXIST)
+
+  do_make_dir(sbox, 'E/@', 'E/@', 'svn: ' + mnemonic + ': ')
 
 #=====================================================================
 # Test for 'svn move' to a subdirectory
