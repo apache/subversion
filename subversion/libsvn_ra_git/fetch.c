@@ -143,7 +143,8 @@ svn_ra_git__split_url(const char **repos_root_url,
 
       /* ... and try to connect to it. */
       git_err = git_remote_connect(remote, GIT_DIRECTION_FETCH, callbacks,
-		                           NULL /* custom_headers */);
+                                   NULL /* proxy_opts */,
+                                   NULL /* custom_headers */);
       if (!git_err)
         {
           found_remote = TRUE;
