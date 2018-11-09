@@ -386,7 +386,7 @@ def make_dir_subdir_4_no_escape_peg(sbox):
 #   - make_dir_subdir_5_escape_peg
 #   - make_dir_subdir_6_escape_peg
 
-@Wimp("The error message is EEXIST but should be E125001")
+@Wimp("Reports error that E exists but should be E125001 for E/@")
 def make_dir_subdir_7_no_escape_peg(sbox):
   "create directory 'E/@' without pegrev escape"
   do_make_dir(sbox, 'E/@', 'E/@', "svn: E125001: 'E/@'")
@@ -452,6 +452,69 @@ def remove_here_6_no_escape_peg(sbox):
 def remove_here_7_no_escape_peg(sbox):
   "remove '@' without pegrev escape"
   do_remove(sbox, '@', '@', "svn: E125001: '@'")
+
+#=====================================================================
+# Tests for 'svn remove' in a subdirectory directory
+
+def remove_subdir_1_escape_peg(sbox):
+  "remove 'A/alpha' with pegrev escape"
+  do_remove(sbox, 'A/alpha', 'A/alpha@')
+
+def remove_subdir_2_escape_peg(sbox):
+  "remove 'B/@beta' with pegrev escape"
+  do_remove(sbox, 'B/@beta', 'B/@beta@')
+
+def remove_subdir_3_escape_peg(sbox):
+  "remove 'G/_@gamma' with pegrev escape"
+  do_remove(sbox, 'G/_@gamma', 'G/_@gamma@')
+
+def remove_subdir_4_escape_peg(sbox):
+  "remove 'D/.@delta' with pegrev escape"
+  do_remove(sbox, 'D/.@delta', 'D/.@delta@')
+
+def remove_subdir_5_escape_peg(sbox):
+  "remove 'B/pi@' with pegrev escape"
+  do_remove(sbox, 'B/pi@', 'B/pi@@')
+
+def remove_subdir_6_escape_peg(sbox):
+  "remove 'A/@omega@' with pegrev escape"
+  do_remove(sbox, 'A/@omega@', 'A/@omega@@')
+
+def remove_subdir_7_escape_peg(sbox):
+  "remove 'B/@' with pegrev escape"
+  do_remove(sbox, 'B/@', 'B/@@')
+
+#---------------------------------------------------------------------
+
+def remove_subdir_1_no_escape_peg(sbox):
+  "remove 'A/alpha' without pegrev escape"
+  do_remove(sbox, 'A/alpha', 'A/alpha')
+
+@Wimp("The error message mentions 'B@beta' instead of 'B/@beta'")
+@Wimp("The error message should be E125001")
+def remove_subdir_2_no_escape_peg(sbox):
+  "remove 'B/@beta' without pegrev escape"
+  do_remove(sbox, 'B/@beta', 'B/@beta', "svn: E200009: 'B/@beta'")
+
+def remove_subdir_3_no_escape_peg(sbox):
+  "remove 'G/_@gamma' without pegrev escape"
+  do_remove(sbox, 'G/_@gamma', 'G/_@gamma', "svn: E200009: 'G/_@gamma'")
+
+@Wimp("The error message mentions 'D@delta' instead of 'D/.@delta'")
+def remove_subdir_4_no_escape_peg(sbox):
+  "remove 'D/.@delta' without pegrev escape"
+  do_remove(sbox, 'D/.@delta', 'D/.@delta', "svn: E200009: 'D/.@delta'")
+
+# Skip tests 5 and 6 that remove a node with a trailing @ in the name
+# because is correctly interpreted as a peg revision escape. This is already
+# tested by:
+#   - remove_subdir_5_escape_peg
+#   - remove_subdir__escape_peg
+
+@Wimp("Removes B instead of reporting E125001 for B/@")
+def remove_subdir_7_no_escape_peg(sbox):
+  "remove 'B/@' without pegrev escape"
+  do_remove(sbox, 'B/@', 'B/@') #, "svn: E125001: 'B/@'")
 
 #=====================================================================
 # Test for 'svn move' to a subdirectory
@@ -559,6 +622,22 @@ test_list = [ None,
               remove_here_5_no_escape_peg,
               remove_here_6_no_escape_peg,
               remove_here_7_no_escape_peg,
+
+              remove_subdir_1_escape_peg,
+              remove_subdir_2_escape_peg,
+              remove_subdir_3_escape_peg,
+              remove_subdir_4_escape_peg,
+              remove_subdir_5_escape_peg,
+              remove_subdir_6_escape_peg,
+              remove_subdir_7_escape_peg,
+
+              remove_subdir_1_no_escape_peg,
+              remove_subdir_2_no_escape_peg,
+              remove_subdir_3_no_escape_peg,
+              remove_subdir_4_no_escape_peg,
+              # skipped: remove_subdir_5_no_escape_peg,
+              # skipped: remove_subdir_6_no_escape_peg,
+              remove_subdir_7_no_escape_peg,
 
               rename_to_subdir_2_dst_escape_peg,
               rename_to_subdir_2_no_dst_escape_peg,
