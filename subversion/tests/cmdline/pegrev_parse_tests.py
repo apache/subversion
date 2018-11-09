@@ -486,7 +486,7 @@ def remove_subdir_7_escape_peg(sbox):
 
 def remove_subdir_7a_escape_peg(sbox):
   "remove missing 'E/@' without pegrev escape"
-  do_remove(sbox, 'E/@', 'E/@@', "svn: E200005: '.*[\\/]E[\\/]@'")
+  do_remove(sbox, 'E/@', 'E/@@', r"svn: E200005: '.*[\\/]E[\\/]@'")
 
 def remove_subdir_7b_escape_peg(sbox):
   "remove missing '@/@' without pegrev escape"
