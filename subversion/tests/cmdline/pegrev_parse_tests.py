@@ -118,7 +118,7 @@ def do_make_dir_e(sbox, dst, dst_cmdline, expected_stderr=None):
 
 def do_remove(sbox, dst, dst_cmdline, expected_stderr=None):
   expected_status = build_trojan_sandbox(sbox, expected_stderr)
-  if expected_status is not None:
+  if expected_status is not None and dst in expected_status.desc:
     expected_status.tweak(dst, status='D ')
 
   run_svn(sbox, expected_status, expected_stderr,
@@ -484,6 +484,14 @@ def remove_subdir_7_escape_peg(sbox):
   "remove 'B/@' with pegrev escape"
   do_remove(sbox, 'B/@', 'B/@@')
 
+def remove_subdir_7a_escape_peg(sbox):
+  "remove missing 'E/@' without pegrev escape"
+  do_remove(sbox, 'E/@', 'E/@@', "svn: E200005: '.*/E/@'")
+
+def remove_subdir_7b_escape_peg(sbox):
+  "remove missing '@/@' without pegrev escape"
+  do_remove(sbox, '@/@@', '@/@@', "svn: E200005: '.*/@/@'")
+
 #---------------------------------------------------------------------
 
 def remove_subdir_1_no_escape_peg(sbox):
@@ -515,6 +523,16 @@ def remove_subdir_4_no_escape_peg(sbox):
 def remove_subdir_7_no_escape_peg(sbox):
   "remove 'B/@' without pegrev escape"
   do_remove(sbox, 'B/@', 'B/@') #, "svn: E125001: 'B/@'")
+
+@Wimp("Removes E instead of reporting ENOENT or E125001 for E/@")
+def remove_subdir_7a_no_escape_peg(sbox):
+  "remove missing 'E/@' without pegrev escape"
+  do_remove(sbox, 'E/@', 'E/@') #, "svn: E125001: 'E/@'")
+
+@Wimp("Removes @ instead of reporting ENOENT or E125001 for @/@")
+def remove_subdir_7b_no_escape_peg(sbox):
+  "remove missing '@/@' without pegrev escape"
+  do_remove(sbox, '@/@', '@/@') #, "svn: E125001: '@/@'")
 
 #=====================================================================
 # Test for 'svn move' to a subdirectory
@@ -630,6 +648,8 @@ test_list = [ None,
               remove_subdir_5_escape_peg,
               remove_subdir_6_escape_peg,
               remove_subdir_7_escape_peg,
+              remove_subdir_7a_escape_peg,
+              remove_subdir_7b_escape_peg,
 
               remove_subdir_1_no_escape_peg,
               remove_subdir_2_no_escape_peg,
@@ -638,6 +658,8 @@ test_list = [ None,
               # skipped: remove_subdir_5_no_escape_peg,
               # skipped: remove_subdir_6_no_escape_peg,
               remove_subdir_7_no_escape_peg,
+              remove_subdir_7a_no_escape_peg,
+              remove_subdir_7b_no_escape_peg,
 
               rename_to_subdir_2_dst_escape_peg,
               rename_to_subdir_2_no_dst_escape_peg,
