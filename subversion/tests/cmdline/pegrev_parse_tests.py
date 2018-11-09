@@ -116,6 +116,14 @@ def do_make_dir_e(sbox, dst, dst_cmdline, expected_stderr=None):
   "like do_make_dir() but with an empty sandbox"
   return do_make_dir(sbox, dst, dst_cmdline, expected_stderr, True)
 
+def do_remove(sbox, dst, dst_cmdline, expected_stderr=None):
+  expected_status = build_trojan_sandbox(sbox, expected_stderr)
+  if expected_status is not None:
+    expected_status.tweak(dst, status='D ')
+
+  run_svn(sbox, expected_status, expected_stderr,
+          'remove', dst_cmdline)
+
 def do_rename(sbox, src, src_cmdline, dst, dst_cmdline,
               expected_stderr=None):
   expected_status = build_trojan_sandbox(sbox, expected_stderr)
@@ -260,7 +268,6 @@ def add_file_subdir_7_no_escape_peg(sbox):
   "add file 'E/@' without pegrev escape"
   do_add_file(sbox, 'E/@', 'E/@', "svn: E125001: 'E/@'")
 
-
 #=====================================================================
 # Tests for 'svn mkdir' in the current directory
 
@@ -385,11 +392,73 @@ def make_dir_subdir_7_no_escape_peg(sbox):
   do_make_dir(sbox, 'E/@', 'E/@', "svn: E125001: 'E/@'")
 
 #=====================================================================
+# Tests for 'svn remove' in the current directory
+
+def remove_here_1_escape_peg(sbox):
+  "remove 'iota' with pegrev escape"
+  do_remove(sbox, 'iota', 'iota@')
+
+def remove_here_2_escape_peg(sbox):
+  "remove '@zeta' with pegrev escape"
+  do_remove(sbox, '@zeta', '@zeta@')
+
+def remove_here_3_escape_peg(sbox):
+  "remove '_@theta' with pegrev escape"
+  do_remove(sbox, '_@theta', '_@theta@')
+
+def remove_here_4_escape_peg(sbox):
+  "remove '.@kappa' with pegrev escape"
+  do_remove(sbox, '.@kappa', '.@kappa@')
+
+def remove_here_5_escape_peg(sbox):
+  "remove 'lambda@' with pegrev escape"
+  do_remove(sbox, 'lambda@', 'lambda@@')
+
+def remove_here_6_escape_peg(sbox):
+  "remove '@omicron@' with pegrev escape"
+  do_remove(sbox, '@omicron@', '@omicron@@')
+
+def remove_here_7_escape_peg(sbox):
+  "remove '@' with pegrev escape"
+  do_remove(sbox, '@', '@@')
+
+#---------------------------------------------------------------------
+
+def remove_here_1_no_escape_peg(sbox):
+  "remove 'iota' without pegrev escape"
+  do_remove(sbox, 'iota', 'iota')
+
+def remove_here_2_no_escape_peg(sbox):
+  "remove '@zeta' without pegrev escape"
+  do_remove(sbox, '@zeta', '@zeta', "svn: E125001: '@zeta'")
+
+def remove_here_3_no_escape_peg(sbox):
+  "remove '_@theta' without pegrev escape"
+  do_remove(sbox, '_@theta', '_@theta', "svn: E200009: '_@theta'")
+
+@Wimp("The error message mentions '@kappa' instead of '.@kappa'")
+def remove_here_4_no_escape_peg(sbox):
+  "remove '.@kappa' without pegrev escape"
+  do_remove(sbox, '.@kappa', '.@kappa', "svn: E200009: '.@kappa'")
+
+def remove_here_5_no_escape_peg(sbox):
+  "remove 'lambda@' without pegrev escape"
+  do_remove(sbox, 'lambda@', 'lambda@', 'svn: E200005: ')
+
+def remove_here_6_no_escape_peg(sbox):
+  "remove '@omicron@' without pegrev escape"
+  do_remove(sbox, '@omicron@', '@omicron@', 'svn: E200005: ')
+
+def remove_here_7_no_escape_peg(sbox):
+  "remove '@' without pegrev escape"
+  do_remove(sbox, '@', '@', "svn: E125001: '@'")
+
+#=====================================================================
 # Test for 'svn move' to a subdirectory
 
 @Wimp("Rename creates 'E/@tau@' instead of '@/@tau'")
 @Issue(4530)
-def move_file_subdir_2_dst_escape_peg(sbox):
+def rename_to_subdir_2_dst_escape_peg(sbox):
   "rename 'iota' to 'E/@tau with pegrev escape"
   # NOTE: This rename succeeds, but creates E/@tau@ instead of E/@tau, even
   #       though it should strip away the pegrev escape from the target.
@@ -399,7 +468,7 @@ def move_file_subdir_2_dst_escape_peg(sbox):
 
 @Wimp("Rename creates 'E@tau' instead of failing")
 @Issue(4530)
-def move_file_subdir_2_no_dst_escape_peg(sbox):
+def rename_to_subdir_2_no_dst_escape_peg(sbox):
   "rename 'iota' to 'E/@tau without pegrev escape"
   # NOTE: This rename succeeds, but creates E@tau in the current directory,
   #       when instead it should fail with 'svn: E125001: ...'.
@@ -475,8 +544,24 @@ test_list = [ None,
               # skipped: make_dir_subdir_6_no_escape_peg
               make_dir_subdir_7_no_escape_peg,
 
-              move_file_subdir_2_dst_escape_peg,
-              move_file_subdir_2_no_dst_escape_peg,
+              remove_here_1_escape_peg,
+              remove_here_2_escape_peg,
+              remove_here_3_escape_peg,
+              remove_here_4_escape_peg,
+              remove_here_5_escape_peg,
+              remove_here_6_escape_peg,
+              remove_here_7_escape_peg,
+
+              remove_here_1_no_escape_peg,
+              remove_here_2_no_escape_peg,
+              remove_here_3_no_escape_peg,
+              remove_here_4_no_escape_peg,
+              remove_here_5_no_escape_peg,
+              remove_here_6_no_escape_peg,
+              remove_here_7_no_escape_peg,
+
+              rename_to_subdir_2_dst_escape_peg,
+              rename_to_subdir_2_no_dst_escape_peg,
              ]
 
 if __name__ == '__main__':
