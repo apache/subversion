@@ -244,16 +244,16 @@ def add_file_subdir_1_no_escape_peg(sbox):
 @Wimp("The error message should be E125001")
 def add_file_subdir_2_no_escape_peg(sbox):
   "add file 'E/@tau' without pegrev escape"
-  do_add_file(sbox, 'E/@tau', 'E/@tau', "svn: E200009: 'E/@tau'")
+  do_add_file(sbox, 'E/@tau', 'E/@tau', r"svn: E200009: 'E[\\/]@tau'")
 
 def add_file_subdir_3_no_escape_peg(sbox):
   "add file 'E/_@tau' without pegrev escape"
-  do_add_file(sbox, 'E/_@tau', 'E/_@tau', "svn: E200009: 'E/_@tau'")
+  do_add_file(sbox, 'E/_@tau', 'E/_@tau', r"svn: E200009: 'E[\\/]_@tau'")
 
 @Wimp("The error message mentions 'E@tau' instead of 'E/.@tau'")
 def add_file_subdir_4_no_escape_peg(sbox):
   "add file 'E/.@tau' without pegrev escape"
-  do_add_file(sbox, 'E/.@tau', 'E/.@tau', "svn: E200009: 'E/.@tau'")
+  do_add_file(sbox, 'E/.@tau', 'E/.@tau', r"svn: E200009: 'E[\\/].@tau'")
 
 def add_file_subdir_5_no_escape_peg(sbox):
   "add file 'E/tau@' without pegrev escape"
@@ -266,7 +266,7 @@ def add_file_subdir_6_no_escape_peg(sbox):
 @Wimp("The error message is E200009 but should be E125001")
 def add_file_subdir_7_no_escape_peg(sbox):
   "add file 'E/@' without pegrev escape"
-  do_add_file(sbox, 'E/@', 'E/@', "svn: E125001: 'E/@'")
+  do_add_file(sbox, 'E/@', 'E/@', r"svn: E125001: 'E[\\/]@'")
 
 #=====================================================================
 # Tests for 'svn mkdir' in the current directory
@@ -369,16 +369,16 @@ def make_dir_subdir_1_no_escape_peg(sbox):
 @Wimp("The error message should be E125001")
 def make_dir_subdir_2_no_escape_peg(sbox):
   "create directory 'E/@T' without pegrev escape"
-  do_make_dir(sbox, 'E/@T', 'E/@T', "svn: E200009: 'E/@T'")
+  do_make_dir(sbox, 'E/@T', 'E/@T', r"svn: E200009: 'E[\\/]@T'")
 
 def make_dir_subdir_3_no_escape_peg(sbox):
   "create directory 'E/_@T' without pegrev escape"
-  do_make_dir(sbox, 'E/_@T', 'E/_@T', "svn: E200009: 'E/_@T'")
+  do_make_dir(sbox, 'E/_@T', 'E/_@T', r"svn: E200009: 'E[\\/]_@T'")
 
 @Wimp("The error message mentions 'E@T' instead of 'E/.@T'")
 def make_dir_subdir_4_no_escape_peg(sbox):
   "create directory 'E/.@T' without pegrev escape"
-  do_make_dir(sbox, 'E/.@T', 'E/.@T', "svn: E200009: 'E/.@T'")
+  do_make_dir(sbox, 'E/.@T', 'E/.@T', r"svn: E200009: 'E[\\/].@T'")
 
 # Skip tests 5 and 6 that create a directory with a trailing @ in the name
 # because is correctly interpreted as a peg revision escape. This is already
@@ -389,7 +389,7 @@ def make_dir_subdir_4_no_escape_peg(sbox):
 @Wimp("Reports error that E exists but should be E125001 for E/@")
 def make_dir_subdir_7_no_escape_peg(sbox):
   "create directory 'E/@' without pegrev escape"
-  do_make_dir(sbox, 'E/@', 'E/@', "svn: E125001: 'E/@'")
+  do_make_dir(sbox, 'E/@', 'E/@', r"svn: E125001: 'E[\\/]@'")
 
 #=====================================================================
 # Tests for 'svn remove' in the current directory
@@ -486,11 +486,11 @@ def remove_subdir_7_escape_peg(sbox):
 
 def remove_subdir_7a_escape_peg(sbox):
   "remove missing 'E/@' without pegrev escape"
-  do_remove(sbox, 'E/@', 'E/@@', "svn: E200005: '.*/E/@'")
+  do_remove(sbox, 'E/@', 'E/@@', "svn: E200005: '.*[\\/]E[\\/]@'")
 
 def remove_subdir_7b_escape_peg(sbox):
   "remove missing '@/@' without pegrev escape"
-  do_remove(sbox, '@/@@', '@/@@', "svn: E200005: '.*/@/@'")
+  do_remove(sbox, '@/@@', '@/@@', r"svn: E200005: '.*[\\/]@[\\/]@'")
 
 #---------------------------------------------------------------------
 
@@ -502,11 +502,11 @@ def remove_subdir_1_no_escape_peg(sbox):
 @Wimp("The error message should be E125001")
 def remove_subdir_2_no_escape_peg(sbox):
   "remove 'B/@beta' without pegrev escape"
-  do_remove(sbox, 'B/@beta', 'B/@beta', "svn: E200009: 'B/@beta'")
+  do_remove(sbox, 'B/@beta', 'B/@beta', r"svn: E200009: 'B[\\/]@beta'")
 
 def remove_subdir_3_no_escape_peg(sbox):
   "remove 'G/_@gamma' without pegrev escape"
-  do_remove(sbox, 'G/_@gamma', 'G/_@gamma', "svn: E200009: 'G/_@gamma'")
+  do_remove(sbox, 'G/_@gamma', 'G/_@gamma', r"svn: E200009: 'G[\\/]_@gamma'")
 
 @Wimp("The error message mentions 'D@delta' instead of 'D/.@delta'")
 def remove_subdir_4_no_escape_peg(sbox):
@@ -522,17 +522,17 @@ def remove_subdir_4_no_escape_peg(sbox):
 @Wimp("Removes B instead of reporting E125001 for B/@")
 def remove_subdir_7_no_escape_peg(sbox):
   "remove 'B/@' without pegrev escape"
-  do_remove(sbox, 'B/@', 'B/@') #, "svn: E125001: 'B/@'")
+  do_remove(sbox, 'B/@', 'B/@') #, r"svn: E125001: 'B[\\/]@'")
 
 @Wimp("Removes E instead of reporting ENOENT or E125001 for E/@")
 def remove_subdir_7a_no_escape_peg(sbox):
   "remove missing 'E/@' without pegrev escape"
-  do_remove(sbox, 'E/@', 'E/@') #, "svn: E125001: 'E/@'")
+  do_remove(sbox, 'E/@', 'E/@') #, r"svn: E125001: 'E[\\/]@'")
 
 @Wimp("Removes @ instead of reporting ENOENT or E125001 for @/@")
 def remove_subdir_7b_no_escape_peg(sbox):
   "remove missing '@/@' without pegrev escape"
-  do_remove(sbox, '@/@', '@/@') #, "svn: E125001: '@/@'")
+  do_remove(sbox, '@/@', '@/@') #, r"svn: E125001: '@[\\/]@'")
 
 #=====================================================================
 # Test for 'svn move' to a subdirectory
