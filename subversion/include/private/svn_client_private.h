@@ -412,6 +412,36 @@ svn_client__get_diff_summarize_callbacks(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/** Send committable changes found in the WC to a delta-editor.
+ *
+ * Committable changes are found in TARGETS:DEPTH:CHANGELISTS.
+ *
+ * Send the changes to EDITOR:EDIT_BATON.
+ *
+ * Compared with svn_client__do_commit(), this (like svn_client_commit6)
+ * handles:
+ *  - condense targets and find committable paths
+ *  - checking only one repository is involved
+ *
+ * Compared with svn_client_commit6(), this does not handle:
+ *  - externals
+ *  - log message
+ *  - revprops
+ *  - checking the commit includes both halves of each local move
+ *  - changing the copy revision of each local move to ~HEAD
+ *  - WC write locks
+ *  - bumping revisions in WC
+ *  - removing locks and changelists in WC
+ */
+svn_error_t *
+svn_client__wc_replay(const apr_array_header_t *targets,
+                      svn_depth_t depth,
+                      const apr_array_header_t *changelists,
+                      const svn_delta_editor_t *editor,
+                      void *edit_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
