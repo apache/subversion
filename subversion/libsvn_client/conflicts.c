@@ -7935,20 +7935,47 @@ resolve_update_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   const char *local_abspath;
   const char *lock_abspath;
   svn_error_t *err;
+  svn_wc_conflict_reason_t local_change;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
 
-  SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
-            &lock_abspath, ctx->wc_ctx, local_abspath,
-            scratch_pool, scratch_pool));
+  if (local_change == svn_wc_conflict_reason_unversioned)
+    {
+      char *parent_abspath = svn_dirent_dirname(local_abspath, scratch_pool);
+      SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
+                &lock_abspath, ctx->wc_ctx, parent_abspath,
+                scratch_pool, scratch_pool));
 
-  err = svn_wc__conflict_tree_update_local_add(ctx->wc_ctx,
-                                               local_abspath,
-                                               ctx->cancel_func,
-                                               ctx->cancel_baton,
-                                               ctx->notify_func2,
-                                               ctx->notify_baton2,
-                                               scratch_pool);
+      /* The update/switch operation has added the incoming versioned
+       * directory as a deleted op-depth layer. We can revert this layer
+       * to make the incoming tree appear in the working copy.
+       * This meta-data-only revert operation effecively merges the
+       * versioned and unversioned trees but leaves all unversioned files as
+       * they were. This is the best we can do; 3-way merging of unversioned
+       * files with files from the repository is impossible because there is
+       * no known merge base. No unversioned data will be lost, and any
+       * differences to files in the repository will show up in 'svn diff'. */
+      err = svn_wc_revert6(ctx->wc_ctx, local_abspath, svn_depth_infinity,
+                           FALSE, NULL, TRUE, TRUE /* metadata_only */,
+                           TRUE /*added_keep_local*/,
+                           NULL, NULL, /* no cancellation */
+                           ctx->notify_func2, ctx->notify_baton2,
+                           scratch_pool);
+    }
+  else
+    {
+      SVN_ERR(svn_wc__acquire_write_lock_for_resolve(
+                &lock_abspath, ctx->wc_ctx, local_abspath,
+                scratch_pool, scratch_pool));
+      err = svn_wc__conflict_tree_update_local_add(ctx->wc_ctx,
+                                                   local_abspath,
+                                                   ctx->cancel_func,
+                                                   ctx->cancel_baton,
+                                                   ctx->notify_func2,
+                                                   ctx->notify_baton2,
+                                                   scratch_pool);
+    }
 
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,
@@ -9922,8 +9949,9 @@ configure_option_incoming_added_dir_merge(svn_client_conflict_t *conflict,
       incoming_change == svn_wc_conflict_action_add &&
       (local_change == svn_wc_conflict_reason_added ||
        (operation == svn_wc_operation_merge &&
-       local_change == svn_wc_conflict_reason_obstructed)))
-
+        local_change == svn_wc_conflict_reason_obstructed) ||
+       (operation != svn_wc_operation_merge &&
+        local_change == svn_wc_conflict_reason_unversioned)))
     {
       const char *description;
       const char *wcroot_abspath;
