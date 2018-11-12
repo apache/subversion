@@ -1021,6 +1021,56 @@ def repos_to_wc(sbox):
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
+def foreign_repos_to_wc(sbox):
+  "foreign repository to WC copy"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  def move_url(repo_url, source, dest):
+    svntest.main.run_svn(False, 'move', '-m', svntest.main.make_log_msg(),
+                         repo_url + '/' + source,
+                         repo_url + '/' + dest)
+
+  # We have a standard repository and working copy.  Now we create a
+  # second repository with the same greek tree, but different UUID.
+  repo_dir       = sbox.repo_dir
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+  move_url(other_repo_url, 'A', 'A2')
+  move_url(other_repo_url, 'A2', 'A3')
+
+  # URL->wc copy:
+  # copy a file and a directory from a foreign repository.
+  # we should get some scheduled additions *without history*.
+  E_url = other_repo_url + "/A2/B/E"
+  pi_url = other_repo_url + "/A2/D/G/pi"
+  peg_rev = '2'
+  op_rev = '1'
+  E_url_resolved = E_url.replace('/A2/', '/A/')
+  pi_url_resolved = pi_url.replace('/A2/', '/A/')
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Copying from foreign repository URL \'%s\':\n' % E_url_resolved,
+    'A         %s\n' % sbox.ospath('E'),
+    'A         %s\n' % sbox.ospath('E/beta'),
+    'A         %s\n' % sbox.ospath('E/alpha'),
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'copy', '-r' + op_rev,
+                                     E_url + '@' + peg_rev,
+                                     wc_dir)
+
+  expected_output = [
+    '--- Copying from foreign repository URL \'%s\':\n' % pi_url_resolved,
+    'A         %s\n' % sbox.ospath('pi'),
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'copy', '-r' + op_rev,
+                                     pi_url + '@' + peg_rev,
+                                     wc_dir)
+
+#----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
 @Issue(1084)
 def copy_to_root(sbox):
@@ -6044,6 +6094,7 @@ test_list = [ None,
               ext_wc_copy_deleted,
               copy_subtree_deleted,
               resurrect_at_root,
+              foreign_repos_to_wc,
              ]
 
 if __name__ == '__main__':
