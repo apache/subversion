@@ -7985,35 +7985,6 @@ resolve_update_incoming_added_dir_merge(svn_client_conflict_option_t *option,
   return SVN_NO_ERROR;
 }
 
-/* A baton for notification_adjust_func(). */
-struct notification_adjust_baton
-{
-  svn_wc_notify_func2_t inner_func;
-  void *inner_baton;
-  const char *checkout_abspath;
-  const char *final_abspath;
-};
-
-/* A svn_wc_notify_func2_t function that wraps BATON->inner_func (whose
- * baton is BATON->inner_baton) and adjusts the notification paths that
- * start with BATON->checkout_abspath to start instead with
- * BATON->final_abspath. */
-static void
-notification_adjust_func(void *baton,
-                         const svn_wc_notify_t *notify,
-                         apr_pool_t *pool)
-{
-  struct notification_adjust_baton *nb = baton;
-  svn_wc_notify_t *inner_notify = svn_wc_dup_notify(notify, pool);
-  const char *relpath;
-
-  relpath = svn_dirent_skip_ancestor(nb->checkout_abspath, notify->path);
-  inner_notify->path = svn_dirent_join(nb->final_abspath, relpath, pool);
-
-  if (nb->inner_func)
-    nb->inner_func(nb->inner_baton, inner_notify, pool);
-}
-
 /* Resolve a dir/dir "incoming add vs local obstruction" tree conflict by
  * replacing the local directory with the incoming directory.
  * If MERGE_DIRS is set, also merge the directories after replacing. */
@@ -8032,14 +8003,9 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   svn_revnum_t incoming_new_pegrev;
   const char *local_abspath;
   const char *lock_abspath;
-  const char *tmpdir_abspath, *tmp_abspath;
   svn_error_t *err;
-  svn_revnum_t copy_src_revnum;
   svn_opt_revision_t copy_src_peg_revision;
   svn_boolean_t timestamp_sleep;
-  svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
-  void *old_notify_baton2 = ctx->notify_baton2;
-  struct notification_adjust_baton nb;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
@@ -8060,45 +8026,8 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   if (corrected_url)
     url = corrected_url;
 
-
-  /* Find a temporary location in which to check out the copy source. */
-  SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, local_abspath,
-                             scratch_pool, scratch_pool));
-
-  SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
-                                   svn_io_file_del_on_close,
-                                   scratch_pool, scratch_pool));
-
-  /* Make a new checkout of the requested source. While doing so,
-   * resolve copy_src_revnum to an actual revision number in case it
-   * was until now 'invalid' meaning 'head'.  Ask this function not to
-   * sleep for timestamps, by passing a sleep_needed output param.
-   * Send notifications for all nodes except the root node, and adjust
-   * them to refer to the destination rather than this temporary path. */
-
-  nb.inner_func = ctx->notify_func2;
-  nb.inner_baton = ctx->notify_baton2;
-  nb.checkout_abspath = tmp_abspath;
-  nb.final_abspath = local_abspath;
-  ctx->notify_func2 = notification_adjust_func;
-  ctx->notify_baton2 = &nb;
-
   copy_src_peg_revision.kind = svn_opt_revision_number;
   copy_src_peg_revision.value.number = incoming_new_pegrev;
-
-  err = svn_client__checkout_internal(&copy_src_revnum, &timestamp_sleep,
-                                      url, tmp_abspath,
-                                      &copy_src_peg_revision,
-                                      &copy_src_peg_revision,
-                                      svn_depth_infinity,
-                                      TRUE, /* we want to ignore externals */
-                                      FALSE, /* we don't allow obstructions */
-                                      ra_session, ctx, scratch_pool);
-
-  ctx->notify_func2 = old_notify_func2;
-  ctx->notify_baton2 = old_notify_baton2;
-
-  SVN_ERR(err);
 
   /* ### The following WC modifications should be atomic. */
 
@@ -8116,31 +8045,13 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   if (err)
     goto unlock_wc;
 
-  /* Schedule dst_path for addition in parent, with copy history.
-     Don't send any notification here.
-     Then remove the temporary checkout's .svn dir in preparation for
-     moving the rest of it into the final destination. */
-  err = svn_wc_copy3(ctx->wc_ctx, tmp_abspath, local_abspath,
-                     TRUE /* metadata_only */,
-                     NULL, NULL, /* don't allow user to cancel here */
-                     NULL, NULL, scratch_pool);
-  if (err)
-    goto unlock_wc;
-
-  err = svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, tmp_abspath,
-                                   FALSE, scratch_pool, scratch_pool);
-  if (err)
-    goto unlock_wc;
-  err = svn_wc_remove_from_revision_control2(ctx->wc_ctx,
-                                             tmp_abspath,
-                                             FALSE, FALSE,
-                                             NULL, NULL, /* don't cancel */
-                                             scratch_pool);
-  if (err)
-    goto unlock_wc;
-
-  /* Move the temporary disk tree into place. */
-  err = svn_io_file_rename2(tmp_abspath, local_abspath, FALSE, scratch_pool);
+  err = svn_client__repos_to_wc_copy_dir(&timestamp_sleep,
+                                         url,
+                                         &copy_src_peg_revision,
+                                         &copy_src_peg_revision,
+                                         local_abspath,
+                                         TRUE, /* we want to ignore externals */
+                                         ra_session, ctx, scratch_pool);
   if (err)
     goto unlock_wc;
 
