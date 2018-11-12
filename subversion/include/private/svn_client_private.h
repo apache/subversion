@@ -293,8 +293,8 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
 svn_error_t *
 svn_client__copy_foreign(const char *url,
                          const char *dst_abspath,
-                         svn_opt_revision_t *peg_revision,
-                         svn_opt_revision_t *revision,
+                         const svn_opt_revision_t *peg_revision,
+                         const svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
                          svn_boolean_t already_locked,
@@ -416,6 +416,9 @@ svn_client__get_diff_summarize_callbacks(
  * SRC_OP_REVISION, to DST_ABSPATH in a WC.
  *
  * The caller should be holding a WC lock on the parent of dst_abspath.
+ *
+ * If RA_SESSION is NOT NULL, it may be used to avoid creating a new
+ * session. The session may point to a different URL after returning.
  */
 svn_error_t *
 svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
