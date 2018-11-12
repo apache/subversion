@@ -2079,6 +2079,18 @@ svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
     }
 }
 
+void
+svn_ra_serf__setup_xml_name_escape(serf_bucket_t *headers,
+                                   svn_ra_serf__session_t *session,
+                                   apr_pool_t *request_pool)
+{
+  if (session->xml_name_escape)
+    serf_bucket_headers_setn(headers,
+                             SVN_DAV_XML_NAME_ESCAPE_HEADER,
+                             apr_psprintf(request_pool, "%%%02X",
+                                          session->xml_name_escape));
+}
+
 svn_boolean_t
 svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session)
 {

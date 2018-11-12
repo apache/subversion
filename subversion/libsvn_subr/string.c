@@ -1577,3 +1577,92 @@ svn_cstring_skip_prefix(const char *str, const char *prefix)
       return NULL;
     }
 }
+
+const char *
+svn__cntrl_escape(const char *str,
+                  char escape,
+                  apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf = NULL;
+  const char *p, *next;
+
+  for(p = str; *p; ++p)
+    {
+      if (svn_ctype_iscntrl(*p) || *p == escape)
+        {
+          if (!buf)
+              buf = svn_stringbuf_ncreate(str, p - str, pool);
+          else
+            svn_stringbuf_appendbytes(buf, next, p - next);
+
+          if (*p == escape)
+            {
+              char twice[2];
+              twice[0] = twice[1] = escape;
+              
+              svn_stringbuf_appendbytes(buf, twice, 2);
+            }
+          else
+            {
+              svn_stringbuf_ensure(buf, buf->len + 4);
+              apr_snprintf(buf->data + buf->len, 4, "%c%02X",
+                           escape, (unsigned char)*p);
+              buf->len += 3;
+            }
+
+          next = p + 1;
+        }
+    }
+  if (buf)
+    svn_stringbuf_appendbytes(buf, next, p - next);
+
+  return buf ? buf->data : str;
+}
+
+
+const char *
+svn__cntrl_unescape(const char *str,
+                    char escape,
+                    apr_pool_t *pool)
+{
+  svn_stringbuf_t *buf = NULL;
+  const char *p, *next;
+
+  if (!escape)
+    return str;
+  
+  for(p = str; *p; ++p)
+    {
+      if (p[0] == escape
+          && (p[1] == escape
+              || (svn_ctype_isxdigit(p[1]) && svn_ctype_isxdigit(p[2]))))
+        {
+          if (!buf)
+              buf = svn_stringbuf_ncreate(str, p - str, pool);
+          else
+            svn_stringbuf_appendbytes(buf, next, p - next);
+
+          if (p[1] == escape)
+            {
+              svn_stringbuf_appendbytes(buf, &escape, 1);
+              ++p;
+            }
+          else
+            {
+              char digitz[3], c[1];
+              digitz[0] = p[1];
+              digitz[1] = p[2];
+              digitz[2] = '\0';
+              c[0] = (char)(strtol(digitz, NULL, 16));
+              svn_stringbuf_appendbytes(buf, c, 1);
+              p += 2;
+            }
+
+          next = p + 1;
+        }
+    }
+  if (buf)
+    svn_stringbuf_appendbytes(buf, next, p - next);
+
+  return buf ? buf->data : str;
+}

@@ -34,6 +34,7 @@
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "../libsvn_ra/ra_loader.h"
+#include "private/svn_string_private.h"
 
 #include "ra_serf.h"
 
@@ -45,6 +46,7 @@ typedef struct gls_context_t {
   svn_revnum_t start_rev;
   svn_revnum_t end_rev;
   const char *path;
+  char xml_name_escape;
 
   /* location segment callback function/baton */
   svn_location_segment_receiver_t receiver;
@@ -90,7 +92,8 @@ gls_closed(svn_ra_serf__xml_estate_t *xes,
 
   SVN_ERR_ASSERT(leaving_state == SEGMENT);
 
-  path = svn_hash_gets(attrs, "path");
+  path = svn__cntrl_unescape(svn_hash_gets(attrs, "path"),
+                             gls_ctx->xml_name_escape, scratch_pool);
   start_str = svn_hash_gets(attrs, "range-start");
   end_str = svn_hash_gets(attrs, "range-end");
 
@@ -153,6 +156,20 @@ create_gls_body(serf_bucket_t **body_bkt,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+setup_getlocationsegments_headers(serf_bucket_t *headers,
+                                  void *setup_baton,
+                                  apr_pool_t *pool /* request pool */,
+                                  apr_pool_t *scratch_pool)
+
+{
+  svn_ra_serf__session_t *session = setup_baton;
+
+  svn_ra_serf__setup_xml_name_escape(headers, session, pool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
                                    const char *path,
@@ -175,6 +192,7 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   gls_ctx->peg_revision = peg_revision;
   gls_ctx->start_rev = start_rev;
   gls_ctx->end_rev = end_rev;
+  gls_ctx->xml_name_escape = session->xml_name_escape;
   gls_ctx->receiver = receiver;
   gls_ctx->receiver_baton = receiver_baton;
 
@@ -193,6 +211,8 @@ svn_ra_serf__get_location_segments(svn_ra_session_t *ra_session,
   handler->body_delegate = create_gls_body;
   handler->body_delegate_baton = gls_ctx;
   handler->body_type = "text/xml";
+  handler->header_delegate = setup_getlocationsegments_headers;
+  handler->header_delegate_baton = session;
 
   err = svn_ra_serf__context_run_one(handler, pool);
 

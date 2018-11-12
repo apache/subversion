@@ -273,6 +273,11 @@ struct svn_ra_serf__session_t {
    * to a successful PUT request. */
   svn_boolean_t supports_put_result_checksum;
 
+  /* The XML name escape character from the header in the OPTIONS
+     response. NUL if no header, i.e. the server does not support
+     escaping. */
+  char xml_name_escape;
+
   apr_interval_time_t conn_latency;
 };
 
@@ -1598,6 +1603,11 @@ svn_ra_serf__uri_parse(apr_uri_t *uri,
 void
 svn_ra_serf__setup_svndiff_accept_encoding(serf_bucket_t *headers,
                                            svn_ra_serf__session_t *session);
+
+void
+svn_ra_serf__setup_xml_name_escape(serf_bucket_t *headers,
+                                   svn_ra_serf__session_t *session,
+                                   apr_pool_t *request_pool);
 
 svn_boolean_t
 svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session);

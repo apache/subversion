@@ -1,0 +1,102 @@
+This branch aims to transport control characters in paths over DAV.
+
+Currently, if a path with a control character exists in the HEAD revision,
+operations involving this path will fail over DAV, until the offending path
+has been removed with 'svn rm', This branch aims to make all SVN operations
+work with such paths over DAV.
+
+Firstly, here is a python script to create a repository that has all
+characters from 0x01 to 0x7F (apart from '/' and '\n') in file and
+directory names.
+
+[[[
+#!/usr/bin/python
+from svn import repos, fs
+import sys
+
+repos.create(sys.argv[1], "", "", None, None)
+f = repos.fs(repos.open(sys.argv[1]))
+h = fs.youngest_rev(f)
+t = fs.begin_txn(f, h)
+r = fs.txn_root(t)
+for i in range(1,128):
+    if chr(i) in ['/', '\n']:
+        continue
+    dirname = "D" + "%0.2X" % i
+    fs.make_dir(r, dirname)
+    subdirname = dirname + "/S" + chr(i)
+    fs.make_dir(r, subdirname)
+    filename = subdirname + "/F" + chr(i)
+    fs.make_file(r, filename)
+    fs.change_node_prop(r, filename, "p", "v")
+fs.commit_txn(t)
+]]]
+
+With the patch on this branch it is possible to checkout/update/log/switch
+this working copy.  It's possible to use curl to get each of the files.
+It's possible to use 'svn pg p URL' to get a property from each file.
+The escape support is negotiated, so the new server supports old clients
+that do not have escape support.
+
+How the patch works:
+
+The server sends a new header as part of the OPTIONS reponse:
+
+  SVN-XML-Filename-Escape: 0x25
+
+to indicate that it supports escaping.  If the new client sees the
+header then it includes the same header in requests and can % escape any
+paths in the request body as necessary.  If the new client does not see the
+header then it cannot escape paths in the request body and any path that
+would require escaping will result in a client error to the user:
+"server too old".   The old client will not send the header and will not
+escape paths in the request body.
+
+If the server sees the header when handling a request it is able to
+unescape any paths in the request body.  The server includes the same
+header in the response and is able to escape any paths in the response
+body.  The client sees the header in the response and it is able to
+unescape any paths in the reponse body.
+
+If the server does not see the header when handling a request then it
+knows that any paths in the request body are not escaped.  The server
+includes a header
+
+  SVN-XML-Filename-Escape: 0x7f
+
+and uses that character to escape any paths in the response body.  The
+old client will not be able to unescape paths in the response body but
+most of the paths affected by this problem are ones that the client
+cannot currently use over HTTP.  The only existing path that the old
+client will get wrong is a directory containing an 0x7f character.
+
+New client to new server:
+New server to new client:
+
+  SVN-XML-Filename-Escape: 0x25
+  'A' '5' '0' '%' 'B'   encoded as "A50%%B"
+  'A' '\x1f' 'B'        encoded as "A%1fB"
+
+New client to old server:
+
+  'A' '5' '0' '%' 'B'   encoded as "A50%B"
+  'A' '\x1f' 'B'        client error "server too old"
+
+New server to old client
+
+  SVN-XML-Filename-Escape: 0x7f
+  'A' '5' '0' '%' 'B'   encoded as "A50%B"
+  'A' '\x1f' 'B'        encoded as 'A' '\x7f' '1' 'f' 'B'  (*)
+  'A' '\x7f' 'B'        encoded as 'A' '\x7f' '\x7f' 'B'   (*)
+
+In the (*) cases the path '\x1f' will be misinterpreted by the old
+client but any such path is not currently supported.  The path
+containing '\x7f' will also be misinterpreted by the old client, it is
+the only currently supported path that will break and can only be a
+directory.
+
+Current status:
+
+The patch is not complete, it doesn't handle the full range of requests,
+and I haven't implemented the client-side check to throw errors when an
+escape is required and the server is too old.

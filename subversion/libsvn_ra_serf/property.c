@@ -82,6 +82,8 @@ typedef struct propfind_context_t {
    * "good"; otherwise, they'll get discarded.
    */
   apr_hash_t *ps_props;
+
+  svn_ra_serf__session_t *sess;
 } propfind_context_t;
 
 
@@ -359,6 +361,8 @@ setup_propfind_headers(serf_bucket_t *headers,
       serf_bucket_headers_setn(headers, "Label", ctx->label);
     }
 
+  svn_ra_serf__setup_xml_name_escape(headers, ctx->sess, pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -472,6 +476,7 @@ svn_ra_serf__create_propfind_handler(svn_ra_serf__handler_t **propfind_handler,
   new_prop_ctx->prop_func = prop_func;
   new_prop_ctx->prop_func_baton = prop_func_baton;
   new_prop_ctx->depth = depth;
+  new_prop_ctx->sess = sess;
 
   if (SVN_IS_VALID_REVNUM(rev))
     {

@@ -1000,3 +1000,18 @@ dav_svn__fuzzy_escape_author(const char *author,
 
   return apr_xml_quote_string(result_pool, author, 1);
 }
+
+void
+dav_svn__set_xml_name_encoding(const dav_resource *resource)
+{
+  apr_table_set(resource->info->r->headers_out,
+                SVN_DAV_XML_NAME_ESCAPE_HEADER,
+                apr_psprintf(resource->pool, "%%%02X",
+                             resource->info->xml_name_escape));
+}
+
+const char *
+dav_svn__quote_escape(const char *str, char escape, apr_pool_t *pool)
+{
+  return apr_xml_quote_string(pool, svn__cntrl_escape(str, escape, pool), 1);
+}

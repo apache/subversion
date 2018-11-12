@@ -57,6 +57,7 @@
 #include "private/svn_fspath.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_string_private.h"
 
 #include "dav_svn.h"
 
@@ -1821,6 +1822,23 @@ negotiate_encoding_prefs(request_rec *r, int *svndiff_version)
     }
 }
 
+static void
+get_xml_name_encoding(request_rec *r, char *xml_name_escape)
+{
+  const char *val = apr_table_get(r->headers_in,
+                                  SVN_DAV_XML_NAME_ESCAPE_HEADER);
+  char escape;
+
+  if (val && val[0] == '%'
+      && svn_ctype_isxdigit(val[1]) && svn_ctype_isxdigit(val[2])
+      && !val[3])
+    escape = (char)strtoul(val + 1, NULL, 16);
+  else
+    escape = '\x7F';
+
+  *xml_name_escape = escape;
+}
+
 
 /* The only two possible values for a capability. */
 static const char *capability_yes = "yes";
@@ -2268,6 +2286,8 @@ get_resource(request_rec *r,
   }
 
   negotiate_encoding_prefs(r, &comb->priv.svndiff_version);
+
+  get_xml_name_encoding(r, &comb->priv.xml_name_escape);
 
   /* ### and another hack for computing diffs to send to the client */
   comb->priv.delta_base = apr_table_get(r->headers_in,
@@ -3127,12 +3147,16 @@ dav_svn__getetag(const dav_resource *resource, apr_pool_t *pool)
 
   /* Use the "weak" format of the etag for collections because our GET
      requests on collections include dynamic data (the HEAD revision,
-     the build version of Subversion, etc.). */
+     the build version of Subversion, etc.).
+
+     This etag is used in both the ETag: header and in the XML body of
+     the PROPFIND response, the value must be valid for both uses. We
+     are free to always use '%' to escape as Subversion doesn't ever
+     unescape it. */
   return apr_psprintf(pool, "%s\"%ld/%s\"",
                       resource->collection ? "W/" : "",
                       created_rev,
-                      apr_xml_quote_string(pool,
-                                           resource->info->repos_path, 1));
+                      dav_svn__quote_escape(resource->info->repos_path, '%', pool));
 }
 
 

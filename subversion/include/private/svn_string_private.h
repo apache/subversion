@@ -324,6 +324,23 @@ int
 svn_prefix_string__compare(const svn_prefix_string__t *lhs,
                            const svn_prefix_string__t *rhs);
 
+/**
+ * Escape control characters in @a str and return the escaped string,
+ * or return @a str if no escaping required.
+ */
+const char *
+svn__cntrl_escape(const char *str,
+                  char escape,
+                  apr_pool_t *pool);
+
+/**
+ * Unescape control characters in @a str and return the unescaped string,
+ * or return @a str if no unescaping required.
+ */
+const char *
+svn__cntrl_unescape(const char *str,
+                    char escape,
+                    apr_pool_t *pool);
 /** @} */
 
 /** @} */

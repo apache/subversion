@@ -71,6 +71,8 @@ struct log_receiver_baton
   /* whether the client can handle encoded binary property values */
   svn_boolean_t encode_binary_props;
 
+  char xml_name_escape;
+
   /* Helper variables to force early bucket brigade flushes */
   int result_count;
   int next_forced_flush;
@@ -144,9 +146,9 @@ start_path_with_copy_from(const char **element,
             (lrb->bb, lrb->output,
              "<%s copyfrom-path=\"%s\" copyfrom-rev=\"%ld\"",
              *element,
-             apr_xml_quote_string(pool,
-                                  log_item->copyfrom_path,
-                                  1), /* escape quotes */
+             dav_svn__quote_escape(log_item->copyfrom_path,
+                                   lrb->xml_name_escape,
+                                   pool),
              log_item->copyfrom_rev));
   else
     SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output, "<%s", *element));
@@ -211,7 +213,8 @@ log_change_receiver(void *baton,
               svn_node_kind_to_word(change->node_kind),
               change->text_mod ? "true" : "false",
               change->prop_mod ? "true" : "false",
-              apr_xml_quote_string(scratch_pool, change->path.data, 0),
+              dav_svn__quote_escape(change->path.data, lrb->xml_name_escape,
+                                    scratch_pool),
               close_element));
 
   return SVN_NO_ERROR;
@@ -494,6 +497,7 @@ dav_svn__log_report(const dav_resource *resource,
   lrb.needs_header = TRUE;
   lrb.needs_log_item = TRUE;
   lrb.stack_depth = 0;
+  lrb.xml_name_escape = resource->info->xml_name_escape;
   /* lrb.requested_custom_revprops set above */
 
   lrb.result_count = 0;

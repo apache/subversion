@@ -340,6 +340,13 @@ capabilities_headers_iterator_callback(void *baton,
               svn_hash_sets(session->supported_posts, post_val, (void *)1);
             }
         }
+      else if (svn_cstring_casecmp(key, SVN_DAV_XML_NAME_ESCAPE_HEADER) == 0)
+        {
+          if (val[0] == '%'
+              && svn_ctype_isxdigit(val[1]) && svn_ctype_isxdigit(val[2])
+              && !val[3])
+            session->xml_name_escape = (char)strtoul(val + 1, NULL, 16);
+        }
       else if (svn_cstring_casecmp(key, SVN_DAV_REPOSITORY_MERGEINFO) == 0)
         {
           if (svn_cstring_casecmp(val, "yes") == 0)

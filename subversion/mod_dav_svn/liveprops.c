@@ -39,6 +39,7 @@
 #include "svn_ctype.h"
 
 #include "private/svn_dav_protocol.h"
+#include "private/svn_string_private.h"
 
 #include "dav_svn.h"
 
@@ -676,7 +677,8 @@ insert_prop_internal(const dav_resource *resource,
 
       /* drop the leading slash, so it is relative */
       s = resource->info->repos_path + 1;
-      value = apr_xml_quote_string(scratch_pool, s, 1);
+      value = dav_svn__quote_escape(s, resource->info->xml_name_escape,
+                                    scratch_pool);
       break;
 
     case SVN_PROPID_md5_checksum:
@@ -974,6 +976,7 @@ dav_svn__insert_all_liveprops(request_rec *r,
       return;
     }
 
+  dav_svn__set_xml_name_encoding(resource);
   iterpool = svn_pool_create(resource->pool);
   for (spec = props; spec->name != NULL; ++spec)
     {

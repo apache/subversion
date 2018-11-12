@@ -370,6 +370,9 @@ get_option(const dav_resource *resource,
                      apr_pstrdup(r->pool, capabilities[i].capability_name));
     }
 
+  /* FIXME: check master version */
+  apr_table_set(r->headers_out, SVN_DAV_XML_NAME_ESCAPE_HEADER, "%25");
+
   return NULL;
 }
 
@@ -1115,7 +1118,6 @@ report_label_header_allowed(const apr_xml_doc *doc)
   return 0;
 }
 
-
 static dav_error *
 deliver_report(request_rec *r,
                const dav_resource *resource,
@@ -1134,6 +1136,7 @@ deliver_report(request_rec *r,
 
       if (strcmp(doc->root->name, "update-report") == 0)
         {
+          dav_svn__set_xml_name_encoding(resource);
           return dav_svn__update_report(resource, doc, output);
         }
       else if (strcmp(doc->root->name, "log-report") == 0)

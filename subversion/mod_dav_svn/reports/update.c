@@ -42,6 +42,7 @@
 
 #include "private/svn_log.h"
 #include "private/svn_fspath.h"
+#include "private/svn_string_private.h"
 
 #include "../dav_svn.h"
 
@@ -95,6 +96,8 @@ typedef struct update_ctx_t {
   /* Did the client submit this REPORT request via the HTTPv2 "me
      resource" and are we advertising support for as much? */
   svn_boolean_t enable_v2_response;
+
+  char xml_name_escape;
 
 } update_ctx_t;
 
@@ -283,9 +286,8 @@ absent_helper(svn_boolean_t is_dir,
               (uc->bb, uc->output,
                "<S:absent-%s name=\"%s\"/>" DEBUG_CR,
                DIR_OR_FILE(is_dir),
-               apr_xml_quote_string(pool,
-                                    svn_relpath_basename(path, NULL),
-                                    1)));
+               dav_svn__quote_escape(svn_relpath_basename(path, NULL),
+                                     uc->xml_name_escape, pool)));
     }
 
   return SVN_NO_ERROR;
@@ -330,7 +332,8 @@ add_helper(svn_boolean_t is_dir,
     }
   else
     {
-      const char *qname = apr_xml_quote_string(pool, child->name, 1);
+      const char *qname = dav_svn__quote_escape(child->name,
+                                                uc->xml_name_escape, pool);
       const char *elt;
       const char *real_path = get_real_fs_path(child, pool);
       const char *bc_url_str = "";
@@ -385,7 +388,8 @@ add_helper(svn_boolean_t is_dir,
         }
       else
         {
-          const char *qcopy = apr_xml_quote_string(pool, copyfrom_path, 1);
+          const char *qcopy = dav_svn__quote_escape(copyfrom_path,
+                                                    uc->xml_name_escape, pool);
 
           elt = apr_psprintf(pool,
                              "<S:add-%s name=\"%s\"%s%s "
@@ -427,7 +431,9 @@ open_helper(svn_boolean_t is_dir,
             void **child_baton)
 {
   item_baton_t *child = make_child_baton(parent, path, pool);
-  const char *qname = apr_xml_quote_string(pool, child->name, 1);
+  update_ctx_t *uc = child->uc;
+  const char *qname = dav_svn__quote_escape(child->name,
+                                            uc->xml_name_escape, pool);
 
   SVN_ERR(dav_svn__brigade_printf(child->uc->bb, child->uc->output,
                                   "<S:open-%s name=\"%s\""
@@ -566,9 +572,9 @@ upd_delete_entry(const char *path,
                  apr_pool_t *pool)
 {
   item_baton_t *parent = parent_baton;
-  const char *qname = apr_xml_quote_string(pool,
-                                           svn_relpath_basename(path, NULL),
-                                           1);
+  update_ctx_t *uc = parent->uc;
+  const char *qname = dav_svn__quote_escape(svn_relpath_basename(path, NULL),
+                                            uc->xml_name_escape, pool);
   return dav_svn__brigade_printf(parent->uc->bb, parent->uc->output,
                                  "<S:delete-entry name=\"%s\" rev=\"%ld\"/>"
                                    DEBUG_CR, qname, revision);
@@ -1197,6 +1203,7 @@ dav_svn__update_report(const dav_resource *resource,
     }
 
   uc.svndiff_version = resource->info->svndiff_version;
+  uc.xml_name_escape = resource->info->xml_name_escape;
   uc.compression_level = dav_svn__get_compression_level(resource->info->r);
   uc.resource = resource;
   uc.output = output;

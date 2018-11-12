@@ -1319,4 +1319,3 @@ svn_path_resolve_repos_relative_url(const char **absolute_url,
 
   return SVN_NO_ERROR;
 }
-

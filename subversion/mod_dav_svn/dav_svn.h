@@ -300,6 +300,8 @@ struct dav_resource_private {
      (ie: /path/to/item?kw=1)? */
   svn_boolean_t keyword_subst;
 
+  char xml_name_escape;
+
   /* whether this resource parameters are fixed and won't change
      between requests. */
   svn_boolean_t idempotent;
@@ -1152,6 +1154,12 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
  * location headers.  It will modify the stream in BB. */
 apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
                                            apr_bucket_brigade *bb);
+
+void
+dav_svn__set_xml_name_encoding(const dav_resource *resource);
+
+const char *
+dav_svn__quote_escape(const char *str, char escape, apr_pool_t *pool);
 
 
 #ifdef __cplusplus

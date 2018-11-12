@@ -51,6 +51,7 @@ struct location_segment_baton
   dav_svn__output *output;
   apr_bucket_brigade *bb;
   dav_svn__authz_read_baton arb;
+  char xml_name_escape;
 };
 
 
@@ -84,7 +85,9 @@ location_segment_receiver(svn_location_segment_t *segment,
 
   if (segment->path)
     {
-      const char *path_quoted = apr_xml_quote_string(pool, segment->path, 1);
+      const char *path_quoted = dav_svn__quote_escape(segment->path,
+                                                      b->xml_name_escape,
+                                                      pool);
 
       SVN_ERR(dav_svn__brigade_printf(b->bb, b->output,
                            "<S:location-segment path=\"%s\" "
@@ -221,6 +224,7 @@ dav_svn__get_location_segments_report(const dav_resource *resource,
   location_segment_baton.sent_opener = FALSE;
   location_segment_baton.output = output;
   location_segment_baton.bb = bb;
+  location_segment_baton.xml_name_escape = resource->info->xml_name_escape;
   if ((serr = svn_repos_node_location_segments(resource->info->repos->repos,
                                                abs_path, peg_revision,
                                                start_rev, end_rev,

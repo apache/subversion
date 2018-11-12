@@ -1524,6 +1524,8 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
           name = svn_hash_gets(attrs, "name");
           if (!name)
             name = "";
+          name = svn__cntrl_unescape(name, ctx->sess->xml_name_escape,
+                                     scratch_pool);
 
           SVN_ERR(create_dir_baton(&dir, ctx, name, scratch_pool));
 
@@ -1569,11 +1571,14 @@ update_opened(svn_ra_serf__xml_estate_t *xes,
       case ADD_FILE:
         {
           file_baton_t *file;
+          const char *name;
 
           attrs = svn_ra_serf__xml_gather_since(xes, entered_state);
+          name = svn_hash_gets(attrs, "name");
+          name = svn__cntrl_unescape(name, ctx->sess->xml_name_escape,
+                                     scratch_pool);
 
-          SVN_ERR(create_file_baton(&file, ctx, svn_hash_gets(attrs, "name"),
-                                    scratch_pool));
+          SVN_ERR(create_file_baton(&file, ctx, name, scratch_pool));
 
           if (entered_state == OPEN_FILE)
             {
@@ -1908,6 +1913,8 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
 
           SVN_ERR(ensure_dir_opened(ctx->cur_dir, scratch_pool));
 
+          name = svn__cntrl_unescape(name, ctx->sess->xml_name_escape,
+                                     scratch_pool);
           revstr = svn_hash_gets(attrs, "rev");
 
           if (revstr)
@@ -1931,6 +1938,9 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
 
           SVN_ERR(ensure_dir_opened(ctx->cur_dir, scratch_pool));
 
+          name = svn__cntrl_unescape(name, ctx->sess->xml_name_escape,
+                                     scratch_pool);
+
           SVN_ERR(ctx->editor->absent_directory(
                                     svn_relpath_join(ctx->cur_dir->relpath,
                                                      name, scratch_pool),
@@ -1943,6 +1953,9 @@ update_closed(svn_ra_serf__xml_estate_t *xes,
           const char *name = svn_hash_gets(attrs, "name");
 
           SVN_ERR(ensure_dir_opened(ctx->cur_dir, scratch_pool));
+
+          name = svn__cntrl_unescape(name, ctx->sess->xml_name_escape,
+                                     scratch_pool);
 
           SVN_ERR(ctx->editor->absent_file(
                                     svn_relpath_join(ctx->cur_dir->relpath,
@@ -2169,6 +2182,8 @@ setup_update_report_headers(serf_bucket_t *headers,
   report_context_t *report = baton;
 
   svn_ra_serf__setup_svndiff_accept_encoding(headers, report->sess);
+
+  svn_ra_serf__setup_xml_name_escape(headers, report->sess, pool);
 
   return SVN_NO_ERROR;
 }
@@ -2690,7 +2705,10 @@ make_update_reporter(svn_ra_session_t *ra_session,
       make_simple_xml_tag(&buf, "S:include-props", "yes", scratch_pool);
     }
 
-  make_simple_xml_tag(&buf, "S:src-path", report->source, scratch_pool);
+  make_simple_xml_tag(&buf, "S:src-path",
+                      svn__cntrl_escape(report->source, sess->xml_name_escape,
+                                        scratch_pool),
+                      scratch_pool);
 
   if (SVN_IS_VALID_REVNUM(report->target_rev))
     {
@@ -2701,13 +2719,19 @@ make_update_reporter(svn_ra_session_t *ra_session,
 
   if (report->destination && *report->destination)
     {
-      make_simple_xml_tag(&buf, "S:dst-path", report->destination,
+      make_simple_xml_tag(&buf, "S:dst-path",
+                          svn__cntrl_escape(report->destination,
+                                            sess->xml_name_escape,
+                                            scratch_pool),
                           scratch_pool);
     }
 
   if (report->update_target && *report->update_target)
     {
-      make_simple_xml_tag(&buf, "S:update-target", report->update_target,
+      make_simple_xml_tag(&buf, "S:update-target",
+                          svn__cntrl_escape(report->update_target,
+                                            sess->xml_name_escape,
+                                            scratch_pool),
                           scratch_pool);
     }
 

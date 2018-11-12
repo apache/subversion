@@ -206,6 +206,10 @@ extern "C" {
 #define SVN_DAV_REPOSITORY_MERGEINFO "SVN-Repository-MergeInfo"
 
 /**
+ * @since New in 1.11. FIXME also 1.10.? and 1.9.? */
+#define SVN_DAV_XML_NAME_ESCAPE_HEADER "SVN-XML-Name-Escape"
+
+/**
  * @name Fulltext MD5 headers
  *
  * These headers are for client and server to verify that the base

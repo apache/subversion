@@ -505,6 +505,20 @@ create_log_body(serf_bucket_t **body_bkt,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+setup_get_log_headers(serf_bucket_t *headers,
+                      void *setup_baton,
+                      apr_pool_t *pool /* request pool */,
+                      apr_pool_t *scratch_pool)
+
+{
+  svn_ra_serf__session_t *session = setup_baton;
+
+  svn_ra_serf__setup_xml_name_escape(headers, session, pool);
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_ra_serf__get_log(svn_ra_session_t *ra_session,
                      const apr_array_header_t *paths,
@@ -595,6 +609,8 @@ svn_ra_serf__get_log(svn_ra_session_t *ra_session,
   handler->body_delegate = create_log_body;
   handler->body_delegate_baton = log_ctx;
   handler->body_type = "text/xml";
+  handler->header_delegate = setup_get_log_headers;
+  handler->header_delegate_baton = session;
 
   SVN_ERR(svn_ra_serf__context_run_one(handler, pool));
 
