@@ -44,14 +44,6 @@ Candidate changes:
      +1: philip, brane
      +1: stefan2 (without r1827574)
 
- * r1838813
-   Let 'svnadmin recover' prune the rep-cache even if it is disabled.
-   Justification:
-     Can potentially lead to data loss.
-   Votes:
-     +1: julianfoad, brane
-     +0: danielsh (haven't reviewed the regression test)
-
  * r1843888
    Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
    Justification:
@@ -66,22 +58,12 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1663609, r1666067
-   Silence the svn-warnings bot on the 1.9.x branch.
-   Justification:
-     Keeps the warnings checker buildslave clean.
-   Notes:
-     - r1663609 fixes an old-style function definition.
-     - r1666067 removes an unused variable.
-   Votes:
-     +1: brane, danielsh
-
  * r1846403, r1846406
    Fix issue #4785: foreign repo copy with peg/operative revisions.
    Justification:
      It has been broken since first introduced in 1.8.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
 Veto-blocked changes:
 =====================
@@ -104,3 +86,21 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1663609, r1666067
+   Silence the svn-warnings bot on the 1.9.x branch.
+   Justification:
+     Keeps the warnings checker buildslave clean.
+   Notes:
+     - r1663609 fixes an old-style function definition.
+     - r1666067 removes an unused variable.
+   Votes:
+     +1: brane, danielsh, rhuijben
+
+ * r1838813
+   Let 'svnadmin recover' prune the rep-cache even if it is disabled.
+   Justification:
+     Can potentially lead to data loss.
+   Votes:
+     +1: julianfoad, brane, rhuijben
+     +0: danielsh (haven't reviewed the regression test)
