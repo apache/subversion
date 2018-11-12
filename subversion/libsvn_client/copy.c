@@ -2487,7 +2487,6 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                            &pair->src_op_revision,
                                            svn_depth_infinity,
                                            FALSE /* make_parents */,
-                                           TRUE /* already_locked */,
                                            ctx, pool));
 
           return SVN_NO_ERROR;

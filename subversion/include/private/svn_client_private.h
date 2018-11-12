@@ -289,6 +289,9 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
  *
  * If MAKE_PARENTS is TRUE and DST_ABSPATH doesn't have an added parent
  * create missing parent directories
+ *
+ * The caller should be holding a WC write lock that allows DST_ABSPATH to
+ * be created, such as on the parent of DST_ABSPATH.
  */
 svn_error_t *
 svn_client__copy_foreign(const char *url,
@@ -297,7 +300,6 @@ svn_client__copy_foreign(const char *url,
                          const svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
-                         svn_boolean_t already_locked,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
 
@@ -415,7 +417,8 @@ svn_client__get_diff_summarize_callbacks(
 /* Copy a directory tree from SRC_URL @ SRC_PEG_REVISION, operative revision
  * SRC_OP_REVISION, to DST_ABSPATH in a WC.
  *
- * The caller should be holding a WC lock on the parent of dst_abspath.
+ * The caller should be holding a WC write lock that allows DST_ABSPATH to
+ * be created, such as on the parent of DST_ABSPATH.
  *
  * If RA_SESSION is NOT NULL, it may be used to avoid creating a new
  * session. The session may point to a different URL after returning.
