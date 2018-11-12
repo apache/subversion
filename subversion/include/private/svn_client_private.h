@@ -412,6 +412,22 @@ svn_client__get_diff_summarize_callbacks(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Copy a directory tree from SRC_URL @ SRC_PEG_REVISION, operative revision
+ * SRC_OP_REVISION, to DST_ABSPATH in a WC.
+ *
+ * The caller should be holding a WC lock on the parent of dst_abspath.
+ */
+svn_error_t *
+svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
+                                 const char *src_url,
+                                 const svn_opt_revision_t *src_peg_revision,
+                                 const svn_opt_revision_t *src_op_revision,
+                                 const char *dst_abspath,
+                                 svn_boolean_t ignore_externals,
+                                 svn_ra_session_t *ra_session,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
 /** Send committable changes found in the WC to a delta-editor.
  *
  * Committable changes are found in TARGETS:DEPTH:CHANGELISTS.
