@@ -76,6 +76,13 @@ Candidate changes:
    Votes:
      +1: brane, danielsh
 
+ * r1846403, r1846406
+   Fix issue #4785: foreign repo copy with peg/operative revisions.
+   Justification:
+     It has been broken since first introduced in 1.8.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
