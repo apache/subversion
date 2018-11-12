@@ -578,7 +578,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
 static svn_error_t *
 resolve_pinned_externals(apr_hash_t **pinned_externals,
                          const apr_hash_t *externals_to_pin,
-                         svn_client__copy_pair_t *pair,
+                         const svn_client__copy_pair_t *pair,
                          svn_ra_session_t *ra_session,
                          const char *repos_root_url,
                          svn_client_ctx_t *ctx,
@@ -2421,10 +2421,12 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
 /* Peform each individual copy operation for a repos -> wc copy.  A
    helper for repos_to_wc_copy().
 
-   Resolve PAIR->src_revnum to a real revision number if it isn't already. */
+   PAIR->src_revnum PAIR->src_abspath_or_url should already have been
+   resolved to the operative revision number and operative URL.
+ */
 static svn_error_t *
 repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
-                        svn_client__copy_pair_t *pair,
+                        const svn_client__copy_pair_t *pair,
                         svn_boolean_t same_repositories,
                         svn_boolean_t ignore_externals,
                         svn_boolean_t pin_externals,
@@ -2436,6 +2438,8 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
   apr_hash_t *src_mergeinfo;
   const char *dst_abspath = pair->dst_abspath_or_url;
 
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(pair->src_revnum));
+  SVN_ERR_ASSERT(svn_path_is_url(pair->src_abspath_or_url));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
   if (!same_repositories && ctx->notify_func2)
@@ -2558,7 +2562,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
        * to an actual revision number if it's 'invalid' meaning 'head'. */
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum,
                               new_base_contents,
-                              &pair->src_revnum, &new_props, pool));
+                              NULL, &new_props, pool));
 
       if (new_props && ! same_repositories)
         svn_hash_sets(new_props, SVN_PROP_MERGEINFO, NULL);

@@ -448,8 +448,8 @@ copy_foreign_dir(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_client__copy_foreign(const char *url,
                          const char *dst_abspath,
-                         svn_opt_revision_t *peg_revision,
-                         svn_opt_revision_t *revision,
+                         const svn_opt_revision_t *peg_revision,
+                         const svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
                          svn_boolean_t already_locked,
@@ -473,17 +473,17 @@ svn_client__copy_foreign(const char *url,
                                             revision, ctx,
                                             scratch_pool));
 
+  /* The source must exist */
   SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind, scratch_pool));
-
   if (kind != svn_node_file && kind != svn_node_dir)
     return svn_error_createf(
                 SVN_ERR_ILLEGAL_TARGET, NULL,
                 _("'%s' is not a valid location inside a repository"),
                 url);
 
+  /* The target path must not exist (at least not as a versioned node) */
   SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dst_abspath, FALSE, TRUE,
                             scratch_pool));
-
   if (wc_kind != svn_node_none)
     {
       return svn_error_createf(
@@ -492,10 +492,11 @@ svn_client__copy_foreign(const char *url,
                 svn_dirent_local_style(dst_abspath, scratch_pool));
     }
 
+  /* Either the target path's parent must be a versioned directory already
+     or we must create it if MAKE_PARENTS is true */
   dir_abspath = svn_dirent_dirname(dst_abspath, scratch_pool);
   SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dir_abspath,
                             FALSE, FALSE, scratch_pool));
-
   if (wc_kind == svn_node_none)
     {
       if (make_parents)
@@ -505,13 +506,11 @@ svn_client__copy_foreign(const char *url,
       SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dir_abspath,
                                 FALSE, FALSE, scratch_pool));
     }
-
   if (wc_kind != svn_node_dir)
     return svn_error_createf(
                 SVN_ERR_ENTRY_NOT_FOUND, NULL,
                 _("Can't add '%s', because no parent directory is found"),
                 svn_dirent_local_style(dst_abspath, scratch_pool));
-
 
   if (kind == svn_node_file)
     {
