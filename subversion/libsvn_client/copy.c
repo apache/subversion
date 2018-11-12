@@ -2477,7 +2477,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
         {
           *timestamp_sleep = TRUE;
 
-          SVN_ERR(svn_client__copy_foreign(pair->src_abspath_or_url,
+          SVN_ERR(svn_client__copy_foreign(pair->src_original,
                                            dst_abspath,
                                            &pair->src_peg_revision,
                                            &pair->src_op_revision,
