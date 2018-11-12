@@ -17,6 +17,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
 
   - Client-side bugfixes:
     * Repos-to-WC copy with --parents works with absent target (r1843888)
+    * Repos-to-WC copy from foreign repo with peg/operative revs (#4785)
 
   - Server-side bugfixes:
 
