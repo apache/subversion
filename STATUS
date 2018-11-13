@@ -86,11 +86,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1838813
-   Let 'svnadmin recover' prune the rep-cache even if it is disabled.
-   Justification:
-     Can potentially lead to data loss.
-   Votes:
-     +1: julianfoad, brane, rhuijben
-     +0: danielsh (haven't reviewed the regression test)
