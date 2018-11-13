@@ -76,9 +76,9 @@ typedef struct server_conf_t {
 
 /* combination of path and expression */
 typedef struct path_expr_t {
-    const char *base;                /* base path */
+  const char *base;                  /* base path */
 #ifdef SVN_AP_HAS_EXPRESSIONS
-    const ap_expr_info_t *expr;      /* expression suffix added to the base */
+  const ap_expr_info_t *expr;        /* expression suffix added to the base */
 #endif /* SVN_AP_HAS_EXPRESSIONS */
 } path_expr_t;
 
@@ -763,9 +763,10 @@ get_path_config(request_rec *r, path_expr_t *path, const char *path_cmd_name)
         {
           svn_error_t *serr;
           svn_boolean_t under_root;
-          const char *err = NULL, *suffix;
 
-          suffix = ap_expr_str_exec(r, path->expr, &err);
+          const char *err = NULL;
+          const char *suffix = ap_expr_str_exec(r, path->expr, &err);
+
           if (!err)
             {
               serr = svn_dirent_is_under_root(
@@ -906,9 +907,9 @@ dav_svn__get_root_dir(request_rec *r)
 #ifdef SVN_AP_HAS_EXPRESSIONS
   if (conf->root_expr)
     {
-      const char *err = NULL, *root_dir;
+      const char *err = NULL;
+      const char *root_dir = ap_expr_str_exec(r, conf->root_expr, &err);
 
-      root_dir = ap_expr_str_exec(r, conf->root_expr, &err);
       if (!err)
         {
           return svn_urlpath__canonicalize(root_dir, r->pool);
