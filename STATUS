@@ -44,13 +44,6 @@ Candidate changes:
      +1: philip, brane
      +1: stefan2 (without r1827574)
 
- * r1843888
-   Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
-   Justification:
-     Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
-   Votes:
-     +1: brane, rhuijben
-
  * r1845212
    Silence a deprecation warning from amalgamated SQLite on macOS.
    Justification:
@@ -86,3 +79,10 @@ Approved changes:
      It has been broken since first introduced in 1.8.
    Votes:
      +1: julianfoad, rhuijben, brane
+
+ * r1843888
+   Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
+   Justification:
+     Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
+   Votes:
+     +1: brane, rhuijben, julianfoad
