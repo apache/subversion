@@ -51,6 +51,18 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1696722
+   Add a note to 'tools/client-side/detach.py' about how this doesn't work
+   (at least not properly) with 1.8+ WCs.
+   Justification:
+     Try harder not to annoy the users who come across this script.
+   Notes:
+     Only needs one +1 and one +0 vote, at most.
+     See https://issues.apache.org/jira/browse/SVN-2884?focusedCommentId=14925199&page=com.atlassian.jira.plugin.system.issuetabpanels:comment-tabpanel#comment-14925199
+     From 1.10.x this script has been removed altogether.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
