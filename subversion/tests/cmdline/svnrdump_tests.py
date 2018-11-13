@@ -991,6 +991,36 @@ def load_non_deltas_with_props(sbox):
     actual = map(str.strip, out)
     svntest.verify.compare_and_display_lines(None, 'PROPS', expected, actual)
 
+def load_invalid_svn_date_revprop_in_r0(sbox):
+  "load: invalid svn:date revprop in r0"
+  svnrdump_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                    'svnrdump_tests_data')
+  sbox.build(create_wc=False, empty=True)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  expected_err = svntest.verify.RegexListOutput(
+                   ['.* E125005: Wrong or unexpected property value.*'],
+                   match_all=False)
+  dumpfile = "bad-date-r0.dump"
+  dumpfile_path = os.path.join(svnrdump_tests_dir, dumpfile)
+  run_and_verify_svnrdump_load(dumpfile_path,
+                               [], expected_err, 1,
+                               sbox.repo_url)
+
+def load_invalid_svn_date_revprop_in_r1(sbox):
+  "load: invalid svn:date revprop in r1"
+  svnrdump_tests_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                    'svnrdump_tests_data')
+  sbox.build(create_wc=False, empty=True)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  expected_err = svntest.verify.RegexListOutput(
+                   ['.* E125005: Wrong or unexpected property value.*'],
+                   match_all=False)
+  dumpfile = "bad-date-r0.dump"
+  dumpfile_path = os.path.join(svnrdump_tests_dir, dumpfile)
+  run_and_verify_svnrdump_load(dumpfile_path,
+                               [], expected_err, 1,
+                               sbox.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -1052,6 +1082,8 @@ test_list = [ None,
               load_non_deltas_replace_copy_with_props,
               dump_replace_with_copy,
               load_non_deltas_with_props,
+              load_invalid_svn_date_revprop_in_r0,
+              load_invalid_svn_date_revprop_in_r1,
              ]
 
 if __name__ == '__main__':
