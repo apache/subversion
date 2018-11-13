@@ -6898,8 +6898,10 @@ resolve_merge_incoming_added_file_text_update(
   apr_hash_t *working_props;
   apr_array_header_t *propdiffs;
   svn_error_t *err;
+  svn_wc_conflict_reason_t local_change;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
+  local_change = svn_client_conflict_get_local_change(conflict);
 
   /* Set up tempory storage for the working version of file. */
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
@@ -6910,19 +6912,30 @@ resolve_merge_incoming_added_file_text_update(
                                  svn_io_file_del_none,
                                  scratch_pool, scratch_pool));
 
-  /* Copy the detranslated working file to temporary storage. */
-  SVN_ERR(svn_wc__translated_stream(&working_file_stream, ctx->wc_ctx,
-                                    local_abspath, local_abspath,
-                                    SVN_WC_TRANSLATE_TO_NF,
-                                    scratch_pool, scratch_pool));
+  if (local_change == svn_wc_conflict_reason_unversioned)
+    {
+      /* Copy the unversioned file to temporary storage. */
+      SVN_ERR(svn_stream_open_readonly(&working_file_stream, local_abspath,
+                                       scratch_pool, scratch_pool));
+      /* Unversioned files have no properties. */
+      working_props = apr_hash_make(scratch_pool);
+    }
+  else
+    {
+      /* Copy the detranslated working file to temporary storage. */
+      SVN_ERR(svn_wc__translated_stream(&working_file_stream, ctx->wc_ctx,
+                                        local_abspath, local_abspath,
+                                        SVN_WC_TRANSLATE_TO_NF,
+                                        scratch_pool, scratch_pool));
+      /* Get a copy of the working file's properties. */
+      SVN_ERR(svn_wc_prop_list2(&working_props, ctx->wc_ctx, local_abspath,
+                                scratch_pool, scratch_pool));
+      filter_props(working_props, scratch_pool);
+    }
+
   SVN_ERR(svn_stream_copy3(working_file_stream, working_file_tmp_stream,
                            ctx->cancel_func, ctx->cancel_baton,
                            scratch_pool));
-
-  /* Get a copy of the working file's properties. */
-  SVN_ERR(svn_wc_prop_list2(&working_props, ctx->wc_ctx, local_abspath,
-                            scratch_pool, scratch_pool));
-  filter_props(working_props, scratch_pool);
 
   /* Create an empty file as fake "merge-base" for the two added files.
    * The files are not ancestrally related so this is the best we can do. */
@@ -9783,6 +9796,7 @@ configure_option_incoming_added_file_text_merge(svn_client_conflict_t *conflict,
       incoming_new_kind == svn_node_file &&
       incoming_change == svn_wc_conflict_action_add &&
       (local_change == svn_wc_conflict_reason_obstructed ||
+       local_change == svn_wc_conflict_reason_unversioned ||
        local_change == svn_wc_conflict_reason_added))
     {
       const char *description;
