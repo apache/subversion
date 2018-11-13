@@ -87,16 +87,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1663609, r1666067
-   Silence the svn-warnings bot on the 1.9.x branch.
-   Justification:
-     Keeps the warnings checker buildslave clean.
-   Notes:
-     - r1663609 fixes an old-style function definition.
-     - r1666067 removes an unused variable.
-   Votes:
-     +1: brane, danielsh, rhuijben
-
  * r1838813
    Let 'svnadmin recover' prune the rep-cache even if it is disabled.
    Justification:

@@ -180,7 +180,7 @@ static void set_cleanup_pool(apr_pool_t *pool)
 }
 
 /* Get the thread-specific cleanup pool. */
-static apr_pool_t *get_cleanup_pool()
+static apr_pool_t *get_cleanup_pool(void)
 {
   void *data;
   apr_status_t status = apr_threadkey_private_get(&data, cleanup_pool_key);
