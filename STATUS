@@ -15,13 +15,6 @@ Status of 1.10.4:
 Candidate changes:
 ==================
 
- * r1843888
-   Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
-   Justification:
-     Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
-   Votes:
-     +1: brane, rhuijben
-
  * r1844987
    Raise an error if someone tries to use -rPREV on a working copy at r0.
    Justification:
@@ -41,3 +34,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1843888
+   Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
+   Justification:
+     Consistency is good; repos-to-WC copy should behave like WC-to-WC copy.
+   Votes:
+     +1: brane, rhuijben, julianfoad
