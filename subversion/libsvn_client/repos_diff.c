@@ -51,6 +51,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_editor.h"
+#include "private/svn_sorts_private.h"
 
 /* Overall crawler editor baton.  */
 struct edit_baton {
@@ -380,7 +381,7 @@ get_file_from_ra(struct file_baton *fb,
      way.  Hence this little hack:  We populate FILE_BATON->PROPCHANGES only
      with *actual* property changes.
 
-     See http://subversion.tigris.org/issues/show_bug.cgi?id=3657#desc9 and
+     See https://issues.apache.org/jira/browse/SVN-3657#desc9 and
      http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details.
  */
 static void
@@ -404,15 +405,9 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
 
           if (old_val && svn_string_compare(old_val, change->value))
             {
-              int j;
-
-              /* Remove the matching change by shifting the rest */
-              for (j = i; j < changes->nelts - 1; j++)
-                {
-                  APR_ARRAY_IDX(changes, j, svn_prop_t)
-                       = APR_ARRAY_IDX(changes, j+1, svn_prop_t);
-                }
-              changes->nelts--;
+              /* Remove the matching change and re-check the current index */
+              svn_sort__array_delete(changes, i, 1);
+              i--;
             }
         }
     }

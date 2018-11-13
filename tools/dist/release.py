@@ -51,6 +51,9 @@ import operator
 import itertools
 import subprocess
 import argparse       # standard in Python 2.7
+import io
+
+import backport.status
 
 # Find ezt, using Subversion's copy, if there isn't one on the system.
 try:
@@ -71,16 +74,24 @@ tool_versions = {
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
             'libtool'  : ['2.4.6',
             'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.10',
-            '2939aae39dec06095462f1b95ce1c958ac80d07b926e48871046d17c0094f44c'],
+            'swig'     : ['3.0.12',
+            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
+  },
+  '1.11' : {
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['3.0.12',
+            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
   },
   '1.10' : {
             'autoconf' : ['2.69',
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
             'libtool'  : ['2.4.6',
             'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.10',
-            '2939aae39dec06095462f1b95ce1c958ac80d07b926e48871046d17c0094f44c'],
+            'swig'     : ['3.0.12',
+            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
   },
   '1.9' : {
             'autoconf' : ['2.69',
@@ -102,7 +113,9 @@ tool_versions = {
 
 # The version that is our current recommended release
 # ### TODO: derive this from svn_version.h; see ../../build/getversion.py
-recommended_release = '1.9'
+recommended_release = '1.11'
+# For clean-dist, a whitelist of artifacts to keep, by version.
+supported_release_lines = frozenset({"1.9", "1.10", "1.11", "1.12"})
 
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
@@ -174,7 +187,7 @@ class Version(object):
             ver_tag = '" (Alpha %d)"' % self.pre_num
             ver_numtag = '"-alpha%d"' % self.pre_num
         elif self.pre == 'beta':
-            ver_tag = '" (Beta %d)"' % args.version.pre_num
+            ver_tag = '" (Beta %d)"' % self.pre_num
             ver_numtag = '"-beta%d"' % self.pre_num
         elif self.pre == 'rc':
             ver_tag = '" (Release Candidate %d)"' % self.pre_num
@@ -712,9 +725,13 @@ def roll_tarballs(args):
         filepath = os.path.join(get_tempdir(args.base_dir), filename)
         shutil.move(filepath, get_deploydir(args.base_dir))
         filepath = os.path.join(get_deploydir(args.base_dir), filename)
-        m = hashlib.sha1()
-        m.update(open(filepath, 'r').read())
-        open(filepath + '.sha1', 'w').write(m.hexdigest())
+        if args.version < Version("1.11.0-alpha1"):
+            # 1.10 and earlier generate *.sha1 files for compatibility reasons.
+            # They are deprecated, however, so we don't publicly link them in
+            # the announcements any more.
+            m = hashlib.sha1()
+            m.update(open(filepath, 'r').read())
+            open(filepath + '.sha1', 'w').write(m.hexdigest())
         m = hashlib.sha512()
         m.update(open(filepath, 'r').read())
         open(filepath + '.sha512', 'w').write(m.hexdigest())
@@ -737,8 +754,12 @@ def sign_candidates(args):
     def sign_file(filename):
         asc_file = open(filename + '.asc', 'a')
         logging.info("Signing %s" % filename)
-        proc = subprocess.check_call(['gpg', '-ba', '-o', '-', filename],
-                                     stdout=asc_file)
+        if args.userid:
+            proc = subprocess.check_call(['gpg', '-ba', '-u', args.userid,
+                                         '-o', '-', filename], stdout=asc_file)
+        else:
+            proc = subprocess.check_call(['gpg', '-ba', '-o', '-', filename],
+                                         stdout=asc_file)
         asc_file.close()
 
     target = get_target(args)
@@ -773,8 +794,9 @@ def post_candidates(args):
 
 #----------------------------------------------------------------------
 # Create tag
+# Bump versions on branch
 
-def create_tag(args):
+def create_tag_only(args):
     'Create tag in the repository'
 
     target = get_target(args)
@@ -805,62 +827,87 @@ def create_tag(args):
             logging.error("Do you need to pass --branch=trunk?")
         raise
 
+def bump_versions_on_branch(args):
+    'Bump version numbers on branch'
+
+    logging.info('Bumping version numbers on the branch')
+
+    if not args.branch:
+        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+
+    branch = secure_repos + '/' + args.branch.rstrip('/')
+
+    def replace_in_place(fd, startofline, flat, spare):
+        """In file object FD, replace FLAT with SPARE in the first line
+        starting with regex STARTOFLINE."""
+
+        pattern = r'^(%s)%s' % (startofline, re.escape(flat))
+        repl =    r'\g<1>%s' % (spare,)
+        fd.seek(0, os.SEEK_SET)
+        lines = fd.readlines()
+        for i, line in enumerate(lines):
+            replacement = re.sub(pattern, repl, line)
+            if replacement != line:
+                lines[i] = replacement
+                break
+        else:
+            raise RuntimeError("Could not replace r'%s' with r'%s' in '%s'"
+                               % (pattern, repl, fd.url))
+
+        fd.seek(0, os.SEEK_SET)
+        fd.writelines(lines)
+        fd.truncate() # for current callers, new value is never shorter.
+
+    new_version = Version('%d.%d.%d' %
+                          (args.version.major, args.version.minor,
+                           args.version.patch + 1))
+
+    HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
+                                    '--', branch]).strip()
+    HEAD = int(HEAD)
+    def file_object_for(relpath):
+        fd = tempfile.NamedTemporaryFile()
+        url = branch + '/' + relpath
+        fd.url = url
+        subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
+                              stdout=fd)
+        return fd
+
+    svn_version_h = file_object_for('subversion/include/svn_version.h')
+    replace_in_place(svn_version_h, '#define SVN_VER_PATCH  *',
+                     str(args.version.patch), str(new_version.patch))
+
+    STATUS = file_object_for('STATUS')
+    replace_in_place(STATUS, 'Status of ',
+                     str(args.version), str(new_version))
+
+    svn_version_h.seek(0, os.SEEK_SET)
+    STATUS.seek(0, os.SEEK_SET)
+    subprocess.check_call(['svnmucc', '-r', str(HEAD),
+                           '-m', 'Post-release housekeeping: '
+                                 'bump the %s branch to %s.'
+                           % (branch.split('/')[-1], str(new_version)),
+                           'put', svn_version_h.name, svn_version_h.url,
+                           'put', STATUS.name, STATUS.url,
+                          ])
+    del svn_version_h
+    del STATUS
+
+def create_tag_and_bump_versions(args):
+    '''Create tag in the repository and, if not a prerelease version,
+       bump version numbers on the branch'''
+
+    create_tag_only(args)
+
     if not args.version.is_prerelease():
-        logging.info('Bumping revisions on the branch')
-        def replace_in_place(fd, startofline, flat, spare):
-            """In file object FD, replace FLAT with SPARE in the first line
-            starting with STARTOFLINE."""
-
-            fd.seek(0, os.SEEK_SET)
-            lines = fd.readlines()
-            for i, line in enumerate(lines):
-                if line.startswith(startofline):
-                    lines[i] = line.replace(flat, spare)
-                    break
-            else:
-                raise RuntimeError('Definition of %r not found' % startofline)
-
-            fd.seek(0, os.SEEK_SET)
-            fd.writelines(lines)
-            fd.truncate() # for current callers, new value is never shorter.
-
-        new_version = Version('%d.%d.%d' %
-                              (args.version.major, args.version.minor,
-                               args.version.patch + 1))
-
-        def file_object_for(relpath):
-            fd = tempfile.NamedTemporaryFile()
-            url = branch + '/' + relpath
-            fd.url = url
-            subprocess.check_call(['svn', 'cat', '%s@%d' % (url, args.revnum)],
-                                  stdout=fd)
-            return fd
-
-        svn_version_h = file_object_for('subversion/include/svn_version.h')
-        replace_in_place(svn_version_h, '#define SVN_VER_PATCH ',
-                         str(args.version.patch), str(new_version.patch))
-
-        STATUS = file_object_for('STATUS')
-        replace_in_place(STATUS, 'Status of ',
-                         str(args.version), str(new_version))
-
-        svn_version_h.seek(0, os.SEEK_SET)
-        STATUS.seek(0, os.SEEK_SET)
-        subprocess.check_call(['svnmucc', '-r', str(args.revnum),
-                               '-m', 'Post-release housekeeping: '
-                                     'bump the %s branch to %s.'
-                               % (branch.split('/')[-1], str(new_version)),
-                               'put', svn_version_h.name, svn_version_h.url,
-                               'put', STATUS.name, STATUS.url,
-                              ])
-        del svn_version_h
-        del STATUS
+        bump_versions_on_branch(args)
 
 #----------------------------------------------------------------------
 # Clean dist
 
 def clean_dist(args):
-    'Clean the distribution directory of all but the most recent artifacts.'
+    '''Clean the distribution directory of release artifacts of
+    no-longer-supported minor lines.'''
 
     stdout = subprocess.check_output(['svn', 'list', dist_release_url])
 
@@ -872,15 +919,15 @@ def clean_dist(args):
     filenames = stdout.split('\n')
     filenames = filter(lambda x: x.startswith('subversion-'), filenames)
     versions = set(map(Version, filenames))
-    minor_lines = set(map(minor, versions))
     to_keep = set()
-    # Keep 3 minor lines: 1.10.0-alpha3, 1.9.7, 1.8.19.
     # TODO: When we release 1.A.0 GA we'll have to manually remove 1.(A-2).* artifacts.
-    for recent_line in sorted(minor_lines, reverse=True)[:3]:
-        to_keep.add(max(
+    for line_to_keep in [minor(Version(x + ".0")) for x in supported_release_lines]:
+        candidates = list(
             x for x in versions
-            if minor(x) == recent_line
-        ))
+            if minor(x) == line_to_keep
+        )
+        if candidates:
+            to_keep.add(max(candidates))
     for i in sorted(to_keep):
         logging.info("Saving release '%s'", i)
 
@@ -938,6 +985,7 @@ def write_news(args):
              'version_base' : args.version.base,
              'anchor': args.version.get_download_anchor(),
              'is_recommended': ezt_bool(args.version.is_recommended()),
+             'announcement_url': args.announcement_url,
            }
 
     if args.version.is_prerelease():
@@ -947,38 +995,53 @@ def write_news(args):
 
     template = ezt.Template()
     template.parse(get_tmplfile(template_filename).read())
-    template.generate(sys.stdout, data)
+
+    # Insert the output into an existing file if requested, else print it
+    if args.edit_html_file:
+        tmp_name = args.edit_html_file + '.tmp'
+        with open(args.edit_html_file, 'r') as f, open(tmp_name, 'w') as g:
+            inserted = False
+            for line in f:
+                if not inserted and line.startswith('<div class="h3" id="news-'):
+                    template.generate(g, data)
+                    g.write('\n')
+                    inserted = True
+                g.write(line)
+        os.remove(args.edit_html_file)
+        os.rename(tmp_name, args.edit_html_file)
+    else:
+        template.generate(sys.stdout, data)
 
 
-def get_sha1info(args):
-    'Return a list of sha1 info for the release'
+def get_fileinfo(args):
+    'Return a list of file info (filenames) for the release tarballs'
 
     target = get_target(args)
 
-    sha1s = glob.glob(os.path.join(target, 'subversion*-%s*.sha1' % args.version))
+    files = glob.glob(os.path.join(target, 'subversion*-%s*.asc' % args.version))
+    files.sort()
 
     class info(object):
         pass
 
-    sha1info = []
-    for s in sha1s:
+    fileinfo = []
+    for f in files:
         i = info()
-        # strip ".sha1"
-        i.filename = os.path.basename(s)[:-5]
-        i.sha1 = open(s, 'r').read()
-        sha1info.append(i)
+        # strip ".asc"
+        i.filename = os.path.basename(f)[:-4]
+        fileinfo.append(i)
 
-    return sha1info
+    return fileinfo
 
 
 def write_announcement(args):
     'Write the release announcement.'
-    sha1info = get_sha1info(args)
-    siginfo = "\n".join(get_siginfo(args, True)) + "\n"
+    siginfo = get_siginfo(args, True)
+    if not siginfo:
+      raise RuntimeError("No signatures found for %s at %s" % (args.version, args.target))
 
     data = { 'version'              : str(args.version),
-             'sha1info'             : sha1info,
-             'siginfo'              : siginfo,
+             'siginfo'              : "\n".join(siginfo) + "\n",
              'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
              'anchor'               : args.version.get_download_anchor(),
@@ -1007,10 +1070,10 @@ def write_announcement(args):
 
 def write_downloads(args):
     'Output the download section of the website.'
-    sha1info = get_sha1info(args)
+    fileinfo = get_fileinfo(args)
 
     data = { 'version'              : str(args.version),
-             'fileinfo'             : sha1info,
+             'fileinfo'             : fileinfo,
            }
 
     template = ezt.Template(compress_whitespace = False)
@@ -1174,6 +1237,206 @@ def get_keys(args):
         fd.seek(0)
         subprocess.check_call(['gpg', '--import'], stdin=fd)
 
+def add_to_changes_dict(changes_dict, audience, section, change, revision):
+    # Normalize arguments
+    if audience:
+        audience = audience.upper()
+    if section:
+        section = section.lower()
+    change = change.strip()
+    
+    if not audience in changes_dict:
+        changes_dict[audience] = dict()
+    if not section in changes_dict[audience]:
+        changes_dict[audience][section] = dict()
+    
+    changes = changes_dict[audience][section]
+    if change in changes:
+        changes[change].add(revision)
+    else:
+        changes[change] = set([revision])
+        
+def print_section(changes_dict, audience, section, title, mandatory=False):
+    if audience in changes_dict:
+        audience_changes = changes_dict[audience]
+        if mandatory or (section in audience_changes):
+            if title:
+                print('  - %s:' % title)
+        if section in audience_changes:
+            print_changes(audience_changes[section])
+        elif mandatory:
+            print('    (none)')
+
+def print_changes(changes):
+    # Print in alphabetical order, so entries with the same prefix are together
+    for change in sorted(changes):
+        revs = changes[change]
+        rev_string = 'r' + str(min(revs)) + (' et al' if len(revs) > 1 else '')
+        print('    * %s (%s)' % (change, rev_string))
+
+def write_changelog(args):
+    'Write changelog, parsed from commit messages'
+    # Changelog lines are lines with the following format:
+    #   '['[audience[:section]]']' <message>
+    # or:
+    #   <message> '['[audience[:section]]']'
+    # where audience = U (User-visible) or D (Developer-visible)
+    #       section = general|major|minor|client|server|clientserver|other|api|bindings
+    #                 (section is optional and is treated case-insensitively)
+    #       message = the actual text for CHANGES
+    #
+    # This means the "changes label" can be used as prefix or suffix, and it
+    # can also be left empty (which results in an uncategorized changes entry),
+    # if the committer isn't sure where the changelog entry belongs.
+    #
+    # Putting [skip], [ignore], [c:skip] or [c:ignore] somewhere in the
+    # log message means this commit must be ignored for Changelog processing
+    # (ignored even with the --include-unlabeled-summaries option).
+    # 
+    # If there is no changes label anywhere in the commit message, and the
+    # --include-unlabeled-summaries option is used, we'll consider the summary
+    # line of the commit message (= first line except if it starts with a *)
+    # as an uncategorized changes entry, except if it contains "status",
+    # "changes", "post-release housekeeping" or "follow-up".
+    #
+    # Examples:
+    #   [U:major] Better interactive conflict resolution for tree conflicts
+    #   ra_serf: Adjustments for serf versions with HTTP/2 support [U:minor]
+    #   [U] Fix 'svn diff URL@REV WC' wrongly looks up URL@HEAD (issue #4597)
+    #   Fix bug with canonicalizing Window-specific drive-relative URL []
+    #   New svn_ra_list() API function [D:api]
+    #   [D:bindings] JavaHL: Allow access to constructors of a couple JavaHL classes
+
+    branch = secure_repos + '/' + args.branch
+    previous = secure_repos + '/' + args.previous
+    include_unlabeled = args.include_unlabeled
+    separator_line = ('-' * 72) + '\n'
+    
+    mergeinfo = subprocess.check_output(['svn', 'mergeinfo', '--show-revs',
+                    'eligible', '--log', branch, previous])
+    log_messages_dict = {
+        # This is a dictionary mapping revision numbers to their respective
+        # log messages.  The expression in the "key:" part of the dict
+        # comprehension extracts the revision number, as integer, from the
+        # 'svn log' output.
+        int(log_message.splitlines()[0].split()[0][1:]): log_message
+        # The [1:-1] ignores the empty first and last element of the split().
+        for log_message in mergeinfo.split(separator_line)[1:-1]
+    }
+    mergeinfo = mergeinfo.splitlines()
+    
+    separator_pattern = re.compile('^-{72}$')
+    revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
+    changes_prefix_pattern = re.compile(r'^\[(U|D)?:?([^\]]+)?\](.+)$')
+    changes_suffix_pattern = re.compile(r'^(.+)\[(U|D)?:?([^\]]+)?\]$')
+    # TODO: push this into backport.status as a library function
+    auto_merge_pattern = \
+        re.compile(r'^Merge (r\d+,? |the r\d+ group |the \S+ branch:)')
+
+    changes_dict = dict()  # audience -> (section -> (change -> set(revision)))
+    revision = -1
+    got_firstline = False
+    unlabeled_summary = None
+    changes_ignore = False
+    audience = None
+    section = None
+    message = None
+    
+    for line in mergeinfo:
+        if separator_pattern.match(line):
+            # New revision section. Reset variables.
+            # If there's an unlabeled summary from a previous section, and
+            # include_unlabeled is True, put it into uncategorized_changes.
+            if include_unlabeled and unlabeled_summary and not changes_ignore:
+                if auto_merge_pattern.match(unlabeled_summary):
+                    # 1. Parse revision numbers from the first line
+                    merged_revisions = [
+                        int(x) for x in
+                        re.compile(r'(?<=\br)\d+\b').findall(unlabeled_summary)
+                    ]
+                    # TODO pass each revnum in MERGED_REVISIONS through this
+                    #      logic, in order to extract CHANGES_PREFIX_PATTERN
+                    #      and CHANGES_SUFFIX_PATTERN lines from the trunk log
+                    #      message.
+                    
+                    # 2. Parse the STATUS entry
+                    this_log_message = log_messages_dict[revision]
+                    status_paragraph = this_log_message.split('\n\n')[2]
+                    logsummary = \
+                        backport.status.StatusEntry(status_paragraph).logsummary
+                    add_to_changes_dict(changes_dict, None, None,
+                                        ' '.join(logsummary), revision)
+                else:
+                    add_to_changes_dict(changes_dict, None, None,
+                                        unlabeled_summary, revision)
+            revision = -1
+            got_firstline = False
+            unlabeled_summary = None
+            changes_ignore = False
+            audience = None
+            section = None
+            message = None
+            continue
+
+        revmatch = revline_pattern.match(line)
+        if revmatch and (revision == -1):
+            # A revision line: get the revision number
+            revision = int(revmatch.group(1))
+            logging.debug('Changelog processing revision r%d' % revision)
+            continue
+
+        if line.strip() == '':
+            # Skip empty / whitespace lines
+            continue
+
+        if not got_firstline:
+            got_firstline = True
+            if (not re.search(r'status|changes|post-release housekeeping|follow-up|^\*',
+                              line, re.IGNORECASE)
+                    and not changes_prefix_pattern.match(line)
+                    and not changes_suffix_pattern.match(line)):
+                unlabeled_summary = line
+
+        if re.search(r'\[(c:)?(skip|ignore)\]', line, re.IGNORECASE):
+            changes_ignore = True
+            
+        prefix_match = changes_prefix_pattern.match(line)
+        if prefix_match:
+            audience = prefix_match.group(1)
+            section = prefix_match.group(2)
+            message = prefix_match.group(3)
+            add_to_changes_dict(changes_dict, audience, section, message, revision)
+
+        suffix_match = changes_suffix_pattern.match(line)
+        if suffix_match:
+            message = suffix_match.group(1)
+            audience = suffix_match.group(2)
+            section = suffix_match.group(3)
+            add_to_changes_dict(changes_dict, audience, section, message, revision)
+
+    # Output the sorted changelog entries
+    # 1) Uncategorized changes
+    print_section(changes_dict, None, None, None)
+    print
+    # 2) User-visible changes
+    print(' User-visible changes:')
+    print_section(changes_dict, 'U', None, None)
+    print_section(changes_dict, 'U', 'general', 'General')
+    print_section(changes_dict, 'U', 'major', 'Major new features')
+    print_section(changes_dict, 'U', 'minor', 'Minor new features and improvements')
+    print_section(changes_dict, 'U', 'client', 'Client-side bugfixes', mandatory=True)
+    print_section(changes_dict, 'U', 'server', 'Server-side bugfixes', mandatory=True)
+    print_section(changes_dict, 'U', 'clientserver', 'Client-side and server-side bugfixes')
+    print_section(changes_dict, 'U', 'other', 'Other tool improvements and bugfixes')
+    print_section(changes_dict, 'U', 'bindings', 'Bindings bugfixes', mandatory=True)
+    print
+    # 3) Developer-visible changes
+    print(' Developer-visible changes:')
+    print_section(changes_dict, 'D', None, None)
+    print_section(changes_dict, 'D', 'general', 'General', mandatory=True)
+    print_section(changes_dict, 'D', 'api', 'API changes', mandatory=True)
+    print_section(changes_dict, 'D', 'bindings', 'Bindings')
+
 #----------------------------------------------------------------------
 # Main entry point for argument parsing and handling
 
@@ -1231,6 +1494,10 @@ def main():
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
+    subparser.add_argument('--userid',
+                    help='''The (optional) USER-ID specifying the key to be
+                            used for signing, such as '110B1C95' (Key-ID). If
+                            omitted, uses the default key.''')
 
     # Setup the parser for the post-candidates subcommand
     subparser = subparsers.add_parser('post-candidates',
@@ -1247,8 +1514,26 @@ def main():
 
     # Setup the parser for the create-tag subcommand
     subparser = subparsers.add_parser('create-tag',
-                    help='''Create the release tag.''')
-    subparser.set_defaults(func=create_tag)
+                    help='''Create the release tag and, if not a prerelease
+                            version, bump version numbers on the branch.''')
+    subparser.set_defaults(func=create_tag_and_bump_versions)
+    subparser.add_argument('version', type=Version,
+                    help='''The release label, such as '1.7.0-alpha1'.''')
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
+                    help='''The revision number to base the release on.''')
+    subparser.add_argument('--branch',
+                    help='''The branch to base the release on,
+                            relative to ^/subversion/.''')
+    subparser.add_argument('--username',
+                    help='''Username for ''' + secure_repos + '''.''')
+    subparser.add_argument('--target',
+                    help='''The full path to the directory containing
+                            release artifacts.''')
+
+    # Setup the parser for the bump-versions-on-branch subcommand
+    subparser = subparsers.add_parser('bump-versions-on-branch',
+                    help='''Bump version numbers on branch.''')
+    subparser.set_defaults(func=bump_versions_on_branch)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
@@ -1264,8 +1549,7 @@ def main():
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
-                    help='''Clean the distribution directory (and mirrors) of
-                            all but the most recent MAJOR.MINOR release.''')
+                    help=clean_dist.__doc__.split('\n\n')[0])
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
@@ -1288,6 +1572,11 @@ def main():
                     help='''Output to stdout template text for use in the news
                             section of the Subversion website.''')
     subparser.set_defaults(func=write_news)
+    subparser.add_argument('--announcement-url',
+                    help='''The URL to the archived announcement email.''')
+    subparser.add_argument('--edit-html-file',
+                    help='''Insert the text into this file
+                            news.html, index.html).''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
@@ -1338,6 +1627,29 @@ def main():
                             separate subcommand.''')
     subparser.set_defaults(func=cleanup)
 
+    # write-changelog
+    subparser = subparsers.add_parser('write-changelog',
+                    help='''Output to stdout changelog entries parsed from
+                            commit messages, optionally labeled with a category
+                            like [U:client], [D:api], [U], ...''')
+    subparser.set_defaults(func=write_changelog)
+    subparser.add_argument('branch',
+                    help='''The branch (or tag or trunk), relative to
+                            ^/subversion/, of which to generate the
+                            changelog, when compared to "previous".''')
+    subparser.add_argument('previous',
+                    help='''The "previous" branch or tag, relative to 
+                            ^/subversion/, to compare "branch" against.''')
+    subparser.add_argument('--include-unlabeled-summaries',
+                    dest='include_unlabeled',
+                    action='store_true', default=False,
+                    help='''Include summary lines that do not have a changes
+                            label, unless an explicit [c:skip] or [c:ignore]
+                            is part of the commit message (except if the
+                            summary line contains 'STATUS', 'CHANGES',
+                            'Post-release housekeeping', 'Follow-up' or starts
+                            with '*').''')
+    
     # Parse the arguments
     args = parser.parse_args()
 

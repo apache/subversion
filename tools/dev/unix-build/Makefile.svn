@@ -45,10 +45,15 @@ EXCLUSIVE_WC_LOCKS ?= 1
 USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
+MAKE_JOBS ?= 4
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
 RUBY		= $(shell which ruby 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby24 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby23 2>/dev/null)
 ifeq ($(RUBY),)
 RUBY		= $(shell which ruby22 2>/dev/null)
 ifeq ($(RUBY),)
@@ -64,6 +69,14 @@ endif # 1.9
 endif # 2.0
 endif # 2.1
 endif # 2.2
+endif # 2.3
+endif # 2.4
+
+ifeq ($(UNAME),OpenBSD)
+# Pick the correct base compiler (ie. clang rather than ancient gcc 4.2.1)
+CC = cc
+CXX = c++
+endif
 
 TAG		?= none
 ifeq ($(TAG),none)
@@ -95,7 +108,7 @@ SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
 SQLITE_VER	= 3160200
 LIBMAGIC_VER	= 5.30
-RUBY_VER	= 2.1.10
+RUBY_VER	= 2.4.4
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 2.7.13
 JUNIT_VER	= 4.10
@@ -125,7 +138,7 @@ SHA256_${NEON_DIST} = db0bd8cdec329b48f53a6f00199c92d5ba40b0f015b153718d1b15d3d9
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
 SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c8693263615
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
-SHA256_${RUBY_DIST} = fb2e454d7a5e5a39eb54db0ec666f53eeb6edc593d1d2b970ae4d150b831dd20
+SHA256_${RUBY_DIST} = 254f1c1a79e4cc814d1e7320bc5bdd995dc57e08727d30a767664619a9c8ae5a
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
 SHA256_${PYTHON_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
@@ -164,18 +177,19 @@ FETCH_CMD	= wget -c
 SUBVERSION_REPOS_URL = https://svn.apache.org/repos/asf/subversion
 BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
 APR_URL		= https://svn.apache.org/repos/asf/apr/apr
-APR_ICONV_URL	= https://www.apache.org/dist/apr/$(APR_ICONV_DIST)
+APR_ICONV_URL	= https://archive.apache.org/dist/apr/$(APR_ICONV_DIST)
 GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
 HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
-NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
+#NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
+NEON_URL	= http://ftp.openbsd.org/pub/OpenBSD/distfiles/$(NEON_DIST)
 SERF_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_VER)
 SERF_OLD_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_OLD_VER)
 SQLITE_URL	= https://www.sqlite.org/2017/$(SQLITE_DIST)
 CYRUS_SASL_URL	= ftp://ftp.andrew.cmu.edu/pub/cyrus-mail/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
-RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.1/$(RUBY_DIST)
-BZ2_URL		= http://bzip.org/$(BZ2_VER)/$(BZ2_DIST)
+RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.4/$(RUBY_DIST)
+BZ2_URL		= https://ftp.openbsd.org/pub/OpenBSD/distfiles/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 JUNIT_URL	= https://downloads.sourceforge.net/project/junit/junit/$(JUNIT_VER)/$(JUNIT_DIST)
 GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
@@ -231,6 +245,10 @@ endif
 
 # We need this to make sure some targets below pick up the right libraries
 LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
+
+# We need this to make sure some targets below pick up the right pkg-config files
+PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFIX)/serf/lib/pkgconfig:$(PREFIX)/sqlite/lib/pkgconfig:$(PREFIX)/ruby/lib/pkgconfig:$(PREFIX)/python/lib/pkgconfig:$(PREFIX)/lz4/lib/pkgconfig
+
 
 #######################################################################
 # Main targets.
@@ -325,6 +343,7 @@ $(BDB_OBJDIR)/.retrieved: $(DISTDIR)/$(BDB_DIST)
 $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 	cd $(BDB_SRCDIR)/build_unix \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) \
 		../dist/configure \
 		--prefix=$(PREFIX)/bdb \
 		--enable-debug
@@ -332,7 +351,7 @@ $(BDB_OBJDIR)/.configured: $(BDB_OBJDIR)/.retrieved
 
 # compile bdb
 $(BDB_OBJDIR)/.compiled: $(BDB_OBJDIR)/.configured
-	(cd $(BDB_SRCDIR)/build_unix && env MAKEFLAGS= make)
+	(cd $(BDB_SRCDIR)/build_unix && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install bdb
@@ -382,6 +401,8 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 	cd $(APR_SRCDIR) && ./buildconf
 	cd $(APR_OBJDIR) \
 		&& env CFLAGS="-O0 -g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+		CC=$(CC) CXX=$(CXX) \
 		$(APR_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--enable-maintainer-mode \
@@ -391,7 +412,7 @@ $(APR_OBJDIR)/.configured: $(APR_OBJDIR)/.retrieved $(BDB_OBJDIR)/.installed
 
 # compile apr
 $(APR_OBJDIR)/.compiled: $(APR_OBJDIR)/.configured
-	(cd $(APR_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(APR_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install apr
@@ -430,7 +451,9 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 	$(APR_OBJDIR)/.installed
 	cd $(APR_ICONV_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(APR_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
 		--with-apr=$(PREFIX)/apr
@@ -439,7 +462,7 @@ $(APR_ICONV_OBJDIR)/.configured: $(APR_ICONV_OBJDIR)/.retrieved \
 # compile apr-iconv
 $(APR_ICONV_OBJDIR)/.compiled: $(APR_ICONV_OBJDIR)/.configured
 	(cd $(APR_ICONV_OBJDIR) \
-		&& env MAKEFLAGS= make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)")
+		&& env MAKEFLAGS= make CPPFLAGS="-D_OSD_POSIX" CFLAGS="-g -O0 $(PROFILE_CFLAGS)" -j${MAKE_JOBS})
 	touch $@
 
 # install apr-iconv
@@ -514,6 +537,8 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 		${MAKE} -f Makefile.devel lib/aliases.h
 	cd $(GNU_ICONV_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GNU_ICONV_SRCDIR)/configure \
 		--prefix=$(PREFIX)/iconv \
 		--enable-extra-encodings
@@ -521,7 +546,7 @@ $(GNU_ICONV_OBJDIR)/.configured: $(GNU_ICONV_OBJDIR)/.retrieved
 
 # compile gnu-iconv
 $(GNU_ICONV_OBJDIR)/.compiled: $(GNU_ICONV_OBJDIR)/.configured
-	(cd $(GNU_ICONV_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(GNU_ICONV_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install gnu-iconv
@@ -584,7 +609,9 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 	cd $(APR_UTIL_SRCDIR) && ./buildconf --with-apr=$(APR_SRCDIR)
 	cd $(APR_UTIL_OBJDIR) \
 		&& env LD_LIBRARY_PATH=$(PREFIX)/bdb/lib \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CC=$(CC) CXX=$(CXX) \
 			GREP="`which grep`" \
 			$(APR_UTIL_SRCDIR)/configure \
 		--prefix=$(PREFIX)/apr \
@@ -596,7 +623,7 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 
 # compile apr-util
 $(APR_UTIL_OBJDIR)/.compiled: $(APR_UTIL_OBJDIR)/.configured
-	(cd $(APR_UTIL_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(APR_UTIL_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install apr-util
@@ -675,6 +702,13 @@ $(HTTPD_OBJDIR)/acinclude.diff:
 	echo >>$@.tmp '     AC_CHECK_FUNCS(SSL_set_state)'
 	mv -f $@.tmp $@
 
+# fix build without APR_HAS_THREADS (broken by r1750836)
+ifneq ($(THREADING),yes)
+HTTPD_REVERT_1750836_CMD = (cd $(HTTPD_SRCDIR)/modules/proxy && svn diff -c-1750836 https://svn.apache.org/repos/asf/httpd/httpd/branches/2.2.x/modules/proxy/proxy_util.c | patch)
+else
+HTTPD_REVERT_1750836_CMD = true
+endif
+
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	$(HTTPD_OBJDIR)/chil-engine.diff $(HTTPD_OBJDIR)/ssl-set-state.diff \
@@ -703,6 +737,7 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 		< $(HTTPD_SRCDIR)/modules/ssl/${f}.orig \
 		> $(HTTPD_SRCDIR)/modules/ssl/${f};\
 	)
+	$(HTTPD_REVERT_1750836_CMD)
 	touch $@
 
 # configure httpd
@@ -711,7 +746,9 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 	cd $(HTTPD_SRCDIR) && ./buildconf
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
@@ -725,7 +762,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 
 # compile httpd
 $(HTTPD_OBJDIR)/.compiled: $(HTTPD_OBJDIR)/.configured
-	(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install httpd
@@ -796,6 +833,8 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 	fi
 	cd $(NEON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(NEON_SRCDIR)/configure \
 		PATH=$(NEON_OBJDIR):$$PATH \
 		--prefix=$(PREFIX)/neon \
@@ -806,7 +845,7 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 
 # compile neon
 $(NEON_OBJDIR)/.compiled: $(NEON_OBJDIR)/.configured
-	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install neon
@@ -854,11 +893,13 @@ $(SERF_OBJDIR)/.retrieved:
 $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_SRCDIR) && \
-		scons DEBUG=1 \
+		scons -j${MAKE_JOBS} DEBUG=1 \
 			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CC=$(CC) CXX=$(CXX) \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
-			PREFIX=$(PREFIX)/serf
+			PREFIX=$(PREFIX)/serf \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH)
 	touch $@
 
 # install serf
@@ -899,6 +940,7 @@ $(SERF_OLD_OBJDIR)/.compiled: $(SERF_OLD_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_OLD_SRCDIR) && \
 		env CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CC=$(CC) CXX=$(CXX) \
 			./serfmake --with-apr=$(PREFIX)/apr \
 			--prefix=$(PREFIX)/serf-old \
 			build
@@ -950,6 +992,8 @@ endif
 $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 	cd $(SQLITE_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+		CC=$(CC) CXX=$(CXX) \
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
 		$(THREADSAFE_FLAG)
@@ -957,7 +1001,7 @@ $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 
 # compile sqlite
 $(SQLITE_OBJDIR)/.compiled: $(SQLITE_OBJDIR)/.configured
-	(cd $(SQLITE_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(SQLITE_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install sqlite
@@ -1019,7 +1063,9 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 	cd $(CYRUS_SASL_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
 		CPPFLAGS="-I/usr/include/kerberosV" \
+		CC=$(CC) CXX=$(CXX) \
 		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(CYRUS_SASL_SRCDIR)/configure \
 		--with-dbpath=$(PREFIX)/cyrus-sasl/etc/sasldb2 \
 		--with-plugindir=$(PREFIX)/cyrus-sasl/lib/sasl2 \
@@ -1031,7 +1077,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 		--prefix=$(PREFIX)/cyrus-sasl
 	touch $@
 
-# compile cyrus-sasl
+# compile cyrus-sasl (ignore MAKE_JOBS; multiple jobs cause random build failures)
 $(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
 	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
@@ -1071,6 +1117,8 @@ $(LIBMAGIC_OBJDIR)/.retrieved: $(DISTDIR)/$(LIBMAGIC_DIST)
 $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 	cd $(LIBMAGIC_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(LIBMAGIC_SRCDIR)/configure \
 		--enable-fsect-man5 \
 		--prefix=$(PREFIX)/libmagic
@@ -1078,7 +1126,7 @@ $(LIBMAGIC_OBJDIR)/.configured: $(LIBMAGIC_OBJDIR)/.retrieved
 
 # compile libmagic
 $(LIBMAGIC_OBJDIR)/.compiled: $(LIBMAGIC_OBJDIR)/.configured
-	(cd $(LIBMAGIC_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(LIBMAGIC_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install libmagic
@@ -1105,12 +1153,54 @@ ruby-clean:
 $(DISTDIR)/$(RUBY_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(RUBY_URL)
 
+$(RUBY_OBJDIR)/openssl_missing.patch:
+	mkdir -p $(dir $@)
+	echo > $@.tmp 'Index: ext/openssl/openssl_missing.h'
+	echo >> $@.tmp '--- ext/openssl/openssl_missing.h.orig'
+	echo >> $@.tmp '+++ ext/openssl/openssl_missing.h'
+	echo >> $@.tmp '@@ -119,6 +119,9 @@ void ossl_HMAC_CTX_free(HMAC_CTX *);'
+	echo >> $@.tmp ' #if !defined(HAVE_X509_STORE_SET_EX_DATA)'
+	echo >> $@.tmp ' #  define X509_STORE_set_ex_data(x, idx, data) \'
+	echo >> $@.tmp ' 	CRYPTO_set_ex_data(&(x)->ex_data, (idx), (data))'
+	echo >> $@.tmp '+#endif'
+	echo >> $@.tmp '+'
+	echo >> $@.tmp '+#if !defined(HAVE_X509_STORE_GET_EX_NEW_INDEX)'
+	echo >> $@.tmp ' #  define X509_STORE_get_ex_new_index(l, p, newf, dupf, freef) \'
+	echo >> $@.tmp ' 	CRYPTO_get_ex_new_index(CRYPTO_EX_INDEX_X509_STORE, (l), (p), \'
+	echo >> $@.tmp ' 				(newf), (dupf), (freef))'
+	echo >> $@.tmp '@@ -192,6 +195,7 @@ void ossl_X509_REQ_get0_signature(const X509_REQ *, co'
+	echo >> $@.tmp ' #endif'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp ' #if !defined(HAVE_OPAQUE_OPENSSL)'
+	echo >> $@.tmp '+#if defined(LIBRESSL_VERSION_NUMBER) && LIBRESSL_VERSION_NUMBER < 0x2070000fL'
+	echo >> $@.tmp ' #define IMPL_PKEY_GETTER(_type, _name) \'
+	echo >> $@.tmp ' static inline _type *EVP_PKEY_get0_##_type(EVP_PKEY *pkey) { \'
+	echo >> $@.tmp ' 	return pkey->pkey._name; }'
+	echo >> $@.tmp '@@ -243,6 +247,7 @@ IMPL_PKEY_GETTER(EC_KEY, ec)'
+	echo >> $@.tmp ' #undef IMPL_PKEY_GETTER'
+	echo >> $@.tmp ' #undef IMPL_KEY_ACCESSOR2'
+	echo >> $@.tmp ' #undef IMPL_KEY_ACCESSOR3'
+	echo >> $@.tmp '+#endif'
+	echo >> $@.tmp ' #endif /* HAVE_OPAQUE_OPENSSL */'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp ' #if defined(HAVE_AUTHENTICATED_ENCRYPTION) && !defined(EVP_CTRL_AEAD_GET_TAG)'
+	mv -f $@.tmp $@
+
+ifeq ($(UNAME),OpenBSD)
+RUBY_SSL_EX_NEW_DATA_PATCH = sed -i -e '/^have_func("X509_STORE_set_ex_data")$$/ { p; s/^.*$$/\have_func("X509_STORE_get_ex_new_index")/; }'
+else
+RUBY_SSL_EX_NEW_DATA_PATCH = true
+endif
+
 # retrieve ruby
 #
-$(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST)
+$(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST) $(RUBY_OBJDIR)/openssl_missing.patch
 	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
+	-which ghead && sed -i -e "s/head -c/ghead -c/" $(RUBY_SRCDIR)/configure
+	$(RUBY_SSL_EX_NEW_DATA_PATCH) $(RUBY_SRCDIR)/ext/openssl/extconf.rb
+	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/openssl_missing.patch
 	touch $@
 
 ifeq ($(THREADING),yes)
@@ -1123,6 +1213,8 @@ endif
 $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 	cd $(RUBY_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(RUBY_SRCDIR)/configure \
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
@@ -1133,7 +1225,7 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 		--without-gmp
 	touch $@
 
-# compile ruby
+# compile ruby (ignore MAKE_JOBS; multiple jobs cause random build failures)
 $(RUBY_OBJDIR)/.compiled: $(RUBY_OBJDIR)/.configured
 	(cd $(RUBY_OBJDIR) && env MAKEFLAGS= make)
 	touch $@
@@ -1170,7 +1262,8 @@ $(BZ2_OBJDIR)/.retrieved: $(DISTDIR)/$(BZ2_DIST)
 
 # compile bz2
 $(BZ2_OBJDIR)/.compiled: $(BZ2_OBJDIR)/.retrieved
-	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CFLAGS="-g $(PROFILE_CFLAGS) -fPIC")
+	(cd $(BZ2_SRCDIR) && env MAKEFLAGS= make CC=$(CC) CXX=$(CXX) \
+		CFLAGS="-g $(PROFILE_CFLAGS) -fPIC" -j${MAKE_JOBS})
 	touch $@
 
 # install bz2
@@ -1230,9 +1323,11 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 	$(BZ2_OBJDIR)/.installed
 	cd $(PYTHON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
 		--enable-shared \
@@ -1246,7 +1341,7 @@ $(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
 	(cd $(PYTHON_OBJDIR) && \
 		env MAKEFLAGS= \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
-		make)
+		make -j${MAKE_JOBS})
 	touch $@
 
 # install python
@@ -1299,7 +1394,9 @@ $(GETTEXT_OBJDIR)/.retrieved: $(DISTDIR)/$(GETTEXT_DIST)
 $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 	cd $(GETTEXT_SRCDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
 		LDFLAGS="-L$(PREFIX)/iconv/lib" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(GETTEXT_SRCDIR)/configure \
 		--prefix=$(PREFIX)/gettext \
 		--with-libiconv-prefix=$(PREFIX)/iconv \
@@ -1317,7 +1414,7 @@ $(GETTEXT_OBJDIR)/.configured: $(GETTEXT_OBJDIR)/.retrieved
 
 # compile gettext
 $(GETTEXT_OBJDIR)/.compiled: $(GETTEXT_OBJDIR)/.configured
-	(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make)
+	(cd $(GETTEXT_SRCDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
 	touch $@
 
 # install gettext
@@ -1358,7 +1455,8 @@ $(LZ4_OBJDIR)/.configured: $(LZ4_OBJDIR)/.retrieved
 # compile lz4
 $(LZ4_OBJDIR)/.compiled: $(LZ4_OBJDIR)/.configured
 	(cd $(LZ4_SRCDIR)/lib && \
-		env MAKEFLAGS= $(MAKE) PREFIX=$(PREFIX)/lz4)
+		env MAKEFLAGS= $(MAKE) CC=$(CC) CXX=$(CXX) \
+			-j${MAKE_JOBS} PREFIX=$(PREFIX)/lz4)
 	touch $@
 
 # install lz4
@@ -1460,6 +1558,7 @@ SERF_FLAG=--with-serf="$(PREFIX)/serf"
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
 # so we have to do that ourselves :(
 SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
+LZ4_LDFLAG=-Wl,-rpath,$(PREFIX)/lz4/lib
 MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
 MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
@@ -1485,6 +1584,17 @@ SVN_WITH_HTTPD=--with-apxs="$(PREFIX)/httpd/bin/apxs" \
 SVN_WITH_SASL=--with-sasl="$(PREFIX)/cyrus-sasl"
 endif
 
+# On OpenBSD, MExtUtils -e ldopts outputs -L/usr/local/lib, which can
+# cause us to link Perl bindings against the wrong set of SVN libraries.
+# As a workaround, we patch the configure script after it has been generated.
+ifeq ($(UNAME),OpenBSD)
+SWIG_PL_INCLUDES_HACK= sed -i 's^\($$PERL -MExtUtils::Embed -e ccopts\)^\1 | sed -e s@-I/usr/local/include@@^' $(svn_builddir)/configure
+SWIG_PL_LINK_HACK= sed -i 's^\($$PERL -MExtUtils::Embed -e ldopts\)^\1 | sed -e s@-L/usr/local/lib@@^' $(svn_builddir)/configure
+else
+SWIG_PL_INCLUDES_HACK=true
+SWIG_PL_LINK_HACK=true
+endif
+
 $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(APR_OBJDIR)/.installed $(APR_UTIL_OBJDIR)/.installed \
 	$(BDB_OBJDIR)/.installed $(SQLITE_OBJDIR)/.installed \
@@ -1493,11 +1603,15 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(SERF_OBJDIR)/.installed $(SERF_OLD_OBJDIR)/.installed \
 	$(RUBY_OBJDIR)/.installed $(PYTHON_OBJDIR)/.installed
 	cd $(SVN_SRCDIR) && ./autogen.sh
+	$(SWIG_PL_INCLUDES_HACK)
+	$(SWIG_PL_LINK_HACK)
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib $(SERF_LDFLAG) $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+			CC=$(CC) CXX=$(CXX) \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 			GREP="`which grep`" \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
@@ -1526,7 +1640,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 # compile svn
 $(SVN_OBJDIR)/.compiled: $(SVN_OBJDIR)/.configured
 	cd $(svn_builddir) \
-		&& env MAKEFLAGS= make EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
+		&& env MAKEFLAGS= make -j${MAKE_JOBS} EXTRA_CFLAGS="$(PROFILE_CFLAGS) $(W_NO_SYSTEM_HEADERS)"
 	touch $@
 
 # install svn
@@ -1545,17 +1659,30 @@ $(SVN_OBJDIR)/.pre-generated-swig-cleaned:
 		&& env MAKEFLAGS= make clean-swig
 	touch $@
 
+
+# On OpenBSD, Perl's LDDLFLAGS include -L/usr/local/lib, which can cause
+# us to link Perl bindings against the wrong set of SVN libraries.
+# We manually fix up the generated Makefile.PL to work around this issue.
+ifeq ($(UNAME),OpenBSD)
+MAKEFILE_PL_LDDLFLAGS_HACK= sed -i 's@^WriteMakefile@$$config{LDDLFLAGS} =~ s+-L/usr/local/lib++; WriteMakefile@' \
+			$(SVN_SRCDIR)/subversion/bindings/swig/perl/native/Makefile.PL
+else
+MAKEFILE_PL_LDDLFLAGS_HACK=true
+endif
+
 $(SVN_OBJDIR)/.bindings-compiled: $(SVN_OBJDIR)/.installed $(SVN_OBJDIR)/.pre-generated-swig-cleaned
 	cd $(svn_builddir) \
 		&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			env MAKEFLAGS= make swig-py
+			env MAKEFLAGS= make -j${MAKE_JOBS} swig-py
 	cd $(svn_builddir) && \
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make swig-rb
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make -j${MAKE_JOBS} swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
+		cd $(svn_builddir) && make $(SVN_SRCDIR)/subversion/bindings/swig/perl/native/Makefile.PL; \
+		$(MAKEFILE_PL_LDDLFLAGS_HACK); \
 		cd $(svn_builddir) \
 			&& env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-				env MAKEFLAGS= make swig-pl; \
+				env MAKEFLAGS= make -j${MAKE_JOBS} swig-pl; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
@@ -1569,13 +1696,15 @@ $(SVN_OBJDIR)/.bindings-installed: $(SVN_OBJDIR)/.bindings-compiled
 		env MAKEFLAGS= make install-swig-py
 	cd $(svn_builddir) && \
 		env PATH=$(PREFIX)/ruby/bin:$$PATH \
-		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) env MAKEFLAGS= make install-swig-rb
+		LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) MAKEFLAGS= make install-swig-rb
 	if [ $(ENABLE_PERL_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
-	    && env MAKEFLAGS= make install-swig-pl-lib; \
-	  cd subversion/bindings/swig/perl/native \
-		  && perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
-		  && env MAKEFLAGS= make install; \
+			&& env MAKEFLAGS= LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+				make install-swig-pl-lib; \
+		cd subversion/bindings/swig/perl/native \
+			&& perl Makefile.PL PREFIX="$(SVN_PREFIX)" \
+			&& env MAKEFLAGS= LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
+				make install; \
 	fi
 	if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		cd $(svn_builddir) \
@@ -1906,6 +2035,7 @@ endif
 
 HTTPD_CMD = env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
 		$(PREFIX)/httpd/bin/apachectl
+HTTPD_LOG_ROTATE = mv $(PREFIX)/httpd/logs/error_log $(PREFIX)/httpd/logs/error_log.old
 HTTPD_START_CMD = $(HTTPD_CMD) -f $(HTTPD_CHECK_CONF) -k start
 HTTPD_START_CMD_PROXY = $(HTTPD_CMD) -f $(HTTPD_PROXY_CONF)
 HTTPD_START_CMD_DEBUG = $(HTTPD_START_CMD) -X
@@ -1924,6 +2054,7 @@ SVNSERVE_STOP_CMD = kill `cat $(PWD)/svnserve-$(WC).pid`; sleep 3; \
 			rm -f $(PWD)/svnserve-$(WC).pid
 
 start-httpd: $(HTTPD_CHECK_CONF)
+	-$(HTTPD_LOG_ROTATE)
 	$(HTTPD_START_CMD)
 	@echo "To run tests over http, run:"
 	@echo "    make check BASE_URL=http://localhost:$(HTTPD_CHECK_PORT)"
@@ -1964,6 +2095,7 @@ define do_check
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
         env MAKEFLAGS= make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
 	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) \
+	  SVN_BIN_DIR=$(SVN_PREFIX)/bin \
 	  MEMCACHED_SERVER=$(MEMCACHED_SERVER) $1 FS_TYPE=$$fs; \
     for log in tests.log fails.log; do \
         test -f $$log && mv -f $$log $$log.$@-$$fs; \
@@ -2045,7 +2177,7 @@ svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-			env MAKEFLAGS= make $(JAVAHL_CHECK_TARGET) 2>&1) | \
+			MAKEFLAGS= make $(JAVAHL_CHECK_TARGET) 2>&1) | \
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 

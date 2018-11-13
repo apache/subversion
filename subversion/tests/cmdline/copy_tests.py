@@ -1021,6 +1021,56 @@ def repos_to_wc(sbox):
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
+def foreign_repos_to_wc(sbox):
+  "foreign repository to WC copy"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  def move_url(repo_url, source, dest):
+    svntest.main.run_svn(False, 'move', '-m', svntest.main.make_log_msg(),
+                         repo_url + '/' + source,
+                         repo_url + '/' + dest)
+
+  # We have a standard repository and working copy.  Now we create a
+  # second repository with the same greek tree, but different UUID.
+  repo_dir       = sbox.repo_dir
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+  move_url(other_repo_url, 'A', 'A2')
+  move_url(other_repo_url, 'A2', 'A3')
+
+  # URL->wc copy:
+  # copy a file and a directory from a foreign repository.
+  # we should get some scheduled additions *without history*.
+  E_url = other_repo_url + "/A2/B/E"
+  pi_url = other_repo_url + "/A2/D/G/pi"
+  peg_rev = '2'
+  op_rev = '1'
+  E_url_resolved = E_url.replace('/A2/', '/A/')
+  pi_url_resolved = pi_url.replace('/A2/', '/A/')
+
+  expected_output = svntest.verify.UnorderedOutput([
+    '--- Copying from foreign repository URL \'%s\':\n' % E_url_resolved,
+    'A         %s\n' % sbox.ospath('E'),
+    'A         %s\n' % sbox.ospath('E/beta'),
+    'A         %s\n' % sbox.ospath('E/alpha'),
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'copy', '-r' + op_rev,
+                                     E_url + '@' + peg_rev,
+                                     wc_dir)
+
+  expected_output = [
+    '--- Copying from foreign repository URL \'%s\':\n' % pi_url_resolved,
+    'A         %s\n' % sbox.ospath('pi'),
+  ]
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'copy', '-r' + op_rev,
+                                     pi_url + '@' + peg_rev,
+                                     wc_dir)
+
+#----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
 @Issue(1084)
 def copy_to_root(sbox):
@@ -3504,6 +3554,50 @@ def copy_make_parents_wc_wc(sbox):
                                         expected_output,
                                         expected_status)
 
+
+#----------------------------------------------------------------------
+# Test copying and creating parents in the wc with dst directory being
+# precreated and unversioned
+
+def copy_make_parents_wc_wc_existing_unversioned_dst(sbox):
+  "svn cp --parents WC_PATH WC_PATH (ex. unver. dst)"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_path = sbox.ospath('iota')
+  new_iota_path = sbox.ospath('X/Y/Z/iota')
+  os.makedirs(os.path.dirname(new_iota_path))
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'cp', '--parents',
+                                     iota_path, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'          : Item(verb='Adding'),
+    'X/Y'        : Item(verb='Adding'),
+    'X/Y/Z'      : Item(verb='Adding'),
+    'X/Y/Z/iota' : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status)
+
+
 #----------------------------------------------------------------------
 # Test copying and creating parents from the repo to the wc
 
@@ -3515,6 +3609,49 @@ def copy_make_parents_repo_wc(sbox):
 
   iota_url = sbox.repo_url + '/iota'
   new_iota_path = sbox.ospath('X/Y/Z/iota')
+
+  # Copy iota
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'cp', '--parents',
+                                     iota_url, new_iota_path)
+
+  # Create expected output
+  expected_output = svntest.wc.State(wc_dir, {
+    'X'           : Item(verb='Adding'),
+    'X/Y'         : Item(verb='Adding'),
+    'X/Y/Z'       : Item(verb='Adding'),
+    'X/Y/Z/iota'  : Item(verb='Adding'),
+    })
+
+  # Create expected status tree
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
+
+  # Add the moved files
+  expected_status.add({
+    'X'           : Item(status='  ', wc_rev=2),
+    'X/Y'         : Item(status='  ', wc_rev=2),
+    'X/Y/Z'       : Item(status='  ', wc_rev=2),
+    'X/Y/Z/iota'  : Item(status='  ', wc_rev=2),
+    })
+
+  svntest.actions.run_and_verify_commit(wc_dir,
+                                        expected_output,
+                                        expected_status)
+
+
+#----------------------------------------------------------------------
+# Test copying and creating parents from the repo to the wc with dst
+# directory being precreated and unversioned
+
+def copy_make_parents_repo_wc_existing_unversioned_dst(sbox):
+  "svn cp --parents URL WC_PATH with (ex. unver. dst)"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  iota_url = sbox.repo_url + '/iota'
+  new_iota_path = sbox.ospath('X/Y/Z/iota')
+  os.makedirs(os.path.dirname(new_iota_path))
 
   # Copy iota
   svntest.actions.run_and_verify_svn(None, [],
@@ -4333,7 +4470,7 @@ def copy_added_dir_with_copy(sbox):
 def copy_broken_symlink(sbox):
   """copy broken symlink"""
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3303. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3303. ##
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -5904,7 +6041,9 @@ test_list = [ None,
               copy_peg_rev_url,
               old_dir_wc_to_wc,
               copy_make_parents_wc_wc,
+              copy_make_parents_wc_wc_existing_unversioned_dst,
               copy_make_parents_repo_wc,
+              copy_make_parents_repo_wc_existing_unversioned_dst,
               copy_make_parents_wc_repo,
               copy_make_parents_repo_repo,
               URI_encoded_repos_to_wc,
@@ -5955,6 +6094,7 @@ test_list = [ None,
               ext_wc_copy_deleted,
               copy_subtree_deleted,
               resurrect_at_root,
+              foreign_repos_to_wc,
              ]
 
 if __name__ == '__main__':

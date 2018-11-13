@@ -23,7 +23,7 @@ AC_PREREQ(2.59)
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
-     [esyscmd(python build/getversion.py SVN subversion/include/svn_version.h)],
+     [esyscmd($PYTHON build/getversion.py SVN subversion/include/svn_version.h)],
      [http://subversion.apache.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
@@ -152,9 +152,11 @@ SVN_FIND_APACHE(20051115, $apache_whitelist_ver)
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
 dnl the correct command to unpack the downloaded file.
-SQLITE_MINIMUM_VER="3.7.12"
-SQLITE_RECOMMENDED_VER="3.7.15.1"
-SQLITE_URL="http://www.sqlite.org/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
+SQLITE_MINIMUM_VER="3.8.2"
+SQLITE_RECOMMENDED_VER="3.8.11.1"
+dnl Used to construct the SQLite download URL.
+SQLITE_RECOMMENDED_VER_REL_YEAR="2015"
+SQLITE_URL="https://www.sqlite.org/$SQLITE_RECOMMENDED_VER_REL_YEAR/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
                ${SQLITE_URL})
@@ -591,6 +593,7 @@ if test "$with_old_gnome_keyring" != "no"; then
                         [Is GNOME Keyring support enabled?])
               CPPFLAGS="$old_CPPFLAGS"
               SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
+              SVN_GNOME_KEYRING_PCLIBS="glib-2.0 gnome-keyring-1"
             else
               AC_MSG_RESULT([no])
               if test "$with_old_gnome_keyring" = "yes"; then
@@ -864,18 +867,21 @@ fi
 
 dnl plaintext passwords -------------------
 AC_ARG_ENABLE(plaintext-password-storage,
-AS_HELP_STRING([--disable-plaintext-password-storage],
-               [Disable on-disk caching of plaintext passwords and passphrases.
-                (Leaving this functionality enabled will not force Subversion
+AS_HELP_STRING([--enable-plaintext-password-storage],
+               [Enable on-disk caching of plaintext passwords and passphrases.
+                (Enabling this functionality will not force Subversion
                 to store passwords in plaintext, but does permit users to
                 explicitly allow that behavior via runtime configuration.)]),
-[
-   if test "$enableval" = "no"; then
-      AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
-      AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
-                [Defined if plaintext password/passphrase storage is disabled])
-   fi
-])
+[plaintext_passwordd_storage="$enableval"],
+[plaintext_passwordd_storage="no"])
+
+if test "$plaintext_passwordd_storage" = "yes"; then
+  AC_MSG_WARN([Enabling plaintext password/passphrase storage])
+else
+  AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
+  AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
+            [Defined if plaintext password/passphrase storage is disabled])
+fi
 
 dnl Build and install rules -------------------
 
@@ -945,8 +951,9 @@ AC_FUNC_VPRINTF
 dnl check for functions needed in special file handling
 AC_CHECK_FUNCS(symlink readlink)
 
-dnl check for uname
+dnl check for uname and ELF headers
 AC_CHECK_HEADERS(sys/utsname.h, [AC_CHECK_FUNCS(uname)], [])
+AC_CHECK_HEADERS(elf.h)
 
 dnl check for termios
 AC_CHECK_HEADER(termios.h,[
@@ -1303,7 +1310,7 @@ fi
 AC_PATH_PROGS(PYTHON, "$PYTHON", none)
 
 # The minimum version for the JVM runtime for our Java bytecode.
-JAVA_OLDEST_WORKING_VER='1.6'
+JAVA_OLDEST_WORKING_VER='1.8'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
@@ -1321,7 +1328,7 @@ if test "$RUBY" != "none"; then
     if test -n "$RDOC"; then
       AC_PATH_PROG(RDOC, "$RDOC", none)
     else
-      AC_PATH_PROGS(RUBY, rdoc rdoc1 rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2 rdoc2.0 rdoc20 rdoc2.1 rdoc21 rdoc2.2 rdoc22 rdoc2.3 rdoc23 rdoc2.4 rdoc24, none)
+      AC_PATH_PROGS(RDOC, rdoc rdoc1 rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2 rdoc2.0 rdoc20 rdoc2.1 rdoc21 rdoc2.2 rdoc22 rdoc2.3 rdoc23 rdoc2.4 rdoc24, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
     svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
@@ -1358,6 +1365,10 @@ if test "$RUBY" != "none"; then
 fi
 
 SVN_CHECK_SWIG
+AC_ARG_VAR(SWIG_FEATURES, [SWIG feature flags common to all bindings])
+AC_ARG_VAR(SWIG_RB_FEATURES, [SWIG feature flags specific to Ruby bindings])
+AC_ARG_VAR(SWIG_PL_FEATURES, [SWIG feature flags specific to Perl bindings])
+AC_ARG_VAR(SWIG_PY_FEATURES, [SWIG feature flags specific to Python bindings])
 
 SVN_CHECK_CTYPESGEN
 
@@ -1533,12 +1544,6 @@ AC_CHECK_HEADERS([stdbool.h stdint.h])
 if test "$CC" = "clang"; then
   SVN_STRIP_FLAG(CPPFLAGS, [-no-cpp-precomp ])
 fi
-
-# Need to strip '-no-cpp-precomp' from CPPFLAGS for SWIG as well.
-SWIG_CPPFLAGS="$CPPFLAGS"
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-no-cpp-precomp ])
-SVN_STRIP_FLAG(SWIG_CPPFLAGS, [-Wdate-time ])
-AC_SUBST([SWIG_CPPFLAGS])
 
 dnl Since this is used only on Unix-y systems, define the path separator as '/'
 AC_DEFINE_UNQUOTED(SVN_PATH_LOCAL_SEPARATOR, '/',

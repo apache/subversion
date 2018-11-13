@@ -1768,7 +1768,7 @@ def rm_of_replaced_file(sbox):
                                                    'proplist', '-v',
                                                    mu_path + '@base')
   expected_output = svntest.verify.UnorderedRegexListOutput([
-      'Properties on',
+      'Properties on.*',
       '  yellow',
       '    submarine',
       '  orange',

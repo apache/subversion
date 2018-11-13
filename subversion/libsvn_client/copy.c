@@ -578,7 +578,7 @@ pin_externals_prop(svn_string_t **pinned_externals,
 static svn_error_t *
 resolve_pinned_externals(apr_hash_t **pinned_externals,
                          const apr_hash_t *externals_to_pin,
-                         svn_client__copy_pair_t *pair,
+                         const svn_client__copy_pair_t *pair,
                          svn_ra_session_t *ra_session,
                          const char *repos_root_url,
                          svn_client_ctx_t *ctx,
@@ -2337,13 +2337,96 @@ notification_adjust_func(void *baton,
     nb->inner_func(nb->inner_baton, inner_notify, pool);
 }
 
+svn_error_t *
+svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
+                                 const char *src_url,
+                                 const svn_opt_revision_t *src_peg_revision,
+                                 const svn_opt_revision_t *src_op_revision,
+                                 const char *dst_abspath,
+                                 svn_boolean_t ignore_externals,
+                                 svn_ra_session_t *ra_session,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *tmpdir_abspath, *tmp_abspath;
+  svn_revnum_t copy_src_revnum;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
+
+  /* Find a temporary location in which to check out the copy source. */
+  SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
+                             scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
+                                   svn_io_file_del_on_close,
+                                   scratch_pool, scratch_pool));
+
+  /* Make a new checkout of the requested source. While doing so,
+   * resolve copy_src_revnum to an actual revision number in case it
+   * was until now 'invalid' meaning 'head'.  Ask this function not to
+   * sleep for timestamps, by passing a sleep_needed output param.
+   * Send notifications for all nodes except the root node, and adjust
+   * them to refer to the destination rather than this temporary path. */
+  {
+    svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
+    void *old_notify_baton2 = ctx->notify_baton2;
+    struct notification_adjust_baton nb;
+    svn_error_t *err;
+
+    nb.inner_func = ctx->notify_func2;
+    nb.inner_baton = ctx->notify_baton2;
+    nb.checkout_abspath = tmp_abspath;
+    nb.final_abspath = dst_abspath;
+    ctx->notify_func2 = notification_adjust_func;
+    ctx->notify_baton2 = &nb;
+
+    err = svn_client__checkout_internal(&copy_src_revnum, timestamp_sleep,
+                                        src_url,
+                                        tmp_abspath,
+                                        src_peg_revision,
+                                        src_op_revision,
+                                        svn_depth_infinity,
+                                        ignore_externals,
+                                        FALSE, /* we don't allow obstructions */
+                                        ra_session, ctx, scratch_pool);
+
+    ctx->notify_func2 = old_notify_func2;
+    ctx->notify_baton2 = old_notify_baton2;
+
+    SVN_ERR(err);
+  }
+
+  /* Schedule dst_path for addition in parent, with copy history.
+     Don't send any notification here.
+     Then remove the temporary checkout's .svn dir in preparation for
+     moving the rest of it into the final destination. */
+  SVN_ERR(svn_wc_copy3(ctx->wc_ctx, tmp_abspath, dst_abspath,
+                       TRUE /* metadata_only */,
+                       NULL, NULL, /* don't allow user to cancel here */
+                       NULL, NULL, scratch_pool));
+  SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, tmp_abspath,
+                                     FALSE, scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc_remove_from_revision_control2(ctx->wc_ctx,
+                                               tmp_abspath,
+                                               FALSE, FALSE,
+                                               NULL, NULL, /* don't cancel */
+                                               scratch_pool));
+
+  /* Move the temporary disk tree into place. */
+  SVN_ERR(svn_io_file_rename2(tmp_abspath, dst_abspath, FALSE, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Peform each individual copy operation for a repos -> wc copy.  A
    helper for repos_to_wc_copy().
 
-   Resolve PAIR->src_revnum to a real revision number if it isn't already. */
+   PAIR->src_revnum PAIR->src_abspath_or_url should already have been
+   resolved to the operative revision number and operative URL.
+ */
 static svn_error_t *
 repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
-                        svn_client__copy_pair_t *pair,
+                        const svn_client__copy_pair_t *pair,
                         svn_boolean_t same_repositories,
                         svn_boolean_t ignore_externals,
                         svn_boolean_t pin_externals,
@@ -2355,6 +2438,8 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
   apr_hash_t *src_mergeinfo;
   const char *dst_abspath = pair->dst_abspath_or_url;
 
+  SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(pair->src_revnum));
+  SVN_ERR_ASSERT(svn_path_is_url(pair->src_abspath_or_url));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
   if (!same_repositories && ctx->notify_func2)
@@ -2376,90 +2461,32 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
     {
       if (same_repositories)
         {
-          const char *tmpdir_abspath, *tmp_abspath;
+          /* Avoid a chicken-and-egg problem:
+           * If pinning externals we'll need to adjust externals
+           * properties before checking out any externals.
+           * But copy needs to happen before pinning because else there
+           * are no svn:externals properties to pin. */
+          if (pin_externals)
+            ignore_externals = TRUE;
 
-          /* Find a temporary location in which to check out the copy source. */
-          SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
-                                     pool, pool));
-
-          SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
-                                           svn_io_file_del_on_close, pool, pool));
-
-          /* Make a new checkout of the requested source. While doing so,
-           * resolve pair->src_revnum to an actual revision number in case it
-           * was until now 'invalid' meaning 'head'.  Ask this function not to
-           * sleep for timestamps, by passing a sleep_needed output param.
-           * Send notifications for all nodes except the root node, and adjust
-           * them to refer to the destination rather than this temporary path. */
-          {
-            svn_wc_notify_func2_t old_notify_func2 = ctx->notify_func2;
-            void *old_notify_baton2 = ctx->notify_baton2;
-            struct notification_adjust_baton nb;
-            svn_error_t *err;
-
-            nb.inner_func = ctx->notify_func2;
-            nb.inner_baton = ctx->notify_baton2;
-            nb.checkout_abspath = tmp_abspath;
-            nb.final_abspath = dst_abspath;
-            ctx->notify_func2 = notification_adjust_func;
-            ctx->notify_baton2 = &nb;
-
-            /* Avoid a chicken-and-egg problem:
-             * If pinning externals we'll need to adjust externals
-             * properties before checking out any externals.
-             * But copy needs to happen before pinning because else there
-             * are no svn:externals properties to pin. */
-            if (pin_externals)
-              ignore_externals = TRUE;
-
-            err = svn_client__checkout_internal(&pair->src_revnum, timestamp_sleep,
-                                                pair->src_original,
-                                                tmp_abspath,
-                                                &pair->src_peg_revision,
-                                                &pair->src_op_revision,
-                                                svn_depth_infinity,
-                                                ignore_externals, FALSE,
-                                                ra_session, ctx, pool);
-
-            ctx->notify_func2 = old_notify_func2;
-            ctx->notify_baton2 = old_notify_baton2;
-
-            SVN_ERR(err);
-          }
-
-          *timestamp_sleep = TRUE;
-
-          /* Schedule dst_path for addition in parent, with copy history.
-             Don't send any notification here.
-             Then remove the temporary checkout's .svn dir in preparation for
-             moving the rest of it into the final destination. */
-          SVN_ERR(svn_wc_copy3(ctx->wc_ctx, tmp_abspath, dst_abspath,
-                               TRUE /* metadata_only */,
-                               ctx->cancel_func, ctx->cancel_baton,
-                               NULL, NULL, pool));
-          SVN_ERR(svn_wc__acquire_write_lock(NULL, ctx->wc_ctx, tmp_abspath,
-                                             FALSE, pool, pool));
-          SVN_ERR(svn_wc_remove_from_revision_control2(ctx->wc_ctx,
-                                                       tmp_abspath,
-                                                       FALSE, FALSE,
-                                                       ctx->cancel_func,
-                                                       ctx->cancel_baton,
-                                                       pool));
-
-          /* Move the temporary disk tree into place. */
-          SVN_ERR(svn_io_file_rename2(tmp_abspath, dst_abspath, FALSE, pool));
+          SVN_ERR(svn_client__repos_to_wc_copy_dir(timestamp_sleep,
+                                                   pair->src_original,
+                                                   &pair->src_peg_revision,
+                                                   &pair->src_op_revision,
+                                                   dst_abspath,
+                                                   ignore_externals,
+                                                   ra_session, ctx, pool));
         }
       else
         {
           *timestamp_sleep = TRUE;
 
-          SVN_ERR(svn_client__copy_foreign(pair->src_abspath_or_url,
+          SVN_ERR(svn_client__copy_foreign(pair->src_original,
                                            dst_abspath,
                                            &pair->src_peg_revision,
                                            &pair->src_op_revision,
                                            svn_depth_infinity,
                                            FALSE /* make_parents */,
-                                           TRUE /* already_locked */,
                                            ctx, pool));
 
           return SVN_NO_ERROR;
@@ -2534,7 +2561,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
        * to an actual revision number if it's 'invalid' meaning 'head'. */
       SVN_ERR(svn_ra_get_file(ra_session, src_rel, pair->src_revnum,
                               new_base_contents,
-                              &pair->src_revnum, &new_props, pool));
+                              NULL, &new_props, pool));
 
       if (new_props && ! same_repositories)
         svn_hash_sets(new_props, SVN_PROP_MERGEINFO, NULL);
@@ -2741,6 +2768,16 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
         {
           SVN_ERR(svn_client__make_local_parents(dst_parent, TRUE, ctx,
                                                  iterpool));
+        }
+      else if (make_parents && dst_parent_kind == svn_node_dir)
+        {
+          SVN_ERR(svn_wc_read_kind2(&dst_parent_kind, ctx->wc_ctx, dst_parent,
+                                    FALSE, TRUE, iterpool));
+          if (dst_parent_kind == svn_node_none)
+            {
+              SVN_ERR(svn_client__make_local_parents(dst_parent, TRUE, ctx,
+                                                     iterpool));
+            }
         }
       else if (dst_parent_kind != svn_node_dir)
         {

@@ -28,7 +28,7 @@ Usage: remove-zombie-locks.py REPOS-PATH <REVISION|all>
   locks on files that don't exist in the HEAD revision, removing any found.
 
   This script is a workaround for Subversion issue #2507
-  http://subversion.tigris.org/issues/show_bug.cgi?id=2507
+  https://issues.apache.org/jira/browse/SVN-2507
 
 Examples:
 

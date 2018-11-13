@@ -84,6 +84,10 @@ usage: 1. log [PATH][@REV]
     was created:
       svn log --stop-on-copy --limit 1 -r0:HEAD ^/branches/foo
 
+    Show all log messages for commits between the tags ^/tags/2.0 and
+    ^/tags/3.0; assuming that tag 2.0 was created in revision 100:
+      svn log -rHEAD:100 ^/tags/3.0
+
     If ^/trunk/foo.c was moved to ^/trunk/bar.c' in revision 22, 'svn log -v'
     shows a deletion and a copy in its changed paths list, such as:
        D /trunk/foo.c
@@ -127,13 +131,15 @@ Valid options:
                                -U ARG, --context ARG: Show ARG lines of context
                                -p, --show-c-function: Show C function name
   --search ARG             : use ARG as search pattern (glob syntax, case-
-                             and accent-insensitive)
+                             and accent-insensitive, may require quotation marks
+                             to prevent shell expansion)
   --search-and ARG         : combine ARG with the previous search pattern
 
 Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG (caution: on many operating
                              systems, other users will be able to see this)
+  --password-from-stdin    : read password from stdin
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting (default is to prompt
                              only if standard input is a terminal device)
@@ -203,7 +209,7 @@ Valid options:
                                 'BASE'       base rev of item's working copy
                                 'COMMITTED'  last commit at or before BASE
                                 'PREV'       revision just before COMMITTED
-  -N [--non-recursive]     : obsolete; try --depth=files or --depth=immediates
+  -N [--non-recursive]     : obsolete; same as --depth=files
   --depth ARG              : limit operation by depth ARG ('empty', 'files',
                              'immediates', or 'infinity')
   --set-depth ARG          : set new working copy depth to ARG ('exclude',
@@ -224,6 +230,7 @@ Global options:
   --username ARG           : specify a username ARG
   --password ARG           : specify a password ARG (caution: on many operating
                              systems, other users will be able to see this)
+  --password-from-stdin    : read password from stdin
   --no-auth-cache          : do not cache authentication tokens
   --non-interactive        : do no interactive prompting (default is to prompt
                              only if standard input is a terminal device)

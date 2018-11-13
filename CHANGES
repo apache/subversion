@@ -1,5 +1,151 @@
+# To view a revision listed as (rXXXXXXX), visit:
+#   https://svn.apache.org/rXXXXXXX
+#
+# To view an issue listed as (issue #XXXX), visit:
+#   https://issues.apache.org/jira/browse/SVN-XXXX
+
+Version 1.12.0
+(?? ??? 20XX, from /branches/1.12.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.12.0
+
+ User-visible changes:
+  - Major new features:
+
+  - Minor new features and improvements:
+    * 'svn --version --verbose' shows loaded libraries on Linux (r1843774)
+    * 'svnrdump' can read/write a file instead of stdin/stdout (r1844906)
+
+  - Client-side bugfixes:
+    * Repos-to-WC copy with --parents works with absent target (r1843888)
+    * Repos-to-WC copy from foreign repo with peg/operative revs (#4785)
+
+  - Server-side bugfixes:
+
+  - Client-side and server-side bugfixes:
+
+  - Other tool improvements and bugfixes:
+
+ Developer-visible changes:
+  - General:
+    * Storing passwords in plain text on disk is disabled by default (r1845377)
+    * Updated the required libtool version to 2.x (r1845716)
+
+  - Bindings:
+    * Fixed potential core dump in JavaHL's ISVNClient.diff (r1845408)
+
+
+Version 1.11.0
+(30 Oct 2018, from /branches/1.11.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.11.0
+
+ User-visible changes:
+  - Major new features:
+    * Shelving is no longer based on patch files (experimental) (issue #3625)
+    * Checkpointing (experimental) (issue #3626)
+    * Viewspec output command (experimental) (issue #4753)
+
+  - Minor new features and improvements:
+    * Improvements to tree conflict resolution (issue #4694 #4766 ...)
+    * 'patch' can now read non-pretty-printed svn:mergeinfo diffs (r1822151)
+    * Better error when http:// URL is not a Subversion repository (r1825302)
+    * Add 'schedule' and 'depth' items to 'svn info --show-item' (r1827032)
+    * Allow the client cert password to be saved (r1836762)
+
+  - Client-side bugfixes:
+    * Fix a crash in a repo:WC summary diff of a local copy (r1835218)
+    * Fix double diff headers (r1836746)
+    * Tree conflict resolver: avoid endless scan in some cases (r1839662)
+
+  - Server-side bugfixes:
+    * svnadmin dump shouldn't canonicalize svn:date (issue #4767)
+    * 'svnadmin verify --keep-going --quiet' shows an error summary (r1837790)
+    * Let 'svnadmin recover' prune the rep-cache even if disabled (r1838813)
+
+  - Client-side and server-side bugfixes:
+    * Fix pattern-matching of top level path in listing with search (r1830599)
+    * Allow commands like 'svn ci --file X' to work when X is a FIFO (r1836306)
+
+  - Other tool improvements and bugfixes:
+    * tools/client-side/bash_completion: Add '--password-from-stdin' (r1820045)
+
+ Developer-visible changes:
+  - General:
+    * new tool: tools/dist/edit-N-log-messages (r1819207)
+    * tools/dev/unix-build/Makefile.svn: various fixes
+    * Expose the diff option 'pretty_print_mergeinfo' in APIs (r1822014)
+    * In 'revert' APIs, choose whether to delete schedule-add nodes (r1822534)
+
+  - Bindings:
+    * Fix Python binding fs.FileDiff behaviour with python-future (r1823802)
+    * Fix Python unit test, fs.SubversionFSTestCase, on Windows (r1824410)
+    * Bump minimum JDK version required for JavaHL to 1.8 (r1831895)
+    * Enable building against Java 10 (r1841180 et al)
+    * Fix a potential crash in JavaHL (issue #4764)
+
+
+Version 1.10.3
+(10 Oct 2018, from /branches/1.10.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.10.3
+
+ User-visible changes:
+  - Minor new features and improvements:
+    * Store the HTTPS client cert password (r1842578)
+
+  - Client-side bugfixes:
+    * Fix shelving when custom diff command is configured (issue #4758)
+    * Fix conflict resolver crashes (issue #4744, r1842581, r1842582, r1842583)
+    * Fix conflict resolver endless scan in some cases (r1842586)
+    * Fix "Accept incoming deletion" on locally deleted file (issue #4739)
+    * Fix "resolver adds unrelated moves to move target list" (issue #4766)
+
+  - Server-side bugfixes:
+    * Reject bad PUT before CHECKOUT in v1 HTTP protocol (r1841281)
+    * Let 'svnadmin recover' prune the rep-cache even if disabled (r1842585)
+
+  - Client-side and server-side bugfixes:
+    * Allow commands like 'svn ci --file X' to work when X is a FIFO (r1841282)
+
+  - Other tool improvements and bugfixes:
+    * 'svnadmin verify --keep-going --quiet' shows an error summary (r1842584)
+    * Fix error in german translation for 'svn help merge' (r1837038)
+
+ Developer-visible changes:
+  - General:
+    * Python tests use the current python executable (r1842626)
+
+
+Version 1.10.2
+(20 Jul 2018, from /branches/1.10.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.10.2
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * Correctly claim to offer Gnome Keyring support with libsecret (r1831142)
+    * Fix segfault using Gnome Keyring with libsecret (r1835782)
+    * Fix JavaHL local refs capacity warning when unparsing externals (r1831143)
+    * Since on Windows Subversion does not handle symlinks, never check for reparse points (r1835701)
+    * Prune externals after 'update --set-depth=exclude' (r1835702)
+    * Fix issue #4740, "conflict resolver searches too far back ..." (r1835703)
+  - Server-side bugfixes:
+    * Fix regression issue #4741: authz group refers to multiple groups (r1831220)
+
+ Developer-visible changes:
+  - General:
+    * Regression test and FSFS checksum test, part of issue #4722 (r1828043)
+    * Explicit error on configure --without-lz4 or --without-utf8proc (r1831604)
+    * configure.ac: Fix regression relating to path to 'rdoc' (r1833486)
+    * Ensure consistent use of $PYTHON during build and test (r1833487)
+    * Fix libsvn_auth_gnome_keyring.pc when built using libsecret (r1835781)
+  - Bindings:
+    * Fix regression in use of pre-generated Swig bindings in release builds (r1833488)
+
+
+Version 1.10.1
+(Not released; see changes for 1.10.2.)
+
+
 Version 1.10.0
-(?? ??? 2017, from /branches/1.10.x)
+(13 Apr 2018, from /branches/1.10.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.10.0
 
 See the 1.10 release notes for a more verbose overview of the changes since
@@ -8,28 +154,28 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
  User-visible changes:
   - Major new features:
     * Better interactive conflict resolution for tree conflicts (r1687489 et al)
-    * New and improved implementation of path-based authorization (r1776832)
+    * Wilcards and improved performance in path-based authorization (r1776832)
+    * New experimental 'svn shelve' command (issue #3625)
   - Minor new features and improvements:
-    * svnbench: Show wall-clock time when done (r1703383)
-    * svnbench: Show number of bytes transferred across the network (r1710586)
-    * svnbench: Actually evaluate the '--with-no-revprops' option (r1709593)
-    * New 'svnadmin load-revprops' subcommand (r1694191)
-    * New 'svnadmin dump-revprops' subcommand (r1694225)
+    * svnbench: Show time taken & bytes transferred (r1703383, r1710586)
+    * New 'svnadmin dump' options to include/exclude paths (r1811992 et al)
+    * New '--normalize-props' option for 'svnadmin dump' (r1807836 et al)
+    * New 'svnadmin 'load-revprops', 'dump-revprops' subcommands (r1694191, -225)
     * New '--no-flush-to-disk' option for 'svnadmin load' (r1736357, -7357)
     * New '--file' option for several svnadmin subcommands (r1738021)
-    * New '--max-request-size' option for svnserve (r1714330)
-    * New '--max-response-size' option for svnserve (r1714333)
+    * New '--max-request-size', '--max-response-size' options for svnserve (r1714330, -333)
     * New '-rN' option for 'svnadmin lstxns' (r1703699)
     * New '--search' option for fast 'svn ls' searches (r1767186 et al)
     * Add '--search' option support to 'svnbench null-list' (r1767202)
     * New '-M' option for 'svnlook tree' (r1708222)
     * New '--skip-unchanged' option for 'svnsync copy-revprops' (r1692655)
-    * 'svn log --search' is now case-insensitive (r1731300)
-    * 'svn log --search' now ignores diacriticals when matching words (r1735614)
+    * 'svn log --search' now ignores case and diacriticals (r1731300, r1735614)
     * Improved performance of server-side log processing (r1732768, r1731656)
     * diff3: Reduce processing time and memory usage (r1731659)
     * ra_serf: Adjustments for serf versions with HTTP/2 support (r1716400)
     * ra_serf: Send svndiff1 deltas during commit (r1704317, r1704613, r1791290)
+    * ra_serf: Stream svndiff deltas w/o creating temporary files (r1803143 et al)
+    * ra_serf: Don't necessarily request full MERGE reponses (r1806017 et al)
     * 'svn patch': Parse binary diffs in git-style patches (r1703925)
     * 'svnadmin info' now reports latest revision in the repository (r1697953)
     * ra_svn: Various performance-related tweaks (r1694490)
@@ -57,8 +203,9 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * FSFS: Warn if a possible rep-cache SHA1 collision is detected (r1674673)
     * FSFS: Optimize revprop cache filling strategy under high load (r1795324)
     * FSFS: New "verify-before-commit" fsfs.conf option (r1795351)
+    * FSFS: New format 8 with various performance improvements (r1801940 et al)
     * FSFS/FSX: Chunked read support for changed paths lists (r1746026, -4987)
-    * FSFS/FSX: Several improvements made to cache implementation (r1694489)
+    * FSFS/FSX: Improvements to cache implementation (r1694489)
     * FSX: Add checksums to packed revprop manifests and files (r1713132, -9717)
     * FSX: Significantly reduce size of packed revprop manifest data (r1713109)
     * FSX: Improved on-disk representation of property lists (r1717427)
@@ -72,26 +219,36 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * svnsync: Fix assertion failure with up-to-date repositories (r1727140)
     * ra_serf: Parallel requests for text and property changes (r1716575)
     * svnserve: Remove disk I/O to TMPDIR during first commit (r1716240)
-    * 'svn blame': Optimize a bit on the server side (r1711666)
     * Triple performance of URI escaping (r1710099, -103)
+    * 'svn blame': Optimize a bit on the server side (r1711666)
+    * 'svn cleanup': Add --vacuum-pristines option (r1802787 et al)
     * 'svn diff --git': Show diffs of symlinks like git and hg (r1706372)
     * 'svn patch': Capable of handling git-like symlink changes (r1706446)
     * 'svn patch': Improve detection of additions and deletions (r1706623)
+    * 'svn patch': Handle zero-byte files vs deleted files (r1705856)
     * 'svn diff --git': Produce 'rename from/to' headers (r1706855)
     * 'svn diff --git': Produce proper mode headers (r1706041)
-    * 'svn patch': Handle zero-byte files vs deleted files (r1705856)
+    * 'svn lock', 'svn unlock': Take the -q option (r1796288)
+    * 'svn help': improved wording and consistency (r1802989 et al)
+    * 'svn': Add a new '--accept recommended' option. (r1805623)
+    * 'svn': --non-interactive uses recommended tree conflict resolution (r1805620)
     * Evaluate 'old mode' and 'new mode' lines from git-syle diffs (r1705391)
     * svnrdump, svndumpfilter: Enable buffered stdin (r1703074)
-    * ra_serf: Receive svndiff1 and gzip compressed deltas (r1781282, -3, -4)
-    * 'svn lock', 'svn unlock': Take the -q option (r1796288)
+    * ra_serf: Receive svndiff1 and gzip compressed deltas (r1791282, -3, -4)
     * svnadmin: 'lock', 'unlock', 'rmlocks': Take the -q option (r1796406)
     * New svndiff2 binary delta format using lz4 compression (r1801938, et al)
     * gpg-agent: Support gpg ≥2.1.13 and unset GPG_AGENT_INFO (r1795087)
+    * Add 'http-compression=auto' client config option as default (r1803899 et al)
+    * Speed up processing of mergeinfo (r1802470 et al)
+    * Check for invalid 'xt' fields in x509 certs (r1809290)
+    * New '--password-from-stdin' option for 'svn' (r1819093)
   - Client-side bugfixes:
+    * svnbench: Honour the '--with-no-revprops' option (r1709593)
     * ra_serf: Fix segfault when running over HTTP v1 (r1766089)
     * ra_serf: Keep small svndiffs in memory during commit (r1724455)
     * ra_serf: Improve error messages related to lock operations (r1716450)
     * ra_serf: Work around a bug in serf bucket handling (r1714806)
+    * ra_serf: Fix lock token handling for file-path commits (r1815799 et al)
     * Raise a malfunction instead of segfaulting with corrupt wc.db (r1749887)
     * Fix check for unversioned obstructions blocking file externals (r1735932)
     * 'svn patch' bugfixes:
@@ -118,6 +275,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
       + Fix problems with --git diffs applied in reverse (r1704854, -88)
       + Fix removal of EOL if final patch context line has no EOL (#4315)
     * 'svn diff --git': Fix file permission modes to match git and hg (r1695384)
+    * 'svn diff --git': added/deleted filenames are never /dev/null (issue #4689)
     * Fix a problem with relocating some externals (r1723385)
     * Fix 'svn diff URL@REV WC' wrongly looks up URL@HEAD (issue #4597)
     * Fix 'svn diff --no-diff-added' shows properties as added (issue #4596)
@@ -125,6 +283,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Fix 'svn diff' with local directories marked incomplete (r1674413 et al)
     * ra_svn/ra_serf: Make negative log limits work as documented (r1665530)
     * ra_svn: Eliminate unnecessary URL reparenting (r1779611, r1779611)
+    * ra_svn: Use svndiff2 deltas when supported on both ends (r1803269 et al)
     * Handle invalid revision numbers consistently across RA layers (r1665328)
     * Handle commits to revs > HEAD consistently across RA layers (r1664698)
     * Eliminate one client/server roundtrip from checkouts of HEAD (r1779620)
@@ -147,6 +306,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * FSFS: Fix false positive "Not a directory" error involving file moved and
       replaced by dir (issue #4677)
     * FSFS: Fix crash accessing revprops with --memory-cache-size=0 (r1795164)
+    * FSFS: Fix issue #4623 for FSFS. (r1813794 et al)
     * mod_dav_svn: Omit Cache-Control HTTP header for HEAD URLs (issue #4514)
     * mod_dav_svn: Reduced memory consumption for DAV merge responses (r1727790)
     * mod_dav_svn: Don't set a Last-Modified header in GET responses (r1724790)
@@ -155,13 +315,16 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Fix insertion of very large items into the membuffer cache (r1717337, -8)
     * Fix capacity check of the membuffer cache's prefix pool (r1714356)
     * Prevent paths containing newlines from being committed (r1662585)
+    * Fix for properties: Null updates break last-changed-revision (issue #4700)
     * 'svnfsfs stats': Fix false positive checksum errors reading old revisions
       (r1785904)
+    * 'svnfsfs stats': Fix support for pre-v4 FSFS repositories. (r1816966)
     * svnadmin, svnfsfs: Detect invalid arguments to -M (r1787023, r1787045)
     * svnlook, svnserve: Detect invalid arguments to -M (r1787023, r1787045)
     * svnadmin: Output locked paths in canonical form (r1796420)
     * svnadmin: Output locked paths correctly encoded (r1797122)
     * svn: propdel, propset: Transcode property names on output (r1797186)
+    * svnserve: Make use-sasl=true a fatal error in SASL-less builds. (r1803188)
   - Client-side and server-side bugfixes:
     * Fix integer overflow check with >= 1G mergeinfo ranges per path (r1714380)
     * Fix integer overflow checks on WoW64 platforms (r1714372)
@@ -171,16 +334,18 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * FSFS: Improve error messages when DAG lookup fails (r1795120)
     * Transcode command-line arguments to UTF-8 (r1797190, r1797362, et al)
     * Fix segfault on x509 certificate with empty name (r1798157)
+    * Fix segfault with invalid URLs in svn:externals (r1803471)
+    * Windows: Failure to write files might remain undetected (r1806014)
   - Other tool improvements and bugfixes:
     * New svn-mergeinfo-normalizer tool (r1695992 et al)
     * Allow configuring mailer.py to use SMTP SSL (r1777846)
     * svnmucc can now delete directories with deleted children (issue #4666)
     * svn-vendor.py: Minor enhancements, mostly in treating symlinks (r1732669)
-    * bash_completion: Implement much better URL completion (r1701494)
+    * bash_completion: Better URL completion (r1701494)
     * bash_completion: Complete arguments to 'svn info --show-item' (r1698276)
-    * bash_completion: Add 1.10 options (r1802196)
-    * fsfs-stats: Following rename to svnfsfs in r1594860, install a wrapper
-      for compatibility (r1802032)
+    * fsfs-stats: New 1.8-compatible wrapper for 'svnfsfs stats' (r1802032)
+    * Drop support for upgrading working copies created with Subversion 1.7
+      (r1807584 et al)
 
  Developer-visible changes:
   - General:
@@ -191,11 +356,16 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * get-deps.sh: download Googlemock and Googletest from GitHub (r1746303)
     * windows: Add autodetection for 'zlibstat.lib' (r1783704)
     * windows: Compile libsvn_fs_* as DLLs (r1696758, -83)
+    * windows: Allow building against OpenSSL 1.1.0 (r1814724 et al)
     * OS X: Silence compile-time deprecation warnings with SASL (r1739649)
+    * OS X: Silence ranlib warnings about disabled WIN32 code (r1809792)
     * 'make check GLOBAL_SCHEDULER=1' will run many tests in parallel (r1716399)
     * unix: New '--enable-apache-whitelist' configure script option (r1732294)
     * OS X: Support 'configure --enable-runtime-module-search' (r1677273)
     * tests: Allow tests to be run over HTTP/2 (r1710707)
+    * tests: httpd compile-time and run-time version may differ (r1808955 et al)
+    * tests: Add pre-cooked repos for all FSFS versions. (r1816402 et al)
+    * tests: Add FSFS_DIR_DELTIFICATION option. (r1813897)
     * Add basic tests for svn_xml_parser_t API (r1765214)
     * Unbreak the test suite on Python 3 (r1743034, -81, et al)
     * Make the test suite work when checked out of a git repository (r1771118)
@@ -210,12 +380,19 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * gnome-keyring: Support libsecret in preference to libgnome-keyring
       (r1798004)
     * kwallet: Support KDE 5 in preference to KDE 4 (r1798731)
+    * kwallet: Fix KDE5 support with clang 3.8 (r1802536 et al)
+    * kwallet: Add --with-kwallet=INCDIR:LIBDIR build option (r1802646)
     * Rename cxxhl bindings 'make tests' to avoid confusion with 'make test'
       (r1800849)
     * 'make check': Allow testing with FSFS compression (r1801936)
     * svnserveautocheck.sh: Support out-of-tree builds when running a single
       test file (r1802081)
     * Distribution artifacts now prepared with swig 3.0.10 (r1802135)
+    * SQLite: Use https:// links to download amalgamation sources (r1817043)
+    * Create reproducible tarballs (r1804618 et al)
+    * Disable static builds of the apache and auth provider modules (r1802612)
+    * utf8proc: Update to version 2.1.0 (r1809090 et al)
+    * utf8proc: Build against the system library by default (r1803210 et al)
   - API changes:
     * New svn_client_conflict_* API functions for the new conflict resolver.
     * New svn_repos_fs_get_mergeinfo2() with streamy access (r1780810 et al)
@@ -235,7 +412,10 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * New svn_error_quick_wrapf() API function (r1662668)
     * New svn_repos_path_change_t type (r1802114)
     * New svn_repos_log_entry_t type (r1802114)
+    * New svn_cstring_join2() API (r1806041)
+    * New svn_txdelta_to_svndiff_stream() API (r1803140 et al)
     * svn_repos_parse_dumpstream3() now accepts NULL pointers (r1700180)
+    * Return resettable streams from svn_stream_checksummed2(). (r1804807)
     * Fix svnserveautocheck&davautocheck when time is only a built-in (r1665652)
   - Bindings:
     * Configure the swig bindings only if swig has been enabled (r1751167)
@@ -248,6 +428,43 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Disable some swig wrappers that aren't working (r1700966)
     * JavaHL: Make StringArray nullable (r1785429)
     * JavaHL: Add missing exception checks (r1801108)
+    * Ruby: Fix handling of NULL MD5 digests (r1811786)
+    * Ruby: Detect versions up to 2.4 (r1806570)
+
+
+Version 1.9.9
+(20 Jul 2018, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.9
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix SEGV for 'svn export -rN WC' with relative externals (r1803755)
+    * Fix issue #4677: 'svn up' after a directory replaced a file (r1814248)
+    * Fix segfault when no home directory is available (r1819199)
+    * Performance: Make 'svn info' fast on old repository revisions (r1827690)
+    * Fix RA-serf problem with proxy username and password (r1833571)
+
+  - Server-side bugfixes:
+    * svnadmin: Fix false errors on some valid LOCK_PATH arguments (r1803754)
+    * Fix crash when exiting 'svnserve --config-file' (r1824405)
+    * Fix issue #4722: false "filesystem is corrupt" error on commit (r1827688)
+    * Reword confusing "nested" wording in an httpd.conf warning (r1835700)
+
+  - Bindings bugfixes:
+    * swig-py: svn.core.Stream supports raw binary file-like objects (r1820620)
+    * swig-rb: Don't crash if svn_md5_digest_to_cstring returns NULL (r1823805)
+
+ Developer-visible changes:
+  - General:
+    * Fix CVE-2017-9800: Malicious server can execute arbitrary command on client (r1804698)
+    * Fix test failure if compile- and run-time HTTPD versions differ (r1820523)
+
+  - API changes:
+    (none)
+
+
+Version 1.9.8
+(Not released; see changes for 1.9.9.)
 
 
 Version 1.9.7
@@ -2963,7 +3180,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: ra_serf doesn't support http-auth-types config (issue #3435)
     * fixed: merge sets incorrect mergeinfo on skipped paths (issue #3440)
     * fixed: ra_serf inconsistent handling of cached authn creds (issue #3450)
-    * fixed: ra_serf sefault with using NTLM or Negotiate auth (r876910)
+    * fixed: ra_serf segfault with using NTLM or Negotiate auth (r876910)
     * fixed: excluded subtrees are not detected by svnversion (issue #3461)
     * fixed: submitting a changelist while obstructed item exists (issue #3484)
     * fixed: crash when changing an external's URL (issue #3530)
@@ -5684,7 +5901,7 @@ http://svn.apache.org/repos/asf/subversion/tags/0.28.2
       twice as slow and lose all concurrent-client scalability.
 
       This is a temporary fix for a larger design problem.  See issue
-      http://subversion.tigris.org/issues/show_bug.cgi?id=1499
+      https://issues.apache.org/jira/browse/SVN-1499
 
 
 Version 0.28.1

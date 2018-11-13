@@ -79,9 +79,9 @@ test_dump_bad_props(svn_stringbuf_t **dump_data_p,
   SVN_ERR(svn_repos_dump_fs4(repos, stream, start_rev, end_rev,
                              FALSE, FALSE, TRUE, TRUE,
                              notify_func, notify_baton,
-                             NULL, NULL,
+                             NULL, NULL, NULL, NULL,
                              pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* Check that the property appears in the dump data */
   expected_str = apr_psprintf(pool, "K %d\n%s\n"
@@ -131,7 +131,7 @@ test_load_bad_props(svn_stringbuf_t *dump_data,
                              notify_func, notify_baton,
                              NULL, NULL, /*cancellation*/
                              pool));
-  svn_stream_close(stream);
+  SVN_ERR(svn_stream_close(stream));
 
   /* Check the loaded property */
   fs = svn_repos_fs(repos);

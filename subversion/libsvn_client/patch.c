@@ -343,7 +343,9 @@ strip_path(const char **result, const char *path, int strip_count,
   components = svn_path_decompose(path, scratch_pool);
   if (strip_count > components->nelts)
     return svn_error_createf(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT, NULL,
-                             _("Cannot strip %u components from '%s'"),
+                             Q_("Cannot strip %u component from '%s'",
+                                "Cannot strip %u components from '%s'",
+                                strip_count),
                              strip_count,
                              svn_dirent_local_style(path, scratch_pool));
 
@@ -2145,8 +2147,8 @@ reject_hunk(patch_target_t *target, target_content_t *content,
   if (prop_name)
     {
       /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Property'. */
-      svn_stream_printf(target->reject_stream,
-                        pool, "Property: %s" APR_EOL_STR, prop_name);
+      SVN_ERR(svn_stream_printf(target->reject_stream,
+                                pool, "Property: %s" APR_EOL_STR, prop_name));
       atat = prop_atat;
     }
   else
@@ -2511,7 +2513,8 @@ sort_matched_hunks(const void *a, const void *b)
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * REMOVE_TEMPFILES, PATCH_FUNC, and PATCH_BATON as in svn_client_patch().
+ * REMOVE_TEMPFILES is as in svn_client_patch().
+ * TARGETS_INFO is for preserving info across calls.
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
  * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.

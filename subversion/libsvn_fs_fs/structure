@@ -568,6 +568,9 @@ defined:
             ### in formats >=4, also present:
             <sha1-digest> gives hex SHA1 digest of expanded rep
             <uniquifier> see representation_t->uniquifier in fs.h
+            ### Starting from format 8, a special notation "-"
+            can be used for optional values that are not present
+            (<sha1-digest> and <uniquifier>).
   cpath     FS pathname node was created at
   copyfrom  "<rev> <path>" of copyfrom data
   copyroot  "<rev> <created-path>" of the root of this copy

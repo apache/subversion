@@ -3024,16 +3024,19 @@ def peg_rev_on_non_existent_wc_path(sbox):
   # setup some history
   sbox.simple_move('A', 'A2')
   sbox.simple_move('A2/mu', 'A2/mu2')
-  open(sbox.ospath('A2/mu2'), 'w').write('r2\n')
+  with open(sbox.ospath('A2/mu2'), 'w') as f:
+    f.write('r2\n')
   sbox.simple_commit(message='r2')
   #
   sbox.simple_move('A2/mu2', 'A2/mu3')
   sbox.simple_move('A2', 'A3')
-  open(sbox.ospath('A3/mu3'), 'w').write('r3\n')
+  with open(sbox.ospath('A3/mu3'), 'w') as f:
+    f.write('r3\n')
   sbox.simple_commit(message='r3')
   #
   sbox.simple_move('A3/mu3', 'A3/mu4')
-  open(sbox.ospath('A3/mu4'), 'w').write('r4\n')
+  with open(sbox.ospath('A3/mu4'), 'w') as f:
+    f.write('r4\n')
   sbox.simple_move('A3', 'A4')
   sbox.simple_commit(message='r4')
 
@@ -3045,6 +3048,15 @@ def peg_rev_on_non_existent_wc_path(sbox):
   os.chdir(sbox.ospath('A4'))
   svntest.actions.run_and_verify_svn(['r2\n'], [],
                                      'cat', '-r2', sbox.ospath('mu3') + '@3')
+
+
+@Issue(4532)
+def diff_previous_revision_of_r0(sbox):
+  """diff -rPREV on WC at revision 0"""
+
+  sbox.build(empty=True)
+  svntest.actions.run_and_verify_svn(None, 'svn: E195002: ',
+                                     'diff', '-rPREV', sbox.ospath(''))
 
 
 # With 'svn mkdir --parents' the target directory may already exist on disk.
@@ -3114,31 +3126,122 @@ def plaintext_password_storage_disabled(sbox):
       f.close()
 
 
-
+@Skip(svntest.main.is_os_windows)
 def filtered_ls(sbox):
   "filtered 'svn ls'"
 
   sbox.build(read_only=True)
   path = sbox.repo_url + "/A/D"
 
-  # check plain info
-  expected = [ "H/omega\n",
-               "gamma\n" ]
+  # with and without externals, because without externals on a 1.10+ server
+  # a server-side code path is used
+  for extra_opts in [ [], ['--include-externals'] ]:
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
-    expected, [], 'ls', path, '--depth=infinity', '--search=*a')
+    expected = [ "H/omega\n",
+                 "gamma\n" ]
 
-  # check case-insensitivity
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
-    expected, [], 'ls', path, '--depth=infinity', '--search=*A')
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      expected, [], 'ls', path, '--depth=infinity', '--search=*a', *extra_opts)
 
-  expected = [ "H/\n" ]
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
-    expected, [], 'ls', path, '--depth=infinity', '--search=h')
+    # check case-insensitivity
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      expected, [], 'ls', path, '--depth=infinity', '--search=*A', *extra_opts)
 
-  # we don't match full paths
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
-    [], [], 'ls', path, '--depth=infinity', '--search=*/*')
+    expected = [ "H/\n" ]
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      expected, [], 'ls', path, '--depth=infinity', '--search=h', *extra_opts)
+
+    # we don't match full paths
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      [], [], 'ls', path, '--depth=infinity', '--search=*/*', *extra_opts)
+
+@Issue(4700)
+@XFail(svntest.main.is_fs_type_fsx)
+def null_update_last_changed_revision(sbox):
+  "null 'update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  # r2: Random text change.
+  old_contents = open(sbox.path("iota")).read()
+  sbox.simple_append("iota", "Line 2.\n")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: Revert r2.
+  sbox.simple_append("iota", old_contents, truncate=True)
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # Perform a null update.
+  #
+  # This used to say '3'; probably because iota@3 and iota@1 were textually
+  # identical. It seems this problem was introduced in r1760570.
+  sbox.simple_update(revision='1')
+  svntest.actions.run_and_verify_svn(["1\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
+
+@Issue(4700)
+@XFail(svntest.main.is_fs_type_bdb)
+@XFail(svntest.main.is_fs_type_fsx)
+def null_prop_update_last_changed_revision(sbox):
+  "null 'property update' updates last changed rev"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r2')
+  sbox.simple_update()
+
+  # r3: change the property
+  sbox.simple_propset("prop", "changed", "iota")
+  sbox.simple_commit(message='r3')
+  sbox.simple_update()
+
+  # r4: Revert r3.
+  sbox.simple_propset("prop", "value", "iota")
+  sbox.simple_commit(message='r4')
+  sbox.simple_update()
+
+  # Perform a null update.
+  sbox.simple_update(revision='2')
+  svntest.actions.run_and_verify_svn(["2\n"], [],
+                                     'info', sbox.path('iota'),
+                                     '--show-item', 'last-changed-revision')
+
+@Skip(svntest.main.is_os_windows)
+def filtered_ls_top_level_path(sbox):
+  "filtered 'svn ls' top level path"
+
+  sbox.build(read_only=True, create_wc=False)
+  d_path = sbox.repo_url + "/A/B"
+  f_path = sbox.repo_url + "/A/B/lambda"
+
+  d_expected = svntest.verify.RegexListOutput([
+                 r".* \./",  # expect '*B*' to match its name which is 'B'
+                 r".* E/beta",
+                 r".* lambda" ])
+  f_expected = [ "lambda\n" ]
+
+  # with and without externals, because without externals on a 1.10+ server
+  # a server-side code path is used
+  for extra_opts in [ [], ['--include-externals'] ]:
+
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      d_expected, [], 'ls', '-v', d_path, '-R', '--search=*B*', *extra_opts)
+
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      f_expected, [], 'ls', f_path, '--search=lambda', *extra_opts)
+
+    # we don't match full paths, even for the top level path
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      [], [], 'ls', '-v', d_path, '-R', '--search=*/*', *extra_opts)
+    exit_code, output, error = svntest.actions.run_and_verify_svn(
+      [], [], 'ls', f_path, '--search=*/*', *extra_opts)
+
 
 ########################################################################
 # Run the tests
@@ -3208,9 +3311,13 @@ test_list = [ None,
               rm_missing_with_case_clashing_ondisk_item,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
+              diff_previous_revision_of_r0,
               mkdir_parents_target_exists_on_disk,
               plaintext_password_storage_disabled,
               filtered_ls,
+              null_update_last_changed_revision,
+              null_prop_update_last_changed_revision,
+              filtered_ls_top_level_path,
              ]
 
 if __name__ == '__main__':

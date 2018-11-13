@@ -150,8 +150,9 @@ class ExpectedOutput(object):
        MESSAGE unless it is None, the expected lines, the ACTUAL lines,
        and a diff, all labeled with LABEL.
     """
-    display_lines(message, self.expected, actual, label, label)
-    display_lines_diff(self.expected, actual, label, label)
+    e_label = label + ' (match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
+    display_lines_diff(self.expected, actual, e_label, label)
 
 
 class AnyOutput(ExpectedOutput):
@@ -181,12 +182,36 @@ class AnyOutput(ExpectedOutput):
       logger.warn(message)
 
 
+def re_fullmatch(pattern, string, flags=0):
+  """If the whole STRING matches the regular expression PATTERN,
+     return a corresponding match object.
+     Based on re.fullmatch() in Python 3.4.
+  """
+  if pattern.endswith('$'):
+    return re.match(pattern, string, flags)
+
+  return re.match(pattern + '$', string, flags)
+
+def regex_fullmatch(rx, string):
+  """If the whole STRING matches the compiled regular expression RX,
+     return a corresponding match object.
+     Based on regex.fullmatch() in Python 3.4.
+  """
+  if rx.pattern.endswith('$'):
+    return rx.match(string)
+
+  return re_fullmatch(rx.pattern, string, rx.flags)
+
 class RegexOutput(ExpectedOutput):
   """Matches a single regular expression.
 
      If MATCH_ALL is true, every actual line must match the RE.  If
      MATCH_ALL is false, at least one actual line must match the RE.  In
      any case, there must be at least one line of actual output.
+
+     The RE must match a prefix of the actual line, in contrast to the
+     RegexListOutput and UnorderedRegexListOutput classes which match
+     whole lines.
   """
 
   def __init__(self, expected, match_all=True):
@@ -212,7 +237,8 @@ class RegexOutput(ExpectedOutput):
       return any(self.expected_re.match(line) for line in actual)
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (regexp)', label)
+    e_label = label + ' (regexp, match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
 
   def insert(self, index, line):
     self.expected.insert(index, line)
@@ -228,6 +254,9 @@ class RegexListOutput(ExpectedOutput):
      ones.
 
      In any case, there must be at least one line of actual output.
+
+     The REs must match whole actual lines, in contrast to the RegexOutput
+     class which matches a prefix of the actual line.
   """
 
   def __init__(self, expected, match_all=True):
@@ -243,18 +272,37 @@ class RegexListOutput(ExpectedOutput):
 
     if self.match_all:
       return (len(self.expected_res) == len(actual) and
-              all(e.match(a) for e, a in zip(self.expected_res, actual)))
+              all(regex_fullmatch(e, a) for e, a in zip(self.expected_res, actual)))
 
     i_expected = 0
     for actual_line in actual:
-      if self.expected_res[i_expected].match(actual_line):
+      if regex_fullmatch(self.expected_res[i_expected], actual_line):
         i_expected += 1
         if i_expected == len(self.expected_res):
           return True
     return False
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (regexp)', label)
+    e_label = label + ' (regexp, match_all=%s)' % (self.match_all,)
+    display_lines(message, self.expected, actual, e_label, label)
+
+    assert actual is not None
+    if not isinstance(actual, list):
+      actual = [actual]
+
+    if self.match_all:
+      logger.warn('DIFF ' + label + ':')
+      if len(self.expected) != len(actual):
+        logger.warn('# Expected %d lines; actual %d lines' %
+                    (len(self.expected), len(actual)))
+      for e, a in map(None, self.expected_res, actual):
+        if e is not None and a is not None and regex_fullmatch(e, a):
+          logger.warn("|  " + a.rstrip())
+        else:
+          if e is not None:
+            logger.warn("| -" + repr(e.pattern))
+          if a is not None:
+            logger.warn("| +" + repr(a))
 
   def insert(self, index, line):
     self.expected.insert(index, line)
@@ -279,8 +327,9 @@ class UnorderedOutput(ExpectedOutput):
     return sorted(self.expected) == sorted(actual)
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual, label + ' (unordered)', label)
-    display_lines_diff(self.expected, actual, label + ' (unordered)', label)
+    e_label = label + ' (unordered)'
+    display_lines(message, self.expected, actual, e_label, label)
+    display_lines_diff(sorted(self.expected), sorted(actual), e_label, label)
 
 
 class UnorderedRegexListOutput(ExpectedOutput):
@@ -295,6 +344,9 @@ class UnorderedRegexListOutput(ExpectedOutput):
      expressions.  The implementation matches each expression in turn to
      the first unmatched actual line that it can match, and does not try
      all the permutations when there are multiple possible matches.
+
+     The REs must match whole actual lines, in contrast to the RegexOutput
+     class which matches a prefix of the actual line.
   """
 
   def __init__(self, expected):
@@ -305,13 +357,16 @@ class UnorderedRegexListOutput(ExpectedOutput):
     assert actual is not None
     if not isinstance(actual, list):
       actual = [actual]
+    else:
+      # copy the list so we can remove elements without affecting caller
+      actual = actual[:]
 
     if len(self.expected) != len(actual):
       return False
     for e in self.expected:
       expect_re = re.compile(e)
       for actual_line in actual:
-        if expect_re.match(actual_line):
+        if regex_fullmatch(expect_re, actual_line):
           actual.remove(actual_line)
           break
       else:
@@ -320,9 +375,30 @@ class UnorderedRegexListOutput(ExpectedOutput):
     return True
 
   def display_differences(self, message, label, actual):
-    display_lines(message, self.expected, actual,
-                  label + ' (regexp) (unordered)', label)
+    e_label = label + ' (regexp) (unordered)'
+    display_lines(message, self.expected, actual, e_label, label)
 
+    assert actual is not None
+    if not isinstance(actual, list):
+      actual = [actual]
+    else:
+      # copy the list so we can remove elements without affecting caller
+      actual = actual[:]
+
+    logger.warn('DIFF ' + label + ':')
+    if len(self.expected) != len(actual):
+      logger.warn('# Expected %d lines; actual %d lines' %
+                  (len(self.expected), len(actual)))
+    for e in self.expected:
+      expect_re = re.compile(e)
+      for actual_line in actual:
+        if regex_fullmatch(expect_re, actual_line):
+          actual.remove(actual_line)
+          break
+      else:
+        logger.warn("| -" + expect_re.pattern.rstrip())
+    for a in actual:
+      logger.warn("| +" + a.rstrip())
 
 class AlternateOutput(ExpectedOutput):
   """Matches any one of a list of ExpectedOutput instances.
@@ -467,10 +543,11 @@ def verify_exit_code(message, actual, expected,
 # A simple dump file parser.  While sufficient for the current
 # testsuite it doesn't cope with all valid dump files.
 class DumpParser:
-  def __init__(self, lines):
+  def __init__(self, lines, ignore_sha1=False):
     self.current = 0
     self.lines = lines
     self.parsed = {}
+    self.ignore_sha1 = ignore_sha1
 
   def parse_line(self, regex, required=True):
     m = re.match(regex, self.lines[self.current])
@@ -660,6 +737,9 @@ class DumpParser:
       if not header in headers:
         node[key] = None
         continue
+      if self.ignore_sha1 and (key in ['copy_sha1', 'text_sha1']):
+        node[key] = None
+        continue
       m = re.match(regex, headers[header])
       if not m:
         raise SVNDumpParseError("expected '%s' at line %d\n%s"
@@ -726,7 +806,8 @@ class DumpParser:
     self.parse_all_revisions()
     return self.parsed
 
-def compare_dump_files(message, label, expected, actual,
+def compare_dump_files(label_expected, label_actual,
+                       expected, actual,
                        ignore_uuid=False,
                        expect_content_length_always=False,
                        ignore_empty_prop_sections=False,
@@ -735,8 +816,7 @@ def compare_dump_files(message, label, expected, actual,
   of lines as returned by run_and_verify_dump, and check that the same
   revisions, nodes, properties, etc. are present in both dumps.
   """
-
-  parsed_expected = DumpParser(expected).parse()
+  parsed_expected = DumpParser(expected, not svntest.main.fs_has_sha1()).parse()
   parsed_actual = DumpParser(actual).parse()
 
   if ignore_uuid:
@@ -769,6 +849,8 @@ def compare_dump_files(message, label, expected, actual,
 
   if parsed_expected != parsed_actual:
     print('DIFF of raw dumpfiles (including expected differences)')
+    print('--- ' + (label_expected or 'expected'))
+    print('+++ ' + (label_actual or 'actual'))
     print(''.join(ndiff(expected, actual)))
     raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
                           + '\n'.join(ndiff(
@@ -860,7 +942,7 @@ def make_git_diff_header(target_path, repos_relpath,
     ])
     if text_changes:
       output.extend([
-        "--- /dev/null\t(" + old_tag + ")\n",
+        "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
         "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif delete:
@@ -871,7 +953,7 @@ def make_git_diff_header(target_path, repos_relpath,
     if text_changes:
       output.extend([
         "--- a/" + repos_relpath + src_label + "\t(" + old_tag + ")\n",
-        "+++ /dev/null\t(" + new_tag + ")\n"
+        "+++ b/" + repos_relpath + dst_label + "\t(" + new_tag + ")\n"
       ])
   elif cp:
     if copyfrom_rev:

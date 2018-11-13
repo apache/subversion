@@ -277,9 +277,9 @@ test_authz_parse(const svn_test_opts_t *opts,
 
   printf("[users]\n");
   if (authz->has_anon_rights)
-    print_user_rights(NULL, NULL, 0, &authz->anon_rights, pool);
+    SVN_ERR(print_user_rights(NULL, NULL, 0, &authz->anon_rights, pool));
   if (authz->has_authn_rights)
-    print_user_rights(NULL, NULL, 0, &authz->authn_rights, pool);
+    SVN_ERR(print_user_rights(NULL, NULL, 0, &authz->authn_rights, pool));
   SVN_ERR(svn_iter_apr_hash(NULL, authz->user_rights,
                             print_user_rights, NULL, pool));
   printf("\n\n");
@@ -444,6 +444,73 @@ test_global_rights(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+issue_4741_groups(apr_pool_t *pool)
+{
+   const char rules[] =
+     "[groups]"      NL
+     "g1 = userA"    NL
+     "g2 = userB"    NL
+     "g = @g1, @g2"  NL
+     ""              NL
+     "[/]"           NL
+     "* ="           NL
+     "@g = rw"       NL
+     ;
+
+   svn_stringbuf_t *buf = svn_stringbuf_create(rules, pool);
+   svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
+   svn_authz_t *authz;
+   svn_boolean_t access_granted;
+
+   SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+
+   SVN_ERR(svn_repos_authz_check_access(authz, "repo", "/", "userA",
+                                        svn_authz_write, &access_granted,
+                                        pool));
+   SVN_TEST_ASSERT(access_granted == TRUE);
+
+   SVN_ERR(svn_repos_authz_check_access(authz, "repo", "/", "userB",
+                                        svn_authz_write, &access_granted,
+                                        pool));
+   SVN_TEST_ASSERT(access_granted == TRUE);
+
+   return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+reposful_reposless_stanzas_inherit(apr_pool_t *pool)
+{
+  const char rules[] = 
+    "[groups]"                               NL
+    "company = user1, user2, user3"          NL
+    "customer = customer1, customer2"        NL
+    ""                                       NL
+    "# company can read-write on everything" NL
+    "[/]"                                    NL
+    "@company = rw"                          NL
+    ""                                       NL
+    "[project1:/]"                           NL
+    "@customer = r"                          NL
+    ""                                       NL
+    "[project2:/]"                           NL;
+
+   svn_stringbuf_t *buf = svn_stringbuf_create(rules, pool);
+   svn_stream_t *stream = svn_stream_from_stringbuf(buf, pool);
+   svn_authz_t *authz;
+   svn_boolean_t access_granted;
+
+   SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+
+   SVN_ERR(svn_repos_authz_check_access(authz, "project1", "/foo", "user1",
+                                        svn_authz_write | svn_authz_recursive,
+                                        &access_granted,
+                                        pool));
+   SVN_TEST_ASSERT(access_granted == TRUE);
+
+   return SVN_NO_ERROR;
+}
+
 static int max_threads = 4;
 
 static struct svn_test_descriptor_t test_funcs[] =
@@ -453,6 +520,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test svn_authz__parse"),
     SVN_TEST_PASS2(test_global_rights,
                    "test svn_authz__get_global_rights"),
+    SVN_TEST_PASS2(issue_4741_groups,
+                   "issue 4741 groups"),
+    SVN_TEST_XFAIL2(reposful_reposless_stanzas_inherit,
+                    "[foo:/] inherits [/]"),
     SVN_TEST_NULL
   };
 

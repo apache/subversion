@@ -137,7 +137,7 @@ parse_section(svn_config_t *cfg, HKEY hkey, const char *section,
                                 _("Can't enumerate registry values"));
 
       /* Ignore option names that start with '#', see
-         http://subversion.tigris.org/issues/show_bug.cgi?id=671 */
+         https://issues.apache.org/jira/browse/SVN-671 */
       if (type == REG_SZ && option->data[0] != '#')
         {
           DWORD value_len = (DWORD)value->blocksize;
@@ -272,5 +272,12 @@ svn_config__parse_registry(svn_config_t *cfg, const char *file,
   svn_pool_destroy(subpool);
   return svn_err;
 }
+
+#else  /* !WIN32 */
+
+/* Silence OSX ranlib warnings about object files with no symbols. */
+#include <apr.h>
+extern const apr_uint32_t svn__fake__config_win;
+const apr_uint32_t svn__fake__config_win = 0xdeadbeef;
 
 #endif /* WIN32 */

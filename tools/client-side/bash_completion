@@ -128,7 +128,7 @@ function _svn_complete_target() {
 		COMPREPLY=( $(compgen -d -S '/' -X '*/.*' -- $cur ) )
 		return
 	elif [[ ( $1 == "all" && $cur == ^/* ) || ( "$colon" == ":" && $cur == //*/* ) ]]
-	then	# we already hava a protocoll and host: autocomplete for svn ls ^/bla | svn ls remote_url | svn checkout remote_url
+	then	# we already have a protocol and host: autocomplete for svn ls ^/bla | svn ls remote_url | svn checkout remote_url
 		local p
 		if [ "$colon" == ":" ] ; then
 			p="$prefix$colon"
@@ -248,6 +248,8 @@ _svn()
 	cmds="$cmds patch propdel pdel propedit pedit propget pget proplist"
 	cmds="$cmds plist propset pset relocate resolve resolved revert status"
 	cmds="$cmds switch unlock update upgrade"
+	cmds="$cmds x-shelf-diff x-shelf-drop x-shelf-list x-shelf-list-by-paths"
+	cmds="$cmds x-shelf-log x-shelf-save x-shelve x-shelves x-unshelve"
 
 	# help options have a strange command status...
 	local helpOpts='--help -h'
@@ -445,7 +447,7 @@ _svn()
 
 	    # then we have an argument
 	    if [[ $cmd = 'merge' && ! $URL ]] ; then
-              # fist argument is the source URL for the merge
+              # first argument is the source URL for the merge
 	      URL=$opt
 	    fi
 
@@ -844,9 +846,11 @@ _svn()
 
 	# otherwise build possible options for the command
 	pOpts="--username --password --no-auth-cache --non-interactive \
+	       --password-from-stdin \
 	       --trust-server-cert-failures \
 	       --force-interactive"
-	mOpts="-m --message -F --file --encoding --force-log --with-revprop"
+	mOpts="-m --message -F --file --encoding --force-log --with-revprop \
+               --editor-cmd"
 	rOpts="-r --revision"
 	qOpts="-q --quiet"
 	nOpts="-N --non-recursive --depth"
@@ -881,20 +885,20 @@ _svn()
                          --force"
 		;;
 	cleanup)
-		cmdOpts="--diff3-cmd $pOpts --include-externals -q --quiet\
-			--remove-ignored --remove-unversioned"
+		cmdOpts="$pOpts --include-externals -q --quiet\
+			--remove-ignored --remove-unversioned --vacuum-pristines"
 		;;
 	commit|ci)
-		cmdOpts="$mOpts $qOpts $nOpts --targets --editor-cmd $pOpts \
+		cmdOpts="$mOpts $qOpts $nOpts --targets $pOpts \
 		         --no-unlock $cOpts --keep-changelists \
 		         --include-externals"
 		;;
 	copy|cp)
-		cmdOpts="$mOpts $rOpts $qOpts --editor-cmd $pOpts --parents \
+		cmdOpts="$mOpts $rOpts $qOpts $pOpts --parents \
 		         --ignore-externals --pin-externals"
 		;;
 	delete|del|remove|rm)
-		cmdOpts="--force $mOpts $qOpts --targets --editor-cmd $pOpts \
+		cmdOpts="--force $mOpts $qOpts --targets $pOpts \
                          --keep-local"
 		;;
 	diff|di)
@@ -914,7 +918,7 @@ _svn()
 		;;
 	import)
 		cmdOpts="--auto-props --no-auto-props $mOpts $qOpts $nOpts \
-		         --no-ignore --editor-cmd $pOpts --force"
+		         --no-ignore $pOpts --force"
 		;;
 	info)
 		cmdOpts="$pOpts $rOpts --targets -R --recursive --depth \
@@ -948,10 +952,10 @@ _svn()
 		         $qOpts -v --verbose --incremental --log"
 		;;
 	mkdir)
-		cmdOpts="$mOpts $qOpts --editor-cmd $pOpts --parents"
+		cmdOpts="$mOpts $qOpts $pOpts --parents"
 		;;
 	move|mv|rename|ren)
-		cmdOpts="$mOpts $rOpts $qOpts --force --editor-cmd $pOpts \
+		cmdOpts="$mOpts $qOpts --force $pOpts \
                          --parents --allow-mixed-revisions"
 		;;
 	patch)
@@ -964,7 +968,7 @@ _svn()
 		[[ $isRevProp || ! $prop ]] && cmdOpts="$cmdOpts --revprop"
 		;;
 	propedit|pedit|pe)
-		cmdOpts="--editor-cmd $pOpts $mOpts --force"
+		cmdOpts="$pOpts $mOpts --force"
 		[[ $isRevProp || ! $prop ]] && \
 		    cmdOpts="$cmdOpts --revprop $rOpts"
 		;;
@@ -1004,7 +1008,7 @@ _svn()
                          $rOpts $cOpts"
 		;;
 	switch|sw)
-		cmdOpts="--relocate $rOpts $nOpts $qOpts $pOpts --diff3-cmd \
+		cmdOpts="$rOpts $nOpts $qOpts $pOpts --diff3-cmd \
                          --force --accept --ignore-externals --set-depth \
 		         --ignore-ancestry"
 		;;
@@ -1019,6 +1023,37 @@ _svn()
 		;;
 	upgrade)
 		cmdOpts="$qOpts $pOpts"
+		;;
+	x-shelf-list-by-paths)
+		cmdOpts="$pOpts"
+		;;
+	x-shelf-diff)
+		cmdOpts="$pOpts --summarize"
+		;;
+	x-shelf-drop)
+		cmdOpts="$pOpts"
+		;;
+	x-shelf-list|x-shelves)
+		cmdOpts="$qOpts $pOpts"
+		;;
+	x-shelf-log)
+		cmdOpts="$qOpts $pOpts"
+		;;
+	x-shelf-save)
+		cmdOpts="--dry-run \
+                         --depth --targets $cOpts \
+                         $mOpts \
+                         $qOpts $pOpts"
+		;;
+	x-shelve)
+		cmdOpts="--keep-local --dry-run \
+                         --depth --targets $cOpts \
+                         $mOpts \
+                         $qOpts $pOpts"
+		;;
+	x-unshelve)
+		cmdOpts="--drop --dry-run \
+                         $qOpts $pOpts"
 		;;
 	*)
 		;;
@@ -1102,9 +1137,9 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create delrevprop deltify dump freeze help hotcopy \
-	      info list-dblogs \
-	      list-unused-dblogs load lock lslocks lstxns pack recover rmlocks \
+	cmds='crashtest create delrevprop deltify dump dump-revprops freeze \
+	      help hotcopy info list-dblogs list-unused-dblogs \
+	      load load-revprops lock lslocks lstxns pack recover rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -1115,7 +1150,7 @@ _svnadmin ()
 	# options that require a parameter
 	# note: continued lines must end '|' continuing lines must start '|'
 	optsParam="-r|--revision|--parent-dir|--fs-type|-M|--memory-cache-size"
-	optsParam="$optsParam|-F|--file"
+	optsParam="$optsParam|-F|--file|--exclude|--include"
 
 	# if not typing an option, or if the previous option required a
 	# parameter, then fallback on ordinary filename expansion
@@ -1130,15 +1165,18 @@ _svnadmin ()
 	case ${COMP_WORDS[1]} in
 	create)
 		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
-		         --fs-type --pre-1.4-compatible --pre-1.5-compatible \
-		         --pre-1.6-compatible --compatible-version"
+		         --fs-type --compatible-version"
 		;;
 	deltify)
-		cmdOpts="-r --revision -q --quiet"
+		cmdOpts="-r --revision -q --quiet -M --memory-cache-size"
 		;;
 	dump)
 		cmdOpts="-r --revision --incremental -q --quiet --deltas \
-		         -M --memory-cache-size -F --file"
+		         -M --memory-cache-size -F --file \
+		         --exclude --include --pattern"
+		;;
+        dump-revprops)
+		cmdOpts="-r --revision -q --quiet -F --file"
 		;;
 	freeze)
 		cmdOpts="-F --file"
@@ -1147,22 +1185,34 @@ _svnadmin ()
 		cmdOpts="$cmds"
 		;;
 	hotcopy)
-		cmdOpts="--clean-logs"
+		cmdOpts="--clean-logs --incremental -q --quiet"
 		;;
 	load)
 		cmdOpts="--ignore-uuid --force-uuid --parent-dir -q --quiet \
 		         --use-pre-commit-hook --use-post-commit-hook \
 		         --bypass-prop-validation -M --memory-cache-size \
-		         --no-flush-to-disk --normalize-props -F --file"
+		         --no-flush-to-disk --normalize-props -F --file \
+		         --ignore-dates -r --revision"
+		;;
+        load-revprops)
+		cmdOpts="-r --revision -q --quiet -F --file \
+		         --bypass-prop-validation --normalize-props \
+		         --force-uuid --no-flush-to-disk"
 		;;
 	lstxns)
         	cmdOpts="-r --revision"
 		;;
 	lock|unlock)
-		cmdOpts="--bypass-hooks"
+		cmdOpts="--bypass-hooks -q --quiet"
+		;;
+	pack)
+		cmdOpts="-M --memory-cache-size -q --quiet"
 		;;
 	recover)
 		cmdOpts="--wait"
+		;;
+	rmlocks)
+		cmdOpts="-q --quiet"
 		;;
 	rmtxns)
 		cmdOpts="-q --quiet"
@@ -1176,7 +1226,9 @@ _svnadmin ()
 		         --use-post-revprop-change-hook"
 		;;
 	verify)
-		cmdOpts="-r --revision -q --quiet"
+		cmdOpts="-r --revision -t --transaction -q --quiet \
+		         --check-normalization --keep-going \
+		         -M --memory-cache-size --metadata-only"
 		;;
 	*)
 		;;
@@ -1255,9 +1307,9 @@ _svndumpfilter ()
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
 	exclude|include)
-		cmdOpts="--drop-empty-revs --renumber-revs
+		cmdOpts="--drop-empty-revs --drop-all-empty-revs --renumber-revs
 		         --skip-missing-merge-sources --targets
-		         --preserve-revprops --quiet"
+		         --preserve-revprops --quiet --pattern"
 		;;
 	help|h|\?)
 		cmdOpts="$cmds"

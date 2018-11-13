@@ -263,7 +263,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         elif val == '2017' or val == '15':
           self.vs_version = '2017'
           self.sln_version = '12.00'
-          self.vcproj_version = '15.0'
+          self.vcproj_version = '14.1'
           self.vcproj_extension = '.vcxproj'
         elif re.match('^20\d+$', val):
           print('WARNING: Unknown VS.NET version "%s",'
@@ -878,16 +878,26 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                int(vermatch.group(4)))
     openssl_version = vermatch.group(1)
 
+    libcrypto = 'libcrypto'
+    libssl = 'libssl'
+    versuffix = '-%d_%d' % version[0:2]
+    if version < (1, 1, 0):
+      libcrypto = 'libeay32'
+      libssl = 'ssleay32'
+      versuffix = ''
+
     self._libraries['openssl'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
-                                                  'ssleay32.lib',
+                                                  '%s.lib' % (libssl,),
                                                   openssl_version,
-                                                  dll_name='ssleay32.dll',
+                                                  dll_name='%s%s.dll' %
+                                                      (libssl, versuffix),
                                                   dll_dir=bin_dir)
 
-    self._libraries['libeay32'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
-                                                    'libeay32.lib',
+    self._libraries['libcrypto'] = SVNCommonLibrary('openssl', inc_dir, lib_dir,
+                                                    '%s.lib' % (libcrypto,),
                                                     openssl_version,
-                                                    dll_name='libeay32.dll',
+                                                    dll_name='%s%s.dll' %
+                                                      (libcrypto, versuffix),
                                                     dll_dir=bin_dir)
 
   def _find_perl(self, show_warnings):
@@ -1057,11 +1067,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       return
 
     try:
-      outfp = subprocess.Popen([os.path.join(jdk_path, 'bin', 'javah.exe'),
-                               '-version'], stdout=subprocess.PIPE).stdout
+      # Apparently a 1.8 javac writes its version output to stderr, while
+      # a 1.10 javac writes it to stdout. To catch them all, we redirect
+      # stderr to stdout.
+      outfp = subprocess.Popen([os.path.join(jdk_path, 'bin', 'javac.exe'),
+                               '-version'], stdout=subprocess.PIPE,
+                               stderr=subprocess.STDOUT).stdout
       line = outfp.read()
       if line:
-        vermatch = re.search(r'"(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)"', line, re.M)
+        vermatch = re.search(r'(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)', line, re.M)
       else:
         vermatch = None
 
@@ -1373,7 +1387,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_sqlite(self, show_warnings):
     "Find the Sqlite library and version"
 
-    minimal_sqlite_version = (3, 7, 12)
+    minimal_sqlite_version = (3, 8, 2)
 
     # For SQLite we support 3 scenarios:
     # - Installed in standard directory layout

@@ -56,6 +56,8 @@ SVN_XML_LIBS = @SVN_XML_LIBS@
 SVN_ZLIB_LIBS = @SVN_ZLIB_LIBS@
 SVN_LZ4_LIBS = @SVN_LZ4_LIBS@
 SVN_UTF8PROC_LIBS = @SVN_UTF8PROC_LIBS@
+SVN_MACOS_PLIST_LIBS = @SVN_MACOS_PLIST_LIBS@
+SVN_MACOS_KEYCHAIN_LIBS = @SVN_MACOS_KEYCHAIN_LIBS@
 
 LIBS = @LIBS@
 
@@ -190,7 +192,10 @@ CXXMAINTAINERFLAGS = @CXXMAINTAINERFLAGS@
 CPPFLAGS = @CPPFLAGS@ $(EXTRA_CPPFLAGS)
 LDFLAGS = @LDFLAGS@ $(EXTRA_LDFLAGS)
 SWIG_LDFLAGS = @SWIG_LDFLAGS@ $(EXTRA_SWIG_LDFLAGS)
-SWIG_CPPFLAGS = @SWIG_CPPFLAGS@ $(EXTRA_CPPFLAGS)
+SWIG_FEATURES = @SWIG_FEATURES@
+SWIG_PY_FEATURES = @SWIG_PY_FEATURES@
+SWIG_PL_FEATURES = @SWIG_PL_FEATURES@
+SWIG_RB_FEATURES = @SWIG_RB_FEATURES@
 
 COMPILE = $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CMAINTAINERFLAGS) $(CFLAGS) $(INCLUDES)
 COMPILE_NOWARN = $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CNOWARNFLAGS) $(CFLAGS) $(INCLUDES)
@@ -215,7 +220,6 @@ COMPILE_SWIG_RB = $(LIBTOOL) $(LTFLAGS) --mode=compile $(SWIG_RB_COMPILE) $(CPPF
 # special compilation for files destined for javahl (i.e. C++)
 COMPILE_JAVAHL_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=compile $(COMPILE_CXX) $(LT_CFLAGS) $(JAVAHL_INCLUDES) -o $@ -c
 COMPILE_JAVAHL_JAVAC = $(JAVAC) $(JAVAC_FLAGS)
-COMPILE_JAVAHL_JAVAH = $(JAVAH)
 COMPILE_JAVAHL_COMPAT_JAVAC = $(JAVAC) $(JAVAC_COMPAT_FLAGS)
 
 # On Mac OS X, export an env variable so that the tests can run without
@@ -390,7 +394,6 @@ JAVAC = @JAVAC@
 JAVADOC = @JAVADOC@
 JAVAC_FLAGS = @JAVAC_FLAGS@
 JAVAC_COMPAT_FLAGS = @JAVAC_COMPAT_FLAGS@
-JAVAH = @JAVAH@
 JAR = @JAR@
 
 JAVA_CLASSPATH=$(abs_srcdir)/subversion/bindings/javahl/src:@JAVA_CLASSPATH@
@@ -491,8 +494,8 @@ revision-install:
 install-static: @INSTALL_STATIC_RULES@
 
 # JavaHL target aliases
-javahl: mkdir-init javahl-java javahl-javah javahl-callback-javah javahl-remote-javah javahl-types-javah javahl-util-javah javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
-install-javahl: javahl install-javahl-java install-javahl-javah install-javahl-lib
+javahl: mkdir-init javahl-java javahl-callback-java javahl-remote-java javahl-types-java javahl-util-java javahl-lib @JAVAHL_TESTS_TARGET@ javahl-compat
+install-javahl: javahl install-javahl-java install-javahl-lib
 javahl-compat: javahl-compat-java @JAVAHL_COMPAT_TESTS_TARGET@
 
 clean-javahl:
@@ -594,6 +597,15 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  fi;                                                                \
 	  if test "$(FSFS_COMPRESSION)" != ""; then                          \
 	    flags="--fsfs-compression $(FSFS_COMPRESSION) $$flags";          \
+	  fi;                                                                \
+	  if test "$(FSFS_DIR_DELTIFICATION)" != ""; then                    \
+	    flags="--fsfs-dir-deltification $(FSFS_DIR_DELTIFICATION) $$flags";\
+	  fi;                                                                \
+	  if test "$(ALLOW_REMOTE_HTTP_CONNECTION)" != ""; then              \
+	    flags="--allow-remote-http-connection $$flags";                  \
+	  fi;                                                                \
+	  if test "$(SVN_BIN_DIR)" != ""; then                               \
+	    flags="--bin $(SVN_BIN_DIR) $$flags";                            \
 	  fi;                                                                \
 	  LD_LIBRARY_PATH='$(auth_plugin_dirs):$(LD_LIBRARY_PATH)'           \
 	  $(PYTHON) $(top_srcdir)/build/run_tests.py                         \
@@ -854,7 +866,7 @@ extraclean-swig-headers: clean-swig-headers
 $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
 
-$(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
+$(SWIG_PL_DIR)/native/Makefile: libsvn_swig_perl $(SWIG_PL_DIR)/native/Makefile.PL
 	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL PREFIX=$(prefix)
 
 # There is a "readlink -f" command on some systems for the same purpose,
@@ -863,9 +875,7 @@ $(SWIG_PL_DIR)/native/Makefile: $(SWIG_PL_DIR)/native/Makefile.PL
 READLINK_PY=$(PYTHON) -c 'import sys,os; print(os.path.realpath(sys.argv[1]))'
 READLINK_PL=$(PERL) -e 'use Cwd; print Cwd::realpath(shift)'
 
-swig-pl_DEPS = autogen-swig-pl libsvn_swig_perl \
-  $(SWIG_PL_DIR)/native/Makefile
-swig-pl: $(swig-pl_DEPS)
+swig-pl: autogen-swig-pl $(SWIG_PL_DIR)/native/Makefile
 	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
 	  for f in $(SWIG_PL_SRC_DIR)/native/*.c ; do \
 	     if [ -e "$$f" ] ; then \

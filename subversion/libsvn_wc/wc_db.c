@@ -6839,7 +6839,7 @@ revert_maybe_raise_moved_away(svn_wc__db_wcroot_t * wcroot,
     }
 
   SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason, &action,
-                                              NULL,
+                                              NULL, NULL,
                                               db, wcroot->abspath,
                                               conflict,
                                               scratch_pool,
@@ -16525,8 +16525,8 @@ db_process_commit_queue(svn_wc__db_t *db,
                                                         iterpool),
                                                     iterpool, iterpool));
 
-              lock_remove_txn(queue->wcroot, cqi->local_relpath, work_item,
-                              iterpool);
+              SVN_ERR(lock_remove_txn(queue->wcroot, cqi->local_relpath,
+                                      work_item, iterpool));
             }
           if (cqi->remove_changelist)
             SVN_ERR(svn_wc__db_op_set_changelist(db,
@@ -16578,12 +16578,12 @@ svn_wc__db_process_commit_queue(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
-                              svn_wc__db_t *db,
-                              const char *wri_abspath,
-                              const char *repos_relpath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
+svn_wc__db_find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
+                                 svn_wc__db_t *db,
+                                 const char *wri_abspath,
+                                 const char *repos_relpath,
+                                 apr_pool_t *result_pool,
+                                 apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *wri_relpath;
@@ -16620,3 +16620,46 @@ svn_wc__find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 
+svn_error_t *
+svn_wc__db_find_working_nodes_with_basename(apr_array_header_t **local_abspaths,
+                                            svn_wc__db_t *db,
+                                            const char *wri_abspath,
+                                            const char *basename,
+                                            svn_node_kind_t kind,
+                                            apr_pool_t *result_pool,
+                                            apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *wri_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &wri_relpath, db,
+                                                wri_abspath, scratch_pool,
+                                                scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+            STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND));
+  SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, basename,
+                            kind_map, kind));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  *local_abspaths = apr_array_make(result_pool, 1, sizeof(const char *));
+
+  while (have_row)
+    {
+      const char *local_relpath;
+      const char *local_abspath;
+
+      local_relpath = svn_sqlite__column_text(stmt, 1, NULL);
+      local_abspath = svn_dirent_join(wcroot->abspath, local_relpath,
+                                      result_pool);
+      APR_ARRAY_PUSH(*local_abspaths, const char *) = local_abspath;
+      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+    }
+
+  return svn_error_trace(svn_sqlite__reset(stmt));
+}

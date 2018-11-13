@@ -53,6 +53,24 @@ Wimp = svntest.testcase.Wimp_deco
 SkipDumpLoadCrossCheck = svntest.testcase.SkipDumpLoadCrossCheck_deco
 Item = svntest.wc.StateItem
 
+def read_rep_cache(repo_dir):
+  """Return the rep-cache contents as a dict {hash: (rev, index, ...)}.
+  """
+  db_path = os.path.join(repo_dir, 'db', 'rep-cache.db')
+  db1 = svntest.sqlite3.connect(db_path)
+  schema1 = db1.execute("pragma user_version").fetchone()[0]
+  # Can't test newer rep-cache schemas with an old built-in SQLite; see the
+  # documentation of STMT_CREATE_SCHEMA_V2 in ../../libsvn_fs_fs/rep-cache-db.sql
+  if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
+    raise svntest.Failure("Can't read rep-cache schema %d using old "
+                          "Python-SQLite version %s < (3,8,2)" %
+                           (schema1,
+                            svntest.sqlite3.sqlite_version_info))
+
+  content = { row[0]: row[1:] for row in
+              db1.execute("select * from rep_cache") }
+  return content
+
 def check_hotcopy_bdb(src, dst):
   "Verify that the SRC BDB repository has been correctly copied to DST."
   ### TODO: This function should be extended to verify all hotcopied files,
@@ -129,6 +147,15 @@ def check_hotcopy_fsfs_fsx(src, dst):
         if src_file == 'rep-cache.db':
           db1 = svntest.sqlite3.connect(src_path)
           db2 = svntest.sqlite3.connect(dst_path)
+          schema1 = db1.execute("pragma user_version").fetchone()[0]
+          schema2 = db2.execute("pragma user_version").fetchone()[0]
+          if schema1 != schema2:
+            raise svntest.Failure("rep-cache schema differs: '%s' vs. '%s'"
+                                  % (schema1, schema2))
+          # Can't test newer rep-cache schemas with an old built-in SQLite.
+          if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
+            continue
+
           rows1 = []
           rows2 = []
           for row in db1.execute("select * from rep_cache order by hash"):
@@ -247,7 +274,8 @@ def patch_format(repo_dir, shard_size):
 
   new_contents = b"\n".join(processed_lines)
   os.chmod(format_path, svntest.main.S_ALL_RW)
-  open(format_path, 'wb').write(new_contents)
+  with open(format_path, 'wb') as f:
+    f.write(new_contents)
 
 def is_sharded(repo_dir):
   """Return whether the FSFS repository REPO_DIR is sharded."""
@@ -746,7 +774,7 @@ def verify_windows_paths_in_repos(sbox):
                  "* Verified revision 0.\n",
                  "* Verified revision 1.\n",
                  "* Verified revision 2.\n"], output)
-  elif svntest.main.fs_has_rep_sharing():
+  elif svntest.main.fs_has_rep_sharing() and not svntest.main.is_fs_type_bdb():
     svntest.verify.compare_and_display_lines(
       "Error while running 'svnadmin verify'.",
       'STDOUT', ["* Verifying repository metadata ...\n",
@@ -768,9 +796,13 @@ def verify_windows_paths_in_repos(sbox):
 def fsfs_file(repo_dir, kind, rev):
   if svntest.main.options.server_minor_version >= 5:
     if svntest.main.options.fsfs_sharding is None:
+      if svntest.main.is_fs_type_fsx():
+        rev = 'r' + rev
       return os.path.join(repo_dir, 'db', kind, '0', rev)
     else:
       shard = int(rev) // svntest.main.options.fsfs_sharding
+      if svntest.main.is_fs_type_fsx():
+        rev = 'r' + rev
       path = os.path.join(repo_dir, 'db', kind, str(shard), rev)
 
       if svntest.main.options.fsfs_packing is None or kind == 'revprops':
@@ -790,6 +822,10 @@ def fsfs_file(repo_dir, kind, rev):
 def verify_incremental_fsfs(sbox):
   """svnadmin verify detects corruption dump can't"""
 
+  if svntest.main.options.fsfs_version is not None and \
+     svntest.main.options.fsfs_version not in [4, 6]:
+    raise svntest.Skip("Unsupported prepackaged repository version")
+
   # setup a repo with a directory 'c:hi'
   # use physical addressing as this is hard to provoke with logical addressing
   sbox.build(create_wc = False,
@@ -807,7 +843,7 @@ def verify_incremental_fsfs(sbox):
   # the listing itself is valid.
   r2 = fsfs_file(sbox.repo_dir, 'revs', '2')
   if r2.endswith('pack'):
-    raise svntest.Skip('Test doesn\'t handle packed revisions')
+    raise svntest.Skip("Test doesn't handle packed revisions")
 
   fp = open(r2, 'wb')
   fp.write(b"""id: 0-2.0.r2/0
@@ -1030,7 +1066,7 @@ def fsfs_recover_old_db_current(sbox):
 def load_with_parent_dir(sbox):
   "'svnadmin load --parent-dir' reparents mergeinfo"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2983. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2983. ##
   sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
@@ -1121,7 +1157,7 @@ def set_uuid(sbox):
 def reflect_dropped_renumbered_revs(sbox):
   "reflect dropped renumbered revs in svn:mergeinfo"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3020. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3020. ##
 
   sbox.build(empty=True)
 
@@ -1313,7 +1349,7 @@ def verify_with_invalid_revprops(sbox):
 #   2) Dump 'SOURCE-REPOS' in a series of incremental dumps and load
 #      each of them to 'TARGET-REPOS'.
 #
-# See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc13
+# See https://issues.apache.org/jira/browse/SVN-3020#desc13
 @Issue(3020)
 def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
   "don't filter mergeinfo revs from incremental dump"
@@ -1499,7 +1535,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 
   # Check the resulting mergeinfo.  We expect the exact same results
   # as Part 3.
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3020#desc16.
+  # See https://issues.apache.org/jira/browse/SVN-3020#desc16.
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'propget', 'svn:mergeinfo', '-R',
                                      sbox.repo_url)
@@ -1510,7 +1546,7 @@ def dont_drop_valid_mergeinfo_during_incremental_loads(sbox):
 def hotcopy_symlink(sbox):
   "'svnadmin hotcopy' replicates symlink"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2591. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2591. ##
 
   # Create a repository.
   sbox.build(create_wc=False, empty=True)
@@ -1616,9 +1652,9 @@ text
   sbox.build(empty=True)
 
   # Try to load the dumpstream, expecting a failure (because of mixed EOLs).
-  exp_err = svntest.verify.RegexListOutput(['svnadmin: E125005',
-                                            'svnadmin: E125005',
-                                            'svnadmin: E125017'],
+  exp_err = svntest.verify.RegexListOutput(['svnadmin: E125005:.*',
+                                            'svnadmin: E125005:.*',
+                                            'svnadmin: E125017:.*'],
                                            match_all=False)
   load_and_verify_dumpstream(sbox, [], exp_err, dumpfile_revisions,
                              False, dump_str, '--ignore-uuid')
@@ -1654,6 +1690,10 @@ text
 def verify_non_utf8_paths(sbox):
   "svnadmin verify with non-UTF-8 paths"
 
+  if svntest.main.options.fsfs_version is not None and \
+     svntest.main.options.fsfs_version not in [4, 6]:
+    raise svntest.Skip("Unsupported prepackaged repository version")
+
   dumpfile = clean_dumpfile()
 
   # Corruption only possible in physically addressed revisions created
@@ -1676,15 +1716,12 @@ def verify_non_utf8_paths(sbox):
     if line == b"A\n":
       # replace 'A' with a latin1 character -- the new path is not valid UTF-8
       fp_new.write(b"\xE6\n")
-    elif line == b"text: 1 279 32 32 d63ecce65d8c428b86f4f8b0920921fe\n":
+    elif line == b"text: 1 340 32 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, PLAIN directories: fix up the representation checksum
-      fp_new.write(b"text: 1 279 32 32 b50b1d5ed64075b5f632f3b8c30cd6b2\n")
-    elif line == b"text: 1 292 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
+      fp_new.write(b"text: 1 340 32 32 f2e93e73272cac0f18fccf16f224eb93\n")
+    elif line == b"text: 1 340 44 32 a6be7b4cf075fd39e6a99eb69a31232b\n":
       # phys, deltified directories: fix up the representation checksum
-      fp_new.write(b"text: 1 292 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
-    elif line == b"text: 1 6 31 31 90f306aa9bfd72f456072076a2bd94f7\n":
-      # log addressing: fix up the representation checksum
-      fp_new.write(b"text: 1 6 31 31 db2d4a0bad5dff0aea9a288dec02f1fb\n")
+      fp_new.write(b"text: 1 340 44 32 f2e93e73272cac0f18fccf16f224eb93\n")
     elif line == b"cpath: /A\n":
       # also fix up the 'created path' field
       fp_new.write(b"cpath: /\xE6\n")
@@ -1746,10 +1783,10 @@ def test_lslocks_and_rmlocks(sbox):
   def expected_output_list(path):
     return [
       "Path: " + path,
-      "UUID Token: opaquelocktoken",
+      "UUID Token: opaquelocktoken:.*",
       "Owner: jrandom",
-      "Created:",
-      "Expires:",
+      "Created:.*",
+      "Expires:.*",
       "Comment \(1 line\):",
       "Locking files",
       "\n", # empty line
@@ -1800,7 +1837,7 @@ def test_lslocks_and_rmlocks(sbox):
 def load_ranges(sbox):
   "'svnadmin load --revision X:Y'"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3734. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3734. ##
   sbox.build(empty=True)
 
   dumpfile_location = os.path.join(os.path.dirname(sys.argv[0]),
@@ -2151,7 +2188,7 @@ def verify_keep_going(sbox):
                                                         sbox.repo_dir)
 
   if (svntest.main.is_fs_log_addressing()):
-    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0"])
+    exp_out = svntest.verify.RegexListOutput([".*Verifying metadata at revision 0.*"])
   else:
     exp_out = svntest.verify.RegexListOutput([".*Verified revision 0.",
                                               ".*Verified revision 1."])
@@ -2520,7 +2557,7 @@ def verify_denormalized_names(sbox):
     ".*Verified revision 7."]
 
   # The BDB backend doesn't do global metadata verification.
-  if (svntest.main.fs_has_rep_sharing()):
+  if (svntest.main.fs_has_rep_sharing() and not svntest.main.is_fs_type_bdb()):
     expected_output_regex_list.insert(0, ".*Verifying repository metadata.*")
 
   if svntest.main.options.fsfs_sharding is not None:
@@ -2842,10 +2879,7 @@ def verify_quickly(sbox):
   "verify quickly using metadata"
 
   sbox.build(create_wc = False)
-  if svntest.main.is_fs_type_fsfs():
-    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
-  else:
-    rev_file = open(fsfs_file(sbox.repo_dir, 'revs', 'r1'), 'r+b')
+  rev_file = open(fsfs_file(sbox.repo_dir, 'revs', '1'), 'r+b')
 
   # set new contents
   rev_file.seek(8)
@@ -3350,7 +3384,8 @@ def dump_no_op_change(sbox):
   svntest.actions.run_and_verify_svn(expected, [], 'log',  '-v',
                                      sbox2.repo_url + '/bar')
 
-@XFail() # This test will XPASS on FSFS if rep-caching is disabled.
+@XFail(svntest.main.is_fs_type_bdb)
+@XFail(svntest.main.is_fs_type_fsx)
 @Issue(4623)
 def dump_no_op_prop_change(sbox):
   "svnadmin dump with no-op property change"
@@ -3443,7 +3478,8 @@ def load_from_file(sbox):
   sbox.build(empty=True)
 
   file = sbox.get_tempname()
-  open(file, 'wb').writelines(clean_dumpfile())
+  with open(file, 'wb') as f:
+    f.writelines(clean_dumpfile())
   svntest.actions.run_and_verify_svnadmin2(None, [],
                                            0, 'load', '--file', file,
                                            '--ignore-uuid', sbox.repo_dir)
@@ -3455,6 +3491,434 @@ def load_from_file(sbox):
   svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
                                      'update', sbox.wc_dir)
   svntest.actions.verify_disk(sbox.wc_dir, expected_tree, check_props=True)
+
+def dump_exclude(sbox):
+  "svnadmin dump with excluded paths"
+
+  sbox.build(create_wc=False)
+
+  # Dump repository with /A/D/H and /A/B/E paths excluded.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/A/D/H',
+                                                       '--exclude', '/A/B/E',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    # '/A/D/H' and '/A/B/E' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /A\n'),
+    re.escape('   A /A/B\n'),
+    re.escape('   A /A/B/F\n'),
+    re.escape('   A /A/B/lambda\n'),
+    re.escape('   A /A/C\n'),
+    re.escape('   A /A/D\n'),
+    re.escape('   A /A/D/G\n'),
+    re.escape('   A /A/D/G/pi\n'),
+    re.escape('   A /A/D/G/rho\n'),
+    re.escape('   A /A/D/G/tau\n'),
+    re.escape('   A /A/D/gamma\n'),
+    re.escape('   A /A/mu\n'),
+    re.escape('   A /iota\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_exclude_copysource(sbox):
+  "svnadmin dump with excluded copysource"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create default repository structure.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches',
+                                     sbox.repo_url + '/tags',
+                                     "-m", "Create repository structure.")
+
+  # Create a branch.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "copy",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches/branch1',
+                                     "-m", "Create branch.")
+
+  # Dump repository with /trunk excluded.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/trunk',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r2\ .*\n',
+    re.escape('Changed paths:\n'),
+    # Simple add, not copy.
+    re.escape('   A /branches/branch1\n'),
+    '-+\\n',
+    'r1\ .*\n',
+    # '/trunk' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /branches\n'),
+    re.escape('   A /tags\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_include(sbox):
+  "svnadmin dump with included paths"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories.
+  # Note that we can't use greek tree as it contains only two top-level
+  # nodes. Including non top-level nodes (e.g. '--include /A/B/E') will
+  # produce unloadable dump for now.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/A',
+                                     sbox.repo_url + '/B',
+                                     sbox.repo_url + '/C',
+                                     "-m", "Create folder.")
+
+  # Dump repository with /A and /C paths included.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/A',
+                                                       '--include', '/C',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    # '/B' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /A\n'),
+    re.escape('   A /C\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_not_include_copysource(sbox):
+  "svnadmin dump with not included copysource"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create default repository structure.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches',
+                                     sbox.repo_url + '/tags',
+                                     "-m", "Create repository structure.")
+
+  # Create a branch.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "copy",
+                                     sbox.repo_url + '/trunk',
+                                     sbox.repo_url + '/branches/branch1',
+                                     "-m", "Create branch.")
+
+  # Dump repository with only /branches included.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/branches',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r2\ .*\n',
+    re.escape('Changed paths:\n'),
+    # Simple add, not copy.
+    re.escape('   A /branches/branch1\n'),
+    '-+\\n',
+    'r1\ .*\n',
+    # Only '/branches' is added in r1.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /branches\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_exclude_by_pattern(sbox):
+  "svnadmin dump with paths excluded by pattern"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/aaa',
+                                     sbox.repo_url + '/aab',
+                                     sbox.repo_url + '/aac',
+                                     sbox.repo_url + '/bbc',
+                                     "-m", "Create repository structure.")
+
+  # Dump with paths excluded by pattern.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/aa?',
+                                                       '--pattern',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    re.escape('Changed paths:\n'),
+    # Only '/bbc' is added in r1.
+    re.escape('   A /bbc\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_include_by_pattern(sbox):
+  "svnadmin dump with paths included by pattern"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories.
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/aaa',
+                                     sbox.repo_url + '/aab',
+                                     sbox.repo_url + '/aac',
+                                     sbox.repo_url + '/bbc',
+                                     "-m", "Create repository structure.")
+
+  # Dump with paths included by pattern.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/aa?',
+                                                       '--pattern',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r1\ .*\n',
+    # '/bbc' is not added.
+    re.escape('Changed paths:\n'),
+    re.escape('   A /aaa\n'),
+    re.escape('   A /aab\n'),
+    re.escape('   A /aac\n'),
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def dump_exclude_all_rev_changes(sbox):
+  "svnadmin dump with all revision changes excluded"
+
+  sbox.build(create_wc=False, empty=True)
+
+  # Create a couple of directories (r1).
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/r1a',
+                                     sbox.repo_url + '/r1b',
+                                     sbox.repo_url + '/r1c',
+                                     "-m", "Revision 1.")
+
+  # Create a couple of directories (r2).
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/r2a',
+                                     sbox.repo_url + '/r2b',
+                                     sbox.repo_url + '/r2c',
+                                     "-m", "Revision 2.")
+
+  # Create a couple of directories (r3).
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "mkdir",
+                                     sbox.repo_url + '/r3a',
+                                     sbox.repo_url + '/r3b',
+                                     sbox.repo_url + '/r3c',
+                                     "-m", "Revision 3.")
+
+  # Dump with paths excluded by pattern.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--exclude', '/r2?',
+                                                       '--pattern',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log. Revision properties ('svn:log' etc.) should be empty for r2.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r3 | jrandom | .* | 1 line\\n',
+    re.escape('Changed paths:'),
+    re.escape('   A /r3a'),
+    re.escape('   A /r3b'),
+    re.escape('   A /r3c'),
+    '',
+    re.escape('Revision 3.'),
+    '-+\\n',
+    re.escape('r2 | (no author) | (no date) | 1 line'),
+    '',
+    '',
+    '-+\\n',
+    'r1 | jrandom | .* | 1 line\\n',
+    re.escape('Changed paths:'),
+    re.escape('   A /r1a'),
+    re.escape('   A /r1b'),
+    re.escape('   A /r1c'),
+    '',
+    re.escape('Revision 1.'),
+    '-+\\n',
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v',  sbox2.repo_url)
+
+def dump_invalid_filtering_option(sbox):
+  "dump with --include and --exclude simultaneously"
+
+  sbox.build(create_wc=False, empty=False)
+
+  # Attempt to dump repository with '--include' and '--exclude' options
+  # specified simultaneously.
+  expected_error = ".*: '--exclude' and '--include' options cannot be used " \
+                   "simultaneously"
+  svntest.actions.run_and_verify_svnadmin(None, expected_error,
+                                          'dump', '-q',
+                                          '--exclude', '/A/D/H',
+                                          '--include', '/A/B/E',
+                                          sbox.repo_dir)
+
+@Issue(4725)
+def load_issue4725(sbox):
+  """load that triggers issue 4725"""
+
+  sbox.build(empty=True)
+
+  sbox.simple_mkdir('subversion')
+  sbox.simple_commit()
+  sbox.simple_mkdir('subversion/trunk')
+  sbox.simple_mkdir('subversion/branches')
+  sbox.simple_commit()
+  sbox.simple_mkdir('subversion/trunk/src')
+  sbox.simple_commit()
+
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       sbox.repo_dir)
+
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump, '-M100')
+
+@Issue(4767)
+def dump_no_canonicalize_svndate(sbox):
+  "svnadmin dump shouldn't canonicalize svn:date"
+
+  sbox.build(create_wc=False, empty=True)
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+
+  # set svn:date in a non-canonical format (not six decimal places)
+  propval = "2015-01-01T00:00:00.0Z"
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
+                                     "propset", "--revprop", "-r0", "svn:date",
+                                     propval,
+                                     sbox.repo_url)
+
+  dump_lines = svntest.actions.run_and_verify_dump(sbox.repo_dir)
+  assert propval + '\n' in dump_lines
+
+def check_recover_prunes_rep_cache(sbox, enable_rep_sharing):
+  """Check 'recover' prunes the rep-cache while enable-rep-sharing is
+     true/false.
+  """
+  # Remember the initial rep cache content.
+  rep_cache_r1 = read_rep_cache(sbox.repo_dir)
+  #print '\n'.join([h + ": " + repr(ref) for h, ref in rep_cache_r1.items()])
+
+  # Commit one new rep and check the rep-cache is extended.
+  sbox.simple_append('iota', 'New line.\n')
+  sbox.simple_commit()
+  rep_cache_r2 = read_rep_cache(sbox.repo_dir)
+  if not (len(rep_cache_r2) == len(rep_cache_r1) + 1):
+    raise svntest.Failure
+
+  fsfs_conf = svntest.main.get_fsfs_conf_file_path(sbox.repo_dir)
+  svntest.main.file_append(fsfs_conf,
+                           # Add a newline in case the existing file doesn't
+                           # end with one.
+                           "\n"
+                           "[rep-sharing]\n"
+                           "enable-rep-sharing = %s\n"
+                           % (('true' if enable_rep_sharing else 'false'),))
+
+  # Break r2 in such a way that 'recover' will discard it
+  head_rev_path = fsfs_file(sbox.repo_dir, 'revs', '2')
+  os.remove(head_rev_path)
+  current_path = os.path.join(sbox.repo_dir, 'db', 'current')
+  svntest.main.file_write(current_path, '1\n')
+
+  # Recover back to r1.
+  svntest.actions.run_and_verify_svnadmin(None, [],
+                                          "recover", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnlook(['1\n'], [], 'youngest',
+                                         sbox.repo_dir)
+
+  # Check the rep-cache is pruned.
+  rep_cache_recovered = read_rep_cache(sbox.repo_dir)
+  if not (rep_cache_recovered == rep_cache_r1):
+    raise svntest.Failure
+
+@Issue(4077)
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.python_sqlite_can_read_without_rowid)
+def recover_prunes_rep_cache_when_enabled(sbox):
+  "recover prunes rep cache when enabled"
+  sbox.build()
+
+  check_recover_prunes_rep_cache(sbox, enable_rep_sharing=True)
+
+@Issue(4077)
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.python_sqlite_can_read_without_rowid)
+def recover_prunes_rep_cache_when_disabled(sbox):
+  "recover prunes rep cache when disabled"
+  sbox.build()
+
+  check_recover_prunes_rep_cache(sbox, enable_rep_sharing=False)
 
 ########################################################################
 # Run the tests
@@ -3520,7 +3984,19 @@ test_list = [ None,
               dump_no_op_prop_change,
               load_no_flush_to_disk,
               dump_to_file,
-              load_from_file
+              load_from_file,
+              dump_exclude,
+              dump_exclude_copysource,
+              dump_include,
+              dump_not_include_copysource,
+              dump_exclude_by_pattern,
+              dump_include_by_pattern,
+              dump_exclude_all_rev_changes,
+              dump_invalid_filtering_option,
+              load_issue4725,
+              dump_no_canonicalize_svndate,
+              recover_prunes_rep_cache_when_enabled,
+              recover_prunes_rep_cache_when_disabled,
              ]
 
 if __name__ == '__main__':

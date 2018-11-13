@@ -9,11 +9,11 @@ use v5.10.0; # needed for $^V
 # experimental and "subject to change" in v5.18 (see perl5180delta).  Every
 # use of it now triggers a warning.
 #
-# As of Perl v5.24.1, the semantics of given/when provided by Perl are
+# As of Perl v5.26.1, the semantics of given/when provided by Perl are
 # compatible with those expected by the script, so disable the warning for
 # those Perls.  But don't try to disable the the warning category on Perls
 # that don't know that category, since that breaks compilation.
-no if (v5.17.0 le $^V and $^V le v5.24.1),
+no if (v5.17.0 le $^V and $^V le v5.26.1),
    warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -791,7 +791,7 @@ sub vote {
 
     # Add to state votes that aren't '+0' or 'edit'
     $state->{$_->{digest}}++ for grep
-                                   +{ qw/-1 t -0 t +1 t/ }->{$_->{vote}},
+                                 +($_->{approval} or $_->{vote} =~ /^(-1|-0|[+]1)$/),
                                  @votesarray;
   }
 }
@@ -1279,7 +1279,7 @@ sub nominate_main {
   # Open the file in line-mode (not paragraph-mode).
   my @STATUS;
   tie @STATUS, "Tie::File", $STATUS, recsep => "\n";
-  my ($index) = grep { $STATUS[$_] =~ /^Veto/ } (0..$#STATUS);
+  my ($index) = grep { $STATUS[$_] =~ /^Veto|^Approved/ } (0..$#STATUS);
   die "Couldn't find where to add an entry" unless $index;
 
   # Add an empty line if needed.
@@ -1297,7 +1297,8 @@ sub nominate_main {
   # Done!
   system "$SVN diff -- $STATUS";
   if (prompt "Commit this nomination? ") {
-    system "$SVN commit -m '* STATUS: Nominate r$revnums[0].' -- $STATUS";
+    my $header = join ', ', map "r$_", @revnums;
+    system "$SVN commit -m '* STATUS: Nominate $header.' -- $STATUS";
     exit $?;
   }
   elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {

@@ -173,7 +173,10 @@ public:
     {
       Iterator iter(get_iterator());
       while (iter.has_next())
-        function(T(m_env, NativeT(iter.next())));
+        {
+          ::Java::LocalFrame frame(m_env);
+          function(T(m_env, NativeT(iter.next())));
+        }
       return function;
     }
 };

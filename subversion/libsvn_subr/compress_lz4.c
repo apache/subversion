@@ -27,7 +27,7 @@
 
 #include "svn_private_config.h"
 
-#if SVN_INTERNAL_LZ4
+#ifdef SVN_INTERNAL_LZ4
 #include "lz4/lz4internal.h"
 #else
 #include <lz4.h>
@@ -125,4 +125,20 @@ svn__decompress_lz4(const void *data, apr_size_t len,
   out->len = decompressed_data_len;
 
   return SVN_NO_ERROR;
+}
+
+const char *
+svn_lz4__compiled_version(void)
+{
+  static const char lz4_version_str[] = APR_STRINGIFY(LZ4_VERSION_MAJOR) "." \
+                                        APR_STRINGIFY(LZ4_VERSION_MINOR) "." \
+                                        APR_STRINGIFY(LZ4_VERSION_RELEASE);
+
+  return lz4_version_str;
+}
+
+int
+svn_lz4__runtime_version(void)
+{
+  return LZ4_versionNumber();
 }

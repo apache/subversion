@@ -610,7 +610,8 @@ def export_file_overwrite_fails(sbox):
   os.mkdir(tmpdir)
 
   # Run it for source local
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn([], '.*exist.*',
                                      'export', iota_path, tmpdir)
 
@@ -621,7 +622,8 @@ def export_file_overwrite_fails(sbox):
   svntest.actions.verify_disk(tmpdir, expected_disk)
 
   # Run it for source URL
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn([], '.*exist.*',
                                      'export', iota_url, tmpdir)
 
@@ -721,7 +723,7 @@ def export_working_copy_ignoring_keyword_translation(sbox):
 def export_with_url_unsafe_characters(sbox):
   "export file with URL unsafe characters"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3683 ##
+  ## See https://issues.apache.org/jira/browse/SVN-3683 ##
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -904,14 +906,16 @@ def export_file_overwrite_with_force(sbox):
       })
 
   # Run it for WC export
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput,
                                      [], 'export', '--force',
                                      iota_path, tmpdir)
   svntest.actions.verify_disk(tmpdir, expected_disk)
 
   # Run it for URL export
-  open(os.path.join(tmpdir, 'iota'), 'w').write(not_iota_contents)
+  with open(os.path.join(tmpdir, 'iota'), 'w') as f:
+    f.write(not_iota_contents)
   svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput,
                                      [], 'export', '--force',
                                      iota_url, tmpdir)

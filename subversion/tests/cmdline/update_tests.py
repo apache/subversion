@@ -480,7 +480,7 @@ def update_to_rev_zero(sbox):
 def receive_overlapping_same_change(sbox):
   "overlapping identical changes should not conflict"
 
-  ### (See http://subversion.tigris.org/issues/show_bug.cgi?id=682.)
+  ### (See https://issues.apache.org/jira/browse/SVN-682.)
   ###
   ### How this test works:
   ###
@@ -6719,6 +6719,7 @@ def update_conflict_details(sbox):
 # Keywords should be updated in local file even if text change is shortcut
 # (due to the local change being the same as the incoming change, for example).
 @XFail()
+@Issue(4585)
 def update_keywords_on_shortcut(sbox):
   "update_keywords_on_shortcut"
 
@@ -6840,6 +6841,21 @@ def update_delete_switched(sbox):
   svntest.actions.run_and_verify_update(wc_dir, None, None, expected_status,
                                         [], False, sbox.ospath('A'), '-r', 0)
 
+@XFail()
+def update_add_missing_local_add(sbox):
+  "update adds missing local addition"
+  
+  sbox.build(read_only=True)
+  
+  # Note that updating 'A' to r0 doesn't reproduce this issue...
+  sbox.simple_update('', revision='0')
+  sbox.simple_mkdir('A')
+  sbox.simple_add_text('mumumu', 'A/mu')
+  os.unlink(sbox.ospath('A/mu'))
+  os.rmdir(sbox.ospath('A'))
+  
+  sbox.simple_update()
+
 #######################################################################
 # Run the tests
 
@@ -6930,6 +6946,7 @@ test_list = [ None,
               update_add_conflicted_deep,
               missing_tmp_update,
               update_delete_switched,
+              update_add_missing_local_add,
              ]
 
 if __name__ == '__main__':

@@ -55,19 +55,8 @@ AC_DEFUN(SVN_LIB_MACOS_PLIST,
     #error ProperyList API unavailable.
     #endif
   ]],[[]])],[
-    dnl ### Hack.  We should only need to pass the -framework options when
-    dnl linking libsvn_subr, since it is the only library that uses Keychain.
-    dnl
-    dnl Unfortunately, libtool 1.5.x doesn't track transitive dependencies for
-    dnl OS X frameworks like it does for normal libraries, so we need to
-    dnl explicitly pass the option to all the users of libsvn_subr to allow
-    dnl static builds to link successfully.
-    dnl
-    dnl This does mean that all executables we link will be linked directly
-    dnl to these frameworks - even when building shared libraries - but that
-    dnl shouldn't cause any problems.
-
-    LIBS="$LIBS -framework CoreFoundation"
+    SVN_MACOS_PLIST_LIBS="-framework CoreFoundation"
+    AC_SUBST(SVN_MACOS_PLIST_LIBS)
     AC_DEFINE([SVN_HAVE_MACOS_PLIST], [1],
               [Is Mac OS property list API available?])
     AC_MSG_RESULT([yes])
@@ -97,9 +86,8 @@ AC_DEFUN(SVN_LIB_MACOS_KEYCHAIN,
       #error KeyChain API unavailable.
       #endif
     ]],[[]])],[
-      dnl ### Hack, see SVN_LIB_MACOS_PLIST
-      LIBS="$LIBS -framework Security"
-      LIBS="$LIBS -framework CoreServices"
+      SVN_MACOS_KEYCHAIN_LIBS="-framework Security -framework CoreServices"
+      AC_SUBST(SVN_MACOS_KEYCHAIN_LIBS)
       AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
       AC_MSG_RESULT([yes])
     ],[

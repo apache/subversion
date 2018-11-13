@@ -83,9 +83,9 @@ compare_p2l_entry_revision(const void *lhs,
                            const void *rhs)
 {
   const svn_fs_fs__p2l_entry_t *lhs_entry
-    =*(const svn_fs_fs__p2l_entry_t **)lhs;
+    =*(const svn_fs_fs__p2l_entry_t *const *)lhs;
   const svn_fs_fs__p2l_entry_t *rhs_entry
-    =*(const svn_fs_fs__p2l_entry_t **)rhs;
+    =*(const svn_fs_fs__p2l_entry_t *const *)rhs;
 
   if (lhs_entry->offset < rhs_entry->offset)
     return -1;

@@ -71,6 +71,9 @@ typedef struct options_context_t {
   svn_ra_serf__response_handler_t inner_handler;
   void *inner_baton;
 
+  /* Have we received any DAV headers at all? */
+  svn_boolean_t received_dav_header;
+
   const char *activity_collection;
   svn_revnum_t youngest_rev;
 
@@ -165,6 +168,8 @@ capabilities_headers_iterator_callback(void *baton,
       apr_array_header_t *vals = svn_cstring_split(val, ",", TRUE,
                                                    opt_ctx->pool);
 
+      opt_ctx->received_dav_header = TRUE;
+
       /* Right now we only have a few capabilities to detect, so just
          seek for them directly.  This could be written slightly more
          efficiently, but that wouldn't be worth it until we have many
@@ -231,6 +236,11 @@ capabilities_headers_iterator_callback(void *baton,
           /* Use compressed svndiff1 format for servers that properly
              advertise this capability (Subversion 1.10 and greater). */
           session->supports_svndiff1 = TRUE;
+        }
+      if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_LIST, vals))
+        {
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_LIST, capability_yes);
         }
       if (svn_cstring_match_list(SVN_DAV_NS_DAV_SVN_SVNDIFF2, vals))
         {
@@ -384,10 +394,25 @@ options_response_handler(serf_request_t *request,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
                     capability_no);
+      svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_LIST,
+                    capability_no);
 
       /* Then see which ones we can discover. */
       serf_bucket_headers_do(hdrs, capabilities_headers_iterator_callback,
                              opt_ctx);
+
+      /* Bail out early if we're not talking to a DAV server.
+         Note that this check is only valid if we've received a success
+         response; redirects and errors don't count. */
+      if (opt_ctx->handler->sline.code >= 200
+          && opt_ctx->handler->sline.code < 300
+          && !opt_ctx->received_dav_header)
+        {
+          return svn_error_createf
+            (SVN_ERR_RA_DAV_OPTIONS_REQ_FAILED, NULL,
+             _("The server at '%s' does not support the HTTP/DAV protocol"),
+             session->session_url_str);
+        }
 
       /* Assume mergeinfo capability unsupported, if didn't receive information
          about server or repository mergeinfo capability. */

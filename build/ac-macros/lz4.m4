@@ -28,9 +28,21 @@ AC_DEFUN(SVN_LZ4,
   AC_ARG_WITH([lz4],
     [AS_HELP_STRING([--with-lz4=PREFIX|internal],
                     [look for lz4 in PREFIX or use the internal code])],
-    [lz4_prefix="$withval"],
+    [
+      if test "$withval" = internal; then
+        lz4_prefix=internal
+      elif test "$withval" = yes; then
+        lz4_prefix=std
+      else
+        lz4_prefix="$withval"
+      fi
+    ],
     [lz4_prefix=std])
 
+  if test "$lz4_prefix" = "no"; then
+    dnl The user has tried to disable LZ4
+    AC_MSG_ERROR([Subversion requires LZ4])
+  fi
   if test "$lz4_prefix" = "internal"; then
     AC_MSG_NOTICE([using internal lz4])
     AC_DEFINE([SVN_INTERNAL_LZ4], [1],
@@ -42,28 +54,36 @@ AC_DEFUN(SVN_LZ4,
       SVN_LZ4_PREFIX
     fi
     if test "$lz4_found" != "yes"; then
-      AC_MSG_ERROR([Subversion requires LZ4])
+      AC_MSG_ERROR([Subversion requires LZ4 >= r129, or use --with-lz4=internal])
     fi
   fi
   AC_SUBST(SVN_LZ4_INCLUDES)
   AC_SUBST(SVN_LZ4_LIBS)
 ])
 
+dnl LZ4 changed versioning schemes after r131, the next version being 1.7.3, so
+dnl we need to check for both schemes.  We can't use "--atleast-version=1.7.3"
+dnl because that will result in a >= 1 check for the older versioning scheme.
+dnl Instead, fallback to --max-version=3 if the old scheme fails.  This gives a
+dnl little room for major version changes, but won't falsely identify old
+dnl versions as supported.
 AC_DEFUN(SVN_LZ4_STD,
 [
   if test -n "$PKG_CONFIG"; then
     AC_MSG_CHECKING([for lz4 library via pkg-config])
-    if $PKG_CONFIG liblz4 --exists; then
+    if $PKG_CONFIG liblz4 --atleast-version=129 || $PKG_CONFIG liblz4 --max-version=3; then
       AC_MSG_RESULT([yes])
       lz4_found=yes
       SVN_LZ4_INCLUDES=`$PKG_CONFIG liblz4 --cflags`
       SVN_LZ4_LIBS=`$PKG_CONFIG liblz4 --libs`
       SVN_LZ4_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($SVN_LZ4_LIBS)`"
+    else
+      AC_MSG_RESULT([no])
     fi
-  else
+  fi
+  if test "$lz4_found" != "yes"; then
     AC_MSG_NOTICE([lz4 configuration without pkg-config])
-    AC_CHECK_LIB(lz4, LZ4_decompress_safe, [
-      AC_MSG_RESULT([yes])
+    AC_CHECK_LIB(lz4, LZ4_compress_default, [
       lz4_found=yes
       SVN_LZ4_LIBS="-llz4"
     ])
@@ -77,8 +97,7 @@ AC_DEFUN(SVN_LZ4_PREFIX,
   CPPFLAGS="$CPPFLAGS -I$lz4_prefix/include"
   save_ldflags="$LDFLAGS"
   LDFLAGS="$LDFLAGS -L$lz4_prefix/lib"
-  AC_CHECK_LIB(lz4, LZ4_decompress_safe, [
-    AC_MSG_RESULT([yes])
+  AC_CHECK_LIB(lz4, LZ4_compress_default, [
     lz4_found=yes
     SVN_LZ4_INCLUDES="-I$lz4_prefix/include"
     SVN_LZ4_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS(-L$lz4_prefix/lib)` -llz4"

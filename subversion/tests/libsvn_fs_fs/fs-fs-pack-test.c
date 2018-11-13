@@ -1631,8 +1631,8 @@ delta_chain_with_plain(const svn_test_opts_t *opts,
   svn_hash_sets(props, "p", svn_string_create(prop_value->data, pool));
 
   hash_rep = svn_stringbuf_create_empty(pool);
-  svn_hash_write2(props, svn_stream_from_stringbuf(hash_rep, pool), "END",
-                  pool);
+  SVN_ERR(svn_hash_write2(props, svn_stream_from_stringbuf(hash_rep, pool),
+                          "END", pool));
 
   SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));

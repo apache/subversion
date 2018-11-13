@@ -44,7 +44,7 @@
 static svn_error_t *
 version(apr_pool_t *pool)
 {
-  return svn_opt_print_help4(NULL, "svn-wc-db-tester", TRUE, FALSE, FALSE,
+  return svn_opt_print_help5(NULL, "svn-wc-db-tester", TRUE, FALSE, FALSE,
                              NULL, NULL, NULL, NULL, NULL, NULL, pool);
 }
 

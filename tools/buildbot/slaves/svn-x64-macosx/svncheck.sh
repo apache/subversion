@@ -24,15 +24,22 @@ run_tests() {
     ok=true
 
     case "${ra}" in
-        local) check=check;             skipC=;;
-        svn)   check=svnserveautocheck; skipC="SKIP_C_TESTS=1";;
-        dav)   check=davautocheck;      skipC="SKIP_C_TESTS=1";;
+        local) check=check;             more=;;
+        svn)   check=svnserveautocheck; more="SKIP_C_TESTS=1";;
+        dav)   check=davautocheck;      more="SKIP_C_TESTS=1";
+               if [ "${fs}" == "bdb" ]; then
+                   more="${more} APACHE_MPM=prefork"
+               else
+                   more="${more} APACHE_MPM=event"
+               fi;;
         *)     exit 1;;
     esac
 
+    ${allow_remote} && more="${more} ALLOW_REMOTE_HTTP_CONNECTION=1"
+
     echo "============ make check ${ra}+${fs}"
     cd ${absbld}
-    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${skipC} || ok=false
+    make ${check} FS_TYPE=${fs} PARALLEL=${SVNBB_PARALLEL} CLEANUP=1 ${more} || ok=false
 
     # Move any log files to the buildbot work directory
     test -f tests.log && mv tests.log "${abssrc}/.test-logs/tests-${ra}-${fs}.log"
@@ -72,6 +79,7 @@ check_fsfs_v6=false
 check_fsfs_v4=false
 check_fsx=false
 check_bdb=false
+allow_remote=false
 
 while [ ! -z "$1" ]; do
     case "$1" in
@@ -84,6 +92,7 @@ while [ ! -z "$1" ]; do
         fsfs-v4) check_fsfs_v4=true;;
         fsx)     check_fsx=true;;
         bdb)     check_bdb=true;;
+        remote)  allow_remote=true;;
         *)       exit 1;;
     esac
     shift

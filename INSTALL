@@ -147,10 +147,11 @@ I.    INTRODUCTION
          for other languages, you need to have those languages
          available at build time.
 
-      * KDELibs, GNOME Keyring  (OPTIONAL for client)
+      * KDE Framework 5, libsecret, GNOME Keyring (OPTIONAL for client)
 
          Subversion contains optional support for storing passwords in
-         KWallet (KDE 4) or GNOME Keyring.
+         KWallet via KDE Framework 5 libraries (preferred) or kdelibs4,
+         and GNOME Keyring via libsecret (preferred) or GNOME APIs.
 
       * libmagic (OPTIONAL)
 
@@ -430,7 +431,7 @@ I.    INTRODUCTION
 
       12. SQLite  (REQUIRED)
 
-      Subversion requires SQLite version 3.7.12 or above.  You can meet this
+      Subversion requires SQLite version 3.8.2 or above.  You can meet this
       dependency several ways:
         * Use an SQLite amalgamation file.
         * Specify an SQLite installation to use.
@@ -456,19 +457,22 @@ I.    INTRODUCTION
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      15. Qt 4  (Unix only, OPTIONAL)
+      15. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      16. KDELibs 4  (Unix only, OPTIONAL)
+      16. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
+      Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
+      and needs kf5-config to find them. The KDELibs 4 api is also supported.
       KDELibs contains core KDE libraries. Subversion uses libkdecore and libkdeui
       libraries when support for KWallet is enabled. kde4-config is used to get
       some necessary options. pkg-config, D-Bus and Qt 4 are also required.
+
       If you want to build support for KWallet, then pass the '--with-kwallet'
       option to `configure`. If KDE is installed in a non-standard prefix, then
       use:
@@ -526,6 +530,19 @@ I.    INTRODUCTION
       Googlemock can be installed and built in-tree by invoking
 
       $ ./get-dep.sh gmock
+
+      22. LZ4 (OPTIONAL)
+
+      Subversion uses LZ4 compression libary version r129 or above. Configure
+      will attempt to locate the system library by default using pkg-config
+      and known paths.
+
+      If it is installed in a non-standard location, then use:
+
+        --with-lz4=/path/to/liblz4
+
+      If configure should use the version bundled with the sources, use:
+        --with-lz4=internal
 
   D. Documentation
 
@@ -727,8 +744,8 @@ II.   INSTALLATION
         1.3 or later (1.2 for apr-iconv). If you are building from a Subversion
         checkout and have not downloaded Apache 2, then get these 3 libraries
         from https://www.apache.org/dist/apr/.
-      * SQLite 3.7.12 or higher from https://www.sqlite.org/download.html
-        (3.8.0 or higher recommended)
+      * SQLite 3.8.2 or higher from https://www.sqlite.org/download.html
+        (3.8.11.1 or higher recommended)
       * ZLib 1.2 or higher is required and can be obtained from
         http://www.zlib.net/
       * Either a Subversion client binary from
@@ -843,11 +860,7 @@ II.   INSTALLATION
 
   E.4 Building the Binaries
 
-      To build the binaries either follow the instructions here or use
-      build\win32\vc6-build.bat.in after editing its default paths to match
-      yours and saving it as vc6-build.bat.  The vc6-build.bat does a full build
-      using all options so it requires Apache 2 source and the other optional
-      components.
+      To build the binaries either follow these instructions.
 
       Start in the SVN directory you created.
 

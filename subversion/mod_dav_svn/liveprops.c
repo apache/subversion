@@ -423,43 +423,10 @@ insert_prop_internal(const dav_resource *resource,
         if (last_author == NULL)
           return DAV_PROP_INSERT_NOTDEF;
 
-        if (svn_xml_is_xml_safe(last_author->data, last_author->len)
-            || !resource->info->repos->is_svn_client)
-          value = apr_xml_quote_string(scratch_pool, last_author->data, 1);
-        else
-          {
-            /* We are talking to a Subversion client, which will (like any proper
-               xml parser) error out if we produce control characters in XML.
-
-               However Subversion clients process both the generic
-               <creator-displayname /> as the custom element for svn:author.
-
-               Let's skip outputting the invalid characters here to make the XML
-               valid, so clients can see the custom element.
-
-               Subversion Clients will then either use a slightly invalid
-               author (unlikely) or more likely use the second result, which
-               will be transferred with full escaping capabilities.
-
-               We have tests in place to assert proper behavior over the RA layer.
-             */
-            apr_size_t i;
-            svn_stringbuf_t *buf;
-
-            buf = svn_stringbuf_create_from_string(last_author, scratch_pool);
-
-            for (i = 0; i < buf->len; i++)
-              {
-                char c = buf->data[i];
-
-                if (svn_ctype_iscntrl(c))
-                  {
-                    svn_stringbuf_remove(buf, i--, 1);
-                  }
-              }
-
-            value = apr_xml_quote_string(scratch_pool, buf->data, 1);
-          }
+        /* We need to sanitize the LAST_AUTHOR. */
+        value = dav_svn__fuzzy_escape_author(last_author->data,
+                                      resource->info->repos->is_svn_client,
+                                      scratch_pool, scratch_pool);
         break;
       }
 

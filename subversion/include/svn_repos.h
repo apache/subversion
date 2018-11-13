@@ -375,6 +375,24 @@ typedef void (*svn_repos_notify_func_t)(void *baton,
                                         const svn_repos_notify_t *notify,
                                         apr_pool_t *scratch_pool);
 
+/** Callback for filtering repository contents during dump.
+ *
+ * Set @a *include to TRUE to indicate that node, identified by path
+ * @a path in @a root should be included in dump, or set it to @c FALSE
+ * to indicate that node should be excluded (presumably according to state
+ * stored in @a baton).
+ *
+ * Do not assume @a scratch_pool has any lifetime beyond this call.
+ *
+ * @since New in 1.10.
+ */
+typedef svn_error_t * (*svn_repos_dump_filter_func_t)(
+  svn_boolean_t *include,
+  svn_fs_root_t *root,
+  const char *path,
+  void *baton,
+  apr_pool_t *scratch_pool);
+
 /**
  * Allocate an #svn_repos_notify_t structure in @a result_pool, initialize
  * and return it.
@@ -843,7 +861,7 @@ typedef svn_error_t *(*svn_repos_freeze_func_t)(void *baton, apr_pool_t *pool);
  * @since New in 1.8.
  */
 svn_error_t *
-svn_repos_freeze(apr_array_header_t *paths,
+svn_repos_freeze(const apr_array_header_t *paths,
                  svn_repos_freeze_func_t freeze_func,
                  void *freeze_baton,
                  apr_pool_t *pool);
@@ -1018,7 +1036,10 @@ svn_repos_hooks_setenv(svn_repos_t *repos,
  *
  * @a send_copyfrom_args instructs the driver to send 'copyfrom'
  * arguments to the editor's add_file() and add_directory() methods,
- * whenever it deems feasible.
+ * and therefore to send their content as deltas against the copy source,
+ * whenever it deems feasible. The implementation only does so for
+ * add_file(), and only when the file itself is the copy root (not when
+ * the file is part of a copied subtree).
  *
  * Use @a authz_read_func and @a authz_read_baton (if not @c NULL) to
  * avoid sending data through @a editor/@a edit_baton which is not
@@ -1708,11 +1729,11 @@ svn_repos_stat(svn_dirent_t **dirent,
                apr_pool_t *pool);
 
 /**
- * Callback type to be used with @c svn_repos_list.  It will be invoked for
+ * Callback type to be used with svn_repos_list().  It will be invoked for
  * every directory entry found.
  *
  * The full path of the entry is given in @a path and @a dirent contains
- * various additional information.  If @c svn_repos_list has been called
+ * various additional information.  If svn_repos_list() has been called
  * with @a path_info_only set, only the @a kind element of this struct
  * will be valid.
  *
@@ -1733,14 +1754,14 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
  * Walk the sub-tree starting at @a path under @a root up to the given
  * @a depth.  For each directory entry found, @a receiver will be called
  * with @a receiver_baton.  The starting @a path will be reported as well.
- * Because retrieving all elements of a @c svn_dirent_t can be expensive,
+ * Because retrieving all elements of a #svn_dirent_t can be expensive,
  * you may set @a path_info_only to receive only the path name and the node
  * kind.  The entries will be reported ordered by their path.
  *
  * @a patterns is an optional array of <tt>const char *</tt>.  If it is
  * not @c NULL, only those directory entries will be reported whose last
  * path segment matches at least one of these patterns.  This feature uses
- * @c apr_fnmatch for glob matching and requiring '.' to matched by dots
+ * apr_fnmatch() for glob matching and requiring '.' to matched by dots
  * in the path.
  *
  * If @a authz_read_func is not @c NULL, this function will neither report
@@ -1750,7 +1771,7 @@ typedef svn_error_t *(* svn_repos_dirent_receiver_t)(const char *path,
  * @a cancel_func and @a cancel_baton.
  *
  * @a path must point to a directory and @a depth must be at least
- * @c svn_depth_empty.
+ * #svn_depth_empty.
  *
  * Use @a scratch_pool for temporary memory allocation.
  *
@@ -2386,7 +2407,7 @@ svn_repos_fs_get_mergeinfo(svn_mergeinfo_catalog_t *catalog,
  * @note Prior to Subversion 1.9, this function may request delta handlers
  * from @a handler even for empty text deltas.  Starting with 1.9, the
  * delta handler / baton return arguments passed to @a handler will be
- * #NULL unless there is an actual difference in the file contents between
+ * NULL unless there is an actual difference in the file contents between
  * the current and the previous call.
  *
  * @since New in 1.5.
@@ -3310,6 +3331,9 @@ svn_repos_verify_fs(svn_repos_t *repos,
  *            reiterating the existence of previous warnings
  *        ### This is a presentation issue. Caller could do this itself.
  *
+ * If @a filter_func is not @c NULL, it is called for each node being
+ * dumped, allowing the caller to exclude it from dump.
+ *
  * If @a cancel_func is not @c NULL, it is called periodically with
  * @a cancel_baton as argument to see if the client wishes to cancel
  * the dump.
@@ -3329,13 +3353,16 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                    svn_boolean_t include_changes,
                    svn_repos_notify_func_t notify_func,
                    void *notify_baton,
+                   svn_repos_dump_filter_func_t filter_func,
+                   void *filter_baton,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
                    apr_pool_t *pool);
 
 /**
  * Similar to svn_repos_dump_fs4(), but with @a include_revprops and 
- * @a include_changes both set to @c TRUE.
+ * @a include_changes both set to @c TRUE and @a filter_func and
+ * @a filter_baton set to @c NULL.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.9 API.
@@ -3779,7 +3806,7 @@ typedef struct svn_repos_parse_fns3_t
  *
  * @since New in 1.8.
 
- * @since Starting in 1.10, @a parse_fns may contain #NULL pointers for
+ * @since Starting in 1.10, @a parse_fns may contain NULL pointers for
  * those callbacks that the caller is not interested in.
  */
 svn_error_t *

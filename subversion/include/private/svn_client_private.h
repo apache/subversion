@@ -289,15 +289,17 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
  *
  * If MAKE_PARENTS is TRUE and DST_ABSPATH doesn't have an added parent
  * create missing parent directories
+ *
+ * The caller should be holding a WC write lock that allows DST_ABSPATH to
+ * be created, such as on the parent of DST_ABSPATH.
  */
 svn_error_t *
 svn_client__copy_foreign(const char *url,
                          const char *dst_abspath,
-                         svn_opt_revision_t *peg_revision,
-                         svn_opt_revision_t *revision,
+                         const svn_opt_revision_t *peg_revision,
+                         const svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
-                         svn_boolean_t already_locked,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
 
@@ -340,6 +342,127 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
                           svn_ra_session_t *ra_session,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
+
+/** Return a diff processor that will print a Subversion-style
+ * (not git-style) diff.
+ *
+ * @a anchor is optional (may be null), and is the 'anchor' path to prefix
+ * to the diff-processor paths before displaying.
+ *
+ * @a orig_path_1 and @a orig_path_2 are the two main root paths to be
+ * diffed; each may be a URL, a local WC path or a local unversioned path.
+ *
+ * Other arguments are as for svn_client_diff7() etc.
+ */
+svn_error_t *
+svn_client__get_diff_writer_svn(
+                svn_diff_tree_processor_t **diff_processor,
+                const char *anchor,
+                const char *orig_path_1,
+                const char *orig_path_2,
+                const apr_array_header_t *options,
+                const char *relative_to_dir,
+                svn_boolean_t no_diff_added,
+                svn_boolean_t no_diff_deleted,
+                svn_boolean_t show_copies_as_adds,
+                svn_boolean_t ignore_content_type,
+                svn_boolean_t ignore_properties,
+                svn_boolean_t properties_only,
+                svn_boolean_t pretty_print_mergeinfo,
+                const char *header_encoding,
+                svn_stream_t *outstream,
+                svn_stream_t *errstream,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *pool);
+
+/** Output the subtree of @a shelf_version rooted at @a shelf_relpath
+ * as a diff to @a diff_processor.
+ *
+ * ### depth and ignore_ancestry are currently ignored.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_diff(svn_client__shelf_version_t *shelf_version,
+                       const char *shelf_relpath,
+                       svn_depth_t depth,
+                       svn_boolean_t ignore_ancestry,
+                       const svn_diff_tree_processor_t *diff_processor,
+                       apr_pool_t *scratch_pool);
+
+/*** Editor for diff summary ***/
+
+/* Set *DIFF_PROCESSOR to a diff processor that will report a diff summary
+   to SUMMARIZE_FUNC.
+
+   P_ROOT_RELPATH will return a pointer to a string that must be set,
+   before the processor is called, to a prefix that will be found on
+   every DIFF_PROCESSOR relpath, that will be removed before passing
+   the path to SUMMARIZE_FUNC.
+
+   ORIGINAL_TARGET is not used.
+
+   SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
+   created callbacks for each changed item.
+*/
+svn_error_t *
+svn_client__get_diff_summarize_callbacks(
+                        svn_diff_tree_processor_t **diff_processor,
+                        svn_client_diff_summarize_func_t summarize_func,
+                        void *summarize_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
+
+/* Copy a directory tree from SRC_URL @ SRC_PEG_REVISION, operative revision
+ * SRC_OP_REVISION, to DST_ABSPATH in a WC.
+ *
+ * The caller should be holding a WC write lock that allows DST_ABSPATH to
+ * be created, such as on the parent of DST_ABSPATH.
+ *
+ * If RA_SESSION is NOT NULL, it may be used to avoid creating a new
+ * session. The session may point to a different URL after returning.
+ */
+svn_error_t *
+svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
+                                 const char *src_url,
+                                 const svn_opt_revision_t *src_peg_revision,
+                                 const svn_opt_revision_t *src_op_revision,
+                                 const char *dst_abspath,
+                                 svn_boolean_t ignore_externals,
+                                 svn_ra_session_t *ra_session,
+                                 svn_client_ctx_t *ctx,
+                                 apr_pool_t *pool);
+
+/** Send committable changes found in the WC to a delta-editor.
+ *
+ * Committable changes are found in TARGETS:DEPTH:CHANGELISTS.
+ *
+ * Send the changes to EDITOR:EDIT_BATON.
+ *
+ * Compared with svn_client__do_commit(), this (like svn_client_commit6)
+ * handles:
+ *  - condense targets and find committable paths
+ *  - checking only one repository is involved
+ *
+ * Compared with svn_client_commit6(), this does not handle:
+ *  - externals
+ *  - log message
+ *  - revprops
+ *  - checking the commit includes both halves of each local move
+ *  - changing the copy revision of each local move to ~HEAD
+ *  - WC write locks
+ *  - bumping revisions in WC
+ *  - removing locks and changelists in WC
+ */
+svn_error_t *
+svn_client__wc_replay(const apr_array_header_t *targets,
+                      svn_depth_t depth,
+                      const apr_array_header_t *changelists,
+                      const svn_delta_editor_t *editor,
+                      void *edit_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

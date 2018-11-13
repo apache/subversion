@@ -342,8 +342,13 @@ io_check_path(const char *path,
   /* Not using svn_io_stat() here because we want to check the
      apr_err return explicitly. */
   SVN_ERR(cstring_from_utf8(&path_apr, path, pool));
-
+#ifdef WIN32
+  /* on Windows, svn does not handle reparse points or hard links.
+     So ignore the 'resolve_symlinks' flag. */
+  flags = APR_FINFO_MIN;
+#else
   flags = resolve_symlinks ? APR_FINFO_MIN : (APR_FINFO_MIN | APR_FINFO_LINK);
+#endif
   apr_err = apr_stat(&finfo, path_apr, flags, pool);
 
   if (APR_STATUS_IS_ENOENT(apr_err))
@@ -2541,27 +2546,37 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
     {
       apr_finfo_t finfo = { 0 };
 
-      /* In some cases we get size 0 and no error for non files,
-          so we also check for the name. (= cached in apr_file_t) */
+      /* In some cases we get size 0 and no error for non files, so we
+         also check for the name. (= cached in apr_file_t) */
       if (! apr_file_info_get(&finfo, APR_FINFO_SIZE, file) && finfo.fname)
         {
-          /* we've got the file length. Now, read it in one go. */
+          /* In general, there is no guarantee that the given file size is
+             correct, for instance, because the underlying handle could be
+             pointing to a pipe.  We don't know that in advance, so attempt
+             to read *one more* byte than necessary.  If we get an EOF, then
+             we're done and we have succesfully avoided reading the file chunk-
+             by-chunk.  If we don't, we fall through and do so to read the
+             remaining part of the file. */
           svn_boolean_t eof;
-          res_initial_len = (apr_size_t)finfo.size;
+          res_initial_len = (apr_size_t)finfo.size + 1;
           res = svn_stringbuf_create_ensure(res_initial_len, pool);
           SVN_ERR(svn_io_file_read_full2(file, res->data,
                                          res_initial_len, &res->len,
                                          &eof, pool));
           res->data[res->len] = 0;
 
-          *result = res;
-          return SVN_NO_ERROR;
+          if (eof)
+            {
+              *result = res;
+              return SVN_NO_ERROR;
+            }
         }
     }
 
   /* XXX: We should check the incoming data for being of type binary. */
   buf = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
-  res = svn_stringbuf_create_ensure(res_initial_len, pool);
+  if (!res)
+    res = svn_stringbuf_create_ensure(res_initial_len, pool);
 
   /* apr_file_read will not return data and eof in the same call. So this loop
    * is safe from missing read data.  */
@@ -2707,8 +2722,8 @@ svn_io_remove_dir(const char *path, apr_pool_t *pool)
  directory scan.  A previous workaround involving rewinddir is
  problematic on Win32 and some NFS clients, notably NetBSD.
 
- See http://subversion.tigris.org/issues/show_bug.cgi?id=1896 and
- http://subversion.tigris.org/issues/show_bug.cgi?id=3501.
+ See https://issues.apache.org/jira/browse/SVN-1896 and
+ https://issues.apache.org/jira/browse/SVN-3501.
 */
 
 /* Neither windows nor unix allows us to delete a non-empty
@@ -4631,7 +4646,7 @@ svn_io_dir_walk2(const char *dirname,
         }
       else if (finfo.filetype == APR_REG || finfo.filetype == APR_LNK)
         {
-          /* some other directory. pass it to the callback. */
+          /* a regular file or a symlink. pass it to the callback. */
           SVN_ERR(entry_name_to_utf8(&name_utf8, finfo.name, dirname,
                                      subpool));
           full_path = svn_dirent_join(dirname, name_utf8, subpool);

@@ -5,7 +5,7 @@ JavaHL provides a (mostly native, using JNI and javah) implementation of
 a high level Java API for Subversion, which was originally targeted for
 implementors of GUI clients and IDE plug-ins for Subversion.  JavaHL
 currently provides a minimal-but-complete set of APIs which expose the
-core Subversion C API to Java.  It requires a JRE 1.6+ (runtime).
+core Subversion C API to Java.  It requires a JRE 1.8+ (runtime).
 
 It is currently quite mature, and can be considered for production use.
 
@@ -14,7 +14,7 @@ Build system
 ------------
 
 JavaHL should compile and run under Linux, Win32, and Mac OS X with
-JDK 1.6+ and a C++ compiler with a complete implementation of
+JDK 1.8+ and a C++ compiler with a complete implementation of
 C++98 (for example, GCC 3.2 and older cannot compile JavaHL 1.9+).
 
 Its build will produce both a native library (libsvnjavahl-1.so on Unix

@@ -466,6 +466,7 @@ parse_value_continuation_lines(int *pch, parse_context_t *ctx)
               else
                 {
                   /* This is a continuation line. Read it. */
+                  SVN_ERR(parser_ungetc(ctx, ch));
                   SVN_ERR(parser_get_line(ctx, ctx->line_read, &ch));
 
                   /* Trailing whitespace is ignored. */
@@ -1154,6 +1155,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "###                              HTTP operation."                   NL
         "###   http-chunked-requests      Whether to use chunked transfer"   NL
         "###                              encoding for HTTP requests body."  NL
+        "###   http-auth-types            List of HTTP authentication types."NL
         "###   ssl-authority-files        List of files, each of a trusted CA"
                                                                              NL
         "###   ssl-trust-default-ca       Trust the system 'default' CAs"    NL

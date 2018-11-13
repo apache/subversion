@@ -411,6 +411,11 @@ create_tree_conflict(svn_skel_t **conflict_p,
     ? svn_dirent_join(wcroot->abspath,
                       move_src_op_root_relpath, scratch_pool)
     : NULL;
+  const char *move_dst_op_root_abspath
+    = dst_op_root_relpath
+    ? svn_dirent_join(wcroot->abspath,
+                      dst_op_root_relpath, scratch_pool)
+    : NULL;
   const char *old_repos_relpath_part
     = old_repos_relpath && old_version
     ? svn_relpath_skip_ancestor(old_version->path_in_repos,
@@ -468,7 +473,7 @@ create_tree_conflict(svn_skel_t **conflict_p,
 
           SVN_ERR(svn_wc__conflict_read_tree_conflict(&existing_reason,
                                                       &existing_action,
-                                                      &existing_abspath,
+                                                      &existing_abspath, NULL,
                                                       db, wcroot->abspath,
                                                       conflict,
                                                       scratch_pool,
@@ -500,6 +505,7 @@ create_tree_conflict(svn_skel_t **conflict_p,
                      reason,
                      action,
                      move_src_op_root_abspath,
+                     move_dst_op_root_abspath,
                      result_pool,
                      scratch_pool));
 
@@ -4099,7 +4105,7 @@ fetch_conflict_details(int *src_op_depth,
 
   SVN_ERR(svn_wc__conflict_read_tree_conflict(&reason,
                                               action,
-                                              &move_src_op_root_abspath,
+                                              &move_src_op_root_abspath, NULL,
                                               db, local_abspath,
                                               conflict_skel, result_pool,
                                               scratch_pool));

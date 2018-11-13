@@ -4461,7 +4461,7 @@ test_list(const svn_test_opts_t *opts,
   SVN_ERR(svn_repos_list(rev_root, "/A", patterns, svn_depth_infinity, FALSE,
                          NULL, NULL, list_callback, &counter, NULL, NULL,
                          pool));
-  SVN_TEST_ASSERT(counter == 6);
+  SVN_TEST_ASSERT(counter == 7);
 
   return SVN_NO_ERROR;
 }
