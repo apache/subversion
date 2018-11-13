@@ -179,6 +179,7 @@ elif [ -x $ABS_SRCDIR/subversion/svn/svn ]; then
 else
   fail "Run this script from the root of Subversion's build tree!"
 fi
+TESTDIR="subversion/tests/cmdline/svn-test-work"
 
 # Remove any proxy environmental variables that affect wget or curl.
 # We don't need a proxy to connect to localhost and having the proxy
@@ -277,6 +278,8 @@ HTPASSWD=$(get_prog_name htpasswd htpasswd2) \
 [ -x $HTPASSWD ] \
   || fail "HTPASSWD '$HTPASSWD' not executable"
 say "Using '$HTPASSWD'..."
+
+HTTPD_MMN="$($APXS -q HTTPD_MMN)"
 
 LOAD_MOD_DAV=$(get_loadmodule_config mod_dav) \
   || fail "DAV module not found"
@@ -536,21 +539,26 @@ CustomLog           "$HTTPD_ROOT/ops" "%t %u %{SVN-REPOS-NAME}e %{SVN-ACTION}e" 
   #Require           all granted
 </Directory>
 
-Alias /nodavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/nodavroot
-<Directory $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/nodavroot>
+Alias /nodavroot $ABS_BUILDDIR/$TESTDIR/nodavroot
+<Directory $ABS_BUILDDIR/$TESTDIR/nodavroot>
 </Directory>
 
-Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
-<Directory $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot>
+Alias /fsdavroot $ABS_BUILDDIR/$TESTDIR/fsdavroot
+<Directory $ABS_BUILDDIR/$TESTDIR/fsdavroot>
   DAV filesystem
 </Directory>
-
-<Location /svn-test-work/repositories>
 __EOF__
+
 location_common() {
-cat >> "$HTTPD_CFG" <<__EOF__
+  if [ ! -z "$1" ]; then
+    LOCATION="$1"
+  else
+    LOCATION=
+  fi
+  cat >> "$HTTPD_CFG" <<__EOF__
+$LOCATION
   DAV               svn
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/$TESTDIR/authz"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
@@ -560,41 +568,53 @@ cat >> "$HTTPD_CFG" <<__EOF__
   SVNBlockRead      ${BLOCK_READ_SETTING}
 __EOF__
 }
-location_common
-cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+
+# If httpd supports expressions, use them in the main repository location
+if [ "$HTTPD_MMN" -ge "20111025" ]; then
+  location_common '<LocationMatch "^/svn-test-work/(?<REPOSITORIES>repositories)">'
+  cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR" "%{env:MATCH_REPOSITORIES}"
+  Require           valid-user
+  ${SVN_PATH_AUTHZ_LINE}
+</LocationMatch>
+__EOF__
+else
+  location_common '<Location /svn-test-work/repositories>'
+  cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/repositories"
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
-<Location /ddt-test-work/repositories>
 __EOF__
-location_common
+fi
+
+location_common '<Location /ddt-test-work/repositories>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/repositories"
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
   DontDoThatConfigFile "$HTTPD_DONTDOTHAT"
 </Location>
-<Location /svn-test-work/local_tmp/repos>
 __EOF__
-location_common
+
+location_common '<Location /svn-test-work/local_tmp/repos>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/repos"
+  SVNPath           "$ABS_BUILDDIR/$TESTDIR/local_tmp/repos"
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
-<Location /svn-test-work/local_tmp/trojan>
 __EOF__
-location_common
+
+location_common '<Location /svn-test-work/local_tmp/trojan>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/trojan"
+  SVNPath           "$ABS_BUILDDIR/$TESTDIR/local_tmp/trojan"
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
 <Location /authz-test-work/anon>
   DAV               svn
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
+  AuthzSVNAccessFile "$ABS_BUILDDIR/$TESTDIR/authz"
   SVNAdvertiseV2Protocol ${ADVERTISE_V2_PROTOCOL}
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   SVNListParentPath On
@@ -610,55 +630,55 @@ cat >> "$HTTPD_CFG" <<__EOF__
   </IfModule>
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
-<Location /authz-test-work/mixed>
 __EOF__
-location_common
+
+location_common '<Location /authz-test-work/mixed>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
   Require           valid-user
   Satisfy Any
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
-<Location /authz-test-work/mixed-noauthwhenanon>
 __EOF__
-location_common
+
+location_common '<Location /authz-test-work/mixed-noauthwhenanon>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
   Require           valid-user
   AuthzSVNNoAuthWhenAnonymousAllowed On
   SVNPathAuthz On
 </Location>
-<Location /authz-test-work/authn>
 __EOF__
-location_common
+
+location_common '<Location /authz-test-work/authn>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
-<Location /authz-test-work/authn-anonoff>
 __EOF__
-location_common
+
+location_common '<Location /authz-test-work/authn-anonoff>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
   Require           valid-user
   AuthzSVNAnonymous Off
   SVNPathAuthz On
 </Location>
-<Location /authz-test-work/authn-lcuser>
 __EOF__
-location_common
+
+location_common '<Location /authz-test-work/authn-lcuser>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
   Require           valid-user
   AuthzForceUsernameCase Lower
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
-<Location /authz-test-work/authn-group>
 __EOF__
-location_common
+
+location_common '<Location /authz-test-work/authn-group>'
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
   AuthGroupFile     $HTTPD_GROUPS
   Require           group random
   AuthzSVNAuthoritative Off
@@ -669,7 +689,7 @@ cat >> "$HTTPD_CFG" <<__EOF__
 __EOF__
 location_common
 cat >> "$HTTPD_CFG" <<__EOF__
-    SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+    SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
     AuthzSendForbiddenOnFailure On
     Satisfy All
     <RequireAny>
@@ -682,7 +702,7 @@ cat >> "$HTTPD_CFG" <<__EOF__
 __EOF__
 location_common
 cat >> "$HTTPD_CFG" <<__EOF__
-    SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+    SVNParentPath     "$ABS_BUILDDIR/$TESTDIR/local_tmp"
     AuthzSendForbiddenOnFailure On
     Satisfy All
     <RequireAll>
