@@ -3050,6 +3050,15 @@ def peg_rev_on_non_existent_wc_path(sbox):
                                      'cat', '-r2', sbox.ospath('mu3') + '@3')
 
 
+@Issue(4532)
+def diff_previous_revision_of_r0(sbox):
+  """diff -rPREV on WC at revision 0"""
+
+  sbox.build(empty=True)
+  svntest.actions.run_and_verify_svn(None, 'svn: E195002: ',
+                                     'diff', '-rPREV', sbox.ospath(''))
+
+
 # With 'svn mkdir --parents' the target directory may already exist on disk.
 # In that case it was wrongly performing a recursive 'add' on its contents.
 def mkdir_parents_target_exists_on_disk(sbox):
@@ -3302,6 +3311,7 @@ test_list = [ None,
               rm_missing_with_case_clashing_ondisk_item,
               delete_conflicts_one_of_many,
               peg_rev_on_non_existent_wc_path,
+              diff_previous_revision_of_r0,
               mkdir_parents_target_exists_on_disk,
               plaintext_password_storage_disabled,
               filtered_ls,
