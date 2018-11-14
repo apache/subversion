@@ -85,13 +85,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1846403, r1846406
-   Fix issue #4785: foreign repo copy with peg/operative revisions.
-   Justification:
-     It has been broken since first introduced in 1.8.
-   Votes:
-     +1: julianfoad, rhuijben, brane
-
  * r1843888
    Fix issue #4768, repos-to-WC copy with --parents doesn't create directories.
    Justification:
