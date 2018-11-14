@@ -27,10 +27,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1844987
-   Raise an error if someone tries to use -rPREV on a working copy at r0.
-   Justification:
-     Fixes #4532, which is an assertion abort.
-   Votes:
-     +1: brane, rhuijben, julianfoad
