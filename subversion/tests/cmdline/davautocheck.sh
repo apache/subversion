@@ -297,6 +297,9 @@ LOAD_MOD_MIME=$(get_loadmodule_config mod_mime) \
 LOAD_MOD_ALIAS=$(get_loadmodule_config mod_alias) \
   || fail "ALIAS module not found"
 
+LOAD_MOD_ENV=$(get_loadmodule_config mod_env) \
+  || fail "ENV module not found"
+
 # needed for Auth*, Require, etc. directives
 LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
   || {
@@ -451,6 +454,7 @@ $LOAD_MOD_SSL
 $LOAD_MOD_LOG_CONFIG
 $LOAD_MOD_MIME
 $LOAD_MOD_ALIAS
+$LOAD_MOD_ENV
 $LOAD_MOD_UNIXD
 $LOAD_MOD_DAV
 $LOAD_MOD_DAV_FS
@@ -547,6 +551,8 @@ Alias /fsdavroot $ABS_BUILDDIR/$TESTDIR/fsdavroot
 <Directory $ABS_BUILDDIR/$TESTDIR/fsdavroot>
   DAV filesystem
 </Directory>
+
+SetEnv MATCH_REPOSITORIES repositories
 __EOF__
 
 location_common() {
@@ -571,12 +577,13 @@ __EOF__
 
 # If httpd supports expressions, use them in the main repository location
 if [ "$HTTPD_MMN" -ge "20111025" ]; then
-  location_common '<LocationMatch "^/svn-test-work/(?<REPOSITORIES>repositories)">'
+#  location_common '<LocationMatch "^/svn-test-work/(?<REPOSITORIES>repositories)">'
+location_common '<Location /svn-test-work/repositories>'
   cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/$TESTDIR" "%{env:MATCH_REPOSITORIES}"
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
-</LocationMatch>
+</Location>
 __EOF__
 else
   location_common '<Location /svn-test-work/repositories>'
