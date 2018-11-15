@@ -1,3 +1,6 @@
+Issue #SVN-4788 "DAV doesn't handle control characters in paths"
+  https://issues.apache.org/jira/browse/SVN-4788
+
 This branch aims to transport control characters in paths over DAV.
 
 Currently, if a path with a control character exists in the HEAD revision,
