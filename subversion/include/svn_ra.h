@@ -229,7 +229,7 @@ typedef void (*svn_ra_progress_notify_func_t)(apr_off_t progress,
  *
  * @a revision is the target revision number of the received replay report.
  *
- * @a editor and @a edit_baton should provided by the callback implementation.
+ * @a *editor and @a *edit_baton should provided by the callback implementation.
  *
  * @a replay_baton is the baton as originally passed to replay_range.
  *
@@ -253,7 +253,7 @@ typedef svn_error_t *(*svn_ra_replay_revstart_callback_t)(
  *
  * @a revision is the target revision number of the received replay report.
  *
- * @a editor and @a edit_baton should provided by the callback implementation.
+ * @a editor and @a edit_baton are the values provided by the REVSTART callback.
  *
  * @a replay_baton is the baton as originally passed to replay_range.
  *
