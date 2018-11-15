@@ -452,6 +452,28 @@ svn_client__wc_editor(const svn_delta_editor_t **editor_p,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool);
 
+/* Return an editor for applying local modifications to a WC.
+ *
+ * Like svn_client__wc_editor() but with additional options.
+ *
+ * If @a root_dir_add is true, then create and schedule for addition
+ * the root directory of this edit, else assume it is already a versioned,
+ * existing directory.
+ *
+ * If @a ignore_mergeinfo_changes is true, ignore any incoming changes
+ * to the 'svn:mergeinfo' property.
+ */
+svn_error_t *
+svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
+                               void **edit_baton_p,
+                               const char *dst_abspath,
+                               svn_boolean_t root_dir_add,
+                               svn_boolean_t ignore_mergeinfo_changes,
+                               svn_wc_notify_func2_t notify_func,
+                               void *notify_baton,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool);
+
 /** Send committable changes found in the WC to a delta-editor.
  *
  * Committable changes are found in TARGETS:DEPTH:CHANGELISTS.
