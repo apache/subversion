@@ -434,6 +434,24 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
                                  svn_client_ctx_t *ctx,
                                  apr_pool_t *pool);
 
+/** Return an editor for applying local modifications to a WC.
+ *
+ * Return an editor in @a *editor_p, @a *edit_baton_p that will apply
+ * local modifications to the WC subdirectory at @a dst_abspath.
+ *
+ * Send notifications via @a notify_func / @a notify_baton.
+ *
+ * Ignore changes to non-regular property (entry-props, DAV/WC-props).
+ */
+svn_error_t *
+svn_client__wc_editor(const svn_delta_editor_t **editor_p,
+                      void **edit_baton_p,
+                      const char *dst_abspath,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool);
+
 /** Send committable changes found in the WC to a delta-editor.
  *
  * Committable changes are found in TARGETS:DEPTH:CHANGELISTS.
