@@ -6143,6 +6143,9 @@ describe_incoming_edit_list_modified_revs(apr_array_header_t *edits,
   const char *s = "";
   int i;
 
+  if (edits->nelts == 0)
+    return _(" (no revisions found)");
+
   if (edits->nelts <= max_revs_to_display)
     num_revs_to_skip = 0;
   else
