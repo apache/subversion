@@ -3938,7 +3938,7 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
           status != svn_wc__db_status_added)
         continue;
 
-      if (node_kind != victim_node_kind)
+      if (victim_node_kind != svn_node_none && node_kind != victim_node_kind)
         continue;
 
       SVN_ERR(svn_wc__db_is_switched(&is_wcroot, &is_switched, NULL,
