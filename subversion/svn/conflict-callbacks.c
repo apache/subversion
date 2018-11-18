@@ -446,6 +446,10 @@ static const resolver_option_t builtin_resolver_options[] =
   { "m", svn_client_conflict_option_sibling_move_file_text_merge },
   { "m", svn_client_conflict_option_sibling_move_dir_merge },
 
+  /* Options for incoming move vs local move. */
+  { "m", svn_client_conflict_option_both_moved_file_merge },
+  { "M", svn_client_conflict_option_both_moved_file_move_merge },
+
   { NULL }
 };
 
