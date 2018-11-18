@@ -30,12 +30,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.10.x-r1846299
    Votes:
-     +1: stsp
-     -1: brane (without r1846844) -- Needs backport branch:
-     .../subversion/libsvn_client/conflicts.c:7726:13: error: implicit declaration of function
-           'svn_wc_revert6' [-Werror,-Wimplicit-function-declaration]
-           err = svn_wc_revert6(ctx->wc_ctx, local_abspath, svn_depth_infinity,
-                 ^
+     +1: stsp, brane
 
 Veto-blocked changes:
 =====================
