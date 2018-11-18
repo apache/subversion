@@ -29,6 +29,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1846299
+   Add resolver support for unversioned directories during update/switch.
+   Justification:
+     Support or unversioned files has already been backported.
+     We should support directories as well for consistency.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
