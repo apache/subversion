@@ -27,7 +27,7 @@ Candidate changes:
    Justification:
      Misleading output from conflict resolver.
    Votes:
-     +1: stsp
+     +1: stsp, danielsh
 
  * r1846299
    Add resolver support for unversioned directories during update/switch.
