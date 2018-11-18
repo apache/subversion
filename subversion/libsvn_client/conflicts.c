@@ -8803,7 +8803,6 @@ resolve_both_moved_file_text_merge(svn_client_conflict_option_t *option,
   svn_client_conflict_option_id_t option_id;
   const char *victim_abspath;
   const char *local_moved_to_abspath;
-  svn_wc_conflict_reason_t local_change;
   svn_wc_operation_t operation;
   const char *lock_abspath;
   svn_error_t *err;
@@ -8831,7 +8830,6 @@ resolve_both_moved_file_text_merge(svn_client_conflict_option_t *option,
   apr_array_header_t *local_moves;
 
   victim_abspath = svn_client_conflict_get_local_abspath(conflict);
-  local_change = svn_client_conflict_get_local_change(conflict);
   operation = svn_client_conflict_get_operation(conflict);
   incoming_details = conflict->tree_conflict_incoming_details;
   if (incoming_details == NULL || incoming_details->moves == NULL)
