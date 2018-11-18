@@ -22,21 +22,23 @@ Candidate changes:
    Votes:
      +1: brane
 
-Veto-blocked changes:
-=====================
-
  * r1846299
    Add resolver support for unversioned directories during update/switch.
    Justification:
      Support or unversioned files has already been backported.
      We should support directories as well for consistency.
+   Branch:
+     ^/subversion/branches/1.10.x-r1846299
    Votes:
      +1: stsp
-     -1: brane -- Needs backport branch:
+     -1: brane (without r1846844) -- Needs backport branch:
      .../subversion/libsvn_client/conflicts.c:7726:13: error: implicit declaration of function
            'svn_wc_revert6' [-Werror,-Wimplicit-function-declaration]
            err = svn_wc_revert6(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                  ^
+
+Veto-blocked changes:
+=====================
 
 Approved changes:
 =================
