@@ -22,23 +22,23 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1846704
-   Fix SVN-4717 "tree conflict message ends a sentence with a colon".
-   Justification:
-     Misleading output from conflict resolver.
-   Votes:
-     +1: stsp, danielsh
-
  * r1846299
    Add resolver support for unversioned directories during update/switch.
    Justification:
      Support or unversioned files has already been backported.
      We should support directories as well for consistency.
    Votes:
-     +1: stsp
+     +1: stsp, brane
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1846704
+   Fix SVN-4717 "tree conflict message ends a sentence with a colon".
+   Justification:
+     Misleading output from conflict resolver.
+   Votes:
+     +1: stsp, danielsh, brane
