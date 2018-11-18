@@ -2626,6 +2626,7 @@ test_merge_incoming_delete_vs_local_delete(const svn_test_opts_t *opts,
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
       svn_client_conflict_option_incoming_delete_accept,
       -1 /* end of list */
     };
@@ -2639,6 +2640,7 @@ test_merge_incoming_delete_vs_local_delete(const svn_test_opts_t *opts,
     svn_client_conflict_option_id_t expected_opts[] = {
       svn_client_conflict_option_postpone,
       svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
       svn_client_conflict_option_incoming_delete_accept,
       -1 /* end of list */
     };
