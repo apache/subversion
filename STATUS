@@ -22,12 +22,8 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1846704
-   Fix SVN-4717 "tree conflict message ends a sentence with a colon".
-   Justification:
-     Misleading output from conflict resolver.
-   Votes:
-     +1: stsp, danielsh
+Veto-blocked changes:
+=====================
 
  * r1846299
    Add resolver support for unversioned directories during update/switch.
@@ -36,9 +32,18 @@ Candidate changes:
      We should support directories as well for consistency.
    Votes:
      +1: stsp
-
-Veto-blocked changes:
-=====================
+     -1: brane -- Needs backport branch:
+     .../subversion/libsvn_client/conflicts.c:7726:13: error: implicit declaration of function
+           'svn_wc_revert6' [-Werror,-Wimplicit-function-declaration]
+           err = svn_wc_revert6(ctx->wc_ctx, local_abspath, svn_depth_infinity,
+                 ^
 
 Approved changes:
 =================
+
+ * r1846704
+   Fix SVN-4717 "tree conflict message ends a sentence with a colon".
+   Justification:
+     Misleading output from conflict resolver.
+   Votes:
+     +1: stsp, danielsh, brane
