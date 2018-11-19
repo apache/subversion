@@ -68,6 +68,8 @@ struct edit_baton_t
   /* True => filter out any incoming svn:mergeinfo property changes */
   svn_boolean_t ignore_mergeinfo_changes;
 
+  svn_ra_session_t *ra_session;
+
   svn_wc_context_t *wc_ctx;
   svn_client_ctx_t *ctx;
   svn_wc_notify_func2_t notify_func;
@@ -207,6 +209,28 @@ dir_open(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Are RA_SESSION and the versioned *parent* dir of WC_TARGET_ABSPATH in
+ * the same repository?
+ */
+static svn_error_t *
+is_same_repository(svn_boolean_t *same_repository,
+                   svn_ra_session_t *ra_session,
+                   const char *wc_target_abspath,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  const char *src_uuid, *dst_uuid;
+
+  /* Get the repository UUIDs of copy source URL and WC parent path */
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &src_uuid, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(NULL /*root_url*/, &dst_uuid,
+                                    svn_dirent_dirname(wc_target_abspath,
+                                                       scratch_pool),
+                                    ctx, scratch_pool, scratch_pool));
+  *same_repository = (strcmp(src_uuid, dst_uuid) == 0);
+  return SVN_NO_ERROR;
+}
+
 static svn_error_t *
 dir_add(const char *path,
         void *parent_baton,
@@ -222,18 +246,20 @@ dir_add(const char *path,
 
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     {
-      svn_opt_revision_t copy_src_peg_revision;
+      svn_boolean_t same_repository;
+      svn_boolean_t timestamp_sleep;
 
-      copy_src_peg_revision.kind = svn_opt_revision_number;
-      copy_src_peg_revision.value.number = copyfrom_revision;
+      SVN_ERR(is_same_repository(&same_repository,
+                                 db->eb->ra_session, db->local_abspath,
+                                 db->eb->ctx, db->pool));
 
-      SVN_ERR(svn_client__repos_to_wc_copy_dir(NULL /*timestamp_sleep*/,
+      SVN_ERR(svn_client__repos_to_wc_copy_dir(&timestamp_sleep,
                                                copyfrom_path,
-                                               &copy_src_peg_revision,
-                                               &copy_src_peg_revision,
+                                               copyfrom_revision,
                                                db->local_abspath,
                                                TRUE /*ignore_externals*/,
-                                               NULL /*ra_session*/,
+                                               same_repository,
+                                               db->eb->ra_session,
                                                db->eb->ctx, db->pool));
     }
 
@@ -408,6 +434,24 @@ file_add(const char *path,
 
   SVN_ERR(file_open_or_add(path, parent_baton, &fb));
 
+  if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
+    {
+      svn_boolean_t same_repository;
+      svn_boolean_t timestamp_sleep;
+
+      SVN_ERR(is_same_repository(&same_repository,
+                                 fb->eb->ra_session, fb->local_abspath,
+                                 fb->eb->ctx, fb->pool));
+
+      SVN_ERR(svn_client__repos_to_wc_copy_file(&timestamp_sleep,
+                                                copyfrom_path,
+                                                copyfrom_revision,
+                                                fb->local_abspath,
+                                                same_repository,
+                                                fb->eb->ra_session,
+                                                fb->eb->ctx, fb->pool));
+    }
+
   *file_baton = fb;
   return SVN_NO_ERROR;
 }
@@ -547,6 +591,7 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
                                svn_boolean_t ignore_mergeinfo_changes,
                                svn_wc_notify_func2_t notify_func,
                                void *notify_baton,
+                               svn_ra_session_t *ra_session,
                                svn_client_ctx_t *ctx,
                                apr_pool_t *result_pool)
 {
@@ -558,6 +603,7 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
   eb->root_dir_add = root_dir_add;
   eb->ignore_mergeinfo_changes = ignore_mergeinfo_changes;
 
+  eb->ra_session = ra_session;
   eb->wc_ctx = ctx->wc_ctx;
   eb->ctx = ctx;
   eb->notify_func = notify_func;
@@ -590,6 +636,7 @@ svn_client__wc_editor(const svn_delta_editor_t **editor_p,
                       const char *dst_abspath,
                       svn_wc_notify_func2_t notify_func,
                       void *notify_baton,
+                      svn_ra_session_t *ra_session,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool)
 {
@@ -598,6 +645,7 @@ svn_client__wc_editor(const svn_delta_editor_t **editor_p,
                                          FALSE /*root_dir_add*/,
                                          FALSE /*ignore_mergeinfo_changes*/,
                                          notify_func, notify_baton,
+                                         ra_session,
                                          ctx, result_pool));
   return SVN_NO_ERROR;
 }

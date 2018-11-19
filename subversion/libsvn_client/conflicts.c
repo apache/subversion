@@ -8004,7 +8004,6 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   const char *local_abspath;
   const char *lock_abspath;
   svn_error_t *err;
-  svn_opt_revision_t copy_src_peg_revision;
   svn_boolean_t timestamp_sleep;
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
@@ -8026,9 +8025,6 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   if (corrected_url)
     url = corrected_url;
 
-  copy_src_peg_revision.kind = svn_opt_revision_number;
-  copy_src_peg_revision.value.number = incoming_new_pegrev;
-
   /* ### The following WC modifications should be atomic. */
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
@@ -8047,10 +8043,10 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
 
   err = svn_client__repos_to_wc_copy_dir(&timestamp_sleep,
                                          url,
-                                         &copy_src_peg_revision,
-                                         &copy_src_peg_revision,
+                                         incoming_new_pegrev,
                                          local_abspath,
                                          TRUE, /* we want to ignore externals */
+                                         TRUE /*same_repositories*/,
                                          ra_session, ctx, scratch_pool);
   if (err)
     goto unlock_wc;
