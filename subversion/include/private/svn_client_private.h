@@ -419,6 +419,11 @@ svn_client__get_diff_summarize_callbacks(
  * The caller should be holding a WC write lock that allows DST_ABSPATH to
  * be created, such as on the parent of DST_ABSPATH.
  *
+ * SAME_REPOSITORIES must be true if and only if the source of this copy
+ * is from the same repository at the WC parent of DST_ABSPATH.
+ * If SAME_REPOSITORIES, then fill in the 'copy-from' in the WC target.
+ * If not SAME_REPOSITORIES, then remove any svn:mergeinfo property.
+ *
  * Use RA_SESSION to fetch the data. The session may point to a different
  * URL after returning.
  */
