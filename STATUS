@@ -37,10 +37,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1846704
-   Fix SVN-4717 "tree conflict message ends a sentence with a colon".
-   Justification:
-     Misleading output from conflict resolver.
-   Votes:
-     +1: stsp, danielsh, brane
