@@ -72,11 +72,14 @@ copy_foreign_dir(svn_ra_session_t *ra_session,
   const svn_ra_reporter3_t *reporter;
   void *reporter_baton;
 
+  /* Get a WC editor. It does not need an RA session because we will not
+     be sending it any 'copy from' requests, only 'add' requests. */
   SVN_ERR(svn_client__wc_editor_internal(&editor, &eb,
                                          dst_abspath,
                                          TRUE /*root_dir_add*/,
                                          TRUE /*ignore_mergeinfo_changes*/,
                                          notify_func, notify_baton,
+                                         NULL /*ra_session*/,
                                          ctx, scratch_pool));
 
   SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
