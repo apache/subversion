@@ -833,7 +833,7 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
 }
 
 /* Allocate a new svn_fs_x__dag_path_t node from RESULT_POOL, containing
-   NODE, ENTRY and PARENT, all copied into RESULT_POOL as well.  */
+   NODE, ENTRY and PARENT; NODE and ENTRY are copied into RESULT_POOL.  */
 static svn_fs_x__dag_path_t *
 make_parent_path(dag_node_t *node,
                  const svn_stringbuf_t *entry,
