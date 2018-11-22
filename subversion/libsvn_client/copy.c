@@ -2310,9 +2310,15 @@ struct notification_adjust_baton
 };
 
 /* A svn_wc_notify_func2_t function that wraps BATON->inner_func (whose
- * baton is BATON->inner_baton) and adjusts the notification paths that
- * start with BATON->checkout_abspath to start instead with
- * BATON->final_abspath. */
+ * baton is BATON->inner_baton) to turn the result of a 'checkout' into
+ * what we want to see for a 'copy to WC' operation.
+ *
+ *  - Adjust the notification paths that start with BATON->checkout_abspath
+ *    to start instead with BATON->final_abspath.
+ *  - Change start-of-update notification into a plain WC 'add' for the root.
+ *  - Change checkout 'add' notifications into a plain WC 'add'.
+ *  - Discard 'update_completed' notifications.
+ */
 static void
 notification_adjust_func(void *baton,
                          const svn_wc_notify_t *notify,
@@ -2324,6 +2330,21 @@ notification_adjust_func(void *baton,
 
   relpath = svn_dirent_skip_ancestor(nb->checkout_abspath, notify->path);
   inner_notify->path = svn_dirent_join(nb->final_abspath, relpath, pool);
+
+  /* Convert 'update' notifications to plain 'add' notifications; discard
+     notifications about checkout/update starting/finishing. */
+  if (notify->action == svn_wc_notify_update_started  /* root */
+      || notify->action == svn_wc_notify_update_add)  /* non-root */
+    {
+      inner_notify->action = svn_wc_notify_add;
+    }
+  else if (notify->action == svn_wc_notify_update_update
+           || notify->action == svn_wc_notify_update_completed)
+    {
+      /* update_update happens only for a prop mod on root; the root was
+         already notified so discard this */
+      return;
+    }
 
   if (nb->inner_func)
     nb->inner_func(nb->inner_baton, inner_notify, pool);
@@ -2367,6 +2388,8 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
   SVN_ERR(svn_wc__get_tmpdir(&tmpdir_abspath, ctx->wc_ctx, dst_abspath,
                              scratch_pool, scratch_pool));
 
+  /* Get a temporary path. The crude way we do this is to create a
+     temporary file, remember its name, and let it be deleted immediately. */
   SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_abspath, tmpdir_abspath,
                                    svn_io_file_del_on_close,
                                    scratch_pool, scratch_pool));
@@ -2463,6 +2486,16 @@ svn_client__repos_to_wc_copy_file(svn_boolean_t *timestamp_sleep,
             same_repositories ? src_rev : SVN_INVALID_REVNUM,
             ctx->cancel_func, ctx->cancel_baton,
             scratch_pool));
+  /* Do our own notification for the root node, even if we could possibly
+     have delegated it.  See also issue #2198. */
+  if (ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(dst_abspath, svn_wc_notify_add, scratch_pool);
+
+      notify->kind = svn_node_file;
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
   return SVN_NO_ERROR;
 }
 
@@ -2522,10 +2555,8 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                ignore_externals,
                                                same_repositories,
                                                ra_session, ctx, pool));
-      if (!same_repositories)
-        return SVN_NO_ERROR;
 
-      if (pin_externals)
+      if (same_repositories && pin_externals)
         {
           apr_hash_t *pinned_externals;
           apr_hash_index_t *hi;
@@ -2603,18 +2634,8 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                               TRUE /*squelch_incapable*/,
                                               pool));
       SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
-    }
 
-  /* Do our own notification for the root node, even if we could possibly
-     have delegated it.  See also issue #1552.
-
-     ### Maybe this notification should mention the mergeinfo change. */
-  if (ctx->notify_func2)
-    {
-      svn_wc_notify_t *notify = svn_wc_create_notify(
-                                  dst_abspath, svn_wc_notify_add, pool);
-      notify->kind = pair->src_kind;
-      ctx->notify_func2(ctx->notify_baton2, notify, pool);
+      /* ### Maybe the notification should mention this mergeinfo change. */
     }
 
   return SVN_NO_ERROR;

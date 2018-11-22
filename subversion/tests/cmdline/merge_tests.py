@@ -4966,11 +4966,11 @@ def merge_to_switched_path(sbox):
   A_COPY_D_G_rho_path = sbox.ospath('A_COPY/D/G/rho')
 
   expected = svntest.verify.UnorderedOutput(
-         ["A    " + os.path.join(G_COPY_path, "pi") + "\n",
-          "A    " + os.path.join(G_COPY_path, "rho") + "\n",
-          "A    " + os.path.join(G_COPY_path, "tau") + "\n",
-          "Checked out revision 6.\n",
-          "A         " + G_COPY_path + "\n"])
+         ["A         " + G_COPY_path + "\n",
+          "A         " + os.path.join(G_COPY_path, "pi") + "\n",
+          "A         " + os.path.join(G_COPY_path, "rho") + "\n",
+          "A         " + os.path.join(G_COPY_path, "tau") + "\n",
+          ])
 
   # r7 - Copy A/D/G to A/D/G_COPY and commit.
   svntest.actions.run_and_verify_svn(expected, [], 'copy',
@@ -12848,6 +12848,39 @@ def natural_history_filtering(sbox):
   #      the revisions on 'trunk' which occurred after 'branch2' was copied as
   #      these are not part of 'branch2's natural history.
 
+  def path_join(head, tail):
+    if not head: return tail
+    if not tail: return head
+    return head + '/' + tail
+
+  def greek_file_item(path):
+    if path[-1:].islower():
+      basename = re.sub('.*/', '', path)
+      return Item("This is the file '" + basename + "'.\n")
+    return Item()
+
+  A_paths = [
+    "",
+    "B",
+    "B/lambda",
+    "B/E",
+    "B/E/alpha",
+    "B/E/beta",
+    "B/F",
+    "mu",
+    "C",
+    "D",
+    "D/gamma",
+    "D/G",
+    "D/G/pi",
+    "D/G/rho",
+    "D/G/tau",
+    "D/H",
+    "D/H/chi",
+    "D/H/omega",
+    "D/H/psi",
+    ]
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -12861,68 +12894,16 @@ def natural_history_filtering(sbox):
 
   # r7: Make a second 'branch': Copy A to A_COPY_2
   expected = svntest.verify.UnorderedOutput(
-    ["A    " + os.path.join(A_COPY_2_path, "B") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "lambda") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "E") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "E", "alpha") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "E", "beta") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "F") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "mu") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "C") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "gamma") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G", "pi") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G", "rho") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G", "tau") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H", "chi") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H", "omega") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H", "psi") + "\n",
-     "Checked out revision 6.\n",
-     "A         " + A_COPY_2_path + "\n"])
-  wc_status.add({
-    "A_COPY_2" + "/B"         : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/lambda"  : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/E"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/E/alpha" : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/E/beta"  : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/F"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/mu"        : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/C"         : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D"         : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/gamma"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G/pi"    : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G/rho"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G/tau"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H/chi"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H/omega" : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H/psi"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2"                : Item(status='  ', wc_rev=7),
-    })
-  wc_disk.add({
-    "A_COPY_2"                : Item(),
-    "A_COPY_2" + '/B'         : Item(),
-    "A_COPY_2" + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
-    "A_COPY_2" + '/B/E'       : Item(),
-    "A_COPY_2" + '/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    "A_COPY_2" + '/B/E/beta'  : Item("New content"),
-    "A_COPY_2" + '/B/F'       : Item(),
-    "A_COPY_2" + '/mu'        : Item("This is the file 'mu'.\n"),
-    "A_COPY_2" + '/C'         : Item(),
-    "A_COPY_2" + '/D'         : Item(),
-    "A_COPY_2" + '/D/gamma'   : Item("This is the file 'gamma'.\n"),
-    "A_COPY_2" + '/D/G'       : Item(),
-    "A_COPY_2" + '/D/G/pi'    : Item("This is the file 'pi'.\n"),
-    "A_COPY_2" + '/D/G/rho'   : Item("New content"),
-    "A_COPY_2" + '/D/G/tau'   : Item("This is the file 'tau'.\n"),
-    "A_COPY_2" + '/D/H'       : Item(),
-    "A_COPY_2" + '/D/H/chi'   : Item("New content"),
-    "A_COPY_2" + '/D/H/omega' : Item("This is the file 'omega'.\n"),
-    "A_COPY_2" + '/D/H/psi'   : Item("New content"),
-    })
+    [ "A         " + sbox.ospath(path_join("A_COPY_2", p)) + "\n"
+      for p in A_paths ])
+  wc_status.add(
+    { path_join("A_COPY_2", p) : Item(status='  ', wc_rev=7)
+      for p in A_paths })
+  wc_disk.add(
+    { path_join("A_COPY_2", p) :
+        Item("New content") if p in ['B/E/beta', 'D/G/rho', 'D/H/chi', 'D/H/psi']
+                            else greek_file_item(p)
+      for p in A_paths })
   svntest.actions.run_and_verify_svn(expected, [], 'copy',
                                      sbox.repo_url + "/A",
                                      A_COPY_2_path)

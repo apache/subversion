@@ -3046,13 +3046,12 @@ def mergeinfo_update_elision(sbox):
 
   # Make a branch A/B_COPY
   expected_stdout =  verify.UnorderedOutput([
-     "A    " + sbox.ospath('A/B_COPY/lambda') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/E') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/E/alpha') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/E/beta') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/F') + "\n",
-     "Checked out revision 1.\n",
      "A         " + B_COPY_path + "\n",
+     "A         " + sbox.ospath('A/B_COPY/lambda') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/E') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/E/alpha') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/E/beta') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/F') + "\n",
     ])
   svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_path)

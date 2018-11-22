@@ -1336,25 +1336,23 @@ def mergeinfo_switch_elision(sbox):
 
   # Make branches A/B_COPY_1 and A/B_COPY_2
   expected_stdout = verify.UnorderedOutput([
-     "A    " + sbox.ospath('A/B_COPY_1/lambda') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/E') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/E/alpha') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/E/beta') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/F') + "\n",
-     "Checked out revision 1.\n",
      "A         " + B_COPY_1_path + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/lambda') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/E') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/E/alpha') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/E/beta') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/F') + "\n",
     ])
   svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_1_path)
 
   expected_stdout = verify.UnorderedOutput([
-     "A    " + sbox.ospath('A/B_COPY_2/lambda') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/E') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/E/alpha') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/E/beta') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/F') + "\n",
-     "Checked out revision 1.\n",
      "A         " + B_COPY_2_path + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/lambda') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/E') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/E/alpha') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/E/beta') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/F') + "\n",
     ])
   svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_2_path)

@@ -253,69 +253,48 @@ def set_up_branch(sbox, branch_only = False, nbr_of_branches = 1):
   expected_status = actions.get_virginal_state(wc_dir, 1)
   expected_disk = main.greek_state.copy()
 
+  def path_join(head, tail):
+    if not head: return tail
+    if not tail: return head
+    return head + '/' + tail
+
+  def greek_file_item(path):
+    if path[-1:].islower():
+      basename = re.sub('.*/', '', path)
+      return Item("This is the file '" + basename + "'.\n")
+    return Item()
+
+  A_paths = [
+    "",
+    "B",
+    "B/lambda",
+    "B/E",
+    "B/E/alpha",
+    "B/E/beta",
+    "B/F",
+    "mu",
+    "C",
+    "D",
+    "D/gamma",
+    "D/G",
+    "D/G/pi",
+    "D/G/rho",
+    "D/G/tau",
+    "D/H",
+    "D/H/chi",
+    "D/H/omega",
+    "D/H/psi",
+    ]
   def copy_A(dest_name, rev):
     expected = verify.UnorderedOutput(
-      ["A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "alpha") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "beta") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "F") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "mu") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "C") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "gamma") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "pi") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "rho") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "tau") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "chi") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "omega") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "psi") + "\n",
-       "Checked out revision " + str(rev - 1) + ".\n",
-       "A         " + os.path.join(wc_dir, dest_name) + "\n"])
-    expected_status.add({
-      dest_name + "/B"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/lambda"  : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E/alpha" : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E/beta"  : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/F"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/mu"        : Item(status='  ', wc_rev=rev),
-      dest_name + "/C"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/D"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/gamma"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/pi"    : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/rho"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/tau"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/chi"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/omega" : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
-      dest_name                : Item(status='  ', wc_rev=rev)})
-    expected_disk.add({
-      dest_name                : Item(),
-      dest_name + '/B'         : Item(),
-      dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
-      dest_name + '/B/E'       : Item(),
-      dest_name + '/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-      dest_name + '/B/E/beta'  : Item("This is the file 'beta'.\n"),
-      dest_name + '/B/F'       : Item(),
-      dest_name + '/mu'        : Item("This is the file 'mu'.\n"),
-      dest_name + '/C'         : Item(),
-      dest_name + '/D'         : Item(),
-      dest_name + '/D/gamma'   : Item("This is the file 'gamma'.\n"),
-      dest_name + '/D/G'       : Item(),
-      dest_name + '/D/G/pi'    : Item("This is the file 'pi'.\n"),
-      dest_name + '/D/G/rho'   : Item("This is the file 'rho'.\n"),
-      dest_name + '/D/G/tau'   : Item("This is the file 'tau'.\n"),
-      dest_name + '/D/H'       : Item(),
-      dest_name + '/D/H/chi'   : Item("This is the file 'chi'.\n"),
-      dest_name + '/D/H/omega' : Item("This is the file 'omega'.\n"),
-      dest_name + '/D/H/psi'   : Item("This is the file 'psi'.\n"),
-      })
+      [ "A         " + sbox.ospath(path_join(dest_name, p)) + "\n"
+        for p in A_paths ])
+    expected_status.add(
+      { path_join(dest_name, p) : Item(status='  ', wc_rev=rev)
+        for p in A_paths })
+    expected_disk.add(
+      { path_join(dest_name, p) : greek_file_item(p)
+        for p in A_paths })
 
     # Make a branch A_COPY to merge into.
     actions.run_and_verify_svn(expected, [], 'copy',
