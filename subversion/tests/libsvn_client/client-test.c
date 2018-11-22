@@ -767,7 +767,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_WC__CALL_WITH_WRITE_LOCK(
     svn_client__copy_foreign(loc,
                              svn_dirent_join(wc_path, "A-copied", pool),
-                             svn_depth_infinity, FALSE,
+                             svn_depth_infinity,
                              ra_session, ctx, pool),
     ctx->wc_ctx, wc_path, FALSE, pool);
 
@@ -775,7 +775,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_WC__CALL_WITH_WRITE_LOCK(
     svn_client__copy_foreign(loc,
                              svn_dirent_join(wc_path, "iota-copied", pool),
-                             svn_depth_infinity, FALSE,
+                             svn_depth_infinity,
                              ra_session, ctx, pool),
     ctx->wc_ctx, wc_path, FALSE, pool);
 

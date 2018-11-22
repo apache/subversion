@@ -299,7 +299,6 @@ svn_error_t *
 svn_client__copy_foreign(const svn_client__pathrev_t *loc,
                          const char *dst_abspath,
                          svn_depth_t depth,
-                         svn_boolean_t make_parents,
                          svn_ra_session_t *ra_session,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);

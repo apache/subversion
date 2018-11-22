@@ -2377,7 +2377,6 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
       SVN_ERR(svn_client__copy_foreign(location,
                                        dst_abspath,
                                        svn_depth_infinity,
-                                       FALSE /* make_parents */,
                                        ra_session,
                                        ctx, scratch_pool));
 
@@ -2656,12 +2655,6 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
   svn_boolean_t same_repositories;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  /* We've already checked for physical obstruction by a working file.
-     But there could also be logical obstruction by an entry whose
-     working file happens to be missing.*/
-  SVN_ERR(verify_wc_dsts(copy_pairs, FALSE, FALSE, FALSE /* metadata_only */,
-                         ctx, scratch_pool, iterpool));
-
   /* Decide whether the two repositories are the same or not. */
   {
     const char *parent_abspath;
@@ -2710,7 +2703,6 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
 static svn_error_t *
 repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
                  const apr_array_header_t *copy_pairs,
-                 svn_boolean_t make_parents,
                  svn_boolean_t ignore_externals,
                  svn_boolean_t pin_externals,
                  const apr_hash_t *externals_to_pin,
@@ -2764,8 +2756,6 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
     {
       svn_client__copy_pair_t *pair = APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *);
-      svn_node_kind_t dst_parent_kind, dst_kind;
-      const char *dst_parent;
       const char *src_rel;
 
       svn_pool_clear(iterpool);
@@ -2788,43 +2778,6 @@ repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
               (SVN_ERR_FS_NOT_FOUND, NULL,
                _("Path '%s' not found in head revision"),
                pair->src_abspath_or_url);
-        }
-
-      /* Figure out about dst. */
-      SVN_ERR(svn_io_check_path(pair->dst_abspath_or_url, &dst_kind,
-                                iterpool));
-      if (dst_kind != svn_node_none)
-        {
-          return svn_error_createf(
-            SVN_ERR_ENTRY_EXISTS, NULL,
-            _("Path '%s' already exists"),
-            svn_dirent_local_style(pair->dst_abspath_or_url, pool));
-        }
-
-      /* Make sure the destination parent is a directory and produce a clear
-         error message if it is not. */
-      dst_parent = svn_dirent_dirname(pair->dst_abspath_or_url, iterpool);
-      SVN_ERR(svn_io_check_path(dst_parent, &dst_parent_kind, iterpool));
-      if (make_parents && dst_parent_kind == svn_node_none)
-        {
-          SVN_ERR(svn_client__make_local_parents(dst_parent, TRUE, ctx,
-                                                 iterpool));
-        }
-      else if (make_parents && dst_parent_kind == svn_node_dir)
-        {
-          SVN_ERR(svn_wc_read_kind2(&dst_parent_kind, ctx->wc_ctx, dst_parent,
-                                    FALSE, TRUE, iterpool));
-          if (dst_parent_kind == svn_node_none)
-            {
-              SVN_ERR(svn_client__make_local_parents(dst_parent, TRUE, ctx,
-                                                     iterpool));
-            }
-        }
-      else if (dst_parent_kind != svn_node_dir)
-        {
-          return svn_error_createf(SVN_ERR_WC_NOT_WORKING_COPY, NULL,
-                                   _("Path '%s' is not a directory"),
-                                   svn_dirent_local_style(dst_parent, pool));
         }
     }
   svn_pool_destroy(iterpool);
@@ -3180,9 +3133,13 @@ try_copy(svn_boolean_t *timestamp_sleep,
     }
   else if ((srcs_are_urls) && (! dst_is_url))
     {
+      SVN_ERR(verify_wc_dsts(copy_pairs, make_parents,
+                             FALSE, FALSE /* metadata_only */,
+                             ctx, pool, pool));
+
       return svn_error_trace(
         repos_to_wc_copy(timestamp_sleep,
-                         copy_pairs, make_parents, ignore_externals,
+                         copy_pairs, ignore_externals,
                          pin_externals, externals_to_pin, ctx, pool));
     }
   else
