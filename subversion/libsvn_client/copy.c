@@ -2592,13 +2592,18 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                 ctx, pool));
     }
 
-  /* Record the implied mergeinfo (before the notification callback
-     is invoked for the root node). */
-  SVN_ERR(svn_client__get_repos_mergeinfo(
-            &src_mergeinfo, ra_session,
-            pair->src_abspath_or_url, pair->src_revnum,
-            svn_mergeinfo_inherited, TRUE /*squelch_incapable*/, pool));
-  SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
+  if (same_repositories)
+    {
+      /* Record the implied mergeinfo (before the notification callback
+         is invoked for the root node). */
+      SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
+                                              pair->src_abspath_or_url,
+                                              pair->src_revnum,
+                                              svn_mergeinfo_inherited,
+                                              TRUE /*squelch_incapable*/,
+                                              pool));
+      SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
+    }
 
   /* Do our own notification for the root node, even if we could possibly
      have delegated it.  See also issue #1552.
