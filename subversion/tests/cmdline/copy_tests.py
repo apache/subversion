@@ -1021,6 +1021,7 @@ def repos_to_wc(sbox):
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
+@XFail()
 def foreign_repos_to_wc(sbox):
   "foreign repository to WC copy"
 
@@ -1032,43 +1033,63 @@ def foreign_repos_to_wc(sbox):
                          repo_url + '/' + source,
                          repo_url + '/' + dest)
 
+  # Scenarios:
+  # (parent-path-under-'A/', base-name, child-paths, mergeinfo-inheritance)
+  scenarios = [
+    ('B',   'E',   ['alpha','beta'], 'explicit'),
+    ('B',   'F',   [],               'inherited'),
+    ('D/G', 'pi',  [],               'explicit'),
+    ('D/G', 'rho', [],               'inherited'),
+  ]
+
+  # Add some mergeinfo, which should be discarded by a foreign repo copy.
+  # On each path of interest, add either explicit or inherited mergeinfo:
+  # the implementation handles these cases differently.
+  # (We commit these initially in the original repo just for convenience: as
+  # we already have a WC. Really they only need to be in the 'other' repo.)
+  for parent, name, children, mi_inheritance in scenarios:
+    if mi_inheritance == 'explicit':
+      sbox.simple_propset(SVN_PROP_MERGEINFO,
+                          '/branch/' + name + ':1', 'A/' + parent + '/' + name)
+    else:
+      sbox.simple_propset(SVN_PROP_MERGEINFO,
+                          '/branch/' + name + ':1', 'A/' + parent)
+  sbox.simple_commit()
+
   # We have a standard repository and working copy.  Now we create a
   # second repository with the same greek tree, but different UUID.
   repo_dir       = sbox.repo_dir
   other_repo_dir, other_repo_url = sbox.add_repo_path('other')
-  svntest.main.copy_repos(repo_dir, other_repo_dir, 1, 1)
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 1)
   move_url(other_repo_url, 'A', 'A2')
   move_url(other_repo_url, 'A2', 'A3')
 
   # URL->wc copy:
   # copy a file and a directory from a foreign repository.
   # we should get some scheduled additions *without history*.
-  E_url = other_repo_url + "/A2/B/E"
-  pi_url = other_repo_url + "/A2/D/G/pi"
-  peg_rev = '2'
-  op_rev = '1'
-  E_url_resolved = E_url.replace('/A2/', '/A/')
-  pi_url_resolved = pi_url.replace('/A2/', '/A/')
+  peg_rev = '3'
+  op_rev = '2'
 
-  expected_output = svntest.verify.UnorderedOutput([
-    '--- Copying from foreign repository URL \'%s\':\n' % E_url_resolved,
-    'A         %s\n' % sbox.ospath('E'),
-    'A         %s\n' % sbox.ospath('E/beta'),
-    'A         %s\n' % sbox.ospath('E/alpha'),
-  ])
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'copy', '-r' + op_rev,
-                                     E_url + '@' + peg_rev,
-                                     wc_dir)
+  for parent, name, children, mi_inheritance in scenarios:
+    src_url = other_repo_url + '/A2/' + parent + '/' + name
+    src_url_resolved = src_url.replace('/A2/', '/A/')
 
-  expected_output = [
-    '--- Copying from foreign repository URL \'%s\':\n' % pi_url_resolved,
-    'A         %s\n' % sbox.ospath('pi'),
-  ]
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'copy', '-r' + op_rev,
-                                     pi_url + '@' + peg_rev,
-                                     wc_dir)
+    expected_output = [
+      '--- Copying from foreign repository URL \'%s\':\n' % src_url_resolved,
+      'A         %s\n' % sbox.ospath(name),
+    ] + [
+      'A         %s\n' % sbox.ospath(name + '/' + child)
+      for child in children
+    ]
+    svntest.actions.run_and_verify_svn(expected_output, [],
+                                       'copy', '-r' + op_rev,
+                                       src_url + '@' + peg_rev,
+                                       wc_dir)
+
+    # Validate the mergeinfo of the copy destination (we expect none)
+    svntest.actions.run_and_verify_svn([], '.*W200017: Property.*not found',
+                                       'propget', SVN_PROP_MERGEINFO,
+                                       sbox.ospath(name))
 
 #----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
