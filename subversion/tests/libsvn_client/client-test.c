@@ -735,7 +735,10 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   const char *repos2_url;
   const char *wc_path;
   svn_client_ctx_t *ctx;
-/* Create a filesytem and repository containing the Greek tree. */
+  svn_ra_session_t *ra_session;
+  svn_client__pathrev_t *loc;
+
+  /* Create a filesytem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
   SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
@@ -756,21 +759,24 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path, &peg_rev, &rev,
                                svn_depth_infinity, FALSE, FALSE, ctx, pool));
 
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                            repos2_url, NULL, &peg_rev, &rev,
+                                            ctx, pool));
+
+  loc->url = svn_path_url_add_component2(repos2_url, "A", pool);
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_client__copy_foreign(svn_path_url_add_component2(repos2_url, "A",
-                                                         pool),
+    svn_client__copy_foreign(loc,
                              svn_dirent_join(wc_path, "A-copied", pool),
-                             &peg_rev, &rev, svn_depth_infinity, FALSE,
-                             ctx, pool),
+                             svn_depth_infinity, FALSE,
+                             ra_session, ctx, pool),
     ctx->wc_ctx, wc_path, FALSE, pool);
 
-
+  loc->url = svn_path_url_add_component2(repos2_url, "iota", pool);
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_client__copy_foreign(svn_path_url_add_component2(repos2_url, "iota",
-                                                         pool),
+    svn_client__copy_foreign(loc,
                              svn_dirent_join(wc_path, "iota-copied", pool),
-                             &peg_rev, &rev, svn_depth_infinity, FALSE,
-                             ctx, pool),
+                             svn_depth_infinity, FALSE,
+                             ra_session, ctx, pool),
     ctx->wc_ctx, wc_path, FALSE, pool);
 
   return SVN_NO_ERROR;

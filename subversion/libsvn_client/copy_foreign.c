@@ -55,7 +55,7 @@
  */
 static svn_error_t *
 copy_foreign_dir(svn_ra_session_t *ra_session,
-                 svn_client__pathrev_t *location,
+                 const svn_client__pathrev_t *location,
                  const char *dst_abspath,
                  svn_depth_t depth,
                  svn_wc_notify_func2_t notify_func,
@@ -103,31 +103,21 @@ copy_foreign_dir(svn_ra_session_t *ra_session,
 
 
 svn_error_t *
-svn_client__copy_foreign(const char *url,
+svn_client__copy_foreign(const svn_client__pathrev_t *loc,
                          const char *dst_abspath,
-                         const svn_opt_revision_t *peg_revision,
-                         const svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
+                         svn_ra_session_t *ra_session,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
-  svn_ra_session_t *ra_session;
-  svn_client__pathrev_t *loc;
   svn_node_kind_t kind;
   svn_node_kind_t wc_kind;
   const char *dir_abspath;
 
-  SVN_ERR_ASSERT(svn_path_is_url(url));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
-  /* Do we need to validate/update revisions? */
-
-  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
-                                            url, NULL,
-                                            peg_revision,
-                                            revision, ctx,
-                                            scratch_pool));
+  SVN_ERR(svn_ra_reparent(ra_session, loc->url, scratch_pool));
 
   /* The source must exist */
   SVN_ERR(svn_ra_check_path(ra_session, "", loc->rev, &kind, scratch_pool));
@@ -135,7 +125,7 @@ svn_client__copy_foreign(const char *url,
     return svn_error_createf(
                 SVN_ERR_ILLEGAL_TARGET, NULL,
                 _("'%s' is not a valid location inside a repository"),
-                url);
+                loc->url);
 
   /* The target path must not exist (at least not as a versioned node) */
   SVN_ERR(svn_wc_read_kind2(&wc_kind, ctx->wc_ctx, dst_abspath, FALSE, TRUE,

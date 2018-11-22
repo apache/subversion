@@ -2346,18 +2346,18 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
 
   if (!same_repositories)
     {
-      svn_opt_revision_t src_revision;
+      svn_client__pathrev_t *location;
 
       *timestamp_sleep = TRUE;
 
-      src_revision.kind = svn_opt_revision_number;
-      src_revision.value.number = src_revnum;
-      SVN_ERR(svn_client__copy_foreign(src_url,
+      SVN_ERR(svn_client__pathrev_create_with_session(&location, ra_session,
+                                                      src_revnum, src_url,
+                                                      scratch_pool));
+      SVN_ERR(svn_client__copy_foreign(location,
                                        dst_abspath,
-                                       &src_revision,
-                                       &src_revision,
                                        svn_depth_infinity,
                                        FALSE /* make_parents */,
+                                       ra_session,
                                        ctx, scratch_pool));
 
       return SVN_NO_ERROR;
