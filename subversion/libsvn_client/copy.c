@@ -1100,13 +1100,9 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
 }
 
 static svn_error_t *
-verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
-                        svn_boolean_t make_parents,
-                        svn_boolean_t is_move,
-                        svn_boolean_t metadata_only,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool)
+verify_wc_srcs(const apr_array_header_t *copy_pairs,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
 {
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -1133,10 +1129,6 @@ verify_wc_srcs_and_dsts(const apr_array_header_t *copy_pairs,
                                         pair->src_abspath_or_url,
                                         scratch_pool));
     }
-
-  SVN_ERR(verify_wc_dsts(copy_pairs, make_parents, is_move, metadata_only, ctx,
-                         result_pool, iterpool));
-
   svn_pool_destroy(iterpool);
 
   return SVN_NO_ERROR;
@@ -3130,8 +3122,9 @@ try_copy(svn_boolean_t *timestamp_sleep,
   /* Now, call the right handler for the operation. */
   if ((! srcs_are_urls) && (! dst_is_url))
     {
-      SVN_ERR(verify_wc_srcs_and_dsts(copy_pairs, make_parents, is_move,
-                                      metadata_only, ctx, pool, pool));
+      SVN_ERR(verify_wc_srcs(copy_pairs, ctx, pool));
+      SVN_ERR(verify_wc_dsts(copy_pairs, make_parents, is_move, metadata_only,
+                             ctx, pool, pool));
 
       /* Copy or move all targets. */
       if (is_move)
