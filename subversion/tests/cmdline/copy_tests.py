@@ -1021,7 +1021,6 @@ def repos_to_wc(sbox):
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
-@XFail()
 def foreign_repos_to_wc(sbox):
   "foreign repository to WC copy"
 
