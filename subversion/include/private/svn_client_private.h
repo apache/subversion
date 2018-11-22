@@ -281,9 +281,8 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Copy the file or directory on URL in some repository to DST_ABSPATH,
- * copying node information and properties. Resolve URL using PEG_REV and
- * REVISION.
+/* Copy the file or directory at LOC to DST_ABSPATH,
+ * copying node information and properties.
  *
  * If URL specifies a directory, create the copy using depth DEPTH.
  *
@@ -292,14 +291,16 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
  *
  * The caller should be holding a WC write lock that allows DST_ABSPATH to
  * be created, such as on the parent of DST_ABSPATH.
+ *
+ * Use RA_SESSION to fetch the data. The session may point to a different
+ * URL after returning.
  */
 svn_error_t *
-svn_client__copy_foreign(const char *url,
+svn_client__copy_foreign(const svn_client__pathrev_t *loc,
                          const char *dst_abspath,
-                         const svn_opt_revision_t *peg_revision,
-                         const svn_opt_revision_t *revision,
                          svn_depth_t depth,
                          svn_boolean_t make_parents,
+                         svn_ra_session_t *ra_session,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
 
