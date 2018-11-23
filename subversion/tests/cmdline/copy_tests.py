@@ -1073,13 +1073,13 @@ def foreign_repos_to_wc(sbox):
     src_url = other_repo_url + '/A2/' + parent + '/' + name
     src_url_resolved = src_url.replace('/A2/', '/A/')
 
-    expected_output = [
+    expected_output = svntest.verify.UnorderedOutput([
       '--- Copying from foreign repository URL \'%s\':\n' % src_url_resolved,
       'A         %s\n' % sbox.ospath(name),
     ] + [
       'A         %s\n' % sbox.ospath(name + '/' + child)
       for child in children
-    ]
+    ])
     svntest.actions.run_and_verify_svn(expected_output, [],
                                        'copy', '-r' + op_rev,
                                        src_url + '@' + peg_rev,
