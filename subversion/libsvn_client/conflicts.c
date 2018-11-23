@@ -8760,6 +8760,14 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
     }
+  else if (local_change == svn_wc_conflict_reason_missing)
+    {
+      /* Clear tree conflict marker. */
+      err = svn_wc__del_tree_conflict(ctx->wc_ctx, victim_abspath,
+                                      scratch_pool);
+      if (err)
+        goto unlock_wc;
+    }
 
   if (ctx->notify_func2)
     {
