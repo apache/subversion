@@ -41,7 +41,7 @@ Veto-blocked changes:
      We don't want bogus mergeinfo.
    Votes:
      +1: julianfoad
-     -1: brane -- because r1847181 breaks tests:
+     -1: brane (only r1847181, r1847182) -- because r1847181 breaks tests:
          https://ci.apache.org/builders/svn-x64-macosx-bdb/builds/3968
 
 Approved changes:
