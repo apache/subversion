@@ -426,12 +426,17 @@ svn_cl__list(apr_getopt_t *os,
 
   if (opt_state->xml)
     {
-      /* The XML output contains all the information, so "--verbose"
-         does not apply. */
+      /* The XML output contains all the information, so "--verbose" does
+         not apply, and using "--human-readable" with machine-readable
+         output does not make sense. */
       if (opt_state->verbose)
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
             _("--verbose is not valid in --xml mode"));
+      if (opt_state->human_readable)
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--human-readable is not valid in --xml mode"));
 
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in
