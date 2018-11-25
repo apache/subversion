@@ -37,6 +37,14 @@ Candidate changes:
    Votes:
      +1: julianfoad, brane
 
+ * r1847377
+   Reduce the scope of the Windows-specific help text for 'svn list'.
+   Justification:
+     Should make backporting translations easier with a more more similar
+     generated .po file.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
