@@ -167,7 +167,8 @@ build_info_from_dirent(svn_client_info2_t **info,
 #define DIRENT_FIELDS (SVN_DIRENT_KIND        | \
                        SVN_DIRENT_CREATED_REV | \
                        SVN_DIRENT_TIME        | \
-                       SVN_DIRENT_LAST_AUTHOR)
+                       SVN_DIRENT_LAST_AUTHOR | \
+                       SVN_DIRENT_SIZE)
 
 
 /* Helper func for recursively fetching svn_dirent_t's from a remote
