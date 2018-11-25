@@ -40,8 +40,13 @@
 
 /* Baton used when printing directory entries. */
 struct print_baton {
-  svn_boolean_t verbose;
   svn_client_ctx_t *ctx;
+  svn_boolean_t verbose;
+  svn_boolean_t human_readable;
+
+  /* Keep track of the width of the author field. */
+  int author_width;
+  int max_author_width;
 
   /* To keep track of last seen external information. */
   const char *last_external_parent_url;
@@ -49,11 +54,72 @@ struct print_baton {
   svn_boolean_t in_external;
 };
 
+/* Starting and maximum width of the author field */
+static const int initial_author_width = 8;
+static const int initial_human_readable_author_width = 14;
+static const int maximum_author_width = 16;
+static const int maximum_human_readable_author_width = 22;
+
+/* Width of the size field */
+static const int normal_size_width = 10;
+static const int human_readable_size_width = 4;
+
 /* Field flags required for this function */
 static const apr_uint32_t print_dirent_fields = SVN_DIRENT_KIND;
 static const apr_uint32_t print_dirent_fields_verbose = (
     SVN_DIRENT_KIND  | SVN_DIRENT_SIZE | SVN_DIRENT_TIME |
     SVN_DIRENT_CREATED_REV | SVN_DIRENT_LAST_AUTHOR);
+
+/* Converts a file size to human-readable form with base-2 unit suffix.
+   File sizes are never negative, so we don't handle that case. */
+static const char *
+get_human_readable_size(svn_filesize_t size, apr_pool_t *scratch_pool)
+{
+  static const struct
+  {
+    svn_filesize_t mask;
+    char suffix;
+  }
+  order[] =
+    {
+      {APR_INT64_C(0x0000000000000000), 'B'}, /* byte */
+      {APR_INT64_C(0x00000000000003FF), 'K'}, /* kibi */
+      {APR_INT64_C(0x00000000000FFFFF), 'M'}, /* mibi */
+      {APR_INT64_C(0x000000003FFFFFFF), 'G'}, /* gibi */
+      {APR_INT64_C(0x000000FFFFFFFFFF), 'T'}, /* tibi */
+      {APR_INT64_C(0x0003FFFFFFFFFFFF), 'E'}, /* exbi */
+      {APR_INT64_C(0x0FFFFFFFFFFFFFFF), 'P'}  /* pibi */
+    };
+
+  const svn_filesize_t abs_size = ((size < 0) ? -size : size);
+  double human_readable_size;
+
+  /* Find the size mask for the (absolute) file size. It would be sexy to
+     do a binary search here, but with only 7 elements in the array ... */
+  apr_size_t index = sizeof(order) / sizeof(order[0]);
+  while (index > 0)
+    {
+      --index;
+      if (abs_size > order[index].mask)
+        break;
+    }
+
+  /* Adjust the size to the given order of magnitude.
+
+     This is division by (order[index].mask + 1), which is the base-2^10
+     magnitude of the size; and that is the same as an arithmetic right
+     shift by (index * 10) bits. But we split it into an integer and a
+     floating-point division, so that we don't overflow the mantissa at
+     very large file sizes. */
+  human_readable_size = (index == 0 ? (double)size
+                         : (size >> 3 * index) / 128.0 / index);
+
+  /* When the absolute adjusted size is < 10, show tenths of a unit, too.
+     NOTE: This will display the locale-specific decimal separator. */
+  return apr_psprintf(scratch_pool, "%.*f%c",
+                      (abs_size >> 10 * index < 10) ? 1 : 0,
+                      human_readable_size, order[index].suffix);
+}
 
 /* This implements the svn_client_list_func2_t API, printing a single
    directory entry in text format. */
@@ -121,7 +187,10 @@ print_dirent(void *baton,
       apr_status_t apr_err;
       apr_size_t size;
       char timestr[20];
-      const char *sizestr, *utf8_timestr;
+      const int sizewidth = (!pb->human_readable ? normal_size_width
+                             : human_readable_size_width);
+      const char *sizestr = "";
+      const char *utf8_timestr;
 
       /* svn_time_to_human_cstring gives us something *way* too long
          to use for this, so we have to roll our own.  We include
@@ -146,15 +215,36 @@ print_dirent(void *baton,
       /* we need it in UTF-8. */
       SVN_ERR(svn_utf_cstring_to_utf8(&utf8_timestr, timestr, scratch_pool));
 
-      sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
-                             dirent->size);
+      /* We may have to adjust the width of th 'author' field. */
+      if (dirent->last_author)
+        {
+          const int author_width = (int)strlen(dirent->last_author);
+          if (author_width > pb->author_width)
+            {
+              if (author_width < pb->max_author_width)
+                pb->author_width = author_width;
+              else
+                pb->author_width = pb->max_author_width;
+            }
+        }
+
+      /* The format of the size field depends on the --human-readable flag. */
+      if (dirent->kind == svn_node_file)
+        {
+          if (pb->human_readable)
+            sizestr = get_human_readable_size(dirent->size, scratch_pool);
+          else
+            sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
+                                   dirent->size);
+        }
 
       return svn_cmdline_printf
-              (scratch_pool, "%7ld %-8.8s %c %10s %12s %s%s\n",
+              (scratch_pool, "%7ld %-*.*s %c %*s %12s %s%s\n",
                dirent->created_rev,
+               pb->author_width, pb->author_width,
                dirent->last_author ? dirent->last_author : " ? ",
                lock ? 'O' : ' ',
-               (dirent->kind == svn_node_file) ? sizestr : "",
+               sizewidth, sizestr,
                utf8_timestr,
                entryname,
                (dirent->kind == svn_node_dir) ? "/" : "");
@@ -332,6 +422,11 @@ svn_cl__list(apr_getopt_t *os,
 
   pb.ctx = ctx;
   pb.verbose = opt_state->verbose;
+  pb.human_readable = opt_state->human_readable;
+  pb.author_width = (!pb.human_readable ? initial_author_width
+                     : initial_human_readable_author_width);
+  pb.max_author_width = (!pb.human_readable ? maximum_author_width
+                         : maximum_human_readable_author_width);
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_immediates;
