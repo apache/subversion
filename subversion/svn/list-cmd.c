@@ -21,10 +21,6 @@
  * ====================================================================
  */
 
-#include <assert.h>
-#include <math.h>
-#include <stdio.h>
-
 #include "svn_cmdline.h"
 #include "svn_client.h"
 #include "svn_error.h"
@@ -74,85 +70,6 @@ static const apr_uint32_t print_dirent_fields_verbose = (
     SVN_DIRENT_KIND  | SVN_DIRENT_SIZE | SVN_DIRENT_TIME |
     SVN_DIRENT_CREATED_REV | SVN_DIRENT_LAST_AUTHOR);
 
-/* Converts a file size to human-readable form with base-2 unit suffix.
-   File sizes are never negative, so we don't handle that case other than
-   making sure that the scale adjustment will work. */
-static const char *
-get_human_readable_size(svn_filesize_t size, apr_pool_t *scratch_pool)
-{
-  static const struct
-  {
-    svn_filesize_t mask;
-    char suffix;
-  }
-  order[] =
-    {
-      {APR_INT64_C(0x0000000000000000), 'B'}, /* byte */
-      {APR_INT64_C(0x00000000000003FF), 'K'}, /* kibi */
-      {APR_INT64_C(0x00000000000FFFFF), 'M'}, /* mibi */
-      {APR_INT64_C(0x000000003FFFFFFF), 'G'}, /* gibi */
-      {APR_INT64_C(0x000000FFFFFFFFFF), 'T'}, /* tibi */
-      {APR_INT64_C(0x0003FFFFFFFFFFFF), 'E'}, /* exbi */
-      {APR_INT64_C(0x0FFFFFFFFFFFFFFF), 'P'}  /* pibi */
-    };
-  static const apr_size_t order_size = sizeof(order) / sizeof(order[0]);
-
-  const svn_filesize_t abs_size = ((size < 0) ? -size : size);
-  double human_readable_size;
-
-  /* Find the size mask for the (absolute) file size. It would be sexy to
-     do a binary search here, but with only 7 elements in the array ... */
-  apr_size_t index = order_size;
-  while (index > 0)
-    {
-      --index;
-      if (abs_size > order[index].mask)
-        break;
-    }
-
-  /* Adjust the size to the given order of magnitude.
-
-     This is division by (order[index].mask + 1), which is the base-2^10
-     magnitude of the size; and that is the same as an arithmetic right
-     shift by (index * 10) bits. But we split it into an integer and a
-     floating-point division, so that we don't overflow the mantissa at
-     very large file sizes. */
-  ;
-  if ((abs_size >> 10 * index) > 999)
-    {
-      /* This assertion should never fail, because we only have 4 binary
-         digits in the petabyte range and so the number of petabytes can't
-         be large enough to enter this conditional block. */
-      assert(index < order_size - 1);
-      ++index;
-    }
-  human_readable_size = (index == 0 ? (double)size
-                         : (size >> 3 * index) / 128.0 / index);
-
-  /* NOTE: We want to display a locale-specific decimal sepratator, but
-           APR's formatter completely ignores the locale. So we use the
-           good, old, standard, *dangerous* sprintf() to format the size.
-
-           But, on the brigt side, we've just made sure that the number has
-           no more than 3 non-fractional digits. So the call to sprintf()
-           here should be safe. */
-  {
-    /*   3 digits (or 2 digits and 1 decimal separator)
-       + 1 unit suffix
-       + 1 negative sign (which should not appear under normal circumstances)
-       + 1 nul terminator
-       ---
-       = 6 characters of space needed in the buffer. */
-    char buffer[8];
-
-    /* When the adjusted size has only one significant digit left of the
-       decimal point, show tenths of a unit, too. */
-    sprintf(buffer, "%.*f%c",
-            fabs(human_readable_size) < 10.0 ? 1 : 0,
-            human_readable_size, order[index].suffix);
-    return apr_pstrdup(scratch_pool, buffer);
-  }
-}
 
 /* This implements the svn_client_list_func2_t API, printing a single
    directory entry in text format. */
@@ -265,7 +182,8 @@ print_dirent(void *baton,
       if (dirent->kind == svn_node_file)
         {
           if (pb->human_readable)
-            sizestr = get_human_readable_size(dirent->size, scratch_pool);
+            sizestr = svn_cl__get_base2_unit_file_size(dirent->size, FALSE,
+                                                       scratch_pool);
           else
             sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
                                    dirent->size);
