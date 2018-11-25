@@ -166,6 +166,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"quiet",         'q', 0, N_("print nothing, or only summary information")},
   {"recursive",     'R', 0, N_("descend recursively, same as --depth=infinity")},
   {"non-recursive", 'N', 0, N_("obsolete")},
+  {"human-readable",'H', 0, N_("show human-readable output")},
   {"change",        'c', 1,
                     N_("the change made by revision ARG (like -r ARG-1:ARG)\n"
                        "                             "
@@ -895,8 +896,15 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"
     )},
-    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
-     opt_include_externals, opt_search}, },
+    {'r', 'v', 'R', 'H', opt_depth, opt_incremental, opt_xml,
+     opt_include_externals, opt_search},
+    {{'H', N_("with --verbose, show file sizes with base-2\n"
+              "                             "
+              "unit suffixes (Byte, Kilobyte, Megabyte,\n"
+              "                             "
+              "Gigabyte, Terabyte and Petabyte), limiting\n"
+              "                             "
+              "the number of digits to three or less")}} },
 
   { "lock", svn_cl__lock, {0}, {N_(
      "Lock working copy paths or URLs in the repository, so that\n"
@@ -2476,6 +2484,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case 'N':
         descend = FALSE;
+        break;
+      case 'H':
+        opt_state.human_readable = TRUE;
         break;
       case opt_depth:
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
