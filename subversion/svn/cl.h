@@ -32,6 +32,7 @@
 #include <apr_tables.h>
 #include <apr_getopt.h>
 
+#include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -722,6 +723,16 @@ svn_cl__node_kind_str_xml(svn_node_kind_t kind);
 const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
 
+/* Return the size of a file, formatted to 3 colums in base-2 units.
+   if LONG_UNITS is TRUE, unit suffixes will be the whole SI symbol,
+   e.g., KiB, MiB, etc; otherwise only the first letters will be used.
+
+   File sizes are never negative, so we don't handle that case other than
+   making sure that the scale adjustment will work. */
+const char *
+svn_cl__get_base2_unit_file_size(svn_filesize_t size,
+                                 svn_boolean_t long_units,
+                                 apr_pool_t *result_pool);
 
 /** Provides an XML name for a given OPERATION.
  * Note: POOL is currently not used.

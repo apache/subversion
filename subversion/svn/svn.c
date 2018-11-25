@@ -859,9 +859,16 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  EXPERIMENTAL:\n"
      "  With --x-viewspec, print the working copy layout.\n"
     )},
-    {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
+    {'r', 'R', 'H', opt_depth, opt_targets, opt_incremental, opt_xml,
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline,
-     opt_viewspec}
+     opt_viewspec},
+    {{'H', N_("show file sizes with base-2 unit suffixes\n"
+              "                             "
+              "(Byte, Kilobyte, Megabyte, Gigabyte, Terabyte\n"
+              "                             "
+              "and Petabyte), limiting the number of digits\n"
+              "                             "
+              "to three or less")}}
   },
 
   { "list", svn_cl__list, {"ls"},
