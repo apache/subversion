@@ -429,8 +429,9 @@ svn_cl__list(apr_getopt_t *os,
       /* The XML output contains all the information, so "--verbose"
          does not apply. */
       if (opt_state->verbose)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("'verbose' option invalid in XML mode"));
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--verbose is not valid in --xml mode"));
 
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in
@@ -441,9 +442,9 @@ svn_cl__list(apr_getopt_t *os,
   else
     {
       if (opt_state->incremental)
-        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                _("'incremental' option only valid in XML "
-                                  "mode"));
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--incremental is only valid in --xml mode"));
     }
 
   if (opt_state->xml)
