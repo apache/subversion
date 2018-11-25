@@ -716,6 +716,59 @@ def info_item_uncommmitted(sbox):
     sbox.ospath('newfile'), sbox.ospath('newdir'))
 
 
+def info_item_size_wc_recursive(sbox):
+  "recursive '--show-item=repos-size' on local path"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    [], [],
+    'info', '--show-item=repos-size', '--recursive',
+    sbox.ospath(''))
+
+
+def info_item_size_repos(sbox):
+  "non-recursive '--show-item=repos-size' on file URL"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    "25\n", [],
+    'info', '--show-item=repos-size',
+    sbox.repo_url + "/iota")
+
+  svntest.actions.run_and_verify_svn(
+    "25", [],
+    'info', '--show-item=repos-size', '--no-newline',
+    sbox.repo_url + "/iota")
+
+
+def info_item_size_repos_recursive(sbox):
+  "recursive '--show-item=repos-size' on dir URL"
+
+  sbox.build(read_only=True)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    "25         " + sbox.repo_url + "/iota\n",
+    "27         " + sbox.repo_url + "/A/B/lambda\n",
+    "25         " + sbox.repo_url + "/A/B/E/beta\n",
+    "26         " + sbox.repo_url + "/A/B/E/alpha\n",
+    "23         " + sbox.repo_url + "/A/mu\n",
+    "26         " + sbox.repo_url + "/A/D/gamma\n",
+    "23         " + sbox.repo_url + "/A/D/G/pi\n",
+    "24         " + sbox.repo_url + "/A/D/G/rho\n",
+    "24         " + sbox.repo_url + "/A/D/G/tau\n",
+    "26         " + sbox.repo_url + "/A/D/H/omega\n",
+    "24         " + sbox.repo_url + "/A/D/H/psi\n",
+    "24         " + sbox.repo_url + "/A/D/H/chi\n",
+  ])
+
+  svntest.actions.run_and_verify_svn(
+    expected_output, [],
+    'info', '--show-item=repos-size', '--recursive',
+    sbox.repo_url)
+
+
 def info_item_failures(sbox):
   "failure modes of 'svn info --show-item'"
 
@@ -746,6 +799,11 @@ def info_item_failures(sbox):
     'info', '--show-item=revision', '--no-newline',
     sbox.ospath('A'), sbox.ospath('iota'))
 
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E200007: can't show in-repository size.*"),
+    'info', '--show-item=repos-size',
+    sbox.ospath('iota'))
+
 
 ########################################################################
 # Run the tests
@@ -767,6 +825,9 @@ test_list = [ None,
               info_item_simple_multiple,
               info_item_url,
               info_item_uncommmitted,
+              info_item_size_wc_recursive,
+              info_item_size_repos,
+              info_item_size_repos_recursive,
               info_item_failures,
              ]
 
