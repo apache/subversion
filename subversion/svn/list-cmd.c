@@ -115,7 +115,8 @@ get_human_readable_size(svn_filesize_t size, apr_pool_t *scratch_pool)
                          : (size >> 3 * index) / 128.0 / index);
 
   /* When the absolute adjusted size is < 10, show tenths of a unit, too.
-     NOTE: This will display the locale-specific decimal separator. */
+     NOTE: This *should* display the locale-specific decimal separator,
+           but apparently APR isn't too hot on localisation. */
   return apr_psprintf(scratch_pool, "%.*f%c",
                       (abs_size >> 10 * index < 10) ? 1 : 0,
                       human_readable_size, order[index].suffix);
