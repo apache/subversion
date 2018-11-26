@@ -734,6 +734,14 @@ svn_cl__get_base2_unit_file_size(svn_filesize_t size,
                                  svn_boolean_t long_units,
                                  apr_pool_t *result_pool);
 
+/* Like svn_cl__get_base2_unit_file_size() but using base-10 units,
+   e.g., kB, MB, etc. (and short variabts k, M, etc.). */
+const char *
+svn_cl__get_base10_unit_file_size(svn_filesize_t size,
+                                  svn_boolean_t long_units,
+                                  apr_pool_t *result_pool);
+
+
 /** Provides an XML name for a given OPERATION.
  * Note: POOL is currently not used.
  */
