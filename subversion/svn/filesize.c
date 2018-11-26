@@ -116,3 +116,73 @@ svn_cl__get_base2_unit_file_size(svn_filesize_t size,
     return apr_pstrcat(result_pool, buffer, suffix, SVN_VA_NULL);
   }
 }
+
+
+const char *
+svn_cl__get_base10_unit_file_size(svn_filesize_t size,
+                                  svn_boolean_t long_units,
+                                  apr_pool_t *result_pool)
+{
+  static const struct
+  {
+    svn_filesize_t mask;
+    const char *suffix;
+    const char *short_suffix;
+  }
+  order[] =
+    {
+      {APR_INT64_C(                 0), " B",  "B"}, /* byte */
+      {APR_INT64_C(               999), " kB", "k"}, /* kilo */
+      {APR_INT64_C(            999999), " MB", "M"}, /* mega */
+      {APR_INT64_C(         999999999), " GB", "G"}, /* giga */
+      {APR_INT64_C(      999999999999), " TB", "T"}, /* tera */
+      {APR_INT64_C(   999999999999999), " EB", "E"}, /* exa  */
+      {APR_INT64_C(999999999999999999), " PB", "P"}  /* peta */
+    };
+  static const apr_size_t order_size = sizeof(order) / sizeof(order[0]);
+
+  const svn_filesize_t abs_size = ((size < 0) ? -size : size);
+  double human_readable_size;
+
+  /* Find the size mask for the (absolute) file size. It would be sexy to
+     do a binary search here, but with only 7 elements in the array ... */
+  apr_size_t index = order_size;
+  while (index > 0)
+    {
+      --index;
+      if (abs_size > order[index].mask)
+        break;
+    }
+
+  /* Adjust the size to the given order of magnitude.
+
+     This is division by (order[index].mask + 1), which is the base-1000
+     magnitude of the size. For large file sizes, we split the operation
+     into an integer and a floating-point division, so that we don't
+     overflow the mantissa. */
+  if (index == 0)
+    human_readable_size = (double)size;
+  else if (index <= 3)
+    human_readable_size = (double)size / (order[index].mask + 1);
+  else
+    {
+      /*                              [  Keep integer division here!  ] */
+      const double divisor = (double)((order[index].mask + 1) / 1000000);
+      human_readable_size = (size / 1000000) / divisor;
+      /*                    [   And here!  ] */
+    }
+
+  /* NOTE: See localisation note in svn_cl__get_base2_unit_file_size(). */
+  {
+    const char *const suffix = (long_units ? order[index].suffix
+                                : order[index].short_suffix);
+    char buffer[8];
+
+    /* When the adjusted size has only one significant digit left of the
+       decimal point, show tenths of a unit, too. */
+    sprintf(buffer, "%.*f",
+            fabs(human_readable_size) < 10.0 ? 1 : 0,
+            human_readable_size);
+    return apr_pstrcat(result_pool, buffer, suffix, SVN_VA_NULL);
+  }
+}
