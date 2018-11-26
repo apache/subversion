@@ -76,7 +76,7 @@ format_size(double human_readable_size,
            APR's formatter completely ignores the locale. So we use the
            good, old, standard, *dangerous* sprintf() to format the size.
 
-           But, on the brigt side, we require sure that the number has
+           But, on the bright side, we require sure that the number has
            no more than 3 non-fractional digits. So the call to sprintf()
            here should be safe. */
   const double absolute_human_readable_size = fabs(human_readable_size);
