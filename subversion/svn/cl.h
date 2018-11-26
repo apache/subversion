@@ -723,23 +723,27 @@ svn_cl__node_kind_str_xml(svn_node_kind_t kind);
 const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
 
-/* Return the size of a file, formatted to 3 colums in base-2 units.
+/* Supported unit bases for file size conversion. */
+typedef enum svn_cl__unit_base_t
+  {
+    SVN_CL__BASE_10_UNIT = 1000, /* Use base-10 SI units. */
+    SVN_CL__BASE_2_UNIT = 1024   /* Use base-2 SI units. */
+  } svn_cl__unit_base_t;
+
+/* Set *RESULT to the size of a file, formatted to 3 colums in BASE units.
    if LONG_UNITS is TRUE, unit suffixes will be the whole SI symbol,
    e.g., KiB, MiB, etc; otherwise only the first letters will be used.
 
    File sizes are never negative, so we don't handle that case other than
-   making sure that the scale adjustment will work. */
-const char *
-svn_cl__get_base2_unit_file_size(svn_filesize_t size,
-                                 svn_boolean_t long_units,
-                                 apr_pool_t *result_pool);
+   making sure that the scale adjustment will work.
 
-/* Like svn_cl__get_base2_unit_file_size() but using base-10 units,
-   e.g., kB, MB, etc. (and short variabts k, M, etc.). */
-const char *
-svn_cl__get_base10_unit_file_size(svn_filesize_t size,
-                                  svn_boolean_t long_units,
-                                  apr_pool_t *result_pool);
+   The result will be allocated from RESULT_POOL. */
+svn_error_t *
+svn_cl__get_unit_file_size(const char **result,
+                           svn_filesize_t size,
+                           svn_cl__unit_base_t base,
+                           svn_boolean_t long_units,
+                           apr_pool_t *result_pool);
 
 
 /** Provides an XML name for a given OPERATION.

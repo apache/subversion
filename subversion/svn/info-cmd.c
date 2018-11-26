@@ -767,11 +767,17 @@ print_info(void *baton,
 
   if (info->kind == svn_node_file && info->size != SVN_INVALID_FILESIZE)
     {
-      const char *const sizestr =
-        (receiver_baton->human_readable
-         ? svn_cl__get_base2_unit_file_size(info->size, TRUE, pool)
-         : apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT,
-                        info->size));
+      const char *sizestr;
+      if (receiver_baton->human_readable)
+        {
+          SVN_ERR(svn_cl__get_unit_file_size(&sizestr, info->size,
+                                             SVN_CL__BASE_2_UNIT,
+                                             TRUE, pool));
+        }
+      else
+        {
+          sizestr = apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, info->size);
+        }
       SVN_ERR(svn_cmdline_printf(pool, _("Size in Repository: %s\n"),
                                  sizestr));
     }
