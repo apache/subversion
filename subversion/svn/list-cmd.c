@@ -182,11 +182,16 @@ print_dirent(void *baton,
       if (dirent->kind == svn_node_file)
         {
           if (pb->human_readable)
-            sizestr = svn_cl__get_base2_unit_file_size(dirent->size, FALSE,
-                                                       scratch_pool);
+            {
+              SVN_ERR(svn_cl__get_unit_file_size(&sizestr, dirent->size,
+                                                 SVN_CL__BASE_2_UNIT,
+                                                 FALSE, scratch_pool));
+            }
           else
-            sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
-                                   dirent->size);
+            {
+              sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
+                                     dirent->size);
+            }
         }
 
       return svn_cmdline_printf

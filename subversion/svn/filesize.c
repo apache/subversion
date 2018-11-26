@@ -35,18 +35,78 @@
 
 /*** Code. ***/
 
-const char *
-svn_cl__get_base2_unit_file_size(svn_filesize_t size,
-                                 svn_boolean_t long_units,
-                                 apr_pool_t *result_pool)
+/* The structure that describes the units and their magnitudes. */
+typedef struct filesize_order_t
 {
-  static const struct
-  {
-    svn_filesize_t mask;
-    const char *suffix;
-    const char *short_suffix;
-  }
-  order[] =
+  svn_filesize_t mask;
+  const char *suffix;
+  const char *short_suffix;
+} filesize_order_t;
+
+
+/* Get the index of the order of magnitude of the given SIZE.
+   The returned index will be within [0 .. order_size - 1]. */
+static apr_size_t
+get_order_index(svn_filesize_t abs_size,
+                const filesize_order_t *order,
+                apr_size_t order_size)
+{
+  /* It would be sexy to do a binary search here, but with only 7 elements
+     in the arrays ... we should ### FIXME: do the binary search anyway. */
+  apr_size_t index = order_size;
+  while (index > 0)
+    {
+      --index;
+      if (abs_size > order[index].mask)
+        break;
+    }
+  return index;
+}
+
+
+/* Format the adjusted size with the given units. */
+static const char *
+format_size(double human_readable_size,
+            svn_boolean_t long_units,
+            const filesize_order_t *order,
+            apr_size_t index,
+            apr_pool_t *result_pool)
+{
+  /* NOTE: We want to display a locale-specific decimal sepratator, but
+           APR's formatter completely ignores the locale. So we use the
+           good, old, standard, *dangerous* sprintf() to format the size.
+
+           But, on the brigt side, we require sure that the number has
+           no more than 3 non-fractional digits. So the call to sprintf()
+           here should be safe. */
+  const double absolute_human_readable_size = fabs(human_readable_size);
+  const char *const suffix = (long_units ? order[index].suffix
+                              : order[index].short_suffix);
+
+  /*   3 digits (or 2 digits and 1 decimal separator)
+     + 1 negative sign (which should not appear under normal circumstances)
+     + 1 nul terminator
+     ---
+     = 5 characters of space needed in the buffer. */
+    char buffer[8];
+
+    assert(absolute_human_readable_size < 1000.0);
+
+    /* When the adjusted size has only one significant digit left of the
+       decimal point, show tenths of a unit, too. */
+    sprintf(buffer, "%.*f",
+            absolute_human_readable_size < 10.0 ? 1 : 0,
+            human_readable_size);
+    return apr_pstrcat(result_pool, buffer, suffix, SVN_VA_NULL);
+}
+
+
+static const char *
+get_base2_unit_file_size(svn_filesize_t size,
+                         svn_boolean_t long_units,
+                         apr_pool_t *result_pool)
+{
+  static const filesize_order_t order[] =
     {
       {APR_INT64_C(0x0000000000000000), " B",   "B"}, /* byte */
       {APR_INT64_C(0x00000000000003FF), " KiB", "K"}, /* kibi */
@@ -59,17 +119,8 @@ svn_cl__get_base2_unit_file_size(svn_filesize_t size,
   static const apr_size_t order_size = sizeof(order) / sizeof(order[0]);
 
   const svn_filesize_t abs_size = ((size < 0) ? -size : size);
+  apr_size_t index = get_order_index(abs_size, order, order_size);
   double human_readable_size;
-
-  /* Find the size mask for the (absolute) file size. It would be sexy to
-     do a binary search here, but with only 7 elements in the array ... */
-  apr_size_t index = order_size;
-  while (index > 0)
-    {
-      --index;
-      if (abs_size > order[index].mask)
-        break;
-    }
 
   /* Adjust the size to the given order of magnitude.
 
@@ -90,46 +141,17 @@ svn_cl__get_base2_unit_file_size(svn_filesize_t size,
   human_readable_size = (index == 0 ? (double)size
                          : (size >> 3 * index) / 128.0 / index);
 
-  /* NOTE: We want to display a locale-specific decimal sepratator, but
-           APR's formatter completely ignores the locale. So we use the
-           good, old, standard, *dangerous* sprintf() to format the size.
-
-           But, on the brigt side, we've just made sure that the number has
-           no more than 3 non-fractional digits. So the call to sprintf()
-           here should be safe. */
-  {
-    const char *const suffix = (long_units ? order[index].suffix
-                                : order[index].short_suffix);
-
-    /*   3 digits (or 2 digits and 1 decimal separator)
-       + 1 negative sign (which should not appear under normal circumstances)
-       + 1 nul terminator
-       ---
-       = 5 characters of space needed in the buffer. */
-    char buffer[8];
-
-    /* When the adjusted size has only one significant digit left of the
-       decimal point, show tenths of a unit, too. */
-    sprintf(buffer, "%.*f",
-            fabs(human_readable_size) < 10.0 ? 1 : 0,
-            human_readable_size);
-    return apr_pstrcat(result_pool, buffer, suffix, SVN_VA_NULL);
-  }
+  return format_size(human_readable_size,
+                     long_units, order, index, result_pool);
 }
 
 
-const char *
-svn_cl__get_base10_unit_file_size(svn_filesize_t size,
-                                  svn_boolean_t long_units,
-                                  apr_pool_t *result_pool)
+static const char *
+get_base10_unit_file_size(svn_filesize_t size,
+                          svn_boolean_t long_units,
+                          apr_pool_t *result_pool)
 {
-  static const struct
-  {
-    svn_filesize_t mask;
-    const char *suffix;
-    const char *short_suffix;
-  }
-  order[] =
+  static const filesize_order_t order[] =
     {
       {APR_INT64_C(                 0), " B",  "B"}, /* byte */
       {APR_INT64_C(               999), " kB", "k"}, /* kilo */
@@ -142,17 +164,8 @@ svn_cl__get_base10_unit_file_size(svn_filesize_t size,
   static const apr_size_t order_size = sizeof(order) / sizeof(order[0]);
 
   const svn_filesize_t abs_size = ((size < 0) ? -size : size);
+  apr_size_t index = get_order_index(abs_size, order, order_size);
   double human_readable_size;
-
-  /* Find the size mask for the (absolute) file size. It would be sexy to
-     do a binary search here, but with only 7 elements in the array ... */
-  apr_size_t index = order_size;
-  while (index > 0)
-    {
-      --index;
-      if (abs_size > order[index].mask)
-        break;
-    }
 
   /* Adjust the size to the given order of magnitude.
 
@@ -172,17 +185,31 @@ svn_cl__get_base10_unit_file_size(svn_filesize_t size,
       /*                    [   And here!  ] */
     }
 
-  /* NOTE: See localisation note in svn_cl__get_base2_unit_file_size(). */
-  {
-    const char *const suffix = (long_units ? order[index].suffix
-                                : order[index].short_suffix);
-    char buffer[8];
+  return format_size(human_readable_size,
+                     long_units, order, index, result_pool);
+}
 
-    /* When the adjusted size has only one significant digit left of the
-       decimal point, show tenths of a unit, too. */
-    sprintf(buffer, "%.*f",
-            fabs(human_readable_size) < 10.0 ? 1 : 0,
-            human_readable_size);
-    return apr_pstrcat(result_pool, buffer, suffix, SVN_VA_NULL);
-  }
+
+svn_error_t *
+svn_cl__get_unit_file_size(const char **result,
+                           svn_filesize_t size,
+                           svn_cl__unit_base_t base,
+                           svn_boolean_t long_units,
+                           apr_pool_t *result_pool)
+{
+  switch (base)
+    {
+    case SVN_CL__BASE_2_UNIT:
+      *result = get_base2_unit_file_size(size, long_units, result_pool);
+      break;
+
+    case SVN_CL__BASE_10_UNIT:
+      *result = get_base10_unit_file_size(size, long_units, result_pool);
+      break;
+
+    default:
+      SVN_ERR_MALFUNCTION();
+    }
+
+  return SVN_NO_ERROR;
 }
