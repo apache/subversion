@@ -1053,7 +1053,7 @@ open_path(parent_path_t **parent_path_p,
                   return SVN_NO_ERROR;
                 }
               else
-                return err_not_directory(root, directory, pool);
+                return svn_error_trace(err_not_directory(root, directory, pool));
             }
         }
     }
@@ -1187,7 +1187,8 @@ open_path(parent_path_t **parent_path_p,
             }
 
           /* It's really a problem ... */
-          return err_not_directory(root, path_so_far->data, iterpool);
+          return svn_error_trace(
+                   err_not_directory(root, path_so_far->data, iterpool));
         }
 
       rest = next;
