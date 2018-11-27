@@ -1663,6 +1663,37 @@ def remove_access_after_commit(sbox):
                                         expected_status,
                                         [], True)
 
+@XFail()
+@Skip(svntest.main.is_ra_type_file)
+def inverted_group_membership(sbox):
+  "access rights for user in inverted group"
+
+  # Bug reported here: https://lists.apache.org/thread.html/6cc7b22b211827ff946373407a516a3ab4d866fe03cdc85d22ff276b@%3Cdev.subversion.apache.org%3E
+
+  sbox.build(create_wc = False)
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox,
+                   {"/" : ("$anonymous =\n"
+                           "~@readonly = rw\n"
+                           "@readonly = r\n")},
+                   {"groups": "readonly = %s\n" % svntest.main.wc_author2})
+
+  expected_output = svntest.verify.UnorderedOutput(['A/\n', 'iota\n'])
+
+  # User mentioned in the @readonly group can read ...
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author2,
+                                     sbox.repo_url)
+
+  # ... but the access control entry for the inverted group isn't applied.
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author,
+                                     sbox.repo_url)
+
 
 ########################################################################
 # Run the tests
@@ -1700,6 +1731,7 @@ test_list = [ None,
               authz_file_external_to_authz,
               authz_log_censor_revprops,
               remove_access_after_commit,
+              inverted_group_membership,
              ]
 serial_only = True
 
