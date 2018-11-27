@@ -1351,30 +1351,29 @@ def create_http_connection(url, debuglevel=9):
   h.set_debuglevel(debuglevel)
   return h
 
-def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
+def write_restrictive_svnserve_conf(repo_dir, anon_access="none",
+                                    separate_groups_db=False):
   "Create a restrictive authz file ( no anynomous access )."
 
   fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
-  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
-           "authz-db = authz\n" % anon_access)
+  fp.write("[general]\n"
+           "anon-access = %s\n"
+           "auth-access = write\n"
+           "authz-db = authz\n" % anon_access);
+  if separate_groups_db:
+    fp.write("groups-db = groups\n")
   if options.enable_sasl:
-    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+    fp.write("realm = svntest\n"
+             "[sasl]\n",
+             "use-sasl = true\n");
   else:
     fp.write("password-db = passwd\n")
   fp.close()
 
-def write_restrictive_svnserve_conf_with_groups(repo_dir,
-                                                anon_access="none"):
+def write_restrictive_svnserve_conf_with_groups(repo_dir, anon_access="none"):
   "Create a restrictive configuration with groups stored in a separate file."
 
-  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
-  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
-           "authz-db = authz\ngroups-db = groups\n" % anon_access)
-  if options.enable_sasl:
-    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
-  else:
-    fp.write("password-db = passwd\n")
-  fp.close()
+  return write_restrictive_svnserve_conf(repo_dir, anon_access, True)
 
 # Warning: because mod_dav_svn uses one shared authz file for all
 # repositories, you *cannot* use write_authz_file in any test that
