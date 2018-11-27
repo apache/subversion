@@ -128,7 +128,7 @@ svn_cl__show_revs_t
 svn_cl__show_revs_from_word(const char *word);
 
 
-/* Unit tupes for file size conversion. */
+/* Unit types for file size conversion. */
 typedef enum svn_cl__size_unit_t
   {
     SVN_CL__SIZE_UNIT_NONE = 0,       /* Default, no conversion. */
@@ -734,7 +734,7 @@ const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
 
 /* Set *RESULT to the size of a file, formatted according to BASE.
-   For base-10 and base-2 units, the size is constrainsd to at most
+   For base-10 and base-2 units, the size is constrained to at most
    three significant digits.
 
    If LONG_UNITS is TRUE, any unit suffixes will be the whole SI symbol,
