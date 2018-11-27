@@ -22,21 +22,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1846299
-   Add resolver support for unversioned directories during update/switch.
-   Justification:
-     Support or unversioned files has already been backported.
-     We should support directories as well for consistency.
-   Votes:
-     +1: stsp, brane
-
- * r1847181, r1847182, r1847188, r1847264
-   Fix issue SVN-4792: Foreign repo copy of file adding mergeinfo.
-   Justification:
-     We don't want bogus mergeinfo.
-   Votes:
-     +1: julianfoad, brane
-
  * r1847377
    Reduce the scope of the Windows-specific help text for 'svn list'.
    Justification:
@@ -50,3 +35,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1846299
+   Add resolver support for unversioned directories during update/switch.
+   Justification:
+     Support or unversioned files has already been backported.
+     We should support directories as well for consistency.
+   Votes:
+     +1: stsp, brane, rhuijben
+
+ * r1847181, r1847182, r1847188, r1847264
+   Fix issue SVN-4792: Foreign repo copy of file adding mergeinfo.
+   Justification:
+     We don't want bogus mergeinfo.
+   Votes:
+     +1: julianfoad, brane, rhuijben
