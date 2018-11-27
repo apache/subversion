@@ -421,8 +421,8 @@ typedef struct print_info_baton_t
   /* Did we already print a line of output? */
   svn_boolean_t start_new_line;
 
-  /* Are we going to print human-readable sizes? */
-  svn_boolean_t human_readable;
+  /* Format for file sizes */
+  svn_cl__size_unit_t file_size_unit;
 
   /* The client context. */
   svn_client_ctx_t *ctx;
@@ -526,8 +526,10 @@ print_info_xml(void *baton,
   /* "<entry ...>" */
   if (info->kind == svn_node_file && info->size != SVN_INVALID_FILESIZE)
     {
-      const char *const size_str =
-        apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, info->size);
+      const char *size_str;
+      SVN_ERR(svn_cl__format_file_size(&size_str, info->size,
+                                       SVN_CL__SIZE_UNIT_XML,
+                                       FALSE, pool));
 
       svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
                             "path", path_str,
@@ -768,16 +770,9 @@ print_info(void *baton,
   if (info->kind == svn_node_file && info->size != SVN_INVALID_FILESIZE)
     {
       const char *sizestr;
-      if (receiver_baton->human_readable)
-        {
-          SVN_ERR(svn_cl__get_unit_file_size(&sizestr, info->size,
-                                             SVN_CL__BASE_2_UNIT,
-                                             TRUE, pool));
-        }
-      else
-        {
-          sizestr = apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, info->size);
-        }
+      SVN_ERR(svn_cl__format_file_size(&sizestr, info->size,
+                                       receiver_baton->file_size_unit,
+                                       TRUE, pool));
       SVN_ERR(svn_cmdline_printf(pool, _("Size in Repository: %s\n"),
                                  sizestr));
     }
@@ -1177,9 +1172,13 @@ print_info_item(void *baton,
               actual_target_path);
         }
 
-      SVN_ERR(print_info_item_string(
-                  apr_psprintf(pool, "%" SVN_FILESIZE_T_FMT, info->size),
-                  target_path, pool));
+      {
+        const char *sizestr;
+        SVN_ERR(svn_cl__format_file_size(&sizestr, info->size,
+                                         receiver_baton->file_size_unit,
+                                         TRUE, pool));
+        SVN_ERR(print_info_item_string(sizestr, target_path, pool));
+      }
       break;
 
     case info_item_revision:
@@ -1264,6 +1263,7 @@ svn_cl__info(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, pool);
 
   receiver_baton.ctx = ctx;
+  receiver_baton.file_size_unit = opt_state->file_size_unit;
 
   if (opt_state->xml)
     {
@@ -1277,7 +1277,7 @@ svn_cl__info(apr_getopt_t *os,
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
             _("--no-newline is not valid in --xml mode"));
-      if (opt_state->human_readable)
+      if (opt_state->file_size_unit != SVN_CL__SIZE_UNIT_NONE)
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
             _("--human-readable is not valid in --xml mode"));
@@ -1296,10 +1296,6 @@ svn_cl__info(apr_getopt_t *os,
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
             _("--incremental is only valid in --xml mode"));
-      if (opt_state->human_readable)
-        return svn_error_create(
-            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-            _("--human-readable is not valid with --show-item"));
 
       receiver_baton.multiple_targets = (opt_state->depth > svn_depth_empty
                                          || targets->nelts > 1);
@@ -1315,7 +1311,6 @@ svn_cl__info(apr_getopt_t *os,
   else
     {
       receiver = print_info;
-      receiver_baton.human_readable = opt_state->human_readable;
 
       if (opt_state->incremental)
         return svn_error_create(

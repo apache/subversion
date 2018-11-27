@@ -728,7 +728,7 @@ def info_item_size_wc_recursive(sbox):
 
 
 def info_item_size_repos(sbox):
-  "non-recursive '--show-item=repos-size' on file URL"
+  "non-recursive '--show-item=repos-size' on URL"
 
   sbox.build(read_only=True)
 
@@ -737,10 +737,23 @@ def info_item_size_repos(sbox):
     'info', '--show-item=repos-size',
     sbox.repo_url + "/iota")
 
+  # Same, but without the newline.
   svntest.actions.run_and_verify_svn(
     "25", [],
     'info', '--show-item=repos-size', '--no-newline',
     sbox.repo_url + "/iota")
+
+  # Same, but with "human-readable" output.
+  svntest.actions.run_and_verify_svn(
+    "25 B", [],
+    'info', '--show-item=repos-size', '--human-readable',
+    sbox.repo_url + "/iota")
+
+  # No output when the URL is a directory.
+  svntest.actions.run_and_verify_svn(
+    [], [],
+    'info', '--show-item=repos-size',
+    sbox.repo_url)
 
 
 def info_item_size_repos_recursive(sbox):

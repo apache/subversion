@@ -127,6 +127,16 @@ typedef enum svn_cl__show_revs_t {
 svn_cl__show_revs_t
 svn_cl__show_revs_from_word(const char *word);
 
+
+/* Unit tupes for file size conversion. */
+typedef enum svn_cl__size_unit_t
+  {
+    SVN_CL__SIZE_UNIT_NONE = 0,       /* Default, no conversion. */
+    SVN_CL__SIZE_UNIT_XML = -1,       /* Conversion for XML output. */
+    SVN_CL__SIZE_UNIT_BASE_10 = 1000, /* Use base-10 SI units. */
+    SVN_CL__SIZE_UNIT_BASE_2 = 1024   /* Use base-2 SI units. */
+  } svn_cl__size_unit_t;
+
 
 /*** Command dispatch. ***/
 
@@ -258,7 +268,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
   svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
   svn_boolean_t drop;             /* drop shelf after successful unshelve */
-  svn_boolean_t human_readable;   /* show human-readable output */
+  svn_cl__size_unit_t file_size_unit; /* file size format */
   enum svn_cl__viewspec_t {
       svn_cl__viewspec_unspecified = 0 /* default */,
       svn_cl__viewspec_classic,
@@ -723,15 +733,11 @@ svn_cl__node_kind_str_xml(svn_node_kind_t kind);
 const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
 
-/* Supported unit bases for file size conversion. */
-typedef enum svn_cl__unit_base_t
-  {
-    SVN_CL__BASE_10_UNIT = 1000, /* Use base-10 SI units. */
-    SVN_CL__BASE_2_UNIT = 1024   /* Use base-2 SI units. */
-  } svn_cl__unit_base_t;
+/* Set *RESULT to the size of a file, formatted according to BASE.
+   For base-10 and base-2 units, the size is constrainsd to at most
+   three significant digits.
 
-/* Set *RESULT to the size of a file, formatted to 3 colums in BASE units.
-   if LONG_UNITS is TRUE, unit suffixes will be the whole SI symbol,
+   If LONG_UNITS is TRUE, any unit suffixes will be the whole SI symbol,
    e.g., KiB, MiB, etc; otherwise only the first letters will be used.
 
    File sizes are never negative, so we don't handle that case other than
@@ -739,11 +745,11 @@ typedef enum svn_cl__unit_base_t
 
    The result will be allocated from RESULT_POOL. */
 svn_error_t *
-svn_cl__get_unit_file_size(const char **result,
-                           svn_filesize_t size,
-                           svn_cl__unit_base_t base,
-                           svn_boolean_t long_units,
-                           apr_pool_t *result_pool);
+svn_cl__format_file_size(const char **result,
+                         svn_filesize_t size,
+                         svn_cl__size_unit_t base,
+                         svn_boolean_t long_units,
+                         apr_pool_t *result_pool);
 
 
 /** Provides an XML name for a given OPERATION.

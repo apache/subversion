@@ -129,12 +129,12 @@ get_base2_unit_file_size(svn_filesize_t size,
      shift by (index * 10) bits. But we split it into an integer and a
      floating-point division, so that we don't overflow the mantissa at
      very large file sizes. */
-  ;
   if ((abs_size >> 10 * index) > 999)
     {
       /* This assertion should never fail, because we only have 4 binary
-         digits in the petabyte range and so the number of petabytes can't
-         be large enough to enter this conditional block. */
+         digits in the petabyte (all right, "pibibyte") range and so the
+         number of petabytes can't be large enough to cause the program
+         flow to enter this conditional block. */
       assert(index < order_size - 1);
       ++index;
     }
@@ -160,6 +160,7 @@ get_base10_unit_file_size(svn_filesize_t size,
       {APR_INT64_C(      999999999999), " TB", "T"}, /* tera */
       {APR_INT64_C(   999999999999999), " EB", "E"}, /* exa  */
       {APR_INT64_C(999999999999999999), " PB", "P"}  /* peta */
+      /*         18446744073709551615 is the maximum value.  */
     };
   static const apr_size_t order_size = sizeof(order) / sizeof(order[0]);
 
@@ -179,7 +180,7 @@ get_base10_unit_file_size(svn_filesize_t size,
     human_readable_size = (double)size / (order[index].mask + 1);
   else
     {
-      /*                              [  Keep integer division here!  ] */
+      /*                             [   Keep integer division here!   ] */
       const double divisor = (double)((order[index].mask + 1) / 1000000);
       human_readable_size = (size / 1000000) / divisor;
       /*                    [   And here!  ] */
@@ -191,19 +192,24 @@ get_base10_unit_file_size(svn_filesize_t size,
 
 
 svn_error_t *
-svn_cl__get_unit_file_size(const char **result,
-                           svn_filesize_t size,
-                           svn_cl__unit_base_t base,
-                           svn_boolean_t long_units,
-                           apr_pool_t *result_pool)
+svn_cl__format_file_size(const char **result,
+                         svn_filesize_t size,
+                         svn_cl__size_unit_t base,
+                         svn_boolean_t long_units,
+                         apr_pool_t *result_pool)
 {
   switch (base)
     {
-    case SVN_CL__BASE_2_UNIT:
+    case SVN_CL__SIZE_UNIT_NONE:
+    case SVN_CL__SIZE_UNIT_XML:
+      *result = apr_psprintf(result_pool, "%" SVN_FILESIZE_T_FMT, size);
+      break;
+
+    case SVN_CL__SIZE_UNIT_BASE_2:
       *result = get_base2_unit_file_size(size, long_units, result_pool);
       break;
 
-    case SVN_CL__BASE_10_UNIT:
+    case SVN_CL__SIZE_UNIT_BASE_10:
       *result = get_base10_unit_file_size(size, long_units, result_pool);
       break;
 

@@ -2281,6 +2281,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_unspecified;
   opt_state.show_revs = svn_cl__show_revs_invalid;
+  opt_state.file_size_unit = SVN_CL__SIZE_UNIT_NONE;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -2497,7 +2498,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         descend = FALSE;
         break;
       case 'H':
-        opt_state.human_readable = TRUE;
+        opt_state.file_size_unit = SVN_CL__SIZE_UNIT_BASE_2;
         break;
       case opt_depth:
         err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);

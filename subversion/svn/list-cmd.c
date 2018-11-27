@@ -42,7 +42,7 @@
 struct print_baton {
   svn_client_ctx_t *ctx;
   svn_boolean_t verbose;
-  svn_boolean_t human_readable;
+  svn_cl__size_unit_t file_size_unit;
 
   /* Keep track of the width of the author field. */
   int author_width;
@@ -137,7 +137,8 @@ print_dirent(void *baton,
       apr_status_t apr_err;
       apr_size_t size;
       char timestr[20];
-      const int sizewidth = (!pb->human_readable ? normal_size_width
+      const int sizewidth = (pb->file_size_unit == SVN_CL__SIZE_UNIT_NONE
+                             ? normal_size_width
                              : human_readable_size_width);
       const char *sizestr = "";
       const char *utf8_timestr;
@@ -178,20 +179,11 @@ print_dirent(void *baton,
             }
         }
 
-      /* The format of the size field depends on the --human-readable flag. */
       if (dirent->kind == svn_node_file)
         {
-          if (pb->human_readable)
-            {
-              SVN_ERR(svn_cl__get_unit_file_size(&sizestr, dirent->size,
-                                                 SVN_CL__BASE_2_UNIT,
-                                                 FALSE, scratch_pool));
-            }
-          else
-            {
-              sizestr = apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT,
-                                     dirent->size);
-            }
+          SVN_ERR(svn_cl__format_file_size(&sizestr, dirent->size,
+                                           pb->file_size_unit,
+                                           FALSE, scratch_pool));
         }
 
       return svn_cmdline_printf
@@ -284,9 +276,11 @@ print_dirent_xml(void *baton,
 
   if (dirent->kind == svn_node_file)
     {
-      svn_cl__xml_tagged_cdata
-        (&sb, scratch_pool, "size",
-         apr_psprintf(scratch_pool, "%" SVN_FILESIZE_T_FMT, dirent->size));
+      const char *sizestr;
+      SVN_ERR(svn_cl__format_file_size(&sizestr, dirent->size,
+                                       SVN_CL__SIZE_UNIT_XML,
+                                       FALSE, scratch_pool));
+      svn_cl__xml_tagged_cdata(&sb, scratch_pool, "size", sizestr);
     }
 
   svn_xml_make_open_tag(&sb, scratch_pool, svn_xml_normal, "commit",
@@ -356,7 +350,7 @@ svn_cl__list(apr_getopt_t *os,
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
             _("--verbose is not valid in --xml mode"));
-      if (opt_state->human_readable)
+      if (opt_state->file_size_unit != SVN_CL__SIZE_UNIT_NONE)
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
             _("--human-readable is not valid in --xml mode"));
@@ -384,11 +378,17 @@ svn_cl__list(apr_getopt_t *os,
 
   pb.ctx = ctx;
   pb.verbose = opt_state->verbose;
-  pb.human_readable = opt_state->human_readable;
-  pb.author_width = (!pb.human_readable ? initial_author_width
-                     : initial_human_readable_author_width);
-  pb.max_author_width = (!pb.human_readable ? maximum_author_width
-                         : maximum_human_readable_author_width);
+  pb.file_size_unit = opt_state->file_size_unit;
+  if (pb.file_size_unit == SVN_CL__SIZE_UNIT_NONE)
+    {
+      pb.author_width = initial_author_width;
+      pb.max_author_width = maximum_author_width;
+    }
+  else
+    {
+      pb.author_width = initial_human_readable_author_width;
+      pb.max_author_width = maximum_human_readable_author_width;
+    }
 
   if (opt_state->depth == svn_depth_unknown)
     opt_state->depth = svn_depth_immediates;
