@@ -27,10 +27,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1847181, r1847182, r1847188, r1847264
-   Fix issue SVN-4792: Foreign repo copy of file adding mergeinfo.
-   Justification:
-     We don't want bogus mergeinfo.
-   Votes:
-     +1: julianfoad, brane, rhuijben
