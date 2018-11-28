@@ -28,16 +28,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1846299
-   Add resolver support for unversioned directories during update/switch.
-   Justification:
-     Support or unversioned files has already been backported.
-     We should support directories as well for consistency.
-   Branch:
-     ^/subversion/branches/1.10.x-r1846299
-   Votes:
-     +1: stsp, brane, rhuijben
-
  * r1847181, r1847182, r1847188, r1847264
    Fix issue SVN-4792: Foreign repo copy of file adding mergeinfo.
    Justification:
