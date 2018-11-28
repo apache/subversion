@@ -163,7 +163,7 @@ svn_min__help(apr_getopt_t *os,
                                                              pool)),
                          pool);
 #endif
-#ifdef SVN_HAVE_GNOME_KEYRING
+#if (defined(SVN_HAVE_GNOME_KEYRING) || defined(SVN_HAVE_LIBSECRET))
   svn_stringbuf_appendcstr(version_footer, "* Gnome Keyring\n");
 #endif
 #ifdef SVN_HAVE_GPG_AGENT
@@ -176,7 +176,7 @@ svn_min__help(apr_getopt_t *os,
   svn_stringbuf_appendcstr(version_footer, "* KWallet (KDE)\n");
 #endif
 
-  return svn_opt_print_help4(os,
+  return svn_opt_print_help5(os,
                              "svn-mergeinfo-normalizer",
                              opt_state ? opt_state->version : FALSE,
                              opt_state ? opt_state->quiet : FALSE,

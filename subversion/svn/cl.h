@@ -32,6 +32,7 @@
 #include <apr_tables.h>
 #include <apr_getopt.h>
 
+#include "svn_types.h"
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_string.h"
@@ -125,6 +126,16 @@ typedef enum svn_cl__show_revs_t {
 /* Return svn_cl__show_revs_t value corresponding to word. */
 svn_cl__show_revs_t
 svn_cl__show_revs_from_word(const char *word);
+
+
+/* Unit types for file size conversion. */
+typedef enum svn_cl__size_unit_t
+  {
+    SVN_CL__SIZE_UNIT_NONE = 0,       /* Default, no conversion. */
+    SVN_CL__SIZE_UNIT_XML = -1,       /* Conversion for XML output. */
+    SVN_CL__SIZE_UNIT_BASE_10 = 1000, /* Use base-10 SI units. */
+    SVN_CL__SIZE_UNIT_BASE_2 = 1024   /* Use base-2 SI units. */
+  } svn_cl__size_unit_t;
 
 
 /*** Command dispatch. ***/
@@ -256,7 +267,13 @@ typedef struct svn_cl__opt_state_t
   const char *show_item;           /* print only the given item */
   svn_boolean_t adds_as_modification; /* update 'add vs add' no tree conflict */
   svn_boolean_t vacuum_pristines; /* remove unreferenced pristines */
-  svn_boolean_t list;
+  svn_boolean_t drop;             /* drop shelf after successful unshelve */
+  svn_cl__size_unit_t file_size_unit; /* file size format */
+  enum svn_cl__viewspec_t {
+      svn_cl__viewspec_unspecified = 0 /* default */,
+      svn_cl__viewspec_classic,
+      svn_cl__viewspec_svn11
+  } viewspec;                     /* value of --x-viewspec */
 } svn_cl__opt_state_t;
 
 /* Conflict stats for operations such as update and merge. */
@@ -307,13 +324,11 @@ svn_opt_subcommand_t
   svn_cl__shelf_diff,
   svn_cl__shelf_drop,
   svn_cl__shelf_list,
+  svn_cl__shelf_list_by_paths,
   svn_cl__shelf_log,
   svn_cl__shelf_save,
   svn_cl__shelf_shelve,
   svn_cl__shelf_unshelve,
-  svn_cl__shelve,
-  svn_cl__unshelve,
-  svn_cl__shelves,
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
@@ -322,7 +337,7 @@ svn_opt_subcommand_t
 
 
 /* See definition in svn.c for documentation. */
-extern const svn_opt_subcommand_desc2_t svn_cl__cmd_table[];
+extern const svn_opt_subcommand_desc3_t svn_cl__cmd_table[];
 
 /* See definition in svn.c for documentation. */
 extern const int svn_cl__global_options[];
@@ -718,6 +733,24 @@ svn_cl__node_kind_str_xml(svn_node_kind_t kind);
 const char *
 svn_cl__node_kind_str_human_readable(svn_node_kind_t kind);
 
+/* Set *RESULT to the size of a file, formatted according to BASE.
+   For base-10 and base-2 units, the size is constrained to at most
+   three significant digits.
+
+   If LONG_UNITS is TRUE, any unit suffixes will be the whole SI symbol,
+   e.g., KiB, MiB, etc; otherwise only the first letters will be used.
+
+   File sizes are never negative, so we don't handle that case other than
+   making sure that the scale adjustment will work.
+
+   The result will be allocated from RESULT_POOL. */
+svn_error_t *
+svn_cl__format_file_size(const char **result,
+                         svn_filesize_t size,
+                         svn_cl__size_unit_t base,
+                         svn_boolean_t long_units,
+                         apr_pool_t *result_pool);
+
 
 /** Provides an XML name for a given OPERATION.
  * Note: POOL is currently not used.
@@ -921,6 +954,20 @@ svn_cl__similarity_check(const char *key,
                          svn_cl__simcheck_t **tokens,
                          apr_size_t token_count,
                          apr_pool_t *scratch_pool);
+
+/* Return in FUNC_P and BATON_P a callback that prints a summary diff,
+ * according to the options XML and IGNORE_PROPERTIES.
+ *
+ * ANCHOR is a URL or local path to be prefixed to the printed paths.
+ */
+svn_error_t *
+svn_cl__get_diff_summary_writer(svn_client_diff_summarize_func_t *func_p,
+                                void **baton_p,
+                                svn_boolean_t xml,
+                                svn_boolean_t ignore_properties,
+                                const char *anchor,
+                                apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

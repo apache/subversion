@@ -262,13 +262,34 @@ x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 
   if (*p == end)
     return SVN_NO_ERROR;
+  
+  /* The OID encoding of 1.2.840.113549.1.1.10 (id-RSASSA-PSS) */
+#define OID_RSASSA_PSS "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a"
 
-  /*
-   * assume the algorithm parameters must be NULL
-   */
-  err = asn1_get_tag(p, end, &len, ASN1_NULL);
-  if (err)
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
+  if (equal(alg->p, alg->len, OID_RSASSA_PSS, sizeof(OID_RSASSA_PSS) - 1))
+    {
+      /* Skip over algorithm parameters for id-RSASSA-PSS (RFC 8017)
+       *
+       * RSASSA-PSS-params ::= SEQUENCE {
+       *  hashAlgorithm      [0] HashAlgorithm    DEFAULT sha1,
+       *  maskGenAlgorithm   [1] MaskGenAlgorithm DEFAULT mgf1SHA1,
+       *  saltLength         [2] INTEGER          DEFAULT 20,
+       *  trailerField       [3] TrailerField     DEFAULT trailerFieldBC
+       * }
+       */
+      err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
+
+      *p += len;
+    }
+  else
+    {
+      /* Algorithm parameters must be NULL for other algorithms */
+      err = asn1_get_tag(p, end, &len, ASN1_NULL);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
+    }
 
   if (*p != end)
     {

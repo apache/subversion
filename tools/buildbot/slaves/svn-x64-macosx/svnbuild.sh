@@ -27,15 +27,31 @@ scripts=$(cd $(dirname "$0") && pwd)
 ${scripts}/mkramdisk.sh ${volume_name} ${ramconf}
 
 # These are the default APR and Serf config options
-serfconfig="--with-serf=${SVNBB_SERF} --with-apxs=/usr/sbin/apxs"
+serfconfig=" --with-serf=${SVNBB_SERF} --with-apxs=/usr/local/opt/httpd/bin/apxs"
 
 # An optional parameter tells build scripts which version of APR to use
 if [ ! -z "$1" ]; then
     aprdir=$(eval 'echo $SVNBB_'"$1")
+else
+    aprconfig="--with-apr=${SVNBB_APR} --with-apr-util=${SVNBB_APRUTIL}"
 fi
 if [ ! -z "${aprdir}" -a  -d "${aprdir}" ]; then
     aprconfig="--with-apr=${aprdir} --with-apr-util=${aprdir}"
     serfconfig=" --without-serf --without-apxs"
+fi
+
+# An optional parameter tells us if this is a warnings-only build.
+# We run the warnings build with a number of additional options.
+if [ "$2" = "warnings" ]; then
+    parallel=1
+    maintainer_mode=' -q --enable-maintainer-mode'
+    config_cflags="-Wno-deprecated-declarations"
+    config_cflags="${config_cflags} -DPACK_AFTER_EVERY_COMMIT"
+    config_cflags="${config_cflags} -DSVN_UNALIGNED_ACCESS_IS_OK=0"
+    config_cflags="${config_cflags} -DSUFFIX_LINES_TO_KEEP=0"
+    config_cflags="${config_cflags} -DSVN_DEPRECATED="
+else
+    parallel=${SVNBB_PARALLEL}
 fi
 
 #
@@ -82,8 +98,10 @@ fi
 
 echo "============ configure"
 cd ${absbld}
-env CC=clang CXX=clang++ \
-${abssrc}/configure \
+env CC=clang CFLAGS="${config_cflags}" \
+    CXX=clang++ CXXFLAGS="${config_cxxflags}" \
+    LDFLAGS='-Wl,-w' \
+${abssrc}/configure${maintainer_mode} \
     --prefix="${absbld}/.install-prefix" \
     --enable-debug${optimizeconfig} \
     --disable-nls \
@@ -91,6 +109,7 @@ ${abssrc}/configure \
     ${aprconfig}${serfconfig} \
     --with-swig="${SVNBB_SWIG}" \
     --with-berkeley-db=db.h:"${SVNBB_BDB}/include":${SVNBB_BDB}/lib:db \
+    --enable-bdb6 \
     --enable-javahl \
     --without-jikes \
     ${lz4config} \
@@ -105,4 +124,4 @@ test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 
 echo "============ make"
 cd ${absbld}
-make -j${SVNBB_PARALLEL}
+make -j${parallel}

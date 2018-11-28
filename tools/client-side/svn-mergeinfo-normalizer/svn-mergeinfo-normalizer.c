@@ -221,43 +221,44 @@ const int svn_min__global_options[] =
   opt_config_dir, opt_config_options, 0
 };
 
-const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
+const svn_opt_subcommand_desc3_t svn_min__cmd_table[] =
 {
-  { "help", svn_min__help, {"?", "h"}, N_
-    ("Describe the usage of this program or its subcommands.\n"
-     "usage: help [SUBCOMMAND...]\n"),
+  { "help", svn_min__help, {"?", "h"}, {N_(
+     "Describe the usage of this program or its subcommands.\n"
+     "usage: help [SUBCOMMAND...]\n"
+    )},
     {0} },
 
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
-  { "analyze", svn_min__analyze, { "analyse" }, N_
-    ("Generate a report of which part of the sub-tree mergeinfo can be\n"
+  { "analyze", svn_min__analyze, { "analyse" }, {N_(
+     "Generate a report of which part of the sub-tree mergeinfo can be\n"
      "removed and which part can't.\n"
      "usage: analyze [WCPATH...]\n"
-     "\n"
+     "\n"), N_(
      "  If neither --remove-obsoletes, --remove-redundant nor --combine-ranges\n"
      "  option is given, all three will be used implicitly.\n"
-     "\n"
+     "\n"), N_(
      "  In verbose mode, the command will behave just like 'normalize --dry-run'\n"
      "  but will show an additional summary of all deleted branches that were\n"
      "  encountered plus the revision of their latest deletion (if available).\n"
-     "\n"
+     "\n"), N_(
      "  In non-verbose mode, the per-node output does not give the parent path,\n"
      "  no successful elisions and branch removals nor the list of remaining\n"
      "  branches.\n"
-    ),
+    )},
     {opt_targets, opt_depth, 'v',
      opt_remove_obsoletes, opt_remove_redundant,
      opt_remove_redundant_misaligned, opt_combine_ranges} },
 
-  { "normalize", svn_min__normalize, { 0 }, N_
-    ("Normalize / reduce the mergeinfo throughout the working copy sub-tree.\n"
+  { "normalize", svn_min__normalize, { 0 }, {N_(
+     "Normalize / reduce the mergeinfo throughout the working copy sub-tree.\n"
      "usage: normalize [WCPATH...]\n"
-     "\n"
+     "\n"), N_(
      "  If neither --remove-obsoletes, --remove-redundant, --combine-ranges\n"
      "  nor --remove-redundant-misaligned option is given, --remove-redundant\n"
      "  will be used implicitly.\n"
-     "\n"
+     "\n"), N_(
      "  In non-verbose mode, only general progress as well as a summary before\n"
      "  and after the normalization process will be shown.  Note that sub-node\n"
      "  mergeinfo which could be removed entirely does not contribute to the\n"
@@ -265,12 +266,12 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
      "  ranges combined only refers to the mergeinfo lines still present after\n"
      "  the normalization process.  To get total numbers, compare the initial\n"
      "  with the final mergeinfo statistics.\n"
-     "\n"
+     "\n"), N_(
      "  The detailed operation log in verbose mode replaces the progress display.\n"
      "  For each node with mergeinfo, the nearest parent node with mergeinfo is\n"
      "  given - if there is one and the result of trying to remove the mergeinfo\n"
      "  is shown for each branch.  The various outputs are:\n"
-     "\n"
+     "\n"), N_(
      "    elide redundant branch - Revision ranges are the same as in the parent.\n"
      "                             Mergeinfo for this branch can be elided.\n"
      "    elide branch           - Not an exact match with the parent but the\n"
@@ -324,32 +325,34 @@ const svn_opt_subcommand_desc2_t svn_min__cmd_table[] =
      "                             The sub-tree mergeinfo cannot be elided.\n"
      "    REVERSE RANGE(S) found - The mergeinfo contains illegal reverse ranges.\n"
      "                             The sub-tree mergeinfo cannot be elided.\n"
-     "\n"
+     "\n"), N_(
      "  If all branches have been removed from a nodes' mergeinfo, the whole\n"
      "  svn:mergeinfo property will be removed.  Otherwise, only obsolete\n"
      "  branches will be removed.  In verbose mode, a list of branches that\n"
-     "  could not be removed will be shown per node.\n"),
+     "  could not be removed will be shown per node.\n"
+    )},
     {opt_targets, opt_depth, opt_dry_run, 'q', 'v',
      opt_remove_obsoletes, opt_remove_redundant,
      opt_remove_redundant_misaligned, opt_combine_ranges} },
 
-  { "remove-branches", svn_min__remove_branches, { 0 }, N_
-    ("Read a list of branch names from the given file and remove all\n"
+  { "remove-branches", svn_min__remove_branches, { 0 }, {N_(
+     "Read a list of branch names from the given file and remove all\n"
      "mergeinfo referring to these branches from the given targets.\n"
      "usage: remove-branches [WCPATH...] --file FILE\n"
-     "\n"
+     "\n"), N_(
      "  The command will behave just like 'normalize --remove-obsoletes' but\n"
      "  will never actually contact the repository.  Instead, it assumes any\n"
      "  path given in FILE is a deleted branch.\n"
-     "\n"
+     "\n"), N_(
      "  Compared to a simple 'normalize --remove-obsoletes' run, this command\n"
      "  allows for selective removal of obsolete branches.  It may therefore be\n"
      "  better suited for large deployments with complex branch structures.\n"
      "  You may also use this to remove mergeinfo that refers to still existing\n"
-     "  branches.\n"),
+     "  branches.\n"
+    )},
     {opt_targets, opt_depth, opt_dry_run, 'q', 'v', 'F'} },
 
-  { NULL, NULL, {0}, NULL, {0} }
+  { NULL, NULL, {0}, {NULL}, {0} }
 };
 
 
@@ -414,7 +417,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
   int i;
-  const svn_opt_subcommand_desc2_t *subcommand = NULL;
+  const svn_opt_subcommand_desc3_t *subcommand = NULL;
   svn_min__cmd_baton_t command_baton = { 0 };
   svn_auth_baton_t *ab;
   svn_config_t *cfg_config;
@@ -639,7 +642,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      just typos/mistakes.  Whatever the case, the subcommand to
      actually run is svn_cl__help(). */
   if (opt_state.help)
-    subcommand = svn_opt_get_canonical_subcommand2(svn_min__cmd_table, "help");
+    subcommand = svn_opt_get_canonical_subcommand3(svn_min__cmd_table, "help");
 
   /* If we're not running the `help' subcommand, then look for a
      subcommand in the first argument. */
@@ -650,8 +653,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           if (opt_state.version)
             {
               /* Use the "help" subcommand to handle the "--version" option. */
-              static const svn_opt_subcommand_desc2_t pseudo_cmd =
-                { "--version", svn_min__help, {0}, "",
+              static const svn_opt_subcommand_desc3_t pseudo_cmd =
+                { "--version", svn_min__help, {0}, {""},
                   {opt_version,    /* must accept its own option */
                    'q',            /* brief output */
                    'v',            /* verbose output */
@@ -676,7 +679,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
                                           pool));
-          subcommand = svn_opt_get_canonical_subcommand2(svn_min__cmd_table,
+          subcommand = svn_opt_get_canonical_subcommand3(svn_min__cmd_table,
                                                          first_arg);
           if (subcommand == NULL)
             {
@@ -704,12 +707,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       if (opt_id == 'h' || opt_id == '?')
         continue;
 
-      if (! svn_opt_subcommand_takes_option3(subcommand, opt_id,
+      if (! svn_opt_subcommand_takes_option4(subcommand, opt_id,
                                              svn_min__global_options))
         {
           const char *optstr;
           const apr_getopt_option_t *badopt =
-            svn_opt_get_option_from_code2(opt_id, svn_min__options,
+            svn_opt_get_option_from_code3(opt_id, svn_min__options,
                                           subcommand, pool);
           svn_opt_format_option(&optstr, badopt, FALSE, pool);
           if (subcommand->name[0] == '-')

@@ -2823,7 +2823,8 @@ def commit_add_subadd(sbox):
 
   # prepare targets file
   targets = "A/D A/D/H A/D/H/chi A/D/H/omega A/D/H/psi".split()
-  open(targets_file, 'w').write("\n".join(targets))
+  with open(targets_file, 'w') as f:
+    f.write("\n".join(targets))
 
   # r2: rm A/D
   sbox.simple_rm('A/D')
@@ -3113,6 +3114,39 @@ def commit_xml(sbox):
   sbox.simple_append('index.html', '<Q></R>', True)
   sbox.simple_commit()
 
+@Issue(4722)
+def commit_issue4722_checksum(sbox):
+  "commit that triggered checksum failure"
+
+  sbox.build()
+
+  # This bug only ever affected FSFS in 1.9.7.  The test could be
+  # considered a bit "fragile" as any change to the on-disk
+  # representation may well make it pass trivially.  On the other hand
+  # it should still pass irrespective of that representation, and for
+  # all other repository types.
+
+  # Enough data to allow the bug to occur
+  with open(sbox.ospath('f'), 'w') as fp:
+    for i in range(0, 2001):
+      fp.write('abcdefghijklmnopqrstuvwxyz')
+  sbox.simple_add('f')
+  sbox.simple_commit()
+
+  # Just the right data to trigger the bug
+  with open(sbox.ospath('f'), 'w') as fp:
+    for i in range(0, 8713):
+      fp.write(str(i))
+    fp.write("11111")
+  sbox.simple_commit()
+
+  # Trigger deduplication which is when the bug occurred
+  with open(sbox.ospath('f'), 'w') as fp:
+    for i in range(0, 2001):
+      fp.write('abcdefghijklmnopqrstuvwxyz')
+  sbox.simple_commit()
+
+
 ########################################################################
 # Run the tests
 
@@ -3190,6 +3224,7 @@ test_list = [ None,
               commit_mergeinfo_ood,
               mkdir_conflict_proper_error,
               commit_xml,
+              commit_issue4722_checksum,
              ]
 
 if __name__ == '__main__':

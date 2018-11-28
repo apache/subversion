@@ -142,7 +142,7 @@ public class NativeResources
     private static final void init()
     {
         final int SVN_VER_MAJOR = 1;
-        final int SVN_VER_MINOR = 11;
+        final int SVN_VER_MINOR = 12;
         initNativeLibrary();
         version = new Version();
         if (!version.isAtLeast(SVN_VER_MAJOR, SVN_VER_MINOR, 0))

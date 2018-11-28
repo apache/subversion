@@ -578,16 +578,17 @@ jthrowable JNIUtil::wrappedCreateClientException(svn_error_t *err, jthrowable jc
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  const char *source = NULL;
+  std::string source;
 #ifdef SVN_DEBUG
 #ifndef SVN_ERR__TRACING
   if (err->file)
     {
-      std::ostringstream buf;
-      buf << err->file;
+      source = err->file;
       if (err->line > 0)
-        buf << ':' << err->line;
-      source = buf.str().c_str();
+        {
+          source += ':';
+          source += err->line;
+        }
     }
 #endif
 #endif
@@ -615,7 +616,7 @@ jthrowable JNIUtil::wrappedCreateClientException(svn_error_t *err, jthrowable jc
       JNICriticalSection cs(*g_logMutex);
       g_logStream << "Subversion JavaHL exception thrown, message:<";
       g_logStream << msg << ">";
-      if (source)
+      if (!source.empty())
         g_logStream << " source:<" << source << ">";
       if (err->apr_err != -1)
         g_logStream << " apr-err:<" << err->apr_err << ">";
@@ -624,7 +625,7 @@ jthrowable JNIUtil::wrappedCreateClientException(svn_error_t *err, jthrowable jc
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 
-  jstring jsource = makeJString(source);
+  jstring jsource = (source.empty() ? NULL : makeJString(source.c_str()));
   if (isJavaExceptionThrown())
     POP_AND_RETURN_NULL;
 

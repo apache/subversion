@@ -2861,6 +2861,13 @@ open_stream(const dav_resource *resource,
                                     "Resource body changes may only be made to "
                                     "working resources (at this time).");
         }
+      if (!resource->info->root.root)
+        {
+          return dav_svn__new_error(resource->pool, HTTP_METHOD_NOT_ALLOWED,
+                                    0, 0,
+                                    "Resource body changes may only be made to "
+                                    "checked-out resources (at this time).");
+        }
     }
 
   /* ### TODO:  Can we support range writes someday? */

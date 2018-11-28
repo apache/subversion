@@ -34,6 +34,7 @@
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             [--fsfs-compression=<type>] [--fsfs-dir-deltification=<true|false>]
+            [--allow-remote-http-connection]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -280,6 +281,8 @@ class TestHarness:
       cmdline.append('--fsfs-compression=%s' % self.opts.fsfs_compression)
     if self.opts.fsfs_dir_deltification is not None:
       cmdline.append('--fsfs-dir-deltification=%s' % self.opts.fsfs_dir_deltification)
+    if self.opts.allow_remote_http_connection is not None:
+      cmdline.append('--allow-remote-http-connection')
 
     self.py_test_cmdline = cmdline
 
@@ -327,7 +330,7 @@ class TestHarness:
     def _command_line(self, harness):
       if self.is_python:
         cmdline = list(harness.py_test_cmdline)
-        cmdline.insert(0, 'python')
+        cmdline.insert(0, sys.executable)
         cmdline.insert(1, self.progabs)
         # Run the test apps in "child process" mode,
         # i.e. w/o cleaning up global directories etc.
@@ -375,7 +378,7 @@ class TestHarness:
 
     def _count_py_tests(self, progabs, progdir, progbase):
       'Run a c test, escaping parameters as required.'
-      cmdline = [ 'python', progabs, '--list' ]
+      cmdline = [ sys.executable, progabs, '--list' ]
       prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
       lines = prog.stdout.readlines()
 
@@ -448,6 +451,7 @@ class TestHarness:
     job_queue = queue.Queue()
     total_count = 0
     scrambled = list(jobs)
+    # TODO: What's this line doing, and what's the magic number?
     scrambled.sort(key=lambda x: ("1" if x.test_count() < 30 else "0") + str(x.number))
     for job in scrambled:
       total_count += job.test_count()
@@ -1032,6 +1036,8 @@ def create_parser():
                     help='Set compression type (for fsfs)')
   parser.add_option('--fsfs-dir-deltification', action='store', type='str',
                     help='Set directory deltification option (for fsfs)')
+  parser.add_option('--allow-remote-http-connection', action='store_true',
+                    help='Run tests that connect to remote HTTP(S) servers')
 
   parser.set_defaults(set_log_level=None)
   return parser

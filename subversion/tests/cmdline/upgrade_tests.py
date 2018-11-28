@@ -392,7 +392,8 @@ def xml_entries_relocate(path, from_url, to_url):
   entries = os.path.join(path, adm_name, 'entries')
   txt = open(entries).read().replace('url="' + from_url, 'url="' + to_url)
   os.chmod(entries, svntest.main.S_ALL_RWX)
-  open(entries, 'w').write(txt)
+  with open(entries, 'w') as f:
+    f.write(txt)
 
   for dirent in os.listdir(path):
     item_path = os.path.join(path, dirent)
@@ -410,7 +411,8 @@ def simple_entries_replace(path, from_url, to_url):
   entries = os.path.join(path, adm_name, 'entries')
   txt = open(entries).read().replace(from_url, to_url)
   os.chmod(entries, svntest.main.S_ALL_RWX)
-  open(entries, 'wb').write(txt.encode())
+  with open(entries, 'wb') as f:
+    f.write(txt.encode())
 
   for dirent in os.listdir(path):
     item_path = os.path.join(path, dirent)

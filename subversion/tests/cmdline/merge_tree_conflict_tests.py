@@ -540,7 +540,7 @@ def merge_add_over_versioned_file_conflicts(sbox):
 def mergeinfo_recording_in_skipped_merge(sbox):
   "mergeinfo recording in skipped merge"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2829. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2829. ##
 
   # Create a WC with a single branch
   sbox.build()
@@ -705,7 +705,7 @@ def del_differing_file(sbox):
 def tree_conflicts_and_obstructions(sbox):
   "tree conflicts and obstructions"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=3146. ##
+  ## See https://issues.apache.org/jira/browse/SVN-3146. ##
 
   sbox.build()
   wc_dir = sbox.wc_dir

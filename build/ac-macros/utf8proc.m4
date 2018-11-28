@@ -39,6 +39,10 @@ AC_DEFUN(SVN_UTF8PROC,
     ],
     [utf8proc_prefix=std])
 
+  if test "$utf8proc_prefix" = "no"; then
+    dnl The user has tried to disable UTF8PROC
+    AC_MSG_ERROR([Subversion requires UTF8PROC])
+  fi
   if test "$utf8proc_prefix" = "internal"; then
     AC_MSG_NOTICE([using internal utf8proc])
     AC_DEFINE([SVN_INTERNAL_UTF8PROC], [1],

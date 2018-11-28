@@ -473,6 +473,7 @@ def ensure_tree_conflict(sbox, operation,
         run_and_verify_svn(expected_stdout, [],
                            'merge',
                            '--allow-mixed-revisions',
+                           '--accept=postpone',
                            '-r', str(source_left_rev) + ':' + str(source_right_rev),
                            source_url, target_path)
       else:
@@ -1096,13 +1097,15 @@ def at_directory_external(sbox):
   svntest.main.run_svn(None, 'update', wc_dir)
 
   # r3: modify ^/A/B/E/alpha
-  open(sbox.ospath('A/B/E/alpha'), 'a').write('This is still A/B/E/alpha.\n')
+  with open(sbox.ospath('A/B/E/alpha'), 'a') as f:
+    f.write('This is still A/B/E/alpha.\n')
   svntest.main.run_svn(None, 'commit', '-m', 'file mod', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
   merge_rev = svntest.main.youngest(sbox.repo_dir)
 
   # r4: create ^/A/B/E/alpha2
-  open(sbox.ospath('A/B/E/alpha2'), 'a').write("This is the file 'alpha2'.\n")
+  with open(sbox.ospath('A/B/E/alpha2'), 'a') as f:
+    f.write("This is the file 'alpha2'.\n")
   svntest.main.run_svn(None, 'add', sbox.ospath('A/B/E/alpha2'))
   svntest.main.run_svn(None, 'commit', '-m', 'file add', wc_dir)
   svntest.main.run_svn(None, 'update', wc_dir)
@@ -1503,6 +1506,47 @@ def update_delete_mixed_rev(sbox):
   }
   run_and_verify_info([expected_info], sbox.repo_url + '/A/B/E/alpha2')
 
+# NB: This test will run forever if the bug it is testing for is present!
+def local_missing_dir_endless_loop(sbox):
+  "endless loop when resolving local-missing dir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+  sbox.simple_copy('A', 'A1')
+  sbox.simple_commit()
+  sbox.simple_update()
+  sbox.simple_move('A/B', 'A/B2')
+  sbox.simple_commit()
+  sbox.simple_update()
+  main.file_append_binary(sbox.ospath("A/B2/lambda"), "This is more content.\n")
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Create a config which enables the interactive conflict resolver
+  config_contents = '''\
+[auth]
+password-stores =
+
+[miscellany]
+interactive-conflicts = true
+'''
+  config_dir = sbox.create_config_dir(config_contents)
+
+  # Bug: 'svn' keeps retrying interactive conflict resolution while the library
+  # keeps signalling 'SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE' -> endless loop
+  main.run_svn("Tree conflict on '%s'" % sbox.ospath("A1/B2"),
+      'merge', '-c4', '^/A', sbox.ospath('A1'),
+      '--config-dir', config_dir, '--force-interactive')
+
+  # If everything works as expected the resolver will recommended a
+  # resolution option and 'svn' will resolve the conflict automatically.
+  # Verify that 'A1/B/lambda' contains the merged content:
+  contents = open(sbox.ospath('A1/B/lambda'), 'rb').readlines()
+  svntest.verify.compare_and_display_lines(
+    "A1/B/lambda has unexpectected contents", sbox.ospath("A1/B/lambda"),
+    [ "This is the file 'lambda'.\n", "This is more content.\n"], contents)
+
+
 #######################################################################
 # Run the tests
 
@@ -1534,6 +1578,7 @@ test_list = [ None,
               actual_only_node_behaviour,
               update_dir_with_not_present,
               update_delete_mixed_rev,
+              local_missing_dir_endless_loop,
              ]
 
 if __name__ == '__main__':

@@ -31,6 +31,7 @@
 
 #include "svn_types.h"
 #include "svn_repos.h"
+#include "svn_delta.h"
 #include "svn_editor.h"
 #include "svn_config.h"
 
@@ -296,6 +297,23 @@ svn_repos__dump_headers(svn_stream_t *stream,
                         svn_repos__dumpfile_headers_t *headers,
                         apr_pool_t *scratch_pool);
 
+/* Write a magic header record to DUMP_STREAM specifying format version
+ * VERSION.
+ */
+svn_error_t *
+svn_repos__dump_magic_header_record(svn_stream_t *dump_stream,
+                                    int version,
+                                    apr_pool_t *pool);
+
+/* Write a UUID record to DUMP_STREAM.
+ *
+ * If UUID is NULL then write nothing at all.
+ */
+svn_error_t *
+svn_repos__dump_uuid_header_record(svn_stream_t *dump_stream,
+                                   const char *uuid,
+                                   apr_pool_t *pool);
+
 /* Write a revision record to DUMP_STREAM for revision REVISION with revision
  * properies REVPROPS, creating appropriate headers.
  *
@@ -348,6 +366,27 @@ svn_repos__dump_node_record(svn_stream_t *dump_stream,
                             svn_filesize_t text_content_length,
                             svn_boolean_t content_length_always,
                             apr_pool_t *scratch_pool);
+
+/**
+ * Get a dump editor @a editor along with a @a edit_baton allocated in
+ * @a pool.  The editor will write output to @a stream.
+ *
+ * @a update_anchor_relpath is the repository relative path of the
+ * anchor of the update-style drive which will happen on @a *editor;
+ * if a replay-style drive will instead be used, it should be passed
+ * as @c NULL.
+ *
+ * In contrast to the dump editor used inside svn_repos_dump_fs4(), this
+ * one supports only deltas mode.
+ *
+ * ### TODO: Unify with the dump editor inside svn_repos_dump_fs4().
+ */
+svn_error_t *
+svn_repos__get_dump_editor(const svn_delta_editor_t **editor,
+                           void **edit_baton,
+                           svn_stream_t *stream,
+                           const char *update_anchor_relpath,
+                           apr_pool_t *pool);
 
 #ifdef __cplusplus
 }

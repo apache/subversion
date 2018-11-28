@@ -122,7 +122,7 @@ section).</p>
 
 <p><code>svn merge</code> needs to handle renames better.  This
 requires <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
+href="https://issues.apache.org/jira/browse/SVN-898">true
 rename support</a>.</p>
 
 <p>Edit foo.c on branch A.  Rename foo.c to bar.c on branch B.</p>
@@ -138,7 +138,7 @@ rename support</a>.</p>
 </ol>
 
 <p>Problem #2 stems from the fact that we don't have <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=898">true
+href="https://issues.apache.org/jira/browse/SVN-898">true
 renames</a>, just copies (with history) and deletes.  That's not
 fixable without a FS schema change, and (probably) a libsvn_wc
 rewrite.</p>
@@ -372,7 +372,7 @@ some filesystem backend implementation detail (e.g.
 items in the dump as a sort of "soft data" (which would allow them to
 be used for "translating" the merge tracking data at load time, where
 those IDs would be otherwise irrelevant).  See <a
-href="http://subversion.tigris.org/issues/show_bug.cgi?id=1525">issue
+href="https://issues.apache.org/jira/browse/SVN-1525">issue
 1525</a> about user-visible entity IDs.</p>
 
 </div>  <!-- dump-load -->

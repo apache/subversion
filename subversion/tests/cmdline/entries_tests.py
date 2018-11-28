@@ -121,14 +121,17 @@ def basic_entries(sbox):
                                         G_path, iota_path)
 
   # Add a file over the DELETED 'alpha'. It should be schedule-add.
-  open(alpha_path, 'w').write('New alpha contents\n')
+  with open(alpha_path, 'w') as f:
+    f.write('New alpha contents\n')
 
   # Delete 'beta', then add a file over it. Should be schedule-replace.
   svntest.actions.run_and_verify_svn(None, [], 'rm', beta_path)
-  open(beta_path, 'w').write('New beta contents\n')
+  with open(beta_path, 'w') as f:
+    f.write('New beta contents\n')
 
   # Plain old add. Should have revision == 0.
-  open(added_path, 'w').write('Added file contents\n')
+  with open(added_path, 'w') as f:
+    f.write('Added file contents\n')
 
   svntest.actions.run_and_verify_svn(None, [], 'add',
                                      alpha_path, beta_path, added_path)

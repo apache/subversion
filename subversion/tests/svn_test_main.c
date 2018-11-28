@@ -903,9 +903,12 @@ svn_test_main(int argc, const char *argv[], int max_threads,
       apr_err = apr_getopt_long(os, cl_options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
-      else if (apr_err && (apr_err != APR_BADCH))
+      else if (apr_err)
         {
           /* Ignore invalid option error to allow passing arbitrary options */
+          if (apr_err == APR_BADCH)
+            continue;
+
           fprintf(stderr, "apr_getopt_long failed : [%d] %s\n",
                   apr_err, apr_strerror(apr_err, errmsg, sizeof(errmsg)));
           exit(1);

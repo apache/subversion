@@ -44,6 +44,7 @@
    Known instances of "type **" which are *not* OUTPUT parameters are:
    - svn_stream_checksummed(..., const unsigned char **read_digest,
                                  const unsigned char **write_digest, ...)
+   - svn_*_change_rev_prop2(..., const svn_string_t *const *old_value_p, ...)
 */
 %typemap(in, numinputs=0) SWIGTYPE ** ($*1_ltype temp) "$1 = &temp;";
 

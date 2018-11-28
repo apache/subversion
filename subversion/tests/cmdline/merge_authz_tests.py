@@ -486,7 +486,7 @@ def mergeinfo_and_skipped_paths(sbox):
 def merge_fails_if_subtree_is_deleted_on_src(sbox):
   "merge fails if subtree is deleted on src"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2876. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2876. ##
 
   # Create a WC
   sbox.build()
@@ -613,7 +613,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   # should be able to reintegrate, regardless of what authorization
   # they have to parents of the source and target.
   #
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3242#desc78
+  # See https://issues.apache.org/jira/browse/SVN-3242#desc78
 
   # Some paths we'll care about
   wc_dir = sbox.wc_dir

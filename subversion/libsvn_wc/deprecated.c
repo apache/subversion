@@ -2096,8 +2096,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                                       result_pool, scratch_pool));
 
   if (reverse_order)
-    diff_processor = svn_diff__tree_processor_reverse_create(
-                              diff_processor, NULL, result_pool);
+    diff_processor = svn_diff__tree_processor_reverse_create(diff_processor, result_pool);
 
   if (! show_copies_as_adds)
     diff_processor = svn_diff__tree_processor_copy_as_changed_create(

@@ -500,7 +500,7 @@ typedef struct svn_client_commit_item3_t
    * contents in @c incoming_prop_changes->pool, so that it has the
    * same lifetime as this data structure.
    *
-   * See http://subversion.tigris.org/issues/show_bug.cgi?id=806 for a
+   * See https://issues.apache.org/jira/browse/SVN-806 for a
    * description of what would happen if the post-commit process
    * didn't group these changes together with all other changes to the
    * item.
@@ -520,7 +520,7 @@ typedef struct svn_client_commit_item3_t
 
   /**
    * When processing the commit this contains the relative path for
-   * the commit session. #NULL until the commit item is preprocessed.
+   * the commit session. NULL until the commit item is preprocessed.
    * @since New in 1.7.
    */
   const char *session_relpath;
@@ -1546,6 +1546,38 @@ svn_client_switch(svn_revnum_t *result_rev,
                   apr_pool_t *pool);
 
 /** @} */
+
+/** Callback for svn_client__layout_list()
+ *
+ * @warning EXPERIMENTAL.
+ */
+typedef svn_error_t * (*svn_client__layout_func_t)(
+                            void *layout_baton,
+                            const char *local_abspath,
+                            const char *repos_root_url,
+                            svn_boolean_t not_present,
+                            svn_boolean_t url_changed,
+                            const char *url,
+                            svn_boolean_t revision_changed,
+                            svn_revnum_t revision,
+                            svn_boolean_t depth_changed,
+                            svn_depth_t depth,
+                            apr_pool_t *scratch_pool);
+
+/**
+ * Describe the layout of the working copy below @a local_abspath to
+ * the callback @a layout.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__layout_list(const char *local_abspath,
+                        svn_client__layout_func_t layout,
+                        void *layout_baton,
+                        svn_client_ctx_t *ctx,
+                        apr_pool_t *scratch_pool);
+
 
 /**
  * @defgroup Add Begin versioning files/directories in a working copy.
@@ -3067,9 +3099,10 @@ svn_client_blame(const char *path_or_url,
  *
  * Generated headers are encoded using @a header_encoding.
  *
- * Diff output will not be generated for binary files, unless @a
- * ignore_content_type is TRUE, in which case diffs will be shown
- * regardless of the content types.
+ * If either side has an svn:mime-type property that indicates 'binary'
+ * content, then if @a ignore_content_type is set, attempt to produce the
+ * diff in the usual way, otherwise produce a 'GIT binary diff' in git mode
+ * or print a warning message in non-git mode.
  *
  * @a diff_options (an array of <tt>const char *</tt>) is used to pass
  * additional command line options to the diff processes invoked to compare
@@ -4386,7 +4419,7 @@ svn_client_relocate(const char *dir,
  * then do not error, just invoke @a ctx->notify_func2 with @a
  * ctx->notify_baton2, using notification code #svn_wc_notify_skip.
  *
- * @warn The 'revert' command intentionally and permanently loses
+ * @warning The 'revert' command intentionally and permanently loses
  * local modifications.
  *
  * @since New in 1.11.
@@ -4401,8 +4434,8 @@ svn_client_revert4(const apr_array_header_t *paths,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool);
 
-/** Similar to svn_client_revert4(), but with @a remove_added_from_disk set to
- * FALSE.
+/** Similar to svn_client_revert4(), but with @a added_keep_local set to
+ * TRUE.
  *
  * @since New in 1.9.
  * @deprecated Provided for backwards compatibility with the 1.10 API.
@@ -4525,7 +4558,16 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_incoming_move_dir_merge,
 
   /* Options for local move vs incoming edit on merge. */
-  svn_client_conflict_option_local_move_file_text_merge
+  svn_client_conflict_option_local_move_file_text_merge,
+  svn_client_conflict_option_local_move_dir_merge, /**< @since New in 1.11. */
+
+  /* Options for local missing vs incoming edit on merge. */
+  svn_client_conflict_option_sibling_move_file_text_merge, /**< @since New in 1.11. */
+  svn_client_conflict_option_sibling_move_dir_merge, /**< @since New in 1.11. */
+
+  /* Options for local move vs incoming move on merge. */
+  svn_client_conflict_option_both_moved_file_merge, /*< since New in 1.12 */
+  svn_client_conflict_option_both_moved_file_move_merge, /*< since New in 1.12 */
 } svn_client_conflict_option_id_t;
 
 /**
@@ -4546,26 +4588,45 @@ svn_client_conflict_option_set_merged_propval(
   const svn_string_t *merged_propval);
 
 /**
- * Get a list of possible repository paths which can be applied to the
- * svn_client_conflict_option_incoming_move_file_text_merge or
- * svn_client_conflict_option_incoming_move_dir_merge resolution
- * @a option. (If a different option is passed in, this function will
- * raise an assertion failure.)
+ * Get a list of possible repository paths which can be applied to @a option.
  *
- * In some situations, there can be multiple possible destinations for an
- * incoming move. One such situation is where a file was copied and moved
- * in the same revision: svn cp a b; svn mv a c; svn commit
+ * In some situations, there can be multiple possible destinations for a move.
+ * One such situation is where a file was copied and moved in the same revision:
+ *   svn cp a b; svn mv a c; svn commit
  * When this move is merged elsewhere, both b and c will appear as valid move
  * destinations to the conflict resolver. To resolve such ambiguity, the client
  * may call this function to obtain a list of possible destinations the user
  * may choose from.
  *
+ * @a *possible_moved_to_repos_relpaths is set to NULL if the @a option does
+ * not support multiple move targets. API users may assume that only one option
+ * among those which can be applied to a conflict supports move targets.
+ *
  * The array is allocated in @a result_pool and will have "const char *"
  * elements pointing to strings also allocated in @a result_pool.
  * All paths are relpaths, and relative to the repository root.
  *
- * @see svn_client_conflict_option_set_moved_to_repos_relpath()
+ * @see svn_client_conflict_option_set_moved_to_repos_relpath2()
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_repos_relpath_candidates2(
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Get a list of possible repository paths which can be applied to the
+ * svn_client_conflict_option_incoming_move_file_text_merge, or the
+ * svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
+ *
+ * In SVN 1.10, if a different option is passed in, this function will
+ * raise an assertion failure. Otherwise this function behaves just like
+ * svn_client_conflict_option_get_moved_to_repos_relpath_candidates2().
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_get_moved_to_repos_relpath_candidates2()
  */
 svn_error_t *
 svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
@@ -4575,10 +4636,9 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
   apr_pool_t *scratch_pool);
 
 /**
- * Set the preferred moved target repository path for the
- * svn_client_conflict_option_incoming_move_file_text_merge or
- * svn_client_conflict_option_incoming_move_dir_merge resolution option.
- * 
+ * Set the preferred moved target repository path. If @a option is not
+ * applicable to a moved target repository path, do nothing.
+ *
  * @a preferred_move_target_idx must be a valid index into the list returned
  * by svn_client_conflict_option_get_moved_to_repos_relpath_candidates().
  * 
@@ -4587,7 +4647,23 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
  * svn_client_conflict_option_get_description(). Call these functions again
  * to get updated descriptions containing the newly selected move target.
  *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_repos_relpath2(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_conflict_option_set_moved_to_repos_relpath2(), except
+ * that in SVN 1.10 it raises an assertion failure if an option other
+ * than svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge is passed.
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_set_moved_to_repos_relpath2()
  */
 svn_error_t *
 svn_client_conflict_option_set_moved_to_repos_relpath(
@@ -4598,24 +4674,45 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
 
 /**
  * Get a list of possible moved-to abspaths in the working copy which can be
- * applied to the svn_client_conflict_option_incoming_move_file_text_merge
- * or svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
- * (If a different option is passed in, this function will raise an assertion
- * failure.)
+ * applied to @a option.
  *
- * All paths in the returned list correspond to the repository path which
- * is assumed to be the destination of the incoming move operation.
- * To support cases where this destination path is ambiguous, the client may
- * call svn_client_conflict_option_get_moved_to_repos_relpath_candidates()
- * before calling this function to let the user select a repository path first.
+ * All working copy paths in the returned list correspond to one repository
+ * path which is be one of the possible destinations of a move operation.
+ * More than one repository-side move target candidate may exist; call
+ * svn_client_conflict_option_get_moved_to_repos_relpath_candidates() before
+ * calling this function to let the user select a repository path first.
+ * Otherwise, one of the repository-side paths will be selected internally.
  * 
+ * @a *possible_moved_to_abspaths is set to NULL if the @a option does not
+ * support multiple move targets. API users may assume that only one option
+ * among those which can be applied to a conflict supports move targets.
+ *
  * If no possible moved-to paths can be found, return an empty array.
  * This doesn't mean that no move happened in the repository. It is possible
  * that the move destination is outside the scope of the current working copy,
  * for example, in which case the conflict must be resolved in some other way.
  *
- * @see svn_client_conflict_option_set_moved_to_abspath()
+ * @see svn_client_conflict_option_set_moved_to_abspath2()
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_get_moved_to_abspath_candidates2(
+  apr_array_header_t **possible_moved_to_abspaths,
+  svn_client_conflict_option_t *option,
+  apr_pool_t *result_pool,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Get a list of possible moved-to abspaths in the working copy which can be
+ * svn_client_conflict_option_incoming_move_file_text_merge, or the
+ * svn_client_conflict_option_incoming_move_dir_merge resolution @a option.
+ *
+ * In SVN 1.10, if a different option is passed in, this function will
+ * raise an assertion failure. Otherwise this function behaves just like
+ * svn_client_conflict_option_get_moved_to_abspath_candidates2().
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_get_moved_to_abspath_candidates2()
  */
 svn_error_t *
 svn_client_conflict_option_get_moved_to_abspath_candidates(
@@ -4625,14 +4722,34 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
   apr_pool_t *scratch_pool);
 
 /**
- * Set the preferred moved target abspath for the
- * svn_client_conflict_option_incoming_move_file_text_merge or
- * svn_client_conflict_option_incoming_move_dir_merge resolution option.
+ * Set the preferred moved target working copy path. If @a option is not
+ * applicable to a moved target working copy path, do nothing.
  * 
  * @a preferred_move_target_idx must be a valid index into the list
- * returned by svn_client_conflict_option_get_moved_to_abspath_candidates().
+ * returned by svn_client_conflict_option_get_moved_to_abspath_candidates2().
  * 
+ * This function can be called multiple times.
+ * It affects the output of svn_client_conflict_tree_get_description() and
+ * svn_client_conflict_option_get_description(). Call these functions again
+ * to get updated descriptions containing the newly selected move target.
+ *
+ * @since New in 1.11.
+ */
+svn_error_t *
+svn_client_conflict_option_set_moved_to_abspath2(
+  svn_client_conflict_option_t *option,
+  int preferred_move_target_idx,
+  svn_client_ctx_t *ctx,
+  apr_pool_t *scratch_pool);
+
+/**
+ * Like svn_client_conflict_option_set_moved_to_abspath2(), except that
+ * in SVN 1.10 this function raises an assertion failure if an option
+ * other than svn_client_conflict_option_incoming_move_file_text_merge or
+ * svn_client_conflict_option_incoming_move_dir_merge is passed.
+ *
  * @since New in 1.10.
+ * @deprecated use svn_client_conflict_option_set_moved_to_abspath2()
  */
 svn_error_t *
 svn_client_conflict_option_set_moved_to_abspath(
@@ -4681,7 +4798,7 @@ typedef svn_error_t *(*svn_client_conflict_walk_func_t)(
 
 /**
  * Walk all conflicts within the specified @a depth of @a local_abspath.
- * Pass each conflict found during the walk to the @conflict_walk_func
+ * Pass each conflict found during the walk to the @a conflict_walk_func
  * callback, along with @a conflict_walk_func_baton.
  * Use cancellation and notification support provided by client context @a ctx.
  * 
@@ -4979,7 +5096,7 @@ svn_client_conflict_get_repos_info(const char **repos_root_url,
  * Any output parameter may be set to @c NULL by the caller to indicate that
  * a particular piece of information should not be returned.
  *
- * In case of tree conflicts, this path@revision does not necessarily exist
+ * In case of tree conflicts, this "path@revision" does not necessarily exist
  * in the repository, and it does not necessarily represent the incoming
  * change which is responsible for the occurance of the tree conflict.
  * The responsible incoming change is generally located somewhere between
@@ -6647,7 +6764,7 @@ svn_client_list2(const char *path_or_url,
 
 /**
  * Similar to svn_client_list2(), but with @a recurse instead of @a depth.
- * If @a recurse is TRUE, pass #svn_depth_files for @a depth; else
+ * If @a recurse is FALSE, pass #svn_depth_immediates for @a depth; else
  * pass #svn_depth_infinity.
  *
  * @since New in 1.4.
@@ -6821,63 +6938,67 @@ svn_client_cat(svn_stream_t *out,
 
 /** A shelf.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
-typedef struct svn_client_shelf_t
+typedef struct svn_client__shelf_t
 {
     /* Public fields (read-only for public use) */
     const char *name;
-    int max_version;
+    int max_version;  /**< @deprecated */
 
     /* Private fields */
     const char *wc_root_abspath;
     const char *shelves_dir;
-    apr_hash_t *revprops;  /* non-null; allocated in POOL */
+    apr_hash_t *revprops;  /**< non-null; allocated in POOL */
     svn_client_ctx_t *ctx;
     apr_pool_t *pool;
-} svn_client_shelf_t;
+} svn_client__shelf_t;
 
 /** One version of a shelved change-set.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
-typedef struct svn_client_shelf_version_t
+typedef struct svn_client__shelf_version_t
 {
   /* Public fields (read-only for public use) */
-  svn_client_shelf_t *shelf;
-  apr_time_t mtime;  /** time-stamp of this version */
+  svn_client__shelf_t *shelf;
+  apr_time_t mtime;  /**< time-stamp of this version */
 
-  /* TODO: these should be Private fields */
-  const char *patch_abspath;  /** abspath of the patch file */
-} svn_client_shelf_version_t;
+  /* Private fields */
+  const char *files_dir_abspath;  /**< abspath of the storage area */
+  int version_number;  /**< version number starting from 1 */
+} svn_client__shelf_version_t;
 
 /** Open an existing shelf or create a new shelf.
  *
+ * Create a new shelf (containing no versions) if a shelf named @a name
+ * is not found.
+ *
  * The shelf should be closed after use by calling svn_client_shelf_close().
  *
- * @since New in 1.X.
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_open(svn_client_shelf_t **shelf_p,
-                      const char *name,
-                      const char *local_abspath,
-                      svn_client_ctx_t *ctx,
-                      apr_pool_t *result_pool);
+svn_client__shelf_open_or_create(svn_client__shelf_t **shelf_p,
+                                const char *name,
+                                const char *local_abspath,
+                                svn_client_ctx_t *ctx,
+                                apr_pool_t *result_pool);
 
-/** Open an existing shelf or error if it doesn't exist.
+/** Open an existing shelf named @a name, or error if it doesn't exist.
  *
  * The shelf should be closed after use by calling svn_client_shelf_close().
  *
- * @since New in 1.X.
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_open_existing(svn_client_shelf_t **shelf_p,
+svn_client__shelf_open_existing(svn_client__shelf_t **shelf_p,
                                const char *name,
                                const char *local_abspath,
                                svn_client_ctx_t *ctx,
@@ -6887,22 +7008,22 @@ svn_client_shelf_open_existing(svn_client_shelf_t **shelf_p,
  *
  * If @a shelf is NULL, do nothing; otherwise @a shelf must be an open shelf.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_close(svn_client_shelf_t *shelf,
+svn_client__shelf_close(svn_client__shelf_t *shelf,
                        apr_pool_t *scratch_pool);
 
-/** Delete a shelf, by name.
+/** Delete the shelf named @a name, or error if it doesn't exist.
  *
- * @since New in 1.X.
+ * @a local_abspath is any path in the WC and is used to find the WC root.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_delete(const char *name,
+svn_client__shelf_delete(const char *name,
                         const char *local_abspath,
                         svn_boolean_t dry_run,
                         svn_client_ctx_t *ctx,
@@ -6911,288 +7032,300 @@ svn_client_shelf_delete(const char *name,
 /** Save the local modifications found by @a paths, @a depth,
  * @a changelists as a new version of @a shelf.
  *
+ * If any paths are shelved, create a new shelf-version and return the new
+ * shelf-version in @a *new_version_p, else set @a *new_version_p to null.
+ * @a new_version_p may be null if that output is not wanted; a new shelf-
+ * version is still saved and may be found through @a shelf.
+ *
  * @a paths are relative to the CWD, or absolute.
  *
- * If there are no local modifications in the specified locations, do not
- * create a new version of @a shelf.
+ * For each successfully shelved path: call @a shelved_func (if not null)
+ * with @a shelved_baton.
  *
- * @since New in 1.X.
+ * If any paths cannot be shelved: if @a not_shelved_func is given, call
+ * it with @a not_shelved_baton for each such path, and still create a new
+ * shelf-version if any paths are shelved.
+ *
+ * This function does not revert the changes from the WC; use
+ * svn_client_shelf_unapply() for that.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_save_new_version(svn_client_shelf_t *shelf,
-                                  const apr_array_header_t *paths,
-                                  svn_depth_t depth,
-                                  const apr_array_header_t *changelists,
-                                  apr_pool_t *scratch_pool);
+svn_client__shelf_save_new_version3(svn_client__shelf_version_t **new_version_p,
+                                   svn_client__shelf_t *shelf,
+                                   const apr_array_header_t *paths,
+                                   svn_depth_t depth,
+                                   const apr_array_header_t *changelists,
+                                   svn_client_status_func_t shelved_func,
+                                   void *shelved_baton,
+                                   svn_client_status_func_t not_shelved_func,
+                                   void *not_shelved_baton,
+                                   apr_pool_t *scratch_pool);
 
-/** Set the newest version of @a shelf to @a version.
+/** Delete all newer versions of @a shelf newer than @a shelf_version.
  *
- * Delete all newer versions.
+ * If @a shelf_version is null, delete all versions of @a shelf. (The
+ * shelf will still exist, with any log message and other revprops, but
+ * with no versions in it.)
  *
- * @since New in 1.X.
+ * Leave the shelf's log message and other revprops unchanged.
+ *
+ * Any #svn_client_shelf_version_t object that refers to a deleted version
+ * will become invalid: attempting to use it will give undefined behaviour.
+ * The given @a shelf_version will remain valid.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_set_current_version(svn_client_shelf_t *shelf,
-                                     int version,
-                                     apr_pool_t *scratch_pool);
+svn_client__shelf_delete_newer_versions(svn_client__shelf_t *shelf,
+                                       svn_client__shelf_version_t *shelf_version,
+                                       apr_pool_t *scratch_pool);
 
-/** Open an existing shelf version.
+/** Return in @a shelf_version an existing version of @a shelf, given its
+ * @a version_number (starting from 1). Error if that version doesn't exist.
  *
  * There is no need to "close" it after use.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_version_open(svn_client_shelf_version_t **shelf_version_p,
-                              svn_client_shelf_t *shelf,
-                              int version,
+svn_client__shelf_version_open(svn_client__shelf_version_t **shelf_version_p,
+                              svn_client__shelf_t *shelf,
+                              int version_number,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
-/** Apply version @a version of @a shelf to the WC.
+/** Return in @a shelf_version the newest version of @a shelf.
  *
- * @since New in 1.X.
+ * Set @a shelf_version to null if no versions exist.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_apply(svn_client_shelf_version_t *shelf_version,
+svn_client__shelf_get_newest_version(svn_client__shelf_version_t **shelf_version_p,
+                                    svn_client__shelf_t *shelf,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
+/** Return in @a versions_p an array of (#svn_client_shelf_version_t *)
+ * containing all versions of @a shelf.
+ *
+ * The versions will be in chronological order, oldest to newest.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_get_all_versions(apr_array_header_t **versions_p,
+                                  svn_client__shelf_t *shelf,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
+
+/** Apply @a shelf_version to the WC.
+ *
+ * If @a dry_run is true, try applying the shelf-version to the WC and
+ * report the full set of notifications about successes and conflicts,
+ * but leave the WC untouched.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_apply(svn_client__shelf_version_t *shelf_version,
                        svn_boolean_t dry_run,
                        apr_pool_t *scratch_pool);
 
-/** Reverse-apply the current version of @a shelf to the WC.
+/** Test whether we can successfully apply the changes for @a file_relpath
+ * in @a shelf_version to the WC.
  *
- * @since New in 1.X.
+ * Set @a *conflict_p to true if the changes conflict with the WC state,
+ * else to false.
+ *
+ * If @a file_relpath is not found in @a shelf_version, set @a *conflict_p
+ * to FALSE.
+ *
+ * @a file_relpath is relative to the WC root.
+ *
+ * A conflict means the shelf cannot be applied successfully to the WC
+ * because the change to be applied is not compatible with the current
+ * working state of the WC file. Examples are a text conflict, or the
+ * file does not exist or is a directory, or the shelf is trying to add
+ * the file but it already exists, or trying to delete it but it does not
+ * exist.
+ *
+ * Return an error only if something is broken, e.g. unable to read data
+ * from the specified shelf-version.
+ *
+ * Leave the WC untouched.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_unapply(svn_client_shelf_version_t *shelf_version,
+svn_client__shelf_test_apply_file(svn_boolean_t *conflict_p,
+                                 svn_client__shelf_version_t *shelf_version,
+                                 const char *file_relpath,
+                                 apr_pool_t *scratch_pool);
+
+/** Reverse-apply @a shelf_version to the WC.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_unapply(svn_client__shelf_version_t *shelf_version,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool);
 
-/** Set @a *patch_abspath to the patch file path of @a shelf_version.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_get_patch_abspath(const char **patch_abspath,
-                                   svn_client_shelf_version_t *shelf_version,
-                                   apr_pool_t *scratch_pool);
-
-/** Output version @a version of @a shelf as a patch to @a outstream.
- *
- * @since New in 1.X.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_export_patch(svn_client_shelf_version_t *shelf_version,
-                              svn_stream_t *outstream,
-                              apr_pool_t *scratch_pool);
-
 /** Set @a *affected_paths to a hash with one entry for each path affected
- * by the @a shelf @a version. The hash key is the old path and value is
- * the new path, both relative to the WC root. The key and value are the
- * same except when a path is moved or copied.
+ * by the @a shelf_version.
  *
- * @since New in 1.10, changed in 1.X.
+ * The hash key is the path of the affected file, relative to the WC root.
+ *
+ * (Future possibility: When moves and copies are supported, the hash key
+ * is the old path and value is the new path.)
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_paths_changed(apr_hash_t **affected_paths,
-                               svn_client_shelf_version_t *shelf_version,
+svn_client__shelf_paths_changed(apr_hash_t **affected_paths,
+                               svn_client__shelf_version_t *shelf_version,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/** Set the log message in @a shelf, using the log message callbacks in
- * the client context, and set other revprops to @a revprop_table.
+/** Set @a shelf's revprop @a prop_name to @a prop_val.
  *
- * @since New in 1.X.
+ * This can be used to set or change the shelf's log message
+ * (property name "svn:log" or #SVN_PROP_REVISION_LOG).
+ *
+ * If @a prop_val is NULL, delete the property (if present).
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_set_log_message(svn_client_shelf_t *shelf,
+svn_client__shelf_revprop_set(svn_client__shelf_t *shelf,
+                             const char *prop_name,
+                             const svn_string_t *prop_val,
+                             apr_pool_t *scratch_pool);
+
+/** Set @a shelf's revprops to @a revprop_table.
+ *
+ * This deletes all previous revprops.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_revprop_set_all(svn_client__shelf_t *shelf,
                                  apr_hash_t *revprop_table,
-                                 svn_boolean_t dry_run,
+                                 apr_pool_t *scratch_pool);
+
+/** Get @a shelf's revprop @a prop_name into @a *prop_val.
+ *
+ * If the property is not present, set @a *prop_val to NULL.
+ *
+ * This can be used to get the shelf's log message
+ * (property name "svn:log" or #SVN_PROP_REVISION_LOG).
+ *
+ * The lifetime of the result is limited to that of @a shelf and/or
+ * of @a result_pool.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_revprop_get(svn_string_t **prop_val,
+                             svn_client__shelf_t *shelf,
+                             const char *prop_name,
+                             apr_pool_t *result_pool);
+
+/** Get @a shelf's revprops into @a props.
+ *
+ * The lifetime of the result is limited to that of @a shelf and/or
+ * of @a result_pool.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_revprop_list(apr_hash_t **props,
+                              svn_client__shelf_t *shelf,
+                              apr_pool_t *result_pool);
+
+/** Set the log message in @a shelf to @a log_message.
+ *
+ * If @a log_message is null, delete the log message.
+ *
+ * Similar to svn_client_shelf_revprop_set(... SVN_PROP_REVISION_LOG ...).
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_set_log_message(svn_client__shelf_t *shelf,
+                                 const char *log_message,
                                  apr_pool_t *scratch_pool);
 
 /** Get the log message in @a shelf into @a *log_message.
  *
  * Set @a *log_message to NULL if there is no log message.
  *
- * @since New in 1.X.
+ * Similar to svn_client_shelf_revprop_get(... SVN_PROP_REVISION_LOG ...).
+ *
+ * The result is allocated in @a result_pool.
+ *
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_get_log_message(char **log_message,
-                                 svn_client_shelf_t *shelf,
+svn_client__shelf_get_log_message(char **log_message,
+                                 svn_client__shelf_t *shelf,
                                  apr_pool_t *result_pool);
 
 /** Information about a shelf.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
-typedef struct svn_client_shelf_info_t
+typedef struct svn_client__shelf_info_t
 {
-  apr_time_t mtime;  /* mtime of the latest change */
-} svn_client_shelf_info_t;
+  apr_time_t mtime;  /**< mtime of the latest change */
+} svn_client__shelf_info_t;
 
-/** Set @a *shelved_patch_infos to a hash, keyed by shelf name, of pointers to
- * @c svn_client_shelf_info_t structures.
+/** Set @a *shelf_infos to a hash, keyed by shelf name, of pointers to
+ * @c svn_client_shelf_info_t structures, one for each shelf in the
+ * given WC.
  *
  * @a local_abspath is any path in the WC and is used to find the WC root.
  *
- * @since New in 1.X.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelf_list(apr_hash_t **shelf_infos,
+svn_client__shelf_list(apr_hash_t **shelf_infos,
                       const char *local_abspath,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);
 
-/** @} */
-
-/** Shelving v1
+/** Report the shelved status of all the shelved paths in @a shelf_version
+ * via @a walk_func(@a walk_baton, ...).
  *
- * @defgroup svn_client_shelve_funcs Client Shelving Functions
- * @{
- */
-
-/** Shelve a change.
- *
- * Shelve as @a name the local modifications found by @a paths, @a depth,
- * @a changelists. Revert the shelved change from the WC unless @a keep_local
- * is true.
- *
- * If @a dry_run is true, don't actually do it.
- *
- * @since New in 1.10.
  * @warning EXPERIMENTAL.
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_client_shelve(const char *name,
-                  const apr_array_header_t *paths,
-                  svn_depth_t depth,
-                  const apr_array_header_t *changelists,
-                  svn_boolean_t keep_local,
-                  svn_boolean_t dry_run,
-                  svn_client_ctx_t *ctx,
-                  apr_pool_t *pool);
-
-/** Unshelve the shelved change @a name.
- *
- * @a local_abspath is any path in the WC and is used to find the WC root.
- * Rename the shelved patch to add a '.bak' extension unless @a keep is true.
- *
- * If @a dry_run is true, don't actually do it.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_unshelve(const char *name,
-                    const char *local_abspath,
-                    svn_boolean_t keep,
-                    svn_boolean_t dry_run,
-                    svn_client_ctx_t *ctx,
-                    apr_pool_t *pool);
-
-/** Delete the shelved patch @a name.
- *
- * @a local_abspath is any path in the WC and is used to find the WC root.
- *
- * If @a dry_run is true, don't actually do it.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelves_delete(const char *name,
-                          const char *local_abspath,
-                          svn_boolean_t dry_run,
-                          svn_client_ctx_t *ctx,
-                          apr_pool_t *pool);
-
-/** Information about a shelved patch.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-typedef struct svn_client_shelved_patch_info_t
-{
-  const char *message;  /* first line of log message */
-  const char *patch_path;  /* abspath of the patch file */
-  svn_io_dirent2_t *dirent;  /* info about the patch file */
-  apr_time_t mtime;  /* a copy of dirent->mtime */
-} svn_client_shelved_patch_info_t;
-
-/** Set @a *shelved_patch_infos to a hash, keyed by patch name, of pointers to
- * @c svn_client_shelved_patch_info_t structures.
- *
- * @a local_abspath is any path in the WC and is used to find the WC root.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelves_list(apr_hash_t **shelved_patch_infos,
-                        const char *local_abspath,
-                        svn_client_ctx_t *ctx,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
-
-/** Set @a *affected_paths to a hash with one entry for each path affected
- * by the shelf @a name. The hash key is the old path and value is
- * the new path, both relative to the WC root. The key and value are the
- * same except when a path is moved or copied.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_get_paths(apr_hash_t **affected_paths,
-                           const char *name,
-                           const char *local_abspath,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
-/** Set @a *has_changes to indicate whether the shelf @a name
- * contains any modifications, in other words if svn_client_shelf_get_paths()
- * would return a non-empty set of paths.
- *
- * @since New in 1.10.
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client_shelf_has_changes(svn_boolean_t *has_changes,
-                             const char *name,
-                             const char *local_abspath,
-                             svn_client_ctx_t *ctx,
-                             apr_pool_t *scratch_pool);
-
+svn_client__shelf_version_status_walk(svn_client__shelf_version_t *shelf_version,
+                                     const char *wc_relpath,
+                                     svn_wc_status_func4_t walk_func,
+                                     void *walk_baton,
+                                     apr_pool_t *scratch_pool);
 /** @} */
 
 /** Changelist commands

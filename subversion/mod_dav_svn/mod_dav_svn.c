@@ -231,6 +231,9 @@ merge_server_config(apr_pool_t *p, void *base, void *overrides)
       newconf->compression_level = child->compression_level;
     }
 
+  newconf->use_utf8 = INHERIT_VALUE(parent, child, use_utf8);                 
+  svn_utf_initialize2(newconf->use_utf8, p); 
+
   return newconf;
 }
 
@@ -1255,7 +1258,7 @@ static int dav_svn__translate_name(request_rec *r)
 
   /* Leave a note to ourselves so that we know not to decline in the
    * map_to_storage hook. */
-  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, (const char*)1);
+  apr_table_setn(r->notes, NO_MAP_TO_STORAGE_NOTE, "1");
   return OK;
 }
 

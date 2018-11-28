@@ -369,7 +369,7 @@ handle_config_error(svn_error_t *error,
 
       /* Now that we've logged the error, clear it and return a
        * nice, generic error to the user:
-       * http://subversion.tigris.org/issues/show_bug.cgi?id=2271 */
+       * https://issues.apache.org/jira/browse/SVN-2271 */
       svn_error_clear(error);
       return svn_error_create(apr_err, NULL, NULL);
     }
