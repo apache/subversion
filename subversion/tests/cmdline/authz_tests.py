@@ -1664,6 +1664,7 @@ def remove_access_after_commit(sbox):
                                         [], True)
 
 @XFail()
+@Issue(4793)
 @Skip(svntest.main.is_ra_type_file)
 def inverted_group_membership(sbox):
   "access rights for user in inverted group"
@@ -1689,6 +1690,24 @@ def inverted_group_membership(sbox):
                                      sbox.repo_url)
 
   # ... but the access control entry for the inverted group isn't applied.
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author,
+                                     sbox.repo_url)
+
+@Skip(svntest.main.is_ra_type_file)
+def group_member_empty_string(sbox):
+  "group definition ignores with empty member"
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox,
+                   {"/" : ("$anonymous =\n"
+                           "@readonly = r\n")},
+                   {"groups": "readonly = , %s\n" % svntest.main.wc_author})
+
+  expected_output = svntest.verify.UnorderedOutput(['A/\n', 'iota\n'])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'list',
                                      '--username', svntest.main.wc_author,
@@ -1732,6 +1751,7 @@ test_list = [ None,
               authz_log_censor_revprops,
               remove_access_after_commit,
               inverted_group_membership,
+              group_member_empty_string,
              ]
 serial_only = True
 
