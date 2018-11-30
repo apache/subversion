@@ -414,7 +414,8 @@ svn_client__get_diff_summarize_callbacks(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/* Copy a directory tree from SRC_URL @ SRC_REV, to DST_ABSPATH in a WC.
+/* Copy a directory tree or a file (according to KIND) from SRC_URL @ SRC_REV,
+ * to DST_ABSPATH in a WC.
  *
  * The caller should be holding a WC write lock that allows DST_ABSPATH to
  * be created, such as on the parent of DST_ABSPATH.
@@ -428,38 +429,16 @@ svn_client__get_diff_summarize_callbacks(
  * URL after returning.
  */
 svn_error_t *
-svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
-                                 const char *src_url,
-                                 svn_revnum_t src_rev,
-                                 const char *dst_abspath,
-                                 svn_boolean_t ignore_externals,
-                                 svn_boolean_t same_repositories,
-                                 svn_ra_session_t *ra_session,
-                                 svn_client_ctx_t *ctx,
-                                 apr_pool_t *pool);
-
-/* Copy a file from SRC_URL @ SRC_REV, to DST_ABSPATH in a WC.
- *
- * The caller should be holding a WC write lock that allows DST_ABSPATH to
- * be created, such as on the parent of DST_ABSPATH.
- *
- * SAME_REPOSITORIES must be true if and only if the source of this copy
- * is from the same repository at the WC parent of DST_ABSPATH.
- * If SAME_REPOSITORIES, then fill in the 'copy-from' in the WC target.
- * If not SAME_REPOSITORIES, then remove any svn:mergeinfo property.
- *
- * Use RA_SESSION to fetch the data. The session may point to a different
- * URL after returning.
- */
-svn_error_t *
-svn_client__repos_to_wc_copy_file(svn_boolean_t *timestamp_sleep,
-                                  const char *src_url,
-                                  svn_revnum_t src_rev,
-                                  const char *dst_abspath,
-                                  svn_boolean_t same_repositories,
-                                  svn_ra_session_t *ra_session,
-                                  svn_client_ctx_t *ctx,
-                                  apr_pool_t *scratch_pool);
+svn_client__repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
+                             svn_node_kind_t kind,
+                             const char *src_url,
+                             svn_revnum_t src_rev,
+                             const char *dst_abspath,
+                             svn_boolean_t ignore_externals,
+                             svn_boolean_t same_repositories,
+                             svn_ra_session_t *ra_session,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
 
 /** Return an editor for applying local modifications to a WC.
  *
