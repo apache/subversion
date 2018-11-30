@@ -2360,7 +2360,6 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
                                  const char *src_url,
                                  svn_revnum_t src_revnum,
                                  const char *dst_abspath,
-                                 svn_boolean_t ignore_externals,
                                  svn_boolean_t same_repositories,
                                  svn_ra_session_t *ra_session,
                                  svn_client_ctx_t *ctx,
@@ -2427,7 +2426,7 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
                                         &copy_src_revision,
                                         &copy_src_revision,
                                         svn_depth_infinity,
-                                        ignore_externals,
+                                        TRUE /*ignore_externals*/,
                                         FALSE, /* we don't allow obstructions */
                                         ra_session, ctx, scratch_pool);
 
@@ -2514,7 +2513,6 @@ svn_client__repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
                              const char *src_url,
                              svn_revnum_t src_rev,
                              const char *dst_abspath,
-                             svn_boolean_t ignore_externals,
                              svn_boolean_t same_repositories,
                              svn_ra_session_t *ra_session,
                              svn_client_ctx_t *ctx,
@@ -2525,7 +2523,6 @@ svn_client__repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
       SVN_ERR(svn_client__repos_to_wc_copy_dir(timestamp_sleep,
                                                src_url, src_rev,
                                                dst_abspath,
-                                               ignore_externals,
                                                same_repositories,
                                                ra_session,
                                                ctx, scratch_pool));
@@ -2581,61 +2578,59 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
     }
 
-  /* Avoid a chicken-and-egg problem:
-   * If pinning externals we'll need to adjust externals
-   * properties before checking out any externals.
-   * But copy needs to happen before pinning because else there
-   * are no svn:externals properties to pin. */
-  if (pin_externals)
-    ignore_externals = TRUE;
-
   SVN_ERR(svn_client__repos_to_wc_copy(timestamp_sleep,
                                        pair->src_kind,
                                        pair->src_abspath_or_url,
                                        pair->src_revnum,
                                        dst_abspath,
-                                       ignore_externals,
                                        same_repositories,
                                        ra_session, ctx, pool));
 
-  if (pair->src_kind == svn_node_dir)
+  /* Fetch externals, pinning them if requested */
+  if (!ignore_externals && pair->src_kind == svn_node_dir)
     {
-      if (same_repositories && pin_externals)
+      if (same_repositories)
         {
-          apr_hash_t *pinned_externals;
-          apr_hash_index_t *hi;
-          apr_pool_t *iterpool;
           const char *repos_root_url;
           apr_hash_t *new_externals;
           apr_hash_t *new_depths;
 
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
-          SVN_ERR(resolve_pinned_externals(&pinned_externals,
-                                           externals_to_pin, pair,
-                                           ra_session, repos_root_url,
-                                           ctx, pool, pool));
 
-          iterpool = svn_pool_create(pool);
-          for (hi = apr_hash_first(pool, pinned_externals);
-               hi;
-               hi = apr_hash_next(hi))
+          if (pin_externals)
             {
-              const char *dst_relpath = apr_hash_this_key(hi);
-              svn_string_t *externals_propval = apr_hash_this_val(hi);
-              const char *local_abspath;
+              apr_hash_t *pinned_externals;
+              apr_hash_index_t *hi;
+              apr_pool_t *iterpool;
 
-              svn_pool_clear(iterpool);
+              SVN_ERR(resolve_pinned_externals(&pinned_externals,
+                                               externals_to_pin, pair,
+                                               ra_session, repos_root_url,
+                                               ctx, pool, pool));
 
-              local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
-                                              dst_relpath, iterpool);
-              /* ### use a work queue? */
-              SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
-                                       SVN_PROP_EXTERNALS, externals_propval,
-                                       svn_depth_empty, TRUE /* skip_checks */,
-                                       NULL  /* changelist_filter */,
-                                       ctx->cancel_func, ctx->cancel_baton,
-                                       NULL, NULL, /* no extra notification */
-                                       iterpool));
+              iterpool = svn_pool_create(pool);
+              for (hi = apr_hash_first(pool, pinned_externals);
+                   hi;
+                   hi = apr_hash_next(hi))
+                {
+                  const char *dst_relpath = apr_hash_this_key(hi);
+                  svn_string_t *externals_propval = apr_hash_this_val(hi);
+                  const char *local_abspath;
+
+                  svn_pool_clear(iterpool);
+
+                  local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
+                                                  dst_relpath, iterpool);
+                  /* ### use a work queue? */
+                  SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
+                                           SVN_PROP_EXTERNALS, externals_propval,
+                                           svn_depth_empty, TRUE /* skip_checks */,
+                                           NULL  /* changelist_filter */,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           NULL, NULL, /* no extra notification */
+                                           iterpool));
+                }
+              svn_pool_destroy(iterpool);
             }
 
           /* Now update all externals in the newly created copy. */
@@ -2644,15 +2639,14 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                        ctx->wc_ctx,
                                                        dst_abspath,
                                                        svn_depth_infinity,
-                                                       iterpool, iterpool));
+                                                       pool, pool));
           SVN_ERR(svn_client__handle_externals(new_externals,
                                                new_depths,
                                                repos_root_url, dst_abspath,
                                                svn_depth_infinity,
                                                timestamp_sleep,
                                                ra_session,
-                                               ctx, iterpool));
-          svn_pool_destroy(iterpool);
+                                               ctx, pool));
         }
     }
 

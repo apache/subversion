@@ -8045,7 +8045,6 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
                                      svn_node_dir,
                                      url, incoming_new_pegrev,
                                      local_abspath,
-                                     TRUE, /* we want to ignore externals */
                                      TRUE /*same_repositories*/,
                                      ra_session, ctx, scratch_pool);
   if (err)
