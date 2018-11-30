@@ -22,6 +22,16 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1847572, r1847596
+   fsfs: Fix SVN-4791, an issue with the DAG open_path() that was causing
+   unexpected SVN_ERR_FS_NOT_DIRECTORY errors when attempting to open a path
+   with `open_path_node_only | open_path_allow_null` flags.
+   Justification:
+     Some valid FSFS read operations errored out. This could break some
+     end-user operations like 'update'.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
