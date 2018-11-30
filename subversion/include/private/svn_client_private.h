@@ -427,6 +427,9 @@ svn_client__get_diff_summarize_callbacks(
  *
  * Use RA_SESSION to fetch the data. The session may point to a different
  * URL after returning.
+ *
+ * This API does not process any externals definitions that may be present
+ * on copied directories.
  */
 svn_error_t *
 svn_client__repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
@@ -434,7 +437,6 @@ svn_client__repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
                              const char *src_url,
                              svn_revnum_t src_rev,
                              const char *dst_abspath,
-                             svn_boolean_t ignore_externals,
                              svn_boolean_t same_repositories,
                              svn_ra_session_t *ra_session,
                              svn_client_ctx_t *ctx,
