@@ -1099,6 +1099,9 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+/* Verify that the WC sources in COPY_PAIRS exist, and set pair->src_kind
+   for each.
+ */
 static svn_error_t *
 verify_wc_srcs(const apr_array_header_t *copy_pairs,
                svn_client_ctx_t *ctx,
@@ -2350,7 +2353,9 @@ notification_adjust_func(void *baton,
     nb->inner_func(nb->inner_baton, inner_notify, pool);
 }
 
-svn_error_t *
+/* Implementation of svn_client__repos_to_wc_copy() for a dir.
+ */
+static svn_error_t *
 svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
                                  const char *src_url,
                                  svn_revnum_t src_revnum,
@@ -2454,7 +2459,12 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
+/* Implementation of svn_client__repos_to_wc_copy() for a file.
+ *
+ * This has no 'ignore_externals' parameter because we don't support the
+ * 'svn:externals' property being set on a file.
+ */
+static svn_error_t *
 svn_client__repos_to_wc_copy_file(svn_boolean_t *timestamp_sleep,
                                   const char *src_url,
                                   svn_revnum_t src_rev,
@@ -2498,6 +2508,40 @@ svn_client__repos_to_wc_copy_file(svn_boolean_t *timestamp_sleep,
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client__repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
+                             svn_node_kind_t kind,
+                             const char *src_url,
+                             svn_revnum_t src_rev,
+                             const char *dst_abspath,
+                             svn_boolean_t ignore_externals,
+                             svn_boolean_t same_repositories,
+                             svn_ra_session_t *ra_session,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool)
+{
+  if (kind == svn_node_dir)
+    {
+      SVN_ERR(svn_client__repos_to_wc_copy_dir(timestamp_sleep,
+                                               src_url, src_rev,
+                                               dst_abspath,
+                                               ignore_externals,
+                                               same_repositories,
+                                               ra_session,
+                                               ctx, scratch_pool));
+    }
+  else if (kind == svn_node_file)
+    {
+      SVN_ERR(svn_client__repos_to_wc_copy_file(timestamp_sleep,
+                                                src_url, src_rev,
+                                                dst_abspath,
+                                                same_repositories,
+                                                ra_session,
+                                                ctx, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
 /* Peform each individual copy operation for a repos -> wc copy.  A
    helper for repos_to_wc_copy().
 
@@ -2537,24 +2581,25 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
     }
 
+  /* Avoid a chicken-and-egg problem:
+   * If pinning externals we'll need to adjust externals
+   * properties before checking out any externals.
+   * But copy needs to happen before pinning because else there
+   * are no svn:externals properties to pin. */
+  if (pin_externals)
+    ignore_externals = TRUE;
+
+  SVN_ERR(svn_client__repos_to_wc_copy(timestamp_sleep,
+                                       pair->src_kind,
+                                       pair->src_abspath_or_url,
+                                       pair->src_revnum,
+                                       dst_abspath,
+                                       ignore_externals,
+                                       same_repositories,
+                                       ra_session, ctx, pool));
+
   if (pair->src_kind == svn_node_dir)
     {
-      /* Avoid a chicken-and-egg problem:
-       * If pinning externals we'll need to adjust externals
-       * properties before checking out any externals.
-       * But copy needs to happen before pinning because else there
-       * are no svn:externals properties to pin. */
-      if (pin_externals)
-        ignore_externals = TRUE;
-
-      SVN_ERR(svn_client__repos_to_wc_copy_dir(timestamp_sleep,
-                                               pair->src_abspath_or_url,
-                                               pair->src_revnum,
-                                               dst_abspath,
-                                               ignore_externals,
-                                               same_repositories,
-                                               ra_session, ctx, pool));
-
       if (same_repositories && pin_externals)
         {
           apr_hash_t *pinned_externals;
@@ -2609,17 +2654,6 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                ctx, iterpool));
           svn_pool_destroy(iterpool);
         }
-    } /* end directory case */
-
-  else if (pair->src_kind == svn_node_file)
-    {
-      SVN_ERR(svn_client__repos_to_wc_copy_file(timestamp_sleep,
-                                                pair->src_abspath_or_url,
-                                                pair->src_revnum,
-                                                dst_abspath,
-                                                same_repositories,
-                                                ra_session,
-                                                ctx, pool));
     }
 
   if (same_repositories)

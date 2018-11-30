@@ -253,14 +253,15 @@ dir_add(const char *path,
                                  db->eb->ra_session, db->local_abspath,
                                  db->eb->ctx, db->pool));
 
-      SVN_ERR(svn_client__repos_to_wc_copy_dir(&timestamp_sleep,
-                                               copyfrom_path,
-                                               copyfrom_revision,
-                                               db->local_abspath,
-                                               TRUE /*ignore_externals*/,
-                                               same_repository,
-                                               db->eb->ra_session,
-                                               db->eb->ctx, db->pool));
+      SVN_ERR(svn_client__repos_to_wc_copy(&timestamp_sleep,
+                                           svn_node_dir,
+                                           copyfrom_path,
+                                           copyfrom_revision,
+                                           db->local_abspath,
+                                           TRUE /*ignore_externals*/,
+                                           same_repository,
+                                           db->eb->ra_session,
+                                           db->eb->ctx, db->pool));
     }
 
   *child_baton = db;
@@ -443,13 +444,15 @@ file_add(const char *path,
                                  fb->eb->ra_session, fb->local_abspath,
                                  fb->eb->ctx, fb->pool));
 
-      SVN_ERR(svn_client__repos_to_wc_copy_file(&timestamp_sleep,
-                                                copyfrom_path,
-                                                copyfrom_revision,
-                                                fb->local_abspath,
-                                                same_repository,
-                                                fb->eb->ra_session,
-                                                fb->eb->ctx, fb->pool));
+      SVN_ERR(svn_client__repos_to_wc_copy(&timestamp_sleep,
+                                           svn_node_file,
+                                           copyfrom_path,
+                                           copyfrom_revision,
+                                           fb->local_abspath,
+                                           TRUE /*ignore_externals*/,
+                                           same_repository,
+                                           fb->eb->ra_session,
+                                           fb->eb->ctx, fb->pool));
     }
 
   *file_baton = fb;
