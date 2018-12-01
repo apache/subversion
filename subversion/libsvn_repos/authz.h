@@ -139,7 +139,7 @@ typedef struct authz_full_t
   svn_boolean_t has_authn_rights;
   authz_global_rights_t authn_rights;
 
-  /* Globally accumulated rights from inverted groups or aliases. */
+  /* Globally accumulated rights from inverted selectors. */
   svn_boolean_t has_neg_rights;
   authz_global_rights_t neg_rights;
 
@@ -260,6 +260,7 @@ typedef struct authz_acl_t
 
   /* The parsed rule. */
   authz_rule_t rule;
+
 
   /* Access rights for anonymous users. */
   svn_boolean_t has_anon_access;
