@@ -1663,13 +1663,10 @@ def remove_access_after_commit(sbox):
                                         expected_status,
                                         [], True)
 
-@XFail()
 @Issue(4793)
 @Skip(svntest.main.is_ra_type_file)
 def inverted_group_membership(sbox):
   "access rights for user in inverted group"
-
-  # Bug reported here: https://lists.apache.org/thread.html/6cc7b22b211827ff946373407a516a3ab4d866fe03cdc85d22ff276b@%3Cdev.subversion.apache.org%3E
 
   sbox.build(create_wc = False)
 

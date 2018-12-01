@@ -154,6 +154,8 @@ static const char anon_access_token[] = "$anonymous";
 /* The authenticated access token. */
 static const char authn_access_token[] = "$authenticated";
 
+/* Fake token for inverted rights. */
+static const char neg_access_token[] = "~~$inverted";
 
 /* Initialize a rights structure.
    The minimum rights start with all available access and are later
@@ -191,6 +193,8 @@ insert_default_acl(ctor_baton_t *cb)
   acl->acl.has_anon_access = TRUE;
   acl->acl.authn_access = authz_access_none;
   acl->acl.has_authn_access = TRUE;
+  acl->acl.neg_access = authz_access_none;
+  acl->acl.has_neg_access = TRUE;
   acl->acl.user_access = NULL;
   acl->aces = svn_hash__make(cb->parser_pool);
   acl->alias_aces = svn_hash__make(cb->parser_pool);
@@ -208,6 +212,7 @@ create_ctor_baton(apr_pool_t *result_pool,
   authz_full_t *const authz = apr_pcalloc(result_pool, sizeof(*authz));
   init_global_rights(&authz->anon_rights, anon_access_token, result_pool);
   init_global_rights(&authz->authn_rights, authn_access_token, result_pool);
+  init_global_rights(&authz->neg_rights, neg_access_token, result_pool);
   authz->user_rights = svn_hash__make(result_pool);
   authz->pool = result_pool;
 
@@ -758,6 +763,8 @@ rules_open_section(void *baton, svn_stringbuf_t *section)
   acl.acl.has_anon_access = FALSE;
   acl.acl.authn_access = authz_access_none;
   acl.acl.has_authn_access = FALSE;
+  acl.acl.neg_access = authz_access_none;
+  acl.acl.has_neg_access = FALSE;
   acl.acl.user_access = NULL;
 
   acl.aces = svn_hash__make(cb->parser_pool);
@@ -957,6 +964,14 @@ add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
           /* Prepare the global rights struct for this user. */
           if (!aliased && *ace->name != '@')
             prepare_global_rights(cb, ace->name);
+        }
+
+      /* Propagate rights for inverted selectors to the global rights, otherwise
+         an access check can bail out early. See: SVN-4793 */
+      if (inverted)
+        {
+          acl->acl.has_neg_access = TRUE;
+          acl->acl.neg_access |= access;
         }
     }
 
@@ -1270,6 +1285,12 @@ expand_acl_callback(void *baton,
       cb->authz->has_authn_rights = TRUE;
       update_global_rights(&cb->authz->authn_rights,
                            acl->rule.repos, acl->authn_access);
+    }
+  if (acl->has_neg_access)
+    {
+      cb->authz->has_neg_rights = TRUE;
+      update_global_rights(&cb->authz->neg_rights,
+                           acl->rule.repos, acl->neg_access);
     }
   SVN_ERR(svn_iter_apr_hash(NULL, cb->authz->user_rights,
                             update_user_rights, acl, scratch_pool));
