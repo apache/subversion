@@ -30,7 +30,7 @@ Candidate changes:
      Some valid FSFS read operations errored out. This could break some
      end-user operations like 'update'.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, brane
 
  * r1847598, r1847697, r1847922, r1847924
    Fix SVN-4793: authz rights from inverted access selectors were not
