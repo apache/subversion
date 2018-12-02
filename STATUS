@@ -40,7 +40,7 @@ Candidate changes:
    Votes:
      +1: julianfoad, brane
 
- * r1847598, r1847697, r1847922, r1847924
+ * r1847598, r1847697, r1847922, r1847924, r1847946
    Fix SVN-4793: authz rights from inverted access selectors were not
    accounted for at the global level, causing wrong authz check results.
    Justification:
@@ -48,7 +48,7 @@ Candidate changes:
    Notes:
      - r1847598 and r1847697 are only test suite changes, but by including
        them we can avoids creating a backport branch.
-     - r1847924 is a tiny but IMO relevant comment tweak.
+     - r1847924 and r1847946 are tiny but IMO relevant comment tweaks.
    Votes:
      +1: brane
 
