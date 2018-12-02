@@ -270,7 +270,7 @@ typedef struct authz_acl_t
   svn_boolean_t has_authn_access;
   authz_access_t authn_access;
 
-  /* Access rights from inverted groups or aliases. */
+  /* Access rights from inverted selectors. */
   svn_boolean_t has_neg_access;
   authz_access_t neg_access;
 
