@@ -19,6 +19,13 @@
 #    under the License.
 # ====================================================================
 
+# Note: This script has a hardcoded check for a 1.7 WC format. It won't work
+# with 1.8+ WCs. For one thing, it doesn't handle WC move-tracking metadata.
+# As stated in the exception it's unfinished and not ready for use. See the
+# dev@ email thread "detach.py script isn't updated for 1.8/1.9" started on
+# 2015-08-12 at e.g. <http://svn.haxx.se/dev/archive-2015-08/0071.shtml> or
+# <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3C55CA829A.2080509@gmx.de%3E>.
+
 # TODO: if this was part of core subversion, we'd have all sorts of nifty
 #       checks, and could use a lot of existing code.
 
