@@ -2353,6 +2353,65 @@ notification_adjust_func(void *baton,
     nb->inner_func(nb->inner_baton, inner_notify, pool);
 }
 
+/** Copy a directory tree from a remote repository.
+ *
+ * Copy from RA_SESSION:LOCATION, depth DEPTH, to WC_CTX:DST_ABSPATH.
+ *
+ * Create the directory DST_ABSPATH, if not present. Its parent should be
+ * already under version control in the WC and in a suitable state for
+ * scheduling the addition of a child.
+ *
+ * Ignore any incoming non-regular properties (entry-props, DAV/WC-props).
+ * Remove any incoming 'svn:mergeinfo' properties.
+ */
+static svn_error_t *
+copy_foreign_dir(svn_ra_session_t *ra_session,
+                 const svn_client__pathrev_t *location,
+                 const char *dst_abspath,
+                 svn_depth_t depth,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_delta_editor_t *editor;
+  void *eb;
+  const svn_delta_editor_t *wrapped_editor;
+  void *wrapped_baton;
+  const svn_ra_reporter3_t *reporter;
+  void *reporter_baton;
+
+  /* Get a WC editor. It does not need an RA session because we will not
+     be sending it any 'copy from' requests, only 'add' requests. */
+  SVN_ERR(svn_client__wc_editor_internal(&editor, &eb,
+                                         dst_abspath,
+                                         TRUE /*root_dir_add*/,
+                                         TRUE /*ignore_mergeinfo_changes*/,
+                                         notify_func, notify_baton,
+                                         NULL /*ra_session*/,
+                                         ctx, scratch_pool));
+
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                            editor, eb,
+                                            &wrapped_editor, &wrapped_baton,
+                                            scratch_pool));
+
+  SVN_ERR(svn_ra_do_update3(ra_session, &reporter, &reporter_baton,
+                            location->rev, "", svn_depth_infinity,
+                            FALSE, FALSE, wrapped_editor, wrapped_baton,
+                            scratch_pool, scratch_pool));
+
+  SVN_ERR(reporter->set_path(reporter_baton, "", location->rev, depth,
+                             TRUE /* incomplete */,
+                             NULL, scratch_pool));
+
+  SVN_ERR(reporter->finish_report(reporter_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Implementation of svn_client__repos_to_wc_copy() for a dir.
  */
 static svn_error_t *
@@ -2378,11 +2437,13 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
       SVN_ERR(svn_client__pathrev_create_with_session(&location, ra_session,
                                                       src_revnum, src_url,
                                                       scratch_pool));
-      SVN_ERR(svn_client__copy_foreign(location,
-                                       dst_abspath,
-                                       svn_depth_infinity,
-                                       ra_session,
-                                       ctx, scratch_pool));
+      SVN_ERR(svn_ra_reparent(ra_session, src_url, scratch_pool));
+      SVN_ERR(copy_foreign_dir(ra_session, location,
+                               dst_abspath,
+                               svn_depth_infinity,
+                               ctx->notify_func2, ctx->notify_baton2,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               ctx, scratch_pool));
 
       return SVN_NO_ERROR;
     }
@@ -2518,6 +2579,11 @@ svn_client__repos_to_wc_copy(svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool)
 {
+  svn_boolean_t timestamp_sleep_ignored;
+
+  if (!timestamp_sleep)
+    timestamp_sleep = &timestamp_sleep_ignored;
+
   if (kind == svn_node_dir)
     {
       SVN_ERR(svn_client__repos_to_wc_copy_dir(timestamp_sleep,
