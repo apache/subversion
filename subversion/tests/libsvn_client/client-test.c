@@ -31,6 +31,7 @@
 #include "../../libsvn_client/client.h"
 #include "svn_pools.h"
 #include "svn_client.h"
+#include "private/svn_client_private.h"
 #include "private/svn_client_mtcc.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
@@ -765,17 +766,22 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
 
   loc->url = svn_path_url_add_component2(repos2_url, "A", pool);
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_client__copy_foreign(loc,
+    svn_client__repos_to_wc_copy(NULL /*sleep*/, svn_node_dir,
+                             loc->url, loc->rev,
                              svn_dirent_join(wc_path, "A-copied", pool),
-                             svn_depth_infinity,
+                             /*svn_depth_infinity,*/
+                             FALSE /*same_repositories*/,
                              ra_session, ctx, pool),
     ctx->wc_ctx, wc_path, FALSE, pool);
 
+  SVN_ERR(svn_ra_reparent(ra_session, repos2_url, pool));
   loc->url = svn_path_url_add_component2(repos2_url, "iota", pool);
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_client__copy_foreign(loc,
+    svn_client__repos_to_wc_copy(NULL /*sleep*/, svn_node_file,
+                             loc->url, loc->rev,
                              svn_dirent_join(wc_path, "iota-copied", pool),
-                             svn_depth_infinity,
+                             /*svn_depth_infinity,*/
+                             FALSE /*same_repositories*/,
                              ra_session, ctx, pool),
     ctx->wc_ctx, wc_path, FALSE, pool);
 
