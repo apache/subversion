@@ -1045,7 +1045,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
    "The syntax of the configuration files is a subset of the one used by"    NL
    "Python's ConfigParser module; see"                                       NL
    ""                                                                        NL
-   "   http://www.python.org/doc/current/lib/module-ConfigParser.html"       NL
+   "   https://docs.python.org/3/library/configparser.html"                  NL
    ""                                                                        NL
    "Configuration data in the Windows registry"                              NL
    "=========================================="                              NL
