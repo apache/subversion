@@ -19,6 +19,8 @@
 #
 #
 import unittest, setup_path
+import os
+import tempfile
 import svn.delta
 import svn.core
 from sys import version_info # For Python version check
@@ -46,6 +48,59 @@ class DeltaTestCase(unittest.TestCase):
     window_handler, baton = \
        svn.delta.tx_apply(src_stream, target_stream, None)
     window_handler(None, baton)
+
+  def testTxWindowHandler_stream_IF(self):
+    """Test tx_invoke_window_handler, with svn.core.svn_stream_t object"""
+    pool = svn.core.Pool()
+    in_str = "hello world"
+    src_stream = svn.core.svn_stream_from_stringbuf(in_str)
+    content_str = "bye world"
+    content_stream = svn.core.svn_stream_from_stringbuf(content_str)
+    fd, fname = tempfile.mkstemp()
+    os.close(fd)
+    try:
+      target_stream = svn.core.svn_stream_from_aprfile2(fname, False)
+      window_handler, baton = \
+          svn.delta.tx_apply(src_stream, target_stream, None)
+      svn.delta.tx_send_stream(content_stream, window_handler, baton, pool)
+      fp = open(fname, 'rb')
+      out_str = fp.read()
+      fp.close()
+      self.assertEqual(content_str, out_str)
+    finally:
+      del pool
+      try:
+        os.remove(fname)
+      except OSError:
+        pass
+
+  def testTxWindowHandler_Stream_IF(self):
+    """Test tx_invoke_window_handler, with svn.core.Stream object"""
+    pool = svn.core.Pool()
+    in_str = "hello world"
+    src_stream = svn.core.Stream(
+                    svn.core.svn_stream_from_stringbuf(in_str))
+    content_str = "bye world"
+    content_stream = svn.core.Stream(
+                    svn.core.svn_stream_from_stringbuf(content_str))
+    fd, fname = tempfile.mkstemp()
+    os.close(fd)
+    try:
+      target_stream = svn.core.Stream(
+                    svn.core.svn_stream_from_aprfile2(fname, False))
+      window_handler, baton = \
+          svn.delta.tx_apply(src_stream, target_stream, None)
+      svn.delta.tx_send_stream(content_stream, window_handler, baton, None)
+      fp = open(fname, 'rb')
+      out_str = fp.read()
+      fp.close()
+      self.assertEqual(content_str, out_str)
+    finally:
+      del pool
+      try:
+        os.remove(fname)
+      except OSError:
+        pass
 
   def testTxdeltaWindowT(self):
     """Test the svn_txdelta_window_t wrapper."""
