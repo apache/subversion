@@ -945,56 +945,9 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
         $1 = NULL;
     }
     else {
-        PyObject *libsvn_core;
-        PyObject *py_stream_t;
-        libsvn_core = PyImport_ImportModule("libsvn.core");
-        if (PyErr_Occurred()) {
-            Py_XDECREF(libsvn_core);
-            SWIG_fail;
-        }
-        py_stream_t = PyObject_GetAttrString(libsvn_core, "svn_stream_t");
-        if (PyErr_Occurred()) {
-            Py_XDECREF(py_stream_t);
-            Py_DECREF(libsvn_core);
-            SWIG_fail;
-        }
-        if (PyObject_IsInstance($input, py_stream_t)) {
-            $1 = (svn_stream_t *)svn_swig_py_must_get_ptr(
-                                    $input, $1_descriptor, $argnum);
-            if (PyErr_Occurred()) {
-                Py_DECREF(py_stream_t);
-                Py_DECREF(libsvn_core);
-                SWIG_fail;
-            }
-            Py_DECREF(py_stream_t);
-            Py_DECREF(libsvn_core);
-        }
-        else if (PyObject_HasAttrString($input, "_stream")){
-            PyObject *_stream = PyObject_GetAttrString($input, "_stream");
-            if (PyObject_IsInstance(_stream, py_stream_t)) {
-                $1 = (svn_stream_t *)svn_swig_py_must_get_ptr(
-                                        _stream, $1_descriptor,
-                                        $argnum);
-                if (PyErr_Occurred()) {
-                    PyErr_Clear();
-                    $1 = NULL;
-                }
-                Py_DECREF(_stream);
-                Py_DECREF(py_stream_t);
-                Py_DECREF(libsvn_core);
-            }
-        }
+        $1 = svn_swig_py_make_stream ($input, _global_pool);
         if ($1 == NULL) {
-            if (   PyObject_HasAttrString($input, "read")
-                || PyObject_HasAttrString($input, "write")) {
-                $1 = svn_swig_py_make_stream ($input, _global_pool);
-            }
-            else {
-                PyErr_SetString(PyExc_TypeError,
-                                "expecting a svn_stream_t"
-                                " or file like object");
-                SWIG_fail;
-            }
+            SWIG_fail;
         }
     }
 }
