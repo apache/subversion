@@ -2718,8 +2718,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 
   if (same_repositories)
     {
-      /* Record the implied mergeinfo (before the notification callback
-         is invoked for the root node). */
+      /* Record the implied mergeinfo. */
       SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
                                               pair->src_abspath_or_url,
                                               pair->src_revnum,
@@ -2729,6 +2728,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
       SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
       /* ### Maybe the notification should mention this mergeinfo change. */
+      /* ### Maybe we should do this during rather than after the copy. */
     }
 
   return SVN_NO_ERROR;
