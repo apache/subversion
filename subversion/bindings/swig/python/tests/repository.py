@@ -231,6 +231,21 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # the comparison list gets too long.
     self.assertEqual(dsp.ops[:len(expected_list)], expected_list)
 
+  def test_parse_fns3_invalid_set_fulltext(self):
+    class DumpStreamParserSubclass(DumpStreamParser):
+      def set_fulltext(self, node_baton):
+        DumpStreamParser.set_fulltext(self, node_baton)
+        return 42
+    stream = open(os.path.join(os.path.dirname(sys.argv[0]),
+                               "trac/versioncontrol/tests/svnrepos.dump"))
+    try:
+      dsp = DumpStreamParserSubclass()
+      ptr, baton = repos.make_parse_fns3(dsp)
+      self.assertRaises(TypeError, repos.parse_dumpstream3,
+                        stream, ptr, baton, False, None)
+    finally:
+      stream.close()
+
   def test_get_logs(self):
     """Test scope of get_logs callbacks"""
     logs = []
