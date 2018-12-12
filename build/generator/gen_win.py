@@ -736,6 +736,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
+      fakedefines.append('SVN_WIN32_CRASHREPORT_EMAIL="users@subversion.apache.org"')
 
     return fakedefines
 
