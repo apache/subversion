@@ -2578,36 +2578,18 @@ svn_swig_py_stream_destroy(void *py_io)
 svn_stream_t *
 svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
 {
-  PyObject *libsvn_core = NULL;
-  PyObject *py_stream_t = NULL;
   PyObject *_stream = NULL;
-  svn_stream_t *result = NULL;
+  void *result = NULL;
   swig_type_info *typeinfo = svn_swig_TypeQuery("svn_stream_t *");
 
-  libsvn_core = PyImport_ImportModule("libsvn.core");
-  if (PyErr_Occurred()) {
-    goto finished;
-  }
-  py_stream_t = PyObject_GetAttrString(libsvn_core, "svn_stream_t");
-  if (PyErr_Occurred()) {
-    goto finished;
-  }
-  if (PyObject_IsInstance(py_io, py_stream_t)) {
-    result = (svn_stream_t *)svn_swig_py_must_get_ptr(py_io, typeinfo, 0);
-    if (PyErr_Occurred()) {
-      result = NULL;
-      goto finished;
-    }
-  }
-  else if (PyObject_HasAttrString(py_io, "_stream")) {
-    _stream = PyObject_GetAttrString(py_io, "_stream");
-    if (PyObject_IsInstance(_stream, py_stream_t)) {
-      result = (svn_stream_t *)svn_swig_py_must_get_ptr(_stream, typeinfo, 0);
-      if (PyErr_Occurred()) {
-        result = NULL;
-        goto finished;
+  if (svn_swig_py_convert_ptr(py_io, &result, typeinfo) != 0) {
+      PyErr_Clear();
+      if (PyObject_HasAttrString(py_io, "_stream")) {
+        _stream = PyObject_GetAttrString(py_io, "_stream");
+        if (svn_swig_py_convert_ptr(_stream, &result, typeinfo) != 0) {
+          PyErr_Clear();
+        }
       }
-    }
   }
   if (result == NULL) {
     if (!PyObject_HasAttrString(py_io, "read")
@@ -2627,8 +2609,6 @@ svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
 
 finished:
   Py_XDECREF(_stream);
-  Py_XDECREF(py_stream_t);
-  Py_XDECREF(libsvn_core);
 
   return result;
 }
