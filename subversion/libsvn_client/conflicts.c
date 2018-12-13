@@ -8041,11 +8041,12 @@ merge_incoming_added_dir_replace(svn_client_conflict_option_t *option,
   if (err)
     goto unlock_wc;
 
-  err = svn_client__repos_to_wc_copy_by_editor(&timestamp_sleep,
-                                               svn_node_dir,
-                                               url, incoming_new_pegrev,
-                                               local_abspath,
-                                               ra_session, ctx, scratch_pool);
+  err = svn_client__repos_to_wc_copy(&timestamp_sleep,
+                                     svn_node_dir,
+                                     url, incoming_new_pegrev,
+                                     local_abspath,
+                                     TRUE /*same_repositories*/,
+                                     ra_session, ctx, scratch_pool);
   if (err)
     goto unlock_wc;
 
