@@ -1646,10 +1646,58 @@ svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
   return canonicalize(type_uri, uri, pool);
 }
 
+svn_error_t *
+svn_uri_canonicalize_safe(const char **canonical_uri,
+                          const char **non_canonical_result,
+                          const char *uri,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  const char *const result = svn_uri_canonicalize(uri, result_pool);
+  if (!svn_uri_is_canonical(result, scratch_pool))
+    {
+      if (non_canonical_result)
+        *non_canonical_result = result;
+
+      return svn_error_createf(
+          SVN_ERR_CANONICALIZATION_FAILED, NULL,
+          _("Could not canonicalize URI '%s'"
+            " (the result '%s' is not canonical)"),
+          uri, result);
+    }
+  *canonical_uri = result;
+  return SVN_NO_ERROR;
+}
+
 const char *
 svn_relpath_canonicalize(const char *relpath, apr_pool_t *pool)
 {
   return canonicalize(type_relpath, relpath, pool);
+}
+
+svn_error_t *
+svn_relpath_canonicalize_safe(const char **canonical_relpath,
+                              const char **non_canonical_result,
+                              const char *relpath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  const char *const result = svn_relpath_canonicalize(relpath, result_pool);
+  if (!svn_relpath_is_canonical(result))
+    {
+      if (non_canonical_result)
+        *non_canonical_result = result;
+
+      return svn_error_createf(
+          SVN_ERR_CANONICALIZATION_FAILED, NULL,
+          _("Could not canonicalize relpath '%s'"
+            " (the result '%s' is not canonical)"),
+          relpath, result);
+    }
+
+  SVN_UNUSED(scratch_pool);
+  *canonical_relpath = result;
+  return SVN_NO_ERROR;
 }
 
 const char *
@@ -1676,6 +1724,29 @@ svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 #endif /* SVN_USE_DOS_PATHS */
 
   return dst;
+}
+
+svn_error_t *
+svn_dirent_canonicalize_safe(const char **canonical_dirent,
+                             const char **non_canonical_result,
+                             const char *dirent,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  const char *const result = svn_dirent_canonicalize(dirent, result_pool);
+  if (!svn_dirent_is_canonical(result, scratch_pool))
+    {
+      if (non_canonical_result)
+        *non_canonical_result = result;
+
+      return svn_error_createf(
+          SVN_ERR_CANONICALIZATION_FAILED, NULL,
+          _("Could not canonicalize dirent '%s'"
+            " (the result '%s' is not canonical)"),
+          dirent, result);
+    }
+  *canonical_dirent = result;
+  return SVN_NO_ERROR;
 }
 
 svn_boolean_t

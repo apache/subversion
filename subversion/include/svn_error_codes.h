@@ -1482,6 +1482,11 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 46,
              "LZ4 decompression failed")
 
+  /** @since New in 1.12.  */
+  SVN_ERRDEF(SVN_ERR_CANONICALIZATION_FAILED,
+             SVN_ERR_MISC_CATEGORY_START + 47,
+             "Could not canonicalize path or URI")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
