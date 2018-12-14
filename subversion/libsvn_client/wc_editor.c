@@ -209,28 +209,6 @@ dir_open(const char *path,
   return SVN_NO_ERROR;
 }
 
-/* Are RA_SESSION and the versioned *parent* dir of WC_TARGET_ABSPATH in
- * the same repository?
- */
-static svn_error_t *
-is_same_repository(svn_boolean_t *same_repository,
-                   svn_ra_session_t *ra_session,
-                   const char *wc_target_abspath,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *scratch_pool)
-{
-  const char *src_uuid, *dst_uuid;
-
-  /* Get the repository UUIDs of copy source URL and WC parent path */
-  SVN_ERR(svn_ra_get_uuid2(ra_session, &src_uuid, scratch_pool));
-  SVN_ERR(svn_client_get_repos_root(NULL /*root_url*/, &dst_uuid,
-                                    svn_dirent_dirname(wc_target_abspath,
-                                                       scratch_pool),
-                                    ctx, scratch_pool, scratch_pool));
-  *same_repository = (strcmp(src_uuid, dst_uuid) == 0);
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 dir_add(const char *path,
         void *parent_baton,
@@ -242,25 +220,21 @@ dir_add(const char *path,
   struct dir_baton_t *db;
 
   SVN_ERR(dir_open_or_add(path, parent_baton, &db));
-  SVN_ERR(svn_io_make_dir_recursively(db->local_abspath, db->pool));
 
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     {
-      svn_boolean_t same_repository;
-      svn_boolean_t timestamp_sleep;
-
-      SVN_ERR(is_same_repository(&same_repository,
-                                 db->eb->ra_session, db->local_abspath,
-                                 db->eb->ctx, db->pool));
-
-      SVN_ERR(svn_client__repos_to_wc_copy(&timestamp_sleep,
+      SVN_ERR(svn_client__repos_to_wc_copy_internal(NULL /*timestamp_sleep*/,
                                            svn_node_dir,
                                            copyfrom_path,
                                            copyfrom_revision,
                                            db->local_abspath,
-                                           same_repository,
                                            db->eb->ra_session,
                                            db->eb->ctx, db->pool));
+      db->created = TRUE;
+    }
+  else
+    {
+      SVN_ERR(svn_io_make_dir_recursively(db->local_abspath, db->pool));
     }
 
   *child_baton = db;
@@ -436,21 +410,14 @@ file_add(const char *path,
 
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     {
-      svn_boolean_t same_repository;
-      svn_boolean_t timestamp_sleep;
-
-      SVN_ERR(is_same_repository(&same_repository,
-                                 fb->eb->ra_session, fb->local_abspath,
-                                 fb->eb->ctx, fb->pool));
-
-      SVN_ERR(svn_client__repos_to_wc_copy(&timestamp_sleep,
+      SVN_ERR(svn_client__repos_to_wc_copy_internal(NULL /*timestamp_sleep*/,
                                            svn_node_file,
                                            copyfrom_path,
                                            copyfrom_revision,
                                            fb->local_abspath,
-                                           same_repository,
                                            fb->eb->ra_session,
                                            fb->eb->ctx, fb->pool));
+      fb->created = TRUE;
     }
 
   *file_baton = fb;
