@@ -124,6 +124,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
         # So optional, we don't even have any code to detect them on Windows
         'magic',
+        'macos-plist',
+        'macos-keychain',
   ]
 
   # When build.conf contains a 'when = SOMETHING' where SOMETHING is not in
