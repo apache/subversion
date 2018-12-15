@@ -147,16 +147,46 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/** Convert @a dirent from the local style to the canonical internal style.
+/**
+ * Convert @a dirent from the local style to the canonical internal style.
  * "Local style" means native path separators and "." for the empty path.
  *
  * Allocate the result in @a result_pool.
+ *
+ * @warning This function may call @c abort() if the @a dirent parameter
+ *          is not a valid local-style path.
+ *          Use svn_dirent_internal_style_safe() for tainted input.
  *
  * @since New in 1.6.
  */
 const char *
 svn_dirent_internal_style(const char *dirent,
                           apr_pool_t *result_pool);
+
+/**
+ * Convert @a dirent from the local style to the canonical internal style
+ * and return it in @a *internal_style_dirent. "Local style" means native
+ * path separators and "." for the empty path.
+ *
+ * Similar to svn_dirent_internal_style() (which see), but returns an error
+ * if the @a dirent can not be canonicalized or of the result does not pass
+ * the svn_dirent_is_canonical() test.
+ *
+ * If the function fails and @a non_canonical_result is not @c NULL, the
+ * result of the failed canonicalization attempt (which may be @c NULL)
+ * will be returned in @a *non_canonical_result.
+ *
+ * Allocates the results in @a result_pool. Uses @a scratch_pool for
+ * temporary allocations.
+ *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_dirent_internal_style_safe(const char **internal_style_dirent,
+                               const char **non_canonical_result,
+                               const char *dirent,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool);
 
 /** Convert @a dirent from the internal style to the local style.
  * "Local style" means native path separators and "." for the empty path.
