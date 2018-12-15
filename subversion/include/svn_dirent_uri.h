@@ -486,7 +486,8 @@ svn_boolean_t
 svn_uri_is_root(const char *uri,
                 apr_size_t len);
 
-/** Return a new dirent like @a dirent, but transformed such that some types
+/**
+ * Return a new dirent like @a dirent, but transformed such that some types
  * of dirent specification redundancies are removed.
  *
  * This involves:
@@ -499,6 +500,10 @@ svn_uri_is_root(const char *uri,
  * and possibly other semantically inoperative transformations.
  *
  * Allocate the result in @a result_pool.
+ *
+ * @warning This function may call @c abort() if @a dirent can not be
+ *          canonicalized.
+ *          Use svn_dirent_canonicalize_safe() for tainted input.
  *
  * @since New in 1.6.
  */
@@ -531,7 +536,8 @@ svn_dirent_canonicalize_safe(const char **canonical_dirent,
                              apr_pool_t *scratch_pool);
 
 
-/** Return a new relpath like @a relpath, but transformed such that some types
+/**
+ * Return a new relpath like @a relpath, but transformed such that some types
  * of relpath specification redundancies are removed.
  *
  * This involves:
@@ -542,6 +548,10 @@ svn_dirent_canonicalize_safe(const char **canonical_dirent,
  * and possibly other semantically inoperative transformations.
  *
  * Allocate the result in @a result_pool.
+ *
+ * @warning This function may call @c abort() if @a relpath can not be
+ *          canonicalized.
+ *          Use svn_relpath_canonicalize_safe() for tainted input.
  *
  * @since New in 1.7.
  */
@@ -575,7 +585,8 @@ svn_relpath_canonicalize_safe(const char **canonical_relpath,
                               apr_pool_t *scratch_pool);
 
 
-/** Return a new uri like @a uri, but transformed such that some types
+/**
+ * Return a new uri like @a uri, but transformed such that some types
  * of uri specification redundancies are removed.
  *
  * This involves:
@@ -592,7 +603,11 @@ svn_relpath_canonicalize_safe(const char **canonical_relpath,
  *
  * Allocate the result in @a result_pool.
  *
- * @since New in 1.7.
+ * @warning This function may call @c abort() if @a uri can not be
+ *          canonicalized.
+ *          Use svn_uri_canonicalize_safe() for tainted input.
+ *
+  * @since New in 1.7.
  */
 const char *
 svn_uri_canonicalize(const char *uri,
