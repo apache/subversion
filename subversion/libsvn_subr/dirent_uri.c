@@ -897,6 +897,20 @@ svn_dirent_internal_style(const char *dirent, apr_pool_t *pool)
   return svn_dirent_canonicalize(internal_style(dirent, pool), pool);
 }
 
+svn_error_t *
+svn_dirent_internal_style_safe(const char **internal_style_dirent,
+                               const char **non_canonical_result,
+                               const char *dirent,
+                               apr_pool_t *result_pool,
+                               apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+      svn_dirent_canonicalize_safe(internal_style_dirent,
+                                   non_canonical_result,
+                                   internal_style(dirent, scratch_pool),
+                                   result_pool, scratch_pool));
+}
+
 const char *
 svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
 {
