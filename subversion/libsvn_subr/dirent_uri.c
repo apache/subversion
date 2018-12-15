@@ -1659,8 +1659,11 @@ svn_uri_canonicalize(const char *uri, apr_pool_t *pool)
 {
   const char *result;
   svn_error_t *const err = canonicalize(&result, type_uri, uri, pool);
-  svn_error_clear(err);
-  SVN_ERR_ASSERT_NO_RETURN(!err);
+  if (err)
+    {
+      svn_error_clear(err);
+      SVN_ERR_ASSERT_NO_RETURN(!"URI canonicalization failed");
+    }
   return result;
 }
 
@@ -1693,8 +1696,11 @@ svn_relpath_canonicalize(const char *relpath, apr_pool_t *pool)
 {
   const char *result;
   svn_error_t *const err = canonicalize(&result, type_relpath, relpath, pool);
-  svn_error_clear(err);
-  SVN_ERR_ASSERT_NO_RETURN(!err);
+  if (err)
+    {
+      svn_error_clear(err);
+      SVN_ERR_ASSERT_NO_RETURN(!"relpath canonicalization failed");
+    }
   return result;
 }
 
@@ -1758,8 +1764,11 @@ svn_dirent_canonicalize(const char *dirent, apr_pool_t *pool)
 {
   const char *result;
   svn_error_t *const err = canonicalize_dirent(&result, dirent, pool);
-  svn_error_clear(err);
-  SVN_ERR_ASSERT_NO_RETURN(!err);
+  if (err)
+    {
+      svn_error_clear(err);
+      SVN_ERR_ASSERT_NO_RETURN(!"dirent canonicalization failed");
+    }
   return result;
 }
 
