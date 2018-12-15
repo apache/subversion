@@ -1099,6 +1099,9 @@ verify_wc_dsts(const apr_array_header_t *copy_pairs,
   return SVN_NO_ERROR;
 }
 
+/* Verify that the WC sources in COPY_PAIRS exist, and set pair->src_kind
+   for each.
+ */
 static svn_error_t *
 verify_wc_srcs(const apr_array_header_t *copy_pairs,
                svn_client_ctx_t *ctx,
@@ -2350,12 +2353,72 @@ notification_adjust_func(void *baton,
     nb->inner_func(nb->inner_baton, inner_notify, pool);
 }
 
-svn_error_t *
+/** Copy a directory tree from a remote repository.
+ *
+ * Copy from RA_SESSION:LOCATION to WC_CTX:DST_ABSPATH.
+ *
+ * Create the directory DST_ABSPATH, if not present. Its parent should be
+ * already under version control in the WC and in a suitable state for
+ * scheduling the addition of a child.
+ *
+ * Ignore any incoming non-regular properties (entry-props, DAV/WC-props).
+ * Remove any incoming 'svn:mergeinfo' properties.
+ */
+static svn_error_t *
+copy_foreign_dir(svn_ra_session_t *ra_session,
+                 const svn_client__pathrev_t *location,
+                 const char *dst_abspath,
+                 svn_wc_notify_func2_t notify_func,
+                 void *notify_baton,
+                 svn_cancel_func_t cancel_func,
+                 void *cancel_baton,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool)
+{
+  const svn_delta_editor_t *editor;
+  void *eb;
+  const svn_delta_editor_t *wrapped_editor;
+  void *wrapped_baton;
+  const svn_ra_reporter3_t *reporter;
+  void *reporter_baton;
+
+  /* Get a WC editor. It does not need an RA session because we will not
+     be sending it any 'copy from' requests, only 'add' requests. */
+  SVN_ERR(svn_client__wc_editor_internal(&editor, &eb,
+                                         dst_abspath,
+                                         TRUE /*root_dir_add*/,
+                                         TRUE /*ignore_mergeinfo_changes*/,
+                                         notify_func, notify_baton,
+                                         NULL /*ra_session*/,
+                                         ctx, scratch_pool));
+
+  SVN_ERR(svn_delta_get_cancellation_editor(cancel_func, cancel_baton,
+                                            editor, eb,
+                                            &wrapped_editor, &wrapped_baton,
+                                            scratch_pool));
+
+  SVN_ERR(svn_ra_do_update3(ra_session, &reporter, &reporter_baton,
+                            location->rev, "", svn_depth_infinity,
+                            FALSE, FALSE, wrapped_editor, wrapped_baton,
+                            scratch_pool, scratch_pool));
+
+  SVN_ERR(reporter->set_path(reporter_baton, "", location->rev,
+                             svn_depth_infinity /* irrelevant */,
+                             TRUE /*start_empty*/,
+                             NULL, scratch_pool));
+
+  SVN_ERR(reporter->finish_report(reporter_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Implementation of svn_client__repos_to_wc_copy() for a dir.
+ */
+static svn_error_t *
 svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
                                  const char *src_url,
                                  svn_revnum_t src_revnum,
                                  const char *dst_abspath,
-                                 svn_boolean_t ignore_externals,
                                  svn_boolean_t same_repositories,
                                  svn_ra_session_t *ra_session,
                                  svn_client_ctx_t *ctx,
@@ -2374,11 +2437,12 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
       SVN_ERR(svn_client__pathrev_create_with_session(&location, ra_session,
                                                       src_revnum, src_url,
                                                       scratch_pool));
-      SVN_ERR(svn_client__copy_foreign(location,
-                                       dst_abspath,
-                                       svn_depth_infinity,
-                                       ra_session,
-                                       ctx, scratch_pool));
+      SVN_ERR(svn_ra_reparent(ra_session, src_url, scratch_pool));
+      SVN_ERR(copy_foreign_dir(ra_session, location,
+                               dst_abspath,
+                               ctx->notify_func2, ctx->notify_baton2,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               ctx, scratch_pool));
 
       return SVN_NO_ERROR;
     }
@@ -2422,7 +2486,7 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
                                         &copy_src_revision,
                                         &copy_src_revision,
                                         svn_depth_infinity,
-                                        ignore_externals,
+                                        TRUE /*ignore_externals*/,
                                         FALSE, /* we don't allow obstructions */
                                         ra_session, ctx, scratch_pool);
 
@@ -2454,7 +2518,12 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
+/* Implementation of svn_client__repos_to_wc_copy() for a file.
+ *
+ * This has no 'ignore_externals' parameter because we don't support the
+ * 'svn:externals' property being set on a file.
+ */
+static svn_error_t *
 svn_client__repos_to_wc_copy_file(svn_boolean_t *timestamp_sleep,
                                   const char *src_url,
                                   svn_revnum_t src_rev,
@@ -2498,6 +2567,116 @@ svn_client__repos_to_wc_copy_file(svn_boolean_t *timestamp_sleep,
   return SVN_NO_ERROR;
 }
 
+/* Are RA_SESSION and the versioned *parent* dir of WC_TARGET_ABSPATH in
+ * the same repository?
+ */
+static svn_error_t *
+is_same_repository(svn_boolean_t *same_repository,
+                   svn_ra_session_t *ra_session,
+                   const char *wc_target_abspath,
+                   svn_client_ctx_t *ctx,
+                   apr_pool_t *scratch_pool)
+{
+  const char *src_uuid, *dst_uuid;
+
+  /* Get the repository UUIDs of copy source URL and WC parent path */
+  SVN_ERR(svn_ra_get_uuid2(ra_session, &src_uuid, scratch_pool));
+  SVN_ERR(svn_client_get_repos_root(NULL /*root_url*/, &dst_uuid,
+                                    svn_dirent_dirname(wc_target_abspath,
+                                                       scratch_pool),
+                                    ctx, scratch_pool, scratch_pool));
+  *same_repository = (strcmp(src_uuid, dst_uuid) == 0);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__repos_to_wc_copy_internal(svn_boolean_t *timestamp_sleep,
+                             svn_node_kind_t kind,
+                             const char *src_url,
+                             svn_revnum_t src_rev,
+                             const char *dst_abspath,
+                             svn_ra_session_t *ra_session,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t timestamp_sleep_ignored;
+  svn_boolean_t same_repositories;
+
+  SVN_ERR(is_same_repository(&same_repositories,
+                             ra_session, dst_abspath, ctx, scratch_pool));
+
+  if (!timestamp_sleep)
+    timestamp_sleep = &timestamp_sleep_ignored;
+
+  if (kind == svn_node_dir)
+    {
+      SVN_ERR(svn_client__repos_to_wc_copy_dir(timestamp_sleep,
+                                               src_url, src_rev,
+                                               dst_abspath,
+                                               same_repositories,
+                                               ra_session,
+                                               ctx, scratch_pool));
+    }
+  else if (kind == svn_node_file)
+    {
+      SVN_ERR(svn_client__repos_to_wc_copy_file(timestamp_sleep,
+                                                src_url, src_rev,
+                                                dst_abspath,
+                                                same_repositories,
+                                                ra_session,
+                                                ctx, scratch_pool));
+    }
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
+                svn_node_kind_t kind,
+                const char *src_url,
+                svn_revnum_t src_rev,
+                const char *dst_abspath,
+                svn_ra_session_t *ra_session,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool)
+{
+  const svn_delta_editor_t *editor;
+  void *eb;
+  const char *src_anchor = svn_uri_dirname(src_url, scratch_pool);
+  const char *dst_target = svn_dirent_basename(dst_abspath, scratch_pool);
+  void *rb, *db;
+
+  SVN_ERR(svn_ra_reparent(ra_session, src_anchor, scratch_pool));
+
+  SVN_ERR(svn_client__wc_editor(&editor, &eb,
+                                svn_dirent_dirname(dst_abspath, scratch_pool),
+                                ctx->notify_func2, ctx->notify_baton2,
+                                ra_session,
+                                ctx, scratch_pool));
+
+  SVN_ERR(editor->open_root(eb, SVN_INVALID_REVNUM, scratch_pool, &rb));
+  if (kind == svn_node_dir)
+    {
+      SVN_ERR(editor->add_directory(dst_target, rb,
+                                    src_url, src_rev,
+                                    scratch_pool,
+                                    &db));
+      SVN_ERR(editor->close_directory(db, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(editor->add_file(dst_target, rb,
+                               src_url, src_rev,
+                               scratch_pool,
+                               &db));
+      SVN_ERR(editor->close_file(db, NULL, scratch_pool));
+    }
+  SVN_ERR(editor->close_edit(eb, scratch_pool));
+
+  if (timestamp_sleep)
+    *timestamp_sleep = TRUE;
+  return SVN_NO_ERROR;
+}
+
 /* Peform each individual copy operation for a repos -> wc copy.  A
    helper for repos_to_wc_copy().
 
@@ -2507,7 +2686,6 @@ svn_client__repos_to_wc_copy_file(svn_boolean_t *timestamp_sleep,
 static svn_error_t *
 repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                         const svn_client__copy_pair_t *pair,
-                        svn_boolean_t same_repositories,
                         svn_boolean_t ignore_externals,
                         svn_boolean_t pin_externals,
                         const apr_hash_t *externals_to_pin,
@@ -2517,11 +2695,14 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
 {
   apr_hash_t *src_mergeinfo;
   const char *dst_abspath = pair->dst_abspath_or_url;
+  svn_boolean_t same_repositories;
 
   SVN_ERR_ASSERT(SVN_IS_VALID_REVNUM(pair->src_revnum));
   SVN_ERR_ASSERT(svn_path_is_url(pair->src_abspath_or_url));
   SVN_ERR_ASSERT(svn_dirent_is_absolute(dst_abspath));
 
+  SVN_ERR(is_same_repository(&same_repositories,
+                             ra_session, dst_abspath, ctx, pool));
   if (!same_repositories && ctx->notify_func2)
     {
       svn_wc_notify_t *notify;
@@ -2537,60 +2718,59 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
         SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
     }
 
-  if (pair->src_kind == svn_node_dir)
+  SVN_ERR(svn_client__repos_to_wc_copy_by_editor(
+            timestamp_sleep,
+            pair->src_kind,
+            pair->src_abspath_or_url,
+            pair->src_revnum,
+            dst_abspath,
+            ra_session, ctx, pool));
+
+  /* Fetch externals, pinning them if requested */
+  if (!ignore_externals && pair->src_kind == svn_node_dir)
     {
-      /* Avoid a chicken-and-egg problem:
-       * If pinning externals we'll need to adjust externals
-       * properties before checking out any externals.
-       * But copy needs to happen before pinning because else there
-       * are no svn:externals properties to pin. */
-      if (pin_externals)
-        ignore_externals = TRUE;
-
-      SVN_ERR(svn_client__repos_to_wc_copy_dir(timestamp_sleep,
-                                               pair->src_abspath_or_url,
-                                               pair->src_revnum,
-                                               dst_abspath,
-                                               ignore_externals,
-                                               same_repositories,
-                                               ra_session, ctx, pool));
-
-      if (same_repositories && pin_externals)
+      if (same_repositories)
         {
-          apr_hash_t *pinned_externals;
-          apr_hash_index_t *hi;
-          apr_pool_t *iterpool;
           const char *repos_root_url;
           apr_hash_t *new_externals;
           apr_hash_t *new_depths;
 
           SVN_ERR(svn_ra_get_repos_root2(ra_session, &repos_root_url, pool));
-          SVN_ERR(resolve_pinned_externals(&pinned_externals,
-                                           externals_to_pin, pair,
-                                           ra_session, repos_root_url,
-                                           ctx, pool, pool));
 
-          iterpool = svn_pool_create(pool);
-          for (hi = apr_hash_first(pool, pinned_externals);
-               hi;
-               hi = apr_hash_next(hi))
+          if (pin_externals)
             {
-              const char *dst_relpath = apr_hash_this_key(hi);
-              svn_string_t *externals_propval = apr_hash_this_val(hi);
-              const char *local_abspath;
+              apr_hash_t *pinned_externals;
+              apr_hash_index_t *hi;
+              apr_pool_t *iterpool;
 
-              svn_pool_clear(iterpool);
+              SVN_ERR(resolve_pinned_externals(&pinned_externals,
+                                               externals_to_pin, pair,
+                                               ra_session, repos_root_url,
+                                               ctx, pool, pool));
 
-              local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
-                                              dst_relpath, iterpool);
-              /* ### use a work queue? */
-              SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
-                                       SVN_PROP_EXTERNALS, externals_propval,
-                                       svn_depth_empty, TRUE /* skip_checks */,
-                                       NULL  /* changelist_filter */,
-                                       ctx->cancel_func, ctx->cancel_baton,
-                                       NULL, NULL, /* no extra notification */
-                                       iterpool));
+              iterpool = svn_pool_create(pool);
+              for (hi = apr_hash_first(pool, pinned_externals);
+                   hi;
+                   hi = apr_hash_next(hi))
+                {
+                  const char *dst_relpath = apr_hash_this_key(hi);
+                  svn_string_t *externals_propval = apr_hash_this_val(hi);
+                  const char *local_abspath;
+
+                  svn_pool_clear(iterpool);
+
+                  local_abspath = svn_dirent_join(pair->dst_abspath_or_url,
+                                                  dst_relpath, iterpool);
+                  /* ### use a work queue? */
+                  SVN_ERR(svn_wc_prop_set4(ctx->wc_ctx, local_abspath,
+                                           SVN_PROP_EXTERNALS, externals_propval,
+                                           svn_depth_empty, TRUE /* skip_checks */,
+                                           NULL  /* changelist_filter */,
+                                           ctx->cancel_func, ctx->cancel_baton,
+                                           NULL, NULL, /* no extra notification */
+                                           iterpool));
+                }
+              svn_pool_destroy(iterpool);
             }
 
           /* Now update all externals in the newly created copy. */
@@ -2599,33 +2779,20 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
                                                        ctx->wc_ctx,
                                                        dst_abspath,
                                                        svn_depth_infinity,
-                                                       iterpool, iterpool));
+                                                       pool, pool));
           SVN_ERR(svn_client__handle_externals(new_externals,
                                                new_depths,
                                                repos_root_url, dst_abspath,
                                                svn_depth_infinity,
                                                timestamp_sleep,
                                                ra_session,
-                                               ctx, iterpool));
-          svn_pool_destroy(iterpool);
+                                               ctx, pool));
         }
-    } /* end directory case */
-
-  else if (pair->src_kind == svn_node_file)
-    {
-      SVN_ERR(svn_client__repos_to_wc_copy_file(timestamp_sleep,
-                                                pair->src_abspath_or_url,
-                                                pair->src_revnum,
-                                                dst_abspath,
-                                                same_repositories,
-                                                ra_session,
-                                                ctx, pool));
     }
 
   if (same_repositories)
     {
-      /* Record the implied mergeinfo (before the notification callback
-         is invoked for the root node). */
+      /* Record the implied mergeinfo. */
       SVN_ERR(svn_client__get_repos_mergeinfo(&src_mergeinfo, ra_session,
                                               pair->src_abspath_or_url,
                                               pair->src_revnum,
@@ -2635,6 +2802,7 @@ repos_to_wc_copy_single(svn_boolean_t *timestamp_sleep,
       SVN_ERR(extend_wc_mergeinfo(dst_abspath, src_mergeinfo, ctx, pool));
 
       /* ### Maybe the notification should mention this mergeinfo change. */
+      /* ### Maybe we should do this during rather than after the copy. */
     }
 
   return SVN_NO_ERROR;
@@ -2652,31 +2820,7 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
                         apr_pool_t *scratch_pool)
 {
   int i;
-  svn_boolean_t same_repositories;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-
-  /* Decide whether the two repositories are the same or not. */
-  {
-    const char *parent_abspath;
-    const char *src_uuid, *dst_uuid;
-
-    /* Get the repository uuid of SRC_URL */
-    SVN_ERR(svn_ra_get_uuid2(ra_session, &src_uuid, iterpool));
-
-    /* Get repository uuid of dst's parent directory, since dst may
-       not exist.  ### TODO:  we should probably walk up the wc here,
-       in case the parent dir has an imaginary URL.  */
-    if (copy_pairs->nelts == 1)
-      parent_abspath = svn_dirent_dirname(top_dst_abspath, scratch_pool);
-    else
-      parent_abspath = top_dst_abspath;
-
-    SVN_ERR(svn_client_get_repos_root(NULL /* root_url */, &dst_uuid,
-                                      parent_abspath, ctx,
-                                      iterpool, iterpool));
-    /* ### Also check repos_root_url? */
-    same_repositories = (strcmp(src_uuid, dst_uuid) == 0);
-  }
 
   /* Perform the move for each of the copy_pairs. */
   for (i = 0; i < copy_pairs->nelts; i++)
@@ -2690,7 +2834,6 @@ repos_to_wc_copy_locked(svn_boolean_t *timestamp_sleep,
       SVN_ERR(repos_to_wc_copy_single(timestamp_sleep,
                                       APR_ARRAY_IDX(copy_pairs, i,
                                                     svn_client__copy_pair_t *),
-                                      same_repositories,
                                       ignore_externals,
                                       pin_externals, externals_to_pin,
                                       ra_session, ctx, iterpool));

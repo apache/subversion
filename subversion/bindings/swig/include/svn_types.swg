@@ -942,7 +942,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
 #ifdef SWIGPYTHON
 %typemap(in) svn_stream_t *WRAPPED_STREAM {
-    $1 = svn_swig_py_make_stream ($input, _global_pool);
+    if ($input == Py_None) {
+        $1 = NULL;
+    }
+    else {
+        $1 = svn_swig_py_make_stream ($input, _global_pool);
+        if ($1 == NULL) {
+            SWIG_fail;
+        }
+    }
 }
 #endif
 

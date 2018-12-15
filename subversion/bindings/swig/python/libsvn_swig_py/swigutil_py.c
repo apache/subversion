@@ -2362,8 +2362,8 @@ static svn_error_t *parse_fn3_set_fulltext(svn_stream_t **stream,
                                            void *node_baton)
 {
   item_baton *ib = node_baton;
-  PyObject *result;
-  svn_error_t *err;
+  PyObject *result = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
 
   svn_swig_py_acquire_py_lock();
 
@@ -2385,14 +2385,17 @@ static svn_error_t *parse_fn3_set_fulltext(svn_stream_t **stream,
       /* create a stream from the IO object. it will increment the
          reference on the 'result'. */
       *stream = svn_swig_py_make_stream(result, ib->pool);
+      if (*stream == NULL)
+        {
+          err = callback_exception_error();
+          goto finished;
+        }
     }
 
   /* if the handler returned an IO object, svn_swig_py_make_stream() has
      incremented its reference counter. If it was None, it is discarded. */
-  Py_DECREF(result);
-  err = SVN_NO_ERROR;
-
- finished:
+finished:
+  Py_XDECREF(result);
   svn_swig_py_release_py_lock();
   return err;
 }
@@ -2656,17 +2659,39 @@ svn_swig_py_stream_destroy(void *py_io)
 svn_stream_t *
 svn_swig_py_make_stream(PyObject *py_io, apr_pool_t *pool)
 {
-  svn_stream_t *stream;
+  PyObject *_stream = NULL;
+  void *result = NULL;
+  swig_type_info *typeinfo = svn_swig_TypeQuery("svn_stream_t *");
 
-  stream = svn_stream_create(py_io, pool);
-  svn_stream_set_read2(stream, read_handler_pyio, NULL);
-  svn_stream_set_write(stream, write_handler_pyio);
-  svn_stream_set_close(stream, close_handler_pyio);
-  apr_pool_cleanup_register(pool, py_io, svn_swig_py_stream_destroy,
-                            apr_pool_cleanup_null);
-  Py_INCREF(py_io);
+  if (svn_swig_py_convert_ptr(py_io, &result, typeinfo) != 0) {
+      PyErr_Clear();
+      if (PyObject_HasAttrString(py_io, "_stream")) {
+        _stream = PyObject_GetAttrString(py_io, "_stream");
+        if (svn_swig_py_convert_ptr(_stream, &result, typeinfo) != 0) {
+          PyErr_Clear();
+        }
+      }
+  }
+  if (result == NULL) {
+    if (!PyObject_HasAttrString(py_io, "read")
+        && !PyObject_HasAttrString(py_io, "write")) {
+      PyErr_SetString(PyExc_TypeError,
+                      "expecting a svn_stream_t or file like object");
+      goto finished;
+    }
+    result = svn_stream_create(py_io, pool);
+    svn_stream_set_read2(result, read_handler_pyio, NULL);
+    svn_stream_set_write(result, write_handler_pyio);
+    svn_stream_set_close(result, close_handler_pyio);
+    apr_pool_cleanup_register(pool, py_io, svn_swig_py_stream_destroy,
+                              apr_pool_cleanup_null);
+    Py_INCREF(py_io);
+  }
 
-  return stream;
+finished:
+  Py_XDECREF(_stream);
+
+  return result;
 }
 
 PyObject *
