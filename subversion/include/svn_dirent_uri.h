@@ -477,7 +477,7 @@ svn_dirent_canonicalize(const char *dirent,
                         apr_pool_t *result_pool);
 
 /**
- * Return a new @a *cannonical_dirent like @a dirent, but transformed such
+ * Return a new @a *canonical_dirent like @a dirent, but transformed such
  * that some types of dirent specification redundancies are removed.
  *
  * Similar to svn_dirent_canonicalize() (which see), but returns an error
@@ -485,8 +485,8 @@ svn_dirent_canonicalize(const char *dirent,
  * the svn_dirent_is_canonical() test.
  *
  * If the function fails and @a non_canonical_result is not @c NULL, the
- * result of the failed canonicalization attempt will be returned in
- * @a *non_canonical_result.
+ * result of the failed canonicalization attempt (which may be @c NULL)
+ * will be returned in @a *non_canonical_result.
  *
  * Allocates the results in @a result_pool. Uses @a scratch_pool for
  * temporary allocations.
@@ -528,8 +528,8 @@ svn_relpath_canonicalize(const char *relpath,
  * pass the svn_relpath_is_canonical() test.
  *
  * If the function fails and @a non_canonical_result is not @c NULL, the
- * result of the failed canonicalization attempt will be returned in
- * @a *non_canonical_result.
+ * result of the failed canonicalization attempt (which may be @c NULL)
+ * will be returned in @a *non_canonical_result.
  *
  * Allocates the results in @a result_pool. Uses @a scratch_pool for
  * temporary allocations.
@@ -577,8 +577,8 @@ svn_uri_canonicalize(const char *uri,
  * svn_uri_is_canonical() test.
  *
  * If the function fails and @a non_canonical_result is not @c NULL, the
- * result of the failed canonicalization attempt will be returned in
- * @a *non_canonical_result.
+ * result of the failed canonicalization attempt (which may be @c NULL)
+ * will be returned in @a *non_canonical_result.
  *
  * Allocates the results in @a result_pool. Uses @a scratch_pool for
  * temporary allocations.
