@@ -469,7 +469,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
         PyErr_SetString(PyExc_TypeError, "expecting a string");
         SWIG_fail;
     }
-    $1 = PyStr_AsUTF8AndSize($input, &pyStrLen);
+    /* Explicitly cast away const from PyStr_AsUTF8AndSize (in Python 3). The
+       swig generated argument ($1) here will be "char *", but since its only
+       use is to pass directly into the "const char *" argument of the wrapped
+       function, this is safe to do. */
+    $1 = (char *)PyStr_AsUTF8AndSize($input, &pyStrLen);
     $2 = pyStrLen;
 }
 #endif

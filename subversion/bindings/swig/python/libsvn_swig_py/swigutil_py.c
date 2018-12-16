@@ -2511,7 +2511,7 @@ apr_file_t *svn_swig_py_make_file(PyObject *py_file,
   if (PyStr_Check(py_file))
     {
       /* input is a path -- just open an apr_file_t */
-      char* fname = PyStr_AsString(py_file);
+      const char* fname = PyStr_AsString(py_file);
       apr_err = apr_file_open(&apr_file, fname,
                               APR_CREATE | APR_READ | APR_WRITE,
                               APR_OS_DEFAULT, pool);

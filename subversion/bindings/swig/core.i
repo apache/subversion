@@ -447,7 +447,11 @@
                         "expecting a string for the buffer");
         SWIG_fail;
     }
-    $1 = PyStr_AsUTF8AndSize($input, &temp);
+    /* Explicitly cast away const from PyStr_AsUTF8AndSize (in Python 3). The
+       swig generated argument ($1) here will be "char *", but since its only
+       use is to pass directly into the "const char *" argument of the wrapped
+       function, this is safe to do. */
+    $1 = (char *)PyStr_AsUTF8AndSize($input, &temp);
     $2 = ($2_ltype)&temp;
 }
 #endif
@@ -501,7 +505,7 @@
     }
 
     if (PyStr_Check($input)) {
-        char *value = PyStr_AsString($input);
+        const char *value = PyStr_AsString($input);
         $1 = apr_pstrdup(_global_pool, value);
     }
     else if (PyLong_Check($input)) {
