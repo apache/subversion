@@ -2331,7 +2331,8 @@ test_relpath_internal_style(apr_pool_t *pool)
 
   for (i = 0; i < COUNT_OF(tests); i++)
     {
-      const char *internal = svn_relpath__internal_style(tests[i].path, pool);
+      const char *internal;
+      SVN_ERR(svn_relpath__internal_style(&internal, tests[i].path, pool, pool));
 
       if (strcmp(internal, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
