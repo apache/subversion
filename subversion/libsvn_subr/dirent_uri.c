@@ -934,13 +934,17 @@ svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
   return dirent;
 }
 
-const char *
-svn_relpath__internal_style(const char *relpath,
-                            apr_pool_t *pool)
+svn_error_t *
+svn_relpath__internal_style(const char **internal_style_relpath,
+                            const char *relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool)
 {
-  return svn_relpath_canonicalize(internal_style(relpath, pool), pool);
+  return svn_error_trace(
+      svn_relpath_canonicalize_safe(internal_style_relpath, NULL,
+                                    internal_style(relpath, scratch_pool),
+                                    result_pool, scratch_pool));
 }
-
 
 /* We decided against using apr_filepath_root here because of the negative
    performance impact (creating a pool and converting strings ). */

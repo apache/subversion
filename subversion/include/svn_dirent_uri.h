@@ -200,17 +200,21 @@ const char *
 svn_dirent_local_style(const char *dirent,
                        apr_pool_t *result_pool);
 
-/** Convert @a relpath from the local style to the canonical internal style.
+/**
+ * Convert @a relpath from the local style to the canonical internal style.
  * "Local style" means native path separators and "." for the empty path.
  *
- * Allocate the result in @a result_pool.
+ * Allocates the results in @a result_pool. Uses @a scratch_pool for
+ * temporary allocations.
  *
  * @since New in 1.7.
+ * @since Signature changed in 1.12.
  */
-const char *
-svn_relpath__internal_style(const char *relpath,
-                            apr_pool_t *result_pool);
-
+svn_error_t *
+svn_relpath__internal_style(const char **internal_style_relpath,
+                            const char *relpath,
+                            apr_pool_t *result_pool,
+                            apr_pool_t *scratch_pool);
 
 /** Join a base dirent (@a base) with a component (@a component).
  *
