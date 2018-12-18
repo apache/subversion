@@ -43,7 +43,7 @@
 
 OperationContext::OperationContext(SVN::Pool &pool)
   : m_config(NULL),
-    m_prompter(NULL),
+    m_prompter(),
     m_cancelOperation(0),
     m_pool(&pool),
     m_jctx(NULL),
@@ -253,7 +253,7 @@ OperationContext::password(const char *pi_password)
 void
 OperationContext::setPrompt(Prompter::UniquePtr prompter)
 {
-  m_prompter = prompter;
+  m_prompter = JavaHL::cxx::move(prompter);
 }
 
 void
@@ -311,7 +311,7 @@ Prompter::UniquePtr OperationContext::clonePrompter() const
 {
   if (m_prompter.get())
     return m_prompter->clone();
-  return Prompter::UniquePtr(NULL);
+  return Prompter::UniquePtr();
 }
 
 void OperationContext::setTunnelCallback(jobject jtunnelcb)

@@ -42,10 +42,11 @@
 #include "../Credential.hpp"
 #include "../ExternalItem.hpp"
 #include "../EditorCallbacks.hpp"
+#include "../CxxCompat.hpp"
 
 namespace
 {
-/* This class behaves like a dumbed-down std:auto_ptr, but it
+/* This class behaves like a dumbed-down std:unique_ptr, but it
    implements atomic access and modification of the wrapped
    pointer. */
 class ClassImplPtr
@@ -132,11 +133,11 @@ class ClassCacheImpl
 
   // The statically initialized calss wrappers are always defined and
   // therefore do not need atomic access.
-#define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)            \
-  std::auto_ptr<Object::ClassImpl> m_impl_##M;          \
-  const Object::ClassImpl* get_##M(Env)                 \
-    {                                                   \
-      return m_impl_##M.get();                          \
+#define JNIWRAPPER_DEFINE_CACHED_CLASS(M, C)                     \
+  JavaHL::cxx::owned_ptr<Object::ClassImpl> m_impl_##M;          \
+  const Object::ClassImpl* get_##M(Env)                          \
+    {                                                            \
+      return m_impl_##M.get();                                   \
     }
 
   JNIWRAPPER_DEFINE_CACHED_CLASS(object, Object)
@@ -153,7 +154,7 @@ class ClassCacheImpl
       Object::ClassImpl* pimpl = m_impl_##M.get();              \
       if (!pimpl)                                               \
         {                                                       \
-          std::auto_ptr<Object::ClassImpl> tmp(                 \
+          JavaHL::cxx::owned_ptr<Object::ClassImpl> tmp(        \
               new C::ClassImpl(                                 \
                   env, env.FindClass(C::m_class_name)));        \
           pimpl = m_impl_##M.test_and_set(tmp.get());           \

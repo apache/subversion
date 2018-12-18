@@ -43,7 +43,7 @@ RemoteSessionContext::RemoteSessionContext(
   if (passwordStr != NULL)
     password(passwordStr);
 
-  setPrompt(prompter);
+  setPrompt(JavaHL::cxx::move(prompter));
   setConfigEventHandler(jcfgcb);
   setTunnelCallback(jtunnelcb);
 
