@@ -169,7 +169,7 @@ RemoteSession::open(jint jretryAttempts,
 namespace{
   struct compare_c_strings
   {
-    bool operator()(const char* a, const char* b)
+    bool operator()(const char* a, const char* b) const
       {
         return (0 < std::strcmp(a, b));
       }
