@@ -28,7 +28,7 @@ Candidate changes:
      Should make backporting translations easier with a more more similar
      generated .po file.
    Votes:
-     +1: brane
+     +1: brane, stefan2
 
  * r1847598, r1847697, r1847922, r1847924, r1847946
    Fix SVN-4793: authz rights from inverted access selectors were not
