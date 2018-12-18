@@ -22,16 +22,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1847572, r1847596
-   fsfs: Fix SVN-4791, an issue with the DAG open_path() that was causing
-   unexpected SVN_ERR_FS_NOT_DIRECTORY errors when attempting to open a path
-   with `open_path_node_only | open_path_allow_null` flags.
-   Justification:
-     Some valid FSFS read operations errored out. This could break some
-     end-user operations like 'update'.
-   Votes:
-     +1: julianfoad, brane
-
 * r1847598, r1847697, r1847922, r1847924, r1847946
    Fix SVN-4793: authz rights from inverted access selectors were not
    accounted for at the global level, causing wrong authz check results.
@@ -49,3 +39,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1847572, r1847596
+   fsfs: Fix SVN-4791, an issue with the DAG open_path() that was causing
+   unexpected SVN_ERR_FS_NOT_DIRECTORY errors when attempting to open a path
+   with `open_path_node_only | open_path_allow_null` flags.
+   Justification:
+     Some valid FSFS read operations errored out. This could break some
+     end-user operations like 'update'.
+   Votes:
+     +1: julianfoad, brane, stefan2
+
