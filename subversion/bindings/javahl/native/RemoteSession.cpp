@@ -104,7 +104,9 @@ RemoteSession::open(jint jretryAttempts,
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
-      usernameStr, passwordStr, prompter, jprogress, jcfgcb, jtunnelcb);
+      usernameStr, passwordStr,
+      JavaHL::cxx::move(prompter),
+      jprogress, jcfgcb, jtunnelcb);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     jremoteSession = NULL;
   return jremoteSession;
@@ -120,7 +122,9 @@ RemoteSession::open(jint jretryAttempts,
 {
   RemoteSession* session = new RemoteSession(
       jretryAttempts, url, uuid, configDirectory,
-      usernameStr, passwordStr, prompter, jcfgcb, jtunnelcb);
+      usernameStr, passwordStr,
+      JavaHL::cxx::move(prompter),
+      jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown() || !session)
     {
       delete session;
@@ -187,7 +191,9 @@ RemoteSession::RemoteSession(int retryAttempts,
   : m_session(NULL), m_context(NULL)
 {
   m_context = new RemoteSessionContext(
-      pool, configDirectory, username, password, prompter, jcfgcb, jtunnelcb);
+      pool, configDirectory, username, password,
+      JavaHL::cxx::move(prompter),
+      jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -856,7 +862,8 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
                                 editor->delta_editor(),
                                 editor->delta_baton(),
                                 report_pool),);
-  rp->set_reporter_data(raw_reporter, report_baton, editor);
+  rp->set_reporter_data(raw_reporter, report_baton,
+                        JavaHL::cxx::move(editor));
 }
 
 // TODO: diff

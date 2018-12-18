@@ -37,6 +37,7 @@
 #include "JNIUtil.h"
 #include "NativeStream.hpp"
 #include "Utility.hpp"
+#include "CxxCompat.hpp"
 
 #include <apr_hash.h>
 
@@ -165,7 +166,7 @@ Java_org_apache_subversion_javahl_util_SubstLib_translateInputStream(
       const Java::Env env(jenv);
 
       // We'll allocate the stream in the bound object's pool.
-      std::auto_ptr<JavaHL::NativeInputStream>
+      JavaHL::cxx::owned_ptr<JavaHL::NativeInputStream>
         translated(new JavaHL::NativeInputStream());
       svn_stream_t* source = Java::InputStream::get_global_stream(
           env, jsource, translated->get_pool());
@@ -199,7 +200,7 @@ Java_org_apache_subversion_javahl_util_SubstLib_translateOutputStream(
       const Java::Env env(jenv);
 
       // We'll allocate the stream in the bound object's pool.
-      std::auto_ptr<JavaHL::NativeOutputStream>
+      JavaHL::cxx::owned_ptr<JavaHL::NativeOutputStream>
         translated(new JavaHL::NativeOutputStream());
       svn_stream_t* destination = Java::OutputStream::get_global_stream(
           env, jdestination, translated->get_pool());

@@ -280,7 +280,7 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt__Lorg_apache_subversion_ja
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->getClientContext().setPrompt(prompter);
+  cl->getClientContext().setPrompt(JavaHL::cxx::move(prompter));
 }
 
 JNIEXPORT void JNICALL
@@ -298,7 +298,7 @@ Java_org_apache_subversion_javahl_SVNClient_setPrompt__Lorg_apache_subversion_ja
   if (JNIUtil::isExceptionThrown())
     return;
 
-  cl->getClientContext().setPrompt(prompter);
+  cl->getClientContext().setPrompt(JavaHL::cxx::move(prompter));
 }
 
 JNIEXPORT void JNICALL
