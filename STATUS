@@ -50,7 +50,7 @@ Candidate changes:
        them we can avoids creating a backport branch.
      - r1847924 and r1847946 are tiny but IMO relevant comment tweaks.
    Votes:
-     +1: brane
+     +1: brane, stefan2
 
 Veto-blocked changes:
 =====================
