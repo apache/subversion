@@ -28,14 +28,6 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
- * r1826720, r1826721, r1827191, r1827574
-   Regression test and FSFS checksum verification for issue #4722.
-   Justification:
-     Tests the issue #4722 fix.
-   Votes:
-     +1: philip, brane
-     +1: stefan2 (without r1827574)
-
  * r1845212
    Silence a deprecation warning from amalgamated SQLite on macOS.
    Justification:
@@ -83,4 +75,11 @@ Approved changes:
    Branch: ^/subversion/branches/1.9.x-issue4686
    Votes:
      +1: julianfoad, brane, stefan2
+
+ * r1826720, r1826721, r1827191, r1827574
+   Regression test and FSFS checksum verification for issue #4722.
+   Justification:
+     Tests the issue #4722 fix.
+   Votes:
+     +1: philip, brane, stefan2
 
