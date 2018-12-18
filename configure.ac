@@ -640,29 +640,6 @@ AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 dnl LibSecret -------------------
 SVN_LIB_SECRET
 
-dnl Googlemock -----------------
-AC_ARG_ENABLE([googlemock],
-  AS_HELP_STRING([--disable-googlemock],
-                 [Do not use the Googlemock testing framework]),
-  [],
-  [enable_googlemock=yes])
-
-AC_SUBST([GOOGLEMOCK_SRCDIR], [$abs_srcdir/googlemock])
-AC_MSG_CHECKING([whether use Googlemock])
-if test "$enable_googlemock" != "no"; then
-  if test -d "$GOOGLEMOCK_SRCDIR"; then
-    AC_MSG_RESULT([yes])
-    SVN_USE_GOOGLEMOCK=true
-  else
-    AC_MSG_RESULT([no])
-    SVN_USE_GOOGLEMOCK=false
-  fi
-else
-  AC_MSG_RESULT([no])
-  SVN_USE_GOOGLEMOCK=false
-fi
-AC_SUBST([SVN_USE_GOOGLEMOCK])
-
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
 dnl providing this flag, users can choose to use the currently-shimmed Ev2

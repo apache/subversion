@@ -161,11 +161,6 @@ I.    INTRODUCTION
          configured via auto-props or the mime-types-file option
          take precedence.
 
-      * Googlemock aka Gmock (OPTIONAL)
-
-         This optional package is used by the tests for Subversions'
-         C++ bindings.
-
 
   C. Dependencies in Detail
 
@@ -524,12 +519,6 @@ I.    INTRODUCTION
       the default locations should be searched, then use:
 
         --with-libmagic
-
-      21. Googlemock (OPTIONAL)
-
-      Googlemock can be installed and built in-tree by invoking
-
-      $ ./get-dep.sh gmock
 
       22. LZ4 (OPTIONAL)
 
