@@ -395,7 +395,12 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_boolean_t
 use_compat_mode(const char *cmd, apr_pool_t *pool)
 {
-  cmd = svn_dirent_internal_style(cmd, pool);
+  svn_error_t *err = svn_dirent_internal_style_safe(&cmd, NULL, cmd, pool, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
   cmd = svn_dirent_basename(cmd, NULL);
 
   /* Skip over the Libtool command prefix if it exists on the command. */
@@ -437,7 +442,9 @@ canonicalize_access_file(const char **canonicalized_access_file,
                                    access_file);
         }
 
-      *canonicalized_access_file = svn_uri_canonicalize(access_file, pool);
+      SVN_ERR(svn_uri_canonicalize_safe(
+                  canonicalized_access_file, NULL,
+                  access_file, pool, pool));
     }
   else if (within_txn)
     {
@@ -450,8 +457,9 @@ canonicalize_access_file(const char **canonicalized_access_file,
     {
       /* If it isn't a URL and there's no transaction flag then it's a
        * dirent to the access file on local disk. */
-      *canonicalized_access_file =
-          svn_dirent_internal_style(access_file, pool);
+      SVN_ERR(svn_dirent_internal_style_safe(
+                  canonicalized_access_file, NULL,
+                  access_file, pool, pool));
     }
 
   return SVN_NO_ERROR;
@@ -626,7 +634,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                               pool));
           os->ind++;
 
-          opt_state.repos_path = svn_dirent_internal_style(opt_state.repos_path, pool);
+          SVN_ERR(svn_dirent_internal_style_safe(&opt_state.repos_path, NULL,
+                                                 opt_state.repos_path,
+                                                 pool, pool));
         }
 
       /* Exactly 1 non-option argument */

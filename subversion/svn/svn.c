@@ -2637,7 +2637,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_config_dir:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
+        SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
+                                               utf8_opt_arg, pool, pool));
         break;
       case opt_config_options:
         if (!opt_state.config_options)
@@ -3220,7 +3221,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           svn_node_kind_t kind;
           const char *local_abspath;
-          const char *fname = svn_dirent_internal_style(dash_F_arg, pool);
+          const char *fname;
+
+          SVN_ERR(svn_dirent_internal_style_safe(&fname, NULL, dash_F_arg,
+                                                 pool, pool));
 
           err = svn_dirent_get_absolute(&local_abspath, fname, pool);
 
