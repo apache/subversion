@@ -69,7 +69,6 @@ def connect_other_dav_server(sbox):
 
 #----------------------------------------------------------------------
 
-@XFail()
 @SkipUnless(svntest.main.is_remote_http_connection_allowed)
 def connect_to_github_server(sbox):
   "connect to GitHub's SVN bridge"
