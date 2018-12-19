@@ -21,44 +21,24 @@
  * @endcopyright
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
+#include "svnxx/tristate.hpp"
 
-#ifndef SVN_CXXHL_TRISTATE_HPP
-#define SVN_CXXHL_TRISTATE_HPP
+#include "svn_types.h"
+#undef TRUE
+#undef FALSE
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 
-class Tristate
-{
-public:
-  static const Tristate TRUE;
-  static const Tristate FALSE;
-  static const Tristate UNKNOWN;
+Tristate::Tristate(short value) throw()
+    : m_value(value)
+{}
 
-  Tristate(const Tristate& that) throw()
-    : m_value(that.m_value)
-    {}
+const Tristate Tristate::TRUE = Tristate(svn_tristate_true);
+const Tristate Tristate::FALSE = Tristate(svn_tristate_false);
+const Tristate Tristate::UNKNOWN = Tristate(svn_tristate_unknown);
 
-  bool operator==(const Tristate& that) const throw()
-    { return m_value == that.m_value; }
-
-  bool operator!=(const Tristate& that) const throw()
-    { return !(*this == that); }
-
-  bool known() const throw()
-    { return *this != UNKNOWN; }
-
-private:
-  explicit Tristate(short int value) throw();
-  short int m_value;
-};
-
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
-
-#endif  // SVN_CXXHL_TRISTATE_HPP

@@ -21,13 +21,13 @@
  * @endcopyright
  */
 
-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_POOL_H
-#define SVN_CXXHL_PRIVATE_APRWRAP_POOL_H
+#ifndef SVNXX_PRIVATE_APRWRAP_POOL_H
+#define SVNXX_PRIVATE_APRWRAP_POOL_H
 
 #include <cstdlib>
 
-#include "svncxxhl/exception.hpp"
-#include "svncxxhl/_compat.hpp"
+#include "svnxx/exception.hpp"
+#include "svnxx/_compat.hpp"
 
 #include "svn_pools.h"
 #undef TRUE
@@ -35,7 +35,7 @@
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace apr {
 
 // Forward declaration
@@ -191,8 +191,8 @@ inline Pool::Iteration::Iteration(IterationPool& iterbase) throw()
 }
 
 } // namespace apr
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif // SVN_CXXHL_PRIVATE_APRWRAP_POOL_H
+#endif // SVNXX_PRIVATE_APRWRAP_POOL_H

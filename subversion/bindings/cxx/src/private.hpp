@@ -21,9 +21,9 @@
  * @endcopyright
  */
 
-#ifndef SVN_CXXHL_PRIVATE_PRIVATE_H
-#define SVN_CXXHL_PRIVATE_PRIVATE_H
+#ifndef SVNXX_PRIVATE_PRIVATE_H
+#define SVNXX_PRIVATE_PRIVATE_H
 
 #include "private/exception-private.hpp"
 
-#endif // SVN_CXXHL_PRIVATE_PRIVATE_H
+#endif // SVNXX_PRIVATE_PRIVATE_H

@@ -25,58 +25,58 @@
 #error "This is a C++ header file."
 #endif
 
-#ifndef SVN_CXXHL_COMPAT_HPP
-#define SVN_CXXHL_COMPAT_HPP
+#ifndef SVNXX_COMPAT_HPP
+#define SVNXX_COMPAT_HPP
 
 // Configuration test: std::shared_ptr<> and friends
 // Currently detects: clang++, g++, msvc-2010+
-#ifndef SVN_CXXHL_HAVE_STD_SMART_PTRS
+#ifndef SVNXX_HAVE_STD_SMART_PTRS
 #  if   (defined(__clang__) && __cplusplus >= 201103L) \
      || (defined(__GNUC__) && defined(__GXX_EXPERIMENTAL_CXX0X__)) \
      || (defined(_MSC_VER) && _MSC_VER >= 1600)
-#    define SVN_CXXHL_HAVE_STD_SMART_PTRS
+#    define SVNXX_HAVE_STD_SMART_PTRS
 #  endif  // config test: std::shared_ptr<>
-#endif  // SVN_CXXHL_HAVE_STD_SMART_PTRS
+#endif  // SVNXX_HAVE_STD_SMART_PTRS
 
 // Configuration test: std::tr1::shared_ptr<> and friends
 // Currently detects: clang++, g++
-#ifndef SVN_CXXHL_HAVE_STD_SMART_PTRS
-#  ifndef SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS
+#ifndef SVNXX_HAVE_STD_SMART_PTRS
+#  ifndef SVNXX_HAVE_STD_TR1_SMART_PTRS
 #    if   defined(__GNUC__) \
        && (__GNUC__ > 4 || __GNUC__ == 4 && __GNUC_MINOR__ >= 1)
-#      define SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS
+#      define SVNXX_HAVE_STD_TR1_SMART_PTRS
 #    endif  // config test: std::tr1::shared_ptr<>
-#  endif  // SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS
-#endif  // SVN_CXXHL_HAVE_STD_SMART_PTRS
+#  endif  // SVNXX_HAVE_STD_TR1_SMART_PTRS
+#endif  // SVNXX_HAVE_STD_SMART_PTRS
 
 
-#if defined(SVN_CXXHL_HAVE_STD_SMART_PTRS)
+#if defined(SVNXX_HAVE_STD_SMART_PTRS)
 
 #include <memory>
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace compat {
 using std::weak_ptr;
 using std::shared_ptr;
 using std::enable_shared_from_this;
 } // namespace compat
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#elif defined(SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS)
+#elif defined(SVNXX_HAVE_STD_TR1_SMART_PTRS)
 
 #include <tr1/memory>
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace compat {
 using std::tr1::weak_ptr;
 using std::tr1::shared_ptr;
 using std::tr1::enable_shared_from_this;
 } // namespace compat
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
@@ -85,41 +85,41 @@ using std::tr1::enable_shared_from_this;
 // ::std given known compiler characteristics, then try Boost as a
 // last resort.
 
-#define SVN_CXXHL_USING_BOOST
+#define SVNXX_USING_BOOST
 #include <boost/shared_ptr.hpp>
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace compat {
 using boost::weak_ptr;
 using boost::shared_ptr;
 using boost::enable_shared_from_this;
 } // namespace compat
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif  // SVN_CXXHL_HAVE_STD_SMART_PTRS
+#endif  // SVNXX_HAVE_STD_SMART_PTRS
 
 // Configuration test: noncopyable mixin.
-#ifdef SVN_CXXHL_USING_BOOST
+#ifdef SVNXX_USING_BOOST
 
 #include <boost/noncopyable.hpp>
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace compat {
 using boost::noncopyable;
 } // namespace compat
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#else  // !SVN_CXXHL_USING_BOOST
+#else  // !SVNXX_USING_BOOST
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace compat {
 namespace noncopyable_
 {
@@ -135,10 +135,10 @@ private:
 } // namespace noncopyable_
 typedef noncopyable_::noncopyable noncopyable;
 } // namespace compat
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif // SVN_CXXHL_USING_BOOST
+#endif // SVNXX_USING_BOOST
 
-#endif  // SVN_CXXHL_COMPAT_HPP
+#endif  // SVNXX_COMPAT_HPP

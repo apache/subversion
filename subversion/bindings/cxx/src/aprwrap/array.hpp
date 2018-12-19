@@ -21,8 +21,8 @@
  * @endcopyright
  */
 
-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_ARRAY_H
-#define SVN_CXXHL_PRIVATE_APRWRAP_ARRAY_H
+#ifndef SVNXX_PRIVATE_APRWRAP_ARRAY_H
+#define SVNXX_PRIVATE_APRWRAP_ARRAY_H
 
 #include <stdexcept>
 
@@ -33,7 +33,7 @@
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace apr {
 
 /**
@@ -273,8 +273,8 @@ public:
 };
 
 } // namespace apr
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif // SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
+#endif // SVNXX_PRIVATE_APRWRAP_HASH_H

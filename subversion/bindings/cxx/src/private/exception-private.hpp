@@ -21,24 +21,29 @@
  * @endcopyright
  */
 
-#include "svncxxhl/tristate.hpp"
+#ifndef __cplusplus
+#error "This is a C++ header file."
+#endif
 
-#include "svn_types.h"
-#undef TRUE
-#undef FALSE
+#ifndef SVNXX_PRIVATE_EXCEPTION_HPP
+#define SVNXX_PRIVATE_EXCEPTION_HPP
+
+#include "svn_error.h"
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
+namespace detail {
 
-Tristate::Tristate(short value) throw()
-    : m_value(value)
-{}
+/**
+ * Given a @a err, if it is not @c NULL, convert it to a and throw an
+ * Error exception; otherwise do nothing.
+ */
+void checked_call(svn_error_t* err);
 
-const Tristate Tristate::TRUE = Tristate(svn_tristate_true);
-const Tristate Tristate::FALSE = Tristate(svn_tristate_false);
-const Tristate Tristate::UNKNOWN = Tristate(svn_tristate_unknown);
-
-} // namespace cxxhl
+} // namespace detail
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
+
+#endif // SVNXX_PRIVATE_EXCEPTION_HPP

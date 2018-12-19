@@ -21,15 +21,15 @@
  * @endcopyright
  */
 
-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
-#define SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
+#ifndef SVNXX_PRIVATE_APRWRAP_HASH_H
+#define SVNXX_PRIVATE_APRWRAP_HASH_H
 
 #include <apr_hash.h>
 #include "pool.hpp"
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace apr {
 
 // Template forward declaration
@@ -364,8 +364,8 @@ public:
 
 
 } // namespace apr
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif // SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
+#endif // SVNXX_PRIVATE_APRWRAP_HASH_H
