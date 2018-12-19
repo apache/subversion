@@ -73,7 +73,10 @@ def connect_other_dav_server(sbox):
 def connect_to_github_server(sbox):
   "connect to GitHub's SVN bridge"
 
-  github_mirror_url = 'https://github.com/apache/subversion/trunk'
+  #github_mirror_url = 'https://github.com/apache/subversion/trunk'
+  # FIXME: Subversion's mirror on GitHub seems to randomly return gateway
+  #        errors (status 504), so use this more stable one instead.
+  github_mirror_url = 'https://github.com/apache/serf/trunk'
 
   # Skip this test if we can't connect to the GitHub server.
   # We check this here instead of in a SkipUnless() predicate decorator,
