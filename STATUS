@@ -57,13 +57,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1826720, r1826721, r1827191, r1827574
-   Regression test and FSFS checksum verification for issue #4722.
-   Justification:
-     Tests the issue #4722 fix.
-   Votes:
-     +1: philip, brane, stefan2
-
  * r1847572, r1847596
    fsfs: Fix SVN-4791, an issue with the DAG open_path() that was causing
    unexpected SVN_ERR_FS_NOT_DIRECTORY errors when attempting to open a path
