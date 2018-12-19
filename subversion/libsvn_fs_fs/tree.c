@@ -877,6 +877,25 @@ try_match_last_node(dag_node_t **node_p,
   return SVN_NO_ERROR;
 }
 
+/* Helper for open_path() that constructs and returns an appropriate
+   SVN_ERR_FS_NOT_DIRECTORY error. */
+static svn_error_t *
+err_not_directory(svn_fs_root_t *root,
+                  const char *path,
+                  apr_pool_t *scratch_pool)
+{
+  const char *msg;
+
+  msg = root->is_txn_root
+      ? apr_psprintf(scratch_pool,
+                     _("Failure opening '%s' in transaction '%s'"),
+                     path, root->txn)
+      : apr_psprintf(scratch_pool,
+                     _("Failure opening '%s' in revision %ld"),
+                     path, root->rev);
+
+  return svn_error_quick_wrap(SVN_FS__ERR_NOT_DIRECTORY(root->fs, path), msg);
+}
 
 /* Open the node identified by PATH in ROOT, allocating in POOL.  Set
    *PARENT_PATH_P to a path from the node up to ROOT.  The resulting
@@ -973,11 +992,25 @@ open_path(parent_path_t **parent_path_p,
           SVN_ERR(dag_node_cache_get(&here, root, directory, pool));
 
           /* Did the shortcut work? */
-          if (here)
+          if (here && svn_fs_fs__dag_node_kind(here) == svn_node_dir)
             {
               apr_size_t dirname_len = strlen(directory);
               path_so_far->len = dirname_len;
               rest = path + dirname_len + 1;
+            }
+          else if (here)
+            {
+              /* The parent node is not a directory.  We are looking for some
+                 sub-path, so that sub-path will not exist.  That will be o.k.
+                 if we are just here to check for the path's existence, but
+                 should result in an error otherwise. */
+              if (flags & open_path_allow_null)
+                {
+                  *parent_path_p = NULL;
+                  return SVN_NO_ERROR;
+                }
+              else
+                return svn_error_trace(err_not_directory(root, directory, pool));
             }
         }
     }
@@ -1111,8 +1144,8 @@ open_path(parent_path_t **parent_path_p,
             }
 
           /* It's really a problem ... */
-          SVN_ERR_W(SVN_FS__ERR_NOT_DIRECTORY(fs, path_so_far->data),
-                    apr_psprintf(iterpool, _("Failure opening '%s'"), path));
+          return svn_error_trace(
+                   err_not_directory(root, path_so_far->data, iterpool));
         }
 
       rest = next;
