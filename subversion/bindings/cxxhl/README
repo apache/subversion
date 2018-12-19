@@ -1,13 +1,56 @@
 WORK IN PROGRESS
 ================
 
-This directory contains an experimental implementation of a C++HL, a
-high-level Subversion C++ API, modeled along the lines of JavaHL.
+This directory contains an experimental implementation of SVN++, a
+high-level Subversion C++ API.
 
 It is far from complete and may never see the light of day.
 
 On the other hand, one good reason for having a high-level C++ API is
-to use it as a baseline for Swig-generated binadings.  Our current set
+to use it as a baseline for Swig-generated bindings. Our current set
 of Perl, Python and Ruby bindings is too heterogenous in terms of
 feature set, object and usage model. They're almost as hard to use as
 the C API itself.
+
+
+DESIGN GOALS
+============
+
+In no particular order:
+
+  * Use modern C++ constructs (the current baseline is C++11).
+
+  * Hide the dependency on APR that is exposed in Subversion's C API.
+
+  * Use separate C++ types for different kinds of values returned
+    from the C API (e.g., dirent vs. property value vs. URL), to make
+    it easier to create generic typemaps for Swig.
+
+  * Provide both synchronous and asynchronous interfaces.
+
+  * Avoid unnecessary copies by defining strict lifetimes for
+    returned values.
+
+  * Provide API variants that accept wide strings as well as
+    UTF-8-encoded narrow strings.
+
+  * Provide high-level constructs for common parameter types; e.g.,
+    revision ranges and lists for diff, merge, etc.
+
+  * API versioning.
+
+
+API COVERAGE
+============
+
+Planned:
+
+  * libsvn_client (highest priority)
+  * svn_mtcc_*
+  * utilities (diff, revision ranges/lists, etc.)
+  * libsvn_ra
+  * libsvn_repos/libsvn_fs (lowest priority)
+
+Not planned:
+  * libsvn_subr
+  * libsvn_wc
