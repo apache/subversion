@@ -1437,6 +1437,11 @@ AC_SUBST(SVN_FS_LIB_DEPS)
 AC_SUBST(SVN_FS_LIB_INSTALL_DEPS)
 AC_SUBST(SVN_FS_LIB_LINK)
 
+# ==== SVN++ =================================================================
+
+AX_BOOST_BASE([1.58],[SVN_HAVE_CXX_BOOST=true],[SVN_HAVE_CXX_BOOST=false])
+AC_SUBST(SVN_HAVE_CXX_BOOST)
+
 # ==== JavaHL ================================================================
 
 dnl Possibly compile JavaHL

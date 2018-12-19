@@ -141,6 +141,9 @@ APACHE_INCLUDES = @APACHE_INCLUDES@
 APACHE_LIBEXECDIR = $(DESTDIR)@APACHE_LIBEXECDIR@
 APACHE_LDFLAGS = @APACHE_LDFLAGS@
 
+BOOST_CPPFLAGS = @BOOST_CPPFLAGS@
+BOOST_LDFLAGS = @BOOST_LDFLAGS@
+
 SWIG = @SWIG@
 SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@ -I$(SWIG_SRC_DIR)/python/libsvn_swig_py
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
@@ -162,6 +165,7 @@ CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
+SVN_HAVE_CXX_BOOST = @SVN_HAVE_CXX_BOOST@
 SVNXX_INCLUDES = -I$(abs_srcdir)/subversion/bindings/cxx/include
 
 SVN_APR_CONFIG = @SVN_APR_CONFIG@
@@ -258,11 +262,13 @@ TEST_SHLIB_VAR_SWIG_RB=\
 
 # special compilation for files destined for SVN++
 COMPILE_SVNXX_CXX = $(LT_COMPILE_CXX) $(SVNXX_INCLUDES) -o $@ -c
+COMPILE_SVNXX_CXX_BOOST = $(LT_COMPILE_CXX) $(SVNXX_INCLUDES) $(BOOST_CPPFLAGS) -o $@ -c
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 LINK_LIB = $(LINK) $(LT_SO_VERSION)
 LINK_CXX = $(LIBTOOL) $(LTCXXFLAGS) --mode=link $(CXX) $(LT_LDFLAGS) $(CXXFLAGS) $(LDFLAGS) -rpath $(libdir)
 LINK_CXX_LIB = $(LINK_CXX) $(LT_SO_VERSION)
+LINK_CXX_BOOST = $(LINK_CXX) $(BOOST_LDFLAGS)
 
 # special link rule for mod_dav_svn
 LINK_APACHE_MOD = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(APACHE_LIBEXECDIR) -avoid-version -module $(APACHE_LDFLAGS) -shared
