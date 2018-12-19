@@ -162,7 +162,7 @@ CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
-CXXHL_INCLUDES = -I$(abs_srcdir)/subversion/bindings/cxxhl/include
+SVNXX_INCLUDES = -I$(abs_srcdir)/subversion/bindings/cxx/include
 
 SVN_APR_CONFIG = @SVN_APR_CONFIG@
 SVN_APR_INCLUDES = @SVN_APR_INCLUDES@
@@ -256,8 +256,8 @@ TEST_SHLIB_VAR_SWIG_RB=\
     export @SVN_APR_SHLIB_PATH_VAR@; \
   fi;
 
-# special compilation for files destined for cxxhl
-COMPILE_CXXHL_CXX = $(LT_COMPILE_CXX) $(CXXHL_INCLUDES) -o $@ -c
+# special compilation for files destined for SVN++
+COMPILE_SVNXX_CXX = $(LT_COMPILE_CXX) $(SVNXX_INCLUDES) -o $@ -c
 
 LINK = $(LIBTOOL) $(LTFLAGS) --mode=link $(CC) $(LT_LDFLAGS) $(CFLAGS) $(LDFLAGS) -rpath $(libdir)
 LINK_LIB = $(LINK) $(LT_SO_VERSION)

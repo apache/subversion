@@ -27,7 +27,7 @@
 #include <new>
 #include <sstream>
 
-#include "svncxxhl/exception.hpp"
+#include "svnxx/exception.hpp"
 #include "private.hpp"
 #include "aprwrap.hpp"
 
@@ -41,7 +41,7 @@
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 
 namespace detail {
 
@@ -326,6 +326,6 @@ void checked_call(svn_error_t* err)
 }
 } // namespace detail
 
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache

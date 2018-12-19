@@ -25,25 +25,13 @@
 #error "This is a C++ header file."
 #endif
 
-#ifndef SVN_CXXHL_PRIVATE_EXCEPTION_HPP
-#define SVN_CXXHL_PRIVATE_EXCEPTION_HPP
+#ifndef SVNXX_HPP
+#define SVNXX_HPP
 
-#include "svn_error.h"
+// Expose the whole API and alias the default version namespace
+#include "svnxx/exception.hpp"
+#include "svnxx/tristate.hpp"
 
-namespace apache {
-namespace subversion {
-namespace cxxhl {
-namespace detail {
+namespace SVN = ::apache::subversion::svnxx;
 
-/**
- * Given a @a err, if it is not @c NULL, convert it to a and throw an
- * Error exception; otherwise do nothing.
- */
-void checked_call(svn_error_t* err);
-
-} // namespace detail
-} // namespace cxxhl
-} // namespace subversion
-} // namespace apache
-
-#endif // SVN_CXXHL_PRIVATE_EXCEPTION_HPP
+#endif  // SVNXX_HPP

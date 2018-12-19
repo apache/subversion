@@ -25,13 +25,40 @@
 #error "This is a C++ header file."
 #endif
 
-#ifndef SVN_CXXHL_HPP
-#define SVN_CXXHL_HPP
+#ifndef SVNXX_TRISTATE_HPP
+#define SVNXX_TRISTATE_HPP
 
-// Expose the whole API and alias the default version namespace
-#include "svncxxhl/exception.hpp"
-#include "svncxxhl/tristate.hpp"
+namespace apache {
+namespace subversion {
+namespace svnxx {
 
-namespace SVN = ::apache::subversion::cxxhl;
+class Tristate
+{
+public:
+  static const Tristate TRUE;
+  static const Tristate FALSE;
+  static const Tristate UNKNOWN;
 
-#endif  // SVN_CXXHL_HPP
+  Tristate(const Tristate& that) throw()
+    : m_value(that.m_value)
+    {}
+
+  bool operator==(const Tristate& that) const throw()
+    { return m_value == that.m_value; }
+
+  bool operator!=(const Tristate& that) const throw()
+    { return !(*this == that); }
+
+  bool known() const throw()
+    { return *this != UNKNOWN; }
+
+private:
+  explicit Tristate(short int value) throw();
+  short int m_value;
+};
+
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache
+
+#endif  // SVNXX_TRISTATE_HPP

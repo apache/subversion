@@ -25,7 +25,7 @@
 #include <ios>
 #include <iostream>
 
-#include "svncxxhl.hpp"
+#include "svnxx.hpp"
 #include "../src/private.hpp"
 
 #include <apr.h>

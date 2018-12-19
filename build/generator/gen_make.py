@@ -445,7 +445,7 @@ class Generator(gen_base.GeneratorBase):
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' \
            or area[:7] == 'javahl-' \
-           or area[:6] == 'cxxhl-' \
+           or area[:6] == 'svnxx-' \
            or area == 'tools':
           ezt_area.extra_install = 'yes'
 

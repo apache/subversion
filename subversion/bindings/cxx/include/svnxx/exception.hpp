@@ -25,19 +25,19 @@
 #error "This is a C++ header file."
 #endif
 
-#ifndef SVN_CXXHL_EXCEPTION_HPP
-#define SVN_CXXHL_EXCEPTION_HPP
+#ifndef SVNXX_EXCEPTION_HPP
+#define SVNXX_EXCEPTION_HPP
 
 #include <exception>
 #include <string>
 #include <utility>
 #include <vector>
 
-#include "svncxxhl/_compat.hpp"
+#include "svnxx/_compat.hpp"
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 
 namespace compat {} // Announce the compat namespace for shared_ptr lookup
 
@@ -181,8 +181,8 @@ protected:
     {}
 };
 
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif  // SVN_CXXHL_EXCEPTION_HPP
+#endif  // SVNXX_EXCEPTION_HPP

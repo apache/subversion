@@ -21,14 +21,14 @@
  * @endcopyright
  */
 
-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_H
-#define SVN_CXXHL_PRIVATE_APRWRAP_H
+#ifndef SVNXX_PRIVATE_APRWRAP_H
+#define SVNXX_PRIVATE_APRWRAP_H
 
 // Expose the whole APR wrapper API and alias the namespace
 #include "aprwrap/pool.hpp"
 #include "aprwrap/hash.hpp"
 #include "aprwrap/array.hpp"
 
-namespace APR = ::apache::subversion::cxxhl::apr;
+namespace APR = ::apache::subversion::svnxx::apr;
 
-#endif // SVN_CXXHL_PRIVATE_APRWRAP_H
+#endif // SVNXX_PRIVATE_APRWRAP_H

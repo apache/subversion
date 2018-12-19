@@ -33,7 +33,7 @@
 
 namespace apache {
 namespace subversion {
-namespace cxxhl {
+namespace svnxx {
 namespace apr {
 
 //
@@ -67,7 +67,7 @@ apr_pool_t* Pool::get_root_pool()
           state = svn_atomic_cas(&init_state, NONE, NONE);
         }
       if (state == START)
-        throw cxxhl::InternalError(
+        throw svnxx::InternalError(
             _("APR pool initialization failed: Timed out"));
       return root_pool;
 
@@ -79,7 +79,7 @@ apr_pool_t* Pool::get_root_pool()
       return root_pool;
 
     default:
-      throw cxxhl::InternalError(
+      throw svnxx::InternalError(
           _("APR pool initialization failed: Invalid state"));
     }
 }
@@ -105,6 +105,6 @@ void Hash<void, void>::iterate(Hash<void, void>::Iteration& callback,
 }
 
 } // namespace apr
-} // namespace cxxhl
+} // namespace svnxx
 } // namespace subversion
 } // namespace apache
