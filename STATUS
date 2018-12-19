@@ -57,14 +57,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1800754,r1800755,r1800803,r1801705,r1801722,r1823202,r1823203
-   Fix issue #4686 "Unable to parse reversed revision range '19634-19631'"
-   Justification:
-     Assertion failure during certain merges.
-   Branch: ^/subversion/branches/1.9.x-issue4686
-   Votes:
-     +1: julianfoad, brane, stefan2
-
  * r1826720, r1826721, r1827191, r1827574
    Regression test and FSFS checksum verification for issue #4722.
    Justification:
@@ -82,4 +74,3 @@ Approved changes:
    Branch: 1.9.x-issue4791
    Votes:
      +1: julianfoad, brane, stefan2
-
