@@ -21,8 +21,6 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "fixture_initialize_apr.hpp"
-
 #include <algorithm>
 #include <stdexcept>
 
