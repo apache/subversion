@@ -142,6 +142,8 @@ public:
 
   /**
    * Abstract base class for mutable iteration callback functors.
+   *
+   * FIXME: obsolete; see below.
    */
   struct Iteration
   {
@@ -155,6 +157,8 @@ public:
   /**
    * Iterate over all the values pairs in the array, invoking
    * @a callback for each one.
+   *
+   * FIXME: should use std::function instead.
    */
   void iterate(Iteration& callback)
     {
@@ -165,6 +169,8 @@ public:
 
   /**
    * Abstract base class for immutable iteration callback functors.
+   *
+   * FIXME: obsolete; see below.
    */
   struct ConstIteration
   {
@@ -178,6 +184,8 @@ public:
   /**
    * Iterate over all the values pairs in the array, invoking
    * @a callback for each one.
+   *
+   * FIXME: should use std::function instead.
    */
   void iterate(ConstIteration& callback) const
     {
@@ -259,12 +267,16 @@ public:
 
   /**
    * Abstract base class for immutable iteration callback functors.
+   *
+   * FIXME: obsolete; see below.
    */
   typedef typename inherited::ConstIteration Iteration;
 
   /**
    * Iterate over all the values pairs in the array, invoking
    * @a callback for each one.
+   *
+   * FIXME: should use std::function instead.
    */
   void iterate(Iteration& callback) const
     {

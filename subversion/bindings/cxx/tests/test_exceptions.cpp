@@ -18,6 +18,7 @@
  *    under the License.
  * ====================================================================
  */
+#include <boost/test/unit_test.hpp>
 
 #include <algorithm>
 #include <cstdio>
@@ -28,12 +29,10 @@
 #include "svnxx.hpp"
 #include "../src/private.hpp"
 
-#include <apr.h>
+//#include <apr.h>
 #include "svn_error.h"
 #undef TRUE
 #undef FALSE
-
-#include <gmock/gmock.h>
 
 namespace {
 svn_error_t* make_error_test_error()
@@ -49,7 +48,9 @@ svn_error_t* make_error_test_error()
 }
 } // anonymous namespace
 
-TEST(Exceptions, CatchError)
+BOOST_AUTO_TEST_SUITE(exceptions);
+
+BOOST_AUTO_TEST_CASE(catch_error)
 {
   try
     {
@@ -58,27 +59,27 @@ TEST(Exceptions, CatchError)
   catch (const SVN::Error& err)
     {
       SVN::Error::MessageList ml = err.messages();
-      EXPECT_EQ(3, ml.size());
-      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, ml[0].code());
-      EXPECT_EQ(SVN_ERR_BASE, ml[1].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, ml[2].code());
+      BOOST_TEST(ml.size() == 3);
+      BOOST_TEST(ml[0].code() == SVN_ERR_UNSUPPORTED_FEATURE);
+      BOOST_TEST(ml[1].code() == SVN_ERR_BASE);
+      BOOST_TEST(ml[2].code() == SVN_ERR_TEST_FAILED);
 
       SVN::Error::MessageList tml = err.traced_messages();
 #ifdef SVN_DEBUG
-      EXPECT_EQ(8, tml.size());
-      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[0].code());
-      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[1].code());
-      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[2].code());
-      EXPECT_EQ(SVN_ERR_BASE, tml[3].code());
-      EXPECT_EQ(SVN_ERR_BASE, tml[4].code());
-      EXPECT_EQ(SVN_ERR_BASE, tml[5].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[6].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[7].code());
+      BOOST_TEST(tml.size() == 8);
+      BOOST_TEST(tml[0].code() == SVN_ERR_UNSUPPORTED_FEATURE);
+      BOOST_TEST(tml[1].code() == SVN_ERR_UNSUPPORTED_FEATURE);
+      BOOST_TEST(tml[2].code() == SVN_ERR_UNSUPPORTED_FEATURE);
+      BOOST_TEST(tml[3].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[4].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[5].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[6].code() == SVN_ERR_TEST_FAILED);
+      BOOST_TEST(tml[7].code() == SVN_ERR_TEST_FAILED);
 #else  // !SVN_DEBUG
-      EXPECT_EQ(3, tml.size());
-      EXPECT_EQ(SVN_ERR_UNSUPPORTED_FEATURE, tml[0].code());
-      EXPECT_EQ(SVN_ERR_BASE, tml[1].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[2].code());
+      BOOST_TEST(3, tml.size());
+      BOOST_TEST(SVN_ERR_UNSUPPORTED_FEATURE, tml[0].code());
+      BOOST_TEST(SVN_ERR_BASE, tml[1].code());
+      BOOST_TEST(SVN_ERR_TEST_FAILED, tml[2].code());
 #endif // SVN_DEBUG
     }
 }
@@ -98,7 +99,7 @@ svn_error_t* make_cancel_test_error()
 }
 } // anonymous namespace
 
-TEST(Exceptions, CatchCancelled)
+BOOST_AUTO_TEST_CASE(catch_canceled)
 {
   try
     {
@@ -107,27 +108,29 @@ TEST(Exceptions, CatchCancelled)
   catch (const SVN::Cancelled& err)
     {
       SVN::Error::MessageList ml = err.messages();
-      EXPECT_EQ(3, ml.size());
-      EXPECT_EQ(SVN_ERR_BASE, ml[0].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, ml[1].code());
-      EXPECT_EQ(SVN_ERR_CANCELLED, ml[2].code());
+      BOOST_TEST(ml.size() == 3);
+      BOOST_TEST(ml[0].code() == SVN_ERR_BASE);
+      BOOST_TEST(ml[1].code() == SVN_ERR_TEST_FAILED);
+      BOOST_TEST(ml[2].code() == SVN_ERR_CANCELLED);
 
       SVN::Error::MessageList tml = err.traced_messages();
 #ifdef SVN_DEBUG
-      EXPECT_EQ(8, tml.size());
-      EXPECT_EQ(SVN_ERR_BASE, tml[0].code());
-      EXPECT_EQ(SVN_ERR_BASE, tml[1].code());
-      EXPECT_EQ(SVN_ERR_BASE, tml[2].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[3].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[4].code());
-      EXPECT_EQ(SVN_ERR_CANCELLED, tml[5].code());
-      EXPECT_EQ(SVN_ERR_CANCELLED, tml[6].code());
-      EXPECT_EQ(SVN_ERR_CANCELLED, tml[7].code());
+      BOOST_TEST(tml.size() == 8);
+      BOOST_TEST(tml[0].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[1].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[2].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[3].code() == SVN_ERR_TEST_FAILED);
+      BOOST_TEST(tml[4].code() == SVN_ERR_TEST_FAILED);
+      BOOST_TEST(tml[5].code() == SVN_ERR_CANCELLED);
+      BOOST_TEST(tml[6].code() == SVN_ERR_CANCELLED);
+      BOOST_TEST(tml[7].code() == SVN_ERR_CANCELLED);
 #else  // !SVN_DEBUG
-      EXPECT_EQ(3, tml.size());
-      EXPECT_EQ(SVN_ERR_BASE, tml[0].code());
-      EXPECT_EQ(SVN_ERR_TEST_FAILED, tml[1].code());
-      EXPECT_EQ(SVN_ERR_CANCELLED, tml[2].code());
+      BOOST_TEST(tml.size() == 3);
+      BOOST_TEST(tml[0].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[1].code() == SVN_ERR_TEST_FAILED);
+      BOOST_TEST(tml[2].code() == SVN_ERR_CANCELLED);
 #endif // SVN_DEBUG
     }
 }
+
+BOOST_AUTO_TEST_SUITE_END();
