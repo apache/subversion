@@ -21,9 +21,10 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_H
-#define SVNXX_PRIVATE_PRIVATE_H
+#ifndef SVNXX_PRIVATE_PRIVATE_HPP
+#define SVNXX_PRIVATE_PRIVATE_HPP
 
 #include "private/exception-private.hpp"
+#include "private/tristate-private.hpp"
 
-#endif // SVNXX_PRIVATE_PRIVATE_H
+#endif // SVNXX_PRIVATE_PRIVATE_HPP
