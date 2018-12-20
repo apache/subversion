@@ -165,7 +165,8 @@ CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
 JAVAHL_JAR=subversion/bindings/javahl/svn-javahl.jar
 JAVAHL_INCLUDES= @JNI_INCLUDES@ -I$(abs_builddir)/subversion/bindings/javahl/include
 
-SVN_HAVE_CXX_BOOST = @SVN_HAVE_CXX_BOOST@
+SVN_BUILD_SVNXX = @SVN_BUILD_SVNXX@
+SVN_BUILD_SVNXX_TESTS = @SVN_BUILD_SVNXX_TESTS@
 SVNXX_INCLUDES = -I$(abs_srcdir)/subversion/bindings/cxx/include
 
 SVN_APR_CONFIG = @SVN_APR_CONFIG@

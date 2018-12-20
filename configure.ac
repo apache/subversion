@@ -1439,13 +1439,66 @@ AC_SUBST(SVN_FS_LIB_LINK)
 
 # ==== SVN++ =================================================================
 
+dnl Possibly compile SVN++
+do_svnxx_build=no
+AC_ARG_ENABLE(svnxx,
+  AS_HELP_STRING([--enable-svnxx],
+      [Enable compilation of the C++ bindings (requires C++)]),
+  [ if test "$enableval" = "yes" ; then
+        AC_MSG_NOTICE([Enabling the C++ bindings])
+        do_svnxx_build=yes
+    fi
+  ])
+
+dnl Possibly compile SVN++ tests
+do_svnxx_test_build=no
+AC_ARG_ENABLE(svnxx-tests,
+  AS_HELP_STRING([--enable-svnxx-tests],
+      [Enable compilation of tests for the C++ bindings
+      (implies --enable-svnxx, requires Boost and Boost.Test)]),
+  [ if test "$enableval" = "yes" ; then
+        AC_MSG_NOTICE([Enabling tests for the C++ bindings])
+        do_svnxx_test_build=yes
+    fi
+  ])
+
 AX_BOOST_BASE([1.58],
   [
-    SVN_HAVE_CXX_BOOST=true
-    AX_BOOST_UNIT_TEST_FRAMEWORK
+    if test "$do_svnxx_test_build" = "yes"; then
+        AX_BOOST_UNIT_TEST_FRAMEWORK
+    fi
   ],
-  [SVN_HAVE_CXX_BOOST=false])
-AC_SUBST(SVN_HAVE_CXX_BOOST)
+  [
+    if test "$do_svnxx_test_build" = "yes"; then
+        AC_MSG_WARN([Tests for the C++ bindings require Boost and Boost.Test])
+        do_svnxx_test_build=no
+    fi
+  ])
+
+if test "$do_svnxx_test_build" = "yes"; then
+    if test "$want_boost" != "yes"; then
+        AC_MSG_WARN([Tests for the C++ bindings require Boost and Boost.Test])
+        do_svnxx_test_build=no
+        SVN_BUILD_SVNXX_TESTS=false
+    else
+        if test "$do_svnxx_build" != "yes"; then
+            AC_MSG_WARN([Enabling the C++ bindings because their tests are enabled])
+            do_svnxx_build=yes
+        fi
+        SVN_BUILD_SVNXX_TESTS=true
+    fi
+else
+    SVN_BUILD_SVNXX_TESTS=false
+fi
+
+if test "$do_svnxx_build" == "yes"; then
+    SVN_BUILD_SVNXX=true
+else
+    SVN_BUILD_SVNXX=false
+fi
+
+AC_SUBST(SVN_BUILD_SVNXX)
+AC_SUBST(SVN_BUILD_SVNXX_TESTS)
 
 # ==== JavaHL ================================================================
 
