@@ -21,24 +21,43 @@
  * @endcopyright
  */
 
-#include "svnxx/tristate.hpp"
+#ifndef __cplusplus
+#error "This is a C++ header file."
+#endif
 
+#ifndef SVNXX_PRIVATE_TRISTATE_HPP
+#define SVNXX_PRIVATE_TRISTATE_HPP
+
+#include "svnxx/tristate.hpp"
 #include "svn_types.h"
-#undef TRUE
-#undef FALSE
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
+namespace detail {
 
-Tristate::Tristate(short value) throw()
-    : m_value(value)
-{}
+/**
+ * Converts an @c svn_tristate_t value to a @c tristate value.
+ */
+inline constexpr tristate convert(svn_tristate_t x)
+{
+  return (x == svn_tristate_true ? tristate(true)
+          : (x == svn_tristate_false ? tristate(false)
+             : tristate::unknown()));
+}
 
-const Tristate Tristate::TRUE = Tristate(svn_tristate_true);
-const Tristate Tristate::FALSE = Tristate(svn_tristate_false);
-const Tristate Tristate::UNKNOWN = Tristate(svn_tristate_unknown);
+/**
+ * Converts a @c tristate value to an @c svn_tristate_t value.
+ */
+inline constexpr svn_tristate_t convert(tristate t)
+{
+  return (t ? svn_tristate_true
+          : (!t ? svn_tristate_false : svn_tristate_unknown));
+}
 
+} // namespace detail
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
+
+#endif // SVNXX_PRIVATE_TRISTATE_HPP
