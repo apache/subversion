@@ -1439,7 +1439,12 @@ AC_SUBST(SVN_FS_LIB_LINK)
 
 # ==== SVN++ =================================================================
 
-AX_BOOST_BASE([1.58],[SVN_HAVE_CXX_BOOST=true],[SVN_HAVE_CXX_BOOST=false])
+AX_BOOST_BASE([1.58],
+  [
+    SVN_HAVE_CXX_BOOST=true
+    AX_BOOST_UNIT_TEST_FRAMEWORK
+  ],
+  [SVN_HAVE_CXX_BOOST=false])
 AC_SUBST(SVN_HAVE_CXX_BOOST)
 
 # ==== JavaHL ================================================================

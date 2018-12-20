@@ -19,28 +19,29 @@
  * ====================================================================
  */
 
-#include <cstdlib>
-#include <iostream>
+#ifndef __cplusplus
+#error "This is a C++ header file."
+#endif
 
-#include <apr_errno.h>
-#include <apr_general.h>
+#ifndef SVNXX_TEST_APRWRAP_ARRAY_HELPERS_HPP
+#define SVNXX_TEST_APRWRAP_ARRAY_HELPERS_HPP
 
-#include <gtest/gtest.h>
-#include <gmock/gmock.h>
-
-int main(int argc, char** argv)
+namespace {
+// Create a randomly-ordered array of constant strings.
+apr_array_header_t* fill_array(APR::Pool& pool)
 {
-  apr_status_t status = apr_initialize();
-  if (status)
-    {
-      char errbuf[512];
-      std::cerr << "APR initialization failed: "
-                << apr_strerror(status, errbuf, sizeof(errbuf) - 1)
-                << std::endl;
-      return 7;
-    }
-  std::atexit(apr_terminate);
-
-  testing::InitGoogleMock(&argc, argv);
-  return RUN_ALL_TESTS();
+  apr_array_header_t* a = apr_array_make(pool.get(), 0, sizeof(const char*));
+  APR_ARRAY_PUSH(a, const char*) = "primus";
+  APR_ARRAY_PUSH(a, const char*) = "secundus";
+  APR_ARRAY_PUSH(a, const char*) = "tertius";
+  APR_ARRAY_PUSH(a, const char*) = "quartus";
+  APR_ARRAY_PUSH(a, const char*) = "quintus";
+  APR_ARRAY_PUSH(a, const char*) = "sextus";
+  APR_ARRAY_PUSH(a, const char*) = "septimus";
+  std::random_shuffle(&APR_ARRAY_IDX(a, 0, const char*),
+                      &APR_ARRAY_IDX(a, a->nelts, const char*));
+  return a;
 }
+} // anonymous namespace
+
+#endif  // SVNXX_TEST_APRWRAP_ARRAY_HELPERS_HPP

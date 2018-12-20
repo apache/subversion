@@ -50,6 +50,8 @@ public:
    * Iterate over all the key-value pairs in the hash table, invoking
    * @a callback for each pair.
    * Uses @a scratch_pool for temporary allocations.
+   *
+   * FIXME: should use std::function instead.
    */
   void iterate(Iteration& callback, const Pool& scratch_pool);
 

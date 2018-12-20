@@ -19,38 +19,12 @@
  * ====================================================================
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
+#define BOOST_TEST_MODULE svnxx
+#include <boost/test/unit_test.hpp>
 
-#ifndef SVNXX_TEST_FIXTURE_INITIALIZE_APR_HPP
-#define SVNXX_TEST_FIXTURE_INITIALIZE_APR_HPP
+#include "fixture_initialize_apr.hpp"
 
-#include <iostream>
-#include <stdexcept>
-
-#include <apr_general.h>
-
-struct initialize_apr_library
+int main (int argc, char* argv[])
 {
-  initialize_apr_library()
-    {
-      const auto status = apr_initialize();
-      if (status)
-        {
-          char errbuf[512];
-          std::cerr << "APR initialization failed: "
-                    << apr_strerror(status, errbuf, sizeof(errbuf) - 1)
-                    << std::endl;
-          throw std::runtime_error("APR initialization failed");
-        }
-    }
-  ~initialize_apr_library()
-    {
-      apr_terminate();
-    }
-};
-
-BOOST_GLOBAL_FIXTURE(initialize_apr_library);
-
-#endif  // SVNXX_TEST_FIXTURE_INITIALIZE_APR_HPP
+  return boost::unit_test::unit_test_main(&init_unit_test, argc, argv);
+}
