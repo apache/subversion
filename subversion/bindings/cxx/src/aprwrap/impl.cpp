@@ -21,12 +21,9 @@
  * @endcopyright
  */
 
-#include <apr_time.h>
+#include <mutex>
 
-#include "private/svn_atomic.h"
 #include "svn_private_config.h"
-#undef TRUE
-#undef FALSE
 
 #include "pool.hpp"
 #include "hash.hpp"
@@ -42,46 +39,18 @@ namespace apr {
 
 apr_pool_t* Pool::get_root_pool()
 {
-  static const svn_atomic_t NONE = 0;
-  static const svn_atomic_t START = 1;
-  static const svn_atomic_t DONE = 2;
+  static std::once_flag atomic_init_flag;
+  static apr_pool_t* root_pool = nullptr;
 
-  static volatile svn_atomic_t init_state = NONE;
-  static apr_pool_t* root_pool = NULL;
-
-  svn_atomic_t state = svn_atomic_cas(&init_state, START, NONE);
-
-  switch (state)
-    {
-    case DONE:
-      // The root pool has already been initialized.
-      return root_pool;
-
-    case START:
-      // Another thread is currently initializing the pool; Spin and
-      // wait for it to finish, with exponential backoff, but no
-      // longer than half a second.
-      for (unsigned shift = 0; state == START && shift < 8; ++shift)
+  std::call_once(
+      atomic_init_flag,
+      []()
         {
-          apr_sleep((APR_USEC_PER_SEC / 1000) << shift);
-          state = svn_atomic_cas(&init_state, NONE, NONE);
-        }
-      if (state == START)
-        throw svnxx::InternalError(
-            _("APR pool initialization failed: Timed out"));
-      return root_pool;
+          const auto allocator = svn_pool_create_allocator(true);
+          root_pool = svn_pool_create_ex(nullptr, allocator);
+        });
 
-    case NONE:
-      // Initialize the root pool and release the lock.
-      // We'll assume that we always need thread-safe allocation.
-      root_pool = svn_pool_create_ex(NULL, svn_pool_create_allocator(true));
-      svn_atomic_cas(&init_state, DONE, START);
-      return root_pool;
-
-    default:
-      throw svnxx::InternalError(
-          _("APR pool initialization failed: Invalid state"));
-    }
+  return root_pool;
 }
 
 //
