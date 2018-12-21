@@ -29,6 +29,7 @@
 #define SVNXX_EXCEPTION_HPP
 
 #include <exception>
+#include <memory>
 #include <string>
 #include <utility>
 #include <vector>
