@@ -427,31 +427,31 @@ byte_array_to_svn_string(JNIByteArray& ary, SVN::Pool& scratch_pool)
 void
 RemoteSession::changeRevisionProperty(
     jlong jrevision, jstring jname,
-    jbyteArray jold_value, jbyteArray jvalue)
+    jbyteArray jold_propval, jbyteArray jpropval)
 {
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIByteArray old_value(jold_value);
+  JNIByteArray old_propval(jold_propval);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIByteArray value(jvalue);
+  JNIByteArray propval(jpropval);
   if (JNIUtil::isExceptionThrown())
     return;
 
   SVN::Pool subPool(pool);
-  svn_string_t* const* p_old_value = NULL;
-  svn_string_t* const str_old_value =
-    byte_array_to_svn_string(old_value, subPool);
-  if (str_old_value)
-    p_old_value = &str_old_value;
+  svn_string_t* const* p_old_propval = NULL;
+  svn_string_t* const str_old_propval =
+    byte_array_to_svn_string(old_propval, subPool);
+  if (str_old_propval)
+    p_old_propval = &str_old_propval;
 
   SVN_JNI_ERR(svn_ra_change_rev_prop2(m_session,
                                       svn_revnum_t(jrevision),
-                                      name, p_old_value,
-                                      byte_array_to_svn_string(value, subPool),
+                                      name, p_old_propval,
+                                      byte_array_to_svn_string(propval, subPool),
                                       subPool.getPool()), );
 }
 
