@@ -48,7 +48,7 @@ namespace detail {
 class ErrorDescription
 {
 public:
-  typedef compat::shared_ptr<ErrorDescription> shared_ptr;
+  typedef std::shared_ptr<ErrorDescription> shared_ptr;
 
   static shared_ptr create(const char* message, int error_code,
                            const char *loc_file, long loc_line,

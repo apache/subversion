@@ -33,13 +33,9 @@
 #include <utility>
 #include <vector>
 
-#include "svnxx/_compat.hpp"
-
 namespace apache {
 namespace subversion {
 namespace svnxx {
-
-namespace compat {} // Announce the compat namespace for shared_ptr lookup
 
 namespace detail {
 // Forward declaration of implementation-specific structure
@@ -64,7 +60,7 @@ public:
   virtual const char* what() const throw();
 
 protected:
-  typedef compat::shared_ptr<detail::ErrorDescription> description_ptr;
+  typedef std::shared_ptr<detail::ErrorDescription> description_ptr;
   explicit InternalError(description_ptr description) throw();
   description_ptr m_description;
 };

@@ -27,7 +27,7 @@
 #include <cstdlib>
 
 #include "svnxx/exception.hpp"
-#include "svnxx/_compat.hpp"
+#include "svnxx/noncopyable.hpp"
 
 #include "svn_pools.h"
 #undef TRUE
@@ -44,7 +44,7 @@ class IterationPool;
 /**
  * Encapsulates an APR pool.
  */
-class Pool : compat::noncopyable
+class Pool : detail::noncopyable
 {
 public:
   /**
@@ -116,7 +116,7 @@ public:
    * Construct this object inside a loop body in order to clear the
    * proxied pool on every iteration.
    */
-  class Iteration : compat::noncopyable
+  class Iteration : detail::noncopyable
   {
   public:
     /**
@@ -169,7 +169,7 @@ public:
  * Construct this object outside a loop body, then within the body,
  * use Pool::Iteration to access the wrapped pool.
  */
-class IterationPool : compat::noncopyable
+class IterationPool : detail::noncopyable
 {
 public:
   IterationPool() {}
