@@ -2736,7 +2736,7 @@ public class BasicTests extends SVNTests
                 public void singleMessage(Set<ChangePath> changedPaths,
                     long revision, Map<String, byte[]> revprops,
                     boolean hasChildren)
-                { revList.add(new Long(revision)); }
+                { revList.add(Long.valueOf(revision)); }
             });
 
         long[] revisions = new long[revList.size()];
