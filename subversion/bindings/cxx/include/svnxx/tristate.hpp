@@ -79,7 +79,9 @@ public:
    * @brief Factory method for the @e unknown state.
    */
   static constexpr tristate unknown() noexcept
-    { return tristate(/*unknown_value*/); }
+    {
+      return tristate(/*unknown_value*/);
+    }
 
   /**
    * @brief Constructor for the @e true and @e false states.
@@ -94,7 +96,9 @@ public:
    * @e true state.
    */
   constexpr operator safe_bool() const noexcept
-    { return value == true_value ? &impl::trueval : 0; }
+    {
+      return value == true_value ? &impl::trueval : 0;
+    }
 
   /**
    * @brief Logical negation.
@@ -126,13 +130,6 @@ public:
                  : tristate::unknown()));
     }
 
-  /**
-   * @brief Test for the @e unknown state.
-   * @returns @c true only if @a t is the @e unknown state.
-   */
-  static constexpr bool unknown(tristate t) noexcept
-    { return t.value == unknown_value; }
-
 private:
   // See svn_tristate_t in svn_types.h.
   enum: unsigned char {
@@ -141,6 +138,16 @@ private:
     unknown_value
   } value;
 };
+
+/**
+ * @related tristate
+ * @brief Test for the @e unknown @c tristate state.
+ * @returns @c true only if @a t is the @e * unknown state.
+ */
+constexpr inline bool unknown(tristate t) noexcept
+{
+  return bool(t) == bool(!t);
+}
 
 /**
  * @related tristate
@@ -290,8 +297,7 @@ constexpr inline tristate operator||(bool b, tristate t) noexcept
  */
 constexpr inline tristate operator==(tristate t, tristate u) noexcept
 {
-  return (tristate::unknown(t) || tristate::unknown(u)
-          ? tristate::unknown()
+  return (unknown(t) || unknown(u) ? tristate::unknown()
           : ((t && u) || (!t && !u)));
 }
 
@@ -347,8 +353,7 @@ constexpr inline tristate operator==(bool b, tristate t) noexcept
  */
 constexpr inline tristate operator!=(tristate t, tristate u) noexcept
 {
-  return (tristate::unknown(t) || tristate::unknown(u)
-          ? tristate::unknown()
+  return (unknown(t) || unknown(u) ? tristate::unknown()
           : !((t && u) || (!t && !u)));
 }
 
