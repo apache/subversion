@@ -37,7 +37,14 @@ In no particular order:
   * Provide high-level constructs for common parameter types; e.g.,
     revision ranges and lists for diff, merge, etc.
 
-  * API versioning.
+  * Provide optional header-only conversions and overload for Boost types (e.g.,
+    boost::tribool, boost::filesystem::path), which can be enabled by users by
+    defining the SVNXX_USE_BOOST symbol.
+
+    These convenience overloads and conversions must *not* make the SVN++
+    library depend on any Boost runtime libraries.
+
+  * API versioning (how?).
 
 
 API COVERAGE
