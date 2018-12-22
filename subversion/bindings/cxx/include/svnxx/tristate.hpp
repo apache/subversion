@@ -28,6 +28,10 @@
 #ifndef SVNXX_TRISTATE_HPP
 #define SVNXX_TRISTATE_HPP
 
+#if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
+#include <boost/logic/tribool.hpp>
+#endif
+
 namespace apache {
 namespace subversion {
 namespace svnxx {
@@ -137,12 +141,38 @@ private:
     true_value,
     unknown_value
   } value;
+
+#if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
+public:
+  /**
+   * @brief Conversion from <tt>boost::tribool</tt>.
+   * @returns a @c tribool value equivalent to the @a t.
+   * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+   */
+  constexpr tristate(boost::tribool t) noexcept
+    : value(boost::indeterminate(t) ? unknown_value
+            : (t ? true_value : false_value))
+    {}
+
+  /**
+   * @brief Conversion to <tt>boost::tribool</tt>.
+   * @returns a <tt>boost::tribool</tt> value equivalent to the @c
+   * tristate value.
+   * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+   */
+  constexpr operator boost::tribool() const noexcept
+    {
+      return (value == true_value ? boost::tribool(true)
+              : (value == false_value ? boost::tribool(false)
+                 : boost::tribool(boost::indeterminate)));
+    }
+#endif
 };
 
 /**
  * @related tristate
  * @brief Test for the @e unknown @c tristate state.
- * @returns @c true only if @a t is the @e * unknown state.
+ * @returns @c true only if @a t is the @e unknown state.
  */
 constexpr inline bool unknown(tristate t) noexcept
 {
@@ -206,6 +236,28 @@ constexpr inline tristate operator&&(bool b, tristate t) noexcept
   return b ? t : tristate(false);
 }
 
+#if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator&&(tristate t, boost::tribool b) noexcept
+{
+  return t && tristate(b);
+}
+
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator&&(boost::tribool b, tristate t) noexcept
+{
+  return tristate(b) && t;
+}
+#endif
+
 /**
  * @related tristate
  * @brief Logical disjunction.
@@ -263,6 +315,28 @@ constexpr inline tristate operator||(bool b, tristate t) noexcept
   return b ? tristate(true) : t;
 }
 
+#if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator||(tristate t, boost::tribool b) noexcept
+{
+  return t || tristate(b);
+}
+
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator||(boost::tribool b, tristate t) noexcept
+{
+  return tristate(b) || t;
+}
+#endif
+
 /**
  * @related tristate
  * @brief Equality comparison.
@@ -319,6 +393,28 @@ constexpr inline tristate operator==(bool b, tristate t) noexcept
   return tristate(b) == t;
 }
 
+#if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator==(tristate t, boost::tribool b) noexcept
+{
+  return t == tristate(b);
+}
+
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator==(boost::tribool b, tristate t) noexcept
+{
+  return tristate(b) == t;
+}
+#endif
+
 /**
  * @related tristate
  * @brief Inquality comparison.
@@ -374,6 +470,28 @@ constexpr inline tristate operator!=(bool b, tristate t) noexcept
 {
   return tristate(b) != t;
 }
+
+#if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator!=(tristate t, boost::tribool b) noexcept
+{
+  return t != tristate(b);
+}
+
+/**
+ * @related tristate
+ * @overload
+ * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ */
+constexpr inline tristate operator!=(boost::tribool b, tristate t) noexcept
+{
+  return tristate(b) != t;
+}
+#endif
 
 } // namespace svnxx
 } // namespace subversion
