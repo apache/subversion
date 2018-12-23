@@ -101,7 +101,8 @@ APR_VER		= 1.5.2
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.15
 APR_UTIL_VER	= 1.5.4
-HTTPD_VER	= 2.2.32
+PCRE_VER	= 8.41
+HTTPD_VER	= 2.4.37
 NEON_VER	= 0.30.2
 SERF_VER	= 1.3.9
 SERF_OLD_VER	= 0.3.1
@@ -121,6 +122,7 @@ GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
 SQLITE_DIST	= sqlite-autoconf-$(SQLITE_VER).tar.gz
 CYRUS_SASL_DIST	= cyrus-sasl-$(CYRUS_SASL_VER).tar.gz
+PCRE_DIST	= pcre-$(PCRE_VER).tar.gz
 HTTPD_DIST	= httpd-$(HTTPD_VER).tar.gz
 LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
@@ -133,7 +135,8 @@ LZ4_DIST	= lz4-$(LZ4_VER).tar.gz
 SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
 SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
 SHA256_${GNU_ICONV_DIST} = ccf536620a45458d26ba83887a983b96827001e92a13847b45e4925cc8913178
-SHA256_${HTTPD_DIST} = b6e1528779f99c301d6438d89ae892a311619b43a39f16297f9eabd4a8d16cb8
+SHA256_${PCRE_DIST} = 244838e1f1d14f7e2fa7681b857b3a8566b74215f28133f14a8f5e59241b682c
+SHA256_${HTTPD_DIST} = aa97a834a32d51974be8d8a013b561e28d327387cb1da2c3c2762acd0146aabd
 SHA256_${NEON_DIST} = db0bd8cdec329b48f53a6f00199c92d5ba40b0f015b153718d1b15d3d967fbca
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
 SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c8693263615
@@ -161,6 +164,7 @@ endef
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
 		$(DISTDIR)/$(SQLITE_DIST) \
+		$(DISTDIR)/$(PCRE_DIST) \
 		$(DISTDIR)/$(HTTPD_DIST) \
 		$(DISTDIR)/$(APR_ICONV_DIST) \
 		$(DISTDIR)/$(GNU_ICONV_DIST) \
@@ -180,6 +184,7 @@ APR_URL		= https://svn.apache.org/repos/asf/apr/apr
 APR_ICONV_URL	= https://archive.apache.org/dist/apr/$(APR_ICONV_DIST)
 GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
+PCRE_URL	= https://ftp.pcre.org/pub/pcre/$(PCRE_DIST)
 HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 #NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
 NEON_URL	= http://ftp.openbsd.org/pub/OpenBSD/distfiles/$(NEON_DIST)
@@ -201,6 +206,7 @@ APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
 APR_ICONV_SRCDIR	= $(SRCDIR)/apr-iconv-$(APR_ICONV_VER)
 GNU_ICONV_SRCDIR	= $(SRCDIR)/libiconv-$(GNU_ICONV_VER)
 APR_UTIL_SRCDIR	= $(SRCDIR)/apr-util-$(APR_UTIL_VER)
+PCRE_SRCDIR	= $(SRCDIR)/pcre-$(PCRE_VER)
 HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
 NEON_SRCDIR	= $(SRCDIR)/neon-$(NEON_VER)
 SERF_SRCDIR	= $(SRCDIR)/serf-$(SERF_VER)
@@ -220,6 +226,7 @@ APR_OBJDIR	= $(OBJDIR)/apr-$(APR_VER)
 APR_ICONV_OBJDIR	= $(OBJDIR)/apr-iconv-$(APR_ICONV_VER)
 GNU_ICONV_OBJDIR	= $(OBJDIR)/libiconv-$(GNU_ICONV_VER)
 APR_UTIL_OBJDIR	= $(OBJDIR)/apr-util-$(APR_UTIL_VER)
+PCRE_OBJDIR	= $(OBJDIR)/pcre-$(PCRE_VER)
 HTTPD_OBJDIR	= $(OBJDIR)/httpd-$(HTTPD_VER)
 NEON_OBJDIR	= $(OBJDIR)/neon-$(NEON_VER)
 SERF_OBJDIR	= $(OBJDIR)/serf-$(SERF_VER)
@@ -257,19 +264,19 @@ PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFI
 .PHONY: all reset clean nuke fetch
 
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
-	httpd-install neon-install serf-install serf-old-install \
+	pcre-install httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
 	ruby-install bz2-install python-install gettext-install \
 	lz4-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
-	httpd-reset neon-reset serf-reset serf-old-reset sqlite-reset \
-	cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
+	pcre-reset httpd-reset neon-reset serf-reset serf-old-reset \
+	sqlite-reset cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
 	bz2-reset gettext-reset lz4-reset svn-reset
 
 # Use to save disk space.
-clean: bdb-clean apr-clean iconv-clean apr-util-clean httpd-clean \
+clean: bdb-clean apr-clean iconv-clean apr-util-clean pcre-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
 	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean \
 	lz4-clean svn-clean
@@ -380,6 +387,9 @@ $(APR_OBJDIR)/.retrieved:
 	if [ ! -d $(APR_SRCDIR) ]; then \
 		svn export $(APR_URL)/tags/$(APR_VER)/ $(APR_SRCDIR); \
 	fi
+	# Hack configure script to ensure that sizeof(apr_off_t) == sizeof(uint64_t)
+	sed -i.orig -e 's/if test "$$ac_cv_sizeof_off_t" = "$$ac_cv_sizeof_long"; then/if false; then/' $(APR_SRCDIR)/configure.in
+	sed -i -e 's/^elif test "$$ac_cv_sizeof_long" = "8"; then/elif false; then/' $(APR_SRCDIR)/configure.in
 	touch $@
 
 ifeq ($(THREADING),yes)
@@ -632,6 +642,53 @@ $(APR_UTIL_OBJDIR)/.installed: $(APR_UTIL_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# pcre
+#######################################################################
+
+pcre-retrieve:	$(PCRE_OBJDIR)/.retrieved
+pcre-configure:	$(PCRE_OBJDIR)/.configured
+pcre-compile:	$(PCRE_OBJDIR)/.compiled
+pcre-install:	$(PCRE_OBJDIR)/.installed
+pcre-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(PCRE_OBJDIR)/$(f);)
+
+pcre-clean:
+	-(cd $(PCRE_OBJDIR) && env MAKEFLAGS= make clean)
+
+# fetch distfile for pcre
+$(DISTDIR)/$(PCRE_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(PCRE_URL)
+
+# retrieve pcre
+$(PCRE_OBJDIR)/.retrieved: $(DISTDIR)/$(PCRE_DIST)
+	$(call do_check_sha256,$(PCRE_DIST))
+	[ -d $(PCRE_OBJDIR) ] || mkdir -p $(PCRE_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PCRE_DIST)
+	touch $@
+
+# configure pcre
+$(PCRE_OBJDIR)/.configured: $(PCRE_OBJDIR)/.retrieved
+	cd $(PCRE_OBJDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
+		CC=$(CC) CXX=$(CXX) \
+		GREP="`which grep`" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+		$(PCRE_SRCDIR)/configure \
+		--prefix=$(PREFIX)/pcre
+	touch $@
+
+# compile pcre
+$(PCRE_OBJDIR)/.compiled: $(PCRE_OBJDIR)/.configured
+	(cd $(PCRE_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
+	touch $@
+
+# install pcre
+$(PCRE_OBJDIR)/.installed: $(PCRE_OBJDIR)/.compiled
+	(cd $(PCRE_OBJDIR) && env MAKEFLAGS= make install)
+	touch $@
+
+#######################################################################
 # httpd
 #######################################################################
 
@@ -646,104 +703,91 @@ httpd-reset:
 
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make clean)
-	-rm ${HTTPD_OBJDIR}/chil-engine.diff
-	-rm ${HTTPD_OBJDIR}/ssl-set-state.diff
-	-rm ${HTTPD_OBJDIR}/acinclude.diff
+	rm -f $(HTTPD_OBJDIR)/mod-deflate-fmt.diff
+	rm -f $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff
 
 # fetch distfile for httpd
 $(DISTDIR)/$(HTTPD_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(HTTPD_URL)
 
-$(HTTPD_OBJDIR)/chil-engine.diff:
+$(HTTPD_OBJDIR)/mod-deflate-fmt.diff:
 	mkdir -p $(dir $@)
-	echo > $@.tmp '--- modules/ssl/ssl_engine_init.c.orig	Mon Apr 14 13:20:57 2014'
-	echo >>$@.tmp '+++ modules/ssl/ssl_engine_init.c	Mon Apr 14 13:21:22 2014'
-	echo >>$@.tmp '@@ -406,9 +406,11 @@ void ssl_init_Engine(server_rec *s, apr_pool_t *p)'
-	echo >>$@.tmp '             ssl_die();'
-	echo >>$@.tmp '         }'
-	echo >>$@.tmp ' '
-	echo >>$@.tmp '+#ifdef ENGINE_CTRL_CHIL_SET_FORKCHECK'
-	echo >>$@.tmp '         if (strEQ(mc->szCryptoDevice, "chil")) {'
-	echo >>$@.tmp '             ENGINE_ctrl(e, ENGINE_CTRL_CHIL_SET_FORKCHECK, 1, 0, 0);'
-	echo >>$@.tmp '         }'
-	echo >>$@.tmp '+#endif'
-	echo >>$@.tmp ' '
-	echo >>$@.tmp '         if (!ENGINE_set_default(e, ENGINE_METHOD_ALL)) {'
-	echo >>$@.tmp '             ap_log_error(APLOG_MARK, APLOG_ERR, 0, s,'
+	echo > $@.tmp '--- modules/filters/mod_deflate.c.orig	Sun Dec 16 13:11:26 2018'
+	echo >> $@.tmp '+++ modules/filters/mod_deflate.c	Sun Dec 16 13:19:20 2018'
+	echo >> $@.tmp '@@ -852,7 +852,8 @@'
+	echo >> $@.tmp '                                        f->c->bucket_alloc);'
+	echo >> $@.tmp '             APR_BRIGADE_INSERT_TAIL(ctx->bb, b);'
+	echo >> $@.tmp '             ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, APLOGNO(01384)'
+	echo >> $@.tmp '-                          "Zlib: Compressed %ld to %ld : URL %s",'
+	echo >> $@.tmp '+                          "Zlib: Compressed %" APR_OFF_T_FMT'
+	echo >> $@.tmp '+			  " to %" APR_OFF_T_FMT " : URL %s",'
+	echo >> $@.tmp '                           ctx->stream.total_in, ctx->stream.total_out, r->uri);'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp '             /* leave notes for logging */'
+	echo >> $@.tmp '@@ -1419,7 +1420,8 @@'
+	echo >> $@.tmp '                 ctx->validation_buffer_length += valid;'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp '                 ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, APLOGNO(01393)'
+	echo >> $@.tmp '-                              "Zlib: Inflated %ld to %ld : URL %s",'
+	echo >> $@.tmp '+                              "Zlib: Inflated %" APR_OFF_T_FMT'
+	echo >> $@.tmp '+			      " to %" APR_OFF_T_FMT " : URL %s",'
+	echo >> $@.tmp '                               ctx->stream.total_in, ctx->stream.total_out,'
+	echo >> $@.tmp '                               r->uri);'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp '@@ -1445,7 +1447,8 @@'
+	echo >> $@.tmp '                     if ((ctx->stream.total_out & 0xFFFFFFFF) != compLen) {'
+	echo >> $@.tmp '                         inflateEnd(&ctx->stream);'
+	echo >> $@.tmp '                         ap_log_rerror(APLOG_MARK, APLOG_WARNING, 0, r, APLOGNO(01395)'
+	echo >> $@.tmp '-                                      "Zlib: Length %ld of inflated data does "'
+	echo >> $@.tmp '+                                      "Zlib: Length %" APR_OFF_T_FMT'
+	echo >> $@.tmp '+				      " of inflated data does "'
+	echo >> $@.tmp '                                       "not match expected value %ld",'
+	echo >> $@.tmp '                                       ctx->stream.total_out, compLen);'
+	echo >> $@.tmp '                         return APR_EGENERAL;'
+	echo >> $@.tmp '@@ -1622,7 +1625,8 @@'
+	echo >> $@.tmp '             flush_libz_buffer(ctx, c, f->c->bucket_alloc, inflate, Z_SYNC_FLUSH,'
+	echo >> $@.tmp '                               UPDATE_CRC);'
+	echo >> $@.tmp '             ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, APLOGNO(01398)'
+	echo >> $@.tmp '-                          "Zlib: Inflated %ld to %ld : URL %s",'
+	echo >> $@.tmp '+                          "Zlib: Inflated %" APR_OFF_T_FMT'
+	echo >> $@.tmp '+			  " to %" APR_OFF_T_FMT " : URL %s",'
+	echo >> $@.tmp '                           ctx->stream.total_in, ctx->stream.total_out, r->uri);'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp '             if (ctx->validation_buffer_length == VALIDATION_SIZE) {'
 	mv -f $@.tmp $@
 
-$(HTTPD_OBJDIR)/ssl-set-state.diff:
+$(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff:
 	mkdir -p $(dir $@)
-	echo > $@.tmp '--- modules/ssl/ssl_toolkit_compat.h.orig	Fri Feb  3 10:47:33 2017'
-	echo >>$@.tmp '+++ modules/ssl/ssl_toolkit_compat.h	Fri Feb  3 10:52:17 2017'
-	echo >>$@.tmp '@@ -84,7 +84,9 @@'
-	echo >>$@.tmp ' #define SSL_get_state(ssl) SSL_state(ssl)'
-	echo >>$@.tmp ' #endif'
-	echo >>$@.tmp ' '
-	echo >>$@.tmp '+#ifndef HAVE_SSL_SET_STATE'
-	echo >>$@.tmp ' #define SSL_set_state(ssl,val) (ssl)->state = val'
-	echo >>$@.tmp '+#endif'
-	echo >>$@.tmp ' '
-	echo >>$@.tmp ' #define MODSSL_BIO_CB_ARG_TYPE const char'
-	echo >>$@.tmp ' #define MODSSL_CRYPTO_CB_ARG_TYPE const char'
+	echo > $@.tmp '--- modules/ssl/ssl_engine_init.c.orig	Sun Dec 16 13:34:14 2018'
+	echo >> $@.tmp '+++ modules/ssl/ssl_engine_init.c	Sun Dec 16 13:34:59 2018'
+	echo >> $@.tmp '@@ -1492,7 +1492,7 @@'
+	echo >> $@.tmp '     X509_STORE_CTX *sctx;'
+	echo >> $@.tmp '     X509_STORE *store = SSL_CTX_get_cert_store(mctx->ssl_ctx);'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp '-#if OPENSSL_VERSION_NUMBER >= 0x1010100fL'
+	echo >> $@.tmp '+#if OPENSSL_VERSION_NUMBER >= 0x1010100fL && !defined(LIBRESSL_VERSION_NUMBER)'
+	echo >> $@.tmp '     /* For OpenSSL >=1.1.1, turn on client cert support which is'
+	echo >> $@.tmp '      * otherwise turned off by default (by design).'
+	echo >> $@.tmp '      * https://github.com/openssl/openssl/issues/6933 */'
 	mv -f $@.tmp $@
-
-$(HTTPD_OBJDIR)/acinclude.diff:
-	mkdir -p $(dir $@)
-	echo >$@.tmp '--- acinclude.m4.orig	Fri Feb  3 11:05:08 2017'
-	echo >>$@.tmp '+++ acinclude.m4	Fri Feb  3 11:05:15 2017'
-	echo >>$@.tmp '@@ -455,6 +455,7 @@'
-	echo >>$@.tmp '     AC_CHECK_HEADERS([openssl/engine.h])'
-	echo >>$@.tmp '     AC_CHECK_FUNCS([SSLeay_version SSL_CTX_new], [], [liberrors="yes"])'
-	echo >>$@.tmp '     AC_CHECK_FUNCS([ENGINE_init ENGINE_load_builtin_engines])'
-	echo >>$@.tmp '+    AC_CHECK_FUNCS(SSL_set_state)'
-	echo >>$@.tmp '   else'
-	echo >>$@.tmp '     AC_CHECK_FUNCS([SSLC_library_version SSL_CTX_new], [], [liberrors="yes"])'
-	echo >>$@.tmp '     AC_CHECK_FUNCS(SSL_set_state)'
-	mv -f $@.tmp $@
-
-# fix build without APR_HAS_THREADS (broken by r1750836)
-ifneq ($(THREADING),yes)
-HTTPD_REVERT_1750836_CMD = (cd $(HTTPD_SRCDIR)/modules/proxy && svn diff -c-1750836 https://svn.apache.org/repos/asf/httpd/httpd/branches/2.2.x/modules/proxy/proxy_util.c | patch)
-else
-HTTPD_REVERT_1750836_CMD = true
-endif
 
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
-	$(HTTPD_OBJDIR)/chil-engine.diff $(HTTPD_OBJDIR)/ssl-set-state.diff \
-	$(HTTPD_OBJDIR)/acinclude.diff
+	$(HTTPD_OBJDIR)/mod-deflate-fmt.diff \
+	$(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff
 	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
-	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/chil-engine.diff
-	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-set-state.diff
-	cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/acinclude.diff
-	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h \
-		$(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig
-	sed '/^#define HAVE_SSL_RAND_EGD/d' \
-		< $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h.orig \
-		> $(HTTPD_SRCDIR)/modules/ssl/ssl_toolkit_compat.h
-	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c \
-		$(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig
-	sed 's/^\(#if (OPENSSL_VERSION_NUMBER >= 0x00908000)\)$$/\1 \&\& !defined(OPENSSL_NO_COMP)/' \
-		< $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c.orig \
-		> $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_vars.c
-	cp $(HTTPD_SRCDIR)/modules/ssl/ssl_engine_init.c \
-		$(HTTPD_SRCDIR)/modules/ssl/ssl_engine_init.c.orig
-	$(foreach f,  ssl_engine_init.c ssl_util_ssl.c ssl_util_ssl.h, \
-		cp $(HTTPD_SRCDIR)/modules/ssl/${f}  $(HTTPD_SRCDIR)/modules/ssl/${f}.orig; \
-		sed 's/SSL_CTX_use_certificate_chain/_SSL_CTX_use_certificate_chain/' \
-		< $(HTTPD_SRCDIR)/modules/ssl/${f}.orig \
-		> $(HTTPD_SRCDIR)/modules/ssl/${f};\
-	)
-	$(HTTPD_REVERT_1750836_CMD)
+	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/mod-deflate-fmt.diff)
+	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff)
 	touch $@
 
 # configure httpd
 $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
-	$(APR_UTIL_OBJDIR)/.installed
-	cd $(HTTPD_SRCDIR) && ./buildconf
+	$(APR_UTIL_OBJDIR)/.installed $(PCRE_OBJDIR)/.installed
+	cd $(HTTPD_SRCDIR) && ./buildconf \
+		--with-apr="$(PREFIX)/apr/bin/apr-1-config" \
+		--with-apr-util="$(PREFIX)/apr/bin/apu-1-config"
 	cd $(HTTPD_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
 		CC=$(CC) CXX=$(CXX) \
@@ -752,12 +796,16 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
 		--enable-maintainer-mode \
+		--with-mpm=prefork \
 		--enable-ssl \
 		--enable-dav \
 		--enable-proxy \
-		--with-mpm=prefork \
-		--with-apr="$(PREFIX)/apr" \
-		--with-apr-util="$(PREFIX)/apr"
+		--disable-md \
+		--disable-http2 \
+		--disable-brotli \
+		--with-apr="$(PREFIX)/apr/bin/apr-1-config" \
+		--with-apr-util="$(PREFIX)/apr/bin/apu-1-config" \
+		--with-pcre="$(PREFIX)/pcre"
 	touch $@
 
 # compile httpd
@@ -776,19 +824,27 @@ $(HTTPD_CONF):
 	echo > $@.tmp '# httpd config for use with mod_dav_svn'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:8080'
+	echo >>$@.tmp 'LoadModule unixd_module modules/mod_unixd.so'
+	echo >>$@.tmp 'LoadModule alias_module modules/mod_alias.so'
+	echo >>$@.tmp 'LoadModule authn_core_module modules/mod_authn_core.so'
+	echo >>$@.tmp 'LoadModule authn_file_module modules/mod_authn_file.so'
+	echo >>$@.tmp 'LoadModule authz_core_module modules/mod_authz_core.so'
+	echo >>$@.tmp 'LoadModule authz_user_module modules/mod_authz_user.so'
+	echo >>$@.tmp 'LoadModule authz_groupfile_module modules/mod_authz_groupfile.so'
+	echo >>$@.tmp 'LoadModule auth_basic_module modules/mod_auth_basic.so'
+	echo >>$@.tmp 'LoadModule dav_module modules/mod_dav.so'
 	echo >>$@.tmp 'LoadModule dav_svn_module modules/svn-$(WC)/mod_dav_svn.so'
 	echo >>$@.tmp 'LoadModule authz_svn_module modules/svn-$(WC)/mod_authz_svn.so'
 	echo >>$@.tmp 'DocumentRoot "$(PREFIX)/httpd/htdocs"'
 	echo >>$@.tmp '<Directory />'
 	echo >>$@.tmp '    Options FollowSymLinks'
 	echo >>$@.tmp '    AllowOverride None'
-	echo >>$@.tmp '    Order deny,allow'
-	echo >>$@.tmp '    Deny from all'
+	echo >>$@.tmp '    Require all denied'
 	echo >>$@.tmp '</Directory>'
 	echo >>$@.tmp '<Location /repos>'
 	echo >>$@.tmp '    DAV svn'
 	echo >>$@.tmp '    SVNPath /tmp/svn-sandbox/repos'
-	echo >>$@.tmp '    Allow from localhost'
+	echo >>$@.tmp '    Require ip localhost'
 	echo >>$@.tmp '</Location>'
 	mv -f $@.tmp $@
 
@@ -1742,6 +1798,15 @@ $(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF) $(HTTPD_CHECK_GROUPS)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:$(HTTPD_CHECK_PORT)'
+	echo >>$@.tmp 'LoadModule unixd_module modules/mod_unixd.so'
+	echo >>$@.tmp 'LoadModule alias_module modules/mod_alias.so'
+	echo >>$@.tmp 'LoadModule authn_core_module modules/mod_authn_core.so'
+	echo >>$@.tmp 'LoadModule authn_file_module modules/mod_authn_file.so'
+	echo >>$@.tmp 'LoadModule authz_core_module modules/mod_authz_core.so'
+	echo >>$@.tmp 'LoadModule authz_user_module modules/mod_authz_user.so'
+	echo >>$@.tmp 'LoadModule authz_groupfile_module modules/mod_authz_groupfile.so'
+	echo >>$@.tmp 'LoadModule auth_basic_module modules/mod_auth_basic.so'
+	echo >>$@.tmp 'LoadModule dav_module modules/mod_dav.so'
 	echo >>$@.tmp 'LoadModule dav_svn_module $(MOD_DAV_SVN)'
 	echo >>$@.tmp 'LoadModule authz_svn_module $(MOD_AUTHZ_SVN)'
 	echo >>$@.tmp 'LoadModule dontdothat_module $(MOD_DONTDOTHAT)'
@@ -1750,8 +1815,7 @@ $(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF) $(HTTPD_CHECK_GROUPS)
 	echo >>$@.tmp '<Directory />'
 	echo >>$@.tmp '    Options FollowSymLinks'
 	echo >>$@.tmp '    AllowOverride None'
-	echo >>$@.tmp '    Order deny,allow'
-	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    Require all granted'
 	echo >>$@.tmp '</Directory>'
 	echo >>$@.tmp '<Location /svn-test-work/repositories>'
 	echo >>$@.tmp '    DAV svn'
@@ -1783,11 +1847,26 @@ ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
 	echo >>$@.tmp '    SVNPathAuthz short_circuit'
 endif
 	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /svn-test-work/local_tmp/trojan>'
+	echo >>$@.tmp '    DAV svn'
+	echo >>$@.tmp '    SVNPath $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp/trojan'
+	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
+	echo >>$@.tmp '    AuthType Basic'
+	echo >>$@.tmp '    AuthName "Subversion Repository"'
+	echo >>$@.tmp '    AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '    Require valid-user'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
 	echo >>$@.tmp '# This Location lets you access repositories dropped in /tmp/'
 	echo >>$@.tmp '<Location /svn>'
 	echo >>$@.tmp '    DAV svn'
 	echo >>$@.tmp '    SVNParentPath /tmp'
-	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    Require all granted'
 	echo >>$@.tmp '    #AuthType Basic'
 	echo >>$@.tmp '    #AuthName "Subversion Repository"'
 	echo >>$@.tmp '    #AuthUserFile $(HTTPD_CHECK_USERS)'
@@ -1828,7 +1907,7 @@ endif
 	echo >>$@.tmp '    Require all granted'
 	echo >>$@.tmp '  </IfModule>'
 	echo >>$@.tmp '  <IfModule !mod_authz_core.c>'
-	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    Requite all granted'
 	echo >>$@.tmp '  </IfModule>'
 ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
 	echo >>$@.tmp '    SVNPathAuthz short_circuit'
@@ -1846,7 +1925,6 @@ endif
 	echo >>$@.tmp '  AuthName          "Subversion Repository"'
 	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
 	echo >>$@.tmp '  Require           valid-user'
-	echo >>$@.tmp '  Satisfy Any'
 ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
 	echo >>$@.tmp '    SVNPathAuthz short_circuit'
 endif
@@ -1929,7 +2007,7 @@ endif
 	echo >>$@.tmp '  AuthName          "Subversion Repository"'
 	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
 	echo >>$@.tmp '  AuthGroupFile     $(HTTPD_CHECK_GROUPS)'
-	echo >>$@.tmp '  Require           group random'
+	echo >>$@.tmp '  Require           file-group random'
 	echo >>$@.tmp '  AuthzSVNAuthoritative Off'
 	echo >>$@.tmp '  SVNPathAuthz On'
 	echo >>$@.tmp '</Location>'
@@ -1946,7 +2024,6 @@ endif
 	echo >>$@.tmp '    AuthName          "Subversion Repository"'
 	echo >>$@.tmp '    AuthUserFile      $(HTTPD_CHECK_USERS)'
 	echo >>$@.tmp '    AuthzSendForbiddenOnFailure On'
-	echo >>$@.tmp '    Satisfy All'
 	echo >>$@.tmp '    <RequireAny>'
 	echo >>$@.tmp '      Require valid-user'
 	echo >>$@.tmp '      Require expr req("ALLOW") == "1"'
@@ -1967,7 +2044,6 @@ endif
 	echo >>$@.tmp '    AuthName          "Subversion Repository"'
 	echo >>$@.tmp '    AuthUserFile      $(HTTPD_CHECK_USERS)'
 	echo >>$@.tmp '    AuthzSendForbiddenOnFailure On'
-	echo >>$@.tmp '    Satisfy All'
 	echo >>$@.tmp '    <RequireAll>'
 	echo >>$@.tmp '      Require valid-user'
 	echo >>$@.tmp '      Require expr req("ALLOW") == "1"'
@@ -1979,7 +2055,7 @@ endif
 	echo >>$@.tmp '</IfModule>'
 	echo >>$@.tmp 'RedirectMatch permanent ^/svn-test-work/repositories/REDIRECT-PERM-(.*)$$ /svn-test-work/repositories/$$1'
 	echo >>$@.tmp 'RedirectMatch ^/svn-test-work/repositories/REDIRECT-TEMP-(.*)$$ /svn-test-work/repositories/$$1'
-	echo >>$@.tmp 'Include "conf/$(SVN_REL_WC)*-custom.conf"'
+	echo >>$@.tmp 'IncludeOptional "conf/$(SVN_REL_WC)*-custom.conf"'
 	echo >> $@.tmp '#SVNInMemoryCacheSize 0'
 	echo >> $@.tmp '#SVNCacheTextDeltas Off'
 	echo >> $@.tmp '#SVNCacheRevProps Off'
@@ -1990,6 +2066,15 @@ $(HTTPD_PROXY_CONF): $(HTTPD_CHECK_CONF)
 	echo > $@.tmp '# httpd config for a write-through proxy'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:$(HTTPD_PROXY_PORT)'
+	echo >>$@.tmp 'LoadModule unixd_module modules/mod_unixd.so'
+	echo >>$@.tmp 'LoadModule alias_module modules/mod_alias.so'
+	echo >>$@.tmp 'LoadModule authn_core_module modules/mod_authn_core.so'
+	echo >>$@.tmp 'LoadModule authn_file_module modules/mod_authn_file.so'
+	echo >>$@.tmp 'LoadModule authz_core_module modules/mod_authz_core.so'
+	echo >>$@.tmp 'LoadModule authz_user_module modules/mod_authz_user.so'
+	echo >>$@.tmp 'LoadModule authz_groupfile_module modules/mod_authz_groupfile.so'
+	echo >>$@.tmp 'LoadModule auth_basic_module modules/mod_auth_basic.so'
+	echo >>$@.tmp 'LoadModule dav_module modules/mod_dav.so'
 	echo >>$@.tmp 'LoadModule dav_svn_module $(MOD_DAV_SVN)'
 	echo >>$@.tmp 'LoadModule authz_svn_module $(MOD_AUTHZ_SVN)'
 	echo >>$@.tmp 'LoadModule dontdothat_module $(MOD_DONTDOTHAT)'
@@ -1999,7 +2084,7 @@ $(HTTPD_PROXY_CONF): $(HTTPD_CHECK_CONF)
 	echo >>$@.tmp '    DAV svn'
 	echo >>$@.tmp '    SVNParentPath /tmp/svn-$(BRANCH)-proxy'
 	echo >>$@.tmp '    SVNMasterURI http://localhost:$(HTTPD_CHECK_PORT)/svn/'
-	echo >>$@.tmp '    Allow from all'
+	echo >>$@.tmp '    Requite all granted'
 	echo >>$@.tmp '    #AuthType Basic'
 	echo >>$@.tmp '    #AuthName "Subversion Repository"'
 	echo >>$@.tmp '    #AuthUserFile $(HTTPD_CHECK_USERS)'
@@ -2015,7 +2100,7 @@ endif
 	echo >>$@.tmp '<Location /svn-proxy-sync>'
 	echo >>$@.tmp 'DAV svn'
 	echo >>$@.tmp 'SVNParentPath /tmp/svn-$(BRANCH)-proxy'
-	echo >>$@.tmp 'Allow from all'
+	echo >>$@.tmp 'Require all granted'
 	echo >>$@.tmp '</Location>'
 	mv -f $@.tmp $@
 
