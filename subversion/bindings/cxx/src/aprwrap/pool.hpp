@@ -30,8 +30,6 @@
 #include "svnxx/noncopyable.hpp"
 
 #include "svn_pools.h"
-#undef TRUE
-#undef FALSE
 
 namespace apache {
 namespace subversion {

@@ -22,35 +22,6 @@
 #define BOOST_TEST_MODULE svnxx
 #include <boost/test/unit_test.hpp>
 
-#include <iostream>
-#include <stdexcept>
-
-#include <apr_general.h>
-
-
-struct initialize_apr_library
-{
-  initialize_apr_library()
-    {
-      const auto status = apr_initialize();
-      if (status)
-        {
-          char errbuf[512];
-          std::cerr << "APR initialization failed: "
-                    << apr_strerror(status, errbuf, sizeof(errbuf) - 1)
-                    << std::endl;
-          throw std::runtime_error("APR initialization failed");
-        }
-    }
-  ~initialize_apr_library()
-    {
-      apr_terminate();
-    }
-};
-
-BOOST_GLOBAL_FIXTURE(initialize_apr_library);
-
-
 int main (int argc, char* argv[])
 {
   return boost::unit_test::unit_test_main(&init_unit_test, argc, argv);

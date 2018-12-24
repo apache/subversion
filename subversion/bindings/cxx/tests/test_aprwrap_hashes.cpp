@@ -26,7 +26,10 @@
 
 #include "../src/aprwrap.hpp"
 
-BOOST_AUTO_TEST_SUITE(aprwrap_hashes);
+#include "fixture_init.hpp"
+
+BOOST_AUTO_TEST_SUITE(aprwrap_hashes,
+                      * boost::unit_test::fixture<init>());
 
 BOOST_AUTO_TEST_CASE(string_hash)
 {
