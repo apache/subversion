@@ -26,7 +26,10 @@
 
 #include "../src/aprwrap.hpp"
 
-BOOST_AUTO_TEST_SUITE(aprwrap_pools);
+#include "fixture_init.hpp"
+
+BOOST_AUTO_TEST_SUITE(aprwrap_pools,
+                      * boost::unit_test::fixture<init>());
 
 BOOST_AUTO_TEST_CASE(initialize_global_pool)
 {

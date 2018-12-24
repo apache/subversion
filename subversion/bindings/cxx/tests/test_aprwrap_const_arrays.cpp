@@ -26,9 +26,12 @@
 
 #include "../src/aprwrap.hpp"
 
+#include "fixture_init.hpp"
+
 #include "test_aprwrap_array_helpers.hpp"
 
-BOOST_AUTO_TEST_SUITE(aprwrap_const_arrayw);
+BOOST_AUTO_TEST_SUITE(aprwrap_const_arrayw,
+                      * boost::unit_test::fixture<init>());
 
 BOOST_AUTO_TEST_CASE(wrap_array)
 {

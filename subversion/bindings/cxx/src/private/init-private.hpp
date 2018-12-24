@@ -21,47 +21,69 @@
  * @endcopyright
  */
 
-#include "pool.hpp"
-#include "hash.hpp"
+#ifndef __cplusplus
+#error "This is a C++ header file."
+#endif
 
-#include "../private/init-private.hpp"
+#ifndef SVNXX_PRIVATE_INIT_HPP
+#define SVNXX_PRIVATE_INIT_HPP
+
+#include <memory>
+#include <mutex>
+#include <stdexcept>
+
+#include <apr_pools.h>
+
+#include "svnxx/init.hpp"
+#include "svnxx/noncopyable.hpp"
+
+#include "svn_private_config.h"
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace apr {
+namespace detail {
 
-//
-// Pool implementation
-//
-
-apr_pool_t* Pool::get_root_pool()
+class context : noncopyable
 {
-  auto ctx = detail::context::get();
-  return ctx->get_root_pool();
-}
+public:
+  using ptr = std::shared_ptr<context>;
+  using weak_ptr = std::weak_ptr<context>;
 
-//
-// Hash implementation
-//
+  ~context();
 
-void Hash<void, void>::iterate(Hash<void, void>::Iteration& callback,
-                               const Pool& scratch_pool)
-{
-  for (apr_hash_index_t* hi = apr_hash_first(scratch_pool.get(), m_hash);
-       hi; hi = apr_hash_next(hi))
+  static ptr create();
+  static ptr get()
     {
-      key_type key;
-      value_type val;
-      Key::size_type klen;
-
-      apr_hash_this(hi, &key, &klen, &val);
-      if (!callback(Key(key, klen), val))
-        break;
+      auto ctx = self.lock();
+      if (!ctx)
+        {
+          throw std::logic_error(
+              _("The SVN++ library is not initialized."
+                " Did you forget to create an instance of "
+                " the apache::subversion::svnxx::init class?"));
+        }
+      return ctx;
     }
-}
 
-} // namespace apr
+  apr_pool_t* get_root_pool() const noexcept
+    {
+      return root_pool;
+    }
+
+private:
+  // Thou shalt not create contexts other than through the factory.
+  context();
+
+  apr_pool_t* root_pool{nullptr};
+
+  static std::mutex guard;
+  static weak_ptr self;
+};
+
+} // namespace detail
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
+
+#endif // SVNXX_PRIVATE_INIT_HPP

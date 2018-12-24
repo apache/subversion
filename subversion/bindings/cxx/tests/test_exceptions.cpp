@@ -29,10 +29,9 @@
 #include "svnxx.hpp"
 #include "../src/private.hpp"
 
-//#include <apr.h>
 #include "svn_error.h"
-#undef TRUE
-#undef FALSE
+
+#include "fixture_init.hpp"
 
 namespace {
 svn_error_t* make_error_test_error()
@@ -48,7 +47,8 @@ svn_error_t* make_error_test_error()
 }
 } // anonymous namespace
 
-BOOST_AUTO_TEST_SUITE(exceptions);
+BOOST_AUTO_TEST_SUITE(exceptions,
+                      * boost::unit_test::fixture<init>());
 
 BOOST_AUTO_TEST_CASE(catch_error)
 {

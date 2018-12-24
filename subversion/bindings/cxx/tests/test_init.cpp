@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,21 +17,48 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
+#include <boost/test/unit_test.hpp>
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
+#include "../src/private/init-private.hpp"
 
-#ifndef SVNXX_HPP
-#define SVNXX_HPP
+namespace svn = ::apache::subversion::svnxx;
+namespace detail = ::apache::subversion::svnxx::detail;
 
-// Expose the whole API and alias the default version namespace
-#include "svnxx/init.hpp"
-#include "svnxx/exception.hpp"
-#include "svnxx/tristate.hpp"
+BOOST_AUTO_TEST_SUITE(init);
 
-namespace SVN = ::apache::subversion::svnxx;
+BOOST_AUTO_TEST_CASE(context_with_init)
+{
+  svn::init svnxx_initialized;
+  BOOST_TEST(detail::context::get());
+}
 
-#endif  // SVNXX_HPP
+BOOST_AUTO_TEST_CASE(context_without_init)
+{
+  BOOST_CHECK_THROW(detail::context::get(), std::logic_error);
+}
+
+BOOST_AUTO_TEST_CASE(init_scope)
+{
+  {
+    svn::init svnxx_initialized;
+    BOOST_TEST(detail::context::get());
+  }
+  BOOST_CHECK_THROW(detail::context::get(), std::logic_error);
+}
+
+BOOST_AUTO_TEST_CASE(multi_init_same_context)
+{
+  svn::init svnxx_initialized_first;
+  const auto ctx = detail::context::get();
+  BOOST_REQUIRE(ctx);
+
+  {
+    svn::init svnxx_initialized_second;
+    BOOST_TEST(ctx == detail::context::get());
+  }
+
+  BOOST_TEST(ctx == detail::context::get());
+}
+
+BOOST_AUTO_TEST_SUITE_END();

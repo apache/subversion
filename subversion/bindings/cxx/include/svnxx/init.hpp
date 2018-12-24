@@ -25,14 +25,39 @@
 #error "This is a C++ header file."
 #endif
 
-#ifndef SVNXX_HPP
-#define SVNXX_HPP
+#ifndef SVNXX_INIT_HPP
+#define SVNXX_INIT_HPP
 
-// Expose the whole API and alias the default version namespace
-#include "svnxx/init.hpp"
-#include "svnxx/exception.hpp"
-#include "svnxx/tristate.hpp"
+#include <memory>
 
-namespace SVN = ::apache::subversion::svnxx;
+namespace apache {
+namespace subversion {
+namespace svnxx {
 
-#endif  // SVNXX_HPP
+namespace detail {
+// Forward declaration of the private API context.
+class context;
+} // namespace detail
+
+/**
+ * @brief SVN++ initialization.
+ *
+ * The @c init class takes care of library initialization and
+ * teardown and maintains shared (global) internal state. You must
+ * create an @c init object before you can use the SVN++ API. It is
+ * safe to create create any number of these objects.
+ */
+class init
+{
+public:
+  init();
+
+private:
+  std::shared_ptr<detail::context> context;
+};
+
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache
+
+#endif  // SVNXX_INIT_HPP

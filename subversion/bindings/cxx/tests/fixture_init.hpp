@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,21 +17,22 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 #ifndef __cplusplus
 #error "This is a C++ header file."
 #endif
 
-#ifndef SVNXX_HPP
-#define SVNXX_HPP
+#ifndef SVNXX_TEST_FIXTURE_INIT_HPP
+#define SVNXX_TEST_FIXTURE_INIT_HPP
 
-// Expose the whole API and alias the default version namespace
 #include "svnxx/init.hpp"
-#include "svnxx/exception.hpp"
-#include "svnxx/tristate.hpp"
 
-namespace SVN = ::apache::subversion::svnxx;
+namespace {
+struct init
+{
+  apache::subversion::svnxx::init fixturizer;
+};
+} // anonymous namespace
 
-#endif  // SVNXX_HPP
+#endif  // SVNXX_TEST_FIXTURE_INIT_HPP
