@@ -1586,6 +1586,33 @@ def revert_moved_dir_partial(sbox):
   sbox.simple_move('A', 'A_')
   svntest.actions.run_and_verify_svn(None, [], 'revert', sbox.ospath('A'))
 
+@XFail()
+@Issue(4798)
+def revert_remove_added(sbox):
+  "revert_remove_added"
+
+  sbox.build(empty=True, read_only=True)
+
+  # We'll test the items named with a '1' as direct targets to 'revert',
+  # and items named with a '2' as items found by recursion.
+  sbox.simple_mkdir('D1', 'D2')
+  sbox.simple_add_text('This is a new file.',
+                       'D1/file', 'file1',
+                       'D2/file', 'file2')
+
+  run_and_verify_revert(sbox.ospaths(['D1']), ['--remove-added', '-R'],
+                        sbox.ospaths(['D1/file', 'D1']))
+  assert(not os.path.exists(sbox.ospath('D1')))
+
+  run_and_verify_revert(sbox.ospaths(['file1']), ['--remove-added'],
+                        sbox.ospaths(['file1']))
+  assert(not os.path.exists(sbox.ospath('file1')))
+
+  run_and_verify_revert(sbox.ospaths(['.']), ['--remove-added', '-R'],
+                        sbox.ospaths(['D2/file', 'D2', 'file2']))
+  assert(not os.path.exists(sbox.ospath('file2')))
+  assert(not os.path.exists(sbox.ospath('D2')))
+
 
 ########################################################################
 # Run the tests
@@ -1628,6 +1655,7 @@ test_list = [ None,
               revert_nonexistent,
               revert_obstructing_wc,
               revert_moved_dir_partial,
+              revert_remove_added,
              ]
 
 if __name__ == '__main__':
