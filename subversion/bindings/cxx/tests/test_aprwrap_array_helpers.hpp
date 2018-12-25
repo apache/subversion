@@ -28,7 +28,7 @@
 
 namespace {
 // Create a randomly-ordered array of constant strings.
-apr_array_header_t* fill_array(APR::Pool& pool)
+apr_array_header_t* fill_array(apr::pool& pool)
 {
   apr_array_header_t* a = apr_array_make(pool.get(), 0, sizeof(const char*));
   APR_ARRAY_PUSH(a, const char*) = "primus";

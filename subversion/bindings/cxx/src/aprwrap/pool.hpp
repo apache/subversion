@@ -25,6 +25,7 @@
 #define SVNXX_PRIVATE_APRWRAP_POOL_H
 
 #include <cstdlib>
+#include <memory>
 
 #include "svnxx/exception.hpp"
 #include "svnxx/noncopyable.hpp"
@@ -36,51 +37,58 @@ namespace subversion {
 namespace svnxx {
 namespace apr {
 
-// Forward declaration
-class IterationPool;
+struct delete_pool
+{
+  void operator() (apr_pool_t* pool)
+    {
+      svn_pool_destroy(pool);
+    }
+};
+
+using pool_ptr = std::unique_ptr<apr_pool_t, delete_pool>;
 
 /**
  * Encapsulates an APR pool.
  */
-class Pool : detail::noncopyable
+class pool : pool_ptr
 {
+  friend class iteration;
+  struct iteration_proxy
+  {
+    pool& proxied_pool;
+  };
+
+  static apr_pool_t* get_root_pool();
+
 public:
   /**
-   * Create a pool as a child of the applications' root pool.
+   * Create a pool as a child of the application's root pool.
    */
-  Pool()
-    : m_pool(svn_pool_create(get_root_pool()))
+  pool()
+    : pool_ptr(svn_pool_create(get_root_pool()))
     {}
-
-  /**
-   * Create a pool as a child of @a parent.
-   */
-  explicit Pool(Pool* parent) throw()
-    : m_pool(svn_pool_create(parent->m_pool))
-    {}
-
-  /**
-   * Destroy the pool.
-   */
-  ~Pool() throw()
-    {
-      svn_pool_destroy(m_pool);
-    }
-
-  /**
-   * Clear the pool.
-   */
-  void clear() throw()
-    {
-      apr_pool_clear(m_pool);
-    }
 
   /**
    * Retuurn a pool pointer that can be used by the C APIs.
    */
-  apr_pool_t* get() const throw()
+  apr_pool_t* get() const noexcept
     {
-      return m_pool;
+      return pool_ptr::get();
+    }
+
+  /**
+   * Create a pool as a child of @a parent.
+   */
+  explicit pool(const pool* parent) noexcept
+    : pool_ptr(svn_pool_create(parent->get()))
+    {}
+
+  /**
+   * Clear the pool.
+   */
+  void clear() noexcept
+    {
+      apr_pool_clear(get());
     }
 
   /**
@@ -88,9 +96,9 @@ public:
    * The contents of the allocated buffer will contain unspecified data.
    */
   template<typename T>
-  T* alloc(std::size_t count) throw()
+  T* alloc(std::size_t count) noexcept
     {
-      return static_cast<T*>(apr_palloc(m_pool, count * sizeof(T)));
+      return static_cast<T*>(apr_palloc(get(), count * sizeof(T)));
     }
 
   /**
@@ -98,14 +106,14 @@ public:
    * The contents of the allocated buffer will be initialized to zero.
    */
   template<typename T>
-  T* allocz(std::size_t count) throw()
+  T* allocz(std::size_t count) noexcept
     {
-      return static_cast<T*>(apr_pcalloc(m_pool, count * sizeof(T)));
+      return static_cast<T*>(apr_pcalloc(get(), count * sizeof(T)));
     }
-
-private:
-  static apr_pool_t* get_root_pool();
-  apr_pool_t* const m_pool;
+  operator iteration_proxy() noexcept
+    {
+      return iteration_proxy{*this};
+    }
 
 public:
   /**
@@ -114,79 +122,56 @@ public:
    * Construct this object inside a loop body in order to clear the
    * proxied pool on every iteration.
    */
-  class Iteration : detail::noncopyable
+  class iteration : detail::noncopyable
   {
   public:
     /**
      * The constructor clears the proxied pool.
      */
-    explicit Iteration(IterationPool& iterbase) throw();
+    explicit iteration(pool::iteration_proxy iterbase) noexcept
+      : proxied(iterbase.proxied_pool)
+      {
+        proxied.clear();
+      }
 
     /**
      * Returns a reference to the proxied pool.
      */
-    Pool& pool() const throw()
+    apr::pool& pool() const noexcept
       {
-        return m_pool;
+        return proxied;
       }
 
     /**
-     * Proxy method for Pool::get
+     * proxy method for pool::get()
      */
-    apr_pool_t* get() const throw()
+    apr_pool_t* get() const noexcept
       {
-        return m_pool.get();
+        return proxied.get();
       }
 
     /**
-     * Proxy method for Pool::alloc
-     */
-    template<typename T>
-    T* alloc(std::size_t count) throw()
-      {
-        return m_pool.alloc<T>(count);
-      }
-
-    /**
-     * Proxy method for Pool::allocz
+     * Proxy method for pool::alloc()
      */
     template<typename T>
-    T* allocz(std::size_t count) throw()
+    T* alloc(std::size_t count) noexcept
       {
-        return m_pool.allocz<T>(count);
+        return proxied.alloc<T>(count);
+      }
+
+    /**
+     * Proxy method for pool::allocz()
+     */
+    template<typename T>
+    T* allocz(std::size_t count) noexcept
+      {
+        return proxied.allocz<T>(count);
       }
 
   private:
-    Pool& m_pool;
+    apr::pool& proxied;
   };
 };
-
-/**
- * Pool wrapper that hides the pool implementation, except for construction.
- *
- * Construct this object outside a loop body, then within the body,
- * use Pool::Iteration to access the wrapped pool.
- */
-class IterationPool : detail::noncopyable
-{
-public:
-  IterationPool() {}
-
-  explicit IterationPool(Pool* parent) throw()
-    : m_pool(parent)
-    {}
-
-private:
-  friend class Pool::Iteration;
-  Pool m_pool;
-};
-
-// Pool::Iteration constructor implementation
-inline Pool::Iteration::Iteration(IterationPool& iterbase) throw()
-  : m_pool(iterbase.m_pool)
-{
-  m_pool.clear();
-}
 
 } // namespace apr
 } // namespace svnxx

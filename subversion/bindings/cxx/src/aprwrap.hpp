@@ -29,6 +29,7 @@
 #include "aprwrap/hash.hpp"
 #include "aprwrap/array.hpp"
 
+namespace apr = ::apache::subversion::svnxx::apr;
 namespace APR = ::apache::subversion::svnxx::apr;
 
 #endif // SVNXX_PRIVATE_APRWRAP_H

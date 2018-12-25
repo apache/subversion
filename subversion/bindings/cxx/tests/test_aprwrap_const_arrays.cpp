@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(wrap_array)
 {
   typedef APR::ConstArray<unsigned char> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   const apr_array_header_t* apr_array =
     apr_array_make(pool.get(), 0, sizeof(Array::value_type));
   BOOST_TEST_REQUIRE(apr_array != nullptr);
@@ -52,7 +52,7 @@ BOOST_AUTO_TEST_CASE(rewrap_type_mismatch)
   typedef APR::ConstArray<unsigned char> ByteArray;
   typedef APR::Array<int> IntArray;
 
-  APR::Pool pool;
+  apr::pool pool;
   BOOST_CHECK_THROW(ByteArray array(IntArray(pool).array()),
                     std::invalid_argument);
 }
@@ -61,7 +61,7 @@ BOOST_AUTO_TEST_CASE(out_of_bounds)
 {
   typedef APR::ConstArray<unsigned char> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array = Array(APR::Array<Array::value_type>(pool));
 
   BOOST_CHECK_THROW(array.at(-1), std::out_of_range);
@@ -72,7 +72,7 @@ BOOST_AUTO_TEST_CASE(indexing)
 {
   typedef APR::ConstArray<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   BOOST_TEST(array[0] == APR_ARRAY_IDX(array.array(), 0, Array::value_type));
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(checked_indexing)
 {
   typedef APR::ConstArray<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   BOOST_TEST(array.at(0) == APR_ARRAY_IDX(array.array(), 0, Array::value_type));
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(iteration)
 {
   typedef APR::ConstArray<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   struct Iteration : public Array::Iteration

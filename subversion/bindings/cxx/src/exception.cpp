@@ -169,7 +169,7 @@ int Error::code() const throw()
 
 namespace {
 const char* get_generic_message(apr_status_t error_code,
-                                const APR::Pool& scratch_pool)
+                                const apr::pool& scratch_pool)
 {
   char errorbuf[512];
 
@@ -195,7 +195,7 @@ const char* get_generic_message(apr_status_t error_code,
 
 void handle_one_error(Error::MessageList& ml, bool show_traces,
                       const detail::ErrorDescription* descr,
-                      const APR::Pool& pool)
+                      const apr::pool& result_pool)
 {
   const int error_code = descr->code();
 
@@ -203,7 +203,7 @@ void handle_one_error(Error::MessageList& ml, bool show_traces,
     {
       const char* file_utf8 = NULL;
       svn_error_t* err =
-        svn_utf_cstring_to_utf8(&file_utf8, descr->file(), pool.get());
+        svn_utf_cstring_to_utf8(&file_utf8, descr->file(), result_pool.get());
       if (err)
         {
           svn_error_clear(err);
@@ -233,7 +233,7 @@ void handle_one_error(Error::MessageList& ml, bool show_traces,
 
   const char *description = descr->what();
   if (!description)
-    description = get_generic_message(error_code, pool);
+    description = get_generic_message(error_code, result_pool);
   ml.push_back(Error::Message(error_code, std::string(description), false));
 }
 } // anonymous namespace
@@ -258,11 +258,11 @@ Error::MessageList Error::compile_messages(bool show_traces) const
   std::vector<int> empties;
   empties.reserve(max_length);
 
-  APR::IterationPool iterbase;
+  apr::pool iterbase;
   for (const detail::ErrorDescription* description = m_description.get();
        description; description = description->nested().get())
     {
-      APR::Pool::Iteration iterpool(iterbase);
+      apr::pool::iteration iterpool(iterbase);
 
       if (!description->what())
         {
@@ -280,8 +280,8 @@ Error::MessageList Error::compile_messages(bool show_traces) const
 
 const char* Error::Message::generic_message() const
 {
-  APR::Pool pool;
-  return get_generic_message(m_errno, pool);
+  apr::pool scratch_pool;
+  return get_generic_message(m_errno, scratch_pool);
 }
 
 namespace detail {

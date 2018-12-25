@@ -35,7 +35,7 @@ BOOST_AUTO_TEST_CASE(string_hash)
 {
   typedef APR::Hash<char, const char> H;
 
-  APR::Pool pool;
+  apr::pool pool;
   H hash(pool);
   hash.set("aa", "a");
   hash.set("bbb", "b");
@@ -53,7 +53,7 @@ BOOST_AUTO_TEST_CASE(fixed_string_hash)
   // of the template actually limits the length of the keys.
   typedef APR::Hash<char, const char, 2> H;
 
-  APR::Pool pool;
+  apr::pool pool;
   H hash(pool);
   hash.set("aa&qux", "a");
   hash.set("bb#foo", "b");
@@ -69,7 +69,7 @@ BOOST_AUTO_TEST_CASE(delete_element)
 {
   typedef APR::Hash<char, const char> H;
 
-  APR::Pool pool;
+  apr::pool pool;
   H hash(pool);
   hash.set("aa", "a");
   hash.set("bbb", "b");
@@ -86,7 +86,7 @@ BOOST_AUTO_TEST_CASE(iterate)
 {
   typedef APR::Hash<char, const char> H;
 
-  APR::Pool pool;
+  apr::pool pool;
   H hash(pool);
   hash.set("aa", "a");
   hash.set("bbb", "b");

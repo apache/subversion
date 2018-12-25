@@ -53,7 +53,7 @@ public:
    *
    * FIXME: should use std::function instead.
    */
-  void iterate(Iteration& callback, const Pool& scratch_pool);
+  void iterate(Iteration& callback, const pool& scratch_pool);
 
 public:
   /**
@@ -95,7 +95,7 @@ public:
     /**
      * The hash table wrapper must be able to call the protected constructor.
      */
-    friend void Hash::iterate(Hash::Iteration&, const Pool&);
+    friend void Hash::iterate(Hash::Iteration&, const pool&);
 
   private:
     const key_type m_key;       ///< Immutable reference to the key
@@ -108,18 +108,18 @@ public:
   typedef unsigned int size_type;
 
   /**
-   * Create and proxy a new APR hash table in @a pool.
+   * Create and proxy a new APR hash table in @a result_pool.
    */
-  explicit Hash(const Pool& pool) throw()
-    : m_hash(apr_hash_make(pool.get()))
+  explicit Hash(const pool& result_pool) throw()
+    : m_hash(apr_hash_make(result_pool.get()))
     {}
 
   /**
-   * Create and proxy a new APR hash table in @a pool, using @a
+   * Create and proxy a new APR hash table in @a result_pool, using @a
    * hash_func as the hash function.
    */
-  explicit Hash(const Pool& pool, apr_hashfunc_t hash_func) throw()
-    : m_hash(apr_hash_make_custom(pool.get(), hash_func))
+  explicit Hash(const pool& result_pool, apr_hashfunc_t hash_func) throw()
+    : m_hash(apr_hash_make_custom(result_pool.get(), hash_func))
     {}
 
   /**
@@ -267,18 +267,18 @@ public:
   typedef V* value_type;
 
   /**
-   * Create and proxy a new APR hash table allocated from @a pool.
+   * Create and proxy a new APR hash table allocated from @a result_pool.
    */
-  explicit Hash(const Pool& pool) throw()
-    : inherited(pool)
+  explicit Hash(const pool& result_pool) throw()
+    : inherited(result_pool)
     {}
 
   /**
-   * Create and proxy a new APR hash table allocated from @a pool,
+   * Create and proxy a new APR hash table allocated from @a result_pool,
    * using @a hash_func as the hash function.
    */
-  explicit Hash(const Pool& pool, apr_hashfunc_t hash_func) throw()
-    : inherited(pool, hash_func)
+  explicit Hash(const pool& result_pool, apr_hashfunc_t hash_func) throw()
+    : inherited(result_pool, hash_func)
     {}
 
   /**
@@ -340,7 +340,7 @@ public:
     virtual bool operator() (const Key& key, value_type value) = 0;
 
   private:
-    friend void Hash::iterate(Iteration& callback, const Pool& scratch_pool);
+    friend void Hash::iterate(Iteration& callback, const pool& scratch_pool);
 
     /**
      * Implementation of the derived virtual operator().
@@ -358,7 +358,7 @@ public:
    * @a callback for each pair.
    * Uses @a scratch_pool for temporary allocations.
    */
-  void iterate(Iteration& callback, const Pool& scratch_pool)
+  void iterate(Iteration& callback, const pool& scratch_pool)
     {
       inherited::iterate(callback, scratch_pool);
     }
