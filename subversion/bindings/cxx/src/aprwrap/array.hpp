@@ -50,11 +50,11 @@ public:
   typedef int size_type;
 
   /**
-   * Create and proxy a new APR array allocated from @a pool.
+   * Create and proxy a new APR array allocated from @a result_pool.
    * Reserve space for @a nelts array elements.
    */
-  explicit Array(const Pool& pool, size_type nelts = 0) throw()
-    : m_array(apr_array_make(pool.get(), nelts, sizeof(value_type)))
+  explicit Array(const pool& result_pool, size_type nelts = 0) throw()
+    : m_array(apr_array_make(result_pool.get(), nelts, sizeof(value_type)))
     {}
 
   /**

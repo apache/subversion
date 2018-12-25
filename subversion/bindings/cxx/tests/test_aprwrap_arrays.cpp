@@ -37,7 +37,7 @@ BOOST_AUTO_TEST_CASE(create_array)
 {
   typedef APR::Array<unsigned char> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(pool);
 
   BOOST_TEST(array.array() != nullptr);
@@ -50,7 +50,7 @@ BOOST_AUTO_TEST_CASE(wrap_array)
 {
   typedef APR::Array<unsigned char> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   apr_array_header_t* apr_array =
     apr_array_make(pool.get(), 0, sizeof(Array::value_type));
   BOOST_TEST_REQUIRE(apr_array != nullptr);
@@ -65,7 +65,7 @@ BOOST_AUTO_TEST_CASE(rewrap_type_mismatch)
   typedef APR::Array<unsigned char> ByteArray;
   typedef APR::Array<int> IntArray;
 
-  APR::Pool pool;
+  apr::pool pool;
   BOOST_CHECK_THROW(ByteArray array(IntArray(pool).array()),
                     std::invalid_argument);
 }
@@ -74,7 +74,7 @@ BOOST_AUTO_TEST_CASE(out_of_bounds)
 {
   typedef APR::Array<unsigned char> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(pool);
 
   BOOST_CHECK_THROW(array.at(-1), std::out_of_range);
@@ -85,7 +85,7 @@ BOOST_AUTO_TEST_CASE(indexing)
 {
   typedef APR::Array<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   BOOST_TEST(array[0] == APR_ARRAY_IDX(array.array(), 0, Array::value_type));
@@ -98,7 +98,7 @@ BOOST_AUTO_TEST_CASE(checked_indexing)
 {
   typedef APR::Array<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   BOOST_TEST(array.at(0) == APR_ARRAY_IDX(array.array(), 0, Array::value_type));
@@ -111,7 +111,7 @@ BOOST_AUTO_TEST_CASE(iteration)
 {
   typedef APR::Array<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   struct Iteration : public Array::Iteration
@@ -150,7 +150,7 @@ BOOST_AUTO_TEST_CASE(const_iteration)
 {
   typedef APR::Array<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   struct Iteration : public Array::ConstIteration
@@ -179,7 +179,7 @@ BOOST_AUTO_TEST_CASE(push)
 {
   typedef APR::Array<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   const Array::size_type point = array.size();
@@ -201,7 +201,7 @@ BOOST_AUTO_TEST_CASE(pop)
 {
   typedef APR::Array<const char*> Array;
 
-  APR::Pool pool;
+  apr::pool pool;
   Array array(fill_array(pool));
 
   for (Array::size_type i = 0, z = array.size(); i <= z; ++i)

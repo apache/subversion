@@ -35,7 +35,7 @@ namespace apr {
 // Pool implementation
 //
 
-apr_pool_t* Pool::get_root_pool()
+apr_pool_t* pool::get_root_pool()
 {
   auto ctx = detail::context::get();
   return ctx->get_root_pool();
@@ -46,7 +46,7 @@ apr_pool_t* Pool::get_root_pool()
 //
 
 void Hash<void, void>::iterate(Hash<void, void>::Iteration& callback,
-                               const Pool& scratch_pool)
+                               const pool& scratch_pool)
 {
   for (apr_hash_index_t* hi = apr_hash_first(scratch_pool.get(), m_hash);
        hi; hi = apr_hash_next(hi))

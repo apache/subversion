@@ -33,21 +33,21 @@ BOOST_AUTO_TEST_SUITE(aprwrap_pools,
 
 BOOST_AUTO_TEST_CASE(initialize_global_pool)
 {
-  APR::Pool pool;
+  apr::pool pool;
   BOOST_TEST(pool.get() != nullptr);
   BOOST_TEST(apr_pool_parent_get(pool.get()) != nullptr);
 }
 
 BOOST_AUTO_TEST_CASE(create_subpool)
 {
-  APR::Pool pool;
-  APR::Pool subpool(&pool);
+  apr::pool pool;
+  apr::pool subpool(&pool);
   BOOST_TEST(pool.get() == apr_pool_parent_get(subpool.get()));
 }
 
 BOOST_AUTO_TEST_CASE(typed_allocate)
 {
-  APR::Pool pool;
+  apr::pool pool;
   const unsigned char* buffer = pool.alloc<unsigned char>(1);
   BOOST_TEST(buffer != nullptr);
 }
@@ -57,7 +57,7 @@ BOOST_AUTO_TEST_CASE(typed_allocate)
 // values of uninitialized memory.
 BOOST_AUTO_TEST_CASE(typed_allocate_zerofill)
 {
-  APR::Pool pool;
+  apr::pool pool;
   static const std::size_t size = 32757;
   const unsigned char* buffer = pool.allocz<unsigned char>(size);
   BOOST_TEST_REQUIRE(buffer != nullptr);
