@@ -133,7 +133,7 @@ svn_pool_create_allocator(svn_boolean_t thread_safe)
 #endif
 
   /* By default, allocators are *not* thread-safe. We must provide a mutex
-   * if we want thread-safety for that mutex. */
+   * if we want thread-safety for that pool. */
 
 #if APR_HAS_THREADS
   if (thread_safe)
