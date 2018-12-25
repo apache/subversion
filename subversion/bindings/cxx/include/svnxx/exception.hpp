@@ -21,14 +21,11 @@
  * @endcopyright
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
-
 #ifndef SVNXX_EXCEPTION_HPP
 #define SVNXX_EXCEPTION_HPP
 
 #include <exception>
+#include <stdexcept>
 #include <memory>
 #include <string>
 #include <utility>
@@ -37,6 +34,23 @@
 namespace apache {
 namespace subversion {
 namespace svnxx {
+
+/**
+ * @brief Exception type that will be thrown when memory allocation fails.
+ */
+class allocation_failed : public std::runtime_error
+{
+public:
+  explicit allocation_failed(const std::string& what_arg)
+    : std::runtime_error(what_arg)
+    {}
+
+  explicit allocation_failed(const char* what_arg)
+    : std::runtime_error(what_arg)
+    {}
+
+  virtual ~allocation_failed() {}
+};
 
 namespace detail {
 // Forward declaration of implementation-specific structure
