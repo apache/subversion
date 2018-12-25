@@ -47,13 +47,17 @@ int handle_failed_allocation(int)
 
 apr_pool_t* create_root_pool()
 {
-  apr_allocator_t *allocator;
-  if (apr_allocator_create(&allocator) || !allocator)
+  // Create the root pool's allocator.
+  apr_allocator_t *allocator = nullptr;
+  auto status = apr_allocator_create(&allocator);
+  if (status || !allocator)
     throw allocation_failed("svn++ creating pool allocator");
 
-  apr_pool_t* root_pool;
-  apr_pool_create_ex(&root_pool, nullptr, handle_failed_allocation, allocator);
-  if (!root_pool)
+  // Create the root pool.
+  apr_pool_t* root_pool = nullptr;
+  status = apr_pool_create_ex(&root_pool, nullptr,
+                              handle_failed_allocation, allocator);
+  if (status || !root_pool)
     throw allocation_failed("svn++ creating root pool");
 
 #if APR_POOL_DEBUG
@@ -62,8 +66,10 @@ apr_pool_t* create_root_pool()
 
 #if APR_HAS_THREADS
   // SVN++ pools are always as thread safe as APR can make them.
-  apr_thread_mutex_t *mutex;
-  apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, root_pool);
+  apr_thread_mutex_t *mutex = nullptr;
+  status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, root_pool);
+  if (status || !mutex)
+    throw allocation_failed("svn++ creating allocator mutex");
   apr_allocator_mutex_set(allocator, mutex);
 #endif
 
