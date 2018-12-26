@@ -33,6 +33,9 @@
 
 #include "fixture_init.hpp"
 
+BOOST_AUTO_TEST_SUITE(exceptions,
+                      * boost::unit_test::fixture<init>());
+
 namespace {
 svn_error_t* make_error_test_error()
 {
@@ -47,24 +50,30 @@ svn_error_t* make_error_test_error()
 }
 } // anonymous namespace
 
-BOOST_AUTO_TEST_SUITE(exceptions,
-                      * boost::unit_test::fixture<init>());
-
 BOOST_AUTO_TEST_CASE(catch_error)
 {
+  BOOST_CHECK_THROW(
+      svn::detail::checked_call(make_error_test_error()),
+      svn::error);
+
   try
     {
-      SVN::detail::checked_call(make_error_test_error());
+      svn::detail::checked_call(make_error_test_error());
     }
-  catch (const SVN::Error& err)
+  catch (const svn::error& err)
     {
-      SVN::Error::MessageList ml = err.messages();
+      auto ml = err.messages();
       BOOST_TEST(ml.size() == 3);
       BOOST_TEST(ml[0].code() == SVN_ERR_UNSUPPORTED_FEATURE);
+      BOOST_TEST(ml[0].name() == "SVN_ERR_UNSUPPORTED_FEATURE");
       BOOST_TEST(ml[1].code() == SVN_ERR_BASE);
+      BOOST_TEST(ml[1].name() == "SVN_ERR_BASE");
+      BOOST_TEST(ml[1].text() == "wrapper message");
       BOOST_TEST(ml[2].code() == SVN_ERR_TEST_FAILED);
+      BOOST_TEST(ml[2].name() == "SVN_ERR_TEST_FAILED");
+      BOOST_TEST(ml[2].text() == "original message");
 
-      SVN::Error::MessageList tml = err.traced_messages();
+      auto tml = err.traced_messages();
 #ifdef SVN_DEBUG
       BOOST_TEST(tml.size() == 8);
       BOOST_TEST(tml[0].code() == SVN_ERR_UNSUPPORTED_FEATURE);
@@ -76,10 +85,10 @@ BOOST_AUTO_TEST_CASE(catch_error)
       BOOST_TEST(tml[6].code() == SVN_ERR_TEST_FAILED);
       BOOST_TEST(tml[7].code() == SVN_ERR_TEST_FAILED);
 #else  // !SVN_DEBUG
-      BOOST_TEST(3, tml.size());
-      BOOST_TEST(SVN_ERR_UNSUPPORTED_FEATURE, tml[0].code());
-      BOOST_TEST(SVN_ERR_BASE, tml[1].code());
-      BOOST_TEST(SVN_ERR_TEST_FAILED, tml[2].code());
+      BOOST_TEST(tml.size() == 3);
+      BOOST_TEST(tml[0].code() == SVN_ERR_UNSUPPORTED_FEATURE);
+      BOOST_TEST(tml[1].code() == SVN_ERR_BASE);
+      BOOST_TEST(tml[2].code() == SVN_ERR_TEST_FAILED);
 #endif // SVN_DEBUG
     }
 }
@@ -101,19 +110,28 @@ svn_error_t* make_cancel_test_error()
 
 BOOST_AUTO_TEST_CASE(catch_canceled)
 {
+  BOOST_CHECK_THROW(
+      svn::detail::checked_call(make_cancel_test_error()),
+      svn::canceled);
+
   try
     {
-      SVN::detail::checked_call(make_cancel_test_error());
+      svn::detail::checked_call(make_cancel_test_error());
     }
-  catch (const SVN::Cancelled& err)
+  catch (const svn::canceled& err)
     {
-      SVN::Error::MessageList ml = err.messages();
+      auto ml = err.messages();
       BOOST_TEST(ml.size() == 3);
       BOOST_TEST(ml[0].code() == SVN_ERR_BASE);
+      BOOST_TEST(ml[0].name() == "SVN_ERR_BASE");
+      BOOST_TEST(ml[0].text() == "wrapper message");
       BOOST_TEST(ml[1].code() == SVN_ERR_TEST_FAILED);
+      BOOST_TEST(ml[1].name() == "SVN_ERR_TEST_FAILED");
+      BOOST_TEST(ml[1].text() == "original message");
       BOOST_TEST(ml[2].code() == SVN_ERR_CANCELLED);
+      BOOST_TEST(ml[2].name() == "SVN_ERR_CANCELLED");
 
-      SVN::Error::MessageList tml = err.traced_messages();
+      auto tml = err.traced_messages();
 #ifdef SVN_DEBUG
       BOOST_TEST(tml.size() == 8);
       BOOST_TEST(tml[0].code() == SVN_ERR_BASE);

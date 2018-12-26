@@ -33,6 +33,7 @@
 #include "svnxx/exception.hpp"
 #include "svnxx/tristate.hpp"
 
+namespace svn = ::apache::subversion::svnxx;
 namespace SVN = ::apache::subversion::svnxx;
 
 #endif  // SVNXX_HPP
