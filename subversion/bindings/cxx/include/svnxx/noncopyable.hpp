@@ -21,25 +21,14 @@
  * @endcopyright
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
-
 #ifndef SVNXX_NONCOPYABLE_HPP
 #define SVNXX_NONCOPYABLE_HPP
-
-#if defined(SVNXX_USE_BOOST) && !defined(DOXYGEN)
-#include <boost/noncopyable.hpp>
-#endif
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
 namespace detail {
 
-#if defined(SVNXX_USE_BOOST) && !defined(DOXYGEN)
-using boost::noncopyable;
-#else
 namespace noncopyable_ {
 
 /**
@@ -62,7 +51,6 @@ private:
 } // namespace noncopyable_
 
 using noncopyable = noncopyable_::noncopyable;
-#endif // SVNXX_USE_BOOST
 
 } // namespace detail
 } // namespace svnxx
