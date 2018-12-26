@@ -93,6 +93,7 @@
 %apply SWIGTYPE **OUTPARAM {
   /* apr */
   apr_file_t **,
+  apr_hash_t **,
   /* svn_types.h */
   svn_commit_info_t **,
   svn_dirent_t **,
@@ -116,10 +117,16 @@
   void **credentials,
   void **iter_baton,
   void **token,
+  /* svn_checksum */
+  svn_checksum_t **,
   /* svn_client */
   svn_client_commit_info_t **,
+  svn_client_conflict_t **,
+  svn_client_conflict_option_t **,
   svn_client_ctx_t **,
   const svn_client_commit_item3_t **,
+  svn_client__shelf_t **,
+  svn_client__shelf_version_t **,
   /* svn_delta */
   const svn_delta_editor_t **,
   svn_txdelta_stream_t **,
@@ -129,6 +136,7 @@
   svn_txdelta_window_handler_t *,
 #endif
   void **handler_baton,
+  void **handler2_baton,
   void **root_baton,
   void **child_baton,
   void **file_baton,
@@ -142,6 +150,9 @@
   svn_fs_root_t **,
   svn_fs_txn_t **,
   void **contents_baton_p,
+  /* svn_io */
+  svn_io_dirent2_t **,
+  svn_stream_mark_t **,
   /* svn_ra */
   svn_ra_callbacks2_t **,
   svn_ra_plugin_t **,

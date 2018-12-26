@@ -950,6 +950,7 @@ DECLARE_SWIG_CONSTRUCTOR(info, svn_info_dup)
 DECLARE_SWIG_CONSTRUCTOR(location_segment, svn_location_segment_dup)
 DECLARE_SWIG_CONSTRUCTOR(commit_info, svn_commit_info_dup)
 DECLARE_SWIG_CONSTRUCTOR(wc_notify, svn_wc_dup_notify)
+DECLARE_SWIG_CONSTRUCTOR(client_status, svn_client_status_dup)
 
 static PyObject *convert_log_changed_path(void *value, void *ctx,
                                           PyObject *py_pool)
@@ -2802,6 +2803,39 @@ void svn_swig_py_status_func(void *baton,
   svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallFunction(function, (char *)"sO&", path,
                                       make_ob_wc_status, status)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      /* The callback shouldn't be returning anything. */
+      if (result != Py_None)
+        err = callback_bad_return_error("Not None");
+      Py_DECREF(result);
+    }
+
+  /* Our error has no place to go. :-( */
+  svn_error_clear(err);
+
+  svn_swig_py_release_py_lock();
+}
+
+void svn_swig_py_client_status_func(void *baton,
+                                    const char *path,
+                                    const svn_client_status_t *status,
+                                    apr_pool_t *scratch_pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if (function == NULL || function == Py_None)
+    return;
+
+  svn_swig_py_acquire_py_lock();
+  if ((result = PyObject_CallFunction(function, (char *)"sO&O&", path,
+                                      make_ob_client_status, status,
+                                      make_ob_pool, scratch_pool)) == NULL)
     {
       err = callback_exception_error();
     }

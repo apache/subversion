@@ -32,6 +32,11 @@ except ImportError:
 class SubversionClientTestCase(unittest.TestCase):
   """Test cases for the basic SWIG Subversion client layer"""
 
+  def assert_all_instances_of(self, iterable, instancetype):
+    """"Asserts that all object from iterable are an instance of instancetype."""
+
+    self.assertTrue(not [x for x in iterable if not isinstance(x, instancetype)])
+
   def log_message_func(self, items, pool):
     """ Simple log message provider for unit tests. """
     self.log_message_func_calls += 1
@@ -378,7 +383,7 @@ class SubversionClientTestCase(unittest.TestCase):
     providers = core.svn_auth_get_platform_specific_client_providers(None, None)
     # Not much more we can test in this minimal environment.
     self.assertTrue(isinstance(providers, list))
-    self.assertTrue(not [x for x in providers if not isinstance(x, core.svn_auth_provider_object_t)])
+    self.assert_all_instances_of(providers, core.svn_auth_provider_object_t)
 
   def testGnomeKeyring(self):
     if getattr(core, 'svn_auth_set_gnome_keyring_unlock_prompt_func', None) is None:
@@ -496,6 +501,87 @@ class SubversionClientTestCase(unittest.TestCase):
     self.notified_paths.sort()
     expected_paths.sort()
     self.assertEqual(self.notified_paths, expected_paths)
+
+  def test_conflict(self):
+    """Test conflict api."""
+
+    rev = core.svn_opt_revision_t()
+    rev.kind = core.svn_opt_revision_number
+    rev.value.number = 0
+
+    path = self.temper.alloc_empty_dir('-conflict')
+
+    client.checkout2(self.repos_uri, path, rev, rev, True, True,
+            self.client_ctx)
+
+    trunk_path = os.path.join(path, 'trunk')
+
+    # Create a conflicting path
+    os.mkdir(trunk_path)
+
+    rev.value.number = 2
+
+    client.update4((path,), rev, core.svn_depth_unknown, True, False, False,
+                   False, False, self.client_ctx)
+
+    pool = core.Pool()
+    conflict = client.conflict_get(trunk_path, self.client_ctx, pool)
+
+    self.assertTrue(isinstance(conflict, client.svn_client_conflict_t))
+
+    conflict_opts = client.conflict_tree_get_resolution_options(conflict, self.client_ctx)
+
+    self.assertTrue(isinstance(conflict_opts, list))
+    self.assert_all_instances_of(conflict_opts, client.svn_client_conflict_option_t)
+
+    pool.clear()
+
+  def test_shelf(self):
+    """Test shelf api."""
+
+    rev = core.svn_opt_revision_t()
+    rev.kind = core.svn_opt_revision_number
+    rev.value.number = 2
+
+    path = self.temper.alloc_empty_dir('-shelf')
+
+
+    client.checkout2(self.repos_uri, path, rev, rev, True, True,
+            self.client_ctx)
+
+    pool = core.Pool()
+    shelf = client._shelf_open_or_create("test1", path, self.client_ctx, pool)
+
+    self.assertTrue(isinstance(shelf, client.svn_client__shelf_t))
+
+    new_subpath = os.path.join('trunk', 'new-shelf-test.txt')
+    new_path = os.path.join(path, new_subpath)
+
+    with open(new_path, "wb") as fp:
+      fp.write("A new text file\n".encode('utf8'))
+
+    client.add5(new_path, core.svn_depth_unknown, False, False, False, True, self.client_ctx, pool)
+
+    statused_paths = []
+    def shelf_status(path, status, pool):
+      statused_paths.append(path)
+
+    shelf_version = client._shelf_save_new_version3(shelf, (new_path, ), core.svn_depth_unknown,
+                                                    None, shelf_status, None, pool)
+
+    self.assertTrue(isinstance(shelf_version, client.svn_client__shelf_version_t))
+
+    all_versions = client._shelf_get_all_versions(shelf, pool, pool)
+
+    self.assertEqual(1, len(all_versions))
+    self.assertTrue(isinstance(all_versions[0], client.svn_client__shelf_version_t))
+    self.assertEqual(shelf_version.version_number, all_versions[0].version_number)
+    self.assertEqual(1, len(statused_paths))
+    self.assertEqual(new_subpath, statused_paths[0])
+
+    client._shelf_close(shelf, pool)
+
+    pool.clear()
 
 
 def suite():

@@ -239,6 +239,33 @@ Callback: svn_client_diff_summarize_func_t
                   svn_swig_rb_changelist_receiver)
 #endif
 
+ /* -----------------------------------------------------------------------
+    Callback: svn_client_status_func_t
+    svn_client_status*()
+    svn_client__shelf_save_new_version3()
+ */
+
+#ifdef SWIGPYTHON
+%callback_typemap(svn_client_status_func_t status_func,
+                  void *status_baton,
+                  svn_swig_py_client_status_func,
+                  ,
+                  )
+
+%callback_typemap_maybenull(svn_client_status_func_t shelved_func,
+                            void *shelved_baton,
+                            svn_swig_py_client_status_func,
+                            ,
+                            )
+
+%callback_typemap_maybenull(svn_client_status_func_t not_shelved_func,
+                            void *not_shelved_baton,
+                            svn_swig_py_client_status_func,
+                            ,
+                            )
+#endif
+
+
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the
    API anywhere. Thus, SWIG doesn't generate a typemap entry for it. by

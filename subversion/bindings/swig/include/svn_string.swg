@@ -288,4 +288,8 @@ typedef struct svn_string_t svn_string_t;
 #endif
 
 /* svn_wc_get_ancestry() lacks a 'const' */
-%apply const char **OUTPUT { const char **, char **url };
+%apply const char **OUTPUT {
+  const char **,
+  char **url,
+  char **log_message
+};
