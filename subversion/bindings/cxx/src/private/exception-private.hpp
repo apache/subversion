@@ -36,10 +36,10 @@ namespace svnxx {
 namespace detail {
 
 /**
- * Given a @a err, if it is not @c NULL, convert it to a and throw an
- * Error exception; otherwise do nothing.
+ * Given a @a err, if it is not @c nullptr, convert it to a and throw an
+ * svn::error or svn::canceled exception; otherwise do nothing.
  */
-void checked_call(svn_error_t* err);
+void checked_call(svn_error_t* const err);
 
 } // namespace detail
 } // namespace svnxx

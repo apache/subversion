@@ -21,11 +21,9 @@
  * @endcopyright
  */
 
-#include <algorithm>
 #include <cstddef>
-#include <cstring>
-#include <new>
 #include <sstream>
+#include <unordered_set>
 
 #include "svnxx/exception.hpp"
 #include "private.hpp"
@@ -33,299 +31,223 @@
 
 #include "svn_error.h"
 #include "svn_utf.h"
-#include "private/svn_atomic.h"
 #include "private/svn_error_private.h"
-#include "svn_private_config.h"
-#undef TRUE
-#undef FALSE
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
 
 namespace detail {
-
-class ErrorDescription
+struct wrapped_error final
 {
-public:
-  typedef std::shared_ptr<ErrorDescription> shared_ptr;
-
-  static shared_ptr create(const char* message, int error_code,
-                           const char *loc_file, long loc_line,
-                           bool trace_link)
+  svn_error_t* err;
+  wrapped_error(svn_error_t* const& e) : err(e) {}
+  ~wrapped_error()
     {
-      const bool empty_message = (message == NULL);
-      const std::size_t length = (empty_message ? 0 : std::strlen(message));
-      void* memblock = ::operator new(length + sizeof(ErrorDescription));
-
-      ErrorDescription* description = new(memblock) ErrorDescription(
-          error_code, loc_file, loc_line, trace_link, empty_message);
-      if (length)
-        std::memcpy(description->m_message, message, length);
-      description->m_message[length] = 0;
-      return shared_ptr(description);
+      svn_error_clear(err);
     }
-
-  static shared_ptr create(const char* message, int error_code)
-    {
-      return create(message, error_code, NULL, 0, false);
-    }
-
-  ~ErrorDescription() throw() {}
-
-  const char* what() const throw() { return (m_empty ? NULL : m_message); }
-  int code() const throw() { return m_errno; }
-  const char* file() const throw() { return m_loc_file; }
-  long line() const throw() { return m_loc_line; }
-  bool trace() const throw() { return m_trace; }
-  shared_ptr& nested() throw() { return m_nested; }
-  const shared_ptr& nested() const throw() { return m_nested; }
-
-private:
-  ErrorDescription(int error_code,
-                   const char *loc_file, long loc_line,
-                   bool trace_link, bool empty_message) throw()
-    : m_loc_file(loc_file),
-      m_loc_line(loc_line),
-      m_trace(trace_link),
-      m_empty(empty_message),
-      m_errno(error_code)
-    {}
-
-  const char* m_loc_file;
-  long m_loc_line;
-  bool m_trace;
-  bool m_empty;
-
-  shared_ptr m_nested;
-
-  int m_errno;                  ///< The (SVN or APR) error code.
-  char m_message[1];            ///< The error message
 };
-
 } // namespace detail
 
 //
-// Class InternalError
+// Class error
 //
 
-InternalError::InternalError(const char* description)
-  : m_description(detail::ErrorDescription::create(description, 0))
-{}
-
-InternalError::InternalError(const InternalError& that) throw()
-  : m_description(that.m_description)
-{}
-
-InternalError& InternalError::operator=(const InternalError& that) throw()
+namespace {
+inline const char* best_message(const detail::error_ptr& wrapper)
 {
-  if (this == &that)
-    return *this;
+  if (!wrapper || !wrapper->err)
+    return "";
 
-  // This in-place destroy+copy implementation of the assignment
-  // operator is safe because both the destructor and the copy
-  // constructor do not throw exceptions.
-  this->~InternalError();
-  return *new(this) InternalError(that);
+  const apr_size_t bufsize = 512;
+  char* buf = static_cast<char*>(apr_palloc(wrapper->err->pool, bufsize));
+  return svn_err_best_message(wrapper->err, buf, bufsize);
+}
+} // anonymous namspace
+
+error::error(detail::error_ptr svn_error)
+  : detail::error_ptr(svn_error),
+    m_message(best_message(svn_error))
+{}
+
+const char* error::what() const noexcept
+{
+  return m_message;
 }
 
-InternalError::~InternalError() throw() {}
-
-const char* InternalError::what() const throw()
+int error::code() const noexcept
 {
-  return m_description->what();
+  const auto wrapper = get();
+  if (!wrapper || !wrapper->err)
+    return 0;
+
+  return static_cast<int>(wrapper->err->apr_err);
 }
 
-InternalError::InternalError(description_ptr description) throw()
-  : m_description(description)
-{}
-
-//
-// Class Error
-//
-
-Error::Error(const Error& that) throw()
-  : InternalError(that.m_description)
-{}
-
-Error& Error::operator=(const Error& that) throw()
+const char* error::name() const noexcept
 {
-  if (this == &that)
-    return *this;
-
-  // This in-place destroy+copy implementation of the assignment
-  // operator is safe because both the destructor and the copy
-  // constructor do not throw exceptions.
-  this->~Error();
-  return *new(this) Error(that);
-}
-
-Error::~Error() throw() {}
-
-int Error::code() const throw()
-{
-  return m_description->code();
+  const auto wrapper = get();
+  return svn_error_symbolic_name(!wrapper || !wrapper->err ? 0
+                                 : wrapper->err->apr_err);
 }
 
 namespace {
 const char* get_generic_message(apr_status_t error_code,
-                                const apr::pool& scratch_pool)
+                                apr::pool& result_pool)
 {
-  char errorbuf[512];
+  const std::size_t errorbuf_size = 512;
+  const auto errorbuf = result_pool.alloc<char>(errorbuf_size);
 
-  // Is this a Subversion-specific error code?
-  if (error_code > APR_OS_START_USEERR && error_code <= APR_OS_START_CANONERR)
-    return svn_strerror(error_code, errorbuf, sizeof(errorbuf));
-  // Otherwise, this must be an APR error code.
-  else
-    {
-      const char* generic;
-      svn_error_t* err = svn_utf_cstring_to_utf8(
-          &generic,
-          apr_strerror(error_code, errorbuf, sizeof(errorbuf)),
-          scratch_pool.get());
-      if (!err)
-        return generic;
-
-      // Use fuzzy transliteration instead.
-      svn_error_clear(err);
-      return svn_utf_cstring_from_utf8_fuzzy(errorbuf, scratch_pool.get());
-    }
+  // Wondering about what's in UTF-8? Yes, do keep on wondering ...
+  return svn_strerror(error_code, errorbuf, errorbuf_size);
 }
 
-void handle_one_error(Error::MessageList& ml, bool show_traces,
-                      const detail::ErrorDescription* descr,
-                      const apr::pool& result_pool)
-{
-  const int error_code = descr->code();
+//
+// Class error::message
+//
 
-  if (show_traces && descr->file())
+void handle_one_error(std::vector<error::message>& messages,
+                      bool show_traces,
+                      const svn_error_t* err,
+                      apr::pool& scratch_pool)
+{
+  struct message_builder final : public error::message
+  {
+    message_builder(apr_status_t errval, const char* errname,
+                    const std::string& message, bool trace)
+      : error::message(static_cast<int>(errval), errname, message, trace)
+      {}
+  };
+
+  const char* const symbolic_name = svn_error_symbolic_name(err->apr_err);
+  const bool tracing_link = svn_error__is_tracing_link(err);
+
+  if (show_traces && err->file)
     {
-      const char* file_utf8 = NULL;
-      svn_error_t* err =
-        svn_utf_cstring_to_utf8(&file_utf8, descr->file(), result_pool.get());
-      if (err)
+      const char* file_utf8 = nullptr;
+      svn_error_t* inner_err =
+        svn_utf_cstring_to_utf8(&file_utf8, err->file, scratch_pool.get());
+      if (inner_err)
         {
-          svn_error_clear(err);
-          file_utf8 = NULL;
+          svn_error_clear(inner_err);
+          file_utf8 = nullptr;
         }
+
       std::ostringstream buffer;
       if (file_utf8)
-        buffer << file_utf8 << ':' << descr->line();
+        buffer << file_utf8 << ':' << err->line;
       else
         buffer << "svn:<undefined>";
-      if (descr->trace())
+
+      if (tracing_link)
         buffer << ',';
       else
         {
-#ifdef SVN_DEBUG
-          if (const char* symbolic_name = svn_error_symbolic_name(error_code))
+          if (symbolic_name)
             buffer << ": (apr_err=" << symbolic_name << ')';
           else
-#endif
-            buffer << ": (apr_err=" << error_code << ')';
+            buffer << ": (apr_err=" << err->apr_err << ')';
         }
-      ml.push_back(Error::Message(error_code, buffer.str(), true));
+      messages.emplace_back(message_builder(err->apr_err, symbolic_name,
+                                            buffer.str(), true));
     }
 
-  if (descr->trace())
+  if (tracing_link)
     return;
 
-  const char *description = descr->what();
+  const char* description = err->message;
   if (!description)
-    description = get_generic_message(error_code, result_pool);
-  ml.push_back(Error::Message(error_code, std::string(description), false));
+    description = get_generic_message(err->apr_err, scratch_pool);
+  messages.emplace_back(message_builder(err->apr_err, symbolic_name,
+                                        description, false));
 }
 } // anonymous namespace
 
-Error::MessageList Error::compile_messages(bool show_traces) const
+std::vector<error::message> error::compile_messages(bool show_traces) const
 {
   // Determine the maximum size of the returned list
-  MessageList::size_type max_length = 0;
-  for (const detail::ErrorDescription* description = m_description.get();
-       description; description = description->nested().get())
+  std::vector<message>::size_type max_length = 0;
+  for (svn_error_t* err = get()->err; err; err = err->child)
     {
-      if (show_traces && description->file())
+      if (show_traces && err->file)
         ++max_length;                   // We will display an error location
-      if (!description->trace())
+      if (!svn_error__is_tracing_link(err))
         ++max_length;                   // Traces do not emit a message line
     }
-  MessageList ml;
-  ml.reserve(max_length);
 
-  // This vector holds a list of all error codes that we've printed
-  // the generic description for.  See svn_handle_error2 for details.
-  std::vector<int> empties;
+  std::vector<message> messages;
+  messages.reserve(max_length);
+
+  // This the set of error codes that we've printed the generic
+  // description for.  See svn_handle_error2 for details.
+  std::unordered_set<apr_status_t> empties;
   empties.reserve(max_length);
 
   apr::pool iterbase;
-  for (const detail::ErrorDescription* description = m_description.get();
-       description; description = description->nested().get())
+  for (svn_error_t* err = get()->err; err; err = err->child)
     {
       apr::pool::iteration iterpool(iterbase);
 
-      if (!description->what())
+      if (!err->message)
         {
           // Non-specific messages are printed only once.
-          std::vector<int>::iterator it = std::find(
-              empties.begin(), empties.end(), description->code());
-          if (it != empties.end())
+          if (empties.count(err->apr_err))
             continue;
-          empties.push_back(description->code());
+          empties.emplace(err->apr_err);
         }
-      handle_one_error(ml, show_traces, description, iterpool.pool());
+      handle_one_error(messages, show_traces, err, iterpool.get_pool());
     }
-  return ml;
+  return messages;
 }
 
-const char* Error::Message::generic_message() const
+std::string error::message::generic_text() const
 {
   apr::pool scratch_pool;
   return get_generic_message(m_errno, scratch_pool);
 }
 
-namespace detail {
-void checked_call(svn_error_t* err)
+//
+// Class cancel
+//
+
+const char* cancel::what() const noexcept
 {
+  return "svn::cancel";
+}
+
+//
+// checked_call
+//
+
+namespace detail {
+void checked_call(svn_error_t* const err)
+{
+  struct error_builder final : public error
+  {
+    explicit error_builder(error_ptr svn_error)
+      : error(svn_error)
+      {}
+  };
+
+  struct canceled_builder final : public canceled
+  {
+    explicit canceled_builder(error_ptr svn_error)
+      : canceled(svn_error)
+      {}
+  };
+
   if (!err)
     return;
 
-  struct ErrorBuilder : public Error
-  {
-    explicit ErrorBuilder (ErrorDescription::shared_ptr description)
-      : Error(description)
-      {}
-  };
-
-  struct CancelledBuilder : public Cancelled
-  {
-    explicit CancelledBuilder (ErrorDescription::shared_ptr description)
-      : Cancelled(description)
-      {}
-  };
-
-  ErrorDescription::shared_ptr description;
-  ErrorDescription::shared_ptr* current = &description;
-
-  bool cancelled = false;
+  auto wrapper = std::make_shared<wrapped_error>(err);
   for (svn_error_t* next = err; next; next = next->child)
     {
-      *current = ErrorDescription::create(next->message, next->apr_err,
-                                          next->file, next->line,
-                                          svn_error__is_tracing_link(next));
-      current = &(*current)->nested();
       if (next->apr_err == SVN_ERR_CANCELLED)
-        cancelled = true;
+        throw canceled_builder(wrapper);
     }
-  svn_error_clear(err);
-
-  if (cancelled)
-    throw CancelledBuilder(description);
-  else
-    throw ErrorBuilder(description);
+  throw error_builder(wrapper);
 }
 } // namespace detail
-
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

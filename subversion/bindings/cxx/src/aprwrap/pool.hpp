@@ -137,7 +137,7 @@ public:
     /**
      * Returns a reference to the proxied pool.
      */
-    apr::pool& pool() const noexcept
+    apr::pool& get_pool() const noexcept
       {
         return proxied;
       }
