@@ -80,6 +80,9 @@ datadir = @datadir@
 datarootdir = @datarootdir@
 localedir = @localedir@
 
+# where to install SVN++
+svnxx_libdir = @libdir@
+
 # where to install libsvn_swig_*
 swig_py_libdir = @libdir@
 swig_pl_libdir = @libdir@
@@ -322,6 +325,8 @@ INSTALL_MOD_SHARED = @APXS@ -i -S LIBEXECDIR="$(APACHE_LIBEXECDIR)" @MOD_ACTIVAT
 INSTALL_DATA = $(INSTALL) -m 644
 INSTALL_LOCALE = $(INSTALL_DATA)
 INSTALL_APACHE_MODS = @INSTALL_APACHE_MODS@
+
+INSTALL_SVNXX_LIB = $(INSTALL_LIB)
 
 ### this isn't correct yet
 INSTALL_SWIG_PY = $(INSTALL_LIB)
