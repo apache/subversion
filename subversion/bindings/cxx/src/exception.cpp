@@ -37,16 +37,49 @@ namespace apache {
 namespace subversion {
 namespace svnxx {
 
+//
+// checked_call
+//
+
 namespace detail {
-struct wrapped_error final
+
+struct svn_error final : svn_error_t {};
+
+void checked_call(svn_error_t* const err)
 {
-  svn_error_t* err;
-  wrapped_error(svn_error_t* const& e) : err(e) {}
-  ~wrapped_error()
+  if (!err)
+    return;
+
+  struct error_builder final : public error
+  {
+    explicit error_builder(error_ptr err_)
+      : error(err_)
+      {}
+  };
+
+  struct cancelled_builder final : public cancelled
+  {
+    explicit cancelled_builder(error_ptr err_)
+      : cancelled(err_)
+      {}
+  };
+
+  static const auto error_deleter =
+    [](svn_error* ptr) noexcept
+      {
+        svn_error_clear(ptr);
+      };
+
+  auto err_ptr = error_ptr(static_cast<svn_error*>(err), error_deleter);
+  for (auto next = err; next; next = next->child)
     {
-      svn_error_clear(err);
+      if (next->apr_err == SVN_ERR_CANCELLED
+          || next->apr_err == SVN_ERR_ITER_BREAK)
+        throw cancelled_builder(err_ptr);
     }
-};
+  throw error_builder(err_ptr);
+}
+
 } // namespace detail
 
 //
@@ -54,20 +87,20 @@ struct wrapped_error final
 //
 
 namespace {
-inline const char* best_message(const detail::error_ptr& wrapper)
+inline const char* best_message(const detail::error_ptr& err)
 {
-  if (!wrapper || !wrapper->err)
+  if (!err)
     return "";
 
   const apr_size_t bufsize = 512;
-  char* buf = static_cast<char*>(apr_palloc(wrapper->err->pool, bufsize));
-  return svn_err_best_message(wrapper->err, buf, bufsize);
+  char* buf = static_cast<char*>(apr_palloc(err->pool, bufsize));
+  return svn_err_best_message(err.get(), buf, bufsize);
 }
 } // anonymous namspace
 
-error::error(detail::error_ptr svn_error)
-  : detail::error_ptr(svn_error),
-    m_message(best_message(svn_error))
+error::error(detail::error_ptr err)
+  : detail::error_ptr(err),
+    m_message(best_message(err))
 {}
 
 const char* error::what() const noexcept
@@ -77,18 +110,17 @@ const char* error::what() const noexcept
 
 int error::code() const noexcept
 {
-  const auto wrapper = get();
-  if (!wrapper || !wrapper->err)
+  const auto err = detail::error_ptr::get();
+  if (!err)
     return 0;
 
-  return static_cast<int>(wrapper->err->apr_err);
+  return static_cast<int>(err->apr_err);
 }
 
 const char* error::name() const noexcept
 {
-  const auto wrapper = get();
-  return svn_error_symbolic_name(!wrapper || !wrapper->err ? 0
-                                 : wrapper->err->apr_err);
+  const auto err = detail::error_ptr::get();
+  return svn_error_symbolic_name(!err ? 0 : err->apr_err);
 }
 
 namespace {
@@ -167,7 +199,7 @@ std::vector<error::message> error::compile_messages(bool show_traces) const
 {
   // Determine the maximum size of the returned list
   std::vector<message>::size_type max_length = 0;
-  for (svn_error_t* err = get()->err; err; err = err->child)
+  for (svn_error_t* err = detail::error_ptr::get(); err; err = err->child)
     {
       if (show_traces && err->file)
         ++max_length;                   // We will display an error location
@@ -184,7 +216,7 @@ std::vector<error::message> error::compile_messages(bool show_traces) const
   empties.reserve(max_length);
 
   apr::pool iterbase;
-  for (svn_error_t* err = get()->err; err; err = err->child)
+  for (svn_error_t* err = detail::error_ptr::get(); err; err = err->child)
     {
       apr::pool::iteration iterpool(iterbase);
 
@@ -207,47 +239,14 @@ std::string error::message::generic_text() const
 }
 
 //
-// Class cancel
+// Class stop_iteration
 //
 
-const char* cancel::what() const noexcept
+const char* stop_iteration::what() const noexcept
 {
-  return "svn::cancel";
+  return "svn::stop_iteration";
 }
 
-//
-// checked_call
-//
-
-namespace detail {
-void checked_call(svn_error_t* const err)
-{
-  struct error_builder final : public error
-  {
-    explicit error_builder(error_ptr svn_error)
-      : error(svn_error)
-      {}
-  };
-
-  struct canceled_builder final : public canceled
-  {
-    explicit canceled_builder(error_ptr svn_error)
-      : canceled(svn_error)
-      {}
-  };
-
-  if (!err)
-    return;
-
-  auto wrapper = std::make_shared<wrapped_error>(err);
-  for (svn_error_t* next = err; next; next = next->child)
-    {
-      if (next->apr_err == SVN_ERR_CANCELLED)
-        throw canceled_builder(wrapper);
-    }
-  throw error_builder(wrapper);
-}
-} // namespace detail
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

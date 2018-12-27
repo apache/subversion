@@ -25,10 +25,10 @@
 #define SVNXX_EXCEPTION_HPP
 
 #include <exception>
-#include <stdexcept>
 #include <memory>
+#include <new>
+#include <stdexcept>
 #include <string>
-#include <utility>
 #include <vector>
 
 /**
@@ -58,14 +58,17 @@
  * All SVN++ exceptions are ultimately derived from @c std:::exception.
  *
  * * <em>std::exception</em>
- *   + <em>std::runtime_error</em>
+ *   + <em>std::bad_alloc</em>
  *     - apache::subversion::svnxx::allocation_failed\n
  *       Thrown when memory cannot be allocated from an APR pool
- *   + apache::subversion::svnxx::error\n
- *     Thrown when an operation failed (see @ref svn_error_t)
- *     - apache::subversion::svnxx::canceled\n
- *       Thrown when an operation was canceled
- *   + apache::subversion::svnxx::cancel\n
+ *   + <em>std::runtime_error</em>
+ *     - apache::subversion::svnxx::error\n
+ *       Thrown when an operation failed (see @ref svn_error_t)
+ *       - apache::subversion::svnxx::cancelled\n
+ *         Thrown when an operation was cancelled, including by the
+ *         user code throwing a @c stop_iteration exception (see
+ *         below)
+ *   + apache::subversion::svnxx::stop_iteration\n
  *     Thrown by user callbacks to terminate iteration
  *
  * @{
@@ -78,23 +81,28 @@ namespace svnxx {
 /**
  * @brief Exception type that will be thrown when memory allocation fails.
  */
-class allocation_failed : public std::runtime_error
+class allocation_failed : public std::bad_alloc
 {
 public:
-  explicit allocation_failed(const std::string& what_arg)
-    : std::runtime_error(what_arg)
+  virtual ~allocation_failed() noexcept {}
+
+  virtual const char* what() const noexcept override
+    {
+      return reason;
+    }
+
+protected:
+  explicit allocation_failed(const char* what_arg) noexcept
+    : reason(what_arg)
     {}
 
-  explicit allocation_failed(const char* what_arg)
-    : std::runtime_error(what_arg)
-    {}
-
-  virtual ~allocation_failed() {}
+private:
+  const char* reason;
 };
 
 namespace detail {
-struct wrapped_error;
-using error_ptr = std::shared_ptr<wrapped_error>;
+struct svn_error;
+using error_ptr = std::shared_ptr<svn_error>;
 } // namespace detail
 
 /**
@@ -110,10 +118,10 @@ public:
    * Returns the message associated with the top-level error that
    * caused the exception.
    *
-   * @note the returned string is valid onlu as long as the @c error
+   * @note the returned string is valid only as long as this @c error
    *       object is in scope.
    */
-  virtual const char* what() const noexcept;
+  virtual const char* what() const noexcept override;
 
   /**
    * Returns the error code associated with the top-level error that
@@ -198,7 +206,7 @@ public:
     }
 
 protected:
-  error(detail::error_ptr svn_error);
+  error(detail::error_ptr err);
   const char* const m_message;
   std::vector<message> compile_messages(bool show_traces) const;
 };
@@ -207,14 +215,14 @@ protected:
  * Thrown instead of Error when the error chain contains a
  * @c SVN_ERR_CANCELLED error code.
  */
-class canceled : public error
+class cancelled : public error
 {
 public:
-  virtual ~canceled() {}
+  virtual ~cancelled() {}
 
 protected:
-  canceled(detail::error_ptr svn_error)
-    : error(svn_error)
+  cancelled(detail::error_ptr err)
+    : error(err)
     {}
 };
 
@@ -222,12 +230,12 @@ protected:
  * User code should throw this exception from callbacks to
  * cancel an operation.
  */
-class cancel : public std::exception
+class stop_iteration : public std::exception
 {
 public:
-  cancel() {}
-  virtual ~cancel() {}
-  virtual const char* what() const noexcept;
+  stop_iteration() {}
+  virtual ~stop_iteration() {}
+  virtual const char* what() const noexcept override;
 };
 
 } // namespace svnxx

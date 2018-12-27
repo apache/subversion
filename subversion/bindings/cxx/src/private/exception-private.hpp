@@ -37,10 +37,18 @@ namespace detail {
 
 /**
  * Given a @a err, if it is not @c nullptr, convert it to a and throw an
- * svn::error or svn::canceled exception; otherwise do nothing.
+ * svn::error or svn::cancelled exception; otherwise do nothing.
  */
 void checked_call(svn_error_t* const err);
 
+/**
+ * Call this when a callback throws svn::stop_iteration to return
+ * an appropriate error.
+ */
+inline svn_error_t* iteration_etopped()
+{
+  return svn_error_create(SVN_ERR_ITER_BREAK, nullptr, nullptr);
+}
 } // namespace detail
 } // namespace svnxx
 } // namespace subversion
