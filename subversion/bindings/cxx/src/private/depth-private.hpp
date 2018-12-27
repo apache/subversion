@@ -21,12 +21,31 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_HPP
-#define SVNXX_PRIVATE_PRIVATE_HPP
+#ifndef SVNXX_PRIVATE_DEPTH_HPP
+#define SVNXX_PRIVATE_DEPTH_HPP
 
-#include "private/depth-private.hpp"
-#include "private/exception-private.hpp"
-#include "private/strings-private.hpp"
-#include "private/tristate-private.hpp"
+#include "svnxx/depth.hpp"
 
-#endif // SVNXX_PRIVATE_PRIVATE_HPP
+#include "svn_types.h"
+
+namespace apache {
+namespace subversion {
+namespace svnxx {
+namespace detail {
+
+/**
+ * Convert @a d to an svn_depth_t.
+ */
+svn_depth_t convert(depth d);
+
+/**
+ * Convert @a d to an svn::depth.
+ */
+depth convert(svn_depth_t d);
+
+} // namespace detail
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache
+
+#endif // SVNXX_PRIVATE_DEPTH_HPP
