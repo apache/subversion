@@ -25,6 +25,7 @@
 #define SVNXX_PRIVATE_APRWRAP_POOL_H
 
 #include <cstdlib>
+#include <functional>
 #include <memory>
 
 #include "svnxx/exception.hpp"
@@ -60,6 +61,22 @@ class pool : pool_ptr
 
   static apr_pool_t* get_root_pool();
 
+  struct allocation_size_overflowed final : public allocation_failed
+  {
+    allocation_size_overflowed() noexcept
+    : allocation_failed("svn++ allocation size overflowed")
+      {}
+  };
+
+  using allocator = std::function<void*(apr_pool_t*,apr_size_t)>;
+  template<typename T>
+  T* safe_alloc(std::size_t count, allocator alloc)
+    {
+      if (count > APR_SIZE_MAX / sizeof(T))
+        throw allocation_size_overflowed();
+      return static_cast<T*>(alloc(get(), count * sizeof(T)));
+    }
+
 public:
   /**
    * Create a pool as a child of the application's root pool.
@@ -79,14 +96,14 @@ public:
   /**
    * Create a pool as a child of @a parent.
    */
-  explicit pool(const pool* parent) noexcept
+  explicit pool(const pool* parent)
     : pool_ptr(svn_pool_create(parent->get()))
     {}
 
   /**
    * Clear the pool.
    */
-  void clear() noexcept
+  void clear()
     {
       apr_pool_clear(get());
     }
@@ -96,9 +113,14 @@ public:
    * The contents of the allocated buffer will contain unspecified data.
    */
   template<typename T>
-  T* alloc(std::size_t count) noexcept
+  T* alloc(std::size_t count)
     {
-      return static_cast<T*>(apr_palloc(get(), count * sizeof(T)));
+      // apr_palloc may be a macro, so wrap it in a closure.
+      static const auto palloc = [](apr_pool_t* p, apr_size_t size)
+                                   {
+                                     return apr_palloc(p, size);
+                                   };
+      return safe_alloc<T>(count, palloc);
     }
 
   /**
@@ -106,10 +128,16 @@ public:
    * The contents of the allocated buffer will be initialized to zero.
    */
   template<typename T>
-  T* allocz(std::size_t count) noexcept
+  T* allocz(std::size_t count)
     {
-      return static_cast<T*>(apr_pcalloc(get(), count * sizeof(T)));
+      // apr_pcalloc may be a macro, so wrap it in a closure.
+      static const auto pcalloc = [](apr_pool_t* p, apr_size_t size)
+                                    {
+                                      return apr_pcalloc(p, size);
+                                    };
+      return safe_alloc<T>(count, pcalloc);
     }
+
   operator iteration_proxy() noexcept
     {
       return iteration_proxy{*this};
@@ -128,7 +156,7 @@ public:
     /**
      * The constructor clears the proxied pool.
      */
-    explicit iteration(pool::iteration_proxy iterbase) noexcept
+    explicit iteration(pool::iteration_proxy iterbase)
       : proxied(iterbase.proxied_pool)
       {
         proxied.clear();
@@ -154,7 +182,7 @@ public:
      * Proxy method for pool::alloc()
      */
     template<typename T>
-    T* alloc(std::size_t count) noexcept
+    T* alloc(std::size_t count)
       {
         return proxied.alloc<T>(count);
       }
@@ -163,7 +191,7 @@ public:
      * Proxy method for pool::allocz()
      */
     template<typename T>
-    T* allocz(std::size_t count) noexcept
+    T* allocz(std::size_t count)
       {
         return proxied.allocz<T>(count);
       }

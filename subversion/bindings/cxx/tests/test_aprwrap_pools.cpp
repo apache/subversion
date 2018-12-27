@@ -21,12 +21,14 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include <algorithm>
-#include <stdexcept>
+#include <cstdlib>
 
+#include "svnxx/exception.hpp"
 #include "../src/aprwrap.hpp"
 
 #include "fixture_init.hpp"
+
+namespace svn = ::apache::subversion::svnxx;
 
 BOOST_AUTO_TEST_SUITE(aprwrap_pools,
                       * boost::unit_test::fixture<init>());
@@ -62,6 +64,13 @@ BOOST_AUTO_TEST_CASE(typed_allocate_zerofill)
   const unsigned char* buffer = pool.allocz<unsigned char>(size);
   BOOST_TEST_REQUIRE(buffer != nullptr);
   BOOST_TEST(std::count(buffer, buffer + size, 0) == size);
+}
+
+BOOST_AUTO_TEST_CASE(overflow)
+{
+  apr::pool pool;
+  BOOST_CHECK_THROW(pool.alloc<long>(~std::size_t(0)), svn::allocation_failed);
+  BOOST_CHECK_THROW(pool.allocz<int>(~std::size_t(0)), svn::allocation_failed);
 }
 
 BOOST_AUTO_TEST_SUITE_END();
