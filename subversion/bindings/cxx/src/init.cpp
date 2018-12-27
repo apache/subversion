@@ -40,9 +40,16 @@ init::init()
 namespace detail {
 
 namespace {
+struct allocation_failed_builder final : public allocation_failed
+{
+  explicit allocation_failed_builder(const char* what_arg) noexcept
+    : allocation_failed(what_arg)
+    {}
+};
+
 int handle_failed_allocation(int)
 {
-  throw allocation_failed("");
+  throw allocation_failed_builder("svn::allocation_failed");
 }
 
 apr_pool_t* create_root_pool()
@@ -51,14 +58,14 @@ apr_pool_t* create_root_pool()
   apr_allocator_t *allocator = nullptr;
   auto status = apr_allocator_create(&allocator);
   if (status || !allocator)
-    throw allocation_failed("svn++ creating pool allocator");
+    throw allocation_failed_builder("svn++ creating pool allocator");
 
   // Create the root pool.
   apr_pool_t* root_pool = nullptr;
   status = apr_pool_create_ex(&root_pool, nullptr,
                               handle_failed_allocation, allocator);
   if (status || !root_pool)
-    throw allocation_failed("svn++ creating root pool");
+    throw allocation_failed_builder("svn++ creating root pool");
 
 #if APR_POOL_DEBUG
   apr_pool_tag(root_pool, "svn++ root pool");
@@ -69,7 +76,7 @@ apr_pool_t* create_root_pool()
   apr_thread_mutex_t *mutex = nullptr;
   status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, root_pool);
   if (status || !mutex)
-    throw allocation_failed("svn++ creating allocator mutex");
+    throw allocation_failed_builder("svn++ creating allocator mutex");
   apr_allocator_mutex_set(allocator, mutex);
 #endif
 

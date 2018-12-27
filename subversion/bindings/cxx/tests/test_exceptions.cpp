@@ -50,6 +50,13 @@ svn_error_t* make_error_test_error()
 }
 } // anonymous namespace
 
+BOOST_AUTO_TEST_CASE(thrown_error)
+{
+  BOOST_CHECK_THROW(
+      svn::detail::checked_call(make_error_test_error()),
+      svn::error);
+}
+
 BOOST_AUTO_TEST_CASE(catch_error)
 {
   BOOST_CHECK_THROW(
@@ -62,6 +69,10 @@ BOOST_AUTO_TEST_CASE(catch_error)
     }
   catch (const svn::error& err)
     {
+      BOOST_TEST(err.code() == SVN_ERR_UNSUPPORTED_FEATURE);
+      BOOST_TEST(err.name() == "SVN_ERR_UNSUPPORTED_FEATURE");
+      BOOST_TEST(err.what() == "Trying to use an unsupported feature");
+
       auto ml = err.messages();
       BOOST_TEST(ml.size() == 3);
       BOOST_TEST(ml[0].code() == SVN_ERR_UNSUPPORTED_FEATURE);
@@ -93,6 +104,21 @@ BOOST_AUTO_TEST_CASE(catch_error)
     }
 }
 
+BOOST_AUTO_TEST_CASE(propagate_error)
+{
+  std::exception_ptr xptr;
+  try
+    {
+      svn::detail::checked_call(make_error_test_error());
+    }
+  catch (...)
+    {
+      xptr =  std::current_exception();
+    }
+  BOOST_REQUIRE(xptr);
+  BOOST_CHECK_THROW(std::rethrow_exception(xptr), svn::error);
+}
+
 
 namespace {
 svn_error_t* make_cancel_test_error()
@@ -108,18 +134,25 @@ svn_error_t* make_cancel_test_error()
 }
 } // anonymous namespace
 
-BOOST_AUTO_TEST_CASE(catch_canceled)
+BOOST_AUTO_TEST_CASE(thtrown_cancelled)
 {
   BOOST_CHECK_THROW(
       svn::detail::checked_call(make_cancel_test_error()),
-      svn::canceled);
+      svn::cancelled);
+}
 
+BOOST_AUTO_TEST_CASE(catch_cancelled)
+{
   try
     {
       svn::detail::checked_call(make_cancel_test_error());
     }
-  catch (const svn::canceled& err)
+  catch (const svn::cancelled& err)
     {
+      BOOST_TEST(err.code() == SVN_ERR_BASE);
+      BOOST_TEST(err.name() == "SVN_ERR_BASE");
+      BOOST_TEST(err.what() == "wrapper message");
+
       auto ml = err.messages();
       BOOST_TEST(ml.size() == 3);
       BOOST_TEST(ml[0].code() == SVN_ERR_BASE);
@@ -148,6 +181,48 @@ BOOST_AUTO_TEST_CASE(catch_canceled)
       BOOST_TEST(tml[1].code() == SVN_ERR_TEST_FAILED);
       BOOST_TEST(tml[2].code() == SVN_ERR_CANCELLED);
 #endif // SVN_DEBUG
+    }
+}
+
+BOOST_AUTO_TEST_CASE(propagate_cancelled)
+{
+  std::exception_ptr xptr;
+  try
+    {
+      svn::detail::checked_call(make_cancel_test_error());
+    }
+  catch (...)
+    {
+      xptr =  std::current_exception();
+    }
+  BOOST_REQUIRE(xptr);
+  BOOST_CHECK_THROW(std::rethrow_exception(xptr), svn::cancelled);
+}
+
+BOOST_AUTO_TEST_CASE(iteration_stopped_cancels)
+{
+  BOOST_CHECK_THROW(
+      svn::detail::checked_call(svn::detail::iteration_etopped()),
+      svn::cancelled);
+}
+
+BOOST_AUTO_TEST_CASE(iteration_stopped)
+{
+  try
+    {
+      svn::detail::checked_call(svn::detail::iteration_etopped());
+    }
+  catch (const svn::cancelled& err)
+    {
+      BOOST_TEST(err.code() == SVN_ERR_ITER_BREAK);
+      BOOST_TEST(err.name() == "SVN_ERR_ITER_BREAK");
+      BOOST_TEST(err.what() == "Iteration terminated before completion");
+
+      auto ml = err.messages();
+      BOOST_TEST(ml.size() == 1);
+      BOOST_TEST(ml[0].code() == SVN_ERR_ITER_BREAK);
+      BOOST_TEST(ml[0].name() == "SVN_ERR_ITER_BREAK");
+      BOOST_TEST(ml[0].text() == "Iteration terminated before completion");
     }
 }
 
