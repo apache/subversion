@@ -58,7 +58,7 @@ class Callbacks:
                                       svn.core.SVN_AUTH_PARAM_DEFAULT_PASSWORD,
                                       password)
     def open_tmp_file(self, pool):
-      path = '/'.join([self.wc, svn.wc.get_adm_dir(pool), 'tmp'])
+      path = b'/'.join([self.wc, svn.wc.get_adm_dir(pool), b'tmp'])
       (fd, fn) = tempfile.mkstemp(dir=path)
       os.close(fd)
       return fn

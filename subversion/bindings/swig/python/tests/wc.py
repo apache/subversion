@@ -56,10 +56,10 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       wc.entry(self.path, self.wc, True)
 
   def test_lock(self):
-      readme_path = '%s/trunk/README.txt' % self.path
+      readme_path = b'%s/trunk/README.txt' % self.path
 
       lock = core.svn_lock_create(core.Pool())
-      lock.token = 'http://svnbook.org/nightly/en/svn.advanced.locking.html'
+      lock.token = b'http://svnbook.org/nightly/en/svn.advanced.locking.html'
 
       wc.add_lock(readme_path, lock, self.wc)
       self.assertEqual(True, wc.adm_locked(self.wc))
@@ -73,23 +73,23 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assertEqual(self.path, wc.adm_access_path(self.wc))
 
   def test_is_adm_dir(self):
-      self.assertTrue(wc.is_adm_dir(".svn"))
-      self.assertFalse(wc.is_adm_dir(".foosvn"))
+      self.assertTrue(wc.is_adm_dir(b".svn"))
+      self.assertFalse(wc.is_adm_dir(b".foosvn"))
 
   def test_get_adm_dir(self):
-      self.assertTrue(isinstance(wc.get_adm_dir(), str))
+      self.assertTrue(isinstance(wc.get_adm_dir(), bytes))
 
   def test_set_adm_dir(self):
-      self.assertRaises(SubversionException, wc.set_adm_dir, ".foobar")
-      self.assertTrue(wc.is_adm_dir(".svn"))
-      self.assertFalse(wc.is_adm_dir("_svn"))
-      self.assertFalse(wc.is_adm_dir(".foobar"))
-      wc.set_adm_dir("_svn")
-      self.assertTrue(wc.is_adm_dir("_svn"))
-      self.assertEqual("_svn", wc.get_adm_dir())
-      wc.set_adm_dir(".svn")
-      self.assertFalse(wc.is_adm_dir("_svn"))
-      self.assertEqual(".svn", wc.get_adm_dir())
+      self.assertRaises(SubversionException, wc.set_adm_dir, b".foobar")
+      self.assertTrue(wc.is_adm_dir(b".svn"))
+      self.assertFalse(wc.is_adm_dir(b"_svn"))
+      self.assertFalse(wc.is_adm_dir(b".foobar"))
+      wc.set_adm_dir(b"_svn")
+      self.assertTrue(wc.is_adm_dir(b"_svn"))
+      self.assertEqual(b"_svn", wc.get_adm_dir())
+      wc.set_adm_dir(b".svn")
+      self.assertFalse(wc.is_adm_dir(b"_svn"))
+      self.assertEqual(b".svn", wc.get_adm_dir())
 
   def test_init_traversal_info(self):
       wc.init_traversal_info()
@@ -122,7 +122,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
               pass
 
       # Remove trunk/README.txt
-      readme_path = '%s/trunk/README.txt' % self.path
+      readme_path = b'%s/trunk/README.txt' % self.path
       self.assertTrue(os.path.exists(readme_path))
       os.remove(readme_path)
 
@@ -134,7 +134,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
       # Check that the report finished
       self.assertTrue(reporter.finished_report)
-      self.assertEqual([''], set_paths)
+      self.assertEqual([b''], set_paths)
       self.assertEqual(1, len(infos))
 
       # Check content of infos object
@@ -179,42 +179,42 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
       self.assertTrue(len(paths) > 0)
 
   def test_is_normal_prop(self):
-      self.assertFalse(wc.is_normal_prop('svn:wc:foo:bar'))
-      self.assertFalse(wc.is_normal_prop('svn:entry:foo:bar'))
-      self.assertTrue(wc.is_normal_prop('svn:foo:bar'))
-      self.assertTrue(wc.is_normal_prop('foreign:foo:bar'))
+      self.assertFalse(wc.is_normal_prop(b'svn:wc:foo:bar'))
+      self.assertFalse(wc.is_normal_prop(b'svn:entry:foo:bar'))
+      self.assertTrue(wc.is_normal_prop(b'svn:foo:bar'))
+      self.assertTrue(wc.is_normal_prop(b'foreign:foo:bar'))
 
   def test_is_wc_prop(self):
-      self.assertTrue(wc.is_wc_prop('svn:wc:foo:bar'))
-      self.assertFalse(wc.is_wc_prop('svn:entry:foo:bar'))
-      self.assertFalse(wc.is_wc_prop('svn:foo:bar'))
-      self.assertFalse(wc.is_wc_prop('foreign:foo:bar'))
+      self.assertTrue(wc.is_wc_prop(b'svn:wc:foo:bar'))
+      self.assertFalse(wc.is_wc_prop(b'svn:entry:foo:bar'))
+      self.assertFalse(wc.is_wc_prop(b'svn:foo:bar'))
+      self.assertFalse(wc.is_wc_prop(b'foreign:foo:bar'))
 
   def test_is_entry_prop(self):
-      self.assertTrue(wc.is_entry_prop('svn:entry:foo:bar'))
-      self.assertFalse(wc.is_entry_prop('svn:wc:foo:bar'))
-      self.assertFalse(wc.is_entry_prop('svn:foo:bar'))
-      self.assertFalse(wc.is_entry_prop('foreign:foo:bar'))
+      self.assertTrue(wc.is_entry_prop(b'svn:entry:foo:bar'))
+      self.assertFalse(wc.is_entry_prop(b'svn:wc:foo:bar'))
+      self.assertFalse(wc.is_entry_prop(b'svn:foo:bar'))
+      self.assertFalse(wc.is_entry_prop(b'foreign:foo:bar'))
 
   def test_get_prop_diffs(self):
-      wc.prop_set("foreign:foo", "bla", self.path, self.wc)
-      self.assertEqual([{"foreign:foo": "bla"}, {}],
+      wc.prop_set(b"foreign:foo", b"bla", self.path, self.wc)
+      self.assertEqual([{b"foreign:foo": b"bla"}, {}],
               wc.get_prop_diffs(self.path, self.wc))
 
   def test_get_pristine_copy_path(self):
-      path_to_file = '%s/trunk/README.txt' % self.path
+      path_to_file = b'%s/trunk/README.txt' % self.path
       path_to_text_base = wc.get_pristine_copy_path(path_to_file)
-      with open(path_to_text_base) as fp:
+      with open(path_to_text_base, 'rb') as fp:
           text_base = fp.read()
       # TODO: This test should modify the working file first, to ensure the
       # path isn't just the path to the working file.
-      self.assertEqual(text_base, 'A test.\n')
+      self.assertEqual(text_base, b'A test.\n')
 
   def test_entries_read(self):
       entries = wc.entries_read(self.wc, True)
       keys = core._as_list(entries.keys())
       keys.sort()
-      self.assertEqual(['', 'branches', 'tags', 'trunk'], keys)
+      self.assertEqual([b'', b'branches', b'tags', b'trunk'], keys)
 
   def test_get_ignores(self):
       self.assertTrue(isinstance(wc.get_ignores(None, self.wc), list))
@@ -222,9 +222,9 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_commit(self):
     # Replace README.txt's contents, using binary mode so we know the
     # exact contents even on Windows, and therefore the MD5 checksum.
-    readme_path = '%s/trunk/README.txt' % self.path
+    readme_path = b'%s/trunk/README.txt' % self.path
     fp = open(readme_path, 'wb')
-    fp.write('hello\n'.encode('UTF-8'))
+    fp.write(b'hello\n')
     fp.close()
 
     # Setup ra_ctx.
@@ -236,7 +236,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     commit_info = [None]
     def commit_cb(_commit_info, pool):
       commit_info[0] = _commit_info
-    (editor, edit_baton) = ra.get_commit_editor2(ra_ctx, 'log message',
+    (editor, edit_baton) = ra.get_commit_editor2(ra_ctx, b'log message',
                                                  commit_cb,
                                                  None,
                                                  False)
@@ -250,7 +250,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                                                   False, editor, baton, pool)
       return baton
     try:
-      delta.path_driver(editor, edit_baton, -1, ['trunk/README.txt'],
+      delta.path_driver(editor, edit_baton, -1, [b'trunk/README.txt'],
                         driver_cb)
       editor.close_edit(edit_baton)
     except:
@@ -265,8 +265,8 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     (commit_info,) = commit_info
 
     # Assert the commit.
-    self.assertEqual(binascii.b2a_hex(checksum).decode('UTF-8'),
-                      'b1946ac92492d2347c6235b4d2611184')
+    self.assertEqual(binascii.b2a_hex(checksum),
+                      b'b1946ac92492d2347c6235b4d2611184')
     self.assertEqual(commit_info.revision, 13)
 
     # Bump working copy state.
@@ -290,14 +290,14 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     url = self.repos_uri
 
     # cause file_changed: Replace README.txt's contents.
-    readme_path = '%s/trunk/README.txt' % self.path
-    fp = open(readme_path, 'w')
-    fp.write('hello\n')
+    readme_path = b'%s/trunk/README.txt' % self.path
+    fp = open(readme_path, 'wb')
+    fp.write(b'hello\n')
     fp.close()
     # cause file_added: Create readme3.
-    readme3_path = '%s/trunk/readme3' % self.path
-    fp = open(readme3_path, 'w')
-    fp.write('hello\n')
+    readme3_path = b'%s/trunk/readme3' % self.path
+    fp = open(readme3_path, 'wb')
+    fp.write(b'hello\n')
     fp.close()
     wc.add2(readme3_path,
             wc.adm_probe_retrieve(self.wc,
@@ -307,7 +307,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
             None,                     # notify_func
             pool)
     # cause file_deleted: Delete README2.txt.
-    readme2_path = '%s/trunk/README2.txt' % self.path
+    readme2_path = b'%s/trunk/README2.txt' % self.path
     wc.delete3(readme2_path,
                wc.adm_probe_retrieve(self.wc,
                                      os.path.dirname(readme2_path), pool),
@@ -316,8 +316,8 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                False,                 # keep_local
                pool)
     # cause dir_props_changed: ps testprop testval dir1/dir2
-    dir2_path = '%s/trunk/dir1/dir2' % self.path
-    wc.prop_set2('testprop', 'testval', dir2_path,
+    dir2_path = b'%s/trunk/dir1/dir2' % self.path
+    wc.prop_set2(b'testprop', b'testval', dir2_path,
                  wc.adm_probe_retrieve(self.wc,
                                        os.path.dirname(dir2_path), pool),
                  False,               # skip_checks
@@ -338,8 +338,8 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     def write_diff(path, left, right):
       options = svn.diff.file_options_create()
       diff = svn.diff.file_diff_2(left, right, options, pool)
-      original_header = modified_header = ''
-      encoding = 'utf8'
+      original_header = modified_header = b''
+      encoding = b'utf8'
       relative_to_dir = None
       bio = BytesIO()
       svn.diff.file_output_unified3(bio, diff,
@@ -347,7 +347,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                                     original_header, modified_header,
                                     encoding, relative_to_dir,
                                     options.show_c_function, pool)
-      got_diffs[path[len(self.path) + 1:]] = bio.getvalue().decode('UTF-8').splitlines()
+      got_diffs[path[len(self.path) + 1:]] = bio.getvalue().splitlines()
 
     # Diff callbacks that call props_changed and write_diff.
     contentstate = propstate = state = wc.notify_state_unknown
@@ -379,7 +379,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
 
     # Setup wc diff editor.
     (editor, edit_baton) = wc.get_diff_editor4(
-      self.wc, '', diff_callbacks, depth,
+      self.wc, b'', diff_callbacks, depth,
       False,                    # ignore_ancestry
       False,                    # use_text_base
       False,                    # reverse_order
@@ -396,39 +396,39 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
     (reporter, report_baton) = ra.do_diff3(
       ra_ctx,
       head,                     # versus_url revision
-      '',                       # diff_target
+      b'',                       # diff_target
       depth,
       False,                    # ignore_ancestry
       True,                     # text_deltas
       url,                      # versus_url
       editor, edit_baton, pool)
     # Report wc state (pretty plain).
-    reporter.set_path(report_baton, '', head, depth,
+    reporter.set_path(report_baton, b'', head, depth,
                       False,    # start_empty
                       None,     # lock_token
                       pool)
     reporter.finish_report(report_baton, pool)
 
     # Assert we got the right diff.
-    expected_prop_changes = [('trunk/dir1/dir2',
-                              'testprop', 'testval')]
+    expected_prop_changes = [(b'trunk/dir1/dir2',
+                              b'testprop', b'testval')]
     expected_diffs = {
-      'trunk/readme3':
-        ['--- ',
-         '+++ ',
-         '@@ -0,0 +1 @@',
-         '+hello'],
-      'trunk/README.txt':
-        ['--- ',
-         '+++ ',
-         '@@ -1 +1 @@',
-         '-A test.',
-         '+hello'],
-      'trunk/README2.txt':
-        ['--- ',
-         '+++ ',
-         '@@ -1 +0,0 @@',
-         '-A test.'],
+      b'trunk/readme3':
+        [b'--- ',
+         b'+++ ',
+         b'@@ -0,0 +1 @@',
+         b'+hello'],
+      b'trunk/README.txt':
+        [b'--- ',
+         b'+++ ',
+         b'@@ -1 +1 @@',
+         b'-A test.',
+         b'+hello'],
+      b'trunk/README2.txt':
+        [b'--- ',
+         b'+++ ',
+         b'@@ -1 +0,0 @@',
+         b'-A test.'],
       }
     self.assertEqual(got_prop_changes, expected_prop_changes)
     self.assertEqual(got_diffs, expected_diffs)

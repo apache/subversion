@@ -119,7 +119,7 @@
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
     for (i = 0; i < nelts; ++i, ++ppitem) {
         PyObject *item = PyTuple_New(2);
-        PyObject *name = PyStr_FromStringAndSize((*ppitem)->node_name->data,
+        PyObject *name = PyBytes_FromStringAndSize((*ppitem)->node_name->data,
                                                     (*ppitem)->node_name->len);
         PyObject *hash = svn_swig_py_prophash_to_dict((*ppitem)->prop_hash);
 

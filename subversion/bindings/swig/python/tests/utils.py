@@ -47,14 +47,14 @@ class Temper(object):
   def alloc_empty_dir(self, suffix = ""):
     """Create an empty temporary directory. Returns its full path
        in canonical internal form."""
-    temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix))
+    temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix).encode('UTF-8'))
     self._cleanup_list.append((temp_dir_name, core.svn_io_remove_dir))
     return temp_dir_name
 
   def alloc_empty_repo(self, suffix = ""):
     """Create an empty repository. Returns a tuple of its handle, path and
        file: URI in canonical internal form."""
-    temp_path = tempfile.mkdtemp(suffix)
+    temp_path = tempfile.mkdtemp(suffix).encode('UTF-8')
     repo_path = core.svn_dirent_internal_style(temp_path)
     repo_uri = core.svn_uri_canonicalize(file_uri_for_path(temp_path))
     handle = repos.create(repo_path, None, None, None, None)
@@ -74,9 +74,9 @@ class Temper(object):
 
 def file_uri_for_path(path):
   """Return the file: URI corresponding to the given path."""
-  uri_path = pathname2url(path)
+  uri_path = pathname2url(path).encode('UTF-8')
 
   # pathname2url claims to return the path part of the URI, but on Windows
   # it returns both the authority and path parts for no reason, which
   # means we have to trim the leading slashes to "normalize" the result.
-  return 'file:///' + uri_path.lstrip('/')
+  return b'file:///' + uri_path.lstrip(b'/')

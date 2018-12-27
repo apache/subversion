@@ -132,16 +132,16 @@ class FileDiff:
 
         with builtins.open(self.difftemp, "wb") as fp:
           diffopt = _svndiff.file_options_create()
-          diffobj = _svndiff.file_diff_2(self.tempfile1,
-                                         self.tempfile2,
+          diffobj = _svndiff.file_diff_2(self.tempfile1.encode('UTF-8'),
+                                         self.tempfile2.encode('UTF-8'),
                                          diffopt)
 
           _svndiff.file_output_unified4(fp,
                                         diffobj,
-                                        self.tempfile1,
-                                        self.tempfile2,
+                                        self.tempfile1.encode('UTF-8'),
+                                        self.tempfile2.encode('UTF-8'),
                                         None, None,
-                                        "utf8",
+                                        b"utf8",
                                         None,
                                         diffopt.show_c_function,
                                         diffopt.context_size,

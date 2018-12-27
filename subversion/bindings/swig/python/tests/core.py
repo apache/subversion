@@ -19,6 +19,8 @@
 #
 #
 import unittest
+import os
+import tempfile
 
 import svn.core, svn.client
 import utils
@@ -40,13 +42,13 @@ class SubversionCoreTestCase(unittest.TestCase):
                      'error message')
 
   def test_mime_type_is_binary(self):
-    self.assertEqual(0, svn.core.svn_mime_type_is_binary("text/plain"))
-    self.assertEqual(1, svn.core.svn_mime_type_is_binary("image/png"))
+    self.assertEqual(0, svn.core.svn_mime_type_is_binary(b"text/plain"))
+    self.assertEqual(1, svn.core.svn_mime_type_is_binary(b"image/png"))
 
   def test_mime_type_validate(self):
     self.assertRaises(svn.core.SubversionException,
-            svn.core.svn_mime_type_validate, "this\nis\ninvalid\n")
-    svn.core.svn_mime_type_validate("unknown/but-valid; charset=utf8")
+            svn.core.svn_mime_type_validate, b"this\nis\ninvalid\n")
+    svn.core.svn_mime_type_validate(b"unknown/but-valid; charset=utf8")
 
   def test_exception_interoperability(self):
     """Test if SubversionException is correctly converted into svn_error_t
@@ -109,20 +111,20 @@ class SubversionCoreTestCase(unittest.TestCase):
   def test_config_enumerate2(self):
     cfg = svn.core.svn_config_create(False)
     entries = {
-      'one': 'one-value',
-      'two': 'two-value',
-      'three': 'three-value'
+      b'one': b'one-value',
+      b'two': b'two-value',
+      b'three': b'three-value'
     }
 
     for (name, value) in entries.items():
-      svn.core.svn_config_set(cfg, "section", name, value)
+      svn.core.svn_config_set(cfg, b"section", name, value)
 
     received_entries = {}
     def enumerator(name, value, pool):
       received_entries[name] = value
       return len(received_entries) < 2
 
-    svn.core.svn_config_enumerate2(cfg, "section", enumerator)
+    svn.core.svn_config_enumerate2(cfg, b"section", enumerator)
 
     self.assertEqual(len(received_entries), 2)
     for (name, value) in received_entries.items():
@@ -131,22 +133,22 @@ class SubversionCoreTestCase(unittest.TestCase):
 
   def test_config_enumerate2_exception(self):
     cfg = svn.core.svn_config_create(False)
-    svn.core.svn_config_set(cfg, "section", "one", "one-value")
-    svn.core.svn_config_set(cfg, "section", "two", "two-value")
+    svn.core.svn_config_set(cfg, b"section", b"one", b"one-value")
+    svn.core.svn_config_set(cfg, b"section", b"two", b"two-value")
 
     def enumerator(name, value, pool):
       raise Exception
 
     # the exception will be swallowed, but enumeration must be stopped
     self.assertEqual(
-      svn.core.svn_config_enumerate2(cfg, "section", enumerator), 1)
+      svn.core.svn_config_enumerate2(cfg, b"section", enumerator), 1)
 
   def test_config_enumerate_sections2(self):
     cfg = svn.core.svn_config_create(False)
-    sections = ['section-one', 'section-two', 'section-three']
+    sections = [b'section-one', b'section-two', b'section-three']
 
     for section in sections:
-      svn.core.svn_config_set(cfg, section, "name", "value")
+      svn.core.svn_config_set(cfg, section, b"name", b"value")
 
     received_sections = []
     def enumerator(section, pool):
@@ -161,8 +163,8 @@ class SubversionCoreTestCase(unittest.TestCase):
 
   def test_config_enumerate_sections2_exception(self):
     cfg = svn.core.svn_config_create(False)
-    svn.core.svn_config_set(cfg, "section-one", "name", "value")
-    svn.core.svn_config_set(cfg, "section-two", "name", "value")
+    svn.core.svn_config_set(cfg, b"section-one", b"name", b"value")
+    svn.core.svn_config_set(cfg, b"section-two", b"name", b"value")
 
     def enumerator(section, pool):
       raise Exception
@@ -170,6 +172,120 @@ class SubversionCoreTestCase(unittest.TestCase):
     # the exception will be swallowed, but enumeration must be stopped
     self.assertEqual(
       svn.core.svn_config_enumerate_sections2(cfg, enumerator), 1)
+
+  def test_stream_from_stringbuf(self):
+    stream = svn.core.svn_stream_from_stringbuf(b'')
+    svn.core.svn_stream_close(stream)
+    with self.assertRaises(TypeError):
+        stream = svn.core.svn_stream_from_stringbuf(b''.decode())
+        svn.core.svn_stream_close(stream)
+
+  def test_stream_read_full(self):
+    in_str = (b'Python\x00'
+              b'\xa4\xd1\xa4\xa4\xa4\xbd\xa4\xf3\r\n'
+              b'Subversion\x00'
+              b'\xa4\xb5\xa4\xd6\xa4\xd0\xa1\xbc\xa4\xb8\xa4\xe7\xa4\xf3\n'
+              b'swig\x00'
+              b'\xa4\xb9\xa4\xa6\xa4\xa3\xa4\xb0\r'
+              b'end')
+    stream = svn.core.svn_stream_from_stringbuf(in_str)
+    self.assertEqual(svn.core.svn_stream_read_full(stream, 4096), in_str)
+    svn.core.svn_stream_seek(stream, None)
+    self.assertEqual(svn.core.svn_stream_read_full(stream, 10), in_str[0:10])
+    svn.core.svn_stream_seek(stream, None)
+    svn.core.svn_stream_skip(stream, 20)
+    self.assertEqual(svn.core.svn_stream_read_full(stream, 4096), in_str[20:])
+    self.assertEqual(svn.core.svn_stream_read_full(stream, 4096), b'')
+    svn.core.svn_stream_close(stream)
+
+  def test_stream_read2(self):
+    # as we can't create non block stream by using swig-py API directly,
+    # we only test svn_stream_read2() behaves just same as
+    # svn_stream_read_full()
+    in_str = (b'Python\x00'
+              b'\xa4\xd1\xa4\xa4\xa4\xbd\xa4\xf3\r\n'
+              b'Subversion\x00'
+              b'\xa4\xb5\xa4\xd6\xa4\xd0\xa1\xbc\xa4\xb8\xa4\xe7\xa4\xf3\n'
+              b'swig\x00'
+              b'\xa4\xb9\xa4\xa6\xa4\xa3\xa4\xb0\r'
+              b'end')
+    stream = svn.core.svn_stream_from_stringbuf(in_str)
+    self.assertEqual(svn.core.svn_stream_read2(stream, 4096), in_str)
+    svn.core.svn_stream_seek(stream, None)
+    self.assertEqual(svn.core.svn_stream_read2(stream, 10), in_str[0:10])
+    svn.core.svn_stream_seek(stream, None)
+    svn.core.svn_stream_skip(stream, 20)
+    self.assertEqual(svn.core.svn_stream_read2(stream, 4096), in_str[20:])
+    self.assertEqual(svn.core.svn_stream_read2(stream, 4096), b'')
+    svn.core.svn_stream_close(stream)
+
+  def test_stream_write_exception(self):
+    ostr_unicode = b'Python'.decode()
+    stream = svn.core.svn_stream_empty()
+    with self.assertRaises(TypeError):
+        svn.core.svn_stream_write(stream, ostr_unicode)
+    svn.core.svn_stream_close(stream)
+
+  def test_stream_write(self):
+    o1_str = b'Python\x00\xa4\xd1\xa4\xa4\xa4\xbd\xa4\xf3\r\n'
+    o2_str = (b'subVersioN\x00'
+              b'\xa4\xb5\xa4\xd6\xa4\xd0\xa1\xbc\xa4\xb8\xa4\xe7\xa4\xf3\n')
+    o3_str =  b'swig\x00\xa4\xb9\xa4\xa6\xa4\xa3\xa4\xb0\rend'
+    out_str = o1_str + o2_str + o3_str
+    rewrite_str = b'Subversion'
+    fd, fname = tempfile.mkstemp()
+    os.close(fd)
+    try:
+      stream = svn.core.svn_stream_from_aprfile2(fname.encode('UTF-8'), False)
+      self.assertEqual(svn.core.svn_stream_write(stream, out_str),
+                       len(out_str))
+      svn.core.svn_stream_seek(stream, None)
+      self.assertEqual(svn.core.svn_stream_read_full(stream, 4096), out_str)
+      svn.core.svn_stream_seek(stream, None)
+      svn.core.svn_stream_skip(stream, len(o1_str))
+      self.assertEqual(svn.core.svn_stream_write(stream, rewrite_str),
+                       len(rewrite_str))
+      svn.core.svn_stream_seek(stream, None)
+      self.assertEqual(
+                svn.core.svn_stream_read_full(stream, 4096),
+                o1_str + rewrite_str + o2_str[len(rewrite_str):] + o3_str)
+      svn.core.svn_stream_close(stream)
+    finally:
+      try:
+        os.remove(fname)
+      except OSError:
+        pass
+
+  def test_stream_readline(self):
+    o1_str = b'Python\t\xa4\xd1\xa4\xa4\xa4\xbd\xa4\xf3\r\n'
+    o2_str = (b'Subversion\t'
+              b'\xa4\xb5\xa4\xd6\xa4\xd0\xa1\xbc\xa4\xb8\xa4\xe7\xa4\xf3\n')
+    o3_str =  b'swig\t\xa4\xb9\xa4\xa6\xa4\xa3\xa4\xb0\rend'
+    in_str = o1_str + o2_str + o3_str
+    stream = svn.core.svn_stream_from_stringbuf(in_str)
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\n'),
+                     [o1_str[:-1], 0])
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\n'),
+                     [o2_str[:-1], 0])
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\n'),
+                     [o3_str, 1])
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\n'),
+                     [b'', 1])
+    svn.core.svn_stream_seek(stream, None)
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\r\n'),
+                     [o1_str[:-2], 0])
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\r\n'),
+                     [o2_str + o3_str, 1])
+    svn.core.svn_stream_write(stream, b'\r\n')
+    svn.core.svn_stream_seek(stream, None)
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\r\n'),
+                     [o1_str[:-2], 0])
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\r\n'),
+                     [o2_str + o3_str, 0])
+    self.assertEqual(svn.core.svn_stream_readline(stream, b'\r\n'),
+                     [b'', 1])
+    svn.core.svn_stream_close(stream)
+
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(

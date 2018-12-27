@@ -47,14 +47,15 @@ class DeltaTestCase(unittest.TestCase):
   def testTxWindowHandler_stream_IF(self):
     """Test tx_invoke_window_handler, with svn.core.svn_stream_t object"""
     pool = svn.core.Pool()
-    in_str = "hello world"
+    in_str = b"hello world"
     src_stream = svn.core.svn_stream_from_stringbuf(in_str)
-    content_str = "bye world"
+    content_str = b"bye world"
     content_stream = svn.core.svn_stream_from_stringbuf(content_str)
     fd, fname = tempfile.mkstemp()
     os.close(fd)
     try:
-      target_stream = svn.core.svn_stream_from_aprfile2(fname, False)
+      target_stream = svn.core.svn_stream_from_aprfile2(fname.encode('UTF-8'),
+                                                        False)
       window_handler, baton = \
           svn.delta.tx_apply(src_stream, target_stream, None)
       svn.delta.tx_send_stream(content_stream, window_handler, baton, pool)
@@ -72,17 +73,18 @@ class DeltaTestCase(unittest.TestCase):
   def testTxWindowHandler_Stream_IF(self):
     """Test tx_invoke_window_handler, with svn.core.Stream object"""
     pool = svn.core.Pool()
-    in_str = "hello world"
+    in_str = b"hello world"
     src_stream = svn.core.Stream(
                     svn.core.svn_stream_from_stringbuf(in_str))
-    content_str = "bye world"
+    content_str = b"bye world"
     content_stream = svn.core.Stream(
                     svn.core.svn_stream_from_stringbuf(content_str))
     fd, fname = tempfile.mkstemp()
     os.close(fd)
     try:
       target_stream = svn.core.Stream(
-                    svn.core.svn_stream_from_aprfile2(fname, False))
+                    svn.core.svn_stream_from_aprfile2(fname.encode('UTF-8'),
+                                                      False))
       window_handler, baton = \
           svn.delta.tx_apply(src_stream, target_stream, None)
       svn.delta.tx_send_stream(content_stream, window_handler, baton, None)

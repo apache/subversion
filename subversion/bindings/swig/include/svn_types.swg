@@ -346,7 +346,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    Create a typemap for specifying string args that may be NULL.
 */
 #ifdef SWIGPYTHON
-%typemap(in, parse="z") const char *MAY_BE_NULL "";
+%typemap(in) const char *MAY_BE_NULL
+{
+    if ($input == Py_None) {
+        $1 = NULL;
+    } else {
+        $1 = PyBytes_AsString($input);
+        if ($1 == NULL) SWIG_fail;
+    }
+}
 #endif
 
 #ifdef SWIGPERL
@@ -476,15 +484,13 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(in) (const char *PTR, apr_size_t LEN) {
     Py_ssize_t pyStrLen;
-    if (!PyStr_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "expecting a string");
+    if (!PyBytes_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "expecting a bytes");
         SWIG_fail;
     }
-    /* Explicitly cast away const from PyStr_AsUTF8AndSize (in Python 3). The
-       swig generated argument ($1) here will be "char *", but since its only
-       use is to pass directly into the "const char *" argument of the wrapped
-       function, this is safe to do. */
-    $1 = (char *)PyStr_AsUTF8AndSize($input, &pyStrLen);
+    if (PyBytes_AsStringAndSize($input, &$1, &pyStrLen) == -1) {
+        SWIG_fail;
+    }
     $2 = pyStrLen;
 }
 #endif

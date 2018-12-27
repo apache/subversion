@@ -42,11 +42,11 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
   """Test cases for mergeinfo"""
 
   # Some textual mergeinfo.
-  TEXT_MERGEINFO1 = "/trunk:3-9,27,42*"
-  TEXT_MERGEINFO2 = "/trunk:27-29,41-43*"
+  TEXT_MERGEINFO1 = b"/trunk:3-9,27,42*"
+  TEXT_MERGEINFO2 = b"/trunk:27-29,41-43*"
 
   # Meta data used in conjunction with this mergeinfo.
-  MERGEINFO_SRC = "/trunk"
+  MERGEINFO_SRC = b"/trunk"
   MERGEINFO_NBR_REV_RANGES = 3
 
   def setUp(self):
@@ -113,15 +113,15 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                                 self.MERGEINFO_NBR_REV_RANGES)
 
   def test_mergeinfo_get(self):
-    mergeinfo = repos.fs_get_mergeinfo(self.repos, ['/trunk'], self.rev,
+    mergeinfo = repos.fs_get_mergeinfo(self.repos, [b'/trunk'], self.rev,
                                        core.svn_mergeinfo_inherited,
                                        False, None, None)
     expected_mergeinfo = \
-      { '/trunk' :
-          { '/branches/a' : [RevRange(2, 11)],
-            '/branches/b' : [RevRange(9, 13)],
-            '/branches/c' : [RevRange(2, 16)],
-            '/trunk'      : [RevRange(1, 9)],  },
+      { b'/trunk' :
+          { b'/branches/a' : [RevRange(2, 11)],
+            b'/branches/b' : [RevRange(9, 13)],
+            b'/branches/c' : [RevRange(2, 16)],
+            b'/trunk'      : [RevRange(1, 9)],  },
       }
     self.compare_mergeinfo_catalogs(mergeinfo, expected_mergeinfo)
 

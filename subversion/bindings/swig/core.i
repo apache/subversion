@@ -420,7 +420,7 @@
 
 #ifdef SWIGPYTHON
 %typemap(argout) (char *buffer, apr_size_t *len) {
-  %append_output(PyStr_FromStringAndSize($1, *$2));
+  %append_output(PyBytes_FromStringAndSize($1, *$2));
   free($1);
 }
 #endif
@@ -442,16 +442,18 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) (const char *data, apr_size_t *len) ($*2_type temp) {
-    if (!PyStr_Check($input)) {
+    char *tmpdata;
+    Py_ssize_t length;
+    if (!PyBytes_Check($input)) {
         PyErr_SetString(PyExc_TypeError,
-                        "expecting a string for the buffer");
+                        "expecting a bytes object for the buffer");
         SWIG_fail;
     }
-    /* Explicitly cast away const from PyStr_AsUTF8AndSize (in Python 3). The
-       swig generated argument ($1) here will be "char *", but since its only
-       use is to pass directly into the "const char *" argument of the wrapped
-       function, this is safe to do. */
-    $1 = (char *)PyStr_AsUTF8AndSize($input, &temp);
+    if (PyBytes_AsStringAndSize($input, &tmpdata, &length) == -1) {
+        SWIG_fail;
+    }
+    temp = ($*2_type)length;
+    $1 = tmpdata;
     $2 = ($2_ltype)&temp;
 }
 #endif
@@ -504,8 +506,8 @@
        SWIG_fail;
     }
 
-    if (PyStr_Check($input)) {
-        const char *value = PyStr_AsString($input);
+    if (PyBytes_Check($input)) {
+        const char *value = PyBytes_AsString($input);
         $1 = apr_pstrdup(_global_pool, value);
     }
     else if (PyLong_Check($input)) {

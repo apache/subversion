@@ -55,8 +55,11 @@ import os.path
 import time
 import weakref
 import posixpath
+import sys
 
 from svn import fs, repos, core, delta
+
+IS_PY3 = sys.version_info[0] >= 3
 
 _kindmap = {core.svn_node_dir: Node.DIRECTORY,
             core.svn_node_file: Node.FILE}
@@ -107,17 +110,17 @@ class SubversionRepository(Repository):
             raise TracError("%s does not appear to be a Subversion repository." % (path, ))
         if self.path != path:
             self.scope = path[len(self.path):]
-            if not self.scope[-1] == '/':
-                self.scope += '/'
+            if not self.scope[-1:] == b'/':
+                self.scope += b'/'
         else:
-            self.scope = '/'
+            self.scope = b'/'
 
         self.repos = repos.svn_repos_open(self.path)
         self.fs_ptr = repos.svn_repos_fs(self.repos)
         self.rev = fs.youngest_rev(self.fs_ptr)
 
         self.history = None
-        if self.scope != '/':
+        if self.scope != b'/':
             self.history = []
             for path,rev in _get_history(self.scope[1:], self.authz,
                                          self.fs_ptr, 0, self.rev):
@@ -132,7 +135,7 @@ class SubversionRepository(Repository):
         return node_type in _kindmap
 
     def normalize_path(self, path):
-        return path == '/' and path or path and path.strip('/') or ''
+        return path == b'/' and path or path and path.strip(b'/') or b''
 
     def normalize_rev(self, rev):
         try:
@@ -157,7 +160,7 @@ class SubversionRepository(Repository):
 
     def get_node(self, path, rev=None):
         self.authz.assert_permission(self.scope + path)
-        if path and path[-1] == '/':
+        if path and path[-1] == b'/':
             path = path[:-1]
 
         rev = self.normalize_rev(rev)
@@ -166,13 +169,13 @@ class SubversionRepository(Repository):
 
     def get_oldest_rev(self):
         rev = 0
-        if self.scope == '/':
+        if self.scope == b'/':
             return rev
         return self.history[-1]
 
     def get_youngest_rev(self):
         rev = self.rev
-        if self.scope == '/':
+        if self.scope == b'/':
             return rev
         return self.history[0]
 
@@ -180,7 +183,7 @@ class SubversionRepository(Repository):
         rev = int(rev)
         if rev == 0:
             return None
-        if self.scope == '/':
+        if self.scope == b'/':
             return rev - 1
         idx = self.history.index(rev)
         if idx + 1 < len(self.history):
@@ -191,7 +194,7 @@ class SubversionRepository(Repository):
         rev = int(rev)
         if rev == self.rev:
             return None
-        if self.scope == '/':
+        if self.scope == b'/':
             return rev + 1
         if rev == 0:
             return self.oldest_rev
@@ -224,7 +227,7 @@ class SubversionRepository(Repository):
                         else: # the path changed: 'newer' was a copy
                             rev = self.previous_rev(newer[1]) # restart before the copy op
                             yield newer[0], newer[1], Changeset.COPY
-                            older = (older[0], older[1], 'unknown')
+                            older = (older[0], older[1], b'unknown')
                             break
                     newer = older
                 if older: # either a real ADD or the source of a COPY
@@ -262,7 +265,7 @@ class SubversionRepository(Repository):
             def authz_cb(root, path, pool): return 1
             text_deltas = 0 # as this is anyway re-done in Diff.py...
             entry_props = 0 # ("... typically used only for working copy updates")
-            repos.svn_repos_dir_delta(old_root, old_path, '',
+            repos.svn_repos_dir_delta(old_root, old_path, b'',
                                       new_root, new_path,
                                       e_ptr, e_baton, authz_cb,
                                       text_deltas,
@@ -290,7 +293,7 @@ class SubversionNode(Node):
     def __init__(self, path, rev, authz, scope, fs_ptr):
         self.authz = authz
         self.scope = scope
-        if scope != '/':
+        if scope != b'/':
             self.scoped_path = scope + path
         else:
             self.scoped_path = path
@@ -300,7 +303,11 @@ class SubversionNode(Node):
         self.root = fs.revision_root(fs_ptr, rev)
         node_type = fs.check_path(self.root, self.scoped_path)
         if not node_type in _kindmap:
-            raise TracError("No node at %s in revision %s" % (path, rev))
+            if IS_PY3:
+                raise TracError("No node at %s in revision %s"
+                                % (path.decode('UTF-8'), rev))
+            else:
+                raise TracError("No node at %s in revision %s" % (path, rev))
         self.created_rev = fs.node_created_rev(self.root, self.scoped_path)
         self.created_path = fs.node_created_path(self.root, self.scoped_path)
         # Note: 'created_path' differs from 'path' if the last change was a copy,
@@ -323,7 +330,7 @@ class SubversionNode(Node):
             return
         entries = fs.dir_entries(self.root, self.scoped_path)
         for item in entries:
-            path = '/'.join((self.path, item))
+            path = b'/'.join((self.path, item))
             if not self.authz.has_permission(path):
                 continue
             yield SubversionNode(path, self._requested_rev, self.authz,
@@ -350,7 +357,7 @@ class SubversionNode(Node):
     def get_properties(self):
         props = fs.node_proplist(self.root, self.scoped_path)
         for name,value in core._as_list(props.items()):
-            props[name] = str(value) # Make sure the value is a proper string
+            props[name] = value
         return props
 
     def get_content_length(self):
@@ -461,7 +468,7 @@ class DiffChangeEditor(delta.Editor):
     # -- svn.delta.Editor callbacks
 
     def open_root(self, base_revision, dir_pool):
-        return ('/', Changeset.EDIT)
+        return (b'/', Changeset.EDIT)
 
     def add_directory(self, path, dir_baton, copyfrom_path, copyfrom_rev, dir_pool):
         self.deltas.append((path, Node.DIRECTORY, Changeset.ADD))

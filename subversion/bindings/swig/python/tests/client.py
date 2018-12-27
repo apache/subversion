@@ -40,7 +40,7 @@ class SubversionClientTestCase(unittest.TestCase):
   def log_message_func(self, items, pool):
     """ Simple log message provider for unit tests. """
     self.log_message_func_calls += 1
-    return "Test log message"
+    return b"Test log message"
 
   def log_receiver(self, changed_paths, revision, author, date, message, pool):
     """ Function to receive log messages retrieved by client.log3(). """
@@ -134,8 +134,8 @@ class SubversionClientTestCase(unittest.TestCase):
 
     # We keep track of these objects in separate variables here
     # because you can't get a PyObject back out of a PY_AS_VOID field
-    test_object1 = lambda *args: "message 1"
-    test_object2 = lambda *args: "message 2"
+    test_object1 = lambda *args: b"message 1"
+    test_object2 = lambda *args: b"message 2"
 
     # Verify that the refcount of a Python object is incremented when
     # you insert it into a PY_AS_VOID field.
@@ -191,7 +191,7 @@ class SubversionClientTestCase(unittest.TestCase):
 
   def test_mkdir_url(self):
     """Test svn_client_mkdir2 on a file:// URL"""
-    directory = urljoin(self.repos_uri+"/", "dir1")
+    directory = urljoin(self.repos_uri+b"/", b"dir1")
 
     commit_info = client.mkdir2((directory,), self.client_ctx)
     self.assertEqual(commit_info.revision, 13)
@@ -199,28 +199,28 @@ class SubversionClientTestCase(unittest.TestCase):
 
   def test_mkdir_url_with_revprops(self):
     """Test svn_client_mkdir3 on a file:// URL, with added revprops"""
-    directory = urljoin(self.repos_uri+"/", "some/deep/subdir")
+    directory = urljoin(self.repos_uri+b"/", b"some/deep/subdir")
 
-    commit_info = client.mkdir3((directory,), 1, {'customprop':'value'},
+    commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
                                 self.client_ctx)
     self.assertEqual(commit_info.revision, 13)
     self.assertEqual(self.log_message_func_calls, 1)
 
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
-    directory = urljoin(self.repos_uri+"/", "trunk/dir1")
+    directory = urljoin(self.repos_uri+b"/", b"trunk/dir1")
 
     start = core.svn_opt_revision_t()
     end = core.svn_opt_revision_t()
-    core.svn_opt_parse_revision(start, end, "4:0")
+    core.svn_opt_parse_revision(start, end, b"4:0")
     client.log3((directory,), start, start, end, 1, True, False,
         self.log_receiver, self.client_ctx)
-    self.assertEqual(self.change_author, "john")
-    self.assertEqual(self.log_message, "More directories.")
+    self.assertEqual(self.change_author, b"john")
+    self.assertEqual(self.log_message, b"More directories.")
     self.assertEqual(len(self.changed_paths), 3)
-    for dir in ('/trunk/dir1', '/trunk/dir2', '/trunk/dir3'):
+    for dir in (b'/trunk/dir1', b'/trunk/dir2', b'/trunk/dir3'):
       self.assertTrue(dir in self.changed_paths)
-      self.assertEqual(self.changed_paths[dir].action, 'A')
+      self.assertEqual(self.changed_paths[dir].action, b'A')
 
   def test_log5(self):
     """Test svn_client_log5."""
@@ -247,7 +247,7 @@ class SubversionClientTestCase(unittest.TestCase):
     """Test svn_client_uuid_from_url on a file:// URL"""
     self.assertTrue(isinstance(
                  client.uuid_from_url(self.repos_uri, self.client_ctx),
-                 str))
+                 bytes))
 
   def test_url_from_path(self):
     """Test svn_client_url_from_path for a file:// URL"""
@@ -279,7 +279,7 @@ class SubversionClientTestCase(unittest.TestCase):
                       client.uuid_from_url(self.repos_uri, self.client_ctx))
 
     self.assertTrue(isinstance(client.uuid_from_path(path, wc_adm,
-                            self.client_ctx), str))
+                            self.client_ctx), bytes))
 
   def test_open_ra_session(self):
       """Test svn_client_open_ra_session()."""
@@ -302,8 +302,8 @@ class SubversionClientTestCase(unittest.TestCase):
     try:
       # Test 1: Run info -r BASE. We expect the size value to be filled in.
       rev.kind = core.svn_opt_revision_base
-      readme_path = '%s/trunk/README.txt' % wc_path
-      readme_url = '%s/trunk/README.txt' % self.repos_uri
+      readme_path = b'%s/trunk/README.txt' % wc_path
+      readme_url = b'%s/trunk/README.txt' % self.repos_uri
       client.info(readme_path, rev, rev, self.info_receiver,
                   False, self.client_ctx)
 
@@ -349,8 +349,8 @@ class SubversionClientTestCase(unittest.TestCase):
                      True, False, self.client_ctx)
 
     # Let's try to backport a change from the v1x branch
-    trunk_path = core.svn_dirent_join(wc_path, 'trunk')
-    v1x_path = core.svn_dirent_join(wc_path, 'branches/v1x')
+    trunk_path = core.svn_dirent_join(wc_path, b'trunk')
+    v1x_path = core.svn_dirent_join(wc_path, b'branches/v1x')
 
     start = core.svn_opt_revision_t()
     start.kind = core.svn_opt_revision_number
@@ -370,14 +370,14 @@ class SubversionClientTestCase(unittest.TestCase):
 
     # Did it take effect?
     readme_path_native = core.svn_dirent_local_style(
-      core.svn_dirent_join(trunk_path, 'README.txt')
+      core.svn_dirent_join(trunk_path, b'README.txt')
     )
 
-    readme = open(readme_path_native, 'r')
+    readme = open(readme_path_native, 'rb')
     readme_text = readme.read()
     readme.close()
 
-    self.assertEqual(readme_text, 'This is a test.\n')
+    self.assertEqual(readme_text, b'This is a test.\n')
 
   def test_platform_providers(self):
     providers = core.svn_auth_get_platform_specific_client_providers(None, None)
@@ -396,38 +396,38 @@ class SubversionClientTestCase(unittest.TestCase):
     # just test if this doesn't error out, there's not even a return
     # value to test.
     def prompt_func(realm_string, pool):
-      return "Foo"
+      return b"Foo"
 
     core.svn_auth_set_gnome_keyring_unlock_prompt_func(self.client_ctx.auth_baton, prompt_func)
 
   def proplist_receiver_trunk(self, path, props, iprops, pool):
-    self.assertEqual(props['svn:global-ignores'], '*.q\n')
+    self.assertEqual(props[b'svn:global-ignores'], b'*.q\n')
     self.proplist_receiver_trunk_calls += 1
 
   def proplist_receiver_dir1(self, path, props, iprops, pool):
     self.assertEqual(iprops[self.proplist_receiver_dir1_key],
-                      {'svn:global-ignores':'*.q\n'})
+                      {b'svn:global-ignores':b'*.q\n'})
     self.proplist_receiver_dir1_calls += 1
 
   def test_inherited_props(self):
     """Test inherited props"""
 
-    trunk_url = self.repos_uri + '/trunk'
-    client.propset_remote('svn:global-ignores', '*.q', trunk_url,
+    trunk_url = self.repos_uri + b'/trunk'
+    client.propset_remote(b'svn:global-ignores', b'*.q', trunk_url,
                           False, 12, {}, None, self.client_ctx)
 
     head = core.svn_opt_revision_t()
     head.kind = core.svn_opt_revision_head
-    props, iprops, rev = client.propget5('svn:global-ignores', trunk_url,
+    props, iprops, rev = client.propget5(b'svn:global-ignores', trunk_url,
                                          head, head, core.svn_depth_infinity,
                                          None, self.client_ctx)
-    self.assertEqual(props[trunk_url], '*.q\n')
+    self.assertEqual(props[trunk_url], b'*.q\n')
 
-    dir1_url = trunk_url + '/dir1'
-    props, iprops, rev = client.propget5('svn:global-ignores', dir1_url,
+    dir1_url = trunk_url + b'/dir1'
+    props, iprops, rev = client.propget5(b'svn:global-ignores', dir1_url,
                                          head, head, core.svn_depth_infinity,
                                          None, self.client_ctx)
-    self.assertEqual(iprops[trunk_url], {'svn:global-ignores':'*.q\n'})
+    self.assertEqual(iprops[trunk_url], {b'svn:global-ignores':b'*.q\n'})
 
     self.proplist_receiver_trunk_calls = 0
     client.proplist4(trunk_url, head, head, core.svn_depth_empty, None, True,
@@ -467,15 +467,15 @@ class SubversionClientTestCase(unittest.TestCase):
                    False, False, self.client_ctx)
     expected_paths = [
         path,
-        os.path.join(path, 'branches'),
-        os.path.join(path, 'tags'),
-        os.path.join(path, 'trunk'),
+        os.path.join(path, b'branches'),
+        os.path.join(path, b'tags'),
+        os.path.join(path, b'trunk'),
         path,
         path
     ]
     # All normal subversion apis process paths in Subversion's canonical format,
     # which isn't the platform specific format
-    expected_paths = [x.replace(os.path.sep, '/') for x in expected_paths]
+    expected_paths = [x.replace(os.path.sep.encode('UTF-8'), b'/') for x in expected_paths]
     self.notified_paths.sort()
     expected_paths.sort()
 
@@ -490,12 +490,12 @@ class SubversionClientTestCase(unittest.TestCase):
     self.notified_paths = []
     expected_paths = [
         path,
-        os.path.join(path, 'trunk', 'README.txt'),
-        os.path.join(path, 'trunk'),
+        os.path.join(path, b'trunk', b'README.txt'),
+        os.path.join(path, b'trunk'),
         path,
         path
     ]
-    expected_paths = [x.replace(os.path.sep, '/') for x in expected_paths]
+    expected_paths = [x.replace(os.path.sep.encode('UTF-8'), b'/') for x in expected_paths]
     client.update4((path,), rev, core.svn_depth_unknown, True, False, False,
                    False, False, self.client_ctx)
     self.notified_paths.sort()
