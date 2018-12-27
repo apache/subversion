@@ -234,9 +234,10 @@ class SubversionCoreTestCase(unittest.TestCase):
     out_str = o1_str + o2_str + o3_str
     rewrite_str = b'Subversion'
     fd, fname = tempfile.mkstemp()
+    fname_bytes = fname if isinstance(fname, bytes) else fname.encode('UTF-8')
     os.close(fd)
     try:
-      stream = svn.core.svn_stream_from_aprfile2(fname.encode('UTF-8'), False)
+      stream = svn.core.svn_stream_from_aprfile2(fname_bytes, False)
       self.assertEqual(svn.core.svn_stream_write(stream, out_str),
                        len(out_str))
       svn.core.svn_stream_seek(stream, None)

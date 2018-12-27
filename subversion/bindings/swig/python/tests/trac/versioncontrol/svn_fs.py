@@ -55,11 +55,8 @@ import os.path
 import time
 import weakref
 import posixpath
-import sys
 
 from svn import fs, repos, core, delta
-
-IS_PY3 = sys.version_info[0] >= 3
 
 _kindmap = {core.svn_node_dir: Node.DIRECTORY,
             core.svn_node_file: Node.FILE}
@@ -303,11 +300,8 @@ class SubversionNode(Node):
         self.root = fs.revision_root(fs_ptr, rev)
         node_type = fs.check_path(self.root, self.scoped_path)
         if not node_type in _kindmap:
-            if IS_PY3:
-                raise TracError("No node at %s in revision %s"
-                                % (path.decode('UTF-8'), rev))
-            else:
-                raise TracError("No node at %s in revision %s" % (path, rev))
+            raise TracError("No node at %s in revision %s"
+                            % (path.decode('UTF-8'), rev))
         self.created_rev = fs.node_created_rev(self.root, self.scoped_path)
         self.created_path = fs.node_created_path(self.root, self.scoped_path)
         # Note: 'created_path' differs from 'path' if the last change was a copy,

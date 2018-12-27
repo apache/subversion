@@ -47,13 +47,18 @@ class Temper(object):
   def alloc_empty_dir(self, suffix = ""):
     """Create an empty temporary directory. Returns its full path
        in canonical internal form."""
-    temp_dir_name = core.svn_dirent_internal_style(tempfile.mkdtemp(suffix).encode('UTF-8'))
+    if isinstance(suffix, bytes):
+      suffix = suffix.decode('UTF-8')
+    temp_dir_name = tempfile.mkdtemp(suffix).encode('UTF-8')
+    temp_dir_name = core.svn_dirent_internal_style(temp_dir_name)
     self._cleanup_list.append((temp_dir_name, core.svn_io_remove_dir))
     return temp_dir_name
 
   def alloc_empty_repo(self, suffix = ""):
     """Create an empty repository. Returns a tuple of its handle, path and
        file: URI in canonical internal form."""
+    if isinstance(suffix, bytes):
+      suffix = suffix.decode('UTF-8')
     temp_path = tempfile.mkdtemp(suffix).encode('UTF-8')
     repo_path = core.svn_dirent_internal_style(temp_path)
     repo_uri = core.svn_uri_canonicalize(file_uri_for_path(temp_path))

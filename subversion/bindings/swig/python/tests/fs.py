@@ -68,8 +68,12 @@ class SubversionFSTestCase(unittest.TestCase):
 
     clientctx.auth_baton = core.svn_auth_open(providers)
 
-    commitinfo = client.import2(self.tmpfile.encode('UTF-8'),
-                                urljoin(self.repos_uri + b"/", b"trunk/UniTest.txt"),
+    if isinstance(self.tmpfile, bytes):
+        tmpfile_bytes = self.tmpfile
+    else:
+        tmpfile_bytes = self.tmpfile.encode('UTF-8')
+    commitinfo = client.import2(tmpfile_bytes,
+                                urljoin(self.repos_uri + b"/",b"trunk/UniTest.txt"),
                                 True, True,
                                 clientctx)
 

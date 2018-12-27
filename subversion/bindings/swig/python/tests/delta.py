@@ -52,10 +52,10 @@ class DeltaTestCase(unittest.TestCase):
     content_str = b"bye world"
     content_stream = svn.core.svn_stream_from_stringbuf(content_str)
     fd, fname = tempfile.mkstemp()
+    fname_bytes = fname if isinstance(fname, bytes) else fname.encode('UTF-8')
     os.close(fd)
     try:
-      target_stream = svn.core.svn_stream_from_aprfile2(fname.encode('UTF-8'),
-                                                        False)
+      target_stream = svn.core.svn_stream_from_aprfile2(fname_bytes, False)
       window_handler, baton = \
           svn.delta.tx_apply(src_stream, target_stream, None)
       svn.delta.tx_send_stream(content_stream, window_handler, baton, pool)
@@ -80,11 +80,11 @@ class DeltaTestCase(unittest.TestCase):
     content_stream = svn.core.Stream(
                     svn.core.svn_stream_from_stringbuf(content_str))
     fd, fname = tempfile.mkstemp()
+    fname_bytes = fname if isinstance(fname, bytes) else fname.encode('UTF-8')
     os.close(fd)
     try:
       target_stream = svn.core.Stream(
-                    svn.core.svn_stream_from_aprfile2(fname.encode('UTF-8'),
-                                                      False))
+                    svn.core.svn_stream_from_aprfile2(fname_bytes, False))
       window_handler, baton = \
           svn.delta.tx_apply(src_stream, target_stream, None)
       svn.delta.tx_send_stream(content_stream, window_handler, baton, None)

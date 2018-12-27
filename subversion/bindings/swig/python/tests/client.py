@@ -459,6 +459,9 @@ class SubversionClientTestCase(unittest.TestCase):
     def notify_func(path, action, kind, mime_type, content_state, prop_state, rev):
         self.notified_paths.append(path)
 
+    PATH_SEPARATOR = os.path.sep
+    if not isinstance(PATH_SEPARATOR, bytes):
+        PATH_SEPARATOR = PATH_SEPARATOR.encode('UTF-8')
     self.client_ctx.notify_func = client.svn_swig_py_notify_func
     self.client_ctx.notify_baton = notify_func
     rev.value.number = 1
@@ -475,7 +478,7 @@ class SubversionClientTestCase(unittest.TestCase):
     ]
     # All normal subversion apis process paths in Subversion's canonical format,
     # which isn't the platform specific format
-    expected_paths = [x.replace(os.path.sep.encode('UTF-8'), b'/') for x in expected_paths]
+    expected_paths = [x.replace(PATH_SEPARATOR, b'/') for x in expected_paths]
     self.notified_paths.sort()
     expected_paths.sort()
 
@@ -495,7 +498,7 @@ class SubversionClientTestCase(unittest.TestCase):
         path,
         path
     ]
-    expected_paths = [x.replace(os.path.sep.encode('UTF-8'), b'/') for x in expected_paths]
+    expected_paths = [x.replace(PATH_SEPARATOR, b'/') for x in expected_paths]
     client.update4((path,), rev, core.svn_depth_unknown, True, False, False,
                    False, False, self.client_ctx)
     self.notified_paths.sort()
