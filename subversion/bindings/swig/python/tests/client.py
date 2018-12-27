@@ -514,7 +514,7 @@ class SubversionClientTestCase(unittest.TestCase):
     client.checkout2(self.repos_uri, path, rev, rev, True, True,
             self.client_ctx)
 
-    trunk_path = os.path.join(path, 'trunk')
+    trunk_path = os.path.join(path, b'trunk')
 
     # Create a conflicting path
     os.mkdir(trunk_path)
@@ -550,11 +550,11 @@ class SubversionClientTestCase(unittest.TestCase):
             self.client_ctx)
 
     pool = core.Pool()
-    shelf = client._shelf_open_or_create("test1", path, self.client_ctx, pool)
+    shelf = client._shelf_open_or_create(b"test1", path, self.client_ctx, pool)
 
     self.assertTrue(isinstance(shelf, client.svn_client__shelf_t))
 
-    new_subpath = os.path.join('trunk', 'new-shelf-test.txt')
+    new_subpath = os.path.join(b'trunk', b'new-shelf-test.txt')
     new_path = os.path.join(path, new_subpath)
 
     with open(new_path, "wb") as fp:

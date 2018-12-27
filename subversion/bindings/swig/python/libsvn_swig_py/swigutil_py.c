@@ -2872,7 +2872,13 @@ void svn_swig_py_client_status_func(void *baton,
     return;
 
   svn_swig_py_acquire_py_lock();
-  if ((result = PyObject_CallFunction(function, (char *)"sO&O&", path,
+  if ((result = PyObject_CallFunction(function,
+#if IS_PY3
+                                      (char *)"yO&O&",
+#else
+                                      (char *)"sO&O&",
+#endif
+                                      path,
                                       make_ob_client_status, status,
                                       make_ob_pool, scratch_pool)) == NULL)
     {
