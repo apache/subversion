@@ -26,10 +26,9 @@
 
 #include <stdexcept>
 
-#include <apr_tables.h>
 #include "pool.hpp"
 
-#include "svn_private_config.h"
+#include <apr_tables.h>
 
 namespace apache {
 namespace subversion {
@@ -37,59 +36,68 @@ namespace svnxx {
 namespace apr {
 
 /**
- * Proxy for an APR array.
+ * @brief Proxy for an APR array.
  *
  * This class does not own the array. The array's lifetime is tied to
  * its pool. The caller is responsible for making sure that the
  * array's lifetime is longer than this proxy object's.
  */
-template<typename T> class Array
+template<typename T> class array
 {
 public:
-  typedef T value_type;
-  typedef int size_type;
+  using value_type = T;
+  using size_type = int;
+  using iterator = value_type*;
+  using const_iterator = const value_type*;
 
   /**
    * Create and proxy a new APR array allocated from @a result_pool.
    * Reserve space for @a nelts array elements.
    */
-  explicit Array(const pool& result_pool, size_type nelts = 0) throw()
-    : m_array(apr_array_make(result_pool.get(), nelts, sizeof(value_type)))
+  explicit array(const pool& result_pool, size_type nelts = 0)
+    : proxied(apr_array_make(result_pool.get(), nelts, sizeof(value_type)))
     {}
 
   /**
-   * Create a new proxy for the APR array @a array.
+   * Create a new proxy for the APR array @a array_.
    */
-  explicit Array(apr_array_header_t* array)
-    : m_array(array)
+  explicit array(apr_array_header_t* array_)
+    : proxied(array_)
     {
-      if (m_array->elt_size != sizeof(value_type))
-        throw std::invalid_argument(
-            _("APR array element size does not match template parameter"));
+      if (proxied->elt_size != sizeof(value_type))
+        throw std::invalid_argument("apr::array element size mismatch");
     }
 
   /**
    * @return The wrapped APR array.
    */
-  apr_array_header_t* array() const throw()
+  apr_array_header_t* get_array() const noexcept
     {
-      return m_array;
+      return proxied;
     }
 
   /**
    * @return the number of elements in the wrapped APR array.
    */
-  size_type size() const throw()
+  size_type size() const noexcept
     {
-      return m_array->nelts;
+      return proxied->nelts;
+    }
+
+  /**
+   * @return the reserved space in the wrapped APR array.
+   */
+  size_type capacity() const noexcept
+    {
+      return proxied->nalloc;
     }
 
   /**
    * @return An immutable reference to the array element at @a index.
    */
-  const value_type& operator[](size_type index) const throw()
+  const value_type& operator[](size_type index) const noexcept
     {
-      return APR_ARRAY_IDX(m_array, index, value_type);
+      return APR_ARRAY_IDX(proxied, index, value_type);
     }
 
   /**
@@ -99,16 +107,16 @@ public:
   const value_type& at(size_type index) const
     {
       if (index < 0 || index >= size())
-        throw std::out_of_range(_("APR array index is out of range"));
+        throw std::out_of_range("apr::array index out of range");
       return (*this)[index];
     }
 
   /**
    * @return A mutable reference to the array element at @a index.
    */
-  value_type& operator[](size_type index) throw()
+  value_type& operator[](size_type index) noexcept
     {
-      return APR_ARRAY_IDX(m_array, index, value_type);
+      return APR_ARRAY_IDX(proxied, index, value_type);
     }
 
   /**
@@ -118,16 +126,16 @@ public:
   value_type& at(size_type index)
     {
       if (index < 0 || index >= size())
-        throw std::out_of_range(_("APR array index is out of range"));
+        throw std::out_of_range("apr::array index out of range");
       return (*this)[index];
     }
 
   /**
    * Push @a value onto the end of the APR array.
    */
-  void push(const value_type& value) throw()
+  void push(const value_type& value)
     {
-      APR_ARRAY_PUSH(m_array, value_type) = value;
+      APR_ARRAY_PUSH(proxied, value_type) = value;
     }
 
   /**
@@ -135,153 +143,61 @@ public:
    * @return A pointer to the value that was removed, or @c NULL if
    * the array was empty.
    */
-  value_type* pop() throw()
+  value_type* pop() noexcept
     {
-      return static_cast<value_type*>(apr_array_pop(m_array));
+      return static_cast<value_type*>(apr_array_pop(proxied));
     }
 
   /**
-   * Abstract base class for mutable iteration callback functors.
-   *
-   * FIXME: obsolete; see below.
+   * @brief Return an interator to the beginning of the array.
    */
-  struct Iteration
-  {
-    /**
-     * Called by Array::iterate for every value in the array.
-     * @return @c false to terminate the iteration, @c true otherwise.
-     */
-    virtual bool operator() (value_type& value) = 0;
-  };
-
-  /**
-   * Iterate over all the values pairs in the array, invoking
-   * @a callback for each one.
-   *
-   * FIXME: should use std::function instead.
-   */
-  void iterate(Iteration& callback)
+  iterator begin() noexcept
     {
-      for (size_type n = 0; n < size(); ++n)
-        if (!callback((*this)[n]))
-          break;
+      return &APR_ARRAY_IDX(proxied, 0, value_type);
     }
 
   /**
-   * Abstract base class for immutable iteration callback functors.
-   *
-   * FIXME: obsolete; see below.
+   * @brief Return a constant interator to the beginning of the array.
    */
-  struct ConstIteration
-  {
-    /**
-     * Called by Array::iterate for every value in the array.
-     * @return @c false to terminate the iteration, @c true otherwise.
-     */
-    virtual bool operator() (const value_type& value) = 0;
-  };
+  const_iterator begin() const noexcept
+    {
+      return &APR_ARRAY_IDX(proxied, 0, const value_type);
+    }
 
   /**
-   * Iterate over all the values pairs in the array, invoking
-   * @a callback for each one.
-   *
-   * FIXME: should use std::function instead.
+   * @brief Return a constant interator to the beginning of the array.
    */
-  void iterate(ConstIteration& callback) const
+  const_iterator cbegin() const noexcept
     {
-      for (size_type n = 0; n < size(); ++n)
-        if (!callback((*this)[n]))
-          break;
+      return begin();
+    }
+
+  /**
+   * @brief Return an interator to the end of the array.
+   */
+  iterator end() noexcept
+    {
+      return &APR_ARRAY_IDX(proxied, size(), value_type);
+    }
+
+  /**
+   * @brief Return a constant interator to the end of the array.
+   */
+  const_iterator end() const noexcept
+    {
+      return &APR_ARRAY_IDX(proxied, size(), const value_type);
+    }
+
+  /**
+   * @brief Return a constant interator to the end of the array.
+   */
+  const_iterator cend() const noexcept
+    {
+      return end();
     }
 
 private:
-  apr_array_header_t* const m_array; ///< The wrapperd APR array.
-};
-
-
-/**
- * Proxy for an immutable APR array.
- */
-template<typename T>
-class ConstArray : private Array<T>
-{
-  typedef Array<T> inherited;
-
-public:
-  typedef typename inherited::value_type value_type;
-  typedef typename inherited::size_type size_type;
-
-  /**
-   * Create a new proxy for the APR array wrapped by @a that.
-   */
-  ConstArray(const ConstArray& that) throw()
-    : inherited(that)
-    {}
-
-  /**
-   * Create a new proxy for the APR array wrapped by @a that.
-   */
-  explicit ConstArray(const inherited& that) throw()
-    : inherited(that)
-    {}
-
-  /**
-   * Create a new proxy for the APR array @a array.
-   */
-  explicit ConstArray(const apr_array_header_t* array)
-    : inherited(const_cast<apr_array_header_t*>(array))
-    {}
-
-  /**
-   * @return The wrapped APR array.
-   */
-  const apr_array_header_t* array() const throw()
-    {
-      return inherited::array();
-    }
-
-  /**
-   * @return The number of elements in the wrapped APR array.
-   */
-  size_type size() const throw()
-    {
-      return inherited::size();
-    }
-
-  /**
-   * @return An immutable reference to the array element at @a index.
-   */
-  const value_type& operator[](size_type index) const throw()
-    {
-      return inherited::operator[](index);
-    }
-
-  /**
-   * @return An immutable reference to the array element at @a index.
-   * Like operator[] but perfoms a range check on the index.
-   */
-  const value_type& at(size_type index) const
-    {
-      return inherited::at(index);
-    }
-
-  /**
-   * Abstract base class for immutable iteration callback functors.
-   *
-   * FIXME: obsolete; see below.
-   */
-  typedef typename inherited::ConstIteration Iteration;
-
-  /**
-   * Iterate over all the values pairs in the array, invoking
-   * @a callback for each one.
-   *
-   * FIXME: should use std::function instead.
-   */
-  void iterate(Iteration& callback) const
-    {
-      inherited::iterate(callback);
-    }
+  apr_array_header_t* const proxied; ///< The wrapperd APR array.
 };
 
 } // namespace apr

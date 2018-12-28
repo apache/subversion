@@ -28,189 +28,169 @@
 
 #include "fixture_init.hpp"
 
-#include "test_aprwrap_array_helpers.hpp"
-
 BOOST_AUTO_TEST_SUITE(aprwrap_arrays,
                       * boost::unit_test::fixture<init>());
 
+namespace {
+// Create a randomly-ordered array of constant strings.
+apr_array_header_t* fill_array(apr::pool& pool)
+{
+  apr_array_header_t* a = apr_array_make(pool.get(), 0, sizeof(const char*));
+  APR_ARRAY_PUSH(a, const char*) = "primus";
+  APR_ARRAY_PUSH(a, const char*) = "secundus";
+  APR_ARRAY_PUSH(a, const char*) = "tertius";
+  APR_ARRAY_PUSH(a, const char*) = "quartus";
+  APR_ARRAY_PUSH(a, const char*) = "quintus";
+  APR_ARRAY_PUSH(a, const char*) = "sextus";
+  APR_ARRAY_PUSH(a, const char*) = "septimus";
+  std::random_shuffle(&APR_ARRAY_IDX(a, 0, const char*),
+                      &APR_ARRAY_IDX(a, a->nelts, const char*));
+  return a;
+}
+} // anonymous namespace
+
 BOOST_AUTO_TEST_CASE(create_array)
 {
-  typedef APR::Array<unsigned char> Array;
+  typedef apr::array<unsigned char> array;
 
   apr::pool pool;
-  Array array(pool);
+  array a(pool);
 
-  BOOST_TEST(array.array() != nullptr);
-  BOOST_TEST(array.size() == 0);
-  BOOST_TEST(sizeof(Array::value_type) == sizeof(unsigned char));
-  BOOST_TEST(array.array()->elt_size == sizeof(Array::value_type));
+  BOOST_TEST(a.get_array() != nullptr);
+  BOOST_TEST(a.size() == 0);
+  BOOST_TEST(sizeof(array::value_type) == sizeof(unsigned char));
+  BOOST_TEST(a.get_array()->elt_size == sizeof(array::value_type));
 }
 
 BOOST_AUTO_TEST_CASE(wrap_array)
 {
-  typedef APR::Array<unsigned char> Array;
+  typedef apr::array<unsigned char> array;
 
   apr::pool pool;
   apr_array_header_t* apr_array =
-    apr_array_make(pool.get(), 0, sizeof(Array::value_type));
+    apr_array_make(pool.get(), 0, sizeof(array::value_type));
   BOOST_TEST_REQUIRE(apr_array != nullptr);
 
-  Array array(apr_array);
-  BOOST_TEST(array.array() == apr_array);
-  BOOST_TEST(array.size() == 0);
+  array a(apr_array);
+  BOOST_TEST(a.get_array() == apr_array);
+  BOOST_TEST(a.size() == 0);
 }
 
 BOOST_AUTO_TEST_CASE(rewrap_type_mismatch)
 {
-  typedef APR::Array<unsigned char> ByteArray;
-  typedef APR::Array<int> IntArray;
+  typedef apr::array<unsigned char> byte_array;
+  typedef apr::array<int> int_array;
 
   apr::pool pool;
-  BOOST_CHECK_THROW(ByteArray array(IntArray(pool).array()),
+  BOOST_CHECK_THROW(byte_array{int_array(pool).get_array()},
                     std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(out_of_bounds)
 {
-  typedef APR::Array<unsigned char> Array;
+  typedef apr::array<unsigned char> array;
 
   apr::pool pool;
-  Array array(pool);
+  array a(pool);
 
-  BOOST_CHECK_THROW(array.at(-1), std::out_of_range);
-  BOOST_CHECK_THROW(array.at(array.size()), std::out_of_range);
+  BOOST_CHECK_THROW(a.at(-1), std::out_of_range);
+  BOOST_CHECK_THROW(a.at(a.size()), std::out_of_range);
 }
 
 BOOST_AUTO_TEST_CASE(indexing)
 {
-  typedef APR::Array<const char*> Array;
+  typedef apr::array<const char*> array;
 
   apr::pool pool;
-  Array array(fill_array(pool));
+  array a(fill_array(pool));
 
-  BOOST_TEST(array[0] == APR_ARRAY_IDX(array.array(), 0, Array::value_type));
-  BOOST_TEST(array[array.size() - 1] == APR_ARRAY_IDX(array.array(),
-                                                      array.array()->nelts - 1,
-                                                      Array::value_type));
+  BOOST_TEST(a[0] == APR_ARRAY_IDX(a.get_array(), 0, array::value_type));
+  BOOST_TEST(a[a.size() - 1] == APR_ARRAY_IDX(a.get_array(),
+                                              a.get_array()->nelts - 1,
+                                              array::value_type));
 }
 
 BOOST_AUTO_TEST_CASE(checked_indexing)
 {
-  typedef APR::Array<const char*> Array;
+  typedef apr::array<const char*> array;
 
   apr::pool pool;
-  Array array(fill_array(pool));
+  array a(fill_array(pool));
 
-  BOOST_TEST(array.at(0) == APR_ARRAY_IDX(array.array(), 0, Array::value_type));
-  BOOST_TEST(array.at(array.size() - 1) == APR_ARRAY_IDX(array.array(),
-                                                         array.array()->nelts - 1,
-                                                         Array::value_type));
+  BOOST_TEST(a.at(0) == APR_ARRAY_IDX(a.get_array(), 0, array::value_type));
+  BOOST_TEST(a.at(a.size() - 1) == APR_ARRAY_IDX(a.get_array(),
+                                                 a.get_array()->nelts - 1,
+                                                 array::value_type));
 }
 
 BOOST_AUTO_TEST_CASE(iteration)
 {
-  typedef APR::Array<const char*> Array;
+  typedef apr::array<const char*> array;
 
   apr::pool pool;
-  Array array(fill_array(pool));
+  array a(fill_array(pool));
 
-  struct Iteration : public Array::Iteration
-  {
-    Iteration(apr_array_header_t* raw_array)
-      : m_index(0), m_raw_array(raw_array)
-      {}
-
-    bool operator()(Array::value_type& value)
-      {
-        BOOST_TEST(value == APR_ARRAY_IDX(m_raw_array, m_index,
-                                          Array::value_type));
-        ++m_index;
-        return true;
-      }
-
-  private:
-    Array::size_type m_index;
-    apr_array_header_t* m_raw_array;
-  } callback(array.array());
-
-  array.iterate(callback);
-
-  // TODO: Fix iteration to take std::function.
-  // Array::size_type index = 0;
-  // apr_array_header_t* raw_array = array.array();
-  // array.iterate(
-  //     [&index, &raw_array](Array::value_type& value) {
-  //       BOOST_TEST(value == APR_ARRAY_IDX(raw_array, index, Array::value_type));
-  //       ++index;
-  //       return true;
-  //     });
+  const auto raw_array = a.get_array();
+  array::size_type index = 0;
+  for (auto& value : a)
+    {
+      BOOST_TEST(value == APR_ARRAY_IDX(raw_array, index, array::value_type));
+      ++index;
+    }
 }
 
 BOOST_AUTO_TEST_CASE(const_iteration)
 {
-  typedef APR::Array<const char*> Array;
+  typedef apr::array<const char*> array;
 
   apr::pool pool;
-  Array array(fill_array(pool));
+  const array a(fill_array(pool));
 
-  struct Iteration : public Array::ConstIteration
-  {
-    Iteration(const  apr_array_header_t* raw_array)
-      : m_index(0), m_raw_array(raw_array)
-      {}
-
-    bool operator()(const Array::value_type& value)
-      {
-        BOOST_TEST(value == APR_ARRAY_IDX(m_raw_array, m_index,
-                                          Array::value_type));
-        ++m_index;
-        return true;
-      }
-
-  private:
-    Array::size_type m_index;
-    const apr_array_header_t* m_raw_array;
-  } callback(array.array());
-
-  array.iterate(callback);
+  const auto raw_array = a.get_array();
+  array::size_type index = 0;
+  for (const auto& value : a)
+    {
+      BOOST_TEST(value == APR_ARRAY_IDX(raw_array, index, array::value_type));
+      ++index;
+    }
 }
 
 BOOST_AUTO_TEST_CASE(push)
 {
-  typedef APR::Array<const char*> Array;
+  typedef apr::array<const char*> array;
 
   apr::pool pool;
-  Array array(fill_array(pool));
+  array a(fill_array(pool));
 
-  const Array::size_type point = array.size();
-  const Array::value_type first = array[0];
-  const Array::value_type last = array[point - 1];
+  const array::size_type point = a.size();
+  const array::value_type first = a[0];
+  const array::value_type last = a[point - 1];
 
-  array.push("octavius");
-  array.push("nonus");
-  array.push("decimus");
+  a.push("octavius");
+  a.push("nonus");
+  a.push("decimus");
 
-  BOOST_TEST(array.size() == point + 3);
-  BOOST_TEST(array[0] == first);
-  BOOST_TEST(array[point - 1] == last);
-  BOOST_TEST(array[point] == "octavius");
-  BOOST_TEST(array[array.size() - 1] == "decimus");
+  BOOST_TEST(a.size() == point + 3);
+  BOOST_TEST(a[0] == first);
+  BOOST_TEST(a[point - 1] == last);
+  BOOST_TEST(a[point] == "octavius");
+  BOOST_TEST(a[a.size() - 1] == "decimus");
 }
 
 BOOST_AUTO_TEST_CASE(pop)
 {
-  typedef APR::Array<const char*> Array;
+  typedef apr::array<const char*> array;
 
   apr::pool pool;
-  Array array(fill_array(pool));
+  array a(fill_array(pool));
 
-  for (Array::size_type i = 0, z = array.size(); i <= z; ++i)
+  for (array::size_type i = 0, z = a.size(); i <= z; ++i)
     {
-      const char** last = (!array.array()->nelts ? nullptr
-                           : &APR_ARRAY_IDX(array.array(),
-                                            array.array()->nelts - 1,
-                                            Array::value_type));
-      BOOST_TEST(array.pop() == last);
+      const char** last = (!a.get_array()->nelts ? nullptr
+                           : &APR_ARRAY_IDX(a.get_array(),
+                                            a.get_array()->nelts - 1,
+                                            array::value_type));
+      BOOST_TEST(a.pop() == last);
     }
 }
 
