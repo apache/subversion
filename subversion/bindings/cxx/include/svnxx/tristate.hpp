@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/tristate.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,10 +21,6 @@
  * ====================================================================
  * @endcopyright
  */
-
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
 
 #ifndef SVNXX_TRISTATE_HPP
 #define SVNXX_TRISTATE_HPP

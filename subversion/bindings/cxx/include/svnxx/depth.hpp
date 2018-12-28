@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/depth.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -73,4 +74,4 @@ std::u32string to_u32string(depth);
 } // namespace subversion
 } // namespace apache
 
-#endif  // SVNXX_CLIENT_HPP
+#endif  // SVNXX_DEPTH_HPP

@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/exception.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -32,7 +33,8 @@
 #include <vector>
 
 /**
- * @defgroup svnxx_exceptions Exceptions
+ * @defgroup svnxx_exceptions SVN++ Exceptions
+ * @brief Exceptions in SVN++
  *
  * Exceptions in SVN++
  * ===================
@@ -51,6 +53,9 @@
  *     is generating the callback messages. Other exceptions from
  *     user-level callbacks will be propagated back to the calling
  *     application.
+ *
+ * The SVN++ implementation will also throw standard exceptions when
+ * appropriate. Their use is documented in the relevant modules.
  *
  * Exception Hierarchy
  * -------------------

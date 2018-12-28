@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/init.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -20,10 +21,6 @@
  * ====================================================================
  * @endcopyright
  */
-
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
 
 #ifndef SVNXX_INIT_HPP
 #define SVNXX_INIT_HPP
