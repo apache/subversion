@@ -1,5 +1,5 @@
 /**
- * @file svnxx/noncopyable.hpp
+ * @file svnxx/detail/noncopyable.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -22,8 +22,8 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_NONCOPYABLE_HPP
-#define SVNXX_NONCOPYABLE_HPP
+#ifndef SVNXX_DETAIL_NONCOPYABLE_HPP
+#define SVNXX_DETAIL_NONCOPYABLE_HPP
 
 namespace apache {
 namespace subversion {
@@ -31,11 +31,11 @@ namespace svnxx {
 namespace detail {
 
 namespace noncopyable_ {
-
 /**
+ * @ingroup svnxx_detail
  * @brief Base class for non-copyable objects.
  *
- * Objects of classes derived from @c noncopyable cannot be copyed,
+ * Objects of classes derived from @c noncopyable cannot be copied,
  * but can used as rvalue references and with <tt>std::move</tt>.
  *
  * @note Use @e private inheritance to avoid polymorphism traps!
@@ -58,4 +58,4 @@ using noncopyable = noncopyable_::noncopyable;
 } // namespace subversion
 } // namespace apache
 
-#endif  // SVNXX_NONCOPYABLE_HPP
+#endif  // SVNXX_DETAIL_NONCOPYABLE_HPP

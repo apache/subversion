@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/detail/doxygen.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,69 +22,30 @@
  * @endcopyright
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
-
-#ifndef SVNXX_PRIVATE_INIT_HPP
-#define SVNXX_PRIVATE_INIT_HPP
-
-#include <memory>
-#include <mutex>
-#include <stdexcept>
-
-#include <apr_pools.h>
-
-#include "svnxx/init.hpp"
-#include "svnxx/detail/noncopyable.hpp"
-
-#include "svn_private_config.h"
+#ifdef DOXYGEN
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
 namespace detail {
 
-class context : noncopyable
-{
-public:
-  using ptr = std::shared_ptr<context>;
-  using weak_ptr = std::weak_ptr<context>;
-
-  ~context();
-
-  static ptr create();
-  static ptr get()
-    {
-      auto ctx = self.lock();
-      if (!ctx)
-        {
-          throw std::logic_error(
-              _("The SVN++ library is not initialized."
-                " Did you forget to create an instance of "
-                " the apache::subversion::svnxx::init class?"));
-        }
-      return ctx;
-    }
-
-  apr_pool_t* get_root_pool() const noexcept
-    {
-      return root_pool;
-    }
-
-private:
-  // Thou shalt not create contexts other than through the factory.
-  context();
-
-  apr_pool_t* root_pool{nullptr};
-
-  static std::mutex guard;
-  static weak_ptr self;
-};
+/**
+ * @defgroup svnxx_detail SVN++ Implementation Details
+ * @brief The C++ API's Private Parts
+ *
+ * The C++ API's Private Parts
+ * ===========================
+ *
+ * Anything declared or defined in the namespace
+ * @c apache::subversion::svnxx::detail is an implementation detail
+ * of the SVN++ public API. User code @b should @b not use anything
+ * from this namespace, except as far as it's referenced from the
+ * public parts of the API.
+ */
 
 } // namespace detail
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif // SVNXX_PRIVATE_INIT_HPP
+#endif // DOXYGEN
