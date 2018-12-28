@@ -24,7 +24,7 @@
 #include "pool.hpp"
 #include "hash.hpp"
 
-#include "../private/init-private.hpp"
+#include "../private/init_private.hpp"
 
 namespace apache {
 namespace subversion {

@@ -20,8 +20,7 @@
  */
 #include <boost/test/unit_test.hpp>
 
-#include "svnxx/tristate.hpp"
-#include "../src/private/tristate-private.hpp"
+#include "../src/private/tristate_private.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
 namespace detail = ::apache::subversion::svnxx::detail;

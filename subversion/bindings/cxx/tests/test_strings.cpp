@@ -157,7 +157,7 @@ inline std::vector<std::basic_string<C>> generate_string_data(int count)
 } // anonymous namespace
 
 
-#include "../src/private/strings-private.hpp"
+#include "../src/private/strings_private.hpp"
 
 #include "fixture_init.hpp"
 

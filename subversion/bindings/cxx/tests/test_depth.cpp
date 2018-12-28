@@ -21,7 +21,7 @@
 
 #include <boost/test/unit_test.hpp>
 
-#include "../src/private/depth-private.hpp"
+#include "../src/private/depth_private.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
 namespace detail = ::apache::subversion::svnxx::detail;

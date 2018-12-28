@@ -20,7 +20,7 @@
  */
 #include <boost/test/unit_test.hpp>
 
-#include "../src/private/init-private.hpp"
+#include "../src/private/init_private.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
 namespace detail = ::apache::subversion::svnxx::detail;

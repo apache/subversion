@@ -24,10 +24,10 @@
 #ifndef SVNXX_PRIVATE_PRIVATE_HPP
 #define SVNXX_PRIVATE_PRIVATE_HPP
 
-#include "private/depth-private.hpp"
-#include "private/exception-private.hpp"
-#include "private/revision-private.hpp"
-#include "private/strings-private.hpp"
-#include "private/tristate-private.hpp"
+#include "private/depth_private.hpp"
+#include "private/exception_private.hpp"
+#include "private/revision_private.hpp"
+#include "private/strings_private.hpp"
+#include "private/tristate_private.hpp"
 
 #endif // SVNXX_PRIVATE_PRIVATE_HPP

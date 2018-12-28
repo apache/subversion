@@ -23,7 +23,7 @@
 
 #include <stdexcept>
 
-#include "private/revision-private.hpp"
+#include "private/revision_private.hpp"
 
 namespace apache {
 namespace subversion {
