@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/noncopyable.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
