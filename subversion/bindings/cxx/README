@@ -61,3 +61,71 @@ Planned:
 Not planned:
   * libsvn_subr
   * libsvn_wc
+
+
+C++ NAMESPACES AND SOURCE LAYOUT
+================================
+
+Public API
+----------
+
+The public API is in namespace apache::subversion::svnxx and we define
+a namespace alias for that:
+
+    namespace svn = ::apache::subversion::svnxx
+
+All elements of the public API are defined or declared in header files
+in the directory
+
+    .../include/svnxx/*.hpp
+
+with the single header file
+
+    .../include/svnxx.hpp
+
+importing all relevant headers from that directory.
+
+Implementation details used by the public API and visible to user
+code but that should not be directly used by user code are in the
+namespace apache::subversion::svnxx::detail and should be defined
+in header files in the directory:
+
+    .../include/svnxx/detail/*.hpp
+
+Note on API versioning
+----------------------
+
+Version-specific elements of the public API should be defined in
+namespaces within the public namespace; e.g., for version 1.13:
+
+    apache::subversion::svnxx::v_1_13
+
+and the default (or selected) version will be exposed in the
+parent namespace by inlining the namespace declaration.
+This versioning does not apply to things declared in svn::detail.
+
+Implementation
+--------------
+
+All entities that are private to the implementation should be
+in the namespace apache::subversion::svnxx::impl and defined
+in header files within the source directory tree:
+
+    .../src/private/*_private.hpp
+
+with the single header file
+
+    .../src/private.hpp
+
+importing all relevant headers from that directory. The exception to
+this rule are C++ wrappers for APR types, which are defined in the
+namespace apache::subversion::svnxx::apr in header files in the
+directory:
+
+    .../src/aprwrap/*.hpp
+
+with the single header file
+
+    .../src/aprwrap.hpp
+
+importing all relevant headers from that directory.
