@@ -29,7 +29,7 @@
 #include <memory>
 
 #include "svnxx/exception.hpp"
-#include "svnxx/noncopyable.hpp"
+#include "svnxx/detail/noncopyable.hpp"
 
 #include "svn_pools.h"
 
