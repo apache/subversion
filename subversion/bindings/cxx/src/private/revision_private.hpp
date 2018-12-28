@@ -32,7 +32,7 @@
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
 /**
  * Convert @a kind to an svn_opt_revision_kind.
@@ -54,7 +54,7 @@ svn_opt_revision_t convert(const revision& rev);
  */
 revision convert(const svn_opt_revision_t& rev);
 
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

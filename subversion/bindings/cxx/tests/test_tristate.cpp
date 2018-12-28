@@ -23,7 +23,7 @@
 #include "../src/private/tristate_private.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
-namespace detail = ::apache::subversion::svnxx::detail;
+namespace impl = ::apache::subversion::svnxx::impl;
 
 namespace {
 constexpr auto T = svn::tristate(true);
@@ -51,13 +51,13 @@ BOOST_AUTO_TEST_CASE(constants)
 
 BOOST_AUTO_TEST_CASE(conversions)
 {
-  BOOST_TEST(detail::convert(T) == svn_tristate_true);
-  BOOST_TEST(detail::convert(F) == svn_tristate_false);
-  BOOST_TEST(detail::convert(X) == svn_tristate_unknown);
+  BOOST_TEST(impl::convert(T) == svn_tristate_true);
+  BOOST_TEST(impl::convert(F) == svn_tristate_false);
+  BOOST_TEST(impl::convert(X) == svn_tristate_unknown);
 
-  BOOST_TEST(detail::convert(svn_tristate_true) == T);
-  BOOST_TEST(detail::convert(svn_tristate_false) == F);
-  BOOST_TEST(svn::unknown(detail::convert(svn_tristate_unknown)));
+  BOOST_TEST(impl::convert(svn_tristate_true) == T);
+  BOOST_TEST(impl::convert(svn_tristate_false) == F);
+  BOOST_TEST(svn::unknown(impl::convert(svn_tristate_unknown)));
 }
 
 BOOST_AUTO_TEST_CASE(construct_true)

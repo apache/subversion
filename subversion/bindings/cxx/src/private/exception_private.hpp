@@ -28,12 +28,14 @@
 #ifndef SVNXX_PRIVATE_EXCEPTION_HPP
 #define SVNXX_PRIVATE_EXCEPTION_HPP
 
+#include "svnxx/exception.hpp"
+
 #include "svn_error.h"
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
 /**
  * Given a @a err, if it is not @c nullptr, convert it to a and throw an
@@ -49,7 +51,8 @@ inline svn_error_t* iteration_etopped()
 {
   return svn_error_create(SVN_ERR_ITER_BREAK, nullptr, nullptr);
 }
-} // namespace detail
+
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

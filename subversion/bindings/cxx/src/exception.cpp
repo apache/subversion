@@ -37,16 +37,22 @@ namespace apache {
 namespace subversion {
 namespace svnxx {
 
+namespace detail {
+struct svn_error final : svn_error_t {};
+} // namespace detail
+
+
 //
 // checked_call
 //
 
-namespace detail {
-
-struct svn_error final : svn_error_t {};
+namespace impl {
 
 void checked_call(svn_error_t* const err)
 {
+  using svn_error = detail::svn_error;
+  using error_ptr = detail::error_ptr;
+
   if (!err)
     return;
 
@@ -80,7 +86,7 @@ void checked_call(svn_error_t* const err)
   throw error_builder(err_ptr);
 }
 
-} // namespace detail
+} // namespace impl
 
 //
 // Class error

@@ -32,7 +32,7 @@
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
 namespace {
 // Define codecvt types for our various converters.
@@ -98,7 +98,7 @@ inline std::string convert(const std::basic_string<C>& str)
   return converter<C>().to_bytes(str);
 }
 
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

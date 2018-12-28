@@ -28,7 +28,7 @@
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
 svn_opt_revision_kind convert(revision::kind kind)
 {
@@ -169,7 +169,7 @@ revision convert(const svn_opt_revision_t& rev)
     }
 }
 
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

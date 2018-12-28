@@ -162,7 +162,7 @@ inline std::vector<std::basic_string<C>> generate_string_data(int count)
 #include "fixture_init.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
-namespace detail = ::apache::subversion::svnxx::detail;
+namespace impl = ::apache::subversion::svnxx::impl;
 
 BOOST_AUTO_TEST_SUITE(strings,
                       * boost::unit_test::fixture<init>());
@@ -170,19 +170,19 @@ BOOST_AUTO_TEST_SUITE(strings,
 BOOST_AUTO_TEST_CASE(wstring_conversion_roundtrip)
 {
   for (const auto& sample : generate_string_data<wchar_t>(100))
-    BOOST_TEST((sample == detail::convert<wchar_t>(detail::convert(sample))));
+    BOOST_TEST((sample == impl::convert<wchar_t>(impl::convert(sample))));
 }
 
 BOOST_AUTO_TEST_CASE(u16string_conversion_roundtrip)
 {
   for (const auto& sample : generate_string_data<char16_t>(100))
-    BOOST_TEST((sample == detail::convert<char16_t>(detail::convert(sample))));
+    BOOST_TEST((sample == impl::convert<char16_t>(impl::convert(sample))));
 }
 
 BOOST_AUTO_TEST_CASE(u32string_conversion_roundtrip)
 {
   for (const auto& sample : generate_string_data<char32_t>(100))
-    BOOST_TEST((sample == detail::convert<char32_t>(detail::convert(sample))));
+    BOOST_TEST((sample == impl::convert<char32_t>(impl::convert(sample))));
 }
 
 BOOST_AUTO_TEST_CASE(nulchar)
@@ -197,21 +197,21 @@ BOOST_AUTO_TEST_CASE(nulchar)
   BOOST_TEST(u16nulstr.size() == 1);
   BOOST_TEST(u32nulstr.size() == 1);
 
-  BOOST_TEST(detail::convert<wchar_t>(nulstr).size() == 1);
-  BOOST_TEST(detail::convert<char16_t>(nulstr).size() == 1);
-  BOOST_TEST(detail::convert<char32_t>(nulstr).size() == 1);
+  BOOST_TEST(impl::convert<wchar_t>(nulstr).size() == 1);
+  BOOST_TEST(impl::convert<char16_t>(nulstr).size() == 1);
+  BOOST_TEST(impl::convert<char32_t>(nulstr).size() == 1);
 
-  BOOST_TEST((detail::convert<wchar_t>(nulstr) == wnulstr));
-  BOOST_TEST((detail::convert<char16_t>(nulstr) == u16nulstr));
-  BOOST_TEST((detail::convert<char32_t>(nulstr) == u32nulstr));
+  BOOST_TEST((impl::convert<wchar_t>(nulstr) == wnulstr));
+  BOOST_TEST((impl::convert<char16_t>(nulstr) == u16nulstr));
+  BOOST_TEST((impl::convert<char32_t>(nulstr) == u32nulstr));
 
-  BOOST_TEST(detail::convert(wnulstr).size() == 1);
-  BOOST_TEST(detail::convert(u16nulstr).size() == 1);
-  BOOST_TEST(detail::convert(u32nulstr).size() == 1);
+  BOOST_TEST(impl::convert(wnulstr).size() == 1);
+  BOOST_TEST(impl::convert(u16nulstr).size() == 1);
+  BOOST_TEST(impl::convert(u32nulstr).size() == 1);
 
-  BOOST_TEST((detail::convert(wnulstr) == nulstr));
-  BOOST_TEST((detail::convert(u16nulstr) == nulstr));
-  BOOST_TEST((detail::convert(u32nulstr) == nulstr));
+  BOOST_TEST((impl::convert(wnulstr) == nulstr));
+  BOOST_TEST((impl::convert(u16nulstr) == nulstr));
+  BOOST_TEST((impl::convert(u32nulstr) == nulstr));
 }
 
 BOOST_AUTO_TEST_SUITE_END();
