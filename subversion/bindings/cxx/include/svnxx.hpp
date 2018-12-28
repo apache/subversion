@@ -29,8 +29,10 @@
 #define SVNXX_HPP
 
 // Expose the whole API and alias the default version namespace
+#include "svnxx/depth.hpp"
 #include "svnxx/init.hpp"
 #include "svnxx/exception.hpp"
+#include "svnxx/revision.hpp"
 #include "svnxx/tristate.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
