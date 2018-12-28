@@ -34,7 +34,7 @@
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
 /**
  * Converts an @c svn_tristate_t value to a @c tristate value.
@@ -55,7 +55,7 @@ inline constexpr svn_tristate_t convert(tristate t)
           : (!t ? svn_tristate_false : svn_tristate_unknown));
 }
 
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

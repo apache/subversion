@@ -32,25 +32,25 @@ namespace svnxx {
 
 std::string to_string(depth d)
 {
-  return std::string(svn_depth_to_word(detail::convert(d)));
+  return std::string(svn_depth_to_word(impl::convert(d)));
 }
 
 std::wstring to_wstring(depth d)
 {
-  return detail::convert<wchar_t>(svn_depth_to_word(detail::convert(d)));
+  return impl::convert<wchar_t>(svn_depth_to_word(impl::convert(d)));
 }
 
 std::u16string to_u16string(depth d)
 {
-  return detail::convert<char16_t>(svn_depth_to_word(detail::convert(d)));
+  return impl::convert<char16_t>(svn_depth_to_word(impl::convert(d)));
 }
 
 std::u32string to_u32string(depth d)
 {
-  return detail::convert<char32_t>(svn_depth_to_word(detail::convert(d)));
+  return impl::convert<char32_t>(svn_depth_to_word(impl::convert(d)));
 }
 
-namespace detail {
+namespace impl {
 
 svn_depth_t convert(depth d)
 {
@@ -136,7 +136,7 @@ depth convert(svn_depth_t d)
   return depth(d);
 }
 
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache

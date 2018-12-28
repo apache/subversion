@@ -26,10 +26,10 @@
 #include <ios>
 #include <iostream>
 
-#include "svnxx.hpp"
-#include "../src/private.hpp"
+#include "../src/private/exception_private.hpp"
 
-#include "svn_error.h"
+namespace svn = ::apache::subversion::svnxx;
+namespace impl = ::apache::subversion::svnxx::impl;
 
 #include "fixture_init.hpp"
 
@@ -53,19 +53,19 @@ svn_error_t* make_error_test_error()
 BOOST_AUTO_TEST_CASE(thrown_error)
 {
   BOOST_CHECK_THROW(
-      svn::detail::checked_call(make_error_test_error()),
+      impl::checked_call(make_error_test_error()),
       svn::error);
 }
 
 BOOST_AUTO_TEST_CASE(catch_error)
 {
   BOOST_CHECK_THROW(
-      svn::detail::checked_call(make_error_test_error()),
+      impl::checked_call(make_error_test_error()),
       svn::error);
 
   try
     {
-      svn::detail::checked_call(make_error_test_error());
+      impl::checked_call(make_error_test_error());
     }
   catch (const svn::error& err)
     {
@@ -109,7 +109,7 @@ BOOST_AUTO_TEST_CASE(propagate_error)
   std::exception_ptr xptr;
   try
     {
-      svn::detail::checked_call(make_error_test_error());
+      impl::checked_call(make_error_test_error());
     }
   catch (...)
     {
@@ -137,7 +137,7 @@ svn_error_t* make_cancel_test_error()
 BOOST_AUTO_TEST_CASE(thtrown_cancelled)
 {
   BOOST_CHECK_THROW(
-      svn::detail::checked_call(make_cancel_test_error()),
+      impl::checked_call(make_cancel_test_error()),
       svn::cancelled);
 }
 
@@ -145,7 +145,7 @@ BOOST_AUTO_TEST_CASE(catch_cancelled)
 {
   try
     {
-      svn::detail::checked_call(make_cancel_test_error());
+      impl::checked_call(make_cancel_test_error());
     }
   catch (const svn::cancelled& err)
     {
@@ -189,7 +189,7 @@ BOOST_AUTO_TEST_CASE(propagate_cancelled)
   std::exception_ptr xptr;
   try
     {
-      svn::detail::checked_call(make_cancel_test_error());
+      impl::checked_call(make_cancel_test_error());
     }
   catch (...)
     {
@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(propagate_cancelled)
 BOOST_AUTO_TEST_CASE(iteration_stopped_cancels)
 {
   BOOST_CHECK_THROW(
-      svn::detail::checked_call(svn::detail::iteration_etopped()),
+      impl::checked_call(impl::iteration_etopped()),
       svn::cancelled);
 }
 
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(iteration_stopped)
 {
   try
     {
-      svn::detail::checked_call(svn::detail::iteration_etopped());
+      impl::checked_call(impl::iteration_etopped());
     }
   catch (const svn::cancelled& err)
     {

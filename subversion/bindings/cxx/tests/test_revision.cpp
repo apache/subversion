@@ -26,34 +26,34 @@
 #include "../src/private/revision_private.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
-namespace detail = ::apache::subversion::svnxx::detail;
+namespace impl = ::apache::subversion::svnxx::impl;
 
 BOOST_AUTO_TEST_SUITE(revision);
 
 BOOST_AUTO_TEST_CASE(convert_to_kind)
 {
   using kind = svn::revision::kind;
-  BOOST_TEST((detail::convert(kind::unspecified) == svn_opt_revision_unspecified));
-  BOOST_TEST((detail::convert(kind::number)      == svn_opt_revision_number));
-  BOOST_TEST((detail::convert(kind::date)        == svn_opt_revision_date));
-  BOOST_TEST((detail::convert(kind::committed)   == svn_opt_revision_committed));
-  BOOST_TEST((detail::convert(kind::previous)    == svn_opt_revision_previous));
-  BOOST_TEST((detail::convert(kind::base)        == svn_opt_revision_base));
-  BOOST_TEST((detail::convert(kind::working)     == svn_opt_revision_working));
-  BOOST_TEST((detail::convert(kind::head)        == svn_opt_revision_head));
+  BOOST_TEST((impl::convert(kind::unspecified) == svn_opt_revision_unspecified));
+  BOOST_TEST((impl::convert(kind::number)      == svn_opt_revision_number));
+  BOOST_TEST((impl::convert(kind::date)        == svn_opt_revision_date));
+  BOOST_TEST((impl::convert(kind::committed)   == svn_opt_revision_committed));
+  BOOST_TEST((impl::convert(kind::previous)    == svn_opt_revision_previous));
+  BOOST_TEST((impl::convert(kind::base)        == svn_opt_revision_base));
+  BOOST_TEST((impl::convert(kind::working)     == svn_opt_revision_working));
+  BOOST_TEST((impl::convert(kind::head)        == svn_opt_revision_head));
 }
 
 BOOST_AUTO_TEST_CASE(convert_from_kind)
 {
   using kind = svn::revision::kind;
-  BOOST_TEST((detail::convert(svn_opt_revision_unspecified) == kind::unspecified));
-  BOOST_TEST((detail::convert(svn_opt_revision_number)      == kind::number));
-  BOOST_TEST((detail::convert(svn_opt_revision_date)        == kind::date));
-  BOOST_TEST((detail::convert(svn_opt_revision_committed)   == kind::committed));
-  BOOST_TEST((detail::convert(svn_opt_revision_previous)    == kind::previous));
-  BOOST_TEST((detail::convert(svn_opt_revision_base)        == kind::base));
-  BOOST_TEST((detail::convert(svn_opt_revision_working)     == kind::working));
-  BOOST_TEST((detail::convert(svn_opt_revision_head)        == kind::head));
+  BOOST_TEST((impl::convert(svn_opt_revision_unspecified) == kind::unspecified));
+  BOOST_TEST((impl::convert(svn_opt_revision_number)      == kind::number));
+  BOOST_TEST((impl::convert(svn_opt_revision_date)        == kind::date));
+  BOOST_TEST((impl::convert(svn_opt_revision_committed)   == kind::committed));
+  BOOST_TEST((impl::convert(svn_opt_revision_previous)    == kind::previous));
+  BOOST_TEST((impl::convert(svn_opt_revision_base)        == kind::base));
+  BOOST_TEST((impl::convert(svn_opt_revision_working)     == kind::working));
+  BOOST_TEST((impl::convert(svn_opt_revision_head)        == kind::head));
 }
 
 BOOST_AUTO_TEST_CASE(roundtrip_conversions)
@@ -76,7 +76,7 @@ BOOST_AUTO_TEST_CASE(roundtrip_conversions)
   };
 
   for (const auto& r : data)
-    BOOST_TEST((detail::convert(detail::convert(r)) == r));
+    BOOST_TEST((impl::convert(impl::convert(r)) == r));
 }
 
 BOOST_AUTO_TEST_CASE(preconditions)

@@ -24,28 +24,28 @@
 #include "../src/private/depth_private.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
-namespace detail = ::apache::subversion::svnxx::detail;
+namespace impl = ::apache::subversion::svnxx::impl;
 
 BOOST_AUTO_TEST_SUITE(depth);
 
 BOOST_AUTO_TEST_CASE(convert_to)
 {
-  BOOST_TEST((detail::convert(svn::depth::unknown)    == svn_depth_unknown));
-  BOOST_TEST((detail::convert(svn::depth::exclude)    == svn_depth_exclude));
-  BOOST_TEST((detail::convert(svn::depth::empty)      == svn_depth_empty));
-  BOOST_TEST((detail::convert(svn::depth::files)      == svn_depth_files));
-  BOOST_TEST((detail::convert(svn::depth::immediates) == svn_depth_immediates));
-  BOOST_TEST((detail::convert(svn::depth::infinity)   == svn_depth_infinity));
+  BOOST_TEST((impl::convert(svn::depth::unknown)    == svn_depth_unknown));
+  BOOST_TEST((impl::convert(svn::depth::exclude)    == svn_depth_exclude));
+  BOOST_TEST((impl::convert(svn::depth::empty)      == svn_depth_empty));
+  BOOST_TEST((impl::convert(svn::depth::files)      == svn_depth_files));
+  BOOST_TEST((impl::convert(svn::depth::immediates) == svn_depth_immediates));
+  BOOST_TEST((impl::convert(svn::depth::infinity)   == svn_depth_infinity));
 }
 
 BOOST_AUTO_TEST_CASE(convert_from)
 {
-  BOOST_TEST((detail::convert(svn_depth_unknown)    == svn::depth::unknown));
-  BOOST_TEST((detail::convert(svn_depth_exclude)    == svn::depth::exclude));
-  BOOST_TEST((detail::convert(svn_depth_empty)      == svn::depth::empty));
-  BOOST_TEST((detail::convert(svn_depth_files)      == svn::depth::files));
-  BOOST_TEST((detail::convert(svn_depth_immediates) == svn::depth::immediates));
-  BOOST_TEST((detail::convert(svn_depth_infinity)   == svn::depth::infinity));
+  BOOST_TEST((impl::convert(svn_depth_unknown)    == svn::depth::unknown));
+  BOOST_TEST((impl::convert(svn_depth_exclude)    == svn::depth::exclude));
+  BOOST_TEST((impl::convert(svn_depth_empty)      == svn::depth::empty));
+  BOOST_TEST((impl::convert(svn_depth_files)      == svn::depth::files));
+  BOOST_TEST((impl::convert(svn_depth_immediates) == svn::depth::immediates));
+  BOOST_TEST((impl::convert(svn_depth_infinity)   == svn::depth::infinity));
 }
 
 BOOST_AUTO_TEST_CASE(char_names)

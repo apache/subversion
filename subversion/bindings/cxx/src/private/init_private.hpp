@@ -21,10 +21,6 @@
  * @endcopyright
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
-
 #ifndef SVNXX_PRIVATE_INIT_HPP
 #define SVNXX_PRIVATE_INIT_HPP
 

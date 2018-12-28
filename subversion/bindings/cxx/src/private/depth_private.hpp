@@ -31,7 +31,7 @@
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
 /**
  * Convert @a d to an svn_depth_t.
@@ -43,7 +43,7 @@ svn_depth_t convert(depth d);
  */
 depth convert(svn_depth_t d);
 
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
