@@ -36,37 +36,42 @@ svn_opt_revision_kind convert(revision::kind kind)
   switch (kind)
     {
     case revision::kind::unspecified:
-      if (kind != svn_opt_revision_unspecified)
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_unspecified)
         throw std::range_error("convert svn::revision::kind::unspecified");
       break;
 
     case revision::kind::number:
-      if (kind != svn_opt_revision_number)
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_number)
         throw std::range_error("convert svn::revision::kind::number");
       break;
 
     case revision::kind::date:
-      if (kind != svn_opt_revision_date)
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_date)
         throw std::range_error("convert svn::revision::kind::date");
       break;
 
     case revision::kind::committed:
-      if (kind != svn_opt_revision_committed)
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_committed)
         throw std::range_error("convert svn::revision::kind::committed");
       break;
 
+    case revision::kind::previous:
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_previous)
+        throw std::range_error("convert svn::revision::kind::previous");
+      break;
+
     case revision::kind::base:
-      if (kind != svn_opt_revision_base)
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_base)
         throw std::range_error("convert svn::revision::kind::base");
       break;
 
     case revision::kind::working:
-      if (kind != svn_opt_revision_working)
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_working)
         throw std::range_error("convert svn::revision::kind::working");
       break;
 
     case revision::kind::head:
-      if (kind != svn_opt_revision_head)
+      if (svn_opt_revision_kind(kind) != svn_opt_revision_head)
         throw std::range_error("convert svn::revision::kind::head");
       break;
 
@@ -83,37 +88,42 @@ revision::kind convert(svn_opt_revision_kind kind)
   switch (kind)
     {
     case svn_opt_revision_unspecified:
-      if (kind != revision::kind::unspecified)
+      if (kind != svn_opt_revision_kind(revision::kind::unspecified))
         throw std::range_error("convert svn_opt_revision_unspecified");
       break;
 
     case svn_opt_revision_number:
-      if (kind != revision::kind::number)
+      if (kind != svn_opt_revision_kind(revision::kind::number))
         throw std::range_error("convert svn_opt_revision_number");
       break;
 
     case svn_opt_revision_date:
-      if (kind != revision::kind::date)
+      if (kind != svn_opt_revision_kind(revision::kind::date))
         throw std::range_error("convert svn_opt_revision_date");
       break;
 
     case svn_opt_revision_committed:
-      if (kind != revision::kind::committed)
+      if (kind != svn_opt_revision_kind(revision::kind::committed))
         throw std::range_error("convert svn_opt_revision_committed");
       break;
 
+    case svn_opt_revision_previous:
+      if (kind != svn_opt_revision_kind(revision::kind::previous))
+        throw std::range_error("convert svn_opt_revision_previous");
+      break;
+
     case svn_opt_revision_base:
-      if (kind != revision::kind::base)
+      if (kind != svn_opt_revision_kind(revision::kind::base))
         throw std::range_error("convert svn_opt_revision_base");
       break;
 
     case svn_opt_revision_working:
-      if (kind != revision::kind::working)
+      if (kind != svn_opt_revision_kind(revision::kind::working))
         throw std::range_error("convert svn_opt_revision_working");
       break;
 
     case svn_opt_revision_head:
-      if (kind != revision::kind::head)
+      if (kind != svn_opt_revision_kind(revision::kind::head))
         throw std::range_error("convert svn_opt_revision_head");
       break;
 
