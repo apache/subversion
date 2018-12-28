@@ -89,8 +89,6 @@ BOOST_AUTO_TEST_CASE(preconditions)
 BOOST_AUTO_TEST_CASE(postconditions_kind)
 {
   using kind = svn::revision::kind;
-  using usec = svn::revision::usec;
-
   BOOST_TEST((svn::revision(kind::unspecified).get_kind() == kind::unspecified));
   BOOST_TEST((svn::revision(kind::committed)  .get_kind() == kind::committed));
   BOOST_TEST((svn::revision(kind::previous)   .get_kind() == kind::previous));

@@ -58,32 +58,32 @@ svn_depth_t convert(depth d)
   switch (d)
     {
     case depth::unknown:
-      if (d != svn_depth_unknown)
+      if (svn_depth_t(d) != svn_depth_unknown)
         throw std::range_error("convert svn::depth::unknown");
       break;
 
     case depth::exclude:
-      if (d != svn_depth_exclude)
+      if (svn_depth_t(d) != svn_depth_exclude)
         throw std::range_error("convert svn::depth::exclude");
       break;
 
     case depth::empty:
-      if (d != svn_depth_empty)
+      if (svn_depth_t(d) != svn_depth_empty)
         throw std::range_error("convert svn::depth::empty");
       break;
 
     case depth::files:
-      if (d != svn_depth_files)
+      if (svn_depth_t(d) != svn_depth_files)
         throw std::range_error("convert svn::depth::files");
       break;
 
     case depth::immediates:
-      if (d != svn_depth_immediates)
+      if (svn_depth_t(d) != svn_depth_immediates)
         throw std::range_error("convert svn::depth::immediates");
       break;
 
     case depth::infinity:
-      if (d != svn_depth_infinity)
+      if (svn_depth_t(d) != svn_depth_infinity)
         throw std::range_error("convert svn::depth::infinity");
       break;
 
@@ -100,32 +100,32 @@ depth convert(svn_depth_t d)
   switch (d)
     {
     case svn_depth_unknown:
-      if (d != depth::unknown)
+      if (d != svn_depth_t(depth::unknown))
         throw std::range_error("convert svn_depth_unknown");
       break;
 
     case svn_depth_exclude:
-      if (d != depth::exclude)
+      if (d != svn_depth_t(depth::exclude))
         throw std::range_error("convert svn_depth_exclude");
       break;
 
     case svn_depth_empty:
-      if (d != depth::empty)
+      if (d != svn_depth_t(depth::empty))
         throw std::range_error("convert svn_depth_empty");
       break;
 
     case svn_depth_files:
-      if (d != depth::files)
+      if (d != svn_depth_t(depth::files))
         throw std::range_error("convert svn_depth_files");
       break;
 
     case svn_depth_immediates:
-      if (d != depth::immediates)
+      if (d != svn_depth_t(depth::immediates))
         throw std::range_error("convert svn_depth_immediates");
       break;
 
     case svn_depth_infinity:
-      if (d != depth::infinity)
+      if (d != svn_depth_t(depth::infinity))
         throw std::range_error("convert svn_depth_infinity");
       break;
 
