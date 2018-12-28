@@ -82,8 +82,8 @@ BOOST_AUTO_TEST_CASE(roundtrip_conversions)
 BOOST_AUTO_TEST_CASE(preconditions)
 {
   using kind = svn::revision::kind;
-  BOOST_CHECK_THROW(auto r = svn::revision(kind::number), std::invalid_argument);
-  BOOST_CHECK_THROW(auto r = svn::revision(kind::date), std::invalid_argument);
+  BOOST_CHECK_THROW(svn::revision{kind::number}, std::invalid_argument);
+  BOOST_CHECK_THROW(svn::revision{kind::date}, std::invalid_argument);
 }
 
 BOOST_AUTO_TEST_CASE(postconditions_kind)
