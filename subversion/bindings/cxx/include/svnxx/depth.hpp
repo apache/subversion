@@ -35,7 +35,7 @@ namespace svnxx {
  * @brief The concept of depth for directories (see @ref svn_depth_t).
  */
 // NOTE: Keep these values identical to those in svn_depth_t!
-enum class depth : int8_t
+enum class depth : std::int8_t
   {
     unknown = -2,
     exclude = -1,
