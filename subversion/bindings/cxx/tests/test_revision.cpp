@@ -23,7 +23,7 @@
 
 #include <array>
 
-#include "../src/private/revision-private.hpp"
+#include "../src/private/revision_private.hpp"
 
 namespace svn = ::apache::subversion::svnxx;
 namespace detail = ::apache::subversion::svnxx::detail;

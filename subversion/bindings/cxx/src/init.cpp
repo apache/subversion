@@ -24,7 +24,7 @@
 #include <sstream>
 
 #include "svnxx/exception.hpp"
-#include "private/init-private.hpp"
+#include "private/init_private.hpp"
 
 #include <apr_general.h>
 #include "svn_pools.h"
