@@ -21,13 +21,42 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_HPP
-#define SVNXX_PRIVATE_PRIVATE_HPP
+#ifndef SVNXX_PRIVATE_REVISION_HPP
+#define SVNXX_PRIVATE_REVISION_HPP
 
-#include "private/depth-private.hpp"
-#include "private/exception-private.hpp"
-#include "private/revision-private.hpp"
-#include "private/strings-private.hpp"
-#include "private/tristate-private.hpp"
+#include "svnxx/revision.hpp"
 
-#endif // SVNXX_PRIVATE_PRIVATE_HPP
+#include "svn_types.h"
+#include "svn_opt.h"
+
+namespace apache {
+namespace subversion {
+namespace svnxx {
+namespace detail {
+
+/**
+ * Convert @a kind to an svn_opt_revision_kind.
+ */
+svn_opt_revision_kind convert(revision::kind kind);
+
+/**
+ * Convert @a kind to an svn::revision::kind.
+ */
+revision::kind convert(svn_opt_revision_kind kind);
+
+/**
+ * Convert @a rev to an svn_opt_revision_t.
+ */
+svn_opt_revision_t convert(const revision& rev);
+
+/**
+ * Convert @a rev to an svn::revision.
+ */
+revision convert(const svn_opt_revision_t& rev);
+
+} // namespace detail
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache
+
+#endif // SVNXX_PRIVATE_REVISION_HPP
