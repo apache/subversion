@@ -45,11 +45,11 @@ class revision
 {
 public:
   /**
-   * @brief Revisiion number type.
+   * @brief Revision number type.
    */
   enum class number : long
     {
-      invalid = -1,             //< Invalid revision number.
+      invalid = -1,             ///< Invalid revision number.
     };
 
   /**
