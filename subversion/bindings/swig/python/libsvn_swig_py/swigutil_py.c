@@ -51,8 +51,9 @@
 
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
+#include "swigutil_py3c.h"
 
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
 
 /* In Python 3 use the bytes format character for raw data */
 #define SVN_SWIG_BYTES_FMT "y"
@@ -63,8 +64,6 @@
 #define SVN_SWIG_BYTES_FMT "s"
 
 #endif
-
-#include "swigutil_py3c.h"
 
 /* Py_ssize_t for old Pythons */
 /* This code is as recommended by: */
@@ -1781,11 +1780,12 @@ static svn_error_t *add_directory(const char *path,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"add_directory",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"yOylO&", path, ib->baton,
+#if IS_PY3
+                                    (char *)"yOylO&",
 #else
-                                    (char *)"sOslO&", path, ib->baton,
+                                    (char *)"sOslO&",
 #endif
+                                    path, ib->baton,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, dir_pool)) == NULL)
     {
@@ -1846,11 +1846,12 @@ static svn_error_t *change_dir_prop(void *dir_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_dir_prop",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"Oyy#O&", ib->baton, name,
+#if IS_PY3
+                                    (char *)"Oyy#O&",
 #else
-                                    (char *)"Oss#O&", ib->baton, name,
+                                    (char *)"Oss#O&",
 #endif
+                                    ib->baton, name,
                                     value ? value->data : NULL,
                                     value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
@@ -1889,11 +1890,12 @@ static svn_error_t *add_file(const char *path,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"add_file",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"yOylO&", path, ib->baton,
+#if IS_PY3
+                                    (char *)"yOylO&",
 #else
-                                    (char *)"sOslO&", path, ib->baton,
+                                    (char *)"sOslO&",
 #endif
+                                    path, ib->baton,
                                     copyfrom_path, copyfrom_revision,
                                     make_ob_pool, file_pool)) == NULL)
     {
@@ -1999,11 +2001,12 @@ static svn_error_t *apply_textdelta(void *file_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"apply_textdelta",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"(Oy)", ib->baton,
+#if IS_PY3
+                                    (char *)"(Oy)",
 #else
-                                    (char *)"(Os)", ib->baton,
+                                    (char *)"(Os)",
 #endif
+                                    ib->baton,
                                     base_checksum)) == NULL)
     {
       err = callback_exception_error();
@@ -2048,11 +2051,12 @@ static svn_error_t *change_file_prop(void *file_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"change_file_prop",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"Oyy#O&", ib->baton, name,
+#if IS_PY3
+                                    (char *)"Oyy#O&",
 #else
-                                    (char *)"Oss#O&", ib->baton, name,
+                                    (char *)"Oss#O&",
 #endif
+                                    ib->baton, name,
                                     value ? value->data : NULL,
                                     value ? value->len : 0,
                                     make_ob_pool, pool)) == NULL)
@@ -2082,11 +2086,12 @@ static svn_error_t *close_file(void *file_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"close_file",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"(Oy)", ib->baton,
+#if IS_PY3
+                                    (char *)"(Oy)",
 #else
-                                    (char *)"(Os)", ib->baton,
+                                    (char *)"(Os)",
 #endif
+                                    ib->baton,
                                     text_checksum)) == NULL)
     {
       err = callback_exception_error();
@@ -2283,11 +2288,12 @@ static svn_error_t *parse_fn3_set_revision_property(void *revision_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_revision_property",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"Oyy#", ib->baton, name,
+#if IS_PY3
+                                    (char *)"Oyy#",
 #else
-                                    (char *)"Oss#", ib->baton, name,
+                                    (char *)"Oss#",
 #endif
+                                    ib->baton, name,
                                     value ? value->data : NULL,
                                     value ? value->len : 0)) == NULL)
     {
@@ -2317,11 +2323,12 @@ static svn_error_t *parse_fn3_set_node_property(void *node_baton,
 
   /* ### python doesn't have 'const' on the method name and format */
   if ((result = PyObject_CallMethod(ib->editor, (char *)"set_node_property",
-#if PY_VERSION_HEX >= 0x03000000
-                                    (char *)"Oyy#", ib->baton, name,
+#if IS_PY3
+                                    (char *)"Oyy#",
 #else
-                                    (char *)"Oss#", ib->baton, name,
+                                    (char *)"Oss#",
 #endif
+                                    ib->baton, name,
                                     value ? value->data : NULL,
                                     value ? value->len : 0)) == NULL)
     {
@@ -2766,7 +2773,7 @@ void svn_swig_py_notify_func(void *baton,
 
   svn_swig_py_acquire_py_lock();
   if ((result = PyObject_CallFunction(function,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"(yiiyiii)",
 #else
                                       (char *)"(siisiii)",
@@ -2919,7 +2926,7 @@ svn_error_t *svn_swig_py_delta_path_driver_cb_func(void **dir_baton,
                                                  NULL);
 
   result = PyObject_CallFunction(function,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                  (char *)"OyO&",
 #else
                                  (char *)"OsO&",
@@ -3189,7 +3196,7 @@ svn_error_t *svn_swig_py_repos_authz_func(svn_boolean_t *allowed,
     }
 
   if ((result = PyObject_CallFunction(function,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"OyO",
 #else
                                       (char *)"OsO",
@@ -3417,7 +3424,7 @@ svn_error_t *svn_swig_py_log_receiver(void *baton,
     }
 
   if ((result = PyObject_CallFunction(receiver,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"OlyyyO",
 #else
                                       (char *)"OlsssO",
@@ -3569,7 +3576,7 @@ svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
 
   if ((result = PyObject_CallFunction(receiver,
                                       (char *)
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (SVN_APR_INT64_T_PYCFMT "lyyyO&"),
 #else
                                       (SVN_APR_INT64_T_PYCFMT "lsssO&"),
@@ -3605,7 +3612,7 @@ svn_error_t *svn_swig_py_changelist_receiver_func(void *baton,
   svn_swig_py_acquire_py_lock();
 
   if ((result = PyObject_CallFunction(receiver,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"yyO&",
 #else
                                       (char *)"ssO&",
@@ -3680,7 +3687,7 @@ svn_swig_py_auth_simple_prompt_func(svn_auth_cred_simple_t **cred,
   svn_swig_py_acquire_py_lock();
 
   if ((result = PyObject_CallFunction(function,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"yylO&",
 #else
                                       (char *)"sslO&",
@@ -3958,7 +3965,7 @@ svn_swig_py_config_auth_walk_func(svn_boolean_t *delete_cred,
     }
 
   if ((result = PyObject_CallFunction(function,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"yyOO",
 #else
                                       (char *)"ssOO",
@@ -4061,11 +4068,12 @@ ra_callbacks_get_wc_prop(void *baton,
     }
 
   if ((result = PyObject_CallFunction(py_callback,
-#if PY_VERSION_HEX >= 0x03000000
-                                      (char *)"yyO&", path, name,
+#if IS_PY3
+                                      (char *)"yyO&",
 #else
-                                      (char *)"ssO&", path, name,
+                                      (char *)"ssO&",
 #endif
+                                      path, name,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
@@ -4124,11 +4132,12 @@ ra_callbacks_push_or_set_wc_prop(const char *callback,
     }
 
   if ((result = PyObject_CallFunction(py_callback,
-#if PY_VERSION_HEX >= 0x03000000
-                                      (char *)"yyOO&", path, name, py_value,
+#if IS_PY3
+                                      (char *)"yyOO&",
 #else
-                                      (char *)"ssOO&", path, name, py_value,
+                                      (char *)"ssOO&",
 #endif
+                                      path, name, py_value,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
@@ -4191,11 +4200,12 @@ ra_callbacks_invalidate_wc_props(void *baton,
     }
 
   if ((result = PyObject_CallFunction(py_callback,
-#if PY_VERSION_HEX >= 0x03000000
-                                      (char *)"yyO&", path, name,
+#if IS_PY3
+                                      (char *)"yyO&",
 #else
-                                      (char *)"ssO&", path, name,
+                                      (char *)"ssO&",
 #endif
+                                      path, name,
                                       make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
@@ -4427,7 +4437,7 @@ svn_error_t *svn_swig_py_commit_callback(svn_revnum_t new_revision,
   svn_swig_py_acquire_py_lock();
 
   if ((result = PyObject_CallFunction(receiver,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"lyy",
 #else
                                       (char *)"lss",
@@ -4566,7 +4576,7 @@ static svn_error_t *reporter_set_path(void *report_baton,
 
   if ((result = PyObject_CallMethod(py_reporter,
                                     (char *)"set_path",
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                     (char *)"ylbyO&",
 #else
                                     (char *)"slbsO&",
@@ -4639,7 +4649,7 @@ static svn_error_t *reporter_link_path(void *report_baton,
 
   if ((result = PyObject_CallMethod(py_reporter,
                                     (char *)"link_path",
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                     (char *)"yylbsO&",
 #else
                                     (char *)"sslbsO&",
@@ -4774,7 +4784,7 @@ wc_diff_callbacks2_file_changed_or_added(const char *callback,
     }
 
   result = PyObject_CallFunction(py_callback,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                  (char *)"O&yyyllyyO&O&",
 #else
                                  (char *)"O&sssllssO&O&",
@@ -4901,7 +4911,7 @@ wc_diff_callbacks2_file_deleted(svn_wc_adm_access_t *adm_access,
     }
 
   result = PyObject_CallFunction(py_callback,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                  (char *)"O&yyyyyO&",
 #else
                                  (char *)"O&sssssO&",
@@ -4959,7 +4969,7 @@ wc_diff_callbacks2_dir_added(svn_wc_adm_access_t *adm_access,
     }
 
   result = PyObject_CallFunction(py_callback,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                  (char *)"O&yl",
 #else
                                  (char *)"O&sl",
@@ -5065,7 +5075,7 @@ wc_diff_callbacks2_dir_props_changed(svn_wc_adm_access_t *adm_access,
     }
 
   result = PyObject_CallFunction(py_callback,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                  (char *)"O&yO&O&",
 #else
                                  (char *)"O&sO&O&",
@@ -5125,7 +5135,7 @@ svn_swig_py_config_enumerator2(const char *name,
   svn_swig_py_acquire_py_lock();
 
   if ((result = PyObject_CallFunction(function,
-#if PY_VERSION_HEX >= 0x03000000
+#if IS_PY3
                                       (char *)"yyO&",
 #else
                                       (char *)"ssO&",
