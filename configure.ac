@@ -1489,7 +1489,7 @@ else
     SVN_BUILD_SVNXX_TESTS=false
 fi
 
-if test "$do_svnxx_build" == "yes"; then
+if test "$do_svnxx_build" = "yes"; then
     SVN_BUILD_SVNXX=true
 else
     SVN_BUILD_SVNXX=false
