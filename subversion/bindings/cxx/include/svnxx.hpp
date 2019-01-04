@@ -32,6 +32,8 @@
 #include "svnxx/revision.hpp"
 #include "svnxx/tristate.hpp"
 
+#include "svnxx/client.hpp"
+
 namespace svn = ::apache::subversion::svnxx;
 
 #endif  // SVNXX_HPP

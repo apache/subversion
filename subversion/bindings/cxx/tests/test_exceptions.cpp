@@ -202,7 +202,7 @@ BOOST_AUTO_TEST_CASE(propagate_cancelled)
 BOOST_AUTO_TEST_CASE(iteration_stopped_cancels)
 {
   BOOST_CHECK_THROW(
-      impl::checked_call(impl::iteration_etopped()),
+      impl::checked_call(impl::iteration_stopped()),
       svn::cancelled);
 }
 
@@ -210,7 +210,7 @@ BOOST_AUTO_TEST_CASE(iteration_stopped)
 {
   try
     {
-      impl::checked_call(impl::iteration_etopped());
+      impl::checked_call(impl::iteration_stopped());
     }
   catch (const svn::cancelled& err)
     {

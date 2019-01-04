@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/client/context.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,16 +22,38 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_HPP
-#define SVNXX_PRIVATE_PRIVATE_HPP
+#ifndef SVNXX_CLIENT_CONTEXT_HPP
+#define SVNXX_CLIENT_CONTEXT_HPP
 
-#include "private/depth_private.hpp"
-#include "private/exception_private.hpp"
-#include "private/revision_private.hpp"
-#include "private/strings_private.hpp"
-#include "private/tristate_private.hpp"
+#include <memory>
 
-#include "private/client_private.hpp"
-#include "private/client_context_private.hpp"
+namespace apache {
+namespace subversion {
+namespace svnxx {
+namespace client {
 
-#endif // SVNXX_PRIVATE_PRIVATE_HPP
+namespace detail {
+class context;
+using context_ptr = std::unique_ptr<context>;
+} // namespace detail
+
+/**
+ * @brief The context for client operations, see @ref svn_client_ctx_t.
+ * @warning TODO: Work in progress.
+ */
+class context : protected detail::context_ptr
+{
+public:
+  context();
+  ~context();
+
+protected:
+  using inherited = detail::context_ptr;
+};
+
+} // namespace client
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache
+
+#endif  // SVNXX_CLIENT_CONTEXT_HPP

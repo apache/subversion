@@ -21,16 +21,24 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_HPP
-#define SVNXX_PRIVATE_PRIVATE_HPP
+#ifndef SVNXX_PRIVATE_CLIENT_HPP
+#define SVNXX_PRIVATE_CLIENT_HPP
 
-#include "private/depth_private.hpp"
-#include "private/exception_private.hpp"
-#include "private/revision_private.hpp"
-#include "private/strings_private.hpp"
-#include "private/tristate_private.hpp"
+#include "exception_private.hpp"
 
-#include "private/client_private.hpp"
-#include "private/client_context_private.hpp"
+namespace apache {
+namespace subversion {
+namespace svnxx {
+namespace client {
+namespace impl {
 
-#endif // SVNXX_PRIVATE_PRIVATE_HPP
+using svnxx::impl::checked_call;
+using svnxx::impl::iteration_stopped;
+
+} // namesapce impl
+} // namespace client
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache
+
+#endif // SVNXX_PRIVATE_CLIENT_HPP
