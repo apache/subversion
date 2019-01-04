@@ -130,6 +130,28 @@ BOOST_AUTO_TEST_CASE(postconditions_date)
   BOOST_CHECK_THROW(r.get_number(), std::logic_error);
 }
 
+BOOST_AUTO_TEST_CASE(assignment)
+{
+  using kind = svn::revision::kind;
+  using clock = std::chrono::system_clock;
+  const auto timestamp = clock::now();
+
+  svn::revision r;
+  BOOST_TEST((r.get_kind() == kind::unspecified));
+
+  r = svn::revision(kind::previous);
+  BOOST_TEST((r.get_kind() == kind::previous));
+
+  r = svn::revision(svn::revnum(0));
+  BOOST_TEST((r.get_kind() == kind::number));
+  BOOST_TEST((r.get_number() == svn::revnum(0)));
+
+  r = svn::revision(timestamp);
+  BOOST_TEST((r.get_kind() == kind::date));
+  BOOST_TEST((r.get_date<clock::duration>() == timestamp));
+  BOOST_TEST((r.get_date<svn::revision::usec>() == timestamp));
+}
+
 // TODO: Add tests for !=, <, >, <= and >=
 
 BOOST_AUTO_TEST_SUITE_END();

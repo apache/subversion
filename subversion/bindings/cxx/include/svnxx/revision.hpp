@@ -30,6 +30,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <new>
 
 #include "tristate.hpp"
 
@@ -126,6 +127,18 @@ public:
     {}
 
   /**
+   * @brief Assignment operator.
+   * Uses in-place destruction/construction to maintain the immutability
+   * of the revision kind.
+   */
+  revision& operator=(const revision& that)
+    {
+      this->~revision();
+      new(this) revision(that);
+      return *this;
+    }
+
+  /**
    * @brief Return the revision kind.
    */
   kind get_kind() const noexcept
@@ -161,7 +174,7 @@ public:
 private:
   // Even if we were using C++17, we wouldn't use std::variant because we
   // already maintain an explicit discriminator tag for the union.
-  kind tag;           // Union discriminator
+  const kind tag;     // Union discriminator
   union {
     number revnum;    // (tag == kind::number): revision number.
     time<usec> date;  // (tag == kind::date): microseconds from epoch.
