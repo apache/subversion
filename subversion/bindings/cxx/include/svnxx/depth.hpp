@@ -25,6 +25,8 @@
 #ifndef SVNXX_DEPTH_HPP
 #define SVNXX_DEPTH_HPP
 
+#include "svn_types_impl.h"
+
 #include <cstdint>
 #include <string>
 
@@ -38,12 +40,12 @@ namespace svnxx {
 // NOTE: Keep these values identical to those in svn_depth_t!
 enum class depth : std::int8_t
   {
-    unknown = -2,
-    exclude = -1,
-    empty = 0,
-    files = 1,
-    immediates = 2,
-    infinity = 3,
+    unknown    = svn_depth_unknown,
+    exclude    = svn_depth_exclude,
+    empty      = svn_depth_empty,
+    files      = svn_depth_files,
+    immediates = svn_depth_immediates,
+    infinity   = svn_depth_infinity,
   };
 
 /**

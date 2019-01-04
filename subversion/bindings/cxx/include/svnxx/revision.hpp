@@ -25,6 +25,9 @@
 #ifndef SVNXX_REVISION_HPP
 #define SVNXX_REVISION_HPP
 
+#include "svn_opt_impl.h"
+#include "svn_types_impl.h"
+
 #include <chrono>
 #include <cstdint>
 
@@ -47,9 +50,9 @@ public:
   /**
    * @brief Revision number type.
    */
-  enum class number : long
+  enum class number : svn_revnum_t
     {
-      invalid = -1,             ///< Invalid revision number.
+      invalid = SVN_INVALID_REVNUM, ///< Invalid revision number.
     };
 
   /**
@@ -69,14 +72,14 @@ public:
   // NOTE: Keep these values identical to those in svn_opt_revision_kind!
   enum class kind : std::int8_t
     {
-      unspecified,
-      number,
-      date,
-      committed,
-      previous,
-      base,
-      working,
-      head,
+      unspecified = svn_opt_revision_unspecified,
+      number      = svn_opt_revision_number,
+      date        = svn_opt_revision_date,
+      committed   = svn_opt_revision_committed,
+      previous    = svn_opt_revision_previous,
+      base        = svn_opt_revision_base,
+      working     = svn_opt_revision_working,
+      head        = svn_opt_revision_head,
     };
 
   /**

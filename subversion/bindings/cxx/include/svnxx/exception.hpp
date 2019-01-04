@@ -25,6 +25,8 @@
 #ifndef SVNXX_EXCEPTION_HPP
 #define SVNXX_EXCEPTION_HPP
 
+#include "svn_types_impl.h"
+
 #include <exception>
 #include <memory>
 #include <new>
@@ -106,8 +108,7 @@ private:
 };
 
 namespace detail {
-struct svn_error;
-using error_ptr = std::shared_ptr<svn_error>;
+using error_ptr = std::shared_ptr<svn_error_t>;
 } // namespace detail
 
 /**

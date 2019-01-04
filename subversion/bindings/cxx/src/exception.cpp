@@ -37,11 +37,6 @@ namespace apache {
 namespace subversion {
 namespace svnxx {
 
-namespace detail {
-struct svn_error final : svn_error_t {};
-} // namespace detail
-
-
 //
 // checked_call
 //
@@ -50,7 +45,6 @@ namespace impl {
 
 void checked_call(svn_error_t* const err)
 {
-  using svn_error = detail::svn_error;
   using error_ptr = detail::error_ptr;
 
   if (!err)
@@ -58,32 +52,31 @@ void checked_call(svn_error_t* const err)
 
   struct error_builder final : public error
   {
-    explicit error_builder(error_ptr err_)
-      : error(err_)
+    explicit error_builder(error_ptr ptr)
+      : error(ptr)
       {}
   };
 
   struct cancelled_builder final : public cancelled
   {
-    explicit cancelled_builder(error_ptr err_)
-      : cancelled(err_)
+    explicit cancelled_builder(error_ptr ptr)
+      : cancelled(ptr)
       {}
   };
 
   static const auto error_deleter =
-    [](svn_error* ptr) noexcept
+    [](svn_error_t* err) noexcept
       {
-        svn_error_clear(ptr);
+        svn_error_clear(err);
       };
 
-  auto err_ptr = error_ptr(static_cast<svn_error*>(err), error_deleter);
   for (auto next = err; next; next = next->child)
     {
       if (next->apr_err == SVN_ERR_CANCELLED
           || next->apr_err == SVN_ERR_ITER_BREAK)
-        throw cancelled_builder(err_ptr);
+        throw cancelled_builder(error_ptr(err, error_deleter));
     }
-  throw error_builder(err_ptr);
+  throw error_builder(error_ptr(err, error_deleter));
 }
 
 } // namespace impl
