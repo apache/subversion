@@ -39,6 +39,28 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
     * Fixed potential core dump in JavaHL's ISVNClient.diff (r1845408)
 
 
+Version 1.11.1
+(?? ??? 2019, from /branches/1.11.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.11.1
+
+ User-visible changes:
+  - Client-side bugfixes:
+    (none)
+
+  - Server-side bugfixes:
+    (none)
+
+  - Bindings bugfixes:
+    (none)
+
+ Developer-visible changes:
+  - General:
+    (none)
+
+  - API changes:
+    (none)
+
+
 Version 1.11.0
 (30 Oct 2018, from /branches/1.11.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.11.0
@@ -86,6 +108,28 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Bump minimum JDK version required for JavaHL to 1.8 (r1831895)
     * Enable building against Java 10 (r1841180 et al)
     * Fix a potential crash in JavaHL (issue #4764)
+
+
+Version 1.10.4
+(?? ??? 2019, from /branches/1.10.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.10.4
+
+ User-visible changes:
+  - Client-side bugfixes:
+    (none)
+
+  - Server-side bugfixes:
+    (none)
+
+  - Bindings bugfixes:
+    (none)
+
+ Developer-visible changes:
+  - General:
+    (none)
+
+  - API changes:
+    (none)
 
 
 Version 1.10.3
@@ -435,6 +479,28 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * JavaHL: Add missing exception checks (r1801108)
     * Ruby: Fix handling of NULL MD5 digests (r1811786)
     * Ruby: Detect versions up to 2.4 (r1806570)
+
+
+Version 1.9.10
+(?? ??? 2019, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.10
+
+ User-visible changes:
+  - Client-side bugfixes:
+    (none)
+
+  - Server-side bugfixes:
+    (none)
+
+  - Bindings bugfixes:
+    (none)
+
+ Developer-visible changes:
+  - General:
+    (none)
+
+  - API changes:
+    (none)
 
 
 Version 1.9.9
