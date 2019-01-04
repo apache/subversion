@@ -21,40 +21,63 @@
  * @endcopyright
  */
 
-#ifndef __cplusplus
-#error "This is a C++ header file."
-#endif
+#ifndef SVNXX_PRIVATE_CLIENT_CONTEXT_HPP
+#define SVNXX_PRIVATE_CLIENT_CONTEXT_HPP
 
-#ifndef SVNXX_PRIVATE_EXCEPTION_HPP
-#define SVNXX_PRIVATE_EXCEPTION_HPP
+#include "svnxx/client/context.hpp"
 
-#include "svnxx/exception.hpp"
+#include "../aprwrap.hpp"
 
-#include "svn_error.h"
+#include "svn_client.h"
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
+namespace client {
+namespace detail {
+
+// TODO: document this
+class context
+{
+public:
+  context()
+    : ctx(create_ctx(ctx_pool))
+    {}
+
+  svn_client_ctx_t* get() const noexcept { return ctx; };
+  const apr::pool& get_pool() const noexcept { return ctx_pool; }
+
+private:
+  apr::pool ctx_pool;
+  svn_client_ctx_t* const ctx;
+
+  static svn_client_ctx_t* create_ctx(const apr::pool& pool);
+};
+
+} // namespace detail
 namespace impl {
 
-/**
- * Given a @a err, if it is not @c nullptr, convert it to a and throw an
- * svn::error or svn::cancelled exception; otherwise do nothing.
- */
-void checked_call(svn_error_t* const err);
-
-/**
- * Call this when a callback throws svn::stop_iteration to return
- * an appropriate error.
- */
-inline svn_error_t* iteration_stopped()
+// TODO: document this
+class context : public client::context
 {
-  return svn_error_create(SVN_ERR_ITER_BREAK, nullptr, nullptr);
-}
+public:
+  static detail::context& unwrap(client::context& ctx)
+    {
+      return *static_cast<context&>(ctx).get();
+    }
 
-} // namespace impl
+private:
+  using inherited::get;
+
+  context() = delete;
+  context(const context&) = delete;
+  context(context&&) = delete;
+};
+
+} // namesapce impl
+} // namespace client
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif // SVNXX_PRIVATE_EXCEPTION_HPP
+#endif // SVNXX_PRIVATE_CLIENT_CONTEXT_HPP

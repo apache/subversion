@@ -1,4 +1,5 @@
 /**
+ * @file svnxx/client.hpp
  * @copyright
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -21,16 +22,19 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_HPP
-#define SVNXX_PRIVATE_PRIVATE_HPP
+#ifndef SVNXX_CLIENT_HPP
+#define SVNXX_CLIENT_HPP
 
-#include "private/depth_private.hpp"
-#include "private/exception_private.hpp"
-#include "private/revision_private.hpp"
-#include "private/strings_private.hpp"
-#include "private/tristate_private.hpp"
+/**
+ * @defgroup svnxx_client SVN++ Client
+ * @brief Client Operations
+ *
+ * Client Operations
+ * =================
+ * TODO: document this
+ */
 
-#include "private/client_private.hpp"
-#include "private/client_context_private.hpp"
+#include "client/context.hpp"
+#include "client/status.hpp"
 
-#endif // SVNXX_PRIVATE_PRIVATE_HPP
+#endif  // SVNXX_CLIENT_HPP

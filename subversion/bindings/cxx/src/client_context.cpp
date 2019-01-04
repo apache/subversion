@@ -21,16 +21,40 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_HPP
-#define SVNXX_PRIVATE_PRIVATE_HPP
+#include "private.hpp"
 
-#include "private/depth_private.hpp"
-#include "private/exception_private.hpp"
-#include "private/revision_private.hpp"
-#include "private/strings_private.hpp"
-#include "private/tristate_private.hpp"
+namespace apache {
+namespace subversion {
+namespace svnxx {
+namespace client {
 
-#include "private/client_private.hpp"
-#include "private/client_context_private.hpp"
+//
+// class detail::context
+//
 
-#endif // SVNXX_PRIVATE_PRIVATE_HPP
+namespace detail {
+
+svn_client_ctx_t* context::create_ctx(const apr::pool& pool)
+{
+  svn_client_ctx_t* ctx;
+  impl::checked_call(svn_client_create_context2(&ctx, nullptr, pool.get()));
+  return ctx;
+}
+
+} // namespace detail
+
+//
+// class context
+//
+
+context::context()
+  : inherited(new detail::context)
+{}
+
+context::~context()
+{}
+
+} // namespace client
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache
