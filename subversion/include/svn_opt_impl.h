@@ -20,9 +20,12 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_opt.h
+ * @file svn_opt_impl.h
  * @brief Option and argument parsing for Subversion command lines
  *        (common implementation)
+ *
+ * @warning This is a @b private implementation-specific header file.
+ *          User code should include @ref svn_opt.h instead.
  */
 
 /* NOTE:
