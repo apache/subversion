@@ -142,11 +142,12 @@ inline std::vector<std::basic_string<C>> generate_string_data(int count)
       std::u32string val;
       val.reserve(len);
 
-      for (int j = 0; j < len; ++j)
+      for (unsigned j = 0; j < len; ++j)
         {
         repeat:
           auto c = cgen(mt);
-          if (c >= cp::surrogate_min && c <= cp::surrogate_max)
+          if (uint_least32_t(c) >= cp::surrogate_min
+              && uint_least32_t(c) <= cp::surrogate_max)
             goto repeat;
           val.push_back(c);
         }

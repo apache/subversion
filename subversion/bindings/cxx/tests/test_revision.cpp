@@ -132,9 +132,9 @@ BOOST_AUTO_TEST_CASE(postconditions_date)
 
 BOOST_AUTO_TEST_CASE(assignment)
 {
+  using namespace std::chrono;
   using kind = svn::revision::kind;
-  using clock = std::chrono::system_clock;
-  const auto timestamp = clock::now();
+  const auto timestamp = time_point_cast<seconds>(system_clock::now());
 
   svn::revision r;
   BOOST_TEST((r.get_kind() == kind::unspecified));
@@ -148,7 +148,7 @@ BOOST_AUTO_TEST_CASE(assignment)
 
   r = svn::revision(timestamp);
   BOOST_TEST((r.get_kind() == kind::date));
-  BOOST_TEST((r.get_date<clock::duration>() == timestamp));
+  BOOST_TEST((r.get_date<system_clock::duration>() == timestamp));
   BOOST_TEST((r.get_date<svn::revision::usec>() == timestamp));
 }
 

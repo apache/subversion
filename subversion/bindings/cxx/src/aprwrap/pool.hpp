@@ -70,11 +70,11 @@ class pool : pool_ptr
 
   using allocator = std::function<void*(apr_pool_t*,apr_size_t)>;
   template<typename T>
-  T* safe_alloc(std::size_t count, allocator alloc)
+  T* safe_alloc(std::size_t count, allocator allocate)
     {
       if (count > APR_SIZE_MAX / sizeof(T))
         throw allocation_size_overflowed();
-      return static_cast<T*>(alloc(get(), count * sizeof(T)));
+      return static_cast<T*>(allocate(get(), count * sizeof(T)));
     }
 
 public:
