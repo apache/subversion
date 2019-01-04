@@ -44,18 +44,34 @@ Version 1.11.1
 http://svn.apache.org/repos/asf/subversion/tags/1.11.1
 
  User-visible changes:
+  - Minor new features and improvements:
+    * Conflict resolver support for added vs unversioned file (r1845577)
+    * Conflict resolver support for unversioned directories (r1846299)
+    * Improve help for 'svn add' and the '-N' option (r1842814 et al.)
+    * Improve display of Mac OS name in 'svn --version --verbose' (r1842334)
+
   - Client-side bugfixes:
-    (none)
+    * Fix: repos-to-WC copy with --parents doesn't create dirs (#4768)
+    * Fix: foreign repo copy with peg/operative revisions (#4785)
+    * Fix: foreign repo copy of file adding mergeinfo (#4792)
+    * Fix: assertion failure using -rPREV on a working copy at r0 (#4532)
+    * Fix: tree conflict message ends a sentence with a colon (#4717)
 
   - Server-side bugfixes:
-    (none)
+    * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
+    * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
+    * Fix crash in mod_http2 (#4782)
+
+  - Other tool improvements and bugfixes:
+    * svndumpfilter: Clarify error messages by including node path (r1845261)
 
   - Bindings bugfixes:
-    (none)
+    * JavaHL: Fix crash in client code when using external diff (r1845408)
 
  Developer-visible changes:
   - General:
-    (none)
+    * Fix build on systems without python in $PATH (r1845555)
+    * Fix compiler warnings about indentation (r1845556 et al.)
 
   - API changes:
     (none)
@@ -115,18 +131,31 @@ Version 1.10.4
 http://svn.apache.org/repos/asf/subversion/tags/1.10.4
 
  User-visible changes:
+  - Minor new features and improvements:
+    * Conflict resolver support for added vs unversioned file (r1845577)
+    * Conflict resolver support for unversioned directories (r1846299)
+
   - Client-side bugfixes:
-    (none)
+    * Fix: repos-to-WC copy with --parents doesn't create dirs (#4768)
+    * Fix: foreign repo copy with peg/operative revisions (#4785)
+    * Fix: foreign repo copy of file adding mergeinfo (#4792)
+    * Fix: assertion failure using -rPREV on a working copy at r0 (#4532)
+    * Fix: tree conflict message ends a sentence with a colon (#4717)
 
   - Server-side bugfixes:
-    (none)
+    * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
+    * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
+    * Fix crash in mod_http2 (#4782)
+
+  - Other tool improvements and bugfixes:
+    * svndumpfilter: Clarify error messages by including node path (r1845261)
 
   - Bindings bugfixes:
-    (none)
+    * JavaHL: Fix crash in client code when using external diff (r1845408)
 
  Developer-visible changes:
   - General:
-    (none)
+    * Fix build on systems without python in $PATH (r1845555)
 
   - API changes:
     (none)
@@ -487,13 +516,31 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.10
 
  User-visible changes:
   - Client-side bugfixes:
-    (none)
+    * Fix: repos-to-WC copy with --parents doesn't create dirs (#4768)
+    * Fix: foreign repo copy with peg/operative revisions (#4785)
+    * Fix: assertion failure using -rPREV on a working copy at r0 (#4532)
+    * Fix: german translation for 'svn help merge' (r1837037)
+    * Fix: prune externals after 'update --set-depth=exclude' (r1830883 et al.)
+    * Fix: detection of GPG-agent (r1794166 et al.)
+    * Fix: null updates don't update last-changed-revision (#4700)
+    * Fix: merge "Unable to parse reversed revision range" (#4686)
 
   - Server-side bugfixes:
-    (none)
+    * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
+    * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
+    * Fix: crash in mod_http2 (#4782)
+    * Fix: 'svnadmin upgrade' of BDB: Error out on too-new formats (r1804013)
+    * Fix: Enforce v1 HTTP protocol: error if PUT before CHECKOUT (r1833465)
+    * Fix: Let 'svnadmin recover' prune rep-cache even if disabled (r1838813)
+    * Add test and FSFS checksum verification for issue #4722 (r1826720 et al.)
+
+  - Other tool improvements and bugfixes:
+    * Install 'fsfs-stats' wrapper for 1.8 compat (r1802032 et al.)
+    * Note that 'tools/client-side/detach.py' doesn't work on 1.8+ (r1696722)
 
   - Bindings bugfixes:
-    (none)
+    * JavaHL: Fix crash in client code when using external diff (r1845408)
+    * JavaHL: SSL server trust prompt: allow accepting temporarily (r1820718)
 
  Developer-visible changes:
   - General:
