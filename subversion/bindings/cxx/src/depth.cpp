@@ -21,10 +21,10 @@
  * @endcopyright
  */
 
-#include <stdexcept>
+#include "private/depth_private.hpp"
+#include "private/strings_private.hpp"
 
-#include "svnxx/depth.hpp"
-#include "private.hpp"
+#include "svn_types.h"
 
 namespace apache {
 namespace subversion {
@@ -50,93 +50,6 @@ std::u32string to_u32string(depth d)
   return impl::convert<char32_t>(svn_depth_to_word(impl::convert(d)));
 }
 
-namespace impl {
-
-svn_depth_t convert(depth d)
-{
-#ifdef SVN_DEBUG
-  switch (d)
-    {
-    case depth::unknown:
-      if (svn_depth_t(d) != svn_depth_unknown)
-        throw std::range_error("convert svn::depth::unknown");
-      break;
-
-    case depth::exclude:
-      if (svn_depth_t(d) != svn_depth_exclude)
-        throw std::range_error("convert svn::depth::exclude");
-      break;
-
-    case depth::empty:
-      if (svn_depth_t(d) != svn_depth_empty)
-        throw std::range_error("convert svn::depth::empty");
-      break;
-
-    case depth::files:
-      if (svn_depth_t(d) != svn_depth_files)
-        throw std::range_error("convert svn::depth::files");
-      break;
-
-    case depth::immediates:
-      if (svn_depth_t(d) != svn_depth_immediates)
-        throw std::range_error("convert svn::depth::immediates");
-      break;
-
-    case depth::infinity:
-      if (svn_depth_t(d) != svn_depth_infinity)
-        throw std::range_error("convert svn::depth::infinity");
-      break;
-
-    default:
-      throw std::range_error("unknown svn::depth");
-    }
-#endif
-  return svn_depth_t(d);
-}
-
-depth convert(svn_depth_t d)
-{
-#ifdef SVN_DEBUG
-  switch (d)
-    {
-    case svn_depth_unknown:
-      if (d != svn_depth_t(depth::unknown))
-        throw std::range_error("convert svn_depth_unknown");
-      break;
-
-    case svn_depth_exclude:
-      if (d != svn_depth_t(depth::exclude))
-        throw std::range_error("convert svn_depth_exclude");
-      break;
-
-    case svn_depth_empty:
-      if (d != svn_depth_t(depth::empty))
-        throw std::range_error("convert svn_depth_empty");
-      break;
-
-    case svn_depth_files:
-      if (d != svn_depth_t(depth::files))
-        throw std::range_error("convert svn_depth_files");
-      break;
-
-    case svn_depth_immediates:
-      if (d != svn_depth_t(depth::immediates))
-        throw std::range_error("convert svn_depth_immediates");
-      break;
-
-    case svn_depth_infinity:
-      if (d != svn_depth_t(depth::infinity))
-        throw std::range_error("convert svn_depth_infinity");
-      break;
-
-    default:
-      throw std::range_error("unknown svn_depth_t");
-    }
-#endif
-  return depth(d);
-}
-
-} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
