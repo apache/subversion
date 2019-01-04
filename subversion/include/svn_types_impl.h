@@ -20,10 +20,11 @@
  * ====================================================================
  * @endcopyright
  *
- * @file svn_types.h
+ * @file svn_types_impl.h
  * @brief Subversion's data types (common implementation)
- * This is a @b private implementation-specific header file.
- * User code should not include it directly.
+ *
+ * @warning This is a @b private implementation-specific header file.
+ *          User code should include @ref svn_types.h instead.
  */
 
 /* NOTE:
