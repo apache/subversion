@@ -25,6 +25,10 @@
 #ifndef SVNXX_TRISTATE_HPP
 #define SVNXX_TRISTATE_HPP
 
+#include "svn_types_impl.h"
+
+#include <cstdint>
+
 #if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
 #include <boost/logic/tribool.hpp>
 #endif
@@ -132,11 +136,11 @@ public:
     }
 
 private:
-  // See svn_tristate_t in svn_types.h.
-  enum: unsigned char {
-    false_value = 2,
-    true_value,
-    unknown_value
+  // NOTE: Keep these values identical to those in svn_tristate_t!
+  enum : std::uint8_t {
+    false_value   = svn_tristate_false,
+    true_value    = svn_tristate_true,
+    unknown_value = svn_tristate_unknown
   } value;
 
 #if defined(SVNXX_USE_BOOST) || defined(DOXYGEN)
