@@ -176,10 +176,10 @@ public:
 
   protected:
     message(int errval, const char* errname,
-            const std::string& message, bool trace)
+            const std::string& message_, bool trace)
       : m_errno(errval),
         m_errname(errname),
-        m_message(message),
+        m_message(message_),
         m_trace(trace)
       {}
 

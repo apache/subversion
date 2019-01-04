@@ -65,9 +65,9 @@ void checked_call(svn_error_t* const err)
   };
 
   static const auto error_deleter =
-    [](svn_error_t* err) noexcept
+    [](svn_error_t* err_) noexcept
       {
-        svn_error_clear(err);
+        svn_error_clear(err_);
       };
 
   for (auto next = err; next; next = next->child)
@@ -145,8 +145,8 @@ void handle_one_error(std::vector<error::message>& messages,
   struct message_builder final : public error::message
   {
     message_builder(apr_status_t errval, const char* errname,
-                    const std::string& message, bool trace)
-      : error::message(static_cast<int>(errval), errname, message, trace)
+                    const std::string& message_, bool trace)
+      : error::message(static_cast<int>(errval), errname, message_, trace)
       {}
   };
 
