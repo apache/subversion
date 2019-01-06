@@ -30,7 +30,6 @@
 #include "private/strings_private.hpp"
 #include "private/tristate_private.hpp"
 
-#include "private/client_private.hpp"
 #include "private/client_context_private.hpp"
 
 #endif // SVNXX_PRIVATE_PRIVATE_HPP
