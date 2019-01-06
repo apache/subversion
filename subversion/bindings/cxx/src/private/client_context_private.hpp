@@ -55,27 +55,21 @@ private:
 };
 
 } // namespace detail
+} // namespace client
 namespace impl {
 
 // TODO: document this
-class context : public client::context
+inline client::detail::context& unwrap(client::context& ctx)
 {
-public:
-  static detail::context& unwrap(client::context& ctx)
-    {
-      return *static_cast<context&>(ctx).get();
-    }
+  struct context_wrapper : public client::context
+  {
+    using inherited::get;
+  };
 
-private:
-  using inherited::get;
-
-  context() = delete;
-  context(const context&) = delete;
-  context(context&&) = delete;
-};
+  return *static_cast<context_wrapper&>(ctx).get();
+}
 
 } // namesapce impl
-} // namespace client
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
