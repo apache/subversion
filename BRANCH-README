@@ -16,11 +16,6 @@ TODO
   bindings:
     * Python 2 compiles and tests pass
     * Python 3 has a compile error.
-* Make the error more meaningful if the user attempts to build python swig
-  bindings, even if py3c was disabled or not found. Currently the error on
-  makefile builds is "none: command not found", which isn't very descriptive.
-* Make svn_stream_read() [and possibly other functions?] return bytes rather
-  than str: https://mail-archives.apache.org/mod_mbox/subversion-dev/201803.mbox/%3C20180323081026.cqgbhdzfxv2lwm24%40tarpaulin.shahaf.local2%3E
 
 
 References:
