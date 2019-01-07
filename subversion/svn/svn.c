@@ -140,6 +140,7 @@ typedef enum svn_cl__longopt_t {
   opt_mergeinfo_log,
   opt_remove_unversioned,
   opt_remove_ignored,
+  opt_remove_added,
   opt_no_newline,
   opt_show_passwords,
   opt_pin_externals,
@@ -421,6 +422,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"remove-unversioned", opt_remove_unversioned, 0,
                        N_("remove unversioned items")},
   {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
+  {"remove-added", opt_remove_added, 0,
+                       N_("reverting an added item will remove it from disk")},
   {"no-newline", opt_no_newline, 0, N_("do not output the trailing newline")},
   {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
   {"pin-externals", opt_pin_externals, 0,
@@ -1765,7 +1768,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  For information about undoing already committed changes, search\n"
      "  the output of 'svn help merge' for 'undo'.\n"
     )},
-    {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
+    {opt_targets, 'R', opt_depth, 'q', opt_changelist,
+     opt_remove_added} },
 
   { "status", svn_cl__status, {"stat", "st"}, {N_(
      "Print the status of working copy files and directories.\n"
@@ -2806,6 +2810,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_remove_ignored:
         opt_state.remove_ignored = TRUE;
+        break;
+      case opt_remove_added:
+        opt_state.remove_added = TRUE;
         break;
       case opt_no_newline:
       case opt_strict:          /* ### DEPRECATED */
