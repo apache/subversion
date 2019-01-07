@@ -34,6 +34,14 @@ Candidate changes:
    Votes:
      +1: brane, stefan2
 
+ * r1850651
+   Fix a use-after-free in mod_dav_svn's logging of FS warnings.
+   Justification:
+     Lots of crashes on OpenBSD during 'make check' with HTTPD 2.4.
+     See https://svn.haxx.se/dev/archive-2018-12/0137.shtml
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
