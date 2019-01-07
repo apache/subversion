@@ -816,6 +816,7 @@ core_set_current_pool (apr_pool_t *pool)
 
 %include svn_error_codes_h.swg
 %include svn_time_h.swg
+%include svn_types_impl_h.swg
 %include svn_types_h.swg
 %include svn_pools_h.swg
 %include svn_version_h.swg
@@ -827,6 +828,7 @@ core_set_current_pool (apr_pool_t *pool)
 %include svn_props_h.swg
 #pragma SWIG nowarn=+305
 
+%include svn_opt_impl_h.swg
 %include svn_opt_h.swg
 %include svn_cmdline_h.swg
 %include svn_auth_h.swg
