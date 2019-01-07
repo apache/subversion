@@ -2014,7 +2014,7 @@ endif
 	echo >>$@.tmp '<IfModule mod_authz_core.c>'
 	echo >>$@.tmp '  <Location /authz-test-work/sallrany>'
 	echo >>$@.tmp '    DAV               svn'
-	echo >>$@.tmp '    SVNParentPath     $($SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '    SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
 	echo >>$@.tmp '    AuthzSVNAccessFile $(SVN_WC)/subversion/tests/cmdline/svn-test-work/authz'
 ifeq ($(USE_HTTPV1),yes)
 	echo >>$@.tmp '    SVNAdvertiseV2Protocol off'
