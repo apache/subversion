@@ -1,5 +1,5 @@
 /*
- * copy_foreign.c:  copy from other repository support.
+ * wc_editor.c: editing the local modifications in the WC.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -51,8 +51,6 @@
  * TODO:
  *   - tests
  *   - use for all existing scenarios ('svn add', 'svn propset', etc.)
- *   - copy-from (half done: in dir_add only, untested)
- *   - text-delta
  *   - Instead of 'root_dir_add' option, probably the driver should anchor
  *     at the parent dir.
  *   - Instead of 'ignore_mergeinfo' option, implement that as a wrapper.
@@ -350,7 +348,7 @@ struct file_baton_t
   svn_boolean_t created;  /* already under version control in the WC */
   apr_hash_t *properties;
 
-  svn_boolean_t writing;
+  const char *writing_file;
   unsigned char digest[APR_MD5_DIGESTSIZE];
 
   const char *tmp_path;
@@ -473,15 +471,28 @@ file_textdelta(void *file_baton,
                void **handler_baton)
 {
   struct file_baton_t *fb = file_baton;
+  const char *target_dir = svn_dirent_dirname(fb->local_abspath, fb->pool);
+  svn_error_t *err;
+  svn_stream_t *source;
   svn_stream_t *target;
 
-  SVN_ERR_ASSERT(! fb->writing);
+  SVN_ERR_ASSERT(! fb->writing_file);
 
-  SVN_ERR(svn_stream_open_writable(&target, fb->local_abspath, fb->pool,
-                                   fb->pool));
+  err = svn_stream_open_readonly(&source, fb->local_abspath,
+                                 fb->pool, fb->pool);
+  if (err && APR_STATUS_IS_ENOENT(err->apr_err))
+    {
+      svn_error_clear(err);
+      source = svn_stream_empty(fb->pool);
+    }
+  else
+    SVN_ERR(err);
 
-  fb->writing = TRUE;
-  svn_txdelta_apply(svn_stream_empty(fb->pool) /* source */,
+  SVN_ERR(svn_stream_open_unique(&target, &fb->writing_file,
+                                 target_dir, svn_io_file_del_none,
+                                 fb->pool, fb->pool));
+
+  svn_txdelta_apply(source,
                     target,
                     fb->digest,
                     fb->local_abspath,
@@ -522,6 +533,10 @@ file_close(void *file_baton,
 {
   struct file_baton_t *fb = file_baton;
   struct dir_baton_t *pb = fb->pb;
+
+  if (fb->writing_file)
+    SVN_ERR(svn_io_file_rename2(fb->writing_file, fb->local_abspath,
+                                FALSE /*flush*/, scratch_pool));
 
   if (text_checksum)
     {

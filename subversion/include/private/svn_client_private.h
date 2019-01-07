@@ -445,6 +445,10 @@ svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
  * Return an editor in @a *editor_p, @a *edit_baton_p that will apply
  * local modifications to the WC subdirectory at @a dst_abspath.
  *
+ * The @a path arguments to the editor methods shall be local WC paths,
+ * relative to @a dst_abspath. The @a copyfrom_path arguments to the
+ * editor methods shall be URLs.
+ *
  * Send notifications via @a notify_func / @a notify_baton.
  *
  * RA_SESSION is used to fetch the original content for copies.
@@ -488,7 +492,17 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
  *
  * Committable changes are found in TARGETS:DEPTH:CHANGELISTS.
  *
- * Send the changes to EDITOR:EDIT_BATON.
+ * Send the changes to @a editor:@a edit_baton. The @a path arguments
+ * to the editor methods are URL-paths relative to the URL of
+ * @a src_wc_abspath.
+ *
+ *    ### We will presumably need to change this so that the @a path
+ *        arguments to the editor will be local WC relpaths, in order
+ *        to handle switched paths.
+ *
+ * The @a copyfrom_path arguments to the editor methods are URLs. As the
+ * WC does not store copied-from-foreign-repository metadata, the URL will
+ * be in the same repository as the URL of its parent path.
  *
  * Compared with svn_client__do_commit(), this (like svn_client_commit6)
  * handles:
@@ -506,7 +520,8 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
  *  - removing locks and changelists in WC
  */
 svn_error_t *
-svn_client__wc_replay(const apr_array_header_t *targets,
+svn_client__wc_replay(const char *src_wc_abspath,
+                      const apr_array_header_t *targets,
                       svn_depth_t depth,
                       const apr_array_header_t *changelists,
                       const svn_delta_editor_t *editor,
