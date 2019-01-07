@@ -37,6 +37,7 @@
 #include "svn_ctype.h"
 
 #include "dirent_uri.h"
+#include "private/svn_dirent_uri_private.h"
 #include "private/svn_fspath.h"
 #include "private/svn_cert.h"
 
@@ -935,10 +936,10 @@ svn_dirent_local_style(const char *dirent, apr_pool_t *pool)
 }
 
 svn_error_t *
-svn_relpath__internal_style(const char **internal_style_relpath,
-                            const char *relpath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool)
+svn_relpath__make_internal(const char **internal_style_relpath,
+                           const char *relpath,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
       svn_relpath_canonicalize_safe(internal_style_relpath, NULL,

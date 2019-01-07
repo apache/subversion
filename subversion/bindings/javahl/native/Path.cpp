@@ -28,11 +28,12 @@
 #include "Path.h"
 #include "svn_path.h"
 #include "svn_dirent_uri.h"
+#include "private/svn_dirent_uri_private.h"
 #include "JNIUtil.h"
 #include "JNIStringHolder.h"
 #include "Pool.h"
 #include "svn_private_config.h"
-
+ 
 /**
  * Constructor
  *
@@ -165,6 +166,5 @@ svn_error_t*
 Relpath::initfunc(const char*& path, SVN::Pool& pool)
 {
   apr_pool_t *const p = pool.getPool();
-  return svn_error_trace(
-      svn_relpath__internal_style(&path, path, p, p));
+  return svn_error_trace(svn_relpath__make_internal(&path, path, p, p));
 }
