@@ -62,6 +62,18 @@
       the addition of all the directory's children.  Again,
       svn_wc_remove_from_revision_control() should do the trick.
 
+    - For a copy, we remove the item from disk as well. The thinking here
+      is that Subversion is responsible for the existence of the item: it
+      must have been created by something like 'svn copy' or 'svn merge'.
+
+    - For a plain add, removing the file or directory from disk is optional.
+      The user's idea of Subversion's involvement could be either that
+      Subversion was just responsible for adding an existing item to version
+      control, as with 'svn add', and so should not be responsible for
+      deleting it from disk; or that Subversion is responsible for the
+      existence of the item, e.g. if created by 'svn patch' or svn mkdir'.
+      It depends on the use case.
+
     Deletes
 
     - Restore properties to their unmodified state.
