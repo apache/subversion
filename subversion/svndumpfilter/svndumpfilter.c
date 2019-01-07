@@ -43,6 +43,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_version.h"
 
+#include "private/svn_dirent_uri_private.h"
 #include "private/svn_repos_private.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_cmdline_private.h"
@@ -1467,7 +1468,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           /* Ensure that each prefix is UTF8-encoded, in internal
              style, and absolute. */
           SVN_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
-          SVN_ERR(svn_relpath__internal_style(&prefix, prefix, pool, pool));
+          SVN_ERR(svn_relpath__make_internal(&prefix, prefix, pool, pool));
           if (prefix[0] != '/')
             prefix = apr_pstrcat(pool, "/", prefix, SVN_VA_NULL);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;

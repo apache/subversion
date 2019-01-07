@@ -66,7 +66,6 @@
  *    - @c svn_relpath_canonicalize()
  *    - @c svn_relpath_canonicalize_safe()
  *    - @c svn_relpath_is_canonical()
- *    - @c svn_relpath__internal_style()
  *    - @c svn_uri_canonicalize()
  *    - @c svn_uri_canonicalize_safe()
  *    - @c svn_uri_is_canonical()
@@ -199,22 +198,6 @@ svn_dirent_internal_style_safe(const char **internal_style_dirent,
 const char *
 svn_dirent_local_style(const char *dirent,
                        apr_pool_t *result_pool);
-
-/**
- * Convert @a relpath from the local style to the canonical internal style.
- * "Local style" means native path separators and "." for the empty path.
- *
- * Allocates the results in @a result_pool. Uses @a scratch_pool for
- * temporary allocations.
- *
- * @since New in 1.7.
- * @since Signature changed in 1.12.
- */
-svn_error_t *
-svn_relpath__internal_style(const char **internal_style_relpath,
-                            const char *relpath,
-                            apr_pool_t *result_pool,
-                            apr_pool_t *scratch_pool);
 
 /** Join a base dirent (@a base) with a component (@a component).
  *

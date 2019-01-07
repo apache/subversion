@@ -36,6 +36,7 @@
 
 #include "svn_pools.h"
 #include "svn_dirent_uri.h"
+#include "private/svn_dirent_uri_private.h"
 #include "private/svn_fspath.h"
 #include "private/svn_cert.h"
 
@@ -2332,11 +2333,11 @@ test_relpath_internal_style(apr_pool_t *pool)
   for (i = 0; i < COUNT_OF(tests); i++)
     {
       const char *internal;
-      SVN_ERR(svn_relpath__internal_style(&internal, tests[i].path, pool, pool));
+      SVN_ERR(svn_relpath__make_internal(&internal, tests[i].path, pool, pool));
 
       if (strcmp(internal, tests[i].result))
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                                 "svn_relpath__internal_style(\"%s\") returned "
+                                 "svn_relpath__make_internal(\"%s\") returned "
                                  "\"%s\" expected \"%s\"",
                                  tests[i].path, internal, tests[i].result);
     }
