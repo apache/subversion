@@ -1392,6 +1392,29 @@ sort_commit_item_urls(const void *a, const void *b)
 }
 
 
+svn_error_t *
+svn_client__condense_commit_items2(const char *base_url,
+                                   apr_array_header_t *commit_items,
+                                   apr_pool_t *pool)
+{
+  apr_array_header_t *ci = commit_items; /* convenience */
+  int i;
+
+  /* Sort our commit items by their URLs. */
+  svn_sort__array(ci, sort_commit_item_urls);
+
+  /* Hack BASE_URL off each URL; store the result as session_relpath. */
+  for (i = 0; i < ci->nelts; i++)
+    {
+      svn_client_commit_item3_t *this_item
+        = APR_ARRAY_IDX(ci, i, svn_client_commit_item3_t *);
+
+      this_item->session_relpath = svn_uri_skip_ancestor(base_url,
+                                                         this_item->url, pool);
+    }
+
+  return SVN_NO_ERROR;
+}
 
 svn_error_t *
 svn_client__condense_commit_items(const char **base_url,

@@ -870,6 +870,18 @@ svn_client__condense_commit_items(const char **base_url,
                                   apr_array_header_t *commit_items,
                                   apr_pool_t *pool);
 
+/* Rewrite the COMMIT_ITEMS array to be sorted by URL.
+   Rewrite the items' URLs to be relative to BASE_URL.
+
+   COMMIT_ITEMS is an array of (svn_client_commit_item3_t *) items.
+
+   Afterwards, some of the items in COMMIT_ITEMS may contain data
+   allocated in POOL. */
+svn_error_t *
+svn_client__condense_commit_items2(const char *base_url,
+                                   apr_array_header_t *commit_items,
+                                   apr_pool_t *pool);
+
 /* Commit the items in the COMMIT_ITEMS array using EDITOR/EDIT_BATON
    to describe the committed local mods.  Prior to this call,
    COMMIT_ITEMS should have been run through (and BASE_URL generated
