@@ -24,18 +24,30 @@
 #include <sstream>
 
 #include "svnxx/exception.hpp"
+#include "private/debug_private.hpp"
 #include "private/init_private.hpp"
 
 #include <apr_general.h>
-#include "svn_pools.h"
+#include <apr_pools.h>
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
 
 init::init()
-  : context(detail::context::create())
-{}
+  : state(detail::global_state::create())
+{
+#ifdef SVNXX_POOL_DEBUG
+  SVN_DBG(("svn++ created init object   %pp", static_cast<void*>(this)));
+#endif
+}
+
+init::~init() noexcept
+{
+#ifdef SVNXX_POOL_DEBUG
+  SVN_DBG(("svn++ destroyed init object %pp", static_cast<void*>(this)));
+#endif
+}
 
 namespace detail {
 
@@ -51,6 +63,15 @@ int handle_failed_allocation(int)
 {
   throw allocation_failed_builder("svn::allocation_failed");
 }
+
+#ifdef SVNXX_POOL_DEBUG
+apr_status_t notify_root_pool_cleanup(void* key)
+{
+  if (key == impl::root_pool_key)
+    SVN_DBG(("svn++ destroyed root pool"));
+  return APR_SUCCESS;
+}
+#endif
 
 apr_pool_t* create_root_pool()
 {
@@ -68,42 +89,56 @@ apr_pool_t* create_root_pool()
     throw allocation_failed_builder("svn++ creating root pool");
 
 #if APR_POOL_DEBUG
-  apr_pool_tag(root_pool, "svn++ root pool");
+  apr_pool_tag(root_pool, impl::root_pool_tag);
 #endif
 
 #if APR_HAS_THREADS
   // SVN++ pools are always as thread safe as APR can make them.
   apr_thread_mutex_t *mutex = nullptr;
   status = apr_thread_mutex_create(&mutex, APR_THREAD_MUTEX_DEFAULT, root_pool);
-  if (status || !mutex)
-    throw allocation_failed_builder("svn++ creating allocator mutex");
-  apr_allocator_mutex_set(allocator, mutex);
+  if (mutex && !status)
+    apr_allocator_mutex_set(allocator, mutex);
+  else
+    {
+#ifdef SVNXX_POOL_DEBUG
+      SVN_DBG(("svn++ could not create allocator mutex, apr_err=%d", status));
+#endif
+      apr_pool_destroy(root_pool); // Don't leak the global pool.
+      throw allocation_failed_builder("svn++ creating allocator mutex");
+    }
+#endif
+
+#ifdef SVNXX_POOL_DEBUG
+  apr_pool_cleanup_register(root_pool, impl::root_pool_key,
+                            notify_root_pool_cleanup,
+                            apr_pool_cleanup_null);
+  SVN_DBG(("svn++ created root pool"));
 #endif
 
   return root_pool;
 }
 } // anonymous namespace
 
-std::mutex context::guard;
-context::weak_ptr context::self;
+std::mutex global_state::guard;
+global_state::weak_ptr global_state::self;
 
-context::ptr context::create()
+global_state::ptr global_state::create()
 {
   std::unique_lock<std::mutex> lock(guard);
-  auto ctx = self.lock();
-  if (!ctx)
+  auto state = self.lock();
+  if (!state)
     {
       // Work around the private constructor: since this struct is
       // defined within a class member, the the private constructor
       // is accessible and std::make_shared won't complain about it.
-      struct make_shared_hack : public context {};
-      ctx = std::make_shared<make_shared_hack>();
-      self = ctx;
+      struct global_state_builder final : public global_state {};
+      state = std::make_shared<global_state_builder>();
+      self = state;
     }
-  return ctx;
+  return state;
 }
 
-context::context()
+global_state::global_state()
 {
   const auto status = apr_initialize();
   if (status)
@@ -114,11 +149,18 @@ context::context()
               << apr_strerror(status, errbuf, sizeof(errbuf) - 1);
       throw std::runtime_error(message.str());
     }
+
   root_pool = create_root_pool();
+#ifdef SVNXX_POOL_DEBUG
+  SVN_DBG(("svn++ created global state"));
+#endif
 }
 
-context::~context()
+global_state::~global_state()
 {
+#ifdef SVNXX_POOL_DEBUG
+  SVN_DBG(("svn++ destroyed global state"));
+#endif
   std::unique_lock<std::mutex> lock(guard);
   apr_terminate();
   root_pool = nullptr;

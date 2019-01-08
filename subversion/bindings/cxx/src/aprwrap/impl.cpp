@@ -37,8 +37,8 @@ namespace apr {
 
 apr_pool_t* pool::get_root_pool()
 {
-  auto ctx = detail::context::get();
-  return ctx->get_root_pool();
+  auto state = detail::global_state::get();
+  return state->get_root_pool();
 }
 
 //

@@ -21,63 +21,29 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_INIT_HPP
-#define SVNXX_PRIVATE_INIT_HPP
+#ifndef SVNXX_PRIVATE_DEBUG_HPP
+#define SVNXX_PRIVATE_DEBUG_HPP
 
-#include <memory>
-#include <mutex>
-#include <stdexcept>
+// We can only write pool debug logs with SVN_DEBUG enabled.
+#if defined(SVNXX_POOL_DEBUG) && !defined(SVN_DEBUG)
+#  undef SVNXX_POOL_DEBUG
+#endif
 
-#include <apr_pools.h>
-
-#include "svnxx/init.hpp"
-#include "svnxx/detail/noncopyable.hpp"
+#ifdef SVNXX_POOL_DEBUG
+#include "private/svn_debug.h"
+#endif
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
-class global_state : noncopyable
-{
-public:
-  using ptr = std::shared_ptr<global_state>;
-  using weak_ptr = std::weak_ptr<global_state>;
+extern const char root_pool_tag[];
+extern const char root_pool_key[];
 
-  ~global_state();
-
-  static ptr create();
-  static ptr get()
-    {
-      auto state = self.lock();
-      if (!state)
-        {
-          throw std::logic_error(
-              "The SVN++ library is not initialized."
-              " Did you forget to create an instance of "
-              " the apache::subversion::svnxx::init class?");
-        }
-      return state;
-    }
-
-  apr_pool_t* get_root_pool() const noexcept
-    {
-      return root_pool;
-    }
-
-private:
-  // Thou shalt not create global_states other than through the factory.
-  global_state();
-
-  apr_pool_t* root_pool{nullptr};
-
-  static std::mutex guard;
-  static weak_ptr self;
-};
-
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
 
-#endif // SVNXX_PRIVATE_INIT_HPP
+#endif // SVNXX_PRIVATE_DEBUG_HPP

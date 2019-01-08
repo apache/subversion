@@ -68,7 +68,7 @@ status(context& ctx_, const char* path,
   svn_revnum_t result;
 
   impl::checked_call(
-      svn_client_status6(&result, ctx.get(), path, &rev,
+      svn_client_status6(&result, ctx.get_ctx(), path, &rev,
                          impl::convert(depth),
                          bool(flags & status_flags::get_all),
                          bool(flags & status_flags::check_out_of_date),
