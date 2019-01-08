@@ -529,6 +529,16 @@ svn_client__wc_replay(const char *src_wc_abspath,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *scratch_pool);
 
+/** Copy local modifications from one WC subtree to another.
+ *
+ * Find local modifications under @a src_wc_abspath, in the same way as
+ * for a commit.
+ *
+ * Edit the WC at @a dst_wc_abspath, applying those modifications to the
+ * current working state to produce a new working state.
+ * 
+ * The source and destination may be in the same WC or in different WCs.
+ */
 svn_error_t *
 svn_client__wc_copy_mods(const char *src_wc_abspath,
                          const char *dst_wc_abspath,
