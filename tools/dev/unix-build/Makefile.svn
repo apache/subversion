@@ -2010,7 +2010,7 @@ endif
 	echo >>$@.tmp '  AuthName          "Subversion Repository"'
 	echo >>$@.tmp '  AuthUserFile      $(HTTPD_CHECK_USERS)'
 	echo >>$@.tmp '  AuthGroupFile     $(HTTPD_CHECK_GROUPS)'
-	echo >>$@.tmp '  Require           file-group random'
+	echo >>$@.tmp '  Require           group random'
 	echo >>$@.tmp '  AuthzSVNAuthoritative Off'
 	echo >>$@.tmp '  SVNPathAuthz On'
 	echo >>$@.tmp '</Location>'
