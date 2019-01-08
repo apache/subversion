@@ -166,6 +166,58 @@ svn_client_mkdir(svn_client_commit_info_t **commit_info_p,
 }
 
 /*** From blame.c ***/
+struct blame_receiver_wrapper_baton3 {
+  void *baton;
+  svn_client_blame_receiver3_t receiver;
+};
+
+static svn_error_t *
+blame_wrapper_receiver3(void *baton,
+   svn_revnum_t start_revnum,
+   svn_revnum_t end_revnum,
+   apr_int64_t line_no,
+   svn_revnum_t revision,
+   apr_hash_t *rev_props,
+   svn_revnum_t merged_revision,
+   apr_hash_t *merged_rev_props,
+   const char *merged_path,
+   const svn_string_t *line,
+   svn_boolean_t local_change,
+   apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton3 *brwb = baton;
+
+  if (brwb->receiver)
+    return brwb->receiver(brwb->baton, start_revnum, end_revnum, line_no,
+                          revision, rev_props, merged_revision,
+                          merged_rev_props, merged_path, line->data,
+                          local_change, pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_blame5(const char *target,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver3_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool)
+{
+  struct blame_receiver_wrapper_baton3 baton;
+
+  baton.receiver = receiver;
+  baton.baton = receiver_baton;
+
+  return svn_client_blame6(target, peg_revision, start, end, diff_options,
+                           ignore_mime_type, include_merged_revisions,
+                           blame_wrapper_receiver3, &baton, ctx, pool);
+}
 
 struct blame_receiver_wrapper_baton2 {
   void *baton;

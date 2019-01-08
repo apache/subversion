@@ -656,14 +656,14 @@ normalize_blames(struct blame_chain *chain,
 }
 
 svn_error_t *
-svn_client_blame5(const char *target,
+svn_client_blame6(const char *target,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
                   svn_boolean_t include_merged_revisions,
-                  svn_client_blame_receiver3_t receiver,
+                  svn_client_blame_receiver4_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
@@ -941,18 +941,21 @@ svn_client_blame5(const char *target,
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
           if (!eof || sb->len)
             {
+              svn_string_t line;
+              line.data = sb->data;
+              line.len = sb->len;
               if (walk->rev)
                 SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
                                  line_no, walk->rev->revision,
                                  walk->rev->rev_props, merged_rev,
                                  merged_rev_props, merged_path,
-                                 sb->data, FALSE, iterpool));
+                                 &line, FALSE, iterpool));
               else
                 SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
                                  line_no, SVN_INVALID_REVNUM,
                                  NULL, SVN_INVALID_REVNUM,
                                  NULL, NULL,
-                                 sb->data, TRUE, iterpool));
+                                 &line, TRUE, iterpool));
             }
           if (eof) break;
         }
