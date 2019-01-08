@@ -27,38 +27,38 @@ namespace detail = ::apache::subversion::svnxx::detail;
 
 BOOST_AUTO_TEST_SUITE(init);
 
-BOOST_AUTO_TEST_CASE(context_with_init)
+BOOST_AUTO_TEST_CASE(state_with_init)
 {
   svn::init svnxx_initialized;
-  BOOST_TEST(detail::context::get());
+  BOOST_TEST(detail::global_state::get());
 }
 
-BOOST_AUTO_TEST_CASE(context_without_init)
+BOOST_AUTO_TEST_CASE(state_without_init)
 {
-  BOOST_CHECK_THROW(detail::context::get(), std::logic_error);
+  BOOST_CHECK_THROW(detail::global_state::get(), std::logic_error);
 }
 
 BOOST_AUTO_TEST_CASE(init_scope)
 {
   {
     svn::init svnxx_initialized;
-    BOOST_TEST(detail::context::get());
+    BOOST_TEST(detail::global_state::get());
   }
-  BOOST_CHECK_THROW(detail::context::get(), std::logic_error);
+  BOOST_CHECK_THROW(detail::global_state::get(), std::logic_error);
 }
 
-BOOST_AUTO_TEST_CASE(multi_init_same_context)
+BOOST_AUTO_TEST_CASE(multi_init_same_state)
 {
   svn::init svnxx_initialized_first;
-  const auto ctx = detail::context::get();
-  BOOST_REQUIRE(ctx);
+  const auto state = detail::global_state::get();
+  BOOST_REQUIRE(state);
 
   {
     svn::init svnxx_initialized_second;
-    BOOST_TEST(ctx == detail::context::get());
+    BOOST_TEST(state == detail::global_state::get());
   }
 
-  BOOST_TEST(ctx == detail::context::get());
+  BOOST_TEST(state == detail::global_state::get());
 }
 
 BOOST_AUTO_TEST_SUITE_END();

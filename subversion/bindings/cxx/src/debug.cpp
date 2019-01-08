@@ -21,63 +21,17 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_INIT_HPP
-#define SVNXX_PRIVATE_INIT_HPP
-
-#include <memory>
-#include <mutex>
-#include <stdexcept>
-
-#include <apr_pools.h>
-
-#include "svnxx/init.hpp"
-#include "svnxx/detail/noncopyable.hpp"
+#include "private/debug_private.hpp"
 
 namespace apache {
 namespace subversion {
 namespace svnxx {
-namespace detail {
+namespace impl {
 
-class global_state : noncopyable
-{
-public:
-  using ptr = std::shared_ptr<global_state>;
-  using weak_ptr = std::weak_ptr<global_state>;
+const char root_pool_tag[] = "svn++ root pool";
+const char root_pool_key[] = "SVN++ 30F4B67A-CAB4-1337-F00D-DEADBEEFA78F";
 
-  ~global_state();
-
-  static ptr create();
-  static ptr get()
-    {
-      auto state = self.lock();
-      if (!state)
-        {
-          throw std::logic_error(
-              "The SVN++ library is not initialized."
-              " Did you forget to create an instance of "
-              " the apache::subversion::svnxx::init class?");
-        }
-      return state;
-    }
-
-  apr_pool_t* get_root_pool() const noexcept
-    {
-      return root_pool;
-    }
-
-private:
-  // Thou shalt not create global_states other than through the factory.
-  global_state();
-
-  apr_pool_t* root_pool{nullptr};
-
-  static std::mutex guard;
-  static weak_ptr self;
-};
-
-} // namespace detail
+} // namespace impl
 } // namespace svnxx
 } // namespace subversion
 } // namespace apache
-
-#endif // SVNXX_PRIVATE_INIT_HPP

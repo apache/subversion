@@ -31,6 +31,8 @@
 #include "svnxx/exception.hpp"
 #include "svnxx/detail/noncopyable.hpp"
 
+#include "../private/init_private.hpp"
+
 #include "svn_pools.h"
 
 namespace apache {
@@ -98,6 +100,13 @@ public:
    */
   explicit pool(const pool* parent)
     : pool_ptr(svn_pool_create(parent->get()))
+    {}
+
+  /**
+   * Create a pool as a child of the global pool in @a state.
+   */
+  explicit pool(const detail::global_state::ptr& state)
+    : pool_ptr(svn_pool_create(state->get_root_pool()))
     {}
 
   /**

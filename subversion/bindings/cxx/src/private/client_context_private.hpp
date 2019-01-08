@@ -26,6 +26,7 @@
 
 #include "svnxx/client/context.hpp"
 
+#include "../private/init_private.hpp"
 #include "../aprwrap.hpp"
 
 #include "svn_client.h"
@@ -39,15 +40,21 @@ namespace detail {
 // TODO: document this
 class context
 {
+  using global_state = svnxx::detail::global_state;
+
 public:
   context()
-    : ctx(create_ctx(ctx_pool))
+    : state(global_state::get()),
+      ctx_pool(state),
+      ctx(create_ctx(ctx_pool))
     {}
 
-  svn_client_ctx_t* get() const noexcept { return ctx; };
+  const global_state::ptr& get_state() const noexcept { return state; }
   const apr::pool& get_pool() const noexcept { return ctx_pool; }
+  svn_client_ctx_t* get_ctx() const noexcept { return ctx; };
 
 private:
+  const global_state::ptr state;
   apr::pool ctx_pool;
   svn_client_ctx_t* const ctx;
 
@@ -61,7 +68,7 @@ namespace impl {
 // TODO: document this
 inline client::detail::context& unwrap(client::context& ctx)
 {
-  struct context_wrapper : public client::context
+  struct context_wrapper final : public client::context
   {
     using inherited::get;
   };

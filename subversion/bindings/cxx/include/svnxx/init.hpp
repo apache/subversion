@@ -33,7 +33,7 @@ namespace svnxx {
 
 namespace detail {
 // Forward declaration of the private API context.
-class context;
+class global_state;
 } // namespace detail
 
 /**
@@ -44,13 +44,13 @@ class context;
  * create an @c init object before you can use the SVN++ API. It is
  * safe to create create any number of these objects.
  */
-class init
+class init : private std::shared_ptr<detail::global_state>
 {
+  using state = std::shared_ptr<detail::global_state>;
+
 public:
   init();
-
-private:
-  std::shared_ptr<detail::context> context;
+  ~init() noexcept;
 };
 
 } // namespace svnxx
