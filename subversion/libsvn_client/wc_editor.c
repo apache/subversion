@@ -632,3 +632,40 @@ svn_client__wc_editor(const svn_delta_editor_t **editor_p,
                                          ctx, result_pool));
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_client__wc_copy_mods(const char *src_wc_abspath,
+                         const char *dst_wc_abspath,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool)
+{
+  svn_client__pathrev_t *base;
+  const char *dst_wc_url;
+  svn_ra_session_t *ra_session;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  apr_array_header_t *src_targets = apr_array_make(scratch_pool, 1,
+                                                   sizeof(char *));
+
+  /* We'll need an RA session to obtain the base of any copies */
+  SVN_ERR(svn_client__wc_node_get_base(&base,
+                                       src_wc_abspath, ctx->wc_ctx,
+                                       scratch_pool, scratch_pool));
+  dst_wc_url = base->url;
+  SVN_ERR(svn_client_open_ra_session2(&ra_session,
+                                      dst_wc_url, dst_wc_abspath,
+                                      ctx, scratch_pool, scratch_pool));
+  SVN_ERR(svn_client__wc_editor(&editor, &edit_baton,
+                                dst_wc_abspath,
+                                NULL, NULL,
+                                ra_session, ctx, scratch_pool));
+
+  APR_ARRAY_PUSH(src_targets, const char *) = src_wc_abspath;
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    svn_client__wc_replay(src_wc_abspath,
+                          src_targets, svn_depth_infinity, NULL,
+                          editor, edit_baton, ctx, scratch_pool),
+    ctx->wc_ctx, dst_wc_abspath, FALSE, scratch_pool);
+
+  return SVN_NO_ERROR;
+}

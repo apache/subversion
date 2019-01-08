@@ -1207,3 +1207,26 @@ svn_cl__shelf_log(apr_getopt_t *os,
 
   return SVN_NO_ERROR;
 }
+
+/**************************************************************************/
+
+/* This implements the `svn_opt_subcommand_t' interface. */
+svn_error_t *
+svn_cl__wc_copy_mods(apr_getopt_t *os,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  const char *src_wc_abspath, *dst_wc_abspath;
+
+  SVN_ERR(get_next_argument(&src_wc_abspath, os, pool, pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_wc_abspath, src_wc_abspath, pool));
+
+  SVN_ERR(get_next_argument(&dst_wc_abspath, os, pool, pool));
+  SVN_ERR(svn_dirent_get_absolute(&dst_wc_abspath, dst_wc_abspath, pool));
+
+  SVN_ERR(svn_client__wc_copy_mods(src_wc_abspath, dst_wc_abspath,
+                                   ctx, pool));
+
+  return SVN_NO_ERROR;
+}

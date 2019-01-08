@@ -330,6 +330,7 @@ svn_opt_subcommand_t
   svn_cl__shelf_save,
   svn_cl__shelf_shelve,
   svn_cl__shelf_unshelve,
+  svn_cl__wc_copy_mods,
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
