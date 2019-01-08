@@ -710,52 +710,6 @@ httpd-clean:
 $(DISTDIR)/$(HTTPD_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(HTTPD_URL)
 
-$(HTTPD_OBJDIR)/mod-deflate-fmt.diff:
-	mkdir -p $(dir $@)
-	echo > $@.tmp '--- modules/filters/mod_deflate.c.orig	Sun Dec 16 13:11:26 2018'
-	echo >> $@.tmp '+++ modules/filters/mod_deflate.c	Sun Dec 16 13:19:20 2018'
-	echo >> $@.tmp '@@ -852,7 +852,8 @@'
-	echo >> $@.tmp '                                        f->c->bucket_alloc);'
-	echo >> $@.tmp '             APR_BRIGADE_INSERT_TAIL(ctx->bb, b);'
-	echo >> $@.tmp '             ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, APLOGNO(01384)'
-	echo >> $@.tmp '-                          "Zlib: Compressed %ld to %ld : URL %s",'
-	echo >> $@.tmp '+                          "Zlib: Compressed %" APR_OFF_T_FMT'
-	echo >> $@.tmp '+			  " to %" APR_OFF_T_FMT " : URL %s",'
-	echo >> $@.tmp '                           ctx->stream.total_in, ctx->stream.total_out, r->uri);'
-	echo >> $@.tmp ' '
-	echo >> $@.tmp '             /* leave notes for logging */'
-	echo >> $@.tmp '@@ -1419,7 +1420,8 @@'
-	echo >> $@.tmp '                 ctx->validation_buffer_length += valid;'
-	echo >> $@.tmp ' '
-	echo >> $@.tmp '                 ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, APLOGNO(01393)'
-	echo >> $@.tmp '-                              "Zlib: Inflated %ld to %ld : URL %s",'
-	echo >> $@.tmp '+                              "Zlib: Inflated %" APR_OFF_T_FMT'
-	echo >> $@.tmp '+			      " to %" APR_OFF_T_FMT " : URL %s",'
-	echo >> $@.tmp '                               ctx->stream.total_in, ctx->stream.total_out,'
-	echo >> $@.tmp '                               r->uri);'
-	echo >> $@.tmp ' '
-	echo >> $@.tmp '@@ -1445,7 +1447,8 @@'
-	echo >> $@.tmp '                     if ((ctx->stream.total_out & 0xFFFFFFFF) != compLen) {'
-	echo >> $@.tmp '                         inflateEnd(&ctx->stream);'
-	echo >> $@.tmp '                         ap_log_rerror(APLOG_MARK, APLOG_WARNING, 0, r, APLOGNO(01395)'
-	echo >> $@.tmp '-                                      "Zlib: Length %ld of inflated data does "'
-	echo >> $@.tmp '+                                      "Zlib: Length %" APR_OFF_T_FMT'
-	echo >> $@.tmp '+				      " of inflated data does "'
-	echo >> $@.tmp '                                       "not match expected value %ld",'
-	echo >> $@.tmp '                                       ctx->stream.total_out, compLen);'
-	echo >> $@.tmp '                         return APR_EGENERAL;'
-	echo >> $@.tmp '@@ -1622,7 +1625,8 @@'
-	echo >> $@.tmp '             flush_libz_buffer(ctx, c, f->c->bucket_alloc, inflate, Z_SYNC_FLUSH,'
-	echo >> $@.tmp '                               UPDATE_CRC);'
-	echo >> $@.tmp '             ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r, APLOGNO(01398)'
-	echo >> $@.tmp '-                          "Zlib: Inflated %ld to %ld : URL %s",'
-	echo >> $@.tmp '+                          "Zlib: Inflated %" APR_OFF_T_FMT'
-	echo >> $@.tmp '+			  " to %" APR_OFF_T_FMT " : URL %s",'
-	echo >> $@.tmp '                           ctx->stream.total_in, ctx->stream.total_out, r->uri);'
-	echo >> $@.tmp ' '
-	echo >> $@.tmp '             if (ctx->validation_buffer_length == VALIDATION_SIZE) {'
-	mv -f $@.tmp $@
-
 $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff:
 	mkdir -p $(dir $@)
 	echo > $@.tmp '--- modules/ssl/ssl_engine_init.c.orig	Sun Dec 16 13:34:14 2018'
@@ -773,13 +727,12 @@ $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff:
 
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
-	$(HTTPD_OBJDIR)/mod-deflate-fmt.diff \
 	$(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff
 	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
-	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/mod-deflate-fmt.diff)
 	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff)
+	(cd $(HTTPD_SRCDIR) && svn diff -cr1849590 https://svn.apache.org/repos/asf/httpd/httpd/trunk | patch -p0)
 	touch $@
 
 # configure httpd
