@@ -88,7 +88,7 @@ public:
     {}
 
   /**
-   * Retuurn a pool pointer that can be used by the C APIs.
+   * Return a pool pointer that can be used by the C APIs.
    */
   apr_pool_t* get() const noexcept
     {
