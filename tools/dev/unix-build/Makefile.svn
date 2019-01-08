@@ -733,6 +733,7 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
 	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff)
 	(cd $(HTTPD_SRCDIR) && svn diff -cr1849590 https://svn.apache.org/repos/asf/httpd/httpd/trunk | patch -p0)
+	(cd $(HTTPD_SRCDIR) && svn diff -cr1663375 https://svn.apache.org/repos/asf/httpd/httpd/trunk | patch -p0)
 	touch $@
 
 # configure httpd
