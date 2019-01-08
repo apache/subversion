@@ -27,8 +27,8 @@
 
 #include <cstdint>
 #include <functional>
-#include <future>
 
+#include "svnxx/detail/future.hpp"
 #include "svnxx/client/context.hpp"
 
 #include "svnxx/depth.hpp"
@@ -82,8 +82,8 @@ inline status_flags operator|(status_flags a, status_flags b)
 }
 
 /**
- * @brief Perform a status walk on @a path.
- * @see svn_client_status6
+ * @ingroup svnxx_client
+ * @brief Perform a status operation on @a path.
  * @param ctx the #context object to use for this operation
  * @param path the (root) path for the status walk.
  * @param rev the revision to use when @c check_out_of_date is set in @a flags
@@ -91,12 +91,45 @@ inline status_flags operator|(status_flags a, status_flags b)
  * @param flags a combination of @c status_flags
  * @param callback a function that will be called for each status target
  * @warning TODO: Work in progress
+ * @see svn_client_status6
  */
 revision::number
 status(context& ctx, const char* path,
-       revision rev, depth depth, status_flags flags,
+       const revision& rev, depth depth, status_flags flags,
        status_callback callback);
 
+namespace async {
+
+/**
+ * @ingroup svnxx_client
+ * @brief Perform an asynchronous status operation on @a path.
+ *
+ * Behaves as if svn::client::status() were invoked through
+ * <tt>std::async()</tt>, but also maintains the lifetime of
+ * internal state relevant to the status operation.
+ *
+ * @warning Any callbacks regietered in the context @a ctx, as well
+ *          as the status @a callback itself, may be called in the
+ *          context of a different thread than the one that created
+ *          this asynchronous operation.
+ */
+svnxx::detail::future<revision::number>
+status(std::launch policy, context& ctx, const char* path,
+       const revision& rev, depth depth_, status_flags flags,
+       status_callback callback);
+
+/**
+ * @overload
+ * @ingroup svnxx_client
+ * @note Uses the <tt>std::launch</tt> @a policy set to
+ *       <tt>std::launch::async|std::launch::deferred</tt>.
+ */
+svnxx::detail::future<revision::number>
+status(context& ctx, const char* path,
+       const revision& rev, depth depth_, status_flags flags,
+       status_callback callback);
+
+} // namespace async
 } // namespace client
 } // namespace svnxx
 } // namespace subversion
