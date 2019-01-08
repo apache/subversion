@@ -2434,6 +2434,8 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
 
       *timestamp_sleep = TRUE;
 
+      /* ### Reparenting "ra_session" can't be right, can it? As this is
+             a foreign repo, surely we need a new RA session? */
       SVN_ERR(svn_client__pathrev_create_with_session(&location, ra_session,
                                                       src_revnum, src_url,
                                                       scratch_pool));
@@ -2599,8 +2601,12 @@ svn_client__repos_to_wc_copy_internal(svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool)
 {
+  const char *old_session_url;
   svn_boolean_t timestamp_sleep_ignored;
   svn_boolean_t same_repositories;
+
+  SVN_ERR(svn_client__ensure_ra_session_url(&old_session_url, ra_session,
+                                            src_url, scratch_pool));
 
   SVN_ERR(is_same_repository(&same_repositories,
                              ra_session, dst_abspath, ctx, scratch_pool));
@@ -2626,6 +2632,9 @@ svn_client__repos_to_wc_copy_internal(svn_boolean_t *timestamp_sleep,
                                                 ra_session,
                                                 ctx, scratch_pool));
     }
+
+  /* Reparent the session back to the original URL. */
+  SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));
   return SVN_NO_ERROR;
 }
 
