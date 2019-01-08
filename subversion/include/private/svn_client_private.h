@@ -529,6 +529,12 @@ svn_client__wc_replay(const char *src_wc_abspath,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *scratch_pool);
 
+svn_error_t *
+svn_client__wc_copy_mods(const char *src_wc_abspath,
+                         const char *dst_wc_abspath,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

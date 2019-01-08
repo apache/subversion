@@ -2138,6 +2138,19 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
     {opt_drop, 'q', opt_dry_run, opt_force} },
 
+  { "x-wc-copy-mods", svn_cl__wc_copy_mods, {0}, {N_(
+     "Copy local modifications from one WC to another.\n"
+     "usage: x-wc-copy-mods SRC_WC_PATH DST_WC_PATH\n"
+     "\n"), N_(
+     "  The source and destination WC paths may be in the same WC or in different"
+     "  WCs.\n"
+     "\n"), N_(
+     "  This feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {}
+  },
+
   { NULL, NULL, {0}, {NULL}, {0} }
 };
 
