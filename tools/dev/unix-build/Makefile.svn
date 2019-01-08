@@ -387,9 +387,6 @@ $(APR_OBJDIR)/.retrieved:
 	if [ ! -d $(APR_SRCDIR) ]; then \
 		svn export $(APR_URL)/tags/$(APR_VER)/ $(APR_SRCDIR); \
 	fi
-	# Hack configure script to ensure that sizeof(apr_off_t) == sizeof(uint64_t)
-	sed -i.orig -e 's/if test "$$ac_cv_sizeof_off_t" = "$$ac_cv_sizeof_long"; then/if false; then/' $(APR_SRCDIR)/configure.in
-	sed -i -e 's/^elif test "$$ac_cv_sizeof_long" = "8"; then/elif false; then/' $(APR_SRCDIR)/configure.in
 	touch $@
 
 ifeq ($(THREADING),yes)
