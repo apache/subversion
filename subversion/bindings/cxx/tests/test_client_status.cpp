@@ -32,24 +32,40 @@ namespace svn = ::apache::subversion::svnxx;
 BOOST_AUTO_TEST_SUITE(client_status,
                       * boost::unit_test::fixture<init>());
 
+namespace {
+const char working_copy_root[] = "/Users/brane/src/svn/repos/trunk";
+
+const auto status_callback = [](const char* path,
+                                const svn::client::status_notification&)
+                               {
+                                 std::cout << "status on: " << path << std::endl;
+                               };
+}
+
 BOOST_AUTO_TEST_CASE(example,
                      * boost::unit_test::disabled())
 {
-  const char working_copy_root[] = "/Users/brane/src/svn/repos/trunk";
-
-  const auto callback = [](const char* path,
-                           const svn::client::status_notification&)
-                          {
-                            std::cout << "status on: " << path << std::endl;
-                          };
   svn::client::context ctx;
-
   const auto revnum = svn::client::status(ctx, working_copy_root,
                                           svn::revision(),
                                           svn::depth::unknown,
                                           svn::client::status_flags::empty,
-                                          callback);
+                                          status_callback);
   std::cout << "got revision: " << long(revnum) << std::endl;
+}
+
+BOOST_AUTO_TEST_CASE(async_example,
+                     * boost::unit_test::disabled())
+{
+  svn::client::context ctx;
+  auto future = svn::client::async::status(ctx, working_copy_root,
+                                           svn::revision(),
+                                           svn::depth::unknown,
+                                           svn::client::status_flags::empty,
+                                           status_callback);
+  BOOST_TEST(future.valid());
+  future.wait();
+  std::cout << "got revision: " << long(future.get()) << std::endl;
 }
 
 BOOST_AUTO_TEST_SUITE_END();

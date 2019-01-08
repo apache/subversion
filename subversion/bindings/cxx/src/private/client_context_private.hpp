@@ -66,14 +66,17 @@ private:
 namespace impl {
 
 // TODO: document this
-inline client::detail::context& unwrap(client::context& ctx)
+inline client::detail::context_ptr unwrap(client::context& ctx)
 {
   struct context_wrapper final : public client::context
   {
-    using inherited::get;
+    inherited get() const noexcept
+      {
+        return *this;
+      }
   };
 
-  return *static_cast<context_wrapper&>(ctx).get();
+  return static_cast<context_wrapper&>(ctx).get();
 }
 
 } // namesapce impl

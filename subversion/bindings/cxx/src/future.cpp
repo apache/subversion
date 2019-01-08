@@ -21,16 +21,32 @@
  * @endcopyright
  */
 
-#ifndef SVNXX_PRIVATE_PRIVATE_HPP
-#define SVNXX_PRIVATE_PRIVATE_HPP
-
-#include "private/depth_private.hpp"
-#include "private/exception_private.hpp"
 #include "private/future_private.hpp"
-#include "private/revision_private.hpp"
-#include "private/strings_private.hpp"
-#include "private/tristate_private.hpp"
 
-#include "private/client_context_private.hpp"
+namespace apache {
+namespace subversion {
+namespace svnxx {
+namespace detail {
+namespace future_ {
 
-#endif // SVNXX_PRIVATE_PRIVATE_HPP
+future_base::future_base() noexcept {}
+future_base::~future_base() noexcept {}
+
+future_base::future_base(future_base&& that) noexcept
+  : future_base(std::move(that.unique_result))
+{}
+
+future_base::future_base(unique_ptr&& unique_result_) noexcept
+  : unique_result(std::move(unique_result_))
+{}
+
+shared_ptr future_base::share() noexcept
+{
+  return shared_ptr(unique_result.release());
+}
+
+} // namespace future_
+} // namespace detail
+} // namespace svnxx
+} // namespace subversion
+} // namespace apache

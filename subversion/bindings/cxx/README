@@ -129,3 +129,19 @@ with the single header file
     .../src/aprwrap.hpp
 
 importing all relevant headers from that directory.
+
+====================================================================
+
+IMPLEMENTATION NOTES
+====================
+
+Asynchronous Operations (TODO)
+------------------------------
+
+In the current model of asyncrhonous operations, we do not protect
+against using the same svn_client_ctx_t object from multiple
+threads. This _should_ be safe as long as the callback
+implementations are aware of it, but we should consider changing the
+design so that whilst svn::client::context can be shared, we create
+the actual svn_client_ctx_t on the fly for each operation --
+similarly to how we create a the scratch pool.

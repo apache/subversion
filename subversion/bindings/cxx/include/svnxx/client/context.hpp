@@ -34,7 +34,8 @@ namespace client {
 
 namespace detail {
 class context;
-using context_ptr = std::unique_ptr<context>;
+using context_ptr = std::shared_ptr<context>;
+using weak_context_ptr = std::weak_ptr<context>;
 } // namespace detail
 
 /**
