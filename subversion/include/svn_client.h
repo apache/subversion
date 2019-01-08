@@ -736,10 +736,11 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * @{
  */
 
-/** Callback type used by svn_client_blame5() to notify the caller
+/** Callback type used by svn_client_blame6() to notify the caller
  * that line @a line_no of the blamed file was last changed in @a revision
  * which has the revision properties @a rev_props, and that the contents were
- * @a line.
+ * @a line. The @a line content is delivered as is. It is up to the client to
+ * determine the encoding. The line does not contain the cr/lf at the end.
  *
  * @a start_revnum and @a end_revnum contain the start and end revision
  * number of the entire blame operation, as determined from the repository
@@ -757,6 +758,33 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * invalid and @a rev_props will be NULL. In this case @a local_change
  * will be true if the reason there is no blame information is that the line
  * was modified locally. In all other cases @a local_change will be false.
+ *
+ * @note the line is split on LF characters. Clients must be aware of this
+ * when dealing with different encodings of the file/line.
+ * Blaming non ASCII/UTF-8 files requires the @a force flag to be set when
+ * calling the svn_client_blame6 function.
+ *
+ * @since New in 1.12.
+ */
+typedef svn_error_t *(*svn_client_blame_receiver4_t)(
+  void *baton,
+  svn_revnum_t start_revnum,
+  svn_revnum_t end_revnum,
+  apr_int64_t line_no,
+  svn_revnum_t revision,
+  apr_hash_t *rev_props,
+  svn_revnum_t merged_revision,
+  apr_hash_t *merged_rev_props,
+  const char *merged_path,
+  const svn_string_t *line,
+  svn_boolean_t local_change,
+  apr_pool_t *pool);
+
+/**
+ * Similar to #svn_client_blame_receiver4_t, but with the line parameter
+ * as a (const char*) instead of an svn_string_t.
+ *
+ * @deprecated Provided for backward compatibility with the 1.11 API.
  *
  * @since New in 1.7.
  */
@@ -2928,6 +2956,28 @@ svn_client_log(const apr_array_header_t *targets,
  *
  * Use @a pool for any temporary allocation.
  *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_client_blame6(const char *path_or_url,
+                  const svn_opt_revision_t *peg_revision,
+                  const svn_opt_revision_t *start,
+                  const svn_opt_revision_t *end,
+                  const svn_diff_file_options_t *diff_options,
+                  svn_boolean_t ignore_mime_type,
+                  svn_boolean_t include_merged_revisions,
+                  svn_client_blame_receiver4_t receiver,
+                  void *receiver_baton,
+                  svn_client_ctx_t *ctx,
+                  apr_pool_t *pool);
+
+
+/**
+ * Similar to svn_client_blame6(), but with #svn_client_blame_receiver3_t
+ * as the receiver.
+ *
+ * @deprecated Provided for backwards compatibility with the 1.11 API.
+ *
  * @since New in 1.7.
  */
 svn_error_t *
@@ -2943,9 +2993,8 @@ svn_client_blame5(const char *path_or_url,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool);
 
-
 /**
- * Similar to svn_client_blame5(), but with #svn_client_blame_receiver3_t
+ * Similar to svn_client_blame5(), but with #svn_client_blame_receiver2_t
  * as the receiver.
  *
  * @deprecated Provided for backwards compatibility with the 1.6 API.
