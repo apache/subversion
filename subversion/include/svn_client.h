@@ -740,7 +740,7 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * that line @a line_no of the blamed file was last changed in @a revision
  * which has the revision properties @a rev_props, and that the contents were
  * @a line. The @a line content is delivered as is. It is up to the client to
- * determine the encoding. The line does not contain the cr/lf at the end.
+ * determine the encoding. The line does not contain the CR/LF at the end.
  *
  * @a start_revnum and @a end_revnum contain the start and end revision
  * number of the entire blame operation, as determined from the repository
