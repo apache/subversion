@@ -400,8 +400,8 @@ svn_client__get_diff_summarize_callbacks(
  *
  * If not same repositories, then remove any svn:mergeinfo property.
  *
- * Use RA_SESSION to fetch the data. The session may point to a different
- * URL after returning.
+ * Use RA_SESSION to fetch the data. The session may point to any URL
+ * within the source repository.
  *
  * This API does not process any externals definitions that may be present
  * on copied directories.
