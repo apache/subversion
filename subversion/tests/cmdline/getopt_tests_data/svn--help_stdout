@@ -55,6 +55,7 @@ Available subcommands:
    x-shelf-save
    x-shelve
    x-unshelve
+   x-wc-copy-mods
 
 Subversion is a tool for version control.
 For additional information, see http://subversion.apache.org/
