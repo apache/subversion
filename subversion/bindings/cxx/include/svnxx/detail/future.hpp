@@ -77,8 +77,8 @@ class shared_future : private std::shared_future<T>,
 protected:
   using inherited = std::shared_future<T>;
 
-  shared_future(inherited&& that, shared_ptr shared_result) noexcept
-    : inherited(that), shared_future_base(shared_result)
+  shared_future(inherited&& that, shared_ptr shared_result_) noexcept
+    : inherited(that), shared_future_base(shared_result_)
     {}
 
 public:
@@ -133,8 +133,8 @@ class future : private std::future<T>,
 protected:
   using inherited = std::future<T>;
 
-  future(inherited&& that, unique_ptr&& unique_result) noexcept
-    : inherited(std::move(that)), future_base(std::move(unique_result))
+  future(inherited&& that, unique_ptr&& unique_result_) noexcept
+    : inherited(std::move(that)), future_base(std::move(unique_result_))
     {}
 
 public:
