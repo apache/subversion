@@ -2217,6 +2217,7 @@ svn-check-swig-rb:
 
 svn-check-javahl:
 	-if [ $(ENABLE_JAVA_BINDINGS) = yes ]; then \
+		ln -s libsvnjavahl-1.so.0.0 $(PREFIX)/svn-$(WC)/lib/libsvnjavahl-1.so; \
 		(cd $(svn_builddir) && \
 			env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
 			MAKEFLAGS= make $(JAVAHL_CHECK_TARGET) 2>&1) | \
