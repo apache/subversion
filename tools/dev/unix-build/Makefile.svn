@@ -722,13 +722,18 @@ $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff:
 	echo >> $@.tmp '      * https://github.com/openssl/openssl/issues/6933 */'
 	mv -f $@.tmp $@
 
+$(HTTPD_OBJDIR)/mod-proxy-no-threads-2.4.diff:
+	cd $(HTTPD_OBJDIR) && $(FETCH_CMD) https://stsp.name/mod-proxy-no-threads-2.4.diff
+
 # retrieve httpd
 $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
-	$(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff
+	$(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff \
+	$(HTTPD_OBJDIR)/mod-proxy-no-threads-2.4.diff
 	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
 	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff)
+	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/mod-proxy-no-threads-2.4.diff)
 	(cd $(HTTPD_SRCDIR) && svn diff -cr1849590 https://svn.apache.org/repos/asf/httpd/httpd/trunk | patch -p0)
 	(cd $(HTTPD_SRCDIR) && svn diff -cr1663375 https://svn.apache.org/repos/asf/httpd/httpd/trunk | patch -p0)
 	touch $@
