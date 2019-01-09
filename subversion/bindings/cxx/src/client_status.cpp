@@ -96,7 +96,7 @@ status(context& ctx_, const char* path,
 {
   const auto ctx = impl::unwrap(ctx_);
   const auto rev = impl::convert(rev_);
-  const apr::pool scratch_pool(&ctx->get_pool());
+  const auto scratch_pool = apr::pool(&ctx->get_pool());
   return impl::status(ctx->get_ctx(), path, &rev, depth_, flags,
                       callback, scratch_pool.get());
 }
@@ -119,7 +119,7 @@ status(std::launch policy, context& ctx_, const char* path,
                 return revision::number::invalid;
 
               const auto rev = impl::convert(rev_);
-              const apr::pool scratch_pool(&ctx->get_pool());
+              const auto scratch_pool = apr::pool(&ctx->get_pool());
 
               return impl::status(ctx->get_ctx(), path, &rev, depth_, flags,
                                   callback, scratch_pool.get());
