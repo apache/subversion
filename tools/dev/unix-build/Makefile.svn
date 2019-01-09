@@ -751,7 +751,6 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(HTTPD_SRCDIR)/configure \
 		--prefix=$(PREFIX)/httpd \
-		--enable-maintainer-mode \
 		--with-mpm=prefork \
 		--enable-ssl \
 		--enable-dav \
