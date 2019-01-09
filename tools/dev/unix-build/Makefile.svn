@@ -700,7 +700,7 @@ httpd-reset:
 
 httpd-clean:
 	-(cd $(HTTPD_OBJDIR) && env MAKEFLAGS= make clean)
-	rm -f $(HTTPD_OBJDIR)/mod-deflate-fmt.diff
+	rm -f $(HTTPD_OBJDIR)/mod-proxy-no-threads-2.4.diff
 	rm -f $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff
 
 # fetch distfile for httpd
