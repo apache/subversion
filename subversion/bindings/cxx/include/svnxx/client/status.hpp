@@ -108,10 +108,10 @@ namespace async {
  * <tt>std::async()</tt>, but also maintains the lifetime of
  * internal state relevant to the status operation.
  *
- * @warning Any callbacks regietered in the context @a ctx, as well
- *          as the status @a callback itself, may be called in the
- *          context of a different thread than the one that created
- *          this asynchronous operation.
+ * @warning Any callbacks regietered in @a ctx, as well as the
+ *          status @a callback itself, may be called in the context
+ *          of a different thread than the one that created this
+ *          asynchronous operation.
  */
 svnxx::detail::future<revision::number>
 status(std::launch policy, context& ctx, const char* path,
