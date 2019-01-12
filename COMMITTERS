@@ -214,6 +214,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
          moklo   Morten Kloster <morklo@gmail.com>           (diff-improvements br.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (javahl-ra br.)
+      futatuki   Yasuhito Futatsuki <futatuki@yf.bsdclub.org> (swig-py3 br.)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 
