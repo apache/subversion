@@ -759,10 +759,13 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * will be true if the reason there is no blame information is that the line
  * was modified locally. In all other cases @a local_change will be false.
  *
- * @note the line is split on LF characters. Clients must be aware of this
- * when dealing with different encodings of the file/line.
- * Blaming non ASCII/UTF-8 files requires the @a force flag to be set when
- * calling the svn_client_blame6 function.
+ * @note the line contents are processed by @ref svn_subst_stream_translated
+ * to convert newlines. The lines are then split on newlines.
+ * Clients must be aware of this when dealing with different encodings of
+ * the file/line.
+ * Blaming files that have <tt>svn:mime-type</tt> set to something other
+ * than <tt>text/...</tt> requires the @a ignore_mime_type flag to be set to
+ * true when calling the svn_client_blame6 function.
  *
  * @since New in 1.12.
  */
