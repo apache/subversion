@@ -54,8 +54,6 @@ typedef struct blame_baton_t
    XML to stdout. */
 static svn_error_t *
 blame_receiver_xml(void *baton,
-                   svn_revnum_t start_revnum,
-                   svn_revnum_t end_revnum,
                    apr_int64_t line_no,
                    svn_revnum_t revision,
                    apr_hash_t *rev_props,
@@ -170,8 +168,6 @@ print_line_info(svn_stream_t *out,
 /* This implements the svn_client_blame_receiver3_t interface. */
 static svn_error_t *
 blame_receiver(void *baton,
-               svn_revnum_t start_revnum,
-               svn_revnum_t end_revnum,
                apr_int64_t line_no,
                svn_revnum_t revision,
                apr_hash_t *rev_props,
@@ -186,21 +182,6 @@ blame_receiver(void *baton,
   svn_cl__opt_state_t *opt_state = bb->opt_state;
   svn_stream_t *out = bb->out;
   svn_boolean_t use_merged = FALSE;
-
-  if (!bb->rev_maxlength)
-    {
-      svn_revnum_t max_revnum = MAX(start_revnum, end_revnum);
-      /* The standard column width for the revision number is 6 characters.
-         If the revision number can potentially be larger (i.e. if the end_revnum
-          is larger than 1000000), we increase the column width as needed. */
-
-      bb->rev_maxlength = 6;
-      while (max_revnum >= 1000000)
-        {
-          bb->rev_maxlength++;
-          max_revnum = max_revnum / 10;
-        }
-    }
 
   if (opt_state->use_merge_history)
     {
@@ -334,6 +315,7 @@ svn_cl__blame(apr_getopt_t *os,
       const char *truepath;
       svn_opt_revision_t peg_revision;
       svn_client_blame_receiver4_t receiver;
+      svn_revnum_t start_revnum, end_revnum;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -372,6 +354,7 @@ svn_cl__blame(apr_getopt_t *os,
                               &peg_revision,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
+                              &start_revnum, &end_revnum,
                               diff_options,
                               opt_state->force,
                               opt_state->use_merge_history,
@@ -379,6 +362,19 @@ svn_cl__blame(apr_getopt_t *os,
                               &bl,
                               ctx,
                               subpool);
+      {
+        svn_revnum_t max_revnum = MAX(start_revnum, end_revnum);
+        /* The standard column width for the revision number is 6 characters.
+           If the revision number can potentially be larger (i.e. if max revnum
+           is larger than 1000000), we increase the column width as needed. */
+
+        bl.rev_maxlength = 6;
+        while (max_revnum >= 1000000)
+          {
+            bl.rev_maxlength++;
+            max_revnum = max_revnum / 10;
+          }
+      }
 
       if (err)
         {

@@ -41,8 +41,6 @@ class BlameCallback
   ~BlameCallback();
 
   static svn_error_t *callback(void *baton,
-                               svn_revnum_t start_revnum,
-                               svn_revnum_t end_revnum,
                                apr_int64_t line_no,
                                svn_revnum_t revision,
                                apr_hash_t *rev_props,
@@ -54,9 +52,7 @@ class BlameCallback
                                apr_pool_t *pool);
 
  protected:
-  svn_error_t *singleLine(svn_revnum_t start_revnum,
-                          svn_revnum_t end_revnum,
-                          apr_int64_t line_no,
+  svn_error_t *singleLine(apr_int64_t line_no,
                           svn_revnum_t revision,
                           apr_hash_t *rev_props,
                           svn_revnum_t merged_revision,

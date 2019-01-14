@@ -1287,6 +1287,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     SVN_JNI_ERR(svn_client_blame6(
           intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
           revisionEnd.revision(),
+          NULL, NULL,
           options.fileOptions(subPool), ignoreMimeType,
           includeMergedRevisions, BlameCallback::callback, callback, ctx,
           subPool.getPool()),

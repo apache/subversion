@@ -48,8 +48,6 @@ BlameCallback::~BlameCallback()
 /* implements svn_client_blame_receiver3_t */
 svn_error_t *
 BlameCallback::callback(void *baton,
-                        svn_revnum_t start_revnum,
-                        svn_revnum_t end_revnum,
                         apr_int64_t line_no,
                         svn_revnum_t revision,
                         apr_hash_t *rev_props,
@@ -61,8 +59,8 @@ BlameCallback::callback(void *baton,
                         apr_pool_t *pool)
 {
   if (baton)
-    return static_cast<BlameCallback *>(baton)->singleLine(start_revnum,
-        end_revnum, line_no, revision, rev_props, merged_revision,
+    return static_cast<BlameCallback *>(baton)->singleLine(
+        line_no, revision, rev_props, merged_revision,
         merged_rev_props, merged_path, line, local_change, pool);
 
   return SVN_NO_ERROR;
@@ -73,8 +71,7 @@ BlameCallback::callback(void *baton,
  * information was requested.  See the Java-doc for more information.
  */
 svn_error_t *
-BlameCallback::singleLine(svn_revnum_t start_revnum, svn_revnum_t end_revnum,
-                          apr_int64_t line_no, svn_revnum_t revision,
+BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
                           apr_hash_t *revProps, svn_revnum_t mergedRevision,
                           apr_hash_t *mergedRevProps, const char *mergedPath,
                           const svn_string_t *line, svn_boolean_t localChange,
