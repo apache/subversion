@@ -660,6 +660,8 @@ svn_client_blame6(const char *target,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
+                  svn_revnum_t *start_revnum_p,
+                  svn_revnum_t *end_revnum_p,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
                   svn_boolean_t include_merged_revisions,
@@ -696,10 +698,13 @@ svn_client_blame6(const char *target,
   SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
                                           target_abspath_or_url, ra_session,
                                           start, pool));
-
+  if (start_revnum_p)
+    *start_revnum_p = start_revnum;
   SVN_ERR(svn_client__get_revision_number(&end_revnum, NULL, ctx->wc_ctx,
                                           target_abspath_or_url, ra_session,
                                           end, pool));
+  if (end_revnum_p)
+    *end_revnum_p = end_revnum;
 
   {
     svn_client__pathrev_t *loc;
@@ -945,13 +950,13 @@ svn_client_blame6(const char *target,
               line.data = sb->data;
               line.len = sb->len;
               if (walk->rev)
-                SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
+                SVN_ERR(receiver(receiver_baton,
                                  line_no, walk->rev->revision,
                                  walk->rev->rev_props, merged_rev,
                                  merged_rev_props, merged_path,
                                  &line, FALSE, iterpool));
               else
-                SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
+                SVN_ERR(receiver(receiver_baton,
                                  line_no, SVN_INVALID_REVNUM,
                                  NULL, SVN_INVALID_REVNUM,
                                  NULL, NULL,

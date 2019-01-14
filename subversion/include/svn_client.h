@@ -780,8 +780,6 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  */
 typedef svn_error_t *(*svn_client_blame_receiver4_t)(
   void *baton,
-  svn_revnum_t start_revnum,
-  svn_revnum_t end_revnum,
   apr_int64_t line_no,
   svn_revnum_t revision,
   apr_hash_t *rev_props,
@@ -2975,6 +2973,8 @@ svn_client_blame6(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
+                  svn_revnum_t *start_revnum_p,
+                  svn_revnum_t *end_revnum_p,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
                   svn_boolean_t include_merged_revisions,
