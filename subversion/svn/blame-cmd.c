@@ -44,6 +44,7 @@ typedef struct blame_baton_t
   svn_stream_t *out;
   svn_stringbuf_t *sbuf;
 
+  svn_revnum_t start_revnum, end_revnum;
   int rev_maxlength;
 } blame_baton_t;
 
@@ -183,6 +184,21 @@ blame_receiver(void *baton,
   svn_stream_t *out = bb->out;
   svn_boolean_t use_merged = FALSE;
 
+  if (!bb->rev_maxlength)
+  {
+    svn_revnum_t max_revnum = MAX(bb->start_revnum, bb->end_revnum);
+    /* The standard column width for the revision number is 6 characters.
+       If the revision number can potentially be larger (i.e. if the end_revnum
+        is larger than 1000000), we increase the column width as needed. */
+
+    bb->rev_maxlength = 6;
+    while (max_revnum >= 1000000)
+      {
+        bb->rev_maxlength++;
+        max_revnum = max_revnum / 10;
+      }
+  }
+
   if (opt_state->use_merge_history)
     {
       /* Choose which revision to use.  If they aren't equal, prefer the
@@ -315,7 +331,6 @@ svn_cl__blame(apr_getopt_t *os,
       const char *truepath;
       svn_opt_revision_t peg_revision;
       svn_client_blame_receiver4_t receiver;
-      svn_revnum_t start_revnum, end_revnum;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -354,7 +369,7 @@ svn_cl__blame(apr_getopt_t *os,
                               &peg_revision,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
-                              &start_revnum, &end_revnum,
+                              &bl.start_revnum, &bl.end_revnum,
                               diff_options,
                               opt_state->force,
                               opt_state->use_merge_history,
@@ -362,19 +377,6 @@ svn_cl__blame(apr_getopt_t *os,
                               &bl,
                               ctx,
                               subpool);
-      {
-        svn_revnum_t max_revnum = MAX(start_revnum, end_revnum);
-        /* The standard column width for the revision number is 6 characters.
-           If the revision number can potentially be larger (i.e. if max revnum
-           is larger than 1000000), we increase the column width as needed. */
-
-        bl.rev_maxlength = 6;
-        while (max_revnum >= 1000000)
-          {
-            bl.rev_maxlength++;
-            max_revnum = max_revnum / 10;
-          }
-      }
 
       if (err)
         {
