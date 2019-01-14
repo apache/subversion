@@ -62,7 +62,7 @@ blame_receiver_xml(void *baton,
                    svn_revnum_t merged_revision,
                    apr_hash_t *merged_rev_props,
                    const char *merged_path,
-                   const char *line,
+                   const svn_string_t *line,
                    svn_boolean_t local_change,
                    apr_pool_t *pool)
 {
@@ -178,7 +178,7 @@ blame_receiver(void *baton,
                svn_revnum_t merged_revision,
                apr_hash_t *merged_rev_props,
                const char *merged_path,
-               const char *line,
+               const svn_string_t *line,
                svn_boolean_t local_change,
                apr_pool_t *pool)
 {
@@ -237,7 +237,7 @@ blame_receiver(void *baton,
                             bb->rev_maxlength,
                             pool));
 
-  return svn_stream_printf(out, pool, "%s%s", line, APR_EOL_STR);
+  return svn_stream_printf(out, pool, "%s%s", line->data, APR_EOL_STR);
 }
 
 
@@ -333,7 +333,7 @@ svn_cl__blame(apr_getopt_t *os,
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
       const char *truepath;
       svn_opt_revision_t peg_revision;
-      svn_client_blame_receiver3_t receiver;
+      svn_client_blame_receiver4_t receiver;
 
       svn_pool_clear(subpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
@@ -368,7 +368,7 @@ svn_cl__blame(apr_getopt_t *os,
       else
         receiver = blame_receiver;
 
-      err = svn_client_blame5(truepath,
+      err = svn_client_blame6(truepath,
                               &peg_revision,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
