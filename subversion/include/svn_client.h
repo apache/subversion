@@ -739,8 +739,7 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
 /** Callback type used by svn_client_blame6() to notify the caller
  * that line @a line_no of the blamed file was last changed in @a revision
  * which has the revision properties @a rev_props, and that the contents were
- * @a line. The @a line content is delivered as is. It is up to the client to
- * determine the encoding. The line does not contain the CR/LF at the end.
+ * @a line.
  *
  * @a start_revnum and @a end_revnum contain the start and end revision
  * number of the entire blame operation, as determined from the repository
@@ -759,10 +758,20 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * will be true if the reason there is no blame information is that the line
  * was modified locally. In all other cases @a local_change will be false.
  *
- * @note the line contents are processed by @ref svn_subst_stream_translated
- * to convert newlines. The lines are then split on newlines.
- * Clients must be aware of this when dealing with different encodings of
- * the file/line.
+ * Character Encoding and Line Splitting:
+ *
+ * It is up to the client to determine the character encoding. The @a line
+ * content is delivered without any encoding conversion. The line splitting
+ * is designed to work with ASCII-compatible encodings including UTF-8. Any
+ * of the byte sequences LF ("\n"), CR ("\n"), CR LF ("\r\n") ends a line
+ * and is not included in @a line. The @a line content can include all other
+ * byte values including zero (ASCII NUL).
+ * 
+ * @note That is how line splitting is done on the final file content, from
+ * which this callback is driven. It is not entirely clear whether the line
+ * splitting used to calculate diffs between each revision and assign a
+ * revision number to each line is exactly compatible with this in all cases.
+ *
  * Blaming files that have <tt>svn:mime-type</tt> set to something other
  * than <tt>text/...</tt> requires the @a ignore_mime_type flag to be set to
  * true when calling the svn_client_blame6 function.
