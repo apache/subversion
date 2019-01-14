@@ -49,7 +49,7 @@ class BlameCallback
                                svn_revnum_t merged_revision,
                                apr_hash_t *merged_rev_props,
                                const char *merged_path,
-                               const char *line,
+                               const svn_string_t *line,
                                svn_boolean_t local_change,
                                apr_pool_t *pool);
 
@@ -62,7 +62,7 @@ class BlameCallback
                           svn_revnum_t merged_revision,
                           apr_hash_t *merged_rev_props,
                           const char *merged_path,
-                          const char *line,
+                          const svn_string_t *line,
                           svn_boolean_t local_change,
                           apr_pool_t *pool);
 

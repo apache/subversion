@@ -56,7 +56,7 @@ BlameCallback::callback(void *baton,
                         svn_revnum_t merged_revision,
                         apr_hash_t *merged_rev_props,
                         const char *merged_path,
-                        const char *line,
+                        const svn_string_t *line,
                         svn_boolean_t local_change,
                         apr_pool_t *pool)
 {
@@ -77,7 +77,7 @@ BlameCallback::singleLine(svn_revnum_t start_revnum, svn_revnum_t end_revnum,
                           apr_int64_t line_no, svn_revnum_t revision,
                           apr_hash_t *revProps, svn_revnum_t mergedRevision,
                           apr_hash_t *mergedRevProps, const char *mergedPath,
-                          const char *line, svn_boolean_t localChange,
+                          const svn_string_t *line, svn_boolean_t localChange,
                           apr_pool_t *pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
@@ -120,7 +120,7 @@ BlameCallback::singleLine(svn_revnum_t start_revnum, svn_revnum_t end_revnum,
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
-  jstring jline = JNIUtil::makeJString(line);
+  jstring jline = JNIUtil::makeJString(line->data);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 

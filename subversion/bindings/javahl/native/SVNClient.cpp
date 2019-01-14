@@ -1284,7 +1284,7 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame5(
+    SVN_JNI_ERR(svn_client_blame6(
           intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
           revisionEnd.revision(),
           options.fileOptions(subPool), ignoreMimeType,
