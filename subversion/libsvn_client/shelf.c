@@ -1392,19 +1392,16 @@ wc_file_merge(const char *wc_abspath,
 
   /* Do property merge and text merge in one step so that keyword expansion
      takes into account the new property values. */
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
-                  left_file, right_file, wc_abspath,
-                  left_label, right_label, target_label,
-                  NULL, NULL, /*left, right conflict-versions*/
-                  FALSE /*dry_run*/, NULL /*diff3_cmd*/,
-                  NULL /*merge_options*/,
-                  left_props, prop_changes,
-                  NULL, NULL,
-                  ctx->cancel_func, ctx->cancel_baton,
-                  scratch_pool),
-    ctx->wc_ctx, wc_abspath,
-    FALSE /*lock_anchor*/, scratch_pool);
+  SVN_ERR(svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
+                        left_file, right_file, wc_abspath,
+                        left_label, right_label, target_label,
+                        NULL, NULL, /*left, right conflict-versions*/
+                        FALSE /*dry_run*/, NULL /*diff3_cmd*/,
+                        NULL /*merge_options*/,
+                        left_props, prop_changes,
+                        NULL, NULL,
+                        ctx->cancel_func, ctx->cancel_baton,
+                        scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1423,17 +1420,14 @@ wc_dir_props_merge(const char *wc_abspath,
   svn_wc_notify_state_t property_state;
 
   SVN_ERR(svn_prop_diffs(&prop_changes, right_props, left_props, scratch_pool));
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_wc_merge_props3(&property_state, ctx->wc_ctx,
-                        wc_abspath,
-                        NULL, NULL, /*left, right conflict-versions*/
-                        left_props, prop_changes,
-                        FALSE /*dry_run*/,
-                        NULL, NULL,
-                        ctx->cancel_func, ctx->cancel_baton,
-                        scratch_pool),
-    ctx->wc_ctx, wc_abspath,
-    FALSE /*lock_anchor*/, scratch_pool);
+  SVN_ERR(svn_wc_merge_props3(&property_state, ctx->wc_ctx,
+                              wc_abspath,
+                              NULL, NULL, /*left, right conflict-versions*/
+                              left_props, prop_changes,
+                              FALSE /*dry_run*/,
+                              NULL, NULL,
+                              ctx->cancel_func, ctx->cancel_baton,
+                              scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -1445,15 +1439,12 @@ wc_node_delete(const char *to_wc_abspath,
                svn_client_ctx_t *ctx,
                apr_pool_t *scratch_pool)
 {
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_wc_delete4(ctx->wc_ctx,
-                   to_wc_abspath,
-                   FALSE /*keep_local*/,
-                   TRUE /*delete_unversioned_target*/,
-                   NULL, NULL, NULL, NULL, /*cancel, notify*/
-                   scratch_pool),
-    ctx->wc_ctx, to_wc_abspath,
-    TRUE /*lock_anchor*/, scratch_pool);
+  SVN_ERR(svn_wc_delete4(ctx->wc_ctx,
+                         to_wc_abspath,
+                         FALSE /*keep_local*/,
+                         TRUE /*delete_unversioned_target*/,
+                         NULL, NULL, NULL, NULL, /*cancel, notify*/
+                         scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1469,13 +1460,10 @@ wc_node_add(const char *to_wc_abspath,
   /* If it was not already versioned, schedule the node for addition.
      (Do not apply autoprops, because this isn't a user-facing "add" but
      restoring a previously saved state.) */
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_wc_add_from_disk3(ctx->wc_ctx,
-                          to_wc_abspath, work_props,
-                          FALSE /* skip checks */,
-                          NULL, NULL, scratch_pool),
-    ctx->wc_ctx, to_wc_abspath,
-    TRUE /*lock_anchor*/, scratch_pool);
+  SVN_ERR(svn_wc_add_from_disk3(ctx->wc_ctx,
+                                to_wc_abspath, work_props,
+                                FALSE /* skip checks */,
+                                NULL, NULL, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -1845,9 +1833,13 @@ svn_client__shelf_apply(svn_client__shelf_version_t *shelf_version,
 
   baton.shelf_version = shelf_version;
   baton.ctx = shelf_version->shelf->ctx;
-  SVN_ERR(shelf_status_walk(shelf_version, "",
-                            apply_file_visitor, &baton,
-                            scratch_pool));
+
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    shelf_status_walk(shelf_version, "",
+                      apply_file_visitor, &baton,
+                      scratch_pool),
+    baton.ctx->wc_ctx, shelf_version->shelf->wc_root_abspath,
+    FALSE /*lock_anchor*/, scratch_pool);
 
   svn_io_sleep_for_timestamps(shelf_version->shelf->wc_root_abspath,
                               scratch_pool);
