@@ -206,18 +206,17 @@ public class ExceptionTests extends SVNTests
         {
             client.blame(thisTest.getWorkingCopy() + "/iota",
                          Revision.getInstance(1), Revision.getInstance(1),
-                         Revision.getInstance(1), false, false,
-                         new BlameCallback()
-                          {
-                            public void singleLine(long lineNum, long revision,
-                                                   Map<String, byte[]> revProps, long mergedRevision,
-                                                   Map<String, byte[]> mergedRevProps,
-                                                   String mergedPath, String line,
-                                                   boolean localChange)
-                            {
-                                throw new TestException("inner", theException);
-                            }
-                          });
+                         Revision.getInstance(1), false, false, null,
+                         new BlameLineCallback() {
+                             public void singleLine(long lineNum, long revision,
+                                                    Map<String, byte[]> revProps, long mergedRevision,
+                                                    Map<String, byte[]> mergedRevProps,
+                                                    String mergedPath, boolean localChange,
+                                                    byte[] line)
+                             {
+                                 throw new TestException("inner", theException);
+                             }
+                         });
         }
         catch (ClientException e)
         {

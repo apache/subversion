@@ -1658,8 +1658,8 @@ JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_SVNClient_blame
 (JNIEnv *env, jobject jthis, jstring jpath, jobject jpegRevision,
  jobject jrevisionStart, jobject jrevisionEnd, jboolean jignoreMimeType,
- jboolean jincludeMergedRevisions, jobject jblameCallback,
- jobject jdiffOptions)
+ jboolean jincludeMergedRevisions, jobject jdiffOptions,
+ jobject jblameCallback)
 {
   JNIEntry(SVNClient, blame);
   SVNClient *cl = SVNClient::getCppObject(jthis);

@@ -30,6 +30,7 @@ import java.io.OutputStream;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
 import java.io.ByteArrayOutputStream;
+import java.io.UnsupportedEncodingException;
 
 import java.util.Collection;
 import java.util.Collections;
@@ -705,6 +706,7 @@ public class SVNClient implements ISVNClient
                                 boolean ignoreExternals)
             throws ClientException;
 
+    @Deprecated
     public void blame(String path, Revision pegRevision,
                       Revision revisionStart,
                       Revision revisionEnd, boolean ignoreMimeType,
@@ -716,13 +718,27 @@ public class SVNClient implements ISVNClient
               includeMergedRevisions, callback, null);
     }
 
+    @Deprecated
+    public void blame(String path, Revision pegRevision,
+                      Revision revisionStart,
+                      Revision revisionEnd, boolean ignoreMimeType,
+                      boolean includeMergedRevisions,
+                      BlameCallback callback,
+                      DiffOptions options)
+            throws ClientException
+    {
+        blame(path, pegRevision, revisionStart, revisionEnd,
+              ignoreMimeType, includeMergedRevisions, options,
+              new BlameCallbackAdapter(callback));
+    }
+
     public native void blame(String path, Revision pegRevision,
                              Revision revisionStart,
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
-                             BlameCallback callback,
-                             DiffOptions options)
-            throws ClientException;
+                             DiffOptions options,
+                             BlameLineCallback callback)
+        throws ClientException;
 
     public native void setConfigDirectory(String configDir)
             throws ClientException;
@@ -895,6 +911,44 @@ public class SVNClient implements ISVNClient
             else
                 return new ConflictResult(ConflictResult.Choice.postpone,
                                           null);
+        }
+    }
+
+    /**
+     * A private class that adapts from BlameLineCallback to BlameCallback.
+     */
+    @Deprecated
+    private class BlameCallbackAdapter implements BlameLineCallback
+    {
+        private BlameCallback wrappedCallback = null;
+
+        public BlameCallbackAdapter(BlameCallback callback)
+        {
+            wrappedCallback = callback;
+        }
+
+        // Implementation of BlameLineCallback
+        public void singleLine(long lineNum, long revision,
+                               Map<String, byte[]> revProps, long mergedRevision,
+                               Map<String, byte[]> mergedRevProps,
+                               String mergedPath, boolean localChange,
+                               byte[] line)
+            throws ClientException
+        {
+            if (wrappedCallback == null)
+                return;
+
+            String convertedLine = null;
+            try {
+                convertedLine = new String(line, "UTF-8");
+            }
+            catch (UnsupportedEncodingException ex) {
+                throw ClientException.fromException(ex);
+            }
+
+            wrappedCallback.singleLine(lineNum, revision,
+                                       revProps, mergedRevision, mergedRevProps,
+                                       mergedPath, convertedLine, localChange);
         }
     }
 }

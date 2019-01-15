@@ -89,13 +89,13 @@ BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
   static jmethodID mid = 0;
   if (mid == 0)
     {
-      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/BlameCallback"));
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/BlameLineCallback"));
       if (JNIUtil::isJavaExceptionThrown())
         POP_AND_RETURN(SVN_NO_ERROR);
 
       mid = env->GetMethodID(clazz, "singleLine",
                              "(JJLjava/util/Map;JLjava/util/Map;"
-                             "Ljava/lang/String;Ljava/lang/String;Z)V");
+                             "Ljava/lang/String;Z[B)V");
       if (JNIUtil::isJavaExceptionThrown() || mid == 0)
         POP_AND_RETURN(SVN_NO_ERROR);
     }
@@ -117,14 +117,14 @@ BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
-  jstring jline = JNIUtil::makeJString(line->data);
+  jbyteArray jline = JNIUtil::makeJByteArray(line);
   if (JNIUtil::isJavaExceptionThrown())
     POP_AND_RETURN(SVN_NO_ERROR);
 
   // call the Java method
   env->CallVoidMethod(m_callback, mid, (jlong)line_no, (jlong)revision,
                       jrevProps, (jlong)mergedRevision, jmergedRevProps,
-                      jmergedPath, jline, (jboolean)localChange);
+                      jmergedPath, (jboolean)localChange, jline);
 
   POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
 }
