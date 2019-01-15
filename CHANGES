@@ -36,7 +36,8 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
     * All C++ code is compiled in C++11 mode by default (r1849202)
 
   - Bindings:
-    * Fixed potential core dump in JavaHL's ISVNClient.diff (r1845408)
+    * JavaHL: Fixed potential core dump in ISVNClient.diff (r1845408)
+    * JavaHL: Let clients decode file contents from ISVNClient.blame (r1851333)
 
 
 Version 1.11.1
