@@ -31,10 +31,9 @@ import org.apache.subversion.javahl.ISVNClient;
 /**
  * This interface is used to receive every single line for a file on a
  * the {@link ISVNClient#blame} call.
- * @deprecated use {@link BlameLineCallback} instead.
+ * @since 1.12
  */
-@Deprecated
-public interface BlameCallback
+public interface BlameLineCallback
 {
     /**
      * the method will be called for every line in a file.
@@ -45,12 +44,13 @@ public interface BlameCallback
      * @param mergedRevProps    the revision properties for the last merged
      *                          change.
      * @param mergedPath        the path of the last merged change.
-     * @param line              the line in the file.
      * @param localChange       true if the line was locally modified.
+     * @param line              the line in the file.
      */
     public void singleLine(long lineNum, long revision,
                            Map<String, byte[]> revProps, long mergedRevision,
                            Map<String, byte[]> mergedRevProps,
-                           String mergedPath, String line, boolean localChange)
+                           String mergedPath, boolean localChange,
+                           byte[] line)
         throws ClientException;
 }
