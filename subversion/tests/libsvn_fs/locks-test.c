@@ -1089,6 +1089,9 @@ lock_cb_error(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+/* XXX NOTE:
+   This test will fail on most Unix-like systems when run as the
+   root user, because flock() will ignore file permissions. */
 static svn_error_t *
 obtain_write_lock_failure(const svn_test_opts_t *opts,
                           apr_pool_t *pool)
