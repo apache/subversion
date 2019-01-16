@@ -374,13 +374,6 @@ svn_client__shelf_diff(svn_client__shelf_version_t *shelf_version,
 /* Set *DIFF_PROCESSOR to a diff processor that will report a diff summary
    to SUMMARIZE_FUNC.
 
-   P_ROOT_RELPATH will return a pointer to a string that must be set,
-   before the processor is called, to a prefix that will be found on
-   every DIFF_PROCESSOR relpath, that will be removed before passing
-   the path to SUMMARIZE_FUNC.
-
-   ORIGINAL_TARGET is not used.
-
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
    created callbacks for each changed item.
 */
