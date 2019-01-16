@@ -741,11 +741,6 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * which has the revision properties @a rev_props, and that the contents were
  * @a line.
  *
- * @a start_revnum and @a end_revnum contain the start and end revision
- * number of the entire blame operation, as determined from the repository
- * inside svn_client_blame5(). This can be useful for the blame receiver
- * to format the blame output.
- *
  * If svn_client_blame5() was called with @a include_merged_revisions set to
  * TRUE, @a merged_revision, @a merged_rev_props and @a merged_path will be
  * set, otherwise they will be NULL. @a merged_path will be set to the
@@ -791,10 +786,15 @@ typedef svn_error_t *(*svn_client_blame_receiver4_t)(
   apr_pool_t *pool);
 
 /**
- * Similar to #svn_client_blame_receiver4_t, but with the line parameter
- * as a (const char*) instead of an svn_string_t.
+ * Similar to #svn_client_blame_receiver4_t, but with the @a line parameter
+ * as a (const char*) instead of an svn_string_t, and the parameters
+ * @a start_revnum and @a end_revnum contain the start and end revision
+ * number of the entire blame operation, as resolved from the repository
+ * inside svn_client_blame6().
  *
  * @deprecated Provided for backward compatibility with the 1.11 API.
+ * To replace @a start_revnum and @a end_revnum, see the corresponding
+ * output parameters in svn_client_blame6().
  *
  * @since New in 1.7.
  */
@@ -2957,6 +2957,11 @@ svn_client_log(const apr_array_header_t *targets,
  * only if the server is 1.8.0 or greater (supports
  * #SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) and the client is 1.9.0 or
  * newer.
+ *
+ * Before the first call to @a receiver, set @a *start_revnum_p and
+ * @a *end_revnum_p to the start and end revision number of the entire
+ * blame operation, as resolved from the repository. This can be useful
+ * for the blame receiver to format the blame output.
  *
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
