@@ -206,7 +206,7 @@ public class ExceptionTests extends SVNTests
         {
             client.blame(thisTest.getWorkingCopy() + "/iota",
                          Revision.getInstance(1), Revision.getInstance(1),
-                         Revision.getInstance(1), false, false, null,
+                         Revision.getInstance(1), false, false, null, null,
                          new BlameLineCallback() {
                              public void singleLine(long lineNum, long revision,
                                                     Map<String, byte[]> revProps, long mergedRevision,

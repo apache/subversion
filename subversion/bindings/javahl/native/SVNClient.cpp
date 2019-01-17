@@ -1285,7 +1285,8 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
         return;
 
     SVN_JNI_ERR(svn_client_blame6(
-          NULL, NULL,           // TODO: start and end revision numbers
+          callback->get_start_revnum_p(),
+          callback->get_end_revnum_p(),
           intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
           revisionEnd.revision(),
           options.fileOptions(subPool), ignoreMimeType,

@@ -729,7 +729,7 @@ public class SVNClient implements ISVNClient
     {
         blame(path, pegRevision, revisionStart, revisionEnd,
               ignoreMimeType, includeMergedRevisions, options,
-              new BlameCallbackAdapter(callback));
+              null, new BlameCallbackAdapter(callback));
     }
 
     public native void blame(String path, Revision pegRevision,
@@ -737,7 +737,8 @@ public class SVNClient implements ISVNClient
                              Revision revisionEnd, boolean ignoreMimeType,
                              boolean includeMergedRevisions,
                              DiffOptions options,
-                             BlameLineCallback callback)
+                             BlameRangeCallback rangeCallback,
+                             BlameLineCallback lineCallback)
         throws ClientException;
 
     public native void setConfigDirectory(String configDir)

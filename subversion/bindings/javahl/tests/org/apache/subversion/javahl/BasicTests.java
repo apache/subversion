@@ -4185,13 +4185,16 @@ public class BasicTests extends SVNTests
         }
 
         // Test the current interface
-        BlameLineCallbackImpl callback = new BlameLineCallbackImpl();
+        BlameRangeCallbackImpl rangeCallback = new BlameRangeCallbackImpl();
+        BlameLineCallbackImpl lineCallback = new BlameLineCallbackImpl();
         client.blame(thisTest.getWCPath() + "/iota", Revision.HEAD,
                      Revision.getInstance(0), Revision.HEAD,
-                     false, false, null, callback);
-        assertEquals(1, callback.numberOfLines());
+                     false, false, null, rangeCallback, lineCallback);
+        assertEquals(0, rangeCallback.startRevnum);
+        assertEquals(2, rangeCallback.endRevnum);
+        assertEquals(1, lineCallback.numberOfLines());
 
-        BlameLineCallbackImpl.BlameLine line = callback.getBlameLine(0);
+        BlameLineCallbackImpl.BlameLine line = lineCallback.getBlameLine(0);
         assertNotNull(line);
         assertEquals(2, line.getRevision());
         assertEquals("rayjandom", line.getAuthor());
@@ -5025,7 +5028,19 @@ public class BasicTests extends SVNTests
         }
     }
 
-    /* A blame callback implementation. */
+    /* A blame range callback implementation. */
+    protected class BlameRangeCallbackImpl implements BlameRangeCallback
+    {
+        public long startRevnum = -1;
+        public long endRevnum = -1;
+        public void setRange(long start, long end)
+        {
+            startRevnum = start;
+            endRevnum = end;
+        }
+    }
+
+    /* A blame line callback implementation. */
     protected class BlameLineCallbackImpl implements BlameLineCallback
     {
 

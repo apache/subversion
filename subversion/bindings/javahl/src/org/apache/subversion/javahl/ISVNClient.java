@@ -1386,7 +1386,7 @@ public interface ISVNClient
 
     /**
      * Retrieve the content together with the author, the revision and the date
-     * of the last change of each line
+     * of the last change of each line.
      * @param path          the path
      * @param pegRevision   the revision to interpret the path
      * @param revisionStart the first revision to show
@@ -1395,15 +1395,18 @@ public interface ISVNClient
      * @param includeMergedRevisions whether or not to include extra merge
      *                      information
      * @param options       additional options for controlling the output
-     * @param callback      callback to receive the file content and the other
-     *                      information
+     * @param rangeCallback receives the resolved revision range; called
+     *                      exactly once before #lineCallback
+     * @param lineCallback  callback to receive the file content and the other
+     *                      information for every line in the file
      * @throws ClientException
      * @since 1.12
      */
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
-               boolean includeMergedRevisions,
-               DiffOptions options, BlameLineCallback callback)
+               boolean includeMergedRevisions, DiffOptions options,
+               BlameRangeCallback rangeCallback,
+               BlameLineCallback lineCallback)
         throws ClientException;
 
     /**
