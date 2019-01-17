@@ -37,7 +37,7 @@
 class BlameCallback
 {
  public:
-  BlameCallback(jobject jcallback);
+  BlameCallback(jobject jrangeCallback, jobject jlineCallback);
   ~BlameCallback();
 
   static svn_error_t *callback(void *baton,
@@ -51,7 +51,11 @@ class BlameCallback
                                svn_boolean_t local_change,
                                apr_pool_t *pool);
 
+  svn_revnum_t *get_start_revnum_p() { return &m_start_revnum; }
+  svn_revnum_t *get_end_revnum_p()   { return &m_end_revnum; }
+
  protected:
+  svn_error_t *setRange();
   svn_error_t *singleLine(apr_int64_t line_no,
                           svn_revnum_t revision,
                           apr_hash_t *rev_props,
@@ -63,10 +67,14 @@ class BlameCallback
                           apr_pool_t *pool);
 
  private:
-  /**
-   * This a local reference to the Java object.
-   */
-  jobject m_callback;
+  // Arguments for svn_client_blame6
+  svn_revnum_t m_start_revnum;
+  svn_revnum_t m_end_revnum;
+  bool m_range_callback_invoked;
+
+  // These are local references to the Java objects.
+  jobject m_range_callback;
+  jobject m_line_callback;
 };
 
 #endif  // BLAMECALLBACK_H

@@ -25,31 +25,19 @@ package org.apache.subversion.javahl.callback;
 
 import org.apache.subversion.javahl.ClientException;
 
-import java.util.Map;
-
 /**
- * This interface is used to receive every single line for a file on a
+ * This interface is used to the resolved revision range
  * the {@link ISVNClient#blame} call.
  * @since 1.12
  */
-public interface BlameLineCallback
+public interface BlameRangeCallback
 {
     /**
-     * the method will be called for every line in a file.
-     * @param lineNum           the line number for this line
-     * @param revision          the revision of the last change.
-     * @param revProps          the revision properties for this revision.
-     * @param mergedRevision    the revision of the last merged change.
-     * @param mergedRevProps    the revision properties for the last merged
-     *                          change.
-     * @param mergedPath        the path of the last merged change.
-     * @param localChange       true if the line was locally modified.
-     * @param line              the line in the file.
+     * This method will be called once before #{BlameLineCallback.singleLine}
+     * is called for the first time.
+     * @param startRevision     the resolved start of the blame range.
+     * @param endRevision       the resolved end of the blame range.
      */
-    public void singleLine(long lineNum, long revision,
-                           Map<String, byte[]> revProps, long mergedRevision,
-                           Map<String, byte[]> mergedRevProps,
-                           String mergedPath, boolean localChange,
-                           byte[] line)
+    public void setRange(long startRevision, long endRevision)
         throws ClientException;
 }

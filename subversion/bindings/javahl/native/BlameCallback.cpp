@@ -28,14 +28,20 @@
 #include "CreateJ.h"
 #include "JNIUtil.h"
 #include "svn_time.h"
+
+#include "svn_private_config.h"
+
 /**
  * Create a BlameCallback object
  * @param jcallback the Java callback object.
  */
-BlameCallback::BlameCallback(jobject jcallback)
-{
-  m_callback = jcallback;
-}
+BlameCallback::BlameCallback(jobject jrangeCallback, jobject jlineCallback)
+  : m_start_revnum(SVN_INVALID_REVNUM),
+    m_end_revnum(SVN_INVALID_REVNUM),
+    m_range_callback_invoked(false),
+    m_range_callback(jrangeCallback),
+    m_line_callback(jlineCallback)
+{}
 /**
  * Destroy a BlameCallback object
  */
@@ -58,13 +64,64 @@ BlameCallback::callback(void *baton,
                         svn_boolean_t local_change,
                         apr_pool_t *pool)
 {
-  if (baton)
-    return static_cast<BlameCallback *>(baton)->singleLine(
-        line_no, revision, rev_props, merged_revision,
-        merged_rev_props, merged_path, line, local_change, pool);
+  BlameCallback *const self = static_cast<BlameCallback *>(baton);
+  svn_error_t *err = SVN_NO_ERROR;
 
-  return SVN_NO_ERROR;
+  if (self)
+    {
+      if (self->m_range_callback && !self->m_range_callback_invoked)
+        {
+          self->m_range_callback_invoked = true;
+          err = self->setRange();
+        }
+
+      if (self->m_line_callback && err == SVN_NO_ERROR)
+        {
+          err = self->singleLine(
+              line_no, revision, rev_props, merged_revision,
+              merged_rev_props, merged_path, line, local_change, pool);
+        }
+    }
+
+  return err;
 }
+
+svn_error_t *
+BlameCallback::setRange()
+{
+  if (m_start_revnum == SVN_INVALID_REVNUM
+      || m_end_revnum == SVN_INVALID_REVNUM)
+    return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL,
+                            _("Blame revision range was not resolved"));
+
+  JNIEnv *env = JNIUtil::getEnv();
+
+  // Create a local frame for our references
+  env->PushLocalFrame(LOCAL_FRAME_SIZE);
+  if (JNIUtil::isJavaExceptionThrown())
+    return SVN_NO_ERROR;
+
+  // The method id will not change during the time this library is
+  // loaded, so it can be cached.
+  static jmethodID mid = 0;
+  if (mid == 0)
+    {
+      jclass clazz = env->FindClass(JAVAHL_CLASS("/callback/BlameRangeCallback"));
+      if (JNIUtil::isJavaExceptionThrown())
+        POP_AND_RETURN(SVN_NO_ERROR);
+
+      mid = env->GetMethodID(clazz, "setRange", "(JJ)V");
+      if (JNIUtil::isJavaExceptionThrown() || mid == 0)
+        POP_AND_RETURN(SVN_NO_ERROR);
+    }
+
+  // call the Java method
+  env->CallVoidMethod(m_range_callback, mid,
+                      (jlong)m_start_revnum, (jlong)m_end_revnum);
+
+  POP_AND_RETURN_EXCEPTION_AS_SVNERROR();
+}
+
 
 /**
  * Callback called for a single line in the file, for which the blame
@@ -122,7 +179,7 @@ BlameCallback::singleLine(apr_int64_t line_no, svn_revnum_t revision,
     POP_AND_RETURN(SVN_NO_ERROR);
 
   // call the Java method
-  env->CallVoidMethod(m_callback, mid, (jlong)line_no, (jlong)revision,
+  env->CallVoidMethod(m_line_callback, mid, (jlong)line_no, (jlong)revision,
                       jrevProps, (jlong)mergedRevision, jmergedRevProps,
                       jmergedPath, (jboolean)localChange, jline);
 
