@@ -2961,7 +2961,8 @@ svn_client_log(const apr_array_header_t *targets,
  * Before the first call to @a receiver, set @a *start_revnum_p and
  * @a *end_revnum_p to the start and end revision number of the entire
  * blame operation, as resolved from the repository. This can be useful
- * for the blame receiver to format the blame output.
+ * for the blame receiver to format the blame output. Any or both of these
+ * arguments may be @c NULL.
  *
  * Use @a diff_options to determine how to compare different revisions of the
  * target.
@@ -2974,12 +2975,12 @@ svn_client_log(const apr_array_header_t *targets,
  * @since New in 1.12.
  */
 svn_error_t *
-svn_client_blame6(const char *path_or_url,
+svn_client_blame6(svn_revnum_t *start_revnum_p,
+                  svn_revnum_t *end_revnum_p,
+                  const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
-                  svn_revnum_t *start_revnum_p,
-                  svn_revnum_t *end_revnum_p,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
                   svn_boolean_t include_merged_revisions,

@@ -215,8 +215,8 @@ svn_client_blame5(const char *target,
   baton.receiver = receiver;
   baton.baton = receiver_baton;
 
-  return svn_client_blame6(target, peg_revision, start, end,
-                           &baton.start_revnum, &baton.end_revnum,
+  return svn_client_blame6(&baton.start_revnum, &baton.end_revnum,
+                           target, peg_revision, start, end,
                            diff_options,
                            ignore_mime_type, include_merged_revisions,
                            blame_wrapper_receiver3, &baton, ctx, pool);

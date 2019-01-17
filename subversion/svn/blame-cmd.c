@@ -365,11 +365,11 @@ svn_cl__blame(apr_getopt_t *os,
       else
         receiver = blame_receiver;
 
-      err = svn_client_blame6(truepath,
+      err = svn_client_blame6(&bl.start_revnum, &bl.end_revnum,
+                              truepath,
                               &peg_revision,
                               &opt_state->start_revision,
                               &opt_state->end_revision,
-                              &bl.start_revnum, &bl.end_revnum,
                               diff_options,
                               opt_state->force,
                               opt_state->use_merge_history,

@@ -656,12 +656,12 @@ normalize_blames(struct blame_chain *chain,
 }
 
 svn_error_t *
-svn_client_blame6(const char *target,
+svn_client_blame6(svn_revnum_t *start_revnum_p,
+                  svn_revnum_t *end_revnum_p,
+                  const char *target,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
-                  svn_revnum_t *start_revnum_p,
-                  svn_revnum_t *end_revnum_p,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
                   svn_boolean_t include_merged_revisions,
