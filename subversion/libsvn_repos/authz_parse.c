@@ -1011,7 +1011,8 @@ close_section(void *baton, svn_stringbuf_t *section)
 
 
 /* Add a user to GROUP.
-   GROUP is never internalized, but USER always is. */
+   GROUP is never internalized, but USER always is.
+   Adding a NULL user will create an empty group, if it doesn't exist. */
 static void
 add_to_group(ctor_baton_t *cb, const char *group, const char *user)
 {
@@ -1022,7 +1023,8 @@ add_to_group(ctor_baton_t *cb, const char *group, const char *user)
       members = svn_hash__make(cb->authz->pool);
       svn_hash_sets(cb->expanded_groups, group, members);
     }
-  svn_hash_sets(members, user, interned_empty_string);
+  if (user)
+    svn_hash_sets(members, user, interned_empty_string);
 }
 
 
@@ -1038,8 +1040,15 @@ expand_group_callback(void *baton,
   ctor_baton_t *const cb = baton;
   const char *const group = key;
   apr_array_header_t *members = value;
-
   int i;
+
+  if (0 == members->nelts)
+    {
+      /* Create the group with no members. */
+      add_to_group(cb, group, NULL);
+      return SVN_NO_ERROR;
+    }
+
   for (i = 0; i < members->nelts; ++i)
     {
       const char *member = APR_ARRAY_IDX(members, i, const char*);
@@ -1169,10 +1178,18 @@ array_insert_ace(void *baton,
       SVN_ERR_ASSERT(ace->members == NULL);
       ace->members = svn_hash_gets(iab->cb->expanded_groups, ace->name);
       if (!ace->members)
-        return svn_error_createf(
-            SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
-            _("Access entry refers to undefined group '%s'"),
-            ace->name);
+        {
+          return svn_error_createf(
+              SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+              _("Access entry refers to undefined group '%s'"),
+              ace->name);
+        }
+      else if (0 == apr_hash_count(ace->members))
+        {
+          /* TODO: Somehow emit a warning about the use of an empty group. */
+          /* An ACE for an empty group has no effect, so ignore it. */
+          return SVN_NO_ERROR;
+        }
     }
 
   APR_ARRAY_PUSH(iab->ace_array, authz_ace_t) = *ace;
