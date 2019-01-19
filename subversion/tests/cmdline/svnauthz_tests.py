@@ -965,6 +965,25 @@ def svnauthz_inverted_selector_test(sbox):
   os.remove(authz_path)
 
 
+@XFail()
+#TODO: @Issue(XXX)
+def svnauthz_empty_group_test(sbox):
+  "test empty group definition"
+
+
+  # build an authz file
+  authz_content = ("[groups]\n"
+                   "grouped =\n"
+
+                   "[A:/]\n"
+                   "@grouped = rw\n")
+
+  (authz_fd, authz_path) = tempfile.mkstemp()
+  svntest.main.file_write(authz_path, authz_content)
+  svntest.actions.run_and_verify_svnauthz(
+    [], [], 0, False, 'validate', authz_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -984,6 +1003,7 @@ test_list = [ None,
               svnauthz_compat_mode_file_test,
               svnauthz_compat_mode_repo_test,
               svnauthz_inverted_selector_test,
+              svnauthz_empty_group_test,
              ]
 
 if __name__ == '__main__':
