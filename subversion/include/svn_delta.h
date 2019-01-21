@@ -1313,17 +1313,23 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
 
 
 /** Drive @a editor (with its @a edit_baton) to visit each path in @a paths.
+ *
  * As each path is hit as part of the editor drive, use
  * @a callback_func and @a callback_baton to allow the caller to handle
  * the portion of the editor drive related to that path.
  *
  * Each path in @a paths is a (const char *) relpath, relative
- * to the root path of the @a edit. The editor drive will be
+ * to the root path of the edit. The editor drive will be
  * performed in the same order as @a paths. The paths should be sorted
- * using something like svn_sort_compare_paths to ensure that a depth-first
- * pattern is observed for directory/file baton creation. If @a sort_paths
+ * using something like svn_sort_compare_paths() to ensure that each
+ * directory in the depth-first walk is visited only once. If @a sort_paths
  * is set, the function will sort the paths for you. Some callers may need
  * further customization of the order (ie. libsvn_delta/compat.c).
+ *
+ * If the first target path (after any requested sorting) is @c "" (the
+ * root of the edit), the callback function will be responsible for
+ * calling the editor's @c open_root method; otherwise, this function
+ * will call @c open_root.
  *
  * Use @a scratch_pool for all necessary allocations.
  *
@@ -1357,6 +1363,80 @@ svn_delta_path_driver(const svn_delta_editor_t *editor,
                       svn_delta_path_driver_cb_func_t callback_func,
                       void *callback_baton,
                       apr_pool_t *scratch_pool);
+
+
+/** A state object for the path driver that is obtained from
+ * svn_delta_path_driver_start() and driven by
+ * svn_delta_path_driver_step() and svn_delta_path_driver_finish().
+ *
+ * @since New in 1.12.
+ */
+typedef struct svn_delta_path_driver_state_t svn_delta_path_driver_state_t;
+
+/** Return a path driver object that can drive @a editor (with its
+ * @a edit_baton) to visit a series of paths.
+ *
+ * As each path is hit as part of the editor drive, the path driver will
+ * call @a callback_func and @a callback_baton to allow the caller to handle
+ * the portion of the editor drive related to that path.
+ *
+ * This will not call the editor's open_root method; for that, see
+ * svn_delta_path_driver_step().
+ *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_delta_path_driver_start(svn_delta_path_driver_state_t **state_p,
+                            const svn_delta_editor_t *editor,
+                            void *edit_baton,
+                            svn_delta_path_driver_cb_func_t callback_func,
+                            void *callback_baton,
+                            apr_pool_t *result_pool);
+
+/** Visit @a path.
+ *
+ * @a state is the object returned by svn_delta_path_driver_start().
+ *
+ * @a path is a relpath relative to the root path of the edit.
+ *
+ * This function uses the editor and the callback that were originally
+ * supplied to svn_delta_path_driver_start().
+ *
+ * This drives the editor in a depth-first order, closing and then opening
+ * directories if necessary to move from the last visited path to the new
+ * path, as required by the editor driving rules.
+ *
+ * This then calls the callback to allow the caller to handle
+ * the portion of the editor drive related to that path.
+ *
+ * If the first path to visit is @c "" (the root of the edit), the
+ * callback function will be responsible for calling the editor's
+ * @c open_root method; otherwise, this function will call @c open_root.
+ *
+ * The order of paths to visit should in general be sorted using something
+ * like svn_sort_compare_paths() to ensure that each directory in the
+ * depth-first walk is visited only once. Some editors may rely on such a
+ * restriction.
+ *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
+                           const char *path,
+                           apr_pool_t *scratch_pool);
+
+/** Finish driving the editor.
+ *
+ * @a state is the object returned by svn_delta_path_driver_start().
+ *
+ * This drives the editor to close any open directories and then calls
+ * the editor's @c close_edit method.
+ *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_delta_path_driver_finish(svn_delta_path_driver_state_t *state,
+                             apr_pool_t *scratch_pool);
 
 /** @} */
 
