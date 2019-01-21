@@ -495,6 +495,10 @@ svn_txdelta_send_contents(const unsigned char *contents,
  * since there's nothing else in the delta application's context to
  * supply a path for error messages.)
  *
+ * The @a source stream will NOT be closed. The @a target stream will be
+ * closed when the window handler is given a null window to signal the
+ * end of the delta.
+ *
  * @note To avoid lifetime issues, @a error_info is copied into
  * @a pool or a subpool thereof.
  */
