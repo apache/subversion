@@ -351,6 +351,7 @@ struct file_baton_t
   const char *writing_file;
   unsigned char digest[APR_MD5_DIGESTSIZE];
 
+  svn_stream_t *wc_file_read_stream, *tmp_file_write_stream;
   const char *tmp_path;
 };
 
@@ -473,27 +474,25 @@ file_textdelta(void *file_baton,
   struct file_baton_t *fb = file_baton;
   const char *target_dir = svn_dirent_dirname(fb->local_abspath, fb->pool);
   svn_error_t *err;
-  svn_stream_t *source;
-  svn_stream_t *target;
 
   SVN_ERR_ASSERT(! fb->writing_file);
 
-  err = svn_stream_open_readonly(&source, fb->local_abspath,
+  err = svn_stream_open_readonly(&fb->wc_file_read_stream, fb->local_abspath,
                                  fb->pool, fb->pool);
   if (err && APR_STATUS_IS_ENOENT(err->apr_err))
     {
       svn_error_clear(err);
-      source = svn_stream_empty(fb->pool);
+      fb->wc_file_read_stream = svn_stream_empty(fb->pool);
     }
   else
     SVN_ERR(err);
 
-  SVN_ERR(svn_stream_open_unique(&target, &fb->writing_file,
+  SVN_ERR(svn_stream_open_unique(&fb->tmp_file_write_stream, &fb->writing_file,
                                  target_dir, svn_io_file_del_none,
                                  fb->pool, fb->pool));
 
-  svn_txdelta_apply(source,
-                    target,
+  svn_txdelta_apply(fb->wc_file_read_stream,
+                    fb->tmp_file_write_stream,
                     fb->digest,
                     fb->local_abspath,
                     fb->pool,
@@ -535,8 +534,12 @@ file_close(void *file_baton,
   struct dir_baton_t *pb = fb->pb;
 
   if (fb->writing_file)
-    SVN_ERR(svn_io_file_rename2(fb->writing_file, fb->local_abspath,
-                                FALSE /*flush*/, scratch_pool));
+    {
+      SVN_ERR(svn_stream_close(fb->wc_file_read_stream));
+      /*SVN_ERR(svn_stream_close(fb->tmp_file_write_stream));*/
+      SVN_ERR(svn_io_file_rename2(fb->writing_file, fb->local_abspath,
+                                  FALSE /*flush*/, scratch_pool));
+    }
 
   if (text_checksum)
     {
