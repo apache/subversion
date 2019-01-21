@@ -711,6 +711,7 @@ def unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
   os.chdir(was_cwd)
 
+@XFail()
 def unshelve_text_mod_merge(sbox):
   "unshelve text mod merge"
 
@@ -735,6 +736,7 @@ def unshelve_text_mod_merge(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
 def unshelve_text_mod_conflict(sbox):
   "unshelve text mod conflict"
 
@@ -765,6 +767,7 @@ def unshelve_text_mod_conflict(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
 def unshelve_undeclared_binary_mod_conflict(sbox):
   "unshelve undeclared binary mod conflict"
 
@@ -795,6 +798,7 @@ def unshelve_undeclared_binary_mod_conflict(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
 def unshelve_binary_mod_conflict(sbox):
   "unshelve binary mod conflict"
 
@@ -845,6 +849,7 @@ def unshelve_text_prop_merge(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
 def unshelve_text_prop_conflict(sbox):
   "unshelve text prop conflict"
 
