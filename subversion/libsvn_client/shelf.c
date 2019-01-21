@@ -1365,6 +1365,8 @@ send_notification(const char *local_abspath,
 
 /* Apply a set of property changes to one node through EDITOR. If
  * FILE_BATON is non-null, apply to that file, else to the dir at DIR_BATON.
+ *
+ * When any of the properties inputs is null, it means no properties.
  */
 static svn_error_t *
 apply_prop_mods(apr_hash_t *base_props,
@@ -1401,7 +1403,12 @@ apply_prop_mods(apr_hash_t *base_props,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Send edits to EDITOR : FILE_BATON representing the delta from BASE_PROPS
+ * to WORK_PROPS and the delta from the file at STORED_BASE_ABSPATH to the
+ * file at STORED_WORK_ABSPATH.
+ *
+ * When any of the inputs is null, it means no properties or empty text.
+ */
 static svn_error_t *
 apply_file_mods(apr_hash_t *base_props,
                 apr_hash_t *work_props,
@@ -1417,10 +1424,16 @@ apply_file_mods(apr_hash_t *base_props,
   svn_txdelta_stream_t *txdelta_stream;
 
   /* text mods */
-  SVN_ERR(svn_stream_open_readonly(&source_stream, stored_base_abspath,
-                                   scratch_pool, scratch_pool));
-  SVN_ERR(svn_stream_open_readonly(&target_stream, stored_work_abspath,
-                                   scratch_pool, scratch_pool));
+  if (stored_base_abspath)
+    SVN_ERR(svn_stream_open_readonly(&source_stream, stored_base_abspath,
+                                     scratch_pool, scratch_pool));
+  else
+    source_stream = svn_stream_empty(scratch_pool);
+  if (stored_work_abspath)
+    SVN_ERR(svn_stream_open_readonly(&target_stream, stored_work_abspath,
+                                     scratch_pool, scratch_pool));
+  else
+    target_stream = svn_stream_empty(scratch_pool);
   SVN_ERR(editor->apply_textdelta(file_baton, NULL /*base_checksum*/,
                                   scratch_pool, &handler, &handler_baton));
   svn_txdelta2(&txdelta_stream, source_stream, target_stream,
@@ -1546,21 +1559,24 @@ path_driver_cb_func(void **dir_baton_p,
           SVN_ERR(b->editor->add_directory(relpath, parent_baton,
                                            NULL, SVN_INVALID_REVNUM,
                                            scratch_pool, dir_baton_p));
+          SVN_ERR(apply_prop_mods(NULL /*base*/, work_props,
+                                  b->editor, file_baton, *dir_baton_p,
+                                  scratch_pool));
         }
       else if (s->kind == svn_node_file)
         {
-          /* ### should send file content through the editor instead */
-          SVN_ERR(svn_io_copy_file(stored_work_abspath, to_wc_abspath,
-                                   TRUE /*copy_perms*/, scratch_pool));
+          /* add */
           SVN_ERR(b->editor->add_file(relpath, parent_baton,
                                       NULL, SVN_INVALID_REVNUM,
                                       scratch_pool, &file_baton));
+          /* modifications */
+          SVN_ERR(apply_file_mods(NULL /*base*/, work_props,
+                                  NULL /*base*/, stored_work_abspath,
+                                  b->editor, file_baton,
+                                  scratch_pool));
+          /* close */
+          SVN_ERR(b->editor->close_file(file_baton, NULL, scratch_pool));
         }
-      SVN_ERR(apply_prop_mods(base_props, work_props,
-                              b->editor, file_baton, *dir_baton_p,
-                              scratch_pool));
-      if (file_baton)
-        SVN_ERR(b->editor->close_file(file_baton, NULL, scratch_pool));
       SVN_ERR(send_notification(to_wc_abspath,
                                 (s->node_status == svn_wc_status_replaced)
                                   ? svn_wc_notify_update_replace
