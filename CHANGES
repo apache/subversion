@@ -1,4 +1,4 @@
-# To view a revision listed as (rXXXXXXX), visit:
+3, # To view a revision listed as (rXXXXXXX), visit:
 #   https://svn.apache.org/rXXXXXXX
 #
 # To view an issue listed as (issue #XXXX), visit:
@@ -23,10 +23,12 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
     * Repos-to-WC copy from foreign repo with peg/operative revs (#4785)
 
   - Server-side bugfixes:
+    * Ignore empty group definitions in authz files (#4802, r1851687)
 
   - Client-side and server-side bugfixes:
 
   - Other tool improvements and bugfixes:
+    * svnauthz: warn about empty groups in authz files (#4803, r1851823)
 
  Developer-visible changes:
   - General:
