@@ -706,7 +706,8 @@ check-clean: gcov-clean
 	       subversion/tests/libsvn_diff/T1                 \
 	       subversion/tests/libsvn_diff/T2                 \
 	       subversion/tests/libsvn_diff/T3                 \
-	       subversion/tests/svnserveautocheck.pid          \
+	       subversion/tests/cmdline/httpd-*                \
+	       subversion/tests/cmdline/svnserve-*             \
 	       tests.log fails.log
 
 mkdir-init:
