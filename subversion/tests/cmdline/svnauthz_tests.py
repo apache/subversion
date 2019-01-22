@@ -965,7 +965,7 @@ def svnauthz_inverted_selector_test(sbox):
   os.remove(authz_path)
 
 
-#TODO: @Issue(XXX)
+@Issue(4802)
 def svnauthz_empty_group_test(sbox):
   "test empty group definition"
 
