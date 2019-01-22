@@ -50,13 +50,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1851676, r1851687
+ * r1851676, r1851687, r1851791
    Allow the use of empty groups in authz rules.
    Justification:
      Fixes regression from 1.9.x. Does not affect authz file semantics.
    Notes:
      - r1851676 adds a regression test.
      - r1851687 fixes the bug and extends the test.
+     - r1851791 refers to issue #4802.
    Votes:
      +1: brane
 
