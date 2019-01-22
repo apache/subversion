@@ -127,6 +127,10 @@ typedef struct ctor_baton_t
   svn_membuf_t rule_path_buffer;
   svn_stringbuf_t *rule_string_buffer;
 
+  /* The warning callback and its baton. */
+  svn_repos_authz_warning_func_t warning_func;
+  void *warning_baton;
+
   /* The parser's scratch pool. This may not be the same pool as
      passed to the constructor callbacks, that is supposed to be an
      iteration pool maintained by the generic parser.
@@ -203,7 +207,9 @@ insert_default_acl(ctor_baton_t *cb)
 
 /* Initialize a constuctor baton. */
 static ctor_baton_t *
-create_ctor_baton(apr_pool_t *result_pool,
+create_ctor_baton(svn_repos_authz_warning_func_t warning_func,
+                  void *warning_baton,
+                  apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
   apr_pool_t *const parser_pool = svn_pool_create(scratch_pool);
@@ -234,12 +240,34 @@ create_ctor_baton(apr_pool_t *result_pool,
   svn_membuf__create(&cb->rule_path_buffer, 0, parser_pool);
   cb->rule_string_buffer = svn_stringbuf_create_empty(parser_pool);
 
+  cb->warning_func = warning_func;
+  cb->warning_baton = warning_baton;
+
   cb->parser_pool = parser_pool;
 
   insert_default_acl(cb);
 
   return cb;
 }
+
+
+/* Emit a warning. Clears ERROR */
+static void
+emit_parser_warning(const ctor_baton_t *cb,
+                    svn_error_t *error,
+                    apr_pool_t *scratch_pool)
+{
+  if (cb->warning_func)
+    cb->warning_func(cb->warning_baton, error, scratch_pool);
+  svn_error_clear(error);
+}
+
+/* Avoid creating an error struct if there is no warning function. */
+#define SVN_AUTHZ_PARSE_WARN(cb, err, pool)     \
+  do {                                          \
+    if ((cb) && (cb)->warning_func)             \
+      emit_parser_warning((cb), (err), (pool)); \
+  } while(0)
 
 
 /* Create and store per-user global rights.
@@ -1186,8 +1214,14 @@ array_insert_ace(void *baton,
         }
       else if (0 == apr_hash_count(ace->members))
         {
-          /* TODO: Somehow emit a warning about the use of an empty group. */
           /* An ACE for an empty group has no effect, so ignore it. */
+          SVN_AUTHZ_PARSE_WARN(
+              iab->cb,
+              svn_error_createf(
+                  SVN_ERR_AUTHZ_INVALID_CONFIG, NULL,
+                  _("Ignoring access entry for empty group '%s'"),
+                  ace->name),
+              scratch_pool);
           return SVN_NO_ERROR;
         }
     }
@@ -1335,10 +1369,13 @@ svn_error_t *
 svn_authz__parse(authz_full_t **authz,
                  svn_stream_t *rules,
                  svn_stream_t *groups,
+                 svn_repos_authz_warning_func_t warning_func,
+                 void *warning_baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  ctor_baton_t *const cb = create_ctor_baton(result_pool, scratch_pool);
+  ctor_baton_t *const cb = create_ctor_baton(warning_func, warning_baton,
+                                             result_pool, scratch_pool);
 
   /*
    * Pass 1: Parse the authz file.

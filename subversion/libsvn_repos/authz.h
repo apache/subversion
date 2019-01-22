@@ -312,6 +312,8 @@ svn_error_t *
 svn_authz__parse(authz_full_t **authz,
                  svn_stream_t *rules,
                  svn_stream_t *groups,
+                 svn_repos_authz_warning_func_t warning_func,
+                 void *warning_baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool);
 

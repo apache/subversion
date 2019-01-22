@@ -965,7 +965,7 @@ def svnauthz_inverted_selector_test(sbox):
   os.remove(authz_path)
 
 
-@Issue(4802)
+@Issues(4802, 4803)
 def svnauthz_empty_group_test(sbox):
   "test empty group definition"
 
@@ -984,12 +984,15 @@ def svnauthz_empty_group_test(sbox):
   (authz_fd, authz_path) = tempfile.mkstemp()
   svntest.main.file_write(authz_path, authz_content)
 
-  svntest.actions.run_and_verify_svnauthz(
-    [], None, 0, False, 'validate', authz_path)
+  expected_stderr = svntest.verify.RegexOutput(
+    r".*warning: W220003:.*", match_all=False)
 
   svntest.actions.run_and_verify_svnauthz(
-      'r', None, 0, False, 'accessof',
-      '--repository', 'A', '--username', 'user', authz_path)
+    [], expected_stderr, 0, False, 'validate', authz_path)
+
+  svntest.actions.run_and_verify_svnauthz(
+    'r', expected_stderr, 0, False, 'accessof',
+    '--repository', 'A', '--username', 'user', authz_path)
 
 
 ########################################################################
