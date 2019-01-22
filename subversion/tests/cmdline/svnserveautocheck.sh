@@ -74,6 +74,28 @@ fail() {
   exit 1
 }
 
+query() {
+    printf "%s" "$SCRIPT: $1 (y/n)? [$2] "
+    if [ -n "$BASH_VERSION" ]; then
+        read -n 1 -t 32
+    else
+        #
+        prog="
+import select as s
+import sys
+import tty, termios
+tty.setcbreak(sys.stdin.fileno(), termios.TCSANOW)
+if s.select([sys.stdin.fileno()], [], [], 32)[0]:
+  sys.stdout.write(sys.stdin.read(1))
+"
+        stty_state=`stty -g`
+        REPLY=`$PYTHON -u -c "$prog" "$@"`
+        stty $stty_state
+    fi
+    echo
+    [ "${REPLY:-$2}" = 'y' ]
+}
+
 # Compute ABS_BUILDDIR and ABS_SRCDIR.
 if [ -x subversion/svn/svn ]; then
   # cwd is build tree root
@@ -92,13 +114,21 @@ if [ ! -e $ABS_SRCDIR/subversion/include/svn_version.h ]; then
   fail "Run this script from the root of Subversion's build tree!"
 fi
 
+# Create a directory for the PID and log files. If you change this, also make
+# sure to change the svn:ignore entry for it and "make check-clean".
+SVNSERVE_ROOT="$ABS_BUILDDIR/subversion/tests/cmdline/svnserve-$(date '+%Y%m%d-%H%M%S')"
+mkdir "$SVNSERVE_ROOT" \
+    || fail "couldn't create temporary directory '$SVNSERVE_ROOT'"
+
 # If you change this, also make sure to change the svn:ignore entry
 # for it and "make check-clean".
-SVNSERVE_PID=$ABS_BUILDDIR/subversion/tests/svnserveautocheck.pid
+SVNSERVE_PID=$SVNSERVE_ROOT/svnserve.pid
+SVNSERVE_LOG=$SVNSERVE_ROOT/svnserve.log
 
 SERVER_CMD="$ABS_BUILDDIR/subversion/svnserve/svnserve"
 
 rm -f $SVNSERVE_PID
+rm -f $SVNSERVE_LOG
 
 random_port() {
   if [ -n "$BASH_VERSION" ]; then
@@ -140,6 +170,7 @@ fi
             --listen-host 127.0.0.1 \
             --listen-port $SVNSERVE_PORT \
             --pid-file $SVNSERVE_PID \
+            --log-file $SVNSERVE_LOG \
             $SVNSERVE_ARGS &
 
 BASE_URL=svn://127.0.0.1:$SVNSERVE_PORT
@@ -154,6 +185,12 @@ else
   r=$?
   cd - > /dev/null
 fi
+
+query 'Browse server log' n \
+    && less "$SVNSERVE_LOG"
+
+query 'Delete svnserve root directory' y \
+    && rm -fr "$SVNSERVE_ROOT/"
 
 really_cleanup
 exit $r
