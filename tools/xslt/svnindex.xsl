@@ -31,7 +31,7 @@
   <xsl:template match="*"/>
 
   <xsl:template match="svn">
-    <html>
+    <html lang="en">
       <head>
         <title>
           <xsl:if test="string-length(index/@name) != 0">

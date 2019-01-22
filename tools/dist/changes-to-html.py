@@ -23,7 +23,7 @@ import re
 import sys
 
 
-HEADER = """<html>
+HEADER = """<html lang="en">
 <head>
 <title>CHANGES</title>
 <meta http-equiv="Content-Type" content="text/html;charset=utf-8" />

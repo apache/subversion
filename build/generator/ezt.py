@@ -43,7 +43,7 @@ or by calling the parse() method of a template instance directly with
 a EZT template string:
 
     >>> template = Template()
-    >>> template.parse('''<html><head>
+    >>> template.parse('''<html lang="en"><head>
     ... <title>[title_string]</title></head>
     ... <body><h1>[title_string]</h1>
     ...    [for a_sequence] <p>[a_sequence]</p>
@@ -62,7 +62,7 @@ with the output fileobject to the templates generate method:
     ...         'state' : None }
     >>> import sys
     >>> template.generate(sys.stdout, data)
-    <html><head>
+    <html lang="en"><head>
     <title>A Dummy Page</title></head>
     <body><h1>A Dummy Page</h1>
      <p>list item 1</p>

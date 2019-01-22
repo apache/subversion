@@ -73,7 +73,7 @@
 
  <!-- match toplevel element -->
  <xsl:template match="log">
-  <html>
+  <html lang="en">
    <head>
     <title><xsl:value-of select="string($title)" /></title>
     <link rel="stylesheet" href="svn2html.css" type="text/css" />

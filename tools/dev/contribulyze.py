@@ -124,7 +124,7 @@ surrounded by a red border when they are jumped to."""
     page_heading = title
   s  = '<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN"\n'
   s += ' "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">\n'
-  s += '<html><head>\n'
+  s += '<html lang="en"><head>\n'
   s += '<meta http-equiv="Content-Type"'
   s += ' content="text/html; charset=UTF-8" />\n'
   if highlight_targets:

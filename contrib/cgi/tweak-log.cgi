@@ -95,7 +95,7 @@ sub doError
 {
     my $error = shift @_;
 
-    print "<html><head><title>Tweak Log - Error</title></head>\n";
+    print "<html lang=\"en\"><head><title>Tweak Log - Error</title></head>\n";
     print "<body><h1>ERROR</h1>\n<p>$error</p></body></html>\n";
     return;
 }
@@ -135,7 +135,7 @@ sub doInitialForm
     my $rev;
     my $oldest;
 
-    print "<html>\n<head>\n<title>Tweak Log</title>\n</head>\n";
+    print "<html lang=\"en\">\n<head>\n<title>Tweak Log</title>\n</head>\n";
     print "<body>\n<form action=\"$gActionURL\" method=\"post\">\n";
     print "<a name=\"__top__\"></a>\n";
     print "<p>\n";
@@ -221,7 +221,7 @@ sub doFetchLog
     $escaped_log = &html_escape ($log);
 
     # Display the form for editing the revision
-    print "<html>\n<head>\n<title>Tweak Log - Log Edit</title>\n</head>\n";
+    print "<html lang=\"en\">\n<head>\n<title>Tweak Log - Log Edit</title>\n</head>\n";
     print "<body>\n";
     print "<h1>Editing Log Message for Revision $rev</h1>\n";
     print "<h2>Current log message:</h2>\n";
@@ -326,7 +326,7 @@ sub doCommitLog
     $log = `$gSvnlookCmd log $gReposPath -r $rev`;
     $log = &html_escape ($log);
 
-    print "<html>\n<head>\n<title>Tweak Log - Log Changed</title>\n</head>\n";
+    print "<html lang=\"en\">\n<head>\n<title>Tweak Log - Log Changed</title>\n</head>\n";
     print "<body>\n";
     print "<h1>Success!</h1>\n";
     print "<h2>New Log Message for Revision $rev</h2>\n";

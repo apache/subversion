@@ -40,7 +40,7 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
-ls_of_D_no_H = '''<html><head><title>repos - Revision 1: /A/D</title></head>
+ls_of_D_no_H = '''<html lang="en"><head><title>repos - Revision 1: /A/D</title></head>
 <body>
  <h2>repos - Revision 1: /A/D</h2>
  <ul>
@@ -50,7 +50,7 @@ ls_of_D_no_H = '''<html><head><title>repos - Revision 1: /A/D</title></head>
  </ul>
 </body></html>'''
 
-ls_of_D_H = '''<html><head><title>repos - Revision 1: /A/D</title></head>
+ls_of_D_H = '''<html lang="en"><head><title>repos - Revision 1: /A/D</title></head>
 <body>
  <h2>repos - Revision 1: /A/D</h2>
  <ul>
@@ -61,7 +61,7 @@ ls_of_D_H = '''<html><head><title>repos - Revision 1: /A/D</title></head>
  </ul>
 </body></html>'''
 
-ls_of_H = '''<html><head><title>repos - Revision 1: /A/D/H</title></head>
+ls_of_H = '''<html lang="en"><head><title>repos - Revision 1: /A/D/H</title></head>
 <body>
  <h2>repos - Revision 1: /A/D/H</h2>
  <ul>

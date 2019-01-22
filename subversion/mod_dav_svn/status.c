@@ -85,7 +85,7 @@ int dav_svn__status(request_rec *r)
 
   ap_rvputs(r,
             DOCTYPE_HTML_3_2
-            "<html><head>\n"
+            "<html lang=\"en\"><head>\n"
             "<title>Apache SVN Status</title>\n"
             "</head><body>\n"
             "<h1>Apache SVN Cache Status for ",

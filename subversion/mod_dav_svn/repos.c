@@ -3425,7 +3425,7 @@ emit_collection_head(const dav_resource *resource,
         }
 
       SVN_ERR(dav_svn__brigade_printf(bb, output,
-                                      "<html><head><title>%s</title></head>\n"
+                                      "<html lang=\"en\"><head><title>%s</title></head>\n"
                                       "<body>\n <h2>%s</h2>\n <ul>\n",
                                       title, title));
     }
