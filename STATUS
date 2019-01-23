@@ -61,6 +61,20 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1851903
+   Fix missing unlock of working copy in a resolver error case.
+   Justification:
+     Could force users to run 'svn cleanup' unnecessarily.
+   Votes:
+     +1: stsp
+
+ * r1851920
+   Remove a useless common ancestor search from the conflict resolver.
+   Justification:
+     Current behaviour is inefficient and could lead to dubious conflicts.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
