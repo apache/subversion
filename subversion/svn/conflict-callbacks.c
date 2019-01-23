@@ -449,6 +449,8 @@ static const resolver_option_t builtin_resolver_options[] =
   /* Options for incoming move vs local move. */
   { "m", svn_client_conflict_option_both_moved_file_merge },
   { "M", svn_client_conflict_option_both_moved_file_move_merge },
+  { "m", svn_client_conflict_option_both_moved_dir_merge },
+  { "M", svn_client_conflict_option_both_moved_dir_move_merge },
 
   { NULL }
 };
