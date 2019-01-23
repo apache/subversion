@@ -159,7 +159,6 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_status_editor(self):
       paths = []
       def status_func(target, status):
-        self.assertTrue(target.startswith(self.path))
         paths.append(target)
 
       (anchor_access, target_access,
@@ -177,6 +176,30 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
                                               )
       editor.close_edit(edit_baton)
       self.assertTrue(len(paths) > 0)
+      for target in paths:
+        self.assertTrue(target.startswith(self.path))
+
+  def test_status_editor_callback_exception(self):
+      """test case for status_editor call back not to be crashed by Python exception"""
+      def status_func(target, status):
+        # Note: exception with in this call back doesn't propagate to 
+        # the caller
+        raise AssertionError('intentional exception')
+
+      (anchor_access, target_access,
+       target) = wc.adm_open_anchor(self.path, False, -1, None)
+      (editor, edit_baton, set_locks_baton,
+       edit_revision) = wc.get_status_editor2(anchor_access,
+                                              target,
+                                              None,  # SvnConfig
+                                              True,  # recursive
+                                              True, # get_all
+                                              False, # no_ignore
+                                              status_func,
+                                              None,  # cancel_func
+                                              None,  # traversal_info
+                                              )
+      editor.close_edit(edit_baton)
 
   def test_is_normal_prop(self):
       self.assertFalse(wc.is_normal_prop(b'svn:wc:foo:bar'))

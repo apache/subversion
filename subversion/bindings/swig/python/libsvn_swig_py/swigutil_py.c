@@ -2986,7 +2986,10 @@ void svn_swig_py_status_func2(void *baton,
 
   /* Our error has no place to go. :-( */
   if (err)
-    svn_error_clear(err);
+    {
+      svn_error_clear(err);
+      PyErr_Clear();
+    }
 
   svn_swig_py_release_py_lock();
 }
