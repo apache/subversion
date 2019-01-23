@@ -30,10 +30,10 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
 
   - Other tool improvements and bugfixes:
     * svnauthz: warn about empty groups in authz files (#4803, r1851823)
+    * Storing passwords in plain text on disk is disabled by default (r1845377)
 
  Developer-visible changes:
   - General:
-    * Storing passwords in plain text on disk is disabled by default (r1845377)
     * Updated the required libtool version to 2.x (r1845716)
     * get-deps.sh: Remove references to Googlemock and Googletest (r1849200)
     * All C++ code is compiled in C++11 mode by default (r1849202)
