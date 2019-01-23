@@ -8998,9 +8998,8 @@ unlock_wc:
 }
 
 /* Implements conflict_option_resolve_func_t.
- * Resolve an incoming move vs local move conflict by merging from the
- * incoming move's target location to the local move's target location,
- * overriding the incoming move. */
+ * Resolve an incoming move vs local move conflict by moving the locally moved
+ * directory to the incoming move target location, and then merging changes. */
 static svn_error_t *
 resolve_both_moved_dir_merge(svn_client_conflict_option_t *option,
                              svn_client_conflict_t *conflict,
