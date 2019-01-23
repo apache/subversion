@@ -12,6 +12,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
   - Major new features:
 
   - Minor new features and improvements:
+    * 'move vs. move' merge conflicts can now be resolved (r1846851, r1851913)
     * 'svn --version --verbose' shows loaded libraries on Linux (r1843774)
     * 'svnrdump' can read/write a file instead of stdin/stdout (r1844906)
     * 'svn list' tries to not truncate the authior's name (r1847384 et al.)
