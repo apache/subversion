@@ -23,6 +23,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.1
     * Fix: tree conflict message ends a sentence with a colon (#4717)
 
   - Server-side bugfixes:
+    * Fix CVE-2018-11803: malicious SVN clients can crash mod_dav_svn
     * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
     * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
     * Fix crash in mod_http2 (#4782)
@@ -108,6 +109,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.10.4
     * Fix: tree conflict message ends a sentence with a colon (#4717)
 
   - Server-side bugfixes:
+    * Fix CVE-2018-11803: malicious SVN clients can crash mod_dav_svn
     * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
     * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
     * Fix crash in mod_http2 (#4782)
