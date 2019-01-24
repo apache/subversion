@@ -75,6 +75,15 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1852013
+   Fix issue #4804: avoid test failures just because some SQLite compile-time
+   feature was enabled that changes its query plan descriptions.
+   Justification:
+     Reported build failure on Gentoo Linux, see:
+     https://bugs.gentoo.org/605438
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
