@@ -110,6 +110,31 @@ get_path(const char **local_abspath_p,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static svn_error_t *
+dir_open_or_add(struct dir_baton_t **child_dir_baton,
+                const char *path,
+                struct dir_baton_t *pb,
+                struct edit_baton_t *eb)
+{
+  apr_pool_t *dir_pool = svn_pool_create(pb ? pb->pool : eb->pool);
+  struct dir_baton_t *db = apr_pcalloc(dir_pool, sizeof(*db));
+
+  if (pb)
+    pb->users++;
+
+  db->pb = pb;
+  db->eb = eb;
+  db->pool = dir_pool;
+  db->users = 1;
+
+  SVN_ERR(get_path(&db->local_abspath,
+                   eb->anchor_abspath, path, db->pool));
+
+  *child_dir_baton = db;
+  return SVN_NO_ERROR;
+}
+
 /* svn_delta_editor_t function */
 static svn_error_t *
 edit_open(void *edit_baton,
@@ -118,20 +143,15 @@ edit_open(void *edit_baton,
           void **root_baton)
 {
   struct edit_baton_t *eb = edit_baton;
-  apr_pool_t *dir_pool = svn_pool_create(eb->pool);
-  struct dir_baton_t *db = apr_pcalloc(dir_pool, sizeof(*db));
+  struct dir_baton_t *db;
 
-  db->pool = dir_pool;
-  db->eb = eb;
-  db->users = 1;
-  db->local_abspath = eb->anchor_abspath;
+  SVN_ERR(dir_open_or_add(&db, "", NULL, eb));
 
   db->created = !(eb->root_dir_add);
   if (eb->root_dir_add)
-    SVN_ERR(svn_io_make_dir_recursively(eb->anchor_abspath, dir_pool));
+    SVN_ERR(svn_io_make_dir_recursively(eb->anchor_abspath, db->pool));
 
   *root_baton = db;
-
   return SVN_NO_ERROR;
 }
 
@@ -165,31 +185,6 @@ delete_entry(const char *path,
   return SVN_NO_ERROR;
 }
 
-/*  */
-static svn_error_t *
-dir_open_or_add(const char *path,
-                void *parent_baton,
-                struct dir_baton_t **child_baton)
-{
-  struct dir_baton_t *pb = parent_baton;
-  struct edit_baton_t *eb = pb->eb;
-  apr_pool_t *dir_pool = svn_pool_create(pb->pool);
-  struct dir_baton_t *db = apr_pcalloc(dir_pool, sizeof(*db));
-
-  pb->users++;
-
-  db->pb = pb;
-  db->eb = pb->eb;
-  db->pool = dir_pool;
-  db->users = 1;
-
-  SVN_ERR(get_path(&db->local_abspath,
-                   eb->anchor_abspath, path, db->pool));
-
-  *child_baton = db;
-  return SVN_NO_ERROR;
-}
-
 /* An svn_delta_editor_t function. */
 static svn_error_t *
 dir_open(const char *path,
@@ -198,9 +193,11 @@ dir_open(const char *path,
          apr_pool_t *result_pool,
          void **child_baton)
 {
+  struct dir_baton_t *pb = parent_baton;
+  struct edit_baton_t *eb = pb->eb;
   struct dir_baton_t *db;
 
-  SVN_ERR(dir_open_or_add(path, parent_baton, &db));
+  SVN_ERR(dir_open_or_add(&db, path, pb, eb));
   db->created = TRUE;
 
   *child_baton = db;
@@ -215,9 +212,11 @@ dir_add(const char *path,
         apr_pool_t *result_pool,
         void **child_baton)
 {
+  struct dir_baton_t *pb = parent_baton;
+  struct edit_baton_t *eb = pb->eb;
   struct dir_baton_t *db;
 
-  SVN_ERR(dir_open_or_add(path, parent_baton, &db));
+  SVN_ERR(dir_open_or_add(&db, path, pb, eb));
 
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     {
@@ -247,11 +246,8 @@ dir_change_prop(void *dir_baton,
 {
   struct dir_baton_t *db = dir_baton;
   struct edit_baton_t *eb = db->eb;
-  svn_prop_kind_t prop_kind;
 
-  prop_kind = svn_property_kind2(name);
-
-  if (prop_kind != svn_prop_regular_kind
+  if (svn_property_kind2(name) != svn_prop_regular_kind
       || (eb->ignore_mergeinfo_changes && ! strcmp(name, SVN_PROP_MERGEINFO)))
     {
       /* We can't handle DAV, ENTRY and merge specific props here */
@@ -300,14 +296,14 @@ maybe_done(struct dir_baton_t *db)
 }
 
 static svn_error_t *
-ensure_added(struct dir_baton_t *db,
-             apr_pool_t *scratch_pool)
+ensure_added_dir(struct dir_baton_t *db,
+                 apr_pool_t *scratch_pool)
 {
   if (db->created)
     return SVN_NO_ERROR;
 
   if (db->pb)
-    SVN_ERR(ensure_added(db->pb, scratch_pool));
+    SVN_ERR(ensure_added_dir(db->pb, scratch_pool));
 
   db->created = TRUE;
 
@@ -330,7 +326,7 @@ dir_close(void *dir_baton,
   struct dir_baton_t *db = dir_baton;
   /*struct edit_baton_t *eb = db->eb;*/
 
-  SVN_ERR(ensure_added(db, scratch_pool));
+  SVN_ERR(ensure_added_dir(db, scratch_pool));
 
   SVN_ERR(maybe_done(db));
 
@@ -349,7 +345,7 @@ struct file_baton_t
   apr_hash_t *properties;
 
   const char *writing_file;
-  unsigned char digest[APR_MD5_DIGESTSIZE];
+  unsigned char digest[APR_MD5_DIGESTSIZE];  /* MD5 digest of new fulltext */
 
   svn_stream_t *wc_file_read_stream, *tmp_file_write_stream;
   const char *tmp_path;
@@ -431,11 +427,8 @@ file_change_prop(void *file_baton,
 {
   struct file_baton_t *fb = file_baton;
   struct edit_baton_t *eb = fb->eb;
-  svn_prop_kind_t prop_kind;
 
-  prop_kind = svn_property_kind2(name);
-
-  if (prop_kind != svn_prop_regular_kind
+  if (svn_property_kind2(name) != svn_prop_regular_kind
       || (eb->ignore_mergeinfo_changes && ! strcmp(name, SVN_PROP_MERGEINFO)))
     {
       /* We can't handle DAV, ENTRY and merge specific props here */
@@ -512,7 +505,7 @@ ensure_added_file(struct file_baton_t *fb,
     return SVN_NO_ERROR;
 
   if (fb->pb)
-    SVN_ERR(ensure_added(fb->pb, scratch_pool));
+    SVN_ERR(ensure_added_dir(fb->pb, scratch_pool));
 
   fb->created = TRUE;
 
@@ -533,10 +526,10 @@ file_close(void *file_baton,
   struct file_baton_t *fb = file_baton;
   struct dir_baton_t *pb = fb->pb;
 
+  /* If we have text changes, write them to disk */
   if (fb->writing_file)
     {
       SVN_ERR(svn_stream_close(fb->wc_file_read_stream));
-      /*SVN_ERR(svn_stream_close(fb->tmp_file_write_stream));*/
       SVN_ERR(svn_io_file_rename2(fb->writing_file, fb->local_abspath,
                                   FALSE /*flush*/, scratch_pool));
     }
