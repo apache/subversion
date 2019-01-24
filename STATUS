@@ -59,7 +59,7 @@ Candidate changes:
      - r1851687 fixes the bug and extends the test.
      - r1851791 refers to issue #4802.
    Votes:
-     +1: brane
+     +1: brane, julianfoad
 
  * r1851903
    Fix missing unlock of working copy in a resolver error case.
