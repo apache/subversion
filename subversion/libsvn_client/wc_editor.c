@@ -58,7 +58,6 @@
 
 struct edit_baton_t
 {
-  apr_pool_t *pool;
   const char *anchor_abspath;
 
   /* True => 'open_root' method will act as 'add_directory' */
@@ -85,8 +84,6 @@ struct dir_baton_t
 
   svn_boolean_t created;  /* already under version control in the WC */
   apr_hash_t *properties;
-
-  int users;
 };
 
 /*  */
@@ -115,21 +112,18 @@ static svn_error_t *
 dir_open_or_add(struct dir_baton_t **child_dir_baton,
                 const char *path,
                 struct dir_baton_t *pb,
-                struct edit_baton_t *eb)
+                struct edit_baton_t *eb,
+                apr_pool_t *result_pool)
 {
-  apr_pool_t *dir_pool = svn_pool_create(pb ? pb->pool : eb->pool);
+  apr_pool_t *dir_pool = svn_pool_create(result_pool);
   struct dir_baton_t *db = apr_pcalloc(dir_pool, sizeof(*db));
 
-  if (pb)
-    pb->users++;
-
+  db->pool = dir_pool;
   db->pb = pb;
   db->eb = eb;
-  db->pool = dir_pool;
-  db->users = 1;
 
   SVN_ERR(get_path(&db->local_abspath,
-                   eb->anchor_abspath, path, db->pool));
+                   eb->anchor_abspath, path, dir_pool));
 
   *child_dir_baton = db;
   return SVN_NO_ERROR;
@@ -145,11 +139,16 @@ edit_open(void *edit_baton,
   struct edit_baton_t *eb = edit_baton;
   struct dir_baton_t *db;
 
-  SVN_ERR(dir_open_or_add(&db, "", NULL, eb));
+  SVN_ERR(dir_open_or_add(&db, "", NULL, eb, result_pool));
 
   db->created = !(eb->root_dir_add);
   if (eb->root_dir_add)
-    SVN_ERR(svn_io_make_dir_recursively(eb->anchor_abspath, db->pool));
+    {
+      /* ### Our caller should be providing a scratch pool */
+      apr_pool_t *scratch_pool = svn_pool_create(result_pool);
+      SVN_ERR(svn_io_make_dir_recursively(eb->anchor_abspath, scratch_pool));
+      svn_pool_destroy(scratch_pool);
+    }
 
   *root_baton = db;
   return SVN_NO_ERROR;
@@ -197,7 +196,7 @@ dir_open(const char *path,
   struct edit_baton_t *eb = pb->eb;
   struct dir_baton_t *db;
 
-  SVN_ERR(dir_open_or_add(&db, path, pb, eb));
+  SVN_ERR(dir_open_or_add(&db, path, pb, eb, result_pool));
   db->created = TRUE;
 
   *child_baton = db;
@@ -215,8 +214,10 @@ dir_add(const char *path,
   struct dir_baton_t *pb = parent_baton;
   struct edit_baton_t *eb = pb->eb;
   struct dir_baton_t *db;
+  /* ### Our caller should be providing a scratch pool */
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
-  SVN_ERR(dir_open_or_add(&db, path, pb, eb));
+  SVN_ERR(dir_open_or_add(&db, path, pb, eb, result_pool));
 
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     {
@@ -226,15 +227,17 @@ dir_add(const char *path,
                                            copyfrom_revision,
                                            db->local_abspath,
                                            db->eb->ra_session,
-                                           db->eb->ctx, db->pool));
+                                           db->eb->ctx,
+                                           scratch_pool));
       db->created = TRUE;
     }
   else
     {
-      SVN_ERR(svn_io_make_dir_recursively(db->local_abspath, db->pool));
+      SVN_ERR(svn_io_make_dir_recursively(db->local_abspath, scratch_pool));
     }
 
   *child_baton = db;
+  svn_pool_destroy(scratch_pool);
   return SVN_NO_ERROR;
 }
 
@@ -276,25 +279,6 @@ dir_change_prop(void *dir_baton,
   return SVN_NO_ERROR;
 }
 
-/* Releases the directory baton if there are no more users */
-static svn_error_t *
-maybe_done(struct dir_baton_t *db)
-{
-  db->users--;
-
-  if (db->users == 0)
-    {
-      struct dir_baton_t *pb = db->pb;
-
-      svn_pool_clear(db->pool);
-
-      if (pb)
-        SVN_ERR(maybe_done(pb));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 static svn_error_t *
 ensure_added_dir(struct dir_baton_t *db,
                  apr_pool_t *scratch_pool)
@@ -328,8 +312,6 @@ dir_close(void *dir_baton,
 
   SVN_ERR(ensure_added_dir(db, scratch_pool));
 
-  SVN_ERR(maybe_done(db));
-
   return SVN_NO_ERROR;
 }
 
@@ -355,14 +337,13 @@ struct file_baton_t
 static svn_error_t *
 file_open_or_add(const char *path,
                  void *parent_baton,
-                 struct file_baton_t **file_baton)
+                 struct file_baton_t **file_baton,
+                 apr_pool_t *result_pool)
 {
   struct dir_baton_t *pb = parent_baton;
   struct edit_baton_t *eb = pb->eb;
-  apr_pool_t *file_pool = svn_pool_create(pb->pool);
+  apr_pool_t *file_pool = svn_pool_create(result_pool);
   struct file_baton_t *fb = apr_pcalloc(file_pool, sizeof(*fb));
-
-  pb->users++;
 
   fb->pool = file_pool;
   fb->eb = eb;
@@ -384,7 +365,7 @@ file_open(const char *path,
 {
   struct file_baton_t *fb;
 
-  SVN_ERR(file_open_or_add(path, parent_baton, &fb));
+  SVN_ERR(file_open_or_add(path, parent_baton, &fb, result_pool));
   fb->created = TRUE;
 
   *file_baton = fb;
@@ -401,7 +382,7 @@ file_add(const char *path,
 {
   struct file_baton_t *fb;
 
-  SVN_ERR(file_open_or_add(path, parent_baton, &fb));
+  SVN_ERR(file_open_or_add(path, parent_baton, &fb, result_pool));
 
   if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_revision))
     {
@@ -524,7 +505,6 @@ file_close(void *file_baton,
            apr_pool_t *scratch_pool)
 {
   struct file_baton_t *fb = file_baton;
-  struct dir_baton_t *pb = fb->pb;
 
   /* If we have text changes, write them to disk */
   if (fb->writing_file)
@@ -557,7 +537,6 @@ file_close(void *file_baton,
   SVN_ERR(ensure_added_file(fb, fb->pool));
 
   svn_pool_destroy(fb->pool);
-  SVN_ERR(maybe_done(pb));
 
   return SVN_NO_ERROR;
 }
@@ -577,7 +556,6 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
   svn_delta_editor_t *editor = svn_delta_default_editor(result_pool);
   struct edit_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
 
-  eb->pool = result_pool;
   eb->anchor_abspath = apr_pstrdup(result_pool, dst_abspath);
   eb->root_dir_add = root_dir_add;
   eb->ignore_mergeinfo_changes = ignore_mergeinfo_changes;
