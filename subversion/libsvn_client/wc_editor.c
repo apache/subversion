@@ -48,14 +48,29 @@
 
 /* WC Modifications Editor.
  *
+ * This editor applies incoming modifications onto the current working state
+ * of the working copy, to produce a new working state.
+ *
+ * Currently, it assumes the working state matches what the edit driver
+ * expects to find, and may throw an error if not.
+ *
+ * For simplicity, we apply incoming edits as they arrive, rather than
+ * queueing them up to apply in a batch.
+ *
  * TODO:
  *   - tests
  *   - use for all existing scenarios ('svn add', 'svn propset', etc.)
  *   - Instead of 'root_dir_add' option, probably the driver should anchor
  *     at the parent dir.
  *   - Instead of 'ignore_mergeinfo' option, implement that as a wrapper.
+ *   - Option to quietly accept changes that seem to be already applied
+ *     in the versioned state and/or on disk.
+ *     Consider 'svn add' which assumes items to be added are found on disk.
+ *   - Notification.
  */
 
+/* Everything we need to know about the edit session.
+ */
 struct edit_baton_t
 {
   const char *anchor_abspath;
@@ -73,20 +88,20 @@ struct edit_baton_t
   void *notify_baton;
 };
 
+/* Everything we need to know about a directory that's open for edits.
+ */
 struct dir_baton_t
 {
   apr_pool_t *pool;
 
-  struct dir_baton_t *pb;
   struct edit_baton_t *eb;
 
   const char *local_abspath;
-
-  svn_boolean_t created;  /* already under version control in the WC */
-  apr_hash_t *properties;
 };
 
-/*  */
+/* Join PATH onto ANCHOR_ABSPATH.
+ * Throw an error if the result is outside ANCHOR_ABSPATH.
+ */
 static svn_error_t *
 get_path(const char **local_abspath_p,
          const char *anchor_abspath,
@@ -107,19 +122,38 @@ get_path(const char **local_abspath_p,
   return SVN_NO_ERROR;
 }
 
-/*  */
+/* Create a directory on disk and add it to version control,
+ * with no properties.
+ */
+static svn_error_t *
+mkdir(const char *abspath,
+      struct edit_baton_t *eb,
+      apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_io_make_dir_recursively(abspath, scratch_pool));
+  SVN_ERR(svn_wc_add_from_disk3(eb->wc_ctx, abspath,
+                                NULL /*properties*/,
+                                TRUE /* skip checks */,
+                                eb->notify_func, eb->notify_baton,
+                                scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+/* Prepare to open or add a directory: initialize a new dir baton.
+ *
+ * If PATH is "" and PB is null, it represents the root directory of
+ * the edit; otherwise PATH is not "" and PB is not null.
+ */
 static svn_error_t *
 dir_open_or_add(struct dir_baton_t **child_dir_baton,
                 const char *path,
                 struct dir_baton_t *pb,
                 struct edit_baton_t *eb,
-                apr_pool_t *result_pool)
+                apr_pool_t *dir_pool)
 {
-  apr_pool_t *dir_pool = svn_pool_create(result_pool);
   struct dir_baton_t *db = apr_pcalloc(dir_pool, sizeof(*db));
 
   db->pool = dir_pool;
-  db->pb = pb;
   db->eb = eb;
 
   SVN_ERR(get_path(&db->local_abspath,
@@ -141,13 +175,9 @@ edit_open(void *edit_baton,
 
   SVN_ERR(dir_open_or_add(&db, "", NULL, eb, result_pool));
 
-  db->created = !(eb->root_dir_add);
   if (eb->root_dir_add)
     {
-      /* ### Our caller should be providing a scratch pool */
-      apr_pool_t *scratch_pool = svn_pool_create(result_pool);
-      SVN_ERR(svn_io_make_dir_recursively(eb->anchor_abspath, scratch_pool));
-      svn_pool_destroy(scratch_pool);
+      SVN_ERR(mkdir(db->local_abspath, eb, result_pool));
     }
 
   *root_baton = db;
@@ -197,7 +227,6 @@ dir_open(const char *path,
   struct dir_baton_t *db;
 
   SVN_ERR(dir_open_or_add(&db, path, pb, eb, result_pool));
-  db->created = TRUE;
 
   *child_baton = db;
   return SVN_NO_ERROR;
@@ -229,11 +258,10 @@ dir_add(const char *path,
                                            db->eb->ra_session,
                                            db->eb->ctx,
                                            scratch_pool));
-      db->created = TRUE;
     }
   else
     {
-      SVN_ERR(svn_io_make_dir_recursively(db->local_abspath, scratch_pool));
+      SVN_ERR(mkdir(db->local_abspath, eb, result_pool));
     }
 
   *child_baton = db;
@@ -257,48 +285,11 @@ dir_change_prop(void *dir_baton,
       return SVN_NO_ERROR;
     }
 
-  if (! db->created)
-    {
-      /* Store properties to be added later in svn_wc_add_from_disk3() */
-      if (! db->properties)
-        db->properties = apr_hash_make(db->pool);
-
-      if (value != NULL)
-        svn_hash_sets(db->properties, apr_pstrdup(db->pool, name),
-                      svn_string_dup(value, db->pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc_prop_set4(eb->wc_ctx, db->local_abspath, name, value,
-                               svn_depth_empty, FALSE, NULL,
-                               NULL, NULL, /* Cancellation */
-                               NULL, NULL, /* Notification */
-                               scratch_pool));
-    }
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-ensure_added_dir(struct dir_baton_t *db,
-                 apr_pool_t *scratch_pool)
-{
-  if (db->created)
-    return SVN_NO_ERROR;
-
-  if (db->pb)
-    SVN_ERR(ensure_added_dir(db->pb, scratch_pool));
-
-  db->created = TRUE;
-
-  /* Add the directory with all the already collected properties */
-  SVN_ERR(svn_wc_add_from_disk3(db->eb->wc_ctx,
-                                db->local_abspath,
-                                db->properties,
-                                TRUE /* skip checks */,
-                                db->eb->notify_func,
-                                db->eb->notify_baton,
-                                scratch_pool));
+  SVN_ERR(svn_wc_prop_set4(eb->wc_ctx, db->local_abspath, name, value,
+                           svn_depth_empty, FALSE, NULL,
+                           NULL, NULL, /* Cancellation */
+                           NULL, NULL, /* Notification */
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -307,48 +298,57 @@ static svn_error_t *
 dir_close(void *dir_baton,
           apr_pool_t *scratch_pool)
 {
-  struct dir_baton_t *db = dir_baton;
-  /*struct edit_baton_t *eb = db->eb;*/
-
-  SVN_ERR(ensure_added_dir(db, scratch_pool));
-
   return SVN_NO_ERROR;
 }
 
+/* Everything we need to know about a file that's open for edits.
+ */
 struct file_baton_t
 {
   apr_pool_t *pool;
 
-  struct dir_baton_t *pb;
   struct edit_baton_t *eb;
 
   const char *local_abspath;
-  svn_boolean_t created;  /* already under version control in the WC */
-  apr_hash_t *properties;
 
+  /* fields for the transfer of text changes */
   const char *writing_file;
   unsigned char digest[APR_MD5_DIGESTSIZE];  /* MD5 digest of new fulltext */
-
   svn_stream_t *wc_file_read_stream, *tmp_file_write_stream;
   const char *tmp_path;
 };
+
+/* Create a new file on disk and add it to version control.
+ *
+ * The file is empty and has no properties.
+ */
+static svn_error_t *
+mkfile(const char *abspath,
+       struct edit_baton_t *eb,
+       apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_io_file_create_empty(abspath, scratch_pool));
+  SVN_ERR(svn_wc_add_from_disk3(eb->wc_ctx, abspath,
+                                NULL /*properties*/,
+                                TRUE /* skip checks */,
+                                eb->notify_func, eb->notify_baton,
+                                scratch_pool));
+  return SVN_NO_ERROR;
+}
 
 /*  */
 static svn_error_t *
 file_open_or_add(const char *path,
                  void *parent_baton,
                  struct file_baton_t **file_baton,
-                 apr_pool_t *result_pool)
+                 apr_pool_t *file_pool)
 {
   struct dir_baton_t *pb = parent_baton;
   struct edit_baton_t *eb = pb->eb;
-  apr_pool_t *file_pool = svn_pool_create(result_pool);
   struct file_baton_t *fb = apr_pcalloc(file_pool, sizeof(*fb));
 
   fb->pool = file_pool;
   fb->eb = eb;
-  fb->pb = pb;
-
   SVN_ERR(get_path(&fb->local_abspath,
                    eb->anchor_abspath, path, fb->pool));
 
@@ -366,7 +366,6 @@ file_open(const char *path,
   struct file_baton_t *fb;
 
   SVN_ERR(file_open_or_add(path, parent_baton, &fb, result_pool));
-  fb->created = TRUE;
 
   *file_baton = fb;
   return SVN_NO_ERROR;
@@ -393,7 +392,10 @@ file_add(const char *path,
                                            fb->local_abspath,
                                            fb->eb->ra_session,
                                            fb->eb->ctx, fb->pool));
-      fb->created = TRUE;
+    }
+  else
+    {
+      SVN_ERR(mkfile(fb->local_abspath, fb->eb, result_pool));
     }
 
   *file_baton = fb;
@@ -416,24 +418,11 @@ file_change_prop(void *file_baton,
       return SVN_NO_ERROR;
     }
 
-  if (! fb->created)
-    {
-      /* Store properties to be added later in svn_wc_add_from_disk3() */
-      if (! fb->properties)
-        fb->properties = apr_hash_make(fb->pool);
-
-      if (value != NULL)
-        svn_hash_sets(fb->properties, apr_pstrdup(fb->pool, name),
-                      svn_string_dup(value, fb->pool));
-    }
-  else
-    {
-      SVN_ERR(svn_wc_prop_set4(eb->wc_ctx, fb->local_abspath, name, value,
-                               svn_depth_empty, FALSE, NULL,
-                               NULL, NULL, /* Cancellation */
-                               NULL, NULL, /* Notification */
-                               scratch_pool));
-    }
+  SVN_ERR(svn_wc_prop_set4(eb->wc_ctx, fb->local_abspath, name, value,
+                           svn_depth_empty, FALSE, NULL,
+                           NULL, NULL, /* Cancellation */
+                           NULL, NULL, /* Notification */
+                           scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -477,29 +466,6 @@ file_textdelta(void *file_baton,
 }
 
 static svn_error_t *
-ensure_added_file(struct file_baton_t *fb,
-                  apr_pool_t *scratch_pool)
-{
-  struct edit_baton_t *eb = fb->eb;
-
-  if (fb->created)
-    return SVN_NO_ERROR;
-
-  if (fb->pb)
-    SVN_ERR(ensure_added_dir(fb->pb, scratch_pool));
-
-  fb->created = TRUE;
-
-  /* Add the file with all the already collected properties */
-  SVN_ERR(svn_wc_add_from_disk3(eb->wc_ctx, fb->local_abspath, fb->properties,
-                                TRUE /* skip checks */,
-                                eb->notify_func, eb->notify_baton,
-                                fb->pool));
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
 file_close(void *file_baton,
            const char *text_checksum,
            apr_pool_t *scratch_pool)
@@ -533,10 +499,6 @@ file_close(void *file_baton,
                                                     fb->local_abspath,
                                                     fb->pool)));
     }
-
-  SVN_ERR(ensure_added_file(fb, fb->pool));
-
-  svn_pool_destroy(fb->pool);
 
   return SVN_NO_ERROR;
 }
