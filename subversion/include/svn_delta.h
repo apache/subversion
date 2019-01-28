@@ -863,7 +863,7 @@ svn_txdelta_skip_svndiff_window(apr_file_t *file,
  * @c apply_textdelta / @c apply_textdelta_stream and @c close_file
  * should not refer to a parent directory baton UNLESS the editor has
  * taken precautions to allocate it in a pool of the appropriate
- * lifetime (the @a dir_pool passed to @c open_directory and
+ * lifetime (the @a result_pool passed to @c open_directory and
  * @c add_directory definitely does not have the proper lifetime).
  * In general, it is recommended to simply avoid keeping a parent
  * directory baton in a file baton.
