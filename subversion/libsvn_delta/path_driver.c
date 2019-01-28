@@ -228,7 +228,7 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
   size_t common_len;
   apr_pool_t *subpool;
   dir_stack_t *item;
-  void *parent_db = NULL, *db = NULL;
+  void *parent_db, *db;
 
   /* If the first target path is not the root of the edit, we must first
      call open_root() ourselves. (If the first target path is the root of
@@ -310,6 +310,9 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
       item = APR_ARRAY_IDX(state->db_stack, state->db_stack->nelts - 1, void *);
       parent_db = item->dir_baton;
     }
+  else
+    parent_db = NULL;
+  db = NULL;  /* predictable behaviour for callbacks that don't set it */
   subpool = svn_pool_create(state->pool);
   SVN_ERR(state->callback_func(&db, parent_db, state->callback_baton,
                                path, subpool));
