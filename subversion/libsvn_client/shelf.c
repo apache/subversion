@@ -100,7 +100,7 @@ shelf_name_from_filename(char **name,
 {
   size_t len = strlen(filename);
   static const char suffix[] = ".current";
-  int suffix_len = sizeof(suffix) - 1;
+  size_t suffix_len = sizeof(suffix) - 1;
 
   if (len > suffix_len && strcmp(filename + len - suffix_len, suffix) == 0)
     {
