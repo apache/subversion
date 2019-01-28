@@ -7251,6 +7251,21 @@ svn_client__shelf_unapply(svn_client__shelf_version_t *shelf_version,
                          svn_boolean_t dry_run,
                          apr_pool_t *scratch_pool);
 
+/** Send committable changes found in a shelf to a delta-editor.
+ *
+ * Push changes from the @a shelf_version subtree at @a top_relpath
+ * to @a editor : @a edit_baton.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_replay(svn_client__shelf_version_t *shelf_version,
+                         const char *top_relpath,
+                         const svn_delta_editor_t *editor,
+                         void *edit_baton,
+                         apr_pool_t *scratch_pool);
+
 /** Set @a *affected_paths to a hash with one entry for each path affected
  * by the @a shelf_version.
  *

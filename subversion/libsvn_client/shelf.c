@@ -1626,20 +1626,18 @@ shelf_replay_path_visitor(void *baton,
   return SVN_NO_ERROR;
 }
 
-/* Send committable changes found in a shelf to a delta-editor.
- */
-static svn_error_t *
-shelf_replay(svn_client__shelf_version_t *shelf_version,
-             const char *wc_relpath,
-             const svn_delta_editor_t *editor,
-             void *edit_baton,
-             apr_pool_t *scratch_pool)
+svn_error_t *
+svn_client__shelf_replay(svn_client__shelf_version_t *shelf_version,
+                         const char *top_relpath,
+                         const svn_delta_editor_t *editor,
+                         void *edit_baton,
+                         apr_pool_t *scratch_pool)
 {
   struct shelf_replay_path_baton_t baton;
   struct path_driver_cb_baton_t pdb = {0};
   svn_error_t *err;
 
-  baton.top_relpath = wc_relpath;
+  baton.top_relpath = top_relpath;
   baton.walk_root_abspath = shelf_version->files_dir_abspath;
 
   pdb.shelf_version = shelf_version;
@@ -1967,9 +1965,9 @@ svn_client__shelf_apply(svn_client__shelf_version_t *shelf_version,
                          shelf->ctx, scratch_pool));
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
-    shelf_replay(shelf_version, "",
-                 editor, edit_baton,
-                 scratch_pool),
+    svn_client__shelf_replay(shelf_version, "",
+                             editor, edit_baton,
+                             scratch_pool),
     shelf->ctx->wc_ctx, shelf->wc_root_abspath,
     FALSE /*lock_anchor*/, scratch_pool);
 
