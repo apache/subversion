@@ -1477,7 +1477,7 @@ path_driver_cb_func(void **dir_baton_p,
   const char *to_wc_abspath = svn_dirent_join(wc_root_abspath, relpath,
                                               scratch_pool);
 
-  *dir_baton = NULL;
+  *dir_baton_p = NULL;
 
   SVN_ERR(status_read(&s, b->shelf_version, relpath,
                       scratch_pool, scratch_pool));
