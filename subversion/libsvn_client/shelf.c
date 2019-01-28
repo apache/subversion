@@ -1461,10 +1461,6 @@ struct path_driver_cb_baton_t
 
 /* Apply the changes for RELPATH from shelf storage to the WC.
  *
- * In test mode (BATON->test_only): set BATON->conflict if we can't apply
- * the change to WC at RELPATH without conflict. But in fact, just check
- * if WC at RELPATH is locally modified.
- *
  * Implements svn_delta_path_driver_cb_func_t. */
 static svn_error_t *
 path_driver_cb_func(void **dir_baton_p,
@@ -1511,13 +1507,16 @@ path_driver_cb_func(void **dir_baton_p,
         }
     }
 
-  /* If we can merge a file, do so. */
+  /* Modifications to a file or dir. */
   if (s->node_status == svn_wc_status_modified)
     {
       if (s->kind == svn_node_dir)
         {
+          SVN_ERR(b->editor->open_directory(relpath, parent_baton,
+                                            SVN_INVALID_REVNUM,
+                                            scratch_pool, dir_baton_p));
           SVN_ERR(apply_prop_mods(base_props, work_props,
-                                  b->editor, NULL, parent_baton,
+                                  b->editor, NULL, *dir_baton_p,
                                   scratch_pool));
         }
       else if (s->kind == svn_node_file)
@@ -1548,23 +1547,23 @@ path_driver_cb_func(void **dir_baton_p,
                                 scratch_pool));
     }
 
-  /* For an added file, copy it into the WC and ensure it's versioned. */
+  /* Added file or dir. */
   if (s->node_status == svn_wc_status_added
       || s->node_status == svn_wc_status_replaced)
     {
-      void *file_baton = NULL;
-
       if (s->kind == svn_node_dir)
         {
           SVN_ERR(b->editor->add_directory(relpath, parent_baton,
                                            NULL, SVN_INVALID_REVNUM,
                                            scratch_pool, dir_baton_p));
           SVN_ERR(apply_prop_mods(NULL /*base*/, work_props,
-                                  b->editor, file_baton, *dir_baton_p,
+                                  b->editor, NULL, *dir_baton_p,
                                   scratch_pool));
         }
       else if (s->kind == svn_node_file)
         {
+          void *file_baton = NULL;
+
           /* add */
           SVN_ERR(b->editor->add_file(relpath, parent_baton,
                                       NULL, SVN_INVALID_REVNUM,
