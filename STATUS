@@ -4,8 +4,7 @@
       *                                                     *
       * * * * * * * * * * * * * * * * * * * * * * * * * * * *
 
-This file tracks the status of releases in the 1.11.x line.
-
+This file tracks the status of releases in the 1.11.x line.  
 See http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
 for details on how release lines and voting work, what kinds of bugs can
 delay a release, etc.
@@ -83,6 +82,17 @@ Candidate changes:
      https://bugs.gentoo.org/605438
    Votes:
      +1: brane
+
+ * r1852436
+   Make 'svn update' not record a tree conflict when deleting an unmodified
+   directory which happens to contain unversioned items.
+   Justification:
+     Unnecessary tree conflict due to e.g. build artifacts on disk.
+     User complained: https://svn.haxx.se/users/archive-2019-01/0060.shtml
+     IRC discussion:
+     https://colabti.org/irclogger/irclogger_log/svn-dev?date=2019-01-29#l10
+   Votes:
+     +1: stsp
 
 Veto-blocked changes:
 =====================
