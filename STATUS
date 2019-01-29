@@ -69,6 +69,17 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1852436
+   Make 'svn update' not record a tree conflict when deleting an unmodified
+   directory which happens to contain unversioned items.
+   Justification:
+     Unnecessary tree conflict due to e.g. build artifacts on disk.
+     User complained: https://svn.haxx.se/users/archive-2019-01/0060.shtml
+     IRC discussion:
+     https://colabti.org/irclogger/irclogger_log/svn-dev?date=2019-01-29#l10
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
