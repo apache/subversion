@@ -45,6 +45,22 @@ typedef struct dir_stack_t
 } dir_stack_t;
 
 
+/* Push onto dir_stack a new item allocated in POOL and containing
+ * DIR_BATON and POOL.
+ */
+static void
+push_dir_stack_item(apr_array_header_t *db_stack,
+                    void *dir_baton,
+                    apr_pool_t *pool)
+{
+  dir_stack_t *item = apr_pcalloc(pool, sizeof(*item));
+
+  item->dir_baton = dir_baton;
+  item->pool = pool;
+  APR_ARRAY_PUSH(db_stack, dir_stack_t *) = item;
+}
+
+
 /* Call EDITOR's open_directory() function with the PATH argument, then
  * add the resulting dir baton to the dir baton stack.
  */
@@ -72,10 +88,7 @@ open_dir(apr_array_header_t *db_stack,
                                  &db));
 
   /* Now add the dir baton to the stack. */
-  item = apr_pcalloc(subpool, sizeof(*item));
-  item->dir_baton = db;
-  item->pool = subpool;
-  APR_ARRAY_PUSH(db_stack, dir_stack_t *) = item;
+  push_dir_stack_item(db_stack, db, subpool);
 
   return SVN_NO_ERROR;
 }
@@ -238,10 +251,7 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
       subpool = svn_pool_create(state->pool);
       SVN_ERR(state->editor->open_root(state->edit_baton, SVN_INVALID_REVNUM,
                                        subpool, &db));
-      item = apr_pcalloc(subpool, sizeof (*item));
-      item->pool = subpool;
-      item->dir_baton = db;
-      APR_ARRAY_PUSH(state->db_stack, void *) = item;
+      push_dir_stack_item(state->db_stack, db, subpool);
     }
 
   /*** Step A - Find the common ancestor of the last path and the
@@ -320,10 +330,7 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
                                path, subpool));
   if (db)
     {
-      item = apr_pcalloc(subpool, sizeof (*item));
-      item->dir_baton = db;
-      item->pool = subpool;
-      APR_ARRAY_PUSH(state->db_stack, void *) = item;
+      push_dir_stack_item(state->db_stack, db, subpool);
     }
   else
     {
