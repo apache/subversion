@@ -1158,10 +1158,6 @@ typedef struct path_driver_info_t
    or move operation. */
 struct path_driver_cb_baton
 {
-  /* The editor (and its state) used to perform the operation. */
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
-
   /* A hash of path -> path_driver_info_t *'s. */
   apr_hash_t *action_hash;
 
@@ -1171,6 +1167,8 @@ struct path_driver_cb_baton
 
 static svn_error_t *
 path_driver_cb_func(void **dir_baton,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
                     void *parent_baton,
                     void *callback_baton,
                     const char *path,
@@ -1191,9 +1189,9 @@ path_driver_cb_func(void **dir_baton,
   /* Check to see if we need to add the path as a parent directory. */
   if (path_info->dir_add)
     {
-      return cb_baton->editor->add_directory(path, parent_baton, NULL,
-                                             SVN_INVALID_REVNUM, pool,
-                                             dir_baton);
+      return editor->add_directory(path, parent_baton, NULL,
+                                   SVN_INVALID_REVNUM, pool,
+                                   dir_baton);
     }
 
   /* If this is a resurrection, we know the source and dest paths are
@@ -1225,8 +1223,8 @@ path_driver_cb_func(void **dir_baton,
 
   if (do_delete)
     {
-      SVN_ERR(cb_baton->editor->delete_entry(path, SVN_INVALID_REVNUM,
-                                             parent_baton, pool));
+      SVN_ERR(editor->delete_entry(path, SVN_INVALID_REVNUM,
+                                   parent_baton, pool));
     }
   if (do_add)
     {
@@ -1235,40 +1233,40 @@ path_driver_cb_func(void **dir_baton,
       if (path_info->src_kind == svn_node_file)
         {
           void *file_baton;
-          SVN_ERR(cb_baton->editor->add_file(path, parent_baton,
-                                             path_info->src_url,
-                                             path_info->src_revnum,
-                                             pool, &file_baton));
+          SVN_ERR(editor->add_file(path, parent_baton,
+                                   path_info->src_url,
+                                   path_info->src_revnum,
+                                   pool, &file_baton));
           if (path_info->mergeinfo)
-            SVN_ERR(cb_baton->editor->change_file_prop(file_baton,
-                                                       SVN_PROP_MERGEINFO,
-                                                       path_info->mergeinfo,
-                                                       pool));
-          SVN_ERR(cb_baton->editor->close_file(file_baton, NULL, pool));
+            SVN_ERR(editor->change_file_prop(file_baton,
+                                             SVN_PROP_MERGEINFO,
+                                             path_info->mergeinfo,
+                                             pool));
+          SVN_ERR(editor->close_file(file_baton, NULL, pool));
         }
       else
         {
-          SVN_ERR(cb_baton->editor->add_directory(path, parent_baton,
-                                                  path_info->src_url,
-                                                  path_info->src_revnum,
-                                                  pool, dir_baton));
+          SVN_ERR(editor->add_directory(path, parent_baton,
+                                        path_info->src_url,
+                                        path_info->src_revnum,
+                                        pool, dir_baton));
           if (path_info->mergeinfo)
-            SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton,
-                                                      SVN_PROP_MERGEINFO,
-                                                      path_info->mergeinfo,
-                                                      pool));
+            SVN_ERR(editor->change_dir_prop(*dir_baton,
+                                            SVN_PROP_MERGEINFO,
+                                            path_info->mergeinfo,
+                                            pool));
         }
     }
 
   if (path_info->externals)
     {
       if (*dir_baton == NULL)
-        SVN_ERR(cb_baton->editor->open_directory(path, parent_baton,
-                                                 SVN_INVALID_REVNUM,
-                                                 pool, dir_baton));
+        SVN_ERR(editor->open_directory(path, parent_baton,
+                                       SVN_INVALID_REVNUM,
+                                       pool, dir_baton));
 
-      SVN_ERR(cb_baton->editor->change_dir_prop(*dir_baton, SVN_PROP_EXTERNALS,
-                                                path_info->externals, pool));
+      SVN_ERR(editor->change_dir_prop(*dir_baton, SVN_PROP_EXTERNALS,
+                                      path_info->externals, pool));
     }
 
   return SVN_NO_ERROR;
@@ -1852,13 +1850,11 @@ repos_to_repos_copy(const apr_array_header_t *copy_pairs,
                                     pool));
 
   /* Setup the callback baton. */
-  cb_baton.editor = editor;
-  cb_baton.edit_baton = edit_baton;
   cb_baton.action_hash = action_hash;
   cb_baton.is_move = is_move;
 
   /* Call the path-based editor driver. */
-  err = svn_delta_path_driver2(editor, edit_baton, paths, TRUE,
+  err = svn_delta_path_driver3(editor, edit_baton, paths, TRUE,
                                path_driver_cb_func, &cb_baton, pool);
   if (err)
     {
