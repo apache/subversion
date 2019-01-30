@@ -74,6 +74,8 @@
 struct edit_baton_t
 {
   const char *anchor_abspath;
+  svn_boolean_t manage_wc_write_lock;
+  const char *lock_root_abspath;  /* the path locked, when locked */
 
   /* True => 'open_root' method will act as 'add_directory' */
   svn_boolean_t root_dir_add;
@@ -163,6 +165,31 @@ dir_open_or_add(struct dir_baton_t **child_dir_baton,
   return SVN_NO_ERROR;
 }
 
+/*  */
+static svn_error_t *
+release_write_lock(struct edit_baton_t *eb,
+                   apr_pool_t *scratch_pool)
+{
+  if (eb->lock_root_abspath)
+    {
+      SVN_ERR(svn_wc__release_write_lock(
+                eb->ctx->wc_ctx, eb->lock_root_abspath, scratch_pool));
+      eb->lock_root_abspath = NULL;
+    }
+  return SVN_NO_ERROR;
+}
+
+/*  */
+static apr_status_t
+pool_cleanup_handler(void *root_baton)
+{
+  struct dir_baton_t *db = root_baton;
+  struct edit_baton_t *eb = db->eb;
+
+  svn_error_clear(release_write_lock(eb, db->pool));
+  return APR_SUCCESS;
+}
+
 /* svn_delta_editor_t function */
 static svn_error_t *
 edit_open(void *edit_baton,
@@ -175,6 +202,19 @@ edit_open(void *edit_baton,
 
   SVN_ERR(dir_open_or_add(&db, "", NULL, eb, result_pool));
 
+  /* Acquire a WC write lock */
+  if (eb->manage_wc_write_lock)
+    {
+      apr_pool_cleanup_register(db->pool, db,
+                                pool_cleanup_handler,
+                                apr_pool_cleanup_null);
+      SVN_ERR(svn_wc__acquire_write_lock(&eb->lock_root_abspath,
+                                         eb->ctx->wc_ctx,
+                                         eb->anchor_abspath,
+                                         FALSE /*lock_anchor*/,
+                                         db->pool, db->pool));
+    }
+
   if (eb->root_dir_add)
     {
       SVN_ERR(mkdir(db->local_abspath, eb, result_pool));
@@ -186,9 +226,10 @@ edit_open(void *edit_baton,
 
 /* svn_delta_editor_t function */
 static svn_error_t *
-edit_close(void *edit_baton,
-           apr_pool_t *scratch_pool)
+edit_close_or_abort(void *edit_baton,
+                    apr_pool_t *scratch_pool)
 {
+  SVN_ERR(release_write_lock(edit_baton, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -509,6 +550,7 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
                                const char *dst_abspath,
                                svn_boolean_t root_dir_add,
                                svn_boolean_t ignore_mergeinfo_changes,
+                               svn_boolean_t manage_wc_write_lock,
                                svn_wc_notify_func2_t notify_func,
                                void *notify_baton,
                                svn_ra_session_t *ra_session,
@@ -519,6 +561,8 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
   struct edit_baton_t *eb = apr_pcalloc(result_pool, sizeof(*eb));
 
   eb->anchor_abspath = apr_pstrdup(result_pool, dst_abspath);
+  eb->manage_wc_write_lock = manage_wc_write_lock;
+  eb->lock_root_abspath = NULL;
   eb->root_dir_add = root_dir_add;
   eb->ignore_mergeinfo_changes = ignore_mergeinfo_changes;
 
@@ -529,7 +573,8 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
   eb->notify_baton  = notify_baton;
 
   editor->open_root = edit_open;
-  editor->close_edit = edit_close;
+  editor->close_edit = edit_close_or_abort;
+  editor->abort_edit = edit_close_or_abort;
 
   editor->delete_entry = delete_entry;
 
@@ -563,6 +608,7 @@ svn_client__wc_editor(const svn_delta_editor_t **editor_p,
                                          dst_abspath,
                                          FALSE /*root_dir_add*/,
                                          FALSE /*ignore_mergeinfo_changes*/,
+                                         TRUE /*manage_wc_write_lock*/,
                                          notify_func, notify_baton,
                                          ra_session,
                                          ctx, result_pool));

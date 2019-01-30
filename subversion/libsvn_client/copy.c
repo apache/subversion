@@ -2384,6 +2384,7 @@ copy_foreign_dir(svn_ra_session_t *ra_session,
                                          dst_abspath,
                                          TRUE /*root_dir_add*/,
                                          TRUE /*ignore_mergeinfo_changes*/,
+                                         FALSE /*manage_wc_write_lock*/,
                                          notify_func, notify_baton,
                                          NULL /*ra_session*/,
                                          ctx, scratch_pool));
@@ -2652,11 +2653,15 @@ svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
 
   SVN_ERR(svn_ra_reparent(ra_session, src_anchor, scratch_pool));
 
-  SVN_ERR(svn_client__wc_editor(&editor, &eb,
-                                svn_dirent_dirname(dst_abspath, scratch_pool),
-                                ctx->notify_func2, ctx->notify_baton2,
-                                ra_session,
-                                ctx, scratch_pool));
+  SVN_ERR(svn_client__wc_editor_internal(
+            &editor, &eb,
+            svn_dirent_dirname(dst_abspath, scratch_pool),
+            FALSE /*root_dir_add*/,
+            FALSE /*ignore_mergeinfo_changes*/,
+            FALSE /*manage_wc_write_lock*/,
+            ctx->notify_func2, ctx->notify_baton2,
+            ra_session,
+            ctx, scratch_pool));
 
   SVN_ERR(editor->open_root(eb, SVN_INVALID_REVNUM, scratch_pool, &rb));
   if (kind == svn_node_dir)
