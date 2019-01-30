@@ -1454,9 +1454,6 @@ struct path_driver_cb_baton_t
 {
   svn_client__shelf_version_t *shelf_version;
   svn_client_ctx_t *ctx;
-
-  const svn_delta_editor_t *editor;
-  void *edit_baton;
 };
 
 /* Apply the changes for RELPATH from shelf storage to the WC.
@@ -1464,6 +1461,8 @@ struct path_driver_cb_baton_t
  * Implements svn_delta_path_driver_cb_func_t. */
 static svn_error_t *
 path_driver_cb_func(void **dir_baton_p,
+                    const svn_delta_editor_t *editor,
+                    void *edit_baton,
                     void *parent_baton,
                     void *callback_baton,
                     const char *relpath,
@@ -1496,8 +1495,8 @@ path_driver_cb_func(void **dir_baton_p,
   if (s->node_status == svn_wc_status_deleted
       || s->node_status == svn_wc_status_replaced)
     {
-      SVN_ERR(b->editor->delete_entry(relpath, SVN_INVALID_REVNUM,
-                                      parent_baton, scratch_pool));
+      SVN_ERR(editor->delete_entry(relpath, SVN_INVALID_REVNUM,
+                                   parent_baton, scratch_pool));
       if (s->node_status != svn_wc_status_replaced)
         {
           SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_delete,
@@ -1514,11 +1513,11 @@ path_driver_cb_func(void **dir_baton_p,
     {
       if (s->kind == svn_node_dir)
         {
-          SVN_ERR(b->editor->open_directory(relpath, parent_baton,
-                                            SVN_INVALID_REVNUM,
-                                            scratch_pool, dir_baton_p));
+          SVN_ERR(editor->open_directory(relpath, parent_baton,
+                                         SVN_INVALID_REVNUM,
+                                         scratch_pool, dir_baton_p));
           SVN_ERR(apply_prop_mods(base_props, work_props,
-                                  b->editor, NULL, *dir_baton_p,
+                                  editor, NULL, *dir_baton_p,
                                   scratch_pool));
         }
       else if (s->kind == svn_node_file)
@@ -1526,16 +1525,16 @@ path_driver_cb_func(void **dir_baton_p,
           void *file_baton;
 
           /* open */
-          SVN_ERR(b->editor->open_file(relpath, parent_baton,
-                                       SVN_INVALID_REVNUM,
-                                       scratch_pool, &file_baton));
+          SVN_ERR(editor->open_file(relpath, parent_baton,
+                                    SVN_INVALID_REVNUM,
+                                    scratch_pool, &file_baton));
           /* modifications */
           SVN_ERR(apply_file_mods(base_props, work_props,
                                   stored_base_abspath, stored_work_abspath,
-                                  b->editor, file_baton,
+                                  editor, file_baton,
                                   scratch_pool));
           /* close */
-          SVN_ERR(b->editor->close_file(file_baton, NULL, scratch_pool));
+          SVN_ERR(editor->close_file(file_baton, NULL, scratch_pool));
         }
       SVN_ERR(send_notification(to_wc_abspath, svn_wc_notify_update_update,
                                 s->kind,
@@ -1555,11 +1554,11 @@ path_driver_cb_func(void **dir_baton_p,
     {
       if (s->kind == svn_node_dir)
         {
-          SVN_ERR(b->editor->add_directory(relpath, parent_baton,
-                                           NULL, SVN_INVALID_REVNUM,
-                                           scratch_pool, dir_baton_p));
+          SVN_ERR(editor->add_directory(relpath, parent_baton,
+                                        NULL, SVN_INVALID_REVNUM,
+                                        scratch_pool, dir_baton_p));
           SVN_ERR(apply_prop_mods(NULL /*base*/, work_props,
-                                  b->editor, NULL, *dir_baton_p,
+                                  editor, NULL, *dir_baton_p,
                                   scratch_pool));
         }
       else if (s->kind == svn_node_file)
@@ -1567,16 +1566,16 @@ path_driver_cb_func(void **dir_baton_p,
           void *file_baton = NULL;
 
           /* add */
-          SVN_ERR(b->editor->add_file(relpath, parent_baton,
-                                      NULL, SVN_INVALID_REVNUM,
-                                      scratch_pool, &file_baton));
+          SVN_ERR(editor->add_file(relpath, parent_baton,
+                                   NULL, SVN_INVALID_REVNUM,
+                                   scratch_pool, &file_baton));
           /* modifications */
           SVN_ERR(apply_file_mods(NULL /*base*/, work_props,
                                   NULL /*base*/, stored_work_abspath,
-                                  b->editor, file_baton,
+                                  editor, file_baton,
                                   scratch_pool));
           /* close */
-          SVN_ERR(b->editor->close_file(file_baton, NULL, scratch_pool));
+          SVN_ERR(editor->close_file(file_baton, NULL, scratch_pool));
         }
       SVN_ERR(send_notification(to_wc_abspath,
                                 (s->node_status == svn_wc_status_replaced)
@@ -1642,8 +1641,6 @@ svn_client__shelf_replay(svn_client__shelf_version_t *shelf_version,
 
   pdb.shelf_version = shelf_version;
   pdb.ctx = shelf_version->shelf->ctx;
-  pdb.editor = editor;
-  pdb.edit_baton = edit_baton;
 
   SVN_ERR(svn_delta_path_driver_start(&baton.path_driver_state,
                                       editor, edit_baton,
