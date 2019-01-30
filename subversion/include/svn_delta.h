@@ -1294,14 +1294,18 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
  * path's parent directory as created by the editor passed to
  * svn_delta_path_driver().
  *
- * If @a path represents a directory, the handler must return a @a
- * *dir_baton for @a path, generated from the same editor (so that the
- * driver can later close that directory).
+ * If the handler deletes the node at @a path (and does not replace it
+ * with an added directory) it must set @a *dir_baton to null or leave
+ * it unchanged.
  *
- * If, however, @a path represents a file, the handler should NOT
- * return any file batons.  It can close any opened or added files
- * immediately, or delay that close until the end of the edit when
- * svn_delta_path_driver() returns.
+ * If the handler opens (or adds) a directory at @a path, it must set
+ * @a *dir_baton to the directory baton for @a path, generated from
+ * the same editor. The driver will close the directory later.
+ *
+ * If the handler opens (or adds) a file at @a path, the handler must
+ * set @a *dir_baton to null or leave it unchanged.  The handler must
+ * either close the file immediately, or delay that close until the end
+ * of the edit when svn_delta_path_driver() returns.
  *
  * Finally, if @a parent_baton is @c NULL, then the root of the edit
  * is also one of the paths passed to svn_delta_path_driver().  The
