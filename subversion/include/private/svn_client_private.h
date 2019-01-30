@@ -447,6 +447,9 @@ svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
  * RA_SESSION is used to fetch the original content for copies.
  *
  * Ignore changes to non-regular property (entry-props, DAV/WC-props).
+ *
+ * Acquire the WC write lock in 'open_root' and release it in
+ * 'close_edit', in 'abort_edit', or when @a result_pool is cleared.
  */
 svn_error_t *
 svn_client__wc_editor(const svn_delta_editor_t **editor_p,
@@ -468,6 +471,10 @@ svn_client__wc_editor(const svn_delta_editor_t **editor_p,
  *
  * If @a ignore_mergeinfo_changes is true, ignore any incoming changes
  * to the 'svn:mergeinfo' property.
+ *
+ * If @a manage_wc_write_lock is true, acquire the WC write lock in
+ * 'open_root' and release it in 'close_edit', in 'abort_edit', or
+ * when @a result_pool is cleared.
  */
 svn_error_t *
 svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
@@ -475,6 +482,7 @@ svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
                                const char *dst_abspath,
                                svn_boolean_t root_dir_add,
                                svn_boolean_t ignore_mergeinfo_changes,
+                               svn_boolean_t manage_wc_write_lock,
                                svn_wc_notify_func2_t notify_func,
                                void *notify_baton,
                                svn_ra_session_t *ra_session,

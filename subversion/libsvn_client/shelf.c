@@ -1961,12 +1961,9 @@ svn_client__shelf_apply(svn_client__shelf_version_t *shelf_version,
                          shelf->wc_root_abspath,
                          shelf->ctx, scratch_pool));
 
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_client__shelf_replay(shelf_version, "",
-                             editor, edit_baton,
-                             scratch_pool),
-    shelf->ctx->wc_ctx, shelf->wc_root_abspath,
-    FALSE /*lock_anchor*/, scratch_pool);
+  SVN_ERR(svn_client__shelf_replay(shelf_version, "",
+                                   editor, edit_baton,
+                                   scratch_pool));
 
   svn_io_sleep_for_timestamps(shelf->wc_root_abspath,
                               scratch_pool);
