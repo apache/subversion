@@ -34,6 +34,7 @@ struct path_driver_2_to_3_baton_t
 {
   svn_delta_path_driver_cb_func_t callback_func;
   void *callback_baton;
+  svn_boolean_t slash_prefix;
 };
 
 /* Convert from a newer to older callback
@@ -48,6 +49,9 @@ path_driver_2_to_3_func(void **dir_baton,
                         apr_pool_t *pool)
 {
   struct path_driver_2_to_3_baton_t *b = callback_baton;
+
+  if (b->slash_prefix)
+    path = apr_pstrcat(pool, "/", path, SVN_VA_NULL);
 
   /* Just drop the 'editor' parameters */
   SVN_ERR(b->callback_func(dir_baton, parent_baton,
@@ -69,6 +73,29 @@ svn_delta_path_driver2(const svn_delta_editor_t *editor,
 
   b.callback_func = callback_func;
   b.callback_baton = callback_baton;
+
+  /* Remove any '/' prefix from incoming paths and arrange to add it back
+     when calling the callback. We assume the first path is representative
+     of all paths. */
+  if (paths->nelts >= 1
+      && APR_ARRAY_IDX(paths, 0, const char *)[0] == '/')
+    {
+      int i;
+
+      for (i = 0; i < paths->nelts; i++)
+        {
+          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+
+          if (path[0] == '/')
+            APR_ARRAY_IDX(paths, i, const char *) = path + 1;
+        }
+      b.slash_prefix = TRUE;
+    }
+  else
+    {
+      b.slash_prefix = FALSE;
+    }
+
   SVN_ERR(svn_delta_path_driver3(editor, edit_baton,
                                  paths, sort_paths,
                                  path_driver_2_to_3_func, &b,
