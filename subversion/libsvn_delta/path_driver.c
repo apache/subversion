@@ -31,7 +31,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_sorts.h"
-#include "private/svn_fspath.h"
 #include "private/svn_sorts_private.h"
 
 
@@ -146,30 +145,29 @@ count_components(const char *path)
 svn_error_t *
 svn_delta_path_driver3(const svn_delta_editor_t *editor,
                        void *edit_baton,
-                       const apr_array_header_t *paths,
+                       const apr_array_header_t *relpaths,
                        svn_boolean_t sort_paths,
                        svn_delta_path_driver_cb_func2_t callback_func,
                        void *callback_baton,
                        apr_pool_t *pool)
 {
   svn_delta_path_driver_state_t *state;
-  int i = 0;
-  const char *path;
+  int i;
   apr_pool_t *subpool, *iterpool;
 
   /* Do nothing if there are no paths. */
-  if (! paths->nelts)
+  if (! relpaths->nelts)
     return SVN_NO_ERROR;
 
   subpool = svn_pool_create(pool);
   iterpool = svn_pool_create(pool);
 
   /* sort paths if necessary */
-  if (sort_paths && paths->nelts > 1)
+  if (sort_paths && relpaths->nelts > 1)
     {
-      apr_array_header_t *sorted = apr_array_copy(subpool, paths);
+      apr_array_header_t *sorted = apr_array_copy(subpool, relpaths);
       svn_sort__array(sorted, svn_sort_compare_paths);
-      paths = sorted;
+      relpaths = sorted;
     }
 
   SVN_ERR(svn_delta_path_driver_start(&state,
@@ -179,15 +177,17 @@ svn_delta_path_driver3(const svn_delta_editor_t *editor,
 
   /* Now, loop over the commit items, traversing the URL tree and
      driving the editor. */
-  for (; i < paths->nelts; i++)
+  for (i = 0; i < relpaths->nelts; i++)
     {
+      const char *relpath;
+
       /* Clear the iteration pool. */
       svn_pool_clear(iterpool);
 
       /* Get the next path. */
-      path = APR_ARRAY_IDX(paths, i, const char *);
+      relpath = APR_ARRAY_IDX(relpaths, i, const char *);
 
-      SVN_ERR(svn_delta_path_driver_step(state, path, iterpool));
+      SVN_ERR(svn_delta_path_driver_step(state, relpath, iterpool));
     }
 
   /* Destroy the iteration subpool. */
@@ -233,7 +233,7 @@ svn_delta_path_driver_start(svn_delta_path_driver_state_t **state_p,
 
 svn_error_t *
 svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
-                           const char *path,
+                           const char *relpath,
                            apr_pool_t *scratch_pool)
 {
   const char *pdir;
@@ -243,10 +243,12 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
   dir_stack_t *item;
   void *parent_db, *db;
 
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(relpath));
+
   /* If the first target path is not the root of the edit, we must first
      call open_root() ourselves. (If the first target path is the root of
      the edit, then we expect the user's callback to do so.) */
-  if (!state->last_path && !svn_path_is_empty(path))
+  if (!state->last_path && !svn_path_is_empty(relpath))
     {
       subpool = svn_pool_create(state->pool);
       SVN_ERR(state->editor->open_root(state->edit_baton, SVN_INVALID_REVNUM,
@@ -258,9 +260,8 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
        current one.  For the first iteration, this is just the
        empty string. ***/
   if (state->last_path)
-    common = (state->last_path[0] == '/')
-    ? svn_fspath__get_longest_ancestor(state->last_path, path, scratch_pool)
-    : svn_relpath_get_longest_ancestor(state->last_path, path, scratch_pool);
+    common = svn_relpath_get_longest_ancestor(state->last_path, relpath,
+                                              scratch_pool);
   common_len = strlen(common);
 
   /*** Step B - Close any directories between the last path and
@@ -280,10 +281,7 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
 
   /*** Step C - Open any directories between the common ancestor
        and the parent of the current path. ***/
-  if (*path == '/')
-    pdir = svn_fspath__dirname(path, scratch_pool);
-  else
-    pdir = svn_relpath_dirname(path, scratch_pool);
+  pdir = svn_relpath_dirname(relpath, scratch_pool);
 
   if (strlen(pdir) > common_len)
     {
@@ -327,7 +325,7 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
   SVN_ERR(state->callback_func(&db,
                                state->editor, state->edit_baton, parent_db,
                                state->callback_baton,
-                               path, subpool));
+                               relpath, subpool));
   if (db)
     {
       push_dir_stack_item(state->db_stack, db, subpool);
@@ -341,7 +339,7 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
        caller opened or added PATH as a directory, that becomes
        our LAST_PATH.  Otherwise, we use PATH's parent
        directory. ***/
-  state->last_path = apr_pstrdup(state->pool, db ? path : pdir);
+  state->last_path = apr_pstrdup(state->pool, db ? relpath : pdir);
 
   return SVN_NO_ERROR;
 }
