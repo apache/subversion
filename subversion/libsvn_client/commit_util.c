@@ -1524,8 +1524,6 @@ struct file_mod_t
 /* A baton for use while driving a path-based editor driver for commit */
 struct item_commit_baton
 {
-  const svn_delta_editor_t *editor;    /* commit editor */
-  void *edit_baton;                    /* commit editor's baton */
   apr_hash_t *file_mods;               /* hash: path->file_mod_t */
   const char *notify_path_prefix;      /* notification path prefix
                                           (NULL is okay, else abs path) */
@@ -1547,6 +1545,8 @@ struct item_commit_baton
  * This implements svn_delta_path_driver_cb_func_t. */
 static svn_error_t *
 do_item_commit(void **dir_baton,
+               const svn_delta_editor_t *editor,
+               void *edit_baton,
                void *parent_baton,
                void *callback_baton,
                const char *path,
@@ -1558,7 +1558,6 @@ do_item_commit(void **dir_baton,
   svn_node_kind_t kind = item->kind;
   void *file_baton = NULL;
   apr_pool_t *file_pool = NULL;
-  const svn_delta_editor_t *editor = icb->editor;
   apr_hash_t *file_mods = icb->file_mods;
   svn_client_ctx_t *ctx = icb->ctx;
   svn_error_t *err;
@@ -1760,7 +1759,7 @@ do_item_commit(void **dir_baton,
             {
               if (! parent_baton)
                 {
-                  err = editor->open_root(icb->edit_baton, item->revision,
+                  err = editor->open_root(edit_baton, item->revision,
                                           pool, dir_baton);
                 }
               else
@@ -1894,8 +1893,6 @@ svn_client__do_commit(const char *base_url,
     }
 
   /* Setup the callback baton. */
-  cb_baton.editor = editor;
-  cb_baton.edit_baton = edit_baton;
   cb_baton.file_mods = file_mods;
   cb_baton.notify_path_prefix = notify_path_prefix;
   cb_baton.ctx = ctx;
@@ -1903,7 +1900,7 @@ svn_client__do_commit(const char *base_url,
   cb_baton.base_url = base_url;
 
   /* Drive the commit editor! */
-  SVN_ERR(svn_delta_path_driver2(editor, edit_baton, paths, TRUE,
+  SVN_ERR(svn_delta_path_driver3(editor, edit_baton, paths, TRUE,
                                  do_item_commit, &cb_baton, scratch_pool));
 
   /* Transmit outstanding text deltas. */
