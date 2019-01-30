@@ -30,6 +30,52 @@
 #include "svn_sorts.h"
 
 
+struct path_driver_2_to_3_baton_t
+{
+  svn_delta_path_driver_cb_func_t callback_func;
+  void *callback_baton;
+};
+
+/* Convert from a newer to older callback
+ */
+static svn_error_t *
+path_driver_2_to_3_func(void **dir_baton,
+                        const svn_delta_editor_t *editor,
+                        void *edit_baton,
+                        void *parent_baton,
+                        void *callback_baton,
+                        const char *path,
+                        apr_pool_t *pool)
+{
+  struct path_driver_2_to_3_baton_t *b = callback_baton;
+
+  /* Just drop the 'editor' parameters */
+  SVN_ERR(b->callback_func(dir_baton, parent_baton,
+                           b->callback_baton,
+                           path, pool));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_delta_path_driver2(const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       const apr_array_header_t *paths,
+                       svn_boolean_t sort_paths,
+                       svn_delta_path_driver_cb_func_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool)
+{
+  struct path_driver_2_to_3_baton_t b;
+
+  b.callback_func = callback_func;
+  b.callback_baton = callback_baton;
+  SVN_ERR(svn_delta_path_driver3(editor, edit_baton,
+                                 paths, sort_paths,
+                                 path_driver_2_to_3_func, &b,
+                                 pool));
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_delta_path_driver(const svn_delta_editor_t *editor,
                       void *edit_baton,

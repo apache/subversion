@@ -131,11 +131,11 @@ count_components(const char *path)
 
 /*** Public interfaces ***/
 svn_error_t *
-svn_delta_path_driver2(const svn_delta_editor_t *editor,
+svn_delta_path_driver3(const svn_delta_editor_t *editor,
                        void *edit_baton,
                        const apr_array_header_t *paths,
                        svn_boolean_t sort_paths,
-                       svn_delta_path_driver_cb_func_t callback_func,
+                       svn_delta_path_driver_cb_func2_t callback_func,
                        void *callback_baton,
                        apr_pool_t *pool)
 {
@@ -189,7 +189,7 @@ struct svn_delta_path_driver_state_t
 {
   const svn_delta_editor_t *editor;
   void *edit_baton;
-  svn_delta_path_driver_cb_func_t callback_func;
+  svn_delta_path_driver_cb_func2_t callback_func;
   void *callback_baton;
   apr_array_header_t *db_stack;
   const char *last_path;
@@ -200,7 +200,7 @@ svn_error_t *
 svn_delta_path_driver_start(svn_delta_path_driver_state_t **state_p,
                             const svn_delta_editor_t *editor,
                             void *edit_baton,
-                            svn_delta_path_driver_cb_func_t callback_func,
+                            svn_delta_path_driver_cb_func2_t callback_func,
                             void *callback_baton,
                             apr_pool_t *pool)
 {
@@ -314,7 +314,9 @@ svn_delta_path_driver_step(svn_delta_path_driver_state_t *state,
     parent_db = NULL;
   db = NULL;  /* predictable behaviour for callbacks that don't set it */
   subpool = svn_pool_create(state->pool);
-  SVN_ERR(state->callback_func(&db, parent_db, state->callback_baton,
+  SVN_ERR(state->callback_func(&db,
+                               state->editor, state->edit_baton, parent_db,
+                               state->callback_baton,
                                path, subpool));
   if (db)
     {

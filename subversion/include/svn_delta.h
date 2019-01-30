@@ -1289,10 +1289,10 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
 /** Callback function type for svn_delta_path_driver().
  *
  * The handler of this callback is given the callback baton @a
- * callback_baton, @a path which is a relpath relative to the
+ * callback_baton, @a editor and @a edit_baton which represent the
+ * editor being driven, @a path which is a relpath relative to the
  * root of the edit, and the @a parent_baton which represents
- * path's parent directory as created by the editor passed to
- * svn_delta_path_driver().
+ * path's parent directory as created by the editor.
  *
  * If the handler deletes the node at @a path (and does not replace it
  * with an added directory) it must set @a *dir_baton to null or leave
@@ -1311,6 +1311,23 @@ svn_delta_depth_filter_editor(const svn_delta_editor_t **editor,
  * is also one of the paths passed to svn_delta_path_driver().  The
  * handler of this callback must call the editor's open_root()
  * function and return the top-level root dir baton in @a *dir_baton.
+ *
+ * @since New in 1.12.
+ */
+typedef svn_error_t *(*svn_delta_path_driver_cb_func2_t)(
+  void **dir_baton,
+  const svn_delta_editor_t *editor,
+  void *edit_baton,
+  void *parent_baton,
+  void *callback_baton,
+  const char *path,
+  apr_pool_t *pool);
+
+/* Like #svn_delta_path_driver_cb_func2_t but without the @a editor and
+ * @a edit_baton parameters. The user must arrange for the editor to be
+ * passed through @a callback_baton (if required, which it usually is).
+ *
+ * @deprecated Provided for backward compatibility with the 1.11 API.
  */
 typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
   void **dir_baton,
@@ -1341,6 +1358,21 @@ typedef svn_error_t *(*svn_delta_path_driver_cb_func_t)(
  *
  * Use @a scratch_pool for all necessary allocations.
  *
+ * @since New in 1.12.
+ */
+svn_error_t *
+svn_delta_path_driver3(const svn_delta_editor_t *editor,
+                       void *edit_baton,
+                       const apr_array_header_t *paths,
+                       svn_boolean_t sort_paths,
+                       svn_delta_path_driver_cb_func2_t callback_func,
+                       void *callback_baton,
+                       apr_pool_t *pool);
+
+/* Like svn_delta_path_driver3() but with a different callback function
+ * signature.
+ *
+ * @deprecated Provided for backward compatibility with the 1.11 API.
  * @since New in 1.8.
  */
 svn_error_t *
@@ -1397,7 +1429,7 @@ svn_error_t *
 svn_delta_path_driver_start(svn_delta_path_driver_state_t **state_p,
                             const svn_delta_editor_t *editor,
                             void *edit_baton,
-                            svn_delta_path_driver_cb_func_t callback_func,
+                            svn_delta_path_driver_cb_func2_t callback_func,
                             void *callback_baton,
                             apr_pool_t *result_pool);
 
