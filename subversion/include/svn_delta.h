@@ -1374,12 +1374,13 @@ svn_delta_path_driver3(const svn_delta_editor_t *editor,
 /** Like svn_delta_path_driver3() but with a different callback function
  * signature.
  *
- * Optionally, all the paths in @a paths could have a '/' prefix instead of
- * being relpaths. In that case, all paths sent to the callback will have
- * a '/' prefix.
+ * Optionally, paths in @a paths could have a '/' prefix instead of being
+ * relpaths. If any of them do, then (since 1.12) ALL paths sent to the
+ * callback will have a '/' prefix.
  *
  * @deprecated Provided for backward compatibility with the 1.11 API.
- * @since New in 1.8.
+ * @since New in 1.8. Before 1.12, paths sent to the callback were the
+ * exact paths passed in @a paths.
  */
 svn_error_t *
 svn_delta_path_driver2(const svn_delta_editor_t *editor,
