@@ -643,11 +643,9 @@ svn_client__wc_copy_mods(const char *src_wc_abspath,
                                 ra_session, ctx, scratch_pool));
 
   APR_ARRAY_PUSH(src_targets, const char *) = src_wc_abspath;
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-    svn_client__wc_replay(src_wc_abspath,
-                          src_targets, svn_depth_infinity, NULL,
-                          editor, edit_baton, ctx, scratch_pool),
-    ctx->wc_ctx, dst_wc_abspath, FALSE, scratch_pool);
+  SVN_ERR(svn_client__wc_replay(src_wc_abspath,
+                                src_targets, svn_depth_infinity, NULL,
+                                editor, edit_baton, ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }
