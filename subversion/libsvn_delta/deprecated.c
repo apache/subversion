@@ -70,30 +70,30 @@ svn_delta_path_driver2(const svn_delta_editor_t *editor,
                        apr_pool_t *pool)
 {
   struct path_driver_2_to_3_baton_t b;
+  int i;
 
   b.callback_func = callback_func;
   b.callback_baton = callback_baton;
+  b.slash_prefix = FALSE;
 
-  /* Remove any '/' prefix from incoming paths and arrange to add it back
-     when calling the callback. We assume the first path is representative
-     of all paths. */
-  if (paths->nelts >= 1
-      && APR_ARRAY_IDX(paths, 0, const char *)[0] == '/')
+  /* Remove any '/' prefix from incoming paths. Arrange to add a '/'
+     prefix to all paths for the callback, if any incoming path had one. */
+  for (i = 0; i < paths->nelts; i++)
     {
-      int i;
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
 
-      for (i = 0; i < paths->nelts; i++)
+      if (path[0] == '/')
         {
-          const char *path = APR_ARRAY_IDX(paths, i, const char *);
+          /* Re-allocate the array and note that we found a '/' prefix. */
+          if (!b.slash_prefix)
+            {
+              paths = apr_array_copy(pool, paths);
+              b.slash_prefix = TRUE;
+            }
 
-          if (path[0] == '/')
-            APR_ARRAY_IDX(paths, i, const char *) = path + 1;
+          /* Modify each array element that had a '/' prefix */
+          APR_ARRAY_IDX(paths, i, const char *) = path + 1;
         }
-      b.slash_prefix = TRUE;
-    }
-  else
-    {
-      b.slash_prefix = FALSE;
     }
 
   SVN_ERR(svn_delta_path_driver3(editor, edit_baton,
