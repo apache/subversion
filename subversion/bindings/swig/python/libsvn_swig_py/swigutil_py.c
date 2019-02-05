@@ -2767,11 +2767,18 @@ void svn_swig_py_notify_func(void *baton,
   PyObject *function = baton;
   PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   if (function == NULL || function == Py_None)
     return;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
+
   if ((result = PyObject_CallFunction(function,
 #if IS_PY3
                                       (char *)"(yiiyiii)",
@@ -2796,6 +2803,9 @@ void svn_swig_py_notify_func(void *baton,
   /* Our error has no place to go. :-( */
   svn_error_clear(err);
 
+  /* Also, restore error indicator */
+  PyErr_Restore(exc_type, exc, exc_traceback);
+
   svn_swig_py_release_py_lock();
 }
 
@@ -2807,11 +2817,17 @@ void svn_swig_py_notify_func2(void *baton,
   PyObject *function = baton;
   PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   if (function == NULL || function == Py_None)
     return;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
   if ((result = PyObject_CallFunction(function,
                                       (char *)"(O&O&)",
@@ -2831,6 +2847,9 @@ void svn_swig_py_notify_func2(void *baton,
   /* Our error has no place to go. :-( */
   svn_error_clear(err);
 
+  /* Also, restore error indicator */
+  PyErr_Restore(exc_type, exc, exc_traceback);
+
   svn_swig_py_release_py_lock();
 }
 
@@ -2841,11 +2860,18 @@ void svn_swig_py_status_func(void *baton,
   PyObject *function = baton;
   PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   if (function == NULL || function == Py_None)
     return;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
+
   if ((result = PyObject_CallFunction(function,
                                       (char *)SVN_SWIG_BYTES_FMT "O&", path,
                                       make_ob_wc_status, status)) == NULL)
@@ -2863,6 +2889,9 @@ void svn_swig_py_status_func(void *baton,
   /* Our error has no place to go. :-( */
   svn_error_clear(err);
 
+  /* Also, restore error indicator */
+  PyErr_Restore(exc_type, exc, exc_traceback);
+
   svn_swig_py_release_py_lock();
 }
 
@@ -2874,11 +2903,18 @@ void svn_swig_py_client_status_func(void *baton,
   PyObject *function = baton;
   PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   if (function == NULL || function == Py_None)
     return;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
+
   if ((result = PyObject_CallFunction(function,
 #if IS_PY3
                                       (char *)"yO&O&",
@@ -2901,6 +2937,9 @@ void svn_swig_py_client_status_func(void *baton,
 
   /* Our error has no place to go. :-( */
   svn_error_clear(err);
+
+  /* Also, restore error indicator */
+  PyErr_Restore(exc_type, exc, exc_traceback);
 
   svn_swig_py_release_py_lock();
 }
@@ -2965,11 +3004,18 @@ void svn_swig_py_status_func2(void *baton,
   PyObject *function = baton;
   PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   if (function == NULL || function == Py_None)
     return;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
+
   if ((result = PyObject_CallFunction(function,
                                       (char *)SVN_SWIG_BYTES_FMT "O&", path,
                                       make_ob_wc_status, status)) == NULL)
@@ -2985,11 +3031,10 @@ void svn_swig_py_status_func2(void *baton,
     }
 
   /* Our error has no place to go. :-( */
-  if (err)
-    {
-      svn_error_clear(err);
-      PyErr_Clear();
-    }
+  svn_error_clear(err);
+
+  /* Also, restore error indicator */
+  PyErr_Restore(exc_type, exc, exc_traceback);
 
   svn_swig_py_release_py_lock();
 }
@@ -4230,10 +4275,16 @@ ra_callbacks_progress_func(apr_off_t progress,
 {
   PyObject *callbacks = (PyObject *)baton;
   PyObject *py_callback, *py_progress, *py_total, *result;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   py_progress = py_total = NULL;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
   py_callback = PyObject_GetAttrString(callbacks,
                                        (char *)"progress_func");
@@ -4274,6 +4325,9 @@ ra_callbacks_progress_func(apr_off_t progress,
 
   Py_XDECREF(result);
 finished:
+  /* Restore error indicator */
+  PyErr_Restore(exc_type, exc, exc_traceback);
+
   Py_XDECREF(py_callback);
   Py_XDECREF(py_progress);
   Py_XDECREF(py_total);
@@ -5134,8 +5188,14 @@ svn_swig_py_config_enumerator2(const char *name,
   PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t c_result;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
   if ((result = PyObject_CallFunction(function,
 #if IS_PY3
@@ -5158,7 +5218,7 @@ svn_swig_py_config_enumerator2(const char *name,
   /* Any Python exception we might have pending must be cleared,
      because the SWIG wrapper will not check for it, and return a value with
      the exception still set. */
-  PyErr_Clear();
+  PyErr_Restore(exc_type, exc, exc_traceback);
 
   if (err)
     {
@@ -5186,8 +5246,14 @@ svn_swig_py_config_section_enumerator2(const char *name,
   PyObject *result;
   svn_error_t *err = SVN_NO_ERROR;
   svn_boolean_t c_result;
+  PyObject *exc, *exc_type, *exc_traceback;
 
   svn_swig_py_acquire_py_lock();
+
+  /* As caller can't understand Python context and we can't notify if
+     Python call back function raise exception to caller, we must catch it
+     if it is occurred, and restore error indicator */
+  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
   if ((result = PyObject_CallFunction(function,
                                       (char *)SVN_SWIG_BYTES_FMT "O&",
@@ -5205,7 +5271,8 @@ svn_swig_py_config_section_enumerator2(const char *name,
   /* Any Python exception we might have pending must be cleared,
      because the SWIG wrapper will not check for it, and return a value with
      the exception still set. */
-  PyErr_Clear();
+  PyErr_Restore(exc_type, exc, exc_traceback);
+
 
   if (err)
     {
