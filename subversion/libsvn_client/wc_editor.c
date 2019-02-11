@@ -618,6 +618,8 @@ svn_client__wc_editor(const svn_delta_editor_t **editor_p,
 svn_error_t *
 svn_client__wc_copy_mods(const char *src_wc_abspath,
                          const char *dst_wc_abspath,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool)
 {
@@ -639,13 +641,15 @@ svn_client__wc_copy_mods(const char *src_wc_abspath,
                                       ctx, scratch_pool, scratch_pool));
   SVN_ERR(svn_client__wc_editor(&editor, &edit_baton,
                                 dst_wc_abspath,
-                                NULL, NULL,
+                                NULL, NULL, /*notification*/
                                 ra_session, ctx, scratch_pool));
 
   APR_ARRAY_PUSH(src_targets, const char *) = src_wc_abspath;
   SVN_ERR(svn_client__wc_replay(src_wc_abspath,
                                 src_targets, svn_depth_infinity, NULL,
-                                editor, edit_baton, ctx, scratch_pool));
+                                editor, edit_baton,
+                                notify_func, notify_baton,
+                                ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }

@@ -1226,6 +1226,7 @@ svn_cl__wc_copy_mods(apr_getopt_t *os,
   SVN_ERR(svn_dirent_get_absolute(&dst_wc_abspath, dst_wc_abspath, pool));
 
   SVN_ERR(svn_client__wc_copy_mods(src_wc_abspath, dst_wc_abspath,
+                                   ctx->notify_func2, ctx->notify_baton2,
                                    ctx, pool));
 
   return SVN_NO_ERROR;

@@ -443,6 +443,7 @@ svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
  * editor methods shall be URLs.
  *
  * Send notifications via @a notify_func / @a notify_baton.
+ * ### INCOMPLETE
  *
  * RA_SESSION is used to fetch the original content for copies.
  *
@@ -527,6 +528,8 @@ svn_client__wc_replay(const char *src_wc_abspath,
                       const apr_array_header_t *changelists,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *scratch_pool);
 
@@ -543,6 +546,8 @@ svn_client__wc_replay(const char *src_wc_abspath,
 svn_error_t *
 svn_client__wc_copy_mods(const char *src_wc_abspath,
                          const char *dst_wc_abspath,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
 

@@ -559,6 +559,8 @@ svn_client__wc_replay(const char *src_wc_abspath,
                       const apr_array_header_t *changelists,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *pool)
 {
@@ -569,6 +571,7 @@ svn_client__wc_replay(const char *src_wc_abspath,
   svn_client__pathrev_t *base;
   const char *base_url;
   svn_wc_notify_func2_t saved_notify_func;
+  void *saved_notify_baton;
 
   /* Condense the target list. This makes all targets absolute. */
   SVN_ERR(svn_dirent_condense_targets(&base_abspath, &rel_targets, targets,
@@ -607,13 +610,16 @@ svn_client__wc_replay(const char *src_wc_abspath,
   SVN_ERR(svn_client__condense_commit_items2(base_url, commit_items, pool));
 
   saved_notify_func = ctx->notify_func2;
-  ctx->notify_func2 = NULL;
+  saved_notify_baton = ctx->notify_baton2;
+  ctx->notify_func2 = notify_func;
+  ctx->notify_baton2 = notify_baton;
   /* BASE_URL is only used here in notifications & errors */
   SVN_ERR(svn_client__do_commit(base_url, commit_items,
                                 editor, edit_baton,
                                 NULL /*notify_prefix*/, NULL /*sha1_checksums*/,
                                 ctx, pool, pool));
   ctx->notify_func2 = saved_notify_func;
+  ctx->notify_baton2 = saved_notify_baton;
   return SVN_NO_ERROR;
 }
 
