@@ -115,7 +115,6 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
     return
 
   # Shelve; check there are no longer any modifications
-  raise
   svntest.actions.run_and_verify_svn(None, [],
                                      'x-shelve', 'foo')
   check_wc_state(wc_dir, virginal_state)
