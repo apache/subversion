@@ -7098,6 +7098,20 @@ svn_client__shelf_delete(const char *name,
                         svn_client_ctx_t *ctx,
                         apr_pool_t *scratch_pool);
 
+/** Get an editor that, when driven, will store changes in @a shelf_version.
+ *
+ * @warning EXPERIMENTAL.
+ */
+SVN_EXPERIMENTAL
+svn_error_t *
+svn_client__shelf_mods_editor(const svn_delta_editor_t **editor_p,
+                              void **edit_baton_p,
+                              svn_client__shelf_version_t *shelf_version,
+                              svn_wc_notify_func2_t notify_func,
+                              void *notify_baton,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool);
+
 /** Save the local modifications found by @a paths, @a depth,
  * @a changelists as a new version of @a shelf.
  *
@@ -7264,6 +7278,8 @@ svn_client__shelf_replay(svn_client__shelf_version_t *shelf_version,
                          const char *top_relpath,
                          const svn_delta_editor_t *editor,
                          void *edit_baton,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
                          apr_pool_t *scratch_pool);
 
 /** Set @a *affected_paths to a hash with one entry for each path affected

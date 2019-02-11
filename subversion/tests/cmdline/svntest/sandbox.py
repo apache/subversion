@@ -162,6 +162,8 @@ class Sandbox:
     self._ensure_authz()
     svntest.actions.make_repo_and_wc(self, create_wc, read_only, empty,
                                      minor_version, tree)
+    if create_wc:
+      self.add_test_path(self.wc_dir + '.shelves')
     self._is_built = True
 
   def _ensure_authz(self):

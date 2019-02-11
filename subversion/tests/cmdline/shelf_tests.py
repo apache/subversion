@@ -115,6 +115,7 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
     return
 
   # Shelve; check there are no longer any modifications
+  raise
   svntest.actions.run_and_verify_svn(None, [],
                                      'x-shelve', 'foo')
   check_wc_state(wc_dir, virginal_state)
@@ -525,6 +526,7 @@ def shelf_status(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
 def shelve_mkdir(sbox):
   "shelve mkdir"
 
@@ -534,7 +536,7 @@ def shelve_mkdir(sbox):
     sbox.simple_mkdir('D', 'D/D2')
     sbox.simple_propset('p', 'v', 'D', 'D/D2')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
@@ -548,10 +550,11 @@ def shelve_rmdir(sbox):
   def modifier(sbox):
     sbox.simple_rm('A/C', 'A/D/G')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
+@XFail()
 def shelve_replace_dir(sbox):
   "shelve replace dir"
 
@@ -563,7 +566,7 @@ def shelve_replace_dir(sbox):
     sbox.simple_rm('A/C', 'A/D/G')
     sbox.simple_mkdir('A/C', 'A/C/D2')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
@@ -576,7 +579,7 @@ def shelve_file_copy(sbox):
     sbox.simple_copy('iota', 'A/ii')
     sbox.simple_propset('p', 'v', 'A/ii')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
@@ -589,7 +592,7 @@ def shelve_dir_copy(sbox):
     sbox.simple_copy('A/B', 'BB')
     sbox.simple_propset('p', 'v', 'BB')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
@@ -643,31 +646,21 @@ def refuse_to_shelve_conflict(sbox):
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
 
-  # create a tree conflict victim at an unversioned path
+  # create a conflict
   sbox.simple_mkdir('topdir')
-  sbox.simple_commit()
-  sbox.simple_mkdir('topdir/subdir')
-  sbox.simple_commit()
-  sbox.simple_update()
-  sbox.simple_rm('topdir')
   sbox.simple_commit()
   sbox.simple_update()
   svntest.actions.run_and_verify_svn(
     None, [],
-    'merge', '-c2', '.', '--ignore-ancestry', '--accept', 'postpone')
+    'merge', '-c1', '.', '--ignore-ancestry', '--accept', 'postpone')
+  # check that we did create a conflict
   svntest.actions.run_and_verify_svn(
-    None, 'svn: E155015:.*existing.*conflict.*',
+    None, 'svn: E155035:.*conflict.*',
     'merge', '-c1', '.', '--ignore-ancestry', '--accept', 'postpone')
 
   # attempt to shelve
-  expected_out = svntest.verify.RegexListOutput([
-    r'--- .*',
-    r'--- .*',
-    r'\?     C topdir',
-    r'      > .*',
-    r'      >   not shelved'])
-  svntest.actions.run_and_verify_svn(expected_out,
-                                     '.* 1 path could not be shelved',
+  expected_err = "svn: E155015: .* '.*topdir' remains in conflict"
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'x-shelf-save', 'foo')
 
   os.chdir(was_cwd)
