@@ -1,6 +1,26 @@
 == Storage Structure for Shelving ==
 
 
+=== Shelving v3 (trunk) ===
+
+In development in trunk (1.12-dev), marked "experimental".
+
+Each shelf-version is stored in an entire copy of the WC. The shelves are
+stored in a sibling to the user's WC, at '<WC-root-dir>.shelves'. Inside it:
+
+* .../<encoded-name>.current
+  Holds an ASCII-decimal number stating the latest shelf-version of the
+  shelf <encoded-name>, followed by a newline character (LF).
+
+* .../<encoded-name>.log
+  Holds the 'revision' properties of the shelf, in svn_hash_write2() format
+  terminated with "PROPS-END". Created when any revprop is set; need not
+  exist.
+
+* .../<encoded-name>-<version>.wc
+  Directory holding a shelf-version as a real WC.
+
+
 === Shelving v2 ===
 
 Released in Subversion 1.11.0, marked "experimental".
