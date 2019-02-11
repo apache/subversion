@@ -1,28 +1,34 @@
 == Storage Structure for Shelving ==
 
 
-=== Shelving (trunk) ===
+=== Shelving v2 ===
 
-In development in trunk (1.11-dev), marked "experimental".
+Released in Subversion 1.11.0, marked "experimental".
 
 Each shelf has zero or more versions of the change, and exactly one set of
 'revision' properties.
 
-* .svn/shelves
+* .svn/experimental/shelves/v2
   This subdirectory holds all shelving metadata and data.
   It is created on demand, and never deleted.
 
-* .svn/shelves/<encoded-name>.current
+* .svn/experimental/shelves/v2/<encoded-name>.current
   Holds an ASCII-decimal number stating the latest shelf-version of the
-  shelf <encoded-name>.
+  shelf <encoded-name>, followed by a newline character (LF).
 
-* .svn/shelves/<encoded-name>.log
+* .svn/experimental/shelves/v2/<encoded-name>.log
   Holds the 'revision' properties of the shelf, in svn_hash_write2() format
   terminated with "PROPS-END". Created when any revprop is set; need not
   exist.
 
-* .svn/shelves/<encoded-name>-<version>.patch
-  The patch file representing version <version>.
+* .svn/experimental/shelves/v2/<encoded-name>-<version>.d
+  Directory holding the metadata and {base,working}{text,props} files for a
+  shelf-version. For each shelved WC-relpath <P>:
+  - <P>.meta : metadata, serialized in a shelf-v2-specific format
+  - <P>.base : the base text (absent for a directory)
+  - <P>.work : the working text (absent for a directory)
+  - <P>.base-props : the base properties
+  - <P>.work-props : the working properties
 
 <encoded-name>: the shelf name as UTF-8, encoded byte-by-byte into
   two-hex-digit pairs, e.g. shelf name 'Az' is encoded as '417f'.
