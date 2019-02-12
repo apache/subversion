@@ -458,7 +458,7 @@ shelf_status_walk(svn_client__shelf_version_t *shelf_version,
                            FALSE /*get_all*/,
                            TRUE /*no_ignore*/,
                            FALSE /*ignore_text_mods*/,
-                           NULL /*ignore_patterns*/,
+                           NULL /*ignore_patterns: use the defaults*/,
                            shelf_status_visitor, &baton,
                            NULL, NULL, /*cancellation*/
                            scratch_pool);
@@ -1033,14 +1033,19 @@ shelf_copy_base(svn_client__shelf_version_t *new_shelf_version,
                              FALSE /*added_keep_local*/,
                              ctx, scratch_pool));
   SVN_DBG(("revert4: remove unversioned"));
-  /* ### Work around the bug in "revert added-keep-local=false".
-         (We could do other clean-ups here too, but that's not the point.) */
+  /* Remove all unversioned nodes (including "ignored" ones) because they
+     are not part of the base state and must not show up in "status".
+     ### This also works around a bug in "revert added-keep-local=false" by
+         removing unversioned files that "revert" may have left behind.
+     (We could do other clean-ups here too, but that's not the point, as
+     this is not the proper way to copy the base, just an initial
+     implementation to get us started.) */
   SVN_ERR(svn_client_vacuum(new_shelf_version->files_dir_abspath,
                             TRUE /*remove_unversioned*/,
-                            FALSE /*remove_ignored*/,
+                            TRUE /*remove_ignored*/,
                             FALSE /*fix_timestamps */,
                             FALSE /*vacuum_pristines*/,
-                            FALSE /*include_externals*/,
+                            TRUE /*include_externals*/,
                             ctx, scratch_pool));
   SVN_DBG(("cp-base: done"));
   return SVN_NO_ERROR;
