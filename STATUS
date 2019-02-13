@@ -101,6 +101,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1853483
+   Fix #4760 "Missing children when svnadmin dump --include/exclude converts
+   copy-dir to add-dir".
+   Justification:
+     The new-in-1.10 feature was broken.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
