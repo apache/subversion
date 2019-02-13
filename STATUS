@@ -94,6 +94,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1853450
+   Enable 'incoming_move_file_merge' option only if local change is file edit.
+   Justification:
+     Conflict resolver misbehaves when it runs into move vs move conflicts.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
