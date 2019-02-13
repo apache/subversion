@@ -3920,6 +3920,51 @@ def recover_prunes_rep_cache_when_disabled(sbox):
 
   check_recover_prunes_rep_cache(sbox, enable_rep_sharing=False)
 
+@Issue(4760)
+def dump_include_copied_directory(sbox):
+  "include copied directory with nested nodes"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "copy",
+                                     sbox.repo_url + '/A/D',
+                                     sbox.repo_url + '/COPY',
+                                     "-m", "Create branch.")
+
+  # Dump repository with only /COPY path included.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/COPY',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r2\ .*\n',
+    # Only '/COPY' is added
+    re.escape('Changed paths:\n'),
+    re.escape('   A /COPY'),
+    re.escape('   A /COPY/G'),
+    re.escape('   A /COPY/G/pi'),
+    re.escape('   A /COPY/G/rho'),
+    re.escape('   A /COPY/G/tau'),
+    re.escape('   A /COPY/H'),
+    re.escape('   A /COPY/H/chi'),
+    re.escape('   A /COPY/H/omega'),
+    re.escape('   A /COPY/H/psi'),
+    re.escape('   A /COPY/gamma'),
+    '-+\\n',
+    'r1\ .*\n',
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
 ########################################################################
 # Run the tests
 
@@ -3997,6 +4042,7 @@ test_list = [ None,
               dump_no_canonicalize_svndate,
               recover_prunes_rep_cache_when_enabled,
               recover_prunes_rep_cache_when_disabled,
+              dump_include_copied_directory,
              ]
 
 if __name__ == '__main__':
