@@ -348,12 +348,8 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(in) const char *MAY_BE_NULL
 {
-    if ($input == Py_None) {
-        $1 = NULL;
-    } else {
-        $1 = PyBytes_AsString($input);
-        if ($1 == NULL) SWIG_fail;
-    }
+    $1 = svn_swig_py_string_to_cstring($input, TRUE, "$symname", "$1_name");
+    if (PyErr_Occurred()) SWIG_fail;
 }
 #endif
 

@@ -142,13 +142,6 @@ static PyObject * _global_py_pool = NULL;
 /* Python format specifiers. Use Python instead of SWIG to parse
    these basic types, because Python reports better error messages
    (with correct argument numbers). */
-#if defined(PY3)
-%typemap (in, parse="y")
-  char *, char const *, char * const, char const * const "";
-#else
-%typemap (in, parse="s")
-  char *, char const *, char * const, char const * const "";
-#endif
 %typemap (in, parse="c") char "";
 
 %typemap (in, fragment=SWIG_As_frag(long)) long

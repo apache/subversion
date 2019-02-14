@@ -52,6 +52,10 @@ class SubversionClientTestCase(unittest.TestCase):
     """An implementation of svn_log_entry_receiver_t."""
     self.received_revisions.append(log_entry.revision)
 
+  def log_entry_receiver_whole(self, log_entry, pool):
+    """An implementation of svn_log_entry_receiver_t, holds whole log entries."""
+    self.received_log_entries.append(log_entry)
+
   def setUp(self):
     """Set up authentication and client context"""
     self.client_ctx = client.svn_client_create_context()
@@ -242,6 +246,33 @@ class SubversionClientTestCase(unittest.TestCase):
         self.log_entry_receiver, self.client_ctx)
 
     self.assertEqual(self.received_revisions, list(range(0, 5)))
+
+  def test_log5_revprops(self):
+    """Test svn_client_log5 revprops (for typemap(in) apr_array_t *STRINGLIST)"""
+    directory = urljoin(self.repos_uri+b"/", b"trunk/dir1")
+    start = core.svn_opt_revision_t()
+    end = core.svn_opt_revision_t()
+    core.svn_opt_parse_revision(start, end, b"4:0")
+    rev_range = core.svn_opt_revision_range_t()
+    rev_range.start = start
+    rev_range.end = end
+
+    self.received_log_entries = []
+
+    # (Python 3: pass tuple of bytes and str mixture as revprops argment)
+    client.log5((directory,), start, (rev_range,), 1, True, False, False,
+                ('svn:author', b'svn:log'),
+                self.log_entry_receiver_whole, self.client_ctx)
+    self.assertEqual(len(self.received_log_entries), 1)
+    revprops = self.received_log_entries[0].revprops
+    self.assertEqual(revprops[b'svn:log'], b"More directories.")
+    self.assertEqual(revprops[b'svn:author'], b"john")
+    with self.assertRaises(KeyError):
+      commit_date = revprops['svn:date']
+    with self.assertRaises(UnicodeEncodeError):
+      client.log5((directory,), start, (rev_range,), 1, True, False, False,
+                  (u'svn:\udc61uthor', b'svn:log'),
+                  self.log_entry_receiver_whole, self.client_ctx)
 
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""

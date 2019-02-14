@@ -107,6 +107,17 @@ void svn_swig_py_svn_exception(svn_error_t *err);
 
 
 
+/* Function to get char * representation of bytes/str object. This is
+   the replacement of typemap(in, parse="s") and typemap(in, parse="z")
+   to accept both of bytes object and str object, and it assumes to be
+   used from those typemaps only.
+   Note: type of return value should be char const *, however, as SWIG
+   produces variables for C function without 'const' modifier, to avoid
+   ton of cast in SWIG produced C code we drop it from return value
+   types as well  */
+char *svn_swig_py_string_to_cstring(PyObject *input, int maybe_null,
+                                    const char * funcsym, const char * argsym);
+
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Python dict */
 PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);

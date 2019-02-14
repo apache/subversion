@@ -442,18 +442,24 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) (const char *data, apr_size_t *len) ($*2_type temp) {
-    char *tmpdata;
     Py_ssize_t length;
-    if (!PyBytes_Check($input)) {
-        PyErr_SetString(PyExc_TypeError,
-                        "expecting a bytes object for the buffer");
-        SWIG_fail;
+    if (PyBytes_Check($input)) {
+        if (PyBytes_AsStringAndSize($input, (char **)&$1, &length) == -1) {
+            SWIG_fail;
+        }
     }
-    if (PyBytes_AsStringAndSize($input, &tmpdata, &length) == -1) {
+    else if (PyUnicode_Check($input)) {
+        $1 = (char *)PyStr_AsUTF8AndSize($input, &length);
+        if (PyErr_Occurred()) {
+            SWIG_fail;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError,
+                        "expecting a bytes or str object for the buffer");
         SWIG_fail;
     }
     temp = ($*2_type)length;
-    $1 = tmpdata;
     $2 = ($2_ltype)&temp;
 }
 #endif

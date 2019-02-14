@@ -506,6 +506,36 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
 
 /*** Helper/Conversion Routines ***/
 
+/* Function to get char * representation of bytes/str object. This is
+   the replacement of typemap(in, parse="s") and typemap(in, parse="z")
+   to accept both of bytes object and str object, and it assumes to be
+   used from those typemaps only.
+   Note: type of return value should be char const *, however, as SWIG
+   produces variables for C function without 'const' modifier, to avoid
+   ton of cast in SWIG produced C code we drop it from return value
+   types as well  */
+char *svn_swig_py_string_to_cstring(PyObject *input, int maybe_null,
+                                    const char * funcsym, const char * argsym)
+{
+    char *retval = NULL;
+    if (PyBytes_Check(input))
+      {
+        retval = PyBytes_AsString(input);
+      }
+    else if (PyUnicode_Check(input))
+      {
+        retval = (char *)PyStr_AsUTF8(input);
+      }
+    else if (input != Py_None || ! maybe_null)
+      {
+        PyErr_Format(PyExc_TypeError,
+                     "%s() argument %s must be bytes or str%s, not %s",
+                     funcsym, argsym, maybe_null?" or None":"",
+                     Py_TYPE(input)->tp_name);
+      }
+    return retval;
+}
+
 /* Functions for making Python wrappers around Subversion structs */
 static PyObject *make_ob_pool(void *pool)
 {
@@ -540,31 +570,88 @@ static PyObject *make_ob_error(svn_error_t *err)
 
 /***/
 
+static void svn_swig_py_string_type_exception(int maybe_null)
+{
+  PyErr_Format(PyExc_TypeError, "not a bytes or a str%s",
+               maybe_null?" or None":"");
+}
+
 /* Conversion from Python single objects (not hashes/lists/etc.) to
    Subversion types. */
 static char *make_string_from_ob(PyObject *ob, apr_pool_t *pool)
 {
-  if (ob == Py_None)
-    return NULL;
-  if (! PyBytes_Check(ob))
+  /* caller should not expect to raise TypeError: check return value
+     whether it is NULL or not, if needed */
+  if (PyBytes_Check(ob))
     {
-      PyErr_SetString(PyExc_TypeError, "not a bytes object");
-      return NULL;
+      return apr_pstrdup(pool, PyBytes_AsString(ob));
     }
-  return apr_pstrdup(pool, PyBytes_AsString(ob));
-}
-static svn_string_t *make_svn_string_from_ob(PyObject *ob, apr_pool_t *pool)
-{
-  if (ob == Py_None)
-    return NULL;
-  if (! PyBytes_Check(ob))
+  if (PyUnicode_Check(ob))
     {
-      PyErr_SetString(PyExc_TypeError, "not a bytes object");
-      return NULL;
+      /* PyStr_AsUTF8() may cause UnicodeEncodeError,
+         but apr_pstrdup() allows NULL for s */
+      return apr_pstrdup(pool, PyStr_AsUTF8(ob));
     }
-  return svn_string_create(PyBytes_AsString(ob), pool);
+  return NULL;
 }
 
+static char *make_string_from_ob_maybe_null(PyObject *ob, apr_pool_t *pool)
+{
+  char * retval;
+  if (ob == Py_None)
+    {
+      return NULL;
+    }
+  retval = make_string_from_ob(ob, pool);
+  if (!retval)
+    {
+      if (!PyErr_Occurred())
+        {
+          svn_swig_py_string_type_exception(TRUE);
+        }
+    }
+  return retval;
+}
+
+static svn_string_t *make_svn_string_from_ob(PyObject *ob, apr_pool_t *pool)
+{
+  /* caller should not expect to raise TypeError: check return value
+     whether it is NULL or not, if needed */
+  if (PyBytes_Check(ob))
+    {
+      return svn_string_create(PyBytes_AsString(ob), pool);
+    }
+  if (PyUnicode_Check(ob))
+    {
+      /* PyStr_AsUTF8() may cause UnicodeEncodeError,
+         and svn_string_create() does not allows NULL for cstring */
+      const char *obstr = PyStr_AsUTF8(ob);
+      if (obstr)
+        {
+          return svn_string_create(obstr, pool);
+        }
+    }
+  return NULL;
+}
+
+static svn_string_t *make_svn_string_from_ob_maybe_null(PyObject *ob,
+                                                        apr_pool_t *pool)
+{
+  svn_string_t * retval;
+  if (ob == Py_None)
+    {
+      return NULL;
+    }
+  retval = make_svn_string_from_ob(ob, pool);
+  if (!retval)
+    {
+      if (!PyErr_Occurred())
+        {
+          svn_swig_py_string_type_exception(TRUE);
+        }
+    }
+  return retval;
+}
 
 /***/
 
@@ -1055,6 +1142,9 @@ PyObject *svn_swig_py_changed_path2_hash_to_dict(apr_hash_t *hash)
   return dict;
 }
 
+#define TYPE_ERROR_DICT_STRING_KEY \
+        "dictionary keys aren't bytes or str objects"
+
 apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
                                              apr_pool_t *pool)
 {
@@ -1079,11 +1169,18 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
-      const char *propval = make_string_from_ob(value, pool);
-      if (! (propname && propval))
+      if (!propname)
         {
-          PyErr_SetString(PyExc_TypeError,
-                          "dictionary keys/values aren't strings");
+          if (!PyErr_Occurred())
+            {
+              PyErr_SetString(PyExc_TypeError, TYPE_ERROR_DICT_STRING_KEY);
+            }
+          Py_DECREF(keys);
+          return NULL;
+        }
+      const char *propval = make_string_from_ob_maybe_null(value, pool);
+      if (PyErr_Occurred())
+        {
           Py_DECREF(keys);
           return NULL;
         }
@@ -1116,6 +1213,15 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *pathname = make_string_from_ob(key, pool);
+      if (!pathname)
+        {
+          if (!PyErr_Occurred())
+            {
+              PyErr_SetString(PyExc_TypeError, TYPE_ERROR_DICT_STRING_KEY);
+            }
+          Py_DECREF(keys);
+          return NULL;
+        }
       const svn_rangelist_t *ranges = svn_swig_py_seq_to_array(value,
         sizeof(const svn_merge_range_t *),
         svn_swig_py_unwrap_struct_ptr,
@@ -1123,10 +1229,10 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
         pool
       );
 
-      if (! (pathname && ranges))
+      if (!ranges)
         {
           PyErr_SetString(PyExc_TypeError,
-                          "dictionary keys aren't strings or values aren't svn_merge_range_t *'s");
+                          "dictionary values aren't svn_merge_range_t *'s");
           Py_DECREF(keys);
           return NULL;
         }
@@ -1161,11 +1267,18 @@ apr_array_header_t *svn_swig_py_proparray_from_dict(PyObject *dict,
       PyObject *value = PyDict_GetItem(dict, key);
       svn_prop_t *prop = apr_palloc(pool, sizeof(*prop));
       prop->name = make_string_from_ob(key, pool);
-      prop->value = make_svn_string_from_ob(value, pool);
-      if (! (prop->name && prop->value))
+      if (! prop->name)
         {
-          PyErr_SetString(PyExc_TypeError,
-                          "dictionary keys/values aren't strings");
+          if (!PyErr_Occurred())
+            {
+              PyErr_SetString(PyExc_TypeError, TYPE_ERROR_DICT_STRING_KEY);
+            }
+          Py_DECREF(keys);
+          return NULL;
+        }
+      prop->value = make_svn_string_from_ob_maybe_null(value, pool);
+      if (PyErr_Occurred())
+        {
           Py_DECREF(keys);
           return NULL;
         }
@@ -1199,11 +1312,18 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
-      svn_string_t *propval = make_svn_string_from_ob(value, pool);
-      if (! (propname && propval))
+      if (!propname)
         {
-          PyErr_SetString(PyExc_TypeError,
-                          "dictionary keys/values aren't strings");
+          if (!PyErr_Occurred())
+            {
+              PyErr_SetString(PyExc_TypeError, TYPE_ERROR_DICT_STRING_KEY);
+            }
+          Py_DECREF(keys);
+          return NULL;
+        }
+      svn_string_t *propval = make_svn_string_from_ob_maybe_null(value, pool);
+      if (PyErr_Occurred())
+        {
           Py_DECREF(keys);
           return NULL;
         }
@@ -1241,8 +1361,10 @@ apr_hash_t *svn_swig_py_path_revs_hash_from_dict(PyObject *dict,
 
       if (!(path))
         {
-          PyErr_SetString(PyExc_TypeError,
-                          "dictionary keys aren't strings");
+          if (!PyErr_Occurred())
+            {
+              PyErr_SetString(PyExc_TypeError, TYPE_ERROR_DICT_STRING_KEY);
+            }
           Py_DECREF(keys);
           return NULL;
         }
@@ -1296,8 +1418,10 @@ apr_hash_t *svn_swig_py_struct_ptr_hash_from_dict(PyObject *dict,
 
       if (!c_key)
         {
-          PyErr_SetString(PyExc_TypeError,
-                          "dictionary keys aren't strings");
+          if (!PyErr_Occurred())
+            {
+              PyErr_SetString(PyExc_TypeError, TYPE_ERROR_DICT_STRING_KEY);
+            }
           Py_DECREF(keys);
           return NULL;
         }
@@ -1321,8 +1445,21 @@ svn_swig_py_unwrap_string(PyObject *source,
                           void *baton)
 {
     const char **ptr_dest = destination;
-    *ptr_dest = PyBytes_AsString(source);
-
+    if (PyBytes_Check(source))
+      {
+        *ptr_dest = PyBytes_AsString(source);
+      }
+    else if (PyUnicode_Check(source))
+      {
+        *ptr_dest = PyStr_AsUTF8(source);
+      }
+    else
+      {
+        PyErr_Format(PyExc_TypeError,
+                        "Expected bytes or str object, %s found",
+                        Py_TYPE(source)->tp_name);
+        *ptr_dest = NULL;
+      }
     if (*ptr_dest != NULL)
         return 0;
     else
@@ -1494,7 +1631,7 @@ commit_item_array_to_list(const apr_array_header_t *array)
 }
 
 
- 
+
 /*** Errors ***/
 
 /* Convert a given SubversionException to an svn_error_t. On failure returns
@@ -2546,14 +2683,23 @@ apr_file_t *svn_swig_py_make_file(PyObject *py_file,
 {
   apr_file_t *apr_file = NULL;
   apr_status_t apr_err;
+  const char* fname = NULL;
 
   if (py_file == NULL || py_file == Py_None)
     return NULL;
 
+  /* check if input is a path  */
   if (PyBytes_Check(py_file))
     {
+      fname = PyBytes_AsString(py_file);
+    }
+  else if (PyUnicode_Check(py_file))
+    {
+      fname = PyStr_AsUTF8(py_file);
+    }
+  if (fname)
+    {
       /* input is a path -- just open an apr_file_t */
-      const char* fname = PyBytes_AsString(py_file);
       apr_err = apr_file_open(&apr_file, fname,
                               APR_CREATE | APR_READ | APR_WRITE,
                               APR_OS_DEFAULT, pool);
@@ -3707,7 +3853,11 @@ svn_swig_py_auth_gnome_keyring_unlock_prompt_func(char **keyring_passwd,
     }
   else
     {
-      *keyring_passwd = make_string_from_ob(result, pool);
+      *keyring_passwd = make_string_from_ob_maybe_null(result, pool);
+      if (PyErr_Occurred())
+        {
+          err = callback_exception_error();
+        }
       Py_DECREF(result);
     }
 

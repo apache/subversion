@@ -21,7 +21,7 @@
 import sys
 import unittest, setup_path
 import mergeinfo, core, client, delta, checksum, pool, fs, ra, wc, repository, \
-       auth, trac.versioncontrol.tests
+       auth, trac.versioncontrol.tests, typemap
 from svn.core import svn_cache_config_get, svn_cache_config_set
 
 # Run all tests
@@ -47,6 +47,7 @@ def suite():
   s.addTest(repository.suite())
   s.addTest(auth.suite())
   s.addTest(trac.versioncontrol.tests.suite())
+  s.addTest(typemap.suite())
   return s
 
 if __name__ == '__main__':

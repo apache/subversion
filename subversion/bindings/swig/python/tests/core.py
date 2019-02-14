@@ -21,6 +21,9 @@
 import unittest
 import os
 import tempfile
+import sys
+
+IS_PY3 = sys.version_info[0] >= 3
 
 import svn.core, svn.client
 import utils
@@ -220,13 +223,55 @@ class SubversionCoreTestCase(unittest.TestCase):
     svn.core.svn_stream_close(stream)
 
   def test_stream_write_exception(self):
-    ostr_unicode = b'Python'.decode()
     stream = svn.core.svn_stream_empty()
     with self.assertRaises(TypeError):
-        svn.core.svn_stream_write(stream, ostr_unicode)
+      svn.core.svn_stream_write(stream, 16)
+    # Check UnicodeEncodeError
+    # o1_str = b'Python\x00\xa4\xd1\xa4\xa4\xa4\xbd\xa4\xf3\r\n'
+    # ostr_unicode = o1_str.decode('ascii', 'surrogateescape')
+    ostr_unicode = (u'Python\x00'
+                    u'\udca4\udcd1\udca4\udca4\udca4\udcbd\udca4\udcf3\r\n')
+    with self.assertRaises(UnicodeEncodeError):
+      svn.core.svn_stream_write(stream, ostr_unicode)
     svn.core.svn_stream_close(stream)
 
-  def test_stream_write(self):
+  # As default codec of Python 2 is 'ascii', conversion from unicode to bytes 
+  # will be success only if all characters of target strings are in the range
+  # of \u0000 ~ \u007f.
+  @unittest.skipUnless(IS_PY3, "test for Python 3 only")
+  def test_stream_write_str(self):
+    o1_str = u'Python\x00\u3071\u3044\u305d\83093\r\n'
+    o2_str = u'subVersioN\x00\u3055\u3076\u3070\u30fc\u3058\u3087\u3093'
+    o3_str = u'swig\x00\u3059\u3046\u3043\u3050\rend'
+    out_str = o1_str + o2_str + o3_str
+    rewrite_str = u'Subversion'
+    fd, fname = tempfile.mkstemp()
+    os.close(fd)
+    try:
+      stream = svn.core.svn_stream_from_aprfile2(fname, False)
+      self.assertEqual(svn.core.svn_stream_write(stream, out_str),
+                       len(out_str.encode('UTF-8')))
+      svn.core.svn_stream_seek(stream, None)
+      self.assertEqual(svn.core.svn_stream_read_full(stream, 4096),
+                                                     out_str.encode('UTF-8'))
+      svn.core.svn_stream_seek(stream, None)
+      svn.core.svn_stream_skip(stream, len(o1_str.encode('UTF-8')))
+      self.assertEqual(svn.core.svn_stream_write(stream, rewrite_str),
+                       len(rewrite_str.encode('UTF-8')))
+      svn.core.svn_stream_seek(stream, None)
+      self.assertEqual(
+            svn.core.svn_stream_read_full(stream, 4096),
+            (o1_str + rewrite_str
+             + o2_str[len(rewrite_str.encode('UTF-8')):]
+             + o3_str                                   ).encode('UTF-8'))
+      svn.core.svn_stream_close(stream)
+    finally:
+      try:
+        os.remove(fname)
+      except OSError:
+        pass
+
+  def test_stream_write_bytes(self):
     o1_str = b'Python\x00\xa4\xd1\xa4\xa4\xa4\xbd\xa4\xf3\r\n'
     o2_str = (b'subVersioN\x00'
               b'\xa4\xb5\xa4\xd6\xa4\xd0\xa1\xbc\xa4\xb8\xa4\xe7\xa4\xf3\n')

@@ -251,6 +251,26 @@ typedef struct svn_string_t svn_string_t;
 }
 #endif
 
+ /* -----------------------------------------------------------------------
+   Type: char * (input)
+*/
+#ifdef SWIGPYTHON
+%typemap (in) IN_STRING
+{
+    $1 = svn_swig_py_string_to_cstring($input, FALSE, "$symname", "$1_name");
+    if (PyErr_Occurred()) SWIG_fail;
+}
+
+%typemap (freearg) IN_STRING "";
+
+%apply IN_STRING {
+    const char *,
+    char *,
+    char const *,
+    char * const,
+    char const * const
+};
+#endif
 /* -----------------------------------------------------------------------
    define a way to return a 'const char *'
 */
