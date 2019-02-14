@@ -7197,6 +7197,268 @@ test_merge_dir_move_vs_dir_move_accept_move(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+create_file_move_vs_file_move_update_conflict(svn_client_conflict_t **conflict,
+                                              svn_test__sandbox_t *b,
+                                              svn_client_ctx_t *ctx)
+{
+  apr_array_header_t *options;
+  svn_client_conflict_option_t *option;
+  apr_array_header_t *possible_moved_to_abspaths;
+
+  /* Move a file. */
+  SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-moved"));
+
+  /* Edit moved file. */
+  SVN_ERR(sbox_file_write(b, "A/mu-moved", modified_file_content));
+  SVN_ERR(sbox_wc_commit(b, ""));
+
+  /* Update back to r1, */
+  SVN_ERR(sbox_wc_update(b, "", 1)); /* r2 */
+
+  /* Copy the file to test handling of ambiguous moves. */
+  SVN_ERR(sbox_wc_copy(b, "A/mu", "A/mu-copied"));
+
+  /* Move the same file to a different location. */
+  SVN_ERR(sbox_wc_move(b, "A/mu", "A/mu-also-moved"));
+
+  /* Edit moved file. */
+  SVN_ERR(sbox_file_write(b, "A/mu-also-moved",
+                          modified_file_in_working_copy_content));
+
+  /* Update to r2. */
+  /* This should raise an "incoming delete vs local delete" tree conflict. */
+  SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
+
+  SVN_ERR(svn_client_conflict_get(conflict, sbox_wc_path(b, "A/mu"),
+                                  ctx, b->pool, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_incoming_delete_ignore,
+      svn_client_conflict_option_incoming_delete_accept,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(*conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  SVN_ERR(svn_client_conflict_tree_get_details(*conflict, ctx, b->pool));
+  {
+    svn_client_conflict_option_id_t expected_opts[] = {
+      svn_client_conflict_option_postpone,
+      svn_client_conflict_option_accept_current_wc_state,
+      svn_client_conflict_option_both_moved_file_merge,
+      svn_client_conflict_option_both_moved_file_move_merge,
+      -1 /* end of list */
+    };
+    SVN_ERR(assert_tree_conflict_options(*conflict, ctx, expected_opts,
+                                         b->pool));
+  }
+
+  /* Check possible move destinations for the file. */
+  SVN_ERR(svn_client_conflict_tree_get_resolution_options(&options, *conflict,
+                                                          ctx, b->pool,
+                                                          b->pool));
+  option = svn_client_conflict_option_find_by_id(
+             options, svn_client_conflict_option_both_moved_file_merge);
+  SVN_TEST_ASSERT(option != NULL);
+
+  SVN_ERR(svn_client_conflict_option_get_moved_to_abspath_candidates(
+            &possible_moved_to_abspaths, option, b->pool, b->pool));
+
+  /* The resolver finds two possible destinations for the moved file:
+   *
+   *   Possible working copy destinations for moved-away 'A/mu' are:
+   *    (1): 'A/mu-also-moved'
+   *    (2): 'A/mu-copied'
+   *   Only one destination can be a move; the others are copies.
+   */
+  SVN_TEST_INT_ASSERT(possible_moved_to_abspaths->nelts, 2);
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 0, const char *),
+    sbox_wc_path(b, "A/mu-also-moved"));
+  SVN_TEST_STRING_ASSERT(
+    APR_ARRAY_IDX(possible_moved_to_abspaths, 1, const char *),
+    sbox_wc_path(b, "A/mu-copied"));
+
+  return SVN_NO_ERROR;
+}
+
+
+static svn_error_t *
+test_update_file_move_vs_file_move(const svn_test_opts_t *opts,
+                                   apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  svn_opt_revision_t opt_rev;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_stringbuf_t *buf;
+  svn_node_kind_t kind;
+  char *conflicted_content;
+
+  SVN_ERR(svn_test__sandbox_create(b, "update_file_move_vs_file_move",
+                                   opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b)); /* r1 */
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  SVN_ERR(create_file_move_vs_file_move_update_conflict(&conflict, b, ctx));
+
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_both_moved_file_merge,
+            ctx, b->pool));
+
+  /* The node "A/mu" should no longer exist. */
+  SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(
+                          &conflict, sbox_wc_path(b, "A/mu"), ctx, pool, pool),
+                        SVN_ERR_WC_PATH_NOT_FOUND);
+
+  /* The node "A/mu-moved" should now have moved to "A/mu-also-moved. */
+  SVN_ERR(svn_io_check_path(sbox_wc_path(b, "A/mu"), &kind, b->pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, "A/mu-moved"),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(!status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_deleted);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_normal);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_STRING_ASSERT(status->moved_to_abspath,
+                         sbox_wc_path(b, "A/mu-also-moved"));
+
+  /* Ensure that the merged file has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, "A/mu-also-moved"),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_conflicted);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_conflicted);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_STRING_ASSERT(status->moved_from_abspath,
+                         sbox_wc_path(b, "A/mu-moved"));
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Ensure that the moved+merged file has the expected content. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A/mu-also-moved"),
+                                   b->pool));
+  conflicted_content = apr_psprintf(b->pool,
+												 "<<<<<<< .working\n"
+												"%s"
+												"||||||| .old\n"
+												"This is the file 'mu'.\n"
+												"=======\n"
+												"%s"
+												">>>>>>> .new\n",
+									      modified_file_in_working_copy_content,
+												modified_file_content);
+  SVN_TEST_STRING_ASSERT(buf->data, conflicted_content);
+
+  return SVN_NO_ERROR;
+}
+
+/* Same test case as above, but accept the incoming move. */
+static svn_error_t *
+test_update_file_move_vs_file_move_accept_move(const svn_test_opts_t *opts,
+                                               apr_pool_t *pool)
+{
+  svn_test__sandbox_t *b = apr_palloc(pool, sizeof(*b));
+  svn_client_ctx_t *ctx;
+  svn_client_conflict_t *conflict;
+  svn_opt_revision_t opt_rev;
+  struct status_baton sb;
+  struct svn_client_status_t *status;
+  svn_stringbuf_t *buf;
+  char *conflicted_content;
+
+  SVN_ERR(svn_test__sandbox_create(b,
+                                   "update_file_move_vs_file_move_accept_move",
+                                   opts, pool));
+
+  SVN_ERR(sbox_add_and_commit_greek_tree(b)); /* r1 */
+
+  SVN_ERR(svn_test__create_client_ctx(&ctx, b, b->pool));
+  SVN_ERR(create_file_move_vs_file_move_update_conflict(&conflict, b, ctx));
+
+  SVN_ERR(svn_client_conflict_tree_resolve_by_id(
+            conflict,
+            svn_client_conflict_option_both_moved_file_move_merge,
+            ctx, b->pool));
+
+  /* The node "A/mu" should no longer exist. */
+  SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(
+                          &conflict, sbox_wc_path(b, "A/mu"), ctx, pool, pool),
+                        SVN_ERR_WC_PATH_NOT_FOUND);
+
+  /* The node "A/mu-also-moved" should not exist. */
+  SVN_TEST_ASSERT_ERROR(svn_client_conflict_get(
+                          &conflict, sbox_wc_path(b, "A/mu-also-moved"), ctx,
+                          pool, pool),
+                        SVN_ERR_WC_PATH_NOT_FOUND);
+
+  /* Ensure that the merged file has the expected status. */
+  opt_rev.kind = svn_opt_revision_working;
+  sb.result_pool = b->pool;
+  SVN_ERR(svn_client_status6(NULL, ctx, sbox_wc_path(b, "A/mu-moved"),
+                             &opt_rev, svn_depth_unknown, TRUE, TRUE,
+                             TRUE, TRUE, FALSE, TRUE, NULL,
+                             status_func, &sb, b->pool));
+  status = sb.status;
+  SVN_TEST_ASSERT(status->kind == svn_node_file);
+  SVN_TEST_ASSERT(status->versioned);
+  SVN_TEST_ASSERT(status->conflicted);
+  SVN_TEST_ASSERT(status->node_status == svn_wc_status_conflicted);
+  SVN_TEST_ASSERT(status->text_status == svn_wc_status_conflicted);
+  SVN_TEST_ASSERT(status->prop_status == svn_wc_status_none);
+  SVN_TEST_ASSERT(!status->copied);
+  SVN_TEST_ASSERT(!status->switched);
+  SVN_TEST_ASSERT(!status->file_external);
+  SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
+  SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
+
+  /* Ensure that the moved+merged file has the expected content. */
+  SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A/mu-moved"),
+                                   b->pool));
+  conflicted_content = apr_psprintf(b->pool,
+												 "<<<<<<< .working\n" /* ### labels need fixing */
+												"%s"
+												"||||||| .old\n"
+												"This is the file 'mu'.\n"
+												"=======\n"
+												"%s"
+												">>>>>>> .new\n",
+												modified_file_content,
+									      modified_file_in_working_copy_content);
+  SVN_TEST_STRING_ASSERT(buf->data, conflicted_content);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* ========================================================================== */
 
 
@@ -7321,6 +7583,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "dir move vs dir move during merge"),
     SVN_TEST_OPTS_PASS(test_merge_dir_move_vs_dir_move_accept_move,
                        "dir move vs dir move during merge accept move"),
+    SVN_TEST_OPTS_PASS(test_update_file_move_vs_file_move,
+                       "file move vs file move during update"),
+    SVN_TEST_OPTS_PASS(test_update_file_move_vs_file_move_accept_move,
+                       "file move vs file move during update accept move"),
     SVN_TEST_NULL
   };
 
