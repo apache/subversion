@@ -1013,40 +1013,39 @@ shelf_copy_base(svn_client__shelf_version_t *new_shelf_version,
                 apr_pool_t *scratch_pool)
 {
   svn_client_ctx_t *ctx = new_shelf_version->shelf->ctx;
-  const char *real_wc_abspath = new_shelf_version->shelf->wc_root_abspath;
-  apr_array_header_t *targets = apr_array_make(scratch_pool, 1, sizeof(char *));
+  const char *users_wc_abspath = new_shelf_version->shelf->wc_root_abspath;
+  svn_client__pathrev_t *users_wc_root_base;
+  svn_opt_revision_t users_wc_root_rev;
+  svn_ra_session_t *ra_session = NULL;
+  svn_boolean_t sleep_here = FALSE;
 
-  SVN_DBG(("cp-base: cp-dir"));
-  SVN_ERR(svn_io_copy_dir_recursively(
-            real_wc_abspath,
-            svn_dirent_dirname(new_shelf_version->files_dir_abspath, scratch_pool),
-            svn_dirent_basename(new_shelf_version->files_dir_abspath, scratch_pool),
-            TRUE, /* copy_perms */
-            NULL, NULL, /*cancellation*/
-            scratch_pool));
+  SVN_DBG(("cp-base: read user's WC"));
+  SVN_ERR(svn_client__wc_node_get_base(&users_wc_root_base,
+                                       users_wc_abspath, ctx->wc_ctx,
+                                       scratch_pool, scratch_pool));
 
-  SVN_DBG(("cp-base: revert"));
-  APR_ARRAY_PUSH(targets, const char *) = new_shelf_version->files_dir_abspath;
-  SVN_ERR(svn_client_revert4(targets, svn_depth_infinity, NULL /*changelists*/,
-                             TRUE /*clear_changelists*/,
-                             FALSE /*metadata_only*/,
-                             FALSE /*added_keep_local*/,
-                             ctx, scratch_pool));
-  SVN_DBG(("revert4: remove unversioned"));
-  /* Remove all unversioned nodes (including "ignored" ones) because they
-     are not part of the base state and must not show up in "status".
-     ### This also works around a bug in "revert added-keep-local=false" by
-         removing unversioned files that "revert" may have left behind.
-     (We could do other clean-ups here too, but that's not the point, as
-     this is not the proper way to copy the base, just an initial
-     implementation to get us started.) */
-  SVN_ERR(svn_client_vacuum(new_shelf_version->files_dir_abspath,
-                            TRUE /*remove_unversioned*/,
-                            TRUE /*remove_ignored*/,
-                            FALSE /*fix_timestamps */,
-                            FALSE /*vacuum_pristines*/,
-                            TRUE /*include_externals*/,
-                            ctx, scratch_pool));
+  /* ### We need to read and recreate the mixed-rev, switched-URL,
+     mixed-depth WC state; but for a rough start we'll just use
+     HEAD, unswitched, depth-infinity. */
+  users_wc_root_rev.kind = svn_opt_revision_head;
+
+  /* ### TODO: Create an RA session that reads from the user's WC.
+     For a rough start, we'll just let 'checkout' read from the repo. */
+
+  SVN_DBG(("cp-base: checkout"));
+  SVN_ERR(svn_client__checkout_internal(NULL /*result_rev*/, &sleep_here,
+                                        users_wc_root_base->url,
+                                        new_shelf_version->files_dir_abspath,
+                                        &users_wc_root_rev, &users_wc_root_rev,
+                                        svn_depth_infinity,
+                                        TRUE /*ignore_externals*/,
+                                        FALSE /*allow_unver_obstructions*/,
+                                        ra_session,
+                                        ctx, scratch_pool));
+  /* ### hopefully we won't eventually need to sleep_here... */
+  if (sleep_here)
+    svn_io_sleep_for_timestamps(new_shelf_version->files_dir_abspath,
+                                scratch_pool);
   SVN_DBG(("cp-base: done"));
   return SVN_NO_ERROR;
 }
