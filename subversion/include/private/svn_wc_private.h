@@ -348,9 +348,9 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
-/** Set @a *dir to the abspath of the directory in which shelved patches
- * are stored, which is inside the WC's administrative directory, and ensure
- * the directory exists.
+/** Set @a *dir to the abspath of the directory in which administrative
+ * data for experimental features may be stored. This directory is inside
+ * the WC's administrative directory. Ensure the directory exists.
  *
  * @a local_abspath is any path in the WC, and is used to find the WC root.
  *
@@ -358,11 +358,11 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_wc__get_shelves_dir(char **dir,
-                        svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
+svn_wc__get_experimental_dir(char **dir,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /**
  * The following are temporary APIs to aid in the transition from wc-1 to
@@ -634,6 +634,24 @@ svn_wc__find_working_nodes_with_basename(apr_array_header_t **abspaths,
                                          svn_wc_context_t *wc_ctx,
                                          apr_pool_t *result_pool,
                                          apr_pool_t *scratch_pool);
+
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * are copies of REPOS_RELPATH and have node kind KIND.
+ * If no such nodes exist, return an empty array.
+ *
+ * This function returns only paths to nodes which are present in the highest
+ * layer of the WC. In other words, paths to deleted and/or excluded nodes are
+ * never returned.
+ */
+svn_error_t *
+svn_wc__find_copies_of_repos_path(apr_array_header_t **abspaths,
+                                  const char *wri_abspath,
+                                  const char *repos_relpath,
+                                  svn_node_kind_t kind,
+                                  svn_wc_context_t *wc_ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool);
 
 /* Get the working revision of @a local_abspath using @a wc_ctx. If @a
  * local_abspath is not in the working copy, return @c
