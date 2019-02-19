@@ -109,6 +109,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1853761
+   Fix an "unused static function" warning in non-maintainer mode builds.
+   Justification:
+     Requested on dev@.  Fixes a compiler warning.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
