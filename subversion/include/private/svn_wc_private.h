@@ -348,9 +348,9 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool);
 
-/** Set @a *dir to the abspath of the directory in which shelved patches
- * are stored, which is inside the WC's administrative directory, and ensure
- * the directory exists.
+/** Set @a *dir to the abspath of the directory in which administrative
+ * data for experimental features may be stored. This directory is inside
+ * the WC's administrative directory. Ensure the directory exists.
  *
  * @a local_abspath is any path in the WC, and is used to find the WC root.
  *
@@ -358,11 +358,11 @@ svn_wc__get_wcroot(const char **wcroot_abspath,
  */
 SVN_EXPERIMENTAL
 svn_error_t *
-svn_wc__get_shelves_dir(char **dir,
-                        svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        apr_pool_t *result_pool,
-                        apr_pool_t *scratch_pool);
+svn_wc__get_experimental_dir(char **dir,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /**
  * The following are temporary APIs to aid in the transition from wc-1 to
