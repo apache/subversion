@@ -114,6 +114,28 @@ shelf_name_from_filename(char **name,
   return SVN_NO_ERROR;
 }
 
+/* Set *DIR to the shelf storage directory inside the WC's administrative
+ * area. Ensure the directory exists. */
+static svn_error_t *
+get_shelves_dir(char **dir,
+                svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                apr_pool_t *result_pool,
+                apr_pool_t *scratch_pool)
+{
+  char *experimental_abspath;
+
+  SVN_ERR(svn_wc__get_experimental_dir(&experimental_abspath,
+                                       wc_ctx, local_abspath,
+                                       scratch_pool, scratch_pool));
+  *dir = svn_dirent_join(experimental_abspath, "shelves/v3", result_pool);
+
+  /* Ensure the directory exists. (Other versions of svn don't create it.) */
+  SVN_ERR(svn_io_make_dir_recursively(*dir, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Set *ABSPATH to the abspath of the file storage dir for SHELF
  * version VERSION, no matter whether it exists.
  */
@@ -1175,9 +1197,8 @@ shelf_construct(svn_client__shelf_t **shelf_p,
   SVN_ERR(svn_client_get_wc_root(&shelf->wc_root_abspath,
                                  local_abspath, ctx,
                                  result_pool, result_pool));
-  SVN_ERR(svn_wc__get_shelves_dir(&shelves_dir,
-                                  ctx->wc_ctx, local_abspath,
-                                  result_pool, result_pool));
+  SVN_ERR(get_shelves_dir(&shelves_dir, ctx->wc_ctx, local_abspath,
+                          result_pool, result_pool));
   shelf->shelves_dir = shelves_dir;
   shelf->ctx = ctx;
   shelf->pool = result_pool;
@@ -2119,8 +2140,8 @@ svn_client__shelf_list(apr_hash_t **shelf_infos,
 
   SVN_ERR(svn_wc__get_wcroot(&wc_root_abspath, ctx->wc_ctx, local_abspath,
                              scratch_pool, scratch_pool));
-  SVN_ERR(svn_wc__get_shelves_dir(&shelves_dir, ctx->wc_ctx, local_abspath,
-                                  scratch_pool, scratch_pool));
+  SVN_ERR(get_shelves_dir(&shelves_dir, ctx->wc_ctx, local_abspath,
+                          scratch_pool, scratch_pool));
   SVN_ERR(svn_io_get_dirents3(&dirents, shelves_dir, FALSE /*only_check_type*/,
                               result_pool, scratch_pool));
 
