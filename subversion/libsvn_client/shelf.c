@@ -907,7 +907,6 @@ unapply_visitor(void *baton,
         depth = svn_depth_infinity;
       else
         depth = svn_depth_empty;
-      SVN_DBG(("unapply: depth %d at '%s'", depth, relpath));
       SVN_ERR(svn_wc_revert6(b->ctx->wc_ctx,
                              abspath,
                              depth,
@@ -933,8 +932,6 @@ svn_client__shelf_unapply(svn_client__shelf_version_t *shelf_version,
   struct unapply_walk_baton_t baton;
   svn_config_t *cfg;
 
-  SVN_DBG(("unapply: starting"));
-
   baton.wc_root_abspath = shelf->wc_root_abspath;
   baton.dry_run = dry_run;
   baton.ctx = ctx;
@@ -952,7 +949,6 @@ svn_client__shelf_unapply(svn_client__shelf_version_t *shelf_version,
                       scratch_pool),
     ctx->wc_ctx, shelf_version->shelf->wc_root_abspath,
     FALSE /*lock_anchor*/, scratch_pool);
-  SVN_DBG(("unapply: done"));
   return SVN_NO_ERROR;
 }
 
@@ -1017,7 +1013,6 @@ shelf_copy_base(svn_client__shelf_version_t *new_shelf_version,
   svn_ra_session_t *ra_session = NULL;
   svn_boolean_t sleep_here = FALSE;
 
-  SVN_DBG(("cp-base: read user's WC"));
   SVN_ERR(svn_client__wc_node_get_base(&users_wc_root_base,
                                        users_wc_abspath, ctx->wc_ctx,
                                        scratch_pool, scratch_pool));
@@ -1030,7 +1025,6 @@ shelf_copy_base(svn_client__shelf_version_t *new_shelf_version,
   /* ### TODO: Create an RA session that reads from the user's WC.
      For a rough start, we'll just let 'checkout' read from the repo. */
 
-  SVN_DBG(("cp-base: checkout"));
   SVN_ERR(svn_client__checkout_internal(NULL /*result_rev*/, &sleep_here,
                                         users_wc_root_base->url,
                                         new_shelf_version->files_dir_abspath,
@@ -1044,7 +1038,6 @@ shelf_copy_base(svn_client__shelf_version_t *new_shelf_version,
   if (sleep_here)
     svn_io_sleep_for_timestamps(new_shelf_version->files_dir_abspath,
                                 scratch_pool);
-  SVN_DBG(("cp-base: done"));
   return SVN_NO_ERROR;
 }
 
@@ -1108,7 +1101,6 @@ svn_client__shelf_save_new_version3(svn_client__shelf_version_t **new_version_p,
                                shelf, next_version, scratch_pool));
   SVN_ERR(shelf_copy_base(new_shelf_version, scratch_pool));
 
-  SVN_DBG(("save: wc-replay starting"));
   nb.shelf_version = new_shelf_version;
   nb.notify_func = ctx->notify_func2;
   nb.notify_baton = ctx->notify_baton2;
@@ -1124,7 +1116,6 @@ svn_client__shelf_save_new_version3(svn_client__shelf_version_t **new_version_p,
                                 editor, edit_baton,
                                 shelf_save_notifier, &nb,
                                 ctx, scratch_pool));
-  SVN_DBG(("save: wc-replay done"));
 
   if (nb.any_shelved)
     {
