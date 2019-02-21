@@ -3335,23 +3335,34 @@ svn_error_t *svn_swig_py_get_commit_log_func(const char **log_msg,
 
   if (result == Py_None)
     {
-      Py_DECREF(result);
       *log_msg = NULL;
       err = SVN_NO_ERROR;
     }
   else if (PyBytes_Check(result))
     {
       *log_msg = apr_pstrdup(pool, PyBytes_AsString(result));
-      Py_DECREF(result);
       err = SVN_NO_ERROR;
+    }
+  else if (PyUnicode_Check(result))
+    {
+      /* PyStr_AsUTF8() may cause UnicodeEncodeError,
+         but apr_pstrdup() allows NULL for s */
+      if ((*log_msg = apr_pstrdup(pool, PyStr_AsUTF8(result))) == NULL)
+        {
+          err = callback_exception_error();
+        }
+      else
+        {
+          err = SVN_NO_ERROR;
+        }
     }
   else
     {
-      Py_DECREF(result);
-      err = callback_bad_return_error("Not a bytes object");
+      err = callback_bad_return_error("Not a bytes or str object");
     }
+  Py_DECREF(result);
 
- finished:
+finished:
   svn_swig_py_release_py_lock();
   return err;
 }

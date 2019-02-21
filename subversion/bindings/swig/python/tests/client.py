@@ -33,7 +33,7 @@ class SubversionClientTestCase(unittest.TestCase):
   """Test cases for the basic SWIG Subversion client layer"""
 
   def assert_all_instances_of(self, iterable, instancetype):
-    """"Asserts that all object from iterable are an instance of instancetype."""
+    """Asserts that all object from iterable are an instance of instancetype."""
 
     self.assertTrue(not [x for x in iterable if not isinstance(x, instancetype)])
 
@@ -41,6 +41,12 @@ class SubversionClientTestCase(unittest.TestCase):
     """ Simple log message provider for unit tests. """
     self.log_message_func_calls += 1
     return b"Test log message"
+
+  def make_log_message_func(self, message):
+    def generic_log_message_func(items, pool):
+      self.log_message_func_calls += 1
+      return message
+    return generic_log_message_func
 
   def log_receiver(self, changed_paths, revision, author, date, message, pool):
     """ Function to receive log messages retrieved by client.log3(). """
@@ -209,6 +215,31 @@ class SubversionClientTestCase(unittest.TestCase):
                                 self.client_ctx)
     self.assertEqual(commit_info.revision, 13)
     self.assertEqual(self.log_message_func_calls, 1)
+
+  def test_get_commit_log3_callback_accept_unicode(self):
+    """Test svn_client_get_commit_log3_t callback wrapper accept unicode as return value"""
+    directory = urljoin(self.repos_uri+b"/", b"dir1")
+    # override callback function which returns commit log as unicode
+    unicode_log_message_func = self.make_log_message_func(u"Test log message")
+    self.client_ctx.log_msg_baton3 = unicode_log_message_func
+
+    commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
+                                self.client_ctx)
+    self.assertEqual(commit_info.revision, 13)
+    self.assertEqual(self.log_message_func_calls, 1)
+
+  def test_get_commit_log3_callback_unicode_error(self):
+    """Test svn_client_get_commit_log3_t callback wrapper handles UnicodeEncodeError correctly"""
+    directory = urljoin(self.repos_uri+b"/", b"dir1")
+    # override callback function which returns commit log as unicode
+    # which contains surrogate escaped character
+    bogus_log_message_func = self.make_log_message_func(u"Test \udc6cog"
+                                                        u" message")
+    self.client_ctx.log_msg_baton3 = bogus_log_message_func
+
+    with self.assertRaises(UnicodeEncodeError):
+      commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
+                                  self.client_ctx)
 
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
