@@ -2782,11 +2782,7 @@ read_handler_pyio(void *baton, char *buffer, apr_size_t *len)
     }
   else
     {
-      #if IS_PY3
       err = callback_bad_return_error("Not a bytes object");
-      #else
-      err = callback_bad_return_error("Not a string");
-      #endif
     }
   Py_XDECREF(result);
   svn_swig_py_release_py_lock();
