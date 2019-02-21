@@ -2171,7 +2171,7 @@ io_set_readonly_flag(const char *path_apr, /* file-system path */
                      svn_boolean_t set_flag,
                      svn_boolean_t is_file,
                      svn_boolean_t ignore_enoent,
-                     svn_boolean_t pool)
+                     apr_pool_t *pool)
 {
   apr_status_t status;
 
