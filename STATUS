@@ -100,7 +100,7 @@ Candidate changes:
    Justification:
      Requested on dev@.  Fixes a compiler warning.
    Votes:
-     +1: danielsh
+     +1: danielsh, brane
 
  * r1854072, r1854074
    Fix issue #4806: Remove on-disk trees with read-only directories in them.
