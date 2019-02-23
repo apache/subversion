@@ -116,7 +116,7 @@ Candidate changes:
    Votes:
      +1: danielsh, brane
 
- * r1854072, r1854074
+ * r1854072, r1854074, r1854216
    Fix issue #4806: Remove on-disk trees with read-only directories in them.
    Justification:
      Fixes an edge case in our tree removal code. If we clear read-only
