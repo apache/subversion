@@ -4571,20 +4571,23 @@ svn_io_dir_remove_nonrecursive(const char *dirname, apr_pool_t *pool)
 
   SVN_ERR(cstring_from_utf8(&dirname_apr, dirname, pool));
 
-  /* On Windows, a read-only directory cannot be removed. */
-#if defined(WIN32) || defined(__OS2__)
-  SVN_ERR(io_set_readonly_flag(dirname_apr, dirname,
-                               FALSE, FALSE, FALSE, pool));
-#endif
-
   status = apr_dir_remove(dirname_apr, pool);
 
 #ifdef WIN32
   {
     svn_boolean_t retry = TRUE;
 
+    if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
+      {
+        /* Make the destination directory writable because Windows
+           forbids deleting read-only items. */
+        SVN_ERR(io_set_readonly_flag(dirname_apr, dirname,
+                                     FALSE, FALSE, TRUE, pool));
+        status = apr_dir_remove(dirname_apr, pool);
+      }
+
     if (status == APR_FROM_OS_ERROR(ERROR_DIR_NOT_EMPTY))
-    {
+      {
         apr_status_t empty_status = dir_is_empty(dirname_apr, pool);
 
         if (APR_STATUS_IS_ENOTEMPTY(empty_status))
