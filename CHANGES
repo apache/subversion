@@ -15,7 +15,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.0
     * 'move vs. move' merge conflicts can now be resolved (r1846851, r1851913)
     * 'svn --version --verbose' shows loaded libraries on Linux (r1843774)
     * 'svnrdump' can read/write a file instead of stdin/stdout (r1844906)
-    * 'svn list' tries to not truncate the authior's name (r1847384 et al.)
+    * 'svn list' tries to not truncate the author's name (r1847384 et al.)
     * 'svn list' can show sizes in base-2 unit suffixes (r1847384 et al.)
     * 'svn info' shows the size of files in the repository (r1847441 et al.)
     * 'svn cleanup' can remove read-only directories (#4806, r1854072 et al.)
@@ -239,7 +239,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
  User-visible changes:
   - Major new features:
     * Better interactive conflict resolution for tree conflicts (r1687489 et al)
-    * Wilcards and improved performance in path-based authorization (r1776832)
+    * Wildcards and improved performance in path-based authorization (r1776832)
     * New experimental 'svn shelve' command (issue #3625)
   - Minor new features and improvements:
     * svnbench: Show time taken & bytes transferred (r1703383, r1710586)
@@ -260,7 +260,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * ra_serf: Adjustments for serf versions with HTTP/2 support (r1716400)
     * ra_serf: Send svndiff1 deltas during commit (r1704317, r1704613, r1791290)
     * ra_serf: Stream svndiff deltas w/o creating temporary files (r1803143 et al)
-    * ra_serf: Don't necessarily request full MERGE reponses (r1806017 et al)
+    * ra_serf: Don't necessarily request full MERGE responses (r1806017 et al)
     * 'svn patch': Parse binary diffs in git-style patches (r1703925)
     * 'svnadmin info' now reports latest revision in the repository (r1697953)
     * ra_svn: Various performance-related tweaks (r1694490)
