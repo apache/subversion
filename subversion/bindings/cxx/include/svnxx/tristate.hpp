@@ -112,7 +112,7 @@ public:
    *   <table border=1>
    *     <tr>
    *       <th><center><code>!</code></center></th>
-   *       <th/>
+   *       <th></th>
    *     </tr>
    *     <tr>
    *       <th><center><em>false</em></center></th>

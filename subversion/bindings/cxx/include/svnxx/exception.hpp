@@ -62,7 +62,7 @@
  * Exception Hierarchy
  * -------------------
  *
- * All SVN++ exceptions are ultimately derived from @c std:::exception.
+ * All SVN++ exceptions are ultimately derived from @c std::exception.
  *
  * * <em>std::exception</em>
  *   + <em>std::bad_alloc</em>

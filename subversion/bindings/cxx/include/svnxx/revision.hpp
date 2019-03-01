@@ -227,14 +227,14 @@ inline bool operator!=(const revision& a, const revision& b)
  *     </tr>
  *     <tr>
  *       <th><center><tt>number</tt></center></th>
- *       <td><center><tt>a.get_number() < b.get_number()</tt></td>
+ *       <td><center><tt>a.get_number() < b.get_number()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
  *       <th><center><tt>date</tt></center></th>
  *       <td><center><em>unknown</em></center></td>
- *       <td><center><tt>a.get_date() < b.get_date()</tt></td>
+ *       <td><center><tt>a.get_date() < b.get_date()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
@@ -272,14 +272,14 @@ inline tristate operator<(const revision& a, const revision& b)
  *     </tr>
  *     <tr>
  *       <th><center><tt>number</tt></center></th>
- *       <td><center><tt>a.get_number() > b.get_number()</tt></td>
+ *       <td><center><tt>a.get_number() > b.get_number()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
  *       <th><center><tt>date</tt></center></th>
  *       <td><center><em>unknown</em></center></td>
- *       <td><center><tt>a.get_date() > b.get_date()</tt></td>
+ *       <td><center><tt>a.get_date() > b.get_date()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
@@ -317,14 +317,14 @@ inline tristate operator>(const revision& a, const revision& b)
  *     </tr>
  *     <tr>
  *       <th><center><tt>number</tt></center></th>
- *       <td><center><tt>a.get_number() <= b.get_number()</tt></td>
+ *       <td><center><tt>a.get_number() <= b.get_number()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
  *       <th><center><tt>date</tt></center></th>
  *       <td><center><em>unknown</em></center></td>
- *       <td><center><tt>a.get_date() <= b.get_date()</tt></td>
+ *       <td><center><tt>a.get_date() <= b.get_date()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
@@ -355,14 +355,14 @@ inline tristate operator<=(const revision& a, const revision& b)
  *     </tr>
  *     <tr>
  *       <th><center><tt>number</tt></center></th>
- *       <td><center><tt>a.get_number() >= b.get_number()</tt></td>
+ *       <td><center><tt>a.get_number() >= b.get_number()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
  *       <th><center><tt>date</tt></center></th>
  *       <td><center><em>unknown</em></center></td>
- *       <td><center><tt>a.get_date() >= b.get_date()</tt></td>
+ *       <td><center><tt>a.get_date() >= b.get_date()</tt></center></td>
  *       <td><center><em>unknown</em></center></td>
  *     </tr>
  *     <tr>
