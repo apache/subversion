@@ -1382,6 +1382,7 @@ svn_delta_path_driver3(const svn_delta_editor_t *editor,
  * @since New in 1.8. Before 1.12, paths sent to the callback were the
  * exact paths passed in @a paths.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_delta_path_driver2(const svn_delta_editor_t *editor,
                        void *edit_baton,

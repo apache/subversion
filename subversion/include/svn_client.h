@@ -2998,6 +2998,7 @@ svn_client_blame6(svn_revnum_t *start_revnum_p,
  *
  * @since New in 1.7.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_client_blame5(const char *path_or_url,
                   const svn_opt_revision_t *peg_revision,
@@ -4633,10 +4634,10 @@ typedef enum svn_client_conflict_option_id_t {
   svn_client_conflict_option_sibling_move_dir_merge, /**< @since New in 1.11. */
 
   /* Options for local move vs incoming move on merge. */
-  svn_client_conflict_option_both_moved_file_merge, /*< since New in 1.12 */
-  svn_client_conflict_option_both_moved_file_move_merge, /*< since New in 1.12 */
-  svn_client_conflict_option_both_moved_dir_merge, /*< since New in 1.12 */
-  svn_client_conflict_option_both_moved_dir_move_merge, /*< since New in 1.12 */
+  svn_client_conflict_option_both_moved_file_merge, /*< @since New in 1.12 */
+  svn_client_conflict_option_both_moved_file_move_merge, /*< @since New in 1.12 */
+  svn_client_conflict_option_both_moved_dir_merge, /*< @since New in 1.12 */
+  svn_client_conflict_option_both_moved_dir_move_merge, /*< @since New in 1.12 */
 } svn_client_conflict_option_id_t;
 
 /**
@@ -7155,7 +7156,7 @@ svn_client__shelf_save_new_version3(svn_client__shelf_version_t **new_version_p,
  *
  * Leave the shelf's log message and other revprops unchanged.
  *
- * Any #svn_client_shelf_version_t object that refers to a deleted version
+ * Any #svn_client__shelf_version_t object that refers to a deleted version
  * will become invalid: attempting to use it will give undefined behaviour.
  * The given @a shelf_version will remain valid.
  *
@@ -7195,7 +7196,7 @@ svn_client__shelf_get_newest_version(svn_client__shelf_version_t **shelf_version
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
-/** Return in @a versions_p an array of (#svn_client_shelf_version_t *)
+/** Return in @a versions_p an array of (#svn_client__shelf_version_t *)
  * containing all versions of @a shelf.
  *
  * The versions will be in chronological order, oldest to newest.
