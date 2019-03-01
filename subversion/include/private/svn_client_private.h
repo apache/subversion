@@ -385,15 +385,15 @@ svn_client__get_diff_summarize_callbacks(
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
-/* Copy a directory tree or a file (according to KIND) from SRC_URL @ SRC_REV,
- * to DST_ABSPATH in a WC.
+/** Copy a directory tree or a file (according to @a kind) from @a src_url at
+ * @a src_rev, to @a dst_abspath in a WC.
  *
- * The caller should be holding a WC write lock that allows DST_ABSPATH to
- * be created, such as on the parent of DST_ABSPATH.
+ * The caller should be holding a WC write lock that allows @a dst_abspath to
+ * be created, such as on the parent of @a dst_abspath.
  *
  * If not same repositories, then remove any svn:mergeinfo property.
  *
- * Use RA_SESSION to fetch the data. The session may point to any URL
+ * Use @a ra_session to fetch the data. The session may point to any URL
  * within the source repository.
  *
  * This API does not process any externals definitions that may be present
@@ -409,15 +409,15 @@ svn_client__repos_to_wc_copy_internal(svn_boolean_t *timestamp_sleep,
                              svn_client_ctx_t *ctx,
                              apr_pool_t *scratch_pool);
 
-/* Copy a directory tree or a file (according to KIND) from SRC_URL @ SRC_REV,
- * to DST_ABSPATH in a WC.
+/** Copy a directory tree or a file (according to @a kind) from @a src_url at
+ * @a src_rev, to @a dst_abspath in a WC.
  *
- * The caller should be holding a WC write lock that allows DST_ABSPATH to
- * be created, such as on the parent of DST_ABSPATH.
+ * The caller should be holding a WC write lock that allows @a dst_abspath to
+ * be created, such as on the parent of @a dst_abspath.
  *
  * If not same repositories, then remove any svn:mergeinfo property.
  *
- * Use RA_SESSION to fetch the data. The session may point to a different
+ * Use @a ra_session to fetch the data. The session may point to a different
  * URL after returning.
  *
  * This API does not process any externals definitions that may be present
@@ -445,7 +445,7 @@ svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
  * Send notifications via @a notify_func / @a notify_baton.
  * ### INCOMPLETE
  *
- * RA_SESSION is used to fetch the original content for copies.
+ * @a ra_session is used to fetch the original content for copies.
  *
  * Ignore changes to non-regular property (entry-props, DAV/WC-props).
  *
@@ -540,7 +540,7 @@ svn_client__wc_replay(const char *src_wc_abspath,
  *
  * Edit the WC at @a dst_wc_abspath, applying those modifications to the
  * current working state to produce a new working state.
- * 
+ *
  * The source and destination may be in the same WC or in different WCs.
  */
 svn_error_t *
