@@ -20,7 +20,7 @@ Candidate changes:
    Justification:
      Keeps the macOS warnings checker buildslave clean.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
 * r1847598, r1847697, r1847922, r1847924, r1847946
    Fix SVN-4793: authz rights from inverted access selectors were not
