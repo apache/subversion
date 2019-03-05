@@ -63,24 +63,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1854072, r1854074
-   Fix issue #4806: Remove on-disk trees with read-only directories in them.
-   Justification:
-     Fixes an edge case in our tree removal code. If we clear read-only
-     permissions on files in order to remove them, we should do the same for
-     directories.
-   Note:
-     r1854216 should be part of this proposal, but it requires a backport
-     branch for 1.9.x because a whitespace-only change crept into the code
-     sometime between 1.9 and 1.10. I can't be bothered to create that
-     branch for a performance-only tweak on an ancient release branch.
-     (I'm also starting to wonder if we should even bother backporting
-     this change to 1.9.x at all. Counting the votes now. ...)
-   Votes:
-     +0.97583: brane
-     -1: stsp (does not build: subversion/tests/libsvn_subrio-test.c:495: \
-               undefined reference to `svn_test_make_sandbox_dir')
-
 Veto-blocked changes:
 =====================
 
