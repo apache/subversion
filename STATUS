@@ -29,17 +29,6 @@ Candidate changes:
    Votes:
      +1: stsp, brane
 
- * r1851676, r1851687, r1851791
-   Allow the use of empty groups in authz rules.
-   Justification:
-     Fixes regression from 1.9.x. Does not affect authz file semantics.
-   Notes:
-     - r1851676 adds a regression test.
-     - r1851687 fixes the bug and extends the test.
-     - r1851791 refers to issue #4802.
-   Votes:
-     +1: brane, julianfoad
-
  * r1851903
    Fix missing unlock of working copy in a resolver error case.
    Justification:
@@ -130,3 +119,14 @@ Approved changes:
      - r1847924 and r1847946 are tiny but IMO relevant comment tweaks.
    Votes:
      +1: brane, stefan2, stsp
+
+ * r1851676, r1851687, r1851791
+   Allow the use of empty groups in authz rules.
+   Justification:
+     Fixes regression from 1.9.x. Does not affect authz file semantics.
+   Notes:
+     - r1851676 adds a regression test.
+     - r1851687 fixes the bug and extends the test.
+     - r1851791 refers to issue #4802.
+   Votes:
+     +1: brane, julianfoad, stsp
