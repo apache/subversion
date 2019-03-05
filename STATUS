@@ -79,7 +79,7 @@ Candidate changes:
      permissions on files in order to remove them, we should do the same for
      directories.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
 Veto-blocked changes:
 =====================
