@@ -70,7 +70,7 @@ Candidate changes:
    Justification:
      The new feature was broken.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
  * r1854072, r1854074, r1854216
    Fix issue #4806: Remove on-disk trees with read-only directories in them.
