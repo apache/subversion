@@ -78,6 +78,8 @@ Candidate changes:
      this change to 1.9.x at all. Counting the votes now. ...)
    Votes:
      +0.97583: brane
+     -1: stsp (does not build: subversion/tests/libsvn_subrio-test.c:495: \
+               undefined reference to `svn_test_make_sandbox_dir')
 
 Veto-blocked changes:
 =====================
