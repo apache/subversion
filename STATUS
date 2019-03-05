@@ -78,13 +78,6 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1853761
-   Fix an "unused static function" warning in non-maintainer mode builds.
-   Justification:
-     Requested on dev@.  Fixes a compiler warning.
-   Votes:
-     +1: danielsh, brane
-
  * r1854072, r1854074, r1854216
    Fix issue #4806: Remove on-disk trees with read-only directories in them.
    Justification:
@@ -130,3 +123,10 @@ Approved changes:
      - r1851791 refers to issue #4802.
    Votes:
      +1: brane, julianfoad, stsp
+
+ * r1853761
+   Fix an "unused static function" warning in non-maintainer mode builds.
+   Justification:
+     Requested on dev@.  Fixes a compiler warning.
+   Votes:
+     +1: danielsh, brane, stsp
