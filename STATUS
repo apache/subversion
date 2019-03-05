@@ -19,7 +19,7 @@ Candidate changes:
    Justification:
      Keeps the macOS warnings checker buildslave clean.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
  * r1847377
    Reduce the scope of the Windows-specific help text for 'svn list'.
