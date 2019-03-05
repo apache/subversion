@@ -33,7 +33,7 @@ Candidate changes:
    Justification:
      Keeps the macOS warnings checker buildslave clean.
    Votes:
-     +1: brane
+     +1: brane, stsp
 
  * r1850651
    Fix a use-after-free in mod_dav_svn's logging of FS warnings.
