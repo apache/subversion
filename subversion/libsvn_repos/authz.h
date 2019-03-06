@@ -139,6 +139,10 @@ typedef struct authz_full_t
   svn_boolean_t has_authn_rights;
   authz_global_rights_t authn_rights;
 
+  /* Globally accumulated rights from inverted selectors. */
+  svn_boolean_t has_neg_rights;
+  authz_global_rights_t neg_rights;
+
   /* Globally accumulated rights, for all concrete users mentioned
      in the authz file. The key is the user name, the value is
      an authz_global_rights_t*. */
@@ -257,13 +261,18 @@ typedef struct authz_acl_t
   /* The parsed rule. */
   authz_rule_t rule;
 
-  /* Access rights for anonymous users */
+
+  /* Access rights for anonymous users. */
   svn_boolean_t has_anon_access;
   authz_access_t anon_access;
 
-  /* Access rights for authenticated users */
+  /* Access rights for authenticated users. */
   svn_boolean_t has_authn_access;
   authz_access_t authn_access;
+
+  /* Access rights from inverted selectors. */
+  svn_boolean_t has_neg_access;
+  authz_access_t neg_access;
 
   /* All other user- or group-specific access rights.
      Aliases are replaced with their definitions, rules for the same
