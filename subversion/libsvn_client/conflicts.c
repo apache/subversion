@@ -8632,10 +8632,10 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
   if (operation == svn_wc_operation_update ||
       operation == svn_wc_operation_switch)
     {
-      svn_stream_t *working_stream;
+      svn_stream_t *moved_to_stream;
       svn_stream_t *incoming_stream;
 
-      /* Create a temporary copy of the working file in repository-normal form.
+      /* Create a temporary copy of the moved file in repository-normal form.
        * Set up this temporary file to be automatically removed. */
       err = svn_stream_open_unique(&incoming_stream,
                                    &incoming_abspath, wc_tmpdir,
@@ -8644,16 +8644,28 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
 
-      err = svn_wc__translated_stream(&working_stream, ctx->wc_ctx,
-                                      merge_source_abspath,
-                                      merge_source_abspath,
+      err = svn_wc__translated_stream(&moved_to_stream, ctx->wc_ctx,
+                                      moved_to_abspath,
+                                      moved_to_abspath,
                                       SVN_WC_TRANSLATE_TO_NF,
                                       scratch_pool, scratch_pool);
       if (err)
         goto unlock_wc;
 
-      err = svn_stream_copy3(working_stream, incoming_stream,
+      err = svn_stream_copy3(moved_to_stream, incoming_stream,
                              NULL, NULL, /* no cancellation */
+                             scratch_pool);
+      if (err)
+        goto unlock_wc;
+
+      /* Overwrite the moved file with the conflict victim's content.
+       * Incoming changes will be merged in from the temporary file created
+       * above. This is required to correctly make local changes show up as
+       * 'mine' during the three-way text merge between the ancestor file,
+       * the conflict victim ('mine'), and the moved file ('theirs') which
+       * was brought in by the update/switch operation and occupies the path
+       * of the merge target. */
+      err = svn_io_copy_file(merge_source_abspath, moved_to_abspath, FALSE,
                              scratch_pool);
       if (err)
         goto unlock_wc;
