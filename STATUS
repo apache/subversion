@@ -87,6 +87,16 @@ Candidate changes:
    Votes:
      +1: brane, stsp
 
+ * r1855419
+   Fix conflict resolver bug where local and incoming edits got swapped.
+   Justification:
+     Bug breaks text conflict resolution.
+     User complained: https://svn.haxx.se/dev/archive-2019-03/0012.shtml
+   Branch:
+     ^/subversion/branches/1.11.x-r1855419
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
