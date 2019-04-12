@@ -91,6 +91,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1857367
+    Fix memory lifetime problem in a libsvn_wc error code path.
+    Justification:
+      Edge-case crash. Subversion should not crash.
+    Votes:
+      +1: stsp
+
 Veto-blocked changes:
 =====================
 
