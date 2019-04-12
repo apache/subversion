@@ -28,7 +28,6 @@
 #include "private/svn_cache.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_string_private.h"
-#include "private/svn_fs_fs_private.h"
 
 #include "index.h"
 #include "pack.h"

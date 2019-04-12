@@ -199,8 +199,10 @@ get_repo_stats(const svn_test_opts_t *opts,
   svn_repos_t *repos;
   svn_revnum_t rev;
   apr_size_t i;
-  svn_fs_fs__stats_t *stats;
   svn_fs_fs__extension_info_t *extension_info;
+  svn_fs_fs__ioctl_get_stats_input_t input = {0};
+  svn_fs_fs__ioctl_get_stats_output_t *output;
+  const svn_fs_fs__stats_t *stats;
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, "fsfs") != 0)
@@ -211,8 +213,9 @@ get_repo_stats(const svn_test_opts_t *opts,
   SVN_ERR(create_greek_repo(&repos, &rev, opts, REPO_NAME, pool, pool));
 
   /* Gather statistics info on that repo. */
-  SVN_ERR(svn_fs_fs__get_stats(&stats, svn_repos_fs(repos), NULL, NULL,
-                               NULL, NULL, pool, pool));
+  SVN_ERR(svn_fs_ioctl(svn_repos_fs(repos), SVN_FS_FS__IOCTL_GET_STATS,
+                       &input, (void**)&output, NULL, NULL, pool, pool));
+  stats = output->stats;
 
   /* Check that the stats make sense. */
   SVN_TEST_ASSERT(stats->total_size > 1000 && stats->total_size < 10000);
@@ -324,6 +327,7 @@ dump_index(const svn_test_opts_t *opts,
   svn_repos_t *repos;
   svn_revnum_t rev;
   dump_baton_t baton;
+  svn_fs_fs__ioctl_dump_index_input_t input = {0};
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, "fsfs") != 0)
@@ -342,8 +346,12 @@ dump_index(const svn_test_opts_t *opts,
   baton.offset = 0;
   baton.revision = rev;
   baton.numbers_seen = svn_bit_array__create(100, pool);
-  SVN_ERR(svn_fs_fs__dump_index(svn_repos_fs(repos), rev, dump_index_entry,
-                                &baton, NULL, NULL, pool));
+
+  input.revision = rev;
+  input.callback_func = dump_index_entry;
+  input.callback_baton = &baton;
+  SVN_ERR(svn_fs_ioctl(svn_repos_fs(repos), SVN_FS_FS__IOCTL_DUMP_INDEX,
+                       &input, NULL, NULL, NULL, pool, pool));
 
   /* Check that we've got all data (20 noderevs + 20 reps + 1 changes list). */
   SVN_TEST_ASSERT(baton.invocations == 41);
@@ -377,6 +385,8 @@ load_index(const svn_test_opts_t *opts, apr_pool_t *pool)
   apr_array_header_t *entries = apr_array_make(pool, 41, sizeof(void *));
   apr_array_header_t *alt_entries = apr_array_make(pool, 1, sizeof(void *));
   svn_fs_fs__p2l_entry_t entry;
+  svn_fs_fs__ioctl_dump_index_input_t dump_input = {0};
+  svn_fs_fs__ioctl_load_index_input_t load_input = {0};
 
   /* Bail (with success) on known-untestable scenarios */
   if (strcmp(opts->fs_type, "fsfs") != 0)
@@ -391,8 +401,11 @@ load_index(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(create_greek_repo(&repos, &rev, opts, REPO_NAME, pool, pool));
 
   /* Read the original index contents for REV in ENTRIES. */
-  SVN_ERR(svn_fs_fs__dump_index(svn_repos_fs(repos), rev, receive_index,
-                                entries, NULL, NULL, pool));
+  dump_input.revision = rev;
+  dump_input.callback_func = receive_index;
+  dump_input.callback_baton = entries;
+  SVN_ERR(svn_fs_ioctl(svn_repos_fs(repos), SVN_FS_FS__IOCTL_DUMP_INDEX,
+                       &dump_input, NULL, NULL, NULL, pool, pool));
 
   /* Replace it with an index that declares the whole revision contents as
    * "unused". */
@@ -404,14 +417,21 @@ load_index(const svn_test_opts_t *opts, apr_pool_t *pool)
   entry.item.revision = SVN_INVALID_REVNUM;
   APR_ARRAY_PUSH(alt_entries, svn_fs_fs__p2l_entry_t *) = &entry;
 
-  SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, alt_entries, pool));
+  load_input.revision = rev;
+  load_input.entries = alt_entries;
+  SVN_ERR(svn_fs_ioctl(svn_repos_fs(repos), SVN_FS_FS__IOCTL_LOAD_INDEX,
+                       &load_input, NULL, NULL, NULL, pool, pool));
+
   SVN_TEST_ASSERT_ERROR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE,
                                              NULL, NULL, NULL, NULL, NULL,
                                              NULL, pool),
                         SVN_ERR_FS_INDEX_CORRUPTION);
 
   /* Restore the original index. */
-  SVN_ERR(svn_fs_fs__load_index(svn_repos_fs(repos), rev, entries, pool));
+  load_input.revision = rev;
+  load_input.entries = entries;
+  SVN_ERR(svn_fs_ioctl(svn_repos_fs(repos), SVN_FS_FS__IOCTL_LOAD_INDEX,
+                       &load_input, NULL, NULL, NULL, pool, pool));
   SVN_ERR(svn_repos_verify_fs3(repos, rev, rev, FALSE, FALSE, NULL, NULL,
                                NULL, NULL, NULL, NULL, pool));
 
