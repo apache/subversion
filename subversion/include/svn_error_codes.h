@@ -888,6 +888,11 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 67,
              "Content checksums supposedly match but content does not.")
 
+  /** @since New in 1.13. */
+  SVN_ERRDEF(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE,
+             SVN_ERR_FS_CATEGORY_START + 68,
+             "Unrecognized filesystem I/O control code")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

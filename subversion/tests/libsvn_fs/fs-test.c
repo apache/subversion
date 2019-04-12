@@ -7441,6 +7441,34 @@ test_closest_copy_file_replaced_with_dir(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_unrecognized_ioctl(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_error_t *err;
+  svn_fs_ioctl_code_t code = {0};
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-unrecognized-ioctl", opts, pool));
+
+  code.fs_type = "NON-EXISTING";
+  code.code = 98765;
+  err = svn_fs_ioctl(fs, code, NULL, NULL, NULL, NULL, pool, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE);
+
+  code.fs_type = "NON-EXISTING";
+  code.code = 98765;
+  err = svn_fs_ioctl(NULL, code, NULL, NULL, NULL, NULL, pool, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_UNKNOWN_FS_TYPE);
+
+  code.fs_type = opts->fs_type;
+  code.code = 98765;
+  err = svn_fs_ioctl(NULL, code, NULL, NULL, NULL, NULL, pool, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7587,6 +7615,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test issue SVN-4677 regression"),
     SVN_TEST_OPTS_PASS(test_closest_copy_file_replaced_with_dir,
                        "svn_fs_closest_copy after replacing file with dir"),
+    SVN_TEST_OPTS_PASS(test_unrecognized_ioctl,
+                       "test svn_fs_ioctl with unrecognized code"),
     SVN_TEST_NULL
   };
 
