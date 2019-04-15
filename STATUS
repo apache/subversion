@@ -37,6 +37,15 @@ Candidate changes:
     Votes:
       +1: stsp
 
+ * r1857391
+   Fix build with APR 1.7.0.
+   Justification:
+     Bogus configure script check relies on APR internals.
+     See https://svn.haxx.se/users/archive-2019-04/0041.shtml
+     and https://svn.haxx.se/dev/archive-2019-04/0020.shtml
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
