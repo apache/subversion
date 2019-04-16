@@ -340,6 +340,19 @@ typedef struct svn_fs_fs__ioctl_load_index_input_t
 
 SVN_FS_DECLARE_IOCTL_CODE(SVN_FS_FS__IOCTL_LOAD_INDEX, SVN_FS_TYPE_FSFS, 1002);
 
+typedef struct svn_fs_fs__ioctl_revision_size_input_t
+{
+  svn_revnum_t revision;
+} svn_fs_fs__ioctl_revision_size_input_t;
+
+typedef struct svn_fs_fs__ioctl_revision_size_output_t
+{
+  apr_off_t rev_size;
+} svn_fs_fs__ioctl_revision_size_output_t;
+
+/* See svn_fs_fs__revision_size(). */
+SVN_FS_DECLARE_IOCTL_CODE(SVN_FS_FS__IOCTL_REVISION_SIZE, SVN_FS_TYPE_FSFS, 1003);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

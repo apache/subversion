@@ -42,6 +42,7 @@
 #include "svn_time.h"
 #include "svn_user.h"
 #include "svn_xml.h"
+#include "svn_fs.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_opt_private.h"
@@ -49,6 +50,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_fs_fs_private.h"
 
 #include "svn_private_config.h"
 
@@ -114,6 +116,7 @@ static svn_opt_subcommand_t
   subcommand_lstxns,
   subcommand_pack,
   subcommand_recover,
+  subcommand_rev_size,
   subcommand_rmlocks,
   subcommand_rmtxns,
   subcommand_setlog,
@@ -517,6 +520,17 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "exit if the repository is in use by another process.\n"
    )},
    {svnadmin__wait} },
+
+  {"rev-size", subcommand_rev_size, {0}, {N_(
+    "usage: svnadmin rev-size REPOS_PATH -r REVISION\n"
+    "\n"), N_(
+    "Print the total size in bytes of the representation on disk of\n"
+    "revision REVISION.\n"
+    "\n"), N_(
+    "The size includes revision properties and excludes FSFS indexes.\n"
+   )},
+   {'r', 'q', 'M'},
+   { {'q', "print only the size and a newline"} } },
 
   {"rmlocks", subcommand_rmlocks, {0}, {N_(
     "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
@@ -2846,6 +2860,68 @@ subcommand_delrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return set_revprop(prop_name, NULL, opt_state, pool);
 }
 
+
+/* Set *REV_SIZE to the total size in bytes of the representation on disk
+ * of revision REVISION in FS.
+ *
+ * This is implemented only for FSFS repositories, and otherwise returns
+ * an SVN_ERR_UNSUPPORTED_FEATURE error.
+ *
+ * The size includes revision properties and excludes FSFS indexes.
+ */
+static svn_error_t *
+revision_size(apr_off_t *rev_size,
+              svn_fs_t *fs,
+              svn_revnum_t revision,
+              apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_fs_fs__ioctl_revision_size_input_t input = {0};
+  svn_fs_fs__ioctl_revision_size_output_t *output;
+
+  input.revision = revision;
+  err = svn_fs_ioctl(fs, SVN_FS_FS__IOCTL_REVISION_SIZE,
+                     &input, (void **)&output,
+                     check_cancel, NULL, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE)
+    {
+      return svn_error_quick_wrapf(err,
+                                   _("Revision size query is not implemented "
+                                     "for the filesytem type found in '%s'"),
+                                   svn_fs_path(fs, scratch_pool));
+    }
+  SVN_ERR(err);
+
+  *rev_size = output->rev_size;
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+svn_error_t *
+subcommand_rev_size(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_revnum_t revision;
+  apr_off_t rev_size;
+  svn_repos_t *repos;
+
+  if (opt_state->start_revision.kind != svn_opt_revision_number
+      || opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Invalid revision specifier"));
+  revision = opt_state->start_revision.value.number;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
+  SVN_ERR(revision_size(&rev_size, svn_repos_fs(repos), revision, pool));
+
+  if (opt_state->quiet)
+    SVN_ERR(svn_cmdline_printf(pool, "%"APR_OFF_T_FMT"\n", rev_size));
+  else
+    SVN_ERR(svn_cmdline_printf(pool, _("%12"APR_OFF_T_FMT" bytes in revision %ld\n"),
+                               rev_size, revision));
+
+  return SVN_NO_ERROR;
+}
 
 
 /** Main. **/
