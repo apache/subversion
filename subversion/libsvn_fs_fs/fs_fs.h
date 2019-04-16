@@ -347,4 +347,13 @@ svn_fs_fs__load_index(svn_fs_t *fs,
                       apr_array_header_t *entries,
                       apr_pool_t *scratch_pool);
 
+/* Set *REV_SIZE to the total size of objects belonging to revision REVISION
+ * in FS. The size includes revision properties and excludes indexes.
+ */
+svn_error_t *
+svn_fs_fs__revision_size(apr_off_t *rev_size,
+                         svn_fs_t *fs,
+                         svn_revnum_t revision,
+                         apr_pool_t *scratch_pool);
+
 #endif

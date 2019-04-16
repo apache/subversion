@@ -1139,7 +1139,7 @@ _svnadmin ()
 	# Possible expansions, without pure-prefix abbreviations such as "h".
 	cmds='crashtest create delrevprop deltify dump dump-revprops freeze \
 	      help hotcopy info list-dblogs list-unused-dblogs \
-	      load load-revprops lock lslocks lstxns pack recover rmlocks \
+	      load load-revprops lock lslocks lstxns pack recover rev-size rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
 
 	if [[ $COMP_CWORD -eq 1 ]] ; then
@@ -1210,6 +1210,9 @@ _svnadmin ()
 		;;
 	recover)
 		cmdOpts="--wait"
+		;;
+	rev-size)
+		cmdOpts="-r --revision -M --memory-cache-size -q --quiet"
 		;;
 	rmlocks)
 		cmdOpts="-q --quiet"

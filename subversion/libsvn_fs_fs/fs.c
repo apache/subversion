@@ -297,6 +297,17 @@ fs_ioctl(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
                                         scratch_pool));
           *output_p = NULL;
         }
+      else if (ctlcode.code == SVN_FS_FS__IOCTL_REVISION_SIZE.code)
+        {
+          svn_fs_fs__ioctl_revision_size_input_t *input = input_void;
+          svn_fs_fs__ioctl_revision_size_output_t *output
+            = apr_pcalloc(result_pool, sizeof(*output));
+
+          SVN_ERR(svn_fs_fs__revision_size(&output->rev_size,
+                                           fs, input->revision,
+                                           scratch_pool));
+          *output_p = output;
+        }
       else
         return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
     }
