@@ -121,9 +121,9 @@ tool_versions = {
 
 # The version that is our current recommended release
 # ### TODO: derive this from svn_version.h; see ../../build/getversion.py
-recommended_release = '1.11'
+recommended_release = '1.12'
 # For clean-dist, a whitelist of artifacts to keep, by version.
-supported_release_lines = frozenset({"1.9", "1.10", "1.11", "1.12"})
+supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
 
 # Some constants
 repos = 'https://svn.apache.org/repos/asf/subversion'
