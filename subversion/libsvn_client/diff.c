@@ -1865,7 +1865,7 @@ diff_wc_wc(const char *path1,
                           "or between the working versions of two paths"
                           )));
 
-  SVN_ERR(svn_wc__diff7(TRUE,
+  SVN_ERR(svn_wc__diff7(FALSE,
                         ctx->wc_ctx, abspath1, depth,
                         ignore_ancestry, changelists,
                         diff_processor,
