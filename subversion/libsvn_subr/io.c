@@ -2126,7 +2126,7 @@ win32_set_file_information_by_handle(HANDLE hFile,
 }
 
 /* Fast Win32-specific helper for svn_io_check_path() and related functions
- * that only requires a single GetFileAttributesW() / IRP_MJ_QUERY_OPEN.
+ * that only requires a single GetFileAttributes() call in most cases.
  */
 static svn_error_t * io_win_check_path(svn_node_kind_t *kind_p,
                                        svn_boolean_t *is_symlink_p,
