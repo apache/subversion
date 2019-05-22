@@ -61,7 +61,7 @@ HTTP_FETCH=
 
 # Need this uncommented if any of the specific versions of the ASF tarballs to
 # be downloaded are no longer available on the general mirrors.
-APACHE_MIRROR=http://archive.apache.org/dist
+APACHE_MIRROR=https://archive.apache.org/dist
 
 # helpers
 usage() {
@@ -100,7 +100,7 @@ get_zlib() {
     test -d $BASEDIR/zlib && return
 
     cd $TEMPDIR
-    $HTTP_FETCH http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VERSION/$ZLIB.tar.gz
+    $HTTP_FETCH https://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VERSION/$ZLIB.tar.gz
     cd $BASEDIR
 
     gzip -dc $TEMPDIR/$ZLIB.tar.gz | tar -xf -
