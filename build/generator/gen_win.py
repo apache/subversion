@@ -740,7 +740,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     return fakedefines
     
-  def quote_define(self, value)
+  def quote_define(self, value):
     "Properly quote special characters in a define (if needed)"
     return value
 
