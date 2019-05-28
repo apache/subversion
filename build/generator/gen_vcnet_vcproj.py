@@ -289,5 +289,5 @@ class Generator(gen_win.WinGeneratorBase):
     
     if self.vcproj_extension == '.vcproj':
       return value.replace('"', '""')
-    else
+    else:
       return value
