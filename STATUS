@@ -22,6 +22,7 @@ Candidate changes:
      User complained: https://svn.haxx.se/dev/archive-2019-03/0012.shtml
    Votes:
      +1: stsp
+     +0: rhuijben
 
  * r1856397
    Allow generating Visual Studio 2019 projects
@@ -35,16 +36,7 @@ Candidate changes:
     Justification:
       Edge-case crash. Subversion should not crash.
     Votes:
-      +1: stsp
-
- * r1857391
-   Fix build with APR 1.7.0.
-   Justification:
-     Bogus configure script check relies on APR internals.
-     See https://svn.haxx.se/users/archive-2019-04/0041.shtml
-     and https://svn.haxx.se/dev/archive-2019-04/0020.shtml
-   Votes:
-     +1: stsp
+      +1: stsp, rhuijben
 
  * r1860175-1860188
    Fix building Subversion with Visual Studio 2005 and 2008.
@@ -66,3 +58,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1857391
+   Fix build with APR 1.7.0.
+   Justification:
+     Bogus configure script check relies on APR internals.
+     See https://svn.haxx.se/users/archive-2019-04/0041.shtml
+     and https://svn.haxx.se/dev/archive-2019-04/0020.shtml
+   Votes:
+     +1: stsp, rhuijben (bindings change so 2+1's is enough)
