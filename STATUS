@@ -63,7 +63,7 @@ Candidate changes:
        implementations from APR 1.6.x and 1.7.x (the latter should be
        even more slower).
    Votes:
-     +1: kotkov
+     +1: kotkov, rhuijben
 
 Veto-blocked changes:
 =====================
