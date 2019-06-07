@@ -120,6 +120,13 @@ Candidate changes:
    Votes:
      +1: stsp
 
+ * r1856397
+   Allow generating Visual Studio 2019 projects
+   Justification:
+     Makes it easier to build Subversion on Windows. Simple local fix.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
