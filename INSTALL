@@ -23,8 +23,8 @@ Contents:
 
    III. BUILDING A SUBVERSION SERVER
        A. Setting Up Apache Httpd
-       B. Making and Installing the Subversion Server
-       C. Configuring Apache for Subversion
+       B. Making and Installing the Subversion Apache Server Module
+       C. Configuring Apache Httpd for Subversion
        D. Running and Testing
        E. Alternative:  'svnserve' and ra_svn
 
