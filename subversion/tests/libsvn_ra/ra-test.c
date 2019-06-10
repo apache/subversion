@@ -1856,15 +1856,22 @@ test_get_deleted_rev_errors(const svn_test_opts_t *opts,
 {
   svn_ra_session_t *ra_session;
   svn_revnum_t revision_deleted;
+  svn_error_t *err;
 
   SVN_ERR(make_and_open_repos(&ra_session,
                               "test-repo-get-deleted-rev-errors", opts, pool));
   SVN_ERR(commit_changes(ra_session, pool));
 
   /* expect an error when searching up to r3, when repository head is r1 */
-  SVN_TEST_ASSERT_ERROR(svn_ra_get_deleted_rev(ra_session, "A", 1, 3,
-                                               &revision_deleted, pool),
-                        SVN_ERR_FS_NO_SUCH_REVISION);
+  err = svn_ra_get_deleted_rev(ra_session, "A", 1, 3, &revision_deleted, pool);
+
+  /* mod_dav_svn returns a generic error code for "500 Internal Server Error";
+   * the other RA layers return the specific error code for "no such revision".
+   * We should make these consistent, but for now that's how it is. */
+  if (opts->repos_url && strncmp(opts->repos_url, "http", 4) == 0)
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_RA_DAV_REQUEST_FAILED);
+  else
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_NO_SUCH_REVISION);
 
   return SVN_NO_ERROR;
 }
