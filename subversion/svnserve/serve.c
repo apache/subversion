@@ -3516,8 +3516,21 @@ get_deleted_rev(svn_ra_svn_conn_t *conn,
                                svn_relpath_canonicalize(path, pool), pool);
   SVN_ERR(log_command(b, conn, pool, "get-deleted-rev"));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_ERR(svn_repos_deleted_rev(b->repository->fs, full_path, peg_revision,
-                                end_revision, &revision_deleted, pool));
+  SVN_CMD_ERR(svn_repos_deleted_rev(b->repository->fs, full_path, peg_revision,
+                                    end_revision, &revision_deleted, pool));
+
+  /* The protocol does not allow for a reply of SVN_INVALID_REVNUM directly.
+     Instead, return SVN_ERR_ENTRY_MISSING_REVISION. A new enough client
+     knows that this means the answer to the query is SVN_INVALID_REVNUM.
+     (An older client reports this as an error.) */
+  if (revision_deleted == SVN_INVALID_REVNUM)
+    SVN_CMD_ERR(svn_error_createf(SVN_ERR_ENTRY_MISSING_REVISION, NULL,
+                                  "svn protocol command 'get-deleted-rev': "
+                                  "path '%s' was not deleted in r%ld-%ld; "
+                                  "NOTE: newer clients handle this case "
+                                  "and do not report it as an error",
+                                  full_path, peg_revision, end_revision));
+
   SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, "r", revision_deleted));
   return SVN_NO_ERROR;
 }
