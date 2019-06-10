@@ -4138,7 +4138,7 @@ construct_server_baton(server_baton_t **baton,
                        serve_params_t *params,
                        apr_pool_t *scratch_pool)
 {
-  svn_error_t *err, *io_err;
+  svn_error_t *err;
   apr_uint64_t ver;
   const char *client_url, *ra_client_string, *client_string;
   svn_ra_svn__list_t *caplist;
@@ -4280,11 +4280,12 @@ construct_server_baton(server_baton_t **baton,
     }
   if (err)
     {
-      log_error(err, b);
-      io_err = svn_ra_svn__write_cmd_failure(conn, scratch_pool, err);
-      svn_error_clear(err);
-      SVN_ERR(io_err);
-      return svn_ra_svn__flush(conn, scratch_pool);
+      /* Report these errors to the client before closing the connection. */
+      err = svn_error_compose_create(err,
+              svn_ra_svn__write_cmd_failure(conn, scratch_pool, err));
+      err = svn_error_compose_create(err,
+              svn_ra_svn__flush(conn, scratch_pool));
+      return err;
     }
 
   SVN_ERR(svn_fs_get_uuid(b->repository->fs, &b->repository->uuid,
