@@ -119,7 +119,7 @@ Candidate changes:
    Justification:
      Error handling was inconsistent across RA layers.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, stsp
 
 Veto-blocked changes:
 =====================
