@@ -3057,15 +3057,30 @@ void svn_swig_py_client_status_func(void *baton,
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
-  if ((result = PyObject_CallFunction(function,
+  if (status == NULL)
+    {
+      result = PyObject_CallFunction(function,
 #if IS_PY3
-                                      (char *)"yO&O&",
+                                     (char *)"yOO&",
 #else
-                                      (char *)"sO&O&",
+                                     (char *)"sOO&",
 #endif
-                                      path,
-                                      make_ob_client_status, status,
-                                      make_ob_pool, scratch_pool)) == NULL)
+                                     path, Py_None,
+                                     make_ob_pool, scratch_pool);
+    }
+  else
+    {
+      result = PyObject_CallFunction(function,
+#if IS_PY3
+                                     (char *)"yO&O&",
+#else
+                                     (char *)"sO&O&",
+#endif
+                                     path,
+                                     make_ob_client_status, status,
+                                     make_ob_pool, scratch_pool);
+    }
+  if (result == NULL)
     {
       err = callback_exception_error();
     }
