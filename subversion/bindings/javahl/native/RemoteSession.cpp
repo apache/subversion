@@ -104,7 +104,9 @@ RemoteSession::open(jint jretryAttempts,
   jobject jremoteSession = open(
       jretryAttempts, url.c_str(), uuid,
       (jconfigDirectory ? configDirectory.c_str() : NULL),
-      usernameStr, passwordStr, prompter, jprogress, jcfgcb, jtunnelcb);
+      usernameStr, passwordStr,
+      JavaHL::cxx::move(prompter),
+      jprogress, jcfgcb, jtunnelcb);
   if (JNIUtil::isExceptionThrown() || !jremoteSession)
     jremoteSession = NULL;
   return jremoteSession;
@@ -120,7 +122,9 @@ RemoteSession::open(jint jretryAttempts,
 {
   RemoteSession* session = new RemoteSession(
       jretryAttempts, url, uuid, configDirectory,
-      usernameStr, passwordStr, prompter, jcfgcb, jtunnelcb);
+      usernameStr, passwordStr,
+      JavaHL::cxx::move(prompter),
+      jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown() || !session)
     {
       delete session;
@@ -169,7 +173,7 @@ RemoteSession::open(jint jretryAttempts,
 namespace{
   struct compare_c_strings
   {
-    bool operator()(const char* a, const char* b)
+    bool operator()(const char* a, const char* b) const
       {
         return (0 < std::strcmp(a, b));
       }
@@ -187,7 +191,9 @@ RemoteSession::RemoteSession(int retryAttempts,
   : m_session(NULL), m_context(NULL)
 {
   m_context = new RemoteSessionContext(
-      pool, configDirectory, username, password, prompter, jcfgcb, jtunnelcb);
+      pool, configDirectory, username, password,
+      JavaHL::cxx::move(prompter),
+      jcfgcb, jtunnelcb);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -421,31 +427,31 @@ byte_array_to_svn_string(JNIByteArray& ary, SVN::Pool& scratch_pool)
 void
 RemoteSession::changeRevisionProperty(
     jlong jrevision, jstring jname,
-    jbyteArray jold_value, jbyteArray jvalue)
+    jbyteArray jold_propval, jbyteArray jpropval)
 {
   JNIStringHolder name(jname);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIByteArray old_value(jold_value);
+  JNIByteArray old_propval(jold_propval);
   if (JNIUtil::isExceptionThrown())
     return;
 
-  JNIByteArray value(jvalue);
+  JNIByteArray propval(jpropval);
   if (JNIUtil::isExceptionThrown())
     return;
 
   SVN::Pool subPool(pool);
-  svn_string_t* const* p_old_value = NULL;
-  svn_string_t* const str_old_value =
-    byte_array_to_svn_string(old_value, subPool);
-  if (str_old_value)
-    p_old_value = &str_old_value;
+  svn_string_t* const* p_old_propval = NULL;
+  svn_string_t* const str_old_propval =
+    byte_array_to_svn_string(old_propval, subPool);
+  if (str_old_propval)
+    p_old_propval = &str_old_propval;
 
   SVN_JNI_ERR(svn_ra_change_rev_prop2(m_session,
                                       svn_revnum_t(jrevision),
-                                      name, p_old_value,
-                                      byte_array_to_svn_string(value, subPool),
+                                      name, p_old_propval,
+                                      byte_array_to_svn_string(propval, subPool),
                                       subPool.getPool()), );
 }
 
@@ -856,7 +862,8 @@ RemoteSession::status(jobject jthis, jstring jstatus_target,
                                 editor->delta_editor(),
                                 editor->delta_baton(),
                                 report_pool),);
-  rp->set_reporter_data(raw_reporter, report_baton, editor);
+  rp->set_reporter_data(raw_reporter, report_baton,
+                        JavaHL::cxx::move(editor));
 }
 
 // TODO: diff

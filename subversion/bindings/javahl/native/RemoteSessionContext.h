@@ -30,6 +30,7 @@
 #include "svn_ra.h"
 
 #include "OperationContext.h"
+#include "CxxCompat.hpp"
 
 class RemoteSessionContext : public OperationContext
 {
@@ -37,7 +38,7 @@ class RemoteSessionContext : public OperationContext
     RemoteSessionContext(SVN::Pool &pool,
                          const char* jconfigDirectory,
                          const char* jusername, const char* jpassword,
-                         std::auto_ptr<Prompter> prompter,
+                         JavaHL::cxx::owned_ptr<Prompter> prompter,
                          jobject jcfgcb, jobject jtunnelcb);
     virtual ~RemoteSessionContext();
     void activate(jobject jremoteSession, jobject jprogress);

@@ -3503,6 +3503,54 @@ svn_fs_info_dup(const void *info,
                 apr_pool_t *result_pool,
                 apr_pool_t *scratch_pool);
 
+/**
+ * A structure specifying the filesystem-specific input/output operation.
+ *
+ * @see svn_fs_ioctl()
+ *
+ * @since New in 1.13.
+ */
+typedef struct svn_fs_ioctl_code_t
+{
+  const char *fs_type;
+  int code;
+} svn_fs_ioctl_code_t;
+
+/**
+ * A convenience macro to declare #svn_fs_ioctl_code_t codes.
+ *
+ * @since New in 1.13.
+ */
+#define SVN_FS_DECLARE_IOCTL_CODE(name, fs_type, code) \
+  static const svn_fs_ioctl_code_t name = { fs_type, code }
+
+/**
+ * Issue a filesystem-specific input/output operation defined by @a ctlcode
+ * (usually, a low-level operation which cannot be expressed by other
+ * filesystem APIs).  If @a fs is @c NULL, issue a global operation.
+ * If @a fs is not @c NULL, issue an operation that is specific to this
+ * filesystem instance.
+ *
+ * If the filesystem cannot handle this ioctl code, return the
+ * #SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE error.
+ *
+ * Allocate the result in @a result_pool, use @a scratch_pool for temporary
+ * allocations.
+ *
+ * @see #svn_fs_ioctl_code_t
+ *
+ * @since New in 1.13.
+ */
+svn_error_t *
+svn_fs_ioctl(svn_fs_t *fs,
+             svn_fs_ioctl_code_t ctlcode,
+             void *input,
+             void **output_p,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool);
+
 /** @} */
 
 #ifdef __cplusplus

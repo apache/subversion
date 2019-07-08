@@ -92,7 +92,7 @@ our $SERF_VER = '1.3.6';
 our $NEON_VER = '0.29.6';
 
 # Sources for files to download
-our $AWK_URL = 'http://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe';
+our $AWK_URL = 'https://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe';
 our $HTTPD_URL;
 our $APR_URL;
 our $APU_URL;
@@ -168,17 +168,17 @@ sub set_svn_ver_defaults {
 # Any variables with defaults that reference other values
 # should be set here.  This defers setting of the default until runtime in these cases.
 sub set_defaults {
-  set_default(\$HTTPD_URL, "http://archive.apache.org/dist/httpd/httpd-$HTTPD_VER.tar.bz2");
-  set_default(\$APR_URL, "http://archive.apache.org/dist/apr/apr-$APR_VER.tar.bz2");
-  set_default(\$APU_URL, "http://archive.apache.org/dist/apr/apr-util-$APU_VER.tar.bz2");
-  set_default(\$API_URL, "http://archive.apache.org/dist/apr/apr-iconv-$API_VER.tar.bz2");
-  set_default(\$ZLIB_URL, "http://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VER/zlib" . remove_dots($ZLIB_VER) . '.zip');
-  set_default(\$OPENSSL_URL, "http://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz");
+  set_default(\$HTTPD_URL, "https://archive.apache.org/dist/httpd/httpd-$HTTPD_VER.tar.bz2");
+  set_default(\$APR_URL, "https://archive.apache.org/dist/apr/apr-$APR_VER.tar.bz2");
+  set_default(\$APU_URL, "https://archive.apache.org/dist/apr/apr-util-$APU_VER.tar.bz2");
+  set_default(\$API_URL, "https://archive.apache.org/dist/apr/apr-iconv-$API_VER.tar.bz2");
+  set_default(\$ZLIB_URL, "https://sourceforge.net/projects/libpng/files/zlib/$ZLIB_VER/zlib" . remove_dots($ZLIB_VER) . '.zip');
+  set_default(\$OPENSSL_URL, "https://www.openssl.org/source/openssl-$OPENSSL_VER.tar.gz");
   set_default(\$PCRE_URL, "ftp://ftp.csx.cam.ac.uk/pub/software/programming/pcre/pcre-$PCRE_VER.zip");
-  set_default(\$BDB_URL, "http://download.oracle.com/berkeley-db/db-5.3.21.zip");
-  set_default(\$SQLITE_URL, "http://www.sqlite.org/2013/sqlite-amalgamation-$SQLITE_VER.zip");
+  set_default(\$BDB_URL, "https://download.oracle.com/berkeley-db/db-5.3.21.zip");
+  set_default(\$SQLITE_URL, "https://www.sqlite.org/2013/sqlite-amalgamation-$SQLITE_VER.zip");
   set_default(\$SERF_URL, "https://archive.apache.org/dist/serf/serf-$SERF_VER.zip");
-  set_default(\$NEON_URL, "http://www.webdav.org/neon/neon-$NEON_VER.tar.gz");
+  set_default(\$NEON_URL, "https://www.webdav.org/neon/neon-$NEON_VER.tar.gz");
   set_default(\$INSTDIR, $TOPDIR);
   set_default(\$BLDDIR, "$TOPDIR\\build");
   set_default(\$SRCDIR, "$TOPDIR\\sources");

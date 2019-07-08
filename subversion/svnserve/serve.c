@@ -107,13 +107,20 @@ typedef struct authz_baton_t {
   svn_ra_svn_conn_t *conn;
 } authz_baton_t;
 
-/* svn_error_create() a new error, log_server_error() it, and
-   return it. */
+/* Log an error. */
 static void
-log_error(svn_error_t *err, server_baton_t *server)
+log_error(const svn_error_t *err, server_baton_t *server)
 {
   logger__log_error(server->logger, err, server->repository,
                     server->client_info);
+}
+
+/* Log a warning. */
+static void
+log_warning(const svn_error_t *err, server_baton_t *server)
+{
+  logger__log_warning(server->logger, err, server->repository,
+                      server->client_info);
 }
 
 /* svn_error_create() a new error, log_server_error() it, and
@@ -294,7 +301,10 @@ static svn_error_t *
 load_authz_config(repository_t *repository,
                   const char *repos_root,
                   svn_config_t *cfg,
-                  apr_pool_t *pool)
+                  svn_repos_authz_warning_func_t warning_func,
+                  void *warning_baton,
+                  apr_pool_t *result_pool,
+                  apr_pool_t *scratch_pool)
 {
   const char *authzdb_path;
   const char *groupsdb_path;
@@ -313,17 +323,18 @@ load_authz_config(repository_t *repository,
 
       /* Canonicalize and add the base onto the authzdb_path (if needed). */
       err = canonicalize_access_file(&authzdb_path, repository,
-                                     repos_root, pool);
+                                     repos_root, scratch_pool);
 
       /* Same for the groupsdb_path if it is present. */
       if (groupsdb_path && !err)
         err = canonicalize_access_file(&groupsdb_path, repository,
-                                       repos_root, pool);
+                                       repos_root, scratch_pool);
 
       if (!err)
-        err = svn_repos_authz_read3(&repository->authzdb, authzdb_path,
+        err = svn_repos_authz_read4(&repository->authzdb, authzdb_path,
                                     groupsdb_path, TRUE, repository->repos,
-                                    pool, pool);
+                                    warning_func, warning_baton,
+                                    result_pool, scratch_pool);
 
       if (err)
         return svn_error_create(SVN_ERR_AUTHZ_INVALID_CONFIG, err, NULL);
@@ -3505,8 +3516,21 @@ get_deleted_rev(svn_ra_svn_conn_t *conn,
                                svn_relpath_canonicalize(path, pool), pool);
   SVN_ERR(log_command(b, conn, pool, "get-deleted-rev"));
   SVN_ERR(trivial_auth_request(conn, pool, b));
-  SVN_ERR(svn_repos_deleted_rev(b->repository->fs, full_path, peg_revision,
-                                end_revision, &revision_deleted, pool));
+  SVN_CMD_ERR(svn_repos_deleted_rev(b->repository->fs, full_path, peg_revision,
+                                    end_revision, &revision_deleted, pool));
+
+  /* The protocol does not allow for a reply of SVN_INVALID_REVNUM directly.
+     Instead, return SVN_ERR_ENTRY_MISSING_REVISION. A new enough client
+     knows that this means the answer to the query is SVN_INVALID_REVNUM.
+     (An older client reports this as an error.) */
+  if (revision_deleted == SVN_INVALID_REVNUM)
+    SVN_CMD_ERR(svn_error_createf(SVN_ERR_ENTRY_MISSING_REVISION, NULL,
+                                  "svn protocol command 'get-deleted-rev': "
+                                  "path '%s' was not deleted in r%ld-%ld; "
+                                  "NOTE: newer clients handle this case "
+                                  "and do not report it as an error",
+                                  full_path, peg_revision, end_revision));
+
   SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, "r", revision_deleted));
   return SVN_NO_ERROR;
 }
@@ -3793,6 +3817,8 @@ find_repos(const char *url,
            repository_t *repository,
            svn_repos__config_pool_t *config_pool,
            apr_hash_t *fs_config,
+           svn_repos_authz_warning_func_t authz_warning_func,
+           void *authz_warning_baton,
            apr_pool_t *result_pool,
            apr_pool_t *scratch_pool)
 {
@@ -3870,7 +3896,8 @@ find_repos(const char *url,
 
   SVN_ERR(load_pwdb_config(repository, cfg, config_pool, result_pool));
   SVN_ERR(load_authz_config(repository, repository->repos_root, cfg,
-                            result_pool));
+                            authz_warning_func, authz_warning_baton,
+                            result_pool, scratch_pool));
 
   /* Should we use Cyrus SASL? */
   SVN_ERR(svn_config_get_bool(cfg, &sasl_requested,
@@ -4092,6 +4119,16 @@ get_client_info(svn_ra_svn_conn_t *conn,
   return client_info;
 }
 
+static void
+handle_authz_warning(void *baton,
+                     const svn_error_t *err,
+                     apr_pool_t *scratch_pool)
+{
+  server_baton_t *const server_baton = baton;
+  log_warning(err, server_baton);
+  SVN_UNUSED(scratch_pool);
+}
+
 /* Construct the server baton for CONN using PARAMS and return it in *BATON.
  * It's lifetime is the same as that of CONN.  SCRATCH_POOL
  */
@@ -4101,7 +4138,7 @@ construct_server_baton(server_baton_t **baton,
                        serve_params_t *params,
                        apr_pool_t *scratch_pool)
 {
-  svn_error_t *err, *io_err;
+  svn_error_t *err;
   apr_uint64_t ver;
   const char *client_url, *ra_client_string, *client_string;
   svn_ra_svn__list_t *caplist;
@@ -4214,10 +4251,14 @@ construct_server_baton(server_baton_t **baton,
       }
   }
 
+  /* (*b) has the logger, repository and client_info set, so it can
+     be used as the authz_warning_baton that eventyally gets passed
+     to log_warning(). */
   err = handle_config_error(find_repos(client_url, params->root, b->vhost,
                                        b->read_only, params->cfg,
                                        b->repository, params->config_pool,
                                        params->fs_config,
+                                       handle_authz_warning, b,
                                        conn_pool, scratch_pool),
                             b);
   if (!err)
@@ -4239,11 +4280,12 @@ construct_server_baton(server_baton_t **baton,
     }
   if (err)
     {
-      log_error(err, b);
-      io_err = svn_ra_svn__write_cmd_failure(conn, scratch_pool, err);
-      svn_error_clear(err);
-      SVN_ERR(io_err);
-      return svn_ra_svn__flush(conn, scratch_pool);
+      /* Report these errors to the client before closing the connection. */
+      err = svn_error_compose_create(err,
+              svn_ra_svn__write_cmd_failure(conn, scratch_pool, err));
+      err = svn_error_compose_create(err,
+              svn_ra_svn__flush(conn, scratch_pool));
+      return err;
     }
 
   SVN_ERR(svn_fs_get_uuid(b->repository->fs, &b->repository->uuid,

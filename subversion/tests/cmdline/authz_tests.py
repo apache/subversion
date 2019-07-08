@@ -1694,7 +1694,7 @@ def inverted_group_membership(sbox):
 
 @Skip(svntest.main.is_ra_type_file)
 def group_member_empty_string(sbox):
-  "group definition ignores with empty member"
+  "group definition ignores empty member"
 
   sbox.build(create_wc = False)
 
@@ -1703,6 +1703,27 @@ def group_member_empty_string(sbox):
                    {"/" : ("$anonymous =\n"
                            "@readonly = r\n")},
                    {"groups": "readonly = , %s\n" % svntest.main.wc_author})
+
+  expected_output = svntest.verify.UnorderedOutput(['A/\n', 'iota\n'])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author,
+                                     sbox.repo_url)
+
+@Issue(4802)
+@Skip(svntest.main.is_ra_type_file)
+def empty_group(sbox):
+  "empty group is ignored"
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox,
+                   {"/" : ("$anonymous =\n"
+                           "@empty = rw\n"
+                           "@readonly = r\n")},
+                   {"groups": ("empty = \n"
+                               "readonly = %s\n" % svntest.main.wc_author)})
 
   expected_output = svntest.verify.UnorderedOutput(['A/\n', 'iota\n'])
   svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1749,6 +1770,7 @@ test_list = [ None,
               remove_access_after_commit,
               inverted_group_membership,
               group_member_empty_string,
+              empty_group,
              ]
 serial_only = True
 

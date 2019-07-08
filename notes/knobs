@@ -56,6 +56,7 @@ SVN_SQLITE_MIN_VERSION
 SVN_SERF_NO_LOGGING
 SVN_ALLOW_SHORT_INTS
 SVN_ALLOW_NON_8_BIT_CHARS
+SVNXX_USE_BOOST
 
 2.3 Debugging Support
 
@@ -75,6 +76,7 @@ SVN_FS__TRAIL_DEBUG
 SVN_FS_FS__LOG_ACCESS
 SVN_FS_EMULATE_PATHS_CHANGED
 SVN_FS_EMULATE_REPORT_CHANGES
+SVNXX_POOL_DEBUG
 
 2.4 Test-only
 
@@ -304,6 +306,15 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   not defined
   Suggested: not defined (to ensure correct behaviour)
 
+4.13 SVNXX_USE_BOOST
+  Scope:     SVN++ (subversion/bindings/cxx)
+  Purpose:   Adds header-only conversions and overloads to make SVN++
+             interoperate cleanly with selected Boost types. Defining this
+             symbol does *not* affect the SVN++ ABI. Users may define the
+             symbol when using SVN++ after libsvnxx has been built.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined for testing SVN++, otherwise not defined
 
 5 Defines controlling debug support
 ==================================
@@ -458,6 +469,14 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
   Default:   TRUE (local default if macro has not been defined)
   Suggested: FALSE
 
+5.17 SVNXX_POOL_DEBUG
+
+  Scope:     SVN++ (subversion/bindings/cxx)
+  Purpose:   Logs debugging info about the lifetime of the SVN++ global pool.
+             Depends on SVN_DEBUG being defined.
+  Range:     definedness
+  Default:   not defined
+  Suggested: defined, not defined
 
 6 Defines that affect unit tests
 ================================

@@ -102,11 +102,20 @@ def edit_file(path, pattern, replacement):
     assert new_text != old_text
     open(path, 'w').write(new_text)
 
-def prepend_file(path, text):
+def edit_changes_file(path, newtext):
+    """Insert NEWTEXT in the 'CHANGES' file found at PATH,
+       just before the first line that starts with 'Version '.
+    """
     print("Prepending to '%s'" % (path,))
-    print("  text='%s'" % (text,))
-    original = open(path, 'r').read()
-    open(path, 'w').write(text + original)
+    print("  text='%s'" % (newtext,))
+    lines = open(path, 'r').readlines()
+    for i, line in enumerate(lines):
+      if line.startswith('Version '):
+        with open(path, 'w') as newfile:
+          newfile.writelines(lines[:i])
+          newfile.write(newtext)
+          newfile.writelines(lines[i:])
+        break
 
 #----------------------------------------------------------------------
 def make_release_branch(ver, revnum):
@@ -158,7 +167,7 @@ def update_minor_ver_in_trunk(ver, revnum):
     relpath = 'CHANGES'
     relpaths.append(relpath)
     # insert at beginning of CHANGES file
-    prepend_file(get_trunk_wc_path(relpath),
+    edit_changes_file(get_trunk_wc_path(relpath),
                  'Version ' + next_ver.base + '\n'
                  + '(?? ??? 20XX, from /branches/' + next_ver.branch + '.x)\n'
                  + get_tag_url(next_ver) + '\n'

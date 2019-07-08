@@ -1225,25 +1225,32 @@ create_private_resource(const dav_resource *base,
   return &comb->res;
 }
 
-
-static void log_warning(void *baton, svn_error_t *err)
+static void log_warning_req(void *baton, svn_error_t *err)
 {
   request_rec *r = baton;
   const char *continuation = "";
-
-  /* ### hmm. the FS is cleaned up at request cleanup time. "r" might
-     ### not really be valid. we should probably put the FS into a
-     ### subpool to ensure it gets cleaned before the request.
-
-     ### is there a good way to create and use a subpool for all
-     ### of our functions ... ??
-  */
 
   /* Not showing file/line so no point in tracing */
   err = svn_error_purge_tracing(err);
   while (err)
     {
       ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s%s",
+                    continuation, err->message);
+      continuation = "-";
+      err = err->child;
+    }
+}
+
+static void log_warning_conn(void *baton, svn_error_t *err)
+{
+  conn_rec *c = baton;
+  const char *continuation = "";
+
+  /* Not showing file/line so no point in tracing */
+  err = svn_error_purge_tracing(err);
+  while (err)
+    {
+      ap_log_cerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, c, "%s%s",
                     continuation, err->message);
       continuation = "-";
       err = err->child;
@@ -1547,6 +1554,24 @@ cleanup_fs_access(void *data)
   return APR_SUCCESS;
 }
 
+/* Context for cleanup handler. */
+struct cleanup_req_logging_baton
+{
+  svn_fs_t *fs;
+  conn_rec *connection;
+};
+
+static apr_status_t
+cleanup_req_logging(void *data)
+{
+  struct cleanup_req_logging_baton *baton = data;
+
+  /* The request about to be freed. Log future warnings with a connection
+   * context instead of a request context. */
+  svn_fs_set_warning_func(baton->fs, log_warning_conn, baton->connection);
+
+  return APR_SUCCESS;
+}
 
 /* Helper func to construct a special 'parentpath' private resource. */
 static dav_error *
@@ -2180,6 +2205,7 @@ get_resource(request_rec *r,
   int had_slash;
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
+  struct cleanup_req_logging_baton *cleanup_req_logging_baton;
   void *userdata;
   apr_hash_t *fs_config;
 
@@ -2486,7 +2512,7 @@ get_resource(request_rec *r,
   repos->fs = svn_repos_fs(repos->repos);
 
   /* capture warnings during cleanup of the FS */
-  svn_fs_set_warning_func(repos->fs, log_warning, r);
+  svn_fs_set_warning_func(repos->fs, log_warning_req, r);
 
   /* if an authenticated username is present, attach it to the FS */
   if (r->user)
@@ -2502,6 +2528,14 @@ get_resource(request_rec *r,
       cleanup_baton->fs = repos->fs;
       apr_pool_cleanup_register(r->pool, cleanup_baton, cleanup_fs_access,
                                 apr_pool_cleanup_null);
+
+      /* We must degrade the logging context when the request is freed. */
+      cleanup_req_logging_baton =
+        apr_pcalloc(r->pool, sizeof(*cleanup_req_logging_baton));
+      cleanup_req_logging_baton->fs = repos->fs;
+      cleanup_req_logging_baton->connection = r->connection;
+      apr_pool_pre_cleanup_register(r->pool, cleanup_req_logging_baton,
+                                    cleanup_req_logging);
 
       /* Create an access context based on the authenticated username. */
       serr = svn_fs_create_access(&access_ctx, r->user, r->pool);

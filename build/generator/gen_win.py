@@ -743,9 +743,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
-      fakedefines.append('SVN_WIN32_CRASHREPORT_EMAIL="users@subversion.apache.org"')
+      fakedefines.append(self.quote_define('SVN_WIN32_CRASHREPORT_EMAIL="users@subversion.apache.org"'))
 
     return fakedefines
+    
+  def quote_define(self, value):
+    "Properly quote special characters in a define (if needed)"
+    return value
 
   def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
@@ -790,8 +794,8 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
-    if 'cxxhl' in target.name:
-      fakeincludes.append("subversion/bindings/cxxhl/include")
+    if 'svnxx' in target.name:
+      fakeincludes.append("subversion/bindings/cxx/include")
 
     return gen_base.unique(map(self.apath, fakeincludes))
 

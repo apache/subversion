@@ -4,37 +4,87 @@
 # To view an issue listed as (issue #XXXX), visit:
 #   https://issues.apache.org/jira/browse/SVN-XXXX
 
+Version 1.13.0
+(?? ??? 20XX, from /branches/1.13.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.13.0
+
 Version 1.12.0
-(?? ??? 20XX, from /branches/1.12.x)
+(12 Apr 2019, from /branches/1.12.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.12.0
 
  User-visible changes:
   - Major new features:
 
   - Minor new features and improvements:
+    * 'move vs. move' merge conflicts can now be resolved (r1846851, r1851913)
     * 'svn --version --verbose' shows loaded libraries on Linux (r1843774)
     * 'svnrdump' can read/write a file instead of stdin/stdout (r1844906)
-    * 'svn list' tries to not truncate the authior's name (r1847384 et al.)
+    * 'svn list' tries to not truncate the author's name (r1847384 et al.)
     * 'svn list' can show sizes in base-2 unit suffixes (r1847384 et al.)
     * 'svn info' shows the size of files in the repository (r1847441 et al.)
+    * 'svn cleanup' can remove read-only directories (#4806, r1854072 et al.)
 
   - Client-side bugfixes:
     * Repos-to-WC copy with --parents works with absent target (r1843888)
     * Repos-to-WC copy from foreign repo with peg/operative revs (#4785)
 
   - Server-side bugfixes:
+    * Ignore empty group definitions in authz files (#4802, r1851687)
 
   - Client-side and server-side bugfixes:
 
   - Other tool improvements and bugfixes:
+    * svnauthz: warn about empty groups in authz files (#4803, r1851823)
+    * Storing passwords in plain text on disk is disabled by default (r1845377)
 
  Developer-visible changes:
   - General:
-    * Storing passwords in plain text on disk is disabled by default (r1845377)
     * Updated the required libtool version to 2.x (r1845716)
+    * get-deps.sh: Remove references to Googlemock and Googletest (r1849200)
+    * All C++ code is compiled in C++11 mode by default (r1849202)
 
   - Bindings:
-    * Fixed potential core dump in JavaHL's ISVNClient.diff (r1845408)
+    * JavaHL: Fixed potential core dump in ISVNClient.diff (r1845408)
+    * JavaHL: Let clients decode file contents from ISVNClient.blame (r1851333)
+
+
+Version 1.11.1
+(11 Jan 2019, from /branches/1.11.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.11.1
+
+ User-visible changes:
+  - Minor new features and improvements:
+    * Conflict resolver support for added vs unversioned file (r1845577)
+    * Conflict resolver support for unversioned directories (r1846299)
+    * Improve help for 'svn add' and the '-N' option (r1842814 et al.)
+    * Improve display of Mac OS name in 'svn --version --verbose' (r1842334)
+
+  - Client-side bugfixes:
+    * Fix: repos-to-WC copy with --parents doesn't create dirs (#4768)
+    * Fix: foreign repo copy with peg/operative revisions (#4785)
+    * Fix: foreign repo copy of file adding mergeinfo (#4792)
+    * Fix: assertion failure using -rPREV on a working copy at r0 (#4532)
+    * Fix: tree conflict message ends a sentence with a colon (#4717)
+
+  - Server-side bugfixes:
+    * Fix CVE-2018-11803: malicious SVN clients can crash mod_dav_svn
+    * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
+    * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
+    * Fix crash in mod_http2 (#4782)
+
+  - Other tool improvements and bugfixes:
+    * svndumpfilter: Clarify error messages by including node path (r1845261)
+
+  - Bindings bugfixes:
+    * JavaHL: Fix crash in client code when using external diff (r1845408)
+
+ Developer-visible changes:
+  - General:
+    * Fix build on systems without python in $PATH (r1845555)
+    * Fix compiler warnings about indentation (r1845556 et al.)
+
+  - API changes:
+    (none)
 
 
 Version 1.11.0
@@ -84,6 +134,42 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Bump minimum JDK version required for JavaHL to 1.8 (r1831895)
     * Enable building against Java 10 (r1841180 et al)
     * Fix a potential crash in JavaHL (issue #4764)
+
+
+Version 1.10.4
+(11 Jan 2019, from /branches/1.10.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.10.4
+
+ User-visible changes:
+  - Minor new features and improvements:
+    * Conflict resolver support for added vs unversioned file (r1845577)
+    * Conflict resolver support for unversioned directories (r1846299)
+
+  - Client-side bugfixes:
+    * Fix: repos-to-WC copy with --parents doesn't create dirs (#4768)
+    * Fix: foreign repo copy with peg/operative revisions (#4785)
+    * Fix: foreign repo copy of file adding mergeinfo (#4792)
+    * Fix: assertion failure using -rPREV on a working copy at r0 (#4532)
+    * Fix: tree conflict message ends a sentence with a colon (#4717)
+
+  - Server-side bugfixes:
+    * Fix CVE-2018-11803: malicious SVN clients can crash mod_dav_svn
+    * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
+    * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
+    * Fix crash in mod_http2 (#4782)
+
+  - Other tool improvements and bugfixes:
+    * svndumpfilter: Clarify error messages by including node path (r1845261)
+
+  - Bindings bugfixes:
+    * JavaHL: Fix crash in client code when using external diff (r1845408)
+
+ Developer-visible changes:
+  - General:
+    * Fix build on systems without python in $PATH (r1845555)
+
+  - API changes:
+    (none)
 
 
 Version 1.10.3
@@ -157,7 +243,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
  User-visible changes:
   - Major new features:
     * Better interactive conflict resolution for tree conflicts (r1687489 et al)
-    * Wilcards and improved performance in path-based authorization (r1776832)
+    * Wildcards and improved performance in path-based authorization (r1776832)
     * New experimental 'svn shelve' command (issue #3625)
   - Minor new features and improvements:
     * svnbench: Show time taken & bytes transferred (r1703383, r1710586)
@@ -178,7 +264,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * ra_serf: Adjustments for serf versions with HTTP/2 support (r1716400)
     * ra_serf: Send svndiff1 deltas during commit (r1704317, r1704613, r1791290)
     * ra_serf: Stream svndiff deltas w/o creating temporary files (r1803143 et al)
-    * ra_serf: Don't necessarily request full MERGE reponses (r1806017 et al)
+    * ra_serf: Don't necessarily request full MERGE responses (r1806017 et al)
     * 'svn patch': Parse binary diffs in git-style patches (r1703925)
     * 'svnadmin info' now reports latest revision in the repository (r1697953)
     * ra_svn: Various performance-related tweaks (r1694490)
@@ -433,6 +519,46 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * JavaHL: Add missing exception checks (r1801108)
     * Ruby: Fix handling of NULL MD5 digests (r1811786)
     * Ruby: Detect versions up to 2.4 (r1806570)
+
+
+Version 1.9.10
+(11 Jan 2019, from /branches/1.9.x)
+http://svn.apache.org/repos/asf/subversion/tags/1.9.10
+
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix: repos-to-WC copy with --parents doesn't create dirs (#4768)
+    * Fix: foreign repo copy with peg/operative revisions (#4785)
+    * Fix: assertion failure using -rPREV on a working copy at r0 (#4532)
+    * Fix: german translation for 'svn help merge' (r1837037)
+    * Fix: prune externals after 'update --set-depth=exclude' (r1830883 et al.)
+    * Fix: detection of GPG-agent (r1794166 et al.)
+    * Fix: null updates don't update last-changed-revision (#4700)
+    * Fix: merge "Unable to parse reversed revision range" (#4686)
+
+  - Server-side bugfixes:
+    * Fix: unexpected SVN_ERR_FS_NOT_DIRECTORY errors (#4791)
+    * Fix: mod_dav_svn's SVNUseUTF8 had no effect in some setups (r1844882)
+    * Fix: crash in mod_http2 (#4782)
+    * Fix: 'svnadmin upgrade' of BDB: Error out on too-new formats (r1804013)
+    * Fix: Enforce v1 HTTP protocol: error if PUT before CHECKOUT (r1833465)
+    * Fix: Let 'svnadmin recover' prune rep-cache even if disabled (r1838813)
+    * Add test and FSFS checksum verification for issue #4722 (r1826720 et al.)
+
+  - Other tool improvements and bugfixes:
+    * Install 'fsfs-stats' wrapper for 1.8 compat (r1802032 et al.)
+    * Note that 'tools/client-side/detach.py' doesn't work on 1.8+ (r1696722)
+
+  - Bindings bugfixes:
+    * JavaHL: Fix crash in client code when using external diff (r1845408)
+    * JavaHL: SSL server trust prompt: allow accepting temporarily (r1820718)
+
+ Developer-visible changes:
+  - General:
+    (none)
+
+  - API changes:
+    (none)
 
 
 Version 1.9.9

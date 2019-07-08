@@ -1027,7 +1027,7 @@ sub handle_entry {
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
     PROMPT: while (1) {
     say "";
-    say "\n>>> $entry{header_start}:";
+    say "\n\e\x5b32m>>> $entry{header_start}:\e\x5b0m";
     say join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
     say "$BRANCHES/$entry{branch}" if $entry{branch};
     say "--accept=$entry{accept}" if $entry{accept};
@@ -1196,7 +1196,7 @@ sub backport_main {
     given ($lines[0]) {
       # Section header
       when (/^[A-Z].*:$/i) {
-        say "\n\n=== $lines[0]" unless $YES;
+        say "\n\n\e\x5b33m\e\x5b1m=== $lines[0]\e\x5b0m" unless $YES;
         $in_approved = $lines[0] =~ /^Approved changes/;
       }
       # Comment

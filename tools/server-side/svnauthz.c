@@ -31,6 +31,7 @@
 
 #include "private/svn_fspath.h"
 #include "private/svn_cmdline_private.h"
+#include "svn_private_config.h"
 
 
 /*** Option Processing. ***/
@@ -98,6 +99,9 @@ struct svnauthz_opt_state
 
 /* Libtool command prefix */
 #define SVNAUTHZ_LT_PREFIX "lt-"
+
+/* The prefix for handling errors and warnings. */
+#define SVNAUTHZ_ERR_PREFIX "svnauthz: "
 
 
 /*** Subcommands. */
@@ -224,6 +228,18 @@ read_file_contents(svn_stream_t **contents, const char *filename,
   return SVN_NO_ERROR;
 }
 
+/* Handles warning emitted by the authz parser. */
+static void
+handle_parser_warning(void *baton,
+                      const svn_error_t *err,
+                      apr_pool_t *scratch_pool)
+{
+  svn_handle_warning2(stderr, err, SVNAUTHZ_ERR_PREFIX);
+  SVN_UNUSED(baton);
+  SVN_UNUSED(scratch_pool);
+}
+
+
 /* Loads the authz config into *AUTHZ from the file at AUTHZ_FILE
    in repository at REPOS_PATH from the transaction TXN_NAME.  If GROUPS_FILE
    is set, the resulting *AUTHZ will be constructed from AUTHZ_FILE with
@@ -256,7 +272,8 @@ get_authz_from_txn(svn_authz_t **authz, const char *repos_path,
   else
     groups_contents = NULL;
 
-  err = svn_repos_authz_parse(authz, authz_contents, groups_contents, pool);
+  err = svn_repos_authz_parse2(authz, authz_contents, groups_contents,
+                               handle_parser_warning, NULL, pool, pool);
 
   /* Add the filename to the error stack since the parser doesn't have it. */
   if (err != SVN_NO_ERROR)
@@ -283,9 +300,11 @@ get_authz(svn_authz_t **authz, struct svnauthz_opt_state *opt_state,
                               opt_state->txn, pool);
 
   /* Else */
-  return svn_repos_authz_read3(authz, opt_state->authz_file,
+  return svn_repos_authz_read4(authz, opt_state->authz_file,
                                opt_state->groups_file,
-                               TRUE, NULL, pool, pool);
+                               TRUE, NULL,
+                               handle_parser_warning, NULL,
+                               pool, pool);
 }
 
 static svn_error_t *
@@ -395,7 +414,12 @@ subcommand_accessof(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 static svn_boolean_t
 use_compat_mode(const char *cmd, apr_pool_t *pool)
 {
-  cmd = svn_dirent_internal_style(cmd, pool);
+  svn_error_t *err = svn_dirent_internal_style_safe(&cmd, NULL, cmd, pool, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return FALSE;
+    }
   cmd = svn_dirent_basename(cmd, NULL);
 
   /* Skip over the Libtool command prefix if it exists on the command. */
@@ -437,7 +461,9 @@ canonicalize_access_file(const char **canonicalized_access_file,
                                    access_file);
         }
 
-      *canonicalized_access_file = svn_uri_canonicalize(access_file, pool);
+      SVN_ERR(svn_uri_canonicalize_safe(
+                  canonicalized_access_file, NULL,
+                  access_file, pool, pool));
     }
   else if (within_txn)
     {
@@ -450,8 +476,9 @@ canonicalize_access_file(const char **canonicalized_access_file,
     {
       /* If it isn't a URL and there's no transaction flag then it's a
        * dirent to the access file on local disk. */
-      *canonicalized_access_file =
-          svn_dirent_internal_style(access_file, pool);
+      SVN_ERR(svn_dirent_internal_style_safe(
+                  canonicalized_access_file, NULL,
+                  access_file, pool, pool));
     }
 
   return SVN_NO_ERROR;
@@ -626,7 +653,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                               pool));
           os->ind++;
 
-          opt_state.repos_path = svn_dirent_internal_style(opt_state.repos_path, pool);
+          SVN_ERR(svn_dirent_internal_style_safe(&opt_state.repos_path, NULL,
+                                                 opt_state.repos_path,
+                                                 pool, pool));
         }
 
       /* Exactly 1 non-option argument */
@@ -745,7 +774,7 @@ main(int argc, const char *argv[])
     {
       if (exit_code == 0)
         exit_code = EXIT_FAILURE;
-      svn_cmdline_handle_exit_error(err, NULL, "svnauthz: ");
+      svn_cmdline_handle_exit_error(err, NULL, SVNAUTHZ_ERR_PREFIX);
     }
 
   svn_pool_destroy(pool);

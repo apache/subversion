@@ -160,7 +160,7 @@ public class RevisionRange implements Comparable<RevisionRange>, java.io.Seriali
         {
             val = ((Revision.Number) rev).getNumber();
         }
-        return new Long(val);
+        return Long.valueOf(val);
     }
 
     public int hashCode()

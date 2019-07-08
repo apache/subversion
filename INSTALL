@@ -23,8 +23,8 @@ Contents:
 
    III. BUILDING A SUBVERSION SERVER
        A. Setting Up Apache Httpd
-       B. Making and Installing the Subversion Server
-       C. Configuring Apache for Subversion
+       B. Making and Installing the Subversion Apache Server Module
+       C. Configuring Apache Httpd for Subversion
        D. Running and Testing
        E. Alternative:  'svnserve' and ra_svn
 
@@ -165,11 +165,6 @@ I.    INTRODUCTION
          which are added to version control. Note that mime-types
          configured via auto-props or the mime-types-file option
          take precedence.
-
-      * Googlemock aka Gmock (OPTIONAL)
-
-         This optional package is used by the tests for Subversions'
-         C++ bindings.
 
 
   C. Dependencies in Detail
@@ -527,12 +522,6 @@ I.    INTRODUCTION
       the default locations should be searched, then use:
 
         --with-libmagic
-
-      21. Googlemock (OPTIONAL)
-
-      Googlemock can be installed and built in-tree by invoking
-
-      $ ./get-dep.sh gmock
 
       22. LZ4 (OPTIONAL)
 

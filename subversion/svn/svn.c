@@ -140,6 +140,7 @@ typedef enum svn_cl__longopt_t {
   opt_mergeinfo_log,
   opt_remove_unversioned,
   opt_remove_ignored,
+  opt_remove_added,
   opt_no_newline,
   opt_show_passwords,
   opt_pin_externals,
@@ -421,6 +422,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"remove-unversioned", opt_remove_unversioned, 0,
                        N_("remove unversioned items")},
   {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
+  {"remove-added", opt_remove_added, 0,
+                       N_("reverting an added item will remove it from disk")},
   {"no-newline", opt_no_newline, 0, N_("do not output the trailing newline")},
   {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
   {"pin-externals", opt_pin_externals, 0,
@@ -1765,7 +1768,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  For information about undoing already committed changes, search\n"
      "  the output of 'svn help merge' for 'undo'.\n"
     )},
-    {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
+    {opt_targets, 'R', opt_depth, 'q', opt_changelist,
+     opt_remove_added} },
 
   { "status", svn_cl__status, {"stat", "st"}, {N_(
      "Print the status of working copy files and directories.\n"
@@ -2133,6 +2137,18 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  in the next release, and there is no promise of backward compatibility.\n"
     )},
     {opt_drop, 'q', opt_dry_run, opt_force} },
+
+  { "x-wc-copy-mods", svn_cl__wc_copy_mods, {0}, {N_(
+     "Copy local modifications from one WC to another.\n"
+     "usage: x-wc-copy-mods SRC_WC_PATH DST_WC_PATH\n"
+     "\n"), N_(
+     "  The source and destination WC paths may be in the same WC or in different"
+     "  WCs.\n"
+     "\n"), N_(
+     "  This feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+  },
 
   { NULL, NULL, {0}, {NULL}, {0} }
 };
@@ -2637,7 +2653,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_config_dir:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
+        SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
+                                               utf8_opt_arg, pool, pool));
         break;
       case opt_config_options:
         if (!opt_state.config_options)
@@ -2805,6 +2822,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_remove_ignored:
         opt_state.remove_ignored = TRUE;
+        break;
+      case opt_remove_added:
+        opt_state.remove_added = TRUE;
         break;
       case opt_no_newline:
       case opt_strict:          /* ### DEPRECATED */
@@ -3220,7 +3240,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           svn_node_kind_t kind;
           const char *local_abspath;
-          const char *fname = svn_dirent_internal_style(dash_F_arg, pool);
+          const char *fname;
+
+          SVN_ERR(svn_dirent_internal_style_safe(&fname, NULL, dash_F_arg,
+                                                 pool, pool));
 
           err = svn_dirent_get_absolute(&local_abspath, fname, pool);
 

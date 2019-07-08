@@ -201,7 +201,7 @@ dav_svn__list_report(const dav_resource *resource,
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   int ns;
-  const char *full_path;
+  const char *full_path = NULL;
   svn_boolean_t path_info_only;
   svn_fs_root_t *root;
   svn_depth_t depth = svn_depth_unknown;
@@ -278,6 +278,12 @@ dav_svn__list_report(const dav_resource *resource,
             lrb.dirent_fields |= SVN_DIRENT_ALL;
         }
       /* else unknown element; skip it */
+    }
+
+  if (! full_path)
+    {
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                                    "Request was missing the path argument");
     }
 
   /* Build authz read baton */
