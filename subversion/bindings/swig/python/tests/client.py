@@ -641,8 +641,7 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(1, len(all_versions))
     self.assertTrue(isinstance(all_versions[0], client.svn_client__shelf_version_t))
     self.assertEqual(shelf_version.version_number, all_versions[0].version_number)
-    self.assertEqual(1, len(statused_paths))
-    self.assertEqual(new_subpath, statused_paths[0])
+    self.assertIn(new_subpath, statused_paths)
 
     client._shelf_close(shelf, pool)
 
