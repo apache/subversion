@@ -3105,6 +3105,7 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_error_t *err;
 
   path = reparent_path(session, path, pool);
 
@@ -3116,8 +3117,20 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
                                  N_("'get-deleted-rev' not implemented")));
 
-  return svn_error_trace(svn_ra_svn__read_cmd_response(conn, pool, "r",
-                                                       revision_deleted));
+  err = svn_error_trace(svn_ra_svn__read_cmd_response(conn, pool, "r",
+                                                      revision_deleted));
+  /* The protocol does not allow for a reply of SVN_INVALID_REVNUM directly.
+     Instead, a new enough server returns SVN_ERR_ENTRY_MISSING_REVISION to
+     indicate the answer to the query is SVN_INVALID_REVNUM. (An older server
+     closes the connection and returns SVN_ERR_RA_SVN_CONNECTION_CLOSED.) */
+  if (err && err->apr_err == SVN_ERR_ENTRY_MISSING_REVISION)
+    {
+      *revision_deleted = SVN_INVALID_REVNUM;
+      svn_error_clear(err);
+    }
+  else
+    SVN_ERR(err);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
