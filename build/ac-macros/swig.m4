@@ -128,41 +128,6 @@ AC_DEFUN(SVN_FIND_SWIG,
       ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
     ])
     SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
-
-    dnl Sun Forte adds an extra space before substituting APR_INT64_T_FMT
-    dnl gcc-2.95 adds an extra space after substituting APR_INT64_T_FMT
-    dnl thus the egrep patterns have a + in them.
-    SVN_PYCFMT_SAVE_CPPFLAGS="$CPPFLAGS"
-    CPPFLAGS="$CPPFLAGS $SVN_APR_INCLUDES"
-    AC_CACHE_CHECK([for apr_int64_t Python/C API format string],
-                   [svn_cv_pycfmt_apr_int64_t], [
-      if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-        AC_EGREP_CPP([MaTcHtHiS +\"lld\" +EnDeNd],
-                     [#include <apr.h>
-                      MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                     [svn_cv_pycfmt_apr_int64_t="L"])
-      fi
-      if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-        AC_EGREP_CPP([MaTcHtHiS +\"ld\" +EnDeNd],r
-                     [#include <apr.h>
-                      MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                     [svn_cv_pycfmt_apr_int64_t="l"])
-      fi
-      if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-        AC_EGREP_CPP([MaTcHtHiS +\"d\" +EnDeNd],
-                     [#include <apr.h>
-                      MaTcHtHiS APR_INT64_T_FMT EnDeNd],
-                     [svn_cv_pycfmt_apr_int64_t="i"])
-      fi
-    ])
-    CPPFLAGS="$SVN_PYCFMT_SAVE_CPPFLAGS"
-    if test "x$svn_cv_pycfmt_apr_int64_t" = "x"; then
-      AC_MSG_ERROR([failed to recognize APR_INT64_T_FMT on this platform])
-    fi
-    AC_DEFINE_UNQUOTED([SVN_APR_INT64_T_PYCFMT],
-                       ["$svn_cv_pycfmt_apr_int64_t"],
-                       [Define to the Python/C API format character suitable]
-                       [ for apr_int64_t])
   fi
 
   if test "$PERL" != "none"; then
