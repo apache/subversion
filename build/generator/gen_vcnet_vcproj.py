@@ -283,3 +283,11 @@ class Generator(gen_win.WinGeneratorBase):
       }
 
     self.write_with_template('subversion_vcnet.sln', 'templates/vcnet_sln.ezt', data)
+
+  def quote_define(self, value):
+    "Properly quote special characters in a define (if needed)"
+    
+    if self.vcproj_extension == '.vcproj':
+      return value.replace('"', '""')
+    else:
+      return value

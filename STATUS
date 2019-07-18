@@ -21,20 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1860175,r1860186,r1860187,r1860188
-   Fix building Subversion with Visual Studio 2005 and 2008.
-   Justification:
-     A change in 1.12 accidentally introduced a macro escaping issue
-     which broke compilation with these older versions of VC++.
-   Notes:
-     Should have been a simple patch. But lack of this version on my
-     development machine made things harder.
-     (I don't see a problem with dropping VS200 2008 support with
-      a future Subversion version, but then we should provide better
-      documentation on that change.)
-   Votes:
-     +1: rhuijben
-
  * r1859732, r1859734
    io: Implement the functions that check for node existence using the native
    Win32 APIs on Windows.
