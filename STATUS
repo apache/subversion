@@ -21,19 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1859732, r1859734
-   io: Implement the functions that check for node existence using the native
-   Win32 APIs on Windows.
-   Justification:
-     - This allows us to remove the hack from r1833621 and properly handle
-       reparse points on Windows irrespectively of the used APR version.
-     - This improves the I/O performance by using only a single call to
-       GetFileAttributes(), which is much faster than the generic stat
-       implementations from APR 1.6.x and 1.7.x (the latter should be
-       even more slower).
-   Votes:
-     +1: kotkov, rhuijben
-
  * r1860936, r1860951, r1860958
    Provide a way for svnserve's 'get-deleted-rev' API to return 'not deleted'.
    Justification:
