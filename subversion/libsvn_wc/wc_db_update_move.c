@@ -2169,11 +2169,12 @@ suitable_for_move(svn_wc__db_wcroot_t *wcroot,
   while (have_row)
     {
       svn_revnum_t node_revision = svn_sqlite__column_revnum(stmt, 2);
-      const char *child_relpath = svn_sqlite__column_text(stmt, 0, NULL);
+      const char *child_relpath;
       const char *relpath;
 
       svn_pool_clear(iterpool);
 
+      child_relpath = svn_sqlite__column_text(stmt, 0, iterpool);
       relpath = svn_relpath_skip_ancestor(local_relpath, child_relpath);
       relpath = svn_relpath_join(repos_relpath, relpath, iterpool);
 
