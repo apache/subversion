@@ -669,7 +669,20 @@ test_query_expectations(apr_pool_t *scratch_pool)
                        || (item->expression_vars < 1))
                    && !is_result_table(item->table))
             {
-              if (in_list(primary_key_statements, i))
+              if (MATCH_TOKEN(item->table, "sqlite_master"))
+                {
+                  /* The sqlite_master table does not have an index.
+                     Query explanations that say 'SCAN TABLE sqlite_master'
+                     will appear if SQLite was compiled with the option
+                     SQLITE_ENABLE_STMT_SCANSTATUS, for queries such
+                     as 'DROP TABLE foo', but the performance of such
+                     statements is not our concern here. */
+
+                  /* "Slow" statements do expect too see a warning, however. */
+                  if (is_slow_statement(i))
+                    warned = TRUE;
+                }
+              else if (in_list(primary_key_statements, i))
                 {
                   /* Reported as primary key index usage in Sqlite 3.7,
                      as table scan in 3.8+, while the execution plan is
