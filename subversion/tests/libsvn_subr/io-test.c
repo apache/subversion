@@ -211,6 +211,38 @@ create_comparison_candidates(struct test_file_definition_t **definitions,
   return err;
 }
 
+/* Create an on-disk tree with optional read-only attributes on some
+   files and/or directories. */
+static svn_error_t *
+create_dir_tree(const char **dir_path,
+                const char *testname,
+                svn_boolean_t dir_readonly,
+                svn_boolean_t file_readonly,
+                apr_pool_t *pool)
+{
+  const char *test_dir_path;
+  const char *sub_dir_path;
+  const char *file_path;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&test_dir_path, testname, pool));
+
+  sub_dir_path = svn_dirent_join(test_dir_path, "dir", pool);
+  SVN_ERR(svn_io_dir_make(sub_dir_path, APR_OS_DEFAULT, pool));
+
+  file_path = svn_dirent_join(sub_dir_path, "file", pool);
+  SVN_ERR(svn_io_file_create_empty(file_path, pool));
+
+  if (file_readonly)
+    SVN_ERR(svn_io_set_file_read_only(file_path, FALSE, pool));
+
+  if (dir_readonly)
+    SVN_ERR(svn_io_set_file_read_only(sub_dir_path, FALSE, pool));
+
+  *dir_path = sub_dir_path;
+  return SVN_NO_ERROR;
+}
+
+
 
 /* Functions to check the 2-way and 3-way file comparison functions.  */
 
@@ -1147,6 +1179,56 @@ test_apr_trunc_workaround(apr_pool_t *pool)
   return SVN_NO_ERROR;  
 }
 
+
+/* Issue #4806 */
+static svn_error_t *
+test_rmtree_all_writable(apr_pool_t *pool)
+{
+  const char *dir_path = NULL;
+
+  SVN_ERR(create_dir_tree(&dir_path, "test_rmtree_all_writable",
+                          FALSE, FALSE, pool));
+  SVN_ERR(svn_io_remove_dir2(dir_path, FALSE, NULL, NULL, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Issue #4806 */
+static svn_error_t *
+test_rmtree_file_readonly(apr_pool_t *pool)
+{
+  const char *dir_path = NULL;
+
+  SVN_ERR(create_dir_tree(&dir_path, "test_rmtree_file_readonly",
+                          FALSE, TRUE, pool));
+  SVN_ERR(svn_io_remove_dir2(dir_path, FALSE, NULL, NULL, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Issue #4806 */
+static svn_error_t *
+test_rmtree_dir_readonly(apr_pool_t *pool)
+{
+  const char *dir_path = NULL;
+
+  SVN_ERR(create_dir_tree(&dir_path, "test_rmtree_dir_readonly",
+                          TRUE, FALSE, pool));
+  SVN_ERR(svn_io_remove_dir2(dir_path, FALSE, NULL, NULL, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Issue #4806 */
+static svn_error_t *
+test_rmtree_all_readonly(apr_pool_t *pool)
+{
+  const char *dir_path = NULL;
+
+  SVN_ERR(create_dir_tree(&dir_path, "test_rmtree_all_readonly",
+                          TRUE, TRUE, pool));
+  SVN_ERR(svn_io_remove_dir2(dir_path, FALSE, NULL, NULL, pool));
+  return SVN_NO_ERROR;
+}
+
+
 /* The test table.  */
 
 static int max_threads = 3;
@@ -1184,6 +1266,14 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_io_open_uniquely_named()"),
     SVN_TEST_PASS2(test_apr_trunc_workaround,
                    "test workaround for APR in svn_io_file_trunc"),
+    SVN_TEST_PASS2(test_rmtree_all_writable,
+                   "test svn_io_remove_dir2() with writable tree"),
+    SVN_TEST_PASS2(test_rmtree_file_readonly,
+                   "test svn_io_remove_dir2() with read-only file"),
+    SVN_TEST_PASS2(test_rmtree_dir_readonly,
+                   "test svn_io_remove_dir2() with read-only directory"),
+    SVN_TEST_PASS2(test_rmtree_all_readonly,
+                   "test svn_io_remove_dir2() with read-only tree"),
     SVN_TEST_NULL
   };
 
