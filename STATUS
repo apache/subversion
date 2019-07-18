@@ -21,16 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1855419
-   Fix conflict resolver bug where local and incoming edits got swapped.
-   Justification:
-     Bug breaks text conflict resolution.
-     User complained: https://svn.haxx.se/dev/archive-2019-03/0012.shtml
-   Branch:
-     ^/subversion/branches/1.10.x-r1855419
-   Votes:
-     +1: stsp
-
  * r1857367
     Fix memory lifetime problem in a libsvn_wc error code path.
     Justification:
