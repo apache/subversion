@@ -2029,8 +2029,9 @@ def tolerate_local_mods(sbox):
   svntest.main.run_svn(None, 'add', L_path)
   sbox.simple_commit(message='Commit added folder')
 
-  # locally modified unversioned file
+  # locally modified versioned file
   svntest.main.file_write(LM_path, 'Locally modified file.\n', 'w+')
+  sbox.simple_add('A/L/local_mod')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/L' : Item(status='  ', treeconflict='C'),
@@ -2046,7 +2047,8 @@ def tolerate_local_mods(sbox):
   expected_status.tweak('', 'iota', wc_rev=1)
   expected_status.tweak('A', switched='S')
   expected_status.add({
-    'A/L' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-')
+    'A/L' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+    'A/L/local_mod' : Item(status='A ', wc_rev='-'),
   })
 
   # Used to fail with locally modified or unversioned files

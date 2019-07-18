@@ -1454,7 +1454,7 @@ check_tree_conflict(svn_skel_t **pconflict,
          * Therefore, we need to start a separate crawl here. */
 
         SVN_ERR(svn_wc__node_has_local_mods(&modified, NULL,
-                                            eb->db, local_abspath, FALSE,
+                                            eb->db, local_abspath, TRUE,
                                             eb->cancel_func, eb->cancel_baton,
                                             scratch_pool));
 
