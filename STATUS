@@ -21,15 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1855419
-   Fix conflict resolver bug where local and incoming edits got swapped.
-   Justification:
-     Bug breaks text conflict resolution.
-     User complained: https://svn.haxx.se/dev/archive-2019-03/0012.shtml
-   Votes:
-     +1: stsp
-     +0: rhuijben
-
  * r1856397
    Allow generating Visual Studio 2019 projects
    Justification:
@@ -77,4 +68,3 @@ Approved changes:
      Error handling was inconsistent across RA layers.
    Votes:
      +1: julianfoad, stsp
-
