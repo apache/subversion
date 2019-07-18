@@ -20,10 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1860936, r1860951, r1860958
-   Provide a way for svnserve's 'get-deleted-rev' API to return 'not deleted'.
-   Justification:
-     Error handling was inconsistent across RA layers.
-   Votes:
-     +1: julianfoad, stsp
