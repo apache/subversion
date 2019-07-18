@@ -28,6 +28,28 @@ Candidate changes:
                    this behavior change was reverted when a better fix was
                    implemented)
 
+Veto-blocked changes:
+=====================
+
+ * r1701488
+   Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
+     output", http://subversion.tigris.org/issues/show_bug.cgi?id=4592
+   Justification:
+     Make this contributed script work again, after 1.7.8 broke it.
+   Notes:
+     Brett Randall put effort into contributing this fix: see the dev@ email
+     thread "[patch][reboot-topic] fix check-mime-type.pl for changes to
+     'svnlook proplist' output" started by him on 2015-08-07, archived at
+     e.g. <http://svn.haxx.se/dev/archive-2015-08/0047.shtml> or
+     <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3CCALeEUB56NVCR0nCZ2rYki6oKQNcVPPLvWTeCoYyrMqitsov0ag@mail.gmail.com%3E>.
+   Votes:
+     +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
+     +0: danielsh (not tested; would be nice to have a $ anchor in the pattern)
+     -1: brane (Not a valid backport, contrib/ is not in the release tarball.)
+
+Approved changes:
+=================
+
  * r1845212
    Silence a deprecation warning from amalgamated SQLite on macOS.
    Justification:
@@ -88,24 +110,3 @@ Candidate changes:
    Votes:
      +1: julianfoad, stsp
 
-Veto-blocked changes:
-=====================
-
- * r1701488
-   Issue #4592 "fix contrib check-mime-type.pl for changes to 'svnlook proplist'
-     output", http://subversion.tigris.org/issues/show_bug.cgi?id=4592
-   Justification:
-     Make this contributed script work again, after 1.7.8 broke it.
-   Notes:
-     Brett Randall put effort into contributing this fix: see the dev@ email
-     thread "[patch][reboot-topic] fix check-mime-type.pl for changes to
-     'svnlook proplist' output" started by him on 2015-08-07, archived at
-     e.g. <http://svn.haxx.se/dev/archive-2015-08/0047.shtml> or
-     <http://mail-archives.apache.org/mod_mbox/subversion-dev/201508.mbox/%3CCALeEUB56NVCR0nCZ2rYki6oKQNcVPPLvWTeCoYyrMqitsov0ag@mail.gmail.com%3E>.
-   Votes:
-     +0: julianfoad, rhuijben (he says it works, but I haven't reviewed or tested)
-     +0: danielsh (not tested; would be nice to have a $ anchor in the pattern)
-     -1: brane (Not a valid backport, contrib/ is not in the release tarball.)
-
-Approved changes:
-=================
