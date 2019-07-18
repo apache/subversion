@@ -50,14 +50,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1850651
-   Fix a use-after-free in mod_dav_svn's logging of FS warnings.
-   Justification:
-     Lots of crashes on OpenBSD during 'make check' with HTTPD 2.4.
-     See https://svn.haxx.se/dev/archive-2018-12/0137.shtml
-   Votes:
-     +1: stsp, brane
-
  * r1852013
    Fix issue #4804: avoid test failures just because some SQLite compile-time
    feature was enabled that changes its query plan descriptions.
