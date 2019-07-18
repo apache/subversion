@@ -15,6 +15,12 @@ Status of 1.10.5:
 Candidate changes:
 ==================
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1845212
    Silence a deprecation warning from amalgamated SQLite on macOS.
    Justification:
@@ -121,8 +127,3 @@ Candidate changes:
    Votes:
      +1: julianfoad, stsp
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
