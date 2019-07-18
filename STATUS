@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1851920
-   Remove a useless common ancestor search from the conflict resolver.
-   Justification:
-     Current behaviour is inefficient and could lead to dubious conflicts.
-   Votes:
-     +1: stsp
-
  * r1852013
    Fix issue #4804: avoid test failures just because some SQLite compile-time
    feature was enabled that changes its query plan descriptions.
