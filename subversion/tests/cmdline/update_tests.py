@@ -6790,6 +6790,48 @@ def update_delete_switched(sbox):
   svntest.actions.run_and_verify_update(wc_dir, None, None, expected_status,
                                         [], False, sbox.ospath('A'), '-r', 0)
 
+# Verify that deleting an unmodified directory leaves behind any unversioned
+# items on disk
+def update_keeps_unversioned_items_in_deleted_dir(sbox):
+  "update keeps unversioned items in deleted dir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/D/G')
+  sbox.simple_commit()
+
+  sbox.simple_update('', revision='1')
+
+  os.mkdir(sbox.ospath('A/D/G/unversioned-dir'))
+  svntest.main.file_write(sbox.ospath('A/D/G/unversioned.txt'),
+                          'unversioned file', 'wb')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  # The unversioned items should be left behind on disk
+  expected_disk.add({
+    'A/D/G/unversioned-dir' : Item(),
+    'A/D/G/unversioned.txt' : Item('unversioned file'),
+    })
+  expected_disk.remove('A/D/G/pi')
+  expected_disk.remove('A/D/G/rho')
+  expected_disk.remove('A/D/G/tau')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/D/G')
+  expected_status.remove('A/D/G/pi')
+  expected_status.remove('A/D/G/rho')
+  expected_status.remove('A/D/G/tau')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], True)
+
 #######################################################################
 # Run the tests
 
@@ -6879,6 +6921,7 @@ test_list = [ None,
               update_add_conflicted_deep,
               missing_tmp_update,
               update_delete_switched,
+              update_keeps_unversioned_items_in_deleted_dir,
              ]
 
 if __name__ == '__main__':
