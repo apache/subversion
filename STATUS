@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1856397
-   Allow generating Visual Studio 2019 projects
-   Justification:
-     Makes it easier to build Subversion on Windows. Simple local fix.
-   Votes:
-     +1: rhuijben
-
  * r1860936, r1860951, r1860958
    Provide a way for svnserve's 'get-deleted-rev' API to return 'not deleted'.
    Justification:

@@ -265,6 +265,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.sln_version = '12.00'
           self.vcproj_version = '14.1'
           self.vcproj_extension = '.vcxproj'
+        elif val == '2019' or val == '16':
+          self.vs_version = '2019'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.2'
+          self.vcproj_extension = '.vcxproj'
         elif re.match('^20\d+$', val):
           print('WARNING: Unknown VS.NET version "%s",'
                 ' assuming VS2012. Your VS can probably upgrade')
