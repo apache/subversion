@@ -44,6 +44,7 @@
 #include "private/svn_sorts_private.h"
 #include "private/svn_utf_private.h"
 #include "private/svn_cache.h"
+#include "private/svn_fspath.h"
 
 #define ARE_VALID_COPY_ARGS(p,r) ((p) && SVN_IS_VALID_REVNUM(r))
 
@@ -1985,6 +1986,11 @@ dump_filter_authz_func(svn_boolean_t *allowed,
                        apr_pool_t *pool)
 {
   dump_filter_baton_t *b = baton;
+
+  /* For some nodes (e.g. files under copied directory) PATH may be
+   * non-canonical (missing leading '/').  Canonicalize PATH before
+   * passing it to FILTER_FUNC. */
+  path = svn_fspath__canonicalize(path, pool);
 
   return svn_error_trace(b->filter_func(allowed, root, path, b->filter_baton,
                                         pool));
