@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1857367
-    Fix memory lifetime problem in a libsvn_wc error code path.
-    Justification:
-      Edge-case crash. Subversion should not crash.
-    Votes:
-      +1: stsp, rhuijben
-
  * r1860175,r1860186,r1860187,r1860188
    Fix building Subversion with Visual Studio 2005 and 2008.
    Justification:
