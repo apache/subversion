@@ -2073,5 +2073,6 @@ sub new
 sub DESTROY
 {
   print "Cleaning up $temp_dir\n";
+  chdir( $temp_dir . "/.." );
   File::Path::rmtree([$temp_dir], 0, 0);
 }
