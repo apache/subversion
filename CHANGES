@@ -4,6 +4,27 @@
 # To view an issue listed as (issue #XXXX), visit:
 #   https://issues.apache.org/jira/browse/SVN-XXXX
 
+
+Version 1.12.2
+(24 Jul 2019, from /branches/1.12.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.12.2
+
+ User-visible changes:
+    * Fix conflict resolver bug: local and incoming edits swapped. (r1863285)
+    * Fix memory lifetime problem in a libsvn_wc error code path. (r1863287)
+
+ Developer-visible changes:
+    * Allow generating Visual Studio 2019 projects (r1863286)
+    * Fix build with APR 1.7.0. (r1860377)
+    * Fix building Subversion with Visual Studio 2005 and 2008. (r1863288)
+    * Allow svnserve's 'get-deleted-rev' API to return 'not deleted'. (r1863290)
+    * Implement check for node existence using native Win32 APIs. (r1863289)
+
+
+Version 1.12.1
+(Not released; see changes for 1.12.2.)
+
+
 Version 1.12.0
 (12 Apr 2019, from /branches/1.12.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.12.0
@@ -130,6 +151,35 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Bump minimum JDK version required for JavaHL to 1.8 (r1831895)
     * Enable building against Java 10 (r1841180 et al)
     * Fix a potential crash in JavaHL (issue #4764)
+
+
+Version 1.10.6
+(24 Jul 2019, from /branches/1.10.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.10.6
+
+ User-visible changes:
+    * Allow the use of empty groups in authz rules. (r1854883)
+    * Fix conflict resolver case with move vs move conflicts. (r1863297)
+    * Fix #4760: Missing children in svnadmin dump --include/exclude. (r1863298)
+    * Fix #4793: authz rights from inverted access selectors. (r1854882)
+    * Fix conflict resolver bug: local and incoming edits swapped. (r1863300)
+    * Fix #4806: Remove on-disk trees with read-only dirs. (r1863299)
+    * Fix memory lifetime problem in a libsvn_wc error code path. (r1863302)
+    * No tree conflict when 'svn up' deletes unmodified dir with unversioned items. (r1863296)
+    * Remove a useless common ancestor search from conflict resolver. (r1863294)
+
+ Developer-visible changes:
+    * Allow generating Visual Studio 2019 projects (r1863304)
+    * Fix a use-after-free in mod_dav_svn's logging of FS warnings. (r1863292)
+    * Fix "unused static function" warning in release-mode builds. (r1854884)
+    * Fix build with APR 1.7.0. (r1863303)
+    * Fix issue #4804: spurious SQLite-related test failures. (r1863295)
+    * Allow svnserve's 'get-deleted-rev' API to return 'not deleted'. (r1863305)
+    * Silence a deprecation warning from amalgamated SQLite on macOS. (r1863291)
+
+
+Version 1.10.5
+(Not released; see changes for 1.10.6.)
 
 
 Version 1.10.4
@@ -515,6 +565,27 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * JavaHL: Add missing exception checks (r1801108)
     * Ruby: Fix handling of NULL MD5 digests (r1811786)
     * Ruby: Detect versions up to 2.4 (r1806570)
+
+
+Version 1.9.12
+(24 Jul 2019, from /branches/1.9.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.9.12
+
+ User-visible changes:
+    * No tree conflict when 'svn up' deletes unmodified dir with unversioned items. (r1863309)
+
+ Developer-visible changes:
+    * Allow generating Visual Studio 2019 projects (r1863311)
+    * Fix a use-after-free in mod_dav_svn's logging of FS warnings. (r1863307)
+    * Fix "unused static function" warning in release-mode builds. (r1854881)
+    * Fix build with APR 1.7.0. (r1863310)
+    * Fix issue #4804: spurious SQLite-related test failures. (r1863308)
+    * Allow svnserve's 'get-deleted-rev' API to return 'not deleted'. (r1863312)
+    * Silence a deprecation warning from amalgamated SQLite on macOS. (r1863306)
+
+
+Version 1.9.11
+(Not released; see changes for 1.9.12.)
 
 
 Version 1.9.10
