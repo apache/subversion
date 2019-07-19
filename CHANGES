@@ -1,5 +1,34 @@
+Version 1.10.6
+(24 Jul 2019, from /branches/1.10.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.10.6
+
+ User-visible changes:
+    * Allow the use of empty groups in authz rules. (r1854883)
+    * Fix conflict resolver case with move vs move conflicts. (r1863297)
+    * Fix #4760: Missing children in svnadmin dump --include/exclude. (r1863298)
+    * Fix #4793: authz rights from inverted access selectors. (r1854882)
+    * Fix conflict resolver bug: local and incoming edits swapped. (r1863300)
+    * Fix #4806: Remove on-disk trees with read-only dirs. (r1863299)
+    * Fix memory lifetime problem in a libsvn_wc error code path. (r1863302)
+    * No tree conflict when 'svn up' deletes unmodified dir with unversioned items. (r1863296)
+    * Remove a useless common ancestor search from conflict resolver. (r1863294)
+
+ Developer-visible changes:
+    * Allow generating Visual Studio 2019 projects (r1863304)
+    * Fix a use-after-free in mod_dav_svn's logging of FS warnings. (r1863292)
+    * Fix "unused static function" warning in release-mode builds. (r1854884)
+    * Fix build with APR 1.7.0. (r1863303)
+    * Fix issue #4804: spurious SQLite-related test failures. (r1863295)
+    * Allow svnserve's 'get-deleted-rev' API to return 'not deleted'. (r1863305)
+    * Silence a deprecation warning from amalgamated SQLite on macOS. (r1863291)
+
+
+Version 1.10.5
+(Not released; see changes for 1.10.6.)
+
+
 Version 1.10.4
-(?? ??? 2019, from /branches/1.10.x)
+(11 Jan 2019, from /branches/1.10.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.10.4
 
  User-visible changes:
@@ -105,7 +134,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
  User-visible changes:
   - Major new features:
     * Better interactive conflict resolution for tree conflicts (r1687489 et al)
-    * Wilcards and improved performance in path-based authorization (r1776832)
+    * Wildcards and improved performance in path-based authorization (r1776832)
     * New experimental 'svn shelve' command (issue #3625)
   - Minor new features and improvements:
     * svnbench: Show time taken & bytes transferred (r1703383, r1710586)
@@ -126,7 +155,7 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * ra_serf: Adjustments for serf versions with HTTP/2 support (r1716400)
     * ra_serf: Send svndiff1 deltas during commit (r1704317, r1704613, r1791290)
     * ra_serf: Stream svndiff deltas w/o creating temporary files (r1803143 et al)
-    * ra_serf: Don't necessarily request full MERGE reponses (r1806017 et al)
+    * ra_serf: Don't necessarily request full MERGE responses (r1806017 et al)
     * 'svn patch': Parse binary diffs in git-style patches (r1703925)
     * 'svnadmin info' now reports latest revision in the repository (r1697953)
     * ra_svn: Various performance-related tweaks (r1694490)
@@ -383,8 +412,29 @@ the 1.9 release:  https://subversion.apache.org/docs/release-notes/1.10.html
     * Ruby: Detect versions up to 2.4 (r1806570)
 
 
+Version 1.9.12
+(24 Jul 2019, from /branches/1.9.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.9.12
+
+ User-visible changes:
+    * No tree conflict when 'svn up' deletes unmodified dir with unversioned items. (r1863309)
+
+ Developer-visible changes:
+    * Allow generating Visual Studio 2019 projects (r1863311)
+    * Fix a use-after-free in mod_dav_svn's logging of FS warnings. (r1863307)
+    * Fix "unused static function" warning in release-mode builds. (r1854881)
+    * Fix build with APR 1.7.0. (r1863310)
+    * Fix issue #4804: spurious SQLite-related test failures. (r1863308)
+    * Allow svnserve's 'get-deleted-rev' API to return 'not deleted'. (r1863312)
+    * Silence a deprecation warning from amalgamated SQLite on macOS. (r1863306)
+
+
+Version 1.9.11
+(Not released; see changes for 1.9.12.)
+
+
 Version 1.9.10
-(?? ??? 2019, from /branches/1.9.x)
+(11 Jan 2019, from /branches/1.9.x)
 http://svn.apache.org/repos/asf/subversion/tags/1.9.10
 
  User-visible changes:
