@@ -775,7 +775,7 @@ def sign_candidates(args):
     for e in extns:
         filename = os.path.join(target, 'subversion-%s.%s' % (args.version, e))
         sign_file(filename)
-        if args.version.major >= 1 and args.version.minor <= 6:
+        if args.version.major == 1 and args.version.minor <= 6:
             filename = os.path.join(target,
                                    'subversion-deps-%s.%s' % (args.version, e))
             sign_file(filename)
