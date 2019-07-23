@@ -1026,7 +1026,7 @@ def get_fileinfo(args):
 
     target = get_target(args)
 
-    files = glob.glob(os.path.join(target, 'subversion*-%s*.asc' % args.version))
+    files = glob.glob(os.path.join(target, 'subversion*-%s.*.asc' % args.version))
     files.sort()
 
     class info(object):
@@ -1117,14 +1117,12 @@ def get_siginfo(args, quiet=False):
         import security._gnupg as gnupg
     gpg = gnupg.GPG()
 
-    target = get_target(args)
-
     good_sigs = {}
     fingerprints = {}
     output = []
 
-    glob_pattern = os.path.join(target, 'subversion*-%s*.asc' % args.version)
-    for filename in glob.glob(glob_pattern):
+    for fileinfo in get_fileinfo(args):
+        filename = os.path.join(get_target(args), fileinfo.filename + '.asc')
         text = open(filename).read()
         keys = text.split(key_start)
 
