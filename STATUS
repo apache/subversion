@@ -15,6 +15,13 @@ Status of 1.12.3:
 Candidate changes:
 ==================
 
+ * r1863987, r1863990
+   Fix format of Requires(.private) fields in pkg-config files
+   Justification:
+     Fixes format of .pc files and specifies correct include/link flags
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
