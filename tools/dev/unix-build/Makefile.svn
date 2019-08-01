@@ -46,6 +46,7 @@ USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
 MAKE_JOBS ?= 4
+SVN_CHECK_FS_BACKENDS ?= fsfs bdb
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
@@ -2135,7 +2136,7 @@ stop-svnserve:
 	$(SVNSERVE_STOP_CMD)
 
 define do_check
--cd $(svn_builddir) && for fs in fsfs bdb; do \
+-cd $(svn_builddir) && for fs in $(SVN_CHECK_FS_BACKENDS); do \
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
