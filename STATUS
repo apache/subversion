@@ -22,6 +22,14 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1864440
+   Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
+   Justification:
+     'svn patch' should honour the user's umask.
+     User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
+   Votes:
+     +1: stsp
+   
 Veto-blocked changes:
 =====================
 
