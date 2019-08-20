@@ -4492,17 +4492,17 @@ win32_file_rename(const WCHAR *from_path_w,
 
   if (!MoveFileExW(from_path_w, to_path_w, flags))
     {
-      apr_status_t status = apr_get_os_error();
+      apr_status_t err = apr_get_os_error();
       /* If the target file is read only NTFS reports EACCESS and
          FAT/FAT32 reports EEXIST */
-      if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
+      if (APR_STATUS_IS_EACCES(err) || APR_STATUS_IS_EEXIST(err))
         {
           DWORD attrs = GetFileAttributesW(to_path_w);
           if (attrs == INVALID_FILE_ATTRIBUTES)
             {
-              status = apr_get_os_error();
-              if (!(APR_STATUS_IS_ENOENT(status) || SVN__APR_STATUS_IS_ENOTDIR(status)))
-                return status;
+              err = apr_get_os_error();
+              if (!(APR_STATUS_IS_ENOENT(err) || SVN__APR_STATUS_IS_ENOTDIR(err)))
+                return err;
             }
           else if (attrs & FILE_ATTRIBUTE_READONLY)
             {
@@ -4512,9 +4512,9 @@ win32_file_rename(const WCHAR *from_path_w,
               attrs &= ~FILE_ATTRIBUTE_READONLY;
               if (!SetFileAttributesW(to_path_w, attrs))
                 {
-                  status = apr_get_os_error();
-                  if (!(APR_STATUS_IS_ENOENT(status) || SVN__APR_STATUS_IS_ENOTDIR(status)))
-                    return status;
+                  err = apr_get_os_error();
+                  if (!(APR_STATUS_IS_ENOENT(err) || SVN__APR_STATUS_IS_ENOTDIR(err)))
+                    return err;
                 }
             }
 
@@ -4526,7 +4526,7 @@ win32_file_rename(const WCHAR *from_path_w,
             return apr_get_os_error();
         }
       else
-        return status;
+        return err;
     }
 
   return APR_SUCCESS;
