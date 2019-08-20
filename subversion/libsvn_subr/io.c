@@ -4500,8 +4500,9 @@ win32_file_rename(const WCHAR *from_path_w,
           DWORD attrs = GetFileAttributesW(to_path_w);
           if (attrs == INVALID_FILE_ATTRIBUTES)
             {
-              err = apr_get_os_error();
-              if (!(APR_STATUS_IS_ENOENT(err) || SVN__APR_STATUS_IS_ENOTDIR(err)))
+              apr_status_t stat_err = apr_get_os_error();
+              if (!(APR_STATUS_IS_ENOENT(stat_err) || SVN__APR_STATUS_IS_ENOTDIR(stat_err)))
+                /* We failed to stat the file, propagate the original error */
                 return err;
             }
           else if (attrs & FILE_ATTRIBUTE_READONLY)
@@ -4514,6 +4515,7 @@ win32_file_rename(const WCHAR *from_path_w,
                 {
                   err = apr_get_os_error();
                   if (!(APR_STATUS_IS_ENOENT(err) || SVN__APR_STATUS_IS_ENOTDIR(err)))
+                    /* We failed to set file attributes, propagate this new error */
                     return err;
                 }
             }
