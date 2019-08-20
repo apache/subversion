@@ -25,6 +25,7 @@
 /* Include sqlite3 inline, making all symbols private. */
 #ifdef SVN_SQLITE_INLINE
 #  define SQLITE_OMIT_DEPRECATED 1
+#  define SQLITE_DEFAULT_MEMSTATUS 0
 #  define SQLITE_API static
 #  if __GNUC__ > 4 || (__GNUC__ == 4 && __GNUC_MINOR__ >= 2)
 #    pragma GCC diagnostic ignored "-Wunreachable-code"
