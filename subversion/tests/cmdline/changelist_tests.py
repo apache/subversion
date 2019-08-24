@@ -1180,6 +1180,44 @@ def readd_after_revert(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'add', dummy)
 
+#----------------------------------------------------------------------
+
+# A wc-wc diff returned no results if changelists were specified and the
+# diff target dir was not the WC root.
+@Issue(4822)
+def diff_with_changelists_subdir(sbox):
+  "diff --changelist (wc-wc) in subdir of WC"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_paths = sbox.ospaths(['A/D/gamma'])
+  subdir = 'A/D'
+  clname = 'a'
+
+  for path in expected_paths:
+    svntest.main.file_append(path, "New text.\n")
+  svntest.main.run_svn(None, "changelist", clname, *expected_paths)
+
+  # Run 'svn diff ...'
+  exit_code, output, errput = svntest.main.run_svn(None,
+                                'diff', '--changelist', clname,
+                                sbox.ospath(subdir))
+
+  # Filter the output for lines that begin with 'Index:', and
+  # reduce even those lines to just the actual path.
+  paths = sorted([x[7:].rstrip() for x in output if x[:7] == 'Index: '])
+
+  # Diff output on Win32 uses '/' path separators.
+  if sys.platform == 'win32':
+    paths = [x.replace('/', os.sep) for x in paths]
+
+  # And, compare!
+  if (paths != expected_paths):
+    raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
+                          "don't gel"
+                          % (str(expected_paths), str(paths)))
+
 
 ########################################################################
 # Run the tests
@@ -1203,6 +1241,7 @@ test_list = [ None,
               add_remove_non_existent_target,
               add_remove_unversioned_target,
               readd_after_revert,
+              diff_with_changelists_subdir,
              ]
 
 if __name__ == '__main__':
