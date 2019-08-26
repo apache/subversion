@@ -571,6 +571,8 @@ def info_with_changelists(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@Issue(4826)
 def diff_with_changelists(sbox):
   "diff --changelist (wc-wc and repos-wc)"
 
@@ -624,12 +626,6 @@ def diff_with_changelists(sbox):
 
         # And, compare!
         if (paths != expected_paths):
-          ### XFAIL case
-          if is_repos_wc and (depth == 'empty' or depth == 'files' or depth == 'immediates') and subdir != '.':
-            print("XFAIL case: depth=%s, subdir='%s'\nexpect=%s\nactual=%s" % (depth, subdir,
-                  str(expected_paths), str(paths)))
-            continue
-
           raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
                                 "don't gel"
                                 % (str(expected_paths), str(paths)))
