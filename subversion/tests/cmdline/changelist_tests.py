@@ -73,6 +73,33 @@ def changelist_all_files(wc_dir, name_func):
         else:
           svntest.main.run_svn(None, "changelist", clname, full_path)
 
+def select_paths(target_path, depth, changelists, name_func):
+  """Return the subset of paths found on disk at TARGET_PATH, to a depth
+     of DEPTH, that match CHANGELISTS.
+     NAME_FUNC, rather than the working copy, determines what
+     changelist each path is associated with.
+     Returned paths are relative to the CWD.
+
+     ### Only the paths of files are returned.
+  """
+  dot_svn = svntest.main.get_admin_name()
+  for dirpath, dirs, files in os.walk(target_path):
+    # prepare to return paths relative to WC_DIR
+    if dot_svn in dirs:
+      dirs.remove(dot_svn)
+    if not changelists:  # When changelists support dirs, add: "or name_func(name) in changelists"
+      yield os.path.normpath(dirpath)
+    if depth == 'empty':
+      dirs[:] = []  # process no subdirs
+      continue      # nor files
+    for name in files:
+      if not changelists or name_func(name) in changelists:
+        yield os.path.normpath(os.path.join(dirpath, name))
+    if depth == 'files':
+      dirs[:] = []  # process no subdirs
+    if depth == 'immediates':
+      depth = 'empty'  # process subdirs, but no files nor dirs in them
+
 def clname_from_lastchar_cb(full_path):
   """Callback for changelist_all_files() that returns a changelist
   name matching the last character in the file's name.  For example,
@@ -553,31 +580,20 @@ def diff_with_changelists(sbox):
   # Add a line of text to all the versioned files in the tree.
   mod_all_files(wc_dir, "New text.\n")
 
+  # Also make a property modification on each directory.
+  svntest.main.run_svn(None, 'propset', 'p', 'v', '-R', wc_dir)
+
   # Add files to changelists based on the last character in their names.
   changelist_all_files(wc_dir, clname_from_lastchar_cb)
 
   # Now, test various combinations of changelist specification and depths.
   for is_repos_wc in [0, 1]:
-    for clname in [['a'], ['i'], ['a', 'i']]:
-      for depth in ['files', 'infinity']:
+    for clname in [['a'], ['a', 'i'], []]:
+      for depth in ['empty', 'files', 'immediates', 'infinity', None]:
+       for subdir in ['.', 'A', 'A/D']:
 
         # Figure out what we expect to see in our diff output.
-        expected_paths = []
-        if 'a' in clname:
-          if depth == 'infinity':
-            expected_paths.append('A/B/lambda')
-            expected_paths.append('A/B/E/alpha')
-            expected_paths.append('A/B/E/beta')
-            expected_paths.append('A/D/gamma')
-            expected_paths.append('A/D/H/omega')
-          if depth == 'files' or depth == 'infinity':
-            expected_paths.append('iota')
-        if 'i' in clname:
-          if depth == 'infinity':
-            expected_paths.append('A/D/G/pi')
-            expected_paths.append('A/D/H/chi')
-            expected_paths.append('A/D/H/psi')
-        expected_paths = sorted([os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths])
+        expected_paths = sorted(select_paths(sbox.ospath(subdir), depth, clname, clname_from_lastchar_cb))
 
         # Build the command line.
         args = ['diff']
@@ -589,11 +605,11 @@ def diff_with_changelists(sbox):
           args.append(depth)
         if is_repos_wc:
           args.append('--old')
-          args.append(sbox.repo_url)
+          args.append(sbox.repo_url + '/' + subdir)
           args.append('--new')
-          args.append(sbox.wc_dir)
+          args.append(os.path.join(wc_dir, subdir))
         else:
-          args.append(wc_dir)
+          args.append(os.path.join(wc_dir, subdir))
 
         # Run 'svn diff ...'
         exit_code, output, errput = svntest.main.run_svn(None, *args)
@@ -602,12 +618,15 @@ def diff_with_changelists(sbox):
         # reduce even those lines to just the actual path.
         paths = sorted([x[7:].rstrip() for x in output if x[:7] == 'Index: '])
 
-        # Diff output on Win32 uses '/' path separators.
-        if sys.platform == 'win32':
-          paths = [x.replace('/', os.sep) for x in paths]
-
         # And, compare!
+        # Diff output on Win32 uses '/' path separators.
         if (paths != expected_paths):
+          ### XFAIL case
+          if is_repos_wc and (depth == 'empty' or depth == 'files' or depth == 'immediates') and subdir != '.':
+            print("XFAIL case: depth=%s, subdir='%s'\nexpect=%s\nactual=%s" % (depth, subdir,
+                  str(expected_paths), str(paths)))
+            continue
+
           raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
                                 "don't gel"
                                 % (str(expected_paths), str(paths)))
