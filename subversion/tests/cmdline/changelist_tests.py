@@ -618,8 +618,11 @@ def diff_with_changelists(sbox):
         # reduce even those lines to just the actual path.
         paths = sorted([x[7:].rstrip() for x in output if x[:7] == 'Index: '])
 
-        # And, compare!
         # Diff output on Win32 uses '/' path separators.
+        if sys.platform == 'win32':
+          paths = [x.replace('/', os.sep) for x in paths]
+
+        # And, compare!
         if (paths != expected_paths):
           ### XFAIL case
           if is_repos_wc and (depth == 'empty' or depth == 'files' or depth == 'immediates') and subdir != '.':
