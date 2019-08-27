@@ -694,8 +694,9 @@ compare_p2l_to_rev(svn_fs_t *fs,
             return svn_error_createf(SVN_ERR_FS_INDEX_CORRUPTION,
                                      NULL,
                                      _("p2l index entry for changes in"
-                                       " revision r%ld is item %ld of type"
-                                       " %d at offset %s"),
+                                       " revision r%ld is item"
+                                       " %"APR_UINT64_T_FMT
+                                       " of type %d at offset %s"),
                                      entry->item.revision,
                                      entry->item.number,
                                      entry->type,
