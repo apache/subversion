@@ -20,14 +20,14 @@ Candidate changes:
    Justification:
      Fixes format of .pc files and specifies correct include/link flags
    Votes:
-     +1: jamessan
+     +1: jamessan, rhuijben
 
  * r1864025
    fsfs, fsx: Make an error message clearer to developers.
    Justification:
      Prevent hexadecimal values from being taken for decimal ones.
    Votes:
-     +1: danielsh
+     +1: danielsh, rhuijben
 
  * r1864440
    Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
@@ -43,7 +43,7 @@ Candidate changes:
      FS warning logging cleanup handler was only installed in the presence
      of an R->USER request field, which is unrelated.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
