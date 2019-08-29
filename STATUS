@@ -20,7 +20,7 @@ Candidate changes:
    Justification:
      Fixes format of .pc files and specifies correct include/link flags
    Votes:
-     +1: jamessan
+     +1: jamessan, rhuijben
 
  * r1864440
    Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
@@ -28,7 +28,7 @@ Candidate changes:
      'svn patch' should honour the user's umask.
      User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1865266
    mod_dav_svn: Always install cleanup handler for FS warning logging.
@@ -36,7 +36,7 @@ Candidate changes:
      FS warning logging cleanup handler was only installed in the presence
      of an R->USER request field, which is unrelated.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
    
 Veto-blocked changes:
 =====================
