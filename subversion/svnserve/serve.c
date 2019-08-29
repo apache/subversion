@@ -4207,7 +4207,10 @@ construct_server_baton(server_baton_t **baton,
                                  &ra_client_string,
                                  &client_string));
   if (ver != 2)
-    return SVN_NO_ERROR;
+    return svn_error_createf(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                             "Unsupported ra_svn protocol version"
+                             " %"APR_UINT64_T_FMT
+                             " (supported versions: [2])", ver);
 
   client_url = svn_uri_canonicalize(client_url, conn_pool);
   SVN_ERR(svn_ra_svn__set_capabilities(conn, caplist));
@@ -4215,7 +4218,8 @@ construct_server_baton(server_baton_t **baton,
   /* All released versions of Subversion support edit-pipeline,
    * so we do not accept connections from clients that do not. */
   if (! svn_ra_svn_has_capability(conn, SVN_RA_SVN_CAP_EDIT_PIPELINE))
-    return SVN_NO_ERROR;
+    return svn_error_create(SVN_ERR_RA_SVN_BAD_VERSION, NULL,
+                            "Missing edit-pipeline capability");
 
   /* find_repos needs the capabilities as a list of words (eventually
      they get handed to the start-commit hook).  While we could add a
