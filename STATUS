@@ -109,7 +109,7 @@ Candidate changes:
     Justification:
       Edge-case crash. Subversion should not crash.
     Votes:
-      +1: stsp
+      +1: stsp, rhuijben
 
  * r1857391
    Fix build with APR 1.7.0.
@@ -118,7 +118,7 @@ Candidate changes:
      See https://svn.haxx.se/users/archive-2019-04/0041.shtml
      and https://svn.haxx.se/dev/archive-2019-04/0020.shtml
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
 Veto-blocked changes:
 =====================
