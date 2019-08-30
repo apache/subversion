@@ -8,6 +8,24 @@ Version 1.13.0
 (?? ??? 20XX, from /branches/1.13.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.13.0
 
+ User-visible changes:
+  - Minor new features and improvements:
+    * New 'svnadmin rev-size' command to report revision size (r1857624)
+
+  - Client-side bugfixes:
+    * Windows: avoid delays in SSL certificate validation override (r1863018)
+    * Fix 'svn patch' setting mode 0600 on patched files with props (r1864440)
+    * Fix "svn diff --changelist ARG" broken in subdirectories (issue #4822)
+
+  - Server-side bugfixes:
+    * svnserve: Report some errors that we previously ignored (r1866062)
+
+  - Other tool improvements and bugfixes:
+    * svn_load_dirs.pl: do not show password; fix cleanup (r1863262, r1863392)
+
+ Developer-visible changes:
+    * New svn_fs_ioctl() API for FSFS stats, dump/load index, rev-size (r1857435)
+
 
 Version 1.12.2
 (24 Jul 2019, from /branches/1.12.x)
@@ -16,13 +34,13 @@ https://svn.apache.org/repos/asf/subversion/tags/1.12.2
  User-visible changes:
     * Fix conflict resolver bug: local and incoming edits swapped. (r1863285)
     * Fix memory lifetime problem in a libsvn_wc error code path. (r1863287)
+    * Faster Windows file existence checks, improving 'svn st' etc. (r1863289)
 
  Developer-visible changes:
     * Allow generating Visual Studio 2019 projects (r1863286)
     * Fix build with APR 1.7.0. (r1860377)
     * Fix building Subversion with Visual Studio 2005 and 2008. (r1863288)
     * Allow svnserve's 'get-deleted-rev' API to return 'not deleted'. (r1863290)
-    * Implement check for node existence using native Win32 APIs. (r1863289)
 
 
 Version 1.12.1
