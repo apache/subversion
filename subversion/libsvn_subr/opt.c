@@ -323,6 +323,9 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
             }
         }
 
+      if (have_experimental && !with_experimental)
+        SVN_ERR(svn_cmdline_fputs(_("\n(Use '-v' to show experimental options.)\n"),
+                                  stream, pool));
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
     }
