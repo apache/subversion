@@ -131,7 +131,7 @@ my $SVNvsn = do {
   my ($major, $minor, $patch) = `$SVN --version -q` =~ /^(\d+)\.(\d+)\.(\d+)/;
   1e6*$major + 1e3*$minor + $patch;
 };
-$SVN .= " --non-interactive" if $YES or not defined ctermid;
+$SVN .= " --force-interactive" if $YES or not defined ctermid;
 $SVNq = "$SVN -q ";
 $SVNq =~ s/-q// if $DEBUG;
 
