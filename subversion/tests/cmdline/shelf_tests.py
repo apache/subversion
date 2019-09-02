@@ -900,6 +900,8 @@ def run_and_verify_shelf_diff_summarize(output_tree, shelf, *args):
     svntest.verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
+#----------------------------------------------------------------------
+
 # Exercise a very basic case of shelf-diff.
 def shelf_diff_simple(sbox):
   "shelf diff simple"
@@ -945,6 +947,23 @@ def shelf_diff_simple(sbox):
   })
   run_and_verify_shelf_diff_summarize(expected_diff, 'foo')
 
+#----------------------------------------------------------------------
+
+@XFail()
+@Issue(4827)
+def shelve_with_kw_translation(sbox):
+  "shelve with kw translation"
+  sbox.build(empty=True)
+  sbox.simple_add_text('$Rev$\n', 'file')
+  sbox.simple_propset('svn:keywords', 'rev', 'file')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  def modifier(sbox):
+    sbox.simple_append('file', 'New line\n')
+
+  shelve_unshelve(sbox, modifier)
+
 
 ########################################################################
 # Run the tests
@@ -982,6 +1001,7 @@ test_list = [ None,
               unshelve_text_prop_merge,
               unshelve_text_prop_conflict,
               shelf_diff_simple,
+              shelve_with_kw_translation,
              ]
 
 if __name__ == '__main__':
