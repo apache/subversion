@@ -343,20 +343,33 @@ print_generic_help_body3(const char *header,
                          svn_boolean_t with_experimental,
                          apr_pool_t *pool, FILE *stream)
 {
+  svn_boolean_t have_experimental = FALSE;
   int i;
 
   if (header)
     SVN_ERR(svn_cmdline_fputs(header, stream, pool));
 
   for (i = 0; cmd_table[i].name; i++)
-    if (with_experimental || strncmp(cmd_table[i].name, "x-", 2) != 0)
-      {
-        SVN_ERR(svn_cmdline_fputs("   ", stream, pool));
-        SVN_ERR(print_command_info3(cmd_table + i, opt_table,
-                                    NULL, FALSE, FALSE,
-                                    pool, stream));
-        SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
-      }
+    {
+      if (strncmp(cmd_table[i].name, "x-", 2) == 0)
+        {
+          if (with_experimental && !have_experimental)
+            SVN_ERR(svn_cmdline_fputs(_("\nExperimental subcommands:\n"),
+                                      stream, pool));
+          have_experimental = TRUE;
+          if (!with_experimental)
+            continue;
+        }
+      SVN_ERR(svn_cmdline_fputs("   ", stream, pool));
+      SVN_ERR(print_command_info3(cmd_table + i, opt_table,
+                                  NULL, FALSE, FALSE,
+                                  pool, stream));
+      SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
+    }
+
+  if (have_experimental && !with_experimental)
+    SVN_ERR(svn_cmdline_fputs(_("\n(Use '-v' to show experimental subcommands.)\n"),
+                              stream, pool));
 
   SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
 
