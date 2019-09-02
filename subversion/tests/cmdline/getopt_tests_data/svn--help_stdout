@@ -48,5 +48,7 @@ Available subcommands:
    update (up)
    upgrade
 
+(Use '-v' to show experimental subcommands.)
+
 Subversion is a tool for version control.
 For additional information, see http://subversion.apache.org/
