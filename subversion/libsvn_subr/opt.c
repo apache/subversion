@@ -211,13 +211,16 @@ svn_opt_subcommand_takes_option4(const svn_opt_subcommand_desc3_t *command,
 
 /* Print the canonical command name for CMD, and all its aliases, to
    STREAM.  If HELP is set, print CMD's help string too, in which case
-   obtain option usage from OPTIONS_TABLE. */
+   obtain option usage from OPTIONS_TABLE.
+
+   Include global and experimental options iff VERBOSE is true.
+ */
 static svn_error_t *
 print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
                     const apr_getopt_option_t *options_table,
                     const int *global_options,
                     svn_boolean_t help,
-                    svn_boolean_t with_experimental,
+                    svn_boolean_t verbose,
                     apr_pool_t *pool,
                     FILE *stream)
 {
@@ -284,11 +287,11 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
 
                   if (option->name && strncmp(option->name, "x-", 2) == 0)
                     {
-                      if (with_experimental && !have_experimental)
+                      if (verbose && !have_experimental)
                         SVN_ERR(svn_cmdline_fputs(_("\nExperimental options:\n"),
                                                   stream, pool));
                       have_experimental = TRUE;
-                      if (!with_experimental)
+                      if (!verbose)
                         continue;
                     }
 
@@ -299,7 +302,7 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
             }
         }
       /* And global options too */
-      if (global_options && *global_options)
+      if (verbose && global_options && *global_options)
         {
           SVN_ERR(svn_cmdline_fputs(_("\nGlobal options:\n"),
                                     stream, pool));
@@ -323,8 +326,8 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
             }
         }
 
-      if (have_experimental && !with_experimental)
-        SVN_ERR(svn_cmdline_fputs(_("\n(Use '-v' to show experimental options.)\n"),
+      if (!verbose)
+        SVN_ERR(svn_cmdline_fputs(_("\n(Use '-v' to show global and experimental options.)\n"),
                                   stream, pool));
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
@@ -417,12 +420,16 @@ svn_opt_print_generic_help3(const char *header,
 }
 
 
+/* The body of svn_opt_subcommand_help4(), which see.
+ *
+ * VERBOSE means show also the subcommand's global and experimental options.
+ */
 static void
 subcommand_help(const char *subcommand,
                 const svn_opt_subcommand_desc3_t *table,
                 const apr_getopt_option_t *options_table,
                 const int *global_options,
-                svn_boolean_t with_experimental,
+                svn_boolean_t verbose,
                 apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc3_t *cmd =
@@ -431,7 +438,7 @@ subcommand_help(const char *subcommand,
 
   if (cmd)
     err = print_command_info3(cmd, options_table, global_options,
-                              TRUE, with_experimental, pool, stdout);
+                              TRUE, verbose, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
                               _("\"%s\": unknown command.\n\n"), subcommand);
