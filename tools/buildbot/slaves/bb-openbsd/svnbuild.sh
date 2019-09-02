@@ -22,8 +22,10 @@
 set -e
 set -x
 
+(test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
+(cd .. && gmake dirs-create)
 url="$(svn info --show-item url)"
 branch="${url##*/}"
-(test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
+mkdir -p ../objdir/svn-${branch}
 touch ../objdir/svn-${branch}/.retrieved
 (cd .. && gmake BRANCH="$branch" THREADING="no" JAVA="no" MAKE_JOBS=8)

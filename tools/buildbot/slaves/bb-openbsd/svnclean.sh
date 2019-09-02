@@ -22,8 +22,6 @@
 set -e
 set -x
 
-url="$(svn info --show-item url)"
-branch="${url##*/}"
 (test -h ../svn-trunk || ln -s build ../svn-trunk)
 for i in $(jot - 6 12); do
   (test -h ../svn-1.${i}.x || ln -s build ../svn-1.${i}.x)
@@ -33,6 +31,8 @@ svn update ../../unix-build
 newlastchangedrev="$(svn info --show-item=last-changed-revision ../../unix-build/Makefile.svn)"
 (test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
 # always rebuild svn, but only rebuild dependencies if Makefile.svn has changed
+url="$(svn info --show-item url)"
+branch="${url##*/}"
 if [ "$lastchangedrev" != "$newlastchangedrev" ]; then
   (cd .. && gmake BRANCH="$branch" reset clean)
 else
