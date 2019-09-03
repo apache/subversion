@@ -738,8 +738,9 @@ struct dir_baton
    or NULL if this is the top-level directory of the edit.
 
    Perform all allocations in POOL.  */
-static struct dir_baton *
-make_dir_baton(const char *path,
+static struct svn_error_t *
+make_dir_baton(struct dir_baton **dbp,
+               const char *path,
                const char *cmp_path,
                svn_revnum_t cmp_rev,
                void *edit_baton,
@@ -748,10 +749,10 @@ make_dir_baton(const char *path,
 {
   struct edit_baton *eb = edit_baton;
   struct dir_baton *new_db = apr_pcalloc(pool, sizeof(*new_db));
-  const char *full_path;
+  const char *full_path, *canonicalized_path;
 
   /* A path relative to nothing?  I don't think so. */
-  SVN_ERR_ASSERT_NO_RETURN(!path || pb);
+  SVN_ERR_ASSERT(!path || pb);
 
   /* Construct the full path of this node. */
   if (pb)
@@ -761,7 +762,11 @@ make_dir_baton(const char *path,
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
-    cmp_path = svn_relpath_canonicalize(cmp_path, pool);
+    {
+      SVN_ERR(svn_relpath_canonicalize_safe(&canonicalized_path, NULL,
+                                            cmp_path, pool, pool));
+      cmp_path = canonicalized_path;
+    }
 
   new_db->edit_baton = eb;
   new_db->path = full_path;
@@ -772,7 +777,8 @@ make_dir_baton(const char *path,
   new_db->check_name_collision = FALSE;
   new_db->pool = pool;
 
-  return new_db;
+  *dbp = new_db;
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *
@@ -1168,7 +1174,12 @@ dump_node(struct edit_baton *eb,
 
   /* Remove leading slashes from copyfrom paths. */
   if (cmp_path)
-    cmp_path = svn_relpath_canonicalize(cmp_path, pool);
+    {
+      const char *canonicalized_path;
+      SVN_ERR(svn_relpath_canonicalize_safe(&canonicalized_path, NULL,
+                                            cmp_path, pool, pool));
+      cmp_path = canonicalized_path;
+    }
 
   /* Validate the comparison path/rev. */
   if (ARE_VALID_COPY_ARGS(cmp_path, cmp_rev))
@@ -1538,9 +1549,9 @@ open_root(void *edit_baton,
           apr_pool_t *pool,
           void **root_baton)
 {
-  *root_baton = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
-                               edit_baton, NULL, pool);
-  return SVN_NO_ERROR;
+  return svn_error_trace(make_dir_baton((struct dir_baton **)root_baton,
+                                        NULL, NULL, SVN_INVALID_REVNUM,
+                                        edit_baton, NULL, pool));
 }
 
 
@@ -1572,8 +1583,10 @@ add_directory(const char *path,
   struct edit_baton *eb = pb->edit_baton;
   void *was_deleted;
   svn_boolean_t is_copy = FALSE;
-  struct dir_baton *new_db
-    = make_dir_baton(path, copyfrom_path, copyfrom_rev, eb, pb, pool);
+  struct dir_baton *new_db;
+
+  SVN_ERR(make_dir_baton(&new_db, path, copyfrom_path, copyfrom_rev, eb,
+                         pb, pool));
 
   /* This might be a replacement -- is the path already deleted? */
   was_deleted = svn_hash_gets(pb->deleted_entries, path);
@@ -1630,7 +1643,7 @@ open_directory(const char *path,
       cmp_rev = pb->cmp_rev;
     }
 
-  new_db = make_dir_baton(path, cmp_path, cmp_rev, eb, pb, pool);
+  SVN_ERR(make_dir_baton(&new_db, path, cmp_path, cmp_rev, eb, pb, pool));
   *child_baton = new_db;
   return SVN_NO_ERROR;
 }
