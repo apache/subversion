@@ -3893,6 +3893,7 @@ find_repos(const char *url,
            apr_pool_t *scratch_pool)
 {
   const char *path, *full_path, *fs_path, *hooks_env, *canonical_path;
+  const char *canonical_root;
   svn_stringbuf_t *url_buf;
   svn_boolean_t sasl_requested;
 
@@ -3919,8 +3920,9 @@ find_repos(const char *url,
                             "Couldn't determine repository path");
 
   /* Join the server-configured root with the client path. */
-  full_path = svn_dirent_join(svn_dirent_canonicalize(root, scratch_pool),
-                              path, scratch_pool);
+  SVN_ERR(svn_dirent_canonicalize_safe(&canonical_root, NULL, root,
+                                       scratch_pool, scratch_pool));
+  full_path = svn_dirent_join(canonical_root, path, scratch_pool);
 
   /* Search for a repository in the full path. */
   repository->repos_root = svn_repos_find_root_path(full_path, result_pool);
@@ -3941,7 +3943,7 @@ find_repos(const char *url,
   svn_path_remove_components(url_buf,
                         svn_path_component_count(repository->fs_path->data));
   repository->repos_url = url_buf->data;
-  repository->authz_repos_name = svn_dirent_is_child(root,
+  repository->authz_repos_name = svn_dirent_is_child(canonical_root,
                                                      repository->repos_root,
                                                      result_pool);
   if (repository->authz_repos_name == NULL)
