@@ -271,17 +271,23 @@ canonicalize_access_file(const char **access_file, repository_t *repository,
 {
   if (svn_path_is_url(*access_file))
     {
-      *access_file = svn_uri_canonicalize(*access_file, pool);
+      const char *canonical_url;
+      SVN_ERR(svn_uri_canonicalize_safe(&canonical_url, NULL, *access_file,
+                                        pool, pool));
+      *access_file = canonical_url;
     }
   else if (svn_path_is_repos_relative_url(*access_file))
     {
       const char *repos_root_url;
+      const char *canonical_url;
 
       SVN_ERR(svn_uri_get_file_url_from_dirent(&repos_root_url, repos_root,
                                                pool));
       SVN_ERR(svn_path_resolve_repos_relative_url(access_file, *access_file,
                                                   repos_root_url, pool));
-      *access_file = svn_uri_canonicalize(*access_file, pool);
+      SVN_ERR(svn_uri_canonicalize_safe(&canonical_url, NULL, *access_file,
+                                        pool, pool));
+      *access_file = canonical_url;
     }
   else
     {
@@ -894,7 +900,7 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
                               svn_ra_svn__list_t *params, void *baton)
 {
   report_driver_baton_t *b = baton;
-  const char *path, *url, *lock_token, *fs_path, *depth_word;
+  const char *path, *url, *lock_token, *fs_path, *depth_word, *canonical_url;
   svn_revnum_t rev;
   svn_boolean_t start_empty;
   /* Default to infinity, for old clients that don't send depth. */
@@ -907,7 +913,8 @@ static svn_error_t *link_path(svn_ra_svn_conn_t *conn, apr_pool_t *pool,
   /* ### WHAT?!  The link path is an absolute URL?!  Didn't see that
      coming...   -- cmpilato  */
   path = svn_relpath_canonicalize(path, pool);
-  url = svn_uri_canonicalize(url, pool);
+  SVN_ERR(svn_uri_canonicalize_safe(&canonical_url, NULL, url, pool, pool));
+  url = canonical_url;
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   if (!b->err)
@@ -1123,11 +1130,12 @@ reparent(svn_ra_svn_conn_t *conn,
          void *baton)
 {
   server_baton_t *b = baton;
-  const char *url;
+  const char *url, *canonical_url;
   const char *fs_path;
 
   SVN_ERR(svn_ra_svn__parse_tuple(params, "c", &url));
-  url = svn_uri_canonicalize(url, pool);
+  SVN_ERR(svn_uri_canonicalize_safe(&canonical_url, NULL, url, pool, pool));
+  url = canonical_url;
   SVN_ERR(trivial_auth_request(conn, pool, b));
   SVN_CMD_ERR(get_fs_path(svn_path_uri_decode(b->repository->repos_url, pool),
                           svn_path_uri_decode(url, pool),
@@ -1987,7 +1995,7 @@ switch_cmd(svn_ra_svn_conn_t *conn,
   server_baton_t *b = baton;
   svn_revnum_t rev;
   const char *target, *depth_word;
-  const char *switch_url, *switch_path;
+  const char *switch_url, *switch_path, *canonical_url;
   svn_boolean_t recurse;
   /* Default to unknown.  Old clients won't send depth, but we'll
      handle that by converting recurse if necessary. */
@@ -2000,8 +2008,9 @@ switch_cmd(svn_ra_svn_conn_t *conn,
                                   &recurse, &switch_url, &depth_word,
                                   &send_copyfrom_args, &ignore_ancestry));
   target = svn_relpath_canonicalize(target, pool);
-  switch_url = svn_uri_canonicalize(switch_url, pool);
-
+  SVN_ERR(svn_uri_canonicalize_safe(&canonical_url, NULL, switch_url, pool,
+                                    pool));
+  switch_url = canonical_url;
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
   else
@@ -2078,7 +2087,7 @@ diff(svn_ra_svn_conn_t *conn,
 {
   server_baton_t *b = baton;
   svn_revnum_t rev;
-  const char *target, *versus_url, *versus_path, *depth_word;
+  const char *target, *versus_url, *versus_path, *depth_word, *canonical_url;
   svn_boolean_t recurse, ignore_ancestry;
   svn_boolean_t text_deltas;
   /* Default to unknown.  Old clients won't send depth, but we'll
@@ -2102,7 +2111,9 @@ diff(svn_ra_svn_conn_t *conn,
                                       &text_deltas, &depth_word));
     }
   target = svn_relpath_canonicalize(target, pool);
-  versus_url = svn_uri_canonicalize(versus_url, pool);
+  SVN_ERR(svn_uri_canonicalize_safe(&canonical_url, NULL, versus_url,
+                                    pool, pool));
+  versus_url = canonical_url;
 
   if (depth_word)
     depth = svn_depth_from_word(depth_word);
@@ -4140,7 +4151,7 @@ construct_server_baton(server_baton_t **baton,
 {
   svn_error_t *err;
   apr_uint64_t ver;
-  const char *client_url, *ra_client_string, *client_string;
+  const char *client_url, *ra_client_string, *client_string, *canonical_url;
   svn_ra_svn__list_t *caplist;
   apr_pool_t *conn_pool = svn_ra_svn__get_pool(conn);
   server_baton_t *b = apr_pcalloc(conn_pool, sizeof(*b));
@@ -4212,7 +4223,9 @@ construct_server_baton(server_baton_t **baton,
                              " %"APR_UINT64_T_FMT
                              " (supported versions: [2])", ver);
 
-  client_url = svn_uri_canonicalize(client_url, conn_pool);
+  SVN_ERR(svn_uri_canonicalize_safe(&canonical_url, NULL, client_url,
+                                    conn_pool, scratch_pool));
+  client_url = canonical_url;
   SVN_ERR(svn_ra_svn__set_capabilities(conn, caplist));
 
   /* All released versions of Subversion support edit-pipeline,
