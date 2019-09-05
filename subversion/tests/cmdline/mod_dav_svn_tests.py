@@ -640,6 +640,53 @@ def propfind_propname(sbox):
   actual_response = r.read()
   verify_xml_response(expected_response, actual_response)
 
+@SkipUnless(svntest.main.is_ra_type_dav)
+def last_modified_header(sbox):
+  "verify 'Last-Modified' header on 'external' GETs"
+
+  sbox.build(create_wc=False, read_only=True)
+
+  headers = {
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
+  }
+
+  h = svntest.main.create_http_connection(sbox.repo_url)
+
+  # GET /repos/iota
+  # Expect to see a Last-Modified header.
+  h.request('GET', sbox.repo_url + '/iota', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Request failed: %d %s' % (r.status, r.reason))
+  svntest.verify.compare_and_display_lines(None, 'Last-Modified',
+                                           svntest.verify.RegexOutput('.+'),
+                                           r.getheader('Last-Modified'))
+  r.read()
+
+  # HEAD /repos/iota
+  # Expect to see a Last-Modified header.
+  h.request('HEAD', sbox.repo_url + '/iota', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Request failed: %d %s' % (r.status, r.reason))
+  svntest.verify.compare_and_display_lines(None, 'Last-Modified',
+                                           svntest.verify.RegexOutput('.+'),
+                                           r.getheader('Last-Modified'))
+  r.read()
+
+  # GET /repos/!svn/rvr/1/iota
+  # There should not be a Last-Modified header (it's costly and not useful,
+  # see r1724790)
+  h.request('GET', sbox.repo_url + '/!svn/rvr/1/iota', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Request failed: %d %s' % (r.status, r.reason))
+  last_modified = r.getheader('Last-Modified')
+  if last_modified:
+    raise svntest.Failure('Unexpected Last-Modified header: %s' % last_modified)
+  r.read()
+
+  
 ########################################################################
 # Run the tests
 
@@ -652,6 +699,7 @@ test_list = [ None,
               propfind_404,
               propfind_allprop,
               propfind_propname,
+              last_modified_header,
              ]
 serial_only = True
 
