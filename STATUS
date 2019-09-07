@@ -38,6 +38,16 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
    
+ * r1866425
+   mod_dav_svn: Set Last-Modified response header for 'external' GET requests.
+   Justification:
+     The Last-Modified header was removed in r1724790 for performance reasons.
+     However, for external requests the Last-Modified header is needed for
+     certain use cases. Bringing it back only for external requests fixes
+     these, while keeping the performance gain for checkout / update.
+   Votes:
+     +1: jcorvel
+   
 Veto-blocked changes:
 =====================
 
