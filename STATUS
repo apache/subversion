@@ -38,7 +38,7 @@ Candidate changes:
      certain use cases. Bringing it back only for external requests fixes
      these, while keeping the performance gain for checkout / update.
    Votes:
-     +1: jcorvel
+     +1: jcorvel, brane
 
  * r1865987, r1866588
    Fix formatting type size mismatches in FSFS.
