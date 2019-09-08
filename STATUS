@@ -15,21 +15,6 @@ Status of 1.10.7:
 Candidate changes:
 ==================
 
- * r1863987, r1863990
-   Fix format of Requires(.private) fields in pkg-config files
-   Justification:
-     Fixes format of .pc files and specifies correct include/link flags
-   Votes:
-     +1: jamessan, rhuijben
-
- * r1864440
-   Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
-   Justification:
-     'svn patch' should honour the user's umask.
-     User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
-   Votes:
-     +1: stsp, rhuijben
-
  * r1866425
    mod_dav_svn: Set Last-Modified response header for 'external' GET requests.
    Justification:
@@ -52,3 +37,18 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1863987, r1863990
+   Fix format of Requires(.private) fields in pkg-config files
+   Justification:
+     Fixes format of .pc files and specifies correct include/link flags
+   Votes:
+     +1: jamessan, rhuijben, brane
+
+ * r1864440
+   Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
+   Justification:
+     'svn patch' should honour the user's umask.
+     User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
+   Votes:
+     +1: stsp, rhuijben, brane
