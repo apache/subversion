@@ -29,7 +29,7 @@ Candidate changes:
      User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
    Votes:
      +1: stsp, rhuijben
-   
+
  * r1866425
    mod_dav_svn: Set Last-Modified response header for 'external' GET requests.
    Justification:
@@ -39,7 +39,14 @@ Candidate changes:
      these, while keeping the performance gain for checkout / update.
    Votes:
      +1: jcorvel
-   
+
+ * r1865987, r1866588
+   Fix formatting type size mismatches in FSFS.
+   Justification:
+     Could cause wroung output or uninitialised memory read on some platforms.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
