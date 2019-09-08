@@ -45,6 +45,13 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
+ * r1865987, r1866588
+   Fix formatting type size mismatches in FSFS.
+   Justification:
+     Could cause wroung output or uninitialised memory read on some platforms.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
