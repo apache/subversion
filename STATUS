@@ -45,11 +45,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1865266
-   mod_dav_svn: Always install cleanup handler for FS warning logging.
-   Justification:
-     FS warning logging cleanup handler was only installed in the presence
-     of an R->USER request field, which is unrelated.
-   Votes:
-     +1: stsp, rhuijben, jcorvel

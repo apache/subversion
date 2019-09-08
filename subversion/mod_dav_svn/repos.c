@@ -2514,6 +2514,14 @@ get_resource(request_rec *r,
   /* capture warnings during cleanup of the FS */
   svn_fs_set_warning_func(repos->fs, log_warning_req, r);
 
+  /* We must degrade the logging context when the request is freed. */
+  cleanup_req_logging_baton =
+    apr_pcalloc(r->pool, sizeof(*cleanup_req_logging_baton));
+  cleanup_req_logging_baton->fs = repos->fs;
+  cleanup_req_logging_baton->connection = r->connection;
+  apr_pool_pre_cleanup_register(r->pool, cleanup_req_logging_baton,
+                                cleanup_req_logging);
+
   /* if an authenticated username is present, attach it to the FS */
   if (r->user)
     {
@@ -2528,14 +2536,6 @@ get_resource(request_rec *r,
       cleanup_baton->fs = repos->fs;
       apr_pool_cleanup_register(r->pool, cleanup_baton, cleanup_fs_access,
                                 apr_pool_cleanup_null);
-
-      /* We must degrade the logging context when the request is freed. */
-      cleanup_req_logging_baton =
-        apr_pcalloc(r->pool, sizeof(*cleanup_req_logging_baton));
-      cleanup_req_logging_baton->fs = repos->fs;
-      cleanup_req_logging_baton->connection = r->connection;
-      apr_pool_pre_cleanup_register(r->pool, cleanup_req_logging_baton,
-                                    cleanup_req_logging);
 
       /* Create an access context based on the authenticated username. */
       serr = svn_fs_create_access(&access_ctx, r->user, r->pool);
