@@ -15,14 +15,7 @@ Status of 1.12.3:
 Candidate changes:
 ==================
 
- * r1864025
-   fsfs, fsx: Make an error message clearer to developers.
-   Justification:
-     Prevent hexadecimal values from being taken for decimal ones.
-   Votes:
-     +1: danielsh, rhuijben
-
- * r1864440
+  * r1864440
    Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
    Justification:
      'svn patch' should honour the user's umask.
@@ -56,4 +49,11 @@ Approved changes:
    Justification:
      Fixes format of .pc files and specifies correct include/link flags
    Votes:
-     +1: jamessan, rhuijben
+     +1: jamessan, rhuijben, brane
+
+* r1864025
+   fsfs, fsx: Make an error message clearer to developers.
+   Justification:
+     Prevent hexadecimal values from being taken for decimal ones.
+   Votes:
+     +1: danielsh, rhuijben, brane
