@@ -36,13 +36,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r1864025
-   fsfs, fsx: Make an error message clearer to developers.
-   Justification:
-     Prevent hexadecimal values from being taken for decimal ones.
-   Votes:
-     +1: danielsh, rhuijben, brane
-
  * r1865266
    mod_dav_svn: Always install cleanup handler for FS warning logging.
    Justification:

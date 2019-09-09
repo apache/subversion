@@ -254,10 +254,10 @@ svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
                              "P2L offset %s must be larger than L2P offset %s"
                              " in r%ld footer",
                              apr_psprintf(result_pool,
-                                          "%" APR_UINT64_T_HEX_FMT,
+                                          "0x%" APR_UINT64_T_HEX_FMT,
                                           (apr_uint64_t)*p2l_offset),
                              apr_psprintf(result_pool,
-                                          "%" APR_UINT64_T_HEX_FMT,
+                                          "0x%" APR_UINT64_T_HEX_FMT,
                                           (apr_uint64_t)*l2p_offset),
                              rev);
 
