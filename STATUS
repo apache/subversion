@@ -36,13 +36,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1863987, r1863990
-   Fix format of Requires(.private) fields in pkg-config files
-   Justification:
-     Fixes format of .pc files and specifies correct include/link flags
-   Votes:
-     +1: jamessan, rhuijben, brane
-
 * r1864025
    fsfs, fsx: Make an error message clearer to developers.
    Justification:
