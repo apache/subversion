@@ -631,9 +631,10 @@ DIR=`pwd`
         lib_deps=[],
         lib_required=[],
         lib_required_private=[],
+        version=self.version,
         )
-      # libsvn_foo -> -lsvn_foo
-      data.lib_deps.append('-l%s' % lib_name.replace('lib', '', 1))
+      # libsvn_foo -> -lsvn_foo-1
+      data.lib_deps.append('-l%s-%s' % (lib_name.replace('lib', '', 1), data.version))
       for lib_dep in lib_deps.split():
         if lib_dep == 'apriconv':
           # apriconv is part of apr-util, skip it
