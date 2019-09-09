@@ -37,11 +37,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1864440
-   Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
-   Justification:
-     'svn patch' should honour the user's umask.
-     User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
-   Votes:
-     +1: stsp, rhuijben, brane

@@ -1018,6 +1018,7 @@ init_patch_target(patch_target_t **patch_target,
   target_content_t *content;
   svn_boolean_t has_text_changes = FALSE;
   svn_boolean_t follow_moves;
+  const char *tempdir_abspath;
 
   has_text_changes = ((patch->hunks && patch->hunks->nelts > 0)
                       || patch->binary_patch);
@@ -1223,8 +1224,10 @@ init_patch_target(patch_target_t **patch_target,
         }
 
       /* Open a temporary file to write the patched result to. */
+      SVN_ERR(svn_wc__get_tmpdir(&tempdir_abspath, wc_ctx,
+          target->local_abspath, scratch_pool, scratch_pool));
       SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
-                                       &target->patched_path, NULL,
+                                       &target->patched_path, tempdir_abspath,
                                        remove_tempfiles ?
                                          svn_io_file_del_on_pool_cleanup :
                                          svn_io_file_del_none,
@@ -1236,7 +1239,7 @@ init_patch_target(patch_target_t **patch_target,
 
       /* Open a temporary stream to write rejected hunks to. */
       SVN_ERR(svn_stream_open_unique(&target->reject_stream,
-                                     &target->reject_path, NULL,
+                                     &target->reject_path, tempdir_abspath,
                                      remove_tempfiles ?
                                          svn_io_file_del_on_pool_cleanup :
                                          svn_io_file_del_none,
