@@ -134,8 +134,7 @@ recommended_release = '1.12'
 supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
 
 # Some constants
-repos = 'https://svn.apache.org/repos/asf/subversion'
-secure_repos = 'https://svn.apache.org/repos/asf/subversion'
+svn_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
@@ -310,7 +309,7 @@ def get_tmplfile(filename):
         return open(os.path.join(get_tmpldir(), filename))
     except IOError:
         # Hmm, we had a problem with the local version, let's try the repo
-        return urllib2.urlopen(repos + '/trunk/tools/dist/templates/' + filename)
+        return urllib2.urlopen(svn_repos + '/trunk/tools/dist/templates/' + filename)
 
 def get_nullfile():
     return open(os.path.devnull, 'w')
@@ -575,7 +574,7 @@ def roll_tarballs(args):
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
 
-    check_copyright_year(repos, branch, args.revnum)
+    check_copyright_year(svn_repos, branch, args.revnum)
 
     # Ensure we've got the appropriate rolling dependencies available
     autoconf = AutoconfDep(args.base_dir, False, args.verbose,
@@ -594,7 +593,7 @@ def roll_tarballs(args):
 
     if branch != 'trunk':
         # Make sure CHANGES is sync'd.
-        compare_changes(repos, branch, args.revnum)
+        compare_changes(svn_repos, branch, args.revnum)
 
     # Ensure the output directory doesn't already exist
     if os.path.exists(get_deploydir(args.base_dir)):
@@ -606,7 +605,7 @@ def roll_tarballs(args):
     logging.info('Preparing working copy source')
     shutil.rmtree(get_workdir(args.base_dir), True)
     run_script(args.verbose, 'svn checkout %s %s'
-               % (repos + '/' + branch + '@' + str(args.revnum),
+               % (svn_repos + '/' + branch + '@' + str(args.revnum),
                   get_workdir(args.base_dir)))
 
     # Exclude stuff we don't want in the tarball, it will not be present
@@ -825,9 +824,9 @@ def create_tag_only(args):
 
     logging.info('Creating tag for %s' % str(args.version))
 
-    branch_url = secure_repos + '/' + get_branch_path(args)
+    branch_url = svn_repos + '/' + get_branch_path(args)
 
-    tag = secure_repos + '/tags/' + str(args.version)
+    tag = svn_repos + '/tags/' + str(args.version)
 
     svnmucc_cmd = ['svnmucc', '-m',
                    'Tagging release ' + str(args.version)]
@@ -851,7 +850,7 @@ def bump_versions_on_branch(args):
 
     logging.info('Bumping version numbers on the branch')
 
-    branch_url = secure_repos + '/' + get_branch_path(args)
+    branch_url = svn_repos + '/' + get_branch_path(args)
 
     def replace_in_place(fd, startofline, flat, spare):
         """In file object FD, replace FLAT with SPARE in the first line
@@ -1320,8 +1319,8 @@ def write_changelog(args):
     #   New svn_ra_list() API function [D:api]
     #   [D:bindings] JavaHL: Allow access to constructors of a couple JavaHL classes
 
-    branch_url = secure_repos + '/' + get_branch_path(args)
-    previous = secure_repos + '/' + args.previous
+    branch_url = svn_repos + '/' + get_branch_path(args)
+    previous = svn_repos + '/' + args.previous
     include_unlabeled = args.include_unlabeled
     separator_line = ('-' * 72) + '\n'
     
@@ -1538,7 +1537,7 @@ def main():
                     help='''The branch to base the release on,
                             relative to ^/subversion/.''')
     subparser.add_argument('--username',
-                    help='''Username for ''' + secure_repos + '''.''')
+                    help='''Username for ''' + svn_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
@@ -1555,7 +1554,7 @@ def main():
                     help='''The branch to base the release on,
                             relative to ^/subversion/.''')
     subparser.add_argument('--username',
-                    help='''Username for ''' + secure_repos + '''.''')
+                    help='''Username for ''' + svn_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
