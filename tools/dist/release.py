@@ -139,6 +139,7 @@ secure_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
+dist_archive_url = 'https://archive.apache.org/dist/subversion'
 KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
@@ -948,8 +949,7 @@ def clean_dist(args):
         logging.info("Saving release '%s'", i)
 
     svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
-                   'They are still available at ' +
-                   'https://archive.apache.org/dist/subversion/']
+                   'They are still available at ' + dist_archive_url]
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
     for filename in filenames:
