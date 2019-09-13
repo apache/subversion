@@ -1116,19 +1116,17 @@ response_get_location(serf_bucket_t *response,
         return NULL;
 
       /* Replace the path path with what we got */
-      uri.path = (char*)svn_urlpath__canonicalize(location, scratch_pool);
+      uri.path = apr_pstrdup(scratch_pool, location);
 
       /* And make APR produce a proper full url for us */
-      location = apr_uri_unparse(scratch_pool, &uri, 0);
-
-      /* Fall through to ensure our canonicalization rules */
+      return apr_uri_unparse(result_pool, &uri, 0);
     }
   else if (!svn_path_is_url(location))
     {
       return NULL; /* Any other formats we should support? */
     }
 
-  return svn_uri_canonicalize(location, result_pool);
+  return apr_pstrdup(result_pool, location);
 }
 
 
