@@ -293,6 +293,15 @@ def get_target(args):
     else:
         return get_deploydir(args.base_dir)
 
+def get_branch_path(args):
+    if not args.branch:
+        try:
+            args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+        except AttributeError:
+            raise RuntimeError("Please specify the release version label or --branch-path")
+
+    return args.branch.rstrip('/')  # canonicalize for later comparisons
+
 def get_tmpldir():
     return os.path.join(os.path.abspath(sys.path[0]), 'templates')
 
@@ -561,16 +570,12 @@ def replace_lines(path, actions):
 def roll_tarballs(args):
     'Create the release artifacts.'
 
-    if not args.branch:
-        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
-
-    branch = args.branch # shorthand
-    branch = branch.rstrip('/') # canonicalize for later comparisons
+    branch = get_branch_path(args)
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
 
-    check_copyright_year(repos, args.branch, args.revnum)
+    check_copyright_year(repos, branch, args.revnum)
 
     # Ensure we've got the appropriate rolling dependencies available
     autoconf = AutoconfDep(args.base_dir, False, args.verbose,
@@ -820,10 +825,7 @@ def create_tag_only(args):
 
     logging.info('Creating tag for %s' % str(args.version))
 
-    if not args.branch:
-        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
-
-    branch = secure_repos + '/' + args.branch.rstrip('/')
+    branch_url = secure_repos + '/' + get_branch_path(args)
 
     tag = secure_repos + '/tags/' + str(args.version)
 
@@ -831,7 +833,7 @@ def create_tag_only(args):
                    'Tagging release ' + str(args.version)]
     if (args.username):
         svnmucc_cmd += ['--username', args.username]
-    svnmucc_cmd += ['cp', str(args.revnum), branch, tag]
+    svnmucc_cmd += ['cp', str(args.revnum), branch_url, tag]
     svnmucc_cmd += ['put', os.path.join(target, 'svn_version.h.dist' + '-' +
                                         str(args.version)),
                     tag + '/subversion/include/svn_version.h']
@@ -849,10 +851,7 @@ def bump_versions_on_branch(args):
 
     logging.info('Bumping version numbers on the branch')
 
-    if not args.branch:
-        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
-
-    branch = secure_repos + '/' + args.branch.rstrip('/')
+    branch_url = secure_repos + '/' + get_branch_path(args)
 
     def replace_in_place(fd, startofline, flat, spare):
         """In file object FD, replace FLAT with SPARE in the first line
@@ -880,11 +879,11 @@ def bump_versions_on_branch(args):
                            args.version.patch + 1))
 
     HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
-                                    '--', branch]).strip()
+                                    '--', branch_url]).strip()
     HEAD = int(HEAD)
     def file_object_for(relpath):
         fd = tempfile.NamedTemporaryFile()
-        url = branch + '/' + relpath
+        url = branch_url + '/' + relpath
         fd.url = url
         subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
                               stdout=fd)
@@ -903,7 +902,7 @@ def bump_versions_on_branch(args):
     subprocess.check_call(['svnmucc', '-r', str(HEAD),
                            '-m', 'Post-release housekeeping: '
                                  'bump the %s branch to %s.'
-                           % (branch.split('/')[-1], str(new_version)),
+                           % (branch_url.split('/')[-1], str(new_version)),
                            'put', svn_version_h.name, svn_version_h.url,
                            'put', STATUS.name, STATUS.url,
                           ])
@@ -1321,13 +1320,13 @@ def write_changelog(args):
     #   New svn_ra_list() API function [D:api]
     #   [D:bindings] JavaHL: Allow access to constructors of a couple JavaHL classes
 
-    branch = secure_repos + '/' + args.branch
+    branch_url = secure_repos + '/' + get_branch_path(args)
     previous = secure_repos + '/' + args.previous
     include_unlabeled = args.include_unlabeled
     separator_line = ('-' * 72) + '\n'
     
     mergeinfo = subprocess.check_output(['svn', 'mergeinfo', '--show-revs',
-                    'eligible', '--log', branch, previous])
+                    'eligible', '--log', branch_url, previous])
     log_messages_dict = {
         # This is a dictionary mapping revision numbers to their respective
         # log messages.  The expression in the "key:" part of the dict
