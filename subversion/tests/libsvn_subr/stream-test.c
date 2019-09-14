@@ -1000,6 +1000,71 @@ test_stream_readline_file_crlf(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_stream_readline_file_nul(apr_pool_t *pool)
+{
+  /* Test is written based on the problem report in
+       https://lists.apache.org/thread.html/c96eb5618ac0bf6e083345e0fdcdcf834e30913f26eabe6ada7bab62@%3Cusers.subversion.apache.org%3E
+     where the user had an OOM when calling `svndumpfilter` with
+     a (most likely) invalid dump containing nul bytes.
+   */
+  const char data[] =
+    {
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n',
+      'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n', 'a', '\0', '\n'
+    };
+  const char *tmp_dir;
+  const char *tmp_file;
+  svn_stream_t *stream;
+
+  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_stream_readline_file_nul", pool));
+  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
+  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
+  svn_test_add_dir_cleanup(tmp_dir);
+
+  tmp_file = svn_dirent_join(tmp_dir, "file", pool);
+  SVN_ERR(svn_io_file_create_bytes(tmp_file, data, sizeof(data), pool));
+  SVN_ERR(svn_stream_open_readonly(&stream, tmp_file, pool, pool));
+
+  while (1)
+    {
+      svn_boolean_t eof;
+      svn_stringbuf_t *line;
+
+      SVN_ERR(svn_stream_readline(stream, &line, "\n", &eof, pool));
+      if (eof)
+        break;
+
+      /* Don't check the contents of the `line` here, at least for now.
+
+         In other words, we just test that this case does not crash or cause
+         unexpected errors.  The reason is that currently our `readline_fn`
+         implementations have inconsistent behavior when dealing with \0 bytes,
+         handling those differently, either in strchr() or memchr() styles.
+
+         Once we make them consistent (or even decide to bail out with an error
+         for \0), this part of the test should start properly checking `data`;
+         maybe also for non-file streams.
+       */
+    }
+
+  SVN_ERR(svn_stream_close(stream));
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 
 static int max_threads = 1;
@@ -1037,6 +1102,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test reading LF-terminated lines from file"),
     SVN_TEST_PASS2(test_stream_readline_file_crlf,
                    "test reading CRLF-terminated lines from file"),
+    SVN_TEST_PASS2(test_stream_readline_file_nul,
+                   "test reading line from file with nul bytes"),
     SVN_TEST_NULL
   };
 
