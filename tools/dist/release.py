@@ -1466,6 +1466,10 @@ def main():
                    help='''The directory in which to create needed files and
                            folders.  The default is the current working
                            directory.''')
+    parser.add_argument('--branch',
+                   help='''The branch to base the release on,
+                           as a path relative to ^/subversion/.
+                           Default: 'branches/MAJOR.MINOR.x'.''')
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Setup the parser for the build-env subcommand
@@ -1491,9 +1495,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--branch',
-                    help='''The branch to base the release on,
-                            relative to ^/subversion/.''')
     subparser.add_argument('--patches',
                     help='''The path to the directory containing patches.''')
 
@@ -1533,9 +1534,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--branch',
-                    help='''The branch to base the release on,
-                            relative to ^/subversion/.''')
     subparser.add_argument('--username',
                     help='''Username for ''' + svn_repos + '''.''')
     subparser.add_argument('--target',
@@ -1550,9 +1548,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--branch',
-                    help='''The branch to base the release on,
-                            relative to ^/subversion/.''')
     subparser.add_argument('--username',
                     help='''Username for ''' + svn_repos + '''.''')
     subparser.add_argument('--target',
@@ -1645,10 +1640,6 @@ def main():
                             commit messages, optionally labeled with a category
                             like [U:client], [D:api], [U], ...''')
     subparser.set_defaults(func=write_changelog)
-    subparser.add_argument('branch',
-                    help='''The branch (or tag or trunk), relative to
-                            ^/subversion/, of which to generate the
-                            changelog, when compared to "previous".''')
     subparser.add_argument('previous',
                     help='''The "previous" branch or tag, relative to 
                             ^/subversion/, to compare "branch" against.''')
