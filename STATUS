@@ -15,6 +15,19 @@ Status of 1.12.3:
 Candidate changes:
 ==================
 
+ * r1865987, r1866588
+   Fix formatting type size mismatches in FSFS.
+   Justification:
+     Could cause wroung output or uninitialised memory read on some platforms.
+   Votes:
+     +1: brane
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
   * r1864440
    Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
    Justification:
@@ -22,13 +35,6 @@ Candidate changes:
      User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
    Votes:
      +1: stsp, brane
-
- * r1865987, r1866588
-   Fix formatting type size mismatches in FSFS.
-   Justification:
-     Could cause wroung output or uninitialised memory read on some platforms.
-   Votes:
-     +1: brane
 
  * r1866425
    mod_dav_svn: Set Last-Modified response header for 'external' GET requests.
@@ -40,8 +46,3 @@ Candidate changes:
    Votes:
      +1: jcorvel, brane
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
