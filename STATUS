@@ -14,21 +14,6 @@ Status of 1.11.2:
 Candidate changes:
 ==================
 
- * r1845212
-   Silence a deprecation warning from amalgamated SQLite on macOS.
-   Justification:
-     Keeps the macOS warnings checker buildslave clean.
-   Votes:
-     +1: brane, stsp
-
- * r1850651
-   Fix a use-after-free in mod_dav_svn's logging of FS warnings.
-   Justification:
-     Lots of crashes on OpenBSD during 'make check' with HTTPD 2.4.
-     See https://svn.haxx.se/dev/archive-2018-12/0137.shtml
-   Votes:
-     +1: stsp, brane
-
  * r1851903
    Fix missing unlock of working copy in a resolver error case.
    Justification:
@@ -42,15 +27,6 @@ Candidate changes:
      Current behaviour is inefficient and could lead to dubious conflicts.
    Votes:
      +1: stsp
-
- * r1852013
-   Fix issue #4804: avoid test failures just because some SQLite compile-time
-   feature was enabled that changes its query plan descriptions.
-   Justification:
-     Reported build failure on Gentoo Linux, see:
-     https://bugs.gentoo.org/605438
-   Votes:
-     +1: brane, stsp
 
  * r1852436
    Make 'svn update' not record a tree conflict when deleting an unmodified
@@ -70,23 +46,6 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1853483
-   Fix #4760 "Missing children when svnadmin dump --include/exclude converts
-   copy-dir to add-dir".
-   Justification:
-     The new-in-1.10 feature was broken.
-   Votes:
-     +1: julianfoad, stsp
-
- * r1854072, r1854074, r1854216
-   Fix issue #4806: Remove on-disk trees with read-only directories in them.
-   Justification:
-     Fixes an edge case in our tree removal code. If we clear read-only
-     permissions on files in order to remove them, we should do the same for
-     directories.
-   Votes:
-     +1: brane, stsp
-
  * r1855419
    Fix conflict resolver bug where local and incoming edits got swapped.
    Justification:
@@ -104,6 +63,53 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1845212
+   Silence a deprecation warning from amalgamated SQLite on macOS.
+   Justification:
+     Keeps the macOS warnings checker buildslave clean.
+   Votes:
+     +1: brane, stsp
+
+ * r1850651
+   Fix a use-after-free in mod_dav_svn's logging of FS warnings.
+   Justification:
+     Lots of crashes on OpenBSD during 'make check' with HTTPD 2.4.
+     See https://svn.haxx.se/dev/archive-2018-12/0137.shtml
+   Votes:
+     +1: stsp, brane
+
+ * r1852013
+   Fix issue #4804: avoid test failures just because some SQLite compile-time
+   feature was enabled that changes its query plan descriptions.
+   Justification:
+     Reported build failure on Gentoo Linux, see:
+     https://bugs.gentoo.org/605438
+   Votes:
+     +1: brane, stsp
+
+ * r1853483
+   Fix #4760 "Missing children when svnadmin dump --include/exclude converts
+   copy-dir to add-dir".
+   Justification:
+     The new-in-1.10 feature was broken.
+   Votes:
+     +1: julianfoad, stsp
+
+ * r1854072, r1854074, r1854216
+   Fix issue #4806: Remove on-disk trees with read-only directories in them.
+   Justification:
+     Fixes an edge case in our tree removal code. If we clear read-only
+     permissions on files in order to remove them, we should do the same for
+     directories.
+   Votes:
+     +1: brane, stsp
+
  * r1857367
     Fix memory lifetime problem in a libsvn_wc error code path.
     Justification:
@@ -120,8 +126,3 @@ Candidate changes:
    Votes:
      +1: stsp, rhuijben
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
