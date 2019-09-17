@@ -11,14 +11,25 @@ https://svn.apache.org/repos/asf/subversion/tags/1.13.0
  User-visible changes:
   - Minor new features and improvements:
     * New 'svnadmin rev-size' command to report revision size (r1857624)
+    * In 'svn help', hide experimental commands and global options (issue #4828)
+    * Add a hint about mod_dav_svn misconfiguration (r1866738)
+    * Performance improvement for 'svn st' etc., in WC SQLite DB (r1865523)
 
   - Client-side bugfixes:
     * Windows: avoid delays in SSL certificate validation override (r1863018)
     * Fix 'svn patch' setting mode 0600 on patched files with props (r1864440)
     * Fix "svn diff --changelist ARG" broken in subdirectories (issue #4822)
+    * Fix misleading 'redirect cycle' error on a non-repository URL (r1866899)
 
   - Server-side bugfixes:
     * svnserve: Report some errors that we previously ignored (r1866062)
+    * Make server code more resilient to malformed paths and URLs (r1866318 et al)
+    * Make dump stream parser more resilient to malformed dump stream (r1866951)
+    * mod_dav_svn: Fix missing Last-Modified header on 'external' GET requests (r1866425)
+
+  - Client-side and server-side bugfixes:
+    * Fix excessive memory usage in some cases reading binary data (r1866950)
+    * Win32: fix svn_io_file_rename2() spinning in a retry loop (r1865518)
 
   - Other tool improvements and bugfixes:
     * svn_load_dirs.pl: do not show password; fix cleanup (r1863262, r1863392)
