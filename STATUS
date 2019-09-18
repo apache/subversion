@@ -28,14 +28,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-  * r1864440
-   Fix 'svn patch' setting UNIX permissions to 0600 on files with props.
-   Justification:
-     'svn patch' should honour the user's umask.
-     User complained: https://svn.haxx.se/dev/archive-2019-07/0072.shtml
-   Votes:
-     +1: stsp, brane
-
  * r1866425
    mod_dav_svn: Set Last-Modified response header for 'external' GET requests.
    Justification:
@@ -45,4 +37,3 @@ Approved changes:
      these, while keeping the performance gain for checkout / update.
    Votes:
      +1: jcorvel, brane
-
