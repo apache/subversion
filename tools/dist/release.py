@@ -340,6 +340,16 @@ def download_file(url, target, checksum):
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
 
+def run_svn(cmd, username):
+    if (username):
+        cmd[:0] = ['--username', username]
+    subprocess.check_call(['svn'] + cmd)
+
+def run_svnmucc(cmd, username):
+    if (username):
+        cmd[:0] = ['--username', username]
+    subprocess.check_call(['svnmucc'] + cmd)
+
 #----------------------------------------------------------------------
 # ezt helpers
 
@@ -804,14 +814,12 @@ def post_candidates(args):
 
     logging.info('Importing tarballs to %s' % dist_dev_url)
     ver = str(args.version)
-    svn_cmd = ['svn', 'import', '-m',
+    svn_cmd = ['import', '-m',
                'Add Subversion %s candidate release artifacts' % ver,
                '--auto-props', '--config-option',
                'config:auto-props:*.asc=svn:eol-style=native;svn:mime-type=text/plain',
                target, dist_dev_url]
-    if (args.username):
-        svn_cmd += ['--username', args.username]
-    subprocess.check_call(svn_cmd)
+    run_svn(svn_cmd, args.username)
 
 #----------------------------------------------------------------------
 # Create tag
@@ -828,10 +836,7 @@ def create_tag_only(args):
 
     tag = svn_repos + '/tags/' + str(args.version)
 
-    svnmucc_cmd = ['svnmucc', '-m',
-                   'Tagging release ' + str(args.version)]
-    if (args.username):
-        svnmucc_cmd += ['--username', args.username]
+    svnmucc_cmd = ['-m', 'Tagging release ' + str(args.version)]
     svnmucc_cmd += ['cp', str(args.revnum), branch_url, tag]
     svnmucc_cmd += ['put', os.path.join(target, 'svn_version.h.dist' + '-' +
                                         str(args.version)),
@@ -839,7 +844,7 @@ def create_tag_only(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     try:
-        subprocess.check_call(svnmucc_cmd)
+        run_svnmucc(svnmucc_cmd, args.username)
     except subprocess.CalledProcessError:
         if args.version.is_prerelease():
             logging.error("Do you need to pass --branch=trunk?")
@@ -898,13 +903,14 @@ def bump_versions_on_branch(args):
 
     svn_version_h.seek(0, os.SEEK_SET)
     STATUS.seek(0, os.SEEK_SET)
-    subprocess.check_call(['svnmucc', '-r', str(HEAD),
-                           '-m', 'Post-release housekeeping: '
-                                 'bump the %s branch to %s.'
-                           % (branch_url.split('/')[-1], str(new_version)),
-                           'put', svn_version_h.name, svn_version_h.url,
-                           'put', STATUS.name, STATUS.url,
-                          ])
+    run_svnmucc(['-r', str(HEAD),
+                 '-m', 'Post-release housekeeping: '
+                       'bump the %s branch to %s.'
+                 % (branch_url.split('/')[-1], str(new_version)),
+                 'put', svn_version_h.name, svn_version_h.url,
+                 'put', STATUS.name, STATUS.url,
+                ],
+                args.username)
     del svn_version_h
     del STATUS
 
@@ -946,10 +952,8 @@ def clean_dist(args):
     for i in sorted(to_keep):
         logging.info("Saving release '%s'", i)
 
-    svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
+    svnmucc_cmd = ['-m', 'Remove old Subversion releases.\n' +
                    'They are still available at ' + dist_archive_url]
-    if (args.username):
-        svnmucc_cmd += ['--username', args.username]
     for filename in filenames:
         if Version(filename) not in to_keep:
             logging.info("Removing %r", filename)
@@ -957,7 +961,7 @@ def clean_dist(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     if 'rm' in svnmucc_cmd:
-        subprocess.check_call(svnmucc_cmd)
+        run_svnmucc(svnmucc_cmd, args.username)
     else:
         logging.info("Nothing to remove")
 
@@ -973,10 +977,8 @@ def move_to_dist(args):
     for entry in stdout.split('\n'):
       if fnmatch.fnmatch(entry, 'subversion-%s.*' % str(args.version)):
         filenames.append(entry)
-    svnmucc_cmd = ['svnmucc', '-m',
+    svnmucc_cmd = ['-m',
                    'Publish Subversion-%s.' % str(args.version)]
-    if (args.username):
-        svnmucc_cmd += ['--username', args.username]
     svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist'
                           + '-' + str(args.version)]
     for filename in filenames:
@@ -985,7 +987,7 @@ def move_to_dist(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     logging.info('Moving release artifacts to %s' % dist_release_url)
-    subprocess.check_call(svnmucc_cmd)
+    run_svnmucc(svnmucc_cmd, args.username)
 
 #----------------------------------------------------------------------
 # Write announcements
@@ -1470,6 +1472,9 @@ def main():
                    help='''The branch to base the release on,
                            as a path relative to ^/subversion/.
                            Default: 'branches/MAJOR.MINOR.x'.''')
+    parser.add_argument('--username',
+                   help='Username for committing to ' + svn_repos +
+                        ' or ' + dist_repos + '.')
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Setup the parser for the build-env subcommand
@@ -1519,8 +1524,6 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + dist_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
@@ -1534,8 +1537,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + svn_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
@@ -1548,8 +1549,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + svn_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
@@ -1560,8 +1559,6 @@ def main():
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + dist_repos + '''.''')
 
     # The move-to-dist subcommand
     subparser = subparsers.add_parser('move-to-dist',
@@ -1571,8 +1568,6 @@ def main():
     subparser.set_defaults(func=move_to_dist)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + dist_repos + '''.''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
