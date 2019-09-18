@@ -134,8 +134,8 @@ recommended_release = '1.12'
 supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
 
 # Some constants
-svn_repos = 'https://svn.apache.org/repos/asf/subversion'
-dist_repos = 'https://dist.apache.org/repos/dist'
+svn_repos = 'file:///opt/svn/dummy-asf-repos/svn-repo/subversion'
+dist_repos = 'file:///opt/svn/dummy-asf-repos/dist-repo'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
@@ -314,7 +314,9 @@ def get_tmplfile(filename):
 def get_nullfile():
     return open(os.path.devnull, 'w')
 
-def run_script(verbose, script, hide_stderr=False):
+def run_command(cmd, verbose=True, hide_stderr=False):
+    if verbose:
+        print("+ " + ' '.join(cmd))
     stderr = None
     if verbose:
         stdout = None
@@ -323,8 +325,11 @@ def run_script(verbose, script, hide_stderr=False):
         if hide_stderr:
             stderr = get_nullfile()
 
+    subprocess.check_call(cmd, stdout=stdout, stderr=stderr)
+
+def run_script(verbose, script, hide_stderr=False):
     for l in script.split('\n'):
-        subprocess.check_call(l.split(), stdout=stdout, stderr=stderr)
+        run_command(l.split(), verbose, hide_stderr)
 
 def download_file(url, target, checksum):
     response = urllib2.urlopen(url)
@@ -340,15 +345,15 @@ def download_file(url, target, checksum):
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
 
-def run_svn(cmd, username):
+def run_svn(cmd, verbose=True, username=None):
     if (username):
         cmd[:0] = ['--username', username]
-    subprocess.check_call(['svn'] + cmd)
+    run_command(['svn'] + cmd, verbose)
 
-def run_svnmucc(cmd, username):
+def run_svnmucc(cmd, verbose=True, username=None):
     if (username):
         cmd[:0] = ['--username', username]
-    subprocess.check_call(['svnmucc'] + cmd)
+    run_command(['svnmucc'] + cmd, verbose)
 
 #----------------------------------------------------------------------
 # ezt helpers
@@ -614,9 +619,10 @@ def roll_tarballs(args):
 
     logging.info('Preparing working copy source')
     shutil.rmtree(get_workdir(args.base_dir), True)
-    run_script(args.verbose, 'svn checkout %s %s'
-               % (svn_repos + '/' + branch + '@' + str(args.revnum),
-                  get_workdir(args.base_dir)))
+    run_svn(['checkout',
+             svn_repos + '/' + branch + '@' + str(args.revnum),
+             get_workdir(args.base_dir)],
+            verbose=args.verbose)
 
     # Exclude stuff we don't want in the tarball, it will not be present
     # in the exported tree.
@@ -627,8 +633,8 @@ def roll_tarballs(args):
             exclude += ['packages', 'www']
     cwd = os.getcwd()
     os.chdir(get_workdir(args.base_dir))
-    run_script(args.verbose,
-               'svn update --set-depth exclude %s' % " ".join(exclude))
+    run_svn(['update', '--set-depth=exclude'] + exclude,
+            verbose=args.verbose)
     os.chdir(cwd)
 
     if args.patches:
@@ -638,10 +644,10 @@ def roll_tarballs(args):
         for name in os.listdir(args.patches):
             if name.find(majmin) != -1 and name.endswith('patch'):
                 logging.info('Applying patch %s' % name)
-                run_script(args.verbose,
-                           '''svn patch %s %s'''
-                           % (os.path.join(args.patches, name),
-                              get_workdir(args.base_dir)))
+                run_svn(['patch',
+                         os.path.join(args.patches, name),
+                         get_workdir(args.base_dir)],
+                        verbose=args.verbose)
 
     # Massage the new version number into svn_version.h.
     ver_tag, ver_numtag = args.version.get_ver_tags(args.revnum)
@@ -679,8 +685,9 @@ def roll_tarballs(args):
             eol_style = "--native-eol CRLF"
         else:
             eol_style = "--native-eol LF"
-        run_script(args.verbose, "svn export %s %s %s"
-                   % (eol_style, get_workdir(args.base_dir), exportdir))
+        run_svn(['export',
+                 eol_style, get_workdir(args.base_dir), exportdir],
+                verbose=args.verbose)
 
     def transform_sql():
         for root, dirs, files in os.walk(exportdir):
@@ -819,7 +826,7 @@ def post_candidates(args):
                '--auto-props', '--config-option',
                'config:auto-props:*.asc=svn:eol-style=native;svn:mime-type=text/plain',
                target, dist_dev_url]
-    run_svn(svn_cmd, args.username)
+    run_svn(svn_cmd, verbose=args.verbose, username=args.username)
 
 #----------------------------------------------------------------------
 # Create tag
@@ -844,7 +851,7 @@ def create_tag_only(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     try:
-        run_svnmucc(svnmucc_cmd, args.username)
+        run_svnmucc(svnmucc_cmd, verbose=args.verbose, username=args.username)
     except subprocess.CalledProcessError:
         if args.version.is_prerelease():
             logging.error("Do you need to pass --branch=trunk?")
@@ -910,7 +917,7 @@ def bump_versions_on_branch(args):
                  'put', svn_version_h.name, svn_version_h.url,
                  'put', STATUS.name, STATUS.url,
                 ],
-                args.username)
+                verbose=args.verbose, username=args.username)
     del svn_version_h
     del STATUS
 
@@ -961,7 +968,7 @@ def clean_dist(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     if 'rm' in svnmucc_cmd:
-        run_svnmucc(svnmucc_cmd, args.username)
+        run_svnmucc(svnmucc_cmd, verbose=args.verbose, username=args.username)
     else:
         logging.info("Nothing to remove")
 
@@ -987,7 +994,7 @@ def move_to_dist(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     logging.info('Moving release artifacts to %s' % dist_release_url)
-    run_svnmucc(svnmucc_cmd, args.username)
+    run_svnmucc(svnmucc_cmd, verbose=args.verbose, username=args.username)
 
 #----------------------------------------------------------------------
 # Write announcements
