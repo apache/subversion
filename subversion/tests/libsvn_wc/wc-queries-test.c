@@ -747,7 +747,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
                      as 'DROP TABLE foo', but the performance of such
                      statements is not our concern here. */
 
-                  /* "Slow" statements do expect too see a warning, however. */
+                  /* "Slow" statements do expect to see a warning, however. */
                   if (is_slow_statement(i))
                     warned = TRUE;
                 }

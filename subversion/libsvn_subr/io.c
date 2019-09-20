@@ -4491,7 +4491,45 @@ win32_file_rename(const WCHAR *from_path_w,
     }
 
   if (!MoveFileExW(from_path_w, to_path_w, flags))
-      return apr_get_os_error();
+    {
+      apr_status_t err = apr_get_os_error();
+      /* If the target file is read only NTFS reports EACCESS and
+         FAT/FAT32 reports EEXIST */
+      if (APR_STATUS_IS_EACCES(err) || APR_STATUS_IS_EEXIST(err))
+        {
+          DWORD attrs = GetFileAttributesW(to_path_w);
+          if (attrs == INVALID_FILE_ATTRIBUTES)
+            {
+              apr_status_t stat_err = apr_get_os_error();
+              if (!(APR_STATUS_IS_ENOENT(stat_err) || SVN__APR_STATUS_IS_ENOTDIR(stat_err)))
+                /* We failed to stat the file, propagate the original error */
+                return err;
+            }
+          else if (attrs & FILE_ATTRIBUTE_READONLY)
+            {
+              /* Try to set the destination file writable because Windows will
+                 not allow us to rename when to_path is read-only, but will
+                 allow renaming when from_path is read only. */
+              attrs &= ~FILE_ATTRIBUTE_READONLY;
+              if (!SetFileAttributesW(to_path_w, attrs))
+                {
+                  err = apr_get_os_error();
+                  if (!(APR_STATUS_IS_ENOENT(err) || SVN__APR_STATUS_IS_ENOTDIR(err)))
+                    /* We failed to set file attributes, propagate this new error */
+                    return err;
+                }
+            }
+
+          /* NOTE: If the file is not read-only, we don't know if the file did
+             not have the read-only attribute in the first place or if this
+             attribute disappeared due to a race, so try to rename it anyway.
+           */
+          if (!MoveFileExW(from_path_w, to_path_w, flags))
+            return apr_get_os_error();
+        }
+      else
+        return err;
+    }
 
   return APR_SUCCESS;
 }
@@ -4515,18 +4553,6 @@ svn_io_file_rename2(const char *from_path, const char *to_path,
   SVN_ERR(svn_io__utf8_to_unicode_longpath(&from_path_w, from_path_apr, pool));
   SVN_ERR(svn_io__utf8_to_unicode_longpath(&to_path_w, to_path_apr, pool));
   status = win32_file_rename(from_path_w, to_path_w, flush_to_disk);
-
-  /* If the target file is read only NTFS reports EACCESS and
-     FAT/FAT32 reports EEXIST */
-  if (APR_STATUS_IS_EACCES(status) || APR_STATUS_IS_EEXIST(status))
-    {
-      /* Set the destination file writable because Windows will not
-         allow us to rename when to_path is read-only, but will
-         allow renaming when from_path is read only. */
-      SVN_ERR(svn_io_set_file_read_write(to_path, TRUE, pool));
-
-      status = win32_file_rename(from_path_w, to_path_w, flush_to_disk);
-    }
   WIN32_RETRY_LOOP(status, win32_file_rename(from_path_w, to_path_w,
                                              flush_to_disk));
 #elif defined(__OS2__)

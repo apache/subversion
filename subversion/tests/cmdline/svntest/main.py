@@ -57,7 +57,7 @@ from svntest import Failure
 from svntest import Skip
 from svntest.wc import StateItem as Item
 
-SVN_VER_MINOR = 13
+SVN_VER_MINOR = 14
 
 ######################################################################
 #

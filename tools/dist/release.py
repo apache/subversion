@@ -77,6 +77,14 @@ tool_versions = {
             'swig'     : ['3.0.12',
             '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
   },
+  '1.13' : {
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['3.0.12',
+            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
+  },
   '1.12' : {
             'autoconf' : ['2.69',
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
@@ -126,11 +134,11 @@ recommended_release = '1.12'
 supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
 
 # Some constants
-repos = 'https://svn.apache.org/repos/asf/subversion'
-secure_repos = 'https://svn.apache.org/repos/asf/subversion'
+svn_repos = 'https://svn.apache.org/repos/asf/subversion'
 dist_repos = 'https://dist.apache.org/repos/dist'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
+dist_archive_url = 'https://archive.apache.org/dist/subversion'
 KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
@@ -284,6 +292,15 @@ def get_target(args):
     else:
         return get_deploydir(args.base_dir)
 
+def get_branch_path(args):
+    if not args.branch:
+        try:
+            args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+        except AttributeError:
+            raise RuntimeError("Please specify the release version label or --branch-path")
+
+    return args.branch.rstrip('/')  # canonicalize for later comparisons
+
 def get_tmpldir():
     return os.path.join(os.path.abspath(sys.path[0]), 'templates')
 
@@ -292,12 +309,14 @@ def get_tmplfile(filename):
         return open(os.path.join(get_tmpldir(), filename))
     except IOError:
         # Hmm, we had a problem with the local version, let's try the repo
-        return urllib2.urlopen(repos + '/trunk/tools/dist/templates/' + filename)
+        return urllib2.urlopen(svn_repos + '/trunk/tools/dist/templates/' + filename)
 
 def get_nullfile():
     return open(os.path.devnull, 'w')
 
-def run_script(verbose, script, hide_stderr=False):
+def run_command(cmd, verbose=True, hide_stderr=False):
+    if verbose:
+        print("+ " + ' '.join(cmd))
     stderr = None
     if verbose:
         stdout = None
@@ -306,8 +325,11 @@ def run_script(verbose, script, hide_stderr=False):
         if hide_stderr:
             stderr = get_nullfile()
 
+    subprocess.check_call(cmd, stdout=stdout, stderr=stderr)
+
+def run_script(verbose, script, hide_stderr=False):
     for l in script.split('\n'):
-        subprocess.check_call(l.split(), stdout=stdout, stderr=stderr)
+        run_command(l.split(), verbose, hide_stderr)
 
 def download_file(url, target, checksum):
     response = urllib2.urlopen(url)
@@ -322,6 +344,16 @@ def download_file(url, target, checksum):
         raise RuntimeError("Checksum mismatch for '%s': "\
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
+
+def run_svn(cmd, verbose=True, username=None):
+    if (username):
+        cmd[:0] = ['--username', username]
+    run_command(['svn'] + cmd, verbose)
+
+def run_svnmucc(cmd, verbose=True, username=None):
+    if (username):
+        cmd[:0] = ['--username', username]
+    run_command(['svnmucc'] + cmd, verbose)
 
 #----------------------------------------------------------------------
 # ezt helpers
@@ -552,16 +584,12 @@ def replace_lines(path, actions):
 def roll_tarballs(args):
     'Create the release artifacts.'
 
-    if not args.branch:
-        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
-
-    branch = args.branch # shorthand
-    branch = branch.rstrip('/') # canonicalize for later comparisons
+    branch = get_branch_path(args)
 
     logging.info('Rolling release %s from branch %s@%d' % (args.version,
                                                            branch, args.revnum))
 
-    check_copyright_year(repos, args.branch, args.revnum)
+    check_copyright_year(svn_repos, branch, args.revnum)
 
     # Ensure we've got the appropriate rolling dependencies available
     autoconf = AutoconfDep(args.base_dir, False, args.verbose,
@@ -580,7 +608,7 @@ def roll_tarballs(args):
 
     if branch != 'trunk':
         # Make sure CHANGES is sync'd.
-        compare_changes(repos, branch, args.revnum)
+        compare_changes(svn_repos, branch, args.revnum)
 
     # Ensure the output directory doesn't already exist
     if os.path.exists(get_deploydir(args.base_dir)):
@@ -591,9 +619,10 @@ def roll_tarballs(args):
 
     logging.info('Preparing working copy source')
     shutil.rmtree(get_workdir(args.base_dir), True)
-    run_script(args.verbose, 'svn checkout %s %s'
-               % (repos + '/' + branch + '@' + str(args.revnum),
-                  get_workdir(args.base_dir)))
+    run_svn(['checkout',
+             svn_repos + '/' + branch + '@' + str(args.revnum),
+             get_workdir(args.base_dir)],
+            verbose=args.verbose)
 
     # Exclude stuff we don't want in the tarball, it will not be present
     # in the exported tree.
@@ -604,8 +633,8 @@ def roll_tarballs(args):
             exclude += ['packages', 'www']
     cwd = os.getcwd()
     os.chdir(get_workdir(args.base_dir))
-    run_script(args.verbose,
-               'svn update --set-depth exclude %s' % " ".join(exclude))
+    run_svn(['update', '--set-depth=exclude'] + exclude,
+            verbose=args.verbose)
     os.chdir(cwd)
 
     if args.patches:
@@ -615,10 +644,10 @@ def roll_tarballs(args):
         for name in os.listdir(args.patches):
             if name.find(majmin) != -1 and name.endswith('patch'):
                 logging.info('Applying patch %s' % name)
-                run_script(args.verbose,
-                           '''svn patch %s %s'''
-                           % (os.path.join(args.patches, name),
-                              get_workdir(args.base_dir)))
+                run_svn(['patch',
+                         os.path.join(args.patches, name),
+                         get_workdir(args.base_dir)],
+                        verbose=args.verbose)
 
     # Massage the new version number into svn_version.h.
     ver_tag, ver_numtag = args.version.get_ver_tags(args.revnum)
@@ -656,8 +685,9 @@ def roll_tarballs(args):
             eol_style = "--native-eol CRLF"
         else:
             eol_style = "--native-eol LF"
-        run_script(args.verbose, "svn export %s %s %s"
-                   % (eol_style, get_workdir(args.base_dir), exportdir))
+        run_svn(['export',
+                 eol_style, get_workdir(args.base_dir), exportdir],
+                verbose=args.verbose)
 
     def transform_sql():
         for root, dirs, files in os.walk(exportdir):
@@ -775,7 +805,7 @@ def sign_candidates(args):
     for e in extns:
         filename = os.path.join(target, 'subversion-%s.%s' % (args.version, e))
         sign_file(filename)
-        if args.version.major >= 1 and args.version.minor <= 6:
+        if args.version.major == 1 and args.version.minor <= 6:
             filename = os.path.join(target,
                                    'subversion-deps-%s.%s' % (args.version, e))
             sign_file(filename)
@@ -791,14 +821,12 @@ def post_candidates(args):
 
     logging.info('Importing tarballs to %s' % dist_dev_url)
     ver = str(args.version)
-    svn_cmd = ['svn', 'import', '-m',
+    svn_cmd = ['import', '-m',
                'Add Subversion %s candidate release artifacts' % ver,
                '--auto-props', '--config-option',
                'config:auto-props:*.asc=svn:eol-style=native;svn:mime-type=text/plain',
                target, dist_dev_url]
-    if (args.username):
-        svn_cmd += ['--username', args.username]
-    subprocess.check_call(svn_cmd)
+    run_svn(svn_cmd, verbose=args.verbose, username=args.username)
 
 #----------------------------------------------------------------------
 # Create tag
@@ -811,25 +839,19 @@ def create_tag_only(args):
 
     logging.info('Creating tag for %s' % str(args.version))
 
-    if not args.branch:
-        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
+    branch_url = svn_repos + '/' + get_branch_path(args)
 
-    branch = secure_repos + '/' + args.branch.rstrip('/')
+    tag = svn_repos + '/tags/' + str(args.version)
 
-    tag = secure_repos + '/tags/' + str(args.version)
-
-    svnmucc_cmd = ['svnmucc', '-m',
-                   'Tagging release ' + str(args.version)]
-    if (args.username):
-        svnmucc_cmd += ['--username', args.username]
-    svnmucc_cmd += ['cp', str(args.revnum), branch, tag]
+    svnmucc_cmd = ['-m', 'Tagging release ' + str(args.version)]
+    svnmucc_cmd += ['cp', str(args.revnum), branch_url, tag]
     svnmucc_cmd += ['put', os.path.join(target, 'svn_version.h.dist' + '-' +
                                         str(args.version)),
                     tag + '/subversion/include/svn_version.h']
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     try:
-        subprocess.check_call(svnmucc_cmd)
+        run_svnmucc(svnmucc_cmd, verbose=args.verbose, username=args.username)
     except subprocess.CalledProcessError:
         if args.version.is_prerelease():
             logging.error("Do you need to pass --branch=trunk?")
@@ -840,10 +862,7 @@ def bump_versions_on_branch(args):
 
     logging.info('Bumping version numbers on the branch')
 
-    if not args.branch:
-        args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
-
-    branch = secure_repos + '/' + args.branch.rstrip('/')
+    branch_url = svn_repos + '/' + get_branch_path(args)
 
     def replace_in_place(fd, startofline, flat, spare):
         """In file object FD, replace FLAT with SPARE in the first line
@@ -871,11 +890,11 @@ def bump_versions_on_branch(args):
                            args.version.patch + 1))
 
     HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
-                                    '--', branch]).strip()
+                                    '--', branch_url]).strip()
     HEAD = int(HEAD)
     def file_object_for(relpath):
         fd = tempfile.NamedTemporaryFile()
-        url = branch + '/' + relpath
+        url = branch_url + '/' + relpath
         fd.url = url
         subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
                               stdout=fd)
@@ -891,13 +910,14 @@ def bump_versions_on_branch(args):
 
     svn_version_h.seek(0, os.SEEK_SET)
     STATUS.seek(0, os.SEEK_SET)
-    subprocess.check_call(['svnmucc', '-r', str(HEAD),
-                           '-m', 'Post-release housekeeping: '
-                                 'bump the %s branch to %s.'
-                           % (branch.split('/')[-1], str(new_version)),
-                           'put', svn_version_h.name, svn_version_h.url,
-                           'put', STATUS.name, STATUS.url,
-                          ])
+    run_svnmucc(['-r', str(HEAD),
+                 '-m', 'Post-release housekeeping: '
+                       'bump the %s branch to %s.'
+                 % (branch_url.split('/')[-1], str(new_version)),
+                 'put', svn_version_h.name, svn_version_h.url,
+                 'put', STATUS.name, STATUS.url,
+                ],
+                verbose=args.verbose, username=args.username)
     del svn_version_h
     del STATUS
 
@@ -939,11 +959,8 @@ def clean_dist(args):
     for i in sorted(to_keep):
         logging.info("Saving release '%s'", i)
 
-    svnmucc_cmd = ['svnmucc', '-m', 'Remove old Subversion releases.\n' +
-                   'They are still available at ' +
-                   'https://archive.apache.org/dist/subversion/']
-    if (args.username):
-        svnmucc_cmd += ['--username', args.username]
+    svnmucc_cmd = ['-m', 'Remove old Subversion releases.\n' +
+                   'They are still available at ' + dist_archive_url]
     for filename in filenames:
         if Version(filename) not in to_keep:
             logging.info("Removing %r", filename)
@@ -951,7 +968,7 @@ def clean_dist(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     if 'rm' in svnmucc_cmd:
-        subprocess.check_call(svnmucc_cmd)
+        run_svnmucc(svnmucc_cmd, verbose=args.verbose, username=args.username)
     else:
         logging.info("Nothing to remove")
 
@@ -967,10 +984,8 @@ def move_to_dist(args):
     for entry in stdout.split('\n'):
       if fnmatch.fnmatch(entry, 'subversion-%s.*' % str(args.version)):
         filenames.append(entry)
-    svnmucc_cmd = ['svnmucc', '-m',
+    svnmucc_cmd = ['-m',
                    'Publish Subversion-%s.' % str(args.version)]
-    if (args.username):
-        svnmucc_cmd += ['--username', args.username]
     svnmucc_cmd += ['rm', dist_dev_url + '/' + 'svn_version.h.dist'
                           + '-' + str(args.version)]
     for filename in filenames:
@@ -979,7 +994,7 @@ def move_to_dist(args):
 
     # don't redirect stdout/stderr since svnmucc might ask for a password
     logging.info('Moving release artifacts to %s' % dist_release_url)
-    subprocess.check_call(svnmucc_cmd)
+    run_svnmucc(svnmucc_cmd, verbose=args.verbose, username=args.username)
 
 #----------------------------------------------------------------------
 # Write announcements
@@ -1026,7 +1041,7 @@ def get_fileinfo(args):
 
     target = get_target(args)
 
-    files = glob.glob(os.path.join(target, 'subversion*-%s*.asc' % args.version))
+    files = glob.glob(os.path.join(target, 'subversion*-%s.*.asc' % args.version))
     files.sort()
 
     class info(object):
@@ -1117,14 +1132,12 @@ def get_siginfo(args, quiet=False):
         import security._gnupg as gnupg
     gpg = gnupg.GPG()
 
-    target = get_target(args)
-
     good_sigs = {}
     fingerprints = {}
     output = []
 
-    glob_pattern = os.path.join(target, 'subversion*-%s*.asc' % args.version)
-    for filename in glob.glob(glob_pattern):
+    for fileinfo in get_fileinfo(args):
+        filename = os.path.join(get_target(args), fileinfo.filename + '.asc')
         text = open(filename).read()
         keys = text.split(key_start)
 
@@ -1315,13 +1328,13 @@ def write_changelog(args):
     #   New svn_ra_list() API function [D:api]
     #   [D:bindings] JavaHL: Allow access to constructors of a couple JavaHL classes
 
-    branch = secure_repos + '/' + args.branch
-    previous = secure_repos + '/' + args.previous
+    branch_url = svn_repos + '/' + get_branch_path(args)
+    previous = svn_repos + '/' + args.previous
     include_unlabeled = args.include_unlabeled
     separator_line = ('-' * 72) + '\n'
     
     mergeinfo = subprocess.check_output(['svn', 'mergeinfo', '--show-revs',
-                    'eligible', '--log', branch, previous])
+                    'eligible', '--log', branch_url, previous])
     log_messages_dict = {
         # This is a dictionary mapping revision numbers to their respective
         # log messages.  The expression in the "key:" part of the dict
@@ -1462,6 +1475,13 @@ def main():
                    help='''The directory in which to create needed files and
                            folders.  The default is the current working
                            directory.''')
+    parser.add_argument('--branch',
+                   help='''The branch to base the release on,
+                           as a path relative to ^/subversion/.
+                           Default: 'branches/MAJOR.MINOR.x'.''')
+    parser.add_argument('--username',
+                   help='Username for committing to ' + svn_repos +
+                        ' or ' + dist_repos + '.')
     subparsers = parser.add_subparsers(title='subcommands')
 
     # Setup the parser for the build-env subcommand
@@ -1487,9 +1507,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--branch',
-                    help='''The branch to base the release on,
-                            relative to ^/subversion/.''')
     subparser.add_argument('--patches',
                     help='''The path to the directory containing patches.''')
 
@@ -1514,8 +1531,6 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + dist_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
@@ -1529,11 +1544,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--branch',
-                    help='''The branch to base the release on,
-                            relative to ^/subversion/.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + secure_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
@@ -1546,11 +1556,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--branch',
-                    help='''The branch to base the release on,
-                            relative to ^/subversion/.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + secure_repos + '''.''')
     subparser.add_argument('--target',
                     help='''The full path to the directory containing
                             release artifacts.''')
@@ -1561,8 +1566,6 @@ def main():
     subparser.set_defaults(func=clean_dist)
     subparser.add_argument('--dist-dir',
                     help='''The directory to clean.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + dist_repos + '''.''')
 
     # The move-to-dist subcommand
     subparser = subparsers.add_parser('move-to-dist',
@@ -1572,8 +1575,6 @@ def main():
     subparser.set_defaults(func=move_to_dist)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--username',
-                    help='''Username for ''' + dist_repos + '''.''')
 
     # The write-news subcommand
     subparser = subparsers.add_parser('write-news',
@@ -1641,10 +1642,6 @@ def main():
                             commit messages, optionally labeled with a category
                             like [U:client], [D:api], [U], ...''')
     subparser.set_defaults(func=write_changelog)
-    subparser.add_argument('branch',
-                    help='''The branch (or tag or trunk), relative to
-                            ^/subversion/, of which to generate the
-                            changelog, when compared to "previous".''')
     subparser.add_argument('previous',
                     help='''The "previous" branch or tag, relative to 
                             ^/subversion/, to compare "branch" against.''')

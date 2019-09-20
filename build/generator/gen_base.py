@@ -663,7 +663,7 @@ class TargetExe(TargetLinked):
     TargetLinked.add_dependencies(self)
 
     # collect test programs
-    if 'svnauthz' in self.name: # special case
+    if 'svnauthz' in self.name or 'svnmover' in self.name: # special case
       self.gen_obj.test_deps.append(self.filename)
       self.gen_obj.test_helpers.append(self.filename)
     elif self.install == 'test':

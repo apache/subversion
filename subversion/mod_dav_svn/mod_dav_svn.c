@@ -292,10 +292,14 @@ merge_dir_config(apr_pool_t *p, void *base, void *overrides)
   if (parent->fs_path)
     ap_log_error(APLOG_MARK, APLOG_WARNING, 0, NULL,
                  "mod_dav_svn: Location '%s' hinders access to '%s' "
-                 "in parent SVNPath Location '%s'",
+                 "in parent SVNPath Location '%s'%s",
                  child->root_dir,
                  svn_urlpath__skip_ancestor(parent->root_dir, child->root_dir),
-                 parent->root_dir);
+                 parent->root_dir,
+                 (strcmp(child->root_dir, parent->root_dir) == 0)
+                   ? " (or the subversion-specific configuration"
+                     " is included twice into httpd.conf)"
+                   : "");
 
   return newconf;
 }

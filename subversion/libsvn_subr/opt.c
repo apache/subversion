@@ -211,12 +211,16 @@ svn_opt_subcommand_takes_option4(const svn_opt_subcommand_desc3_t *command,
 
 /* Print the canonical command name for CMD, and all its aliases, to
    STREAM.  If HELP is set, print CMD's help string too, in which case
-   obtain option usage from OPTIONS_TABLE. */
+   obtain option usage from OPTIONS_TABLE.
+
+   Include global and experimental options iff VERBOSE is true.
+ */
 static svn_error_t *
 print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
                     const apr_getopt_option_t *options_table,
                     const int *global_options,
                     svn_boolean_t help,
+                    svn_boolean_t verbose,
                     apr_pool_t *pool,
                     FILE *stream)
 {
@@ -251,6 +255,7 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
       const apr_getopt_option_t *option;
       const char *long_alias;
       svn_boolean_t have_options = FALSE;
+      svn_boolean_t have_experimental = FALSE;
 
       SVN_ERR(svn_cmdline_fprintf(stream, pool, ": "));
 
@@ -279,6 +284,17 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
               if (option && option->description)
                 {
                   const char *optstr;
+
+                  if (option->name && strncmp(option->name, "x-", 2) == 0)
+                    {
+                      if (verbose && !have_experimental)
+                        SVN_ERR(svn_cmdline_fputs(_("\nExperimental options:\n"),
+                                                  stream, pool));
+                      have_experimental = TRUE;
+                      if (!verbose)
+                        continue;
+                    }
+
                   format_option(&optstr, option, long_alias, TRUE, pool);
                   SVN_ERR(svn_cmdline_fprintf(stream, pool, "  %s\n",
                                               optstr));
@@ -286,7 +302,7 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
             }
         }
       /* And global options too */
-      if (global_options && *global_options)
+      if (verbose && global_options && *global_options)
         {
           SVN_ERR(svn_cmdline_fputs(_("\nGlobal options:\n"),
                                     stream, pool));
@@ -310,6 +326,9 @@ print_command_info3(const svn_opt_subcommand_desc3_t *cmd,
             }
         }
 
+      if (!verbose)
+        SVN_ERR(svn_cmdline_fputs(_("\n(Use '-v' to show global and experimental options.)\n"),
+                                  stream, pool));
       if (have_options)
         SVN_ERR(svn_cmdline_fprintf(stream, pool, "\n"));
     }
@@ -324,22 +343,36 @@ print_generic_help_body3(const char *header,
                          const svn_opt_subcommand_desc3_t *cmd_table,
                          const apr_getopt_option_t *opt_table,
                          const char *footer,
+                         svn_boolean_t with_experimental,
                          apr_pool_t *pool, FILE *stream)
 {
-  int i = 0;
+  svn_boolean_t have_experimental = FALSE;
+  int i;
 
   if (header)
     SVN_ERR(svn_cmdline_fputs(header, stream, pool));
 
-  while (cmd_table[i].name)
+  for (i = 0; cmd_table[i].name; i++)
     {
+      if (strncmp(cmd_table[i].name, "x-", 2) == 0)
+        {
+          if (with_experimental && !have_experimental)
+            SVN_ERR(svn_cmdline_fputs(_("\nExperimental subcommands:\n"),
+                                      stream, pool));
+          have_experimental = TRUE;
+          if (!with_experimental)
+            continue;
+        }
       SVN_ERR(svn_cmdline_fputs("   ", stream, pool));
       SVN_ERR(print_command_info3(cmd_table + i, opt_table,
-                                  NULL, FALSE,
+                                  NULL, FALSE, FALSE,
                                   pool, stream));
       SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
-      i++;
     }
+
+  if (have_experimental && !with_experimental)
+    SVN_ERR(svn_cmdline_fputs(_("\n(Use '-v' to show experimental subcommands.)\n"),
+                              stream, pool));
 
   SVN_ERR(svn_cmdline_fputs("\n", stream, pool));
 
@@ -349,17 +382,19 @@ print_generic_help_body3(const char *header,
   return SVN_NO_ERROR;
 }
 
-void
-svn_opt_print_generic_help3(const char *header,
-                            const svn_opt_subcommand_desc3_t *cmd_table,
-                            const apr_getopt_option_t *opt_table,
-                            const char *footer,
-                            apr_pool_t *pool, FILE *stream)
+static void
+print_generic_help(const char *header,
+                   const svn_opt_subcommand_desc3_t *cmd_table,
+                   const apr_getopt_option_t *opt_table,
+                   const char *footer,
+                   svn_boolean_t with_experimental,
+                   apr_pool_t *pool, FILE *stream)
 {
   svn_error_t *err;
 
-  err = print_generic_help_body3(header, cmd_table, opt_table, footer, pool,
-                                 stream);
+  err = print_generic_help_body3(header, cmd_table, opt_table, footer,
+                                 with_experimental,
+                                 pool, stream);
 
   /* Issue #3014:
    * Don't print anything on broken pipes. The pipe was likely
@@ -373,13 +408,29 @@ svn_opt_print_generic_help3(const char *header,
   svn_error_clear(err);
 }
 
-
 void
-svn_opt_subcommand_help4(const char *subcommand,
-                         const svn_opt_subcommand_desc3_t *table,
-                         const apr_getopt_option_t *options_table,
-                         const int *global_options,
-                         apr_pool_t *pool)
+svn_opt_print_generic_help3(const char *header,
+                            const svn_opt_subcommand_desc3_t *cmd_table,
+                            const apr_getopt_option_t *opt_table,
+                            const char *footer,
+                            apr_pool_t *pool, FILE *stream)
+{
+  print_generic_help(header, cmd_table, opt_table, footer,
+                     TRUE, pool, stream);
+}
+
+
+/* The body of svn_opt_subcommand_help4(), which see.
+ *
+ * VERBOSE means show also the subcommand's global and experimental options.
+ */
+static void
+subcommand_help(const char *subcommand,
+                const svn_opt_subcommand_desc3_t *table,
+                const apr_getopt_option_t *options_table,
+                const int *global_options,
+                svn_boolean_t verbose,
+                apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc3_t *cmd =
     svn_opt_get_canonical_subcommand3(table, subcommand);
@@ -387,7 +438,7 @@ svn_opt_subcommand_help4(const char *subcommand,
 
   if (cmd)
     err = print_command_info3(cmd, options_table, global_options,
-                              TRUE, pool, stdout);
+                              TRUE, verbose, pool, stdout);
   else
     err = svn_cmdline_fprintf(stderr, pool,
                               _("\"%s\": unknown command.\n\n"), subcommand);
@@ -398,6 +449,17 @@ svn_opt_subcommand_help4(const char *subcommand,
       svn_handle_error2(err, stderr, FALSE, "svn: ");
     svn_error_clear(err);
   }
+}
+
+void
+svn_opt_subcommand_help4(const char *subcommand,
+                         const svn_opt_subcommand_desc3_t *table,
+                         const apr_getopt_option_t *options_table,
+                         const int *global_options,
+                         apr_pool_t *pool)
+{
+  subcommand_help(subcommand, table, options_table, global_options,
+                  TRUE, pool);
 }
 
 
@@ -1185,9 +1247,9 @@ svn_opt_print_help5(apr_getopt_t *os,
 
       for (i = 0; i < targets->nelts; i++)
         {
-          svn_opt_subcommand_help4(APR_ARRAY_IDX(targets, i, const char *),
-                                   cmd_table, option_table,
-                                   global_options, pool);
+          subcommand_help(APR_ARRAY_IDX(targets, i, const char *),
+                          cmd_table, option_table, global_options,
+                          verbose, pool);
         }
     }
   else if (print_version)   /* just --version */
@@ -1197,12 +1259,9 @@ svn_opt_print_help5(apr_getopt_t *os,
                                           quiet, verbose, pool));
     }
   else if (os && !targets->nelts)            /* `-h', `--help', or `help' */
-    svn_opt_print_generic_help3(header,
-                                cmd_table,
-                                option_table,
-                                footer,
-                                pool,
-                                stdout);
+    print_generic_help(header, cmd_table, option_table, footer,
+                       verbose,
+                       pool, stdout);
   else                                       /* unknown option or cmd */
     SVN_ERR(svn_cmdline_fprintf(stderr, pool,
                                 _("Type '%s help' for usage.\n"), pgm_name));

@@ -213,9 +213,11 @@ prefix_mergeinfo_paths(svn_string_t **mergeinfo_val,
     {
       const char *merge_source = apr_hash_this_key(hi);
       svn_rangelist_t *rangelist = apr_hash_this_val(hi);
-      const char *path;
+      const char *path, *canonicalized_path;
 
-      merge_source = svn_relpath_canonicalize(merge_source, pool);
+      SVN_ERR(svn_relpath_canonicalize_safe(&canonicalized_path, NULL,
+                                       merge_source, pool, pool));
+      merge_source = canonicalized_path;
 
       /* The svn:mergeinfo property syntax demands a repos abspath */
       path = svn_fspath__canonicalize(svn_relpath_join(parent_dir,
@@ -377,7 +379,10 @@ make_node_baton(struct node_baton **node_baton_p,
   /* Then add info from the headers.  */
   if ((val = svn_hash_gets(headers, SVN_REPOS_DUMPFILE_NODE_PATH)))
   {
-    val = svn_relpath_canonicalize(val, pool);
+    const char *canonicalized_path;
+    SVN_ERR(svn_relpath_canonicalize_safe(&canonicalized_path, NULL,
+                                          val, pool, pool));
+    val = canonicalized_path;
     if (rb->pb->parent_dir)
       nb->path = svn_relpath_join(rb->pb->parent_dir, val, pool);
     else
@@ -1202,7 +1207,12 @@ svn_repos_get_fs_build_parser6(const svn_repos_parse_fns3_t **callbacks,
   struct parse_baton *pb = apr_pcalloc(pool, sizeof(*pb));
 
   if (parent_dir)
-    parent_dir = svn_relpath_canonicalize(parent_dir, pool);
+    {
+      const char *canonicalized_path;
+      SVN_ERR(svn_relpath_canonicalize_safe(&canonicalized_path, NULL,
+                                            parent_dir, pool, pool));
+      parent_dir = canonicalized_path;
+    }
 
   SVN_ERR_ASSERT((SVN_IS_VALID_REVNUM(start_rev) &&
                   SVN_IS_VALID_REVNUM(end_rev))

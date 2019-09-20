@@ -593,7 +593,7 @@ if test "$with_old_gnome_keyring" != "no"; then
                         [Is GNOME Keyring support enabled?])
               CPPFLAGS="$old_CPPFLAGS"
               SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
-              SVN_GNOME_KEYRING_PCLIBS="glib-2.0 gnome-keyring-1"
+              SVN_GNOME_KEYRING_PCLIBS="glib-2.0, gnome-keyring-1"
             else
               AC_MSG_RESULT([no])
               if test "$with_old_gnome_keyring" = "yes"; then

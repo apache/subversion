@@ -922,7 +922,7 @@ readline_apr_lf(apr_file_t *file,
       }
 
     /* Otherwise, prepare to read the next chunk. */
-    svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+    svn_stringbuf_ensure(buf, buf->len + SVN__LINE_CHUNK_SIZE);
   }
 }
 
@@ -982,7 +982,7 @@ readline_apr_generic(apr_file_t *file,
         }
 
       /* Prepare to read the next chunk. */
-      svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+      svn_stringbuf_ensure(buf, buf->len + SVN__LINE_CHUNK_SIZE);
     }
 }
 

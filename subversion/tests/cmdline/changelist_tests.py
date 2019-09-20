@@ -73,6 +73,33 @@ def changelist_all_files(wc_dir, name_func):
         else:
           svntest.main.run_svn(None, "changelist", clname, full_path)
 
+def select_paths(target_path, depth, changelists, name_func):
+  """Return the subset of paths found on disk at TARGET_PATH, to a depth
+     of DEPTH, that match CHANGELISTS.
+     NAME_FUNC, rather than the working copy, determines what
+     changelist each path is associated with.
+     Returned paths are relative to the CWD.
+
+     ### Only the paths of files are returned.
+  """
+  dot_svn = svntest.main.get_admin_name()
+  for dirpath, dirs, files in os.walk(target_path):
+    # prepare to return paths relative to WC_DIR
+    if dot_svn in dirs:
+      dirs.remove(dot_svn)
+    if not changelists:  # When changelists support dirs, add: "or name_func(name) in changelists"
+      yield os.path.normpath(dirpath)
+    if depth == 'empty':
+      dirs[:] = []  # process no subdirs
+      continue      # nor files
+    for name in files:
+      if not changelists or name_func(name) in changelists:
+        yield os.path.normpath(os.path.join(dirpath, name))
+    if depth == 'files':
+      dirs[:] = []  # process no subdirs
+    if depth == 'immediates':
+      depth = 'empty'  # process subdirs, but no files nor dirs in them
+
 def clname_from_lastchar_cb(full_path):
   """Callback for changelist_all_files() that returns a changelist
   name matching the last character in the file's name.  For example,
@@ -544,6 +571,8 @@ def info_with_changelists(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@Issue(4826)
 def diff_with_changelists(sbox):
   "diff --changelist (wc-wc and repos-wc)"
 
@@ -553,31 +582,20 @@ def diff_with_changelists(sbox):
   # Add a line of text to all the versioned files in the tree.
   mod_all_files(wc_dir, "New text.\n")
 
+  # Also make a property modification on each directory.
+  svntest.main.run_svn(None, 'propset', 'p', 'v', '-R', wc_dir)
+
   # Add files to changelists based on the last character in their names.
   changelist_all_files(wc_dir, clname_from_lastchar_cb)
 
   # Now, test various combinations of changelist specification and depths.
   for is_repos_wc in [0, 1]:
-    for clname in [['a'], ['i'], ['a', 'i']]:
-      for depth in ['files', 'infinity']:
+    for clname in [['a'], ['a', 'i'], []]:
+      for depth in ['empty', 'files', 'immediates', 'infinity', None]:
+       for subdir in ['.', 'A', 'A/D']:
 
         # Figure out what we expect to see in our diff output.
-        expected_paths = []
-        if 'a' in clname:
-          if depth == 'infinity':
-            expected_paths.append('A/B/lambda')
-            expected_paths.append('A/B/E/alpha')
-            expected_paths.append('A/B/E/beta')
-            expected_paths.append('A/D/gamma')
-            expected_paths.append('A/D/H/omega')
-          if depth == 'files' or depth == 'infinity':
-            expected_paths.append('iota')
-        if 'i' in clname:
-          if depth == 'infinity':
-            expected_paths.append('A/D/G/pi')
-            expected_paths.append('A/D/H/chi')
-            expected_paths.append('A/D/H/psi')
-        expected_paths = sorted([os.path.join(wc_dir, x.replace('/', os.sep)) for x in expected_paths])
+        expected_paths = sorted(select_paths(sbox.ospath(subdir), depth, clname, clname_from_lastchar_cb))
 
         # Build the command line.
         args = ['diff']
@@ -589,11 +607,11 @@ def diff_with_changelists(sbox):
           args.append(depth)
         if is_repos_wc:
           args.append('--old')
-          args.append(sbox.repo_url)
+          args.append(sbox.repo_url + '/' + subdir)
           args.append('--new')
-          args.append(sbox.wc_dir)
+          args.append(os.path.join(wc_dir, subdir))
         else:
-          args.append(wc_dir)
+          args.append(os.path.join(wc_dir, subdir))
 
         # Run 'svn diff ...'
         exit_code, output, errput = svntest.main.run_svn(None, *args)
@@ -1180,6 +1198,44 @@ def readd_after_revert(sbox):
   svntest.actions.run_and_verify_svn(None, [],
                                      'add', dummy)
 
+#----------------------------------------------------------------------
+
+# A wc-wc diff returned no results if changelists were specified and the
+# diff target dir was not the WC root.
+@Issue(4822)
+def diff_with_changelists_subdir(sbox):
+  "diff --changelist (wc-wc) in subdir of WC"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  expected_paths = sbox.ospaths(['A/D/gamma'])
+  subdir = 'A/D'
+  clname = 'a'
+
+  for path in expected_paths:
+    svntest.main.file_append(path, "New text.\n")
+  svntest.main.run_svn(None, "changelist", clname, *expected_paths)
+
+  # Run 'svn diff ...'
+  exit_code, output, errput = svntest.main.run_svn(None,
+                                'diff', '--changelist', clname,
+                                sbox.ospath(subdir))
+
+  # Filter the output for lines that begin with 'Index:', and
+  # reduce even those lines to just the actual path.
+  paths = sorted([x[7:].rstrip() for x in output if x[:7] == 'Index: '])
+
+  # Diff output on Win32 uses '/' path separators.
+  if sys.platform == 'win32':
+    paths = [x.replace('/', os.sep) for x in paths]
+
+  # And, compare!
+  if (paths != expected_paths):
+    raise svntest.Failure("Expected paths (%s) and actual paths (%s) "
+                          "don't gel"
+                          % (str(expected_paths), str(paths)))
+
 
 ########################################################################
 # Run the tests
@@ -1203,6 +1259,7 @@ test_list = [ None,
               add_remove_non_existent_target,
               add_remove_unversioned_target,
               readd_after_revert,
+              diff_with_changelists_subdir,
              ]
 
 if __name__ == '__main__':

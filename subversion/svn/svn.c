@@ -828,7 +828,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "Describe the usage of this program or its subcommands.\n"
      "usage: help [SUBCOMMAND...]\n"
     )},
-    {0} },
+    {'v'},
+    {{'v', N_("also show experimental subcommands and options")}} },
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
   { "import", svn_cl__import, {0}, {N_(
