@@ -69,15 +69,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1852013
-   Fix issue #4804: avoid test failures just because some SQLite compile-time
-   feature was enabled that changes its query plan descriptions.
-   Justification:
-     Reported build failure on Gentoo Linux, see:
-     https://bugs.gentoo.org/605438
-   Votes:
-     +1: brane, stsp
-
  * r1853483
    Fix #4760 "Missing children when svnadmin dump --include/exclude converts
    copy-dir to add-dir".
