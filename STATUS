@@ -69,13 +69,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1845212
-   Silence a deprecation warning from amalgamated SQLite on macOS.
-   Justification:
-     Keeps the macOS warnings checker buildslave clean.
-   Votes:
-     +1: brane, stsp
-
  * r1850651
    Fix a use-after-free in mod_dav_svn's logging of FS warnings.
    Justification:
@@ -125,4 +118,3 @@ Approved changes:
      and https://svn.haxx.se/dev/archive-2019-04/0020.shtml
    Votes:
      +1: stsp, rhuijben
-
