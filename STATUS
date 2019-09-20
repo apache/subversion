@@ -69,15 +69,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1854072, r1854074, r1854216
-   Fix issue #4806: Remove on-disk trees with read-only directories in them.
-   Justification:
-     Fixes an edge case in our tree removal code. If we clear read-only
-     permissions on files in order to remove them, we should do the same for
-     directories.
-   Votes:
-     +1: brane, stsp
-
  * r1857367
     Fix memory lifetime problem in a libsvn_wc error code path.
     Justification:
