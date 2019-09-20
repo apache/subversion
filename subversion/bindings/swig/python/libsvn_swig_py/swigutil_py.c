@@ -46,7 +46,7 @@
 #include "svn_mergeinfo.h"
 #include "svn_types.h"
 
-#include "svn_private_config.h" /* for SVN_APR_INT64_T_PYCFMT */
+#include "svn_private_config.h"
 
 #include "swig_python_external_runtime.swg"
 #include "swigutil_py.h"
@@ -3369,10 +3369,9 @@ svn_error_t *svn_swig_py_client_blame_receiver_func(void *baton,
   svn_swig_py_acquire_py_lock();
 
   if ((result = PyObject_CallFunction(receiver,
-                                      (char *)
-                                      (SVN_APR_INT64_T_PYCFMT "lsssO&"),
-                                      line_no, revision, author, date, line,
-                                      make_ob_pool, pool)) == NULL)
+                                      (char *)"LlsssO&",
+                                      (PY_LONG_LONG)line_no, revision, author,
+                                      date, line, make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
     }
