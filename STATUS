@@ -69,13 +69,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1857367
-    Fix memory lifetime problem in a libsvn_wc error code path.
-    Justification:
-      Edge-case crash. Subversion should not crash.
-    Votes:
-      +1: stsp, rhuijben
-
  * r1857391
    Fix build with APR 1.7.0.
    Justification:
