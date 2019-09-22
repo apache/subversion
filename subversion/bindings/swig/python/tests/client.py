@@ -439,7 +439,8 @@ class SubversionClientTestCase(unittest.TestCase):
     readme_text = readme.read()
     readme.close()
 
-    self.assertEqual(readme_text, b'This is a test.\n')
+    self.assertEqual(readme_text,
+                     b'This is a test.' + os.linesep.encode('UTF-8'))
 
   def test_platform_providers(self):
     providers = core.svn_auth_get_platform_specific_client_providers(None, None)
@@ -579,10 +580,10 @@ class SubversionClientTestCase(unittest.TestCase):
     client.checkout2(self.repos_uri, path, rev, rev, True, True,
             self.client_ctx)
 
-    trunk_path = os.path.join(path, b'trunk')
+    trunk_path = core.svn_dirent_join(path, b'trunk')
 
     # Create a conflicting path
-    os.mkdir(trunk_path)
+    os.mkdir(core.svn_dirent_local_style(trunk_path))
 
     rev.value.number = 2
 
@@ -619,10 +620,10 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.assertTrue(isinstance(shelf, client.svn_client__shelf_t))
 
-    new_subpath = os.path.join(b'trunk', b'new-shelf-test.txt')
-    new_path = os.path.join(path, new_subpath)
+    new_subpath = core.svn_relpath_join(b'trunk', b'new-shelf-test.txt')
+    new_path = core.svn_dirent_join(path, new_subpath)
 
-    with open(new_path, "wb") as fp:
+    with open(core.svn_dirent_local_style(new_path), "wb") as fp:
       fp.write("A new text file\n".encode('utf8'))
 
     client.add5(new_path, core.svn_depth_unknown, False, False, False, True, self.client_ctx, pool)
