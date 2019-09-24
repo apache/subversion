@@ -569,7 +569,7 @@ parse_rule_path(authz_rule_t *rule,
               || (pattern->len == 2 && pattern->data[1] == '*'))
             {
               /* Process * and **, applying normalization as per
-                 https://wiki.apache.org/subversion/AuthzImprovements. */
+                 https://cwiki.apache.org/confluence/display/SVN/Authz+Improvements. */
 
               authz_rule_segment_t *const prev =
                 (nseg > 1 ? segment - 1 : NULL);

@@ -7991,7 +7991,7 @@ struct op_delete_baton_t {
  * Note that the following sequence results in the same DB state:
  *   mv A B; mv B/F B/G
  * We do not care about the order the moves were performed in.
- * For details, see http://wiki.apache.org/subversion/MultiLayerMoves
+ * For details, see https://cwiki.apache.org/confluence/display/SVN/MultiLayerMoves
  */
 struct moved_node_t {
   /* The source of the move. */
