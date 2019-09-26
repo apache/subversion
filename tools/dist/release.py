@@ -134,11 +134,12 @@ recommended_release = '1.12'
 supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
 
 # Some constants
-svn_repos = 'https://svn.apache.org/repos/asf/subversion'
-dist_repos = 'https://dist.apache.org/repos/dist'
+svn_repos = 'file:///opt/svn/dummy-asf-repos/svn-repo/subversion'
+dist_repos = 'file:///opt/svn/dummy-asf-repos/dist-repo'
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
+buildbot_repos = 'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster'
 KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
@@ -314,7 +315,7 @@ def get_tmplfile(filename):
 def get_nullfile():
     return open(os.path.devnull, 'w')
 
-def run_command(cmd, verbose=True, hide_stderr=False):
+def run_command(cmd, verbose=True, hide_stderr=False, dry_run=False):
     if verbose:
         print("+ " + ' '.join(cmd))
     stderr = None
@@ -325,7 +326,10 @@ def run_command(cmd, verbose=True, hide_stderr=False):
         if hide_stderr:
             stderr = get_nullfile()
 
-    subprocess.check_call(cmd, stdout=stdout, stderr=stderr)
+    if not dry_run:
+        subprocess.check_call(cmd, stdout=stdout, stderr=stderr)
+    else:
+        print('  ## dry-run; not executed')
 
 def run_script(verbose, script, hide_stderr=False):
     for l in script.split('\n'):
@@ -345,15 +349,15 @@ def download_file(url, target, checksum):
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
 
-def run_svn(cmd, verbose=True, username=None):
+def run_svn(cmd, verbose=True, dry_run=False, username=None):
     if (username):
         cmd[:0] = ['--username', username]
-    run_command(['svn'] + cmd, verbose)
+    run_command(['svn'] + cmd, verbose=verbose, dry_run=dry_run)
 
-def run_svnmucc(cmd, verbose=True, username=None):
+def run_svnmucc(cmd, verbose=True, dry_run=False, username=None):
     if (username):
         cmd[:0] = ['--username', username]
-    run_command(['svnmucc'] + cmd, verbose)
+    run_command(['svnmucc'] + cmd, verbose=verbose, dry_run=dry_run)
 
 #----------------------------------------------------------------------
 # ezt helpers
