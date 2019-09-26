@@ -134,12 +134,15 @@ recommended_release = '1.12'
 supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
 
 # Some constants
-svn_repos = 'file:///opt/svn/dummy-asf-repos/svn-repo/subversion'
-dist_repos = 'file:///opt/svn/dummy-asf-repos/dist-repo'
+svn_repos = os.getenv('SVN_RELEASE_SVN_REPOS',
+                      'https://svn.apache.org/repos/asf/subversion')
+dist_repos = os.getenv('SVN_RELEASE_DIST_REPOS',
+                       'https://dist.apache.org/repos/dist')
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
-buildbot_repos = 'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster'
+buildbot_repos = os.getenv('SVN_RELEASE_BUILDBOT_REPOS',
+                           'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster')
 KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
