@@ -158,18 +158,6 @@ class Version(object):
     def is_prerelease(self):
         return self.pre != None
 
-    def is_recommended(self):
-        return self.branch == recommended_release
-
-    def get_download_anchor(self):
-        if self.is_prerelease():
-            return 'pre-releases'
-        else:
-            if self.is_recommended():
-                return 'recommended-release'
-            else:
-                return 'supported-releases'
-
     def get_ver_tags(self, revnum):
         # These get substituted into svn_version.h
         ver_tag = ''
@@ -332,6 +320,19 @@ def run_svnmucc(cmd, verbose=True, dry_run=False, username=None):
     if (username):
         cmd[:0] = ['--username', username]
     run_command(['svnmucc'] + cmd, verbose=verbose, dry_run=dry_run)
+
+#----------------------------------------------------------------------
+def is_recommended(version):
+    return version.branch == recommended_release
+
+def get_download_anchor(version):
+    if version.is_prerelease():
+        return 'pre-releases'
+    else:
+        if is_recommended(version):
+            return 'recommended-release'
+        else:
+            return 'supported-releases'
 
 #----------------------------------------------------------------------
 # ezt helpers
@@ -1191,8 +1192,8 @@ def write_news(args):
              'major-minor' : args.version.branch,
              'version' : str(args.version),
              'version_base' : args.version.base,
-             'anchor': args.version.get_download_anchor(),
-             'is_recommended': ezt_bool(args.version.is_recommended()),
+             'anchor': get_download_anchor(args.version),
+             'is_recommended': ezt_bool(is_recommended(args.version)),
              'announcement_url': args.announcement_url,
            }
 
@@ -1252,7 +1253,7 @@ def write_announcement(args):
              'siginfo'              : "\n".join(siginfo) + "\n",
              'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
-             'anchor'               : args.version.get_download_anchor(),
+             'anchor'               : get_download_anchor(args.version),
            }
 
     if args.version.is_prerelease():
