@@ -867,9 +867,9 @@ def roll_tarballs(args):
     def export(windows):
         shutil.rmtree(exportdir, True)
         if windows:
-            eol_style = "--native-eol CRLF"
+            eol_style = "--native-eol=CRLF"
         else:
-            eol_style = "--native-eol LF"
+            eol_style = "--native-eol=LF"
         run_svn(['export',
                  eol_style, get_workdir(args.base_dir), exportdir],
                 verbose=args.verbose)
