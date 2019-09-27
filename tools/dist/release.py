@@ -245,15 +245,12 @@ def get_exportdir(base_dir, version, revnum):
     return os.path.join(get_tempdir(base_dir),
                         'subversion-%s-r%d' % (version, revnum))
 
-def get_deploydir(base_dir):
-    return os.path.join(base_dir, 'deploy')
-
 def get_target(args):
     "Return the location of the artifacts"
     if args.target:
         return args.target
     else:
-        return get_deploydir(args.base_dir)
+        return os.path.join(args.base_dir, 'deploy')
 
 def get_branch_path(args):
     if not args.branch:
@@ -357,7 +354,7 @@ def cleanup(args):
 
     shutil.rmtree(get_prefix(args.base_dir), True)
     shutil.rmtree(get_tempdir(args.base_dir), True)
-    shutil.rmtree(get_deploydir(args.base_dir), True)
+    shutil.rmtree(get_target(args), True)
 
 
 #----------------------------------------------------------------------
@@ -797,11 +794,11 @@ def roll_tarballs(args):
         compare_changes(svn_repos, branch, args.revnum)
 
     # Ensure the output directory doesn't already exist
-    if os.path.exists(get_deploydir(args.base_dir)):
+    if os.path.exists(get_target(args)):
         raise RuntimeError('output directory \'%s\' already exists'
-                                            % get_deploydir(args.base_dir))
+                                            % get_target(args))
 
-    os.mkdir(get_deploydir(args.base_dir))
+    os.mkdir(get_target(args))
 
     logging.info('Preparing working copy source')
     shutil.rmtree(get_workdir(args.base_dir), True)
@@ -947,8 +944,8 @@ def roll_tarballs(args):
     for e in extns:
         filename = basename + '.' + e
         filepath = os.path.join(get_tempdir(args.base_dir), filename)
-        shutil.move(filepath, get_deploydir(args.base_dir))
-        filepath = os.path.join(get_deploydir(args.base_dir), filename)
+        shutil.move(filepath, get_target(args))
+        filepath = os.path.join(get_target(args), filename)
         if args.version < Version("1.11.0-alpha1"):
             # 1.10 and earlier generate *.sha1 files for compatibility reasons.
             # They are deprecated, however, so we don't publicly link them in
@@ -964,7 +961,7 @@ def roll_tarballs(args):
     if args.version.pre != 'nightly':
         shutil.copy(os.path.join(get_workdir(args.base_dir),
                                  'subversion', 'include', 'svn_version.h'),
-                    os.path.join(get_deploydir(args.base_dir),
+                    os.path.join(get_target(args),
                                  'svn_version.h.dist-%s' % str(args.version)))
 
     # And we're done!
@@ -1654,13 +1651,18 @@ def main():
     parser = argparse.ArgumentParser(
                             description='Create an Apache Subversion release.')
     parser.add_argument('--clean', action='store_true', default=False,
-                   help='Remove any directories previously created by %(prog)s')
+                   help='''Remove any directories previously created by %(prog)s,
+                           including the 'prefix' dir, the 'temp' dir, and the
+                           default or specified target dir.''')
     parser.add_argument('--verbose', action='store_true', default=False,
                    help='Increase output verbosity')
     parser.add_argument('--base-dir', default=os.getcwd(),
                    help='''The directory in which to create needed files and
                            folders.  The default is the current working
                            directory.''')
+    parser.add_argument('--target',
+                   help='''The full path to the directory containing
+                           release artifacts. Default: <BASE_DIR>/deploy''')
     parser.add_argument('--branch',
                    help='''The branch to base the release on,
                            as a path relative to ^/subversion/.
@@ -1719,9 +1721,6 @@ def main():
     subparser.set_defaults(func=sign_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
     subparser.add_argument('--userid',
                     help='''The (optional) USER-ID specifying the key to be
                             used for signing, such as '110B1C95' (Key-ID). If
@@ -1734,9 +1733,6 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # Setup the parser for the create-tag subcommand
     subparser = subparsers.add_parser('create-tag',
@@ -1747,9 +1743,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # Setup the parser for the bump-versions-on-branch subcommand
     subparser = subparsers.add_parser('bump-versions-on-branch',
@@ -1759,9 +1752,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
@@ -1800,9 +1790,6 @@ def main():
     subparser.add_argument('--security', action='store_true', default=False,
                     help='''The release being announced includes security
                             fixes.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
@@ -1811,9 +1798,6 @@ def main():
                     help='''Output to stdout template text for the download
                             table for subversion.apache.org''')
     subparser.set_defaults(func=write_downloads)
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
@@ -1824,9 +1808,6 @@ def main():
     subparser.set_defaults(func=check_sigs)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # get-keys
     subparser = subparsers.add_parser('get-keys',
