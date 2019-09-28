@@ -79,7 +79,10 @@ class Temper(object):
 
 def file_uri_for_path(path):
   """Return the file: URI corresponding to the given path."""
-  uri_path = pathname2url(path).encode('UTF-8')
+  if isinstance(path, str):
+    uri_path = pathname2url(path).encode('UTF-8')
+  else:
+    uri_path = pathname2url(path.decode('UTF-8')).encode('UTF-8')
 
   # pathname2url claims to return the path part of the URI, but on Windows
   # it returns both the authority and path parts for no reason, which

@@ -68,8 +68,8 @@ from trac.test import TestSetup
 from trac.versioncontrol import Changeset, Node
 from trac.versioncontrol.svn_fs import SubversionRepository
 
-temp_path = tempfile.mktemp("-trac-svnrepos").encode('UTF-8')
-REPOS_PATH = core.svn_dirent_internal_style(temp_path)
+temp_path = tempfile.mktemp("-trac-svnrepos")
+REPOS_PATH = core.svn_dirent_internal_style(temp_path.encode('UTF-8'))
 REPOS_URL = pathname2url(temp_path).encode('UTF-8')
 del temp_path
 
