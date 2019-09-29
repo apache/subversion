@@ -911,7 +911,7 @@ II.   INSTALLATION
       C:>nmake -f Makefile.win
       C:>nmake -f Makefile.win install
 
-      Please refere to the build instructions provided by the library source
+      Please refer to the build instructions provided by the library source
       for actual build instructions.
 
       ZLib
@@ -920,7 +920,7 @@ II.   INSTALLATION
       Building ZLib using Visual Studio should be quite simple. Just open the
       appropriate solution and build the project zlibstat using the IDE.
 
-      Please refere to the build instructions provided by the library source
+      Please refer to the build instructions provided by the library source
       for actual build instructions.
 
       Note that you'd make sure to define ZLIB_WINAPI in the ZLib config
