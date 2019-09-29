@@ -79,7 +79,7 @@ class Temper(object):
 
 def file_uri_for_path(path):
   """Return the file: URI corresponding to the given path."""
-  if isinstance(path, str):
+  if not isinstance(path, str):
     path = path.decode('UTF-8')
   uri_path = pathname2url(path).encode('UTF-8')
 
