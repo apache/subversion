@@ -718,6 +718,25 @@ def create_release_branch(args):
 
 
 #----------------------------------------------------------------------
+def write_release_notes(args):
+
+    template_filename = 'release-notes.ezt'
+
+    prev_ver = Version('%d.%d.0' % (args.version.major, args.version.minor - 1))
+    data = { 'major-minor'          : args.version.branch,
+             'previous-major-minor' : prev_ver.branch,
+           }
+
+    template = ezt.Template(compress_whitespace=False)
+    template.parse(get_tmplfile(template_filename).read())
+
+    if args.edit_html_file:
+        with open(args.edit_html_file, 'w') as g:
+            template.generate(g, data)
+    else:
+        template.generate(sys.stdout, data)
+
+#----------------------------------------------------------------------
 # Create release artifacts
 
 def compare_changes(repos, branch, revision):
@@ -1701,6 +1720,22 @@ def main():
                            nargs='?', default=None,
                     help='''The trunk revision number to base the branch on.
                             Default is HEAD.''')
+    subparser.add_argument('--dry-run', action='store_true', default=False,
+                   help='Avoid committing any changes to repositories.')
+
+    # Setup the parser for the create-release-branch subcommand
+    subparser = subparsers.add_parser('write-release-notes',
+                    help='''Write a template release-notes file.''')
+    subparser.set_defaults(func=write_release_notes)
+    subparser.add_argument('version', type=Version,
+                    help='''A version number to indicate the branch, such as
+                            '1.7.0' (the '.0' is required).''')
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
+                           nargs='?', default=None,
+                    help='''The trunk revision number to base the branch on.
+                            Default is HEAD.''')
+    subparser.add_argument('--edit-html-file',
+                    help='''Write the template release-notes to this file.''')
     subparser.add_argument('--dry-run', action='store_true', default=False,
                    help='Avoid committing any changes to repositories.')
 
