@@ -96,6 +96,7 @@ class SubversionFSTestCase(unittest.TestCase):
 
     diffp = fdiff.get_pipe()
     diffoutput = diffp.read().decode('utf8')
+    diffp.close()
 
     self.assertTrue(diffoutput.find(u'-' + self.unistr) > 0)
 
@@ -116,6 +117,7 @@ class SubversionFSTestCase(unittest.TestCase):
                         None, None, diffoptions=[])
     diffp = fdiff.get_pipe()
     diffoutput = diffp.read().decode('utf8')
+    diffp.close()
 
     self.assertTrue(diffoutput.find(u'< ' + self.unistr) > 0)
 

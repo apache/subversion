@@ -60,6 +60,7 @@ class FileDiff:
     self.tempfile1 = None
     self.tempfile2 = None
     self.difftemp  = None
+    self.procs     = []
 
     self.root1 = root1
     self.path1 = path1
@@ -124,6 +125,7 @@ class FileDiff:
       # open the pipe, and return the file object for reading from the child.
       p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
                             close_fds=_sys.platform != "win32")
+      self.procs.append(p)
       return p.stdout
 
     else:
@@ -158,3 +160,12 @@ class FileDiff:
           _os.remove(tmpfile)
         except OSError:
           pass
+    for proc in self.procs:
+      if proc.poll() is None:
+        proc.terminate()
+        if _sys.hexversion >= 0x030300F0:
+          try:
+            proc.wait(10)
+          except _subprocess.TimeoutExired:
+            proc.kill() 
+        del proc
