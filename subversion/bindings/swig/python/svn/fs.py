@@ -152,6 +152,16 @@ class FileDiff:
       return builtins.open(self.difftemp, "rb")
 
   def __del__(self):
+    # subprocess created by self.get_pipe() should be terminated only if
+    # its stdout is already closed
+    for proc in self.procs:
+      if proc.poll() is None and proc.stdout.closed:
+        proc.terminate()
+        if _sys.hexversion >= 0x030300F0:
+          try:
+            proc.wait(10)
+          except subprocess.TimeoutExpired:
+            proc.kill() 
     # it seems that sometimes the files are deleted, so just ignore any
     # failures trying to remove them
     for tmpfile in [self.tempfile1, self.tempfile2, self.difftemp]:
@@ -160,12 +170,3 @@ class FileDiff:
           _os.remove(tmpfile)
         except OSError:
           pass
-    for proc in self.procs:
-      if proc.poll() is None:
-        proc.terminate()
-        if _sys.hexversion >= 0x030300F0:
-          try:
-            proc.wait(10)
-          except _subprocess.TimeoutExired:
-            proc.kill() 
-        del proc
