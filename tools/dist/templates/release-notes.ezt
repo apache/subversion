@@ -148,7 +148,7 @@ to the upgrade.</p>
 release might necessitate further adjustment by administrators or
 users.  We'll cover those in this section.</p>
 
-</div>  < !-- compat-misc -- >
+</div>  <!- - compat-misc - ->
 -->
 
 </div>  <!-- compatibility -->
@@ -227,7 +227,7 @@ if they occur.</p>
 
 <p>There are no known issues specific to this release at the moment.</p>
 
-</div>  < !-- troubleshooting -- >
+</div>  <!- - troubleshooting - ->
 -->
 
 <div class="h2" id="non-lts-release">
