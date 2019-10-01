@@ -639,33 +639,16 @@ def create_status_file_on_branch(args):
     run_svn(['checkout', branch_url, branch_wc, '--depth=immediates'])
 
     status_local_path = os.path.join(branch_wc, 'STATUS')
-    text='''\
-      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
-      *                                                     *
-      *  THIS RELEASE STREAM IS OPEN FOR STABILIZATION.     *
-      *                                                     *
-      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+    template_filename = 'STATUS.ezt'
+    data = { 'major-minor'          : ver.branch,
+             'major-minor-patch'    : ver.base,
+           }
 
-This file tracks the status of releases in the %s.x line.
+    template = ezt.Template(compress_whitespace=False)
+    template.parse(get_tmplfile(template_filename).read())
 
-See http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
-for details on how release lines and voting work, what kinds of bugs can
-delay a release, etc.
-
-Status of %s:
-
-Candidate changes:
-==================
-
-
-Veto-blocked changes:
-=====================
-
-
-Approved changes:
-=================
-''' % (ver.branch, ver.base)
-    open(status_local_path, 'wx').write(text)
+    with open(status_local_path, 'wx') as g:
+        template.generate(g, data)
     run_svn(['add', status_local_path])
     run_svn(['commit', status_local_path,
              '-m', '* branches/' + ver.branch + '.x/STATUS: New file.'],
