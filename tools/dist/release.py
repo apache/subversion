@@ -657,15 +657,17 @@ def create_status_file_on_branch(args):
 #----------------------------------------------------------------------
 def update_backport_bot(args):
     ver = args.version
-    print("""MANUAL STEP: Fork & edit & pull-request on GitHub:
-https://github.com/apache/infrastructure-puppet/blob/deployment/modules/svnqavm_pvm_asf/manifests/init.pp
-"Add new %s.x branch to list of backport branches"
+    print("""\
+
+*** MANUAL STEP REQUIRED ***
+
+  Ask someone with appropriate access to add the %s.x branch
+  to the backport merge bot.  See
+  http://subversion.apache.org/docs/community-guide/releasing.html#backport-merge-bot
+
+***
+
 """ % (ver.branch,))
-    print("""Someone needs to run the 'svn checkout' manually.
-The exact checkout command is documented in machines/svn-qavm2/notes.txt
-in the private repository (need to use a trunk client and the svn-master.a.o
-hostname).
-""")
 
 #----------------------------------------------------------------------
 def update_buildbot_config(args):
