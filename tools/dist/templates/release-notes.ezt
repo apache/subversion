@@ -23,6 +23,11 @@
 
 <h1 style="text-align: center">Apache Subversion [major-minor] Release Notes</h1>
 
+<div class="notice">
+<p><span style="color: red"><b>This is work in progress.
+  Subversion [major-minor] has not been released yet.</b></span></p>
+</div>
+
 <div class="h2" id="news">
 <h2>What's New in Apache Subversion [major-minor]
   <a class="sectionlink" href="#news"
