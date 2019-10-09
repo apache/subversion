@@ -3965,6 +3965,78 @@ def dump_include_copied_directory(sbox):
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)
 
+def load_normalize_node_props(sbox):
+  "svnadmin load --normalize node props"
+
+  dump_str = b"""SVN-fs-dump-format-version: 2
+
+UUID: dc40867b-38f6-0310-9f5f-f81aa277e06f
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2005-05-03T19:09:41.129900Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 99
+Content-length: 99
+
+K 7
+svn:log
+V 0
+
+K 10
+svn:author
+V 2
+pl
+K 8
+svn:date
+V 27
+2005-05-03T19:10:19.975578Z
+PROPS-END
+
+Node-path: 
+Node-kind: dir
+Node-action: change
+Prop-content-length: 32
+Content-length: 32
+
+K 10
+svn:ignore
+V 3
+\n\r\n
+PROPS-END
+
+
+"""
+  sbox.build(empty=True)
+
+  # Try to load the dumpstream, expecting a failure (because of mixed
+  # EOLs in the svn:ignore property value).
+  exp_err = svntest.verify.RegexListOutput(['svnadmin: E125005:.*',
+                                            'svnadmin: E125017:.*'],
+                                           match_all=False)
+  load_and_verify_dumpstream(sbox, [], exp_err, dumpfile_revisions,
+                             False, dump_str, '--ignore-uuid')
+
+  # Now try it again with prop normalization.
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=False,
+                            normalize_props=True)
+  # We should get the normalized property value.
+  exit_code, output, _ = svntest.main.run_svn(None, 'pg', 'svn:ignore',
+                                              '--no-newline',
+                                              sbox.repo_url)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+  if output != ['\n', '\n']:
+    raise svntest.Failure("Unexpected property value %s" % output)
+
+
 ########################################################################
 # Run the tests
 
@@ -4043,6 +4115,7 @@ test_list = [ None,
               recover_prunes_rep_cache_when_enabled,
               recover_prunes_rep_cache_when_disabled,
               dump_include_copied_directory,
+              load_normalize_node_props,
              ]
 
 if __name__ == '__main__':
