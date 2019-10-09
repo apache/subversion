@@ -86,9 +86,11 @@ svn_repos__validate_prop(const char *name,
  *
  * NAME is used to check that VALUE should be normalized, and if this
  * is the case, VALUE is then normalized, allocated from RESULT_POOL.
- * If no normalization is required, VALUE will be copied to RESULT_POOL
- * unchanged.  If NORMALIZED_P is not NULL, and the normalization
- * happened, set *NORMALIZED_P to non-zero.  If the property is returned
+ * If no normalization happened, *RESULT_P will be set to VALUE, and
+ * no copying of the value will occur.
+ *
+ * If NORMALIZED_P is not NULL, and the normalization happened,
+ * set *NORMALIZED_P to non-zero.  If the property is returned
  * unchanged and NORMALIZED_P is not NULL, then *NORMALIZED_P will be
  * set to zero.  SCRATCH_POOL will be used for temporary allocations.
  */
