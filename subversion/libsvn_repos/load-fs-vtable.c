@@ -155,9 +155,11 @@ get_revision_mapping(apr_hash_t *rev_map,
 }
 
 
-/* Change revision property NAME to VALUE for REVISION in REPOS.  If
-   VALIDATE_PROPS is set, use functions which perform validation of
-   the property value.  Otherwise, bypass those checks. */
+/* Change revision property NAME to VALUE for REVISION in REPOS.
+   If NORMALIZE_PROPS is set, attempt to normalize properties before
+   changing them, if that is needed.  If VALIDATE_PROPS is set, use
+   functions which perform validation of the property value.
+   Otherwise, bypass those checks. */
 static svn_error_t *
 change_rev_prop(svn_repos_t *repos,
                 svn_revnum_t revision,
