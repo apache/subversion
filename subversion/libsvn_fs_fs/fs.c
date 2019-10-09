@@ -277,6 +277,7 @@ fs_ioctl(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
                                        cancel_func, cancel_baton,
                                        result_pool, scratch_pool));
           *output_p = output;
+          return SVN_NO_ERROR;
         }
       else if (ctlcode.code == SVN_FS_FS__IOCTL_DUMP_INDEX.code)
         {
@@ -288,6 +289,7 @@ fs_ioctl(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
                                         cancel_func, cancel_baton,
                                         scratch_pool));
           *output_p = NULL;
+          return SVN_NO_ERROR;
         }
       else if (ctlcode.code == SVN_FS_FS__IOCTL_LOAD_INDEX.code)
         {
@@ -296,6 +298,7 @@ fs_ioctl(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
           SVN_ERR(svn_fs_fs__load_index(fs, input->revision, input->entries,
                                         scratch_pool));
           *output_p = NULL;
+          return SVN_NO_ERROR;
         }
       else if (ctlcode.code == SVN_FS_FS__IOCTL_REVISION_SIZE.code)
         {
@@ -307,14 +310,13 @@ fs_ioctl(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
                                            fs, input->revision,
                                            scratch_pool));
           *output_p = output;
+          return SVN_NO_ERROR;
         }
       else
         return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
     }
   else
     return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
-
-  return SVN_NO_ERROR;
 }
 
 /* The vtable associated with a specific open filesystem. */
