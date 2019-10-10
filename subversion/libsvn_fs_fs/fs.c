@@ -312,11 +312,9 @@ fs_ioctl(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
           *output_p = output;
           return SVN_NO_ERROR;
         }
-      else
-        return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
     }
-  else
-    return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
+
+  return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
 }
 
 /* The vtable associated with a specific open filesystem. */
