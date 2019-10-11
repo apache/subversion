@@ -52,6 +52,26 @@ def entries(root, path, pool=None):
     e[name] = dirent_t_id_get(entry)
   return e
 
+class _PopenStdoutWrapper(object):
+  "Private wrapper object of _subprocess.Popen.stdout to clean up sub process"
+  def __init__(self, pobject):
+    self._pobject = pobject
+  def __getattr__(self, name):
+    return getattr(self._pobject.stdout, name)
+  def close(self):
+    self._pobject.stdout.close()
+    if self._pobject.poll() is None:
+        self._pobject.terminate()
+  def __del__(self):
+    if not self.closed:
+      self.close()
+    if self._pobject.poll() is None:
+        self._pobject.terminate()
+        if _sys.hexversion >= 0x030300F0:
+          try:
+            self._pobject.wait(10)
+          except _subprocess.TimeoutExpired:
+            self._pobject.kill() 
 
 class FileDiff:
   def __init__(self, root1, path1, root2, path2, pool=None, diffoptions=[]):
@@ -60,7 +80,6 @@ class FileDiff:
     self.tempfile1 = None
     self.tempfile2 = None
     self.difftemp  = None
-    self.procs     = []
 
     self.root1 = root1
     self.path1 = path1
@@ -125,8 +144,7 @@ class FileDiff:
       # open the pipe, and return the file object for reading from the child.
       p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
                             close_fds=_sys.platform != "win32")
-      self.procs.append(p)
-      return p.stdout
+      return _PopenStdoutWrapper(p)
 
     else:
       if self.difftemp is None:
@@ -152,16 +170,6 @@ class FileDiff:
       return builtins.open(self.difftemp, "rb")
 
   def __del__(self):
-    # subprocess created by self.get_pipe() should be terminated only if
-    # its stdout is already closed
-    for proc in self.procs:
-      if proc.poll() is None and proc.stdout.closed:
-        proc.terminate()
-        if _sys.hexversion >= 0x030300F0:
-          try:
-            proc.wait(10)
-          except subprocess.TimeoutExpired:
-            proc.kill() 
     # it seems that sometimes the files are deleted, so just ignore any
     # failures trying to remove them
     for tmpfile in [self.tempfile1, self.tempfile2, self.difftemp]:
