@@ -5253,6 +5253,83 @@ def diff_git_format_copy(sbox):
   svntest.actions.run_and_verify_svn(expected_output, [], 'diff',
                                      '--git', '.')
 
+#----------------------------------------------------------------------
+# Regression test for issue #1722: 'svn diff' produced a wrong header,
+# indicating one revision as being in the working copy when it should
+# be 'nonexistent'
+@Issue(1722)
+def diff_nonexistent_in_wc(sbox):
+  "nonexistent in working copy"
+
+  sbox.build(empty=True)
+  wc_dir = sbox.wc_dir
+
+  # We mirror the actions of the reproduction script (with one exception:
+  # we 'svn up -r 0' instead of checking out a second working copy)
+
+  sbox.simple_add_text('test\n', 'file')
+  sbox.simple_commit()
+  sbox.simple_update(revision=0)
+
+  # Expected output is empty for these cases:
+  # svn diff -r BASE
+  # svn diff -r 0:BASE
+  # svn diff -r 0
+
+  # Expected output for:
+  # svn diff -r BASE:HEAD
+  # svn diff -r 0:HEAD
+  # svn diff -r 0:1
+  expected_output_base_head = make_diff_header("file", "nonexistent",
+                                               "revision 1") + [
+  "@@ -0,0 +1 @@\n",
+  "+test\n",
+  ]
+
+  # Expected output for:
+  # svn diff -r HEAD:BASE
+  # svn diff -r HEAD
+  # svn diff -r 1:0
+  # svn diff -r 1
+  expected_output_head_base = make_diff_header("file", "revision 1",
+                                               "nonexistent") + [
+  "@@ -1 +0,0 @@\n",
+  "-test\n"
+  ]
+
+  os.chdir(wc_dir)
+
+  svntest.actions.run_and_verify_svn(expected_output_base_head, [],
+                                     'diff', '-r', 'BASE:HEAD')
+
+  svntest.actions.run_and_verify_svn(expected_output_head_base, [],
+                                     'diff', '-r', 'HEAD:BASE')
+
+  svntest.actions.run_and_verify_svn([], [],
+                                     'diff', '-r', 'BASE')
+
+  svntest.actions.run_and_verify_svn(expected_output_head_base, [],
+                                     'diff', '-r', 'HEAD')
+
+  svntest.actions.run_and_verify_svn([], [],
+                                     'diff', '-r', '0:BASE')
+
+  svntest.actions.run_and_verify_svn(expected_output_base_head, [],
+                                     'diff', '-r', '0:HEAD')
+
+  svntest.actions.run_and_verify_svn(expected_output_base_head, [],
+                                     'diff', '-r', '0:1')
+
+  svntest.actions.run_and_verify_svn(expected_output_head_base, [],
+                                     'diff', '-r', '1:0')
+
+  svntest.actions.run_and_verify_svn([], [],
+                                     'diff', '-r', '0')
+
+  svntest.actions.run_and_verify_svn(expected_output_head_base, [],
+                                     'diff', '-r', '1')
+
+
 ########################################################################
 #Run the tests
 
@@ -5353,6 +5430,7 @@ test_list = [ None,
               diff_summary_repo_wc_local_copy_unmodified,
               diff_file_replaced_by_symlink,
               diff_git_format_copy,
+              diff_nonexistent_in_wc,
               ]
 
 if __name__ == '__main__':
