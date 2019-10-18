@@ -262,6 +262,9 @@ numbers); it will be ignored.  For example,
     $0 "Committed revision 42." "\$Some_justification"
 will nominate r42.
 
+Revision numbers within the last thousand revisions may be specified using
+the last three digits only.
+
 The justification can be an arbitrarily-long string; if it is wider than the
 available width, this script will wrap it for you (and allow you to review
 the result before committing).
@@ -1238,6 +1241,20 @@ sub nominate_main {
 
   die "Unable to proceed." if warned_cannot_commit "Nominating failed";
 
+  # To save typing, require just the last three digits if they're unambiguous.
+  my $BASE_revision = `$SVN info --show-item=revision` + 0;
+  if ($BASE_revision > 1000) {
+    my $residue = $BASE_revision % 1000;
+    my $thousands = $BASE_revision - $residue;
+    @revnums = map {
+      $_ >= 1000
+        ? $_
+        : $thousands + $_ - 1000 * ($_ > $residue)
+      }
+      @revnums;
+  }
+
+  # Deduplicate and sort
   @revnums = sort { $a <=> $b } keys %{{ map { $_ => 1 } @revnums }};
   die "No revision numbers specified" unless @revnums;
 
