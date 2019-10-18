@@ -716,11 +716,8 @@ class TestHarness:
       summary = "Some tests failed"
     else:
       summary = "All tests successful"
-    print("SUMMARY: %s, by the grace of Python %d.%d.%d.\n"
-          % (summary,
-             sys.version_info.major,
-             sys.version_info.minor,
-             sys.version_info.micro))
+    print("Python version: %d.%d.%d.\n" % sys.version_info[:3])
+    print(summary)
 
     self._close_log()
     return failed
