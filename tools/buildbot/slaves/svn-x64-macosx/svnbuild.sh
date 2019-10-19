@@ -54,6 +54,13 @@ else
     parallel=${SVNBB_PARALLEL}
 fi
 
+# An optional parameter tells us if this build should use Python 3.
+if [ "$3" = "python3" ]; then
+    test -n "${SVNBB_PYTHON3ENV}" \
+        && . ${SVNBB_PYTHON3ENV}/bin/activate \
+        && export PYTHON="$(which python)"
+fi
+
 #
 # Step 0: Create a directory for the test log files
 #

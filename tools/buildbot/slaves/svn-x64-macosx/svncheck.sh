@@ -98,7 +98,10 @@ while [ ! -z "$1" ]; do
     shift
 done
 
-${use_python3} && test -n "${SVNBB_PYTHON3ENV}" && . ${SVNBB_PYTHON3ENV}/bin/activate
+${use_python3} \
+    && test -n "${SVNBB_PYTHON3ENV}" \
+    && . ${SVNBB_PYTHON3ENV}/bin/activate \
+    && export PYTHON="$(which python)"
 
 ${check_local} && check_tests local
 ${check_svn} && check_tests svn
