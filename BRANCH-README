@@ -1,24 +1,15 @@
-This branch is for development towards getting the python bindings working under
-Python 3. [0]
+This branch is lightweight branch for the resolution of dynamic link issue
+on swig Python bindings with non-system default Python on macOS[0].
 
-Branch type: dev branch off trunk.
-
-The upstream Python project has previously announced End of Life for Python 2,
-with no updates passed some point in 2020. So the bindings need to be updated to
-support Python 3. In order to not have to maintain different code for the
-difference versions, the py3c [1] was chosen to provide standard compatibility
-features for the C extension interfaces for each version.
+Branch type: dev branch off swig-py3.
 
 TODO
 ----
 
-* Windows build has been updated to work with the py3c library for python swig
-  bindings:
-    * Python 2 compiles and tests pass
-    * Python 3 has a compile error.
+* fix link option to build Python C extension determined by configure script
+  on macOS
 
 
 References:
-  [0] dev@ thread "Python 3 Bindings Query", Troy Curtis.
-      https://svn.haxx.se/dev/archive-2017-10/0067.shtml
-  [1] https://github.com/encukou/py3c
+  [0] dev@ thread "Re: SWIG Python bindings build with SWIG 4.0" Branko Čibej
+      https://svn.haxx.se/dev/archive-2019-10/0153.shtml
