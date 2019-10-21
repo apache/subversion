@@ -155,9 +155,11 @@ get_revision_mapping(apr_hash_t *rev_map,
 }
 
 
-/* Change revision property NAME to VALUE for REVISION in REPOS.  If
-   VALIDATE_PROPS is set, use functions which perform validation of
-   the property value.  Otherwise, bypass those checks. */
+/* Change revision property NAME to VALUE for REVISION in REPOS.
+   If NORMALIZE_PROPS is set, attempt to normalize properties before
+   changing them, if that is needed.  If VALIDATE_PROPS is set, use
+   functions which perform validation of the property value.
+   Otherwise, bypass those checks. */
 static svn_error_t *
 change_rev_prop(svn_repos_t *repos,
                 svn_revnum_t revision,
@@ -179,17 +181,23 @@ change_rev_prop(svn_repos_t *repos,
                                    NULL, value, pool);
 }
 
-/* Change property NAME to VALUE for PATH in TXN_ROOT.  If
-   VALIDATE_PROPS is set, use functions which perform validation of
-   the property value.  Otherwise, bypass those checks. */
+/* Change property NAME to VALUE for PATH in TXN_ROOT.
+   If NORMALIZE_PROPS is set, attempt to normalize properties before
+   changing them, if that is needed.  If VALIDATE_PROPS is set, use
+   functions which perform validation of the property value.
+   Otherwise, bypass those checks. */
 static svn_error_t *
 change_node_prop(svn_fs_root_t *txn_root,
                  const char *path,
                  const char *name,
                  const svn_string_t *value,
                  svn_boolean_t validate_props,
+                 svn_boolean_t normalize_props,
                  apr_pool_t *pool)
 {
+  if (normalize_props)
+    SVN_ERR(svn_repos__normalize_prop(&value, NULL, name, value, pool, pool));
+
   if (validate_props)
     return svn_repos_fs_change_node_prop(txn_root, path, name, value, pool);
   else
@@ -874,7 +882,8 @@ set_node_property(void *baton,
     }
 
   return change_node_prop(rb->txn_root, nb->path, name, value,
-                          pb->validate_props, nb->pool);
+                          pb->validate_props, rb->pb->normalize_props,
+                          nb->pool);
 }
 
 
@@ -890,7 +899,8 @@ delete_node_property(void *baton,
     return SVN_NO_ERROR;
 
   return change_node_prop(rb->txn_root, nb->path, name, NULL,
-                          rb->pb->validate_props, nb->pool);
+                          rb->pb->validate_props, rb->pb->normalize_props,
+                          nb->pool);
 }
 
 
@@ -914,7 +924,8 @@ remove_node_props(void *baton)
       const char *key = apr_hash_this_key(hi);
 
       SVN_ERR(change_node_prop(rb->txn_root, nb->path, key, NULL,
-                               rb->pb->validate_props, nb->pool));
+                               rb->pb->validate_props, rb->pb->normalize_props,
+                               nb->pool));
     }
 
   return SVN_NO_ERROR;

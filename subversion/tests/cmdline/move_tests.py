@@ -883,7 +883,7 @@ def build_simple_file_move_func(sbox, source, dest):
 #
 #   Each test must return on success or raise on failure.
 #
-# See http://wiki.apache.org/subversion/LocalMoves
+# See https://cwiki.apache.org/confluence/display/SVN/LocalMoves
 
 def lateral_move_file_test(sbox):
   "lateral (rename) move of a file test"

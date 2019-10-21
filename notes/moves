@@ -75,7 +75,7 @@ private libsvn_wc API:
 
 More API changes might be needed (TBD).
 In particular, scan_deletion may need to return a list of moves
-in the multi-layer case (http://wiki.apache.org/subversion/MultiLayerMoves)
+in the multi-layer case (https://cwiki.apache.org/confluence/display/SVN/MultiLayerMoves)
 
 We might require a working copy upgrade when going from 1.7 to 1.8,
 and only allow new move functionality to be used with 1.8 working copies.

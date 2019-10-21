@@ -1,3 +1,4 @@
+
 /*
  * sysinfo.c :  information about the running system
  *
@@ -1386,6 +1387,7 @@ release_name_from_minor_version(int minor, const char* product_name)
         case 12: return "Sierra";
         case 13: return "High Sierra";
         case 14: return "Mojave";
+        case 15: return "Catalina";
         }
     }
   return NULL;

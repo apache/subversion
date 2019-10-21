@@ -282,7 +282,7 @@ svn_repos__normalize_prop(const svn_string_t **result_p,
     }
   else
     {
-      *result_p = svn_string_dup(value, result_pool);
+      *result_p = value;
       if (normalized_p)
         *normalized_p = FALSE;
     }

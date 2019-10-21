@@ -713,9 +713,11 @@ class TestHarness:
 
     # Summary.
     if failed or xpassed or failed_list:
-      print("SUMMARY: Some tests failed.\n")
+      summary = "Some tests failed"
     else:
-      print("SUMMARY: All tests successful.\n")
+      summary = "All tests successful"
+    print("Python version: %d.%d.%d." % sys.version_info[:3])
+    print("SUMMARY: %s\n" % summary)
 
     self._close_log()
     return failed

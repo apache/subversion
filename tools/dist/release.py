@@ -68,77 +68,52 @@ except ImportError:
 
 
 # Our required / recommended release tool versions by release branch
-tool_versions = {
-  'trunk' : {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.12',
-            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
-  },
-  '1.13' : {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.12',
-            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
-  },
-  '1.12' : {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.12',
-            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
-  },
-  '1.11' : {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.12',
-            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
-  },
-  '1.10' : {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.12',
-            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
-  },
-  '1.9' : {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['2.0.12',
-            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
-  },
-  '1.8' : {
+tool_versions = {}
+tool_versions['1.8'] = {
             'autoconf' : ['2.69',
             '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
             'libtool'  : ['2.4.3',
             '36b4881c1843d7585de9c66c4c3d9a067ed3a3f792bc670beba21f5a4960acdf'],
             'swig'     : ['2.0.9',
             '586954000d297fafd7e91d1ad31089cc7e249f658889d11a44605d3662569539'],
-  },
-}
+  }
+tool_versions['1.9'] = {
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['2.0.12',
+            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
+  }
+tool_versions['1.10'] = {
+            'autoconf' : ['2.69',
+            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
+            'libtool'  : ['2.4.6',
+            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
+            'swig'     : ['3.0.12',
+            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
+  }
+tool_versions['1.11'] = tool_versions['1.10']
+tool_versions['1.12'] = tool_versions['1.10']
+tool_versions['1.13'] = tool_versions['1.10']
+tool_versions['trunk'] = tool_versions['1.10']
 
 # The version that is our current recommended release
 # ### TODO: derive this from svn_version.h; see ../../build/getversion.py
-recommended_release = '1.12'
+recommended_release = '1.13'
 # For clean-dist, a whitelist of artifacts to keep, by version.
 supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
 
 # Some constants
-svn_repos = 'https://svn.apache.org/repos/asf/subversion'
-dist_repos = 'https://dist.apache.org/repos/dist'
+svn_repos = os.getenv('SVN_RELEASE_SVN_REPOS',
+                      'https://svn.apache.org/repos/asf/subversion')
+dist_repos = os.getenv('SVN_RELEASE_DIST_REPOS',
+                       'https://dist.apache.org/repos/dist')
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
+buildbot_repos = os.getenv('SVN_RELEASE_BUILDBOT_REPOS',
+                           'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster')
 KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
@@ -182,18 +157,6 @@ class Version(object):
 
     def is_prerelease(self):
         return self.pre != None
-
-    def is_recommended(self):
-        return self.branch == recommended_release
-
-    def get_download_anchor(self):
-        if self.is_prerelease():
-            return 'pre-releases'
-        else:
-            if self.is_recommended():
-                return 'recommended-release'
-            else:
-                return 'supported-releases'
 
     def get_ver_tags(self, revnum):
         # These get substituted into svn_version.h
@@ -282,15 +245,12 @@ def get_exportdir(base_dir, version, revnum):
     return os.path.join(get_tempdir(base_dir),
                         'subversion-%s-r%d' % (version, revnum))
 
-def get_deploydir(base_dir):
-    return os.path.join(base_dir, 'deploy')
-
 def get_target(args):
     "Return the location of the artifacts"
     if args.target:
         return args.target
     else:
-        return get_deploydir(args.base_dir)
+        return os.path.join(args.base_dir, 'deploy')
 
 def get_branch_path(args):
     if not args.branch:
@@ -314,7 +274,7 @@ def get_tmplfile(filename):
 def get_nullfile():
     return open(os.path.devnull, 'w')
 
-def run_command(cmd, verbose=True, hide_stderr=False):
+def run_command(cmd, verbose=True, hide_stderr=False, dry_run=False):
     if verbose:
         print("+ " + ' '.join(cmd))
     stderr = None
@@ -325,7 +285,10 @@ def run_command(cmd, verbose=True, hide_stderr=False):
         if hide_stderr:
             stderr = get_nullfile()
 
-    subprocess.check_call(cmd, stdout=stdout, stderr=stderr)
+    if not dry_run:
+        subprocess.check_call(cmd, stdout=stdout, stderr=stderr)
+    else:
+        print('  ## dry-run; not executed')
 
 def run_script(verbose, script, hide_stderr=False):
     for l in script.split('\n'):
@@ -345,15 +308,28 @@ def download_file(url, target, checksum):
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
 
-def run_svn(cmd, verbose=True, username=None):
+def run_svn(cmd, verbose=True, dry_run=False, username=None):
     if (username):
         cmd[:0] = ['--username', username]
-    run_command(['svn'] + cmd, verbose)
+    run_command(['svn'] + cmd, verbose=verbose, dry_run=dry_run)
 
-def run_svnmucc(cmd, verbose=True, username=None):
+def run_svnmucc(cmd, verbose=True, dry_run=False, username=None):
     if (username):
         cmd[:0] = ['--username', username]
-    run_command(['svnmucc'] + cmd, verbose)
+    run_command(['svnmucc'] + cmd, verbose=verbose, dry_run=dry_run)
+
+#----------------------------------------------------------------------
+def is_recommended(version):
+    return version.branch == recommended_release
+
+def get_download_anchor(version):
+    if version.is_prerelease():
+        return 'pre-releases'
+    else:
+        if is_recommended(version):
+            return 'recommended-release'
+        else:
+            return 'supported-releases'
 
 #----------------------------------------------------------------------
 # ezt helpers
@@ -378,7 +354,7 @@ def cleanup(args):
 
     shutil.rmtree(get_prefix(args.base_dir), True)
     shutil.rmtree(get_tempdir(args.base_dir), True)
-    shutil.rmtree(get_deploydir(args.base_dir), True)
+    shutil.rmtree(get_target(args), True)
 
 
 #----------------------------------------------------------------------
@@ -535,6 +511,217 @@ def build_env(args):
 
 
 #----------------------------------------------------------------------
+# Create a new minor release branch
+
+def get_trunk_wc_path(base_dir, path=None):
+    trunk_wc_path = os.path.join(get_tempdir(base_dir), 'svn-trunk')
+    if path is None: return trunk_wc_path
+    return os.path.join(trunk_wc_path, path)
+
+def get_buildbot_wc_path(base_dir, path=None):
+    buildbot_wc_path = os.path.join(get_tempdir(base_dir), 'svn-buildmaster')
+    if path is None: return buildbot_wc_path
+    return os.path.join(buildbot_wc_path, path)
+
+def get_trunk_url(revnum=None):
+    return svn_repos + '/trunk' + '@' + (str(revnum) if revnum else '')
+
+def get_branch_url(ver):
+    return svn_repos + '/branches/' + ver.branch + '.x'
+
+def get_tag_url(ver):
+    return svn_repos + '/tags/' + ver.base
+
+def edit_file(path, pattern, replacement):
+    print("Editing '%s'" % (path,))
+    print("  pattern='%s'" % (pattern,))
+    print("  replace='%s'" % (replacement,))
+    old_text = open(path, 'r').read()
+    new_text = re.sub(pattern, replacement, old_text)
+    assert new_text != old_text
+    open(path, 'w').write(new_text)
+
+def edit_changes_file(path, newtext):
+    """Insert NEWTEXT in the 'CHANGES' file found at PATH,
+       just before the first line that starts with 'Version '.
+    """
+    print("Prepending to '%s'" % (path,))
+    print("  text='%s'" % (newtext,))
+    lines = open(path, 'r').readlines()
+    for i, line in enumerate(lines):
+      if line.startswith('Version '):
+        with open(path, 'w') as newfile:
+          newfile.writelines(lines[:i])
+          newfile.write(newtext)
+          newfile.writelines(lines[i:])
+        break
+
+#----------------------------------------------------------------------
+def make_release_branch(args):
+    ver = args.version
+    run_svn(['copy',
+             get_trunk_url(args.revnum),
+             get_branch_url(ver),
+             '-m', 'Create the ' + ver.branch + '.x release branch.'],
+            dry_run=args.dry_run)
+
+#----------------------------------------------------------------------
+def update_minor_ver_in_trunk(args):
+    """Change the minor version in trunk to the next (future) minor version.
+    """
+    ver = args.version
+    trunk_wc = get_trunk_wc_path(args.base_dir)
+    run_svn(['checkout',
+             get_trunk_url(args.revnum),
+             trunk_wc])
+
+    prev_ver = Version('1.%d.0' % (ver.minor - 1,))
+    next_ver = Version('1.%d.0' % (ver.minor + 1,))
+    relpaths = []
+
+    relpath = 'subversion/include/svn_version.h'
+    relpaths.append(relpath)
+    edit_file(get_trunk_wc_path(args.base_dir, relpath),
+              r'(#define SVN_VER_MINOR *)%s' % (ver.minor,),
+              r'\g<1>%s' % (next_ver.minor,))
+
+    relpath = 'subversion/tests/cmdline/svntest/main.py'
+    relpaths.append(relpath)
+    edit_file(get_trunk_wc_path(args.base_dir, relpath),
+              r'(SVN_VER_MINOR = )%s' % (ver.minor,),
+              r'\g<1>%s' % (next_ver.minor,))
+
+    relpath = 'subversion/bindings/javahl/src/org/apache/subversion/javahl/NativeResources.java'
+    relpaths.append(relpath)
+    try:
+        # since r1817921 (just after branching 1.10)
+        edit_file(get_trunk_wc_path(args.base_dir, relpath),
+                  r'SVN_VER_MINOR = %s;' % (ver.minor,),
+                  r'SVN_VER_MINOR = %s;' % (next_ver.minor,))
+    except:
+        # before r1817921: two separate places
+        edit_file(get_trunk_wc_path(args.base_dir, relpath),
+                  r'version.isAtLeast\(1, %s, 0\)' % (ver.minor,),
+                  r'version.isAtLeast\(1, %s, 0\)' % (next_ver.minor,))
+        edit_file(get_trunk_wc_path(args.base_dir, relpath),
+                  r'1.%s.0, but' % (ver.minor,),
+                  r'1.%s.0, but' % (next_ver.minor,))
+
+    relpath = 'CHANGES'
+    relpaths.append(relpath)
+    # insert at beginning of CHANGES file
+    edit_changes_file(get_trunk_wc_path(args.base_dir, relpath),
+                 'Version ' + next_ver.base + '\n'
+                 + '(?? ??? 20XX, from /branches/' + next_ver.branch + '.x)\n'
+                 + get_tag_url(next_ver) + '\n'
+                 + '\n')
+
+    log_msg = '''\
+Increment the trunk version number to %s, and introduce a new CHANGES
+section, following the creation of the %s.x release branch.
+
+* subversion/include/svn_version.h,
+  subversion/bindings/javahl/src/org/apache/subversion/javahl/NativeResources.java,
+  subversion/tests/cmdline/svntest/main.py
+    (SVN_VER_MINOR): Increment to %s.
+
+* CHANGES: New section for %s.0.
+''' % (next_ver.branch, ver.branch, next_ver.minor, next_ver.branch)
+    commit_paths = [get_trunk_wc_path(args.base_dir, p) for p in relpaths]
+    run_svn(['commit'] + commit_paths + ['-m', log_msg],
+            dry_run=args.dry_run)
+
+#----------------------------------------------------------------------
+def create_status_file_on_branch(args):
+    ver = args.version
+    branch_wc = get_workdir(args.base_dir)
+    branch_url = get_branch_url(ver)
+    run_svn(['checkout', branch_url, branch_wc, '--depth=immediates'])
+
+    status_local_path = os.path.join(branch_wc, 'STATUS')
+    template_filename = 'STATUS.ezt'
+    data = { 'major-minor'          : ver.branch,
+             'major-minor-patch'    : ver.base,
+           }
+
+    template = ezt.Template(compress_whitespace=False)
+    template.parse(get_tmplfile(template_filename).read())
+
+    with open(status_local_path, 'wx') as g:
+        template.generate(g, data)
+    run_svn(['add', status_local_path])
+    run_svn(['commit', status_local_path,
+             '-m', '* branches/' + ver.branch + '.x/STATUS: New file.'],
+            dry_run=args.dry_run)
+
+#----------------------------------------------------------------------
+def update_backport_bot(args):
+    ver = args.version
+    print("""\
+
+*** MANUAL STEP REQUIRED ***
+
+  Ask someone with appropriate access to add the %s.x branch
+  to the backport merge bot.  See
+  http://subversion.apache.org/docs/community-guide/releasing.html#backport-merge-bot
+
+***
+
+""" % (ver.branch,))
+
+#----------------------------------------------------------------------
+def update_buildbot_config(args):
+    """Add the new branch to the list of branches monitored by the buildbot
+       master.
+    """
+    ver = args.version
+    buildbot_wc = get_buildbot_wc_path(args.base_dir)
+    run_svn(['checkout', buildbot_repos, buildbot_wc])
+
+    prev_ver = Version('1.%d.0' % (ver.minor - 1,))
+    next_ver = Version('1.%d.0' % (ver.minor + 1,))
+
+    relpath = 'master1/projects/subversion.conf'
+    edit_file(get_buildbot_wc_path(args.base_dir, relpath),
+              r'(MINOR_LINES=\[.*%s)(\])' % (prev_ver.minor,),
+              r'\1, %s\2' % (ver.minor,))
+
+    log_msg = '''\
+Subversion: start monitoring the %s branch.
+''' % (ver.branch)
+    commit_paths = [get_buildbot_wc_path(args.base_dir, relpath)]
+    run_svn(['commit'] + commit_paths + ['-m', log_msg],
+            dry_run=args.dry_run)
+
+#----------------------------------------------------------------------
+def create_release_branch(args):
+    make_release_branch(args)
+    update_minor_ver_in_trunk(args)
+    create_status_file_on_branch(args)
+    update_backport_bot(args)
+    update_buildbot_config(args)
+
+
+#----------------------------------------------------------------------
+def write_release_notes(args):
+
+    template_filename = 'release-notes.ezt'
+
+    prev_ver = Version('%d.%d.0' % (args.version.major, args.version.minor - 1))
+    data = { 'major-minor'          : args.version.branch,
+             'previous-major-minor' : prev_ver.branch,
+           }
+
+    template = ezt.Template(compress_whitespace=False)
+    template.parse(get_tmplfile(template_filename).read())
+
+    if args.edit_html_file:
+        with open(args.edit_html_file, 'w') as g:
+            template.generate(g, data)
+    else:
+        template.generate(sys.stdout, data)
+
+#----------------------------------------------------------------------
 # Create release artifacts
 
 def compare_changes(repos, branch, revision):
@@ -611,11 +798,11 @@ def roll_tarballs(args):
         compare_changes(svn_repos, branch, args.revnum)
 
     # Ensure the output directory doesn't already exist
-    if os.path.exists(get_deploydir(args.base_dir)):
+    if os.path.exists(get_target(args)):
         raise RuntimeError('output directory \'%s\' already exists'
-                                            % get_deploydir(args.base_dir))
+                                            % get_target(args))
 
-    os.mkdir(get_deploydir(args.base_dir))
+    os.mkdir(get_target(args))
 
     logging.info('Preparing working copy source')
     shutil.rmtree(get_workdir(args.base_dir), True)
@@ -682,9 +869,9 @@ def roll_tarballs(args):
     def export(windows):
         shutil.rmtree(exportdir, True)
         if windows:
-            eol_style = "--native-eol CRLF"
+            eol_style = "--native-eol=CRLF"
         else:
-            eol_style = "--native-eol LF"
+            eol_style = "--native-eol=LF"
         run_svn(['export',
                  eol_style, get_workdir(args.base_dir), exportdir],
                 verbose=args.verbose)
@@ -761,8 +948,8 @@ def roll_tarballs(args):
     for e in extns:
         filename = basename + '.' + e
         filepath = os.path.join(get_tempdir(args.base_dir), filename)
-        shutil.move(filepath, get_deploydir(args.base_dir))
-        filepath = os.path.join(get_deploydir(args.base_dir), filename)
+        shutil.move(filepath, get_target(args))
+        filepath = os.path.join(get_target(args), filename)
         if args.version < Version("1.11.0-alpha1"):
             # 1.10 and earlier generate *.sha1 files for compatibility reasons.
             # They are deprecated, however, so we don't publicly link them in
@@ -778,7 +965,7 @@ def roll_tarballs(args):
     if args.version.pre != 'nightly':
         shutil.copy(os.path.join(get_workdir(args.base_dir),
                                  'subversion', 'include', 'svn_version.h'),
-                    os.path.join(get_deploydir(args.base_dir),
+                    os.path.join(get_target(args),
                                  'svn_version.h.dist-%s' % str(args.version)))
 
     # And we're done!
@@ -1006,8 +1193,8 @@ def write_news(args):
              'major-minor' : args.version.branch,
              'version' : str(args.version),
              'version_base' : args.version.base,
-             'anchor': args.version.get_download_anchor(),
-             'is_recommended': ezt_bool(args.version.is_recommended()),
+             'anchor': get_download_anchor(args.version),
+             'is_recommended': ezt_bool(is_recommended(args.version)),
              'announcement_url': args.announcement_url,
            }
 
@@ -1067,7 +1254,7 @@ def write_announcement(args):
              'siginfo'              : "\n".join(siginfo) + "\n",
              'major-minor'          : args.version.branch,
              'major-minor-patch'    : args.version.base,
-             'anchor'               : args.version.get_download_anchor(),
+             'anchor'               : get_download_anchor(args.version),
            }
 
     if args.version.is_prerelease():
@@ -1468,13 +1655,18 @@ def main():
     parser = argparse.ArgumentParser(
                             description='Create an Apache Subversion release.')
     parser.add_argument('--clean', action='store_true', default=False,
-                   help='Remove any directories previously created by %(prog)s')
+                   help='''Remove any directories previously created by %(prog)s,
+                           including the 'prefix' dir, the 'temp' dir, and the
+                           default or specified target dir.''')
     parser.add_argument('--verbose', action='store_true', default=False,
                    help='Increase output verbosity')
     parser.add_argument('--base-dir', default=os.getcwd(),
                    help='''The directory in which to create needed files and
                            folders.  The default is the current working
                            directory.''')
+    parser.add_argument('--target',
+                   help='''The full path to the directory containing
+                           release artifacts. Default: <BASE_DIR>/deploy''')
     parser.add_argument('--branch',
                    help='''The branch to base the release on,
                            as a path relative to ^/subversion/.
@@ -1499,6 +1691,39 @@ def main():
                     help='''Attempt to use existing build dependencies before
                             downloading and building a private set.''')
 
+    # Setup the parser for the create-release-branch subcommand
+    subparser = subparsers.add_parser('create-release-branch',
+                    help='''Create a minor release branch: branch from trunk,
+                            update version numbers on trunk, create status
+                            file on branch, update backport bot,
+                            update buildbot config.''')
+    subparser.set_defaults(func=create_release_branch)
+    subparser.add_argument('version', type=Version,
+                    help='''A version number to indicate the branch, such as
+                            '1.7.0' (the '.0' is required).''')
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
+                           nargs='?', default=None,
+                    help='''The trunk revision number to base the branch on.
+                            Default is HEAD.''')
+    subparser.add_argument('--dry-run', action='store_true', default=False,
+                   help='Avoid committing any changes to repositories.')
+
+    # Setup the parser for the create-release-branch subcommand
+    subparser = subparsers.add_parser('write-release-notes',
+                    help='''Write a template release-notes file.''')
+    subparser.set_defaults(func=write_release_notes)
+    subparser.add_argument('version', type=Version,
+                    help='''A version number to indicate the branch, such as
+                            '1.7.0' (the '.0' is required).''')
+    subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
+                           nargs='?', default=None,
+                    help='''The trunk revision number to base the branch on.
+                            Default is HEAD.''')
+    subparser.add_argument('--edit-html-file',
+                    help='''Write the template release-notes to this file.''')
+    subparser.add_argument('--dry-run', action='store_true', default=False,
+                   help='Avoid committing any changes to repositories.')
+
     # Setup the parser for the roll subcommand
     subparser = subparsers.add_parser('roll',
                     help='''Create the release artifacts.''')
@@ -1516,9 +1741,6 @@ def main():
     subparser.set_defaults(func=sign_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
     subparser.add_argument('--userid',
                     help='''The (optional) USER-ID specifying the key to be
                             used for signing, such as '110B1C95' (Key-ID). If
@@ -1531,9 +1753,6 @@ def main():
     subparser.set_defaults(func=post_candidates)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # Setup the parser for the create-tag subcommand
     subparser = subparsers.add_parser('create-tag',
@@ -1544,9 +1763,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # Setup the parser for the bump-versions-on-branch subcommand
     subparser = subparsers.add_parser('bump-versions-on-branch',
@@ -1556,9 +1772,6 @@ def main():
                     help='''The release label, such as '1.7.0-alpha1'.''')
     subparser.add_argument('revnum', type=lambda arg: int(arg.lstrip('r')),
                     help='''The revision number to base the release on.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # The clean-dist subcommand
     subparser = subparsers.add_parser('clean-dist',
@@ -1597,9 +1810,6 @@ def main():
     subparser.add_argument('--security', action='store_true', default=False,
                     help='''The release being announced includes security
                             fixes.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
@@ -1608,9 +1818,6 @@ def main():
                     help='''Output to stdout template text for the download
                             table for subversion.apache.org''')
     subparser.set_defaults(func=write_downloads)
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
 
@@ -1621,9 +1828,6 @@ def main():
     subparser.set_defaults(func=check_sigs)
     subparser.add_argument('version', type=Version,
                     help='''The release label, such as '1.7.0-alpha1'.''')
-    subparser.add_argument('--target',
-                    help='''The full path to the directory containing
-                            release artifacts.''')
 
     # get-keys
     subparser = subparsers.add_parser('get-keys',

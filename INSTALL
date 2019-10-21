@@ -293,7 +293,7 @@ I.    INTRODUCTION
       instead.
 
       Apache Serf can be obtained via your system's package distribution
-      system or directly from http://code.google.com/p/serf/.
+      system or directly from https://serf.apache.org/.
 
       For more information on Apache Serf and Subversion's ra_serf, see the
       file subversion/libsvn_ra_serf/README.
@@ -924,7 +924,7 @@ II.   INSTALLATION
       C:>nmake -f Makefile.win
       C:>nmake -f Makefile.win install
 
-      Please refere to the build instructions provided by the library source
+      Please refer to the build instructions provided by the library source
       for actual build instructions.
 
       ZLib
@@ -933,7 +933,7 @@ II.   INSTALLATION
       Building ZLib using Visual Studio should be quite simple. Just open the
       appropriate solution and build the project zlibstat using the IDE.
 
-      Please refere to the build instructions provided by the library source
+      Please refer to the build instructions provided by the library source
       for actual build instructions.
 
       Note that you'd make sure to define ZLIB_WINAPI in the ZLib config
