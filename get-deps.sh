@@ -149,7 +149,6 @@ get_deps() {
     if [ $# -gt 0 ]; then
       for target in "$@"; do
         if [ "$target" != "deps" ]; then
-          echo "get_$target || usage"
           get_$target || usage
         else
           usage
