@@ -22,3 +22,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1868575
+   Fix false positive on test with Python 3 
+   Justification:
+     Python 2 will reach EOL during the lifetime of this branch.
+   Votes:
+     +1: danielsh
+     +0: julianfoad (reviewed only)
