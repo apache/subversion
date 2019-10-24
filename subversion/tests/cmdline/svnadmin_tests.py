@@ -3859,7 +3859,7 @@ def dump_no_canonicalize_svndate(sbox):
                                      sbox.repo_url)
 
   dump_lines = svntest.actions.run_and_verify_dump(sbox.repo_dir)
-  assert propval + '\n' in dump_lines
+  assert propval.encode() + b'\n' in dump_lines
 
 def check_recover_prunes_rep_cache(sbox, enable_rep_sharing):
   """Check 'recover' prunes the rep-cache while enable-rep-sharing is
