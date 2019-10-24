@@ -16,12 +16,20 @@ Candidate changes:
 ==================
 
 
+Veto-blocked changes:
+=====================
+
+
+Approved changes:
+=================
+
  * r1868151
    Fix syntax error when $PYTHON is Python 3.
    Justification:
      Python 2 will reach EOL during the lifetime of this branch.
    Votes:
      +1: danielsh
+     +0: julianfoad (reviewed only)
 
  * r1868575
    Fix false positive on test with Python 3 
@@ -29,10 +37,4 @@ Candidate changes:
      Python 2 will reach EOL during the lifetime of this branch.
    Votes:
      +1: danielsh
-
-Veto-blocked changes:
-=====================
-
-
-Approved changes:
-=================
+     +0: julianfoad (reviewed only)
