@@ -1188,9 +1188,13 @@ def move_to_dist(args):
 
 def write_news(args):
     'Write text for the Subversion website.'
-    release_date = args.news_release_date or datetime.date.today().strftime('%Y-%m-%d')
-    data = { 'date' : re.sub("-", "", release_date),  # format YYYYmmdd
-             'date_pres' : release_date,              # format YYYY-mm-dd
+    if args.news_release_date:
+        release_date = datetime.datetime.strptime(args.news_release_date, '%Y-%m-%d')
+    else:
+        release_date = datetime.date.today()
+    abort
+    data = { 'date' : release_date.strftime('%Y%m%d'),
+             'date_pres' : release_date.strftime('%Y-%m-%d'),
              'major-minor' : args.version.branch,
              'version' : str(args.version),
              'version_base' : args.version.base,
