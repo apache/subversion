@@ -34,6 +34,10 @@ PGP Signatures are available at:
 For this release, the following people have provided PGP signatures:
 
 [siginfo]
+These public keys are available at:
+
+    https://www.apache.org/dist/subversion/subversion-[version].KEYS
+
 Release notes for the [major-minor].x release series may be found at:
 
     https://subversion.apache.org/docs/release-notes/[major-minor].html

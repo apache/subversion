@@ -295,6 +295,13 @@ def run_script(verbose, script, hide_stderr=False):
         run_command(l.split(), verbose, hide_stderr)
 
 def download_file(url, target, checksum):
+    """Download the file at URL to the local path TARGET.
+    If CHECKSUM is a string, verify the checksum of the downloaded
+    file and raise RuntimeError if it does not match.  If CHECKSUM
+    is None, do not verify the downloaded file.
+    """
+    assert checksum is None or isinstance(checksum, str)
+
     response = urllib2.urlopen(url)
     target_file = open(target, 'w+')
     target_file.write(response.read())
@@ -303,7 +310,7 @@ def download_file(url, target, checksum):
     m.update(target_file.read())
     target_file.close()
     checksum2 = m.hexdigest()
-    if checksum != checksum2:
+    if checksum is not None and checksum != checksum2:
         raise RuntimeError("Checksum mismatch for '%s': "\
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
@@ -966,7 +973,15 @@ def roll_tarballs(args):
         shutil.copy(os.path.join(get_workdir(args.base_dir),
                                  'subversion', 'include', 'svn_version.h'),
                     os.path.join(get_target(args),
-                                 'svn_version.h.dist-%s' % str(args.version)))
+                                 'svn_version.h.dist-%s'
+                                   % (str(args.version),)))
+
+        # Download and "tag" the KEYS file (in case a signing key is removed
+        # from a committer's LDAP profile down the road)
+        basename = 'subversion-%s.KEYS' % (str(args.version),)
+        filepath = os.path.join(get_tempdir(args.base_dir), basename)
+        download_file(KEYS, filepath, None)
+        shutil.move(filepath, get_target(args))
 
     # And we're done!
 
