@@ -1188,8 +1188,9 @@ def move_to_dist(args):
 
 def write_news(args):
     'Write text for the Subversion website.'
-    data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
-             'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
+    release_date = args.news_release_date or datetime.date.today().strftime('%Y-%m-%d')
+    data = { 'date' : re.sub("-", "", release_date),  # format YYYYmmdd
+             'date_pres' : release_date,              # format YYYY-mm-dd
              'major-minor' : args.version.branch,
              'version' : str(args.version),
              'version_base' : args.version.base,
@@ -1796,6 +1797,9 @@ def main():
     subparser.set_defaults(func=write_news)
     subparser.add_argument('--announcement-url',
                     help='''The URL to the archived announcement email.''')
+    subparser.add_argument('--news-release-date',
+                    help='''The release date for the news, as YYYY-MM-DD.
+                            Default: today.''')
     subparser.add_argument('--edit-html-file',
                     help='''Insert the text into this file
                             news.html, index.html).''')
