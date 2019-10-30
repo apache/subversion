@@ -1207,7 +1207,6 @@ def write_news(args):
         release_date = datetime.datetime.strptime(args.news_release_date, '%Y-%m-%d')
     else:
         release_date = datetime.date.today()
-    abort
     data = { 'date' : release_date.strftime('%Y%m%d'),
              'date_pres' : release_date.strftime('%Y-%m-%d'),
              'major-minor' : args.version.branch,
