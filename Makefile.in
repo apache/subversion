@@ -912,6 +912,7 @@ EXTRACLEAN_SWIG_PL=rm -f $(SWIG_PL_SRC_DIR)/native/svn_*.c \
 # Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
 # then the directory is probably clean anyway.
 clean-swig-pl:
+	rm -f .swig_pl_checked
 	if test -z "$(RELEASE_MODE)"; then \
 	  $(EXTRACLEAN_SWIG_PL); \
 	fi
@@ -946,6 +947,7 @@ check-swig-py: swig-py
 EXTRACLEAN_SWIG_PY=rm -rf $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
                           $(SWIG_PY_DIR)/[a-z]*.py
 clean-swig-py:
+	rm -f .swig_py_checked
 	rm -rf $(SWIG_PY_DIR)/libsvn
 	if test -z "$(RELEASE_MODE)"; then \
 	  $(EXTRACLEAN_SWIG_PY); \
@@ -978,6 +980,7 @@ check-swig-rb: swig-rb svnserve
 EXTRACLEAN_SWIG_RB=rm -f $(SWIG_RB_SRC_DIR)/svn_*.c $(SWIG_RB_SRC_DIR)/core.c
 
 clean-swig-rb:
+	rm -f .swig_rb_checked
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
 	if test -z "$(RELEASE_MODE)"; then \
 	  $(EXTRACLEAN_SWIG_RB); \
