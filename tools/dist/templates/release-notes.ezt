@@ -242,13 +242,8 @@ if they occur.</p>
 </h2>
 
 <p>[major-minor] is a regular release, not a Long-Term Support release.
-   This release does not change the status of existing LTS releases
-   (1.9 and 1.10).
-   See <a href="/roadmap.html#release-planning">How We Plan Releases</a>.</p>
-
-<p>Therefore, if you are running into an issue with the old stable
-version which has already been fixed in the latest version, we might
-ask you to upgrade to that version to resolve the issue.</p>
+   See <a href="/docs/release-notes/#supported-versions">Supported Versions</a>
+   and <a href="/roadmap.html#release-planning">How We Plan Releases</a>.</p>
 
 </div>  <!-- non-lts-release -->
 
