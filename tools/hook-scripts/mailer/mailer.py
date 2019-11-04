@@ -339,7 +339,11 @@ class SMTPOutput(MailedOutput):
       raise
 
     finally:
-      server.quit()
+      try:
+        server.quit()
+      except smtplib.SMTPException as detail:
+        sys.stderr.write("mailer.py: Error occurred during SMTP session cleanup: %s\n"
+                             % (detail,))
 
 
 class StandardOutput(OutputBase):
