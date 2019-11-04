@@ -106,6 +106,8 @@ tool_versions['trunk'] = tool_versions['1.10']
 recommended_release = '1.13'
 # For clean-dist, a whitelist of artifacts to keep, by version.
 supported_release_lines = frozenset({"1.9", "1.10", "1.13"})
+# Long-Term Support (LTS) versions
+lts_release_lines = frozenset({"1.9", "1.10", "1.14"})
 
 # Some constants
 svn_repos = os.getenv('SVN_RELEASE_SVN_REPOS',
@@ -329,6 +331,9 @@ def run_svnmucc(cmd, verbose=True, dry_run=False, username=None):
     run_command(['svnmucc'] + cmd, verbose=verbose, dry_run=dry_run)
 
 #----------------------------------------------------------------------
+def is_lts(version):
+    return version.branch in lts_release_lines
+
 def is_recommended(version):
     return version.branch == recommended_release
 
@@ -716,7 +721,10 @@ def create_release_branch(args):
 #----------------------------------------------------------------------
 def write_release_notes(args):
 
-    template_filename = 'release-notes.ezt'
+    # Create a skeleton release notes file from template
+
+    template_filename = \
+        'release-notes-lts.ezt' if is_lts(args.version) else 'release-notes.ezt'
 
     prev_ver = Version('%d.%d.0' % (args.version.major, args.version.minor - 1))
     data = { 'major-minor'          : args.version.branch,
@@ -731,6 +739,15 @@ def write_release_notes(args):
             template.generate(g, data)
     else:
         template.generate(sys.stdout, data)
+
+    # Add an "in progress" entry in the release notes index
+    #
+    index_file = os.path.normpath(args.edit_html_file + '/../index.html')
+    marker = '<ul id="release-notes-list">\n'
+    new_item = '<li><a href="%s.html">Subversion %s</a> – <i>in progress</i></li>\n' % (args.version.branch, args.version.branch)
+    edit_file(index_file,
+              re.escape(marker),
+              (marker + new_item).replace('\\', r'\\'))
 
 #----------------------------------------------------------------------
 # Create release artifacts
@@ -1748,7 +1765,8 @@ def main():
                     help='''The trunk revision number to base the branch on.
                             Default is HEAD.''')
     subparser.add_argument('--edit-html-file',
-                    help='''Write the template release-notes to this file.''')
+                    help='''Write the template release-notes to this file,
+                            and update 'index.html' in the same directory.''')
     subparser.add_argument('--dry-run', action='store_true', default=False,
                    help='Avoid committing any changes to repositories.')
 
