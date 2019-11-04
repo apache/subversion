@@ -736,7 +736,6 @@ II.   INSTALLATION
         Edition). Make sure you enable C++ support during setup.
       * Python 2.7 or higher, downloaded from https://www.python.org/ which is
         used to generate the project files.
-        Note that Python 3.x is not supported (yet).
       * Perl 5.8 or higher from https://www.perl.org/get.html
       * Awk (from https://www.cs.princeton.edu/~bwk/btl.mirror/awk95.exe) is
         needed to compile Apache.  Note that this is the actual awk program,
