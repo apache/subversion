@@ -41,7 +41,10 @@ import sys
 import glob
 import fnmatch
 import shutil
-import urllib2
+try:
+  from urllib.request import urlopen  # Python 3
+except:
+  from urllib2 import urlopen  # Python 2
 import hashlib
 import tarfile
 import logging
@@ -102,7 +105,7 @@ tool_versions['trunk'] = tool_versions['1.10']
 # ### TODO: derive this from svn_version.h; see ../../build/getversion.py
 recommended_release = '1.13'
 # For clean-dist, a whitelist of artifacts to keep, by version.
-supported_release_lines = frozenset({"1.9", "1.10", "1.12", "1.13"})
+supported_release_lines = frozenset({"1.9", "1.10", "1.13"})
 
 # Some constants
 svn_repos = os.getenv('SVN_RELEASE_SVN_REPOS',
@@ -269,7 +272,7 @@ def get_tmplfile(filename):
         return open(os.path.join(get_tmpldir(), filename))
     except IOError:
         # Hmm, we had a problem with the local version, let's try the repo
-        return urllib2.urlopen(svn_repos + '/trunk/tools/dist/templates/' + filename)
+        return urlopen(svn_repos + '/trunk/tools/dist/templates/' + filename)
 
 def get_nullfile():
     return open(os.path.devnull, 'w')
@@ -295,15 +298,22 @@ def run_script(verbose, script, hide_stderr=False):
         run_command(l.split(), verbose, hide_stderr)
 
 def download_file(url, target, checksum):
-    response = urllib2.urlopen(url)
-    target_file = open(target, 'w+')
+    """Download the file at URL to the local path TARGET.
+    If CHECKSUM is a string, verify the checksum of the downloaded
+    file and raise RuntimeError if it does not match.  If CHECKSUM
+    is None, do not verify the downloaded file.
+    """
+    assert checksum is None or isinstance(checksum, str)
+
+    response = urlopen(url)
+    target_file = open(target, 'w+b')
     target_file.write(response.read())
     target_file.seek(0)
     m = hashlib.sha256()
     m.update(target_file.read())
     target_file.close()
     checksum2 = m.hexdigest()
-    if checksum != checksum2:
+    if checksum is not None and checksum != checksum2:
         raise RuntimeError("Checksum mismatch for '%s': "\
                            "downloaded: '%s'; expected: '%s'" % \
                            (target, checksum, checksum2))
@@ -369,7 +379,8 @@ class RollDep(object):
 
     def _test_version(self, cmd):
         proc = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                stderr=subprocess.STDOUT)
+                                stderr=subprocess.STDOUT,
+                                universal_newlines=True)
         (stdout, stderr) = proc.communicate()
         rc = proc.wait()
         if rc: return ''
@@ -728,7 +739,7 @@ def compare_changes(repos, branch, revision):
     mergeinfo_cmd = ['svn', 'mergeinfo', '--show-revs=eligible',
                      repos + '/trunk/CHANGES',
                      repos + '/' + branch + '/' + 'CHANGES']
-    stdout = subprocess.check_output(mergeinfo_cmd)
+    stdout = subprocess.check_output(mergeinfo_cmd, universal_newlines=True)
     if stdout:
       # Treat this as a warning since we are now putting entries for future
       # minor releases in CHANGES on trunk.
@@ -746,7 +757,7 @@ def check_copyright_year(repos, branch, revision):
         file_url = (repos + '/' + branch + '/'
                     + branch_relpath + '@' + str(revision))
         cat_cmd = ['svn', 'cat', file_url]
-        stdout = subprocess.check_output(cat_cmd)
+        stdout = subprocess.check_output(cat_cmd, universal_newlines=True)
         m = _copyright_re.search(stdout)
         if m:
             year = m.group('year')
@@ -955,10 +966,10 @@ def roll_tarballs(args):
             # They are deprecated, however, so we don't publicly link them in
             # the announcements any more.
             m = hashlib.sha1()
-            m.update(open(filepath, 'r').read())
+            m.update(open(filepath, 'rb').read())
             open(filepath + '.sha1', 'w').write(m.hexdigest())
         m = hashlib.sha512()
-        m.update(open(filepath, 'r').read())
+        m.update(open(filepath, 'rb').read())
         open(filepath + '.sha512', 'w').write(m.hexdigest())
 
     # Nightlies do not get tagged so do not need the header
@@ -966,7 +977,15 @@ def roll_tarballs(args):
         shutil.copy(os.path.join(get_workdir(args.base_dir),
                                  'subversion', 'include', 'svn_version.h'),
                     os.path.join(get_target(args),
-                                 'svn_version.h.dist-%s' % str(args.version)))
+                                 'svn_version.h.dist-%s'
+                                   % (str(args.version),)))
+
+        # Download and "tag" the KEYS file (in case a signing key is removed
+        # from a committer's LDAP profile down the road)
+        basename = 'subversion-%s.KEYS' % (str(args.version),)
+        filepath = os.path.join(get_tempdir(args.base_dir), basename)
+        download_file(KEYS, filepath, None)
+        shutil.move(filepath, get_target(args))
 
     # And we're done!
 
@@ -1077,7 +1096,8 @@ def bump_versions_on_branch(args):
                            args.version.patch + 1))
 
     HEAD = subprocess.check_output(['svn', 'info', '--show-item=revision',
-                                    '--', branch_url]).strip()
+                                    '--', branch_url],
+                                   universal_newlines=True).strip()
     HEAD = int(HEAD)
     def file_object_for(relpath):
         fd = tempfile.NamedTemporaryFile()
@@ -1124,7 +1144,8 @@ def clean_dist(args):
     '''Clean the distribution directory of release artifacts of
     no-longer-supported minor lines.'''
 
-    stdout = subprocess.check_output(['svn', 'list', dist_release_url])
+    stdout = subprocess.check_output(['svn', 'list', dist_release_url],
+                                     universal_newlines=True)
 
     def minor(version):
         """Return the minor release line of the parameter, which must be
@@ -1165,7 +1186,8 @@ def clean_dist(args):
 def move_to_dist(args):
     'Move candidate artifacts to the distribution directory.'
 
-    stdout = subprocess.check_output(['svn', 'list', dist_dev_url])
+    stdout = subprocess.check_output(['svn', 'list', dist_dev_url],
+                                     universal_newlines=True)
 
     filenames = []
     for entry in stdout.split('\n'):
@@ -1188,8 +1210,12 @@ def move_to_dist(args):
 
 def write_news(args):
     'Write text for the Subversion website.'
-    data = { 'date' : datetime.date.today().strftime('%Y%m%d'),
-             'date_pres' : datetime.date.today().strftime('%Y-%m-%d'),
+    if args.news_release_date:
+        release_date = datetime.datetime.strptime(args.news_release_date, '%Y-%m-%d')
+    else:
+        release_date = datetime.date.today()
+    data = { 'date' : release_date.strftime('%Y%m%d'),
+             'date_pres' : release_date.strftime('%Y-%m-%d'),
              'major-minor' : args.version.branch,
              'version' : str(args.version),
              'version_base' : args.version.base,
@@ -1349,9 +1375,9 @@ def get_siginfo(args, quiet=False):
                                  % (n, filename, key_end))
                 sys.exit(1)
 
-            fd, fn = tempfile.mkstemp()
-            os.write(fd, key_start + key)
-            os.close(fd)
+            fd, fn = tempfile.mkstemp(text=True)
+            with os.fdopen(fd, 'w') as key_file:
+              key_file.write(key_start + key)
             verified = gpg.verify_file(open(fn, 'rb'), filename[:-4])
             os.unlink(fn)
 
@@ -1373,6 +1399,7 @@ def get_siginfo(args, quiet=False):
         gpg_output = subprocess.check_output(
             ['gpg', '--fixed-list-mode', '--with-colons', '--fingerprint', id],
             stderr=subprocess.STDOUT,
+            universal_newlines=True,
         )
         gpg_output = gpg_output.splitlines()
 
@@ -1440,7 +1467,7 @@ def get_keys(args):
     'Import the LDAP-based KEYS file to gpg'
     # We use a tempfile because urlopen() objects don't have a .fileno()
     with tempfile.SpooledTemporaryFile() as fd:
-        fd.write(urllib2.urlopen(KEYS).read())
+        fd.write(urlopen(KEYS).read())
         fd.flush()
         fd.seek(0)
         subprocess.check_call(['gpg', '--import'], stdin=fd)
@@ -1521,7 +1548,8 @@ def write_changelog(args):
     separator_line = ('-' * 72) + '\n'
     
     mergeinfo = subprocess.check_output(['svn', 'mergeinfo', '--show-revs',
-                    'eligible', '--log', branch_url, previous])
+                    'eligible', '--log', branch_url, previous],
+                                        universal_newlines=True)
     log_messages_dict = {
         # This is a dictionary mapping revision numbers to their respective
         # log messages.  The expression in the "key:" part of the dict
@@ -1796,6 +1824,9 @@ def main():
     subparser.set_defaults(func=write_news)
     subparser.add_argument('--announcement-url',
                     help='''The URL to the archived announcement email.''')
+    subparser.add_argument('--news-release-date',
+                    help='''The release date for the news, as YYYY-MM-DD.
+                            Default: today.''')
     subparser.add_argument('--edit-html-file',
                     help='''Insert the text into this file
                             news.html, index.html).''')

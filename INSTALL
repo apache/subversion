@@ -419,6 +419,7 @@ I.    INTRODUCTION
       test suite is written in Python, as is part of Subversion's build
       system.
 
+      Note that Python 3.x on Windows is not supported.
 
       11. Perl 5.8 or newer (Windows only)  (OPTIONAL)
 
