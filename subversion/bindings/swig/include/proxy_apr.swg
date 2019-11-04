@@ -84,6 +84,7 @@ class GenericSWIGWrapper:
   def set_parent_pool(self, pool):
     """Set the parent pool of this object"""
     self._parent_pool = pool
+    self._is_valid = weakref.ref(pool._is_valid)
 
   def valid(self):
     """Is this object valid?"""
@@ -99,8 +100,14 @@ class GenericSWIGWrapper:
     return self.this
 
 def _mark_weakpool_invalid(weakpool):
-  if weakpool and weakpool() and hasattr(weakpool(), "_is_valid"):
-    del weakpool()._is_valid
+  if weakpool:
+    pool = weakpool()
+    if pool:
+      try:
+        del pool._is_valid
+      except AttributeError:
+        pass
+       
 
 %}
 
@@ -133,7 +140,11 @@ struct apr_pool_t {
       def valid(self):
         """Check whether this memory pool and its parents
         are still valid"""
-        return hasattr(self,"_is_valid")
+        try:
+          self._is_valid
+          return True
+        except AttributeError:
+          return False
 
       def assert_valid(self):
         """Assert that this memory_pool is still valid."""
@@ -164,10 +175,15 @@ struct apr_pool_t {
           self._svn_swig_py_clear_application_pool()
 
         # Mark self as invalid
-        if hasattr(self, "_parent_pool"):
+        try:
           del self._parent_pool
-        if hasattr(self, "_is_valid"):
+        except AttributeError:
+          pass
+
+        try:
           del self._is_valid
+        except AttributeError:
+          pass
 
       def __del__(self):
         """Automatically destroy memory pools, if necessary"""
@@ -200,8 +216,11 @@ struct apr_pool_t {
       def _wrap(self, obj):
         """Mark a SWIG object as owned by this pool"""
         self.assert_valid()
-        if hasattr(obj, "set_parent_pool"):
-          obj.set_parent_pool(self)
+        
+        fn = getattr(obj, 'set_parent_pool', None)
+
+        if fn is not None:
+          fn(self)
           return obj
         elif obj is None:
           return None

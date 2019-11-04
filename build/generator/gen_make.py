@@ -208,7 +208,9 @@ class Generator(gen_base.GeneratorBase):
       swig_lang_deps[objname.lang].append(str(objname))
 
     for lang in self.swig.langs:
-      data.swig_langs.append(_eztdata(short=self.swig.short[lang],
+      data.swig_langs.append(_eztdata(name=lang,
+                                      short=self.swig.short[lang],
+                                      short_upper=self.swig.short[lang].upper(),
                                       deps=swig_lang_deps[lang]))
 
     ########################################

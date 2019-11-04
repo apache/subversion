@@ -36,8 +36,8 @@
     if value is None or old_value is None or value is old_value: return
     
     if isinstance(value, dict):
-      for k, v in value.iteritems():
-        _copy_metadata_deep(v, old_value[k])
+      for k in value:
+        _copy_metadata_deep(value[k], old_value[k])
     elif isinstance(value, list):
       for v, old_v in zip(value, old_value):
         _copy_metadata_deep(v, old_v)
@@ -50,14 +50,20 @@
   def _assert_valid_deep(value):
     """Assert value's validity, recursively traversing lists and dicts."""
     if isinstance(value, dict):
-      for v in value.itervalues():
-        _assert_valid_deep(v)
+      for k in value:
+        _assert_valid_deep(value[k])
     elif isinstance(value, list):
       for v in value:
         _assert_valid_deep(v)
-    else:
-      if hasattr(value, "assert_valid"):
-        value.assert_valid()
+    # Ensure that the passed in value isn't a type, which could have an
+    # assert_valid attribute, but it can not be called without an instance.
+    elif type(value) != type:
+      try:
+        fn = value.assert_valid
+      except AttributeError:
+        pass
+      else:
+        fn()
 %}
 
 /* Default code for all wrapped proxy classes in Python.

@@ -24,10 +24,10 @@
 ######################################################################
 
 from libsvn.fs import *
-from svn.core import _unprefix_names, Pool
+from svn.core import _unprefix_names, Pool, _as_list
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
-__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
+__all__ = [x for x in _as_list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names
 
 
@@ -48,10 +48,30 @@ import svn.diff as _svndiff
 def entries(root, path, pool=None):
   "Call dir_entries returning a dictionary mappings names to IDs."
   e = dir_entries(root, path, pool)
-  for name, entry in e.items():
+  for name, entry in _as_list(e.items()):
     e[name] = dirent_t_id_get(entry)
   return e
 
+class _PopenStdoutWrapper(object):
+  "Private wrapper object of _subprocess.Popen.stdout to clean up sub process"
+  def __init__(self, pobject):
+    self._pobject = pobject
+  def __getattr__(self, name):
+    return getattr(self._pobject.stdout, name)
+  def close(self):
+    self._pobject.stdout.close()
+    if self._pobject.poll() is None:
+        self._pobject.terminate()
+  def __del__(self):
+    if not self.closed:
+      self.close()
+    if self._pobject.poll() is None:
+        self._pobject.terminate()
+        if _sys.hexversion >= 0x030300F0:
+          try:
+            self._pobject.wait(10)
+          except _subprocess.TimeoutExpired:
+            self._pobject.kill() 
 
 class FileDiff:
   def __init__(self, root1, path1, root2, path2, pool=None, diffoptions=[]):
@@ -124,7 +144,7 @@ class FileDiff:
       # open the pipe, and return the file object for reading from the child.
       p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
                             close_fds=_sys.platform != "win32")
-      return p.stdout
+      return _PopenStdoutWrapper(p)
 
     else:
       if self.difftemp is None:
@@ -132,16 +152,16 @@ class FileDiff:
 
         with builtins.open(self.difftemp, "wb") as fp:
           diffopt = _svndiff.file_options_create()
-          diffobj = _svndiff.file_diff_2(self.tempfile1,
-                                         self.tempfile2,
+          diffobj = _svndiff.file_diff_2(self.tempfile1.encode('UTF-8'),
+                                         self.tempfile2.encode('UTF-8'),
                                          diffopt)
 
           _svndiff.file_output_unified4(fp,
                                         diffobj,
-                                        self.tempfile1,
-                                        self.tempfile2,
+                                        self.tempfile1.encode('UTF-8'),
+                                        self.tempfile2.encode('UTF-8'),
                                         None, None,
-                                        "utf8",
+                                        b"utf8",
                                         None,
                                         diffopt.show_c_function,
                                         diffopt.context_size,

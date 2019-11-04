@@ -33,6 +33,7 @@
 
 APR_VERSION=${APR_VERSION:-"1.4.6"}
 APU_VERSION=${APU_VERSION:-"1.5.1"}
+PY3C_VERSION=${PY3C_VERSION:='1.1'}
 SERF_VERSION=${SERF_VERSION:-"1.3.8"}
 ZLIB_VERSION=${ZLIB_VERSION:-"1.2.8"}
 SQLITE_VERSION=${SQLITE_VERSION:-"3.8.11.1"}
@@ -43,6 +44,7 @@ APR_ICONV_VERSION=${APR_ICONV_VERSION:-"1.2.1"}
 
 APR=apr-${APR_VERSION}
 APR_UTIL=apr-util-${APU_VERSION}
+PY3C=py3c-${PY3C_VERSION}
 SERF=serf-${SERF_VERSION}
 ZLIB=zlib-${ZLIB_VERSION}
 SQLITE_VERSION_LIST=`echo $SQLITE_VERSION | sed -e 's/\./ /g'`
@@ -66,7 +68,7 @@ APACHE_MIRROR=https://archive.apache.org/dist
 # helpers
 usage() {
     echo "Usage: $0"
-    echo "Usage: $0 [ apr | serf | zlib | sqlite ] ..."
+    echo "Usage: $0 [ apr | py3c | serf | zlib | sqlite ] ..."
     exit $1
 }
 
@@ -82,6 +84,19 @@ get_apr() {
 
     test -d $BASEDIR/apr      || mv $APR apr
     test -d $BASEDIR/apr-util || mv $APR_UTIL apr-util
+}
+
+get_py3c() {
+    test -d $BASEDIR/py3c && return
+    py3cdist=v${PY3C_VERSION}.tar.gz
+
+    cd $TEMPDIR
+    $HTTP_FETCH https://github.com/encukou/py3c/archive/${py3cdist}
+    cd $BASEDIR
+
+    gzip -dc $TEMPDIR/${py3cdist} | tar -xf -
+
+    mv $PY3C py3c
 }
 
 get_serf() {
@@ -125,7 +140,7 @@ get_sqlite() {
 get_deps() {
     mkdir -p $TEMPDIR
 
-    for i in zlib serf sqlite-amalgamation apr apr-util; do
+    for i in zlib serf sqlite-amalgamation py3c apr apr-util; do
       if [ -d $i ]; then
         echo "Local directory '$i' already exists; the downloaded copy won't be used" >&2
       fi
@@ -141,6 +156,7 @@ get_deps() {
       done
     else
       get_apr
+      get_py3c
       get_serf
       get_zlib
       get_sqlite

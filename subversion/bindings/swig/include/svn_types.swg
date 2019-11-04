@@ -93,6 +93,7 @@
 %apply SWIGTYPE **OUTPARAM {
   /* apr */
   apr_file_t **,
+  apr_hash_t **,
   /* svn_types.h */
   svn_commit_info_t **,
   svn_dirent_t **,
@@ -116,10 +117,16 @@
   void **credentials,
   void **iter_baton,
   void **token,
+  /* svn_checksum */
+  svn_checksum_t **,
   /* svn_client */
   svn_client_commit_info_t **,
+  svn_client_conflict_t **,
+  svn_client_conflict_option_t **,
   svn_client_ctx_t **,
   const svn_client_commit_item3_t **,
+  svn_client__shelf_t **,
+  svn_client__shelf_version_t **,
   /* svn_delta */
   const svn_delta_editor_t **,
   svn_txdelta_stream_t **,
@@ -129,6 +136,7 @@
   svn_txdelta_window_handler_t *,
 #endif
   void **handler_baton,
+  void **handler2_baton,
   void **root_baton,
   void **child_baton,
   void **file_baton,
@@ -142,6 +150,9 @@
   svn_fs_root_t **,
   svn_fs_txn_t **,
   void **contents_baton_p,
+  /* svn_io */
+  svn_io_dirent2_t **,
+  svn_stream_mark_t **,
   /* svn_ra */
   svn_ra_callbacks2_t **,
   svn_ra_plugin_t **,
@@ -335,7 +346,11 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
    Create a typemap for specifying string args that may be NULL.
 */
 #ifdef SWIGPYTHON
-%typemap(in, parse="z") const char *MAY_BE_NULL "";
+%typemap(in) const char *MAY_BE_NULL
+{
+    $1 = svn_swig_py_string_to_cstring($input, TRUE, "$symname", "$1_name");
+    if (PyErr_Occurred()) SWIG_fail;
+}
 #endif
 
 #ifdef SWIGPERL
@@ -464,12 +479,15 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 */
 #ifdef SWIGPYTHON
 %typemap(in) (const char *PTR, apr_size_t LEN) {
-    if (!PyString_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "expecting a string");
+    Py_ssize_t pyStrLen;
+    if (!PyBytes_Check($input)) {
+        PyErr_SetString(PyExc_TypeError, "expecting a bytes");
         SWIG_fail;
     }
-    $1 = PyString_AS_STRING($input);
-    $2 = PyString_GET_SIZE($input);
+    if (PyBytes_AsStringAndSize($input, &$1, &pyStrLen) == -1) {
+        SWIG_fail;
+    }
+    $2 = pyStrLen;
 }
 #endif
 
@@ -1102,7 +1120,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(argout) unsigned char digest[ANY]
 {
-  %append_output(PyString_FromStringAndSize((char *)$1, APR_MD5_DIGESTSIZE));
+  %append_output(PyBytes_FromStringAndSize((const char *)$1, APR_MD5_DIGESTSIZE));
 }
 #endif
 
@@ -1175,7 +1193,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     if ($input == Py_None) {
         $1 = NULL;
     } else {
-        $1 = (unsigned char *) PyString_AsString($input);
+        $1 = (unsigned char *) PyBytes_AsString($input);
         if ($1 == NULL) SWIG_fail;
     }
 }

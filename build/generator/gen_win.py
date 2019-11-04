@@ -158,6 +158,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     ### implement this from scratch using the algorithms described in
     ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
 
+    # Ensure data is in byte representation.  If it doesn't have an encode
+    # attribute, assume it is already in the correct form.
+    try:
+      data = data.encode('utf8')
+    except AttributeError:
+      pass
+
     myhash = hashlib_md5(data).hexdigest()
 
     guid = ("{%s-%s-%s-%s-%s}" % (myhash[0:8], myhash[8:12],
@@ -777,6 +784,10 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         lang_subdir = 'perl5'
       else:
         lang_subdir = target.lang
+        
+      if target.lang == "python":
+        lib = self._libraries['py3c']
+        fakeincludes.extend(lib.include_dirs)
 
       # After the language specific includes include the generic libdir,
       # to allow overriding a generic with a per language include

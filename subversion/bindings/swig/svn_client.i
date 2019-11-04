@@ -119,7 +119,7 @@
     ppitem = (svn_client_proplist_item_t **)(*$1)->elts;
     for (i = 0; i < nelts; ++i, ++ppitem) {
         PyObject *item = PyTuple_New(2);
-        PyObject *name = PyString_FromStringAndSize((*ppitem)->node_name->data,
+        PyObject *name = PyBytes_FromStringAndSize((*ppitem)->node_name->data,
                                                     (*ppitem)->node_name->len);
         PyObject *hash = svn_swig_py_prophash_to_dict((*ppitem)->prop_hash);
 
@@ -238,6 +238,33 @@ Callback: svn_client_diff_summarize_func_t
                   ,
                   svn_swig_rb_changelist_receiver)
 #endif
+
+ /* -----------------------------------------------------------------------
+    Callback: svn_client_status_func_t
+    svn_client_status*()
+    svn_client__shelf_save_new_version3()
+ */
+
+#ifdef SWIGPYTHON
+%callback_typemap(svn_client_status_func_t status_func,
+                  void *status_baton,
+                  svn_swig_py_client_status_func,
+                  ,
+                  )
+
+%callback_typemap_maybenull(svn_client_status_func_t shelved_func,
+                            void *shelved_baton,
+                            svn_swig_py_client_status_func,
+                            ,
+                            )
+
+%callback_typemap_maybenull(svn_client_status_func_t not_shelved_func,
+                            void *not_shelved_baton,
+                            svn_swig_py_client_status_func,
+                            ,
+                            )
+#endif
+
 
 /* -----------------------------------------------------------------------
    We use 'svn_wc_status_t *' in some custom code, but it isn't in the

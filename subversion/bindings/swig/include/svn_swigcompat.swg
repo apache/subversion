@@ -45,7 +45,7 @@
 #if SWIG_VERSION <= 0x010327
 #ifdef SWIGPYTHON
 %define %set_constant(name, value)
-PyDict_SetItemString(d, name, value);
+PyDict_SetItem(d, PyBytes_FromString(name), value);
 %enddef
 #endif
 #endif

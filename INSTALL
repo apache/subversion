@@ -147,6 +147,11 @@ I.    INTRODUCTION
          for other languages, you need to have those languages
          available at build time.
 
+      * py3c (OPTIONAL, but REQUIRED for python bindings)
+
+        The Python 3 Compatibility layer for C extensions is required to build
+        the python language bindings.
+
       * KDE Framework 5, libsecret, GNOME Keyring (OPTIONAL for client)
 
          Subversion contains optional support for storing passwords in
@@ -414,9 +419,6 @@ I.    INTRODUCTION
       test suite is written in Python, as is part of Subversion's build
       system.
 
-      Note that Python 3.x on Windows is not supported.
-
-
       11. Perl 5.8 or newer (Windows only)  (OPTIONAL)
 
       To build Subversion under any of the MS Windows platforms, you
@@ -532,6 +534,16 @@ I.    INTRODUCTION
 
       If configure should use the version bundled with the sources, use:
         --with-lz4=internal
+
+      23. py3c (OPTIONAL)
+
+      Subversion uses the py3c compatibility library when building the Python
+      language bindings. Configure will attempt to locate the system library by
+      default using pkg-config and known paths.
+
+      If it is installed in a non-standard location, then use:
+
+        --with-py3c=/path/to/py3c/prefix
 
   D. Documentation
 

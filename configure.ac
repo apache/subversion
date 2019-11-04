@@ -1273,7 +1273,7 @@ AS_HELP_STRING([--enable-gprof],
 # Scripting and Bindings languages
 
 # Python: Used for testsuite, and bindings
-
+AC_ARG_VAR([PYTHON], [Python interpreter command])
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
@@ -1641,7 +1641,7 @@ fi
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 # Ensure that SWIG is checked after reconfiguration.
-rm -f .swig_checked
+rm -f .swig_checked .swig_pl_checked .swig_py_checked .swig_rb_checked
 
 dnl Provide ${host} for use in compiled code (for svn --version)
 AC_DEFINE_UNQUOTED([SVN_BUILD_HOST], "${host}",

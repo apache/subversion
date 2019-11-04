@@ -148,11 +148,13 @@ BOOST_TEST_CPPFLAGS = @BOOST_CPPFLAGS@ -DBOOST_TEST_DYN_LINK -DBOOST_TEST_NO_MAI
 BOOST_TEST_LDFLAGS = @BOOST_LDFLAGS@ @BOOST_UNIT_TEST_FRAMEWORK_LIB@
 
 SWIG = @SWIG@
-SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@ -I$(SWIG_SRC_DIR)/python/libsvn_swig_py
+SWIG_PY_INCLUDES = @SWIG_PY_INCLUDES@ @SVN_PY3C_INCLUDES@ -I$(SWIG_SRC_DIR)/python/libsvn_swig_py
 SWIG_PY_COMPILE = @SWIG_PY_COMPILE@
 SWIG_PY_LINK = @SWIG_PY_LINK@
 SWIG_PY_LIBS = @SWIG_PY_LIBS@
+SWIG_PY_ERRMSG = @SWIG_PY_ERRMSG@
 SWIG_PL_INCLUDES = @SWIG_PL_INCLUDES@
+SWIG_PL_ERRMSG = @SWIG_PL_ERRMSG@
 SWIG_RB_INCLUDES = @SWIG_RB_INCLUDES@ -I$(SWIG_SRC_DIR)/ruby/libsvn_swig_ruby
 SWIG_RB_COMPILE = @SWIG_RB_COMPILE@
 SWIG_RB_LINK = @SWIG_RB_LINK@
@@ -161,6 +163,7 @@ SWIG_RB_SITE_LIB_DIR = @SWIG_RB_SITE_LIB_DIR@
 SWIG_RB_SITE_ARCH_DIR = @SWIG_RB_SITE_ARCH_DIR@
 SWIG_RB_TEST_VERBOSE = @SWIG_RB_TEST_VERBOSE@
 SWIG_RB_RI_DATADIR = $(DESTDIR)$(datadir)/ri/$(RUBY_MAJOR).$(RUBY_MINOR)/site
+SWIG_RB_ERRMSG = @SWIG_RB_ERRMSG@
 
 CTYPESGEN = @CTYPESGEN@
 CTYPES_PYTHON_SRC_DIR = $(abs_srcdir)/subversion/bindings/ctypes-python
@@ -200,6 +203,7 @@ SWIG_FEATURES = @SWIG_FEATURES@
 SWIG_PY_FEATURES = @SWIG_PY_FEATURES@
 SWIG_PL_FEATURES = @SWIG_PL_FEATURES@
 SWIG_RB_FEATURES = @SWIG_RB_FEATURES@
+SWIG_PY_OPTS = @SWIG_PY_OPTS@
 
 COMPILE = $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CMAINTAINERFLAGS) $(CFLAGS) $(INCLUDES)
 COMPILE_NOWARN = $(CC) $(CMODEFLAGS) $(CPPFLAGS) $(CNOWARNFLAGS) $(CFLAGS) $(INCLUDES)
@@ -908,6 +912,7 @@ EXTRACLEAN_SWIG_PL=rm -f $(SWIG_PL_SRC_DIR)/native/svn_*.c \
 # Makefile does not exist, DO NOT try to make it. But, if it doesn't exist,
 # then the directory is probably clean anyway.
 clean-swig-pl:
+	rm -f .swig_pl_checked
 	if test -z "$(RELEASE_MODE)"; then \
 	  $(EXTRACLEAN_SWIG_PL); \
 	fi
@@ -939,9 +944,10 @@ check-swig-py: swig-py
 	cd $(SWIG_PY_DIR); \
 	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
-EXTRACLEAN_SWIG_PY=rm -rf $(SWIG_PY_SRC_DIR)/svn_*.c $(SWIG_PY_SRC_DIR)/core.c \
-                          $(SWIG_PY_SRC_DIR)/[a-z]*.py
+EXTRACLEAN_SWIG_PY=rm -rf $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
+                          $(SWIG_PY_DIR)/[a-z]*.py
 clean-swig-py:
+	rm -f .swig_py_checked
 	rm -rf $(SWIG_PY_DIR)/libsvn
 	if test -z "$(RELEASE_MODE)"; then \
 	  $(EXTRACLEAN_SWIG_PY); \
@@ -974,6 +980,7 @@ check-swig-rb: swig-rb svnserve
 EXTRACLEAN_SWIG_RB=rm -f $(SWIG_RB_SRC_DIR)/svn_*.c $(SWIG_RB_SRC_DIR)/core.c
 
 clean-swig-rb:
+	rm -f .swig_rb_checked
 	rm -rf $(SWIG_RB_DIR)/test/repos $(SWIG_RB_DIR)/test/wc
 	if test -z "$(RELEASE_MODE)"; then \
 	  $(EXTRACLEAN_SWIG_RB); \

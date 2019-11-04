@@ -527,7 +527,10 @@
   apr_array_header_t **logfiles,
   apr_array_header_t **names_p,
   apr_array_header_t **targets_p,
-  apr_array_header_t **args_p
+  apr_array_header_t **args_p,
+  apr_array_header_t **props_conflicted,
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  apr_array_header_t **possible_moved_to_abspaths
 };
 
 /* -----------------------------------------------------------------------
@@ -574,6 +577,40 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **result_revs {
   %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **options
+   For svn_client_conflict_option_t
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **options {
+  %append_output
+    (svn_swig_py_pointerlist_to_list(*$1,
+                                     $descriptor(svn_client_conflict_option_t *),
+                                     _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **versions_p
+   For svn_client__shelf_get_all_versions
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **versions_p {
+  %append_output
+    (svn_swig_py_pointerlist_to_list(*$1,
+                                     $descriptor(svn_client__shelf_version_t *),
+                                     _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif
 

@@ -1273,7 +1273,8 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
-    for line in fileinput.input(fname):
+
+    for line in fileinput.FileInput(fname, openhook=fileinput.hook_encoded("utf-8")):
       match = self._re_include.match(line)
       if not match:
         continue

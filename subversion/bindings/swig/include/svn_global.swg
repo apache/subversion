@@ -31,6 +31,12 @@
 #define SVN_DEPRECATED
 #endif
 
+#ifdef SWIGPYTHON
+%begin %{
+#define SWIG_PYTHON_STRICT_BYTE_CHAR
+%}
+#endif
+
 %include typemaps.i
 %include constraints.i
 %include exception.i
@@ -54,6 +60,7 @@
 #ifdef SWIGPYTHON
 %{
 #include "swigutil_py.h"
+#include "swigutil_py3c.h"
 %}
 #endif
 #ifdef SWIGPERL
@@ -135,9 +142,8 @@ static PyObject * _global_py_pool = NULL;
 /* Python format specifiers. Use Python instead of SWIG to parse
    these basic types, because Python reports better error messages
    (with correct argument numbers). */
-%typemap (in, parse="s")
-  char *, char const *, char * const, char const * const "";
 %typemap (in, parse="c") char "";
+
 %typemap (in, fragment=SWIG_As_frag(long)) long
 {
   $1 = ($1_ltype)SWIG_As(long)($input);

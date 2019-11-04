@@ -20,12 +20,7 @@
 #
 import unittest, setup_path, os, sys
 from sys import version_info # For Python version check
-if version_info[0] >= 3:
-  # Python >=3.0
-  from io import StringIO
-else:
-  # Python <3.0
-  from StringIO import StringIO
+from io import BytesIO
 from svn import core, repos, fs, delta
 from svn.core import SubversionException
 import utils
@@ -49,34 +44,34 @@ class DumpStreamParser(repos.ParseFns3):
     repos.ParseFns3.__init__(self)
     self.ops = []
   def magic_header_record(self, version, pool=None):
-    self.ops.append(("magic-header", version))
+    self.ops.append((b"magic-header", version))
   def uuid_record(self, uuid, pool=None):
-    self.ops.append(("uuid", uuid))
+    self.ops.append((b"uuid", uuid))
   def new_revision_record(self, headers, pool=None):
     rev = int(headers[repos.DUMPFILE_REVISION_NUMBER])
-    self.ops.append(("new-revision", rev))
+    self.ops.append((b"new-revision", rev))
     return rev
   def close_revision(self, revision_baton):
-    self.ops.append(("close-revision", revision_baton))
+    self.ops.append((b"close-revision", revision_baton))
   def new_node_record(self, headers, revision_baton, pool=None):
     node = headers[repos.DUMPFILE_NODE_PATH]
-    self.ops.append(("new-node", revision_baton, node))
+    self.ops.append((b"new-node", revision_baton, node))
     return (revision_baton, node)
   def close_node(self, node_baton):
-    self.ops.append(("close-node", node_baton[0], node_baton[1]))
+    self.ops.append((b"close-node", node_baton[0], node_baton[1]))
   def set_revision_property(self, revision_baton, name, value):
-    self.ops.append(("set-revision-prop", revision_baton, name, value))
+    self.ops.append((b"set-revision-prop", revision_baton, name, value))
   def set_node_property(self, node_baton, name, value):
-    self.ops.append(("set-node-prop", node_baton[0], node_baton[1], name, value))
+    self.ops.append((b"set-node-prop", node_baton[0], node_baton[1], name, value))
   def remove_node_props(self, node_baton):
-    self.ops.append(("remove-node-props", node_baton[0], node_baton[1]))
+    self.ops.append((b"remove-node-props", node_baton[0], node_baton[1]))
   def delete_node_property(self, node_baton, name):
-    self.ops.append(("delete-node-prop", node_baton[0], node_baton[1], name))
+    self.ops.append((b"delete-node-prop", node_baton[0], node_baton[1], name))
   def apply_textdelta(self, node_baton):
-    self.ops.append(("apply-textdelta", node_baton[0], node_baton[1]))
+    self.ops.append((b"apply-textdelta", node_baton[0], node_baton[1]))
     return None
   def set_fulltext(self, node_baton):
-    self.ops.append(("set-fulltext", node_baton[0], node_baton[1]))
+    self.ops.append((b"set-fulltext", node_baton[0], node_baton[1]))
     return None
 
 
@@ -109,17 +104,17 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       raise core.SubversionException(apr_err=core.SVN_ERR_CEASE_INVOCATION,
                                      message="Hi from history_lookup")
 
-    repos.history2(self.fs, '/trunk/README2.txt', history_lookup, None, 0,
+    repos.history2(self.fs, b'/trunk/README2.txt', history_lookup, None, 0,
                    self.rev, True)
     self.assertEqual(len(revs), 1)
 
   def test_create(self):
     """Make sure that repos.create doesn't segfault when we set fs-type
        using a config hash"""
-    fs_config = { "fs-type": "fsfs" }
+    fs_config = { b"fs-type": b"fsfs" }
     for i in range(5):
       path = self.temper.alloc_empty_dir(suffix='-repository-create%d' % i)
-      repos.create(path, "", "", None, fs_config)
+      repos.create(path, b"", b"", None, fs_config)
 
   def test_dump_fs2(self):
     """Test the dump_fs2 function"""
@@ -130,18 +125,18 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       self.callback_calls += 1
       return None
 
-    dumpstream = StringIO()
-    feedbackstream = StringIO()
+    dumpstream = BytesIO()
+    feedbackstream = BytesIO()
     repos.dump_fs2(self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0,
                    is_cancelled)
 
     # Check that we can dump stuff
     dump = dumpstream.getvalue()
     feedback = feedbackstream.getvalue()
-    expected_feedback = "* Dumped revision " + str(self.rev)
-    self.assertEquals(dump.count("Node-path: trunk/README.txt"), 2)
-    self.assertEquals(feedback.count(expected_feedback), 1)
-    self.assertEquals(self.callback_calls, 13)
+    expected_feedback = b"* Dumped revision " + str(self.rev).encode('utf-8')
+    self.assertEqual(dump.count(b"Node-path: trunk/README.txt"), 2)
+    self.assertEqual(feedback.count(expected_feedback), 1)
+    self.assertEqual(self.callback_calls, 13)
 
     # Check that the dump can be cancelled
     self.assertRaises(SubversionException, repos.dump_fs2,
@@ -154,22 +149,22 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertRaises(ValueError, repos.dump_fs2,
       self.repos, dumpstream, feedbackstream, 0, self.rev, 0, 0, None)
 
-    dumpstream = StringIO()
-    feedbackstream = StringIO()
+    dumpstream = BytesIO()
+    feedbackstream = BytesIO()
 
     # Check that we can grab the feedback stream, but not the dumpstream
     repos.dump_fs2(self.repos, None, feedbackstream, 0, self.rev, 0, 0, None)
     feedback = feedbackstream.getvalue()
-    self.assertEquals(feedback.count(expected_feedback), 1)
+    self.assertEqual(feedback.count(expected_feedback), 1)
 
     # Check that we can grab the dumpstream, but not the feedbackstream
     repos.dump_fs2(self.repos, dumpstream, None, 0, self.rev, 0, 0, None)
     dump = dumpstream.getvalue()
-    self.assertEquals(dump.count("Node-path: trunk/README.txt"), 2)
+    self.assertEqual(dump.count(b"Node-path: trunk/README.txt"), 2)
 
     # Check that we can ignore both the dumpstream and the feedbackstream
     repos.dump_fs2(self.repos, dumpstream, None, 0, self.rev, 0, 0, None)
-    self.assertEquals(feedback.count(expected_feedback), 1)
+    self.assertEqual(feedback.count(expected_feedback), 1)
 
     # FIXME: The Python bindings don't check for 'NULL' values for
     #        svn_repos_t objects, so the following call segfaults
@@ -182,50 +177,50 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       return None
     dump_path = os.path.join(os.path.dirname(sys.argv[0]),
         "trac/versioncontrol/tests/svnrepos.dump")
-    stream = open(dump_path)
+    stream = open(dump_path, 'rb')
     dsp = DumpStreamParser()
     ptr, baton = repos.make_parse_fns3(dsp)
     repos.parse_dumpstream3(stream, ptr, baton, False, is_cancelled)
     stream.close()
     self.assertEqual(self.cancel_calls, 76)
     expected_list = [
-        ("magic-header", 2),
-        ('uuid', '92ea810a-adf3-0310-b540-bef912dcf5ba'),
-        ('new-revision', 0),
-        ('set-revision-prop', 0, 'svn:date', '2005-04-01T09:57:41.312767Z'),
-        ('close-revision', 0),
-        ('new-revision', 1),
-        ('set-revision-prop', 1, 'svn:log', 'Initial directory layout.'),
-        ('set-revision-prop', 1, 'svn:author', 'john'),
-        ('set-revision-prop', 1, 'svn:date', '2005-04-01T10:00:52.353248Z'),
-        ('new-node', 1, 'branches'),
-        ('remove-node-props', 1, 'branches'),
-        ('close-node', 1, 'branches'),
-        ('new-node', 1, 'tags'),
-        ('remove-node-props', 1, 'tags'),
-        ('close-node', 1, 'tags'),
-        ('new-node', 1, 'trunk'),
-        ('remove-node-props', 1, 'trunk'),
-        ('close-node', 1, 'trunk'),
-        ('close-revision', 1),
-        ('new-revision', 2),
-        ('set-revision-prop', 2, 'svn:log', 'Added README.'),
-        ('set-revision-prop', 2, 'svn:author', 'john'),
-        ('set-revision-prop', 2, 'svn:date', '2005-04-01T13:12:18.216267Z'),
-        ('new-node', 2, 'trunk/README.txt'),
-        ('remove-node-props', 2, 'trunk/README.txt'),
-        ('set-fulltext', 2, 'trunk/README.txt'),
-        ('close-node', 2, 'trunk/README.txt'),
-        ('close-revision', 2), ('new-revision', 3),
-        ('set-revision-prop', 3, 'svn:log', 'Fixed README.\n'),
-        ('set-revision-prop', 3, 'svn:author', 'kate'),
-        ('set-revision-prop', 3, 'svn:date', '2005-04-01T13:24:58.234643Z'),
-        ('new-node', 3, 'trunk/README.txt'),
-        ('remove-node-props', 3, 'trunk/README.txt'),
-        ('set-node-prop', 3, 'trunk/README.txt', 'svn:mime-type', 'text/plain'),
-        ('set-node-prop', 3, 'trunk/README.txt', 'svn:eol-style', 'native'),
-        ('set-fulltext', 3, 'trunk/README.txt'),
-        ('close-node', 3, 'trunk/README.txt'), ('close-revision', 3),
+        (b"magic-header", 2),
+        (b'uuid', b'92ea810a-adf3-0310-b540-bef912dcf5ba'),
+        (b'new-revision', 0),
+        (b'set-revision-prop', 0, b'svn:date', b'2005-04-01T09:57:41.312767Z'),
+        (b'close-revision', 0),
+        (b'new-revision', 1),
+        (b'set-revision-prop', 1, b'svn:log', b'Initial directory layout.'),
+        (b'set-revision-prop', 1, b'svn:author', b'john'),
+        (b'set-revision-prop', 1, b'svn:date', b'2005-04-01T10:00:52.353248Z'),
+        (b'new-node', 1, b'branches'),
+        (b'remove-node-props', 1, b'branches'),
+        (b'close-node', 1, b'branches'),
+        (b'new-node', 1, b'tags'),
+        (b'remove-node-props', 1, b'tags'),
+        (b'close-node', 1, b'tags'),
+        (b'new-node', 1, b'trunk'),
+        (b'remove-node-props', 1, b'trunk'),
+        (b'close-node', 1, b'trunk'),
+        (b'close-revision', 1),
+        (b'new-revision', 2),
+        (b'set-revision-prop', 2, b'svn:log', b'Added README.'),
+        (b'set-revision-prop', 2, b'svn:author', b'john'),
+        (b'set-revision-prop', 2, b'svn:date', b'2005-04-01T13:12:18.216267Z'),
+        (b'new-node', 2, b'trunk/README.txt'),
+        (b'remove-node-props', 2, b'trunk/README.txt'),
+        (b'set-fulltext', 2, b'trunk/README.txt'),
+        (b'close-node', 2, b'trunk/README.txt'),
+        (b'close-revision', 2), (b'new-revision', 3),
+        (b'set-revision-prop', 3, b'svn:log', b'Fixed README.\n'),
+        (b'set-revision-prop', 3, b'svn:author', b'kate'),
+        (b'set-revision-prop', 3, b'svn:date', b'2005-04-01T13:24:58.234643Z'),
+        (b'new-node', 3, b'trunk/README.txt'),
+        (b'remove-node-props', 3, b'trunk/README.txt'),
+        (b'set-node-prop', 3, b'trunk/README.txt', b'svn:mime-type', b'text/plain'),
+        (b'set-node-prop', 3, b'trunk/README.txt', b'svn:eol-style', b'native'),
+        (b'set-fulltext', 3, b'trunk/README.txt'),
+        (b'close-node', 3, b'trunk/README.txt'), (b'close-revision', 3),
         ]
     # Compare only the first X nodes described in the expected list - otherwise
     # the comparison list gets too long.
@@ -237,7 +232,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         DumpStreamParser.set_fulltext(self, node_baton)
         return 42
     stream = open(os.path.join(os.path.dirname(sys.argv[0]),
-                               "trac/versioncontrol/tests/svnrepos.dump"))
+                               "trac/versioncontrol/tests/svnrepos.dump"), "rb")
     try:
       dsp = DumpStreamParserSubclass()
       ptr, baton = repos.make_parse_fns3(dsp)
@@ -254,16 +249,16 @@ class SubversionRepositoryTestCase(unittest.TestCase):
         logs.append(paths)
 
     # Run get_logs
-    repos.get_logs(self.repos, ['/'], self.rev, 0, True, 0, addLog)
+    repos.get_logs(self.repos, [b'/'], self.rev, 0, True, 0, addLog)
 
     # Count and verify changes
     change_count = 0
     for log in logs:
-      for path_changed in log.values():
+      for path_changed in core._as_list(log.values()):
         change_count += 1
         path_changed.assert_valid()
-    self.assertEqual(logs[2]["/tags/v1.1"].action, "A")
-    self.assertEqual(logs[2]["/tags/v1.1"].copyfrom_path, "/branches/v1x")
+    self.assertEqual(logs[2][b"/tags/v1.1"].action, b"A")
+    self.assertEqual(logs[2][b"/tags/v1.1"].copyfrom_path, b"/branches/v1x")
     self.assertEqual(len(logs), 12)
     self.assertEqual(change_count, 19)
 
@@ -274,14 +269,14 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     prev_root = fs.revision_root(self.fs, self.rev-1)
     editor = ChangeReceiver(this_root, prev_root)
     e_ptr, e_baton = delta.make_editor(editor)
-    repos.dir_delta(prev_root, '', '', this_root, '', e_ptr, e_baton,
+    repos.dir_delta(prev_root, b'', b'', this_root, b'', e_ptr, e_baton,
                     _authz_callback, 1, 1, 0, 0)
 
     # Check results.
     # Ignore the order in which the editor delivers the two sibling files.
     self.assertEqual(set([editor.textdeltas[0].new_data,
                           editor.textdeltas[1].new_data]),
-                     set(["This is a test.\n", "A test.\n"]))
+                     set([b"This is a test.\n", b"A test.\n"]))
     self.assertEqual(len(editor.textdeltas), 2)
 
   def test_unnamed_editor(self):
@@ -292,29 +287,29 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       this_root = fs.revision_root(self.fs, self.rev)
       prev_root = fs.revision_root(self.fs, self.rev-1)
       e_ptr, e_baton = delta.make_editor(ChangeReceiver(this_root, prev_root))
-      repos.dir_delta(prev_root, '', '', this_root, '', e_ptr, e_baton,
+      repos.dir_delta(prev_root, b'', b'', this_root, b'', e_ptr, e_baton,
               _authz_callback, 1, 1, 0, 0)
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""
-    self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, "svn:log",
+    self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, b"svn:log",
                                             _authz_callback),
-                     "''(a few years later)'' Argh... v1.1 was buggy, "
-                     "after all")
+                     b"''(a few years later)'' Argh... v1.1 was buggy, "
+                     b"after all")
 
     # We expect this to complain because we have no pre-revprop-change
     # hook script for the repository.
     self.assertRaises(SubversionException, repos.fs_change_rev_prop3,
-                      self.repos, self.rev, "jrandom", "svn:log",
-                      "Youngest revision", True, True, _authz_callback)
+                      self.repos, self.rev, b"jrandom", b"svn:log",
+                      b"Youngest revision", True, True, _authz_callback)
 
-    repos.fs_change_rev_prop3(self.repos, self.rev, "jrandom", "svn:log",
-                              "Youngest revision", False, False,
+    repos.fs_change_rev_prop3(self.repos, self.rev, b"jrandom", b"svn:log",
+                              b"Youngest revision", False, False,
                               _authz_callback)
 
-    self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, "svn:log",
+    self.assertEqual(repos.fs_revision_prop(self.repos, self.rev, b"svn:log",
                                             _authz_callback),
-                     "Youngest revision")
+                     b"Youngest revision")
 
   def freeze_body(self, pool):
     self.freeze_invoked += 1
@@ -329,42 +324,42 @@ class SubversionRepositoryTestCase(unittest.TestCase):
   def test_lock_unlock(self):
     """Basic lock/unlock"""
 
-    access = fs.create_access('jrandom')
+    access = fs.create_access(b'jrandom')
     fs.set_access(self.fs, access)
-    fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, False)
+    fs.lock(self.fs, b'/trunk/README.txt', None, None, 0, 0, self.rev, False)
     try:
-      fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, False)
+      fs.lock(self.fs, b'/trunk/README.txt', None, None, 0, 0, self.rev, False)
     except core.SubversionException as exc:
       self.assertEqual(exc.apr_err, core.SVN_ERR_FS_PATH_ALREADY_LOCKED)
-    fs.lock(self.fs, '/trunk/README.txt', None, None, 0, 0, self.rev, True)
+    fs.lock(self.fs, b'/trunk/README.txt', None, None, 0, 0, self.rev, True)
 
     self.calls = 0
     self.errors = 0
     def unlock_callback(path, lock, err, pool):
-      self.assertEqual(path, '/trunk/README.txt')
+      self.assertEqual(path, b'/trunk/README.txt')
       self.assertEqual(lock, None)
       self.calls += 1
       if err != None:
         self.assertEqual(err.apr_err, core.SVN_ERR_FS_NO_SUCH_LOCK)
         self.errors += 1
 
-    the_lock = fs.get_lock(self.fs, '/trunk/README.txt')
-    fs.unlock_many(self.fs, {'/trunk/README.txt':the_lock.token}, False,
+    the_lock = fs.get_lock(self.fs, b'/trunk/README.txt')
+    fs.unlock_many(self.fs, {b'/trunk/README.txt':the_lock.token}, False,
                    unlock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.errors, 0)
 
     self.calls = 0
-    fs.unlock_many(self.fs, {'/trunk/README.txt':the_lock.token}, False,
+    fs.unlock_many(self.fs, {b'/trunk/README.txt':the_lock.token}, False,
                    unlock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.errors, 1)
 
     self.locks = 0
     def lock_callback(path, lock, err, pool):
-      self.assertEqual(path, '/trunk/README.txt')
+      self.assertEqual(path, b'/trunk/README.txt')
       if lock != None:
-        self.assertEqual(lock.owner, 'jrandom')
+        self.assertEqual(lock.owner, b'jrandom')
         self.locks += 1
       self.calls += 1
       if err != None:
@@ -374,7 +369,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.calls = 0
     self.errors = 0
     target = fs.lock_target_create(None, self.rev)
-    fs.lock_many(self.fs, {'trunk/README.txt':target},
+    fs.lock_many(self.fs, {b'trunk/README.txt':target},
                  None, False, 0, False, lock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.locks, 1)
@@ -382,7 +377,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     self.calls = 0
     self.locks = 0
-    fs.lock_many(self.fs, {'trunk/README.txt':target},
+    fs.lock_many(self.fs, {b'trunk/README.txt':target},
                  None, False, 0, False, lock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.locks, 0)
@@ -390,21 +385,21 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     self.calls = 0
     self.errors = 0
-    the_lock = fs.get_lock(self.fs, '/trunk/README.txt')
-    repos.fs_unlock_many(self.repos, {'trunk/README.txt':the_lock.token},
+    the_lock = fs.get_lock(self.fs, b'/trunk/README.txt')
+    repos.fs_unlock_many(self.repos, {b'trunk/README.txt':the_lock.token},
                          False, unlock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.errors, 0)
 
     self.calls = 0
-    repos.fs_unlock_many(self.repos, {'trunk/README.txt':the_lock.token},
+    repos.fs_unlock_many(self.repos, {b'trunk/README.txt':the_lock.token},
                          False, unlock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.errors, 1)
 
     self.calls = 0
     self.errors = 0
-    repos.fs_lock_many(self.repos, {'trunk/README.txt':target},
+    repos.fs_lock_many(self.repos, {b'trunk/README.txt':target},
                        None, False, 0, False, lock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.locks, 1)
@@ -412,7 +407,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
 
     self.calls = 0
     self.locks = 0
-    repos.fs_lock_many(self.repos, {'trunk/README.txt':target},
+    repos.fs_lock_many(self.repos, {b'trunk/README.txt':target},
                        None, False, 0, False, lock_callback)
     self.assertEqual(self.calls, 1)
     self.assertEqual(self.locks, 0)

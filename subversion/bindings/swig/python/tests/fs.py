@@ -37,7 +37,7 @@ class SubversionFSTestCase(unittest.TestCase):
 
   def log_message_func(self, items, pool):
     """ Simple log message provider for unit tests. """
-    return "Test unicode log message"
+    return b"Test unicode log message"
 
   def setUp(self):
     """Load a Subversion repository"""
@@ -68,8 +68,12 @@ class SubversionFSTestCase(unittest.TestCase):
 
     clientctx.auth_baton = core.svn_auth_open(providers)
 
-    commitinfo = client.import2(self.tmpfile,
-                                urljoin(self.repos_uri +"/", "trunk/UniTest.txt"),
+    if isinstance(self.tmpfile, bytes):
+        tmpfile_bytes = self.tmpfile
+    else:
+        tmpfile_bytes = self.tmpfile.encode('UTF-8')
+    commitinfo = client.import2(tmpfile_bytes,
+                                urljoin(self.repos_uri + b"/",b"trunk/UniTest.txt"),
                                 True, True,
                                 clientctx)
 
@@ -87,11 +91,12 @@ class SubversionFSTestCase(unittest.TestCase):
     """Test diffing of a repository path using the internal diff."""
 
     # Test standard internal diff
-    fdiff = fs.FileDiff(fs.revision_root(self.fs, self.commitedrev), "/trunk/UniTest.txt",
+    fdiff = fs.FileDiff(fs.revision_root(self.fs, self.commitedrev), b"/trunk/UniTest.txt",
                         None, None, diffoptions=None)
 
     diffp = fdiff.get_pipe()
     diffoutput = diffp.read().decode('utf8')
+    diffp.close()
 
     self.assertTrue(diffoutput.find(u'-' + self.unistr) > 0)
 
@@ -108,10 +113,11 @@ class SubversionFSTestCase(unittest.TestCase):
       else:
         raise err
 
-    fdiff = fs.FileDiff(fs.revision_root(self.fs, self.commitedrev), "/trunk/UniTest.txt",
+    fdiff = fs.FileDiff(fs.revision_root(self.fs, self.commitedrev), b"/trunk/UniTest.txt",
                         None, None, diffoptions=[])
     diffp = fdiff.get_pipe()
     diffoutput = diffp.read().decode('utf8')
+    diffp.close()
 
     self.assertTrue(diffoutput.find(u'< ' + self.unistr) > 0)
 

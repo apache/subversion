@@ -102,6 +102,8 @@ AC_DEFUN(SVN_FIND_SWIG,
  
   SWIG_PY_COMPILE="none"
   SWIG_PY_LINK="none"
+  SWIG_PY_OPTS="none"
+  SWIG_PY_ERRMSG="check config.log for details"
   if test "$PYTHON" != "none"; then
     AC_MSG_NOTICE([Configuring python swig binding])
 
@@ -111,25 +113,66 @@ AC_DEFUN(SVN_FIND_SWIG,
     SWIG_PY_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_python_includes"
 
     if test "$ac_cv_python_includes" = "none"; then
+      SWIG_PY_ERRMSG="no distutils found"
       AC_MSG_WARN([python bindings cannot be built without distutils module])
+    else
+
+      python_header_found="no"
+
+      save_cppflags="$CPPFLAGS"
+      CPPFLAGS="$CPPFLAGS $ac_cv_python_includes"
+      AC_CHECK_HEADER(Python.h, [
+        python_header_found="yes"
+      ])
+      CPPFLAGS="$save_cppflags"
+
+      if test "$python_header_found" = "no"; then
+        SWIG_PY_ERRMSG="no Python.h found"
+        AC_MSG_WARN([Python.h not found; disabling python swig bindings])
+      else
+        SVN_PY3C()
+
+        if test "$py3c_found" = "no"; then
+          SWIG_PY_ERRMSG="py3c library not found"
+          AC_MSG_WARN([py3c library not found; disabling python swig bindings])
+        else
+          AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
+            ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
+          ])
+          SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
+      
+          AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
+            ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
+          ])
+          SWIG_PY_LINK="$ac_cv_python_link"
+      
+          AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
+            ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
+          ])
+          SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
+
+          AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
+            ac_cv_python_is_py3="no"
+            $PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
+               ac_cv_python_is_py3="yes"
+          ])
+
+          if test "$ac_cv_python_is_py3" = "yes"; then
+             SWIG_PY_OPTS="-python -py3"
+          else
+             SWIG_PY_OPTS="-python -classic"
+          fi
+
+          dnl SWIG Python bindings successfully configured, clear the error message
+          SWIG_PY_ERRMSG=""
+        fi
+            
+      fi
     fi
 
-    AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
-      ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
-    ])
-    SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
-
-    AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
-      ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
-    ])
-    SWIG_PY_LINK="$ac_cv_python_link"
-
-    AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
-      ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
-    ])
-    SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
   fi
 
+  SWIG_PL_ERRMSG="check config.log for details"
   if test "$PERL" != "none"; then
     AC_MSG_CHECKING([perl version])
     dnl Note that the q() bit is there to avoid unbalanced brackets
@@ -140,6 +183,9 @@ AC_DEFUN(SVN_FIND_SWIG,
       SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
       SWIG_PL_LINK="`$PERL -MExtUtils::Embed -e ldopts`"
       SWIG_PL_LINK="`SVN_REMOVE_STANDARD_LIB_DIRS($SWIG_PL_LINK)`"
+
+      dnl SWIG Perl bindings successfully configured, clear the error message
+      SWIG_PL_ERRMSG=""
     else
       AC_MSG_WARN([perl bindings require perl 5.8.0 or newer.])
     fi
@@ -147,6 +193,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   SWIG_RB_COMPILE="none"
   SWIG_RB_LINK="none"
+  SWIG_RB_ERRMSG="check config.log for details"
   if test "$RUBY" != "none"; then
     if test x"$SWIG_VERSION" = x"3""00""008"; then
       # Use a local variable to escape the '#' sign.
@@ -264,14 +311,20 @@ int main()
                   [svn_ruby_test_verbose="$svn_cv_ruby_test_verbose"])
       SWIG_RB_TEST_VERBOSE="$svn_ruby_test_verbose"
       AC_MSG_RESULT([$SWIG_RB_TEST_VERBOSE])
+
+    dnl SWIG Ruby bindings successfully configured, clear the error message
+    SWIG_RB_ERRMSG=""
   fi
   AC_SUBST(SWIG)
   AC_SUBST(SWIG_PY_INCLUDES)
   AC_SUBST(SWIG_PY_COMPILE)
   AC_SUBST(SWIG_PY_LINK)
   AC_SUBST(SWIG_PY_LIBS)
+  AC_SUBST(SWIG_PY_OPTS)
+  AC_SUBST(SWIG_PY_ERRMSG)
   AC_SUBST(SWIG_PL_INCLUDES)
   AC_SUBST(SWIG_PL_LINK)
+  AC_SUBST(SWIG_PL_ERRMSG)
   AC_SUBST(SWIG_RB_LINK)
   AC_SUBST(SWIG_RB_LIBS)
   AC_SUBST(SWIG_RB_INCLUDES)
@@ -279,4 +332,5 @@ int main()
   AC_SUBST(SWIG_RB_SITE_LIB_DIR)
   AC_SUBST(SWIG_RB_SITE_ARCH_DIR)
   AC_SUBST(SWIG_RB_TEST_VERBOSE)
+  AC_SUBST(SWIG_RB_ERRMSG)
 ])

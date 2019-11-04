@@ -175,6 +175,8 @@ def _usage_exit(err=None):
   print("")
   print("  --with-swig=DIR")
   print("           look for the swig program in DIR")
+  print("  --with-py3c=DIR")
+  print("           look for the py3c library in DIR")
   print("")
   print("  --with-sqlite=DIR")
   print("           look for sqlite in DIR")
@@ -249,6 +251,7 @@ if __name__ == '__main__':
                             'with-jdk=',
                             'with-junit=',
                             'with-swig=',
+                            'with-py3c=',
                             'with-sqlite=',
                             'with-sasl=',
                             'with-apr_memcache=',
