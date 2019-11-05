@@ -23,6 +23,8 @@
 
 /* Tell swigutil_py.h that we're inside the implementation */
 #define SVN_SWIG_SWIGUTIL_PY_C
+/* Avoid deprecation warnings about PY_SSIZE_T_CLEAN since Python 3.8 */
+#define PY_SSIZE_T_CLEAN
 
 #include <Python.h>
 
@@ -1990,7 +1992,7 @@ static svn_error_t *change_dir_prop(void *dir_baton,
 #endif
                                     ib->baton, name,
                                     value ? value->data : NULL,
-                                    value ? value->len : 0,
+                                    (Py_ssize_t) (value ? value->len : 0),
                                     make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
@@ -2195,7 +2197,7 @@ static svn_error_t *change_file_prop(void *file_baton,
 #endif
                                     ib->baton, name,
                                     value ? value->data : NULL,
-                                    value ? value->len : 0,
+                                    (Py_ssize_t) (value ? value->len : 0),
                                     make_ob_pool, pool)) == NULL)
     {
       err = callback_exception_error();
@@ -2432,7 +2434,8 @@ static svn_error_t *parse_fn3_set_revision_property(void *revision_baton,
 #endif
                                     ib->baton, name,
                                     value ? value->data : NULL,
-                                    value ? value->len : 0)) == NULL)
+                                    (Py_ssize_t) (value ? value->len : 0)))
+      == NULL)
     {
       err = callback_exception_error();
       goto finished;
@@ -2467,7 +2470,8 @@ static svn_error_t *parse_fn3_set_node_property(void *node_baton,
 #endif
                                     ib->baton, name,
                                     value ? value->data : NULL,
-                                    value ? value->len : 0)) == NULL)
+                                    (Py_ssize_t) (value ? value->len : 0)))
+      == NULL)
     {
       err = callback_exception_error();
       goto finished;
@@ -2802,7 +2806,7 @@ write_handler_pyio(void *baton, const char *data, apr_size_t *len)
       svn_swig_py_acquire_py_lock();
       if ((result = PyObject_CallMethod(py_io, (char *)"write",
                                        (char *) SVN_SWIG_BYTES_FMT "#",
-                                       data, *len)) == NULL)
+                                       data, (Py_ssize_t) *len)) == NULL)
         {
           err = callback_exception_error();
         }
