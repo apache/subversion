@@ -322,15 +322,19 @@ class SMTPOutput(MailedOutput):
 
       server.sendmail(self.from_addr, self.to_addrs, self.buffer.getvalue())
 
+    ### TODO: 'raise .. from' is Python 3+. When we convert this
+    ###       script to Python 3, uncomment 'from detail' below
+    ###       (2 instances):
+
     except smtplib.SMTPRecipientsRefused as detail:
       sys.stderr.write("mailer.py: SMTP recipient(s) refused: %s: %s\n"
                            % (self.to_addrs, detail,))
-      raise MessageSendFailure from detail
+      raise MessageSendFailure ### from detail
 
     except smtplib.SMTPSenderRefused as detail:
       sys.stderr.write("mailer.py: SMTP sender refused: %s: %s\n"
                            % (self.from_addr, detail,))
-      raise MessageSendFailure from detail
+      raise MessageSendFailure ### from detail
 
     except smtplib.SMTPException as detail:
       # All other errors are fatal; this includes:
