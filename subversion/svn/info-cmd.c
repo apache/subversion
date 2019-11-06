@@ -365,7 +365,8 @@ typedef enum
   /* Working copy information */
   info_item_wc_root,
   info_item_schedule,
-  info_item_depth
+  info_item_depth,
+  info_item_changelist
 } info_item_t;
 
 /* Mapping between option keywords and info_item_t. */
@@ -392,6 +393,7 @@ static const info_item_map_t info_item_map[] =
     { MAKE_STRING("wc-root"),             info_item_wc_root },
     { MAKE_STRING("schedule"),            info_item_schedule },
     { MAKE_STRING("depth"),               info_item_depth },
+    { MAKE_STRING("changelist"),          info_item_changelist },
   };
 #undef MAKE_STRING
 
@@ -1220,6 +1222,13 @@ print_info_item(void *baton,
       SVN_ERR(print_info_item_string(
                   ((info->wc_info && info->kind == svn_node_dir)
                    ? svn_depth_to_word(info->wc_info->depth) : NULL),
+                  target_path, pool));
+      break;
+
+    case info_item_changelist:
+      SVN_ERR(print_info_item_string(
+                  ((info->wc_info && info->wc_info->changelist)
+                   ? info->wc_info->changelist : NULL),
                   target_path, pool));
       break;
 
