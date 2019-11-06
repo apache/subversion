@@ -8,6 +8,11 @@ Version 1.14.0
 (?? ??? 20XX, from /branches/1.14.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.14.0
 
+ User-visible changes:
+  - Minor new features and improvements:
+    * Add 'svn info --show-item=changelist' (r1869481)
+
+
 Version 1.13.0
 (30 Oct 2019, from /branches/1.13.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.13.0
