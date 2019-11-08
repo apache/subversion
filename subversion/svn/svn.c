@@ -431,7 +431,9 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                             "
                           "current revision (recommended when tagging)")},
   {"show-item", opt_show_item, 1,
-                       N_("print only the item identified by ARG:\n"
+                       N_("print only the items identified by ARG, which is\n"
+                          "                             "
+                          "a comma-separated list of:\n"
                           "                             "
                           "   'kind'       node kind of TARGET\n"
                           "                             "

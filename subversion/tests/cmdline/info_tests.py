@@ -644,6 +644,10 @@ def info_item_simple(sbox):
     ['1'], [],
     'info', '--show-item=revision', '--no-newline',
     sbox.ospath(''))
+  svntest.actions.run_and_verify_svn(
+    ['1\tdir'], [],
+    'info', '--show-item=revision,kind', '--no-newline',
+    sbox.ospath(''))
 
 
 def info_item_simple_multiple(sbox):
