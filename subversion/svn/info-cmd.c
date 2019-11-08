@@ -462,55 +462,54 @@ find_print_what(const char *keywords_from_argv,
       const char *keyword = APR_ARRAY_IDX(whats, i, const char *);
       switch (svn_cl__similarity_check(keyword, keywords,
                                        info_item_map_len, scratch_pool))
-      /* TODO: indent this block */
-    {
-      const info_item_map_t *kw0;
-      const info_item_map_t *kw1;
-      const info_item_map_t *kw2;
+        {
+          const info_item_map_t *kw0;
+          const info_item_map_t *kw1;
+          const info_item_map_t *kw2;
 
-    case 0:                     /* Exact match. */
-      kw0 = keywords[0]->data;
-      APR_ARRAY_PUSH(receiver_baton->print_whats, info_item_t) =
-        kw0->print_what;
-      break;
+        case 0:                     /* Exact match. */
+          kw0 = keywords[0]->data;
+          APR_ARRAY_PUSH(receiver_baton->print_whats, info_item_t) =
+            kw0->print_what;
+          break;
 
-    case 1:
-      /* The best alternative isn't good enough */
-      return svn_error_createf(
-          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for --show-item"),
-          keyword);
+        case 1:
+          /* The best alternative isn't good enough */
+          return svn_error_createf(
+              SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              _("'%s' is not a valid value for --show-item"),
+              keyword);
 
-    case 2:
-      /* There is only one good candidate */
-      kw0 = keywords[0]->data;
-      return svn_error_createf(
-          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for --show-item;"
-            " did you mean '%s'?"),
-          keyword, kw0->keyword.data);
+        case 2:
+          /* There is only one good candidate */
+          kw0 = keywords[0]->data;
+          return svn_error_createf(
+              SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              _("'%s' is not a valid value for --show-item;"
+                " did you mean '%s'?"),
+              keyword, kw0->keyword.data);
 
-    case 3:
-      /* Suggest a list of the most likely candidates */
-      kw0 = keywords[0]->data;
-      kw1 = keywords[1]->data;
-      return svn_error_createf(
-          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for --show-item;"
-            " did you mean '%s' or '%s'?"),
-          keyword, kw0->keyword.data, kw1->keyword.data);
+        case 3:
+          /* Suggest a list of the most likely candidates */
+          kw0 = keywords[0]->data;
+          kw1 = keywords[1]->data;
+          return svn_error_createf(
+              SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              _("'%s' is not a valid value for --show-item;"
+                " did you mean '%s' or '%s'?"),
+              keyword, kw0->keyword.data, kw1->keyword.data);
 
-    default:
-      /* Never suggest more than three candidates */
-      kw0 = keywords[0]->data;
-      kw1 = keywords[1]->data;
-      kw2 = keywords[2]->data;
-      return svn_error_createf(
-          SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-          _("'%s' is not a valid value for --show-item;"
-            " did you mean '%s', '%s' or '%s'?"),
-          keyword, kw0->keyword.data, kw1->keyword.data, kw2->keyword.data);
-    }
+        default:
+          /* Never suggest more than three candidates */
+          kw0 = keywords[0]->data;
+          kw1 = keywords[1]->data;
+          kw2 = keywords[2]->data;
+          return svn_error_createf(
+              SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+              _("'%s' is not a valid value for --show-item;"
+                " did you mean '%s', '%s' or '%s'?"),
+              keyword, kw0->keyword.data, kw1->keyword.data, kw2->keyword.data);
+        }
     }
 
   if (whats->nelts == 0)
@@ -1149,113 +1148,114 @@ print_info_item(void *baton,
     {
       if (i > 0) 
         SVN_ERR(svn_cmdline_fputs("\t", stdout, pool));
+
       switch (APR_ARRAY_IDX(receiver_baton->print_whats, i, info_item_t))
-      /* TODO: indent this block */
-    {
-    case info_item_kind:
-      SVN_ERR(print_info_item_string(svn_node_kind_to_word(info->kind),
-                                     target_path, pool));
-      break;
-
-    case info_item_url:
-      SVN_ERR(print_info_item_string(info->URL, target_path, pool));
-      break;
-
-    case info_item_relative_url:
-      SVN_ERR(print_info_item_string(relative_url(info, pool),
-                                     target_path, pool));
-      break;
-
-    case info_item_repos_root_url:
-      SVN_ERR(print_info_item_string(info->repos_root_URL, target_path, pool));
-      break;
-
-    case info_item_repos_uuid:
-      SVN_ERR(print_info_item_string(info->repos_UUID, target_path, pool));
-      break;
-
-    case info_item_repos_size:
-      if (info->kind != svn_node_file)
         {
-          receiver_baton->start_new_line = FALSE;
-          return SVN_NO_ERROR;
-        }
+        case info_item_kind:
+          SVN_ERR(print_info_item_string(svn_node_kind_to_word(info->kind),
+                                         target_path, pool));
+          break;
 
-      if (info->size == SVN_INVALID_FILESIZE)
-        {
-          if (receiver_baton->multiple_targets)
+        case info_item_url:
+          SVN_ERR(print_info_item_string(info->URL, target_path, pool));
+          break;
+
+        case info_item_relative_url:
+          SVN_ERR(print_info_item_string(relative_url(info, pool),
+                                         target_path, pool));
+          break;
+
+        case info_item_repos_root_url:
+          SVN_ERR(print_info_item_string(info->repos_root_URL, target_path,
+                                         pool));
+          break;
+
+        case info_item_repos_uuid:
+          SVN_ERR(print_info_item_string(info->repos_UUID, target_path, pool));
+          break;
+
+        case info_item_repos_size:
+          if (info->kind != svn_node_file)
             {
               receiver_baton->start_new_line = FALSE;
               return SVN_NO_ERROR;
             }
 
-          return svn_error_createf(
-              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-              _("can't show in-repository size of working copy file '%s'"),
-              actual_target_path);
+          if (info->size == SVN_INVALID_FILESIZE)
+            {
+              if (receiver_baton->multiple_targets)
+                {
+                  receiver_baton->start_new_line = FALSE;
+                  return SVN_NO_ERROR;
+                }
+
+              return svn_error_createf(
+                  SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                  _("can't show in-repository size of working copy file '%s'"),
+                  actual_target_path);
+            }
+
+          {
+            const char *sizestr;
+            SVN_ERR(svn_cl__format_file_size(&sizestr, info->size,
+                                             receiver_baton->file_size_unit,
+                                             TRUE, pool));
+            SVN_ERR(print_info_item_string(sizestr, target_path, pool));
+          }
+          break;
+
+        case info_item_revision:
+          SVN_ERR(print_info_item_revision(info->rev, target_path, pool));
+          break;
+
+        case info_item_last_changed_rev:
+          SVN_ERR(print_info_item_revision(info->last_changed_rev,
+                                           target_path, pool));
+          break;
+
+        case info_item_last_changed_date:
+          SVN_ERR(print_info_item_string(
+                      (!info->last_changed_date ? NULL
+                       : svn_time_to_cstring(info->last_changed_date, pool)),
+                      target_path, pool));
+          break;
+
+        case info_item_last_changed_author:
+          SVN_ERR(print_info_item_string(info->last_changed_author,
+                                         target_path, pool));
+          break;
+
+        case info_item_wc_root:
+          SVN_ERR(print_info_item_string(
+                      (info->wc_info && info->wc_info->wcroot_abspath
+                       ? info->wc_info->wcroot_abspath : NULL),
+                      target_path, pool));
+          break;
+
+        case info_item_schedule:
+          SVN_ERR(print_info_item_string(
+                      (info->wc_info
+                       ? schedule_str(info->wc_info->schedule) : NULL),
+                      target_path, pool));
+          break;
+
+        case info_item_depth:
+          SVN_ERR(print_info_item_string(
+                      ((info->wc_info && info->kind == svn_node_dir)
+                       ? svn_depth_to_word(info->wc_info->depth) : NULL),
+                      target_path, pool));
+          break;
+
+        case info_item_changelist:
+          SVN_ERR(print_info_item_string(
+                      ((info->wc_info && info->wc_info->changelist)
+                       ? info->wc_info->changelist : NULL),
+                      target_path, pool));
+          break;
+
+        default:
+          SVN_ERR_MALFUNCTION();
         }
-
-      {
-        const char *sizestr;
-        SVN_ERR(svn_cl__format_file_size(&sizestr, info->size,
-                                         receiver_baton->file_size_unit,
-                                         TRUE, pool));
-        SVN_ERR(print_info_item_string(sizestr, target_path, pool));
-      }
-      break;
-
-    case info_item_revision:
-      SVN_ERR(print_info_item_revision(info->rev, target_path, pool));
-      break;
-
-    case info_item_last_changed_rev:
-      SVN_ERR(print_info_item_revision(info->last_changed_rev,
-                                       target_path, pool));
-      break;
-
-    case info_item_last_changed_date:
-      SVN_ERR(print_info_item_string(
-                  (!info->last_changed_date ? NULL
-                   : svn_time_to_cstring(info->last_changed_date, pool)),
-                  target_path, pool));
-      break;
-
-    case info_item_last_changed_author:
-      SVN_ERR(print_info_item_string(info->last_changed_author,
-                                     target_path, pool));
-      break;
-
-    case info_item_wc_root:
-      SVN_ERR(print_info_item_string(
-                  (info->wc_info && info->wc_info->wcroot_abspath
-                   ? info->wc_info->wcroot_abspath : NULL),
-                  target_path, pool));
-      break;
-
-    case info_item_schedule:
-      SVN_ERR(print_info_item_string(
-                  (info->wc_info
-                   ? schedule_str(info->wc_info->schedule) : NULL),
-                  target_path, pool));
-      break;
-
-    case info_item_depth:
-      SVN_ERR(print_info_item_string(
-                  ((info->wc_info && info->kind == svn_node_dir)
-                   ? svn_depth_to_word(info->wc_info->depth) : NULL),
-                  target_path, pool));
-      break;
-
-    case info_item_changelist:
-      SVN_ERR(print_info_item_string(
-                  ((info->wc_info && info->wc_info->changelist)
-                   ? info->wc_info->changelist : NULL),
-                  target_path, pool));
-      break;
-
-    default:
-      SVN_ERR_MALFUNCTION();
-    }
     }
 
   receiver_baton->start_new_line = TRUE;
