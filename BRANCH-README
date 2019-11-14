@@ -6,7 +6,7 @@ PURPOSE
 =======
 
 For years, subversion users have used third-party scripts to do what
-should rightfully be a part of subversion itself. This branch aims
+should rightfully be a part of Subversion itself. This branch aims
 to implement bisect functionality and make it available via the
 public API.
 
@@ -14,7 +14,8 @@ public API.
 SPEC
 ====
 
-svn bisect start [-rN[:M]]
+svn bisect start [-rN[:M]] [--term-old=good] [--term-new=bad]
+-------------------------------------------------------------
 
 Initialize the bisection state.
 If a state already exists, clean it up and create a fresh one.
@@ -22,14 +23,27 @@ If a revision range is specified, limit bisection to this range.
 If a single revision is specified, bisect from that revision to HEAD.
 If no revision is specified, bisect from revision 1 to HEAD.
 
+The "--term-old" and/or "--term-new" options allow the use of other
+terms besides "good" and "bad" with svn bisect. This is useful when
+running a bisection for some other reason than to find the revision
+that introduced a bug. Any term can be used but existing Subversion
+command and option strings cannot be used.
+
+
 svn bisect bad [-rN]
+--------------------
 
 If used before "svn bisect run", mark the specified revision as "bad".
 
 If used during interactive bisection, no revision should be specified.
 The current revision is marked as "bad".
 
+If the "--term-new" option was given to "svn bisect start" with a
+value other than "bad", then replace "bad" with the term given.
+
+
 svn bisect good [-rN]
+---------------------
 
 If used before "svn bisect run", mark the specified revision as
 "good".
@@ -37,29 +51,41 @@ If used before "svn bisect run", mark the specified revision as
 If used during interactive bisection, no revision should be
 specified. The current revision is marked as "good".
 
+If the "--term-old" option was given to "svn bisect start" with a
+value other than "good", then replace "good" with the term given.
+
+
 svn bisect skip [-rN[:M]]
+-------------------------
 
 If specified before "svn bisect run", mark the specified revision or
 revision range as "skip".
 
 If used during the interactive bisection, the current revision will
-be marked "skip", and a nearby revision will be chosen.
-#TODO: How to choose the nearby revision?
+be marked "skip", and a nearby revision will be chosen. See below.
+
 
 svn bisect reset [-rN]
+----------------------
 
 Update the working copy to the specified revision and clean the
 bisection state. If no revision is specified, it takes the working
 copy to the revision before "svn bisect start" was run.
 
+
 svn bisect run [my_script [args]]
+---------------------------------
 
 Start the bisection. If no script is given, start the bisect in
-interactive mode. i.e after updating to a specific revision, wait 
+interactive mode. i.e after updating to a specific revision, wait
 for the user to manually run tests and mark the revision as good,
 bad or skip.
 
-The script should follow the following spec:
+
+Test Script Exit Codes
+----------------------
+
+The user-provided script's exit codes should follow this spec:
 
 Good revision   : Exit Code 0
 Bad revision    : Exit Code 1 thru 127 (except 125)
@@ -70,9 +96,267 @@ The above mentioned exit codes conform to the way git bisect does
 things.
 
 
+HOW TO USE
+==========
+
+ 1. Have a checked out working copy.
+
+ 2. In the working copy, navigate to the directory in which the
+    bisection will run. This may be the root directory of the working
+    copy or any subdirectory.
+
+ 3. Run 'svn bisect start [-rN[:M]]' to set the initial bounds for the
+    bisection.
+
+ 4. Optionally, run one or more invocation(s) of
+    'svn bisect skip -rN[:M] to mark revisions for explicit skipping.
+
+ 5. Interactive mode:
+    a. Run 'svn bisect run' with no script argument.
+    b. Subversion will choose a revision and update to it.
+    c. Test the revision.
+    d. Based on the result of the test, run 'svn bisect good',
+       'svn bisect bad', or 'svn bisect skip' with no argument.
+    e. If there are no more revisions to test, a summary is printed
+       which identifies the sought-after revision and this process
+       ends. Otherwise, repeat from step 5a (run 'svn bisect run',
+       etc).
+
+ 6. Automatic mode:
+    a. Run 'svn bisect run' with a script argument.
+    b. Subversion will repeatedly update the working copy to various
+       revisions and run the script at each revision it chooses.
+    c. By means of its exit code, the script will tell Subversion
+       whether this is a good, bad, or skip revision, or whether the
+       bisection should abort due to a fatal error.
+    d. When there are no more revisions to test, a summary is printed
+       which identifies the sought-after revision and the bisection
+       ends.
+
+
+THE GOOD, THE BAD, AND THE SKIPPED
+==================================
+
+As explained above, certain aspects are inspired by Git (such as the
+test script's return codes that signify Good, Bad, Skip, and Abort).
+
+But Subversion knows a few tricks that Git doesn't, such as the
+ability to operate on subsets of repositories. This ability makes it
+possible to house multiple projects in a single repository.
+Subversion's own source code lives in such a "megarepo" alongside
+other ASF projects. This also makes it possible to operate on a subset
+of a project, such as, say, the documentation, which could reside in a
+subdirectory of a project's main directory). This is also Subversion's
+branching model.
+
+This is relevant to the design of a bisect feature because it means
+that between any two revisions, there may be numerous revisions in
+which nothing changes. In those revisions, changes were made in other
+parts of the repository and did not touch the subset being operated
+on.
+
+Thus, there are two reasons why a revision should be skipped:
+
+(1) The revision is implicitly skipped if it is not "operative"
+    (defined below).
+
+(2) The revision is explicitly skipped if the user or the user's test
+    script tell us to skip it.
+
+Both of these are handled by the algorithm. See below.
+
+
+DEFINITIONS
+===========
+
+ 1. Operative: For the purposes of this bisect feature, a revision is
+    "operative" if something changes during that revision in the
+    directory in which 'svn bisect' is run and/or its subdirectories.
+    'Something' can mean file content changes, property changes,
+    and/or tree changes. In other words, if 'svn diff -rN:M-1'
+    produces no output, then there are no operative revisions between
+    N and M (though revision M could be operative).
+
+
+PERSISTENCE RECORD
+==================
+
+In the case of interactive bisection, the svn client exits after each
+invocation. Therefore, a working copy persistence record is needed.
+
+Record contents:
+* N and M: Revision numbers representing the initial bounds as given
+  by user at 'svn bisect start'. These are constants for the duration
+  of the bisection.
+* n, m, r: Revision numbers representing the current bounds (n, m)
+  and revision being tested (r). Note that n < r < m.
+* Set of 'good' revisions.
+* Set of 'bad' revisions.
+* Set of 'skip' revisions.
+* Set of tested revisions.
+* ZigZag: An integer, either 1 or -1, used for zig-zagging around
+  skipped revisions in search of a revision to test.
+
+Notes:
+(1) Names are subject to change.
+(2) The storage format for the above "sets" is not yet determined.
+
+
+ALGORITHM
+=========
+
+Notes:
+(1) This algorithm is a work in progress.
+(2) The pseudocode below is not written according to any standard.
+
+Let n, m, r be revision numbers, where n < r < m.
+
+
+svn bisect start [-rN:M]
+------------------------
+
+ 1. If N is specified, set n = N. Otherwise set n = 1.
+
+ 2. If M is specified, set m = M. Otherwise set m = HEAD.
+
+ 3. Sanity check:
+    a. Make sure the repository contains at least r1 through r4.
+       Otherwise it makes no sense to run a bisection!
+    b. Make sure M > N + 1. Otherwise it makes no sense to run a
+       bisection!
+
+ 4. Initialize r = 0.
+
+ 5. Initialize sets of good, bad, skip, and tested revisions to empty
+    sets.
+
+ 6. Write persistence record to wc.
+
+
+svn bisect skip [-rN[:M]]
+-------------------------
+
+ 1. If no persistence record, 'svn bisect start' was not run; report
+    error and exit.
+
+ 2. Mark the given revision(s) as 'skip' (i.e., record their numbers
+    in the set of 'skip' revisions.
+
+
+Function: Find Middle Revision(n, m):
+-------------------------------------
+
+ 1. If n >= (m - 1), return error code.
+
+ 2. Calculate X = number of operative revisions between n and m, not
+    including n and m.
+
+ 3. If X == 0, return error code.
+
+ 4. Set s = (ceil(X/2))th operative revision after n.
+
+ 5. Return that revision number.
+
+
+Function: Find Alternate Middle Revision(n, m, r):
+--------------------------------------------------
+
+ 1. If n >= (m - 1), return error code.
+
+ 2. ZigZag = -ZigZag
+
+ 3. If ZigZag > 0:
+    a. Set s = next operative revision after r.
+    b. If s >= m, set s = previous operative revision before r.
+    c. If s <= n, return error code.
+
+ 4. If ZigZag < 0:
+    a. Set s = previous operative revision before r.
+    b. If s <= n, set s = next operative revision after r.
+    c. If s >= m, return error code.
+
+ 5. Return s
+
+
+Function: Choose Revision To Test(n, m):
+----------------------------------------
+
+ 1. Set r = Find Middle Revision. If error, return error code.
+
+ 2. If r is an operative revision, return r.
+
+ 3. Set r = Find Alternate Middle Revision.
+    If error, return error code.
+
+ 4. Return r.
+
+
+svn bisect run [script]
+-----------------------
+
+ 1. If script specified, automatic mode else interactive mode.
+
+ 2. Adjust n and m to operative revisions and ensure they do not meet
+    or cross:
+    a. If n >= (m - 1), report error and exit.
+    b. If revision n is not operative, set n to the next operative
+       revision > n.
+    c. If n >= (m - 1), report error and exit.
+    d. If revision m is not operative, set m to the previous operative
+       revision < m.
+    e. If m < n, report error and exit.
+
+ 3. Set r = Choose Revision To Test. If error:
+    a. If revisions have been tested, revision m is the sought after
+       revision. Go to step 11.
+    b. Otherwise, there are no revisions to test. Report error and
+       exit.
+
+ 4. Update to revision r.
+
+ 5. If interactive mode, exit. User should test and run appropriate
+    commands.
+
+ 6. Run script.
+
+ 7. If script reports 'error':
+    a. The bisection is terminated.
+    b. Report error and exit.
+
+ 8. If script reports 'good':
+    a. Add revision r to 'good' set.
+    b. Set n = r.
+    c. Set r = Choose Revision To Test. If error, revision m is the
+       sought after revision. Go to step 11.
+    d. Go to step 4.
+
+ 9. If bad:
+    a. Add revision r to 'bad' set.
+    b. Set m = r.
+    c. Set r = Choose Revision To Test. If error, revision m is the
+       sought after revision. Go to step 11.
+    d. Go to step 4.
+
+10. If skip:
+    a. Add revision r to 'skip' set.
+    b. Set s = Find Alternate Middle Revision.
+    c. If error, revision m is the sought after revision. Go to
+       step 11.
+    d. Set r = s.
+    e. Go to step 4.
+
+11. Found the sought after revision.
+    a. Print report, which may be some combination of:
+       - The initial bounds N and M as given to "svn bisect start".
+       - Which revisions were found 'good', 'bad', and 'skip'.
+       - Summary: The sought after revision and how many revisions
+         were tested to find it.
+    b. Clean up persistence structure. The bisection is complete.
+
 
 MILESTONES
 ==========
+
 This part of the document serves as a progress tracker by defining
 the milestones that need to be completed. It contains a set of phases,
 each with it's own tasks.
