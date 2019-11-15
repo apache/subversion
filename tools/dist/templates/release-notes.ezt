@@ -53,9 +53,7 @@
 releases, and is as of the time of its release considered the current
 "best" release.  Any feature or bugfix in 1.0.x through [previous-major-minor].x is also
 in [major-minor], but [major-minor] contains features and bugfixes not present in any
-earlier release.  The new features will eventually be documented in a
-[major-minor] version of the free Subversion book
-(<a href="http://svnbook.red-bean.com/" >svnbook.red-bean.com</a>).</p>
+earlier release.</p>
 
 <p>This page describes only major changes.  For a complete list of
 changes, see the [major-minor] section of the <a
