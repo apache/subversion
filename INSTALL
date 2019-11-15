@@ -415,13 +415,53 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      10.  Python 2.7 or newer (https://www.python.org/)  (OPTIONAL)
+      10.  Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
 
-      If you want to run "make check" or build from the latest source
-      under Unix/Windows as described in section II.B, II.E and III.D,
-      install Python 2.7 or higher on your system. The majority of the
-      test suite is written in Python, as is part of Subversion's build
-      system.
+      Subversion does not require Python for its basic operation.
+      However, Python is required for building and testing Subversion
+      and for using Subversion's SWIG Python bindings or hook scripts
+      coded in Python.
+
+      The majority of Subversion's test suite is written in Python, as
+      is part of Subversion's build system.
+
+      In more detail, Python is required to do any of the following:
+
+      * Use the SWIG Python bindings.
+      * Use the ctypes Python bindings.
+      * Use hook scripts coded in Python.
+      * Build Subversion from a tarball on Unix-like systems and run
+        Subversion's test suite as described in section II.B.
+      * Build Subversion on Windows as described in section II.E.
+      * Build Subversion from a working copy checked out from
+        Subversion's own repository (whether or not running the test
+        suite).
+      * Build the SWIG Python bindings.
+      * Build the ctypes Python bindings.
+      * Testing as described in section III.D.
+
+      The Python bindings are used by:
+
+      * Third-party programs (e.g., ViewVC)
+      * Scripts distributed with Subversion itself in the tools/
+        subdirectory.
+      * Any in-house scripts you may have.
+
+      Python is NOT required to do any of the following:
+
+      * Use the core command-line binaries (svn, svnadmin, svnsync,
+        etc.)
+      * Use Subversion's C libraries.
+      * Use any of Subversion's other language bindings.
+      * Build Subversion from a tarball on Unix-like systems without
+        running Subversion's test suite
+
+      Although this section calls for Python 3.x, Subversion still
+      technically works with Python 2.7.  However, Support for Python
+      2.7 is being phased out.  As of 1 January 2020, Python 2.7 has
+      reached end of life.  All users are strongly encouraged to move
+      to Python 3.
+
 
       11. Perl 5.8 or newer (Windows only)  (OPTIONAL)
 
