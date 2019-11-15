@@ -57,24 +57,12 @@ struct revert_with_write_lock_baton {
 
 /* (Note: All arguments are in the baton above.)
 
-   Attempt to revert LOCAL_ABSPATH.
+   Attempt to revert LOCAL_ABSPATH by calling svn_wc_revert6(), which
+   see for further details.
 
-   If DEPTH is svn_depth_empty, revert just the properties on the
-   directory; else if svn_depth_files, revert the properties and any
-   files immediately under the directory; else if
-   svn_depth_immediates, revert all of the preceding plus properties
-   on immediate subdirectories; else if svn_depth_infinity, revert
-   path and everything under it fully recursively.
-
-   CHANGELISTS is an array of const char * changelist names, used as a
-   restrictive filter on items reverted; that is, don't revert any
-   item unless it's a member of one of those changelists.  If
-   CHANGELISTS is empty (or altogether NULL), no changelist filtering occurs.
-
-   Consult CTX to determine whether or not to revert timestamp to the
-   time of last commit ('use-commit-times = yes').
-
-   If PATH is unversioned, return SVN_ERR_UNVERSIONED_RESOURCE. */
+   If the target isn't versioned, send a 'skip' notification and return
+   no error.
+ */
 static svn_error_t *
 revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
