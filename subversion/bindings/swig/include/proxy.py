@@ -25,13 +25,6 @@
 
     return value
 
-  # SWIG classes generated with -classic do not define this variable,
-  # so set it to 0 when it doesn't exist
-  try:
-    _newclass
-  except NameError:
-    _newclass = 0
-
   # Attribute access must be intercepted to ensure that objects coming from
   # read attribute access match those that are set with write attribute access.
   # Specifically the metadata, such as the associated apr_pool object, should
@@ -58,13 +51,7 @@
 
       object.__getattribute__(self, 'assert_valid')()
 
-      try:
-        value = object.__getattribute__(self, name)
-      except AttributeError:
-        value = _swig_getattr(self,
-                              object.__getattribute__(self, '__class__'),
-                              name)
-
+      value = _get_instance_attr(self, name)
       fn = object.__getattribute__(self, '_retrieve_swig_value')
       return fn(name, value)
   else:
@@ -85,4 +72,4 @@
     # SWIG-land
     self.__dict__.setdefault("_members",{})[name] = value
 
-    return _swig_setattr(self, self.__class__, name, value)
+    return _set_instance_attr(self, name, value)

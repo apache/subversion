@@ -64,7 +64,58 @@
         pass
       else:
         fn()
+
 %}
+#if defined(SWIGPYTHON_PY3)
+#if SWIG_VERSION >= 0x040000
+%pythoncode %{
+  # -classic and -modern options have been dropped and this variable
+  # is not generated since SWIG 4
+  _newclass = 1
+  _get_instance_attr = object.__getattribute__
+  _set_instance_attr = _swig_setattr_nondynamic_instance_variable(object.__setattr__)
+
+%}
+#else
+%pythoncode %{
+  # SWIG classes generated with -modern do not define this variable
+  try:
+    _newclass
+  except NameError:
+    _newclass = 1
+  else:
+    raise RuntimeError("Require -modern option, but _newclass is defined")
+
+  _get_instance_attr = object.__getattribute__
+  _set_instance_attr = _swig_setattr_nondynamic_method(object.__setattr__)
+
+%}
+#endif
+#else
+%pythoncode %{
+  # SWIG classes generated with -classic do not define this variable,
+  # so set it to 0 when it doesn't exist
+  try:
+    _newclass
+  except NameError:
+    _newclass = 0
+
+  if _newclass:
+    def _get_instance_attr(self, name):
+      try:
+        return object.__getattribute__(self, name)
+      except AttributeError:
+        return _swig_getattr(self, object.__getattribute__(self, '__class__'),
+                             name)
+  else:
+    def _get_instance_attr(self, name):
+      return _swig_getattr(self, self.__class__, name)
+
+  def _set_instance_attr(self, name, value):
+    return _swig_setattr(self, self.__class__, name, value)
+
+%}
+#endif
 
 /* Default code for all wrapped proxy classes in Python.
  * Inline the code from a separate file to avoid issues with

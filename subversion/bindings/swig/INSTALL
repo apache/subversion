@@ -78,8 +78,7 @@ Step 1: [Optional] Install a suitable version of SWIG
       - SWIG 1.3.24 and later 1.3.x may work, but we do not test these
         versions on our latest source code.
       - For Python 2 bindings, SWIG 4.0.0 or later is not supported.
-      - For Python 3 bindings, SWIG 3.0.10 or later is required, but
-        SWIG 4.0.0 and later is not supported (yet).
+      - For Python 3 bindings, SWIG 3.0.10 or later is required.
       - Note that SWIG 3.0.9 has some trouble with Python support.
         (See https://sourceforge.net/p/swig/news/2016/06/swig-3010-released/)
       - For Perl 5.16 and later, SWIG 2.0.8 or later is required.
