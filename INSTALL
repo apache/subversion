@@ -116,7 +116,7 @@ I.    INTRODUCTION
 
       * Netwide Assembler (OPTIONAL for client and server)
 
-        The Netwide Assembler (NASM) is used to build the (optionally)
+        The Netwide Assembler (NASM) is used to build the (optional)
         assembler modules of OpenSSL.  As of OpenSSL 1.1.0 NASM is the
         only supported assembler.
 
