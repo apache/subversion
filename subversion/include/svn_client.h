@@ -4479,8 +4479,9 @@ svn_client_relocate(const char *dir,
  * removed from the working copy. Otherwise, all items are reverted and
  * their on-disk state changed to match.
  *
- * Consult @a ctx to determine whether or not to revert timestamp to the
- * time of last commit ('use-commit-times = yes').
+ * Consult the @c SVN_CONFIG_OPTION_USE_COMMIT_TIMES option in @a ctx to
+ * determine whether or not to revert timestamp to the time of last
+ * commit ('use-commit-times = yes').
  *
  * If @a ctx->notify_func2 is non-NULL, then for each item reverted,
  * call @a ctx->notify_func2 with @a ctx->notify_baton2 and the path of
