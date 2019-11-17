@@ -127,10 +127,10 @@ I.    INTRODUCTION
          there are two options.  The newer and recommended one, known
          as FSFS, does not require Berkeley DB.  FSFS stores data in a
          flat filesystem.  The older implementation, known as BDB, has
-         been deprecated and is not recommend, but is still available.
-         BDB stores data in a Berkeley DB database.  This back-end
-         will only be available if the BDB libraries are discovered at
-         compile time.
+         been deprecated and is not recommended, but is still
+         available.  BDB stores data in a Berkeley DB database.  This
+         back-end will only be available if the BDB libraries are
+         discovered at compile time.
 
       * libsasl (OPTIONAL for client and server)
 
