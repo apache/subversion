@@ -1,6 +1,6 @@
 = How to interpret Subversion dumpfiles =
 
-Version 1.1, 2013-02-02
+Version 1.2, 2019-11-18
 
 == Introduction ==
 
@@ -359,7 +359,8 @@ no revision properties if there is no property section.
 
 The key thing to know about Node properties is that they are 
 persistent, once set, until modified by a future property 
-section on the same path.
+section on the same path.  Property sections are also carried
+forward in copyfrom operations.
 
 Normally, a dumpfile re-lists the entire property set for a directory
 or file in every Node record that changes any part of it. (But see
