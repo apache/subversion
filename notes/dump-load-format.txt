@@ -373,6 +373,11 @@ simply issue a node with an empty properties section. Note that this
 is different from an *absent* properties section, which will change
 no properties and will be associated with a change to content!
 
+Dumpfile generation is not minimalist about generating property
+sections. Interpreters should be prepared to see many empty property
+sections (nominally deleting all properties) when there are no
+previous properties set to be deleted.
+
 === Representation of symbolic links ===
 
 When the Subversion client sends a content blob representing a
@@ -391,9 +396,13 @@ the paths in the file store it is manipulating, and update that map as
 it processes each Node record.
 
 On a repository with thousands of commits, the per-revision list of
-maps can become quite large. For space economy, the file map for each 
-revision can be discarded after it is processed *unless it is a source
-revision for a copyfrom*. 
+maps can become quite large. It is tempting to think that the file map
+for each revision can be discarded after it is processed unless it is
+a source revision for a copyfrom, but there are cases in which doing
+this will leave you unable to trace ancestry chains through copies.
+
+Instead, is advisable to build your filemaps using a copy-on-write
+store.
 
 == An example ==
 
