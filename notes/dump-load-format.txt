@@ -95,7 +95,7 @@ Revision record.  These two numbers will be *identical* for a Revision
 record; the Content-length header is added for the benefit of software
 that can parse RFC-822 messages.
 
-A revision record is followed by one or more Node records (see below).
+A revision record is followed by zero or more Node records (see below).
 
 ==== Node records ====
 
