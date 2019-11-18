@@ -151,6 +151,7 @@ Text-content-length will be present only when there is a text section.
 Zero is a legal value for this length, indicating an empty file.
 
 Prop-content-length will be present only when there is a properties section.
+A properties section has non-zero length even if it has no entries.
 
 Content-length will be present if there is either a text or a
 properties section.  This is not always the case.  In particular, 
@@ -373,11 +374,6 @@ simply issue a node with an empty properties section. Note that this
 is different from an *absent* properties section, which will change
 no properties and will be associated with a change to content!
 
-Dumpfile generation is not minimalist about generating property
-sections. Interpreters should be prepared to see many empty property
-sections (nominally deleting all properties) when there are no
-previous properties set to be deleted.
-
 === Representation of symbolic links ===
 
 When the Subversion client sends a content blob representing a
@@ -389,6 +385,11 @@ In the future, other special blob formats with other prefix keywords may
 be defined.  None such yet exist as of revision 1441992 (February 2013).
 
 === Implementation pragmatics ===
+
+Dumpfile generation in general is not canonical, nor minimalist. In
+particular, interpreters should be prepared to see many empty property
+sections (nominally deleting all properties) when there are no
+previous properties set to be deleted.
 
 Because directory operations with copyfroms don't specify all the file
 paths they modify, an interpreter for this format must build a map of
