@@ -55,6 +55,7 @@ import itertools
 import subprocess
 import argparse       # standard in Python 2.7
 import io
+import yaml
 
 import backport.status
 
@@ -70,43 +71,22 @@ except ImportError:
     sys.path.remove(ezt_path)
 
 
+def get_dist_metadata_file_path():
+    return os.path.join(os.path.abspath(sys.path[0]), 'release-lines.yaml')
+
+# Read the dist metadata (about release lines)
+with open(get_dist_metadata_file_path(), 'r') as stream:
+    dist_metadata = yaml.load(stream)
+
 # Our required / recommended release tool versions by release branch
-tool_versions = {}
-tool_versions['1.8'] = {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.3',
-            '36b4881c1843d7585de9c66c4c3d9a067ed3a3f792bc670beba21f5a4960acdf'],
-            'swig'     : ['2.0.9',
-            '586954000d297fafd7e91d1ad31089cc7e249f658889d11a44605d3662569539'],
-  }
-tool_versions['1.9'] = {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['2.0.12',
-            '65e13f22a60cecd7279c59882ff8ebe1ffe34078e85c602821a541817a4317f7'],
-  }
-tool_versions['1.10'] = {
-            'autoconf' : ['2.69',
-            '954bd69b391edc12d6a4a51a2dd1476543da5c6bbf05a95b59dc0dd6fd4c2969'],
-            'libtool'  : ['2.4.6',
-            'e3bd4d5d3d025a36c21dd6af7ea818a2afcd4dfc1ea5a17b39d7854bcd0c06e3'],
-            'swig'     : ['3.0.12',
-            '7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d'],
-  }
-tool_versions['1.11'] = tool_versions['1.10']
-tool_versions['1.12'] = tool_versions['1.10']
-tool_versions['1.13'] = tool_versions['1.10']
-tool_versions['trunk'] = tool_versions['1.10']
+tool_versions = dist_metadata['tool_versions']
 
 # The version that is our current recommended release
-recommended_release = '1.13'
+recommended_release = dist_metadata['recommended_release']
 # For clean-dist, a whitelist of artifacts to keep, by version.
-supported_release_lines = frozenset({"1.9", "1.10", "1.13"})
+supported_release_lines = frozenset(dist_metadata['supported_release_lines'])
 # Long-Term Support (LTS) versions
-lts_release_lines = frozenset({"1.9", "1.10", "1.14"})
+lts_release_lines = frozenset(dist_metadata['lts_release_lines'])
 
 # Some constants
 svn_repos = os.getenv('SVN_RELEASE_SVN_REPOS',
