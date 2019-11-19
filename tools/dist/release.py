@@ -76,7 +76,7 @@ def get_dist_metadata_file_path():
 
 # Read the dist metadata (about release lines)
 with open(get_dist_metadata_file_path(), 'r') as stream:
-    dist_metadata = yaml.load(stream)
+    dist_metadata = yaml.safe_load(stream)
 
 # Our required / recommended release tool versions by release branch
 tool_versions = dist_metadata['tool_versions']
