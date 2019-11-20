@@ -1779,7 +1779,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_X509_CERT_VERIFY_FAILED,
              SVN_ERR_X509_CATEGORY_START + 19,
-             "Certficate verification failed")
+             "Certificate verification failed")
 
 SVN_ERROR_END
 

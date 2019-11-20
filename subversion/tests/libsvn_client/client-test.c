@@ -61,7 +61,7 @@ create_greek_repos(const char **repos_url,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
-  /* Create a filesytem and repository. */
+  /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(
               &repos, svn_test_data_path(name, pool), opts, pool));
 
@@ -372,7 +372,7 @@ test_patch(const svn_test_opts_t *opts,
     "+It is really the file 'gamma'."
   };
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-patch-repos", opts, pool));
 
   /* Check out the HEAD revision */
@@ -447,7 +447,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   const char *ex_dir_path;
   const char *ex2_dir_path;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-wc-add-repos", opts, pool));
   committed_rev = 1;
 
@@ -576,7 +576,7 @@ test_copy_crash(const svn_test_opts_t *opts,
   const char *dest;
   const char *repos_url;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-copy-crash", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -610,7 +610,7 @@ test_16k_add(const svn_test_opts_t *opts,
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-16k-repos", opts, pool));
 
   /* Check out the HEAD revision */
@@ -671,7 +671,7 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
   const char *dest;
   svn_client__pathrev_t *yc_ancestor;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-youngest-common-ancestor", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -739,7 +739,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   svn_ra_session_t *ra_session;
   svn_client__pathrev_t *loc;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
   SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
@@ -798,7 +798,7 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
 
   peg_rev.kind = svn_opt_revision_unspecified;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "mergesources", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -939,7 +939,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(svn_stream_mark(contentstream, &start, pool));
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-remote-only-status", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -1107,7 +1107,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
     { NULL },
   };
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "pin-externals", opts, pool));
 
   wc_path = svn_test_data_path("pin-externals-working-copy", pool);
@@ -1334,7 +1334,7 @@ test_copy_pin_externals_select_subtree(const svn_test_opts_t *opts, apr_pool_t *
     { NULL },
   };
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "pin-externals-select-subtree",
                              opts, pool));
 

@@ -498,7 +498,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "Print the names of uncommitted transactions. With -rN skip the output\n"
     "of those that have a base revision more recent than rN.  Transactions\n"
     "with base revisions much older than HEAD are likely to have been\n"
-    "abandonded and are candidates to be removed.\n"
+    "abandoned and are candidates to be removed.\n"
    )},
    {'r'},
    { {'r', "transaction base revision ARG"} } },
@@ -2887,7 +2887,7 @@ revision_size(apr_off_t *rev_size,
     {
       return svn_error_quick_wrapf(err,
                                    _("Revision size query is not implemented "
-                                     "for the filesytem type found in '%s'"),
+                                     "for the filesystem type found in '%s'"),
                                    svn_fs_path(fs, scratch_pool));
     }
   SVN_ERR(err);
