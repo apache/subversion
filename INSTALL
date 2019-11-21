@@ -147,10 +147,10 @@ I.    INTRODUCTION
          for other languages, you need to have those languages
          available at build time.
 
-      * py3c (OPTIONAL, but REQUIRED for python bindings)
+      * py3c (OPTIONAL, but REQUIRED for Python bindings)
 
-        The Python 3 Compatibility layer for C extensions is required to build
-        the python language bindings.
+        The Python 3 Compatibility Layer for C Extensions is required
+        to build the Python language bindings.
 
       * KDE Framework 5, libsecret, GNOME Keyring (OPTIONAL for client)
 
@@ -585,13 +585,28 @@ I.    INTRODUCTION
 
       23. py3c (OPTIONAL)
 
-      Subversion uses the py3c compatibility library when building the Python
-      language bindings. Configure will attempt to locate the system library by
-      default using pkg-config and known paths.
+      Subversion uses the Python 3 Compatibility Layer for C
+      Extensions (py3c) library when building the Python language
+      bindings.
+      
+      As py3c is a header-only library, it is needed only to build the
+      bindings, not to use them.
+
+      Configure will attempt to locate py3c by default using
+      pkg-config and known paths.
 
       If it is installed in a non-standard location, then use:
 
-        --with-py3c=/path/to/py3c/prefix
+          --with-py3c=/path/to/py3c/prefix
+
+      The library can be downloaded from GitHub:
+
+          https://github.com/encukou/py3c
+      
+      On Unix systems, you can also use the provided get-deps.sh
+      script to download py3c and several other dependencies; see the
+      top of section I.C for more about get-deps.sh.
+
 
   D. Documentation
 
