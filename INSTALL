@@ -127,10 +127,10 @@ I.    INTRODUCTION
          there are two options.  The newer and recommended one, known
          as FSFS, does not require Berkeley DB.  FSFS stores data in a
          flat filesystem.  The older implementation, known as BDB, has
-         been deprecated and is not recommended, but is still
-         available.  BDB stores data in a Berkeley DB database.  This
-         back-end will only be available if the BDB libraries are
-         discovered at compile time.
+         been deprecated and is not recommended for new repositories,
+         but is still available.  BDB stores data in a Berkeley DB
+         database.  This back-end will only be available if the BDB
+         libraries are discovered at compile time.
 
       * libsasl (OPTIONAL for client and server)
 
@@ -346,15 +346,19 @@ I.    INTRODUCTION
 
       7.  Berkeley DB 4.X  (DEPRECATED and OPTIONAL)
 
-      Berkeley DB is needed to build a Subversion server that supports
-      the BDB repository filesystem, or to access a BDB repository on
-      local disk.
+      You need the Berkeley DB libraries only if you are building a
+      Subversion server that supports the older BDB repository storage
+      back-end, or a Subversion client that can access local BDB
+      repositories via the file:// URI scheme.
 
-      The BDB back end has been deprecated in favor of FSFS, which
-      stores the repository in a flat filesystem.  You do not need 
-      Berkeley DB if you will only use the FSFS repository filesystem,
-      or if you are building a Subversion client that will only speak 
-      to remote (networked) repositories.
+      The BDB back-end has been deprecated and is not recommended for
+      new repositories.  BDB may be removed in Subversion 2.0.  We
+      recommend the newer FSFS back-end for all new repositories.
+      FSFS does not require the Berkeley DB libraries.
+
+      If in doubt, the 'svnadmin info' command, added in Subversion
+      1.9, can identify whether an existing repository uses BDB or
+      FSFS.
 
       The current recommended version of Berkeley DB is 4.4.20 or
       newer, which brings auto-recovery functionality to the Berkeley
