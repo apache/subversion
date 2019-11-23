@@ -388,8 +388,8 @@ class SvnBackup:
         self.set_nonblock(stderr)
         readfds = [ stdout, stderr ]
         selres = select.select(readfds, [], [])
-        bufout = ""
-        buferr = ""
+        bufout = b""
+        buferr = b""
         while len(selres[0]) > 0:
             for fd in selres[0]:
                 buf = fd.read(16384)
@@ -402,7 +402,7 @@ class SvnBackup:
                         bufout += buf
                 else:
                     if printerr:
-                        sys.stdout.write("%s " % buf)
+                        sys.stdout.write("%s " % buf.decode('utf-8'))
                     else:
                         buferr += buf
             if len(readfds) == 0:
@@ -420,8 +420,8 @@ class SvnBackup:
             return (256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
                     str(sys.exc_info()[1])))
         stdout = proc.stdout
-        bufout = ""
-        buferr = ""
+        bufout = b""
+        buferr = b""
         buf = stdout.read(16384)
         while len(buf) > 0:
             if output:
