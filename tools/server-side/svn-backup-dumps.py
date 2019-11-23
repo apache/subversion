@@ -402,7 +402,8 @@ class SvnBackup:
                         bufout += buf
                 else:
                     if printerr:
-                        sys.stdout.write("%s " % buf.decode('utf-8'))
+                        sys.stdout.write(buf.decode(sys.stdout.encoding,
+                                                    'backslashrreplace'))
                     else:
                         buferr += buf
             if len(readfds) == 0:
