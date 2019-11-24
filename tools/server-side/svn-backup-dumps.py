@@ -403,7 +403,7 @@ class SvnBackup:
                 else:
                     if printerr:
                         sys.stdout.write(buf.decode(sys.stdout.encoding,
-                                                    'backslashrreplace'))
+                                                    'backslashreplace'))
                     else:
                         buferr += buf
             if len(readfds) == 0:
