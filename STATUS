@@ -34,6 +34,14 @@ Candidate changes:
    Votes:
      +1: brane, stefan2
 
+ * r1870393, r1870395
+   Add a regression test for issue #4837 'Cannot get info for a file that was
+   inside of file-replaced directory'.
+   Justification:
+     Regression introduced in 1.10.0.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
