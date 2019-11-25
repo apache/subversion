@@ -822,6 +822,33 @@ def info_item_failures(sbox):
     sbox.ospath('iota'))
 
 
+@Issue(4837)
+@XFail()
+def info_file_in_file_replaced_dir(sbox):
+  "info, file in file-replaced dir"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('text\n', 'dir/file')
+  sbox.simple_commit(message='Add file')
+
+  sbox.simple_copy('dir/file', 'file-moved')
+  sbox.simple_rm('dir')
+  sbox.simple_add_text('replaced\n', 'dir')
+  sbox.simple_commit(message='Replace dir with file')
+
+  sbox.simple_update()
+
+  expected = {'Relative URL' : r'\^/dir/file',
+              'Node Kind' : 'file',
+              'Revision': '1',
+              'Last Changed Rev': '1',
+             }
+
+  svntest.actions.run_and_verify_info([expected],
+                                      sbox.repo_url + '/dir/file@1')
+
+
 ########################################################################
 # Run the tests
 
@@ -846,6 +873,7 @@ test_list = [ None,
               info_item_size_repos,
               info_item_size_repos_recursive,
               info_item_failures,
+              info_file_in_file_replaced_dir,
              ]
 
 if __name__ == '__main__':
