@@ -268,6 +268,7 @@ same_resource_in_head(svn_boolean_t *same_p,
                                     ctx, pool);
   if (err &&
       ((err->apr_err == SVN_ERR_CLIENT_UNRELATED_RESOURCES) ||
+       (err->apr_err == SVN_ERR_FS_NOT_DIRECTORY) ||
        (err->apr_err == SVN_ERR_FS_NOT_FOUND)))
     {
       svn_error_clear(err);

@@ -823,7 +823,6 @@ def info_item_failures(sbox):
 
 
 @Issue(4837)
-@XFail()
 def info_file_in_file_replaced_dir(sbox):
   "info, file in file-replaced dir"
 
