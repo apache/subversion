@@ -412,10 +412,7 @@ class SvnBackup:
                     if len(buf) == 0:
                         readfds.remove(fd)
                     elif fd == stdout:
-                        if output:
-                            output.write(buf)
-                        else:
-                            bufout += buf
+                        output.write(buf)
                     else:
                         buferr += buf
                 if len(readfds) == 0:
