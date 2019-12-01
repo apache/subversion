@@ -636,7 +636,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {'r', opt_ignore_keywords} },
 
   { "changelist", svn_cl__changelist, {"cl"}, {N_(
-     "Associate (or dissociate) changelist CLNAME with the named files.\n"
+     "Associate (or dissociate) changelist CLNAME with the named\n"
+     "files.\n"
      "usage: 1. changelist CLNAME PATH...\n"
      "       2. changelist --remove PATH...\n"
     )},
@@ -672,8 +673,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "cleanup", svn_cl__cleanup, {0}, {N_(
-     "Either recover from an interrupted operation that left the working copy locked,\n"
-     "or remove unwanted files.\n"
+     "Either recover from an interrupted operation that left the working\n"
+     "copy locked, or remove unwanted files.\n"
      "usage: 1. cleanup [WCPATH...]\n"
      "       2. cleanup --remove-unversioned [WCPATH...]\n"
      "          cleanup --remove-ignored [WCPATH...]\n"
@@ -1875,7 +1876,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      {'N', N_("obsolete; same as --depth=immediates")}} },
 
   { "switch", svn_cl__switch, {"sw"}, {N_(
-     "Update the working copy to a different URL within the same repository.\n"
+     "Update the working copy to a different URL within the same\n"
+     "repository.\n"
      "usage: 1. switch URL[@PEGREV] [PATH]\n"
      "       2. switch --relocate FROM-PREFIX TO-PREFIX [PATH...]\n"
      "\n"), N_(
