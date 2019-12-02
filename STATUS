@@ -22,7 +22,7 @@ Candidate changes:
    Justification:
      Regression introduced in 1.10.0.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, rhuijben
 
 Veto-blocked changes:
 =====================
