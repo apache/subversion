@@ -19,14 +19,14 @@ Candidate changes:
    Justification:
      Could force users to run 'svn cleanup' unnecessarily.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1851920
    Remove a useless common ancestor search from the conflict resolver.
    Justification:
      Current behaviour is inefficient and could lead to dubious conflicts.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1852436
    Make 'svn update' not record a tree conflict when deleting an unmodified
@@ -38,13 +38,14 @@ Candidate changes:
      https://colabti.org/irclogger/irclogger_log/svn-dev?date=2019-01-29#l10
    Votes:
      +1: stsp
+     -0: rhuijben (I would recommend setting a proper svn:ignore instead)
 
  * r1853450
    Enable 'incoming_move_file_merge' option only if local change is file edit.
    Justification:
      Conflict resolver misbehaves when it runs into move vs move conflicts.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1855419
    Fix conflict resolver bug where local and incoming edits got swapped.
@@ -54,7 +55,7 @@ Candidate changes:
    Branch:
      ^/subversion/branches/1.11.x-r1855419
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
 
  * r1856397
    Allow generating Visual Studio 2019 projects
