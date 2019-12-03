@@ -11,7 +11,6 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
  User-visible changes:
   - Minor new features and improvements:
     * Add 'svn info --show-item=changelist' (r1869481)
-    * Add multiple item arguments to 'svn info --show-item=...' (r1869578)
 
 
 Version 1.13.0
