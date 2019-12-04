@@ -56,17 +56,9 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1851903
-   Fix missing unlock of working copy in a resolver error case.
-   Justification:
-     Could force users to run 'svn cleanup' unnecessarily.
-   Votes:
-     +1: stsp, rhuijben, jamessan
-
  * r1853450
    Enable 'incoming_move_file_merge' option only if local change is file edit.
    Justification:
      Conflict resolver misbehaves when it runs into move vs move conflicts.
    Votes:
      +1: stsp, rhuijben, jamessan
-

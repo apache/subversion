@@ -9012,12 +9012,14 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       svn_opt_revision_t incoming_new_opt_rev;
 
       /* Revert the incoming move target directory. */
-      SVN_ERR(svn_wc_revert6(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
-                             FALSE, NULL, TRUE, FALSE,
-                             TRUE /*added_keep_local*/,
-                             NULL, NULL, /* no cancellation */
-                             ctx->notify_func2, ctx->notify_baton2,
-                             scratch_pool));
+      err = svn_wc_revert6(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
+                           FALSE, NULL, TRUE, FALSE,
+                           TRUE /*added_keep_local*/,
+                           NULL, NULL, /* no cancellation */
+                           ctx->notify_func2, ctx->notify_baton2,
+                           scratch_pool);
+      if (err)
+        goto unlock_wc;
 
       /* The move operation is not part of natural history. We must replicate
        * this move in our history. Record a move in the working copy. */
