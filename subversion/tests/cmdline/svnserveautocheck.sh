@@ -104,7 +104,7 @@ random_port() {
   if [ -n "$BASH_VERSION" ]; then
     echo $(($RANDOM+1024))
   else
-    $PYTHON -c 'import random; print random.randint(1024, 2**16-1)'
+    $PYTHON -c 'import random; print(random.randint(1024, 2**16-1))'
   fi
 }
 

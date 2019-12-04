@@ -27,11 +27,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1868151
-   Fix syntax error when $PYTHON is Python 3.
-   Justification:
-     Python 2 will reach EOL during the lifetime of this branch.
-   Votes:
-     +1: danielsh, jamessan
-
