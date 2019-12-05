@@ -96,6 +96,11 @@ I.    INTRODUCTION
          These diff streams are used everywhere -- over the network,
          in the repository, and in the client's working copy.
 
+      * utf8proc  (REQUIRED for client and server)
+      
+         Subversion uses utf8proc for UTF-8 support, including Unicode
+         normalization.
+
       * Apache Serf  (OPTIONAL for client)
 
          The Apache Serf library allows the Subversion client to send HTTP
@@ -606,6 +611,23 @@ I.    INTRODUCTION
       On Unix systems, you can also use the provided get-deps.sh
       script to download py3c and several other dependencies; see the
       top of section I.C for more about get-deps.sh.
+
+
+      24. utf8proc  (REQUIRED)
+
+      Subversion uses utf8proc for UTF-8 support.  Configure will
+      attempt to locate utf8proc by default using pkg-config and known
+      paths.
+
+      If it is installed in a non-standard location, then use:
+
+        --with-utf8proc=/path/to/libutf8proc
+
+      Alternatively, a copy of utf8proc comes bundled with the
+      Subversion sources.  If configure should use the bundled copy,
+      use:
+
+        --with-utf8proc=internal
 
 
   D. Documentation
