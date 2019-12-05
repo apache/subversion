@@ -172,6 +172,7 @@ I.    INTRODUCTION
          take precedence.
 
 
+
   C. Dependencies in Detail
 
       Subversion depends on a number of third party tools and libraries.
@@ -259,22 +260,55 @@ I.    INTRODUCTION
       configure script.
 
 
-      2. Zlib  (REQUIRED)
+      2.  SQLite  (REQUIRED)
 
-         Subversion's binary-differencing engine depends on zlib for
-         compression.   Most Unix systems have libz pre-installed, but
-         if you need it, you can get it from
+      Subversion requires SQLite version 3.8.2 or above.  You can meet this
+      dependency several ways:
+        * Use an SQLite amalgamation file.
+        * Specify an SQLite installation to use.
+        * Let Subversion find an installed SQLite.
 
-            http://www.zlib.net/
+      To use an SQLite-provided amalgamation, just drop sqlite3.c into
+      Subversion's sqlite-amalgamation/ directory, or point to it with the
+      --with-sqlite configure option.  This file also ships with the Subversion
+      dependencies distribution, or you can download it from SQLite:
+
+          https://www.sqlite.org/download.html
 
 
-      3.  autoconf 2.59 or newer (Unix only)
+      3.  Zlib  (REQUIRED)
+
+      Subversion's binary-differencing engine depends on zlib for
+      compression.  Most Unix systems have libz pre-installed, but if
+      you need it, you can get it from
+
+          http://www.zlib.net/
+
+
+      4.  utf8proc  (REQUIRED)
+
+      Subversion uses utf8proc for UTF-8 support.  Configure will
+      attempt to locate utf8proc by default using pkg-config and known
+      paths.
+
+      If it is installed in a non-standard location, then use:
+
+        --with-utf8proc=/path/to/libutf8proc
+
+      Alternatively, a copy of utf8proc comes bundled with the
+      Subversion sources.  If configure should use the bundled copy,
+      use:
+
+        --with-utf8proc=internal
+
+
+      5.  autoconf 2.59 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B). Generally only developers would be doing this.
 
 
-      4.  libtool 1.4 or newer (Unix only)
+      6.  libtool 1.4 or newer (Unix only)
 
       This is required only if you plan to build from the latest source
       (see section II.B).
@@ -283,7 +317,7 @@ I.    INTRODUCTION
       newer. The autogen.sh script knows about that.
 
 
-      5.  Apache Serf library 1.3.4 or newer (OPTIONAL)
+      7.  Apache Serf library 1.3.4 or newer (OPTIONAL)
 
       If you want your client to be able to speak to an Apache
       server (via a http:// or https:// URL), you must link against
@@ -303,7 +337,8 @@ I.    INTRODUCTION
       For more information on Apache Serf and Subversion's ra_serf, see the
       file subversion/libsvn_ra_serf/README.
 
-      6. OpenSSL  (OPTIONAL)
+
+      8.  OpenSSL  (OPTIONAL)
 
       ### needs some updates. I think Apache Serf automagically handles
       ### finding OpenSSL, but we may need more docco here. and w.r.t
@@ -349,7 +384,7 @@ I.    INTRODUCTION
           https://www.openssl.org/
 
 
-      7.  Berkeley DB 4.X  (DEPRECATED and OPTIONAL)
+      9.  Berkeley DB 4.X  (DEPRECATED and OPTIONAL)
 
       You need the Berkeley DB libraries only if you are building a
       Subversion server that supports the older BDB repository storage
@@ -400,7 +435,7 @@ I.    INTRODUCTION
       Look in the "Releases > Windows > Windows BDB" section.
 
 
-      8.  Cyrus SASL library (OPTIONAL)
+      10. Cyrus SASL library (OPTIONAL)
 
       If the Simple Authentication and Security Layer (SASL) library
       is detected on your system, then the Subversion client and
@@ -411,7 +446,7 @@ I.    INTRODUCTION
          http://freshmeat.net/projects/cyrussasl/
 
 
-      9.  Apache Web Server 2.2.X or newer  (OPTIONAL)
+      11. Apache Web Server 2.2.X or newer  (OPTIONAL)
 
           (https://httpd.apache.org/download.cgi)
 
@@ -424,7 +459,7 @@ I.    INTRODUCTION
       is done: See section III for details.
 
 
-      10.  Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
+      12. Python 3.x or newer (https://www.python.org/)  (OPTIONAL)
 
       Subversion does not require Python for its basic operation.
       However, Python is required for building and testing Subversion
@@ -472,49 +507,33 @@ I.    INTRODUCTION
       to Python 3.
 
 
-      11. Perl 5.8 or newer (Windows only)  (OPTIONAL)
+      13. Perl 5.8 or newer (Windows only)  (OPTIONAL)
 
       To build Subversion under any of the MS Windows platforms, you
       will also need Perl 5.8 or newer to run apr-util's w32locatedb.pl
       script.
 
 
-      12. SQLite  (REQUIRED)
-
-      Subversion requires SQLite version 3.8.2 or above.  You can meet this
-      dependency several ways:
-        * Use an SQLite amalgamation file.
-        * Specify an SQLite installation to use.
-        * Let Subversion find an installed SQLite.
-
-      To use an SQLite-provided amalgamation, just drop sqlite3.c into
-      Subversion's sqlite-amalgamation/ directory, or point to it with the
-      --with-sqlite configure option.  This file also ships with the Subversion
-      dependencies distribution, or you can download it from SQLite:
-
-          https://www.sqlite.org/download.html
-
-
-      13. pkg-config  (Unix only, OPTIONAL)
+      14. pkg-config  (Unix only, OPTIONAL)
 
       Subversion uses pkg-config to find appropriate options used
       at build time.
 
 
-      14. D-Bus  (Unix only, OPTIONAL)
+      15. D-Bus  (Unix only, OPTIONAL)
 
       D-Bus is a message bus system. D-Bus is required for support for KWallet
       and GNOME Keyring. pkg-config is needed to find D-Bus headers and library.
 
 
-      15. Qt 5 or Qt 4  (Unix only, OPTIONAL)
+      16. Qt 5 or Qt 4  (Unix only, OPTIONAL)
 
       Qt is a cross-platform application framework. QtCore, QtDBus and QtGui
       modules are required for support for KWallet. pkg-config is needed
       to find Qt headers and libraries.
 
 
-      16. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
+      17. KDE 5 Framework libraries or KDELibs 4  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in KWallet.
       Subversion will look for KF5Wallet, KF5CoreAddons, KF5I18n APIs by default,
@@ -529,13 +548,14 @@ I.    INTRODUCTION
 
           --with-kwallet=/path/to/KDE/prefix
 
-      17. GLib 2  (Unix only, OPTIONAL)
+
+      18. GLib 2  (Unix only, OPTIONAL)
 
       GLib is a general-purpose utility library. GLib is required for support
       for GNOME Keyring. pkg-config is needed to find GLib headers and library.
 
 
-      18. GNOME Keyring  (Unix only, OPTIONAL)
+      19. GNOME Keyring  (Unix only, OPTIONAL)
 
       Subversion contains optional support for storing passwords in GNOME Keyring.
       pkg-config is needed to find GNOME Keyring headers and library. D-Bus and
@@ -543,7 +563,7 @@ I.    INTRODUCTION
       then pass the '--with-gnome-keyring' option to `configure`.
 
 
-      19. Ctypesgen  (OPTIONAL)
+      20. Ctypesgen  (OPTIONAL)
 
       Ctypesgen is Python wrapper generator for ctypes. It is used to generate
       a part of Subversion Ctypes Python bindings (CSVN). If you want to build
@@ -554,7 +574,8 @@ I.    INTRODUCTION
 
       For more information on CSVN, see subversion/bindings/ctypes-python/README.
 
-      20. libmagic (OPTIONAL)
+
+      21. libmagic (OPTIONAL)
 
       Subversion's configure script attempts to find libmagic automatically.
       If it is installed in a non-standard location, then use:
@@ -575,6 +596,7 @@ I.    INTRODUCTION
 
         --with-libmagic
 
+
       22. LZ4 (OPTIONAL)
 
       Subversion uses LZ4 compression libary version r129 or above. Configure
@@ -587,6 +609,7 @@ I.    INTRODUCTION
 
       If configure should use the version bundled with the sources, use:
         --with-lz4=internal
+
 
       23. py3c (OPTIONAL)
 
@@ -611,23 +634,6 @@ I.    INTRODUCTION
       On Unix systems, you can also use the provided get-deps.sh
       script to download py3c and several other dependencies; see the
       top of section I.C for more about get-deps.sh.
-
-
-      24. utf8proc  (REQUIRED)
-
-      Subversion uses utf8proc for UTF-8 support.  Configure will
-      attempt to locate utf8proc by default using pkg-config and known
-      paths.
-
-      If it is installed in a non-standard location, then use:
-
-        --with-utf8proc=/path/to/libutf8proc
-
-      Alternatively, a copy of utf8proc comes bundled with the
-      Subversion sources.  If configure should use the bundled copy,
-      use:
-
-        --with-utf8proc=internal
 
 
   D. Documentation
