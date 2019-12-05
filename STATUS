@@ -14,13 +14,6 @@ Status of 1.11.2:
 Candidate changes:
 ==================
 
- * r1851920
-   Remove a useless common ancestor search from the conflict resolver.
-   Justification:
-     Current behaviour is inefficient and could lead to dubious conflicts.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1852436
    Make 'svn update' not record a tree conflict when deleting an unmodified
    directory which happens to contain unversioned items.
@@ -32,6 +25,19 @@ Candidate changes:
    Votes:
      +1: stsp
      -0: rhuijben (I would recommend setting a proper svn:ignore instead)
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
+ * r1851920
+   Remove a useless common ancestor search from the conflict resolver.
+   Justification:
+     Current behaviour is inefficient and could lead to dubious conflicts.
+   Votes:
+     +1: stsp, rhuijben
 
  * r1855419
    Fix conflict resolver bug where local and incoming edits got swapped.
@@ -49,9 +55,3 @@ Candidate changes:
      Makes it easier to build Subversion on Windows. Simple local fix.
    Votes:
      +1: rhuijben, jamessan
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
