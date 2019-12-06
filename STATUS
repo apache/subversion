@@ -32,13 +32,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1851920
-   Remove a useless common ancestor search from the conflict resolver.
-   Justification:
-     Current behaviour is inefficient and could lead to dubious conflicts.
-   Votes:
-     +1: stsp, rhuijben
-
  * r1855419
    Fix conflict resolver bug where local and incoming edits got swapped.
    Justification:

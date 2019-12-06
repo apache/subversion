@@ -8883,8 +8883,8 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
   struct conflict_tree_incoming_delete_details *details;
   apr_array_header_t *possible_moved_to_abspaths;
   const char *moved_to_abspath;
-  svn_client__pathrev_t *yca_loc;
-  svn_opt_revision_t yca_opt_rev;
+  const char *incoming_old_url;
+  svn_opt_revision_t incoming_old_opt_rev;
   svn_client__conflict_report_t *conflict_report;
   svn_boolean_t is_copy;
   svn_boolean_t is_modified;
@@ -8977,30 +8977,6 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       goto unlock_wc;
     }
 
-  /* Now find the youngest common ancestor of these nodes. */
-  err = find_yca(&yca_loc, victim_repos_relpath, victim_peg_rev,
-                 moved_to_repos_relpath, moved_to_peg_rev,
-                 repos_root_url, repos_uuid,
-                 NULL, ctx, scratch_pool, scratch_pool);
-  if (err)
-    goto unlock_wc;
-
-  if (yca_loc == NULL)
-    {
-      err = svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
-                              _("Cannot resolve tree conflict on '%s' "
-                                "(could not find common ancestor of '^/%s@%ld' "
-                                " and '^/%s@%ld')"),
-                              svn_dirent_local_style(local_abspath,
-                                                     scratch_pool),
-                              victim_repos_relpath, victim_peg_rev,
-                              moved_to_repos_relpath, moved_to_peg_rev);
-      goto unlock_wc;
-    }
-
-  yca_opt_rev.kind = svn_opt_revision_number;
-  yca_opt_rev.value.number = yca_loc->rev;
-
   err = verify_local_state_for_incoming_delete(conflict, option, ctx,
                                                scratch_pool);
   if (err)
@@ -9032,7 +9008,12 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       if (err)
         goto unlock_wc;
 
-      /* Merge YCA_URL@YCA_REV->MOVE_TARGET_URL@MERGE_RIGHT into move target. */
+      /* Merge INCOMING_OLD_URL@MERGE_LEFT->MOVE_TARGET_URL@MERGE_RIGHT
+       * into move target. */
+      incoming_old_url = apr_pstrcat(scratch_pool, repos_root_url, "/",
+                                     incoming_old_repos_relpath, SVN_VA_NULL);
+      incoming_old_opt_rev.kind = svn_opt_revision_number;
+      incoming_old_opt_rev.value.number = incoming_old_pegrev;
       move_target_url = apr_pstrcat(scratch_pool, repos_root_url, "/",
                                     get_moved_to_repos_relpath(details,
                                                                scratch_pool),
@@ -9040,7 +9021,7 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       incoming_new_opt_rev.kind = svn_opt_revision_number;
       incoming_new_opt_rev.value.number = incoming_new_pegrev;
       err = svn_client__merge_locked(&conflict_report,
-                                     yca_loc->url, &yca_opt_rev,
+                                     incoming_old_url, &incoming_old_opt_rev,
                                      move_target_url, &incoming_new_opt_rev,
                                      moved_to_abspath, svn_depth_infinity,
                                      TRUE, TRUE, /* do a no-ancestry merge */
