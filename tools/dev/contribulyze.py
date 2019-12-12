@@ -56,6 +56,7 @@
 # a lot easier to whip up for straight 'svn log' output.  I'd have no
 # objection to it being rewritten to take XML input.
 
+import functools
 import os
 import sys
 import re
@@ -256,6 +257,9 @@ class Contributor(object):
     else:
       return 0 - result
 
+  def sort_key(self):
+      return (self.is_full_committer, self.score(), self.big_name())
+
   @staticmethod
   def parse(name):
     """Parse NAME, which can be
@@ -398,7 +402,7 @@ class Contributor(object):
     out.write('</table>\n\n')
     out.write('</div>\n\n')
 
-    sorted_logs = sorted(unique_logs.keys())
+    sorted_logs = sorted(unique_logs.keys(), key=LogMessage.sort_key)
     for log in sorted_logs:
       out.write('<hr />\n')
       out.write('<div class="h3" id="%s" title="%s">\n' % (log.revision,
@@ -489,6 +493,9 @@ class LogMessage(object):
     if a > b: return -1
     if a < b: return 1
     else:     return 0
+
+  def sort_key(self):
+    return int(self.revision[1:])
 
   def __str__(self):
     s = '=' * 15
@@ -661,7 +668,8 @@ def drop(revision_url_pattern):
   # sort by number of contributions, so the most active people appear at
   # the top -- that way we know whom to look at first for commit access
   # proposals.
-  sorted_contributors = sorted(Contributor.all_contributors.values())
+  sorted_contributors = sorted(Contributor.all_contributors.values(),
+                               key = Contributor.sort_key)
   for c in sorted_contributors:
     if c not in seen_contributors:
       if c.score() > 0:
