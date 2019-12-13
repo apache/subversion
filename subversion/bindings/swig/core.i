@@ -725,11 +725,6 @@ core_set_current_pool (apr_pool_t *pool)
                   svn_swig_rb_config_section_enumerator)
 #endif
 
-/* Allow None to be passed as config_dir argument */
-#ifdef SWIGPYTHON
-%typemap(in,parse="z") const char *config_dir "";
-#endif
-
 /* -----------------------------------------------------------------------
   thunk the various authentication prompt functions.
   PERL NOTE: store the inputed SV in _global_callback for use in the
