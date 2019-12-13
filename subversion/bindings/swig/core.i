@@ -362,7 +362,9 @@
     /* svn_config_get */
     const char *default_value,
     /* svn_config_read_auth_data */
-    const char *config_dir, 
+    const char *config_dir,
+    /* svn_config_get_user_config_path */
+    const char *fname,
     /* svn_diff_file_output_merge */
     const char *conflict_original,
     const char *conflict_modified,
