@@ -174,9 +174,6 @@ usage: 1. switch URL[@PEGREV] [PATH]
 
   Examples:
     svn switch ^/branches/1.x-release
-    svn switch --relocate http:// svn://
-    svn switch --relocate http://www.example.com/repo/project \
-                          svn://svn.example.com/repo/project
 
 Valid options:
   -r [--revision] ARG      : ARG (some commands also take ARG1:ARG2 range)

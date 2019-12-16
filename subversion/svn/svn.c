@@ -1911,9 +1911,6 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  Examples:\n"
      "    svn switch ^/branches/1.x-release\n"
-     "    svn switch --relocate http:// svn://\n"
-     "    svn switch --relocate http://www.example.com/repo/project \\\n"
-     "                          svn://svn.example.com/repo/project\n"
     )},
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd,
       opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept,
