@@ -126,6 +126,12 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
     ])
   svntest.actions.run_and_verify_svn(expected_output, [], 'x-shelves')
 
+  # Diff; ensure something comes out and it doesn't crash
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
+                                     'x-shelf-diff', 'foo')
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
+                                     'x-shelf-diff', '--summarize', 'foo')
+
   # Unshelve; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
                                      'x-unshelve', 'foo')
@@ -917,6 +923,8 @@ def shelf_diff_simple(sbox):
     sbox.simple_propset('p2', 'v', 'A/mu')
 
   def modifier1(sbox):
+    sbox.simple_rm('A/B/lambda')
+    sbox.simple_add_text('This is a new file.\n', 'A/B/new')
     sbox.simple_append('A/mu', 'New line.\n')
     sbox.simple_propset('p1', 'changed', 'A/mu')
 
@@ -932,7 +940,15 @@ def shelf_diff_simple(sbox):
                                      'x-shelf-save', 'foo')
 
   # basic svn-style diff
-  expected_output = make_diff_header('A/mu', 'revision 2', 'working copy') + [
+  expected_output = make_diff_header('A/B/lambda', 'revision 2', 'nonexistent') + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'lambda'.\n"
+                    ]
+  expected_output += make_diff_header('A/B/new', 'nonexistent', 'working copy') + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is a new file.\n"
+                    ]
+  expected_output += make_diff_header('A/mu', 'revision 2', 'working copy') + [
                       "@@ -1 +1,2 @@\n",
                       " This is the file 'mu'.\n",
                       "+New line.\n",
@@ -943,6 +959,8 @@ def shelf_diff_simple(sbox):
 
   # basic summary diff
   expected_diff = svntest.wc.State(wc_dir, {
+    'A/B/lambda':     Item(status='D '),
+    'A/B/new':        Item(status='A '),
     'A/mu':           Item(status='MM'),
   })
   run_and_verify_shelf_diff_summarize(expected_diff, 'foo')
