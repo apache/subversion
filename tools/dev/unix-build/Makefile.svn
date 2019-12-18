@@ -112,7 +112,8 @@ SQLITE_VER	= 3160200
 LIBMAGIC_VER	= 5.30
 RUBY_VER	= 2.4.4
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 2.7.13
+PYTHON_VER	= 3.7.5
+PY3C_VER	= 1.1
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.19.8.1
 LZ4_VER		= 1.7.5
@@ -129,6 +130,7 @@ LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
 BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
+PY3C_DIST	= py3c-$(PY3C_VER).tar.gz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
 LZ4_DIST	= lz4-$(LZ4_VER).tar.gz
@@ -144,7 +146,8 @@ SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c86
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
 SHA256_${RUBY_DIST} = 254f1c1a79e4cc814d1e7320bc5bdd995dc57e08727d30a767664619a9c8ae5a
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
-SHA256_${PYTHON_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
+SHA256_${PYTHON_DIST} = 8ecc681ea0600bbfb366f2b173f727b205bb825d93d2f0b286bc4e58d37693da
+SHA256_${PY3C_DIST} = c7ffc22bc92dded0ca859db53ef3a0b466f89a9f8aad29359c9fe4ff18ebdd20
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
 SHA256_${GETTEXT_DIST} = ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43
 SHA256_${LZ4_DIST} = 0190cacd63022ccb86f44fa5041dc6c3804407ad61550ca21c382827319e7e7e
@@ -174,6 +177,7 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(RUBY_DIST) \
 		$(DISTDIR)/$(BZ2_DIST) \
 		$(DISTDIR)/$(PYTHON_DIST) \
+		$(DISTDIR)/$(PY3C_DIST) \
 		$(DISTDIR)/$(JUNIT_DIST) \
 		$(DISTDIR)/$(GETTEXT_DIST)
 
@@ -197,6 +201,7 @@ LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.4/$(RUBY_DIST)
 BZ2_URL		= https://stsp.name/distfiles/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
+PY3C_URL	= https://stsp.name/distfiles/py3c-${PY3C_VER}.tar.gz
 JUNIT_URL	= https://stsp.name/distfiles/$(JUNIT_DIST)
 GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
 LZ4_URL		= https://github.com/lz4/lz4/archive/v$(LZ4_VER).tar.gz
@@ -218,6 +223,7 @@ LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
 RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
 BZ2_SRCDIR	= $(SRCDIR)/bzip2-$(BZ2_VER)
 PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
+PY3C_SRCDIR	= $(SRCDIR)/py3c-$(PY3C_VER)
 GETTEXT_SRCDIR	= $(SRCDIR)/gettext-$(GETTEXT_VER)
 LZ4_SRCDIR	= ${SRCDIR}/lz4-$(LZ4_VER)
 SVN_SRCDIR	= $(SVN_WC)
@@ -238,6 +244,7 @@ LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
 RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
 BZ2_OBJDIR	= $(OBJDIR)/bzip2-$(BZ2_VER)
 PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
+PY3C_OBJDIR	= $(OBJDIR)/python-$(PY3C_VER)
 GETTEXT_OBJDIR	= $(OBJDIR)/gettext-$(GETTEXT_VER)
 LZ4_OBJDIR	= ${OBJDIR}/lz4-$(LZ4_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
@@ -267,7 +274,7 @@ PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFI
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	pcre-install httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
-	ruby-install bz2-install python-install gettext-install \
+	ruby-install bz2-install python-install py3c-retrieve gettext-install \
 	lz4-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
@@ -1304,14 +1311,9 @@ python-clean:
 $(DISTDIR)/$(PYTHON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(PYTHON_URL)
 
-# https://bugs.python.org/issue12560
-$(DISTDIR)/python-issue12560.patch:
-	cd $(DISTDIR) && $(FETCH_CMD) -O "$@" \
-		https://hg.python.org/cpython/raw-rev/32cc37a89b58
-	
 # retrieve python
 #
-$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(DISTDIR)/python-issue12560.patch
+$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
@@ -1325,7 +1327,6 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(DISTDIR)/python-issue12
 		> $(PYTHON_SRCDIR)/setup.py.patched
 	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
 	chmod +x $(PYTHON_SRCDIR)/setup.py
-	cd $(PYTHON_SRCDIR) && patch -p1 < $(DISTDIR)/python-issue12560.patch
 	touch $@
 
 # configure python
@@ -1346,6 +1347,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 		--enable-shared \
 		--with-system-expat \
 		--with-dbmliborder=bdb \
+		--without-pymalloc \
 		$(PYTHON_PROFILING)
 	touch $@
 
@@ -1365,6 +1367,25 @@ $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 		make install)
 	touch $@
 
+#######################################################################
+# py3c
+#######################################################################
+
+py3c-retrieve:	$(PY3C_OBJDIR)/.retrieved
+py3c-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(PY3C_OBJDIR)/$(f);)
+
+# fetch distfile for py3c
+$(DISTDIR)/$(PY3C_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(PY3C_URL)
+
+# retrieve py3c
+$(PY3C_OBJDIR)/.retrieved: $(DISTDIR)/$(PY3C_DIST)
+	$(call do_check_sha256,$(PY3C_DIST))
+	[ -d $(PY3C_OBJDIR) ] || mkdir -p $(PY3C_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PY3C_DIST)
+	touch $@
 
 #######################################################################
 # junit
@@ -1625,6 +1646,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+			PYTHON=$(PREFIX)/python/bin/python3 \
 			GREP="`which grep`" \
 			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
@@ -1641,6 +1663,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			--without-gnome-keyring \
 			--with-berkeley-db="$(BDB_FLAG)" \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
+			--with-py3c="$(SRCDIR)/py3c-${PY3C_VER}" \
 			--disable-mod-activation \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
