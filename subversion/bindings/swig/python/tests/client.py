@@ -58,10 +58,6 @@ class SubversionClientTestCase(unittest.TestCase):
     """An implementation of svn_log_entry_receiver_t."""
     self.received_revisions.append(log_entry.revision)
 
-  def log_entry_receiver_whole(self, log_entry, pool):
-    """An implementation of svn_log_entry_receiver_t, holds whole log entries."""
-    self.received_log_entries.append(log_entry)
-
   def setUp(self):
     """Set up authentication and client context"""
     self.client_ctx = client.svn_client_create_context()
@@ -287,13 +283,19 @@ class SubversionClientTestCase(unittest.TestCase):
     rev_range = core.svn_opt_revision_range_t()
     rev_range.start = start
     rev_range.end = end
+    entry_pool = core.Pool()
+
+    def log_entry_receiver_whole(log_entry, pool):
+      """An implementation of svn_log_entry_receiver_t, holds whole log entries."""
+      self.received_log_entries.append(core.svn_log_entry_dup(log_entry,
+                                                              entry_pool))
 
     self.received_log_entries = []
 
     # (Python 3: pass tuple of bytes and str mixture as revprops argment)
     client.log5((directory,), start, (rev_range,), 1, True, False, False,
                 ('svn:author', b'svn:log'),
-                self.log_entry_receiver_whole, self.client_ctx)
+                log_entry_receiver_whole, self.client_ctx)
     self.assertEqual(len(self.received_log_entries), 1)
     revprops = self.received_log_entries[0].revprops
     self.assertEqual(revprops[b'svn:log'], b"More directories.")
@@ -303,7 +305,7 @@ class SubversionClientTestCase(unittest.TestCase):
     with self.assertRaises(UnicodeEncodeError):
       client.log5((directory,), start, (rev_range,), 1, True, False, False,
                   (u'svn:\udc61uthor', b'svn:log'),
-                  self.log_entry_receiver_whole, self.client_ctx)
+                  log_entry_receiver_whole, self.client_ctx)
 
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""
