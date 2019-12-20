@@ -3041,10 +3041,10 @@ void svn_swig_py_status_func(void *baton,
   svn_swig_py_release_py_lock();
 }
 
-void svn_swig_py_client_status_func(void *baton,
-                                    const char *path,
-                                    const svn_client_status_t *status,
-                                    apr_pool_t *scratch_pool)
+svn_error_t *svn_swig_py_client_status_func(void *baton,
+                                            const char *path,
+                                            const svn_client_status_t *status,
+                                            apr_pool_t *scratch_pool)
 {
   PyObject *function = baton;
   PyObject *result;
@@ -3052,14 +3052,9 @@ void svn_swig_py_client_status_func(void *baton,
   PyObject *exc, *exc_type, *exc_traceback;
 
   if (function == NULL || function == Py_None)
-    return;
+    return err;
 
   svn_swig_py_acquire_py_lock();
-
-  /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
-     if it is occurred, and restore error indicator */
-  PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
   if (status == NULL)
     {
@@ -3096,13 +3091,8 @@ void svn_swig_py_client_status_func(void *baton,
       Py_DECREF(result);
     }
 
-  /* Our error has no place to go. :-( */
-  svn_error_clear(err);
-
-  /* Also, restore error indicator */
-  PyErr_Restore(exc_type, exc, exc_traceback);
-
   svn_swig_py_release_py_lock();
+  return err;
 }
 
 

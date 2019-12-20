@@ -315,10 +315,10 @@ void svn_swig_py_status_func(void *baton,
 
 /* a client status function that executes a Python function that is passed in
    via the baton argument */
-void svn_swig_py_client_status_func(void *baton,
-                                    const char *path,
-                                    const svn_client_status_t *status,
-                                    apr_pool_t *scratch_pool);
+svn_error_t *svn_swig_py_client_status_func(void *baton,
+                                            const char *path,
+                                            const svn_client_status_t *status,
+                                            apr_pool_t *scratch_pool);
 
 /* a svn_delta_path_driver callback that executes a Python function
   that is passed in via the baton argument */
