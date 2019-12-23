@@ -733,10 +733,6 @@ svn_cl__log(apr_getopt_t *os,
                                   "XML mode"));
     }
 
-  if (opt_state->quiet && opt_state->show_diff)
-    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                            _("'quiet' and 'diff' options are "
-                              "mutually exclusive"));
   if (opt_state->diff.diff_cmd && (! opt_state->show_diff))
     return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("'diff-cmd' option requires 'diff' "
