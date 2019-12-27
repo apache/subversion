@@ -470,8 +470,10 @@ range_to_string(const svn_merge_range_t *range,
     return apr_psprintf(pool, "-%ld%s", range->start, mark);
   else if (range->start < range->end)
     return apr_psprintf(pool, "%ld-%ld%s", range->start + 1, range->end, mark);
-  else
+  else if (range->start > range->end)
     return apr_psprintf(pool, "%ld-%ld%s", range->start, range->end + 1, mark);
+  else
+    return apr_psprintf(pool, "[empty-range@%ld%s]", range->start, mark);
 }
 
 /* Helper for svn_mergeinfo_parse()
