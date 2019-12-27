@@ -1783,6 +1783,34 @@ test_rangelist_loop(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+/* A specific case where result was non-canonical, around svn 1.10 ~ 1.13. */
+static svn_error_t *
+test_rangelist_merge_canonical_result(apr_pool_t *pool)
+{
+  const char *rangelist_str = "8-10";
+  const char *changes_str = "5-10*,11-24";
+  const char *expected_str = "5-7*,8-24";
+  /* wrong result: "5-7*,8-10,11-24" */
+  svn_rangelist_t *rangelist, *changes;
+  svn_string_t *result_string;
+
+  /* prepare the inputs */
+  SVN_ERR(svn_rangelist__parse(&rangelist, rangelist_str, pool));
+  SVN_ERR(svn_rangelist__parse(&changes, changes_str, pool));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(changes));
+
+  /* perform the merge */
+  SVN_ERR(svn_rangelist_merge2(rangelist, changes, pool, pool));
+
+  /* check the output */
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_ERR(svn_rangelist_to_string(&result_string, rangelist, pool));
+  SVN_TEST_STRING_ASSERT(result_string->data, expected_str);
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -1831,6 +1859,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "merge of rangelists with overlaps (issue 4686)"),
     SVN_TEST_PASS2(test_rangelist_loop,
                     "test rangelist edgecases via loop"),
+    SVN_TEST_XFAIL2(test_rangelist_merge_canonical_result,
+                    "test rangelist merge canonical result (#4840)"),
     SVN_TEST_NULL
   };
 
