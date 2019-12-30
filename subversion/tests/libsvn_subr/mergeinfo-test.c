@@ -2154,6 +2154,114 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+/* Generate random mergeinfo, in which the paths and rangelists are not
+ * necessarily valid. */
+static svn_error_t *
+mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
+                               apr_pool_t *pool)
+{
+  svn_mergeinfo_t m = apr_hash_make(pool);
+  int i;
+
+  for (i = 0; i < 3; i++)
+    {
+      const char *path;
+      svn_rangelist_t *rl;
+
+      switch (rand_less_than(8))
+        {
+        case 0: case 1: case 2: case 3:
+          path = apr_psprintf(pool, "/path%d", i); break;
+        case 4:
+          path = apr_psprintf(pool, "path%d", i); break;
+        case 5:
+          path = apr_psprintf(pool, "//path%d", i); break;
+        case 6:
+          path = "/"; break;
+        case 7:
+          path = ""; break;
+        }
+      rangelist_random_non_validated(&rl, pool);
+      svn_hash_sets(m, path, rl);
+    }
+  *mp = m;
+  return SVN_NO_ERROR;
+}
+
+#if 0
+static const char *
+mergeinfo_to_string_debug(svn_mergeinfo_t m,
+                          apr_pool_t *pool)
+{
+  svn_string_t *s;
+  svn_error_t *err;
+
+  err = svn_mergeinfo_to_string(&s, m, pool);
+  if (err)
+    {
+      const char *s2 = err->message;
+      svn_error_clear(err);
+      return s2;
+    }
+  return s->data;
+}
+#endif
+
+/* Try a mergeinfo merge.  This does not check the result. */
+static svn_error_t *
+mergeinfo_merge_random_inputs(const svn_mergeinfo_t mx,
+                              const svn_mergeinfo_t my,
+                              apr_pool_t *pool)
+{
+  svn_mergeinfo_t mm = svn_mergeinfo_dup(mx, pool);
+
+  SVN_ERR(svn_mergeinfo_merge2(mm, my, pool, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Test svn_mergeinfo_merge2() with random non-validated inputs.
+ *
+ * Unlike the tests with valid inputs, this test expects many assertion
+ * failures.  We don't care about those.  All we care about is that it does
+ * not crash. */
+static svn_error_t *
+test_mergeinfo_merge_random_non_validated_inputs(apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int ix, iy;
+
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_mergeinfo_t mx;
+
+    SVN_ERR(mergeinfo_random_non_validated(&mx, pool));
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_mergeinfo_t my;
+        svn_error_t *err;
+
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(mergeinfo_random_non_validated(&my, iterpool));
+
+        err = mergeinfo_merge_random_inputs(mx, my, iterpool);
+        if (err)
+          {
+            /*
+            printf("testcase FAIL: %s / %s\n",
+                   mergeinfo_to_string_debug(mx, iterpool),
+                   mergeinfo_to_string_debug(my, iterpool));
+            svn_handle_error(err, stdout, FALSE);
+            */
+            svn_error_clear(err);
+          }
+      }
+   }
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -2210,6 +2318,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                     "test rangelist merge random semi-c inputs"),
     SVN_TEST_PASS2(test_rangelist_merge_random_non_validated_inputs,
                    "test rangelist merge random non-validated inputs"),
+    SVN_TEST_PASS2(test_mergeinfo_merge_random_non_validated_inputs,
+                   "test mergeinfo merge random non-validated inputs"),
     SVN_TEST_NULL
   };
 
