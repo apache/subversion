@@ -2118,11 +2118,15 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test svn_rangelist_merge2() with random non-validated inputs.
+ *
+ * Unlike the tests with valid inputs, this test expects many assertion
+ * failures.  We don't care about those.  All we care about is that it does
+ * not crash. */
 static svn_error_t *
 test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
 {
   apr_pool_t *iterpool = svn_pool_create(pool);
-  svn_boolean_t pass = TRUE;
   int ix, iy;
 
   for (ix = 0; ix < 300; ix++)
@@ -2143,18 +2147,11 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
         err = rangelist_merge_random_inputs(rlx, rly, iterpool);
         if (err)
           {
-            printf("testcase FAIL: %s / %s\n",
-                   rangelist_to_string(rlx, iterpool),
-                   rangelist_to_string(rly, iterpool));
-            svn_handle_error(err, stdout, FALSE);
             svn_error_clear(err);
-            pass = FALSE;
           }
       }
    }
 
-  if (!pass)
-    return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
   return SVN_NO_ERROR;
 }
 
@@ -2211,8 +2208,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                     "test rangelist merge random canonical inputs"),
     SVN_TEST_XFAIL2(test_rangelist_merge_random_semi_c_inputs,
                     "test rangelist merge random semi-c inputs"),
-    SVN_TEST_XFAIL2(test_rangelist_merge_random_non_validated_inputs,
-                    "test rangelist merge random non-validated inputs"),
+    SVN_TEST_PASS2(test_rangelist_merge_random_non_validated_inputs,
+                   "test rangelist merge random non-validated inputs"),
     SVN_TEST_NULL
   };
 
