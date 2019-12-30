@@ -1841,7 +1841,7 @@ rangelist_to_array(rl_array_t *a,
       svn_merge_range_t *range = APR_ARRAY_IDX(rl, i, svn_merge_range_t *);
       int r;
 
-      for (r = range->start + 1; r <= range->end; r++)
+      for (r = (int)range->start + 1; r <= (int)range->end; r++)
         {
           a->root[r] = TRUE;
           a->inherit[r] = range->inheritable;
