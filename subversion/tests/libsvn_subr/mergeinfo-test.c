@@ -1839,9 +1839,9 @@ rangelist_to_array(rl_array_t *a,
   for (i = 0; i < rl->nelts; i++)
     {
       svn_merge_range_t *range = APR_ARRAY_IDX(rl, i, svn_merge_range_t *);
-      int r;
+      svn_revnum_t r;
 
-      for (r = (int)range->start + 1; r <= (int)range->end; r++)
+      for (r = range->start + 1; r <= range->end; r++)
         {
           a->root[r] = TRUE;
           a->inherit[r] = range->inheritable;
@@ -1857,7 +1857,7 @@ rangelist_array_union(rl_array_t *ma,
                       const rl_array_t *ba,
                       const rl_array_t *ca)
 {
-  int r;
+  svn_revnum_t r;
 
   for (r = 0; r <= RANGELIST_TESTS_MAX_REV; r++)
     {
@@ -1872,7 +1872,7 @@ static svn_boolean_t
 rangelist_array_equal(const rl_array_t *ba,
                       const rl_array_t *ca)
 {
-  int r;
+  svn_revnum_t r;
 
   for (r = 0; r <= RANGELIST_TESTS_MAX_REV; r++)
     {
