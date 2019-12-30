@@ -457,23 +457,48 @@ combine_with_lastrange(const svn_merge_range_t *new_range,
 }
 
 /* Convert a single svn_merge_range_t *RANGE back into a string.  */
-static char *
-range_to_string(const svn_merge_range_t *range,
+static svn_error_t *
+range_to_string(char **s,
+                const svn_merge_range_t *range,
                 apr_pool_t *pool)
 {
   const char *mark
     = range->inheritable ? "" : SVN_MERGEINFO_NONINHERITABLE_STR;
 
   if (range->start == range->end - 1)
-    return apr_psprintf(pool, "%ld%s", range->end, mark);
+    *s = apr_psprintf(pool, "%ld%s", range->end, mark);
   else if (range->start - 1 == range->end)
-    return apr_psprintf(pool, "-%ld%s", range->start, mark);
+    *s = apr_psprintf(pool, "-%ld%s", range->start, mark);
   else if (range->start < range->end)
-    return apr_psprintf(pool, "%ld-%ld%s", range->start + 1, range->end, mark);
+    *s = apr_psprintf(pool, "%ld-%ld%s", range->start + 1, range->end, mark);
   else if (range->start > range->end)
-    return apr_psprintf(pool, "%ld-%ld%s", range->start, range->end + 1, mark);
+    *s = apr_psprintf(pool, "%ld-%ld%s", range->start, range->end + 1, mark);
   else
-    return apr_psprintf(pool, "[empty-range@%ld%s]", range->start, mark);
+    {
+      return svn_error_createf(SVN_ERR_ASSERTION_FAIL, NULL,
+                               _("bad range {start=%ld,end=%ld,inheritable=%d}"),
+                               range->start, range->end, range->inheritable);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Convert a single svn_merge_range_t *RANGE back into a string.  */
+static char *
+range_to_string_debug(const svn_merge_range_t *range,
+                      apr_pool_t *pool)
+{
+  svn_error_t *err;
+  char *s;
+
+  err = range_to_string(&s, range, pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      s = apr_psprintf(pool, _("bad range {start=%ld,end=%ld,inheritable=%d}"),
+                       range->start, range->end, range->inheritable);
+    }
+  return s;
 }
 
 /* Helper for svn_mergeinfo_parse()
@@ -669,10 +694,10 @@ svn_rangelist__canonicalize(svn_rangelist_t *rangelist,
                                          "revision ranges '%s' and '%s' "
                                          "with different inheritance "
                                          "types"),
-                                       range_to_string(lastrange,
-                                                       scratch_pool),
-                                       range_to_string(range,
-                                                       scratch_pool));
+                                       range_to_string_debug(lastrange,
+                                                             scratch_pool),
+                                       range_to_string_debug(range,
+                                                             scratch_pool));
             }
 
           /* Combine overlapping or adjacent ranges with the
@@ -1979,18 +2004,21 @@ svn_rangelist_to_string(svn_string_t **output,
     {
       int i;
       svn_merge_range_t *range;
+      char *s;
 
       /* Handle the elements that need commas at the end.  */
       for (i = 0; i < rangelist->nelts - 1; i++)
         {
           range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-          svn_stringbuf_appendcstr(buf, range_to_string(range, pool));
+          SVN_ERR(range_to_string(&s, range, pool));
+          svn_stringbuf_appendcstr(buf, s);
           svn_stringbuf_appendcstr(buf, ",");
         }
 
       /* Now handle the last element, which needs no comma.  */
       range = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
-      svn_stringbuf_appendcstr(buf, range_to_string(range, pool));
+      SVN_ERR(range_to_string(&s, range, pool));
+      svn_stringbuf_appendcstr(buf, s);
     }
 
   *output = svn_stringbuf__morph_into_string(buf);
