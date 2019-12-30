@@ -33,6 +33,7 @@
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_sorts_private.h"
 #include "../svn_test.h"
 
 /* A quick way to create error messages.  */
@@ -1811,6 +1812,351 @@ test_rangelist_merge_canonical_result(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+
+/* Randomize revision numbers over this small range.
+ * (With a larger range, we would find edge cases more rarely.) */
+#define RANGELIST_TESTS_MAX_REV 15
+
+/* A representation of svn_rangelist_t in which
+ *   root[R]    := (revision R is in the rangelist)
+ *   inherit[R] := (revision R is in the rangelist and inheritable)
+ *
+ * Assuming all forward ranges.
+ */
+typedef struct rl_array_t {
+    svn_boolean_t root[RANGELIST_TESTS_MAX_REV + 1];
+    svn_boolean_t inherit[RANGELIST_TESTS_MAX_REV + 1];
+} rl_array_t;
+
+static void
+rangelist_to_array(rl_array_t *a,
+                   const svn_rangelist_t *rl)
+{
+  int i;
+
+  memset(a, 0, sizeof(*a));
+  for (i = 0; i < rl->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rl, i, svn_merge_range_t *);
+      int r;
+
+      for (r = range->start + 1; r <= range->end; r++)
+        {
+          a->root[r] = TRUE;
+          a->inherit[r] = range->inheritable;
+        }
+    }
+}
+
+/* Compute the union of two rangelists arrays.
+ * Let MA := union(BA, CA)
+ */
+static void
+rangelist_array_union(rl_array_t *ma,
+                      const rl_array_t *ba,
+                      const rl_array_t *ca)
+{
+  int r;
+
+  for (r = 0; r <= RANGELIST_TESTS_MAX_REV; r++)
+    {
+      ma->root[r]    = ba->root[r]    || ca->root[r];
+      ma->inherit[r] = ba->inherit[r] || ca->inherit[r];
+    }
+}
+
+/* Return TRUE iff two rangelist arrays are equal.
+ */
+static svn_boolean_t
+rangelist_array_equal(const rl_array_t *ba,
+                      const rl_array_t *ca)
+{
+  int r;
+
+  for (r = 0; r <= RANGELIST_TESTS_MAX_REV; r++)
+    {
+      if (ba->root[r]    != ca->root[r]
+       || ba->inherit[r] != ca->inherit[r])
+        {
+          return FALSE;
+        }
+    }
+  return TRUE;
+}
+
+#define IS_VALID_FORWARD_RANGE(range) \
+  (SVN_IS_VALID_REVNUM((range)->start) && ((range)->start < (range)->end))
+
+/* Check rangelist is sorted and contains forward ranges. */
+static svn_boolean_t
+rangelist_is_sorted(const svn_rangelist_t *rangelist)
+{
+  int i;
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      const svn_merge_range_t *thisrange
+        = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+
+      if (!IS_VALID_FORWARD_RANGE(thisrange))
+        return FALSE;
+    }
+  for (i = 1; i < rangelist->nelts; i++)
+    {
+      const svn_merge_range_t *lastrange
+        = APR_ARRAY_IDX(rangelist, i-1, svn_merge_range_t *);
+      const svn_merge_range_t *thisrange
+        = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+
+      if (svn_sort_compare_ranges(&lastrange, &thisrange) > 0)
+        return FALSE;
+    }
+  return TRUE;
+}
+
+/* Return a random number R, where 0 <= R < N.
+ */
+static int rand_less_than(int n)
+{
+  apr_uint32_t next = svn_test_rand(&random_rev_array_seed);
+  return ((apr_uint64_t)next * n) >> 32;
+}
+
+/* Generate a rangelist with a random number of random ranges.
+ */
+static void
+rangelist_random_non_validated(svn_rangelist_t **rl,
+                               apr_pool_t *pool)
+{
+  svn_rangelist_t *r = apr_array_make(pool, 4, sizeof(svn_merge_range_t *));
+  int i;
+
+  /* Choose from 0 to 4 ranges, biased towards 2 ranges */
+  for (i = rand_less_than(3) + rand_less_than(3); i > 0; --i)
+    {
+      svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
+
+      mrange->start = rand_less_than(RANGELIST_TESTS_MAX_REV + 1);
+      mrange->end = rand_less_than(RANGELIST_TESTS_MAX_REV + 1);
+      mrange->inheritable = rand_less_than(2);
+      APR_ARRAY_PUSH(r, svn_merge_range_t *) = mrange;
+    }
+  *rl = r;
+}
+
+/* Generate a random rangelist that is not necessarily canonical
+ * but is at least sorted according to svn_sort_compare_ranges()
+ * and on which svn_rangelist__canonicalize() would succeed. */
+static void
+rangelist_random_semi_canonical(svn_rangelist_t **rl,
+                                apr_pool_t *pool)
+{
+  do
+    {
+      svn_rangelist_t *dup;
+      svn_error_t *err;
+
+      rangelist_random_non_validated(rl, pool);
+      if (!rangelist_is_sorted(*rl))
+        continue;
+      dup = svn_rangelist_dup(*rl, pool);
+      if ((err = svn_rangelist__canonicalize(dup, pool)))
+        {
+          svn_error_clear(err);
+          continue;
+        }
+      break;
+    } while (1);
+}
+
+/* Generate a random rangelist that satisfies svn_rangelist__is_canonical().
+ */
+static void
+rangelist_random_canonical(svn_rangelist_t **rl,
+                           apr_pool_t *pool)
+{
+  do {
+    rangelist_random_non_validated(rl, pool);
+  } while (! svn_rangelist__is_canonical(*rl));
+}
+
+static const char *
+rangelist_to_string(const svn_rangelist_t *rl,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_string_t *ss;
+
+  err = svn_rangelist_to_string(&ss, rl, pool);
+  if (err)
+    {
+      const char *s
+        = apr_psprintf(pool, "<rangelist[%d ranges]: %s>",
+                       rl->nelts, err->child->message);
+      svn_error_clear(err);
+      return s;
+    }
+  return ss->data;
+}
+
+/* Try svn_rangelist_merge2(rlx, rly) and check errors and result */
+static svn_error_t *
+rangelist_merge_random_inputs(svn_rangelist_t *rlx,
+                              svn_rangelist_t *rly,
+                              apr_pool_t *pool)
+{
+  rl_array_t ax, ay, a_expected, a_actual;
+  svn_rangelist_t *rlm;
+
+  rangelist_to_array(&ax, rlx);
+  rangelist_to_array(&ay, rly);
+
+  rlm = svn_rangelist_dup(rlx, pool);
+  /*printf("testcase: %s / %s\n", rangelist_to_string(rlx, pool), rangelist_to_string(rly, pool));*/
+  SVN_ERR(svn_rangelist_merge2(rlm, rly, pool, pool));
+
+  if (!svn_rangelist__is_canonical(rlm))
+    {
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "non-canonical result %s",
+                               rangelist_to_string(rlm, pool));
+    }
+
+  /*SVN_TEST_ASSERT(rangelist_equal(rlm, ...));*/
+  rangelist_array_union(&a_expected, &ax, &ay);
+  rangelist_to_array(&a_actual, rlm);
+  if (!rangelist_array_equal(&a_actual, &a_expected))
+    {
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "wrong result: (c? %d / %d) -> %s",
+                               svn_rangelist__is_canonical(rlx),
+                               svn_rangelist__is_canonical(rly),
+                               rangelist_to_string(rlm, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t pass = TRUE;
+  int ix, iy;
+
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_rangelist_t *rlx;
+
+    rangelist_random_canonical(&rlx, pool);
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_rangelist_t *rly;
+        svn_error_t *err;
+
+        svn_pool_clear(iterpool);
+
+        rangelist_random_canonical(&rly, iterpool);
+
+        err = rangelist_merge_random_inputs(rlx, rly, iterpool);
+        if (err)
+          {
+            printf("testcase FAIL: %s / %s\n",
+                   rangelist_to_string(rlx, iterpool),
+                   rangelist_to_string(rly, iterpool));
+            svn_handle_error(err, stdout, FALSE);
+            svn_error_clear(err);
+            pass = FALSE;
+          }
+      }
+   }
+
+  if (!pass)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t pass = TRUE;
+  int ix, iy;
+
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_rangelist_t *rlx;
+
+    rangelist_random_semi_canonical(&rlx, pool);
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_rangelist_t *rly;
+        svn_error_t *err;
+
+        svn_pool_clear(iterpool);
+
+        rangelist_random_semi_canonical(&rly, iterpool);
+
+        err = rangelist_merge_random_inputs(rlx, rly, iterpool);
+        if (err)
+          {
+            printf("testcase FAIL: %s / %s\n",
+                   rangelist_to_string(rlx, iterpool),
+                   rangelist_to_string(rly, iterpool));
+            svn_handle_error(err, stdout, FALSE);
+            svn_error_clear(err);
+            pass = FALSE;
+          }
+      }
+   }
+
+  if (!pass)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
+{
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  svn_boolean_t pass = TRUE;
+  int ix, iy;
+
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_rangelist_t *rlx;
+
+    rangelist_random_non_validated(&rlx, pool);
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_rangelist_t *rly;
+        svn_error_t *err;
+
+        svn_pool_clear(iterpool);
+
+        rangelist_random_non_validated(&rly, iterpool);
+
+        err = rangelist_merge_random_inputs(rlx, rly, iterpool);
+        if (err)
+          {
+            printf("testcase FAIL: %s / %s\n",
+                   rangelist_to_string(rlx, iterpool),
+                   rangelist_to_string(rly, iterpool));
+            svn_handle_error(err, stdout, FALSE);
+            svn_error_clear(err);
+            pass = FALSE;
+          }
+      }
+   }
+
+  if (!pass)
+    return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -1861,6 +2207,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                     "test rangelist edgecases via loop"),
     SVN_TEST_XFAIL2(test_rangelist_merge_canonical_result,
                     "test rangelist merge canonical result (#4840)"),
+    SVN_TEST_XFAIL2(test_rangelist_merge_random_canonical_inputs,
+                    "test rangelist merge random canonical inputs"),
+    SVN_TEST_XFAIL2(test_rangelist_merge_random_semi_c_inputs,
+                    "test rangelist merge random semi-c inputs"),
+    SVN_TEST_XFAIL2(test_rangelist_merge_random_non_validated_inputs,
+                    "test rangelist merge random non-validated inputs"),
     SVN_TEST_NULL
   };
 
