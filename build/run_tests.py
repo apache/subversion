@@ -50,7 +50,7 @@ separated list of test numbers; the default is to run all the tests in it.
 import os, sys, shutil, codecs
 import re
 import logging
-import optparse, subprocess, imp, threading, traceback
+import optparse, subprocess, threading, traceback
 from datetime import datetime
 
 try:
@@ -63,6 +63,13 @@ except ImportError:
 if sys.version_info < (3, 0):
   # Python >= 3.0 already has this build in
   import exceptions
+
+if sys.version_info < (3, 5):
+  import imp
+else:
+  # The imp module is deprecated since Python 3.4; the replacement we use,
+  # module_from_spec(), is available since Python 3.5.
+  import importlib.util
 
 # Ensure the compiled C tests use a known locale (Python tests set the locale
 # explicitly).
@@ -821,10 +828,15 @@ class TestHarness:
       if sys.version_info < (3, 0):
         prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
                                    ('.py', 'U', imp.PY_SOURCE))
-      else:
+      elif sys.version_info < (3, 5):
         prog_mod = imp.load_module(progbase[:-3],
                                    open(progabs, 'r', encoding="utf-8"),
                                    progabs, ('.py', 'U', imp.PY_SOURCE))
+      else:
+         spec = importlib.util.spec_from_file_location(progbase[:-3], progabs)
+         prog_mod = importlib.util.module_from_spec(spec) 
+         sys.modules[progbase[:-3]] = prog_mod
+         spec.loader.exec_module(prog_mod)
     except:
       print("\nError loading test (details in following traceback): " + progbase)
       traceback.print_exc()
