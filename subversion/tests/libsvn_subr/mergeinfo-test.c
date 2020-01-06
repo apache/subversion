@@ -1993,7 +1993,7 @@ rangelist_to_string(const svn_rangelist_t *rl,
     {
       const char *s
         = apr_psprintf(pool, "<rangelist[%d ranges]: %s>",
-                       rl->nelts, err->child->message);
+                       rl->nelts, svn_error_purge_tracing(err)->message);
       svn_error_clear(err);
       return s;
     }
