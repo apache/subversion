@@ -303,6 +303,9 @@ struct dav_resource_private {
   /* whether this resource parameters are fixed and won't change
      between requests. */
   svn_boolean_t idempotent;
+
+  /* resource is accessed by 'public' uri (not under "!svn") */
+  svn_boolean_t is_public_uri;
 };
 
 

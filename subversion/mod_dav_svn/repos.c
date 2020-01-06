@@ -714,6 +714,8 @@ parse_uri(dav_resource_combined *comb,
       && ((ch = uri[len2]) == '/' || ch == '\0')
       && memcmp(uri, special_uri, len2) == 0)
     {
+      comb->priv.is_public_uri = FALSE;
+
       if (ch == '\0')
         {
           /* URI was "/root/!svn". It exists, but has restricted usage. */
@@ -789,6 +791,8 @@ parse_uri(dav_resource_combined *comb,
       /* The location of these resources corresponds directly to the URI,
          and we keep the leading "/". */
       comb->priv.repos_path = comb->priv.uri_path->data;
+
+      comb->priv.is_public_uri = TRUE;
     }
 
   return FALSE;
@@ -1596,6 +1600,7 @@ get_parentpath_resource(request_rec *r,
   comb->priv.r = r;
   comb->priv.repos_path = "Collection of Repositories";
   comb->priv.root = *droot;
+  comb->priv.is_public_uri = TRUE;
   droot->rev = SVN_INVALID_REVNUM;
 
   comb->priv.repos = repos;
@@ -3139,50 +3144,6 @@ seek_stream(dav_stream *stream, apr_off_t abs_position)
        && resource->baselined))
 
 
-/* Return the last modification time of RESOURCE, or -1 if the DAV
-   resource type is not handled, or if an error occurs.  Temporary
-   allocations are made from RESOURCE->POOL. */
-static apr_time_t
-get_last_modified(const dav_resource *resource)
-{
-  apr_time_t last_modified;
-  svn_error_t *serr;
-  svn_revnum_t created_rev;
-  svn_string_t *date_time;
-
-  if (RESOURCE_LACKS_ETAG_POTENTIAL(resource))
-    return -1;
-
-  if ((serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
-                                      resource->info->repos_path,
-                                      resource->pool)))
-    {
-      svn_error_clear(serr);
-      return -1;
-    }
-
-  if ((serr = svn_fs_revision_prop2(&date_time, resource->info->repos->fs,
-                                    created_rev, SVN_PROP_REVISION_DATE,
-                                    TRUE, resource->pool, resource->pool)))
-    {
-      svn_error_clear(serr);
-      return -1;
-    }
-
-  if (date_time == NULL || date_time->data == NULL)
-    return -1;
-
-  if ((serr = svn_time_from_cstring(&last_modified, date_time->data,
-                                    resource->pool)))
-    {
-      svn_error_clear(serr);
-      return -1;
-    }
-
-  return last_modified;
-}
-
-
 const char *
 dav_svn__getetag(const dav_resource *resource, apr_pool_t *pool)
 {
@@ -3264,20 +3225,42 @@ set_headers(request_rec *r, const dav_resource *resource)
     return NULL;
 
   if ((resource->type == DAV_RESOURCE_TYPE_REGULAR) 
-      && (resource->info->repos_path == resource->info->uri_path->data))
+      && resource->info->is_public_uri)
     {
       /* Include Last-Modified header for 'external' GET or HEAD requests
          (i.e. requests to URI's not under /!svn), to support usage of an
          SVN server as a file server, where the client needs timestamps
          for instance to use as "last modification time" of files on disk. */
-      const apr_time_t last_modified = get_last_modified(resource);
-      if (last_modified != -1)
+
+      svn_revnum_t created_rev;
+      svn_string_t *date_str = NULL;
+
+      serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
+                                     resource->info->repos_path,
+                                     resource->pool);
+
+      if (serr == NULL)
         {
-          /* Note the modification time for the requested resource, and
-             include the Last-Modified header in the response. */
-          ap_update_mtime(r, last_modified);
-          ap_set_last_modified(r);
-        }  
+          serr = svn_fs_revision_prop2(&date_str, resource->info->repos->fs,
+                                       created_rev, SVN_PROP_REVISION_DATE,
+                                       TRUE, resource->pool, resource->pool);
+        }
+
+      if ((serr == NULL) && date_str && date_str->data)
+        {
+          apr_time_t mtime;
+          serr = svn_time_from_cstring(&mtime, date_str->data, resource->pool);
+
+          if (serr == NULL)
+            {
+              /* Note the modification time for the requested resource, and
+                 include the Last-Modified header in the response. */
+              ap_update_mtime(r, mtime);
+              ap_set_last_modified(r);
+            }
+        }
+
+      svn_error_clear(serr);
     }
 
   /* generate our etag and place it into the output */
