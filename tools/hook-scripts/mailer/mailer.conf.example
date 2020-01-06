@@ -23,6 +23,10 @@
 # This option specifies the hostname for delivery via SMTP.
 #smtp_hostname = localhost
 
+# This option specifies the TCP port number to connect for SMTP.
+# If it is not specified, 25 is used by default.
+#smtp_port = 25
+
 # Username and password for SMTP servers requiring authorisation.
 #smtp_username = example
 #smtp_password = example

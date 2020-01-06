@@ -299,11 +299,15 @@ class SMTPOutput(MailedOutput):
     (to minimize the chances of said lockout).
     """
 
+    if self.cfg.is_set('general.smtp_port'):
+       smtp_port = self.cfg.general.smtp_port
+    else:
+       smtp_port = smtplib.SMTP_PORT
     try:
       if self.cfg.is_set('general.smtp_ssl') and self.cfg.general.smtp_ssl == 'yes':
-        server = smtplib.SMTP_SSL(self.cfg.general.smtp_hostname)
+        server = smtplib.SMTP_SSL(self.cfg.general.smtp_hostname, smtp_port)
       else:
-        server = smtplib.SMTP(self.cfg.general.smtp_hostname)
+        server = smtplib.SMTP(self.cfg.general.smtp_hostname, smtp_port)
     except Exception as detail:
       sys.stderr.write("mailer.py: Failed to instantiate SMTP object: %s\n" % (detail,))
       # Any error to instantiate is fatal
