@@ -1917,9 +1917,9 @@ rangelist_is_sorted(const svn_rangelist_t *rangelist)
 
 /* Return a random number R, where 0 <= R < N.
  */
-static int rand_less_than(int n)
+static int rand_less_than(int n, apr_uint32_t *seed)
 {
-  apr_uint32_t next = svn_test_rand(&random_rev_array_seed);
+  apr_uint32_t next = svn_test_rand(seed);
   return ((apr_uint64_t)next * n) >> 32;
 }
 
@@ -1927,19 +1927,20 @@ static int rand_less_than(int n)
  */
 static void
 rangelist_random_non_validated(svn_rangelist_t **rl,
+                               apr_uint32_t *seed,
                                apr_pool_t *pool)
 {
   svn_rangelist_t *r = apr_array_make(pool, 4, sizeof(svn_merge_range_t *));
   int i;
 
   /* Choose from 0 to 4 ranges, biased towards 2 ranges */
-  for (i = rand_less_than(3) + rand_less_than(3); i > 0; --i)
+  for (i = rand_less_than(3, seed) + rand_less_than(3, seed); i > 0; --i)
     {
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
 
-      mrange->start = rand_less_than(RANGELIST_TESTS_MAX_REV + 1);
-      mrange->end = rand_less_than(RANGELIST_TESTS_MAX_REV + 1);
-      mrange->inheritable = rand_less_than(2);
+      mrange->start = rand_less_than(RANGELIST_TESTS_MAX_REV + 1, seed);
+      mrange->end = rand_less_than(RANGELIST_TESTS_MAX_REV + 1, seed);
+      mrange->inheritable = rand_less_than(2, seed);
       APR_ARRAY_PUSH(r, svn_merge_range_t *) = mrange;
     }
   *rl = r;
@@ -1950,6 +1951,7 @@ rangelist_random_non_validated(svn_rangelist_t **rl,
  * and on which svn_rangelist__canonicalize() would succeed. */
 static void
 rangelist_random_semi_canonical(svn_rangelist_t **rl,
+                                apr_uint32_t *seed,
                                 apr_pool_t *pool)
 {
   do
@@ -1957,7 +1959,7 @@ rangelist_random_semi_canonical(svn_rangelist_t **rl,
       svn_rangelist_t *dup;
       svn_error_t *err;
 
-      rangelist_random_non_validated(rl, pool);
+      rangelist_random_non_validated(rl, seed, pool);
       if (!rangelist_is_sorted(*rl))
         continue;
       dup = svn_rangelist_dup(*rl, pool);
@@ -1974,10 +1976,11 @@ rangelist_random_semi_canonical(svn_rangelist_t **rl,
  */
 static void
 rangelist_random_canonical(svn_rangelist_t **rl,
+                           apr_uint32_t *seed,
                            apr_pool_t *pool)
 {
   do {
-    rangelist_random_non_validated(rl, pool);
+    rangelist_random_non_validated(rl, seed, pool);
   } while (! svn_rangelist__is_canonical(*rl));
 }
 
@@ -2041,6 +2044,7 @@ rangelist_merge_random_inputs(svn_rangelist_t *rlx,
 static svn_error_t *
 test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
 {
+  static apr_uint32_t seed = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_boolean_t pass = TRUE;
   int ix, iy;
@@ -2049,7 +2053,7 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
    {
     svn_rangelist_t *rlx;
 
-    rangelist_random_canonical(&rlx, pool);
+    rangelist_random_canonical(&rlx, &seed, pool);
 
     for (iy = 0; iy < 300; iy++)
       {
@@ -2058,7 +2062,7 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
 
         svn_pool_clear(iterpool);
 
-        rangelist_random_canonical(&rly, iterpool);
+        rangelist_random_canonical(&rly, &seed, iterpool);
 
         err = rangelist_merge_random_inputs(rlx, rly, iterpool);
         if (err)
@@ -2081,6 +2085,7 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
 static svn_error_t *
 test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
 {
+  static apr_uint32_t seed = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
   svn_boolean_t pass = TRUE;
   int ix, iy;
@@ -2089,7 +2094,7 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
    {
     svn_rangelist_t *rlx;
 
-    rangelist_random_semi_canonical(&rlx, pool);
+    rangelist_random_semi_canonical(&rlx, &seed, pool);
 
     for (iy = 0; iy < 300; iy++)
       {
@@ -2098,7 +2103,7 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
 
         svn_pool_clear(iterpool);
 
-        rangelist_random_semi_canonical(&rly, iterpool);
+        rangelist_random_semi_canonical(&rly, &seed, iterpool);
 
         err = rangelist_merge_random_inputs(rlx, rly, iterpool);
         if (err)
@@ -2126,6 +2131,7 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
 static svn_error_t *
 test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
 {
+  static apr_uint32_t seed = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
   int ix, iy;
 
@@ -2133,7 +2139,7 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
    {
     svn_rangelist_t *rlx;
 
-    rangelist_random_non_validated(&rlx, pool);
+    rangelist_random_non_validated(&rlx, &seed, pool);
 
     for (iy = 0; iy < 300; iy++)
       {
@@ -2142,7 +2148,7 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
 
         svn_pool_clear(iterpool);
 
-        rangelist_random_non_validated(&rly, iterpool);
+        rangelist_random_non_validated(&rly, &seed, iterpool);
 
         err = rangelist_merge_random_inputs(rlx, rly, iterpool);
         if (err)
@@ -2159,6 +2165,7 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
  * necessarily valid. */
 static svn_error_t *
 mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
+                               apr_uint32_t *seed,
                                apr_pool_t *pool)
 {
   svn_mergeinfo_t m = apr_hash_make(pool);
@@ -2169,7 +2176,7 @@ mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
       const char *path;
       svn_rangelist_t *rl;
 
-      switch (rand_less_than(8))
+      switch (rand_less_than(8, seed))
         {
         case 0: case 1: case 2: case 3:
           path = apr_psprintf(pool, "/path%d", i); break;
@@ -2182,7 +2189,7 @@ mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
         case 7:
           path = ""; break;
         }
-      rangelist_random_non_validated(&rl, pool);
+      rangelist_random_non_validated(&rl, seed, pool);
       svn_hash_sets(m, path, rl);
     }
   *mp = m;
@@ -2228,6 +2235,7 @@ mergeinfo_merge_random_inputs(const svn_mergeinfo_t mx,
 static svn_error_t *
 test_mergeinfo_merge_random_non_validated_inputs(apr_pool_t *pool)
 {
+  static apr_uint32_t seed = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
   int ix, iy;
 
@@ -2235,7 +2243,7 @@ test_mergeinfo_merge_random_non_validated_inputs(apr_pool_t *pool)
    {
     svn_mergeinfo_t mx;
 
-    SVN_ERR(mergeinfo_random_non_validated(&mx, pool));
+    SVN_ERR(mergeinfo_random_non_validated(&mx, &seed, pool));
 
     for (iy = 0; iy < 300; iy++)
       {
@@ -2244,7 +2252,7 @@ test_mergeinfo_merge_random_non_validated_inputs(apr_pool_t *pool)
 
         svn_pool_clear(iterpool);
 
-        SVN_ERR(mergeinfo_random_non_validated(&my, iterpool));
+        SVN_ERR(mergeinfo_random_non_validated(&my, &seed, iterpool));
 
         err = mergeinfo_merge_random_inputs(mx, my, iterpool);
         if (err)
