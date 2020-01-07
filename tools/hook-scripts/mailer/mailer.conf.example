@@ -24,7 +24,8 @@
 #smtp_hostname = localhost
 
 # This option specifies the TCP port number to connect for SMTP.
-# If it is not specified, 25 is used by default.
+# If it is not specified, 25 is used for SMTP and 465 is used for
+# SMTP-Over-SSL by default.
 #smtp_port = 25
 
 # Username and password for SMTP servers requiring authorisation.

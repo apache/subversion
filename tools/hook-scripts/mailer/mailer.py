@@ -302,7 +302,7 @@ class SMTPOutput(MailedOutput):
     if self.cfg.is_set('general.smtp_port'):
        smtp_port = self.cfg.general.smtp_port
     else:
-       smtp_port = smtplib.SMTP_PORT
+       smtp_port = 0
     try:
       if self.cfg.is_set('general.smtp_ssl') and self.cfg.general.smtp_ssl == 'yes':
         server = smtplib.SMTP_SSL(self.cfg.general.smtp_hostname, smtp_port)
