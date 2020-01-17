@@ -1813,6 +1813,36 @@ test_rangelist_merge_canonical_result(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test svn_rangelist_merge2() with specific inputs derived from an
+ * occurrence of issue #4840 "in the wild", that triggered a hard
+ * assertion failure (abort) in a 1.10.6 release-mode build.
+ */
+static svn_error_t *
+test_rangelist_merge_array_insert_failure(apr_pool_t *pool)
+{
+  svn_rangelist_t *rx, *ry;
+  svn_string_t *rxs;
+
+  /* Simplified case with same failure mode as reported case: error
+   * "E200004: svn_sort__array_insert2:
+   *  Attempted insert at index 4 in array length 3" */
+  SVN_ERR(svn_rangelist__parse(&rx, "2*,4*,6*,8", pool));
+  SVN_ERR(svn_rangelist__parse(&ry, "1-9*,11", pool));
+  SVN_ERR(svn_rangelist_merge2(rx, ry, pool, pool));
+  SVN_ERR(svn_rangelist_to_string(&rxs, rx, pool));
+  SVN_TEST_STRING_ASSERT(rxs->data, "1-9*,11");
+
+  /* Actual reported case: in v1.10.6, aborted; after r1872118, error
+   * "E200004: svn_sort__array_insert2:
+   *  Attempted insert at index 57 in array length 55".  The actual "index"
+   *  and "array length" numbers vary with changes such as r1823728. */
+  SVN_ERR(svn_rangelist__parse(&rx, "997347-997597*,997884-1000223*,1000542-1000551*,1001389-1001516,1002139-1002268*,1002896-1003064*,1003320-1003468,1005939-1006089*,1006443-1006630*,1006631-1006857,1007028-1007116*,1009467-1009629,1009630-1010007*,1010774-1010860,1011036-1011502,1011672-1014004*,1014023-1014197,1014484-1014542*,1015077-1015568,1016219-1016365,1016698-1016845,1017331-1018616,1027032-1027180,1027855-1028051,1028261-1028395,1028553-1028663,1028674-1028708,1028773-1028891*,1029223-1030557,1032239-1032284*,1032801-1032959,1032960-1033074*,1033745-1033810,1034990-1035104,1035435-1036108*,1036109-1036395,1036396-1036865*,1036866-1036951,1036952-1037647*,1037648-1037750,1037751-1038548*,1038549-1038700,1038701-1042103*,1042104-1042305,1042306-1046626*,1046627-1046910,1046911-1047676*,1047677-1047818,1047819-1047914*,1047915-1048025,1048026-1048616*,1048617-1048993,1048994-1050066*,1054605-1054739,1054854-1055021", pool));
+  SVN_ERR(svn_rangelist__parse(&ry, "1035435-1050066*,1052459-1054617", pool));
+  SVN_ERR(svn_rangelist_merge2(rx, ry, pool, pool));
+  /* Here we don't care to check the result; just that it returns "success". */
+  return SVN_NO_ERROR;
+}
+
 
 /* Randomize revision numbers over this small range.
  * (With a larger range, we would find edge cases more rarely.) */
@@ -2320,6 +2350,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                     "test rangelist edgecases via loop"),
     SVN_TEST_XFAIL2(test_rangelist_merge_canonical_result,
                     "test rangelist merge canonical result (#4840)"),
+    SVN_TEST_XFAIL2(test_rangelist_merge_array_insert_failure,
+                    "test rangelist merge array insert failure (#4840)"),
     SVN_TEST_XFAIL2(test_rangelist_merge_random_canonical_inputs,
                     "test rangelist merge random canonical inputs"),
     SVN_TEST_XFAIL2(test_rangelist_merge_random_semi_c_inputs,
