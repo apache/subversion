@@ -31,7 +31,7 @@ sub-tests it can run.  It has a standard interface:
     regression tracking scripts), and human-readable (for the sake of
     painstaking grovelling by hand in the dead of night):
 
-      (PASS | FAIL): (argv[0]) (argv[1]): (description)
+      (PASS | XPASS | FAIL | XFAIL): (argv[0]) (argv[1]): (description)
 
 For example,
 
