@@ -2071,11 +2071,52 @@ rangelist_merge_random_inputs(svn_rangelist_t *rlx,
   return SVN_NO_ERROR;
 }
 
+/* Insert a failure mode (ERR_CHAIN) into RESPONSES, keyed by a message
+ * representing its failure mode.  The failure mode message is the lowest
+ * level error message in ERR_CHAIN, with some case-specific details
+ * removed to aid de-duplication.  If it is new failure mode (not already in
+ * RESPONSES), store the error and return the message (hash key), else
+ * clear the error and return NULL.
+ */
+static const char *
+add_failure_mode(svn_error_t *err_chain,
+                 apr_hash_t *failure_modes)
+{
+  svn_error_t *err = err_chain;
+  char buf[100];
+  const char *message;
+
+  if (!err_chain)
+    return NULL;
+
+  while (err->child)
+    err = err->child;
+  message = svn_err_best_message(err, buf, sizeof(buf));
+
+  /* For deduplication, ignore case-specific data in certain messages. */
+  if (strstr(message, "Unable to parse overlapping revision ranges '"))
+    message = "Unable to parse overlapping revision ranges '...";
+  if (strstr(message, "wrong result: (c?"))
+    message = "wrong result: (c?...";
+
+  if (!svn_hash_gets(failure_modes, message))
+    {
+      svn_hash_sets(failure_modes, message, err);
+      return message;
+    }
+  else
+    {
+      svn_error_clear(err_chain);
+      return NULL;
+    }
+}
+
 static svn_error_t *
 test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
 {
   static apr_uint32_t seed = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *failure_modes = apr_hash_make(pool);
   svn_boolean_t pass = TRUE;
   int ix, iy;
 
@@ -2089,18 +2130,22 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
       {
         svn_rangelist_t *rly;
         svn_error_t *err;
+        const char *failure_mode;
 
         svn_pool_clear(iterpool);
 
         rangelist_random_canonical(&rly, &seed, iterpool);
 
-        err = rangelist_merge_random_inputs(rlx, rly, iterpool);
-        if (err)
+        err = svn_error_trace(rangelist_merge_random_inputs(rlx, rly, iterpool));
+        failure_mode = add_failure_mode(err, failure_modes);
+        if (failure_mode)
           {
-            printf("testcase FAIL: %s / %s\n",
+            printf("first example of a failure mode: %s / %s\n"
+                   "  %s\n",
                    rangelist_to_string(rlx, iterpool),
-                   rangelist_to_string(rly, iterpool));
-            svn_handle_error(err, stdout, FALSE);
+                   rangelist_to_string(rly, iterpool),
+                   failure_mode);
+            /*svn_handle_error(err, stdout, FALSE);*/
             svn_error_clear(err);
             pass = FALSE;
           }
@@ -2108,7 +2153,9 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
    }
 
   if (!pass)
-    return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Test failed: %d failure modes",
+                             apr_hash_count(failure_modes));
   return SVN_NO_ERROR;
 }
 
@@ -2117,6 +2164,7 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
 {
   static apr_uint32_t seed = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *failure_modes = apr_hash_make(pool);
   svn_boolean_t pass = TRUE;
   int ix, iy;
 
@@ -2130,18 +2178,22 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
       {
         svn_rangelist_t *rly;
         svn_error_t *err;
+        const char *failure_mode;
 
         svn_pool_clear(iterpool);
 
         rangelist_random_semi_canonical(&rly, &seed, iterpool);
 
-        err = rangelist_merge_random_inputs(rlx, rly, iterpool);
-        if (err)
+        err = svn_error_trace(rangelist_merge_random_inputs(rlx, rly, iterpool));
+        failure_mode = add_failure_mode(err, failure_modes);
+        if (failure_mode)
           {
-            printf("testcase FAIL: %s / %s\n",
+            printf("first example of a failure mode: %s / %s\n"
+                   "  %s\n",
                    rangelist_to_string(rlx, iterpool),
-                   rangelist_to_string(rly, iterpool));
-            svn_handle_error(err, stdout, FALSE);
+                   rangelist_to_string(rly, iterpool),
+                   failure_mode);
+            /*svn_handle_error(err, stdout, FALSE);*/
             svn_error_clear(err);
             pass = FALSE;
           }
@@ -2149,7 +2201,9 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
    }
 
   if (!pass)
-    return svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Test failed: %d failure modes",
+                             apr_hash_count(failure_modes));
   return SVN_NO_ERROR;
 }
 
@@ -2163,6 +2217,7 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
 {
   static apr_uint32_t seed = 0;
   apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *failure_modes = apr_hash_make(pool);
   int ix, iy;
 
   for (ix = 0; ix < 300; ix++)
@@ -2180,8 +2235,8 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
 
         rangelist_random_non_validated(&rly, &seed, iterpool);
 
-        err = rangelist_merge_random_inputs(rlx, rly, iterpool);
-        if (err)
+        err = svn_error_trace(rangelist_merge_random_inputs(rlx, rly, iterpool));
+        if (add_failure_mode(err, failure_modes))
           {
             svn_error_clear(err);
           }
