@@ -1278,7 +1278,7 @@ rangelist_merge2(svn_rangelist_t *rangelist,
     }
 
 #ifdef SVN_DEBUG
-  /*SVN_ERR_ASSERT(svn_rangelist__is_canonical(rangelist));*/
+  SVN_ERR_ASSERT(svn_rangelist__is_canonical(rangelist));
 #endif
 
   return SVN_NO_ERROR;
@@ -1308,14 +1308,18 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  svn_rangelist_t *rangelist_orig = svn_rangelist_dup(rangelist, scratch_pool);
   svn_error_t *err;
+
+#if SVN_DEBUG
+  svn_rangelist_t *rangelist_orig = svn_rangelist_dup(rangelist, scratch_pool);
 
   SVN_ERR_ASSERT(rangelist_is_sorted(rangelist));
   SVN_ERR_ASSERT(rangelist_is_sorted(chg));
+#endif
 
   err = svn_error_trace(rangelist_merge2(rangelist, chg, result_pool,
                                          scratch_pool));
+#if SVN_DEBUG
   if (err)
     {
       err = svn_error_createf(SVN_ERR_ASSERTION_FAIL, err,
@@ -1334,6 +1338,7 @@ svn_rangelist_merge2(svn_rangelist_t *rangelist,
               rangelist_to_string_debug(chg, scratch_pool),
               rangelist_to_string_debug(rangelist, scratch_pool));
     }
+#endif
 
   return err;
 }
