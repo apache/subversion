@@ -2273,7 +2273,7 @@ mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
   int n_paths = 3;  /* See comment "Random testing parameters and coverage" */
   int i;
 
-  for (i = 0; i < 3; i++)
+  for (i = 0; i < n_paths; i++)
     {
       const char *path;
       svn_rangelist_t *rl;
