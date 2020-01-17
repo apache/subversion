@@ -34,6 +34,7 @@
 #include "svn_mergeinfo.h"
 #include "private/svn_mergeinfo_private.h"
 #include "private/svn_sorts_private.h"
+#include "private/svn_error_private.h"
 #include "../svn_test.h"
 
 /* A quick way to create error messages.  */
@@ -1965,19 +1966,32 @@ static int rand_less_than(int n, apr_uint32_t *seed)
   return ((apr_uint64_t)next * n) >> 32;
 }
 
+/* Return a random integer in a triangular (centre-weighted) distribution in
+ * the inclusive interval [MIN, MAX]. */
+static int
+rand_interval_triangular(int min, int max, apr_uint32_t *seed)
+{
+  int span = max - min + 1;
+
+  return min + rand_less_than(span/2 + 1, seed)
+             + rand_less_than((span+1)/2, seed);
+}
+
 /* Generate a rangelist with a random number of random ranges.
+ * Choose from 0 to NON_V_MAX_RANGES ranges, biased towards the middle.
  */
+#define NON_V_MAX_RANGES 4  /* See "Random testing parameters and coverage" */
 static void
 rangelist_random_non_validated(svn_rangelist_t **rl,
                                apr_uint32_t *seed,
                                apr_pool_t *pool)
 {
-  svn_rangelist_t *r = apr_array_make(pool, 4, sizeof(svn_merge_range_t *));
+  svn_rangelist_t *r = apr_array_make(pool, NON_V_MAX_RANGES,
+                                      sizeof(svn_merge_range_t *));
+  int n_ranges = rand_interval_triangular(0, NON_V_MAX_RANGES, seed);
   int i;
 
-  /* Choose from 0 to 4 ranges, biased towards 2 ranges.
-     See comment "Random testing parameters and coverage" */
-  for (i = rand_less_than(3, seed) + rand_less_than(3, seed); i > 0; --i)
+  for (i = 0; i < n_ranges; i++)
     {
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
 
@@ -1989,30 +2003,86 @@ rangelist_random_non_validated(svn_rangelist_t **rl,
   *rl = r;
 }
 
+/* Compare two integers pointed to by A_P and B_P, for use with qsort(). */
+static int
+int_compare(const void *a_p, const void *b_p)
+{
+  const int *a = a_p, *b = b_p;
+
+  return (*a < *b) ? -1 : (*a > *b) ? 1 : 0;
+}
+
+/* Fill an ARRAY[ARRAY_LENGTH] with values each in the inclusive range
+ * [0, MAX].  The values are in ascending order, possibly with the same
+ * value repeated any number of times.
+ */
+static void
+ascending_values(int *array,
+                 int array_length,
+                 int max,
+                 apr_uint32_t *seed)
+{
+  int i;
+
+  for (i = 0; i < array_length; i++)
+    array[i] = rand_less_than(max + 1, seed);
+  /* Sort them. (Some values will be repeated.) */
+  qsort(array, array_length, sizeof(*array), int_compare);
+}
+
 /* Generate a random rangelist that is not necessarily canonical
  * but is at least sorted according to svn_sort_compare_ranges()
- * and on which svn_rangelist__canonicalize() would succeed. */
+ * and on which svn_rangelist__canonicalize() would succeed.
+ * Choose from 0 to SEMI_C_MAX_RANGES ranges, biased towards the middle.
+ */
+#define SEMI_C_MAX_RANGES 8
 static void
 rangelist_random_semi_canonical(svn_rangelist_t **rl,
                                 apr_uint32_t *seed,
                                 apr_pool_t *pool)
 {
-  do
-    {
-      svn_rangelist_t *dup;
-      svn_error_t *err;
+  svn_rangelist_t *r = apr_array_make(pool, 4, sizeof(svn_merge_range_t *));
+  int n_ranges = rand_interval_triangular(0, SEMI_C_MAX_RANGES, seed);
+  int start_and_end_revs[SEMI_C_MAX_RANGES * 2];
+  int i;
 
-      rangelist_random_non_validated(rl, seed, pool);
-      if (!rangelist_is_sorted(*rl))
-        continue;
-      dup = svn_rangelist_dup(*rl, pool);
-      if ((err = svn_rangelist__canonicalize(dup, pool)))
-        {
-          svn_error_clear(err);
-          continue;
-        }
-      break;
-    } while (1);
+  /* Choose start and end revs of the ranges. To end up with ranges evenly
+   * distributed up to RANGELIST_TESTS_MAX_REV, we start with them evenly
+   * distributed up to RANGELIST_TESTS_MAX_REV - N_RANGES, before spreading. */
+  ascending_values(start_and_end_revs, n_ranges * 2,
+                   RANGELIST_TESTS_MAX_REV - n_ranges,
+                   seed);
+  /* Some values will be repeated. Within one range, that is not allowed,
+   * so add 1 to the length of each range, spreading the ranges out so they
+   * still don't overlap:
+   * [(6,6), (6,8)] becomes [(6,7), (7, 10)] */
+  for (i = 0; i < n_ranges; i++)
+    {
+      start_and_end_revs[i*2] += i;
+      start_and_end_revs[i*2 + 1] += i+1;
+    }
+
+  for (i = 0; i < n_ranges; i++)
+    {
+      svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
+
+      mrange->start = start_and_end_revs[i * 2];
+      mrange->end = start_and_end_revs[i * 2 + 1];
+      mrange->inheritable = rand_less_than(2, seed);
+      APR_ARRAY_PUSH(r, svn_merge_range_t *) = mrange;
+    }
+  *rl = r;
+
+  /* check postconditions */
+  {
+    svn_rangelist_t *dup;
+    svn_error_t *err;
+
+    SVN_ERR_ASSERT_NO_RETURN(rangelist_is_sorted(*rl));
+    dup = svn_rangelist_dup(*rl, pool);
+    err = svn_rangelist__canonicalize(dup, pool);
+    SVN_ERR_ASSERT_NO_RETURN(!err);
+  }
 }
 
 /* Generate a random rangelist that satisfies svn_rangelist__is_canonical().
@@ -2022,9 +2092,25 @@ rangelist_random_canonical(svn_rangelist_t **rl,
                            apr_uint32_t *seed,
                            apr_pool_t *pool)
 {
-  do {
-    rangelist_random_non_validated(rl, seed, pool);
-  } while (! svn_rangelist__is_canonical(*rl));
+  svn_rangelist_t *r;
+  int i;
+
+  rangelist_random_semi_canonical(&r, seed, pool);
+  for (i = 1; i < r->nelts; i++)
+    {
+      svn_merge_range_t *prev_mrange = APR_ARRAY_IDX(r, i-1, svn_merge_range_t *);
+      svn_merge_range_t *mrange = APR_ARRAY_IDX(r, i, svn_merge_range_t *);
+
+      /* to be canonical: adjacent ranges need differing inheritability */
+      if (mrange->start == prev_mrange->end)
+        {
+          mrange->inheritable = !prev_mrange->inheritable;
+        }
+    }
+  *rl = r;
+
+  /* check postconditions */
+  SVN_ERR_ASSERT_NO_RETURN(svn_rangelist__is_canonical(*rl));
 }
 
 static const char *
@@ -2108,9 +2194,11 @@ add_failure_mode(svn_error_t *err_chain,
 
   /* For deduplication, ignore case-specific data in certain messages. */
   if (strstr(message, "Unable to parse overlapping revision ranges '"))
-    message = "Unable to parse overlapping revision ranges '...";
+            message = "Unable to parse overlapping revision ranges '...";
   if (strstr(message, "wrong result: (c?"))
-    message = "wrong result: (c?...";
+            message = "wrong result: (c?...";
+  if (strstr(message, "svn_sort__array_insert2: Attempted insert at index "))
+            message = "svn_sort__array_insert2: Attempted insert at index ...";
 
   if (!svn_hash_gets(failure_modes, message))
     {
@@ -2173,6 +2261,9 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Test svn_rangelist_merge2() with inputs that confirm to its doc-string.
+ * Fail if any errors are produced.
+ */
 static svn_error_t *
 test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
 {
