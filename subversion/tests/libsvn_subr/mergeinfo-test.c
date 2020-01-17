@@ -1844,8 +1844,20 @@ test_rangelist_merge_array_insert_failure(apr_pool_t *pool)
 }
 
 
+/* Random testing parameters and coverage
+ *
+ * The parameters for testing random inputs, in conjunction with the
+ * specific test case generation code, were adjusted so as to observe the
+ * tests generating each of the known failure modes.  The aim is also to
+ * have sufficient coverage of inputs to discover other failure modes in
+ * future if the code is changed.
+ *
+ * There are neither theoretic nor empirical guarantees on the coverage.
+ */
+
 /* Randomize revision numbers over this small range.
- * (With a larger range, we would find edge cases more rarely.) */
+ * (With a larger range, we would find edge cases more rarely.)
+ * See comment "Random testing parameters and coverage" */
 #define RANGELIST_TESTS_MAX_REV 15
 
 /* A representation of svn_rangelist_t in which
@@ -1963,7 +1975,8 @@ rangelist_random_non_validated(svn_rangelist_t **rl,
   svn_rangelist_t *r = apr_array_make(pool, 4, sizeof(svn_merge_range_t *));
   int i;
 
-  /* Choose from 0 to 4 ranges, biased towards 2 ranges */
+  /* Choose from 0 to 4 ranges, biased towards 2 ranges.
+     See comment "Random testing parameters and coverage" */
   for (i = rand_less_than(3, seed) + rand_less_than(3, seed); i > 0; --i)
     {
       svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
@@ -2120,6 +2133,7 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
   svn_boolean_t pass = TRUE;
   int ix, iy;
 
+  /* "300": See comment "Random testing parameters and coverage" */
   for (ix = 0; ix < 300; ix++)
    {
     svn_rangelist_t *rlx;
@@ -2168,6 +2182,7 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
   svn_boolean_t pass = TRUE;
   int ix, iy;
 
+  /* "300": See comment "Random testing parameters and coverage" */
   for (ix = 0; ix < 300; ix++)
    {
     svn_rangelist_t *rlx;
@@ -2220,6 +2235,7 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
   apr_hash_t *failure_modes = apr_hash_make(pool);
   int ix, iy;
 
+  /* "300": See comment "Random testing parameters and coverage" */
   for (ix = 0; ix < 300; ix++)
    {
     svn_rangelist_t *rlx;
@@ -2254,6 +2270,7 @@ mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
                                apr_pool_t *pool)
 {
   svn_mergeinfo_t m = apr_hash_make(pool);
+  int n_paths = 3;  /* See comment "Random testing parameters and coverage" */
   int i;
 
   for (i = 0; i < 3; i++)
@@ -2261,6 +2278,8 @@ mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
       const char *path;
       svn_rangelist_t *rl;
 
+      /* A manually chosen distribution of valid and invalid paths:
+         See comment "Random testing parameters and coverage" */
       switch (rand_less_than(8, seed))
         {
         case 0: case 1: case 2: case 3:
