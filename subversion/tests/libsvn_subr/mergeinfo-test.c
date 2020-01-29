@@ -1831,7 +1831,7 @@ test_rangelist_merge_array_insert_failure(apr_pool_t *pool)
   SVN_ERR(svn_rangelist__parse(&ry, "1-9*,11", pool));
   SVN_ERR(svn_rangelist_merge2(rx, ry, pool, pool));
   SVN_ERR(svn_rangelist_to_string(&rxs, rx, pool));
-  SVN_TEST_STRING_ASSERT(rxs->data, "1-9*,11");
+  SVN_TEST_STRING_ASSERT(rxs->data, "1-7*,8,9*,11");
 
   /* Actual reported case: in v1.10.6, aborted; after r1872118, error
    * "E200004: svn_sort__array_insert2:
