@@ -575,7 +575,8 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
         }
       else if (svn_path_is_url(opt_ctx->handler->location))
         {
-          *corrected_url = apr_pstrdup(result_pool, opt_ctx->handler->location);
+          SVN_ERR(svn_uri_canonicalize_safe(corrected_url, NULL,
+              opt_ctx->handler->location, result_pool, scratch_pool));
         }
       else
         {
@@ -586,9 +587,12 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
              See issue #3775 for details. */
 
           apr_uri_t corrected_URI = serf_sess->session_url;
+          char *absolute_uri;
 
           corrected_URI.path = (char *)corrected_url;
-          *corrected_url = apr_uri_unparse(result_pool, &corrected_URI, 0);
+          absolute_uri = apr_uri_unparse(scratch_pool, &corrected_URI, 0);
+          SVN_ERR(svn_uri_canonicalize_safe(corrected_url, NULL,
+              absolute_uri, result_pool, scratch_pool));
         }
 
       return SVN_NO_ERROR;
