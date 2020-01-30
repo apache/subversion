@@ -15,6 +15,13 @@ Status of 1.13.1:
 Candidate changes:
 ==================
 
+ * r1873375
+  Canonicalize redirect URLs in ra_serf.
+  Justification:
+    Server should not be able to trigger assertion failures in clients.
+  Votes:
+    +1: stsp
+
 Veto-blocked changes:
 =====================
 
