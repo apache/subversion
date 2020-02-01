@@ -64,11 +64,12 @@ typedef struct svn_ra__vtable_t {
 
   /* Implementations of the public API functions. */
 
-  /* See svn_ra_open4(). */
+  /* See svn_ra_open5(). */
   /* All fields in SESSION, except priv, have been initialized by the
      time this is called.  SESSION->priv may be set by this function. */
   svn_error_t *(*open_session)(svn_ra_session_t *session,
                                const char **corrected_url,
+                               const char **redirect_url,
                                const char *session_URL,
                                const svn_ra_callbacks2_t *callbacks,
                                void *callback_baton,

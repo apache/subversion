@@ -841,6 +841,7 @@ is_valid_hostinfo(const char *hostinfo)
 
 static svn_error_t *ra_svn_open(svn_ra_session_t *session,
                                 const char **corrected_url,
+                                const char **redirect_url,
                                 const char *url,
                                 const svn_ra_callbacks2_t *callbacks,
                                 void *callback_baton,
@@ -858,6 +859,8 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
   /* We don't support server-prescribed redirections in ra-svn. */
   if (corrected_url)
     *corrected_url = NULL;
+  if (redirect_url)
+    *redirect_url = NULL;
 
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
@@ -913,7 +916,7 @@ static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
 {
   svn_ra_svn__session_baton_t *old_sess = old_session->priv;
 
-  SVN_ERR(ra_svn_open(new_session, NULL, new_session_url,
+  SVN_ERR(ra_svn_open(new_session, NULL, NULL, new_session_url,
                       old_sess->callbacks, old_sess->callbacks_baton,
                       old_sess->auth_baton, old_sess->config,
                       result_pool, scratch_pool));

@@ -546,6 +546,7 @@ svn_ra_serf__v1_get_activity_collection(const char **activity_url,
 svn_error_t *
 svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    const char **corrected_url,
+                                   const char **redirect_url,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool)
 {
@@ -553,6 +554,8 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
 
   if (corrected_url)
     *corrected_url = NULL;
+  if (redirect_url)
+    *redirect_url = NULL;
 
   /* This routine automatically fills in serf_sess->capabilities */
   SVN_ERR(create_options_req(&opt_ctx, serf_sess, scratch_pool));
@@ -577,6 +580,9 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
         {
           SVN_ERR(svn_uri_canonicalize_safe(corrected_url, NULL,
               opt_ctx->handler->location, result_pool, scratch_pool));
+          if (redirect_url)
+            *redirect_url = apr_pstrdup(result_pool,
+                                        opt_ctx->handler->location);
         }
       else
         {
@@ -593,6 +599,8 @@ svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
           absolute_uri = apr_uri_unparse(scratch_pool, &corrected_URI, 0);
           SVN_ERR(svn_uri_canonicalize_safe(corrected_url, NULL,
               absolute_uri, result_pool, scratch_pool));
+          if (redirect_url)
+            *redirect_url = apr_pstrdup(result_pool, absolute_uri);
         }
 
       return SVN_NO_ERROR;
@@ -700,7 +708,8 @@ svn_ra_serf__has_capability(svn_ra_session_t *ra_session,
 
   /* If any capability is unknown, they're all unknown, so ask. */
   if (cap_result == NULL)
-    SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, pool, pool));
+    SVN_ERR(svn_ra_serf__exchange_capabilities(serf_sess, NULL, NULL,
+                                               pool, pool));
 
   /* Try again, now that we've fetched the capabilities. */
   cap_result = svn_hash_gets(serf_sess->capabilities, capability);

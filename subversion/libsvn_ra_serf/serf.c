@@ -476,6 +476,7 @@ get_user_agent_string(apr_pool_t *pool)
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
                   const char **corrected_url,
+                  const char **redirect_url,
                   const char *session_URL,
                   const svn_ra_callbacks2_t *callbacks,
                   void *callback_baton,
@@ -492,6 +493,8 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
   if (corrected_url)
     *corrected_url = NULL;
+  if (redirect_url)
+    *redirect_url = NULL;
 
   serf_sess = apr_pcalloc(result_pool, sizeof(*serf_sess));
   serf_sess->pool = result_pool;
@@ -599,6 +602,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->conn_latency = -1;
 
   err = svn_ra_serf__exchange_capabilities(serf_sess, corrected_url,
+                                           redirect_url,
                                            result_pool, scratch_pool);
 
   /* serf should produce a usable error code instead of APR_EGENERAL */
