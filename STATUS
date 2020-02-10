@@ -22,6 +22,15 @@ Candidate changes:
    Votes:
      +1: brane, jamessan
 
+ * r1872030, r1872031, r1872104, r1872107, r1872108, r1872115, r1872118,
+   r1872121, r1872388, r1872433, r1872910, r1872919, r1872921, r1872922,
+   r1872923, r1872924, r1873294, r1873297
+   Fix issue #4840, Merge assertion failure in svn_sort__array_insert
+   Justification:
+     A merge with complex mergeinfo could abort with an assertion failure.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
