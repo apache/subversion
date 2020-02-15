@@ -39,6 +39,7 @@
 
 #include <apr.h>                /* for STDIN_FILENO */
 #include <apr_errno.h>          /* for apr_strerror */
+#include <apr_escape.h>
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
@@ -1330,7 +1331,10 @@ svn_cmdline__edit_file_externally(const char *path,
     return svn_error_wrap_apr
       (apr_err, _("Can't change working directory to '%s'"), base_dir);
 
-  cmd = apr_psprintf(pool, "%s %s", editor, file_name);
+  /* editor is explicitly documented as being interpreted by the user's shell,
+     and as such should already be quoted/escaped as needed. */
+  cmd = apr_psprintf(pool, "%s \"%s\"", editor,
+                     apr_pescape_shell(pool, file_name));
   sys_err = system(cmd);
 
   apr_err = apr_filepath_set(old_cwd, pool);
@@ -1489,7 +1493,11 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
   if (err)
     goto cleanup;
-  cmd = apr_psprintf(pool, "%s %s", editor, tmpfile_native);
+
+  /* editor is explicitly documented as being interpreted by the user's shell,
+     and as such should already be quoted/escaped as needed. */
+  cmd = apr_psprintf(pool, "%s \"%s\"", editor,
+                     apr_pescape_shell(pool, tmpfile_native));
 
   /* If the caller wants us to leave the file around, return the path
      of the file we'll use, and make a note not to destroy it.  */

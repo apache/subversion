@@ -3642,10 +3642,6 @@ def update_accept_conflicts(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make a backup copy of the working copy
-  wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.duplicate_dir(wc_dir, wc_backup)
-
   # Make a few local mods to files which will be committed
   iota_path = sbox.ospath('iota')
   lambda_path = sbox.ospath('A/B/lambda')
@@ -3653,13 +3649,25 @@ def update_accept_conflicts(sbox):
   alpha_path = sbox.ospath('A/B/E/alpha')
   beta_path = sbox.ospath('A/B/E/beta')
   pi_path = sbox.ospath('A/D/G/pi')
+  p_i_path = sbox.ospath('A/D/G/p i')
   rho_path = sbox.ospath('A/D/G/rho')
+
+  # Rename pi to "p i" so we can exercise SVN_EDITOR's handling of paths with
+  # whitespace
+  sbox.simple_move('A/D/G/pi', 'A/D/G/p i')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
   svntest.main.file_append(lambda_path, 'Their appended text for lambda\n')
   svntest.main.file_append(iota_path, 'Their appended text for iota\n')
   svntest.main.file_append(mu_path, 'Their appended text for mu\n')
   svntest.main.file_append(alpha_path, 'Their appended text for alpha\n')
   svntest.main.file_append(beta_path, 'Their appended text for beta\n')
-  svntest.main.file_append(pi_path, 'Their appended text for pi\n')
+  svntest.main.file_append(p_i_path, 'Their appended text for pi\n')
   svntest.main.file_append(rho_path, 'Their appended text for rho\n')
 
   # Make a few local mods to files which will be conflicted
@@ -3668,7 +3676,7 @@ def update_accept_conflicts(sbox):
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   alpha_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'alpha')
   beta_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'beta')
-  pi_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'pi')
+  p_i_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'p i')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_append(iota_path_backup,
                            'My appended text for iota\n')
@@ -3680,7 +3688,7 @@ def update_accept_conflicts(sbox):
                            'My appended text for alpha\n')
   svntest.main.file_append(beta_path_backup,
                            'My appended text for beta\n')
-  svntest.main.file_append(pi_path_backup,
+  svntest.main.file_append(p_i_path_backup,
                            'My appended text for pi\n')
   svntest.main.file_append(rho_path_backup,
                            'My appended text for rho\n')
@@ -3692,18 +3700,19 @@ def update_accept_conflicts(sbox):
     'A/mu' : Item(verb='Sending'),
     'A/B/E/alpha': Item(verb='Sending'),
     'A/B/E/beta': Item(verb='Sending'),
-    'A/D/G/pi' : Item(verb='Sending'),
+    'A/D/G/p i' : Item(verb='Sending'),
     'A/D/G/rho' : Item(verb='Sending'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', wc_rev=2)
-  expected_status.tweak('A/B/lambda', wc_rev=2)
-  expected_status.tweak('A/mu', wc_rev=2)
-  expected_status.tweak('A/B/E/alpha', wc_rev=2)
-  expected_status.tweak('A/B/E/beta', wc_rev=2)
-  expected_status.tweak('A/D/G/pi', wc_rev=2)
-  expected_status.tweak('A/D/G/rho', wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('iota', wc_rev=3)
+  expected_status.tweak('A/B/lambda', wc_rev=3)
+  expected_status.tweak('A/mu', wc_rev=3)
+  expected_status.tweak('A/B/E/alpha', wc_rev=3)
+  expected_status.tweak('A/B/E/beta', wc_rev=3)
+  expected_status.rename({'A/D/G/pi': 'A/D/G/p i'})
+  expected_status.tweak('A/D/G/p i', wc_rev=3)
+  expected_status.tweak('A/D/G/rho', wc_rev=3)
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -3719,14 +3728,14 @@ def update_accept_conflicts(sbox):
   # Just leave the conflicts alone, since run_and_verify_svn already uses
   # the --non-interactive option.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       2, iota_path_backup),
+                                       3, iota_path_backup),
                                      [],
                                      'update', iota_path_backup)
 
   # lambda: --accept=postpone
   # Just leave the conflicts alone.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       2, lambda_path_backup),
+                                       3, lambda_path_backup),
                                      [],
                                      'update', '--accept=postpone',
                                      lambda_path_backup)
@@ -3734,7 +3743,7 @@ def update_accept_conflicts(sbox):
   # mu: --accept=base
   # Accept the pre-update base file.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       2, mu_path_backup),
+                                       3, mu_path_backup),
                                      [],
                                      'update', '--accept=base',
                                      mu_path_backup)
@@ -3742,7 +3751,7 @@ def update_accept_conflicts(sbox):
   # alpha: --accept=mine
   # Accept the user's working file.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       2, alpha_path_backup),
+                                       3, alpha_path_backup),
                                      [],
                                      'update', '--accept=mine-full',
                                      alpha_path_backup)
@@ -3750,7 +3759,7 @@ def update_accept_conflicts(sbox):
   # beta: --accept=theirs
   # Accept their file.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       2, beta_path_backup),
+                                       3, beta_path_backup),
                                      [],
                                      'update', '--accept=theirs-full',
                                      beta_path_backup)
@@ -3760,16 +3769,16 @@ def update_accept_conflicts(sbox):
   # conflicts in place, so expect a message on stderr, but expect
   # svn to exit with an exit code of 0.
   svntest.actions.run_and_verify_svn2(update_output_with_conflicts_resolved(
-                                        2, pi_path_backup),
+                                        3, p_i_path_backup),
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
                                       '--force-interactive',
-                                      pi_path_backup)
+                                      p_i_path_backup)
 
   # rho: --accept=launch
   # Run the external merge tool, it should leave conflict markers in place.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       2, rho_path_backup),
+                                       3, rho_path_backup),
                                      [],
                                      'update', '--accept=launch',
                                      '--force-interactive',
@@ -3781,55 +3790,57 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('iota', contents=("This is the file 'iota'.\n"
                                         '<<<<<<< .mine\n'
                                         'My appended text for iota\n'
-                                        '||||||| .r1\n'
+                                        '||||||| .r2\n'
                                         '=======\n'
                                         'Their appended text for iota\n'
-                                        '>>>>>>> .r2\n'))
+                                        '>>>>>>> .r3\n'))
   expected_disk.tweak('A/B/lambda', contents=("This is the file 'lambda'.\n"
                                               '<<<<<<< .mine\n'
                                               'My appended text for lambda\n'
-                                              '||||||| .r1\n'
+                                              '||||||| .r2\n'
                                               '=======\n'
                                               'Their appended text for lambda\n'
-                                              '>>>>>>> .r2\n'))
+                                              '>>>>>>> .r3\n'))
   expected_disk.tweak('A/mu', contents="This is the file 'mu'.\n")
   expected_disk.tweak('A/B/E/alpha', contents=("This is the file 'alpha'.\n"
                                                'My appended text for alpha\n'))
   expected_disk.tweak('A/B/E/beta', contents=("This is the file 'beta'.\n"
                                               'Their appended text for beta\n'))
-  expected_disk.tweak('A/D/G/pi', contents=("This is the file 'pi'.\n"
+  expected_disk.rename({'A/D/G/pi': 'A/D/G/p i'})
+  expected_disk.tweak('A/D/G/p i', contents=("This is the file 'pi'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for pi\n'
-                                             '||||||| .r1\n'
+                                             '||||||| .r2\n'
                                              '=======\n'
                                              'Their appended text for pi\n'
-                                             '>>>>>>> .r2\n'
+                                             '>>>>>>> .r3\n'
                                              'foo\n'))
   expected_disk.tweak('A/D/G/rho', contents=("This is the file 'rho'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for rho\n'
-                                             '||||||| .r1\n'
+                                             '||||||| .r2\n'
                                              '=======\n'
                                              'Their appended text for rho\n'
-                                             '>>>>>>> .r2\n'
+                                             '>>>>>>> .r3\n'
                                              'foo\n'))
 
   # Set the expected extra files for the test
-  extra_files = ['iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine',
-                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine']
+  extra_files = ['iota.*\.r2', 'iota.*\.r3', 'iota.*\.mine',
+                 'lambda.*\.r2', 'lambda.*\.r3', 'lambda.*\.mine',
+                 'rho.*\.r2', 'rho.*\.r3', 'rho.*\.mine']
 
   # Set the expected status for the test
-  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_status.rename({'A/D/G/pi': 'A/D/G/p i'})
   expected_status.tweak('iota', 'A/B/lambda', 'A/mu',
                         'A/B/E/alpha', 'A/B/E/beta',
-                        'A/D/G/pi', 'A/D/G/rho', wc_rev=2)
+                        'A/D/G/p i', 'A/D/G/rho', wc_rev=3)
   expected_status.tweak('iota', status='C ')
   expected_status.tweak('A/B/lambda', status='C ')
   expected_status.tweak('A/mu', status='M ')
   expected_status.tweak('A/B/E/alpha', status='M ')
   expected_status.tweak('A/B/E/beta', status='  ')
-  expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.tweak('A/D/G/p i', status='M ')
   expected_status.tweak('A/D/G/rho', status='C ')
 
   # Set the expected output for the test
