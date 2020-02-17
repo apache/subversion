@@ -1234,7 +1234,7 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
 }
 
 
-/* Helper for the next two functions.  Set *EDITOR to some path to an
+/* Helper for the edit_externally functions.  Set *EDITOR to some path to an
    editor binary.  Sources to search include: the EDITOR_CMD argument
    (if not NULL), $SVN_EDITOR, the runtime CONFIG variable (if CONFIG
    is not NULL), $VISUAL, $EDITOR.  Return
@@ -1300,6 +1300,42 @@ find_editor_binary(const char **editor,
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around apr_pescape_shell() which also escapes whitespace. */
+static const char *
+escape_path(apr_pool_t *pool, const char *orig_path)
+{
+  apr_size_t len, esc_len;
+  const char *path;
+  char *p, *esc_path;
+
+  path = apr_pescape_shell(pool, orig_path);
+
+  len = esc_len = 0;
+
+  /* Now that apr has done its escaping, we can check whether there's any
+     whitespace that also needs to be escaped.  This must be done after the
+     fact, otherwise apr_pescape_shell() would escape the backslashes we're
+     inserting. */
+  for (p = (char *)path; *p; p++)
+    {
+      len++;
+      if (*p == ' ' || *p == '\t')
+        esc_len++;
+    }
+
+  if (esc_len == 0)
+    return path;
+
+  p = esc_path = apr_pcalloc(pool, len + esc_len + 1);
+  while (*path)
+    {
+      if (*path == ' ' || *path == '\t')
+        *p++ = '\\';
+      *p++ = *path++;
+    }
+
+  return esc_path;
+}
 
 svn_error_t *
 svn_cmdline__edit_file_externally(const char *path,
@@ -1333,8 +1369,7 @@ svn_cmdline__edit_file_externally(const char *path,
 
   /* editor is explicitly documented as being interpreted by the user's shell,
      and as such should already be quoted/escaped as needed. */
-  cmd = apr_psprintf(pool, "%s \"%s\"", editor,
-                     apr_pescape_shell(pool, file_name));
+  cmd = apr_psprintf(pool, "%s %s", editor, escape_path(pool, file_name));
   sys_err = system(cmd);
 
   apr_err = apr_filepath_set(old_cwd, pool);
@@ -1496,8 +1531,7 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
 
   /* editor is explicitly documented as being interpreted by the user's shell,
      and as such should already be quoted/escaped as needed. */
-  cmd = apr_psprintf(pool, "%s \"%s\"", editor,
-                     apr_pescape_shell(pool, tmpfile_native));
+  cmd = apr_psprintf(pool, "%s %s", editor, escape_path(pool, tmpfile_native));
 
   /* If the caller wants us to leave the file around, return the path
      of the file we'll use, and make a note not to destroy it.  */

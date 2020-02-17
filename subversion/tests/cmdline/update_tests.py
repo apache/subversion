@@ -3649,12 +3649,12 @@ def update_accept_conflicts(sbox):
   alpha_path = sbox.ospath('A/B/E/alpha')
   beta_path = sbox.ospath('A/B/E/beta')
   pi_path = sbox.ospath('A/D/G/pi')
-  p_i_path = sbox.ospath('A/D/G/p i')
+  p_i_path = sbox.ospath('A/D/G/p; i')
   rho_path = sbox.ospath('A/D/G/rho')
 
-  # Rename pi to "p i" so we can exercise SVN_EDITOR's handling of paths with
-  # whitespace
-  sbox.simple_move('A/D/G/pi', 'A/D/G/p i')
+  # Rename pi to "p; i" so we can exercise SVN_EDITOR's handling of paths with
+  # special characters
+  sbox.simple_move('A/D/G/pi', 'A/D/G/p; i')
   sbox.simple_commit()
   sbox.simple_update()
 
@@ -3676,7 +3676,7 @@ def update_accept_conflicts(sbox):
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   alpha_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'alpha')
   beta_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'beta')
-  p_i_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'p i')
+  p_i_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'p; i')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_append(iota_path_backup,
                            'My appended text for iota\n')
@@ -3700,7 +3700,7 @@ def update_accept_conflicts(sbox):
     'A/mu' : Item(verb='Sending'),
     'A/B/E/alpha': Item(verb='Sending'),
     'A/B/E/beta': Item(verb='Sending'),
-    'A/D/G/p i' : Item(verb='Sending'),
+    'A/D/G/p; i' : Item(verb='Sending'),
     'A/D/G/rho' : Item(verb='Sending'),
     })
 
@@ -3710,8 +3710,8 @@ def update_accept_conflicts(sbox):
   expected_status.tweak('A/mu', wc_rev=3)
   expected_status.tweak('A/B/E/alpha', wc_rev=3)
   expected_status.tweak('A/B/E/beta', wc_rev=3)
-  expected_status.rename({'A/D/G/pi': 'A/D/G/p i'})
-  expected_status.tweak('A/D/G/p i', wc_rev=3)
+  expected_status.rename({'A/D/G/pi': 'A/D/G/p; i'})
+  expected_status.tweak('A/D/G/p; i', wc_rev=3)
   expected_status.tweak('A/D/G/rho', wc_rev=3)
 
   # Commit.
@@ -3806,15 +3806,15 @@ def update_accept_conflicts(sbox):
                                                'My appended text for alpha\n'))
   expected_disk.tweak('A/B/E/beta', contents=("This is the file 'beta'.\n"
                                               'Their appended text for beta\n'))
-  expected_disk.rename({'A/D/G/pi': 'A/D/G/p i'})
-  expected_disk.tweak('A/D/G/p i', contents=("This is the file 'pi'.\n"
-                                             '<<<<<<< .mine\n'
-                                             'My appended text for pi\n'
-                                             '||||||| .r2\n'
-                                             '=======\n'
-                                             'Their appended text for pi\n'
-                                             '>>>>>>> .r3\n'
-                                             'foo\n'))
+  expected_disk.rename({'A/D/G/pi': 'A/D/G/p; i'})
+  expected_disk.tweak('A/D/G/p; i', contents=("This is the file 'pi'.\n"
+                                              '<<<<<<< .mine\n'
+                                              'My appended text for pi\n'
+                                              '||||||| .r2\n'
+                                              '=======\n'
+                                              'Their appended text for pi\n'
+                                              '>>>>>>> .r3\n'
+                                              'foo\n'))
   expected_disk.tweak('A/D/G/rho', contents=("This is the file 'rho'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for rho\n'
@@ -3831,16 +3831,16 @@ def update_accept_conflicts(sbox):
 
   # Set the expected status for the test
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
-  expected_status.rename({'A/D/G/pi': 'A/D/G/p i'})
+  expected_status.rename({'A/D/G/pi': 'A/D/G/p; i'})
   expected_status.tweak('iota', 'A/B/lambda', 'A/mu',
                         'A/B/E/alpha', 'A/B/E/beta',
-                        'A/D/G/p i', 'A/D/G/rho', wc_rev=3)
+                        'A/D/G/p; i', 'A/D/G/rho', wc_rev=3)
   expected_status.tweak('iota', status='C ')
   expected_status.tweak('A/B/lambda', status='C ')
   expected_status.tweak('A/mu', status='M ')
   expected_status.tweak('A/B/E/alpha', status='M ')
   expected_status.tweak('A/B/E/beta', status='  ')
-  expected_status.tweak('A/D/G/p i', status='M ')
+  expected_status.tweak('A/D/G/p; i', status='M ')
   expected_status.tweak('A/D/G/rho', status='C ')
 
   # Set the expected output for the test
