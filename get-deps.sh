@@ -31,7 +31,7 @@
 # features already used in the file.  Reviewing the history of changes
 # may be useful as well.
 
-APR_VERSION=${APR_VERSION:-"1.4.6"}
+APR_VERSION=${APR_VERSION:-"1.5.0"}
 APU_VERSION=${APU_VERSION:-"1.5.1"}
 PY3C_VERSION=${PY3C_VERSION:='1.1'}
 SERF_VERSION=${SERF_VERSION:-"1.3.8"}
