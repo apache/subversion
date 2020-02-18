@@ -1203,7 +1203,7 @@ repack_file_open(apr_file_t **file,
   if (revprops->entry.start_rev == start_rev)
     APR_ARRAY_IDX(revprops->manifest, idx, manifest_entry_t) = new_entry;
   else
-    svn_sort__array_insert(revprops->manifest, &new_path, idx + 1);
+    SVN_ERR(svn_sort__array_insert2(revprops->manifest, &new_path, idx + 1));
 
   /* open the file */
   new_path = get_revprop_pack_filepath(revprops, &new_entry, scratch_pool);

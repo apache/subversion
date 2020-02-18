@@ -120,15 +120,8 @@ svn_sort__array_lookup(const apr_array_header_t *array,
  * @a insert_index, growing the array and shuffling existing elements along to
  * make room.
  *
- * @note Private. For use by Subversion's own code only.
- */
-void
-svn_sort__array_insert(apr_array_header_t *array,
-                       const void *new_element,
-                       int insert_index);
-
-/* Like svn_sort__array_insert() but raise an error if @a insert_index
- * is less than 0 or greater than the length of the array.
+ * Raise an error if @a insert_index is less than 0 or greater than the length
+ * of the array.
  *
  * @note Private. For use by Subversion's own code only.
  */
@@ -139,20 +132,10 @@ svn_sort__array_insert2(apr_array_header_t *array,
 
 
 /* Remove @a elements_to_delete elements starting at @a delete_index from the
- * array @a arr. If @a delete_index is not a valid element of @a arr,
- * @a elements_to_delete is not greater than zero, or
- * @a delete_index + @a elements_to_delete is greater than @a arr->nelts,
- * then do nothing.
+ * array @a arr.
  *
- * @note Private. For use by Subversion's own code only.
- */
-void
-svn_sort__array_delete(apr_array_header_t *arr,
-                       int delete_index,
-                       int elements_to_delete);
-
-/* Like svn_sort__array_delete() but raise an error if attempting
- * to delete a range of elements that goes out of bounds of the array.
+ * Raise an error if the indexes to delete extends outside the array bounds
+ * or if @a elements_to_delete is not greater than zero.
  *
  * @note Private. For use by Subversion's own code only.
  */

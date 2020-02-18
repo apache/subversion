@@ -3965,8 +3965,8 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
         {
           insert_index = (*possible_targets)->nelts; /* append */
         }
-      svn_sort__array_insert(*possible_targets, &moved_to_abspath,
-                             insert_index);
+      SVN_ERR(svn_sort__array_insert2(*possible_targets, &moved_to_abspath,
+                                      insert_index));
     }
 
   svn_pool_destroy(iterpool);

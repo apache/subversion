@@ -8396,7 +8396,7 @@ delete_node(void *baton,
                                          scratch_pool, iterpool));
 
               if (!mn->local_relpath)
-                svn_sort__array_delete(moved_nodes, i--, 1);
+                SVN_ERR(svn_sort__array_delete2(moved_nodes, i--, 1));
             }
         }
 
@@ -10804,7 +10804,7 @@ db_read_inherited_props(apr_array_header_t **inherited_props,
 
                   iprop_elt->prop_hash = node_props;
                   /* Build the output array in depth-first order. */
-                  svn_sort__array_insert(iprops, &iprop_elt, 0);
+                  SVN_ERR(svn_sort__array_insert2(iprops, &iprop_elt, 0));
                 }
             }
         }
@@ -10840,7 +10840,7 @@ db_read_inherited_props(apr_array_header_t **inherited_props,
 
           /* If we didn't filter everything then keep this iprop. */
           if (apr_hash_count(cached_iprop->prop_hash))
-            svn_sort__array_insert(iprops, &cached_iprop, 0);
+            SVN_ERR(svn_sort__array_insert2(iprops, &cached_iprop, 0));
         }
     }
 

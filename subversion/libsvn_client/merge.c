@@ -5597,7 +5597,7 @@ svn_client__make_merge_conflict_error(svn_client__conflict_report_t *report,
    defined in get_mergeinfo_paths().  Remove any paths absent from disk
    or scheduled for deletion from CHILDREN_WITH_MERGEINFO which are equal to
    or are descendants of TARGET_WCPATH by setting those children to NULL. */
-static void
+static svn_error_t *
 remove_absent_children(const char *target_wcpath,
                        apr_array_header_t *children_with_mergeinfo)
 {
@@ -5612,9 +5612,10 @@ remove_absent_children(const char *target_wcpath,
       if ((child->absent || child->scheduled_for_deletion)
           && svn_dirent_is_ancestor(target_wcpath, child->abspath))
         {
-          svn_sort__array_delete(children_with_mergeinfo, i--, 1);
+          SVN_ERR(svn_sort__array_delete2(children_with_mergeinfo, i--, 1));
         }
     }
+  return SVN_NO_ERROR;
 }
 
 /* Helper for do_directory_merge() to handle the case where a merge editor
@@ -5629,14 +5630,14 @@ remove_absent_children(const char *target_wcpath,
    MERGE_B->target->abspath, this must always be present in
    CHILDREN_WITH_MERGEINFO so this is never removed by this
    function. */
-static void
+static svn_error_t *
 remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
                                        apr_array_header_t *children_with_mergeinfo)
 {
   int i;
 
   if (!merge_b->paths_with_deleted_mergeinfo)
-    return;
+    return SVN_NO_ERROR;
 
   /* CHILDREN_WITH_MERGEINFO[0] is the always the merge target
      so start at the first child. */
@@ -5647,9 +5648,10 @@ remove_children_with_deleted_mergeinfo(merge_cmd_baton_t *merge_b,
 
       if (svn_hash_gets(merge_b->paths_with_deleted_mergeinfo, child->abspath))
         {
-          svn_sort__array_delete(children_with_mergeinfo, i--, 1);
+          SVN_ERR(svn_sort__array_delete2(children_with_mergeinfo, i--, 1));
         }
     }
+  return SVN_NO_ERROR;
 }
 
 /* Helper for do_directory_merge().
@@ -6022,7 +6024,7 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
    If a range is removed from a child's remaining_ranges array, allocate the
    new remaining_ranges array in POOL.
  */
-static void
+static svn_error_t *
 remove_first_range_from_remaining_ranges(svn_revnum_t revision,
                                          apr_array_header_t
                                            *children_with_mergeinfo,
@@ -6043,10 +6045,11 @@ remove_first_range_from_remaining_ranges(svn_revnum_t revision,
             APR_ARRAY_IDX(child->remaining_ranges, 0, svn_merge_range_t *);
           if (first_range->end == revision)
             {
-              svn_sort__array_delete(child->remaining_ranges, 0, 1);
+              SVN_ERR(svn_sort__array_delete2(child->remaining_ranges, 0, 1));
             }
         }
     }
+  return SVN_NO_ERROR;
 }
 
 /* Get a file's content and properties from the repository.
@@ -7795,7 +7798,7 @@ do_file_merge(svn_mergeinfo_catalog_t result_catalog,
              (This list is used from notify_merge_begin)
 
             Directory merges use remove_first_range_from_remaining_ranges() */
-          svn_sort__array_delete(ranges_to_merge, 0, 1);
+          SVN_ERR(svn_sort__array_delete2(ranges_to_merge, 0, 1));
         }
       merge_b->notify_begin.last_abspath = NULL;
     } /* !merge_b->record_only */
@@ -8548,8 +8551,8 @@ record_mergeinfo_for_dir_merge(svn_mergeinfo_catalog_t result_catalog,
   /* Remove absent children at or under MERGE_B->target->abspath from
      CHILDREN_WITH_MERGEINFO
      before we calculate the merges performed. */
-  remove_absent_children(merge_b->target->abspath,
-                         children_with_mergeinfo);
+  SVN_ERR(remove_absent_children(merge_b->target->abspath,
+                                 children_with_mergeinfo));
 
   /* Determine which subtrees of interest need mergeinfo recorded... */
   SVN_ERR(flag_subtrees_needing_mergeinfo(operative_merge, &range,
@@ -9546,12 +9549,12 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
                  to consider these subtrees for subsequent editor drives
                  nor do we want to record mergeinfo on them describing
                  the merge itself. */
-              remove_children_with_deleted_mergeinfo(
-                merge_b, children_with_mergeinfo);
+              SVN_ERR(remove_children_with_deleted_mergeinfo(
+                        merge_b, children_with_mergeinfo));
 
               /* Prepare for the next iteration (if any). */
-              remove_first_range_from_remaining_ranges(
-                end_rev, children_with_mergeinfo, scratch_pool);
+              SVN_ERR(remove_first_range_from_remaining_ranges(
+                        end_rev, children_with_mergeinfo, scratch_pool));
 
               /* If we raised any conflicts, break out and report how much
                  we have merged. */

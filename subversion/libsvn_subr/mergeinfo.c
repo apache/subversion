@@ -706,7 +706,7 @@ svn_rangelist__canonicalize(svn_rangelist_t *rangelist,
           if (lastrange->inheritable == range->inheritable)
             {
               lastrange->end = MAX(range->end, lastrange->end);
-              svn_sort__array_delete(rangelist, i, 1);
+              SVN_ERR(svn_sort__array_delete2(rangelist, i, 1));
               i--;
             }
         }

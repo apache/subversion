@@ -369,7 +369,7 @@ ensure_node_in_array(apr_array_header_t **array,
    * Create one and insert it into the sorted array. */
   entry.node = create_node(segment, result_pool);
   entry.next = NULL;
-  svn_sort__array_insert(*array, &entry, idx);
+  svn_error_clear(svn_sort__array_insert2(*array, &entry, idx));
 
   return entry.node;
 }

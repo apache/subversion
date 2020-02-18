@@ -488,7 +488,7 @@ parse_representation(rep_stats_t **representation,
             }
         }
 
-      svn_sort__array_insert(revision_info->representations, &result, idx);
+      SVN_ERR(svn_sort__array_insert2(revision_info->representations, &result, idx));
     }
 
   *representation = result;
