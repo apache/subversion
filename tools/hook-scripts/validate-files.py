@@ -30,11 +30,13 @@ import fnmatch
 try:
     # Python >= 3.0
     import configparser
+    ConfigParser = configparser.ConfigParser
 except ImportError:
     # Python < 3.0
     import ConfigParser as configparser
+    ConfigParser = configparser.SafeConfigParser
 
-class Config(configparser.SafeConfigParser):
+class Config(ConfigParser):
     """Superclass of SafeConfigParser with some customizations
     for this script"""
     def optionxform(self, option):
