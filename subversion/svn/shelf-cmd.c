@@ -40,6 +40,7 @@
 #include "svn_private_config.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_client_shelf.h"
 
 
 /* Open the newest version of SHELF; error if no versions found. */
