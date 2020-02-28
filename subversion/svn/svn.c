@@ -52,6 +52,7 @@
 #include "svn_hash.h"
 #include "svn_version.h"
 #include "cl.h"
+#include "shelf-cmd.h"
 
 #include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
@@ -62,95 +63,6 @@
 
 
 /*** Option Processing ***/
-
-/* Add an identifier here for long options that don't have a short
-   option. Options that have both long and short options should just
-   use the short option letter as identifier.  */
-typedef enum svn_cl__longopt_t {
-  opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
-  opt_auth_password_from_stdin,
-  opt_auth_username,
-  opt_autoprops,
-  opt_changelist,
-  opt_config_dir,
-  opt_config_options,
-  /* diff options */
-  opt_diff_cmd,
-  opt_internal_diff,
-  opt_no_diff_added,
-  opt_no_diff_deleted,
-  opt_show_copies_as_adds,
-  opt_notice_ancestry,
-  opt_summarize,
-  opt_use_git_diff_format,
-  opt_ignore_properties,
-  opt_properties_only,
-  opt_patch_compatible,
-  /* end of diff options */
-  opt_dry_run,
-  opt_editor_cmd,
-  opt_encoding,
-  opt_force_log,
-  opt_force,
-  opt_keep_changelists,
-  opt_ignore_ancestry,
-  opt_ignore_externals,
-  opt_incremental,
-  opt_merge_cmd,
-  opt_native_eol,
-  opt_new_cmd,
-  opt_no_auth_cache,
-  opt_no_autoprops,
-  opt_no_ignore,
-  opt_no_unlock,
-  opt_non_interactive,
-  opt_force_interactive,
-  opt_old_cmd,
-  opt_record_only,
-  opt_relocate,
-  opt_remove,
-  opt_revprop,
-  opt_stop_on_copy,
-  opt_strict,                   /* ### DEPRECATED */
-  opt_targets,
-  opt_depth,
-  opt_set_depth,
-  opt_version,
-  opt_xml,
-  opt_keep_local,
-  opt_with_revprop,
-  opt_with_all_revprops,
-  opt_with_no_revprops,
-  opt_parents,
-  opt_accept,
-  opt_show_revs,
-  opt_reintegrate,
-  opt_trust_server_cert,
-  opt_trust_server_cert_failures,
-  opt_strip,
-  opt_ignore_keywords,
-  opt_reverse_diff,
-  opt_ignore_whitespace,
-  opt_diff,
-  opt_allow_mixed_revisions,
-  opt_include_externals,
-  opt_show_inherited_props,
-  opt_search,
-  opt_search_and,
-  opt_mergeinfo_log,
-  opt_remove_unversioned,
-  opt_remove_ignored,
-  opt_remove_added,
-  opt_no_newline,
-  opt_show_passwords,
-  opt_pin_externals,
-  opt_show_item,
-  opt_adds_as_modification,
-  opt_vacuum_pristines,
-  opt_drop,
-  opt_viewspec,
-} svn_cl__longopt_t;
-
 
 /* Option codes and descriptions for the command line client.
  *
@@ -532,15 +444,8 @@ const int svn_cl__global_options[] =
   opt_config_dir, opt_config_options, 0
 };
 
-/* Options for giving a log message.  (Some of these also have other uses.)
- */
-#define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
-                                opt_force_log, \
-                                opt_editor_cmd, \
-                                opt_encoding, \
-                                opt_with_revprop
-
-const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
+static const svn_opt_subcommand_desc3_t
+svn_cl__cmd_table_main[] =
 {
   { "add", svn_cl__add, {0}, {N_(
      "Put new files and directories under version control.\n"
@@ -1994,166 +1899,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     )},
     { 'q' } },
 
-  { "x-shelf-diff", svn_cl__shelf_diff, {0}, {N_(
-     "Show shelved changes as a diff.\n"
-     "usage: x-shelf-diff SHELF [VERSION]\n"
-     "\n"), N_(
-     "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
-     "\n"), N_(
-     "  See also: 'svn diff --cl=svn:shelf:SHELF' which supports most options of\n"
-     "  'svn diff'.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {opt_summarize},
-  },
-
-  { "x-shelf-drop", svn_cl__shelf_drop, {0}, {N_(
-     "Delete a shelf.\n"
-     "usage: x-shelf-drop SHELF [PATH ...]\n"
-     "\n"), N_(
-     "  Delete the shelves named SHELF from the working copies containing PATH\n"
-     "  (default PATH is '.')\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
-  { "x-shelf-list", svn_cl__shelf_list, {"x-shelves"}, {N_(
-     "List shelves.\n"
-     "usage: x-shelf-list [PATH ...]\n"
-     "\n"), N_(
-     "  List shelves for each working copy containing PATH (default is '.')\n"
-     "  Include the first line of any log message and some details about the\n"
-     "  contents of the shelf, unless '-q' is given.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', 'v'}
-  },
-
-  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {0}, {N_(
-     "List which shelf affects each path.\n"
-     "usage: x-shelf-list-by-paths [PATH...]\n"
-     "\n"), N_(
-     "  List which shelf most recently affects each path below the given PATHs.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
-  { "x-shelf-log", svn_cl__shelf_log, {0}, {N_(
-     "Show the versions of a shelf.\n"
-     "usage: x-shelf-log SHELF [PATH...]\n"
-     "\n"), N_(
-     "  Show all versions of SHELF for each working copy containing PATH (the\n"
-     "  default PATH is '.').\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', 'v'}
-  },
-
-  { "x-shelf-save", svn_cl__shelf_save, {0}, {N_(
-     "Copy local changes onto a new version of a shelf.\n"
-     "usage: x-shelf-save SHELF [PATH...]\n"
-     "\n"), N_(
-     "  Save local changes in the given PATHs as a new version of SHELF.\n"
-     "  The shelf's log message can be set with -m, -F, etc.\n"
-     "\n"), N_(
-     "  The same as 'svn shelve --keep-local'.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', opt_dry_run,
-     opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS,
-    }
-  },
-
-  { "x-shelve", svn_cl__shelf_shelve, {0}, {N_(
-     "Move local changes onto a shelf.\n"
-     "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
-     "\n"), N_(
-     "  Save the local changes in the given PATHs to a new or existing SHELF.\n"
-     "  Revert those changes from the WC unless '--keep-local' is given.\n"
-     "  The shelf's log message can be set with -m, -F, etc.\n"
-     "\n"), N_(
-     "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
-     "\n"), N_(
-     "  The kinds of change you can shelve are committable changes to files and\n"
-     "  properties, except the following kinds which are not yet supported:\n"
-     "     * copies and moves\n"
-     "     * mkdir and rmdir\n"
-     "  Uncommittable states such as conflicts, unversioned and missing cannot\n"
-     "  be shelved.\n"
-     "\n"), N_(
-     "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
-     "\n"), N_(
-     "  Shelves are currently stored under <WC>/.svn/experimental/shelves/ .\n"
-     "  (In Subversion 1.10, shelves were stored under <WC>/.svn/shelves/ as\n"
-     "  patch files. To recover a shelf created by 1.10, either use a 1.10\n"
-     "  client to find and unshelve it, or find the patch file and use any\n"
-     "  1.10 or later 'svn patch' to apply it.)\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', opt_dry_run, opt_keep_local,
-     opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS,
-    } },
-
-  { "x-unshelve", svn_cl__shelf_unshelve, {0}, {N_(
-     "Copy shelved changes back into the WC.\n"
-     "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
-     "\n"), N_(
-     "  Apply the changes stored in SHELF to the working copy.\n"
-     "  SHELF defaults to the newest shelf.\n"
-     "\n"), N_(
-     "  Apply the newest version of the shelf, by default. If VERSION is\n"
-     "  specified, apply that version and discard all versions newer than that.\n"
-     "  In any case, retain the unshelved version and versions older than that\n"
-     "  (unless --drop is specified).\n"
-     "\n"), N_(
-     "  With --drop, delete the entire shelf (like 'svn shelf-drop') after\n"
-     "  successfully unshelving with no conflicts.\n"
-     "\n"), N_(
-     "  The working files involved should be in a clean, unmodified state\n"
-     "  before using this command. To roll back to an older version of the\n"
-     "  shelf, first ensure any current working changes are removed, such as\n"
-     "  by shelving or reverting them, and then unshelve the desired version.\n"
-     "\n"), N_(
-     "  Unshelve normally refuses to apply any changes if any path involved is\n"
-     "  already modified (or has any other abnormal status) in the WC. With\n"
-     "  --force, it does not check and may error out and/or produce partial or\n"
-     "  unexpected results.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {opt_drop, 'q', opt_dry_run, opt_force} },
-
-  { "x-wc-copy-mods", svn_cl__wc_copy_mods, {0}, {N_(
-     "Copy local modifications from one WC to another.\n"
-     "usage: x-wc-copy-mods SRC_WC_PATH DST_WC_PATH\n"
-     "\n"), N_(
-     "  The source and destination WC paths may be in the same WC or in different"
-     "  WCs.\n"
-     "\n"), N_(
-     "  This feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
   { NULL, NULL, {0}, {NULL}, {0} }
 };
+
+const svn_opt_subcommand_desc3_t *svn_cl__cmd_table = svn_cl__cmd_table_main;
 
 
 /* Version compatibility check */
@@ -2233,6 +1982,33 @@ viewspec_from_word(enum svn_cl__viewspec_t *viewspec,
   return SVN_NO_ERROR;
 }
 
+/* Re-initialize the command table SVN_CL__CMD_TABLE,
+ * adding additional commands from CMDS_ADD.
+ * (TODO: and the options table) */
+static void
+add_commands(const svn_opt_subcommand_desc3_t *cmds_add,
+             apr_pool_t *pool)
+{
+  int elt_size = sizeof(svn_opt_subcommand_desc3_t);
+  const svn_opt_subcommand_desc3_t *cmds_old = svn_cl__cmd_table;
+  const svn_opt_subcommand_desc3_t *cmd;
+  int n_cmds_old, n_cmds_add, n_cmds_new;
+  svn_opt_subcommand_desc3_t *cmds_new;
+
+  for (cmd = cmds_old; cmd->name; cmd++) ;
+  n_cmds_old = cmd - cmds_old;
+  for (cmd = cmds_add; cmd->name; cmd++) ;
+  n_cmds_add = cmd - cmds_add;
+  n_cmds_new = n_cmds_old + n_cmds_add;
+
+  /* copy CMDS_OLD and CMDS_ADD, plus an all-zeros terminator entry */
+  cmds_new = apr_pcalloc(pool, (n_cmds_new + 1) * elt_size);
+  memcpy(cmds_new, cmds_old, n_cmds_old * elt_size);
+  memcpy(&cmds_new[n_cmds_old], cmds_add, n_cmds_add * elt_size);
+
+  svn_cl__cmd_table = cmds_new;
+}
+
 
 /*** Main. ***/
 
@@ -2289,6 +2065,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
   /* Init the temporary buffer. */
   svn_membuf__create(&buf, 0, pool);
+
+  /* Add externally defined commands */
+  add_commands(svn_cl__cmd_table_shelf3, pool);
 
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
@@ -3224,17 +3003,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      sense (unless we've also been instructed not to care).  This may
      access the working copy so do it after setting the locking mode. */
   if ((! opt_state.force_log)
-      && (subcommand->cmd_func == svn_cl__commit
-          || subcommand->cmd_func == svn_cl__copy
-          || subcommand->cmd_func == svn_cl__delete
-          || subcommand->cmd_func == svn_cl__import
-          || subcommand->cmd_func == svn_cl__mkdir
-          || subcommand->cmd_func == svn_cl__move
-          || subcommand->cmd_func == svn_cl__lock
-          || subcommand->cmd_func == svn_cl__propedit
-          || subcommand->cmd_func == svn_cl__shelf_save
-          || subcommand->cmd_func == svn_cl__shelf_shelve
-         ))
+      && subcommand->cmd_func != svn_cl__propset)
     {
       /* If the -F argument is a file that's under revision control,
          that's probably not what the user intended. */
