@@ -52,6 +52,7 @@
 #include "svn_hash.h"
 #include "svn_version.h"
 #include "cl.h"
+#include "shelf2-cmd.h"
 #include "shelf-cmd.h"
 
 #include "private/svn_opt_private.h"
@@ -2026,6 +2027,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_cl__opt_state_t opt_state = { 0, { 0 } };
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
+  const char *exp_cmds;
   int i;
   const svn_opt_subcommand_desc3_t *subcommand = NULL;
   const char *dash_F_arg = NULL;
@@ -2066,8 +2068,16 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Init the temporary buffer. */
   svn_membuf__create(&buf, 0, pool);
 
-  /* Add externally defined commands */
-  add_commands(svn_cl__cmd_table_shelf3, pool);
+  /* Add experimental commands, if requested */
+  exp_cmds = getenv("SVN_EXPERIMENTAL_COMMANDS");
+  if (!exp_cmds || strstr(exp_cmds, "shelf3"))
+    {
+      add_commands(svn_cl__cmd_table_shelf3, pool);
+    }
+  else if (exp_cmds && strstr(exp_cmds, "shelf2"))
+    {
+      add_commands(svn_cl__cmd_table_shelf2, pool);
+    }
 
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
