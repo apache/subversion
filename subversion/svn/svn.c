@@ -1997,9 +1997,9 @@ add_commands(const svn_opt_subcommand_desc3_t *cmds_add,
   svn_opt_subcommand_desc3_t *cmds_new;
 
   for (cmd = cmds_old; cmd->name; cmd++) ;
-  n_cmds_old = cmd - cmds_old;
+  n_cmds_old = (int)(cmd - cmds_old);
   for (cmd = cmds_add; cmd->name; cmd++) ;
-  n_cmds_add = cmd - cmds_add;
+  n_cmds_add = (int)(cmd - cmds_add);
   n_cmds_new = n_cmds_old + n_cmds_add;
 
   /* copy CMDS_OLD and CMDS_ADD, plus an all-zeros terminator entry */
