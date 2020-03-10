@@ -38,6 +38,7 @@
 #include "svn_props.h"
 
 #include "client.h"
+#include "private/svn_client_shelf.h"
 #include "private/svn_client_private.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_sorts_private.h"

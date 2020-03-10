@@ -51,6 +51,7 @@
 #include "svn_subst.h"
 #include "client.h"
 
+#include "private/svn_client_shelf.h"
 #include "private/svn_wc_private.h"
 #include "private/svn_diff_private.h"
 #include "private/svn_subr_private.h"

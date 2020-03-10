@@ -288,6 +288,103 @@ typedef struct svn_cl__cmd_baton_t
 } svn_cl__cmd_baton_t;
 
 
+/* Add an identifier here for long options that don't have a short
+   option. Options that have both long and short options should just
+   use the short option letter as identifier.  */
+typedef enum svn_cl__longopt_t {
+  opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
+  opt_auth_password_from_stdin,
+  opt_auth_username,
+  opt_autoprops,
+  opt_changelist,
+  opt_config_dir,
+  opt_config_options,
+  /* diff options */
+  opt_diff_cmd,
+  opt_internal_diff,
+  opt_no_diff_added,
+  opt_no_diff_deleted,
+  opt_show_copies_as_adds,
+  opt_notice_ancestry,
+  opt_summarize,
+  opt_use_git_diff_format,
+  opt_ignore_properties,
+  opt_properties_only,
+  opt_patch_compatible,
+  /* end of diff options */
+  opt_dry_run,
+  opt_editor_cmd,
+  opt_encoding,
+  opt_force_log,
+  opt_force,
+  opt_keep_changelists,
+  opt_ignore_ancestry,
+  opt_ignore_externals,
+  opt_incremental,
+  opt_merge_cmd,
+  opt_native_eol,
+  opt_new_cmd,
+  opt_no_auth_cache,
+  opt_no_autoprops,
+  opt_no_ignore,
+  opt_no_unlock,
+  opt_non_interactive,
+  opt_force_interactive,
+  opt_old_cmd,
+  opt_record_only,
+  opt_relocate,
+  opt_remove,
+  opt_revprop,
+  opt_stop_on_copy,
+  opt_strict,                   /* ### DEPRECATED */
+  opt_targets,
+  opt_depth,
+  opt_set_depth,
+  opt_version,
+  opt_xml,
+  opt_keep_local,
+  opt_with_revprop,
+  opt_with_all_revprops,
+  opt_with_no_revprops,
+  opt_parents,
+  opt_accept,
+  opt_show_revs,
+  opt_reintegrate,
+  opt_trust_server_cert,
+  opt_trust_server_cert_failures,
+  opt_strip,
+  opt_ignore_keywords,
+  opt_reverse_diff,
+  opt_ignore_whitespace,
+  opt_diff,
+  opt_allow_mixed_revisions,
+  opt_include_externals,
+  opt_show_inherited_props,
+  opt_search,
+  opt_search_and,
+  opt_mergeinfo_log,
+  opt_remove_unversioned,
+  opt_remove_ignored,
+  opt_remove_added,
+  opt_no_newline,
+  opt_show_passwords,
+  opt_pin_externals,
+  opt_show_item,
+  opt_adds_as_modification,
+  opt_vacuum_pristines,
+  opt_drop,
+  opt_viewspec,
+} svn_cl__longopt_t;
+
+/* Options for giving a log message.  (Some of these also have other uses.)
+ */
+#define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
+                                opt_force_log, \
+                                opt_editor_cmd, \
+                                opt_encoding, \
+                                opt_with_revprop
+
+
 /* Declare all the command procedures */
 svn_opt_subcommand_t
   svn_cl__add,
@@ -322,15 +419,6 @@ svn_opt_subcommand_t
   svn_cl__revert,
   svn_cl__resolve,
   svn_cl__resolved,
-  svn_cl__shelf_diff,
-  svn_cl__shelf_drop,
-  svn_cl__shelf_list,
-  svn_cl__shelf_list_by_paths,
-  svn_cl__shelf_log,
-  svn_cl__shelf_save,
-  svn_cl__shelf_shelve,
-  svn_cl__shelf_unshelve,
-  svn_cl__wc_copy_mods,
   svn_cl__status,
   svn_cl__switch,
   svn_cl__unlock,
@@ -339,7 +427,7 @@ svn_opt_subcommand_t
 
 
 /* See definition in svn.c for documentation. */
-extern const svn_opt_subcommand_desc3_t svn_cl__cmd_table[];
+extern const svn_opt_subcommand_desc3_t *svn_cl__cmd_table;
 
 /* See definition in svn.c for documentation. */
 extern const int svn_cl__global_options[];

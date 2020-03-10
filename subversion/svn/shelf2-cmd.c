@@ -1,5 +1,5 @@
 /*
- * shelf-cmd.c -- Shelving commands.
+ * shelf2-cmd.c -- Shelving commands.
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
@@ -34,23 +34,23 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 
-#include "shelf-cmd.h"
+#include "shelf2-cmd.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_client_private.h"
-#include "private/svn_client_shelf.h"
+#include "private/svn_client_shelf2.h"
 
 
 /* Open the newest version of SHELF; error if no versions found. */
 static svn_error_t *
-get_newest_version_existing(svn_client__shelf_version_t **shelf_version_p,
-                            svn_client__shelf_t *shelf,
+get_newest_version_existing(svn_client__shelf2_version_t **shelf_version_p,
+                            svn_client__shelf2_t *shelf,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_client__shelf_get_newest_version(shelf_version_p, shelf,
+  SVN_ERR(svn_client__shelf2_get_newest_version(shelf_version_p, shelf,
                                               result_pool, scratch_pool));
   if (!*shelf_version_p)
     {
@@ -185,8 +185,8 @@ static int
 compare_shelf_infos_by_mtime(const svn_sort__item_t *a,
                              const svn_sort__item_t *b)
 {
-  svn_client__shelf_info_t *a_val = a->value;
-  svn_client__shelf_info_t *b_val = b->value;
+  svn_client__shelf2_info_t *a_val = a->value;
+  svn_client__shelf2_info_t *b_val = b->value;
 
   return (a_val->mtime < b_val->mtime)
     ? -1 : (a_val->mtime > b_val->mtime) ? 1 : 0;
@@ -202,7 +202,7 @@ list_sorted_by_date(apr_array_header_t **list,
 {
   apr_hash_t *shelf_infos;
 
-  SVN_ERR(svn_client__shelf_list(&shelf_infos, local_abspath,
+  SVN_ERR(svn_client__shelf2_list(&shelf_infos, local_abspath,
                                 ctx, scratch_pool, scratch_pool));
   *list = svn_sort__hash(shelf_infos,
                          compare_shelf_infos_by_mtime,
@@ -212,9 +212,9 @@ list_sorted_by_date(apr_array_header_t **list,
 
 /*  */
 static svn_error_t *
-stats(svn_client__shelf_t *shelf,
+stats(svn_client__shelf2_t *shelf,
       int version,
-      svn_client__shelf_version_t *shelf_version,
+      svn_client__shelf2_version_t *shelf_version,
       apr_time_t time_now,
       svn_boolean_t with_logmsg,
       apr_pool_t *scratch_pool)
@@ -238,7 +238,7 @@ stats(svn_client__shelf_t *shelf,
                                Q_("version %d of %d", "version %d of %d",
                                   shelf->max_version),
                                version, shelf->max_version);
-  SVN_ERR(svn_client__shelf_paths_changed(&paths, shelf_version,
+  SVN_ERR(svn_client__shelf2_paths_changed(&paths, shelf_version,
                                          scratch_pool, scratch_pool));
   paths_str = apr_psprintf(scratch_pool,
                            Q_("%d path changed", "%d paths changed",
@@ -252,7 +252,7 @@ stats(svn_client__shelf_t *shelf,
     {
       char *log_message;
 
-      SVN_ERR(svn_client__shelf_get_log_message(&log_message, shelf,
+      SVN_ERR(svn_client__shelf2_get_log_message(&log_message, shelf,
                                                scratch_pool));
       if (log_message)
         {
@@ -283,12 +283,12 @@ shelves_list(const char *local_abspath,
     {
       const svn_sort__item_t *item = &APR_ARRAY_IDX(list, i, svn_sort__item_t);
       const char *name = item->key;
-      svn_client__shelf_t *shelf;
-      svn_client__shelf_version_t *shelf_version;
+      svn_client__shelf2_t *shelf;
+      svn_client__shelf2_version_t *shelf_version;
 
-      SVN_ERR(svn_client__shelf_open_existing(&shelf, name, local_abspath,
+      SVN_ERR(svn_client__shelf2_open_existing(&shelf, name, local_abspath,
                                              ctx, scratch_pool));
-      SVN_ERR(svn_client__shelf_get_newest_version(&shelf_version, shelf,
+      SVN_ERR(svn_client__shelf2_get_newest_version(&shelf_version, shelf,
                                                   scratch_pool, scratch_pool));
       if (quiet)
         SVN_ERR(svn_cmdline_printf(scratch_pool, "%s\n", shelf->name));
@@ -298,7 +298,7 @@ shelves_list(const char *local_abspath,
       else
         SVN_ERR(stats(shelf, shelf->max_version, shelf_version, time_now,
                       TRUE /*with_logmsg*/, scratch_pool));
-      SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+      SVN_ERR(svn_client__shelf2_close(shelf, scratch_pool));
     }
 
   return SVN_NO_ERROR;
@@ -313,24 +313,24 @@ shelf_log(const char *name,
           apr_pool_t *scratch_pool)
 {
   apr_time_t time_now = apr_time_now();
-  svn_client__shelf_t *shelf;
+  svn_client__shelf2_t *shelf;
   apr_array_header_t *versions;
   int i;
 
-  SVN_ERR(svn_client__shelf_open_existing(&shelf, name, local_abspath,
+  SVN_ERR(svn_client__shelf2_open_existing(&shelf, name, local_abspath,
                                          ctx, scratch_pool));
-  SVN_ERR(svn_client__shelf_get_all_versions(&versions, shelf,
+  SVN_ERR(svn_client__shelf2_get_all_versions(&versions, shelf,
                                             scratch_pool, scratch_pool));
   for (i = 0; i < versions->nelts; i++)
     {
-      svn_client__shelf_version_t *shelf_version
+      svn_client__shelf2_version_t *shelf_version
         = APR_ARRAY_IDX(versions, i, void *);
 
       SVN_ERR(stats(shelf, i + 1, shelf_version, time_now,
                     FALSE /*with_logmsg*/, scratch_pool));
     }
 
-  SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+  SVN_ERR(svn_client__shelf2_close(shelf, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -452,15 +452,15 @@ shelve(int *new_version_p,
        svn_client_ctx_t *ctx,
        apr_pool_t *scratch_pool)
 {
-  svn_client__shelf_t *shelf;
-  svn_client__shelf_version_t *previous_version;
-  svn_client__shelf_version_t *new_version;
+  svn_client__shelf2_t *shelf;
+  svn_client__shelf2_version_t *previous_version;
+  svn_client__shelf2_version_t *new_version;
   struct status_baton sb;
 
-  SVN_ERR(svn_client__shelf_open_or_create(&shelf,
+  SVN_ERR(svn_client__shelf2_open_or_create(&shelf,
                                           name, local_abspath,
                                           ctx, scratch_pool));
-  SVN_ERR(svn_client__shelf_get_newest_version(&previous_version, shelf,
+  SVN_ERR(svn_client__shelf2_get_newest_version(&previous_version, shelf,
                                               scratch_pool, scratch_pool));
 
   if (! quiet)
@@ -484,16 +484,16 @@ shelve(int *new_version_p,
     SVN_ERR(svn_cmdline_printf(scratch_pool,
                                keep_local ? _("--- Saving...\n")
                                : _("--- Shelving...\n")));
-  SVN_ERR(svn_client__shelf_save_new_version3(&new_version, shelf,
+  SVN_ERR(svn_client__shelf2_save_new_version3(&new_version, shelf,
                                              paths, depth, changelists,
                                              was_shelved, &sb,
                                              was_not_shelved, &sb,
                                              scratch_pool));
   if (sb.num_paths_not_shelved > 0)
     {
-      SVN_ERR(svn_client__shelf_delete_newer_versions(shelf, previous_version,
+      SVN_ERR(svn_client__shelf2_delete_newer_versions(shelf, previous_version,
                                                      scratch_pool));
-      SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+      SVN_ERR(svn_client__shelf2_close(shelf, scratch_pool));
       return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                Q_("%d path could not be shelved",
                                   "%d paths could not be shelved",
@@ -503,7 +503,7 @@ shelve(int *new_version_p,
   if (sb.num_paths_shelved == 0
       || ! new_version)
     {
-      SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+      SVN_ERR(svn_client__shelf2_close(shelf, scratch_pool));
       return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
                                keep_local ? _("No local modifications could be saved")
                                : _("No local modifications could be shelved"));
@@ -512,7 +512,7 @@ shelve(int *new_version_p,
   /* Un-apply the changes, if required. */
   if (!keep_local)
     {
-      SVN_ERR(svn_client__shelf_unapply(new_version,
+      SVN_ERR(svn_client__shelf2_unapply(new_version,
                                        dry_run, scratch_pool));
     }
 
@@ -540,18 +540,18 @@ shelve(int *new_version_p,
         }
     }
 
-  SVN_ERR(svn_client__shelf_revprop_set_all(shelf, revprop_table, scratch_pool));
+  SVN_ERR(svn_client__shelf2_revprop_set_all(shelf, revprop_table, scratch_pool));
 
   if (new_version_p)
     *new_version_p = shelf->max_version;
 
   if (dry_run)
     {
-      SVN_ERR(svn_client__shelf_delete_newer_versions(shelf, previous_version,
+      SVN_ERR(svn_client__shelf2_delete_newer_versions(shelf, previous_version,
                                                      scratch_pool));
     }
 
-  SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+  SVN_ERR(svn_client__shelf2_close(shelf, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -584,21 +584,21 @@ status_to_char(enum svn_wc_status_kind status)
 /* Throw an error if any path affected by SHELF_VERSION gives a conflict
  * when applied (as a dry-run) to the WC. */
 static svn_error_t *
-test_apply(svn_client__shelf_version_t *shelf_version,
+test_apply(svn_client__shelf2_version_t *shelf_version,
            svn_client_ctx_t *ctx,
            apr_pool_t *scratch_pool)
 {
   apr_hash_t *paths;
   apr_hash_index_t *hi;
 
-  SVN_ERR(svn_client__shelf_paths_changed(&paths, shelf_version,
+  SVN_ERR(svn_client__shelf2_paths_changed(&paths, shelf_version,
                                          scratch_pool, scratch_pool));
   for (hi = apr_hash_first(scratch_pool, paths); hi; hi = apr_hash_next(hi))
     {
       const char *path = apr_hash_this_key(hi);
       svn_boolean_t conflict;
 
-      SVN_ERR(svn_client__shelf_test_apply_file(&conflict, shelf_version, path,
+      SVN_ERR(svn_client__shelf2_test_apply_file(&conflict, shelf_version, path,
                                                scratch_pool));
       if (conflict)
         {
@@ -639,17 +639,17 @@ shelf_restore(const char *name,
 {
   int version, old_version;
   apr_time_t time_now = apr_time_now();
-  svn_client__shelf_t *shelf;
-  svn_client__shelf_version_t *shelf_version;
+  svn_client__shelf2_t *shelf;
+  svn_client__shelf2_version_t *shelf_version;
 
-  SVN_ERR(svn_client__shelf_open_existing(&shelf, name, local_abspath,
+  SVN_ERR(svn_client__shelf2_open_existing(&shelf, name, local_abspath,
                                          ctx, scratch_pool));
 
   old_version = shelf->max_version;
   if (arg)
     {
       SVN_ERR(svn_cstring_atoi(&version, arg));
-      SVN_ERR(svn_client__shelf_version_open(&shelf_version,
+      SVN_ERR(svn_client__shelf2_version_open(&shelf_version,
                                             shelf, version,
                                             scratch_pool, scratch_pool));
     }
@@ -676,12 +676,12 @@ shelf_restore(const char *name,
                   "or other status in the working copy"));
     }
 
-  SVN_ERR(svn_client__shelf_apply(shelf_version,
+  SVN_ERR(svn_client__shelf2_apply(shelf_version,
                                  dry_run, scratch_pool));
 
   if (! dry_run)
     {
-      SVN_ERR(svn_client__shelf_delete_newer_versions(shelf, shelf_version,
+      SVN_ERR(svn_client__shelf2_delete_newer_versions(shelf, shelf_version,
                                                      scratch_pool));
     }
 
@@ -699,7 +699,7 @@ shelf_restore(const char *name,
                                    name, version));
     }
 
-  SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+  SVN_ERR(svn_client__shelf2_close(shelf, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -713,12 +713,12 @@ shelf_diff(const char *name,
            svn_client_ctx_t *ctx,
            apr_pool_t *scratch_pool)
 {
-  svn_client__shelf_t *shelf;
-  svn_client__shelf_version_t *shelf_version;
+  svn_client__shelf2_t *shelf;
+  svn_client__shelf2_version_t *shelf_version;
   svn_stream_t *stream, *errstream;
   svn_diff_tree_processor_t *diff_processor;
 
-  SVN_ERR(svn_client__shelf_open_existing(&shelf, name, local_abspath,
+  SVN_ERR(svn_client__shelf2_open_existing(&shelf, name, local_abspath,
                                          ctx, scratch_pool));
 
   if (arg)
@@ -726,7 +726,7 @@ shelf_diff(const char *name,
       int version;
 
       SVN_ERR(svn_cstring_atoi(&version, arg));
-      SVN_ERR(svn_client__shelf_version_open(&shelf_version,
+      SVN_ERR(svn_client__shelf2_version_open(&shelf_version,
                                             shelf, version,
                                             scratch_pool, scratch_pool));
     }
@@ -774,12 +774,12 @@ shelf_diff(const char *name,
                 ctx, scratch_pool));
     }
 
-  SVN_ERR(svn_client__shelf_diff(shelf_version, "",
+  SVN_ERR(svn_client__shelf2_diff(shelf_version, "",
                                  depth, ignore_ancestry,
                                  diff_processor, scratch_pool));
   SVN_ERR(svn_stream_close(stream));
 
-  SVN_ERR(svn_client__shelf_close(shelf, scratch_pool));
+  SVN_ERR(svn_client__shelf2_close(shelf, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -792,7 +792,7 @@ shelf_drop(const char *name,
            svn_client_ctx_t *ctx,
            apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_client__shelf_delete(name, local_abspath, dry_run,
+  SVN_ERR(svn_client__shelf2_delete(name, local_abspath, dry_run,
                                   ctx, scratch_pool));
   if (! quiet)
     SVN_ERR(svn_cmdline_printf(scratch_pool,
@@ -1036,19 +1036,19 @@ shelf_list_by_paths(apr_array_header_t *target_relpaths,
     {
       svn_sort__item_t *item = &APR_ARRAY_IDX(shelves, i, svn_sort__item_t);
       const char *name = item->key;
-      svn_client__shelf_t *shelf;
-      svn_client__shelf_version_t *shelf_version;
+      svn_client__shelf2_t *shelf;
+      svn_client__shelf2_version_t *shelf_version;
       apr_hash_t *shelf_paths;
       int j;
 
-      SVN_ERR(svn_client__shelf_open_existing(&shelf,
+      SVN_ERR(svn_client__shelf2_open_existing(&shelf,
                                               name, wc_root_abspath,
                                               ctx, scratch_pool));
-      SVN_ERR(svn_client__shelf_get_newest_version(&shelf_version, shelf,
+      SVN_ERR(svn_client__shelf2_get_newest_version(&shelf_version, shelf,
                                                    scratch_pool, scratch_pool));
       if (!shelf_version)
         continue;
-      SVN_ERR(svn_client__shelf_paths_changed(&shelf_paths,
+      SVN_ERR(svn_client__shelf2_paths_changed(&shelf_paths,
                                               shelf_version,
                                               scratch_pool, scratch_pool));
       for (j = 0; j < target_relpaths->nelts; j++)
@@ -1215,32 +1215,8 @@ svn_cl__shelf_log(apr_getopt_t *os,
   return SVN_NO_ERROR;
 }
 
-/**************************************************************************/
-
-/* This implements the `svn_opt_subcommand_t' interface. */
-static svn_error_t *
-svn_cl__wc_copy_mods(apr_getopt_t *os,
-                     void *baton,
-                     apr_pool_t *pool)
-{
-  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
-  const char *src_wc_abspath, *dst_wc_abspath;
-
-  SVN_ERR(get_next_argument(&src_wc_abspath, os, pool, pool));
-  SVN_ERR(svn_dirent_get_absolute(&src_wc_abspath, src_wc_abspath, pool));
-
-  SVN_ERR(get_next_argument(&dst_wc_abspath, os, pool, pool));
-  SVN_ERR(svn_dirent_get_absolute(&dst_wc_abspath, dst_wc_abspath, pool));
-
-  SVN_ERR(svn_client__wc_copy_mods(src_wc_abspath, dst_wc_abspath,
-                                   ctx->notify_func2, ctx->notify_baton2,
-                                   ctx, pool));
-
-  return SVN_NO_ERROR;
-}
-
 const svn_opt_subcommand_desc3_t
-svn_cl__cmd_table_shelf3[] =
+svn_cl__cmd_table_shelf2[] =
 {
   { "x-shelf-diff", svn_cl__shelf_diff, {0}, {N_(
      "Show shelved changes as a diff.\n"
@@ -1387,18 +1363,6 @@ svn_cl__cmd_table_shelf3[] =
      "  in the next release, and there is no promise of backward compatibility.\n"
     )},
     {opt_drop, 'q', opt_dry_run, opt_force} },
-
-  { "x-wc-copy-mods", svn_cl__wc_copy_mods, {0}, {N_(
-     "Copy local modifications from one WC to another.\n"
-     "usage: x-wc-copy-mods SRC_WC_PATH DST_WC_PATH\n"
-     "\n"), N_(
-     "  The source and destination WC paths may be in the same WC or in different"
-     "  WCs.\n"
-     "\n"), N_(
-     "  This feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
 
   { NULL, NULL, {0}, {NULL}, {0} }
 };
