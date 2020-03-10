@@ -2068,9 +2068,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Init the temporary buffer. */
   svn_membuf__create(&buf, 0, pool);
 
-  /* Add experimental commands, if requested */
+  /* Add experimental commands, if requested. Use the most recent version
+   * that we know about and that is mentioned in the env. var. */
   exp_cmds = getenv("SVN_EXPERIMENTAL_COMMANDS");
-  if (!exp_cmds || strstr(exp_cmds, "shelf3"))
+  if (exp_cmds && strstr(exp_cmds, "shelf3"))
     {
       add_commands(svn_cl__cmd_table_shelf3, pool);
     }
