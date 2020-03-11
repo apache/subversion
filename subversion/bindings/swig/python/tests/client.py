@@ -604,6 +604,7 @@ class SubversionClientTestCase(unittest.TestCase):
 
     pool.clear()
 
+  @unittest.skip("experimental API, not currently exposed")
   def test_shelf(self):
     """Test shelf api."""
 
