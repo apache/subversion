@@ -27,6 +27,7 @@ for i in $(jot - 6 12); do
   (test -h ../svn-1.${i}.x || ln -s build ../svn-1.${i}.x)
 done
 lastchangedrev="$(svn info --show-item=last-changed-revision ../../unix-build/Makefile.svn)"
+svn cleanup ../../unix-build
 svn update ../../unix-build
 newlastchangedrev="$(svn info --show-item=last-changed-revision ../../unix-build/Makefile.svn)"
 (test -h ../GNUmakefile || ln -s ../unix-build/Makefile.svn ../GNUmakefile)
