@@ -1206,6 +1206,27 @@ $(RUBY_OBJDIR)/openssl_missing.patch:
 	echo >> $@.tmp ' #if defined(HAVE_AUTHENTICATED_ENCRYPTION) && !defined(EVP_CTRL_AEAD_GET_TAG)'
 	mv -f $@.tmp $@
 
+$(RUBY_OBJDIR)/sparc64_buserror.patch:
+	mkdir -p $(dir $@)
+	echo >> $@.tmp '--- iseq.h.orig	Thu Mar 12 10:48:08 2020'
+	echo >> $@.tmp '+++ iseq.h	Thu Mar 12 10:49:00 2020'
+	echo >> $@.tmp '@@ -181,12 +181,11 @@'
+	echo >> $@.tmp '     struct iseq_compile_data_storage *next;'
+	echo >> $@.tmp '     unsigned int pos;'
+	echo >> $@.tmp '     unsigned int size;'
+	echo >> $@.tmp '-    char buff[1]; /* flexible array */'
+	echo >> $@.tmp '+    char buff[0]; /* flexible array */'
+	echo >> $@.tmp ' };'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp '-/* account for flexible array */'
+	echo >> $@.tmp ' #define SIZEOF_ISEQ_COMPILE_DATA_STORAGE \'
+	echo >> $@.tmp '-    (sizeof(struct iseq_compile_data_storage) - 1)'
+	echo >> $@.tmp '+    (sizeof(struct iseq_compile_data_storage))'
+	echo >> $@.tmp ' '
+	echo >> $@.tmp ' struct iseq_compile_data {'
+	echo >> $@.tmp '     /* GC is needed */'
+	mv -f $@.tmp $@
+
 ifeq ($(UNAME),OpenBSD)
 RUBY_SSL_EX_NEW_DATA_PATCH = sed -i -e '/^have_func("X509_STORE_set_ex_data")$$/ { p; s/^.*$$/\have_func("X509_STORE_get_ex_new_index")/; }'
 else
@@ -1214,13 +1235,14 @@ endif
 
 # retrieve ruby
 #
-$(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST) $(RUBY_OBJDIR)/openssl_missing.patch
+$(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST) $(RUBY_OBJDIR)/openssl_missing.patch $(RUBY_OBJDIR)/sparc64_buserror.patch
 	$(call do_check_sha256,$(RUBY_DIST))
 	[ -d $(RUBY_OBJDIR) ] || mkdir -p $(RUBY_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	-which ghead && sed -i -e "s/head -c/ghead -c/" $(RUBY_SRCDIR)/configure
 	$(RUBY_SSL_EX_NEW_DATA_PATCH) $(RUBY_SRCDIR)/ext/openssl/extconf.rb
 	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/openssl_missing.patch
+	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/sparc64_buserror.patch
 	touch $@
 
 ifeq ($(THREADING),yes)
