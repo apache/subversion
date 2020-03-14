@@ -2363,7 +2363,7 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
       }
    }
 
-   clear_failure_mode_errors(failure_modes, pool);
+  clear_failure_mode_errors(failure_modes, pool);
 
   return SVN_NO_ERROR;
 }
