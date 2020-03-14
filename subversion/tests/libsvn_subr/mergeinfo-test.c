@@ -2212,6 +2212,20 @@ add_failure_mode(svn_error_t *err_chain,
     }
 }
 
+static void
+clear_failure_mode_errors(apr_hash_t *failure_modes, apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, failure_modes);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_error_t *err = apr_hash_this_val(hi);
+      svn_error_clear(err);
+    }
+}
+
 static svn_error_t *
 test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
 {
@@ -2248,11 +2262,12 @@ test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
                    rangelist_to_string(rly, iterpool),
                    failure_mode);
             /*svn_handle_error(err, stdout, FALSE);*/
-            svn_error_clear(err);
             pass = FALSE;
           }
       }
    }
+
+  clear_failure_mode_errors(failure_modes, pool);
 
   if (!pass)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -2300,11 +2315,12 @@ test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
                    rangelist_to_string(rly, iterpool),
                    failure_mode);
             /*svn_handle_error(err, stdout, FALSE);*/
-            svn_error_clear(err);
             pass = FALSE;
           }
       }
    }
+
+  clear_failure_mode_errors(failure_modes, pool);
 
   if (!pass)
     return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
@@ -2343,12 +2359,11 @@ test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
         rangelist_random_non_validated(&rly, &seed, iterpool);
 
         err = svn_error_trace(rangelist_merge_random_inputs(rlx, rly, iterpool));
-        if (add_failure_mode(err, failure_modes))
-          {
-            svn_error_clear(err);
-          }
+        add_failure_mode(err, failure_modes);
       }
    }
+
+   clear_failure_mode_errors(failure_modes, pool);
 
   return SVN_NO_ERROR;
 }
