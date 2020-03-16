@@ -1305,36 +1305,92 @@ static const char *
 escape_path(apr_pool_t *pool, const char *orig_path)
 {
   apr_size_t len, esc_len;
-  const char *path;
-  char *p, *esc_path;
+  apr_status_t status;
 
-  path = apr_pescape_shell(pool, orig_path);
+  len = strlen(orig_path);
+  esc_len = 0;
 
-  len = esc_len = 0;
+  status = apr_escape_shell(NULL, orig_path, len, &esc_len);
 
-  /* Now that apr has done its escaping, we can check whether there's any
-     whitespace that also needs to be escaped.  This must be done after the
-     fact, otherwise apr_pescape_shell() would escape the backslashes we're
-     inserting. */
-  for (p = (char *)path; *p; p++)
+  if (status == APR_NOTFOUND)
     {
-      len++;
-      if (*p == ' ' || *p == '\t')
-        esc_len++;
+      /* No special characters found by APR, so just surround it in double
+         quotes in case there is whitespace, which APR (as of 1.6.5) doesn't
+         consider special. */
+      return apr_psprintf(pool, "\"%s\"", orig_path);
     }
-
-  if (esc_len == 0)
-    return path;
-
-  p = esc_path = apr_pcalloc(pool, len + esc_len + 1);
-  while (*path)
+  else
     {
-      if (*path == ' ' || *path == '\t')
-        *p++ = '\\';
-      *p++ = *path++;
-    }
+#ifdef WIN32
+      const char *p;
+      /* Following the advice from
+         https://docs.microsoft.com/en-us/archive/blogs/twistylittlepassagesallalike/everyone-quotes-command-line-arguments-the-wrong-way
+         1. Surround argument with double-quotes
+         2. Escape backslashes, if they're followed by a double-quote, and double-quotes
+         3. Escape any metacharacter, including double-quotes, with ^ */
 
-  return esc_path;
+      /* Use APR's buffer size as an approximation for how large the escaped
+         string should be, plus 4 bytes for the leading/trailing ^" */
+      svn_stringbuf_t *buf = svn_stringbuf_create_ensure(esc_len + 4, pool);
+      svn_stringbuf_appendcstr(buf, "^\"");
+      for (p = orig_path; *p; p++)
+        {
+          int nr_backslash = 0;
+          while (*p && *p == '\\')
+            {
+              nr_backslash++;
+              p++;
+            }
+
+          if (!*p)
+            /* We've reached the end of the argument, so we need 2n backslash
+               characters.  That will be interpreted as n backslashes and the
+               final double-quote character will be interpreted as the final
+               string delimiter. */
+            svn_stringbuf_appendfill(buf, '\\', nr_backslash * 2);
+          else if (*p == '"')
+            {
+              /* Double-quote as part of the argument means we need to double
+                 any preceeding backslashes and then add one to escape the
+                 double-quote. */
+              svn_stringbuf_appendfill(buf, '\\', nr_backslash * 2 + 1);
+              svn_stringbuf_appendbyte(buf, '^');
+              svn_stringbuf_appendbyte(buf, *p);
+            }
+          else
+            {
+              /* Since there's no double-quote, we just insert any backslashes
+                 literally.  No escaping needed. */
+              svn_stringbuf_appendfill(buf, '\\', nr_backslash);
+              if (strchr("()%!^<>&|", *p))
+                svn_stringbuf_appendbyte(buf, '^');
+              svn_stringbuf_appendbyte(buf, *p);
+            }
+        }
+      svn_stringbuf_appendcstr(buf, "^\"");
+      return buf->data;
+#else
+      char *path, *p, *esc_path;
+
+      /* Account for whitespace, since APR doesn't */
+      for (p = (char *)orig_path; *p; p++)
+        if (strchr(" \t\n\r", *p))
+          esc_len++;
+
+      path = apr_pcalloc(pool, esc_len);
+      apr_escape_shell(path, orig_path, len, NULL);
+
+      p = esc_path = apr_pcalloc(pool, len + esc_len + 1);
+      while (*path)
+        {
+          if (strchr(" \t\n\r", *path))
+            *p++ = '\\';
+          *p++ = *path++;
+        }
+
+      return esc_path;
+#endif
+    }
 }
 
 svn_error_t *
