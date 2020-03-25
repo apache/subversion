@@ -241,7 +241,7 @@ def get_branch_path(args):
         try:
             args.branch = 'branches/%d.%d.x' % (args.version.major, args.version.minor)
         except AttributeError:
-            raise RuntimeError("Please specify the release version label or --branch-path")
+            raise RuntimeError("Please specify the branch using the release version label argument (for certain subcommands) or the '--branch' global option")
 
     return args.branch.rstrip('/')  # canonicalize for later comparisons
 
