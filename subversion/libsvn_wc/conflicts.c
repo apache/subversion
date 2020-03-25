@@ -1386,7 +1386,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
         }
       case svn_wc_conflict_choose_merged:
         {
-          if (!cdesc->merged_file 
+          if (!cdesc->merged_file
               && (!result->merged_file && !result->merged_value))
             return svn_error_create
                 (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
@@ -2381,7 +2381,7 @@ svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
-  return svn_wc__read_conflicts(conflicts, NULL, wc_ctx->db, local_abspath, 
+  return svn_wc__read_conflicts(conflicts, NULL, wc_ctx->db, local_abspath,
                                 FALSE, FALSE, result_pool, scratch_pool);
 }
 
@@ -2637,7 +2637,7 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
   return SVN_NO_ERROR;
 }
 
-/* 
+/*
  * Record a tree conflict resolution failure due to error condition ERR
  * in the RESOLVE_LATER hash table. If the hash table is not available
  * (meaning the caller does not wish to retry resolution later), or if

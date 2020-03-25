@@ -102,7 +102,7 @@ def compare_xml_elem(a, b):
   # iteration.
   def sortcmp(x, y):
     return compare_xml_elem(x, y)[0]
- 
+
   a_children = sorted(list(a), key=functools.cmp_to_key(sortcmp))
   b_children = sorted(list(b), key=functools.cmp_to_key(sortcmp))
 
@@ -686,7 +686,7 @@ def last_modified_header(sbox):
     raise svntest.Failure('Unexpected Last-Modified header: %s' % last_modified)
   r.read()
 
-  
+
 ########################################################################
 # Run the tests
 

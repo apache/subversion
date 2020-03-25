@@ -824,7 +824,7 @@ JNIUtil::checkJavaException(apr_status_t errorcode)
   else
     err->message = _("Java exception");
 
-  
+
   /* ### TODO: Use apr_pool_userdata_set() on the pool we just created
                for the error chain to keep track of the actual Java
                exception while the error is inside Subversion.

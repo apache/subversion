@@ -141,7 +141,7 @@ list_receiver(const char *path,
     }
 
   SVN_ERR(maybe_send_header(b));
- 
+
   /* If we need to close the element, then send the attributes
      that apply to all changed items and then close the element. */
   SVN_ERR(dav_svn__brigade_printf(b->bb, b->output,

@@ -4154,7 +4154,7 @@ mkdir_delete_copy(svn_repos_t *repos,
   svn_fs_root_t *txn_root, *rev_root;
 
   SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
-  
+
   SVN_ERR(svn_fs_begin_txn(&txn, fs, youngest_rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "A/T", pool));

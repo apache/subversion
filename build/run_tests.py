@@ -390,7 +390,7 @@ class TestHarness:
       lines = prog.stdout.readlines()
 
       for i in range(0, len(lines) - 2):
-        self.result.append(TestHarness.Job(i + 1, True, progabs, 
+        self.result.append(TestHarness.Job(i + 1, True, progabs,
                                            progdir, progbase))
       prog.wait()
 
@@ -834,7 +834,7 @@ class TestHarness:
                                    progabs, ('.py', 'U', imp.PY_SOURCE))
       else:
          spec = importlib.util.spec_from_file_location(progbase[:-3], progabs)
-         prog_mod = importlib.util.module_from_spec(spec) 
+         prog_mod = importlib.util.module_from_spec(spec)
          sys.modules[progbase[:-3]] = prog_mod
          spec.loader.exec_module(prog_mod)
     except:

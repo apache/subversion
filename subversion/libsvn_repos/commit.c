@@ -189,7 +189,7 @@ check_out_of_date(struct edit_baton *eb,
   else if (base_rev > created_rev)
     {
       if (base_rev > svn_fs_txn_base_revision(eb->txn))
-        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL, 
+        return svn_error_createf(SVN_ERR_FS_NO_SUCH_REVISION, NULL,
                                  _("No such revision %ld"),
                                  base_rev);
     }

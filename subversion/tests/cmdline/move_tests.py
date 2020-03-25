@@ -1755,7 +1755,7 @@ def move_conflict_markers(sbox):
   })
   expected_disk.remove('iota', 'iota.prej',
                        'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
-                       'A/B/E/dir_conflicts.prej', 
+                       'A/B/E/dir_conflicts.prej',
                        'A/B/E/beta.prej')
   expected_disk.add({
     'A/iotb'  : Item(contents="This is the file 'iota'.\n"),

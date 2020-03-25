@@ -998,7 +998,7 @@ svn_fs_x__read_changes(apr_array_header_t **changes,
       SVN_ERR(read_change(&change, stream, result_pool, iterpool));
       if (!change)
         break;
- 
+
       APR_ARRAY_PUSH(*changes, svn_fs_x__change_t*) = change;
     }
   svn_pool_destroy(iterpool);

@@ -1545,7 +1545,7 @@ def replace_via_rm_cp(sbox):
   """replace by deleting and copying"""
 
   sbox_build_svnmover(sbox)
-                 
+
   expected_eids = svntest.wc.State('', {
     'B0'     : Item(eid=0),
     'B0/X'   : Item(eid=1),
@@ -1572,7 +1572,7 @@ def replace_via_rm_cp(sbox):
   test_svnmover_verify_log(sbox.repo_url,
                            ['D /top0/X/A',
                             'A /top0/X/A (from /top0/X/A:1)'])
-                 
+
 @XFail()
 # After making a commit, svnmover currently can't (within the same execution)
 # look up paths in the revision it just committed.

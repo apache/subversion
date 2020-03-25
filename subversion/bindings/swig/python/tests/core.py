@@ -235,7 +235,7 @@ class SubversionCoreTestCase(unittest.TestCase):
       svn.core.svn_stream_write(stream, ostr_unicode)
     svn.core.svn_stream_close(stream)
 
-  # As default codec of Python 2 is 'ascii', conversion from unicode to bytes 
+  # As default codec of Python 2 is 'ascii', conversion from unicode to bytes
   # will be success only if all characters of target strings are in the range
   # of \u0000 ~ \u007f.
   @unittest.skipUnless(IS_PY3, "test for Python 3 only")

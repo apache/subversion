@@ -215,7 +215,7 @@ svn_diff_hunk__create_adds_single_line(svn_diff_hunk_t **hunk_out,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool)
 {
-  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch, 
+  SVN_ERR(add_or_delete_single_line(hunk_out, line, patch,
                                     (!patch->reverse),
                                     result_pool, scratch_pool));
   return SVN_NO_ERROR;
@@ -1235,7 +1235,7 @@ parse_next_hunk(svn_diff_hunk_t **hunk,
           c = line->data[0];
           if (c == ' '
               || ((original_lines > 0 && modified_lines > 0)
-                  && ( 
+                  && (
                /* Tolerate chopped leading spaces on empty lines. */
                       (! eof && line->len == 0)
                /* Maybe tolerate chopped leading spaces on non-empty lines. */
@@ -2085,7 +2085,7 @@ parse_binary_patch(svn_patch_t *patch, apr_file_t *apr_file,
           else if (in_src)
             {
               patch->binary_patch = bpatch; /* SUCCESS! */
-              break; 
+              break;
             }
           else
             {

@@ -1421,7 +1421,7 @@ revprops_close_revision(void *baton)
  * both of these values are #SVN_INVALID_REVNUM (in  which case no
  * revision-based filtering occurs at all), or both are valid revisions
  * (where START_REV is older than or equivalent to END_REV).
- * 
+ *
  * START_REV and END_REV act as filters, the lower and upper (inclusive)
  * range values of revisions which will
  * be loaded.  Either both of these values are #SVN_INVALID_REVNUM (in

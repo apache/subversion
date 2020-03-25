@@ -1574,7 +1574,7 @@ reown_file(const char *path,
 }
 
 /* Determine what the PERMS for a new file should be by looking at the
-   permissions of a temporary file that we create in DIRECTORY.  
+   permissions of a temporary file that we create in DIRECTORY.
    DIRECTORY can be NULL in which case the system temporary dir is used.
    Unfortunately, umask() as defined in POSIX provides no thread-safe way
    to get at the current value of the umask, so what we're doing here is

@@ -481,7 +481,7 @@ issue_4741_groups(apr_pool_t *pool)
 static svn_error_t *
 reposful_reposless_stanzas_inherit(apr_pool_t *pool)
 {
-  const char rules[] = 
+  const char rules[] =
     "[groups]"                               NL
     "company = user1, user2, user3"          NL
     "customer = customer1, customer2"        NL

@@ -2374,7 +2374,7 @@ db_base_remove(svn_wc__db_wcroot_t *wcroot,
 
           /* For file externals we only want to place a not present marker
              if there is a BASE parent */
-          
+
           svn_relpath_split(&parent_local_relpath, &name, local_relpath,
                             scratch_pool);
 
@@ -6702,7 +6702,7 @@ svn_wc__db_op_mark_resolved_internal(svn_wc__db_wcroot_t *wcroot,
     return SVN_NO_ERROR;
 
   conflicts = svn_skel__parse(conflict_data, conflict_len, scratch_pool);
-  
+
 
   SVN_ERR(svn_wc__conflict_skel_resolve(&resolved_all, conflicts,
                                         db, wcroot->abspath,
@@ -16616,7 +16616,7 @@ svn_wc__db_find_repos_node_in_wc(apr_array_header_t **local_abspath_list,
 
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
     }
-    
+
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
 

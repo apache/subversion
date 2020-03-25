@@ -679,7 +679,7 @@ svn_repos_fs_type(svn_repos_t *repos,
  * The optional @a cancel_func callback will be invoked with
  * @a cancel_baton as usual to allow the user to preempt this potentially
  * lengthy operation.
- * 
+ *
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.9.
@@ -3360,7 +3360,7 @@ svn_repos_dump_fs4(svn_repos_t *repos,
                    apr_pool_t *pool);
 
 /**
- * Similar to svn_repos_dump_fs4(), but with @a include_revprops and 
+ * Similar to svn_repos_dump_fs4(), but with @a include_revprops and
  * @a include_changes both set to @c TRUE and @a filter_func and
  * @a filter_baton set to @c NULL.
  *

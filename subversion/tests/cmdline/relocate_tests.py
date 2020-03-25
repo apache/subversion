@@ -417,8 +417,8 @@ def prefix_partial_component(sbox):
                                      wc_dir)
   svntest.actions.run_and_verify_info([{ 'URL' : '.*.yyyother$' }],
                                       wc_dir)
-  
-  
+
+
 ########################################################################
 # Run the tests
 

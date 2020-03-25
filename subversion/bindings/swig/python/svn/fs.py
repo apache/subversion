@@ -71,7 +71,7 @@ class _PopenStdoutWrapper(object):
           try:
             self._pobject.wait(10)
           except _subprocess.TimeoutExpired:
-            self._pobject.kill() 
+            self._pobject.kill()
 
 class FileDiff:
   def __init__(self, root1, path1, root2, path2, pool=None, diffoptions=[]):

@@ -3105,7 +3105,7 @@ def plaintext_password_storage_disabled(sbox):
   servers_file = open(os.path.join(config_dir_path, "servers"), "w")
   servers_file.write("[global]\nstore-plaintext-passwords=no\n")
   servers_file.close()
-  
+
   svntest.main.run_command(svntest.main.svn_binary, False, False,
    "commit", "--config-dir", config_dir_path,
     "-m", "committing with plaintext password storage disabled",

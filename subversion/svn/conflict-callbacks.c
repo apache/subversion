@@ -234,7 +234,7 @@ merge_prop_conflict(svn_stream_t *output,
     my_propval = svn_string_create_empty(pool);
   if (their_propval == NULL)
     their_propval = svn_string_create_empty(pool);
-    
+
   options->ignore_eol_style = TRUE;
   SVN_ERR(svn_diff_mem_string_diff3(&diff, base_propval,
                                     merged_propval ?
@@ -361,7 +361,7 @@ edit_prop_conflict(const svn_string_t **merged_propval,
       svn_stringbuf_t *buf;
 
       SVN_ERR(svn_stringbuf_from_file2(&buf, file_path, scratch_pool));
-      *merged_propval = svn_string_create_from_buf(buf, result_pool); 
+      *merged_propval = svn_string_create_from_buf(buf, result_pool);
     }
 
   return SVN_NO_ERROR;
@@ -900,7 +900,7 @@ handle_text_conflict(svn_boolean_t *resolved,
   const char *their_abspath;
   const char *merged_abspath = svn_client_conflict_get_local_abspath(conflict);
   apr_array_header_t *text_conflict_options;
-  svn_client_conflict_option_id_t option_id; 
+  svn_client_conflict_option_id_t option_id;
 
   option_id = svn_client_conflict_option_unspecified;
 
@@ -1559,11 +1559,11 @@ build_tree_conflict_options(
       /* Add move target choice options only if there are multiple
        * move targets to choose from. */
       if (strcmp(o->code, "d") == 0 &&
-          (*possible_moved_to_repos_relpaths == NULL || 
+          (*possible_moved_to_repos_relpaths == NULL ||
            (*possible_moved_to_repos_relpaths)->nelts <= 1))
         continue;
       if (strcmp(o->code, "w") == 0 &&
-          (*possible_moved_to_abspaths == NULL || 
+          (*possible_moved_to_abspaths == NULL ||
            (*possible_moved_to_abspaths)->nelts <= 1))
         continue;
 
@@ -1689,7 +1689,7 @@ find_conflict_option_with_repos_move_targets(
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   apr_array_header_t *possible_moved_to_repos_relpaths = NULL;
-  
+
   *option_with_move_targets = NULL;
 
   for (i = 0; i < options->nelts; i++)
@@ -1720,7 +1720,7 @@ find_conflict_option_with_working_copy_move_targets(
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   int i;
   apr_array_header_t *possible_moved_to_abspaths = NULL;
-  
+
   *option_with_move_targets = NULL;
 
   for (i = 0; i < options->nelts; i++)

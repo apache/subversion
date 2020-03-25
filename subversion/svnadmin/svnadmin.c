@@ -1833,7 +1833,7 @@ subcommand_lstxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
   SVN_ERR(get_revnum(&limit, &opt_state->start_revision, youngest, repos,
                      pool));
-  
+
   iterpool = svn_pool_create(pool);
   for (i = 0; i < txns->nelts; i++)
     {

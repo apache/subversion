@@ -159,7 +159,7 @@ class Version(object):
             ver_tag = '" (Nightly Build r%d)"' % revnum
             ver_numtag = '"-nightly-r%d"' % revnum
         else:
-            ver_tag = '" (r%d)"' % revnum 
+            ver_tag = '" (r%d)"' % revnum
             ver_numtag = '""'
         return (ver_tag, ver_numtag)
 
@@ -1475,18 +1475,18 @@ def add_to_changes_dict(changes_dict, audience, section, change, revision):
     if section:
         section = section.lower()
     change = change.strip()
-    
+
     if not audience in changes_dict:
         changes_dict[audience] = dict()
     if not section in changes_dict[audience]:
         changes_dict[audience][section] = dict()
-    
+
     changes = changes_dict[audience][section]
     if change in changes:
         changes[change].add(revision)
     else:
         changes[change] = set([revision])
-        
+
 def print_section(changes_dict, audience, section, title, mandatory=False):
     if audience in changes_dict:
         audience_changes = changes_dict[audience]
@@ -1523,7 +1523,7 @@ def write_changelog(args):
     # Putting [skip], [ignore], [c:skip] or [c:ignore] somewhere in the
     # log message means this commit must be ignored for Changelog processing
     # (ignored even with the --include-unlabeled-summaries option).
-    # 
+    #
     # If there is no changes label anywhere in the commit message, and the
     # --include-unlabeled-summaries option is used, we'll consider the summary
     # line of the commit message (= first line except if it starts with a *)
@@ -1542,7 +1542,7 @@ def write_changelog(args):
     previous = svn_repos + '/' + args.previous
     include_unlabeled = args.include_unlabeled
     separator_line = ('-' * 72) + '\n'
-    
+
     mergeinfo = subprocess.check_output(['svn', 'mergeinfo', '--show-revs',
                     'eligible', '--log', branch_url, previous],
                                         universal_newlines=True)
@@ -1556,7 +1556,7 @@ def write_changelog(args):
         for log_message in mergeinfo.split(separator_line)[1:-1]
     }
     mergeinfo = mergeinfo.splitlines()
-    
+
     separator_pattern = re.compile('^-{72}$')
     revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
     changes_prefix_pattern = re.compile(r'^\[(U|D)?:?([^\]]+)?\](.+)$')
@@ -1573,7 +1573,7 @@ def write_changelog(args):
     audience = None
     section = None
     message = None
-    
+
     for line in mergeinfo:
         if separator_pattern.match(line):
             # New revision section. Reset variables.
@@ -1590,7 +1590,7 @@ def write_changelog(args):
                     #      logic, in order to extract CHANGES_PREFIX_PATTERN
                     #      and CHANGES_SUFFIX_PATTERN lines from the trunk log
                     #      message.
-                    
+
                     # 2. Parse the STATUS entry
                     this_log_message = log_messages_dict[revision]
                     status_paragraph = this_log_message.split('\n\n')[2]
@@ -1631,7 +1631,7 @@ def write_changelog(args):
 
         if re.search(r'\[(c:)?(skip|ignore)\]', line, re.IGNORECASE):
             changes_ignore = True
-            
+
         prefix_match = changes_prefix_pattern.match(line)
         if prefix_match:
             audience = prefix_match.group(1)
@@ -1875,7 +1875,7 @@ def main():
                             like [U:client], [D:api], [U], ...''')
     subparser.set_defaults(func=write_changelog)
     subparser.add_argument('previous',
-                    help='''The "previous" branch or tag, relative to 
+                    help='''The "previous" branch or tag, relative to
                             ^/subversion/, to compare "branch" against.''')
     subparser.add_argument('--include-unlabeled-summaries',
                     dest='include_unlabeled',
@@ -1886,7 +1886,7 @@ def main():
                             summary line contains 'STATUS', 'CHANGES',
                             'Post-release housekeeping', 'Follow-up' or starts
                             with '*').''')
-    
+
     # Parse the arguments
     args = parser.parse_args()
 

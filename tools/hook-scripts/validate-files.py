@@ -22,7 +22,7 @@ exit with a non-zero exit code.  The script expects a validate-files.conf
 file placed in the conf dir under the repo the commit is for.
 
 Note: As changed file paths $FILE are always represented as a Unicode (Py3)
-      or UTF-8 (Py2) strings, you might need to set apropriate locale and 
+      or UTF-8 (Py2) strings, you might need to set apropriate locale and
       PYTHONIOENCODING environment variable for this script and
       commands to handle non-ascii path and command outputs, especially
       you want to use svnlook cat command to inspect file contents."""

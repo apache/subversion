@@ -746,7 +746,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       fakedefines.append(self.quote_define('SVN_WIN32_CRASHREPORT_EMAIL="users@subversion.apache.org"'))
 
     return fakedefines
-    
+
   def quote_define(self, value):
     "Properly quote special characters in a define (if needed)"
     return value
@@ -784,7 +784,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
         lang_subdir = 'perl5'
       else:
         lang_subdir = target.lang
-        
+
       if target.lang == "python":
         lib = self._libraries['py3c']
         fakeincludes.extend(lib.include_dirs)

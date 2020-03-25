@@ -229,7 +229,7 @@ def getopt_config_option(sbox):
   expected_stderr = '.*W205000.*did you mean.*'
   expected_stdout = svntest.verify.AnyOutput
   svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr, 0,
-                                      'info', 
+                                      'info',
                                       '--config-option',
                                       'config:miscellanous:diff-extensions=' +
                                         '-u -p',

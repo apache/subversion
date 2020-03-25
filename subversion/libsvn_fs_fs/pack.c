@@ -315,12 +315,12 @@ initialize_pack_context(pack_context_t *context,
   context->file_props = apr_array_make(pool, max_items,
                                        sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->file_props_file, NULL, temp_dir,
-                                   svn_io_file_del_on_close, 
+                                   svn_io_file_del_on_close,
                                    context->info_pool, pool));
   context->dir_props = apr_array_make(pool, max_items,
                                       sizeof(svn_fs_fs__p2l_entry_t *));
   SVN_ERR(svn_io_open_unique_file3(&context->dir_props_file, NULL, temp_dir,
-                                   svn_io_file_del_on_close, 
+                                   svn_io_file_del_on_close,
                                    context->info_pool, pool));
 
   /* noderev and representation item bucket */

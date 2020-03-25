@@ -92,7 +92,7 @@ typedef struct authz_svn_config_rec {
 #    define USE_FORCE_AUTHN 1
 #    define IN_SOME_AUTHN_NOTE "authz_svn-in-some-authn"
 #    define FORCE_AUTHN_NOTE "authz_svn-force-authn"
-#  else 
+#  else
      /* ap_some_auth_required() is busted and no viable alternative exists */
 #    ifndef SVN_ALLOW_BROKEN_HTTPD_AUTH
 #      error This Apache httpd has broken auth (CVE-2015-3184)
@@ -961,7 +961,7 @@ access_checker(request_rec *r)
           else
             return HTTP_FORBIDDEN;
         }
-    }    
+    }
 
 #else
   /* Support for older versions of httpd that have a working

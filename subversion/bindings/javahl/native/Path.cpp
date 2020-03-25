@@ -33,7 +33,7 @@
 #include "JNIStringHolder.h"
 #include "Pool.h"
 #include "svn_private_config.h"
- 
+
 /**
  * Constructor
  *

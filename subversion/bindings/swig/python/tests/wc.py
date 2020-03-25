@@ -182,7 +182,7 @@ class SubversionWorkingCopyTestCase(unittest.TestCase):
   def test_status_editor_callback_exception(self):
       """test case for status_editor call back not to be crashed by Python exception"""
       def status_func(target, status):
-        # Note: exception with in this call back doesn't propagate to 
+        # Note: exception with in this call back doesn't propagate to
         # the caller
         raise AssertionError('intentional exception')
 

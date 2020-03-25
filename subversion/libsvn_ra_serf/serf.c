@@ -363,7 +363,7 @@ load_config(svn_ra_serf__session_t *session,
     {
       apr_int64_t timeout;
       svn_error_t *err;
-      
+
       err = svn_cstring_strtoi64(&timeout, timeout_str, 0, APR_INT64_MAX, 10);
       if (err)
         return svn_error_createf(SVN_ERR_BAD_CONFIG_VALUE, err,

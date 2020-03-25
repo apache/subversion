@@ -220,7 +220,7 @@ svn_wc__conflict_skel_add_prop_conflict(svn_skel_t *conflict_skel,
    with (1), MOVE_SRC_OP_ROOT_ABSPATH should be A/B for a conflict
    associated with (2).
    MOVE_DST_OP_ROOT_ABSPATH is the op-root of the move target (i.e. the
-   op-root of the corresponding copy). This needs to be stored because 
+   op-root of the corresponding copy). This needs to be stored because
    moves in the NODE table do not always persist after an update, while
    the conflict resolver may need information about the pre-update state
    of the move.

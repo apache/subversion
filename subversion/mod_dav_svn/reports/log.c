@@ -125,7 +125,7 @@ start_path_with_copy_from(const char **element,
 {
   switch (log_item->change_kind)
     {
-      case svn_fs_path_change_add: 
+      case svn_fs_path_change_add:
         *element = "S:added-path";
         break;
 
@@ -244,7 +244,7 @@ log_revision_receiver(void *baton,
   SVN_ERR(maybe_start_log_item(lrb));
   lrb->needs_log_item = TRUE;
 
-  /* Path changes have been processed already. 
+  /* Path changes have been processed already.
      Now send the remaining per-revision info. */
   SVN_ERR(dav_svn__brigade_printf(lrb->bb, lrb->output,
                                   "<D:version-name>%ld"

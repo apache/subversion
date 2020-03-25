@@ -829,7 +829,7 @@ class State:
       match = _re_parse_eid_ele.search(line)
       if match and match.group(2) != 'none':
         eid = match.group(1)
-        parent_eid = match.group(3) 
+        parent_eid = match.group(3)
         path = match.group(4)
         if path == '.':
           path = ''
@@ -851,7 +851,7 @@ class State:
     add_to_desc(eids, desc, branch_id)
 
     return cls('', desc)
-  
+
 
 class StateItem:
   """Describes an individual item within a working copy.

@@ -3224,7 +3224,7 @@ set_headers(request_rec *r, const dav_resource *resource)
   if (!resource->exists)
     return NULL;
 
-  if ((resource->type == DAV_RESOURCE_TYPE_REGULAR) 
+  if ((resource->type == DAV_RESOURCE_TYPE_REGULAR)
       && resource->info->is_public_uri)
     {
       /* Include Last-Modified header for 'external' GET or HEAD requests

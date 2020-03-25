@@ -1661,16 +1661,16 @@ commit_empty_last_change(const svn_test_opts_t *opts,
       SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
                                         revprop_table,
                                         NULL, NULL, NULL, TRUE, tmp_pool));
-      
+
       SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
       SVN_ERR(editor->close_directory(root_baton, tmp_pool));
       SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
-      
+
       SVN_ERR(svn_ra_stat(session, "", 2+i, &dirent, tmp_pool));
-      
+
       SVN_TEST_ASSERT(dirent != NULL);
       SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
-      
+
       /* BDB used to only updates last_changed on the repos_root when there
          was an actual change. Now all filesystems behave in the same way */
       SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);

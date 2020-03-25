@@ -7219,7 +7219,7 @@ test_cache_clear_during_stream(const svn_test_opts_t *opts,
    * Just to be sure, make it not too uniform to keep self-txdelta at bay. */
   SVN_ERR(svn_fs_apply_textdelta(&consumer_func, &consumer_baton,
                                  txn_root, "/foo", NULL, NULL, subpool));
-  stream = svn_txdelta_target_push(consumer_func, consumer_baton, 
+  stream = svn_txdelta_target_push(consumer_func, consumer_baton,
                                    svn_stream_empty(subpool), subpool);
   for (i = 0; i < 10000; ++ i)
     {

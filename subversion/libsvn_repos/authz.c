@@ -81,11 +81,11 @@ typedef struct limited_rights_t
    */
   path_access_t access;
 
-  /* Minimal access rights that the user has on this or any other node in 
+  /* Minimal access rights that the user has on this or any other node in
    * the sub-tree.  This does not take inherited rights into account. */
   authz_access_t min_rights;
 
-  /* Maximal access rights that the user has on this or any other node in 
+  /* Maximal access rights that the user has on this or any other node in
    * the sub-tree.  This does not take inherited rights into account. */
   authz_access_t max_rights;
 
@@ -889,7 +889,7 @@ create_user_authz(authz_full_t *authz,
   /* Use a separate sub-pool to keep memory usage tight. */
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
-  /* Find all ACLs for REPOSITORY. 
+  /* Find all ACLs for REPOSITORY.
    * Note that repo-specific rules replace global rules,
    * even if they don't apply to the current user. */
   apr_array_header_t *acls = apr_array_make(subpool, authz->acls->nelts,
@@ -947,7 +947,7 @@ create_user_authz(authz_full_t *authz,
   svn_pool_clear(subpool);
   trim_tree(root, NO_SEQUENCE_NUMBER, subpool);
 
-  /* Calculate recursive rights. 
+  /* Calculate recursive rights.
    *
    * This is a bottom-up calculation of the range of access rights
    * specified anywhere in  the respective sub-tree, including the base
@@ -999,7 +999,7 @@ static lookup_state_t *
 create_lookup_state(apr_pool_t *result_pool)
 {
   lookup_state_t *state = apr_pcalloc(result_pool, sizeof(*state));
- 
+
   state->next = apr_array_make(result_pool, 4, sizeof(node_t *));
   state->current = apr_array_make(result_pool, 4, sizeof(node_t *));
 

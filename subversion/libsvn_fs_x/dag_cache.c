@@ -807,7 +807,7 @@ get_copy_inheritance(svn_fs_x__copy_id_inherit_t *inherit_p,
      or if it is a branch point that we are accessing via its original
      copy destination path. */
   svn_fs_x__dag_get_copyroot(&copyroot_rev, &copyroot_path, child->node);
-  SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev, 
+  SVN_ERR(svn_fs_x__revision_root(&copyroot_root, fs, copyroot_rev,
                                   scratch_pool));
   SVN_ERR(svn_fs_x__get_temp_dag_node(&copyroot_node, copyroot_root,
                                       copyroot_path, scratch_pool));
@@ -909,7 +909,7 @@ svn_fs_x__get_dag_path(svn_fs_x__dag_path_t **dag_path_p,
         {
           /* If this was the last path component, and the caller
              said it was optional, then don't return an error;
-             just put a NULL node pointer in the path. 
+             just put a NULL node pointer in the path.
            */
           if ((flags & svn_fs_x__dag_path_last_optional)
               && (path_len == path.len))

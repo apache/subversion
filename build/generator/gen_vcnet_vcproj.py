@@ -125,7 +125,7 @@ class Generator(gen_win.WinGeneratorBase):
 
     if self.vcproj_extension == '.vcproj':
       self.write_with_template(fname, 'templates/vcnet_vcproj.ezt', data)
-      self.write_with_template(os.path.splitext(fname)[0] + '.vsprops', 
+      self.write_with_template(os.path.splitext(fname)[0] + '.vsprops',
                                'templates/vcnet_vsprops.ezt', data)
     else:
       self.write_with_template(fname, 'templates/vcnet_vcxproj.ezt', data)
@@ -289,7 +289,7 @@ class Generator(gen_win.WinGeneratorBase):
 
   def quote_define(self, value):
     "Properly quote special characters in a define (if needed)"
-    
+
     if self.vcproj_extension == '.vcproj':
       return value.replace('"', '""')
     else:

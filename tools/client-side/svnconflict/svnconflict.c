@@ -373,7 +373,7 @@ svnconflict_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   for (i = 0; i < props_conflicted->nelts; i++)
     {
-      const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *); 
+      const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *);
       SVN_ERR(svn_cmdline_printf(pool, "prop-conflict: %s\n", propname));
     }
 

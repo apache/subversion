@@ -365,7 +365,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       if err != None:
         self.assertEqual(err.apr_err, core.SVN_ERR_FS_PATH_ALREADY_LOCKED)
         self.errors += 1
-      
+
     self.calls = 0
     self.errors = 0
     target = fs.lock_target_create(None, self.rev)

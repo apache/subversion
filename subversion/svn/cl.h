@@ -501,7 +501,7 @@ svn_error_t *
 svn_cl__print_conflict_stats(svn_cl__conflict_stats_t *conflict_stats,
                              apr_pool_t *scratch_pool);
 
-/* 
+/*
  * Interactively resolve the conflict a @a CONFLICT.
  * TODO: more docs
  */
@@ -518,7 +518,7 @@ svn_cl__resolve_conflict(svn_boolean_t *quit,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *scratch_pool);
 
-/* 
+/*
  * Interactively resolve conflicts for all TARGETS.
  * TODO: more docs
  */

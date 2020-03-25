@@ -154,7 +154,7 @@ assert_text_conflict_options(svn_client_conflict_t *conflict,
   return SVN_NO_ERROR;
 }
 
-/* 
+/*
  * The following tests verify resolution of "incoming file add vs.
  * local file obstruction upon merge" tree conflicts.
  */
@@ -482,7 +482,7 @@ test_merge_incoming_added_file_replace_and_merge(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
-/* 
+/*
  * The following tests verify resolution of "incoming dir add vs.
  * local dir obstruction upon merge" tree conflicts.
  */
@@ -1453,7 +1453,7 @@ test_merge_incoming_delete_file_ignore(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(!status->file_external);
   SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
-  
+
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
 
@@ -1806,7 +1806,7 @@ test_update_incoming_delete_file_ignore(const svn_test_opts_t *opts,
   SVN_TEST_ASSERT(!status->file_external);
   SVN_TEST_ASSERT(status->moved_from_abspath == NULL);
   SVN_TEST_ASSERT(status->moved_to_abspath == NULL);
-  
+
   SVN_ERR(svn_client_conflict_get(&conflict, sbox_wc_path(b, deleted_path),
                                   ctx, b->pool, b->pool));
 
@@ -2116,7 +2116,7 @@ create_wc_with_incoming_delete_dir_conflict(svn_test__sandbox_t *b,
   if (local_add)
     {
       const char *new_child_path;
-      
+
       new_child_path = svn_relpath_join(branch_path,
                                         svn_relpath_join(deleted_dir_name,
                                                          new_file_name_branch,
@@ -4127,7 +4127,7 @@ create_wc_with_dir_add_vs_dir_add_update_conflict(
     SVN_ERR(svn_io_dir_make(sbox_wc_path(b, new_file_child_path),
                             APR_OS_DEFAULT, b->pool));
 
-  /* Update to the HEAD revision. 
+  /* Update to the HEAD revision.
    * This should raise an "incoming add vs local add" tree conflict. */
   SVN_ERR(sbox_wc_update(b, "", SVN_INVALID_REVNUM));
 
@@ -5026,7 +5026,7 @@ test_cherry_pick_post_move_edit(const svn_test_opts_t *opts,
 
   /* And "A1/mu" should have expected contents. */
   SVN_ERR(svn_stringbuf_from_file2(&buf, sbox_wc_path(b, "A1/mu"), pool));
-  SVN_TEST_STRING_ASSERT(buf->data, 
+  SVN_TEST_STRING_ASSERT(buf->data,
     "<<<<<<< .working" "\n"
     "This is the file 'mu'." "\n"
     "||||||| .old" "\n"
@@ -6732,7 +6732,7 @@ test_merge_file_move_vs_file_move_accept_move(const svn_test_opts_t *opts,
   struct status_baton sb;
   struct svn_client_status_t *status;
 
-  SVN_ERR(svn_test__sandbox_create(b, 
+  SVN_ERR(svn_test__sandbox_create(b,
                                    "merge_file_move_vs_file_move_accept_move",
                                    opts, pool));
 

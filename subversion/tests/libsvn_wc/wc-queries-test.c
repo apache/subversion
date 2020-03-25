@@ -323,7 +323,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
         }
       else if (MATCH_TOKEN(token, "CONSTANT"))
         {
-          item->table = "sqlite_master"; /* not worth checking. 
+          item->table = "sqlite_master"; /* not worth checking.
                                             Just a lookup */
           token = apr_strtok(NULL, " ", &last);
           if (!MATCH_TOKEN(token, "ROW"))
@@ -512,7 +512,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
     }
   else if (MATCH_TOKEN(item->operation, "INDEX"))
     {
-      
+
     }
   else if (MATCH_TOKEN(item->operation, "MULTI-INDEX"))
     {
@@ -537,7 +537,7 @@ parse_explanation_item(struct explanation_item **parsed_item,
     {
     }
   else if (MATCH_TOKEN(item->operation, "SCALAR"))
-    {      
+    {
     }
   else if (MATCH_TOKEN(item->operation, "LEFT-MOST"))
     {

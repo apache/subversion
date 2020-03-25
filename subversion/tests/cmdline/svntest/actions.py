@@ -2181,7 +2181,7 @@ def set_prop(name, value, path, expected_re_string=None, force=None):
       file = None
   else:
     raise TypeError(value)
- 
+
   if file is None:
     propset += (name, value, path)
   else:

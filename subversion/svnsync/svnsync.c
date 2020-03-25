@@ -294,7 +294,7 @@ static const apr_getopt_option_t svnsync_options[] =
 
 typedef struct opt_baton_t {
   svn_boolean_t non_interactive;
-  struct { 
+  struct {
     svn_boolean_t trust_server_cert_unknown_ca;
     svn_boolean_t trust_server_cert_cn_mismatch;
     svn_boolean_t trust_server_cert_expired;

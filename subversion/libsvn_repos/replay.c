@@ -891,7 +891,7 @@ get_relevant_changes(apr_hash_t **changed_paths,
             }
 
           /* If the base_path doesn't match the top directory of this path
-             we don't want anything to do with it... 
+             we don't want anything to do with it...
              ...unless this was a change to one of the parent directories of
              base_path. */
           if (   svn_relpath_skip_ancestor(base_relpath, path)

@@ -449,7 +449,7 @@ verify_checksum(svn_stringbuf_t *content,
                        content->len, scratch_pool));
 
   if (!svn_checksum_match(actual, expected))
-    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool, 
+    SVN_ERR(svn_checksum_mismatch_err(expected, actual, scratch_pool,
                                       "checksum mismatch"));
 
   return SVN_NO_ERROR;
@@ -1424,7 +1424,7 @@ svn_fs_x__set_revision_proplist(svn_fs_t *fs,
                                  scratch_pool));
   else
     SVN_ERR(write_non_packed_revprop(&final_path, &tmp_path,
-                                     fs, rev, proplist, batch, 
+                                     fs, rev, proplist, batch,
                                      scratch_pool, scratch_pool));
 
   /* We use the rev file of this revision as the perms reference,

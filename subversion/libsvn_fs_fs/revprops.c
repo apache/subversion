@@ -261,7 +261,7 @@ cache_revprops(svn_boolean_t *is_cached,
 }
 
 /* Read the non-packed revprops for revision REV in FS, put them into the
- * revprop cache if PROPULATE_CACHE is set and return them in *PROPERTIES. 
+ * revprop cache if PROPULATE_CACHE is set and return them in *PROPERTIES.
  *
  * If the data could not be read due to an otherwise recoverable error,
  * leave *PROPERTIES unchanged. No error will be returned in that case.

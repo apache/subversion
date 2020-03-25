@@ -881,7 +881,7 @@ unparse_dir_entry(svn_fs_x__dirent_t *dirent,
   apr_size_t to_write;
   apr_size_t name_len = strlen(dirent->name);
 
-  /* A buffer with sufficient space for 
+  /* A buffer with sufficient space for
    * - entry name + 1 terminating NUL
    * - 1 byte for the node kind
    * - 2 numbers in 7b/8b encoding for the noderev-id

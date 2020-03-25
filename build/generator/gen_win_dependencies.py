@@ -780,7 +780,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if self.bdb_path:
       bdb_path = self.bdb_path
-    
+
     inc_path = os.path.join(bdb_path, 'include')
     db_h_path = os.path.join(inc_path, 'db.h')
 
@@ -1036,10 +1036,10 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_dir = os.path.join(sysconfig.PREFIX, "libs")
     except ImportError:
       return
-    
+
     if sys.version_info[0] >= 3:
       self.user_macros.append(UserMacro("SWIG_PY_OPTS", "-python -py3"))
-    else:    
+    else:
       self.user_macros.append(UserMacro("SWIG_PY_OPTS", "-python -classic"))
 
     self._libraries['python'] = SVNCommonLibrary('python', inc_dir, lib_dir, None,
@@ -1050,39 +1050,39 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     show_warnings = True
     # Assume a default path, unless otherwise specified
     py3c_path = "py3c"
-    
+
     if self.py3c_path:
       py3c_path = self.py3c_path
-     
+
     py3c_path = os.path.abspath(py3c_path)
     inc_path = os.path.join(py3c_path, 'include')
     py3c_hdr_path = os.path.join(inc_path, 'py3c.h')
-    
+
     pc_path = os.path.join(py3c_path, 'py3c.pc.in')
-    
+
     if not os.path.isfile(py3c_hdr_path):
       if show_warnings:
         print('WARNING: "%s" not found' % py3c_hdr_path)
         print('Use "--with-py3c" to configure py3c location.')
       return False
-      
+
     with open(pc_path) as fp:
       txt = fp.read()
-      
+
     ver_match = re.search(r'Version:\s+([0-9.]+)', txt)
-    
+
     if not ver_match:
       if show_warnings:
         print("WARNING: Failed to find version in '%s'" % pc_path)
       return False
-      
+
     py3c_version = ver_match.group(1)
-      
+
     self._libraries['py3c'] = SVNCommonLibrary('py3c', inc_path, None,
                                                None, py3c_version)
-                                               
+
     return True
-      
+
   def _find_jdk(self, show_warnings):
     "Find details about an installed jdk"
 

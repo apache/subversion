@@ -3220,7 +3220,7 @@ def load_no_svndate_r0(sbox):
               b"Content-length: 10\n", b"\n",
               b"PROPS-END\n", b"\n"]
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_old)
-  
+
   # svn:date should have been removed
   svntest.actions.run_and_verify_svnlook([], [],
                                          'proplist', '--revprop', '-r0',
@@ -4000,7 +4000,7 @@ V 27
 2005-05-03T19:10:19.975578Z
 PROPS-END
 
-Node-path: 
+Node-path:
 Node-kind: dir
 Node-action: change
 Prop-content-length: 32

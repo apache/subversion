@@ -456,7 +456,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
               SVN_ERR_CLIENT_IS_BINARY_FILE, NULL,
               _("Cannot calculate blame information for binary file '%s'"),
                (svn_path_is_url(frb->target)
-                      ? frb->target 
+                      ? frb->target
                       : svn_dirent_local_style(frb->target, pool)));
         }
     }
@@ -553,7 +553,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                      || frb->include_merged_revisions);
 
       /* The file existed before start_rev; generate no blame info for
-         lines from this revision (or before). 
+         lines from this revision (or before).
 
          This revision specifies the state as it was at the start revision */
 
@@ -739,7 +739,7 @@ svn_client_blame6(svn_revnum_t *start_revnum_p,
 
           mime_type = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
         }
-      else 
+      else
         {
           const svn_string_t *value;
 

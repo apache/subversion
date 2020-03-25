@@ -1800,7 +1800,7 @@ svn_wc__resolve_conflicts(svn_wc_context_t *wc_ctx,
                           void *notify_baton,
                           apr_pool_t *scratch_pool);
 
-/** 
+/**
  * Resolve the text conflict at LOCAL_ABSPATH as per CHOICE, and then
  * mark the conflict resolved.
  * The working copy must already be locked for resolving, e.g. by calling
@@ -1817,7 +1817,7 @@ svn_wc__conflict_text_mark_resolved(svn_wc_context_t *wc_ctx,
                                     void *notify_baton,
                                     apr_pool_t *scratch_pool);
 
-/** 
+/**
  * Resolve the conflicted property PROPNAME at LOCAL_ABSPATH as per CHOICE,
  * and then mark the conflict resolved.  If MERGED_VALUE is not NULL, this is
  * the new merged property, used when choosing #svn_wc_conflict_choose_merged.
@@ -1848,7 +1848,7 @@ svn_wc__conflict_prop_mark_resolved(svn_wc_context_t *wc_ctx,
  *
  * The tree conflict at LOCAL_ABSPATH must have the following properties or
  * SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE will be returned:
- * 
+ *
  * operation: svn_wc_operation_update or svn_wc_operation_switch
  * local change: svn_wc_conflict_reason_deleted or
  *               svn_wc_conflict_reason_replaced or
@@ -1885,7 +1885,7 @@ svn_wc__conflict_tree_update_break_moved_away(svn_wc_context_t *wc_ctx,
  *
  * The tree conflict at LOCAL_ABSPATH must have the following properties or
  * SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE will be returned:
- * 
+ *
  * operation: svn_wc_operation_update or svn_wc_operation_switch
  * local change: svn_wc_conflict_reason_deleted or
  *               svn_wc_conflict_reason_replaced
@@ -1921,7 +1921,7 @@ svn_wc__conflict_tree_update_raise_moved_away(svn_wc_context_t *wc_ctx,
  *
  * The tree conflict at LOCAL_ABSPATH must have the following properties or
  * SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE will be returned:
- * 
+ *
  * operation: svn_wc_operation_update or svn_wc_operation_switch
  * local change: svn_wc_conflict_reason_moved_away
  * incoming change: svn_wc_conflict_action_edit

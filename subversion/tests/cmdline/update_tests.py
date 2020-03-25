@@ -6854,16 +6854,16 @@ def update_delete_switched(sbox):
 @XFail()
 def update_add_missing_local_add(sbox):
   "update adds missing local addition"
-  
+
   sbox.build(read_only=True)
-  
+
   # Note that updating 'A' to r0 doesn't reproduce this issue...
   sbox.simple_update('', revision='0')
   sbox.simple_mkdir('A')
   sbox.simple_add_text('mumumu', 'A/mu')
   os.unlink(sbox.ospath('A/mu'))
   os.rmdir(sbox.ospath('A'))
-  
+
   sbox.simple_update()
 
 # Verify that deleting an unmodified directory leaves behind any unversioned

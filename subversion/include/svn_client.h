@@ -761,7 +761,7 @@ typedef svn_error_t *(*svn_client_get_commit_log_t)(
  * of the byte sequences LF ("\n"), CR ("\n"), CR LF ("\r\n") ends a line
  * and is not included in @a line. The @a line content can include all other
  * byte values including zero (ASCII NUL).
- * 
+ *
  * @note That is how line splitting is done on the final file content, from
  * which this callback is driven. It is not entirely clear whether the line
  * splitting used to calculate diffs between each revision and assign a
@@ -4646,7 +4646,7 @@ typedef enum svn_client_conflict_option_id_t {
 
 /**
  * Set a merged property value on @a option to @a merged_propval.
- * 
+ *
  * Setting the merged value is required before resolving the property
  * conflict using an option with ID svn_client_conflict_option_merged_text.
  *
@@ -4715,7 +4715,7 @@ svn_client_conflict_option_get_moved_to_repos_relpath_candidates(
  *
  * @a preferred_move_target_idx must be a valid index into the list returned
  * by svn_client_conflict_option_get_moved_to_repos_relpath_candidates().
- * 
+ *
  * This function can be called multiple times.
  * It affects the output of svn_client_conflict_tree_get_description() and
  * svn_client_conflict_option_get_description(). Call these functions again
@@ -4756,7 +4756,7 @@ svn_client_conflict_option_set_moved_to_repos_relpath(
  * svn_client_conflict_option_get_moved_to_repos_relpath_candidates() before
  * calling this function to let the user select a repository path first.
  * Otherwise, one of the repository-side paths will be selected internally.
- * 
+ *
  * @a *possible_moved_to_abspaths is set to NULL if the @a option does not
  * support multiple move targets. API users may assume that only one option
  * among those which can be applied to a conflict supports move targets.
@@ -4798,10 +4798,10 @@ svn_client_conflict_option_get_moved_to_abspath_candidates(
 /**
  * Set the preferred moved target working copy path. If @a option is not
  * applicable to a moved target working copy path, do nothing.
- * 
+ *
  * @a preferred_move_target_idx must be a valid index into the list
  * returned by svn_client_conflict_option_get_moved_to_abspath_candidates2().
- * 
+ *
  * This function can be called multiple times.
  * It affects the output of svn_client_conflict_tree_get_description() and
  * svn_client_conflict_option_get_description(). Call these functions again
@@ -4847,7 +4847,7 @@ svn_client_conflict_option_find_by_id(
 
 /**
  * Return a conflict for the conflicted path @a local_abspath.
- * 
+ *
  * @since New in 1.10.
  */
 svn_error_t *
@@ -4862,7 +4862,7 @@ svn_client_conflict_get(svn_client_conflict_t **conflict,
  *
  * The lifetime of @a conflict is limited. Its allocation in
  * memory will not persist beyond this callback's execution.
- * 
+ *
  * @since New in 1.10.
  */
 typedef svn_error_t *(*svn_client_conflict_walk_func_t)(
@@ -4875,12 +4875,12 @@ typedef svn_error_t *(*svn_client_conflict_walk_func_t)(
  * Pass each conflict found during the walk to the @a conflict_walk_func
  * callback, along with @a conflict_walk_func_baton.
  * Use cancellation and notification support provided by client context @a ctx.
- * 
+ *
  * This callback may choose to resolve the conflict. If the act of resolving
  * a conflict creates new conflicts within the walked working copy (as might
  * be the case for some tree conflicts), the callback will be invoked for each
  * such new conflict as well.
- * 
+ *
  * @since New in 1.10.
  */
 svn_error_t *
@@ -4900,7 +4900,7 @@ svn_client_conflict_walk(const char *local_abspath,
 * It contains the names of conflicted properties. If no property conflict
 * exists, the array will contain no elements.
 *
-* @since New in 1.10. 
+* @since New in 1.10.
 */
 svn_error_t *
 svn_client_conflict_get_conflicted(svn_boolean_t *text_conflicted,
@@ -5083,7 +5083,7 @@ svn_client_conflict_option_get_description(svn_client_conflict_option_t *option,
  * Client implementations which aim to avoid excessive interactive prompting
  * may wish to try a recommended resolution option before falling back to
  * asking the user which option to use.
- * 
+ *
  * Conflict resolution with a recommended option is not guaranteed to succeed.
  * Clients should check for errors when trying to resolve a conflict and fall
  * back to other options and/or interactive prompting when the recommended
@@ -5101,7 +5101,7 @@ svn_client_conflict_get_recommended_option_id(svn_client_conflict_t *conflict);
  * Return the absolute path to the conflicted working copy node described
  * by @a conflict.
  *
- * @since New in 1.10. 
+ * @since New in 1.10.
  */
 const char *
 svn_client_conflict_get_local_abspath(svn_client_conflict_t *conflict);
@@ -5110,7 +5110,7 @@ svn_client_conflict_get_local_abspath(svn_client_conflict_t *conflict);
  * Return the operation during which the conflict described by @a
  * conflict was recorded.
  *
- * @since New in 1.10. 
+ * @since New in 1.10.
  */
 svn_wc_operation_t
 svn_client_conflict_get_operation(svn_client_conflict_t *conflict);
@@ -5118,8 +5118,8 @@ svn_client_conflict_get_operation(svn_client_conflict_t *conflict);
 /**
  * Return the action an update, switch, or merge operation attempted to
  * perform on the working copy node described by @a conflict.
- * 
- * @since New in 1.10. 
+ *
+ * @since New in 1.10.
  */
 svn_wc_conflict_action_t
 svn_client_conflict_get_incoming_change(svn_client_conflict_t *conflict);
@@ -5132,14 +5132,14 @@ svn_client_conflict_get_incoming_change(svn_client_conflict_t *conflict);
  * modifications in the working copy. During merge operations it may
  * additionally be part of the history of the merge target branch, anywhere
  * between the common ancestor revision and the working copy revision.
- * 
- * @since New in 1.10. 
+ *
+ * @since New in 1.10.
  */
 svn_wc_conflict_reason_t
 svn_client_conflict_get_local_change(svn_client_conflict_t *conflict);
 
 /**
- * Return information about the repository associated with @a conflict. 
+ * Return information about the repository associated with @a conflict.
  * In case of a foreign-repository merge this will differ from the
  * repository information associated with the merge target working copy.
  *
@@ -5157,11 +5157,11 @@ svn_client_conflict_get_repos_info(const char **repos_root_url,
  * old version of the conflicted node described by @a conflict.
  *
  * If the repository-relative path is not available, the @a
- * *incoming_old_repos_relpath will be set to @c NULL, 
+ * *incoming_old_repos_relpath will be set to @c NULL,
  *
  * If the peg revision is not available, @a *incoming_old_regrev will be
  * set to SVN_INVALID_REVNUM.
- * 
+ *
  * If the node kind is not available or if the node does not exist at the
  * specified path and revision, @a *incoming_old_node_kind will be set to
  * svn_node_none.
@@ -5276,7 +5276,7 @@ svn_client_conflict_prop_get_reject_abspath(svn_client_conflict_t *conflict);
  * Return the set of property values involved in the conflict of property
  * PROPNAME described by @a conflict. If a property value is unavailable the
  * corresponding output argument is set to @c NULL.
- *  
+ *
  * A 3-way diff of these property values can be generated with
  * svn_diff_mem_string_diff3(). A merged version with conflict
  * markers can be generated with svn_diff_mem_string_output_merge3().
@@ -5344,11 +5344,11 @@ const char *
 svn_client_conflict_text_get_mime_type(svn_client_conflict_t *conflict);
 
 /**
- * Return absolute paths to the versions of the text-conflicted file 
+ * Return absolute paths to the versions of the text-conflicted file
  * described by @a conflict.
  *
  * If a particular content is not available, it is set to @c NULL.
- * 
+ *
  * ### Should this be returning svn_stream_t instead of paths?
  * @since: New in 1.10.
  */
@@ -5619,7 +5619,7 @@ svn_client_copy7(const apr_array_header_t *sources,
 /**
  * Similar to svn_client_copy7(), but doesn't support meta_data_only
  * and cannot pin externals.
- * 
+ *
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.8 API.

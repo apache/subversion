@@ -157,7 +157,7 @@ N:   Move to the next entry.  Do not prompt for the current entry again, even
      revisions added, justification changed) in the repository.
      (This is a local action that will not affect other people or bots.)
  :   Move to the next entry.  Prompt for the current entry again in the next
-     run of backport.pl. 
+     run of backport.pl.
      (That's a space character, ASCII 0x20.)
 ?:   Display this list.
 EOF
@@ -231,7 +231,7 @@ Both batch modes also perform a basic sanity-check on entries that declare
 backport branches (via the "Branch:" header): if a backport branch is used, but
 at least one of the revisions enumerated in the entry title had neither been
 merged from $TRUNK to the branch root, nor been committed
-directly to the backport branch, the hourly bot will turn red and 
+directly to the backport branch, the hourly bot will turn red and
 nightly bot will skip the entry and email its admins.  (The nightly bot does
 not email the list on failure, since it doesn't use buildbot.)
 

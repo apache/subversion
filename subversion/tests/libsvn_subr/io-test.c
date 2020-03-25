@@ -1176,7 +1176,7 @@ test_apr_trunc_workaround(apr_pool_t *pool)
   SVN_ERR(svn_io_file_seek(f, APR_CUR, &offset, pool));
   SVN_TEST_ASSERT(offset == (int)len);
 
-  return SVN_NO_ERROR;  
+  return SVN_NO_ERROR;
 }
 
 
