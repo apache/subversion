@@ -463,7 +463,7 @@ svn_client__open_ra_session_internal(svn_ra_session_t **ra_session,
     }
   else
     {
-      SVN_ERR(svn_ra_open4(ra_session, NULL, base_url,
+      SVN_ERR(svn_ra_open5(ra_session, NULL, NULL, base_url,
                            uuid, cbtable, cb, ctx->config, result_pool));
     }
 

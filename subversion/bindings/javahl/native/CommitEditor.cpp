@@ -444,7 +444,8 @@ svn_error_t* open_callback_session(svn_ra_session_t*& session,
   if (!session)
     {
       const char* corrected_url = NULL;
-      SVN_ERR(svn_ra_open4(&session, &corrected_url, url, uuid,
+      const char* redirect_url = NULL;
+      SVN_ERR(svn_ra_open5(&session, &corrected_url, &redirect_url, url, uuid,
                            context->getCallbacks(),
                            context->getCallbackBaton(),
                            context->getConfigData(),
@@ -459,8 +460,8 @@ svn_error_t* open_callback_session(svn_ra_session_t*& session,
           return svn_error_createf(
               SVN_ERR_RA_ILLEGAL_URL, NULL,
               _("Repository URL changed while session was open.\n"
-                "Expected URL: %s\nApparent URL: %s"),
-              url, corrected_url);
+                "Expected URL: %s\nRedirect URL:%s\nApparent URL: %s\n"),
+              url, redirect_url, corrected_url);
         }
     }
   return SVN_NO_ERROR;

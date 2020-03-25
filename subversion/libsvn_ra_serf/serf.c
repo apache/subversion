@@ -591,7 +591,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
      Luckily our caller now passes us two pools which handle this case.
    */
 #if defined(SVN_DEBUG) && !SERF_VERSION_AT_LEAST(1,4,0)
-  /* Currently ensured by svn_ra_open4().
+  /* Currently ensured by svn_ra_open5().
      If failing causes segfault in basic_tests.py 48, "basic auth test" */
   SVN_ERR_ASSERT((serf_sess->pool != scratch_pool)
                  && apr_pool_is_ancestor(serf_sess->pool, scratch_pool));

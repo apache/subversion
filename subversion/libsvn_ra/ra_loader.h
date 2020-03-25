@@ -42,6 +42,7 @@ extern "C" {
    handed to the ra api to allow opening other ra sessions. */
 typedef svn_error_t * (*svn_ra__open_func_t)(svn_ra_session_t **session_p,
                                               const char **corrected_url,
+                                              const char **redirect_url,
                                               const char *repos_URL,
                                               const char *uuid,
                                               const svn_ra_callbacks2_t *callbacks,

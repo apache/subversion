@@ -62,7 +62,8 @@ make_and_open_repos(svn_ra_session_t **session,
                                   pool, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
-  SVN_ERR(svn_ra_open4(session, NULL, url, NULL, cbtable, NULL, NULL, pool));
+  SVN_ERR(svn_ra_open5(session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
+                       pool));
 
   return SVN_NO_ERROR;
 }
@@ -387,7 +388,7 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
                                          NULL, NULL, NULL, pool));
 
   b->last_check = TRUE;
-  SVN_TEST_ASSERT_ERROR(svn_ra_open4(&session, NULL,
+  SVN_TEST_ASSERT_ERROR(svn_ra_open5(&session, NULL, NULL,
                                      "svn+foo://localhost/no-repo",
                                      NULL, cbtable, NULL, NULL, pool),
                         SVN_ERR_RA_CANNOT_CREATE_SESSION);
@@ -430,7 +431,7 @@ tunnel_callback_test(const svn_test_opts_t *opts,
                                          NULL, NULL, NULL, pool));
 
   b->last_check = FALSE;
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
                         scratch_pool));
   SVN_TEST_ASSERT(b->last_check);
   SVN_TEST_ASSERT(b->open_count > 0);
@@ -1591,7 +1592,7 @@ tunnel_run_checkout(const svn_test_opts_t *opts,
 
   b->last_check = FALSE;
 
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
                        scratch_pool));
 
   SVN_ERR(commit_changes(session, pool));
@@ -1733,7 +1734,7 @@ commit_locked_file(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   SVN_ERR(svn_test__init_auth_baton(&cbtable->auth_baton, pool));
 
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable,
                        NULL, NULL, pool));
   SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
                                     apr_hash_make(pool),
@@ -1766,7 +1767,7 @@ commit_locked_file(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Open a new session using the file parent's URL. */
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable,
                        NULL, NULL, pool));
 
   /* Create a new commit editor supplying our lock token. */

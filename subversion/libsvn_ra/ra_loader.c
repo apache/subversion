@@ -414,7 +414,7 @@ svn_error_t *svn_ra_open5(svn_ra_session_t **session_p,
     }
 
   if (vtable->set_svn_ra_open)
-    SVN_ERR(vtable->set_svn_ra_open(session, svn_ra_open4));
+    SVN_ERR(vtable->set_svn_ra_open(session, svn_ra_open5));
 
   /* Check the UUID. */
   if (uuid)
@@ -475,7 +475,7 @@ svn_ra__dup_session(svn_ra_session_t **new_session,
                                            scratch_pool));
 
   if (session->vtable->set_svn_ra_open)
-    SVN_ERR(session->vtable->set_svn_ra_open(session, svn_ra_open4));
+    SVN_ERR(session->vtable->set_svn_ra_open(session, svn_ra_open5));
 
   *new_session = session;
   return SVN_NO_ERROR;

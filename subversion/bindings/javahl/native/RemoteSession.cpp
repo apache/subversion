@@ -198,13 +198,14 @@ RemoteSession::RemoteSession(int retryAttempts,
     return;
 
   const char* corrected_url = NULL;
+  const char* redirect_url = NULL;
   bool cycle_detected = false;
   attempt_set attempted;
 
   while (retryAttempts-- >= 0)
     {
       SVN_JNI_ERR(
-          svn_ra_open4(&m_session, &corrected_url,
+          svn_ra_open5(&m_session, &corrected_url, &redirect_url,
                        url, uuid, m_context->getCallbacks(),
                        m_context->getCallbackBaton(),
                        m_context->getConfigData(),
@@ -214,7 +215,7 @@ RemoteSession::RemoteSession(int retryAttempts,
       if (!corrected_url)
         break;
 
-      attempt_insert result = attempted.insert(corrected_url);
+      attempt_insert result = attempted.insert(redirect_url);
       if (!result.second)
         {
           cycle_detected = true;

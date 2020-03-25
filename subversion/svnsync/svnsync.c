@@ -821,7 +821,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  SVN_ERR(svn_ra_open4(&from_session, NULL, baton->from_url, NULL,
+  SVN_ERR(svn_ra_open5(&from_session, NULL, NULL, baton->from_url, NULL,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
   SVN_ERR(svn_ra_get_repos_root2(from_session, &root_url, pool));
@@ -998,7 +998,7 @@ open_source_session(svn_ra_session_t **from_session,
                                           pool));
 
   /* Open the session to copy the revision data. */
-  SVN_ERR(svn_ra_open4(from_session, NULL, from_url, from_uuid_str->data,
+  SVN_ERR(svn_ra_open5(from_session, NULL, NULL, from_url, from_uuid_str->data,
                        callbacks, baton, config, pool));
 
   return SVN_NO_ERROR;
@@ -1013,7 +1013,7 @@ open_target_session(svn_ra_session_t **target_session_p,
                     apr_pool_t *pool)
 {
   svn_ra_session_t *target_session;
-  SVN_ERR(svn_ra_open4(&target_session, NULL, baton->to_url, NULL,
+  SVN_ERR(svn_ra_open5(&target_session, NULL, NULL, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(target_session, baton->to_url, pool));
 
