@@ -5,13 +5,35 @@
 #   https://subversion.apache.org/issue-XXXX
 
 Version 1.14.0
-(?? ??? 20XX, from /branches/1.14.x)
+(29 Apr 2020, from /branches/1.14.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.14.0
 
  User-visible changes:
   - Minor new features and improvements:
-    * Add 'svn info --show-item=changelist' (r1869481)
+    * Experimental shelving feature is now disabled by default (r1875039)
+    * Reinstate support for experimental shelving v2 from SVN 1.11 (r1875037)
 
+  - Client-side improvements and bugfixes:
+    * Add 'changelist' option to 'svn info --show-item' (r1869481)
+    * Allow simultaneous use of 'svn log' --quiet and --diff options (r1871916)
+    * Fix 'svn info' for file that was inside replaced directory (issue #4837)
+    * Don't abort if the server redirects to a non-canonical URL (r1873375)
+    * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
+    * Escape filenames when invoking $SVN_EDITOR (r1874057 et al)
+
+  - Server-side improvements and bugfixes:
+    * Fix 'svnadmin load --normalize-props' for versioned properties (r1868203)
+    * mailer.py: prevent SMTP errors from impeding later emails (issue #1804)
+    * mailer.py: Add option to specify the SMTP port to connect to (r1872398)
+    * Make svn-backup-dump.py work on Python 3 
+    * validate-files.py: Fix handling for non-ascii characters (r1874393)
+
+ Developer-visible changes:
+    * Require at least version 1.5 of APR (r1874094)
+    * Support Python3 in the py-swig bindings; requires py3c (r1869354 et al)
+    * Support building with SWIG 4 on Python 3.x (r1869853)
+    * Fix svnserveautocheck for Python 3 (r1868151)
+    * contribulyze.py: Support Python 3 in addition to Python 2 (r1871211)
 
 Version 1.13.0
 (30 Oct 2019, from /branches/1.13.x)
