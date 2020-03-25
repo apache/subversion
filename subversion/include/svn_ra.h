@@ -755,6 +755,7 @@ svn_ra_open5(svn_ra_session_t **session_p,
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.13 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_ra_open4(svn_ra_session_t **session_p,
              const char **corrected_url,
