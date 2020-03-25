@@ -30,7 +30,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
     * mailer.py: prevent SMTP errors from impeding later emails (issue #1804)
     * mailer.py: Add option to specify the SMTP port to connect to (r1872398)
     * Make svn-backup-dump.py work on Python 3 
-    * validate-files.py: Fix handling for non-ascii characters (r1874393)
+    * validate-files.py: Fix handling for non-ASCII characters (r1874393)
 
  Developer-visible changes:
     * Require at least version 1.5 of APR (r1874094)
