@@ -18,6 +18,7 @@ tool_versions:
   '1.11': *TOOL_VERSIONS_1_10
   '1.12': *TOOL_VERSIONS_1_10
   '1.13': *TOOL_VERSIONS_1_10
+  '1.14': *TOOL_VERSIONS_1_10
   'trunk': *TOOL_VERSIONS_1_10
 
 # The version that is our current recommended release
