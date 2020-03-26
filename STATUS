@@ -21,7 +21,7 @@ Candidate changes:
    Justification:
      Fixes a crash seen when using git-svn with kwallet
    Votes:
-     +1: jamessan
+     +1: jamessan, stsp
 
 Veto-blocked changes:
 =====================
