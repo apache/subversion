@@ -31,6 +31,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1875680
+   Construct KAboutData using QString rather than QStringLiteral
+   Justification:
+     Fixes a crash seen when using git-svn with kwallet
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
