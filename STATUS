@@ -38,6 +38,13 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
+ * r1875726
+   Error out if generating SWIG-related files fails in autogen.sh --release
+   Justification:
+     release.py didn't catch this error when 1.14.0-rc1 release was created
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
