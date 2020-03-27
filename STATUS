@@ -15,7 +15,6 @@ Status of 1.14.0:
 Candidate changes:
 ==================
 
-
  * r1875680
    Construct KAboutData using QString rather than QStringLiteral
    Justification:
@@ -23,23 +22,23 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
- * r1875726
-   Error out if generating SWIG-related files fails in autogen.sh --release
-   Justification:
-     release.py didn't catch this error when 1.14.0-rc1 release was created
-   Votes:
-     +1: stsp, hartmannathan
-     
  * r1875742, r1875762
    Fix autogen.sh SWIG python bindings generation in --release mode.
    Justification:
      We can no longer create usable release artifacts without this fix.
    Votes:
-     +1: stsp
+     +1: stsp, jamessan
 
 Veto-blocked changes:
 =====================
 
-
 Approved changes:
 =================
+
+ * r1875726
+   Error out if generating SWIG-related files fails in autogen.sh --release
+   Justification:
+     release.py didn't catch this error when 1.14.0-rc1 release was created
+   Votes:
+     +1: stsp, hartmannathan, jamessan
+
