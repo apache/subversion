@@ -1820,11 +1820,11 @@ $(HTTPD_CHECK_GROUPS):
 
 $(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF) $(HTTPD_CHECK_GROUPS)
 	mkdir -p $(dir $@)
-	$(PREFIX)/httpd/bin/htpasswd -bc $(HTTPD_CHECK_USERS).tmp jrandom rayjandom
-	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp jconstant rayjandom
-	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp __dumpster__ __loadster__
-	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JRANDOM rayjandom
-	$(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JCONSTANT rayjandom
+	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/htpasswd -bc $(HTTPD_CHECK_USERS).tmp jrandom rayjandom
+	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp jconstant rayjandom
+	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp __dumpster__ __loadster__
+	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JRANDOM rayjandom
+	env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(PREFIX)/httpd/bin/htpasswd -b $(HTTPD_CHECK_USERS).tmp JCONSTANT rayjandom
 	mv -f $(HTTPD_CHECK_USERS).tmp $(HTTPD_CHECK_USERS)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
