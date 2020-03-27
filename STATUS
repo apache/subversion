@@ -30,7 +30,7 @@ Candidate changes:
    Votes:
      +1: stsp, hartmannathan
      
- * r1875742
+ * r1875742, r1875762
    Fix autogen.sh SWIG python bindings generation in --release mode.
    Justification:
      We can no longer create usable release artifacts without this fix.
