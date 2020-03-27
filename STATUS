@@ -28,7 +28,7 @@ Candidate changes:
    Justification:
      release.py didn't catch this error when 1.14.0-rc1 release was created
    Votes:
-     +1: stsp
+     +1: stsp, hartmannathan
      
  * r1875742
    Fix autogen.sh SWIG python bindings generation in --release mode.
