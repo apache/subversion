@@ -22,6 +22,21 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
+ * r1875918
+   rep-cache.db insert optimization
+   Justification:
+     Small performance optimization.
+   Votes:
+     +1: stsp
+
+ * r1875921
+   Introduce 'svnadmin build-repcache' command.
+   Justification:
+     Low-risk and useful feature addition. It would be nice to get this
+     merged in time for 1.14.0. Else this would have to wait until 1.15.0.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
