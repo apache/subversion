@@ -61,7 +61,7 @@
 ######   V A R I A B L E S   ######
 ###################################
 package Vars;
-# variables in the Vars package can be overriden from the command
+# variables in the Vars package can be overridden from the command
 # line with the FOO=BAR syntax.  If you want any defaults to reference
 # other variables the defaults need to be in set_defaults() below to
 # allow the defaults to be set after processing user set variables.
@@ -108,9 +108,9 @@ our $PROJREF_URL = 'https://downloads.redhoundsoftware.com/blog/ProjRef.py';
 
 # Location of the already downloaded file.
 # by default these are undefined and set by the downloader.
-# However, they can be overriden from the commandline and then
+# However, they can be overridden from the commandline and then
 # the downloader is skipped.  Note that BDB has no downloader
-# so it must be overriden from the command line.
+# so it must be overridden from the command line.
 our $AWK_FILE;
 our $HTTPD_FILE;
 our $APR_FILE;
@@ -861,7 +861,7 @@ sub main {
     # Look for variable assignment
     if (my ($lhs, $rhs) = $arg =~ /([^=]+)=(.*)/) {
       # Bit of hackery to allow the global values in the
-      # Vars package to be overriden from the command line.
+      # Vars package to be overridden from the command line.
       # E.G. "CMAKE=C:\CMake\cmake.exe" would replace the
       # default value with this value.
       if (exists($Vars::{$lhs})) {

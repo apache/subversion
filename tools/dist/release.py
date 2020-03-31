@@ -932,7 +932,7 @@ def roll_tarballs(args):
     # Use the gzip -n flag - this prevents it from storing the
     # original name of the .tar file, and far more importantly, the
     # mtime of the .tar file, in the produced .tar.gz file. This is
-    # important, because it makes the gzip encoding reproducable by
+    # important, because it makes the gzip encoding reproducible by
     # anyone else who has an similar version of gzip, and also uses
     # "gzip -9n". This means that committers who want to GPG-sign both
     # the .tar.gz and the .tar.bz2 can download the .tar.bz2 (which is
@@ -1807,7 +1807,7 @@ def main():
 
     # The move-to-dist subcommand
     subparser = subparsers.add_parser('move-to-dist',
-                    help='''Move candiates and signatures from the temporary
+                    help='''Move candidates and signatures from the temporary
                             release dev location to the permanent distribution
                             directory.''')
     subparser.set_defaults(func=move_to_dist)

@@ -56,7 +56,7 @@ def print_line(fname, line_num, line):
 def is_control(line, index, word):
   """ Return whether LINE[INDEX] is actual the start position of
   control statement WORD.  It must be followed by an opening
-  parantheses and only whitespace in between WORD and the '('.
+  parentheses and only whitespace in between WORD and the '('.
   """
   if index > 0:
     if not (line[index-1] in [' ', '\t', ';']):
@@ -117,7 +117,7 @@ def find_control(line):
 
 def parantheses_delta(line):
   """ Return the number of opening minus the number of closing
-  parantheses in LINE.  Don't count those inside strings or chars.
+  parentheses in LINE.  Don't count those inside strings or chars.
   """
   escaped = False
   in_squote = False

@@ -570,7 +570,7 @@ sub parse_entry {
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
-  # strip spaces to match up with the indention
+  # strip spaces to match up with the indentation
   $_[0] =~ s/^( *)\* //;
   my $indentation = ' ' x (length($1) + 2);
   s/^$indentation// for @_;
