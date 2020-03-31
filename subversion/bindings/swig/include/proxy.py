@@ -39,7 +39,7 @@
     def __getattribute__(self, name):
       """Manage access to all attributes of this object."""
 
-      # Start by mimicing __getattr__ behavior: immediately return __dict__ or
+      # Start by mimicking __getattr__ behavior: immediately return __dict__ or
       # items directly present in __dict__
       mydict = object.__getattribute__(self, '__dict__')
 

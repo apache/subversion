@@ -133,7 +133,7 @@ public class Revision implements java.io.Serializable
     }
 
     /**
-     * Creates a Revision.DateSpec objet
+     * Creates a Revision.DateSpec object
      * @param revisionDate  the date of the new object
      * @return  the new object
      */
@@ -278,7 +278,7 @@ public class Revision implements java.io.Serializable
 
         /**
          * Create a revision from a timestamp in milliseconds.
-         * Used by the native implementaiton.
+         * Used by the native implementation.
          */
         private DateSpec(long milliseconds)
         {

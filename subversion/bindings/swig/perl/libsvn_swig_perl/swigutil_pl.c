@@ -284,7 +284,7 @@ apr_array_header_t *svn_swig_pl_objs_to_array(SV *source,
 
 /* Convert a single revision range or an array of revisions ranges
  * Note: We can't simply use svn_swig_pl_to_array() as is, since
- * it immediatley checks whether source is an array reference and then
+ * it immediately checks whether source is an array reference and then
  * proceeds to treat this as the "array of ..." case. But a revision range
  * may be specified as a (two-element) array. Hence we first try to
  * convert source as a single revision range. Failing that and if it's
@@ -591,7 +591,7 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
         case 'L': /* apr_int64_t */
             /* Pass into perl as a string because some implementations may
              * not be able to handle a 64-bit int.  If it's too long to
-             * fit in Perl's interal IV size then perl will only make
+             * fit in Perl's internal IV size then perl will only make
              * it available as a string.  If not then perl will convert
              * it to an IV for us.  So this handles the problem gracefully */
             c = malloc(30);
@@ -634,7 +634,7 @@ svn_error_t *svn_swig_pl_callback_thunk(perl_func_invoker_t caller_func,
       count = call_method(func, call_flags );
         break;
     default:
-      croak("unkonwn calling type");
+      croak("unknown calling type");
         break;
     }
     SPAGAIN ;

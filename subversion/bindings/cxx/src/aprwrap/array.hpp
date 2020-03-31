@@ -102,7 +102,7 @@ public:
 
   /**
    * @return An immutable reference to the array element at @a index.
-   * Like operator[] but perfoms a range check on the index.
+   * Like operator[] but performs a range check on the index.
    */
   const value_type& at(size_type index) const
     {
@@ -121,7 +121,7 @@ public:
 
   /**
    * @return A mutable reference to the array element at @a index.
-   * Like operator[] but perfoms a range check on the index.
+   * Like operator[] but performs a range check on the index.
    */
   value_type& at(size_type index)
     {
@@ -149,7 +149,7 @@ public:
     }
 
   /**
-   * @brief Return an interator to the beginning of the array.
+   * @brief Return an iterator to the beginning of the array.
    */
   iterator begin() noexcept
     {
@@ -157,7 +157,7 @@ public:
     }
 
   /**
-   * @brief Return a constant interator to the beginning of the array.
+   * @brief Return a constant iterator to the beginning of the array.
    */
   const_iterator begin() const noexcept
     {
@@ -165,7 +165,7 @@ public:
     }
 
   /**
-   * @brief Return a constant interator to the beginning of the array.
+   * @brief Return a constant iterator to the beginning of the array.
    */
   const_iterator cbegin() const noexcept
     {
@@ -173,7 +173,7 @@ public:
     }
 
   /**
-   * @brief Return an interator to the end of the array.
+   * @brief Return an iterator to the end of the array.
    */
   iterator end() noexcept
     {
@@ -181,7 +181,7 @@ public:
     }
 
   /**
-   * @brief Return a constant interator to the end of the array.
+   * @brief Return a constant iterator to the end of the array.
    */
   const_iterator end() const noexcept
     {
@@ -189,7 +189,7 @@ public:
     }
 
   /**
-   * @brief Return a constant interator to the end of the array.
+   * @brief Return a constant iterator to the end of the array.
    */
   const_iterator cend() const noexcept
     {
@@ -197,7 +197,7 @@ public:
     }
 
 private:
-  apr_array_header_t* const proxied; ///< The wrapperd APR array.
+  apr_array_header_t* const proxied; ///< The wrapped APR array.
 };
 
 } // namespace apr

@@ -248,7 +248,7 @@ class JNIUtil
  * A statement macro used for checking for errors, in the style of
  * SVN_ERR().
  *
- * Evalute @a expr.  If it yields an error, handle the JNI error, and
+ * Evaluate @a expr.  If it yields an error, handle the JNI error, and
  * return @a ret_val.  Otherwise, continue.
  *
  * Note that if the enclosing function returns <tt>void</tt>, @a ret_val may

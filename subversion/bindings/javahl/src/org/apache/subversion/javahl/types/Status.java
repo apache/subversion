@@ -51,7 +51,7 @@ public class Status implements java.io.Serializable
     private String path;
 
     /**
-     * kind of the item (file, directory or unknonw)
+     * kind of the item (file, directory or unknown)
      */
     private NodeKind nodeKind;
 
@@ -417,7 +417,7 @@ public class Status implements java.io.Serializable
 
     /**
      * Returns the adjusted status of the item's contents, as
-     * compatible with JavaHL 1.8 and older verions.
+     * compatible with JavaHL 1.8 and older versions.
      * @return file status property enum of the "textual" component.
      */
     public Kind getTextStatus()
@@ -474,7 +474,7 @@ public class Status implements java.io.Serializable
 
     /**
      * Returns the adjusted status of the item's contents in the
-     * repository, as compatible with JavaHL 1.8 and older verions.
+     * repository, as compatible with JavaHL 1.8 and older versions.
      * @return file status property enum of the "textual" component in the
      * repository.
      */
@@ -777,7 +777,7 @@ public class Status implements java.io.Serializable
         /** exists, but uninteresting */
         normal      ("normal"),
 
-        /** is scheduled for additon */
+        /** is scheduled for addition */
         added       ("added"),
 
         /** under v.c., but is missing */

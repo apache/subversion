@@ -74,7 +74,7 @@ class tristate
   };
   using safe_bool = void (impl::*)();
 
-  // The default constructor creates the unkonwn state.
+  // The default constructor creates the unknown state.
   constexpr tristate() noexcept
     : value(unknown_value)
     {}
@@ -148,7 +148,7 @@ public:
   /**
    * @brief Conversion from <tt>boost::tribool</tt>.
    * @returns a @c tribool value equivalent to the @a t.
-   * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+   * @note Available only if @c SVNXX_USE_BOOST is defined.
    */
   constexpr tristate(boost::tribool t) noexcept
     : value(boost::indeterminate(t) ? unknown_value
@@ -159,7 +159,7 @@ public:
    * @brief Conversion to <tt>boost::tribool</tt>.
    * @returns a <tt>boost::tribool</tt> value equivalent to the @c
    * tristate value.
-   * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+   * @note Available only if @c SVNXX_USE_BOOST is defined.
    */
   constexpr operator boost::tribool() const noexcept
     {
@@ -241,7 +241,7 @@ constexpr inline tristate operator&&(bool b, tristate t) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator&&(tristate t, boost::tribool b) noexcept
 {
@@ -251,7 +251,7 @@ constexpr inline tristate operator&&(tristate t, boost::tribool b) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator&&(boost::tribool b, tristate t) noexcept
 {
@@ -320,7 +320,7 @@ constexpr inline tristate operator||(bool b, tristate t) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator||(tristate t, boost::tribool b) noexcept
 {
@@ -330,7 +330,7 @@ constexpr inline tristate operator||(tristate t, boost::tribool b) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator||(boost::tribool b, tristate t) noexcept
 {
@@ -398,7 +398,7 @@ constexpr inline tristate operator==(bool b, tristate t) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator==(tristate t, boost::tribool b) noexcept
 {
@@ -408,7 +408,7 @@ constexpr inline tristate operator==(tristate t, boost::tribool b) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator==(boost::tribool b, tristate t) noexcept
 {
@@ -476,7 +476,7 @@ constexpr inline tristate operator!=(bool b, tristate t) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator!=(tristate t, boost::tribool b) noexcept
 {
@@ -486,7 +486,7 @@ constexpr inline tristate operator!=(tristate t, boost::tribool b) noexcept
 /**
  * @related tristate
  * @overload
- * @note Avalible only if @c SVNXX_USE_BOOST is defined.
+ * @note Available only if @c SVNXX_USE_BOOST is defined.
  */
 constexpr inline tristate operator!=(boost::tribool b, tristate t) noexcept
 {

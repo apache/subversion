@@ -52,7 +52,7 @@ public interface Notify
                          int contentState, int propState, long revision);
 
     /**
-     * The type of action occuring.  The values are defined in the
+     * The type of action occurring.  The values are defined in the
      * interface NotifyAction for building reasons.
      */
     public static final class Action implements NotifyAction
@@ -69,7 +69,7 @@ public interface Notify
 
     }
     /**
-     * The type of notification that is occuring.  The values are
+     * The type of notification that is occurring.  The values are
      * defined in the interface NotifyStatus for building reasons.
      */
     public static final class Status implements NotifyStatus

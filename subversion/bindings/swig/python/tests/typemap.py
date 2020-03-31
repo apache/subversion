@@ -25,7 +25,7 @@ import tempfile
 import svn.core
 
 class SubversionTypemapTestCase(unittest.TestCase):
-  """Test cases for the SWIG typemaps argments and return values transration"""
+  """Test cases for the SWIG typemaps arguments and return values translation"""
 
   def test_char_ptr_in(self):
     """Check %typemap(in) IN_STRING works correctly"""

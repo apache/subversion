@@ -8,7 +8,7 @@ It is far from complete and may never see the light of day.
 
 On the other hand, one good reason for having a high-level C++ API is
 to use it as a baseline for Swig-generated bindings. Our current set
-of Perl, Python and Ruby bindings is too heterogenous in terms of
+of Perl, Python and Ruby bindings is too heterogeneous in terms of
 feature set, object and usage model. They're almost as hard to use as
 the C API itself.
 

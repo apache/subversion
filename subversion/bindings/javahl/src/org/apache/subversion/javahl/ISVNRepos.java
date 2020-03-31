@@ -96,7 +96,7 @@ public interface ISVNRepos {
      * @param dataOut           the data will be outputed here
      * @param start             the first revision to be dumped
      * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
+     * @param incremental       the dump will be incremental
      * @param useDeltas         the dump will contain deltas between nodes
          * @param callback          the callback to receive notifications
      * @throws ClientException  throw in case of problem
@@ -252,7 +252,7 @@ public interface ISVNRepos {
      *                          in put optional.
      * @param callback          the target for processing messages
      * @throws ClientException  throw in case of problem
-         * @note behaves like the 1.8 vesion with the revision
+         * @note behaves like the 1.8 version with the revision
          *       parameters set to Revision.START and Revision.HEAD.
      */
     public abstract void load(File path, InputStream dataInput,

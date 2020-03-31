@@ -342,7 +342,7 @@ class SubversionRepositoryAccessTestCase(unittest.TestCase):
     self.assertEqual(self.errors, 1)
 
   def test_get_log2(self):
-    # Get an interesting commmit.
+    # Get an interesting commit.
     self.test_commit3()
     rev = fs.youngest_rev(self.fs)
     revprops = ra.rev_proplist(self.ra_ctx, rev)

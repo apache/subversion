@@ -73,7 +73,7 @@ public class SVNClient implements SVNClientInterface
     }
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;

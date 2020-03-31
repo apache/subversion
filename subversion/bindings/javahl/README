@@ -78,7 +78,7 @@ itself.  The official Subversion C libraries are the reference
 implementation of a Subversion client's logic, and are the most robust
 client implementation available.  Using JNI allows the effort that has
 gone into the existing libraries to be leveraged from Java, and allows
-developer time to me more efficently spent on further development of the
+developer time to me more efficiently spent on further development of the
 underlying libraries shared by many implementations.
 
 The SVNKit <http://svnkit.com/> client library (formerly known as

@@ -189,7 +189,7 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
     }
   else
     {
-      // Not using hte native credentials store, start with an empty
+      // Not using the native credentials store, start with an empty
       // providers array.
       providers = apr_array_make(pool, 0, sizeof(svn_auth_provider_object_t *));
     }

@@ -292,7 +292,7 @@ class SubversionClientTestCase(unittest.TestCase):
 
     self.received_log_entries = []
 
-    # (Python 3: pass tuple of bytes and str mixture as revprops argment)
+    # (Python 3: pass tuple of bytes and str mixture as revprops argument)
     client.log5((directory,), start, (rev_range,), 1, True, False, False,
                 ('svn:author', b'svn:log'),
                 log_entry_receiver_whole, self.client_ctx)

@@ -78,7 +78,7 @@ public class SVNClient implements ISVNClient
 
     /**
      * Build the native peer
-     * @return the adress of the peer
+     * @return the address of the peer
      */
     private native long ctNative();
 
@@ -93,7 +93,7 @@ public class SVNClient implements ISVNClient
     public native void finalize();
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;

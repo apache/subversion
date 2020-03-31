@@ -27,7 +27,7 @@ import org.apache.subversion.javahl.types.Version;
 import org.apache.subversion.javahl.types.RuntimeVersion;
 
 /**
- * Handles activities related to management of native resouces
+ * Handles activities related to management of native resources
  * (e.g. loading of native libraries).
  *
  * Public for backward compat.  This class may disappear in future versions
