@@ -29,7 +29,7 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1875921
+ * r1875921, r1875925
    Introduce 'svnadmin build-repcache' command.
    Justification:
      Low-risk and useful feature addition. It would be nice to get this
