@@ -90,7 +90,7 @@ svn_temp_serializer__init(const void *source_struct,
  * data to serialized structures returned by svn_temp_serializer__get().
  *
  * The current size of the serialized data is given in @a currently_used.
- * If the allocated data buffer is actually larger, you may specifiy that
+ * If the allocated data buffer is actually larger, you may specify that
  * size in @a currently_allocated to prevent unnecessary re-allocations.
  * Otherwise, set it to 0.
  *

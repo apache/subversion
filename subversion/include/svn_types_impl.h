@@ -81,7 +81,7 @@ typedef enum svn_node_kind_t
 /* NOTE: Update svnxx/tristate.hpp when changing this enum. */
 typedef enum svn_tristate_t
 {
-  /** state known to be false (the constant does not evaulate to false) */
+  /** state known to be false (the constant does not evaluate to false) */
   svn_tristate_false = 2,
   /** state known to be true */
   svn_tristate_true,

@@ -527,7 +527,7 @@ svn_depth_from_word(const char *word);
 /** A general subversion directory entry.
  *
  * @note To allow for extending the #svn_dirent_t structure in future
- * releases, always use svn_dirent_create() to allocate the stucture.
+ * releases, always use svn_dirent_create() to allocate the structure.
  *
  * @since New in 1.6.
  */

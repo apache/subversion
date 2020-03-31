@@ -273,7 +273,7 @@ typedef svn_error_t *(*svn_ra_replay_revfinish_callback_t)(
 
 /**
  * Callback function that checks if an ra_svn tunnel called
- * @a tunnel_name is handled by the callbakcs or the default
+ * @a tunnel_name is handled by the callbacks or the default
  * implementation.
  *
  * @a tunnel_baton is the baton as originally passed to ra_open.

@@ -317,7 +317,7 @@ svn_repos__dump_uuid_header_record(svn_stream_t *dump_stream,
                                    apr_pool_t *pool);
 
 /* Write a revision record to DUMP_STREAM for revision REVISION with revision
- * properies REVPROPS, creating appropriate headers.
+ * properties REVPROPS, creating appropriate headers.
  *
  * Include all of the headers in EXTRA_HEADERS (if non-null), ignoring
  * the revision number header and the three content length headers (which

@@ -4278,7 +4278,7 @@ svn_client_mergeinfo_log_eligible(const char *path_or_url,
  * in @a dir_abspath after successful working copy cleanup.
  *
  * If @a fix_recorded_timestamps is @c TRUE, this function fixes recorded
- * timestamps for unmodified files in the working copy, reducing comparision
+ * timestamps for unmodified files in the working copy, reducing comparison
  * time on future checks.
  *
  * If @a vacuum_pristines is @c TRUE, and @a dir_abspath points to the working
@@ -4317,7 +4317,7 @@ svn_client_vacuum(const char *dir_abspath,
  * dir_abspath are broken, otherwise a normal write lock is obtained.
  *
  * If @a fix_recorded_timestamps is @c TRUE, this function fixes recorded
- * timestamps for unmodified files in the working copy, reducing comparision
+ * timestamps for unmodified files in the working copy, reducing comparison
  * time on future checks.
  *
  * If @a clear_dav_cache is @c TRUE, the caching of DAV information for older
@@ -5172,7 +5172,7 @@ svn_client_conflict_get_repos_info(const char **repos_root_url,
  *
  * In case of tree conflicts, this "path@revision" does not necessarily exist
  * in the repository, and it does not necessarily represent the incoming
- * change which is responsible for the occurance of the tree conflict.
+ * change which is responsible for the occurrence of the tree conflict.
  * The responsible incoming change is generally located somewhere between
  * the old and new incoming versions.
  *
@@ -7536,7 +7536,7 @@ svn_client_get_wc_root(const char **wcroot_abspath,
  * Set @a *min_revision and @a *max_revision to the lowest and highest
  * revision numbers found within @a local_abspath.  If @a committed is
  * TRUE, set @a *min_revision and @a *max_revision to the lowest and
- * highest comitted (i.e. "last changed") revision numbers,
+ * highest committed (i.e. "last changed") revision numbers,
  * respectively.  NULL may be passed for either of @a min_revision and
  * @a max_revision to indicate the caller's lack of interest in the
  * value.  Use @a scratch_pool for temporary allocations.

@@ -394,7 +394,7 @@ typedef enum svn_fs_upgrade_notify_action_t
   svn_fs_upgrade_format_bumped
 } svn_fs_upgrade_notify_action_t;
 
-/** The type of an upgrade notification function.  @a number is specifc
+/** The type of an upgrade notification function.  @a number is specific
  * to @a action (see #svn_fs_upgrade_notify_action_t); @a action is the
  * type of action being performed.  @a baton is the corresponding baton
  * for the notification function, and @a scratch_pool can be used for

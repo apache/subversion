@@ -1960,7 +1960,7 @@ svn_repos_node_location_segments(svn_repos_t *repos,
  *       @a copyfrom_known is always @c TRUE.
  *
  * @note To allow for extending this structure in future releases,
- * always use svn_repos_path_change_create() to allocate the stucture.
+ * always use svn_repos_path_change_create() to allocate the structure.
  *
  * @see svn_fs_path_change3_t
  *
@@ -2017,7 +2017,7 @@ typedef svn_error_t *(*svn_repos_path_change_receiver_t)(
  * A structure to represent all the information about a particular log entry.
  *
  * @note To allow for extending this structure in future releases,
- * always use svn_repos_log_entry_create() to allocate the stucture.
+ * always use svn_repos_log_entry_create() to allocate the structure.
  *
  * @since New in 1.10.
  */
@@ -2155,7 +2155,7 @@ typedef svn_error_t *(*svn_repos_log_entry_receiver_t)(
  * (i.e. retrieve none if the array is empty).
  *
  * If any invocation of @a revision_receiver or @a path_change_receiver
- * returnn an error, return that error immediately and without wrapping it.
+ * return an error, return that error immediately and without wrapping it.
  *
  * If @a start or @a end is a non-existent revision, return the error
  * #SVN_ERR_FS_NO_SUCH_REVISION, without ever invoking @a revision_receiver.

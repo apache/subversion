@@ -409,7 +409,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
  * Return every path that refers to a child of the working node at
  * @a dir_abspath.  Do not include a path just because it was a child of a
  * deleted directory that existed at @a dir_abspath if that directory is now
- * sheduled to be replaced by the working node at @a dir_abspath.
+ * scheduled to be replaced by the working node at @a dir_abspath.
  *
  * Allocate @a *children in @a result_pool.  Use @a wc_ctx to access the
  * working copy, and @a scratch_pool for all temporary allocations.
@@ -917,7 +917,7 @@ svn_wc__node_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 /* Set @a *min_revision and @a *max_revision to the lowest and highest revision
  * numbers found within @a local_abspath, using context @a wc_ctx.
  * If @a committed is TRUE, set @a *min_revision and @a *max_revision
- * to the lowest and highest comitted (i.e. "last changed") revision numbers,
+ * to the lowest and highest committed (i.e. "last changed") revision numbers,
  * respectively. Use @a scratch_pool for temporary allocations.
  *
  * Either of MIN_REVISION and MAX_REVISION may be passed as NULL if
@@ -1089,7 +1089,7 @@ svn_wc__get_not_present_descendants(const apr_array_header_t **descendants,
  * If PARENT_DEPTH is not NULL, set *PARENT_DEPTH to the depth stored on the
  * parent. (Set to svn_depth_unknown if LOCAL_ABSPATH itself exists as node)
  *
- * All output arguments except OBSTRUCTION_STATE can be NULL to ommit the
+ * All output arguments except OBSTRUCTION_STATE can be NULL to omit the
  * result.
  *
  * This function performs temporary allocations in SCRATCH_POOL.
@@ -2080,7 +2080,7 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
 
-/* The implemementation of svn_wc_diff6(), but reporting to a diff processor
+/* The implementation of svn_wc_diff6(), but reporting to a diff processor
  *
  * New mode, when ANCHOR_AT_GIVEN_PATHS is true:
  *
@@ -2108,7 +2108,7 @@ svn_wc__diff7(svn_boolean_t anchor_at_given_paths,
 
 /**
  * Read all conflicts at LOCAL_ABSPATH into an array containing pointers to
- * svn_wc_conflict_description2_t data structures alloated in RESULT_POOL.
+ * svn_wc_conflict_description2_t data structures allocated in RESULT_POOL.
  */
 svn_error_t *
 svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,

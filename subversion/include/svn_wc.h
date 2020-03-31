@@ -2220,7 +2220,7 @@ typedef struct svn_wc_conflict_result_t
   svn_boolean_t save_merged;
 
   /** If not NULL, this is the new merged property, used when choosing
-   * #svn_wc_conflict_choose_merged. This value is prefered over using
+   * #svn_wc_conflict_choose_merged. This value is preferred over using
    * merged_file.
    *
    * @since New in 1.9.
@@ -5230,7 +5230,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * turns the node and its implied descendants as the new unmodified state at
  * the new specified revision. Unless @a recurse is TRUE, changes on
  * descendants are not committed as changes directly. In this case they should
- * be queueud as their own changes.
+ * be queued as their own changes.
  *
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.

@@ -346,7 +346,7 @@ svn_version_ext_build_time(const svn_version_extended_t *ext_info);
  * @return The canonical host triplet (arch-vendor-osname) of the
  * system where libsvn_subr was compiled.
  *
- * @note On Unix-like systems (includng Mac OS X), this string is the
+ * @note On Unix-like systems (including Mac OS X), this string is the
  * same as the output of the config.guess script.
  *
  * @since New in 1.8.
