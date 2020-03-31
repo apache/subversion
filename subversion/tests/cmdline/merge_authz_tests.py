@@ -97,7 +97,7 @@ def mergeinfo_and_skipped_paths(sbox):
   wc_disk, wc_status = set_up_branch(sbox, False, 3)
 
   # Create a restrictive authz where part of the merge source and part
-  # of the target are inaccesible.
+  # of the target are inaccessible.
   write_restrictive_svnserve_conf(sbox.repo_dir)
   write_authz_file(sbox, {"/"               : svntest.main.wc_author +"=rw",
                           # Make a directory in the merge source inaccessible.
@@ -342,7 +342,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # this.
   #
   # Merge -c5 -c8 to the restricted WC's A_COPY_2/D/H.  r5 gets merged first
-  # but is a no-op, r8 get's merged next and is operative so the mergeinfo
+  # but is a no-op, r8 gets merged next and is operative so the mergeinfo
   # should be updated on the merge target to reflect both merges.
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),

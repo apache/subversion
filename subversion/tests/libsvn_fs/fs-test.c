@@ -5479,7 +5479,7 @@ commit_timestamp(const svn_test_opts_t *opts,
                           APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(!svn_date);
 
-  /* Commit that overwites a missing svn:date. */
+  /* Commit that overwrites a missing svn:date. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/zig", pool));

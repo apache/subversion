@@ -2870,7 +2870,7 @@ def switch_moves(sbox):
 
   # In Subversion 1.8 this scenario causes an Sqlite row not found error.
   # It would be nice if we could handle the tree conflict more intelligent, as
-  # the working copy matches the incomming change.
+  # the working copy matches the incoming change.
   svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath(''), branch_url,
                                         None, expected_disk, expected_status)
 

@@ -1001,7 +1001,7 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    logger.warn("Commiting a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("Committing a file with 'svn:needs-lock, svn:executable'")
     logger.warn("after unlocking modified file's permissions")
     raise svntest.Failure
 
@@ -1065,7 +1065,7 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    logger.warn("Commiting a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("Committing a file with 'svn:needs-lock, svn:executable'")
     logger.warn("did not set the file to read-only, executable")
     raise svntest.Failure
 
@@ -1454,7 +1454,7 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, [], 'up', '-r1', wc_dir)
   expected_lock_fail_err_re = "svn: warning: W160042: " \
   "(Path .* doesn't exist in HEAD revision)"
-  # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
+  # Issue #3524 These lock attempts were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
   # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
@@ -1835,7 +1835,7 @@ def commit_stolen_lock(sbox):
 # When removing directories, the locks of contained files were not
 # correctly removed from the working copy database, thus they later
 # magically reappeared when new files or directories with the same
-# pathes were added.
+# paths were added.
 @Issue(4364)
 def drop_locks_on_parent_deletion(sbox):
   "drop locks when the parent is deleted"
@@ -1856,7 +1856,7 @@ def drop_locks_on_parent_deletion(sbox):
                                         [],
                                         expected_status)
 
-  # now re-add entities to the deleted pathes.
+  # now re-add entities to the deleted paths.
   sbox.simple_mkdir('A/B')
   sbox.simple_add_text('new file replacing old file', 'A/B/lambda')
   sbox.simple_add_text('file replacing former dir', 'A/B/F')

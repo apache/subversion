@@ -4794,7 +4794,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   # Merge r2:6 into A_COPY/D
   #
   # A_COPY/D should inherit the mergeinfo '/A:4' from A_COPY
-  # combine it with the discontinous merges performed directly on
+  # combine it with the discontinuous merges performed directly on
   # it (A/D/ 2:3 and A/D 4:6) resulting in '/A/D:3-6'.
   expected_output = wc.State(D_COPY_path, {
     'H/psi'   : Item(status='U '),
@@ -13361,7 +13361,7 @@ def no_self_referential_filtering_on_added_path(sbox):
 def merge_range_prior_to_rename_source_existence(sbox):
   "merge prior to rename src existence still dels src"
 
-  # Replicate a merge bug found while synching up a feature branch on the
+  # Replicate a merge bug found while syncing up a feature branch on the
   # Subversion repository with trunk.  See r874121 of
   # http://svn.apache.org/repos/asf/subversion/branches/ignore-mergeinfo, in which
   # a move was merged to the target, but the delete half of the move

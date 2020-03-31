@@ -2094,7 +2094,7 @@ def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   svntest.main.run_svn(None, 'move', old_gamma_path, new_gamma_path)
   sbox.simple_commit(message='Move file')
 
-  # 'svn log -g --stop-on-copy ^/A/C/gamma' hould return *only* r5
+  # 'svn log -g --stop-on-copy ^/A/C/gamma' should return *only* r5
   # Previously this test failed because the change in gamma's inherited
   # mergeinfo between r4 and r5, due to the move, was understood as a merge:
   #

@@ -3911,7 +3911,7 @@ def copy_pin_externals_whitespace_dir(sbox):
   branches_url = repo_url + '/branches'
   trunk_wc = sbox.ospath('trunk')
 
-  # Create a new revision to creat interesting pinning revisions
+  # Create a new revision to create interesting pinning revisions
   sbox.simple_propset('A', 'B', 'trunk')
   sbox.simple_commit('trunk')
 
