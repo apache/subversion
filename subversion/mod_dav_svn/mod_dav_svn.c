@@ -1471,7 +1471,7 @@ register_hooks(apr_pool_t *pconf)
   /* translate_name hook is LAST so that it doesn't interfere with modules
    * like mod_alias that are MIDDLE. */
   ap_hook_translate_name(dav_svn__translate_name, NULL, NULL, APR_HOOK_LAST);
-  /* map_to_storage hook is LAST to avoid interferring with mod_http's
+  /* map_to_storage hook is LAST to avoid interfering with mod_http's
    * handling of OPTIONS and TRACE. */
   ap_hook_map_to_storage(dav_svn__map_to_storage, NULL, NULL, APR_HOOK_LAST);
 }

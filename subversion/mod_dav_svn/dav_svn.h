@@ -205,7 +205,7 @@ typedef struct dav_svn_root {
   */
   const char *activity_id;
 
-  /* If the root is part of a transaction, this contains the FS's tranaction
+  /* If the root is part of a transaction, this contains the FS's transaction
      name. It may be NULL if this root corresponds to a specific revision.
      It may also be NULL if we have not opened the root yet.
 
@@ -1109,7 +1109,7 @@ int dav_svn__parse_request_skel(svn_skel_t **skel, request_rec *r,
 /* Set *YOUNGEST_P to the number of the youngest revision in REPOS.
  *
  * Youngest revision will be cached in REPOS->YOUNGEST_REV to avoid
- * fetching the youngest revision multiple times during proccessing
+ * fetching the youngest revision multiple times during processing
  * the request.
  *
  * Uses SCRATCH_POOL for temporary allocations.

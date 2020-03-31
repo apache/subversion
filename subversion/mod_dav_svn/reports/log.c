@@ -61,7 +61,7 @@ struct log_receiver_baton
      callbacks. */
   svn_boolean_t needs_log_item;
 
-  /* How deep we are in the log message tree.  We only need to surpress the
+  /* How deep we are in the log message tree.  We only need to suppress the
      SVN_INVALID_REVNUM message if the stack_depth is 0. */
   int stack_depth;
 
@@ -325,7 +325,7 @@ log_revision_receiver(void *baton,
 
   /* In general APR will flush the brigade every 8000 bytes through the filter
      stack, but log items may not be generated that fast, especially in
-     combination with authz and busy servers. We now explictly flush after
+     combination with authz and busy servers. We now explicitly flush after
      log-item 4, 16, 64 and 256 to produce a few results fast.
 
      This introduces 4 full flushes of our brigade and the installed output

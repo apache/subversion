@@ -161,7 +161,7 @@ list_receiver(const char *path,
 
   /* In general APR will flush the brigade every 8000 bytes through the filter
      stack, but log items may not be generated that fast, especially in
-     combination with authz and busy servers. We now explictly flush after
+     combination with authz and busy servers. We now explicitly flush after
      direntry 4, 16, 64 and 256 to produce a few results fast.
 
      This introduces 4 full flushes of our brigade and the installed output

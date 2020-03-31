@@ -327,7 +327,7 @@ log_access_verdict(LOG_ARGS_SIGNATURE,
     }
 }
 
-/* Log a message at LOG_LEVEL indiciating the ERR encountered during
+/* Log a message at LOG_LEVEL indicating the ERR encountered during
  * the request R.
  * LOG_ARGS_SIGNATURE expands as in log_access_verdict() above.
  * PREFIX is inserted at the start of the message.  The rest of the
@@ -754,9 +754,9 @@ req_check_access(request_rec *r,
    *
    * However, if repos_path == NULL and the request requires write
    * access, then perform a global authz lookup.  The request is
-   * denied if the user commiting isn't granted any access anywhere
+   * denied if the user committing isn't granted any access anywhere
    * in the repository.  This is to avoid operations that involve no
-   * paths (commiting an empty revision, leaving a dangling
+   * paths (committing an empty revision, leaving a dangling
    * transaction in the FS) being granted by default, letting
    * unauthenticated users write some changes to the repository.
    * This was issue #2388.
@@ -1147,7 +1147,7 @@ register_hooks(apr_pool_t *p)
 module AP_MODULE_DECLARE_DATA authz_svn_module =
 {
   STANDARD20_MODULE_STUFF,
-  create_authz_svn_dir_config,     /* dir config creater */
+  create_authz_svn_dir_config,     /* dir config creator */
   NULL,                            /* dir merger --- default is to override */
   NULL,                            /* server config */
   NULL,                            /* merge server config */
