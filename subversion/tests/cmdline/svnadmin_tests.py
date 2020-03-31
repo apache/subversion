@@ -4038,6 +4038,7 @@ PROPS-END
 
 @SkipUnless(svntest.main.is_fs_type_fsfs)
 @SkipUnless(svntest.main.fs_has_rep_sharing)
+@SkipUnless(svntest.main.python_sqlite_can_read_without_rowid)
 def build_repcache(sbox):
   "svnadmin build-repcache"
 
