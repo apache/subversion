@@ -312,6 +312,22 @@ fs_ioctl(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
           *output_p = output;
           return SVN_NO_ERROR;
         }
+      else if (ctlcode.code == SVN_FS_FS__IOCTL_BUILD_REP_CACHE.code)
+        {
+          svn_fs_fs__ioctl_build_rep_cache_input_t *input = input_void;
+
+          SVN_ERR(svn_fs_fs__build_rep_cache(fs,
+                                             input->start_rev,
+                                             input->end_rev,
+                                             input->progress_func,
+                                             input->progress_baton,
+                                             cancel_func,
+                                             cancel_baton,
+                                             scratch_pool));
+
+          *output_p = NULL;
+          return SVN_NO_ERROR;
+        }
     }
 
   return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);

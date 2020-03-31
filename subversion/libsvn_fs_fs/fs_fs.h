@@ -356,4 +356,23 @@ svn_fs_fs__revision_size(apr_off_t *rev_size,
                          svn_revnum_t revision,
                          apr_pool_t *scratch_pool);
 
+/* Add missing entries to the rep-cache on the filesystem FS. Process data
+ * in revisions START_REV through END_REV inclusive. If START_REV is
+ * SVN_INVALID_REVNUM, start at revision 1; if END_REV is SVN_INVALID_REVNUM,
+ * end at the head revision. If the rep-cache does not exist, then create it.
+ *
+ * Indicate progress via the optional PROGRESS_FUNC callback using
+ * PROGRESS_BATON. The optional CANCEL_FUNC will periodically be called with
+ * CANCEL_BATON to allow cancellation. Use POOL for temporary allocations.
+ */
+svn_error_t *
+svn_fs_fs__build_rep_cache(svn_fs_t *fs,
+                           svn_revnum_t start_rev,
+                           svn_revnum_t end_rev,
+                           svn_fs_progress_notify_func_t progress_func,
+                           void *progress_baton,
+                           svn_cancel_func_t cancel_func,
+                           void *cancel_baton,
+                           apr_pool_t *pool);
+
 #endif

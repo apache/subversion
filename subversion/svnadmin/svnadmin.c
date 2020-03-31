@@ -97,6 +97,7 @@ check_lib_versions(void)
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_build_repcache,
   subcommand_crashtest,
   subcommand_create,
   subcommand_delrevprop,
@@ -306,6 +307,16 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc3_t cmd_table[] =
 {
+  {"build-repcache", subcommand_build_repcache, {0}, {N_(
+    "usage: svnadmin build-repcache REPOS_PATH [-r LOWER[:UPPER]]\n"
+    "\n"), N_(
+    "Add missing entries to the representation cache for the repository\n"
+    "at REPOS_PATH. Process data in revisions LOWER through UPPER.\n"
+    "If no revision arguments are given, process all revisions. If only\n"
+    "LOWER revision argument is given, process only that single revision.\n"
+   )},
+   {'r', 'q', 'M'} },
+
   {"crashtest", subcommand_crashtest, {0}, {N_(
     "usage: svnadmin crashtest REPOS_PATH\n"
     "\n"), N_(
@@ -2919,6 +2930,107 @@ subcommand_rev_size(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   else
     SVN_ERR(svn_cmdline_printf(pool, _("%12"APR_OFF_T_FMT" bytes in revision %ld\n"),
                                rev_size, revision));
+
+  return SVN_NO_ERROR;
+}
+
+static void
+build_rep_cache_progress_func(svn_revnum_t revision,
+                              void *baton,
+                              apr_pool_t *pool)
+{
+  svn_error_clear(svn_cmdline_printf(pool,
+                                     _("* Processed revision %ld.\n"),
+                                     revision));
+}
+
+static svn_error_t *
+build_rep_cache(svn_fs_t *fs,
+                svn_revnum_t start_rev,
+                svn_revnum_t end_rev,
+                struct svnadmin_opt_state *opt_state,
+                apr_pool_t *pool)
+{
+  svn_fs_fs__ioctl_build_rep_cache_input_t input = {0};
+  svn_error_t *err;
+
+  input.start_rev = start_rev;
+  input.end_rev = end_rev;
+
+  if (opt_state->quiet)
+    {
+      input.progress_func = NULL;
+      input.progress_baton = NULL;
+    }
+  else
+    {
+      input.progress_func = build_rep_cache_progress_func;
+      input.progress_baton = NULL;
+    }
+
+  err = svn_fs_ioctl(fs, SVN_FS_FS__IOCTL_BUILD_REP_CACHE,
+                     &input, NULL,
+                     check_cancel, NULL, pool, pool);
+  if (err && err->apr_err == SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE)
+    {
+      return svn_error_quick_wrapf(err,
+                                   _("Building rep-cache is not implemented "
+                                     "for the filesystem type found in '%s'"),
+                                   svn_fs_path(fs, pool));
+    }
+  else if (err && err->apr_err == SVN_ERR_FS_REP_SHARING_NOT_ALLOWED)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("svnadmin: Warning - this repository has rep-sharing disabled."
+                                   " Building rep-cache has no effect.\n")));
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return err;
+    }
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_build_repcache(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t youngest;
+  svn_revnum_t lower;
+  svn_revnum_t upper;
+
+  /* Expect no more arguments. */
+  SVN_ERR(parse_args(NULL, os, 0, 0, pool));
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
+                     youngest, repos, pool));
+  SVN_ERR(get_revnum(&upper, &opt_state->end_revision,
+                     youngest, repos, pool));
+
+  if (SVN_IS_VALID_REVNUM(lower) && SVN_IS_VALID_REVNUM(upper))
+    {
+      if (lower > upper)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("First revision cannot be higher than second"));
+    }
+  else if (SVN_IS_VALID_REVNUM(lower))
+    {
+      upper = lower;
+    }
+  else
+    {
+      upper = youngest;
+    }
+
+  SVN_ERR(build_rep_cache(fs, lower, upper, opt_state, pool));
 
   return SVN_NO_ERROR;
 }

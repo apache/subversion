@@ -1137,7 +1137,7 @@ _svnadmin ()
 	cur=${COMP_WORDS[COMP_CWORD]}
 
 	# Possible expansions, without pure-prefix abbreviations such as "h".
-	cmds='crashtest create delrevprop deltify dump dump-revprops freeze \
+	cmds='build-repcache crashtest create delrevprop deltify dump dump-revprops freeze \
 	      help hotcopy info list-dblogs list-unused-dblogs \
 	      load load-revprops lock lslocks lstxns pack recover rev-size rmlocks \
 	      rmtxns setlog setrevprop setuuid unlock upgrade verify --version'
@@ -1163,6 +1163,9 @@ _svnadmin ()
 
 	cmdOpts=
 	case ${COMP_WORDS[1]} in
+	build-repcache)
+		cmdOpts="-r --revision -q --quiet -M --memory-cache-size"
+		;;
 	create)
 		cmdOpts="--bdb-txn-nosync --bdb-log-keep --config-dir \
 		         --fs-type --compatible-version"

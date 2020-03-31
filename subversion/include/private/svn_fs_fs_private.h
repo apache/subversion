@@ -353,6 +353,17 @@ typedef struct svn_fs_fs__ioctl_revision_size_output_t
 /* See svn_fs_fs__revision_size(). */
 SVN_FS_DECLARE_IOCTL_CODE(SVN_FS_FS__IOCTL_REVISION_SIZE, SVN_FS_TYPE_FSFS, 1003);
 
+typedef struct svn_fs_fs__ioctl_build_rep_cache_input_t
+{
+  svn_revnum_t start_rev;
+  svn_revnum_t end_rev;
+  svn_fs_progress_notify_func_t progress_func;
+  void *progress_baton;
+} svn_fs_fs__ioctl_build_rep_cache_input_t;
+
+/* See svn_fs_fs__build_rep_cache(). */
+SVN_FS_DECLARE_IOCTL_CODE(SVN_FS_FS__IOCTL_BUILD_REP_CACHE, SVN_FS_TYPE_FSFS, 1004);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
