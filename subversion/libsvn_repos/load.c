@@ -371,7 +371,7 @@ parse_format_version(int *version,
      the EOL at all, and currently svn_stream_readline() keeps loading the
      whole thing into memory until it encounters an EOL or the stream ends.
      This is particularly troublesome, because users may incorrectly attempt
-     to load arbitrary large files instread of proper dump files.
+     to load arbitrary large files instead of proper dump files.
 
      As a workaround, parse the first line with a length limit.  While this
      is not a complete solution, doing so handles the common case described

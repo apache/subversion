@@ -161,7 +161,7 @@ svn_fs_x__parse_footer(apr_off_t *l2p_offset,
                             rev));
   *p2l_offset = (apr_off_t)val;
 
-  /* The P2L indes follows the L2P index */
+  /* The P2L index follows the L2P index */
   if (*p2l_offset <= *l2p_offset)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              "P2L offset %s must be larger than L2P offset %s"

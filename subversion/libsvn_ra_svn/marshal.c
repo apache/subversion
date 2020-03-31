@@ -1888,7 +1888,7 @@ svn_ra_svn__has_command(svn_boolean_t *has_command,
 {
   svn_error_t *err;
 
-  /* Don't make whitespace between commands trigger I/O limitiations. */
+  /* Don't make whitespace between commands trigger I/O limitations. */
   svn_ra_svn__reset_command_io_counters(conn);
 
   err = svn_ra_svn__has_item(has_command, conn, pool);

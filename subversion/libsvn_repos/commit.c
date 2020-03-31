@@ -124,7 +124,7 @@ struct dir_baton
   svn_revnum_t base_rev;        /* the revision I'm based on  */
   svn_boolean_t was_copied; /* was this directory added with history? */
   apr_pool_t *pool; /* my personal pool, in which I am allocated. */
-  svn_boolean_t checked_write; /* TRUE after successfull write check */
+  svn_boolean_t checked_write; /* TRUE after successful write check */
 };
 
 
@@ -132,7 +132,7 @@ struct file_baton
 {
   struct edit_baton *edit_baton;
   const char *path; /* the -absolute- path to this file in the fs */
-  svn_boolean_t checked_write; /* TRUE after successfull write check */
+  svn_boolean_t checked_write; /* TRUE after successful write check */
 };
 
 
@@ -641,7 +641,7 @@ open_file(const char *path,
 
   *file_baton = new_fb;
 
-  /* Destory the work subpool. */
+  /* Destroy the work subpool. */
   svn_pool_destroy(subpool);
 
   return SVN_NO_ERROR;

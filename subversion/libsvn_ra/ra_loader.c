@@ -243,7 +243,7 @@ svn_error_t *svn_ra_initialize(apr_pool_t *pool)
 /* Please note: the implementation of svn_ra_create_callbacks is
  * duplicated in libsvn_ra/wrapper_template.h:compat_open() .  This
  * duplication is intentional, is there to avoid a circular
- * dependancy, and is justified in great length in the code of
+ * dependency, and is justified in great length in the code of
  * compat_open() in libsvn_ra/wrapper_template.h.  If you modify the
  * implementation of svn_ra_create_callbacks(), be sure to keep the
  * code in wrapper_template.h:compat_open() in sync with your

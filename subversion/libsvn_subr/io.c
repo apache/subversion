@@ -2797,7 +2797,7 @@ stringbuf_from_aprfile(svn_stringbuf_t **result,
              correct, for instance, because the underlying handle could be
              pointing to a pipe.  We don't know that in advance, so attempt
              to read *one more* byte than necessary.  If we get an EOF, then
-             we're done and we have succesfully avoided reading the file chunk-
+             we're done and we have successfully avoided reading the file chunk-
              by-chunk.  If we don't, we fall through and do so to read the
              remaining part of the file. */
           svn_boolean_t eof;

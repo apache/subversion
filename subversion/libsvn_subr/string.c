@@ -65,7 +65,7 @@ membuf_create(void **data, apr_size_t *size,
  * this function does nothing.
  *
  * If *SIZE is 0, the allocated buffer size will be MINIMUM_SIZE
- * rounded up to the nearest APR alignment boundary. Otherwse, *SIZE
+ * rounded up to the nearest APR alignment boundary. Otherwise, *SIZE
  * will be multiplied by a power of two such that the result is
  * greater or equal to MINIMUM_SIZE. The pointer to the new buffer
  * will be returned in *DATA, and its size in *SIZE.

@@ -1452,7 +1452,7 @@ svn_repos_upgrade2(const char *path,
   if (notify_func)
     {
       /* We notify *twice* here, because there are two different logistical
-         actions occuring. */
+         actions occurring. */
       svn_repos_notify_t *notify = svn_repos_notify_create(
                                     svn_repos_notify_mutex_acquired, subpool);
       notify_func(notify_baton, notify, subpool);
@@ -1702,7 +1702,7 @@ svn_repos_recover4(const char *path,
   if (notify_func)
     {
       /* We notify *twice* here, because there are two different logistical
-         actions occuring. */
+         actions occurring. */
       svn_repos_notify_t *notify = svn_repos_notify_create(
                                     svn_repos_notify_mutex_acquired, subpool);
       notify_func(notify_baton, notify, subpool);

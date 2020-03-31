@@ -379,7 +379,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool);
 
 /* Run the context once. Manage waittime_left to handle timing out when
-   nothing happens over the session->timout.
+   nothing happens over the session->timeout.
  */
 svn_error_t *
 svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
@@ -716,7 +716,7 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__session_t *session,
                                   apr_pool_t *result_pool);
 
 
-/* Allocated within XES->STATE_POOL. Changes are not allowd (callers
+/* Allocated within XES->STATE_POOL. Changes are not allowed (callers
    should make a deep copy if they need to make changes).
 
    The resulting hash maps char* names to char* values.  */

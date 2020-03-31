@@ -1077,7 +1077,7 @@ win32_release_name(apr_pool_t *pool)
 
 
 /* Get a list of handles of shared libs loaded by the current
-   process. Returns a NULL-terminated array alocated from POOL. */
+   process. Returns a NULL-terminated array allocated from POOL. */
 static HMODULE *
 enum_loaded_modules(apr_pool_t *pool)
 {

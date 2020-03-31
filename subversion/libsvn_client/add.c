@@ -647,7 +647,7 @@ svn_client__get_all_auto_props(apr_hash_t **autoprops,
 
 
   /* Are "traditional" auto-props enabled?  If so grab them from the
-    config.  This is our starting set auto-props, which may be overriden
+    config.  This is our starting set auto-props, which may be overridden
     by svn:auto-props. */
   SVN_ERR(svn_config_get_bool(cfg, &use_autoprops,
                               SVN_CONFIG_SECTION_MISCELLANY,

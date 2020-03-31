@@ -394,7 +394,7 @@ svn_fs_x__get_mergeinfo_count(apr_int64_t *count,
 {
   svn_fs_x__noderev_t *noderev;
 
-  /* If we want a full acccess log, we need to provide full data and
+  /* If we want a full access log, we need to provide full data and
      cannot take shortcuts here. */
 #if !defined(SVN_FS_X__LOG_ACCESS)
 
@@ -951,7 +951,7 @@ typedef struct rep_read_baton_t
   /* Used for temporary allocations during the read. */
   apr_pool_t *scratch_pool;
 
-  /* Pool used to store file handles and other data that is persistant
+  /* Pool used to store file handles and other data that is persistent
      for the entire stream read. */
   apr_pool_t *filehandle_pool;
 } rep_read_baton_t;
@@ -1518,7 +1518,7 @@ get_combined_window(svn_stringbuf_t **result,
   return SVN_NO_ERROR;
 }
 
-/* Returns whether or not the expanded fulltext of the file is cachable
+/* Returns whether or not the expanded fulltext of the file is cacheable
  * based on its size SIZE.  The decision depends on the cache used by FFD.
  */
 static svn_boolean_t
@@ -2585,7 +2585,7 @@ parse_dir_entries(apr_array_header_t **entries_p,
 }
 
 /* For directory NODEREV in FS, return the *FILESIZE of its in-txn
- * representation.  If the directory representation is comitted data,
+ * representation.  If the directory representation is committed data,
  * set *FILESIZE to SVN_INVALID_FILESIZE. Use SCRATCH_POOL for temporaries.
  */
 static svn_error_t *

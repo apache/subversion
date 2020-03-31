@@ -1095,7 +1095,7 @@ token_compare(void *baton, void *token1, void *token2, int *compare)
           if (length[i] == 0)
             {
               /* Error if raw_length is 0, that's an unexpected change
-               * of the file that can happen when ingoring whitespace
+               * of the file that can happen when ignoring whitespace
                * and that can lead to an infinite loop. */
               if (raw_length[i] == 0)
                 return svn_error_createf(SVN_ERR_DIFF_DATASOURCE_MODIFIED,

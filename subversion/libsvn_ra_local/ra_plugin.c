@@ -1754,7 +1754,7 @@ static svn_error_t *
 svn_ra_local__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks)
 {
-  /* This is currenly a no-op, since we don't provide our own editor, just
+  /* This is currently a no-op, since we don't provide our own editor, just
      use the one the libsvn_repos hands back to us. */
   return SVN_NO_ERROR;
 }

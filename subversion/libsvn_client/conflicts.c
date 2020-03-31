@@ -1700,7 +1700,7 @@ find_moves(void *baton, svn_log_entry_t *log_entry, apr_pool_t *scratch_pool)
   return SVN_NO_ERROR;
 }
 
-/* Find all moves which occured in repository history starting at
+/* Find all moves which occurred in repository history starting at
  * REPOS_RELPATH@START_REV until END_REV (where START_REV > END_REV).
  * Return results in *MOVES_TABLE (see struct find_moves_baton for details). */
 static svn_error_t *
@@ -4891,7 +4891,7 @@ struct find_added_rev_baton
  * Finds the revision in which a node was added by tracing 'start'
  * revisions in location segments reported for the node.
  * If the PARENT_REPOS_RELPATH in the baton is not NULL, only consider
- * segments in which the node existed somwhere beneath this path. */
+ * segments in which the node existed somewhere beneath this path. */
 static svn_error_t *
 find_added_rev(svn_location_segment_t *segment,
                void *baton,
@@ -5358,7 +5358,7 @@ conflict_tree_get_details_incoming_add(svn_client_conflict_t *conflict,
       details->deleted_rev_author = NULL;
 
       /* Figure out whether this node was deleted later.
-       * ### Could probably optimize by infering both addition and deletion
+       * ### Could probably optimize by inferring both addition and deletion
        * ### from svn_ra_get_location_segments() call above. */
       SVN_ERR(svn_ra_get_latest_revnum(ra_session, &head_rev, scratch_pool));
       if (new_rev < head_rev)
@@ -5832,10 +5832,10 @@ conflict_tree_get_description_incoming_add(
 
 /* Details for tree conflicts involving incoming edits.
  * Note that we store an array of these. Each element corresponds to a
- * revision within the old/new range in which a modification occured. */
+ * revision within the old/new range in which a modification occurred. */
 struct conflict_tree_incoming_edit_details
 {
-  /* The revision in which the edit ocurred. */
+  /* The revision in which the edit occurred. */
   svn_revnum_t rev;
 
   /* The author of the revision. */
@@ -6903,7 +6903,7 @@ resolve_merge_incoming_added_file_text_update(
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
   local_change = svn_client_conflict_get_local_change(conflict);
 
-  /* Set up tempory storage for the working version of file. */
+  /* Set up temporary storage for the working version of file. */
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
                              scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_open_unique(&working_file_tmp_stream,
@@ -7182,7 +7182,7 @@ resolve_merge_incoming_added_file_replace_and_merge(
 
   local_abspath = svn_client_conflict_get_local_abspath(conflict);
 
-  /* Set up tempory storage for the working version of file. */
+  /* Set up temporary storage for the working version of file. */
   SVN_ERR(svn_wc__get_tmpdir(&wc_tmpdir, ctx->wc_ctx, local_abspath,
                              scratch_pool, scratch_pool));
   SVN_ERR(svn_stream_open_unique(&working_file_tmp_stream,
@@ -11086,7 +11086,7 @@ configure_option_sibling_move_merge(svn_client_conflict_t *conflict,
 struct conflict_tree_update_local_moved_away_details {
   /*
    * This array consists of "const char *" absolute paths to working copy
-   * nodes which are uncomitted copies and correspond to the repository path
+   * nodes which are uncommitted copies and correspond to the repository path
    * of the conflict victim.
    * Each such working copy node is a potential local move target which can
    * be chosen to find a suitable merge target when resolving a tree conflict.

@@ -592,7 +592,7 @@ open_single(svn_wc_adm_access_t **adm_access,
    KIND can be NULL.
 
    ### note: this function should go away when we move to a single
-   ### adminstrative area.  */
+   ### administrative area.  */
 static svn_error_t *
 adm_available(svn_boolean_t *available,
               svn_node_kind_t *kind,

@@ -415,7 +415,7 @@ svn_fs_x__initialize_caches(svn_fs_t *fs,
    *   (e.g. fulltexts etc.)
    * - Index data required to find any of the other data has high prio
    *   (e.g. noderevs, L2P and P2L index pages)
-   * - everthing else should use default prio
+   * - everything else should use default prio
    */
 
 #ifdef SVN_DEBUG_CACHE_DUMP_STATS

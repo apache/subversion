@@ -83,7 +83,7 @@ typedef struct ctor_baton_t
      same immutable string multiple times, we reduce the size of the
      authz representation in the result pool.
 
-     N.B.: Whilst the strings are allocated from teh result pool, the
+     N.B.: Whilst the strings are allocated from the result pool, the
      hash table itself is not. */
   apr_hash_t *strings;
 
@@ -205,7 +205,7 @@ insert_default_acl(ctor_baton_t *cb)
 }
 
 
-/* Initialize a constuctor baton. */
+/* Initialize a constructor baton. */
 static ctor_baton_t *
 create_ctor_baton(svn_repos_authz_warning_func_t warning_func,
                   void *warning_baton,
@@ -965,7 +965,7 @@ add_access_entry(ctor_baton_t *cb, svn_stringbuf_t *section,
     {
       /* The inversion tag must be part of the key in the hash
          table, otherwise we can't tell regular and inverted
-         entries appart. */
+         entries apart. */
       const char *key = (inverted ? name - 1 : name);
       const apr_size_t key_len = (inverted ? name_len + 1 : name_len);
       const svn_boolean_t aliased = (*name == '&');

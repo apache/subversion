@@ -2031,7 +2031,7 @@ svn_client__get_log_msg(const char **log_msg,
               old_item->kind = item->kind;
               old_item->url = item->url;
               /* The pre-1.3 API used the revision field for copyfrom_rev
-                 and revision depeding of copyfrom_url. */
+                 and revision depending of copyfrom_url. */
               old_item->revision = item->copyfrom_url ?
                 item->copyfrom_rev : item->revision;
               old_item->copyfrom_url = item->copyfrom_url;

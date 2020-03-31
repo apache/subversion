@@ -588,7 +588,7 @@ print_diff_index_header(svn_stream_t *outstream,
 
    ### FIXME needs proper docstring
 
-   If USE_GIT_DIFF_FORMAT is TRUE, pring git diff headers, which always
+   If USE_GIT_DIFF_FORMAT is TRUE, print git diff headers, which always
    show paths relative to the repository root. DDI->session_relpath and
    DDI->wc_ctx are needed to normalize paths relative the repository root,
    and are ignored if USE_GIT_DIFF_FORMAT is FALSE.
@@ -1440,7 +1440,7 @@ diff_dir_deleted(const char *relpath,
    With only one distinct revision the working copy provides the
    other.  When path is a URL there is no working copy. Thus
 
-     1: compare repository versions for URL coresponding to working copy
+     1: compare repository versions for URL corresponding to working copy
      2: compare working copy against repository version
      3: compare repository versions for URL
      4: nothing to do.
@@ -1662,7 +1662,7 @@ diff_prepare_repos_repos(const char **url1,
     {
       /* It would be nice if we could just return an error when resolving a
          location fails... But in many such cases we prefer diffing against
-         an not existing location to show adds od removes (see issue #4153) */
+         a non-existent location to show adds or removes (see issue #4153) */
 
       if (resolved2
           && (peg_kind != svn_opt_revision_unspecified
@@ -1688,7 +1688,7 @@ diff_prepare_repos_repos(const char **url1,
     {
       /* It would be nice if we could just return an error when resolving a
          location fails... But in many such cases we prefer diffing against
-         an not existing location to show adds od removes (see issue #4153) */
+         a non-existent location to show adds or removes (see issue #4153) */
 
       if (resolved1
           && (peg_kind != svn_opt_revision_unspecified
@@ -1894,7 +1894,7 @@ diff_wc_wc(const char *path1,
    for the underlying diff implementation if the target on either side
    is a file, else at the actual requested targets.
 
-   (The choice of WC anchor implementated here for DDI->anchor appears to
+   (The choice of WC anchor implemented here for DDI->anchor appears to
    be: choose PATH_OR_URL2 (if it's a WC path) or else PATH_OR_URL1 (if
    it's a WC path); then take its parent dir unless both resolved URLs
    refer to directories.)

@@ -3387,7 +3387,7 @@ merge_dir_closed(const char *relpath,
 
    We register a skipped path, which will make parent mergeinfo non-
    inheritable. This ensures that a future merge might see these skipped
-   changes as eligable for merging.
+   changes as eligible for merging.
 
    For legacy reasons we also notify the path as skipped.
  */

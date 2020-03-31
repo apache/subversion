@@ -1224,7 +1224,7 @@ struct rep_read_baton
   /* Used for temporary allocations during the read. */
   apr_pool_t *pool;
 
-  /* Pool used to store file handles and other data that is persistant
+  /* Pool used to store file handles and other data that is persistent
      for the entire stream read. */
   apr_pool_t *filehandle_pool;
 };
@@ -1775,7 +1775,7 @@ get_combined_window(svn_stringbuf_t **result,
   return SVN_NO_ERROR;
 }
 
-/* Returns whether or not the expanded fulltext of the file is cachable
+/* Returns whether or not the expanded fulltext of the file is cacheable
  * based on its size SIZE.  The decision depends on the cache used by FFD.
  */
 static svn_boolean_t
@@ -2699,7 +2699,7 @@ read_dir_entries(apr_array_header_t **entries_p,
 }
 
 /* For directory NODEREV in FS, return the *FILESIZE of its in-txn
- * representation.  If the directory representation is comitted data,
+ * representation.  If the directory representation is committed data,
  * set *FILESIZE to SVN_INVALID_FILESIZE. Use SCRATCH_POOL for temporaries.
  */
 static svn_error_t *
@@ -3345,7 +3345,7 @@ cache_windows(svn_fs_t *fs,
           /* update relative offset in representation */
           rs->current += window_len;
 
-          /* Construct the cachable raw window object. */
+          /* Construct the cacheable raw window object. */
           window.end_offset = rs->current;
           window.window.len = window_len;
           window.window.data = buf;

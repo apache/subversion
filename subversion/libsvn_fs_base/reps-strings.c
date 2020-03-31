@@ -1,4 +1,4 @@
-/* reps-strings.c : intepreting representations with respect to strings
+/* reps-strings.c : interpreting representations with respect to strings
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one

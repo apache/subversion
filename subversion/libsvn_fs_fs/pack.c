@@ -1701,7 +1701,7 @@ svn_fs_fs__get_packed_offset(apr_off_t *rev_offset,
   return svn_cache__set(ffd->packed_offset_cache, &shard, manifest, pool);
 }
 
-/* Packing logic for physical addresssing mode:
+/* Packing logic for physical addressing mode:
  * Simply concatenate all revision contents.
  *
  * Pack the revision shard starting at SHARD_REV containing exactly

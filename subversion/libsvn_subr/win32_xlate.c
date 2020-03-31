@@ -65,8 +65,8 @@ initialize_com(void *baton, apr_pool_t* pool)
 
   if (hr == RPC_E_CHANGED_MODE)
     {
-      /* COM already initalized for multi-threaded object concurrency. We are
-         neutral to object concurrency so try to initalize it in the same way
+      /* COM already initialized for multi-threaded object concurrency. We are
+         neutral to object concurrency so try to initialize it in the same way
          for us, to keep an handle open. */
       hr = CoInitializeEx(NULL, COINIT_MULTITHREADED);
     }

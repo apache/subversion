@@ -907,7 +907,7 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
      will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
 
-  /* Note that since we're using a private environment, we shoudl
+  /* Note that since we're using a private environment, we should
      /not/ initialize locking. We want the environment files to go
      away. */
 
@@ -1078,7 +1078,7 @@ base_bdb_logfiles(apr_array_header_t **logfiles,
 /* Copying a live Berkeley DB-base filesystem.  */
 
 /**
- * Delete all unused log files from DBD enviroment at @a live_path that exist
+ * Delete all unused log files from DBD environment at @a live_path that exist
  * in @a backup_path.
  */
 static svn_error_t *

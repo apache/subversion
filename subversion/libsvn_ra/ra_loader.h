@@ -328,7 +328,7 @@ typedef struct svn_ra__vtable_t {
                                       svn_revnum_t revision,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool);
-  /* If not NULL, receives a pointer to svn_ra_open, to alllow opening
+  /* If not NULL, receives a pointer to svn_ra_open, to allow opening
      a new ra session from inside the ra layer without a circular
      library dependency*/
   svn_error_t *(*set_svn_ra_open)(svn_ra_session_t *session,

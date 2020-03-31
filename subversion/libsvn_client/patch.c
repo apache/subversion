@@ -2470,7 +2470,7 @@ send_patch_notification(const patch_target_t *target,
 
 /* Implements the callback for svn_sort__array.  Puts hunks that match
    before hunks that do not match, puts hunks that match in order
-   based on postion matched, puts hunks that do not match in order
+   based on position matched, puts hunks that do not match in order
    based on original position. */
 static int
 sort_matched_hunks(const void *a, const void *b)

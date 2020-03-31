@@ -902,9 +902,9 @@ svn_client_blame6(svn_revnum_t *start_revnum_p,
       /* If we never created any blame for the original chain, create it now,
          with the most recent changed revision.  This could occur if a file
          was created on a branch and them merged to another branch.  This is
-         semanticly a copy, and we want to use the revision on the branch as
+         semantically a copy, and we want to use the revision on the branch as
          the most recently changed revision.  ### Is this really what we want
-         to do here?  Do the sematics of copy change? */
+         to do here?  Do the semantics of copy change? */
       if (!frb.chain->blame)
         frb.chain->blame = blame_create(frb.chain, frb.last_rev, 0);
 

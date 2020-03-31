@@ -61,9 +61,9 @@ static svn_error_t *compat_open(void **session_baton,
 {
   /* Here, we should be calling svn_ra_create_callbacks to initialize
    * the svn_ra_callbacks2_t structure.  However, doing that
-   * introduces a circular dependancy between libsvn_ra and
+   * introduces a circular dependency between libsvn_ra and
    * libsvn_ra_{local,neon,serf,svn}, which include
-   * wrapper_template.h.  In turn, circular dependancies break the
+   * wrapper_template.h.  In turn, circular dependencies break the
    * build on win32 (and possibly other systems).
    *
    * In order to avoid this happening at all, the code of

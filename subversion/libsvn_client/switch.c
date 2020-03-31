@@ -216,7 +216,7 @@ switch_internal(svn_revnum_t *result_rev,
                              anchor_url, switch_loc->repos_root_url);
 
   /* If we're not ignoring ancestry, then error out if the switch
-     source and target don't have a common ancestory.
+     source and target don't have a common ancestry.
 
      ### We're acting on the anchor here, not the target.  Is that
      ### okay? */
@@ -279,7 +279,7 @@ switch_internal(svn_revnum_t *result_rev,
 
           /* If LOCAL_ABSPATH will be unswitched relative to its parent, then
              it doesn't need an iprop cache.  Note: It doesn't matter if
-             LOCAL_ABSPATH is withing a switched subtree, only if it's the
+             LOCAL_ABSPATH is within a switched subtree, only if it's the
              *root* of a switched subtree.*/
           if (strcmp(unswitched_url, switch_loc->url) == 0)
             needs_iprop_cache = FALSE;

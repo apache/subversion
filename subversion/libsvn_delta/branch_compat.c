@@ -918,7 +918,7 @@ apply_change(void **dir_baton,
       SVN_ERR(editor->delete_entry(ev1_relpath, change->deleting_rev,
                                    parent_baton, scratch_pool));
 
-      /* No futher action possible for this node.  */
+      /* No further action possible for this node.  */
       return SVN_NO_ERROR;
     }
 

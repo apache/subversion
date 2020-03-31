@@ -550,7 +550,7 @@ parse_option(int *pch, parse_context_t *ctx, apr_pool_t *scratch_pool)
 }
 
 
-/* Read chars until enounter ']', then skip everything to the end of
+/* Read chars until encounter ']', then skip everything to the end of
  * the line.  Set *PCH to the character that ended the line (either
  * newline or EOF), and set CTX->section to the string of characters
  * seen before ']'.

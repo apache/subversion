@@ -438,7 +438,7 @@ svn_fs_initialize(apr_pool_t *pool)
 static void
 default_warning_func(void *baton, svn_error_t *err)
 {
-  /* The one unforgiveable sin is to fail silently.  Dumping to stderr
+  /* The one unforgivable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
      processes, since those may both be equivalent to /dev/null.
 

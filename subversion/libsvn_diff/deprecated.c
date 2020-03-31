@@ -409,7 +409,7 @@ svn_diff_mem_string_output_merge2(svn_stream_t *output_stream,
                                                            conflict_latest,
                                                            conflict_separator,
                                                            style,
-                                                           /* no cancelation */
+                                                           /* no cancellation */
                                                            NULL, NULL,
                                                            pool));
 }

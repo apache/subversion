@@ -108,7 +108,7 @@ svn_compat_wrap_file_rev_handler(svn_file_rev_handler_t *handler2,
  * deletion has side effects (unlike deleting a non-existent regular property
  * would).  To solve this, we introduce *another* function into the API, not
  * a part of the Ev2 callbacks, but a companion which is used to register
- * the unlock of a path.  See ev2_change_file_prop() for implemenation
+ * the unlock of a path.  See ev2_change_file_prop() for implementation
  * details.
  */
 
@@ -467,7 +467,7 @@ run_ev2_actions(struct ev2_edit_baton *eb,
 
   iterpool = svn_pool_create(scratch_pool);
 
-  /* Possibly pick up where we left off. Ocassionally, we do some of these
+  /* Possibly pick up where we left off. Occasionally, we do some of these
      as part of close_edit() and then some more as part of abort_edit()  */
   for (; eb->paths_processed < eb->path_order->nelts; ++eb->paths_processed)
     {
@@ -877,7 +877,7 @@ ev2_change_file_prop(void *file_baton,
 
   if (!strcmp(name, SVN_PROP_ENTRY_LOCK_TOKEN) && value == NULL)
     {
-      /* We special case the lock token propery deletion, which is the
+      /* We special case the lock token property deletion, which is the
          server's way of telling the client to unlock the path. */
 
       /* ### this duplicates much of apply_propedit(). fix in future.  */
@@ -1619,7 +1619,7 @@ apply_change(void **dir_baton,
       SVN_ERR(deditor->delete_entry(ev1_relpath, change->deleting,
                                     parent_baton, scratch_pool));
 
-      /* No futher action possible for this node.  */
+      /* No further action possible for this node.  */
       return SVN_NO_ERROR;
     }
 

@@ -1461,7 +1461,7 @@ copy_reps_from_temp(pack_context_t *context,
   SVN_ERR(store_items(context, temp_file, reps, initial_reps_count,
                       scratch_pool));
 
-  /* vaccum ENTRIES array: eliminate NULL entries */
+  /* vacuum ENTRIES array: eliminate NULL entries */
   for (i = 0, k = 0; i < reps->nelts; ++i)
     {
       svn_fs_x__p2l_entry_t *entry
@@ -1686,7 +1686,7 @@ write_l2p_index(pack_context_t *context,
                                                context->reps,
                                                pool, scratch_pool));
 
-  /* Append newly written segment to exisiting proto index file. */
+  /* Append newly written segment to existing proto index file. */
   SVN_ERR(svn_io_file_name_get(&proto_index, context->proto_l2p_index,
                                scratch_pool));
 

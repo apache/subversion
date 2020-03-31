@@ -660,7 +660,7 @@ svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
           /* If no conflicted property names left */
           if (!c->next->next->children)
             {
-              /* Remove the propery conflict skel from the linked list */
+              /* Remove the property conflict skel from the linked list */
              *pconflict = (*pconflict)->next;
              continue;
             }
@@ -3899,7 +3899,7 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
    * cannot be modified (e.g. replaced or deleted nodes) don't count.
    * Nodes which are of a different node kind don't count either.
    * Ignore switched nodes as well, since that is an unlikely case during
-   * update/swtich/merge conflict resolution. And externals shouldn't even
+   * update/switch/merge conflict resolution. And externals shouldn't even
    * be on our candidate list in the first place.
    * If multiple candidates match these criteria, choose the one which
    * shares the longest common ancestor with the victim. */

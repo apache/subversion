@@ -259,7 +259,7 @@ svn_wc__conflict_skel_add_tree_conflict(svn_skel_t *conflict_skel,
    resolve/remove the tree conflict in CONFLICT_SKEL.
 
    If COMPLETELY_RESOLVED is not NULL, then set *COMPLETELY_RESOLVED to TRUE,
-   when no conflict registration is left in CONFLICT_SKEL after editting,
+   when no conflict registration is left in CONFLICT_SKEL after editing,
    otherwise to FALSE.
 
    Allocate data stored in the skel in RESULT_POOL.

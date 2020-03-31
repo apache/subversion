@@ -561,8 +561,8 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   return SVN_NO_ERROR;
 }
 
-/* Parse URL inot URI, validating it and setting the default port if none
-   was given.  Allocate the URI fileds out of POOL. */
+/* Parse URL into URI, validating it and setting the default port if none
+   was given.  Allocate the URI fields out of POOL. */
 static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
                               apr_pool_t *pool)
 {
@@ -1616,7 +1616,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 
          Note: they should NOT be "fixed" to send NULL, as that would break
          any older clients which received that NULL. But we may as well
-         be defensive against a malicous server.  */
+         be defensive against a malicious server.  */
       if (cdate == NULL)
         dirent->time = 0;
       else

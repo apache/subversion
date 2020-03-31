@@ -128,7 +128,7 @@ free_block(void *ptr, alloc_block_t **free_list)
 
 
 /* ==================================================================== */
-/* Mapping offsets in the target streem to txdelta ops. */
+/* Mapping offsets in the target stream to txdelta ops. */
 
 typedef struct offset_index_t
 {

@@ -571,9 +571,9 @@ pin_externals_prop(svn_string_t **pinned_externals,
  * mentioned in EXTERNALS_TO_PIN.
  * The pinning operation takes place as part of the copy operation for
  * the source/destination pair PAIR. Use RA_SESSION and REPOS_ROOT_URL
- * to contact the repository containing the externals definition, if neccesary.
+ * to contact the repository containing the externals definition, if necessary.
  * Use CX to fopen additional RA sessions to external repositories, if
- * neccessary. Allocate *NEW_EXTERNALS in RESULT_POOL.
+ * necessary. Allocate *NEW_EXTERNALS in RESULT_POOL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 resolve_pinned_externals(apr_hash_t **pinned_externals,
@@ -2687,7 +2687,7 @@ svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
   return SVN_NO_ERROR;
 }
 
-/* Peform each individual copy operation for a repos -> wc copy.  A
+/* Perform each individual copy operation for a repos -> wc copy.  A
    helper for repos_to_wc_copy().
 
    PAIR->src_revnum PAIR->src_abspath_or_url should already have been

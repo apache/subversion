@@ -1351,7 +1351,7 @@ escape_path(apr_pool_t *pool, const char *orig_path)
           else if (*p == '"')
             {
               /* Double-quote as part of the argument means we need to double
-                 any preceeding backslashes and then add one to escape the
+                 any preceding backslashes and then add one to escape the
                  double-quote. */
               svn_stringbuf_appendfill(buf, '\\', nr_backslash * 2 + 1);
               svn_stringbuf_appendbyte(buf, '^');

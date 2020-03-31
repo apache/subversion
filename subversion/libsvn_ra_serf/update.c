@@ -2223,7 +2223,7 @@ process_buffer(update_delay_baton_t *udb,
 }
 
 
-/* Delaying wrapping reponse handler, to avoid creating too many
+/* Delaying wrapping response handler, to avoid creating too many
    requests to deliver efficiently */
 static svn_error_t *
 update_delay_handler(serf_request_t *request,

@@ -268,7 +268,7 @@ export_node(void *baton,
     }
 
   /* Skip file externals if they are a descendant of the export,
-     BUT NOT if we are explictly exporting the file external. */
+     BUT NOT if we are explicitly exporting the file external. */
   if (status->file_external && strcmp(eib->origin_abspath, local_abspath) != 0)
     return SVN_NO_ERROR;
 

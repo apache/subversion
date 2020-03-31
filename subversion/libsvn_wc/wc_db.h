@@ -952,7 +952,7 @@ typedef struct svn_wc__db_install_data_t
 /* Open a writable stream to a temporary text base, ready for installing
    into the pristine store.  Set *STREAM to the opened stream.  The temporary
    file will have an arbitrary unique name. Return as *INSTALL_DATA a baton
-   for eiter installing or removing the file
+   for either installing or removing the file
 
    Arrange that, on stream closure, *MD5_CHECKSUM and *SHA1_CHECKSUM will be
    set to the MD-5 and SHA-1 checksums respectively of that file.

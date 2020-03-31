@@ -514,7 +514,7 @@ create_repos_id(apr_int64_t *repos_id,
      above query and the insertion below. We're simply going to ignore
      that, as it means two processes are *modifying* the working copy
      at the same time, *and* new repositores are becoming visible.
-     This is rare enough, let alone the miniscule chance of hitting
+     This is rare enough, let alone the minuscule chance of hitting
      this race condition. Further, simply failing out will leave the
      database in a consistent state, and the user can just re-run the
      failed operation. */

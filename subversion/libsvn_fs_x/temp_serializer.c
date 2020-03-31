@@ -38,7 +38,7 @@
 #include "cached_data.h"
 
 /* Utility to encode a signed NUMBER into a variable-length sequence of
- * 8-bit chars in KEY_BUFFER and return the last writen position.
+ * 8-bit chars in KEY_BUFFER and return the last written position.
  *
  * Numbers will be stored in 7 bits / byte and using byte values above
  * 32 (' ') to make them combinable with other string by simply separating
@@ -183,7 +183,7 @@ svn_fs_x__deserialize_apr_array(void *buffer,
   (*array)->pool = result_pool;
 }
 
-/* auxilliary structure representing the content of a directory array */
+/* auxiliary structure representing the content of a directory array */
 typedef struct dir_data_t
 {
   /* number of entries in the directory

@@ -3713,7 +3713,7 @@ promote_cached_directories(svn_fs_t *fs,
 
       /* Currently, the entry for KEY - if it still exists - is marked
        * as "stale" and would not be used.  Mark it as current for in-
-       * revison data. */
+       * revision data. */
       SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
                                      svn_fs_fs__reset_txn_filesize, NULL,
                                      iterpool));
