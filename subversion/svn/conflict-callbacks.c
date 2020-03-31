@@ -1517,7 +1517,7 @@ build_tree_conflict_options(
                                      iterpool));
       if (opt == NULL)
         {
-          /* Unkown option. Assign a dynamic option code. */
+          /* Unknown option. Assign a dynamic option code. */
           opt = apr_pcalloc(result_pool, sizeof(*opt));
           opt->code = apr_psprintf(result_pool, "%d", next_unknown_option_code);
           next_unknown_option_code++;

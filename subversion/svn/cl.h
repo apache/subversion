@@ -533,7 +533,7 @@ svn_cl__walk_conflicts(apr_array_header_t *targets,
 /*** Command-line output functions -- printing to the user. ***/
 
 /* Print out commit information found in COMMIT_INFO to the console.
- * POOL is used for temporay allocations.
+ * POOL is used for temporary allocations.
  * COMMIT_INFO should not be NULL.
  *
  * This function implements svn_commit_callback2_t.
@@ -873,7 +873,7 @@ svn_cl__prop_use_t;
  *
  *   - start with svn: but do not exactly match a known property; or,
  *   - start with a 3-letter prefix that differs in only one letter
- *     from "svn:", and the rest exactly matches a known propery.
+ *     from "svn:", and the rest exactly matches a known properly.
  *
  * If REVPROP is TRUE, only check revision property names; otherwise
  * only check node property names.

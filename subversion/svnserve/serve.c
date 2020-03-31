@@ -851,7 +851,7 @@ static svn_error_t *must_have_access(svn_ra_svn_conn_t *conn,
 
 /* --- REPORTER COMMAND SET --- */
 
-/* To allow for pipelining, reporter commands have no reponses.  If we
+/* To allow for pipelining, reporter commands have no responses.  If we
  * get an error, we ignore all subsequent reporter commands and return
  * the error finish_report, to be handled by the calling command.
  */

@@ -1323,7 +1323,7 @@ do_log(svnlook_ctxt_t *c, svn_boolean_t print_size, apr_pool_t *pool)
       return SVN_NO_ERROR;
     }
 
-  /* We immitate what svn_cmdline_printf does here, since we need the byte
+  /* We imitate what svn_cmdline_printf does here, since we need the byte
      size of what we are going to print. */
 
   SVN_ERR(svn_subst_translate_cstring2(prop_value->data, &prop_value_eol,

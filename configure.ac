@@ -115,7 +115,7 @@ AC_SUBST(SVN_APR_MAJOR_VERSION)
 SVN_LT_SOVERSION="-version-info $svn_lib_ver"
 AC_SUBST(SVN_LT_SOVERSION)
 AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
-                   [Subversion library major verson])
+                   [Subversion library major version])
 
 dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
@@ -759,7 +759,7 @@ AH_BOTTOM([
 #endif
 
 /* Macro used to specify that a variable is intentionally left unused.
-   Supresses compiler warnings about the variable being unused.  */
+   Suppresses compiler warnings about the variable being unused.  */
 #define SVN_UNUSED(v) ( (void)(v) )
 ])
 

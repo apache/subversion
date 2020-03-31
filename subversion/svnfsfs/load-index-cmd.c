@@ -109,7 +109,7 @@ parse_index_line(svn_fs_fs__p2l_entry_t **entry,
   SVN_ERR(token_to_i64(&value, tokens, 1, 16));
   result->size = (apr_off_t)value;
 
-  /* Parse the rightmost colum that we care of. */
+  /* Parse the rightmost column that we care of. */
   SVN_ERR(token_to_i64(&value, tokens, 4, 10));
   result->item.number = (apr_uint64_t)value;
 

@@ -119,7 +119,7 @@
 #define SVN__PREDICT_FALSE(x)  (x)
 
 /* Macro used to specify that a variable is intentionally left unused.
-   Supresses compiler warnings about the variable being unused.  */
+   Suppresses compiler warnings about the variable being unused.  */
 #define SVN_UNUSED(v) ( (void)(v) )
 
 #if defined(_MSC_VER) && _MSC_VER >= 1600

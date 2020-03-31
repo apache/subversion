@@ -410,7 +410,7 @@ const apr_getopt_option_t svn_cl__options[] =
 
   /* Long-opt Aliases
    *
-   * These have NULL desriptions, but an option code that matches some
+   * These have NULL descriptions, but an option code that matches some
    * other option (whose description should probably mention its aliases).
   */
 
@@ -1925,7 +1925,7 @@ check_lib_versions(void)
   return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
-/* The cancelation handler setup by the cmdline library. */
+/* The cancellation handler setup by the cmdline library. */
 svn_cancel_func_t svn_cl__check_cancel = NULL;
 
 /* Add a --search argument to OPT_STATE.
