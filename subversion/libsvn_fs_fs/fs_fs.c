@@ -2402,6 +2402,10 @@ reindex_node(svn_fs_t *fs,
   SVN_ERR(svn_fs_fs__read_noderev(&noderev, rev_file->stream,
                                   pool, pool));
 
+  /* Make sure EXPANDED_SIZE has the correct value for every rep. */
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->data_rep, pool));
+  SVN_ERR(svn_fs_fs__fixup_expanded_size(fs, noderev->prop_rep, pool));
+
   /* First reindex sub-directory to match write_final_rev() behavior. */
   if (noderev->kind == svn_node_dir)
     {
