@@ -2345,6 +2345,8 @@ svn_fs_fs__info_config_files(apr_array_header_t **files,
   return SVN_NO_ERROR;
 }
 
+/* If no SHA1 checksum is stored in REP->SHA1_DIGEST yet, compute the
+ * SHA1 checksum and fill it in. Use POOL for temporary allocations. */
 static svn_error_t *
 ensure_representation_sha1(svn_fs_t *fs,
                            representation_t *rep,
@@ -2366,6 +2368,13 @@ ensure_representation_sha1(svn_fs_t *fs,
   return SVN_NO_ERROR;
 }
 
+/* Recursively index (in the rep-cache) the filesystem node with the
+ * given ID, located in revision REV and its matching REV_FILE (if the
+ * node ID cannot be found in this revision, do nothing).
+ * Compute the SHA1 checksum of the node's representation and add
+ * a corresponding entry to the repository's rep-cache.
+ * If the node represents a directory this function will recurse and
+ * index all children of this directory as well. */
 static svn_error_t *
 reindex_node(svn_fs_t *fs,
              const svn_fs_id_t *id,
