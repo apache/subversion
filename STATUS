@@ -29,14 +29,14 @@ Candidate changes:
    Votes:
      +1: stsp
 
- * r1875921, r1875925
+ * r1875921, r1875925, r1875973
    Introduce 'svnadmin build-repcache' command.
    Justification:
      Low-risk and useful feature addition. It would be nice to get this
      merged in time for 1.14.0. Else this would have to wait until 1.15.0.
    Votes:
      +1: stsp
-     +0: danielsh
+     +0: danielsh (without r1875973)
      -0: danielsh (Missing docstrings: https://mail-archives.apache.org/mod_mbox/subversion-dev/202003.mbox/%3C20200331092329.580085e0%40tarpaulin.shahaf.local2%3E)
 
 Veto-blocked changes:
