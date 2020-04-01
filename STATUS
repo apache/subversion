@@ -15,19 +15,12 @@ Status of 1.14.0:
 Candidate changes:
 ==================
 
- * r1875680
-   Construct KAboutData using QString rather than QStringLiteral
-   Justification:
-     Fixes a crash seen when using git-svn with kwallet
-   Votes:
-     +1: jamessan, stsp
-
  * r1875918
    rep-cache.db insert optimization
    Justification:
      Small performance optimization.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
 
  * r1875921, r1875925, r1875973, r1876010
    Introduce 'svnadmin build-repcache' command.
@@ -35,7 +28,7 @@ Candidate changes:
      Low-risk and useful feature addition. It would be nice to get this
      merged in time for 1.14.0. Else this would have to wait until 1.15.0.
    Votes:
-     +1: stsp
+     +1: stsp, cmpilato
      +0: danielsh (without r1875973, r1876010)
      -0: danielsh (Missing docstrings: https://mail-archives.apache.org/mod_mbox/subversion-dev/202003.mbox/%3C20200331092329.580085e0%40tarpaulin.shahaf.local2%3E)
 
@@ -44,6 +37,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1875680
+   Construct KAboutData using QString rather than QStringLiteral
+   Justification:
+     Fixes a crash seen when using git-svn with kwallet
+   Votes:
+     +1: jamessan, stsp, cmpilato
 
  * r1875726
    Error out if generating SWIG-related files fails in autogen.sh --release
