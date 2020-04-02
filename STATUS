@@ -22,6 +22,15 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
+ * r1876016, r1876050
+   Explain SWIG is needed for building Python 2 bindings.
+   Justification:
+     Target of Python bindings SWIG-generated source code in the distribution
+     tarballs will switch to Python 3 in 1.14.0, however we still allow to
+     build bindings for Python 2
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
