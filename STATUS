@@ -32,6 +32,13 @@ Candidate changes:
      +0: danielsh (without r1875973, r1876010)
      -0: danielsh (Missing docstrings: https://mail-archives.apache.org/mod_mbox/subversion-dev/202003.mbox/%3C20200331092329.580085e0%40tarpaulin.shahaf.local2%3E)
 
+ * r1876020
+   Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7
+   Justification:
+     Tests should pass cleanly against latest upstream
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
