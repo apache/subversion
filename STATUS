@@ -31,6 +31,13 @@ Candidate changes:
    Votes:
      +1: futatuki, hartmannathan
 
+ * r1876054
+   Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
+   Justification:
+     Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
+   Votes:
+    +1: stsp
+
 Veto-blocked changes:
 =====================
 
