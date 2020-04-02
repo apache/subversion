@@ -37,14 +37,14 @@ Candidate changes:
    Justification:
      release.py didn't catch this error when 1.14.0-rc1 release was created
    Votes:
-     +1: stsp
+     +1: stsp, jamessan
 
  * r1876054
    Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
    Justification:
      Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
    Votes:
-    +1: stsp
+    +1: stsp, jamessan
 
 Veto-blocked changes:
 =====================
