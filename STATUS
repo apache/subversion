@@ -15,23 +15,6 @@ Status of 1.14.0:
 Candidate changes:
 ==================
 
- * r1875918
-   rep-cache.db insert optimization
-   Justification:
-     Small performance optimization.
-   Votes:
-     +1: stsp, cmpilato
-
- * r1875921, r1875925, r1875973, r1876010
-   Introduce 'svnadmin build-repcache' command.
-   Justification:
-     Low-risk and useful feature addition. It would be nice to get this
-     merged in time for 1.14.0. Else this would have to wait until 1.15.0.
-   Votes:
-     +1: stsp, cmpilato
-     +0: danielsh (without r1875973, r1876010)
-     -0: danielsh (Missing docstrings: https://mail-archives.apache.org/mod_mbox/subversion-dev/202003.mbox/%3C20200331092329.580085e0%40tarpaulin.shahaf.local2%3E)
-
  * r1876020
    Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7
    Justification:
@@ -65,4 +48,20 @@ Approved changes:
      We can no longer create usable release artifacts without this fix.
    Votes:
      +1: stsp, jamessan, cmpilato
+
+ * r1875918
+   rep-cache.db insert optimization
+   Justification:
+     Small performance optimization.
+   Votes:
+     +1: stsp, cmpilato, jamessan
+
+ * r1875921, r1875925, r1875973, r1876010
+   Introduce 'svnadmin build-repcache' command.
+   Justification:
+     Low-risk and useful feature addition. It would be nice to get this
+     merged in time for 1.14.0. Else this would have to wait until 1.15.0.
+   Votes:
+     +1: stsp, cmpilato, jamessan
+     +0: danielsh (without r1875973, r1876010)
 
