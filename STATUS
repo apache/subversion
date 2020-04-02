@@ -29,7 +29,7 @@ Candidate changes:
      tarballs will switch to Python 3 in 1.14.0, however we still allow to
      build bindings for Python 2
    Votes:
-     +1: futatuki
+     +1: futatuki, hartmannathan
 
 Veto-blocked changes:
 =====================
