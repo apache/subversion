@@ -22,21 +22,12 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
- * r1876016, r1876050
-   Explain SWIG is needed for building Python 2 bindings.
-   Justification:
-     Target of Python bindings SWIG-generated source code in the distribution
-     tarballs will switch to Python 3 in 1.14.0, however we still allow to
-     build bindings for Python 2
-   Votes:
-     +1: futatuki, hartmannathan
-
  * r1876054
    Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
    Justification:
      Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
    Votes:
-    +1: stsp
+    +1: stsp, jamessan
 
 Veto-blocked changes:
 =====================
@@ -80,4 +71,13 @@ Approved changes:
    Votes:
      +1: stsp, cmpilato, jamessan
      +0: danielsh (without r1875973, r1876010)
+
+ * r1876016, r1876050
+   Explain SWIG is needed for building Python 2 bindings.
+   Justification:
+     Target of Python bindings SWIG-generated source code in the distribution
+     tarballs will switch to Python 3 in 1.14.0, however we still allow to
+     build bindings for Python 2
+   Votes:
+     +1: futatuki, hartmannathan, jamessan
 
