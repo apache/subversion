@@ -35,7 +35,7 @@ Candidate changes:
    Justification:
      Fix shelf-cmd/shelf2-cmd link errors for svn on Windows
    Votes:
-     +1: jamessan
+     +1: jamessan, stsp
 
 Veto-blocked changes:
 =====================
