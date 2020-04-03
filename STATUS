@@ -22,13 +22,6 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
- * r1876054
-   Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
-   Justification:
-     Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
-   Votes:
-    +1: stsp, jamessan
-
  * r1876068
    Add libsvn_shelf.h and libsvn_shelf2.h to msvc-export, needed for the
    private symbols
@@ -88,4 +81,11 @@ Approved changes:
      build bindings for Python 2
    Votes:
      +1: futatuki, hartmannathan, jamessan
+
+ * r1876054
+   Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
+   Justification:
+     Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
+   Votes:
+    +1: stsp, jamessan, hartmannathan
 
