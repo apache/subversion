@@ -15,13 +15,6 @@ Status of 1.14.0:
 Candidate changes:
 ==================
 
- * r1876020
-   Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7
-   Justification:
-     Tests should pass cleanly against latest upstream
-   Votes:
-     +1: jamessan, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -73,6 +66,13 @@ Approved changes:
      build bindings for Python 2
    Votes:
      +1: futatuki, hartmannathan, jamessan
+
+ * r1876020
+   Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7
+   Justification:
+     Tests should pass cleanly against latest upstream
+   Votes:
+     +1: jamessan, stsp, cmpilato
 
  * r1876054
    Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
