@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1875726
-   Error out if generating SWIG-related files fails in autogen.sh --release
-   Justification:
-     release.py didn't catch this error when 1.14.0-rc1 release was created
-   Votes:
-     +1: stsp, hartmannathan, jamessan
-
  * r1875742, r1875762
    Fix autogen.sh SWIG python bindings generation in --release mode.
    Justification:
