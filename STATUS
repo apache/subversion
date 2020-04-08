@@ -21,15 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1876016, r1876050
-   Explain SWIG is needed for building Python 2 bindings.
-   Justification:
-     Target of Python bindings SWIG-generated source code in the distribution
-     tarballs will switch to Python 3 in 1.14.0, however we still allow to
-     build bindings for Python 2
-   Votes:
-     +1: futatuki, hartmannathan, jamessan
-
  * r1876020
    Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7
    Justification:
