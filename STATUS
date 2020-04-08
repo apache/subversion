@@ -20,11 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1876068
-   Add libsvn_shelf.h and libsvn_shelf2.h to msvc-export, needed for the
-   private symbols
-   Justification:
-     Fix shelf-cmd/shelf2-cmd link errors for svn on Windows
-   Votes:
-     +1: jamessan, stsp, jcorvel
