@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1876020
-   Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7
-   Justification:
-     Tests should pass cleanly against latest upstream
-   Votes:
-     +1: jamessan, stsp, cmpilato
-
  * r1876054
    Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
    Justification:
