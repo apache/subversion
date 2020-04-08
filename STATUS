@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1876054
-   Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
-   Justification:
-     Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
-   Votes:
-    +1: stsp, jamessan, hartmannathan
-
  * r1876068
    Add libsvn_shelf.h and libsvn_shelf2.h to msvc-export, needed for the
    private symbols
