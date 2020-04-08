@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1875742, r1875762
-   Fix autogen.sh SWIG python bindings generation in --release mode.
-   Justification:
-     We can no longer create usable release artifacts without this fix.
-   Votes:
-     +1: stsp, jamessan, cmpilato
-
  * r1875918
    rep-cache.db insert optimization
    Justification:
