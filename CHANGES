@@ -5,13 +5,14 @@
 #   https://subversion.apache.org/issue-XXXX
 
 Version 1.14.0
-(29 Apr 2020, from /branches/1.14.x)
+(6 May 2020, from /branches/1.14.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.14.0
 
  User-visible changes:
   - Minor new features and improvements:
     * Experimental shelving feature is now disabled by default (r1875039)
     * Reinstate support for experimental shelving v2 from SVN 1.11 (r1875037)
+    * Introduce 'svnadmin build-repcache' command (r1875921 et al)
 
   - Client-side improvements and bugfixes:
     * Add 'changelist' option to 'svn info --show-item' (r1869481)
@@ -20,13 +21,16 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
     * Don't abort if the server redirects to a non-canonical URL (r1873375)
     * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
     * Escape filenames when invoking $SVN_EDITOR (r1874057 et al)
+    * Small performance optimization for FSFS rep-cache.db (r1875918)
+    * Fix a crash seen when using git-svn with kwallet (r1875680)
 
   - Server-side improvements and bugfixes:
     * Fix 'svnadmin load --normalize-props' for versioned properties (r1868203)
     * mailer.py: prevent SMTP errors from impeding later emails (issue #1804)
     * mailer.py: Add option to specify the SMTP port to connect to (r1872398)
     * Make svn-backup-dump.py work on Python 3 
-    * validate-files.py: Fix handling for non-ascii characters (r1874393)
+    * validate-files.py: Fix handling for non-ASCII characters (r1874393)
+    * Fix an undefined behavior problem in FSFS caching code (r1876054)
 
  Developer-visible changes:
     * Require at least version 1.5 of APR (r1874094)
@@ -34,6 +38,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
     * Support building with SWIG 4 on Python 3.x (r1869853)
     * Fix svnserveautocheck for Python 3 (r1868151)
     * contribulyze.py: Support Python 3 in addition to Python 2 (r1871211)
+    * Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7 (r1876020)
 
 Version 1.13.0
 (30 Oct 2019, from /branches/1.13.x)
@@ -1324,7 +1329,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * cache: fix premature eviction due to 64-bit underflows (r1567996 et al)
     * svnserve: fix potential integer overflow in Cyrus SASL support (r1570434)
     * bdb: fix potential integer overflow and underflow (r1570701)
-    * bdb: prevent silent propogation of some corruption (r1570778)
+    * bdb: prevent silent propagation of some corruption (r1570778)
     * svnadmin hotcopy: do not corrupt db/current contents when copying old
       FSFS repos (r1603485)
     * svnadmin hotcopy: don't produce broken copies when a concurrent pack
@@ -1584,7 +1589,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
       ranges (r1569731)
     * svn_rangelist_inheritable2() and svn_mergeinfo_inheritable2(): fix a
       pool lifetime issue (r1569764)
-    * new APIs to support cancelation during unified diff output and
+    * new APIs to support cancellation during unified diff output and
       allow the context size to be specified (r1570149 et al)
     * APIs related to retrieving logs are now documented to be unlimited when
       a negative value is passed for the limit (r1570330, 1570335)
@@ -1702,7 +1707,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.9.0
     * swig-py: Add close to the core.Stream class (r1619077)
     * javahl: add example clients that use the authn API (r1640533)
     * swig-py: implement dump stream parser (r1642813)
-    * swig-pl: remove some unneded cleanup code that triggered a cleanup
+    * swig-pl: remove some unneeded cleanup code that triggered a cleanup
       failure on windows (r1643072)
     * swig-pl: make cancel_func, cancel_baton parameter pairs work (r1648852)
     * javahl: expose whitespace diff parameters to blame method (issue #4475)
@@ -2033,7 +2038,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.9
   - Client-side bugfixes:
     * log: use proper peg revision over DAV (r1568872)
     * upgrade: allow upgrading from 1.7 with exclusive locks (r1572102 et al)
-    * proplist: resolve inconsitent inherited property results (r1575270 et al)
+    * proplist: resolve inconsistent inherited property results (r1575270 et al)
     * increase minimal timestamp sleep from 1ms to 10ms (r1581305 et al)
     * merge: automatic merge confused by subtree merge (issue #4481)
     * propget: report proper error on invalid revision for url (r1586255)
@@ -2075,7 +2080,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.9
  Developer-visible changes:
   - General:
     * improve consistency checks of DAV inherited property requests (r1498000)
-    * fix ocassional failure in autoprop_tests.py (r1567752)
+    * fix occasional failure in autoprop_tests.py (r1567752)
     * avoid duplicate sqlite analyze information rows (r1571214)
     * add Mavericks to our sysinfo output (r1573088)
     * bump copyright years to 2014 (r1555403)
@@ -2128,7 +2133,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.8
 
  Developer-visible changes:
   - General:
-    * fix ocassional failure of check_tests.py 12 (r1496127 et al)
+    * fix occasional failure of check_tests.py 12 (r1496127 et al)
     * fix failure with SQLite 3.8.1-3.8.3 when built with
       SQLITE_ENABLE_STAT3/4 due to bug in SQLite (r1567286, r1567392)
     * specify SQLite defaults that can be changed when SQLite is built
@@ -2234,7 +2239,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.3
   - Client- and server-side bugfixes:
     * translation updates for Swedish
     * enforce strict version equality between tools and libraries (r1502267)
-    * consistently output revisions as "r%ld" in error messags (r1499044 et al)
+    * consistently output revisions as "r%ld" in error messages (r1499044 et al)
 
   - Client-side bugfixes:
     * status: always use absolute paths in XML output (issue #4398)
@@ -2813,7 +2818,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.18
 
  Developer-visible changes:
   - General:
-    * fix ocassional failure in checkout_tests.py test 12. (r1496127)
+    * fix occasional failure in checkout_tests.py test 12. (r1496127)
     * disable building ZLib's assembly optimizations on Windows.
 
 
@@ -3428,7 +3433,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: wc-to-wc copy of a switch source (issue #1802)
     * fixed: 'svn st' reports symlinks as obstructed items (issue #2284)
     * fixed: 'cd e:\; svn up e:\' fails (issue #2556)
-    * fixed: svn aborts on commiting from root dir on windows (issue #3346)
+    * fixed: svn aborts on committing from root dir on windows (issue #3346)
     * fixed: removing a dir scheduled for deletion corrupts wc (issue #2741)
     * fixed: 'svn cleanup' fails on obstructed paths (issue #2867)
     * fixed: case-only renames resulting from merges don't work (issue #3115)
@@ -3465,7 +3470,7 @@ the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
     * fixed: 'svn info' returns parent info on missing dirs (issue #3178)
     * fixed: spurious prop conflict with 'merge --reintegrate' (issue #3919)
     * fixed: 'svn --version' fails with non-existent $HOME (issue #3947)
-    * fixed: unforced export silently overwites existing file (issue #3799)
+    * fixed: unforced export silently overwrites existing file (issue #3799)
     * fixed: reverse merge which adds subtree mergeinfo fails (issue #3978)
     * fixed: 'svn up -r{R>HEAD}' hangs client over ra_svn (issue #3963)
     * fixed: 'svn up' updates file externals in target siblings (issue #3819)
@@ -3809,7 +3814,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.11
  Developer-visible changes:
   * disable checks for wc-ng working copies when running the test suite
   * on Windows, don't ignore move operation error codes (r896915)
-  * more precise reporting of errors occuring with sqlite init (r927323, -8)
+  * more precise reporting of errors occurring with sqlite init (r927323, -8)
   * ensure rangelist APIs are commutative (r923389, -91)
 
 
@@ -7172,7 +7177,7 @@ Version 0.9 (released 15 Feb 2002, revision 1302)
     - no more 'path styles' in path library
     - rewrite bootstrapping code for python test framework
     - rewrite commandline app's help-system and alias-system
-    - feedback table replaced with notfication callback
+    - feedback table replaced with notification callback
     - rewrite sorting of hashes
     - svnadmin internal rewrite
     - faster post-update processing
