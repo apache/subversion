@@ -21,15 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1875921, r1875925, r1875973, r1876010
-   Introduce 'svnadmin build-repcache' command.
-   Justification:
-     Low-risk and useful feature addition. It would be nice to get this
-     merged in time for 1.14.0. Else this would have to wait until 1.15.0.
-   Votes:
-     +1: stsp, cmpilato, jamessan
-     +0: danielsh (without r1875973, r1876010)
-
  * r1876016, r1876050
    Explain SWIG is needed for building Python 2 bindings.
    Justification:

@@ -893,6 +893,16 @@ SVN_ERROR_START
              SVN_ERR_FS_CATEGORY_START + 68,
              "Unrecognized filesystem I/O control code")
 
+  /** @since New in 1.14. */
+  SVN_ERRDEF(SVN_ERR_FS_REP_SHARING_NOT_ALLOWED,
+             SVN_ERR_FS_CATEGORY_START + 69,
+             "Rep-sharing is not allowed.")
+
+  /** @since New in 1.14. */
+  SVN_ERRDEF(SVN_ERR_FS_REP_SHARING_NOT_SUPPORTED,
+             SVN_ERR_FS_CATEGORY_START + 70,
+             "Rep-sharing is not supported.")
+
   /* repos errors */
 
   SVN_ERRDEF(SVN_ERR_REPOS_LOCKED,

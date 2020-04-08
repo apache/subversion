@@ -35,6 +35,8 @@
 #include "private/svn_subr_private.h"
 
 #include "../../libsvn_fs_fs/index.h"
+#include "../../libsvn_fs_fs/rep-cache.h"
+#include "../../libsvn_fs/fs-loader.h"
 
 #include "../svn_test_fs.h"
 
@@ -440,6 +442,63 @@ load_index(const svn_test_opts_t *opts, apr_pool_t *pool)
 
 #undef REPO_NAME
 
+/* ------------------------------------------------------------------------ */
+
+static svn_error_t *
+build_rep_cache(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  fs_fs_data_t *ffd;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_revnum_t rev;
+  svn_boolean_t exists;
+  const char *fs_path;
+  svn_fs_fs__ioctl_build_rep_cache_input_t input = {0};
+
+  /* Bail (with success) on known-untestable scenarios */
+  if (strcmp(opts->fs_type, "fsfs") != 0)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "this will test FSFS repositories only");
+
+  if (opts->server_minor_version && (opts->server_minor_version < 6))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "pre-1.6 SVN doesn't support FSFS rep-sharing");
+
+  /* Create a filesystem and explicitly disable rep-sharing. */
+  fs_path = "test-repo-build-rep-cache-test";
+  SVN_ERR(svn_test__create_fs2(&fs, fs_path, opts, NULL, pool));
+  ffd = fs->fsap_data;
+  ffd->rep_sharing_allowed = FALSE;
+
+  /* Add the Greek tree. */
+  SVN_ERR(svn_fs_begin_txn(&txn, fs, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_test__create_greek_tree(txn_root, pool));
+  SVN_ERR(svn_fs_commit_txn(NULL, &rev, txn, pool));
+  SVN_TEST_ASSERT(SVN_IS_VALID_REVNUM(rev));
+
+  /* Make sure the rep-cache does not exist. */
+  SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
+  SVN_TEST_ASSERT(!exists);
+
+  /* Build and verify the rep-cache. */
+  ffd->rep_sharing_allowed = TRUE;
+
+  input.start_rev = rev;
+  input.end_rev = rev;
+  SVN_ERR(svn_fs_ioctl(fs, SVN_FS_FS__IOCTL_BUILD_REP_CACHE,
+                       &input, NULL, NULL, NULL, pool, pool));
+
+  SVN_ERR(svn_fs_fs__exists_rep_cache(&exists, fs, pool));
+  SVN_TEST_ASSERT(exists);
+
+  SVN_ERR(svn_fs_verify(fs_path, NULL, 0, SVN_INVALID_REVNUM,
+                        NULL, NULL, NULL, NULL, pool));
+
+  return SVN_NO_ERROR;
+}
+
 
 
 /* The test table.  */
@@ -455,6 +514,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "dump the P2L index"),
     SVN_TEST_OPTS_PASS(load_index,
                        "load the P2L index"),
+    SVN_TEST_OPTS_PASS(build_rep_cache,
+                       "build the representation cache"),
     SVN_TEST_NULL
   };
 
