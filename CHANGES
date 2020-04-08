@@ -16,6 +16,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
   - Minor new features and improvements:
     * Experimental shelving feature is now disabled by default (r1875039)
     * Reinstate support for experimental shelving v2 from SVN 1.11 (r1875037)
+    * Introduce 'svnadmin build-repcache' command (r1875921 et al)
 
   - Client-side improvements and bugfixes:
     * Add 'changelist' option to 'svn info --show-item' (r1869481)
@@ -24,6 +25,8 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
     * Don't abort if the server redirects to a non-canonical URL (r1873375)
     * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
     * Escape filenames when invoking $SVN_EDITOR (r1874057 et al)
+    * Small performance optimization for FSFS rep-cache.db (r1875918)
+    * Fix a crash seen when using git-svn with kwallet (r1875680)
 
   - Server-side improvements and bugfixes:
     * Fix 'svnadmin load --normalize-props' for versioned properties (r1868203)
@@ -31,6 +34,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
     * mailer.py: Add option to specify the SMTP port to connect to (r1872398)
     * Make svn-backup-dump.py work on Python 3 
     * validate-files.py: Fix handling for non-ASCII characters (r1874393)
+    * Fix an undefined behavior problem in FSFS caching code (r1876054)
 
  Developer-visible changes:
     * Require at least version 1.5 of APR (r1874094)
@@ -38,6 +42,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.0
     * Support building with SWIG 4 on Python 3.x (r1869853)
     * Fix svnserveautocheck for Python 3 (r1868151)
     * contribulyze.py: Support Python 3 in addition to Python 2 (r1871211)
+    * Fix Proc.new warnings in Ruby bindings with Ruby >= 2.7 (r1876020)
 
 Version 1.13.0
 (30 Oct 2019, from /branches/1.13.x)
