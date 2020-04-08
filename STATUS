@@ -21,13 +21,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1875680
-   Construct KAboutData using QString rather than QStringLiteral
-   Justification:
-     Fixes a crash seen when using git-svn with kwallet
-   Votes:
-     +1: jamessan, stsp, cmpilato
-
  * r1875726
    Error out if generating SWIG-related files fails in autogen.sh --release
    Justification:
@@ -88,4 +81,3 @@ Approved changes:
      Fix shelf-cmd/shelf2-cmd link errors for svn on Windows
    Votes:
      +1: jamessan, stsp, jcorvel
-
