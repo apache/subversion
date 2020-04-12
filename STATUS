@@ -15,6 +15,14 @@ Status of 1.14.0:
 Candidate changes:
 ==================
 
+ * r1876410
+   Fix the .editorconfig stanza for Makefile's.
+   Justification:
+     Make $EDITOR do the right thing on any backport branches we may create
+     off this stabilization branch.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
