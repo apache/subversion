@@ -511,7 +511,9 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('top_srcdir = .\n')
     standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
-    standalone.write('SWIG_PY_OPTS = -python -py3 -nofastunpack -modern\n')
+    swig_py_opts = os.environ.get('SWIG_PY_OPTS',
+                                  '-python -py3 -nofastunpack -modern')
+    standalone.write('SWIG_PY_OPTS = %s\n' % (swig_py_opts))
     standalone.write('PYTHON = ' + sys.executable + '\n')
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
