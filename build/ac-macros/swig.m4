@@ -151,38 +151,44 @@ AC_DEFUN(SVN_FIND_SWIG,
           ])
           SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
 
-          AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
-            ac_cv_python_is_py3="no"
-            $PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
-               ac_cv_python_is_py3="yes"
-          ])
-
-          if test "$ac_cv_python_is_py3" = "yes"; then
-            if test "$SWIG_VERSION" -ge "300010"; then
-              dnl SWIG Python bindings successfully configured, clear the error message dnl
-              SWIG_PY_ERRMSG=""
-            else
-              SWIG_PY_ERRMSG="SWIG version is not suitable"
-              AC_MSG_WARN([Subversion Python bindings for Python 3 require SWIG 3.0.10 or newer])
-            fi
-            if test "$SWIG_VERSION" -lt "400000"; then
-              SWIG_PY_OPTS="-python -py3 -nofastunpack -modern"
-            else
-              SWIG_PY_OPTS="-python -py3 -nofastunpack"
-            fi
+          if test "$SWIG" = "none"; then
+            SWIG_PY_ERRMSG=""
           else
-            if test "$SWIG_VERSION" -lt "400000"; then
-              SWIG_PY_OPTS="-python -classic"
-              dnl SWIG Python bindings successfully configured, clear the error message dnl
-              SWIG_PY_ERRMSG=""
+            # Look more closely at the SWIG and Python versions to
+            # determine SWIG_PY_OPTS. We can skip this if we already
+            # have the SWIG-generated files.
+            AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
+              ac_cv_python_is_py3="no"
+              $PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
+                 ac_cv_python_is_py3="yes"
+            ])
+  
+            if test "$ac_cv_python_is_py3" = "yes"; then
+              if test "$SWIG_VERSION" -ge "300010"; then
+                dnl SWIG Python bindings successfully configured, clear the error message dnl
+                SWIG_PY_ERRMSG=""
+              else
+                SWIG_PY_ERRMSG="SWIG version is not suitable"
+                AC_MSG_WARN([Subversion Python bindings for Python 3 require SWIG 3.0.10 or newer])
+              fi
+              if test "$SWIG_VERSION" -lt "400000"; then
+                SWIG_PY_OPTS="-python -py3 -nofastunpack -modern"
+              else
+                SWIG_PY_OPTS="-python -py3 -nofastunpack"
+              fi
             else
-              SWIG_PY_OPTS="-python -nofastunpack"
-              SWIG_PY_ERRMSG="SWIG version is not suitable"
-              AC_MSG_WARN([Subversion Python bindings for Python 2 require 1.3.24 <= SWIG < 4.0.0])
+              if test "$SWIG_VERSION" -lt "400000"; then
+                SWIG_PY_OPTS="-python -classic"
+                dnl SWIG Python bindings successfully configured, clear the error message dnl
+                SWIG_PY_ERRMSG=""
+              else
+                SWIG_PY_OPTS="-python -nofastunpack"
+                SWIG_PY_ERRMSG="SWIG version is not suitable"
+                AC_MSG_WARN([Subversion Python bindings for Python 2 require 1.3.24 <= SWIG < 4.0.0])
+              fi
             fi
           fi
         fi
-            
       fi
     fi
 
