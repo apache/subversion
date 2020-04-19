@@ -1923,7 +1923,7 @@ def _run_and_verify_resolve(cmd, expected_paths, *args):
         "Merge conflicts in '" + path + "' marked as resolved.\n" for path in
         expected_paths]),
       verify.UnorderedRegexListOutput([
-        "Conflict in property.*at '" + path + "' marked as resolved.\n" \
+        "Conflict in property.*at '" + re.escape(path) + "' marked as resolved.\n" \
         for path in expected_paths]),
       verify.UnorderedOutput([
         "Tree conflict at '" + path + "' marked as resolved.\n" for path in
