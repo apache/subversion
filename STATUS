@@ -23,6 +23,14 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1877072
+   svnmucc: Change an error message to state another possible cause of the
+   error.
+   Justification:
+     Error messages should be accurate.  User reported (issue #4854).
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
