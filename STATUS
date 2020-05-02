@@ -33,7 +33,7 @@ Candidate changes:
 
 * r1877259
     Move variable declarations to the start of block the to fix
-    syntax errors with VC9 (Visual Studio 8).
+    syntax errors with VC9 (Visual Studio 2008).
   Justification:
     Our code should be C90.
   Votes:
