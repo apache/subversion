@@ -608,7 +608,7 @@ def match_empty_prefix(sbox):
                                                              '--quiet',
                                                              *dumpargs)
     if filtered_err:
-      raise verify.UnexpectedStderr(filtered_err)
+      raise svntest.verify.UnexpectedStderr(filtered_err)
 
     # Load the filtered dump into a repo and check the result
     sbox.build(empty=True)
