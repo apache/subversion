@@ -902,8 +902,6 @@ def run_entriesdump(path):
     ### report on this? or continue to just skip it?
     return None
 
-  class Entry(object):
-    pass
   entries = { }
   exec(''.join(filter_dbg(stdout_lines)))
   return entries
@@ -927,8 +925,6 @@ def run_entriesdump_tree(path):
     ### report on this? or continue to just skip it?
     return None
 
-  class Entry(object):
-    pass
   dirs = { }
   exec(''.join(filter_dbg(stdout_lines)))
   return dirs
