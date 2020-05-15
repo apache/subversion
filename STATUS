@@ -43,5 +43,14 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+Changes that are approved for 1.14.1:
+=====================================
+
+ * r1877788
+   Fix a broken link in a docstring.
+   Votes:
+     +1: danielsh (after 1.14.0)
+
 Approved changes:
 =================
+
