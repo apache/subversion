@@ -143,6 +143,7 @@ Step 2:  Build and Install Subversion.
 
   Make sure that Subversion's ./configure script sees your installed SWIG!
   It tries to detect SWIG near the very end of its output.
+  You can find it by running 'grep "^SWIG=" config.log'.
 
   Also make sure that the configure script sees the paths to the perl and/or
   python executable you used to configure SWIG as above.  If it does not then
