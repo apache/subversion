@@ -46,7 +46,8 @@ USE_HTTPV1 ?= no
 USE_AUTHZ_SHORT_CIRCUIT ?= no
 RAMDISK ?= /ramdisk
 MAKE_JOBS ?= 4
-SVN_CHECK_FS_BACKENDS ?= fsfs bdb
+# available backends: fsfs fsx bdb
+SVN_CHECK_FS_BACKENDS ?= fsfs
 
 PWD		= $(shell pwd)
 UNAME		= $(shell uname)
