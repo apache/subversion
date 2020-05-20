@@ -1096,7 +1096,7 @@ def bump_versions_on_branch(args):
                                    universal_newlines=True).strip()
     HEAD = int(HEAD)
     def file_object_for(relpath):
-        fd = tempfile.NamedTemporaryFile()
+        fd = tempfile.NamedTemporaryFile(mode='w+', encoding='UTF-8')
         url = branch_url + '/' + relpath
         fd.url = url
         subprocess.check_call(['svn', 'cat', '%s@%d' % (url, HEAD)],
