@@ -21,7 +21,7 @@ Candidate changes:
      Make $EDITOR do the right thing on any backport branches we may create
      off this stabilization branch.
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
  * r1877072
    svnmucc: Change an error message to state another possible cause of the
@@ -29,7 +29,7 @@ Candidate changes:
    Justification:
      Error messages should be accurate.  User reported (issue #4854).
    Votes:
-     +1: danielsh
+     +1: danielsh, stsp
 
 * r1877259
     Move variable declarations to the start of block the to fix
@@ -37,7 +37,7 @@ Candidate changes:
   Justification:
     Our code should be C90.
   Votes:
-    +1: brane
+    +1: brane, stsp
     +0: danielsh (from dev@)
 
  * r1877960
@@ -46,19 +46,15 @@ Candidate changes:
    Justification:
      We've not entirely dropped Python 2 bindings support on 1.14.x yet
    Votes:
-     +1: futatuki
+     +1: futatuki, stsp
 
 Veto-blocked changes:
 =====================
 
-Changes that are approved for 1.14.1:
-=====================================
+Approved changes:
+=================
 
  * r1877788
    Fix a broken link in a docstring.
    Votes:
-     +1: danielsh (after 1.14.0)
-
-Approved changes:
-=================
-
+     +1: danielsh, stsp
