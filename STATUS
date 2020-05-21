@@ -53,8 +53,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1877788
-   Fix a broken link in a docstring.
-   Votes:
-     +1: danielsh, stsp
