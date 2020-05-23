@@ -50,6 +50,8 @@ fill_dirent(svn_dirent_t *dirent,
 
   if (dirent->kind == svn_node_file)
     SVN_ERR(svn_fs_file_length(&(dirent->size), root, path, scratch_pool));
+  else
+    dirent->size = SVN_INVALID_FILESIZE;
 
   SVN_ERR(svn_fs_node_has_props(&dirent->has_props, root, path,
                                 scratch_pool));
@@ -322,7 +324,7 @@ svn_repos_list(svn_fs_root_t *root,
   svn_membuf__create(&scratch_buffer, 256, scratch_pool);
 
   /* Actually report PATH, if it passes the filters. */
-  if (matches_any(svn_dirent_dirname(path, scratch_pool), patterns,
+  if (matches_any(svn_dirent_basename(path, scratch_pool), patterns,
                   &scratch_buffer))
     SVN_ERR(report_dirent(root, path, kind, path_info_only,
                           receiver, receiver_baton, scratch_pool));

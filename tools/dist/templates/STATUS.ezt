@@ -1,0 +1,24 @@
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+      *                                                     *
+      *  THIS RELEASE STREAM IS OPEN FOR STABILIZATION.     *
+      *                                                     *
+      * * * * * * * * * * * * * * * * * * * * * * * * * * * *
+
+This file tracks the status of releases in the [major-minor].x line.
+
+See http://subversion.apache.org/docs/community-guide/releasing.html#release-stabilization
+for details on how release lines and voting work, what kinds of bugs can
+delay a release, etc.
+
+Status of [major-minor-patch]:
+
+Candidate changes:
+==================
+
+
+Veto-blocked changes:
+=====================
+
+
+Approved changes:
+=================

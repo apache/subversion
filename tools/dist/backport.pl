@@ -9,11 +9,11 @@ use v5.10.0; # needed for $^V
 # experimental and "subject to change" in v5.18 (see perl5180delta).  Every
 # use of it now triggers a warning.
 #
-# As of Perl v5.24.1, the semantics of given/when provided by Perl are
+# As of Perl v5.30.0, the semantics of given/when provided by Perl are
 # compatible with those expected by the script, so disable the warning for
 # those Perls.  But don't try to disable the the warning category on Perls
 # that don't know that category, since that breaks compilation.
-no if (v5.17.0 le $^V and $^V le v5.24.1),
+no if (v5.17.0 le $^V and $^V le v5.30.0),
    warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -157,7 +157,7 @@ N:   Move to the next entry.  Do not prompt for the current entry again, even
      revisions added, justification changed) in the repository.
      (This is a local action that will not affect other people or bots.)
  :   Move to the next entry.  Prompt for the current entry again in the next
-     run of backport.pl. 
+     run of backport.pl.
      (That's a space character, ASCII 0x20.)
 ?:   Display this list.
 EOF
@@ -231,7 +231,7 @@ Both batch modes also perform a basic sanity-check on entries that declare
 backport branches (via the "Branch:" header): if a backport branch is used, but
 at least one of the revisions enumerated in the entry title had neither been
 merged from $TRUNK to the branch root, nor been committed
-directly to the backport branch, the hourly bot will turn red and 
+directly to the backport branch, the hourly bot will turn red and
 nightly bot will skip the entry and email its admins.  (The nightly bot does
 not email the list on failure, since it doesn't use buildbot.)
 
@@ -261,6 +261,9 @@ The revisions argument may contain arbitrary text (besides the revision
 numbers); it will be ignored.  For example,
     $0 "Committed revision 42." "\$Some_justification"
 will nominate r42.
+
+Revision numbers within the last thousand revisions may be specified using
+the last three digits only.
 
 The justification can be an arbitrarily-long string; if it is wider than the
 available width, this script will wrap it for you (and allow you to review
@@ -567,7 +570,7 @@ sub parse_entry {
   my (@revisions, @logsummary, $branch, @votes);
   # @lines = @_;
 
-  # strip spaces to match up with the indention
+  # strip spaces to match up with the indentation
   $_[0] =~ s/^( *)\* //;
   my $indentation = ' ' x (length($1) + 2);
   s/^$indentation// for @_;
@@ -791,7 +794,7 @@ sub vote {
 
     # Add to state votes that aren't '+0' or 'edit'
     $state->{$_->{digest}}++ for grep
-                                   +{ qw/-1 t -0 t +1 t/ }->{$_->{vote}},
+                                 +($_->{approval} or $_->{vote} =~ /^(-1|-0|[+]1)$/),
                                  @votesarray;
   }
 }
@@ -1027,7 +1030,7 @@ sub handle_entry {
     # the "next PROMPT;" is; there's a "last;" at the end of the loop body.
     PROMPT: while (1) {
     say "";
-    say "\n>>> $entry{header_start}:";
+    say "\n\e\x5b32m>>> $entry{header_start}:\e\x5b0m";
     say join ", ", map { "r$_" } @{$entry{revisions}} if @{$entry{revisions}};
     say "$BRANCHES/$entry{branch}" if $entry{branch};
     say "--accept=$entry{accept}" if $entry{accept};
@@ -1196,7 +1199,7 @@ sub backport_main {
     given ($lines[0]) {
       # Section header
       when (/^[A-Z].*:$/i) {
-        say "\n\n=== $lines[0]" unless $YES;
+        say "\n\n\e\x5b33m\e\x5b1m=== $lines[0]\e\x5b0m" unless $YES;
         $in_approved = $lines[0] =~ /^Approved changes/;
       }
       # Comment
@@ -1238,6 +1241,20 @@ sub nominate_main {
 
   die "Unable to proceed." if warned_cannot_commit "Nominating failed";
 
+  # To save typing, require just the last three digits if they're unambiguous.
+  my $BASE_revision = `$SVN info --show-item=revision` + 0;
+  if ($BASE_revision > 1000) {
+    my $residue = $BASE_revision % 1000;
+    my $thousands = $BASE_revision - $residue;
+    @revnums = map {
+      $_ >= 1000
+        ? $_
+        : $thousands + $_ - 1000 * ($_ > $residue)
+      }
+      @revnums;
+  }
+
+  # Deduplicate and sort
   @revnums = sort { $a <=> $b } keys %{{ map { $_ => 1 } @revnums }};
   die "No revision numbers specified" unless @revnums;
 
@@ -1279,7 +1296,7 @@ sub nominate_main {
   # Open the file in line-mode (not paragraph-mode).
   my @STATUS;
   tie @STATUS, "Tie::File", $STATUS, recsep => "\n";
-  my ($index) = grep { $STATUS[$_] =~ /^Veto/ } (0..$#STATUS);
+  my ($index) = grep { $STATUS[$_] =~ /^Veto|^Approved/ } (0..$#STATUS);
   die "Couldn't find where to add an entry" unless $index;
 
   # Add an empty line if needed.
@@ -1297,7 +1314,8 @@ sub nominate_main {
   # Done!
   system "$SVN diff -- $STATUS";
   if (prompt "Commit this nomination? ") {
-    system "$SVN commit -m '* STATUS: Nominate r$revnums[0].' -- $STATUS";
+    my $header = join ', ', map "r$_", @revnums;
+    system "$SVN commit -m '* STATUS: Nominate $header.' -- $STATUS";
     exit $?;
   }
   elsif (!$had_local_mods or prompt "Revert STATUS (destroying local mods)? ") {

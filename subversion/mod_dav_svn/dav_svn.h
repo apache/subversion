@@ -205,7 +205,7 @@ typedef struct dav_svn_root {
   */
   const char *activity_id;
 
-  /* If the root is part of a transaction, this contains the FS's tranaction
+  /* If the root is part of a transaction, this contains the FS's transaction
      name. It may be NULL if this root corresponds to a specific revision.
      It may also be NULL if we have not opened the root yet.
 
@@ -303,6 +303,9 @@ struct dav_resource_private {
   /* whether this resource parameters are fixed and won't change
      between requests. */
   svn_boolean_t idempotent;
+
+  /* resource is accessed by 'public' uri (not under "!svn") */
+  svn_boolean_t is_public_uri;
 };
 
 
@@ -358,10 +361,6 @@ svn_boolean_t dav_svn__get_list_parentpath_flag(request_rec *r);
    account the support level expected of based on the specified
    master server version (if provided via SVNMasterVersion).  */
 svn_boolean_t dav_svn__check_httpv2_support(request_rec *r);
-
-/* For the repository referred to by this request, should ephemeral
-   txnprop support be advertised?  */
-svn_boolean_t dav_svn__check_ephemeral_txnprops_support(request_rec *r);
 
 
 
@@ -705,6 +704,7 @@ static const dav_report_elem dav_svn__reports_list[] = {
   { SVN_XML_NAMESPACE, "get-deleted-rev-report" },
   { SVN_XML_NAMESPACE, SVN_DAV__MERGEINFO_REPORT },
   { SVN_XML_NAMESPACE, SVN_DAV__INHERITED_PROPS_REPORT },
+  { SVN_XML_NAMESPACE, "list-report" },
   { NULL, NULL },
 };
 
@@ -756,6 +756,11 @@ dav_error *
 dav_svn__get_inherited_props_report(const dav_resource *resource,
                                     const apr_xml_doc *doc,
                                     dav_svn__output *output);
+
+dav_error *
+dav_svn__list_report(const dav_resource *resource,
+                     const apr_xml_doc *doc,
+                     dav_svn__output *output);
 
 /*** posts/ ***/
 
@@ -1104,7 +1109,7 @@ int dav_svn__parse_request_skel(svn_skel_t **skel, request_rec *r,
 /* Set *YOUNGEST_P to the number of the youngest revision in REPOS.
  *
  * Youngest revision will be cached in REPOS->YOUNGEST_REV to avoid
- * fetching the youngest revision multiple times during proccessing
+ * fetching the youngest revision multiple times during processing
  * the request.
  *
  * Uses SCRATCH_POOL for temporary allocations.
@@ -1113,6 +1118,19 @@ svn_error_t *
 dav_svn__get_youngest_rev(svn_revnum_t *youngest_p,
                           dav_svn_repos *repos,
                           apr_pool_t *scratch_pool);
+
+/* Return the liveprop-encoded form of AUTHOR, allocated in RESULT_POOL.
+ * If IS_SVN_CLIENT is set, assume that the data will be sent to a SVN
+ * client.  This mainly sanitizes AUTHOR strings with control chars in
+ * them without converting them to escape sequences etc.
+ *
+ * Use SCRATCH_POOL for temporary allocations.
+ */
+const char *
+dav_svn__fuzzy_escape_author(const char *author,
+                             svn_boolean_t is_svn_client,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
 
 /*** mirror.c ***/
 

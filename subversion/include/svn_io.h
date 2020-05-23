@@ -2410,10 +2410,12 @@ svn_io_write_atomic2(const char *final_path,
                      apr_pool_t *scratch_pool);
 
 /** Similar to svn_io_write_atomic2(), but with @a flush_to_disk set
-* to @c TRUE.
-*
-* @deprecated Provided for backward compatibility with the 1.9 API
-*/
+ * to @c TRUE.
+ *
+ * @since New in 1.9.
+ *
+ * @deprecated Provided for backward compatibility with the 1.9 API
+ */
 SVN_DEPRECATED
 svn_error_t *
 svn_io_write_atomic(const char *final_path,

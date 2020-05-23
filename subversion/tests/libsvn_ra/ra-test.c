@@ -62,7 +62,8 @@ make_and_open_repos(svn_ra_session_t **session,
                                   pool, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
-  SVN_ERR(svn_ra_open4(session, NULL, url, NULL, cbtable, NULL, NULL, pool));
+  SVN_ERR(svn_ra_open5(session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
+                       pool));
 
   return SVN_NO_ERROR;
 }
@@ -91,6 +92,41 @@ commit_changes(svn_ra_session_t *session,
   SVN_ERR(editor->close_directory(dir_baton, pool));
   SVN_ERR(editor->close_directory(root_baton, pool));
   SVN_ERR(editor->close_edit(edit_baton, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Commit two revisions: add 'B', then delete 'A' */
+static svn_error_t *
+commit_two_changes(svn_ra_session_t *session,
+                   apr_pool_t *pool)
+{
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton, *dir_baton;
+
+  /* mkdir B */
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    revprop_table,
+                                    NULL, NULL, NULL, TRUE, pool));
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->add_directory("B", root_baton, NULL, SVN_INVALID_REVNUM,
+                               pool, &dir_baton));
+  SVN_ERR(editor->close_directory(dir_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* delete A */
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    revprop_table,
+                                    NULL, NULL, NULL, TRUE, pool));
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->delete_entry("A", SVN_INVALID_REVNUM, root_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -352,7 +388,7 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
                                          NULL, NULL, NULL, pool));
 
   b->last_check = TRUE;
-  SVN_TEST_ASSERT_ERROR(svn_ra_open4(&session, NULL,
+  SVN_TEST_ASSERT_ERROR(svn_ra_open5(&session, NULL, NULL,
                                      "svn+foo://localhost/no-repo",
                                      NULL, cbtable, NULL, NULL, pool),
                         SVN_ERR_RA_CANNOT_CREATE_SESSION);
@@ -395,7 +431,7 @@ tunnel_callback_test(const svn_test_opts_t *opts,
                                          NULL, NULL, NULL, pool));
 
   b->last_check = FALSE;
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
                         scratch_pool));
   SVN_TEST_ASSERT(b->last_check);
   SVN_TEST_ASSERT(b->open_count > 0);
@@ -427,17 +463,7 @@ lock_cb(void *baton,
   struct lock_result_t *result = apr_palloc(b->pool,
                                             sizeof(struct lock_result_t));
 
-  if (lock)
-    {
-      result->lock = apr_palloc(b->pool, sizeof(svn_lock_t));
-      *result->lock = *lock;
-      result->lock->path = apr_pstrdup(b->pool, lock->path);
-      result->lock->token = apr_pstrdup(b->pool, lock->token);
-      result->lock->owner = apr_pstrdup(b->pool, lock->owner);
-      result->lock->comment = apr_pstrdup(b->pool, lock->comment);
-    }
-  else
-    result->lock = NULL;
+  result->lock = svn_lock_dup(lock, b->pool);
   result->err = ra_err;
 
   svn_hash_sets(b->results, apr_pstrdup(b->pool, path), result);
@@ -1566,7 +1592,7 @@ tunnel_run_checkout(const svn_test_opts_t *opts,
 
   b->last_check = FALSE;
 
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
                        scratch_pool));
 
   SVN_ERR(commit_changes(session, pool));
@@ -1636,16 +1662,16 @@ commit_empty_last_change(const svn_test_opts_t *opts,
       SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
                                         revprop_table,
                                         NULL, NULL, NULL, TRUE, tmp_pool));
-      
+
       SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
       SVN_ERR(editor->close_directory(root_baton, tmp_pool));
       SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
-      
+
       SVN_ERR(svn_ra_stat(session, "", 2+i, &dirent, tmp_pool));
-      
+
       SVN_TEST_ASSERT(dirent != NULL);
       SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
-      
+
       /* BDB used to only updates last_changed on the repos_root when there
          was an actual change. Now all filesystems behave in the same way */
       SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
@@ -1678,6 +1704,175 @@ commit_empty_last_change(const svn_test_opts_t *opts,
   }
 
   svn_pool_destroy(tmp_pool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+commit_locked_file(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  const char *url;
+  svn_ra_callbacks2_t *cbtable;
+  svn_ra_session_t *session;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton;
+  void *file_baton;
+  struct lock_result_t *lock_result;
+  apr_hash_t *lock_tokens;
+  svn_txdelta_window_handler_t handler;
+  void *handler_baton;
+  svn_revnum_t fetched_rev;
+  apr_hash_t *fetched_props;
+  const svn_string_t *propval;
+
+  SVN_ERR(svn_test__create_repos2(NULL, &url, NULL,
+                                  "test-repo-commit-locked-file-test",
+                                  opts, pool, pool));
+
+  SVN_ERR(svn_ra_initialize(pool));
+  SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
+  SVN_ERR(svn_test__init_auth_baton(&cbtable->auth_baton, pool));
+
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable,
+                       NULL, NULL, pool));
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    apr_hash_make(pool),
+                                    NULL, NULL, NULL, TRUE, pool));
+  /* Add a file. */
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->add_file("file", root_baton, NULL, SVN_INVALID_REVNUM,
+                           pool, &file_baton));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* Acquire a lock on this file. */
+  {
+    struct lock_baton_t baton = {0};
+    svn_revnum_t rev = 1;
+    apr_hash_t *lock_targets;
+
+    baton.results = apr_hash_make(pool);
+    baton.pool = pool;
+
+    lock_targets = apr_hash_make(pool);
+    svn_hash_sets(lock_targets, "file", &rev);
+    SVN_ERR(svn_ra_lock(session, lock_targets, "comment", FALSE,
+                        lock_cb, &baton, pool));
+
+    SVN_ERR(expect_lock("file", baton.results, session, pool));
+    lock_result = svn_hash_gets(baton.results, "file");
+  }
+
+  /* Open a new session using the file parent's URL. */
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable,
+                       NULL, NULL, pool));
+
+  /* Create a new commit editor supplying our lock token. */
+  lock_tokens = apr_hash_make(pool);
+  svn_hash_sets(lock_tokens, "file", lock_result->lock->token);
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL, NULL,
+                                    lock_tokens, TRUE, pool));
+  /* Edit the locked file. */
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->open_file("file", root_baton, SVN_INVALID_REVNUM, pool,
+                            &file_baton));
+  SVN_ERR(editor->apply_textdelta(file_baton, NULL, pool, &handler,
+                                  &handler_baton));
+  SVN_ERR(svn_txdelta_send_string(svn_string_create("A", pool),
+                                  handler, handler_baton, pool));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* Check the result. */
+  SVN_ERR(svn_ra_get_file(session, "file", SVN_INVALID_REVNUM, NULL,
+                          &fetched_rev, NULL, pool));
+  SVN_TEST_INT_ASSERT((int) fetched_rev, 2);
+
+  /* Change property of the locked file. */
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    apr_hash_make(pool), NULL, NULL,
+                                    lock_tokens, TRUE, pool));
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->open_file("file", root_baton, SVN_INVALID_REVNUM, pool,
+                            &file_baton));
+  SVN_ERR(editor->change_file_prop(file_baton, "propname",
+                                   svn_string_create("propval", pool),
+                                   pool));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* Check the result. */
+  SVN_ERR(svn_ra_get_file(session, "file", SVN_INVALID_REVNUM, NULL,
+                          &fetched_rev, &fetched_props, pool));
+  SVN_TEST_INT_ASSERT((int) fetched_rev, 3);
+  propval = svn_hash_gets(fetched_props, "propname");
+  SVN_TEST_ASSERT(propval);
+  SVN_TEST_STRING_ASSERT(propval->data, "propval");
+
+  return SVN_NO_ERROR;
+}
+
+/* Cases of 'get-deleted-rev' that should return SVN_INVALID_REVNUM. */
+static svn_error_t *
+test_get_deleted_rev_no_delete(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_revnum_t revision_deleted;
+
+  SVN_ERR(make_and_open_repos(&ra_session,
+                              "test-repo-get-deleted-rev-no-delete", opts,
+                              pool));
+  SVN_ERR(commit_changes(ra_session, pool));
+  SVN_ERR(commit_two_changes(ra_session, pool));
+
+  /* expect 'no deletion' in the range up to r2, when it is deleted in r3 */
+  /* This was failing over RA-SVN where the 'get-deleted-rev' wire command's
+     prototype cannot directly represent that result. A new enough client and
+     server collaborate on a work-around implemented using an error code. */
+  SVN_ERR(svn_ra_get_deleted_rev(ra_session, "A", 1, 2,
+                                 &revision_deleted, pool));
+  SVN_TEST_INT_ASSERT(revision_deleted, SVN_INVALID_REVNUM);
+
+  /* this connection should still be open: a simple case should still work */
+  SVN_ERR(svn_ra_get_deleted_rev(ra_session, "A", 1, 3,
+                                 &revision_deleted, pool));
+  SVN_TEST_INT_ASSERT(revision_deleted, 3);
+
+  return SVN_NO_ERROR;
+}
+
+/* Cases of 'get-deleted-rev' that should return an error. */
+static svn_error_t *
+test_get_deleted_rev_errors(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_revnum_t revision_deleted;
+  svn_error_t *err;
+
+  SVN_ERR(make_and_open_repos(&ra_session,
+                              "test-repo-get-deleted-rev-errors", opts, pool));
+  SVN_ERR(commit_changes(ra_session, pool));
+
+  /* expect an error when searching up to r3, when repository head is r1 */
+  err = svn_ra_get_deleted_rev(ra_session, "A", 1, 3, &revision_deleted, pool);
+
+  /* mod_dav_svn returns a generic error code for "500 Internal Server Error";
+   * the other RA layers return the specific error code for "no such revision".
+   * We should make these consistent, but for now that's how it is. */
+  if (opts->repos_url && strncmp(opts->repos_url, "http", 4) == 0)
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_RA_DAV_REQUEST_FAILED);
+  else
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_NO_SUCH_REVISION);
 
   return SVN_NO_ERROR;
 }
@@ -1716,6 +1911,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "verify checkout over a tunnel"),
     SVN_TEST_OPTS_PASS(commit_empty_last_change,
                        "check how last change applies to empty commit"),
+    SVN_TEST_OPTS_PASS(commit_locked_file,
+                       "check commit editor for a locked file"),
+    SVN_TEST_OPTS_PASS(test_get_deleted_rev_no_delete,
+                       "test get-deleted-rev no delete"),
+    SVN_TEST_OPTS_PASS(test_get_deleted_rev_errors,
+                       "test get-deleted-rev errors"),
     SVN_TEST_NULL
   };
 

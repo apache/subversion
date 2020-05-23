@@ -655,7 +655,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
      because that greatly influences the costs for log processing.
      So, it is faster to iterate over the changes twice - in the worst
      case b/c most times there is no m/i at all and we exit out early
-     without any overhead. 
+     without any overhead.
    */
   while (change && (!any_mergeinfo || !any_copy))
     {
@@ -999,7 +999,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       /* Issue #4022 'svn log -g interprets change in inherited mergeinfo due
          to move as a merge': A copy where the source and destination inherit
          mergeinfo from the same parent means the inherited mergeinfo of the
-         source and destination will differ, but this diffrence is not
+         source and destination will differ, but this difference is not
          indicative of a merge unless the mergeinfo on the inherited parent
          has actually changed.
 
@@ -1053,7 +1053,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
             continue;
         }
 
-      /* Compare, constrast, and combine the results. */
+      /* Compare, contrast, and combine the results. */
       SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, prev_mergeinfo,
                                   mergeinfo, FALSE, result_pool, iterpool));
       SVN_ERR(svn_mergeinfo_merge2(*deleted_mergeinfo, deleted,
@@ -1227,7 +1227,7 @@ typedef struct interesting_merge_baton_t
   void *inner_baton;
 } interesting_merge_baton_t;
 
-/* Implements svn_repos_path_change_receiver_t. 
+/* Implements svn_repos_path_change_receiver_t.
  * *BATON is a interesting_merge_baton_t.
  *
  * If BATON->REV a merged revision that is not already part of
@@ -1909,7 +1909,7 @@ store_search(svn_mergeinfo_t processed,
              apr_pool_t *scratch_pool)
 {
   /* We add 1 to end so that we can use the mergeinfo API to handle
-     singe revisions where HIST_START is equal to HIST_END. */
+     single revisions where HIST_START is equal to HIST_END. */
   svn_revnum_t start = hist_start <= hist_end ? hist_start : hist_end;
   svn_revnum_t end = hist_start <= hist_end ? hist_end + 1 : hist_start + 1;
   svn_mergeinfo_t mergeinfo = svn_hash__make(scratch_pool);
@@ -2447,7 +2447,7 @@ svn_repos_get_logs5(svn_repos_t *repos,
      represents all of PATHS' history between START and END.  We will use
      this later to squelch duplicate log revisions that might exist in
      both natural history and merged-in history.  See
-     http://subversion.tigris.org/issues/show_bug.cgi?id=3650#desc5 */
+     https://issues.apache.org/jira/browse/SVN-3650#desc5 */
   if (include_merged_revisions)
     {
       apr_pool_t *subpool = svn_pool_create(scratch_pool);

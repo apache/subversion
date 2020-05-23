@@ -18,7 +18,7 @@ credentials found.
 """ % (sys.argv[0]))
   sys.exit(0)
 
-config_dir = svn.core.svn_config_get_user_config_path(None, '')
+config_dir = svn.core.svn_config_get_user_config_path(None, None)
 if len(sys.argv) > 1:
   config_dir = sys.argv[1]
 

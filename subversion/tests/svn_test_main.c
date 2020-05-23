@@ -880,7 +880,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
       _set_error_mode(_OUT_TO_STDERR);
 
       /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
-         (Ignored in releas builds) */
+         (Ignored in release builds) */
       _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
       _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
       _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
@@ -903,9 +903,12 @@ svn_test_main(int argc, const char *argv[], int max_threads,
       apr_err = apr_getopt_long(os, cl_options, &opt_id, &opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
-      else if (apr_err && (apr_err != APR_BADCH))
+      else if (apr_err)
         {
           /* Ignore invalid option error to allow passing arbitrary options */
+          if (apr_err == APR_BADCH)
+            continue;
+
           fprintf(stderr, "apr_getopt_long failed : [%d] %s\n",
                   apr_err, apr_strerror(apr_err, errmsg, sizeof(errmsg)));
           exit(1);

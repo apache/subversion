@@ -316,7 +316,7 @@ svn_error_t *
 svn_fs_fs__update_min_unpacked_rev(svn_fs_t *fs,
                                    apr_pool_t *pool);
 
-/* Atomically update the 'min-unpacked-rev' file in FS to hold the specifed
+/* Atomically update the 'min-unpacked-rev' file in FS to hold the specified
  * REVNUM.  Perform temporary allocations in SCRATCH_POOL.
  */
 svn_error_t *
@@ -336,7 +336,7 @@ svn_fs_fs__read_current(svn_revnum_t *rev,
                         svn_fs_t *fs,
                         apr_pool_t *pool);
 
-/* Atomically update the 'current' file to hold the specifed REV,
+/* Atomically update the 'current' file to hold the specified REV,
    NEXT_NODE_ID, and NEXT_COPY_ID.  (The two next-ID parameters are
    ignored and may be 0 if the FS format does not use them.)
    Perform temporary allocations in POOL. */

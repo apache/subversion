@@ -247,7 +247,7 @@ Java_org_apache_subversion_javahl_SVNRepos_load(
     jobject jrevisionStart, jobject jrevisionEnd,
     jboolean jignoreUUID, jboolean jforceUUID,
     jboolean jusePreCommitHook, jboolean jusePostCommitHook,
-    jboolean jvalidateProps, jboolean jignoreDates,
+    jboolean jvalidateProps, jboolean jignoreDates, jboolean jnormalizeProps,
     jstring jrelativePath, jobject jnotifyCallback)
 {
   JNIEntry(SVNRepos, load);
@@ -287,6 +287,7 @@ Java_org_apache_subversion_javahl_SVNRepos_load(
            jusePostCommitHook ? true : false,
            jvalidateProps ? true : false,
            jignoreDates ? true : false,
+           jnormalizeProps ? true : false,
            relativePath,
            (jnotifyCallback != NULL ? &notifyCallback : NULL));
 }

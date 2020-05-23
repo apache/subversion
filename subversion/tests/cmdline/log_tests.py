@@ -1592,7 +1592,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
   # a merge results in added explicit mergeinfo on a path, but that
   # path previously inherited mergeinfo (rather than had no explicit
   # or inherited mergeinfo).  See issue #3235, specifically
-  # http://subversion.tigris.org/issues/show_bug.cgi?id=3235#desc8.
+  # https://issues.apache.org/jira/browse/SVN-3235#desc8.
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -1752,7 +1752,7 @@ def merge_sensitive_log_added_mergeinfo_replaces_inherited(sbox):
 def merge_sensitive_log_propmod_merge_inheriting_path(sbox):
   "log -g and simple propmod to merge-inheriting path"
 
-  # Issue #3285 (http://subversion.tigris.org/issues/show_bug.cgi?id=3285)
+  # Issue #3285 (https://issues.apache.org/jira/browse/SVN-3285)
 
   sbox.build()
   wc_dir = sbox.wc_dir
@@ -2094,7 +2094,7 @@ def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   svntest.main.run_svn(None, 'move', old_gamma_path, new_gamma_path)
   sbox.simple_commit(message='Move file')
 
-  # 'svn log -g --stop-on-copy ^/A/C/gamma' hould return *only* r5
+  # 'svn log -g --stop-on-copy ^/A/C/gamma' should return *only* r5
   # Previously this test failed because the change in gamma's inherited
   # mergeinfo between r4 and r5, due to the move, was understood as a merge:
   #
@@ -2166,13 +2166,13 @@ def log_diff(sbox):
                + [ "@@ -1 +1,2 @@\n",
                    " This is the file 'beta'.\n",
                    "+9\n",
-                   "\ No newline at end of file\n",
+                   "\\ No newline at end of file\n",
                  ]
            ]
   r8diff = [ make_diff_header('A2/D/G/rho', 'nonexistent', 'revision 8')
               + [ "@@ -0,0 +1 @@\n",
                   "+88\n",
-                  "\ No newline at end of file\n",
+                  "\\ No newline at end of file\n",
                 ]
            ]
   log_chain = parse_log_output(output, with_diffs=True)
@@ -2779,6 +2779,42 @@ def log_on_deleted_deep(sbox):
                                      '',
                                      '-q', '-c', '1-2')
 
+@XFail()
+@Issue(4711)
+def log_with_merge_history_and_search(sbox):
+  "log --use-merge-history --search"
+  
+  sbox.build()
+
+  # r2: create branch
+  sbox.simple_repo_copy('A', 'A2') # r2
+
+  # r3: mod in trunk
+  sbox.simple_append('A/mu', 'line 2')
+  sbox.simple_commit(message='r3: mod')
+  sbox.simple_update()
+
+  # r4: merge
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', sbox.ospath('A2'))
+  sbox.simple_commit(message='r4: merge')
+  sbox.simple_update()
+
+  # Helper function
+  def count(haystack, needle):
+    """Return the number of times the string NEEDLE occurs in the string
+    HAYSTACK."""
+    return len(haystack.split(needle)) - 1
+
+  # Check the output is valid
+  # ### Since the test is currently XFail, we only smoke test the output.
+  # ### When fixing this test to PASS, extend this validation.
+  _, output, _ = svntest.main.run_svn(None, 'log', '--xml', '-g',
+                                      '--search', "this will have no matches",
+                                      sbox.ospath('A2'))
+
+  output = '\n'.join(output)
+  if count(output, "<logentry") != count(output, "</logentry"):
+    raise svntest.Failure("Apparently invalid XML in " + repr(output))
 
 ########################################################################
 # Run the tests
@@ -2830,6 +2866,7 @@ test_list = [ None,
               merge_sensitive_log_xml_reverse_merges,
               log_revision_move_copy,
               log_on_deleted_deep,
+              log_with_merge_history_and_search,
              ]
 
 if __name__ == '__main__':

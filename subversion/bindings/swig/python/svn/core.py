@@ -27,8 +27,8 @@ from libsvn.core import *
 import libsvn.core as _libsvncore
 import atexit as _atexit
 import sys
-# __all__ is defined later, since some svn_* functions are implemented below.
 
+# __all__ is defined later, since some svn_* functions are implemented below.
 
 class SubversionException(Exception):
 
@@ -89,6 +89,20 @@ class SubversionException(Exception):
       child = cls(message, apr_err, child, file, line)
     return child
 
+# This function is useful for common Python 2/3 code. It prevents the double
+# memory hit of simply wrapping values/keys/items calls on dictionaries on
+# python 2, but ensuring an independent list is returned in Python 3.
+def _as_list(seq):
+  """Returns the given sequence or iterator as a list.
+
+  If already a list, simply returns the list, otherwise a list is constructed
+  using the given object.
+  """
+  if isinstance(seq, list):
+    return seq
+
+  return list(seq)
+
 def _cleanup_application_pool():
   """Cleanup the application pool before exiting"""
   if application_pool and application_pool.valid():
@@ -96,7 +110,7 @@ def _cleanup_application_pool():
 _atexit.register(_cleanup_application_pool)
 
 def _unprefix_names(symbol_dict, from_prefix, to_prefix = ''):
-  for name, value in symbol_dict.items():
+  for name, value in _as_list(symbol_dict.items()):
     if name.startswith(from_prefix):
       symbol_dict[to_prefix + name[len(from_prefix):]] = value
 
@@ -141,7 +155,7 @@ def svn_path_compare_paths(path1, path2):
 
   # Common prefix was skipped above, next character is compared to
   # determine order
-  return cmp(char1, char2)
+  return (char1 > char2) - (char1 < char2)
 
 def svn_mergeinfo_merge(mergeinfo, changes):
   return _libsvncore.svn_swig_mergeinfo_merge(mergeinfo, changes)
@@ -171,7 +185,7 @@ class Stream:
         if not data:
           break
         chunks.append(data)
-      return ''.join(chunks)
+      return b''.join(chunks)
 
     # read the amount specified
     return svn_stream_read(self._stream, int(amt))
@@ -194,7 +208,7 @@ def secs_from_timestr(svn_datetime, pool=None):
   # ### convert to a time_t; this requires intimate knowledge of
   # ### the apr_time_t type
   # ### aprtime is microseconds; turn it into seconds
-  return aprtime / 1000000
+  return aprtime // 1000000
 
 
 # ============================================================================
@@ -317,12 +331,12 @@ def run_app(func, *args, **kw):
 # 'apr_pool_clear' 'apr_pool_destroy' 'apr_pool_t'
 # 'apr_time_ansi_put'
 # 'run_app'
-# 'svn_relpath__internal_style' 'svn_uri__is_ancestor'
+# 'svn_uri__is_ancestor'
 # 'svn_tristate__from_word' 'svn_tristate__to_word'
-__all__ = filter(lambda s: (s.startswith('svn_')
-                            or s.startswith('SVN_')
-                            or s.startswith('SVNSYNC_')
-                            or s in ('Pool', 'SubversionException'))
-                           and '__' not in s,
-                 locals())
+__all__ = [s for s in _as_list(locals())
+           if (s.startswith('svn_')
+               or s.startswith('SVN_')
+               or s.startswith('SVNSYNC_')
+               or s in ('Pool', 'SubversionException'))
+           and '__' not in s]
 

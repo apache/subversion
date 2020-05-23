@@ -62,7 +62,7 @@ svn_rangelist__parse(svn_rangelist_t **rangelist,
 /* Return TRUE, if all ranges in RANGELIST are in ascending order and do
 * not overlap and are not adjacent.
 *
-* If this returns FALSE, you probaly want to call
+* If this returns FALSE, you probably want to call
 * svn_rangelist__canonicalize().
 */
 svn_boolean_t

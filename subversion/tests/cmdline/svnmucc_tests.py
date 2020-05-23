@@ -458,7 +458,7 @@ rm A/B/C/Y
     '   D /A/B/C/Y',
   ]))
   expected_output = svntest.verify.UnorderedRegexListOutput(excaped
-                    + ['^-', '^r3', '^-', '^Changed paths:',])
+                    + ['^--*', '^r3.*', '^--*', '^Changed paths:',])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr3', repo_url)
 
@@ -534,7 +534,8 @@ def svnmucc_type_errors(sbox):
                 'put', sbox.ospath('file'), 'A')
 
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E160020: Path 'Z' already exists"],
+                ["svnmucc: E160020: Path 'Z' already exists, or was created "
+                 "by an earlier operation"],
                 '-m', '',
                 'mkdir', 'A/Z',
                 'put', sbox.ospath('file'), 'A/Z')
@@ -576,7 +577,8 @@ def svnmucc_propset_and_put(sbox):
 
   # Put same file twice (non existing)
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E160020: Path 't3' already exists"],
+                ["svnmucc: E160020: Path 't3' already exists, or was created "
+                 "by an earlier operation"],
                 '-m', '',
                 'put', sbox.ospath('file'), 't3',
                 'put', sbox.ospath('file'), 't3')

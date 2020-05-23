@@ -59,7 +59,9 @@ svn_utf__utf8proc_runtime_version(void)
   SVN_UNUSED(utf8proc_grapheme_break);
   SVN_UNUSED(utf8proc_tolower);
   SVN_UNUSED(utf8proc_toupper);
+#if UTF8PROC_VERSION_MAJOR >= 2
   SVN_UNUSED(utf8proc_totitle);
+#endif
   SVN_UNUSED(utf8proc_charwidth);
   SVN_UNUSED(utf8proc_category_string);
   SVN_UNUSED(utf8proc_NFD);
@@ -333,7 +335,7 @@ svn_utf__glob(svn_boolean_t *match,
                             _("Cannot use a custom escape token"
                               " in glob matching mode"));
 
-  /* Convert the patern to NFD UTF-8. We can't use the UCS-4 result
+  /* Convert the pattern to NFD UTF-8. We can't use the UCS-4 result
      because apr_fnmatch can't handle it.*/
   SVN_ERR(decompose_normalized(&tempbuf_len, pattern, pattern_len, temp_buf));
   if (!sql_like)

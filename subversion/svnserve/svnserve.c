@@ -479,7 +479,7 @@ static svn_error_t * version(svn_boolean_t quiet, apr_pool_t *pool)
                            _("\nCyrus SASL authentication is available.\n"));
 #endif
 
-  return svn_opt_print_help4(NULL, "svnserve", TRUE, quiet, FALSE,
+  return svn_opt_print_help5(NULL, "svnserve", TRUE, quiet, FALSE,
                              version_footer->data,
                              NULL, NULL, NULL, NULL, NULL, pool);
 }
@@ -1349,7 +1349,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           status = apr_proc_fork(&proc, connection->pool);
           if (status == APR_INCHILD)
             {
-              /* the child would't listen to the main server's socket */
+              /* the child wouldn't listen to the main server's socket */
               apr_socket_close(sock);
 
               /* serve_socket() logs any error it returns, so ignore it. */

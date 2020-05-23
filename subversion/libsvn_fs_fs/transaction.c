@@ -587,7 +587,7 @@ unparse_dir_entry(svn_fs_dirent_t *dirent,
                       : sizeof(SVN_FS_FS__KIND_DIR);
   apr_size_t value_len = type_len + id_str->len;
 
-  /* A buffer with sufficient space for 
+  /* A buffer with sufficient space for
    * - both string lines
    * - 4 newlines
    * - 2 lines K/V lines containing a number each
@@ -3336,6 +3336,24 @@ write_final_rev(const svn_fs_id_t **new_id_p,
   if (noderev->data_rep && noderev->kind == svn_node_dir)
     noderev->data_rep->has_sha1 = FALSE;
 
+  /* Compatibility: while we don't need to serialize SHA1 for props (it is
+     not used), older formats can only have representation strings that either
+     have both the SHA1 value *and* the uniquifier, or don't have them at all.
+     For such formats, both values get written to the disk only if the SHA1
+     is present.
+
+     We cannot omit the uniquifier, as doing so breaks svn_fs_props_changed()
+     for properties with shared representations, see issues #4623 and #4700.
+     Therefore, we skip writing SHA1, but only for the newer formats where
+     this dependency is untied and we can write the uniquifier to the disk
+     without the SHA1.
+   */
+  if (ffd->format >= SVN_FS_FS__MIN_REP_STRING_OPTIONAL_VALUES_FORMAT &&
+      noderev->prop_rep)
+    {
+      noderev->prop_rep->has_sha1 = FALSE;
+    }
+
   /* Workaround issue #4031: is-fresh-txn-root in revision files. */
   noderev->is_fresh_txn_root = FALSE;
 
@@ -3695,7 +3713,7 @@ promote_cached_directories(svn_fs_t *fs,
 
       /* Currently, the entry for KEY - if it still exists - is marked
        * as "stale" and would not be used.  Mark it as current for in-
-       * revison data. */
+       * revision data. */
       SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
                                      svn_fs_fs__reset_txn_filesize, NULL,
                                      iterpool));

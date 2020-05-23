@@ -1606,7 +1606,7 @@ def status_dash_u_deleted_directories(sbox):
                                         os.path.join("B", "E", "alpha"),
           "D                1        1 jrandom      %s\n" % \
                                         os.path.join("B", "E", "beta"),
-          "D                1        1 jrandom      %s\n" % 
+          "D                1        1 jrandom      %s\n" %
           os.path.join("B", "F"),
           "Status against revision:      1\n" ])
   svntest.actions.run_and_verify_svn(expected,
@@ -1949,7 +1949,8 @@ def modified_modulo_translation(sbox):
   sbox.simple_commit()
 
   # CRLF it.
-  open(sbox.ospath('iota'), 'wb').write("This is the file 'iota'.\r\n")
+  with open(sbox.ospath('iota'), 'wb') as f:
+    f.write("This is the file 'iota'.\r\n")
 
   # Run status.  Expect some output.
   # TODO: decide how such files should show in the output; whether they

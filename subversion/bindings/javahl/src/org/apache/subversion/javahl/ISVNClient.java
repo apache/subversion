@@ -33,7 +33,7 @@ import java.util.Set;
 import java.util.Map;
 
 /**
- * This interface is the commom interface for all subversion
+ * This interface is the common interface for all subversion
  * operations. It is implemented by SVNClient
  *
  * @since 1.7
@@ -89,7 +89,7 @@ public interface ISVNClient
      *                    has effect when <code>onServer</code> is
      *                    <code>true</code>.
      * @param getAll      get status for uninteresting (unchanged) files.
-     * @param noIgnore    get status for normaly ignored files and directories.
+     * @param noIgnore    get status for normally ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
      * @param depthAsSticky When set, interpret <code>depth</code> as
      *                      the ambient depth of the working copy.
@@ -633,7 +633,7 @@ public interface ISVNClient
      * @param noIgnore  whether to add files matched by ignore patterns
      * @param noAutoProps if true, ignore any auto-props configuration
      * @param ignoreUnknownNodeTypes whether to ignore files which
-     *                  the node type is not konwn, just as pipes
+     *                  the node type is not known, just as pipes
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
@@ -664,7 +664,7 @@ public interface ISVNClient
      * @param depth     depth to traverse into subdirectories
      * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
-     *                  the node type is not konwn, just as pipes
+     *                  the node type is not known, just as pipes
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.
@@ -1386,7 +1386,7 @@ public interface ISVNClient
 
     /**
      * Retrieve the content together with the author, the revision and the date
-     * of the last change of each line
+     * of the last change of each line.
      * @param path          the path
      * @param pegRevision   the revision to interpret the path
      * @param revisionStart the first revision to show
@@ -1394,17 +1394,37 @@ public interface ISVNClient
      * @param ignoreMimeType whether or not to ignore the mime-type
      * @param includeMergedRevisions whether or not to include extra merge
      *                      information
-     * @param callback      callback to receive the file content and the other
-     *                      information
      * @param options       additional options for controlling the output
+     * @param rangeCallback receives the resolved revision range; called
+     *                      exactly once before #lineCallback
+     * @param lineCallback  callback to receive the file content and the other
+     *                      information for every line in the file
      * @throws ClientException
-     * @since 1.9
+     * @since 1.12
      */
+    void blame(String path, Revision pegRevision, Revision revisionStart,
+               Revision revisionEnd, boolean ignoreMimeType,
+               boolean includeMergedRevisions, DiffOptions options,
+               BlameRangeCallback rangeCallback,
+               BlameLineCallback lineCallback)
+        throws ClientException;
+
+    /**
+     * Retrieve the content together with the author, the revision and the date
+     * of the last change of each line
+     * <p>
+     * Behaves like the 1.12 version but uses BlameCallback instead of
+     * BlameLineCallback. The former expects that file contents can be
+     * converted from UTF-8 to a String, which is not true in general
+     * and may throw exceptions.
+     * @deprecated Use the 1.12 version with BlameLineCallback
+     */
+    @Deprecated
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
                BlameCallback callback, DiffOptions options)
-            throws ClientException;
+        throws ClientException;
 
     /**
      * Retrieve the content together with the author, the revision and the date
@@ -1412,12 +1432,14 @@ public interface ISVNClient
      * <p>
      * Behaves like the 1.9 version with <code>options</code> set to
      * their default values.
+     * @deprecated Use the 1.12 version with BlameLineCallback
      */
+    @Deprecated
     void blame(String path, Revision pegRevision, Revision revisionStart,
                Revision revisionEnd, boolean ignoreMimeType,
                boolean includeMergedRevisions,
                BlameCallback callback)
-            throws ClientException;
+        throws ClientException;
 
     /**
      * Set directory for the configuration information, taking the

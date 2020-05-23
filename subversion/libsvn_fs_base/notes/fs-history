@@ -128,7 +128,7 @@ node-revision ID consists of the same node ID as the node-revision
 that was cloned (since this is just another point along the historical
 lineage of this versioned resource), a copy ID (which will be
 discussed later), and the txn ID in which this modification is
-occuring.
+occurring.
 
 There are some cool things we can read between the lines above.  Since
 the only time a node-revision comes into existence is when it is brand

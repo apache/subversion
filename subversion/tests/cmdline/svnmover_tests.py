@@ -469,7 +469,7 @@ rm A/B/C/Y
     '   D /top0/A/B/C/Y',
   ]))
   expected_output = svntest.verify.UnorderedRegexListOutput(escaped
-                          + ['^-', '^r2', '^-', '^Changed paths:',])
+                          + ['^--*', '^r2.*', '^--*', '^Changed paths:',])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr2', repo_url)
 
@@ -755,7 +755,7 @@ def simple_moves_within_a_branch(sbox):
                 'mv lib/foo/y2 y2')
   # move and rename, dir with children
   test_svnmover2(sbox, '/trunk',
-                 reported_br_diff('') +
+                 reported_br_diff('trunk') +
                  reported_add('subdir') +
                  reported_move('lib', 'subdir/lib2'),
                 'mkdir subdir',
@@ -765,7 +765,7 @@ def simple_moves_within_a_branch(sbox):
   # moves and renames together
   # (put it all back to how it was, in one commit)
   test_svnmover2(sbox, '/trunk',
-                 reported_br_diff('') +
+                 reported_br_diff('trunk') +
                  reported_move('subdir/lib2/README.txt', 'README') +
                  reported_move('subdir/lib2', 'lib') +
                  reported_move('y2', 'lib/foo/y') +
@@ -1545,7 +1545,7 @@ def replace_via_rm_cp(sbox):
   """replace by deleting and copying"""
 
   sbox_build_svnmover(sbox)
-                 
+
   expected_eids = svntest.wc.State('', {
     'B0'     : Item(eid=0),
     'B0/X'   : Item(eid=1),
@@ -1572,7 +1572,7 @@ def replace_via_rm_cp(sbox):
   test_svnmover_verify_log(sbox.repo_url,
                            ['D /top0/X/A',
                             'A /top0/X/A (from /top0/X/A:1)'])
-                 
+
 @XFail()
 # After making a commit, svnmover currently can't (within the same execution)
 # look up paths in the revision it just committed.

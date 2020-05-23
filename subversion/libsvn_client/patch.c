@@ -343,7 +343,9 @@ strip_path(const char **result, const char *path, int strip_count,
   components = svn_path_decompose(path, scratch_pool);
   if (strip_count > components->nelts)
     return svn_error_createf(SVN_ERR_CLIENT_PATCH_BAD_STRIP_COUNT, NULL,
-                             _("Cannot strip %u components from '%s'"),
+                             Q_("Cannot strip %u component from '%s'",
+                                "Cannot strip %u components from '%s'",
+                                strip_count),
                              strip_count,
                              svn_dirent_local_style(path, scratch_pool));
 
@@ -1018,6 +1020,7 @@ init_patch_target(patch_target_t **patch_target,
   target_content_t *content;
   svn_boolean_t has_text_changes = FALSE;
   svn_boolean_t follow_moves;
+  const char *tempdir_abspath;
 
   has_text_changes = ((patch->hunks && patch->hunks->nelts > 0)
                       || patch->binary_patch);
@@ -1223,8 +1226,10 @@ init_patch_target(patch_target_t **patch_target,
         }
 
       /* Open a temporary file to write the patched result to. */
+      SVN_ERR(svn_wc__get_tmpdir(&tempdir_abspath, wc_ctx,
+          target->local_abspath, scratch_pool, scratch_pool));
       SVN_ERR(svn_io_open_unique_file3(&target->patched_file,
-                                       &target->patched_path, NULL,
+                                       &target->patched_path, tempdir_abspath,
                                        remove_tempfiles ?
                                          svn_io_file_del_on_pool_cleanup :
                                          svn_io_file_del_none,
@@ -1236,7 +1241,7 @@ init_patch_target(patch_target_t **patch_target,
 
       /* Open a temporary stream to write rejected hunks to. */
       SVN_ERR(svn_stream_open_unique(&target->reject_stream,
-                                     &target->reject_path, NULL,
+                                     &target->reject_path, tempdir_abspath,
                                      remove_tempfiles ?
                                          svn_io_file_del_on_pool_cleanup :
                                          svn_io_file_del_none,
@@ -2145,8 +2150,8 @@ reject_hunk(patch_target_t *target, target_content_t *content,
   if (prop_name)
     {
       /* ### Print 'Added', 'Deleted' or 'Modified' instead of 'Property'. */
-      svn_stream_printf(target->reject_stream,
-                        pool, "Property: %s" APR_EOL_STR, prop_name);
+      SVN_ERR(svn_stream_printf(target->reject_stream,
+                                pool, "Property: %s" APR_EOL_STR, prop_name));
       atat = prop_atat;
     }
   else
@@ -2465,7 +2470,7 @@ send_patch_notification(const patch_target_t *target,
 
 /* Implements the callback for svn_sort__array.  Puts hunks that match
    before hunks that do not match, puts hunks that match in order
-   based on postion matched, puts hunks that do not match in order
+   based on position matched, puts hunks that do not match in order
    based on original position. */
 static int
 sort_matched_hunks(const void *a, const void *b)
@@ -2511,7 +2516,8 @@ sort_matched_hunks(const void *a, const void *b)
  * in RESULT_POOL. Use WC_CTX as the working copy context.
  * STRIP_COUNT specifies the number of leading path components
  * which should be stripped from target paths in the patch.
- * REMOVE_TEMPFILES, PATCH_FUNC, and PATCH_BATON as in svn_client_patch().
+ * REMOVE_TEMPFILES is as in svn_client_patch().
+ * TARGETS_INFO is for preserving info across calls.
  * IGNORE_WHITESPACE tells whether whitespace should be considered when
  * doing the matching.
  * Call cancel CANCEL_FUNC with baton CANCEL_BATON to trigger cancellation.

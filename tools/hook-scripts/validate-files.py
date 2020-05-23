@@ -19,7 +19,13 @@
 """Subversion pre-commit hook script that runs user configured commands
 to validate files in the commit and reject the commit if the commands
 exit with a non-zero exit code.  The script expects a validate-files.conf
-file placed in the conf dir under the repo the commit is for."""
+file placed in the conf dir under the repo the commit is for.
+
+Note: As changed file paths $FILE are always represented as a Unicode (Py3)
+      or UTF-8 (Py2) strings, you might need to set apropriate locale and
+      PYTHONIOENCODING environment variable for this script and
+      commands to handle non-ascii path and command outputs, especially
+      you want to use svnlook cat command to inspect file contents."""
 
 import sys
 import os
@@ -30,11 +36,13 @@ import fnmatch
 try:
     # Python >= 3.0
     import configparser
+    ConfigParser = configparser.ConfigParser
 except ImportError:
     # Python < 3.0
     import ConfigParser as configparser
+    ConfigParser = configparser.SafeConfigParser
 
-class Config(configparser.SafeConfigParser):
+class Config(ConfigParser):
     """Superclass of SafeConfigParser with some customizations
     for this script"""
     def optionxform(self, option):
@@ -80,18 +88,26 @@ class Commands:
             line = p.stdout.readline()
             if not line:
                 break
-            line = line.decode().strip()
+            line = line.strip()
             text_mod = line[0:1]
             # Only if the contents of the file changed (by addition or update)
             # directories always end in / in the svnlook changed output
-            if line[-1] != "/" and (text_mod == "A" or text_mod == "U"):
-                changed.append(line[4:])
+            if line[-1:] != b"/" and (text_mod == b"A" or text_mod == b"U"):
+                changed_path = line[4:]
+                if not isinstance(changed_path, str):
+                    # svnlook always uses UTF-8 for internal path
+                    changed_path = changed_path.decode('utf-8')
+                changed.append(changed_path)
 
         # wait on the command to finish so we can get the
         # returncode/stderr output
         data = p.communicate()
         if p.returncode != 0:
-            sys.stderr.write(data[1].decode())
+            err_mesg = data[1]
+            if sys.stderr.encoding:
+                err_mesg =err_mesg.decode(sys.stderr.encoding,
+                                          'backslashreplace')
+            sys.stderr.write(err_mesg)
             sys.exit(2)
 
         return changed
@@ -109,7 +125,11 @@ class Commands:
         cmd_env['FILE'] = fn
         p = subprocess.Popen(cmd, shell=True, env=cmd_env, stderr=subprocess.PIPE)
         data = p.communicate()
-        return (p.returncode, data[1].decode())
+        err_mesg = data[1]
+        if sys.stderr.encoding:
+            err_mesg = err_mesg.decode(sys.stderr.encoding,
+                                       'backslashreplace')
+        return (p.returncode, err_mesg)
 
 def main(repo, txn):
     exitcode = 0

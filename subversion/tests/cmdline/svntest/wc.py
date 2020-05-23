@@ -829,7 +829,7 @@ class State:
       match = _re_parse_eid_ele.search(line)
       if match and match.group(2) != 'none':
         eid = match.group(1)
-        parent_eid = match.group(3) 
+        parent_eid = match.group(3)
         path = match.group(4)
         if path == '.':
           path = ''
@@ -851,7 +851,7 @@ class State:
     add_to_desc(eids, desc, branch_id)
 
     return cls('', desc)
-  
+
 
 class StateItem:
   """Describes an individual item within a working copy.
@@ -1092,17 +1092,7 @@ def svn_uri_quote(url):
 
 def python_sqlite_can_read_wc():
   """Check if the Python builtin is capable enough to peek into wc.db"""
-
-  try:
-    db = svntest.sqlite3.connect('')
-
-    c = db.cursor()
-    c.execute('select sqlite_version()')
-    ver = tuple(map(int, c.fetchall()[0][0].split('.')))
-
-    return ver >= (3, 6, 18) # Currently enough (1.7-1.9)
-  except:
-    return False
+  return svntest.main.python_sqlite_can_read_our_wc_db()
 
 def open_wc_db(local_path):
   """Open the SQLite DB for the WC path LOCAL_PATH.

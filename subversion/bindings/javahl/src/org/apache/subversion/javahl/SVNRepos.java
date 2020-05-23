@@ -65,7 +65,7 @@ public class SVNRepos implements ISVNRepos
 
     /**
      * Build the native peer
-     * @return the adress of the peer
+     * @return the address of the peer
      */
     private native long ctNative();
 
@@ -81,7 +81,7 @@ public class SVNRepos implements ISVNRepos
     public native void finalize();
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;
@@ -160,6 +160,17 @@ public class SVNRepos implements ISVNRepos
             throws ClientException;
 
     public void load(File path, InputStream dataInput,
+                     boolean ignoreUUID, boolean forceUUID,
+                     boolean usePreCommitHook, boolean usePostCommitHook,
+                     String relativePath, ReposNotifyCallback callback)
+        throws ClientException
+    {
+        load(path, dataInput, Revision.START, Revision.HEAD,
+             ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
+             false, false, false, relativePath, callback);
+    }
+
+    public void load(File path, InputStream dataInput,
                      Revision start, Revision end,
                      boolean ignoreUUID, boolean forceUUID,
                      boolean usePreCommitHook, boolean usePostCommitHook,
@@ -168,18 +179,20 @@ public class SVNRepos implements ISVNRepos
     {
         load(path, dataInput, start, end,
              ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
-             false, false, relativePath, callback);
+             false, false, false, relativePath, callback);
     }
 
     public void load(File path, InputStream dataInput,
+                     Revision start, Revision end,
                      boolean ignoreUUID, boolean forceUUID,
                      boolean usePreCommitHook, boolean usePostCommitHook,
+                     boolean validateProps, boolean ignoreDates,
                      String relativePath, ReposNotifyCallback callback)
-            throws ClientException
+        throws ClientException
     {
-        load(path, dataInput, Revision.START, Revision.HEAD,
+        load(path, dataInput, start, end,
              ignoreUUID, forceUUID, usePreCommitHook, usePostCommitHook,
-             false, false, relativePath, callback);
+             validateProps, ignoreDates, false, relativePath, callback);
     }
 
     public native void load(File path, InputStream dataInput,
@@ -187,6 +200,7 @@ public class SVNRepos implements ISVNRepos
                             boolean ignoreUUID, boolean forceUUID,
                             boolean usePreCommitHook, boolean usePostCommitHook,
                             boolean validateProps, boolean ignoreDates,
+                            boolean normalizeProps,
                             String relativePath, ReposNotifyCallback callback)
             throws ClientException;
 

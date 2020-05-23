@@ -214,7 +214,7 @@ file_rev_handler(void *baton,
                               frb->compression_level, pool);
       *window_handler = delta_window_handler;
       *window_baton = frb;
-      /* Start the txdelta element wich will be terminated by the window
+      /* Start the txdelta element which will be terminated by the window
          handler together with the file-rev element. */
       SVN_ERR(dav_svn__brigade_puts(frb->bb, frb->output, "<S:txdelta>"));
     }
@@ -333,7 +333,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
   if ((serr = maybe_send_header(&frb)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Error beginning REPORT reponse",
+                                  "Error beginning REPORT response",
                                   resource->pool);
       goto cleanup;
     }
@@ -342,7 +342,7 @@ dav_svn__file_revs_report(const dav_resource *resource,
                                     "</S:file-revs-report>" DEBUG_CR)))
     {
       derr = dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
-                                  "Error ending REPORT reponse",
+                                  "Error ending REPORT response",
                                   resource->pool);
       goto cleanup;
     }

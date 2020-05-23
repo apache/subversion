@@ -592,6 +592,32 @@ static struct x509_test cert_tests[] = {
     "good.example.com",
     "9693f17e59205f41ca2e14450d151b945651b2d7"
   },
+  /* Signed using RSASSA-PSS algorithm with algorithm parameters */
+  {
+    "MIICsjCCAWkCCQDHslXYA8hCxTA+BgkqhkiG9w0BAQowMaANMAsGCWCGSAFlAwQC"
+    "AaEaMBgGCSqGSIb3DQEBCDALBglghkgBZQMEAgGiBAICAN4wKjEUMBIGA1UECgwL"
+    "TXkgTG9jYWwgQ0ExEjAQBgNVBAMMCWxvY2FsaG9zdDAeFw0xODAyMDIxNjQ4MzVa"
+    "Fw0xODAyMDMxNjQ4MzVaMC4xGDAWBgNVBAoMD015IExvY2FsIFNlcnZlcjESMBAG"
+    "A1UEAwwJbG9jYWxob3N0MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQCues61"
+    "JXXpLQI5yeg4aCLWRfvnJY7wnuU6FSA++3wwCJREx1/7ebnP9RRRqqKM+ZeeFMC+"
+    "UlJE3ft2tJTDOVk9j6qjvKrJUKM1YkIe0lARxs4RtZKDGfOdBhw/+iD+6fZzhL0n"
+    "+w+dIJGzl6ADWsE/x9yjDTkdgbtxHrx/76K0KQIDAQABMD4GCSqGSIb3DQEBCjAx"
+    "oA0wCwYJYIZIAWUDBAIBoRowGAYJKoZIhvcNAQEIMAsGCWCGSAFlAwQCAaIEAgIA"
+    "3gOCAQEABYRAijCSGyFdSuUYALUnNzPylqYXlW+dMKPywlUrFEhKnvS+FD9twerI"
+    "8kT4MDW6XvhScmL1MCDPNAkFY92UqaUrgT80oyrbpuakVrxFSS1i28xy8+kXAWYq"
+    "RNQVaME1NqnATYF0ZMD5xQK4rpa76gvWj3K8Lt++9EjjbkNiirIIMQEOxh1lwnDQ"
+    "81q1Rk6iujlnVDGHDQ+w8reE6fKfSWfv1EaQRcjNKCuzrW8WNN387G2byvwaaKeL"
+    "M7lV7wiV6PwrTNTZzVG3cWKDOEP1mGE7gyMu66siLECo8U95+ahK7O6vfeT3m3gv"
+    "7kzWNYozAQtBSC7b0WqWbVrzWI4HSg==",
+    "O=My Local Server, CN=localhost",
+    "2.5.4.10 2.5.4.3",
+    "O=My Local CA, CN=localhost",
+    "2.5.4.10 2.5.4.3",
+    "2018-02-02T16:48:35.000000Z ",
+    "2018-02-03T16:48:35.000000Z ",
+    "localhost",
+    "25ab5a059acfc793fc0d3734d426794a4ca7b631"
+  },
   { NULL }
 };
 

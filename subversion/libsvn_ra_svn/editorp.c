@@ -118,7 +118,7 @@ make_token(char type,
   char buffer[1 + SVN_INT64_BUFFER_SIZE];
   buffer[0] = type;
   len = 1 + svn__ui64toa(&buffer[1], eb->next_token++);
-  
+
   return svn_string_ncreate(buffer, len, pool);
 }
 
@@ -351,17 +351,9 @@ static svn_error_t *ra_svn_apply_textdelta(void *file_baton,
   svn_stream_set_write(diff_stream, ra_svn_svndiff_handler);
   svn_stream_set_close(diff_stream, ra_svn_svndiff_close_handler);
 
-  /* If the connection does not support SVNDIFF1 or if we don't want to use
-   * compression, use the non-compressing "version 0" implementation */
- /* ### TODO: Check SVN_RA_SVN_CAP_SVNDIFF2_ACCEPTED and decide between
-  * ###       svndiff1[at compression_level] and svndiff2 */
-  if (   svn_ra_svn_compression_level(b->conn) > 0
-      && svn_ra_svn_has_capability(b->conn, SVN_RA_SVN_CAP_SVNDIFF1))
-    svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream, 1,
-                            b->conn->compression_level, pool);
-  else
-    svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream, 0,
-                            b->conn->compression_level, pool);
+  svn_txdelta_to_svndiff3(wh, wh_baton, diff_stream,
+                          svn_ra_svn__svndiff_version(b->conn),
+                          b->conn->compression_level, pool);
   return SVN_NO_ERROR;
 }
 

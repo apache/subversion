@@ -2220,7 +2220,7 @@ typedef struct svn_wc_conflict_result_t
   svn_boolean_t save_merged;
 
   /** If not NULL, this is the new merged property, used when choosing
-   * #svn_wc_conflict_choose_merged. This value is prefered over using
+   * #svn_wc_conflict_choose_merged. This value is preferred over using
    * merged_file.
    *
    * @since New in 1.9.
@@ -5230,7 +5230,7 @@ svn_wc_committed_queue_create(apr_pool_t *pool);
  * turns the node and its implied descendants as the new unmodified state at
  * the new specified revision. Unless @a recurse is TRUE, changes on
  * descendants are not committed as changes directly. In this case they should
- * be queueud as their own changes.
+ * be queued as their own changes.
  *
  * If @a remove_lock is @c TRUE, any entryprops related to a repository
  * lock will be removed.
@@ -7602,9 +7602,14 @@ svn_wc_relocate(const char *path,
  * If @a clear_changelists is TRUE, then changelist information for the
  * paths is cleared.
  *
- * If @a metadata_only is TRUE, the working copy files are untouched, but
- * if there are conflict marker files attached to these files these
- * markers are removed.
+ * The @a metadata_only and @a added_keep_local options control the
+ * extent of reverting. If @a metadata_only is TRUE, the working copy
+ * files are untouched, but if there are conflict marker files attached
+ * to these files these markers are removed. Otherwise, if
+ * @a added_keep_local is TRUE, then all items are reverted except an
+ * item that was scheduled as plain 'add' (not a copy) will not be
+ * removed from the working copy. Otherwise, all items are reverted and
+ * their on-disk state changed to match.
  *
  * If @a cancel_func is non-NULL, call it with @a cancel_baton at
  * various points during the reversion process.  If it returns an
@@ -7622,8 +7627,30 @@ svn_wc_relocate(const char *path,
  * If @a path is not under version control, return the error
  * #SVN_ERR_UNVERSIONED_RESOURCE.
  *
- * @since New in 1.9.
+ * @since New in 1.11.
  */
+svn_error_t *
+svn_wc_revert6(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelist_filter,
+               svn_boolean_t clear_changelists,
+               svn_boolean_t metadata_only,
+               svn_boolean_t added_keep_local,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_revert6() but with @a added_keep_local always
+ * set to TRUE.
+ *
+ * @since New in 1.9.
+ * @deprecated Provided for backward compatibility with the 1.10 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revert5(svn_wc_context_t *wc_ctx,
                const char *local_abspath,

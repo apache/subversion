@@ -41,7 +41,7 @@ svn_boolean_t svn_ver_compatible(const svn_version_t *my_version,
                                  const svn_version_t *lib_version)
 {
   /* With normal development builds the matching rules are stricter
-     that for release builds, to avoid inadvertantly using the wrong
+     that for release builds, to avoid inadvertently using the wrong
      libraries.  For backward compatibility testing of development
      builds one can use --disable-full-version-match to cause a
      development build to use the release build rules.  This allows
@@ -143,7 +143,7 @@ svn_version_extended(svn_boolean_t verbose,
   info->build_time = __TIME__;
   info->build_host = SVN_BUILD_HOST;
   info->copyright = apr_pstrdup
-    (pool, _("Copyright (C) 2017 The Apache Software Foundation.\n"
+    (pool, _("Copyright (C) 2020 The Apache Software Foundation.\n"
              "This software consists of contributions made by many people;\n"
              "see the NOTICE file for more information.\n"
              "Subversion is open source software, see "

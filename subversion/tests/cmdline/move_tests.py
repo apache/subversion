@@ -125,7 +125,7 @@ def move_file_test(sbox, source, dest, move_func, test):
   start_disk: validate the on disk state after the start update against this.
   start_status: validate the wc status after the start update against this.
   end_rev: revision to update to, bringing in some update you want to test.
-  up_output: validate the output of the end update agianst this.
+  up_output: validate the output of the end update against this.
   up_disk: validate the on disk state after the end update against this.
   up_status: validate the wc status after the end update against this.
   revert_paths: validate the paths reverted.
@@ -793,7 +793,7 @@ def build_simple_file_move_tests(sbox, source, dest):
 
   # move and update with incoming identical move (r16-17)
   # XXX: It'd be really nice if we actually recognized this and the wc
-  # showed no conflict at all on udpate.
+  # showed no conflict at all on update.
   test = {}
   test['start_rev'] = 16
   test['end_rev'] = 17
@@ -883,7 +883,7 @@ def build_simple_file_move_func(sbox, source, dest):
 #
 #   Each test must return on success or raise on failure.
 #
-# See http://wiki.apache.org/subversion/LocalMoves
+# See https://cwiki.apache.org/confluence/display/SVN/LocalMoves
 
 def lateral_move_file_test(sbox):
   "lateral (rename) move of a file test"
@@ -1261,7 +1261,7 @@ def nested_replaces(sbox):
     '   D /A/B/C/Y',
   ]))
   expected_output = svntest.verify.UnorderedRegexListOutput(escaped
-                    + [ '^-', '^r2', '^-', '^Changed paths:', ])
+                    + [ '^--*', '^r2.*', '^--*', '^Changed paths:', ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-qvr2', repo_url)
 
@@ -1755,7 +1755,7 @@ def move_conflict_markers(sbox):
   })
   expected_disk.remove('iota', 'iota.prej',
                        'A/B/E', 'A/B/E/alpha', 'A/B/E/beta',
-                       'A/B/E/dir_conflicts.prej', 
+                       'A/B/E/dir_conflicts.prej',
                        'A/B/E/beta.prej')
   expected_disk.add({
     'A/iotb'  : Item(contents="This is the file 'iota'.\n"),

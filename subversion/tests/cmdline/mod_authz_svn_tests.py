@@ -167,7 +167,7 @@ def anon(sbox):
 
   write_authz_file(sbox)
 
-  anon_tests = ( 
+  anon_tests = (
                  { 'path': '', 'status': 301 },
                  { 'path': '/', 'status': 200 },
                  { 'path': '/repos', 'status': 301 },

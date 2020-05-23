@@ -81,20 +81,8 @@ def link_options():
   # Initialize config variables
   assert os.name == "posix"
   options = sysconfig.get_config_var('LDSHARED').split()
-  fwdir = sysconfig.get_config_var('PYTHONFRAMEWORKDIR')
 
-  if fwdir and fwdir != "no-framework":
-
-    # Setup the framework prefix
-    fwprefix = sysconfig.get_config_var('PYTHONFRAMEWORKPREFIX')
-    if fwprefix != "/System/Library/Frameworks":
-      add_option_if_missing(options, "-F%s" % fwprefix)
-
-    # Load in the framework
-    fw = sysconfig.get_config_var('PYTHONFRAMEWORK')
-    add_option(options, "-framework", fw)
-
-  elif sys.platform == 'darwin':
+  if sys.platform == 'darwin':
 
     # Load bundles from python
     python_exe = os.path.join(sysconfig.get_config_var("BINDIR"),

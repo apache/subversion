@@ -54,7 +54,7 @@ extern "C" {
 typedef struct svn_x509_certinfo_t svn_x509_certinfo_t;
 
 /**
- * Representation of an atttribute in an X.509 name (e.g. Subject or Issuer)
+ * Representation of an attribute in an X.509 name (e.g. Subject or Issuer)
  *
  * @since New in 1.9.
  */

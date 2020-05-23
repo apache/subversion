@@ -535,7 +535,7 @@ check_db_conflicts(svn_test__sandbox_t *b,
           SVN_ERR(svn_wc__conflict_read_tree_conflict(&info->tc.reason,
                                                       &info->tc.action,
                                                       &move_src_abspath,
-                                                      b->wc_ctx->db,
+                                                      NULL, b->wc_ctx->db,
                                                       local_abspath,
                                                       conflict,
                                                       b->pool, iterpool));
@@ -1770,7 +1770,7 @@ test_db_make_copy(const svn_test_opts_t *opts, apr_pool_t *pool)
     };
 
     SVN_ERR(insert_dirs(&b, before));
-    SVN_ERR(svn_wc__db_op_make_copy(b.wc_ctx->db, sbox_wc_path(&b, "A"), 
+    SVN_ERR(svn_wc__db_op_make_copy(b.wc_ctx->db, sbox_wc_path(&b, "A"),
                                     NULL, NULL, pool));
 
     SVN_ERR(check_db_rows(&b, "", after));

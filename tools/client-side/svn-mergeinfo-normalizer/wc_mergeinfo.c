@@ -112,8 +112,8 @@ static int
 compare_mergeinfo(const void *lhs,
                   const void *rhs)
 {
-  const mergeinfo_t *lhs_mi = *(const mergeinfo_t **)lhs;
-  const mergeinfo_t *rhs_mi = *(const mergeinfo_t **)rhs;
+  const mergeinfo_t *lhs_mi = *(const mergeinfo_t *const *)lhs;
+  const mergeinfo_t *rhs_mi = *(const mergeinfo_t *const *)rhs;
 
   return strcmp(lhs_mi->local_path, rhs_mi->local_path);
 }
@@ -130,7 +130,7 @@ get_urls(void *baton,
   apr_pool_t *target_pool = apr_hash_pool_get(mi->mergeinfo);
   const char *rel_path = svn_uri_skip_ancestor(info->repos_root_URL,
                                                info->URL, pool);
- 
+
   mi->url = apr_pstrdup(target_pool, info->URL);
   mi->fs_path = svn_fspath__canonicalize(rel_path, target_pool);
 

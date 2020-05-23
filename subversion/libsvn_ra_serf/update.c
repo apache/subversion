@@ -603,7 +603,7 @@ get_best_connection(report_context_t *ctx)
      ### simply can't handle the way ra_serf violates the editor v1
      ### drive ordering requirements.
      ###
-     ### See http://subversion.tigris.org/issues/show_bug.cgi?id=4116.
+     ### See https://issues.apache.org/jira/browse/SVN-4116.
   */
   if (ctx->report_received && (ctx->sess->max_connections > 2))
     first_conn = 0;
@@ -2223,7 +2223,7 @@ process_buffer(update_delay_baton_t *udb,
 }
 
 
-/* Delaying wrapping reponse handler, to avoid creating too many
+/* Delaying wrapping response handler, to avoid creating too many
    requests to deliver efficiently */
 static svn_error_t *
 update_delay_handler(serf_request_t *request,

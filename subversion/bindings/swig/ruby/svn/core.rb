@@ -249,31 +249,31 @@ module Svn
         end
       end
 
-      def add_simple_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_simple_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredSimple
         add_prompt_provider("simple", args, prompt, klass)
       end
 
-      def add_username_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_username_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredUsername
         add_prompt_provider("username", args, prompt, klass)
       end
 
-      def add_ssl_server_trust_prompt_provider(prompt=Proc.new)
+      def add_ssl_server_trust_prompt_provider(&prompt)
         args = []
         klass = AuthCredSSLServerTrust
         add_prompt_provider("ssl_server_trust", args, prompt, klass)
       end
 
-      def add_ssl_client_cert_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_ssl_client_cert_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredSSLClientCert
         add_prompt_provider("ssl_client_cert", args, prompt, klass)
       end
 
-      def add_ssl_client_cert_pw_prompt_provider(retry_limit, prompt=Proc.new)
+      def add_ssl_client_cert_pw_prompt_provider(retry_limit, &prompt)
         args = [retry_limit]
         klass = AuthCredSSLClientCertPw
         add_prompt_provider("ssl_client_cert_pw", args, prompt, klass)

@@ -396,7 +396,7 @@ struct decode_baton
 };
 
 
-/* Wrapper aroung svn__deencode_uint taking a file size as *VAL. */
+/* Wrapper around svn__deencode_uint taking a file size as *VAL. */
 static const unsigned char *
 decode_file_offset(svn_filesize_t *val,
                    const unsigned char *p,
@@ -1026,11 +1026,11 @@ svndiff_stream_read_fn(void *baton, char *buffer, apr_size_t *len)
   apr_size_t left = *len;
   apr_size_t read = 0;
 
-  while (left && !b->hit_eof)
+  while (left)
     {
       apr_size_t chunk_size;
 
-      if (b->read_pos == b->window_buffer->len)
+      if (b->read_pos == b->window_buffer->len && !b->hit_eof)
         {
           svn_txdelta_window_t *window;
 
@@ -1049,6 +1049,9 @@ svndiff_stream_read_fn(void *baton, char *buffer, apr_size_t *len)
         chunk_size = b->window_buffer->len - b->read_pos;
       else
         chunk_size = left;
+
+      if (!chunk_size)
+          break;
 
       memcpy(buffer, b->window_buffer->data + b->read_pos, chunk_size);
       b->read_pos += chunk_size;

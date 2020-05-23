@@ -958,7 +958,7 @@ def blame_youngest_to_oldest(sbox):
   sbox.simple_commit() #r3
 
   # Delete a line.
-  open(iota_moved, 'w').write(line)
+  svntest.main.file_write(iota_moved, line)
   sbox.simple_commit() #r4
 
   expected_output = [

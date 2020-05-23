@@ -2522,8 +2522,8 @@ get_p2l_page(apr_array_header_t **entries,
  * MIN_OFFSET.  Set *END to TRUE if the caller should stop refeching.
  *
  * *BATON will be updated with the selected page's info and SCRATCH_POOL
- * will be used for temporary allocations.  If the data is alread in the
- * cache, descrease *LEAKING_BUCKET and increase it otherwise.  With that
+ * will be used for temporary allocations.  If the data is already in the
+ * cache, decrease *LEAKING_BUCKET and increase it otherwise.  With that
  * pattern we will still read all pages from the block even if some of
  * them survived in the cached.
  */
@@ -2681,7 +2681,7 @@ append_p2l_entries(apr_array_header_t *entries,
     }
 }
 
-/* Auxilliary struct passed to p2l_entries_func selecting the relevant
+/* Auxiliary struct passed to p2l_entries_func selecting the relevant
  * data range. */
 typedef struct p2l_entries_baton_t
 {
@@ -3191,9 +3191,9 @@ compare_p2l_entry_revision(const void *lhs,
                            const void *rhs)
 {
   const svn_fs_fs__p2l_entry_t *lhs_entry
-    =*(const svn_fs_fs__p2l_entry_t **)lhs;
+    =*(const svn_fs_fs__p2l_entry_t *const *)lhs;
   const svn_fs_fs__p2l_entry_t *rhs_entry
-    =*(const svn_fs_fs__p2l_entry_t **)rhs;
+    =*(const svn_fs_fs__p2l_entry_t *const *)rhs;
 
   if (lhs_entry->item.revision < rhs_entry->item.revision)
     return -1;

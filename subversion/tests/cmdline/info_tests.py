@@ -716,6 +716,72 @@ def info_item_uncommmitted(sbox):
     sbox.ospath('newfile'), sbox.ospath('newdir'))
 
 
+def info_item_size_wc_recursive(sbox):
+  "recursive '--show-item=repos-size' on local path"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    [], [],
+    'info', '--show-item=repos-size', '--recursive',
+    sbox.ospath(''))
+
+
+def info_item_size_repos(sbox):
+  "non-recursive '--show-item=repos-size' on URL"
+
+  sbox.build(read_only=True)
+
+  svntest.actions.run_and_verify_svn(
+    "25\n", [],
+    'info', '--show-item=repos-size',
+    sbox.repo_url + "/iota")
+
+  # Same, but without the newline.
+  svntest.actions.run_and_verify_svn(
+    "25", [],
+    'info', '--show-item=repos-size', '--no-newline',
+    sbox.repo_url + "/iota")
+
+  # Same, but with "human-readable" output.
+  svntest.actions.run_and_verify_svn(
+    "25 B", [],
+    'info', '--show-item=repos-size', '--human-readable',
+    sbox.repo_url + "/iota")
+
+  # No output when the URL is a directory.
+  svntest.actions.run_and_verify_svn(
+    [], [],
+    'info', '--show-item=repos-size',
+    sbox.repo_url)
+
+
+def info_item_size_repos_recursive(sbox):
+  "recursive '--show-item=repos-size' on dir URL"
+
+  sbox.build(read_only=True)
+
+  expected_output = svntest.verify.UnorderedOutput([
+    "25         " + sbox.repo_url + "/iota\n",
+    "27         " + sbox.repo_url + "/A/B/lambda\n",
+    "25         " + sbox.repo_url + "/A/B/E/beta\n",
+    "26         " + sbox.repo_url + "/A/B/E/alpha\n",
+    "23         " + sbox.repo_url + "/A/mu\n",
+    "26         " + sbox.repo_url + "/A/D/gamma\n",
+    "23         " + sbox.repo_url + "/A/D/G/pi\n",
+    "24         " + sbox.repo_url + "/A/D/G/rho\n",
+    "24         " + sbox.repo_url + "/A/D/G/tau\n",
+    "26         " + sbox.repo_url + "/A/D/H/omega\n",
+    "24         " + sbox.repo_url + "/A/D/H/psi\n",
+    "24         " + sbox.repo_url + "/A/D/H/chi\n",
+  ])
+
+  svntest.actions.run_and_verify_svn(
+    expected_output, [],
+    'info', '--show-item=repos-size', '--recursive',
+    sbox.repo_url)
+
+
 def info_item_failures(sbox):
   "failure modes of 'svn info --show-item'"
 
@@ -746,6 +812,37 @@ def info_item_failures(sbox):
     'info', '--show-item=revision', '--no-newline',
     sbox.ospath('A'), sbox.ospath('iota'))
 
+  svntest.actions.run_and_verify_svn(
+    None, (r".*E200007: can't show in-repository size.*"),
+    'info', '--show-item=repos-size',
+    sbox.ospath('iota'))
+
+
+@Issue(4837)
+def info_file_in_file_replaced_dir(sbox):
+  "info, file in file-replaced dir"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('text\n', 'dir/file')
+  sbox.simple_commit(message='Add file')
+
+  sbox.simple_copy('dir/file', 'file-moved')
+  sbox.simple_rm('dir')
+  sbox.simple_add_text('replaced\n', 'dir')
+  sbox.simple_commit(message='Replace dir with file')
+
+  sbox.simple_update()
+
+  expected = {'Relative URL' : r'\^/dir/file',
+              'Node Kind' : 'file',
+              'Revision': '1',
+              'Last Changed Rev': '1',
+             }
+
+  svntest.actions.run_and_verify_info([expected],
+                                      sbox.repo_url + '/dir/file@1')
+
 
 ########################################################################
 # Run the tests
@@ -767,7 +864,11 @@ test_list = [ None,
               info_item_simple_multiple,
               info_item_url,
               info_item_uncommmitted,
+              info_item_size_wc_recursive,
+              info_item_size_repos,
+              info_item_size_repos_recursive,
               info_item_failures,
+              info_file_in_file_replaced_dir,
              ]
 
 if __name__ == '__main__':

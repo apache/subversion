@@ -37,7 +37,7 @@ typedef apr_int64_t svn_fs_x__txn_id_t;
 
 /* Change set is the umbrella term for transaction and revision in FSX.
  * Revision numbers (>=0) map 1:1 onto change sets while txns are mapped
- * onto the negatve value range. */
+ * onto the negative value range. */
 typedef apr_int64_t svn_fs_x__change_set_t;
 
 /* Invalid / unused change set number. */

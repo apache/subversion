@@ -97,7 +97,7 @@ int dav_svn__proxy_request_fixup(request_rec *r)
            ourselves -- but we need to make sure they aren't aimed at
            resources that only exist on the master server such as
            working resource URIs or the HTTPv2 transaction root and
-           transaction tree resouces. */
+           transaction tree resources. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET) {
             if ((seg = ap_strstr(r->uri, root_dir))) {

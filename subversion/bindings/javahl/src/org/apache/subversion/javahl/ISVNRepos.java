@@ -96,7 +96,7 @@ public interface ISVNRepos {
      * @param dataOut           the data will be outputed here
      * @param start             the first revision to be dumped
      * @param end               the last revision to be dumped
-     * @param incremental       the dump will be incremantal
+     * @param incremental       the dump will be incremental
      * @param useDeltas         the dump will contain deltas between nodes
          * @param callback          the callback to receive notifications
      * @throws ClientException  throw in case of problem
@@ -146,6 +146,39 @@ public interface ISVNRepos {
     public abstract void listUnusedDBLogs(File path, MessageReceiver receiver)
             throws ClientException;
 
+
+    /**
+     * load the data of a dump into a repository
+     * @param path              the path to the repository
+     * @param dataInput         the data input source
+     * @param start             the first revision to load
+     * @param end               the last revision to load
+     * @param ignoreUUID        ignore any UUID found in the input stream
+     * @param forceUUID         set the repository UUID to any found in the
+     *                          stream
+     * @param usePreCommitHook  use the pre-commit hook when processing commits
+     * @param usePostCommitHook use the post-commit hook when processing commits
+     * @param validateProps     validate "svn:" revision and node properties
+     * @param ignoreDates       ignore revision datestamps in the dump stream
+     * @param normalizeProps    attempt to normalize invalid Subversion
+     *                          revision and node properties
+     * @param relativePath      the directory in the repository, where the data
+     *                          in put optional.
+     * @param callback          the target for processing messages
+     * @throws ClientException  throw in case of problem
+     * @since 1.10
+     */
+    public abstract void load(File path, InputStream dataInput,
+                              Revision start, Revision end,
+                              boolean ignoreUUID, boolean forceUUID,
+                              boolean usePreCommitHook,
+                              boolean usePostCommitHook,
+                              boolean validateProps,
+                              boolean ignoreDates,
+                              boolean normalizeProps,
+                              String relativePath,
+                              ReposNotifyCallback callback)
+        throws ClientException;
 
     /**
      * load the data of a dump into a repository
@@ -219,7 +252,7 @@ public interface ISVNRepos {
      *                          in put optional.
      * @param callback          the target for processing messages
      * @throws ClientException  throw in case of problem
-         * @note behaves like the 1.8 vesion with the revision
+         * @note behaves like the 1.8 version with the revision
          *       parameters set to Revision.START and Revision.HEAD.
      */
     public abstract void load(File path, InputStream dataInput,

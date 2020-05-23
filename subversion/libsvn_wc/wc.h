@@ -159,6 +159,7 @@ extern "C" {
  *
  * == 1.8.x shipped with format 31
  * == 1.9.x shipped with format 31
+ * == 1.10.x shipped with format 31
  *
  * Please document any further format changes here.
  */
@@ -288,6 +289,7 @@ struct svn_wc_traversal_info_t
 #define SVN_WC__ADM_TMP                 "tmp"
 #define SVN_WC__ADM_PRISTINE            "pristine"
 #define SVN_WC__ADM_NONEXISTENT_PATH    "nonexistent-path"
+#define SVN_WC__ADM_EXPERIMENTAL        "experimental"
 
 /* The basename of the ".prej" file, if a directory ever has property
    conflicts.  This .prej file will appear *within* the conflicted

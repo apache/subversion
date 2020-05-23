@@ -1029,7 +1029,7 @@ is updated.
 If $ignore_externals is set, don't process externals definitions as part of
 this operation.
 
-If $depth is $SVN::Depth::infinity, update fully recursivelly.  Else if it is
+If $depth is $SVN::Depth::infinity, update fully recursively.  Else if it is
 $SVN::Depth::immediates or $SVN::Depth::files, update each target and its file
 entries, but not its subdirectories.  Else if $SVN::Depth::empty, update
 exactly each target, nonrecursively (essentially, update the target's

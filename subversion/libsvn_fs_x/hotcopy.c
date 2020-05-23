@@ -625,7 +625,7 @@ hotcopy_body(void *baton,
     SVN_ERR(cancel_func(cancel_baton));
 
   /* Split the logic for new and old FS formats. The latter is much simpler
-   * due to the absense of sharding and packing. However, it requires special
+   * due to the absence of sharding and packing. However, it requires special
    * care when updating the 'current' file (which contains not just the
    * revision number, but also the next-ID counters). */
   SVN_ERR(hotcopy_revisions(src_fs, dst_fs, src_youngest, dst_youngest,

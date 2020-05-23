@@ -158,7 +158,7 @@ test_svn_subst_translate_string2_null_encoding(apr_pool_t *pool)
     };
   const char **other_locale;
 
-  strncpy(orig_lc_all, setlocale(LC_ALL, NULL), sizeof (orig_lc_all));
+  strncpy(orig_lc_all, setlocale(LC_ALL, NULL), sizeof (orig_lc_all) - 1);
 
   for (other_locale = other_locales; *other_locale != NULL; ++other_locale)
   {

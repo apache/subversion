@@ -148,7 +148,7 @@ copy_to_tmpdir(svn_skel_t **work_item,
     }
   else if (*kind == svn_node_dir && !file_copy)
     {
-      /* Just build a new direcory from the workqueue */
+      /* Just build a new directory from the workqueue */
       SVN_ERR(svn_wc__wq_build_dir_install(work_item,
                                            db, dst_abspath,
                                            result_pool, scratch_pool));

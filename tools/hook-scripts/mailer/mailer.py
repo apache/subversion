@@ -71,16 +71,10 @@ _MIN_SVN_VERSION = [1, 5, 0]
 
 # Import the Subversion Python bindings, making sure they meet our
 # minimum version requirements.
-try:
-  import svn.fs
-  import svn.delta
-  import svn.repos
-  import svn.core
-except ImportError:
-  sys.stderr.write(
-    "You need version %s or better of the Subversion Python bindings.\n" \
-    % ".".join([str(x) for x in _MIN_SVN_VERSION]))
-  sys.exit(1)
+import svn.fs
+import svn.delta
+import svn.repos
+import svn.core
 if _MIN_SVN_VERSION > [svn.core.SVN_VER_MAJOR,
                        svn.core.SVN_VER_MINOR,
                        svn.core.SVN_VER_PATCH]:
@@ -129,7 +123,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   else:
     raise UnknownSubcommand(cmd)
 
-  messenger.generate()
+  return messenger.generate()
 
 
 def remove_leading_slashes(path):
@@ -291,15 +285,73 @@ class SMTPOutput(MailedOutput):
     self.write(self.mail_headers(group, params))
 
   def finish(self):
-    if self.cfg.is_set('general.smtp_ssl') and self.cfg.general.smtp_ssl == 'yes':
-      server = smtplib.SMTP_SSL(self.cfg.general.smtp_hostname)
+    """
+    Send email via SMTP or SMTP_SSL, logging in if username is
+    specified.
+
+    Errors such as invalid recipient, which affect a particular email,
+    are reported to stderr and raise MessageSendFailure. If the caller
+    has other emails to send, it may continue doing so.
+
+    Errors caused by bad configuration, such as login failures, for
+    which too many occurrences could lead to SMTP server lockout, are
+    reported to stderr and re-raised. These should be considered fatal
+    (to minimize the chances of said lockout).
+    """
+
+    if self.cfg.is_set('general.smtp_port'):
+       smtp_port = self.cfg.general.smtp_port
     else:
-      server = smtplib.SMTP(self.cfg.general.smtp_hostname)
-    if self.cfg.is_set('general.smtp_username'):
-      server.login(self.cfg.general.smtp_username,
-                   self.cfg.general.smtp_password)
-    server.sendmail(self.from_addr, self.to_addrs, self.buffer.getvalue())
-    server.quit()
+       smtp_port = 0
+    try:
+      if self.cfg.is_set('general.smtp_ssl') and self.cfg.general.smtp_ssl == 'yes':
+        server = smtplib.SMTP_SSL(self.cfg.general.smtp_hostname, smtp_port)
+      else:
+        server = smtplib.SMTP(self.cfg.general.smtp_hostname, smtp_port)
+    except Exception as detail:
+      sys.stderr.write("mailer.py: Failed to instantiate SMTP object: %s\n" % (detail,))
+      # Any error to instantiate is fatal
+      raise
+
+    try:
+      if self.cfg.is_set('general.smtp_username'):
+        try:
+          server.login(self.cfg.general.smtp_username,
+                       self.cfg.general.smtp_password)
+        except smtplib.SMTPException as detail:
+          sys.stderr.write("mailer.py: SMTP login failed with username %s and/or password: %s\n"
+                           % (self.cfg.general.smtp_username, detail,))
+          # Any error at login is fatal
+          raise
+
+      server.sendmail(self.from_addr, self.to_addrs, self.buffer.getvalue())
+
+    ### TODO: 'raise .. from' is Python 3+. When we convert this
+    ###       script to Python 3, uncomment 'from detail' below
+    ###       (2 instances):
+
+    except smtplib.SMTPRecipientsRefused as detail:
+      sys.stderr.write("mailer.py: SMTP recipient(s) refused: %s: %s\n"
+                           % (self.to_addrs, detail,))
+      raise MessageSendFailure ### from detail
+
+    except smtplib.SMTPSenderRefused as detail:
+      sys.stderr.write("mailer.py: SMTP sender refused: %s: %s\n"
+                           % (self.from_addr, detail,))
+      raise MessageSendFailure ### from detail
+
+    except smtplib.SMTPException as detail:
+      # All other errors are fatal; this includes:
+      # SMTPHeloError, SMTPDataError, SMTPNotSupportedError
+      sys.stderr.write("mailer.py: SMTP error occurred: %s\n" % (detail,))
+      raise
+
+    finally:
+      try:
+        server.quit()
+      except smtplib.SMTPException as detail:
+        sys.stderr.write("mailer.py: Error occurred during SMTP session cleanup: %s\n"
+                             % (detail,))
 
 
 class StandardOutput(OutputBase):
@@ -427,21 +479,26 @@ class Commit(Messenger):
     ### rather than rebuilding it each time.
 
     subpool = svn.core.svn_pool_create(self.pool)
+    ret = 0
 
     # build a renderer, tied to our output stream
     renderer = TextCommitRenderer(self.output)
 
     for (group, param_tuple), (params, paths) in self.groups.items():
-      self.output.start(group, params)
+      try:
+        self.output.start(group, params)
 
-      # generate the content for this group and set of params
-      generate_content(renderer, self.cfg, self.repos, self.changelist,
-                       group, params, paths, subpool)
+        # generate the content for this group and set of params
+        generate_content(renderer, self.cfg, self.repos, self.changelist,
+                         group, params, paths, subpool)
 
-      self.output.finish()
+        self.output.finish()
+      except MessageSendFailure:
+        ret = 1
       svn.core.svn_pool_clear(subpool)
 
     svn.core.svn_pool_destroy(subpool)
+    return ret
 
 
 class PropChange(Messenger):
@@ -462,35 +519,40 @@ class PropChange(Messenger):
 
   def generate(self):
     actions = { 'A': 'added', 'M': 'modified', 'D': 'deleted' }
+    ret = 0
     for (group, param_tuple), params in self.groups.items():
-      self.output.start(group, params)
-      self.output.write('Author: %s\n'
-                        'Revision: %s\n'
-                        'Property Name: %s\n'
-                        'Action: %s\n'
-                        '\n'
-                        % (self.author, self.repos.rev, self.propname,
-                           actions.get(self.action, 'Unknown (\'%s\')' \
-                                       % self.action)))
-      if self.action == 'A' or self.action not in actions:
-        self.output.write('Property value:\n')
-        propvalue = self.repos.get_rev_prop(self.propname)
-        self.output.write(propvalue)
-      elif self.action == 'M':
-        self.output.write('Property diff:\n')
-        tempfile1 = tempfile.NamedTemporaryFile()
-        tempfile1.write(sys.stdin.read())
-        tempfile1.flush()
-        tempfile2 = tempfile.NamedTemporaryFile()
-        tempfile2.write(self.repos.get_rev_prop(self.propname))
-        tempfile2.flush()
-        self.output.run(self.cfg.get_diff_cmd(group, {
-          'label_from' : 'old property value',
-          'label_to' : 'new property value',
-          'from' : tempfile1.name,
-          'to' : tempfile2.name,
-          }))
-      self.output.finish()
+      try:
+        self.output.start(group, params)
+        self.output.write('Author: %s\n'
+                          'Revision: %s\n'
+                          'Property Name: %s\n'
+                          'Action: %s\n'
+                          '\n'
+                          % (self.author, self.repos.rev, self.propname,
+                             actions.get(self.action, 'Unknown (\'%s\')' \
+                                         % self.action)))
+        if self.action == 'A' or self.action not in actions:
+          self.output.write('Property value:\n')
+          propvalue = self.repos.get_rev_prop(self.propname)
+          self.output.write(propvalue)
+        elif self.action == 'M':
+          self.output.write('Property diff:\n')
+          tempfile1 = tempfile.NamedTemporaryFile()
+          tempfile1.write(sys.stdin.read())
+          tempfile1.flush()
+          tempfile2 = tempfile.NamedTemporaryFile()
+          tempfile2.write(self.repos.get_rev_prop(self.propname))
+          tempfile2.flush()
+          self.output.run(self.cfg.get_diff_cmd(group, {
+            'label_from' : 'old property value',
+            'label_to' : 'new property value',
+            'from' : tempfile1.name,
+            'to' : tempfile2.name,
+            }))
+        self.output.finish()
+      except MessageSendFailure:
+        ret = 1
+    return ret
 
 
 def get_commondir(dirlist):
@@ -570,21 +632,26 @@ class Lock(Messenger):
                                        self.dirlist[0], self.pool)
 
   def generate(self):
+    ret = 0
     for (group, param_tuple), (params, paths) in self.groups.items():
-      self.output.start(group, params)
+      try:
+        self.output.start(group, params)
 
-      self.output.write('Author: %s\n'
-                        '%s paths:\n' %
-                        (self.author, self.do_lock and 'Locked' or 'Unlocked'))
+        self.output.write('Author: %s\n'
+                          '%s paths:\n' %
+                          (self.author, self.do_lock and 'Locked' or 'Unlocked'))
 
-      self.dirlist.sort()
-      for dir in self.dirlist:
-        self.output.write('   %s\n\n' % dir)
+        self.dirlist.sort()
+        for dir in self.dirlist:
+          self.output.write('   %s\n\n' % dir)
 
-      if self.do_lock:
-        self.output.write('Comment:\n%s\n' % (self.lock.comment or ''))
+        if self.do_lock:
+          self.output.write('Comment:\n%s\n' % (self.lock.comment or ''))
 
-      self.output.finish()
+        self.output.finish()
+      except MessageSendFailure:
+        ret = 1
+    return ret
 
 
 class DiffSelections:
@@ -1400,6 +1467,8 @@ class UnknownMappingSpec(Exception):
   pass
 class UnknownSubcommand(Exception):
   pass
+class MessageSendFailure(Exception):
+  pass
 
 
 if __name__ == '__main__':
@@ -1461,8 +1530,9 @@ if the property was added, modified or deleted, respectively.
   if not os.path.exists(config_fname):
     raise MissingConfig(config_fname)
 
-  svn.core.run_app(main, cmd, config_fname, repos_dir,
-                   sys.argv[3:3+expected_args])
+  ret = svn.core.run_app(main, cmd, config_fname, repos_dir,
+                         sys.argv[3:3+expected_args])
+  sys.exit(1 if ret else 0)
 
 # ------------------------------------------------------------------------
 # TODO

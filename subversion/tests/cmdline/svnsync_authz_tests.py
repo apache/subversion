@@ -415,7 +415,7 @@ def specific_deny_authz(sbox):
 
   # For mod_dav_svn's parent path setup we need per-repos permissions in
   # the authz file...
-  if sbox.repo_url.startswith('http'):
+  if svntest.main.is_ra_type_dav():
     src_authz = sbox.authz_name()
     dst_authz = dest_sbox.authz_name()
     write_authz_file(sbox, None,

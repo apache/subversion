@@ -1055,7 +1055,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    options.useGitDiffFormat(),
                                    SVN_APR_LOCALE_CHARSET,
                                    outputStream.getStream(subPool),
-                                   NULL /* error file */,
+                                   // Discard stderr; TODO: Update JavaHL API
+                                   svn_stream_empty(subPool.getPool()),
                                    changelists.array(subPool),
                                    ctx,
                                    subPool.getPool()),
@@ -1084,7 +1085,8 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                options.useGitDiffFormat(),
                                SVN_APR_LOCALE_CHARSET,
                                outputStream.getStream(subPool),
-                               NULL /* error stream */,
+                               // Discard stderr; TODO: Update JavaHL API
+                               svn_stream_empty(subPool.getPool()),
                                changelists.array(subPool),
                                ctx,
                                subPool.getPool()),
@@ -1282,7 +1284,9 @@ void SVNClient::blame(const char *path, Revision &pegRevision,
     if (ctx == NULL)
         return;
 
-    SVN_JNI_ERR(svn_client_blame5(
+    SVN_JNI_ERR(svn_client_blame6(
+          callback->get_start_revnum_p(),
+          callback->get_end_revnum_p(),
           intPath.c_str(), pegRevision.revision(), revisionStart.revision(),
           revisionEnd.revision(),
           options.fileOptions(subPool), ignoreMimeType,

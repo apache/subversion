@@ -1073,7 +1073,7 @@ def commit_depth_immediates(sbox):
   #    Message-ID: <46968831.2070906@collab.net>
   #    Date: Thu, 12 Jul 2007 15:59:45 -0400
   #
-  # See also http://subversion.tigris.org/issues/show_bug.cgi?id=2882.
+  # See also https://issues.apache.org/jira/browse/SVN-2882.
   #
   # Outline of the test:
   # ====================
@@ -2846,7 +2846,7 @@ def commit_excluded(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'D' : Item(verb='Adding'),
   })
-  
+
   expected_status.add({
     'D'          : Item(status='  ', wc_rev='2'),
     'D/H'        : Item(status='  ', wc_rev='2'),
@@ -2971,10 +2971,10 @@ def fold_tree_with_unversioned_items(sbox):
 
   # Set A to be excluded.
   svntest.main.run_svn(None, 'update', '--set-depth=exclude', A_path)
-  
+
   # try a simple update afterwards
   sbox.simple_update()
-  
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,

@@ -362,7 +362,9 @@
     /* svn_config_get */
     const char *default_value,
     /* svn_config_read_auth_data */
-    const char *config_dir, 
+    const char *config_dir,
+    /* svn_config_get_user_config_path */
+    const char *fname,
     /* svn_diff_file_output_merge */
     const char *conflict_original,
     const char *conflict_modified,
@@ -381,6 +383,7 @@
     if (PyLong_Check($input)) {
         temp = PyLong_AsUnsignedLong($input);
     }
+%#if IS_PY3 != 1
     else if (PyInt_Check($input)) {
         /* wish there was a PyInt_AsUnsignedLong but there isn't
            the mask version doesn't do bounds checking for us.
@@ -389,6 +392,7 @@
            problem goes away because PyInt is gone anyway. */
         temp = PyInt_AsUnsignedLongMask($input);
     }
+%#endif
     else {
         PyErr_SetString(PyExc_TypeError,
                         "expecting an integer for the buffer size");
@@ -418,7 +422,7 @@
 
 #ifdef SWIGPYTHON
 %typemap(argout) (char *buffer, apr_size_t *len) {
-  %append_output(PyString_FromStringAndSize($1, *$2));
+  %append_output(PyBytes_FromStringAndSize($1, *$2));
   free($1);
 }
 #endif
@@ -440,13 +444,24 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) (const char *data, apr_size_t *len) ($*2_type temp) {
-    if (!PyString_Check($input)) {
+    Py_ssize_t length;
+    if (PyBytes_Check($input)) {
+        if (PyBytes_AsStringAndSize($input, (char **)&$1, &length) == -1) {
+            SWIG_fail;
+        }
+    }
+    else if (PyUnicode_Check($input)) {
+        $1 = (char *)PyStr_AsUTF8AndSize($input, &length);
+        if (PyErr_Occurred()) {
+            SWIG_fail;
+        }
+    }
+    else {
         PyErr_SetString(PyExc_TypeError,
-                        "expecting a string for the buffer");
+                        "expecting a bytes or str object for the buffer");
         SWIG_fail;
     }
-    $1 = PyString_AS_STRING($input);
-    temp = PyString_GET_SIZE($input);
+    temp = ($*2_type)length;
     $2 = ($2_ltype)&temp;
 }
 #endif
@@ -499,8 +514,8 @@
        SWIG_fail;
     }
 
-    if (PyString_Check($input)) {
-        char *value = PyString_AS_STRING($input);
+    if (PyBytes_Check($input)) {
+        const char *value = PyBytes_AsString($input);
         $1 = apr_pstrdup(_global_pool, value);
     }
     else if (PyLong_Check($input)) {
@@ -605,7 +620,7 @@
 */
 #ifdef SWIGPYTHON
 %typemap(in) FILE * {
-    $1 = PyFile_AsFile($input);
+    $1 = svn_swig_py_as_file($input);
     if ($1 == NULL) {
         PyErr_SetString(PyExc_ValueError, "Must pass in a valid file object");
         SWIG_fail;
@@ -710,11 +725,6 @@ core_set_current_pool (apr_pool_t *pool)
                   svn_swig_rb_config_section_enumerator)
 #endif
 
-/* Allow None to be passed as config_dir argument */
-#ifdef SWIGPYTHON
-%typemap(in,parse="z") const char *config_dir "";
-#endif
-
 /* -----------------------------------------------------------------------
   thunk the various authentication prompt functions.
   PERL NOTE: store the inputed SV in _global_callback for use in the
@@ -816,6 +826,7 @@ core_set_current_pool (apr_pool_t *pool)
 
 %include svn_error_codes_h.swg
 %include svn_time_h.swg
+%include svn_types_impl_h.swg
 %include svn_types_h.swg
 %include svn_pools_h.swg
 %include svn_version_h.swg
@@ -827,6 +838,7 @@ core_set_current_pool (apr_pool_t *pool)
 %include svn_props_h.swg
 #pragma SWIG nowarn=+305
 
+%include svn_opt_impl_h.swg
 %include svn_opt_h.swg
 %include svn_cmdline_h.swg
 %include svn_auth_h.swg

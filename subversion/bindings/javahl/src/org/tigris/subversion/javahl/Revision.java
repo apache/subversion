@@ -146,7 +146,7 @@ public class Revision implements java.io.Serializable
     }
 
     /**
-     * Creates a Revision.DateSpec objet
+     * Creates a Revision.DateSpec object
      * @param revisionDate  the date of the new object
      * @return  the new object
      */

@@ -199,7 +199,7 @@ public class ClientNotifyInformation extends EventObject
     }
 
     /**
-     * @deprecated Constructor compatible with teh 1.8 API; uses
+     * @deprecated Constructor compatible with the 1.8 API; uses
      * <code>null</code> URL and errMsgStack values.
      */
     @Deprecated

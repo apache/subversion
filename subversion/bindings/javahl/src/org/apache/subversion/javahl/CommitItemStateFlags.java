@@ -23,6 +23,8 @@
 
 package org.apache.subversion.javahl;
 
+import java.lang.annotation.*;
+
 /**
  * The constants in this interface describe the changes to an item to
  * be committed.
@@ -32,36 +34,43 @@ public interface CommitItemStateFlags
     /**
      * the item has been added
      */
+    @Native
     public static final int Add=1;
 
     /**
      * the item has been deleted
      */
+    @Native
     public static final int Delete=2;
 
     /**
      * the item has text modifications
      */
+    @Native
     public static final int TextMods=4;
 
     /**
      * the item has property modifications
      */
+    @Native
     public static final int PropMods=8;
 
     /**
      * the item has been copied
      */
+    @Native
     public static final int IsCopy=16;
 
     /**
      * the item has a lock token
      */
+    @Native
     public static final int LockToken = 32;
 
     /**
      * the item was moved to this location
      * @since 1.8
      */
+    @Native
     public static int MovedHere = 64;
 }

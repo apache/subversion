@@ -53,7 +53,7 @@ public class Status implements java.io.Serializable
     private String path;
 
     /**
-     * kind of the item (file, directory or unknonw)
+     * kind of the item (file, directory or unknown)
      */
     private int nodeKind;
 

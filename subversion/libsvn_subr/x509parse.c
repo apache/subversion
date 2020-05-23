@@ -263,12 +263,33 @@ x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
   if (*p == end)
     return SVN_NO_ERROR;
 
-  /*
-   * assume the algorithm parameters must be NULL
-   */
-  err = asn1_get_tag(p, end, &len, ASN1_NULL);
-  if (err)
-    return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
+  /* The OID encoding of 1.2.840.113549.1.1.10 (id-RSASSA-PSS) */
+#define OID_RSASSA_PSS "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a"
+
+  if (equal(alg->p, alg->len, OID_RSASSA_PSS, sizeof(OID_RSASSA_PSS) - 1))
+    {
+      /* Skip over algorithm parameters for id-RSASSA-PSS (RFC 8017)
+       *
+       * RSASSA-PSS-params ::= SEQUENCE {
+       *  hashAlgorithm      [0] HashAlgorithm    DEFAULT sha1,
+       *  maskGenAlgorithm   [1] MaskGenAlgorithm DEFAULT mgf1SHA1,
+       *  saltLength         [2] INTEGER          DEFAULT 20,
+       *  trailerField       [3] TrailerField     DEFAULT trailerFieldBC
+       * }
+       */
+      err = asn1_get_tag(p, end, &len, ASN1_CONSTRUCTED | ASN1_SEQUENCE);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
+
+      *p += len;
+    }
+  else
+    {
+      /* Algorithm parameters must be NULL for other algorithms */
+      err = asn1_get_tag(p, end, &len, ASN1_NULL);
+      if (err)
+        return svn_error_create(SVN_ERR_X509_CERT_INVALID_ALG, err, NULL);
+    }
 
   if (*p != end)
     {
@@ -861,7 +882,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
 
       /* Both BMP and UNIVERSAL should always be in Big Endian (aka
        * network byte order).  But rumor has it that there are certs
-       * out there with other endianess and even Byte Order Marks.
+       * out there with other endianness and even Byte Order Marks.
        * If we actually run into these, we might need to do something
        * about it. */
 
@@ -895,7 +916,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
 
       /* This leaves two types out there in the wild.  PrintableString,
        * which is just a subset of ASCII and IA5 which is ASCII (though
-       * 0x24 '$' and 0x23 '#' may be defined with differnet symbols
+       * 0x24 '$' and 0x23 '#' may be defined with different symbols
        * depending on the location, in practice it seems everyone just
        * treats it as ASCII).  Since these are just ASCII run through
        * the fuzzy_escape code to deal with anything that isn't actually
@@ -958,7 +979,7 @@ is_hostname(const char *str)
           if (i + 1 != len)
             {
               if (str[i + 1] == '.')
-                return FALSE; /* '-' preceeds a '.' */
+                return FALSE; /* '-' precedes a '.' */
             }
           else
             return FALSE; /* '-' is at end of string */

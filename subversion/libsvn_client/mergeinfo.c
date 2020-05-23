@@ -1749,7 +1749,7 @@ svn_client__mergeinfo_log(svn_boolean_t finding_merged,
       if (*target_mergeinfo_catalog)
         {
           /* The caller provided the mergeinfo catalog for
-             TARGET_PATH_OR_URL, so we don't need to accquire
+             TARGET_PATH_OR_URL, so we don't need to acquire
              it ourselves.  We do need to get the repos_root
              though, because get_mergeinfo() won't do it for us. */
           target_mergeinfo_cat = *target_mergeinfo_catalog;

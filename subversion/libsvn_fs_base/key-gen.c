@@ -50,7 +50,7 @@ svn_fs_base__next_key(const char *this, apr_size_t *len, char *next)
    * from being propagated further. */
   SVN_ERR_ASSERT_NO_RETURN(olen != 0 && (olen == 1 || this[0] != '0'));
 
-  i = olen - 1; /* initial index: we work backwords */
+  i = olen - 1; /* initial index: we work backwards */
   while (1729)
     {
       c = this[i];

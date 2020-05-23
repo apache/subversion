@@ -24,7 +24,7 @@
 #
 
 '''usage: python run_tests.py
-            [--verbose] [--log-to-stdout] [--cleanup]
+            [--verbose] [--log-to-stdout] [--cleanup] [--bin=<path>]
             [--parallel | --parallel=<n>] [--global-scheduler]
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
@@ -34,6 +34,7 @@
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             [--fsfs-compression=<type>] [--fsfs-dir-deltification=<true|false>]
+            [--allow-remote-http-connection]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -49,7 +50,7 @@ separated list of test numbers; the default is to run all the tests in it.
 import os, sys, shutil, codecs
 import re
 import logging
-import optparse, subprocess, imp, threading, traceback
+import optparse, subprocess, threading, traceback
 from datetime import datetime
 
 try:
@@ -62,6 +63,13 @@ except ImportError:
 if sys.version_info < (3, 0):
   # Python >= 3.0 already has this build in
   import exceptions
+
+if sys.version_info < (3, 5):
+  import imp
+else:
+  # The imp module is deprecated since Python 3.4; the replacement we use,
+  # module_from_spec(), is available since Python 3.5.
+  import importlib.util
 
 # Ensure the compiled C tests use a known locale (Python tests set the locale
 # explicitly).
@@ -280,6 +288,8 @@ class TestHarness:
       cmdline.append('--fsfs-compression=%s' % self.opts.fsfs_compression)
     if self.opts.fsfs_dir_deltification is not None:
       cmdline.append('--fsfs-dir-deltification=%s' % self.opts.fsfs_dir_deltification)
+    if self.opts.allow_remote_http_connection is not None:
+      cmdline.append('--allow-remote-http-connection')
 
     self.py_test_cmdline = cmdline
 
@@ -327,7 +337,7 @@ class TestHarness:
     def _command_line(self, harness):
       if self.is_python:
         cmdline = list(harness.py_test_cmdline)
-        cmdline.insert(0, 'python')
+        cmdline.insert(0, sys.executable)
         cmdline.insert(1, self.progabs)
         # Run the test apps in "child process" mode,
         # i.e. w/o cleaning up global directories etc.
@@ -375,12 +385,12 @@ class TestHarness:
 
     def _count_py_tests(self, progabs, progdir, progbase):
       'Run a c test, escaping parameters as required.'
-      cmdline = [ 'python', progabs, '--list' ]
+      cmdline = [ sys.executable, progabs, '--list' ]
       prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
       lines = prog.stdout.readlines()
 
       for i in range(0, len(lines) - 2):
-        self.result.append(TestHarness.Job(i + 1, True, progabs, 
+        self.result.append(TestHarness.Job(i + 1, True, progabs,
                                            progdir, progbase))
       prog.wait()
 
@@ -448,6 +458,7 @@ class TestHarness:
     job_queue = queue.Queue()
     total_count = 0
     scrambled = list(jobs)
+    # TODO: What's this line doing, and what's the magic number?
     scrambled.sort(key=lambda x: ("1" if x.test_count() < 30 else "0") + str(x.number))
     for job in scrambled:
       total_count += job.test_count()
@@ -709,9 +720,11 @@ class TestHarness:
 
     # Summary.
     if failed or xpassed or failed_list:
-      print("SUMMARY: Some tests failed.\n")
+      summary = "Some tests failed"
     else:
-      print("SUMMARY: All tests successful.\n")
+      summary = "All tests successful"
+    print("Python version: %d.%d.%d." % sys.version_info[:3])
+    print("SUMMARY: %s\n" % summary)
 
     self._close_log()
     return failed
@@ -815,10 +828,15 @@ class TestHarness:
       if sys.version_info < (3, 0):
         prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
                                    ('.py', 'U', imp.PY_SOURCE))
-      else:
+      elif sys.version_info < (3, 5):
         prog_mod = imp.load_module(progbase[:-3],
                                    open(progabs, 'r', encoding="utf-8"),
                                    progabs, ('.py', 'U', imp.PY_SOURCE))
+      else:
+         spec = importlib.util.spec_from_file_location(progbase[:-3], progabs)
+         prog_mod = importlib.util.module_from_spec(spec)
+         sys.modules[progbase[:-3]] = prog_mod
+         spec.loader.exec_module(prog_mod)
     except:
       print("\nError loading test (details in following traceback): " + progbase)
       traceback.print_exc()
@@ -1032,6 +1050,8 @@ def create_parser():
                     help='Set compression type (for fsfs)')
   parser.add_option('--fsfs-dir-deltification', action='store', type='str',
                     help='Set directory deltification option (for fsfs)')
+  parser.add_option('--allow-remote-http-connection', action='store_true',
+                    help='Run tests that connect to remote HTTP(S) servers')
 
   parser.set_defaults(set_log_level=None)
   return parser

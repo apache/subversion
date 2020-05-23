@@ -124,7 +124,7 @@ struct blocks
      This value has an upper bound proportionate to the text delta
      window size, so unless we dramatically increase the window size,
      it's safe to make this a 32-bit value.  In any case, it has to be
-     hte same width as the block position index, (struct
+     the same width as the block position index, (struct
      block).pos. */
   apr_uint32_t max;
 

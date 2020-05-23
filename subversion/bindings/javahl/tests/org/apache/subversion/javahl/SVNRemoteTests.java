@@ -1383,9 +1383,9 @@ public class SVNRemoteTests extends SVNTests
     {
         ISVNRemote session = getSession();
 
-        Long expected = new Long(1L);
+        Long expected = Long.valueOf(1L);
         ArrayList<Long> revs = new ArrayList<Long>(3);
-        revs.add(new Long(0L));
+        revs.add(Long.valueOf(0L));
         revs.add(expected);
 
         Map<Long, String> locs = session.getLocations("A", 1, revs);

@@ -121,7 +121,7 @@ public interface ISVNRemote
      *<p>
      * <b>Note:</b> If the server has Capability.atomic_revprops and
      * <code>oldValue</code> is not <code>null</code>, and the present
-     * value of the propery is not <code>oldValue</code> (e.g., if
+     * value of the property is not <code>oldValue</code> (e.g., if
      * another client changed the property), then the operation will
      * fail.
      *<p>
@@ -129,8 +129,8 @@ public interface ISVNRemote
      * Capability.atomic_revprops, then <code>oldValue</code>
      * <em>must</em> be <code>null</code>.
      *<p>
-     * @param revision The revision to which the propery is attached
-     * @param propertyName The name of the propery
+     * @param revision The revision to which the property is attached
+     * @param propertyName The name of the property
      * @param oldValue The previous value of the property (see note below)
      * @param newValue The new value of the property. If <code>newValue</code>
      *        is <code>null</code>, the property will be deleted.
@@ -280,7 +280,7 @@ public interface ISVNRemote
      * <p>
      * <code>direntFields</code> controls which portions of the DirEntry
      * objects are filled in. To have them completely filled in, just pass
-     * DirEntry.Fields.all, othewise pass a bitwise OR of any of the
+     * DirEntry.Fields.all, otherwise pass a bitwise OR of any of the
      * DirEntry.Fields flags you would like to have.
      * <p>
      * If <code>properties</code> is not <code>null</code>, set
@@ -405,8 +405,8 @@ public interface ISVNRemote
      * <p>
      * If <code>startRevision</code> or <code>endRevision</code> is
      * {@link org.apache.subversion.javahl.types.Revision#SVN_INVALID_REVNUM},
-     * the HEAD revision is uses for that argument. If eiter is an
-     * invaild non-existent revision, an error will be returned.
+     * the HEAD revision is uses for that argument. If either is an
+     * invalid non-existent revision, an error will be returned.
      * <p>
      * If <code>paths</code> is not <code>null</code> and has one or
      * more elements, then only show revisions in which at least one
@@ -519,7 +519,7 @@ public interface ISVNRemote
         }
 
         /**
-         * @return The repository-relative path of the obejct in this
+         * @return The repository-relative path of the object in this
          * history segment.
          */
         public String getPath() { return path; }

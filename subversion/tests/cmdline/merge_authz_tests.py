@@ -97,7 +97,7 @@ def mergeinfo_and_skipped_paths(sbox):
   wc_disk, wc_status = set_up_branch(sbox, False, 3)
 
   # Create a restrictive authz where part of the merge source and part
-  # of the target are inaccesible.
+  # of the target are inaccessible.
   write_restrictive_svnserve_conf(sbox.repo_dir)
   write_authz_file(sbox, {"/"               : svntest.main.wc_author +"=rw",
                           # Make a directory in the merge source inaccessible.
@@ -342,7 +342,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # this.
   #
   # Merge -c5 -c8 to the restricted WC's A_COPY_2/D/H.  r5 gets merged first
-  # but is a no-op, r8 get's merged next and is operative so the mergeinfo
+  # but is a no-op, r8 gets merged next and is operative so the mergeinfo
   # should be updated on the merge target to reflect both merges.
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
@@ -486,7 +486,7 @@ def mergeinfo_and_skipped_paths(sbox):
 def merge_fails_if_subtree_is_deleted_on_src(sbox):
   "merge fails if subtree is deleted on src"
 
-  ## See http://subversion.tigris.org/issues/show_bug.cgi?id=2876. ##
+  ## See https://issues.apache.org/jira/browse/SVN-2876. ##
 
   # Create a WC
   sbox.build()
@@ -613,7 +613,7 @@ def reintegrate_fails_if_no_root_access(sbox):
   # should be able to reintegrate, regardless of what authorization
   # they have to parents of the source and target.
   #
-  # See http://subversion.tigris.org/issues/show_bug.cgi?id=3242#desc78
+  # See https://issues.apache.org/jira/browse/SVN-3242#desc78
 
   # Some paths we'll care about
   wc_dir = sbox.wc_dir

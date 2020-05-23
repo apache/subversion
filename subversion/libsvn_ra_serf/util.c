@@ -756,6 +756,9 @@ handle_client_cert_pw(void *data,
 
     if (creds)
       {
+        /* At this stage we are unable to check whether the password
+           is correct; if it is incorrect serf will fail to establish
+           an SSL connection and will return a generic SSL error. */
         svn_auth_cred_ssl_client_cert_pw_t *pw_creds;
         pw_creds = creds;
         *password = pw_creds->password;
@@ -795,7 +798,7 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
  *
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  *
- * If DAV_HEADERS is non-zero, it will add standard DAV capabilites headers
+ * If DAV_HEADERS is non-zero, it will add standard DAV capabilities headers
  * to request.
  *
  * REQUEST_POOL should live for the duration of the request. Serf will
@@ -994,7 +997,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 /* Ensure that a handler is no longer scheduled on the connection.
 
    Eventually serf will have a reliable way to cancel existing requests,
-   but currently it doesn't even have a way to relyable identify a request
+   but currently it doesn't even have a way to reliable identify a request
    after rescheduling, for auth reasons.
 
    So the only thing we can do today is reset the connection, which
@@ -1113,19 +1116,17 @@ response_get_location(serf_bucket_t *response,
         return NULL;
 
       /* Replace the path path with what we got */
-      uri.path = (char*)svn_urlpath__canonicalize(location, scratch_pool);
+      uri.path = apr_pstrdup(scratch_pool, location);
 
       /* And make APR produce a proper full url for us */
-      location = apr_uri_unparse(scratch_pool, &uri, 0);
-
-      /* Fall through to ensure our canonicalization rules */
+      return apr_uri_unparse(result_pool, &uri, 0);
     }
   else if (!svn_path_is_url(location))
     {
       return NULL; /* Any other formats we should support? */
     }
 
-  return svn_uri_canonicalize(location, result_pool);
+  return apr_pstrdup(result_pool, location);
 }
 
 
@@ -1445,6 +1446,23 @@ handle_response(serf_request_t *request,
 
  process_body:
 
+  /* A client cert file password was obtained and worked (any HTTP
+     response means that the SSL connection was established.) */
+  if (handler->conn->ssl_client_pw_auth_state)
+    {
+      SVN_ERR(svn_auth_save_credentials(handler->conn->ssl_client_pw_auth_state,
+                                        handler->session->pool));
+      handler->conn->ssl_client_pw_auth_state = NULL;
+    }
+  if (handler->conn->ssl_client_auth_state)
+    {
+      /* The cert file provider doesn't have any code to save creds so
+         this is currently a no-op. */
+      SVN_ERR(svn_auth_save_credentials(handler->conn->ssl_client_auth_state,
+                                        handler->session->pool));
+      handler->conn->ssl_client_auth_state = NULL;
+    }
+
   /* We've been instructed to ignore the body. Drain whatever is present.  */
   if (handler->discard_body)
     {
@@ -1532,7 +1550,7 @@ handle_response_cb(serf_request_t *request,
          If we would return an error outer-status the connection
          would have to be restarted. With scheduled still TRUE
          destroying the handler's pool will still reset the
-         connection, avoiding the posibility of returning
+         connection, avoiding the possibility of returning
          an error for this handler when a new request is
          scheduled. */
       outer_status = APR_EAGAIN; /* Exit context loop */
@@ -2065,3 +2083,72 @@ svn_ra_serf__is_low_latency_connection(svn_ra_serf__session_t *session)
   return session->conn_latency >= 0 &&
          session->conn_latency < apr_time_from_msec(5);
 }
+
+apr_array_header_t *
+svn_ra_serf__get_dirent_props(apr_uint32_t dirent_fields,
+                              svn_ra_serf__session_t *session,
+                              apr_pool_t *result_pool)
+{
+  svn_ra_serf__dav_props_t *prop;
+  apr_array_header_t *props = apr_array_make
+    (result_pool, 7, sizeof(svn_ra_serf__dav_props_t));
+
+  if (session->supports_deadprop_count != svn_tristate_false
+      || ! (dirent_fields & SVN_DIRENT_HAS_PROPS))
+    {
+      if (dirent_fields & SVN_DIRENT_KIND)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = "resourcetype";
+        }
+
+      if (dirent_fields & SVN_DIRENT_SIZE)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = "getcontentlength";
+        }
+
+      if (dirent_fields & SVN_DIRENT_HAS_PROPS)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = SVN_DAV_PROP_NS_DAV;
+          prop->name = "deadprop-count";
+        }
+
+      if (dirent_fields & SVN_DIRENT_CREATED_REV)
+        {
+          svn_ra_serf__dav_props_t *p = apr_array_push(props);
+          p->xmlns = "DAV:";
+          p->name = SVN_DAV__VERSION_NAME;
+        }
+
+      if (dirent_fields & SVN_DIRENT_TIME)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = SVN_DAV__CREATIONDATE;
+        }
+
+      if (dirent_fields & SVN_DIRENT_LAST_AUTHOR)
+        {
+          prop = apr_array_push(props);
+          prop->xmlns = "DAV:";
+          prop->name = "creator-displayname";
+        }
+    }
+  else
+    {
+      /* We found an old subversion server that can't handle
+         the deadprop-count property in the way we expect.
+
+         The neon behavior is to retrieve all properties in this case */
+      prop = apr_array_push(props);
+      prop->xmlns = "DAV:";
+      prop->name = "allprop";
+    }
+
+  return props;
+}
+

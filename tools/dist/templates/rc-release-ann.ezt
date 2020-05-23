@@ -1,16 +1,13 @@
 From: ...@apache.org
 To: announce@subversion.apache.org, users@subversion.apache.org, dev@subversion.apache.org, announce@apache.org
+Reply-To: users@subversion.apache.org
 Subject: [[]ANNOUNCE] Apache Subversion [version] released
 
 I'm happy to announce the release of Apache Subversion [version].
 Please choose the mirror closest to you by visiting:
 
-    http://subversion.apache.org/download.cgi#[anchor]
+    https://subversion.apache.org/download.cgi#[anchor]
 
-The SHA1 checksums are:
-
-[for sha1info]    [sha1info.sha1] [sha1info.filename]
-[end]
 SHA-512 checksums are available at:
 
     https://www.apache.org/dist/subversion/subversion-[version].tar.bz2.sha512
@@ -19,13 +16,17 @@ SHA-512 checksums are available at:
 
 PGP Signatures are available at:
 
-    http://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
-    http://www.apache.org/dist/subversion/subversion-[version].tar.gz.asc
-    http://www.apache.org/dist/subversion/subversion-[version].zip.asc
+    https://www.apache.org/dist/subversion/subversion-[version].tar.bz2.asc
+    https://www.apache.org/dist/subversion/subversion-[version].tar.gz.asc
+    https://www.apache.org/dist/subversion/subversion-[version].zip.asc
 
 For this release, the following people have provided PGP signatures:
 
 [siginfo]
+These public keys are available at:
+
+    https://www.apache.org/dist/subversion/subversion-[version].KEYS
+
 This is a pre-release for what will eventually become version [major-minor-patch] of the
 Apache Subversion open source version control system.  It may contain known
 issues, a complete list of [major-minor-patch]-blocking issues can be found
@@ -57,13 +58,18 @@ end users please.
 
 Release notes for the [major-minor].x release series may be found at:
 
-    http://subversion.apache.org/docs/release-notes/[major-minor].html
+    https://subversion.apache.org/docs/release-notes/[major-minor].html
 
 You can find the list of changes between [version] and earlier versions at:
 
-    http://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES
+    https://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES
 
 Questions, comments, and bug reports to users@subversion.apache.org.
 
 Thanks,
 - The Subversion Team
+
+--
+To unsubscribe, please see:
+
+    https://subversion.apache.org/mailing-lists.html#unsubscribing

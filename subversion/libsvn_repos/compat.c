@@ -98,7 +98,7 @@ log4_path_change_receiver(void *baton,
                                                  : svn_tristate_false;
 
   /* Auto-create the CHANGES container (happens for each first change
-   * in any revison. */
+   * in any revision. */
   if (b->changes == NULL)
     b->changes = svn_hash__make(b->changes_pool);
 

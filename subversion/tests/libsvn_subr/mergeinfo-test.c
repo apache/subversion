@@ -33,6 +33,8 @@
 #include "svn_types.h"
 #include "svn_mergeinfo.h"
 #include "private/svn_mergeinfo_private.h"
+#include "private/svn_sorts_private.h"
+#include "private/svn_error_private.h"
 #include "../svn_test.h"
 
 /* A quick way to create error messages.  */
@@ -1673,100 +1675,27 @@ test_remove_prefix_from_catalog(apr_pool_t *pool)
 static svn_error_t *
 test_rangelist_merge_overlap(apr_pool_t *pool)
 {
-  svn_rangelist_t * changes;
-  /* 15014-19472,19473-19612*,19613-19614,19615-19630*,19631-19634,19635-20055* */
-  svn_rangelist_t * rangelist = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-  svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
+  const char *rangelist_str = "19473-19612*,19615-19630*,19631-19634";
+  const char *changes_str = "15014-20515*";
+  const char *expected_str = "15014-19630*,19631-19634,19635-20515*";
+  /* wrong result: "15014-19630*,19634-19631*,19631-19634,19635-20515*" */
+  svn_rangelist_t *rangelist, *changes;
+  svn_string_t *result_string;
 
-  /* This range is optional for reproducing issue #4686 */
-  mrange->start = 15013;
-  mrange->end = 19472;
-  mrange->inheritable = TRUE;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
-
-  mrange = apr_pcalloc(pool, sizeof(*mrange));
-  mrange->start = 19472;
-  mrange->end = 19612;
-  mrange->inheritable = FALSE;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
-
-  /* This range is optional for reproducing issue #4686 */
-  mrange = apr_pcalloc(pool, sizeof(*mrange));
-  mrange->start = 19612;
-  mrange->end = 19614;
-  mrange->inheritable = TRUE;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
-
-  mrange = apr_pcalloc(pool, sizeof(*mrange));
-  mrange->start = 19614;
-  mrange->end = 19630;
-  mrange->inheritable = FALSE;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
-
-  mrange = apr_pcalloc(pool, sizeof(*mrange));
-  mrange->start = 19630;
-  mrange->end = 19634;
-  mrange->inheritable = TRUE;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
-
-  /* This range is optional for reproducing issue #4686 */
-  mrange = apr_pcalloc(pool, sizeof(*mrange));
-  mrange->start = 19634;
-  mrange->end = 20055;
-  mrange->inheritable = FALSE;
-  APR_ARRAY_PUSH(rangelist, svn_merge_range_t *) = mrange;
-
-  /* 15014-20515* */
-  changes = apr_array_make(pool, 1, sizeof(svn_merge_range_t *));
-  mrange = apr_pcalloc(pool, sizeof(*mrange));
-  mrange->start = 15013;
-  mrange->end = 20515;
-  mrange->inheritable = FALSE;
-  APR_ARRAY_PUSH(changes, svn_merge_range_t *) = mrange;
-#if 0
-  {
-    svn_string_t * tmpString;
-
-    svn_rangelist_to_string(&tmpString, rangelist, pool);
-    printf("rangelist %s\n", tmpString->data);
-  }
-  {
-    svn_string_t * tmpString;
-
-    svn_rangelist_to_string(&tmpString, changes, pool);
-    printf("changes %s\n", tmpString->data);
-  }
-#endif
-
+  /* prepare the inputs */
+  SVN_ERR(svn_rangelist__parse(&rangelist, rangelist_str, pool));
+  SVN_ERR(svn_rangelist__parse(&changes, changes_str, pool));
   SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
   SVN_TEST_ASSERT(svn_rangelist__is_canonical(changes));
 
+  /* perform the merge */
   SVN_ERR(svn_rangelist_merge2(rangelist, changes, pool, pool));
 
+  /* check the output */
   SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_ERR(svn_rangelist_to_string(&result_string, rangelist, pool));
+  SVN_TEST_STRING_ASSERT(result_string->data, expected_str);
 
-#if 0
-  {
-    svn_string_t * tmpString;
-
-    svn_rangelist_to_string(&tmpString, rangelist, pool);
-    printf("result %s\n", tmpString->data);
-  }
-#endif
-
-  /* wrong result
-    result 15014-19472,19473-19612*,19613-19614,19615-19630*,19634-19631*,19631-19634,19635-20515*
-  */
-
-  {
-     svn_string_t * tmp_string;
-     svn_rangelist_t *range_list;
-
-     svn_rangelist_to_string(&tmp_string, rangelist, pool);
-
-     SVN_ERR(svn_rangelist__parse(&range_list, tmp_string->data, pool));
-  }
-  
   return SVN_NO_ERROR;
 }
 
@@ -1856,6 +1785,701 @@ test_rangelist_loop(apr_pool_t *pool)
 
   return SVN_NO_ERROR;
 }
+
+/* A specific case where result was non-canonical, around svn 1.10 ~ 1.13. */
+static svn_error_t *
+test_rangelist_merge_canonical_result(apr_pool_t *pool)
+{
+  const char *rangelist_str = "8-10";
+  const char *changes_str = "5-10*,11-24";
+  const char *expected_str = "5-7*,8-24";
+  /* wrong result: "5-7*,8-10,11-24" */
+  svn_rangelist_t *rangelist, *changes;
+  svn_string_t *result_string;
+
+  /* prepare the inputs */
+  SVN_ERR(svn_rangelist__parse(&rangelist, rangelist_str, pool));
+  SVN_ERR(svn_rangelist__parse(&changes, changes_str, pool));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(changes));
+
+  /* perform the merge */
+  SVN_ERR(svn_rangelist_merge2(rangelist, changes, pool, pool));
+
+  /* check the output */
+  SVN_TEST_ASSERT(svn_rangelist__is_canonical(rangelist));
+  SVN_ERR(svn_rangelist_to_string(&result_string, rangelist, pool));
+  SVN_TEST_STRING_ASSERT(result_string->data, expected_str);
+
+  return SVN_NO_ERROR;
+}
+
+/* Test svn_rangelist_merge2() with specific inputs derived from an
+ * occurrence of issue #4840 "in the wild", that triggered a hard
+ * assertion failure (abort) in a 1.10.6 release-mode build.
+ */
+static svn_error_t *
+test_rangelist_merge_array_insert_failure(apr_pool_t *pool)
+{
+  svn_rangelist_t *rx, *ry;
+  svn_string_t *rxs;
+
+  /* Simplified case with same failure mode as reported case: error
+   * "E200004: svn_sort__array_insert2:
+   *  Attempted insert at index 4 in array length 3" */
+  SVN_ERR(svn_rangelist__parse(&rx, "2*,4*,6*,8", pool));
+  SVN_ERR(svn_rangelist__parse(&ry, "1-9*,11", pool));
+  SVN_ERR(svn_rangelist_merge2(rx, ry, pool, pool));
+  SVN_ERR(svn_rangelist_to_string(&rxs, rx, pool));
+  SVN_TEST_STRING_ASSERT(rxs->data, "1-7*,8,9*,11");
+
+  /* Actual reported case: in v1.10.6, aborted; after r1872118, error
+   * "E200004: svn_sort__array_insert2:
+   *  Attempted insert at index 57 in array length 55".  The actual "index"
+   *  and "array length" numbers vary with changes such as r1823728. */
+  SVN_ERR(svn_rangelist__parse(&rx, "997347-997597*,997884-1000223*,1000542-1000551*,1001389-1001516,1002139-1002268*,1002896-1003064*,1003320-1003468,1005939-1006089*,1006443-1006630*,1006631-1006857,1007028-1007116*,1009467-1009629,1009630-1010007*,1010774-1010860,1011036-1011502,1011672-1014004*,1014023-1014197,1014484-1014542*,1015077-1015568,1016219-1016365,1016698-1016845,1017331-1018616,1027032-1027180,1027855-1028051,1028261-1028395,1028553-1028663,1028674-1028708,1028773-1028891*,1029223-1030557,1032239-1032284*,1032801-1032959,1032960-1033074*,1033745-1033810,1034990-1035104,1035435-1036108*,1036109-1036395,1036396-1036865*,1036866-1036951,1036952-1037647*,1037648-1037750,1037751-1038548*,1038549-1038700,1038701-1042103*,1042104-1042305,1042306-1046626*,1046627-1046910,1046911-1047676*,1047677-1047818,1047819-1047914*,1047915-1048025,1048026-1048616*,1048617-1048993,1048994-1050066*,1054605-1054739,1054854-1055021", pool));
+  SVN_ERR(svn_rangelist__parse(&ry, "1035435-1050066*,1052459-1054617", pool));
+  SVN_ERR(svn_rangelist_merge2(rx, ry, pool, pool));
+  /* Here we don't care to check the result; just that it returns "success". */
+  return SVN_NO_ERROR;
+}
+
+
+/* Random testing parameters and coverage
+ *
+ * The parameters for testing random inputs, in conjunction with the
+ * specific test case generation code, were adjusted so as to observe the
+ * tests generating each of the known failure modes.  The aim is also to
+ * have sufficient coverage of inputs to discover other failure modes in
+ * future if the code is changed.
+ *
+ * There are neither theoretic nor empirical guarantees on the coverage.
+ */
+
+/* Randomize revision numbers over this small range.
+ * (With a larger range, we would find edge cases more rarely.)
+ * See comment "Random testing parameters and coverage" */
+#define RANGELIST_TESTS_MAX_REV 15
+
+/* A representation of svn_rangelist_t in which
+ *   root[R]    := (revision R is in the rangelist)
+ *   inherit[R] := (revision R is in the rangelist and inheritable)
+ *
+ * Assuming all forward ranges.
+ */
+typedef struct rl_array_t {
+    svn_boolean_t root[RANGELIST_TESTS_MAX_REV + 1];
+    svn_boolean_t inherit[RANGELIST_TESTS_MAX_REV + 1];
+} rl_array_t;
+
+static void
+rangelist_to_array(rl_array_t *a,
+                   const svn_rangelist_t *rl)
+{
+  int i;
+
+  memset(a, 0, sizeof(*a));
+  for (i = 0; i < rl->nelts; i++)
+    {
+      svn_merge_range_t *range = APR_ARRAY_IDX(rl, i, svn_merge_range_t *);
+      svn_revnum_t r;
+
+      for (r = range->start + 1; r <= range->end; r++)
+        {
+          a->root[r] = TRUE;
+          a->inherit[r] = range->inheritable;
+        }
+    }
+}
+
+/* Compute the union of two rangelists arrays.
+ * Let MA := union(BA, CA)
+ */
+static void
+rangelist_array_union(rl_array_t *ma,
+                      const rl_array_t *ba,
+                      const rl_array_t *ca)
+{
+  svn_revnum_t r;
+
+  for (r = 0; r <= RANGELIST_TESTS_MAX_REV; r++)
+    {
+      ma->root[r]    = ba->root[r]    || ca->root[r];
+      ma->inherit[r] = ba->inherit[r] || ca->inherit[r];
+    }
+}
+
+/* Return TRUE iff two rangelist arrays are equal.
+ */
+static svn_boolean_t
+rangelist_array_equal(const rl_array_t *ba,
+                      const rl_array_t *ca)
+{
+  svn_revnum_t r;
+
+  for (r = 0; r <= RANGELIST_TESTS_MAX_REV; r++)
+    {
+      if (ba->root[r]    != ca->root[r]
+       || ba->inherit[r] != ca->inherit[r])
+        {
+          return FALSE;
+        }
+    }
+  return TRUE;
+}
+
+#define IS_VALID_FORWARD_RANGE(range) \
+  (SVN_IS_VALID_REVNUM((range)->start) && ((range)->start < (range)->end))
+
+/* Check rangelist is sorted and contains forward ranges. */
+static svn_boolean_t
+rangelist_is_sorted(const svn_rangelist_t *rangelist)
+{
+  int i;
+
+  for (i = 0; i < rangelist->nelts; i++)
+    {
+      const svn_merge_range_t *thisrange
+        = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+
+      if (!IS_VALID_FORWARD_RANGE(thisrange))
+        return FALSE;
+    }
+  for (i = 1; i < rangelist->nelts; i++)
+    {
+      const svn_merge_range_t *lastrange
+        = APR_ARRAY_IDX(rangelist, i-1, svn_merge_range_t *);
+      const svn_merge_range_t *thisrange
+        = APR_ARRAY_IDX(rangelist, i, svn_merge_range_t *);
+
+      if (svn_sort_compare_ranges(&lastrange, &thisrange) > 0)
+        return FALSE;
+    }
+  return TRUE;
+}
+
+/* Return a random number R, where 0 <= R < N.
+ */
+static int rand_less_than(int n, apr_uint32_t *seed)
+{
+  apr_uint32_t next = svn_test_rand(seed);
+  return ((apr_uint64_t)next * n) >> 32;
+}
+
+/* Return a random integer in a triangular (centre-weighted) distribution in
+ * the inclusive interval [MIN, MAX]. */
+static int
+rand_interval_triangular(int min, int max, apr_uint32_t *seed)
+{
+  int span = max - min + 1;
+
+  return min + rand_less_than(span/2 + 1, seed)
+             + rand_less_than((span+1)/2, seed);
+}
+
+/* Generate a rangelist with a random number of random ranges.
+ * Choose from 0 to NON_V_MAX_RANGES ranges, biased towards the middle.
+ */
+#define NON_V_MAX_RANGES 4  /* See "Random testing parameters and coverage" */
+static void
+rangelist_random_non_validated(svn_rangelist_t **rl,
+                               apr_uint32_t *seed,
+                               apr_pool_t *pool)
+{
+  svn_rangelist_t *r = apr_array_make(pool, NON_V_MAX_RANGES,
+                                      sizeof(svn_merge_range_t *));
+  int n_ranges = rand_interval_triangular(0, NON_V_MAX_RANGES, seed);
+  int i;
+
+  for (i = 0; i < n_ranges; i++)
+    {
+      svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
+
+      mrange->start = rand_less_than(RANGELIST_TESTS_MAX_REV + 1, seed);
+      mrange->end = rand_less_than(RANGELIST_TESTS_MAX_REV + 1, seed);
+      mrange->inheritable = rand_less_than(2, seed);
+      APR_ARRAY_PUSH(r, svn_merge_range_t *) = mrange;
+    }
+  *rl = r;
+}
+
+/* Compare two integers pointed to by A_P and B_P, for use with qsort(). */
+static int
+int_compare(const void *a_p, const void *b_p)
+{
+  const int *a = a_p, *b = b_p;
+
+  return (*a < *b) ? -1 : (*a > *b) ? 1 : 0;
+}
+
+/* Fill an ARRAY[ARRAY_LENGTH] with values each in the inclusive range
+ * [0, MAX].  The values are in ascending order, possibly with the same
+ * value repeated any number of times.
+ */
+static void
+ascending_values(int *array,
+                 int array_length,
+                 int max,
+                 apr_uint32_t *seed)
+{
+  int i;
+
+  for (i = 0; i < array_length; i++)
+    array[i] = rand_less_than(max + 1, seed);
+  /* Sort them. (Some values will be repeated.) */
+  qsort(array, array_length, sizeof(*array), int_compare);
+}
+
+/* Generate a random rangelist that is not necessarily canonical
+ * but is at least sorted according to svn_sort_compare_ranges()
+ * and on which svn_rangelist__canonicalize() would succeed.
+ * Choose from 0 to SEMI_C_MAX_RANGES ranges, biased towards the middle.
+ */
+#define SEMI_C_MAX_RANGES 8
+static void
+rangelist_random_semi_canonical(svn_rangelist_t **rl,
+                                apr_uint32_t *seed,
+                                apr_pool_t *pool)
+{
+  svn_rangelist_t *r = apr_array_make(pool, 4, sizeof(svn_merge_range_t *));
+  int n_ranges = rand_interval_triangular(0, SEMI_C_MAX_RANGES, seed);
+  int start_and_end_revs[SEMI_C_MAX_RANGES * 2];
+  int i;
+
+  /* Choose start and end revs of the ranges. To end up with ranges evenly
+   * distributed up to RANGELIST_TESTS_MAX_REV, we start with them evenly
+   * distributed up to RANGELIST_TESTS_MAX_REV - N_RANGES, before spreading. */
+  ascending_values(start_and_end_revs, n_ranges * 2,
+                   RANGELIST_TESTS_MAX_REV - n_ranges,
+                   seed);
+  /* Some values will be repeated. Within one range, that is not allowed,
+   * so add 1 to the length of each range, spreading the ranges out so they
+   * still don't overlap:
+   * [(6,6), (6,8)] becomes [(6,7), (7, 10)] */
+  for (i = 0; i < n_ranges; i++)
+    {
+      start_and_end_revs[i*2] += i;
+      start_and_end_revs[i*2 + 1] += i+1;
+    }
+
+  for (i = 0; i < n_ranges; i++)
+    {
+      svn_merge_range_t *mrange = apr_pcalloc(pool, sizeof(*mrange));
+
+      mrange->start = start_and_end_revs[i * 2];
+      mrange->end = start_and_end_revs[i * 2 + 1];
+      mrange->inheritable = rand_less_than(2, seed);
+      APR_ARRAY_PUSH(r, svn_merge_range_t *) = mrange;
+    }
+  *rl = r;
+
+  /* check postconditions */
+  {
+    svn_rangelist_t *dup;
+    svn_error_t *err;
+
+    SVN_ERR_ASSERT_NO_RETURN(rangelist_is_sorted(*rl));
+    dup = svn_rangelist_dup(*rl, pool);
+    err = svn_rangelist__canonicalize(dup, pool);
+    SVN_ERR_ASSERT_NO_RETURN(!err);
+  }
+}
+
+/* Generate a random rangelist that satisfies svn_rangelist__is_canonical().
+ */
+static void
+rangelist_random_canonical(svn_rangelist_t **rl,
+                           apr_uint32_t *seed,
+                           apr_pool_t *pool)
+{
+  svn_rangelist_t *r;
+  int i;
+
+  rangelist_random_semi_canonical(&r, seed, pool);
+  for (i = 1; i < r->nelts; i++)
+    {
+      svn_merge_range_t *prev_mrange = APR_ARRAY_IDX(r, i-1, svn_merge_range_t *);
+      svn_merge_range_t *mrange = APR_ARRAY_IDX(r, i, svn_merge_range_t *);
+
+      /* to be canonical: adjacent ranges need differing inheritability */
+      if (mrange->start == prev_mrange->end)
+        {
+          mrange->inheritable = !prev_mrange->inheritable;
+        }
+    }
+  *rl = r;
+
+  /* check postconditions */
+  SVN_ERR_ASSERT_NO_RETURN(svn_rangelist__is_canonical(*rl));
+}
+
+static const char *
+rangelist_to_string(const svn_rangelist_t *rl,
+                    apr_pool_t *pool)
+{
+  svn_error_t *err;
+  svn_string_t *ss;
+
+  err = svn_rangelist_to_string(&ss, rl, pool);
+  if (err)
+    {
+      const char *s
+        = apr_psprintf(pool, "<rangelist[%d ranges]: %s>",
+                       rl->nelts, svn_error_purge_tracing(err)->message);
+      svn_error_clear(err);
+      return s;
+    }
+  return ss->data;
+}
+
+/* Try svn_rangelist_merge2(rlx, rly) and check errors and result */
+static svn_error_t *
+rangelist_merge_random_inputs(svn_rangelist_t *rlx,
+                              svn_rangelist_t *rly,
+                              apr_pool_t *pool)
+{
+  rl_array_t ax, ay, a_expected, a_actual;
+  svn_rangelist_t *rlm;
+
+  rangelist_to_array(&ax, rlx);
+  rangelist_to_array(&ay, rly);
+
+  rlm = svn_rangelist_dup(rlx, pool);
+  /*printf("testcase: %s / %s\n", rangelist_to_string(rlx, pool), rangelist_to_string(rly, pool));*/
+  SVN_ERR(svn_rangelist_merge2(rlm, rly, pool, pool));
+
+  if (!svn_rangelist__is_canonical(rlm))
+    {
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "non-canonical result %s",
+                               rangelist_to_string(rlm, pool));
+    }
+
+  /*SVN_TEST_ASSERT(rangelist_equal(rlm, ...));*/
+  rangelist_array_union(&a_expected, &ax, &ay);
+  rangelist_to_array(&a_actual, rlm);
+  if (!rangelist_array_equal(&a_actual, &a_expected))
+    {
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                               "wrong result: (c? %d / %d) -> %s",
+                               svn_rangelist__is_canonical(rlx),
+                               svn_rangelist__is_canonical(rly),
+                               rangelist_to_string(rlm, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Insert a failure mode (ERR_CHAIN) into RESPONSES, keyed by a message
+ * representing its failure mode.  The failure mode message is the lowest
+ * level error message in ERR_CHAIN, with some case-specific details
+ * removed to aid de-duplication.  If it is new failure mode (not already in
+ * RESPONSES), store the error and return the message (hash key), else
+ * clear the error and return NULL.
+ */
+static const char *
+add_failure_mode(svn_error_t *err_chain,
+                 apr_hash_t *failure_modes)
+{
+  svn_error_t *err = err_chain;
+  char buf[100];
+  const char *message;
+
+  if (!err_chain)
+    return NULL;
+
+  while (err->child)
+    err = err->child;
+  message = svn_err_best_message(err, buf, sizeof(buf));
+
+  /* For deduplication, ignore case-specific data in certain messages. */
+  if (strstr(message, "Unable to parse overlapping revision ranges '"))
+            message = "Unable to parse overlapping revision ranges '...";
+  if (strstr(message, "wrong result: (c?"))
+            message = "wrong result: (c?...";
+  if (strstr(message, "svn_sort__array_insert2: Attempted insert at index "))
+            message = "svn_sort__array_insert2: Attempted insert at index ...";
+
+  if (!svn_hash_gets(failure_modes, message))
+    {
+      svn_hash_sets(failure_modes, message, err);
+      return message;
+    }
+  else
+    {
+      svn_error_clear(err_chain);
+      return NULL;
+    }
+}
+
+static void
+clear_failure_mode_errors(apr_hash_t *failure_modes, apr_pool_t *scratch_pool)
+{
+  apr_hash_index_t *hi;
+
+  for (hi = apr_hash_first(scratch_pool, failure_modes);
+       hi;
+       hi = apr_hash_next(hi))
+    {
+      svn_error_t *err = apr_hash_this_val(hi);
+      svn_error_clear(err);
+    }
+}
+
+static svn_error_t *
+test_rangelist_merge_random_canonical_inputs(apr_pool_t *pool)
+{
+  static apr_uint32_t seed = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *failure_modes = apr_hash_make(pool);
+  svn_boolean_t pass = TRUE;
+  int ix, iy;
+
+  /* "300": See comment "Random testing parameters and coverage" */
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_rangelist_t *rlx;
+
+    rangelist_random_canonical(&rlx, &seed, pool);
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_rangelist_t *rly;
+        svn_error_t *err;
+        const char *failure_mode;
+
+        svn_pool_clear(iterpool);
+
+        rangelist_random_canonical(&rly, &seed, iterpool);
+
+        err = svn_error_trace(rangelist_merge_random_inputs(rlx, rly, iterpool));
+        failure_mode = add_failure_mode(err, failure_modes);
+        if (failure_mode)
+          {
+            printf("first example of a failure mode: %s / %s\n"
+                   "  %s\n",
+                   rangelist_to_string(rlx, iterpool),
+                   rangelist_to_string(rly, iterpool),
+                   failure_mode);
+            /*svn_handle_error(err, stdout, FALSE);*/
+            pass = FALSE;
+          }
+      }
+   }
+
+  clear_failure_mode_errors(failure_modes, pool);
+
+  if (!pass)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Test failed: %d failure modes",
+                             apr_hash_count(failure_modes));
+  return SVN_NO_ERROR;
+}
+
+/* Test svn_rangelist_merge2() with inputs that confirm to its doc-string.
+ * Fail if any errors are produced.
+ */
+static svn_error_t *
+test_rangelist_merge_random_semi_c_inputs(apr_pool_t *pool)
+{
+  static apr_uint32_t seed = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *failure_modes = apr_hash_make(pool);
+  svn_boolean_t pass = TRUE;
+  int ix, iy;
+
+  /* "300": See comment "Random testing parameters and coverage" */
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_rangelist_t *rlx;
+
+    rangelist_random_semi_canonical(&rlx, &seed, pool);
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_rangelist_t *rly;
+        svn_error_t *err;
+        const char *failure_mode;
+
+        svn_pool_clear(iterpool);
+
+        rangelist_random_semi_canonical(&rly, &seed, iterpool);
+
+        err = svn_error_trace(rangelist_merge_random_inputs(rlx, rly, iterpool));
+        failure_mode = add_failure_mode(err, failure_modes);
+        if (failure_mode)
+          {
+            printf("first example of a failure mode: %s / %s\n"
+                   "  %s\n",
+                   rangelist_to_string(rlx, iterpool),
+                   rangelist_to_string(rly, iterpool),
+                   failure_mode);
+            /*svn_handle_error(err, stdout, FALSE);*/
+            pass = FALSE;
+          }
+      }
+   }
+
+  clear_failure_mode_errors(failure_modes, pool);
+
+  if (!pass)
+    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                             "Test failed: %d failure modes",
+                             apr_hash_count(failure_modes));
+  return SVN_NO_ERROR;
+}
+
+/* Test svn_rangelist_merge2() with random non-validated inputs.
+ *
+ * Unlike the tests with valid inputs, this test expects many assertion
+ * failures.  We don't care about those.  All we care about is that it does
+ * not crash. */
+static svn_error_t *
+test_rangelist_merge_random_non_validated_inputs(apr_pool_t *pool)
+{
+  static apr_uint32_t seed = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  apr_hash_t *failure_modes = apr_hash_make(pool);
+  int ix, iy;
+
+  /* "300": See comment "Random testing parameters and coverage" */
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_rangelist_t *rlx;
+
+    rangelist_random_non_validated(&rlx, &seed, pool);
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_rangelist_t *rly;
+        svn_error_t *err;
+
+        svn_pool_clear(iterpool);
+
+        rangelist_random_non_validated(&rly, &seed, iterpool);
+
+        err = svn_error_trace(rangelist_merge_random_inputs(rlx, rly, iterpool));
+        add_failure_mode(err, failure_modes);
+      }
+   }
+
+  clear_failure_mode_errors(failure_modes, pool);
+
+  return SVN_NO_ERROR;
+}
+
+/* Generate random mergeinfo, in which the paths and rangelists are not
+ * necessarily valid. */
+static svn_error_t *
+mergeinfo_random_non_validated(svn_mergeinfo_t *mp,
+                               apr_uint32_t *seed,
+                               apr_pool_t *pool)
+{
+  svn_mergeinfo_t m = apr_hash_make(pool);
+  int n_paths = 3;  /* See comment "Random testing parameters and coverage" */
+  int i;
+
+  for (i = 0; i < n_paths; i++)
+    {
+      const char *path;
+      svn_rangelist_t *rl;
+
+      /* A manually chosen distribution of valid and invalid paths:
+         See comment "Random testing parameters and coverage" */
+      switch (rand_less_than(8, seed))
+        {
+        case 0: case 1: case 2: case 3:
+          path = apr_psprintf(pool, "/path%d", i); break;
+        case 4:
+          path = apr_psprintf(pool, "path%d", i); break;
+        case 5:
+          path = apr_psprintf(pool, "//path%d", i); break;
+        case 6:
+          path = "/"; break;
+        case 7:
+          path = ""; break;
+        }
+      rangelist_random_non_validated(&rl, seed, pool);
+      svn_hash_sets(m, path, rl);
+    }
+  *mp = m;
+  return SVN_NO_ERROR;
+}
+
+#if 0
+static const char *
+mergeinfo_to_string_debug(svn_mergeinfo_t m,
+                          apr_pool_t *pool)
+{
+  svn_string_t *s;
+  svn_error_t *err;
+
+  err = svn_mergeinfo_to_string(&s, m, pool);
+  if (err)
+    {
+      const char *s2 = err->message;
+      svn_error_clear(err);
+      return s2;
+    }
+  return s->data;
+}
+#endif
+
+/* Try a mergeinfo merge.  This does not check the result. */
+static svn_error_t *
+mergeinfo_merge_random_inputs(const svn_mergeinfo_t mx,
+                              const svn_mergeinfo_t my,
+                              apr_pool_t *pool)
+{
+  svn_mergeinfo_t mm = svn_mergeinfo_dup(mx, pool);
+
+  SVN_ERR(svn_mergeinfo_merge2(mm, my, pool, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Test svn_mergeinfo_merge2() with random non-validated inputs.
+ *
+ * Unlike the tests with valid inputs, this test expects many assertion
+ * failures.  We don't care about those.  All we care about is that it does
+ * not crash. */
+static svn_error_t *
+test_mergeinfo_merge_random_non_validated_inputs(apr_pool_t *pool)
+{
+  static apr_uint32_t seed = 0;
+  apr_pool_t *iterpool = svn_pool_create(pool);
+  int ix, iy;
+
+  for (ix = 0; ix < 300; ix++)
+   {
+    svn_mergeinfo_t mx;
+
+    SVN_ERR(mergeinfo_random_non_validated(&mx, &seed, pool));
+
+    for (iy = 0; iy < 300; iy++)
+      {
+        svn_mergeinfo_t my;
+        svn_error_t *err;
+
+        svn_pool_clear(iterpool);
+
+        SVN_ERR(mergeinfo_random_non_validated(&my, &seed, iterpool));
+
+        err = mergeinfo_merge_random_inputs(mx, my, iterpool);
+        if (err)
+          {
+            /*
+            printf("testcase FAIL: %s / %s\n",
+                   mergeinfo_to_string_debug(mx, iterpool),
+                   mergeinfo_to_string_debug(my, iterpool));
+            svn_handle_error(err, stdout, FALSE);
+            */
+            svn_error_clear(err);
+          }
+      }
+   }
+
+  return SVN_NO_ERROR;
+}
 
 /* The test table.  */
 
@@ -1900,10 +2524,22 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "diff of rangelists"),
     SVN_TEST_PASS2(test_remove_prefix_from_catalog,
                    "removal of prefix paths from catalog keys"),
-    SVN_TEST_XFAIL2(test_rangelist_merge_overlap,
+    SVN_TEST_PASS2(test_rangelist_merge_overlap,
                    "merge of rangelists with overlaps (issue 4686)"),
-    SVN_TEST_XFAIL2(test_rangelist_loop,
+    SVN_TEST_PASS2(test_rangelist_loop,
                     "test rangelist edgecases via loop"),
+    SVN_TEST_PASS2(test_rangelist_merge_canonical_result,
+                   "test rangelist merge canonical result (#4840)"),
+    SVN_TEST_PASS2(test_rangelist_merge_array_insert_failure,
+                   "test rangelist merge array insert failure (#4840)"),
+    SVN_TEST_PASS2(test_rangelist_merge_random_canonical_inputs,
+                   "test rangelist merge random canonical inputs"),
+    SVN_TEST_PASS2(test_rangelist_merge_random_semi_c_inputs,
+                   "test rangelist merge random semi-c inputs"),
+    SVN_TEST_PASS2(test_rangelist_merge_random_non_validated_inputs,
+                   "test rangelist merge random non-validated inputs"),
+    SVN_TEST_PASS2(test_mergeinfo_merge_random_non_validated_inputs,
+                   "test mergeinfo merge random non-validated inputs"),
     SVN_TEST_NULL
   };
 

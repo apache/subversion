@@ -85,7 +85,7 @@ class Paragraph:
 
   def __init__(self, kind, text, entry, containing_section):
     """Constructor.
-    
+
     KIND is one of the Kind.* enumerators.
 
     TEXT is the physical text in the file, used by unparsing.
@@ -109,7 +109,7 @@ class Paragraph:
   @classmethod
   def is_header(cls, para_text):
     """PARA_TEXT is a single physical paragraph, as a bare multiline string.
-    
+
     If PARA_TEXT is a section header, return the header text; else, return
     False."""
     lines = para_text.split('\n', 2)
@@ -135,7 +135,7 @@ class Paragraph:
 
   def approved(self):
     "TRUE if this paragraph is in the approved section, false otherwise."
-    assert self.kind 
+    assert self.kind
     # ### backport.pl used to check just .startswith() here.
     return self.section() == "Approved changes"
 
@@ -194,10 +194,10 @@ class StatusFile:
         try:
           entry = StatusEntry(para_text, status_file=self)
           kind = Kind.nomination
-        except ParseException:
+        except ParseException as e:
           kind = Kind.unknown
-          logger.warning("Failed to parse entry {!r} in {!r}".format(
-                          para_text, status_fp))
+          logger.warning("Failed to parse entry {!r} in {!r}: {}".format(
+                          para_text, status_fp, e))
       else:
         kind = Kind.preamble
 
@@ -335,7 +335,7 @@ class StatusEntry:
   def __init__(self, para_text, status_file=None):
     """Parse an entry from PARA_TEXT, and add it to SELF.  PARA_TEXT must
     contain exactly one entry, as a single multiline string.
-    
+
     STATUS_FILE is the StatusFile object containing this entry, if any.
     """
     self.branch = None
@@ -379,9 +379,11 @@ class StatusEntry:
       raise ParseException("Entry found with neither branch nor revisions")
 
     # Parse the logsummary.
-    while lines and not self._is_subheader(lines[0]):
+    while True:
       self.logsummary.append(lines[0])
       lines = lines[1:]
+      if (not lines) or self._is_subheader(lines[0]):
+        break
 
     # Parse votes.
     if "Votes:" in lines:
@@ -497,7 +499,7 @@ class StatusEntry:
     assert self.valid()
     suffix = "" if len(self.logsummary) == 1 else " [...]"
     return self.logsummary[0] + suffix
-             
+
   # Private for is_vetoed()
   _re_vetoed = re.compile(r'^\s*(-1:|-1\s*[()])', re.MULTILINE)
   def is_vetoed(self):

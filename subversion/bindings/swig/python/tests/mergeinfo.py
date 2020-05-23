@@ -34,7 +34,7 @@ def get_svn_merge_range_t_objects():
      garbage collector, used for detecting memory leaks."""
   return [
     o for o in gc.get_objects()
-      if hasattr(o, '__class__') and
+      if getattr(o, '__class__', None) is not None and
         o.__class__.__name__ == 'svn_merge_range_t'
   ]
 
@@ -42,11 +42,11 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
   """Test cases for mergeinfo"""
 
   # Some textual mergeinfo.
-  TEXT_MERGEINFO1 = "/trunk:3-9,27,42*"
-  TEXT_MERGEINFO2 = "/trunk:27-29,41-43*"
+  TEXT_MERGEINFO1 = b"/trunk:3-9,27,42*"
+  TEXT_MERGEINFO2 = b"/trunk:27-29,41-43*"
 
   # Meta data used in conjunction with this mergeinfo.
-  MERGEINFO_SRC = "/trunk"
+  MERGEINFO_SRC = b"/trunk"
   MERGEINFO_NBR_REV_RANGES = 3
 
   def setUp(self):
@@ -93,9 +93,9 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     reversed_rl = core.svn_rangelist_reverse(rangelist)
     expected_ranges = ((42, 41), (27, 26), (9, 2))
     for i in range(0, len(reversed_rl)):
-      self.assertEquals(reversed_rl[i].start, expected_ranges[i][0],
+      self.assertEqual(reversed_rl[i].start, expected_ranges[i][0],
                         "Unexpected range start: %d" % reversed_rl[i].start)
-      self.assertEquals(reversed_rl[i].end, expected_ranges[i][1],
+      self.assertEqual(reversed_rl[i].end, expected_ranges[i][1],
                         "Unexpected range end: %d" % reversed_rl[i].end)
 
   def test_mergeinfo_sort(self):
@@ -113,15 +113,15 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
                                 self.MERGEINFO_NBR_REV_RANGES)
 
   def test_mergeinfo_get(self):
-    mergeinfo = repos.fs_get_mergeinfo(self.repos, ['/trunk'], self.rev,
+    mergeinfo = repos.fs_get_mergeinfo(self.repos, [b'/trunk'], self.rev,
                                        core.svn_mergeinfo_inherited,
                                        False, None, None)
     expected_mergeinfo = \
-      { '/trunk' :
-          { '/branches/a' : [RevRange(2, 11)],
-            '/branches/b' : [RevRange(9, 13)],
-            '/branches/c' : [RevRange(2, 16)],
-            '/trunk'      : [RevRange(1, 9)],  },
+      { b'/trunk' :
+          { b'/branches/a' : [RevRange(2, 11)],
+            b'/branches/b' : [RevRange(9, 13)],
+            b'/branches/c' : [RevRange(2, 16)],
+            b'/trunk'      : [RevRange(1, 9)],  },
       }
     self.compare_mergeinfo_catalogs(mergeinfo, expected_mergeinfo)
 
@@ -131,7 +131,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     # When reference counting is working properly, each svn_merge_range_t in
     # the returned mergeinfo will have a ref count of 1...
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
-    for (path, rangelist) in mergeinfo.items():
+    for (path, rangelist) in core._as_list(mergeinfo.items()):
       # ....and now 2 (incref during iteration of rangelist)
 
       for (i, r) in enumerate(rangelist):
@@ -144,7 +144,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
         # Note: if path and index are not '/trunk' and 0 respectively, then
         # only some of the range objects are leaking, which is, as far as
         # leaks go, even more impressive.
-        self.assertEquals(refcount, expected, (
+        self.assertEqual(refcount, expected, (
           "Memory leak!  Expected a ref count of %d for svn_merge_range_t "
           "object, but got %d instead (path: %s, index: %d).  Probable "
           "cause: incorrect Py_INCREF/Py_DECREF usage in libsvn_swig_py/"
@@ -165,7 +165,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     del mergeinfo
     gc.collect()
     lingering = get_svn_merge_range_t_objects()
-    self.assertEquals(lingering, list(), (
+    self.assertEqual(lingering, list(), (
       "Memory leak!  Found lingering svn_merge_range_t objects left over from "
       "our call to svn_mergeinfo_parse(), even though we explicitly deleted "
       "the returned mergeinfo object.  Probable cause: incorrect Py_INCREF/"
@@ -177,16 +177,16 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     self.inspect_rangelist_tuple(rangelist, nbr_rev_ranges)
 
   def inspect_rangelist_tuple(self, rangelist, nbr_rev_ranges):
-    self.assert_(rangelist is not None,
+    self.assertTrue(rangelist is not None,
                  "Rangelist for '%s' not parsed" % self.MERGEINFO_SRC)
-    self.assertEquals(len(rangelist), nbr_rev_ranges,
+    self.assertEqual(len(rangelist), nbr_rev_ranges,
                       "Wrong number of revision ranges parsed")
-    self.assertEquals(rangelist[0].inheritable, True,
+    self.assertEqual(rangelist[0].inheritable, True,
                       "Unexpected revision range 'non-inheritable' flag: %s" %
                       rangelist[0].inheritable)
-    self.assertEquals(rangelist[1].start, 26,
+    self.assertEqual(rangelist[1].start, 26,
                       "Unexpected revision range end: %d" % rangelist[1].start)
-    self.assertEquals(rangelist[2].inheritable, False,
+    self.assertEqual(rangelist[2].inheritable, False,
                       "Missing revision range 'non-inheritable' flag")
 
   def compare_mergeinfo_catalogs(self, catalog1, catalog2):
@@ -194,7 +194,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     keys2 = sorted(catalog2.keys())
     self.assertEqual(keys1, keys2)
 
-    for k in catalog1.keys():
+    for k in catalog1:
         self.compare_mergeinfos(catalog1[k], catalog2[k])
 
   def compare_mergeinfos(self, mergeinfo1, mergeinfo2):
@@ -202,7 +202,7 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
     keys2 = sorted(mergeinfo2.keys())
     self.assertEqual(keys1, keys2)
 
-    for k in mergeinfo1.keys():
+    for k in mergeinfo1:
         self.compare_rangelists(mergeinfo1[k], mergeinfo2[k])
 
   def compare_rangelists(self, rangelist1, rangelist2):
