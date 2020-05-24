@@ -28,14 +28,12 @@
 #include "svn_hash.h"
 #include "svn_path.h"
 #include "svn_ra.h"
-#include "svn_sorts.h"
 #include "svn_string.h"
 #include "svn_xml.h"
 #include "svn_props.h"
 #include "svn_base64.h"
 
 #include "private/svn_dav_protocol.h"
-#include "private/svn_sorts_private.h"
 #include "../libsvn_ra/ra_loader.h"
 #include "svn_private_config.h"
 #include "ra_serf.h"
@@ -314,8 +312,8 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
   *iprops = apr_array_make(result_pool, rq_info->nelts,
                            sizeof(svn_prop_inherited_item_t *));
 
-  /* And now create the result set */
-  for (i = 0; i < rq_info->nelts; i++)
+  /* And now create the result set in depth-first order. */
+  for (i = rq_info->nelts - 1; i >= 0; i--)
     {
       iprop_rq_info_t *rq = APR_ARRAY_IDX(rq_info, i, iprop_rq_info_t *);
       apr_hash_t *node_props;
@@ -340,7 +338,7 @@ get_iprops_via_more_requests(svn_ra_session_t *ra_session,
       new_iprop = apr_palloc(result_pool, sizeof(*new_iprop));
       new_iprop->path_or_url = apr_pstrdup(result_pool, rq->relpath);
       new_iprop->prop_hash = svn_prop_hash_dup(node_props, result_pool);
-      SVN_ERR(svn_sort__array_insert2(*iprops, &new_iprop, 0));
+      APR_ARRAY_PUSH(*iprops, svn_prop_inherited_item_t *) = new_iprop;
     }
 
   return SVN_NO_ERROR;
