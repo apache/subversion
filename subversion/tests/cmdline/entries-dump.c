@@ -45,7 +45,14 @@
 static void
 print_prefix(void)
 {
-  puts("class Entry(object):\n"
+  puts("if b'' == '':\n"
+       "  def _to_str(s):\n"
+       "    return s\n"
+       "else:\n"
+       "  def _to_str(s):\n"
+       "    return s.decode('utf-8', 'surrogateescape')\n"
+       "\n"
+       "class Entry(object):\n"
        "  \"\"\"An Entry object represents one node's entry in a pre-1.6"
        " .svn/entries file.\n\n"
        "Similar to #svn_wc_entry_t, but not all fields are populated.\n\n"
@@ -56,8 +63,19 @@ print_prefix(void)
        "      self.__setattr__(name, val)\n"
        "  else:\n"
        "    def set_strval(self, name, val):\n"
-       "      self.__setattr__(name, val.decode('utf-8', "
-       "'surrogateescape'))\n");
+       "      global _to_str\n"
+       "      self.__setattr__(name, _to_str(val))\n");
+}
+
+static void
+print_as_bytes(const char *val)
+{
+  printf("b'");
+  while(*val)
+    {
+      printf("\\x%02x", (unsigned int)(unsigned char)*val++);
+    }
+  printf("'");
 }
 
 static void
@@ -72,18 +90,14 @@ str_value(const char *name, const char *value, apr_pool_t *pool)
 
       /* Print the human-readable value. */
       assert(NULL == strchr(escaped_value->data, '\n'));
-      printf("# e.%s = %s\n", name, escaped_value->data);
+      printf("# e.%s = '%s'\n", name, escaped_value->data);
 
       /* Print the machine-readable value. */
-      printf("e.set_strval('%s', b'", name);
-      while(*value)
-        {
-          printf("\\x%02x", (unsigned int)(unsigned char)*value++);
-        }      
-      printf("')\n");
+      printf("e.set_strval('%s', ", name);
+      print_as_bytes(value);
+      printf(")\n");
     }
 }
-
 
 static void
 int_value(const char *name, long int value)
@@ -111,6 +125,7 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
   svn_error_t *err;
   svn_wc_context_t *wc_ctx = NULL;
   const char *dir_abspath;
+  apr_pool_t *iterpool = svn_pool_create(pool); 
 
   SVN_ERR(svn_dirent_get_absolute(&dir_abspath, dir_path, pool));
 
@@ -159,44 +174,45 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
 
   for (hi = apr_hash_first(pool, entries); hi; hi = apr_hash_next(hi))
     {
+      svn_stringbuf_t *escaped_key;
       const char *key = apr_hash_this_key(hi);
       const svn_wc_entry_t *entry = apr_hash_this_val(hi);
 
+      svn_pool_clear(iterpool); 
       SVN_ERR_ASSERT(strcmp(key, entry->name) == 0);
-
       printf("e = Entry()\n");
-      str_value("name", entry->name, pool);
+      str_value("name", entry->name, iterpool);
       int_value("revision", entry->revision);
-      str_value("url", entry->url, pool);
-      str_value("repos", entry->repos, pool);
-      str_value("uuid", entry->uuid, pool);
+      str_value("url", entry->url, iterpool);
+      str_value("repos", entry->repos, iterpool);
+      str_value("uuid", entry->uuid, iterpool);
       int_value("kind", entry->kind);
       int_value("schedule", entry->schedule);
       bool_value("copied", entry->copied);
       bool_value("deleted", entry->deleted);
       bool_value("absent", entry->absent);
       bool_value("incomplete", entry->incomplete);
-      str_value("copyfrom_url", entry->copyfrom_url, pool);
+      str_value("copyfrom_url", entry->copyfrom_url, iterpool);
       int_value("copyfrom_rev", entry->copyfrom_rev);
-      str_value("conflict_old", entry->conflict_old, pool);
-      str_value("conflict_new", entry->conflict_new, pool);
-      str_value("conflict_wrk", entry->conflict_wrk, pool);
-      str_value("prejfile", entry->prejfile, pool);
+      str_value("conflict_old", entry->conflict_old, iterpool);
+      str_value("conflict_new", entry->conflict_new, iterpool);
+      str_value("conflict_wrk", entry->conflict_wrk, iterpool);
+      str_value("prejfile", entry->prejfile, iterpool);
       /* skip: text_time */
       /* skip: prop_time */
       /* skip: checksum */
       int_value("cmt_rev", entry->cmt_rev);
       /* skip: cmt_date */
-      str_value("cmt_author", entry->cmt_author, pool);
-      str_value("lock_token", entry->lock_token, pool);
-      str_value("lock_owner", entry->lock_owner, pool);
-      str_value("lock_comment", entry->lock_comment, pool);
+      str_value("cmt_author", entry->cmt_author, iterpool);
+      str_value("lock_token", entry->lock_token, iterpool);
+      str_value("lock_owner", entry->lock_owner, iterpool);
+      str_value("lock_comment", entry->lock_comment, iterpool);
       /* skip: lock_creation_date */
       /* skip: has_props */
       /* skip: has_prop_mods */
       /* skip: cachable_props */
       /* skip: present_props */
-      str_value("changelist", entry->changelist, pool);
+      str_value("changelist", entry->changelist, iterpool);
       /* skip: working_size */
       /* skip: keep_local */
       int_value("depth", entry->depth);
@@ -205,8 +221,17 @@ entries_dump(const char *dir_path, svn_wc_adm_access_t *related, apr_pool_t *poo
       /* skip: file_external_peg_rev */
       /* skip: file_external_rev */
       bool_value("locked", locked && *entry->name == '\0');
-      printf("entries['%s'] = e\n", (const char *)key);
+      /* Print the human-readable value. */
+      escaped_key = NULL;
+      svn_xml_escape_attr_cstring(&escaped_key, key, iterpool);
+      assert(NULL == strchr(escaped_key->data, '\n'));
+      printf("# entries['%s'] = e\n", escaped_key->data);
+      /* Print the machine-readable value. */
+      printf("entries[_to_str(");
+      print_as_bytes(key);
+      printf(")] = e\n");
     }
+  svn_pool_destroy(iterpool);
 
   if (wc_ctx)
     SVN_ERR(svn_wc_context_destroy(wc_ctx));
@@ -317,6 +342,7 @@ tree_dump_dir(const char *local_abspath,
 {
   struct directory_walk_baton *bt = walk_baton;
   const char *path;
+  svn_stringbuf_t *escaped_path;
 
   if (kind != svn_node_dir)
     return SVN_NO_ERROR;
@@ -342,7 +368,15 @@ tree_dump_dir(const char *local_abspath,
   printf("entries = {}\n");
   SVN_ERR(entries_dump(path, bt->adm_access, scratch_pool));
 
-  printf("dirs['%s'] = entries\n", path);
+  /* Print the human-readable value. */
+  escaped_path = NULL;
+  svn_xml_escape_attr_cstring(&escaped_path, path, scratch_pool);
+  assert(NULL == strchr(escaped_path->data, '\n'));
+  printf("# dirs['%s'] = entries\n", escaped_path->data);
+  /* Print the machine-readable value. */
+  printf("dirs[_to_str(");
+  print_as_bytes(path);
+  printf(")] = entries\n");
   return SVN_NO_ERROR;
 
 }
