@@ -527,10 +527,10 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
 
   # We always expect STDERR to be strings, not byte-arrays.
   if not isinstance(stderr, str):
-    stderr = stderr.decode("utf-8")
+    stderr = stderr.decode("utf-8", 'surrogateescape')
   if not binary_mode:
     if not isinstance(stdout, str):
-      stdout = stdout.decode("utf-8")
+      stdout = stdout.decode("utf-8", 'surrogateescape')
 
     # Normalize Windows line endings if in text mode.
     if windows:
