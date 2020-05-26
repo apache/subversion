@@ -1574,15 +1574,7 @@ def patch_no_svn_eol_style(sbox):
   patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
-  if os.name == 'nt':
-    crlf = '\n'
-  else:
-    crlf = '\r\n'
-
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
+  crlf = '\r\n'
 
   eols = [crlf, '\015', '\n', '\012']
   for target_eol in eols:
@@ -1603,7 +1595,7 @@ def patch_no_svn_eol_style(sbox):
       ]
 
       # Set mu contents
-      svntest.main.file_write(mu_path, ''.join(mu_contents))
+      svntest.main.file_write(mu_path, ''.join(mu_contents), mode='wb')
 
       unidiff_patch = [
         "Index: mu",
@@ -1647,7 +1639,8 @@ def patch_no_svn_eol_style(sbox):
         target_eol,
       ]
 
-      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch),
+                              mode='wb')
 
       expected_output = wc.State(wc_dir, {
         'A/mu' : Item(status='U '),
@@ -1666,7 +1659,8 @@ def patch_no_svn_eol_style(sbox):
                                             expected_disk,
                                             expected_status,
                                             expected_skip,
-                                            [], True, True, keep_eol_style)
+                                            [], True, True,
+                                            keep_eol_style=True)
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1681,17 +1675,13 @@ def patch_with_svn_eol_style(sbox):
   patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
-    crlf = '\n'
+    native_nl = '\r\n'
   else:
-    crlf = '\r\n'
+    native_nl = '\n'
+  crlf = '\r\n'
 
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
-
-  eols = [crlf, '\015', '\n', '\012']
+  eols = [crlf, '\015', native_nl, '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
   rev = 1
   for target_eol, target_eol_style in zip(eols, eol_styles):
@@ -1714,7 +1704,7 @@ def patch_with_svn_eol_style(sbox):
       # Set mu contents
       svntest.main.run_svn(None, 'rm', mu_path)
       svntest.main.run_svn(None, 'commit', '-m', 'delete mu', mu_path)
-      svntest.main.file_write(mu_path, ''.join(mu_contents))
+      svntest.main.file_write(mu_path, ''.join(mu_contents), mode='wb')
       svntest.main.run_svn(None, 'add', mu_path)
       svntest.main.run_svn(None, 'propset', 'svn:eol-style', target_eol_style,
                            mu_path)
@@ -1762,7 +1752,8 @@ def patch_with_svn_eol_style(sbox):
         target_eol,
       ]
 
-      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch),
+                              mode='wb')
 
       expected_output = [
         'U         %s\n' % sbox.ospath('A/mu'),
@@ -1786,7 +1777,7 @@ def patch_with_svn_eol_style(sbox):
                                             None, # expected err
                                             1, # check-props
                                             1, # dry-run
-                                            keep_eol_style) # keep-eol-style
+                                            keep_eol_style=True)
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
@@ -1800,17 +1791,13 @@ def patch_with_svn_eol_style_uncommitted(sbox):
   patch_file_path = sbox.get_tempname('my.patch')
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
-    crlf = '\n'
+    native_nl = '\r\n'
   else:
-    crlf = '\r\n'
+    native_nl = '\n'
+  crlf = '\r\n'
 
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
-
-  eols = [crlf, '\015', '\n', '\012']
+  eols = [crlf, '\015', native_nl, '\012']
   eol_styles = ['CRLF', 'CR', 'native', 'LF']
   for target_eol, target_eol_style in zip(eols, eol_styles):
     for patch_eol in eols:
@@ -1830,7 +1817,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
       ]
 
       # Set mu contents
-      svntest.main.file_write(mu_path, ''.join(mu_contents))
+      svntest.main.file_write(mu_path, ''.join(mu_contents), mode='wb')
       svntest.main.run_svn(None, 'propset', 'svn:eol-style', target_eol_style,
                            mu_path)
 
@@ -1876,7 +1863,8 @@ def patch_with_svn_eol_style_uncommitted(sbox):
         target_eol,
       ]
 
-      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch))
+      svntest.main.file_write(patch_file_path, ''.join(unidiff_patch),
+                              mode='wb')
 
       expected_output = wc.State(wc_dir, {
         'A/mu' : Item(status='U '),
@@ -1899,7 +1887,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
                                             None, # expected err
                                             1, # check-props
                                             1, # dry-run
-                                            keep_eol_style) # keep-eol-style
+                                            keep_eol_style=True)
 
       expected_output = ["Reverted '" + mu_path + "'\n"]
       svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
