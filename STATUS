@@ -40,6 +40,14 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1876906
+   Make gen-make.py --debug work with Python 3
+   Justification:
+     We should also be able to build in Debug configuration with Python 3
+     on Windows.
+   Votes:
+     +1: jcorvel
+
 Veto-blocked changes:
 =====================
 
