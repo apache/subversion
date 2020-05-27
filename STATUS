@@ -48,6 +48,15 @@ Candidate changes:
    Votes:
      +1: futatuki, stsp
 
+ * r1876707, r1876734, r1877318, r1877712, r1878141, r1878142, r1878143,
+   r1878144
+   Escape special characters in path when construct expected output regex. 
+   Justification:
+     Our test suit should test Subversion correctly also on Windows with
+     Python 3
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
