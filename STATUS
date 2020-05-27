@@ -23,15 +23,6 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
-* r1877259
-    Move variable declarations to the start of block the to fix
-    syntax errors with VC9 (Visual Studio 2008).
-  Justification:
-    Our code should be C90.
-  Votes:
-    +1: brane, stsp
-    +0: danielsh (from dev@)
-
  * r1877960
    * INSTALL (I.C.12): Add Note that non-release mode is required for building
      SWIG Python 2 bindings.
@@ -62,3 +53,12 @@ Approved changes:
      Error messages should be accurate.  User reported (issue #4854).
    Votes:
      +1: danielsh, stsp, jcorvel
+
+* r1877259
+    Move variable declarations to the start of block the to fix
+    syntax errors with VC9 (Visual Studio 2008).
+  Justification:
+    Our code should be C90.
+  Votes:
+    +1: brane, stsp, jcorvel
+    +0: danielsh (from dev@)
