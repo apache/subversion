@@ -1171,6 +1171,7 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
+      const char *propval;
       if (!propname)
         {
           if (!PyErr_Occurred())
@@ -1180,7 +1181,7 @@ apr_hash_t *svn_swig_py_stringhash_from_dict(PyObject *dict,
           Py_DECREF(keys);
           return NULL;
         }
-      const char *propval = make_string_from_ob_maybe_null(value, pool);
+      propval = make_string_from_ob_maybe_null(value, pool);
       if (PyErr_Occurred())
         {
           Py_DECREF(keys);
@@ -1215,6 +1216,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *pathname = make_string_from_ob(key, pool);
+      const svn_rangelist_t *ranges;
       if (!pathname)
         {
           if (!PyErr_Occurred())
@@ -1224,7 +1226,7 @@ apr_hash_t *svn_swig_py_mergeinfo_from_dict(PyObject *dict,
           Py_DECREF(keys);
           return NULL;
         }
-      const svn_rangelist_t *ranges = svn_swig_py_seq_to_array(value,
+      ranges = svn_swig_py_seq_to_array(value,
         sizeof(const svn_merge_range_t *),
         svn_swig_py_unwrap_struct_ptr,
         svn_swig_TypeQuery("svn_merge_range_t *"),
@@ -1314,6 +1316,7 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
       PyObject *key = PyList_GetItem(keys, i);
       PyObject *value = PyDict_GetItem(dict, key);
       const char *propname = make_string_from_ob(key, pool);
+      svn_string_t *propval;
       if (!propname)
         {
           if (!PyErr_Occurred())
@@ -1323,7 +1326,7 @@ apr_hash_t *svn_swig_py_prophash_from_dict(PyObject *dict,
           Py_DECREF(keys);
           return NULL;
         }
-      svn_string_t *propval = make_svn_string_from_ob_maybe_null(value, pool);
+      propval = make_svn_string_from_ob_maybe_null(value, pool);
       if (PyErr_Occurred())
         {
           Py_DECREF(keys);
