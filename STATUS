@@ -55,14 +55,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1877072
-   svnmucc: Change an error message to state another possible cause of the
-   error.
-   Justification:
-     Error messages should be accurate.  User reported (issue #4854).
-   Votes:
-     +1: danielsh, stsp, jcorvel
-
 * r1877259
     Move variable declarations to the start of block the to fix
     syntax errors with VC9 (Visual Studio 2008).
