@@ -49,6 +49,15 @@ Candidate changes:
    Votes:
      +1: jcorvel
 
+ * r1876662
+   Avoid check for SWIG version for Python bindings when --witout-swig is
+   passed.
+   Justification:
+     SWIG python bindings should be able to be built without SWIG when we use
+     the release tarball
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
