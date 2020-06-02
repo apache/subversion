@@ -145,17 +145,21 @@ Step 2:  Build and Install Subversion.
   It tries to detect SWIG near the very end of its output.
   You can find it by running 'grep "^SWIG=" config.log'.
 
-  Also make sure that the configure script sees the paths to the perl and/or
-  python executable you used to configure SWIG as above.  If it does not then
-  you can specify the correct path by adding PYTHON=/path/to/python or
-  PERL=/path/to/perl onto the command line for configure.  For example:
-       ./configure PYTHON=/usr/bin/python3.7 PERL=/usr/bin/perl5.28.2
+  Also make sure that the configure script sees the paths to the perl,
+  ruby, and/or python executable you used to configure SWIG as above.
+  If it does not then you can specify the correct path by specifying
+  --with-swig-python=/path/to/python, --with-swig-perl=/path/to/perl,
+  and/or --with-swig-ruby=/path/to/ruby to the command line for configure.
+  For example:
+       ./configure --with-swig-python=/usr/bin/python3.7 \
+           --with-swig-perl=/usr/bin/perl5.28.2 \
+           --with-swig-ruby=/usr/bin/ruby2.7
 
   If Subversion's ./configure finds a SWIG that it's happy with, then
   it will build special glue libraries to link svn to the swig bindings:
-    libsvn_swig_py.so (for Python)
-    libsvn_swig_perl.so (for Perl)
-
+    libsvn_swig_py-1.so (for Python)
+    libsvn_swig_perl-1.so (for Perl)
+    libsvn_swig_ruby-1.so (for Ruby)
 
 Step 3:  Install Specific Language Bindings
 
@@ -209,10 +213,10 @@ Step 3:  Install Specific Language Bindings
 *  Perl
 
    Perl 5.8.0 is required.  You can specify the perl binary by passing
-   PERL=/path/to/perl as part of the configure command in the top level
-   of the Subversion source tree.  Make sure that the Perl version used
-   is the same one that you configured SWIG to run against during the
-   SWIG configure (see above).
+   --with-swig-perl=/path/to/perl as an option to the configure command
+   in the top level of the Subversion source tree.  Make sure that the
+   Perl version used is the same one that you configured SWIG to run
+   against during the SWIG configure (see above).
 
    1.  Run `make swig-pl' from the top of the Subversion build tree.
 
@@ -251,10 +255,11 @@ Step 3:  Install Specific Language Bindings
    3. To install, run `make install-swig-rb' from the top of the
       Subversion build tree.
 
-   You can specify the ruby binary by passing RUBY=/path/to/ruby as part
-   of the configure command in the top level of the Subversion source
-   tree. Make sure that the Ruby version used is the same one that you
-   configured SWIG to run against during the SWIG configure (see above).
+   You can specify the ruby binary by passing --with-swig-ruby=/path/to/ruby
+   as an option to the configure command in the top level of the
+   Subversion source tree. Make sure that the Ruby version used is
+   the same one that you configured SWIG to run against during the
+   SWIG configure (see above).
 
 
 BUILDING SWIG BINDINGS FOR SVN ON WINDOWS

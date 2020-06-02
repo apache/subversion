@@ -104,11 +104,11 @@ AC_DEFUN(SVN_FIND_SWIG,
   SWIG_PY_LINK="none"
   SWIG_PY_OPTS="none"
   SWIG_PY_ERRMSG="check config.log for details"
-  if test "$PYTHON" != "none"; then
+  if test "$SWIG_PY_PYTHON" != "none"; then
     AC_MSG_NOTICE([Configuring python swig binding])
 
     AC_CACHE_CHECK([for Python includes], [ac_cv_python_includes],[
-      ac_cv_python_includes="`$PYTHON ${abs_srcdir}/build/get-py-info.py --includes`"
+      ac_cv_python_includes="`$SWIG_PY_PYTHON ${abs_srcdir}/build/get-py-info.py --includes`"
     ])
     SWIG_PY_INCLUDES="\$(SWIG_INCLUDES) $ac_cv_python_includes"
 
@@ -137,17 +137,17 @@ AC_DEFUN(SVN_FIND_SWIG,
           AC_MSG_WARN([py3c library not found; disabling python swig bindings])
         else
           AC_CACHE_CHECK([for compiling Python extensions], [ac_cv_python_compile],[
-            ac_cv_python_compile="`$PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
+            ac_cv_python_compile="`$SWIG_PY_PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
           ])
           SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
       
           AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
-            ac_cv_python_link="`$PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
+            ac_cv_python_link="`$SWIG_PY_PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
           ])
           SWIG_PY_LINK="$ac_cv_python_link"
       
           AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
-            ac_cv_python_libs="`$PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
+            ac_cv_python_libs="`$SWIG_PY_PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
           ])
           SWIG_PY_LIBS="`SVN_REMOVE_STANDARD_LIB_DIRS($ac_cv_python_libs)`"
 
@@ -159,7 +159,7 @@ AC_DEFUN(SVN_FIND_SWIG,
             # have the SWIG-generated files.
             AC_CACHE_CHECK([for Python >= 3], [ac_cv_python_is_py3],[
               ac_cv_python_is_py3="no"
-              $PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
+              $SWIG_PY_PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
                  ac_cv_python_is_py3="yes"
             ])
   
@@ -195,15 +195,15 @@ AC_DEFUN(SVN_FIND_SWIG,
   fi
 
   SWIG_PL_ERRMSG="check config.log for details"
-  if test "$PERL" != "none"; then
+  if test "$SWIG_PL_PERL" != "none"; then
     AC_MSG_CHECKING([perl version])
     dnl Note that the q() bit is there to avoid unbalanced brackets
     dnl which m4 really doesn't like.
-    PERL_VERSION="`$PERL -e 'q([[); print $]] * 1000000,$/;'`"
+    PERL_VERSION="`$SWIG_PL_PERL -e 'q([[); print $]] * 1000000,$/;'`"
     AC_MSG_RESULT([$PERL_VERSION])
     if test "$PERL_VERSION" -ge "5008000"; then
-      SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$PERL -MExtUtils::Embed -e ccopts`"
-      SWIG_PL_LINK="`$PERL -MExtUtils::Embed -e ldopts`"
+      SWIG_PL_INCLUDES="\$(SWIG_INCLUDES) `$SWIG_PL_PERL -MExtUtils::Embed -e ccopts`"
+      SWIG_PL_LINK="`$SWIG_PL_PERL -MExtUtils::Embed -e ldopts`"
       SWIG_PL_LINK="`SVN_REMOVE_STANDARD_LIB_DIRS($SWIG_PL_LINK)`"
 
       dnl SWIG Perl bindings successfully configured, clear the error message
@@ -216,13 +216,13 @@ AC_DEFUN(SVN_FIND_SWIG,
   SWIG_RB_COMPILE="none"
   SWIG_RB_LINK="none"
   SWIG_RB_ERRMSG="check config.log for details"
-  if test "$RUBY" != "none"; then
+  if test "$SWIG_RB_RUBY" != "none"; then
     if test x"$SWIG_VERSION" = x"3""00""008"; then
       # Use a local variable to escape the '#' sign.
       ruby_swig_issue_602='https://subversion.apache.org/docs/release-notes/1.11#ruby-swig-issue-602'
       AC_MSG_WARN([Ruby bindings are known not to support swig 3.0.8; see $ruby_swig_issue_602])
     fi
-    rbconfig="$RUBY -rrbconfig -e "
+    rbconfig="$SWIG_RB_RUBY -rrbconfig -e "
 
     for var_name in arch archdir CC LDSHARED DLEXT LIBS LIBRUBYARG \
                     rubyhdrdir rubyarchhdrdir sitedir sitelibdir sitearchdir libdir
@@ -261,7 +261,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     SWIG_RB_COMPILE="$SWIG_RB_COMPILE -Wno-int-to-pointer-cast"
 
     AC_CACHE_CHECK([how to link Ruby extensions], [svn_cv_ruby_link],[
-      svn_cv_ruby_link="`$RUBY -e 'ARGV.shift; print ARGV.join(%q( ))' \
+      svn_cv_ruby_link="`$SWIG_RB_RUBY -e 'ARGV.shift; print ARGV.join(%q( ))' \
                            $rbconfig_LDSHARED`"
       svn_cv_ruby_link="$rbconfig_CC $svn_cv_ruby_link"
       svn_cv_ruby_link="$svn_cv_ruby_link -shrext .$rbconfig_DLEXT"

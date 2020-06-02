@@ -356,7 +356,7 @@ INSTALL_EXTRA_SWIG_PY=\
       $(INSTALL_DATA) "$$i" $(DESTDIR)$(swig_pydir); \
     done; \
   fi; \
-  $(PYTHON) -c 'import compileall; \
+  $(SWIG_PY_PYTHON) -c 'import compileall; \
     compileall.compile_dir("$(DESTDIR)$(swig_pydir)", 1, "$(swig_pydir)"); \
     compileall.compile_dir("$(DESTDIR)$(swig_pydir_extra)", 1, \
     "$(swig_pydir_extra)");'
@@ -396,7 +396,8 @@ HTTPD_VERSION = @HTTPD_VERSION@
 HTTPD_WHITELIST = @HTTPD_WHITELIST@
 
 PYTHON = @PYTHON@
-PERL = @PERL@
+SWIG_PY_PYTHON = @SWIG_PY_PYTHON@
+SWIG_PL_PERL = @SWIG_PL_PERL@
 
 JDK = @JDK@
 JAVA = @JAVA@
@@ -412,7 +413,7 @@ javahl_compat_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_tests_CLASSPATH=$(JAVA_CLASSPATH)
 javahl_compat_tests_CLASSPATH=$(JAVA_CLASSPATH)
 
-RUBY = @RUBY@
+SWIG_RB_RUBY = @SWIG_RB_RUBY@
 RUBY_MAJOR = @RUBY_MAJOR@
 RUBY_MINOR = @RUBY_MINOR@
 RDOC = @RDOC@
@@ -881,13 +882,13 @@ $(SWIG_PL_DIR)/native/Makefile.PL: $(SWIG_SRC_DIR)/perl/native/Makefile.PL.in
 	./config.status subversion/bindings/swig/perl/native/Makefile.PL
 
 $(SWIG_PL_DIR)/native/Makefile: libsvn_swig_perl $(SWIG_PL_DIR)/native/Makefile.PL
-	cd $(SWIG_PL_DIR)/native; $(PERL) Makefile.PL PREFIX=$(prefix)
+	cd $(SWIG_PL_DIR)/native; $(SWIG_PL_PERL) Makefile.PL PREFIX=$(prefix)
 
 # There is a "readlink -f" command on some systems for the same purpose,
 # but it's not as portable (e.g. Mac OS X doesn't have it).  These should
 # only be used where Python/Perl are known to be available.
 READLINK_PY=$(PYTHON) -c 'import sys,os; print(os.path.realpath(sys.argv[1]))'
-READLINK_PL=$(PERL) -e 'use Cwd; print Cwd::realpath(shift)'
+READLINK_PL=$(SWIG_PL_PERL) -e 'use Cwd; print Cwd::realpath(shift)'
 
 swig-pl: autogen-swig-pl $(SWIG_PL_DIR)/native/Makefile
 	if test "`$(READLINK_PL) $(SWIG_PL_DIR)`" != "`$(READLINK_PL) $(SWIG_PL_SRC_DIR)`"; then \
@@ -943,7 +944,7 @@ swig-py: autogen-swig-py copy-swig-py
 check-swig-py: swig-py
 	$(TEST_SHLIB_VAR_SWIG_PY) \
 	cd $(SWIG_PY_DIR); \
-	  $(PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
+	  $(SWIG_PY_PYTHON) $(SWIG_PY_SRC_DIR)/tests/run_all.py
 
 EXTRACLEAN_SWIG_PY=rm -rf $(SWIG_PY_DIR)/svn_*.c $(SWIG_PY_DIR)/core.c \
                           $(SWIG_PY_DIR)/[a-z]*.py
@@ -968,7 +969,7 @@ check-swig-rb: swig-rb svnserve
 	$(TEST_SHLIB_VAR_SWIG_RB) \
 	cd $(SWIG_RB_DIR); \
 	  check_rb() { \
-	    $(RUBY) -I $(SWIG_RB_SRC_DIR) $(SWIG_RB_SRC_DIR)/test/run-test.rb "$$@"; \
+	    $(SWIG_RB_RUBY) -I $(SWIG_RB_SRC_DIR) $(SWIG_RB_SRC_DIR)/test/run-test.rb "$$@"; \
 	  }; \
 	  if check_rb --help 2>&1 | grep -q -- --collector; then \
 	    check_rb --collector=dir --verbose=$(SWIG_RB_TEST_VERBOSE); \
