@@ -31,16 +31,6 @@ Candidate changes:
    Votes:
      +1: futatuki, stsp
 
- * r1876707, r1876734, r1877318, r1877712, r1878141, r1878142, r1878143,
-   r1878144
-   Various fixes for making the test suite run correctly with Python 3 on
-   Windows. 
-   Justification:
-     Our test suite should test Subversion correctly also on Windows with
-     Python 3
-   Votes:
-     +1: futatuki, jcorvel
-
  * r1876906
    Make gen-make.py --debug work with Python 3
    Justification:
@@ -63,3 +53,13 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1876707, r1876734, r1877318, r1877712, r1878141, r1878142, r1878143,
+   r1878144
+   Various fixes for making the test suite run correctly with Python 3 on
+   Windows. 
+   Justification:
+     Our test suite should test Subversion correctly also on Windows with
+     Python 3
+   Votes:
+     +1: futatuki, jcorvel, stsp
