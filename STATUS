@@ -47,7 +47,7 @@ Candidate changes:
      We should also be able to build in Debug configuration with Python 3
      on Windows.
    Votes:
-     +1: jcorvel
+     +1: jcorvel, stsp
 
  * r1876662
    Avoid check for SWIG version for Python bindings when --witout-swig is
@@ -56,7 +56,7 @@ Candidate changes:
      SWIG python bindings should be able to be built without SWIG when we use
      the release tarball
    Votes:
-     +1: futatuki
+     +1: futatuki, stsp
 
 Veto-blocked changes:
 =====================
