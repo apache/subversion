@@ -28,6 +28,7 @@ import sys
 import re
 import logging
 import pprint
+import io
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -686,10 +687,18 @@ class State:
         if os.path.isfile(node):
           try:
             if keep_eol_style:
-              contents = open(node, 'r', newline='').read()
+              
+              contents = io.open(node, 'r', newline='',
+                                 encoding='utf-8').read()
             else:
-              contents = open(node, 'r').read()
+              contents = io.open(node, 'r', encoding='utf-8').read()
+            if not isinstance(contents, str):
+              # Python 2: contents is read as an unicode object,
+              # but we expect it is a str.
+              contents = contents.encode()
           except:
+            # If the file contains non UTF-8 character, we treat its
+            # content as binary represented as a bytes object.
             contents = open(node, 'rb').read()
         else:
           contents = None

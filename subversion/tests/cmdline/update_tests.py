@@ -1650,15 +1650,11 @@ def conflict_markers_matching_eol(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
-    crlf = '\n'
+    native_nl = '\r\n'
   else:
-    crlf = '\r\n'
-
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
+    native_nl = '\n'
+  crlf = '\r\n'
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -1677,7 +1673,7 @@ def conflict_markers_matching_eol(sbox):
 
   # do the test for each eol-style
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
-                          [crlf, '\015', '\n', '\012']):
+                          [crlf, '\015', native_nl, '\012']):
     # rewrite file mu and set the eol-style property.
     svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
@@ -1704,8 +1700,8 @@ def conflict_markers_matching_eol(sbox):
     svntest.main.run_svn(None, 'update', wc_backup)
 
     # Make a local mod to mu
-    svntest.main.file_append(mu_path,
-                             'Original appended text for mu' + eolchar)
+    svntest.main.file_append_binary(mu_path,
+                                    'Original appended text for mu' + eolchar)
 
     # Commit the original change and note the 'theirs' revision number
     svntest.main.run_svn(None, 'commit', '-m', 'test log', wc_dir)
@@ -1713,8 +1709,9 @@ def conflict_markers_matching_eol(sbox):
     theirs_rev = cur_rev
 
     # Make a local mod to mu, will conflict with the previous change
-    svntest.main.file_append(path_backup,
-                             'Conflicting appended text for mu' + eolchar)
+    svntest.main.file_append_binary(path_backup,
+                                    'Conflicting appended text for mu'
+                                    + eolchar)
 
     # Create expected output tree for an update of the wc_backup.
     expected_backup_output = svntest.wc.State(wc_backup, {
@@ -1764,7 +1761,7 @@ def conflict_markers_matching_eol(sbox):
                                            expected_backup_output,
                                            expected_backup_disk,
                                            expected_backup_status,
-                                           keep_eol_style=keep_eol_style)
+                                           keep_eol_style=True)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -1785,15 +1782,7 @@ def update_eolstyle_handling(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
-  if os.name == 'nt':
-    crlf = '\n'
-  else:
-    crlf = '\r\n'
-
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
+  crlf = '\r\n'
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -1825,7 +1814,7 @@ def update_eolstyle_handling(sbox):
                                          expected_backup_output,
                                          expected_backup_disk,
                                          expected_backup_status,
-                                         keep_eol_style=keep_eol_style)
+                                         keep_eol_style=True)
 
   # Test 2: now change the eol-style property to another value and commit,
   # update the still changed mu in the second working copy; there should be
@@ -1851,7 +1840,7 @@ def update_eolstyle_handling(sbox):
                                          expected_backup_output,
                                          expected_backup_disk,
                                          expected_backup_status,
-                                         keep_eol_style=keep_eol_style)
+                                         keep_eol_style=True)
 
   # Test 3: now delete the eol-style property and commit, update the still
   # changed mu in the second working copy; there should be no conflict!
@@ -1876,7 +1865,7 @@ def update_eolstyle_handling(sbox):
                                          expected_backup_output,
                                          expected_backup_disk,
                                          expected_backup_status,
-                                         keep_eol_style=keep_eol_style)
+                                         keep_eol_style=True)
 
 # Bug in which "update" put a bogus revision number on a schedule-add file,
 # causing the wrong version of it to be committed.
