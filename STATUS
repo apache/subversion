@@ -48,6 +48,13 @@ Candidate changes:
    Votes:
      +1: futatuki, stsp
 
+ * r1878413
+   autogen.sh: Remove per SWIG bindings checked files on release mode.
+   Justification:
+     The release tarballs should not contain .swig_*_checked files
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
