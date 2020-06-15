@@ -194,7 +194,7 @@ def comparator(a, b):
     if not inca:
       return -1
     elif not incb:
-      return 1;
+      return 1
     elif (int(inca) < int(incb)):
       return -1
     else:
@@ -220,7 +220,7 @@ def get_youngest_revision():
     raise Exception("Unable to find the youngest revision for repository '%s'"
                     ": %s" % (repo_dir, stderr_lines[0].rstrip()))
 
-  return stdout_lines[0].strip().decode();
+  return stdout_lines[0].strip().decode()
 
 ######################################################################
 # Main
