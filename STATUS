@@ -31,7 +31,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1878909
+ * r1878909, r1878918, r1878950
    Fix a number of thinkos in human-readable file size formatting.
    Justification:
      Fixes wrong output and an assertion failure in debug mode.
