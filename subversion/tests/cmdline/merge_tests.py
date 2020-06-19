@@ -18500,6 +18500,33 @@ def merge_dir_delete_force(sbox):
                                      'merge', '-c2', '^/', sbox.wc_dir,
                                      '--ignore-ancestry', '--force')
 
+# Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
+# E155023: can't set properties: invalid status for updating properties
+@XFail()
+@Issue(4859)
+def merge_deleted_folder_with_mergeinfo(sbox):
+  "merge deleted folder with mergeinfo"
+
+  sbox.build()
+
+  # Some non-inheritable mergeinfo
+  sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
+  sbox.simple_commit() # r2
+
+  # Branching
+  sbox.simple_repo_copy('A', 'branch_A')  # r3
+  sbox.simple_update()
+
+  # On branch, remove a folder that has non-inheritable mergeinfo
+  sbox.simple_rm('branch_A/D')
+  sbox.simple_commit() # r4
+
+  sbox.simple_update()
+
+  # A merge that removes that folder
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '-c4', '^/branch_A', sbox.ospath('A'))
+
 ########################################################################
 # Run the tests
 
@@ -18647,6 +18674,7 @@ test_list = [ None,
               merge_to_empty_target_merge_to_infinite_target,
               conflict_naming,
               merge_dir_delete_force,
+              merge_deleted_folder_with_mergeinfo,
              ]
 
 if __name__ == '__main__':
