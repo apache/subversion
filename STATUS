@@ -38,6 +38,16 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1879198
+   Fix an invalid quoting in working copy upgrade system that only works
+   because SQLite automatically fixed this. More recent SQLite functions
+   will signal an error when deprecated features are disabled.
+   Note:
+     This filechange by itself doesn't trigger a change that make will
+     handle. So make sure you recompile the sql queries for testing.
+   Votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
