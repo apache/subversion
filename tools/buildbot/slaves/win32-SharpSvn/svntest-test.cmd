@@ -75,19 +75,19 @@ IF "%SVN_BRANCH%" LSS "1.9." (
 
 IF "%LOCAL%+%FSFS%" == "1+1" (
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs %ARGS% "%TESTDIR%\tests"
+  python win-tests.py -c %PARALLEL% %MODE% -f fsfs %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 SET RC=1
 )
 
 IF "%SVN%+%FSFS%" == "1+1" (
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://127.0.0.1 %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://127.0.0.1 %ARGS% "%TESTDIR%\tests"
+  python win-tests.py -c %PARALLEL% %MODE% -f fsfs -u svn://127.0.0.1 %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 SET RC=1
 )
 
 IF "%DAV%+%FSFS%" == "1+1" (
   echo win-tests.py -c %PARALLEL% %MODE% -f fsfs --httpd-no-log --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
-  win-tests.py -c %PARALLEL% %MODE% -f fsfs --httpd-no-log --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
+  python win-tests.py -c %PARALLEL% %MODE% -f fsfs --httpd-no-log --httpd-dir "%CD%\..\deps\release\httpd" --httpd-port %TESTPORT% -u http://127.0.0.1:%TESTPORT% %ARGS% "%TESTDIR%\tests"
   IF ERRORLEVEL 1 SET RC=1
 )
 
