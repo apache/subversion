@@ -23,44 +23,19 @@ Candidate changes:
    Votes:
      +1: danielsh, stsp
 
- * r1877960
-   * INSTALL (I.C.12): Add Note that non-release mode is required for building
-     SWIG Python 2 bindings.
-   Justification:
-     We've not entirely dropped Python 2 bindings support on 1.14.x yet
-   Votes:
-     +1: futatuki, stsp
-
- * r1876906
-   Make gen-make.py --debug work with Python 3
-   Justification:
-     We should also be able to build in Debug configuration with Python 3
-     on Windows.
-   Votes:
-     +1: jcorvel, stsp
-
- * r1876662
-   Avoid check for SWIG version for Python bindings when --witout-swig is
-   passed.
-   Justification:
-     SWIG python bindings should be able to be built without SWIG when we use
-     the release tarball
-   Votes:
-     +1: futatuki, stsp
-
  * r1878413
    autogen.sh: Remove per SWIG bindings checked files on release mode.
    Justification:
      The release tarballs should not contain .swig_*_checked files
    Votes:
-     +1: futatuki
+     +1: futatuki, rhuijben
 
  * r1878909, r1878918, r1878950
    Fix a number of thinkos in human-readable file size formatting.
    Justification:
      Fixes wrong output and an assertion failure in debug mode.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
  * r1879198
    Fix an invalid quoting in working copy upgrade system that only works
@@ -79,3 +54,28 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1877960
+   * INSTALL (I.C.12): Add Note that non-release mode is required for building
+     SWIG Python 2 bindings.
+   Justification:
+     We've not entirely dropped Python 2 bindings support on 1.14.x yet
+   Votes:
+     +1: futatuki, stsp, rhuijben
+
+ * r1876662
+   Avoid check for SWIG version for Python bindings when --without-swig is
+   passed.
+   Justification:
+     SWIG python bindings should be able to be built without SWIG when we use
+     the release tarball
+   Votes:
+     +1: futatuki, stsp, rhuijben
+
+ * r1876906
+   Make gen-make.py --debug work with Python 3
+   Justification:
+     We should also be able to build in Debug configuration with Python 3
+     on Windows.
+   Votes:
+     +1: jcorvel, stsp, rhuijben
