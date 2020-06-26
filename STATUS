@@ -64,20 +64,13 @@ Candidate changes:
    Fix an invalid quoting in working copy upgrade system that only works
    because SQLite automatically fixed this. More recent SQLite functions
    will signal an error when deprecated features are disabled.
+   Justification:
+     Causes user-visible errors.
    Note:
      This filechange by itself doesn't trigger a change that make will
      handle. So make sure you recompile the sql queries for testing.
    Votes:
-     +1: rhuijben
-
- * r1879198
-   Fix invalid escape sequence in working copy queries which causes upgrades
-   from Subversion 1.7 working copies to fail with recent SQLite versions (>=
-   3.29.0).
-   Justification:
-     Causes user-visible errors.
-   Votes:
-     +1: danielsh
+     +1: rhuijben, danielsh
 
 Veto-blocked changes:
 =====================
