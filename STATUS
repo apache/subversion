@@ -70,6 +70,15 @@ Candidate changes:
    Votes:
      +1: rhuijben
 
+ * r1879198
+   Fix invalid escape sequence in working copy queries which causes upgrades
+   from Subversion 1.7 working copies to fail with recent SQLite versions (>=
+   3.29.0).
+   Justification:
+     Causes user-visible errors.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
