@@ -20,7 +20,7 @@ Candidate changes:
   Justification:
     Server should not be able to trigger assertion failures in clients.
   Votes:
-    +1: stsp
+    +1: stsp, rhuijben
 
  * r1872030, r1872031, r1872104, r1872107, r1872108, r1872115, r1872118,
    r1872121, r1872388, r1872433, r1872910, r1872919, r1872921, r1872922,
@@ -36,7 +36,7 @@ Candidate changes:
    Justification:
      Fixes wrong output and an assertion failure in debug mode.
    Votes:
-     +1: brane
+     +1: brane, rhuijben
 
  * r1879198
    Fix an invalid quoting in working copy upgrade system that only works
