@@ -39,7 +39,7 @@ SET result=0
 
 if "%SVN_BRANCH%" GTR "1.9." (
 
-    python win-tests.py -r -f fsfs --swig=python "%TESTDIR%\tests"
+    python2 win-tests.py -r -f fsfs --swig=python "%TESTDIR%\tests"
 
     IF ERRORLEVEL 1 (
         echo [Python tests reported error !ERRORLEVEL!] 1>&2
@@ -60,7 +60,7 @@ if "%SVN_BRANCH%" GTR "1.9." (
 
     SET PYTHONPATH=%TESTDIR%\swig\py-release
 
-    python subversion\bindings\swig\python\tests\run_all.py
+    python2 subversion\bindings\swig\python\tests\run_all.py
     IF ERRORLEVEL 1 (
         echo [Python tests reported error !ERRORLEVEL!] 1>&2
         REM SET result=1
