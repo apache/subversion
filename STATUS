@@ -63,15 +63,6 @@ Approved changes:
    Votes:
      +1: futatuki, stsp, rhuijben
 
- * r1876662
-   Avoid check for SWIG version for Python bindings when --without-swig is
-   passed.
-   Justification:
-     SWIG python bindings should be able to be built without SWIG when we use
-     the release tarball
-   Votes:
-     +1: futatuki, stsp, rhuijben
-
  * r1876906
    Make gen-make.py --debug work with Python 3
    Justification:
