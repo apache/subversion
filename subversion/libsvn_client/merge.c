@@ -5614,7 +5614,7 @@ svn_client__make_merge_conflict_error(svn_client__conflict_report_t *report,
    with paths (svn_client__merge_path_t *) arranged in depth first order,
    which have mergeinfo set on them or meet one of the other criteria
    defined in get_mergeinfo_paths().  Remove any paths absent from disk
-   or scheduled for deletion from CHILDREN_WITH_MERGEINFO which are equal to
+   from CHILDREN_WITH_MERGEINFO which are equal to
    or are descendants of TARGET_WCPATH by setting those children to NULL. */
 static svn_error_t *
 remove_absent_children(const char *target_wcpath,
@@ -5628,7 +5628,7 @@ remove_absent_children(const char *target_wcpath,
     {
       svn_client__merge_path_t *child =
         APR_ARRAY_IDX(children_with_mergeinfo, i, svn_client__merge_path_t *);
-      if ((child->absent || child->scheduled_for_deletion)
+      if (child->absent
           && svn_dirent_is_ancestor(target_wcpath, child->abspath))
         {
           SVN_ERR(svn_sort__array_delete2(children_with_mergeinfo, i--, 1));
