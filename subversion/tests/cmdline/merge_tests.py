@@ -18530,6 +18530,81 @@ def merge_dir_delete_force(sbox):
                                      'merge', '-c2', '^/', sbox.wc_dir,
                                      '--ignore-ancestry', '--force')
 
+# Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
+# E155023: can't set properties: invalid status for updating properties
+@Issue(4859)
+def merge_deleted_folder_with_mergeinfo(sbox):
+  "merge deleted folder with mergeinfo"
+
+  sbox.build()
+
+  # Some non-inheritable mergeinfo
+  sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
+  sbox.simple_commit() # r2
+
+  # Branching
+  sbox.simple_repo_copy('A', 'branch_A')  # r3
+  sbox.simple_update()
+
+  # On branch, remove a folder that has non-inheritable mergeinfo
+  sbox.simple_rm('branch_A/D')
+  sbox.simple_commit() # r4
+
+  sbox.simple_update()
+
+  # A merge that removes that folder
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '-c4', '^/branch_A', sbox.ospath('A'))
+
+# Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
+# E155023: can't set properties: invalid status for updating properties
+#
+# In this test we split the merge into two separate operable parts, a
+# delete followed later by an add, to check it will set the mergeinfo on the
+# subtree paths if the deleted folder is later replaced within the same
+# overall merge.
+@Issue(4859)
+def merge_deleted_folder_with_mergeinfo_2(sbox):
+  "merge deleted folder with mergeinfo 2"
+
+  sbox.build()
+
+  # Some non-inheritable mergeinfo
+  sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
+  sbox.simple_commit() # r2
+
+  # Branching
+  sbox.simple_repo_copy('A', 'branch_A')  # r3
+  sbox.simple_update()
+
+  # On branch, remove a folder that has non-inheritable mergeinfo
+  sbox.simple_rm('branch_A/D')
+  sbox.simple_commit() # r4
+
+  # A commit that we don't want to merge from the branch, to split the merge
+  # into two separate operable parts.
+  sbox.simple_mkdir('branch_A/IgnoreThis')
+  sbox.simple_commit() # r5
+
+  # On branch, replace the deleted folder with a new one, with mergeinfo,
+  # to check we don't omit setting mergeinfo on this.
+  sbox.simple_mkdir('branch_A/D')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C:1*', 'branch_A/D')
+  sbox.simple_mkdir('branch_A/D/G', 'branch_A/D/G2')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C/G:1*', 'branch_A/D/G')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C/G2:1*', 'branch_A/D/G2')
+  sbox.simple_commit() # r6
+
+  sbox.simple_propset('svn:mergeinfo', '/branch_A:5', 'A')
+  sbox.simple_commit() # r7
+
+  sbox.simple_update()
+
+  # A merge that removes that folder
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'merge', '^/branch_A', sbox.ospath('A'))
+  ### TODO: verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+
 ########################################################################
 # Run the tests
 
@@ -18677,6 +18752,8 @@ test_list = [ None,
               merge_to_empty_target_merge_to_infinite_target,
               conflict_naming,
               merge_dir_delete_force,
+              merge_deleted_folder_with_mergeinfo,
+              merge_deleted_folder_with_mergeinfo_2,
              ]
 
 if __name__ == '__main__':
