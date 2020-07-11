@@ -15,40 +15,6 @@ Status of 1.14.1:
 Candidate changes:
 ==================
 
- * r1876410
-   Fix the .editorconfig stanza for Makefile's.
-   Justification:
-     Make $EDITOR do the right thing on any backport branches we may create
-     off this stabilization branch.
-   Votes:
-     +1: danielsh, stsp
-
- * r1878413
-   autogen.sh: Remove per SWIG bindings checked files on release mode.
-   Justification:
-     The release tarballs should not contain .swig_*_checked files
-   Votes:
-     +1: futatuki, rhuijben
-
- * r1878909, r1878918, r1878950
-   Fix a number of thinkos in human-readable file size formatting.
-   Justification:
-     Fixes wrong output and an assertion failure in debug mode.
-   Votes:
-     +1: brane, rhuijben
-
- * r1879198
-   Fix an invalid quoting in working copy upgrade system that only works
-   because SQLite automatically fixed this. More recent SQLite functions
-   will signal an error when deprecated features are disabled.
-   Justification:
-     Causes user-visible errors.
-   Note:
-     This filechange by itself doesn't trigger a change that make will
-     handle. So make sure you recompile the sql queries for testing.
-   Votes:
-     +1: rhuijben, danielsh
-
 Veto-blocked changes:
 =====================
 
@@ -62,3 +28,38 @@ Approved changes:
      We've not entirely dropped Python 2 bindings support on 1.14.x yet
    Votes:
      +1: futatuki, stsp, rhuijben
+
+ * r1876410
+   Fix the .editorconfig stanza for Makefile's.
+   Justification:
+     Make $EDITOR do the right thing on any backport branches we may create
+     off this stabilization branch.
+   Votes:
+     +1: danielsh, stsp, jamessan
+
+ * r1878413
+   autogen.sh: Remove per SWIG bindings checked files on release mode.
+   Justification:
+     The release tarballs should not contain .swig_*_checked files
+   Votes:
+     +1: futatuki, rhuijben, jamessan
+
+ * r1878909, r1878918, r1878950
+   Fix a number of thinkos in human-readable file size formatting.
+   Justification:
+     Fixes wrong output and an assertion failure in debug mode.
+   Votes:
+     +1: brane, rhuijben, jamessan
+
+ * r1879198
+   Fix an invalid quoting in working copy upgrade system that only works
+   because SQLite automatically fixed this. More recent SQLite functions
+   will signal an error when deprecated features are disabled.
+   Justification:
+     Causes user-visible errors.
+   Note:
+     This filechange by itself doesn't trigger a change that make will
+     handle. So make sure you recompile the sql queries for testing.
+   Votes:
+     +1: rhuijben, danielsh, jamessan
+
