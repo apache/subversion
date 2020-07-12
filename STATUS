@@ -29,14 +29,6 @@ Approved changes:
    Votes:
      +1: futatuki, stsp, rhuijben
 
- * r1876410
-   Fix the .editorconfig stanza for Makefile's.
-   Justification:
-     Make $EDITOR do the right thing on any backport branches we may create
-     off this stabilization branch.
-   Votes:
-     +1: danielsh, stsp, jamessan
-
  * r1878413
    autogen.sh: Remove per SWIG bindings checked files on release mode.
    Justification:
@@ -62,4 +54,3 @@ Approved changes:
      handle. So make sure you recompile the sql queries for testing.
    Votes:
      +1: rhuijben, danielsh, jamessan
-
