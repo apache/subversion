@@ -29,13 +29,6 @@ Approved changes:
    Votes:
      +1: futatuki, stsp, rhuijben
 
- * r1878909, r1878918, r1878950
-   Fix a number of thinkos in human-readable file size formatting.
-   Justification:
-     Fixes wrong output and an assertion failure in debug mode.
-   Votes:
-     +1: brane, rhuijben, jamessan
-
  * r1879198
    Fix an invalid quoting in working copy upgrade system that only works
    because SQLite automatically fixed this. More recent SQLite functions
