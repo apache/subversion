@@ -28,15 +28,3 @@ Approved changes:
      We've not entirely dropped Python 2 bindings support on 1.14.x yet
    Votes:
      +1: futatuki, stsp, rhuijben
-
- * r1879198
-   Fix an invalid quoting in working copy upgrade system that only works
-   because SQLite automatically fixed this. More recent SQLite functions
-   will signal an error when deprecated features are disabled.
-   Justification:
-     Causes user-visible errors.
-   Note:
-     This filechange by itself doesn't trigger a change that make will
-     handle. So make sure you recompile the sql queries for testing.
-   Votes:
-     +1: rhuijben, danielsh, jamessan
