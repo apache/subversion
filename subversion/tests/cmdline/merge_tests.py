@@ -18538,6 +18538,10 @@ def merge_deleted_folder_with_mergeinfo(sbox):
 
   sbox.build()
 
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
   # Some non-inheritable mergeinfo
   sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
   sbox.simple_commit() # r2
@@ -18553,8 +18557,32 @@ def merge_deleted_folder_with_mergeinfo(sbox):
   sbox.simple_update()
 
   # A merge that removes that folder
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'merge', '-c4', '^/branch_A', sbox.ospath('A'))
+  # (merge revision 4 only from 'branch_A' to 'A')
+  expected_output = wc.State(sbox.ospath(''), {
+    'A/D'    : Item(status='D '),
+    })
+  expected_mergeinfo_output = wc.State(sbox.ospath(''), {
+    'A'      : Item(status=' U'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.ospath('A'), 4).subtree('A')
+  expected_status.add({ '': Item(status=' M', wc_rev=4) })
+  expected_status.tweak_some(
+    lambda path, item: [True] if path.split('/')[0] == 'D' else [],
+    status='D ')
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'), 3, 4,
+                                       '^/branch_A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       None,
+                                       None,
+                                       expected_status,
+                                       wc.State('', {}),
+                                       [],
+                                       check_props=False,
+                                       dry_run=False  # as dry run is broken
+                                       )
+
+  os.chdir(was_cwd)
 
 # Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
 # E155023: can't set properties: invalid status for updating properties
@@ -18568,6 +18596,10 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
   "merge deleted folder with mergeinfo 2"
 
   sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
 
   # Some non-inheritable mergeinfo
   sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
@@ -18601,9 +18633,42 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
   sbox.simple_update()
 
   # A merge that removes that folder
-  svntest.actions.run_and_verify_svn(None, [],
-                                     'merge', '^/branch_A', sbox.ospath('A'))
-  ### TODO: verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+  expected_output = wc.State(sbox.ospath(''), {
+    'A/D'    : Item(status='A ', prev_status='D '),
+    'A/D/G'  : Item(status='A '),
+    'A/D/G2' : Item(status='A '),
+    })
+  # verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+  #expected_mergeinfo_output = wc.State(sbox.ospath(''), {
+  #  'A'      : Item(status=' U'),
+  #  'A/D'    : Item(status=' G'),
+  #  'A/D/G'  : Item(status=' G'),  # varies, G or U: see issue #4862
+  #  'A/D/G2' : Item(status=' G'),  # varies, G or U: see issue #4862
+  #  })
+  expected_status = svntest.actions.get_virginal_state(sbox.ospath('A'), 7).subtree('A')
+  expected_status.tweak_some(
+    lambda path, item: [True] if path.split('/')[0] == 'D' else [],
+    status='D ')
+  expected_status.add({
+    ''     : Item(status=' M', wc_rev=7),
+    'D'    : Item(status='RM', copied='+', wc_rev='-'),
+    'D/G'  : Item(status=' M', copied='+', wc_rev='-'),
+    'D/G2' : Item(status=' M', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'), None, None,
+                                       '^/branch_A', None,
+                                       expected_output,
+                                       None, #expected_mergeinfo_output
+                                       None,
+                                       None,
+                                       expected_status,
+                                       wc.State('', {}),
+                                       [],
+                                       check_props=False,
+                                       dry_run=False  # as dry run is broken
+                                       )
+
+  os.chdir(was_cwd)
 
 ########################################################################
 # Run the tests
