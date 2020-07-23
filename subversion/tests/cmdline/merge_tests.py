@@ -18609,12 +18609,12 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
     'A/D/G2' : Item(status='A '),
     })
   # verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
-  #expected_mergeinfo_output = wc.State(sbox.ospath(''), {
-  #  'A'      : Item(status=' U'),
-  #  'A/D'    : Item(status=' G'),
-  #  'A/D/G'  : Item(status=' G'),  # varies, G or U: see issue #4862
-  #  'A/D/G2' : Item(status=' G'),  # varies, G or U: see issue #4862
-  #  })
+  expected_mergeinfo_output = wc.State(sbox.ospath(''), {
+    'A'      : Item(status=' U'),
+    'A/D'    : Item(status=' G'),
+    'A/D/G'  : Item(status=' G'),
+    'A/D/G2' : Item(status=' G'),
+    })
   expected_status = svntest.actions.get_virginal_state(sbox.ospath('A'), 7).subtree('A')
   expected_status.tweak_some(
     lambda path, item: [True] if path.split('/')[0] == 'D' else [],
@@ -18628,7 +18628,7 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
   svntest.actions.run_and_verify_merge(sbox.ospath('A'), None, None,
                                        '^/branch_A', None,
                                        expected_output,
-                                       None, #expected_mergeinfo_output
+                                       expected_mergeinfo_output,
                                        None,
                                        None,
                                        expected_status,
@@ -18637,6 +18637,17 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
                                        check_props=False,
                                        dry_run=False  # as dry run is broken
                                        )
+
+  # verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+  expected_mergeinfo = [
+    ('A',       ['/branch_A:3-7']),
+    ('A/D',     ['/branch_A/D:5-7\n', '/branch_B/C:1*']),
+    ('A/D/G',   ['/branch_A/D/G:5-7\n', '/branch_B/C/G:1*']),
+    ('A/D/G2',  ['/branch_A/D/G2:5-7\n', '/branch_B/C/G2:1*']),
+    ]
+  for path, mergeinfo in expected_mergeinfo:
+    svntest.actions.check_prop('svn:mergeinfo', sbox.ospath(path),
+                               [m.encode() for m in mergeinfo])
 
   os.chdir(was_cwd)
 
