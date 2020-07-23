@@ -23,6 +23,13 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
+ * r1880192
+   Fix issue #4862 "Merge: the resulting mergeinfo is non-deterministic".
+   Justification:
+     Non-deterministic merge result is bad.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
