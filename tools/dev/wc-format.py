@@ -40,7 +40,7 @@ def get_format(wc_path):
     parent_path = os.path.dirname(os.path.abspath(wc_path))
     if wc_path != parent_path:
       formatno = get_format(parent_path)
-      if formatno >= MIN_SINGLE_DB_FORMAT:
+      if isinstance(formatno, int) and formatno >= MIN_SINGLE_DB_FORMAT:
       	return formatno
 
   return formatno
