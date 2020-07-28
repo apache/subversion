@@ -953,7 +953,7 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
                                               &eof, local_pool));
 
       /* handle new revision */
-      if ((entry > 0 && proto_entry.offset == 0) || eof)
+      if (eof || (entry > 0 && proto_entry.offset == 0))
         {
           /* dump entries, grouped into pages */
 
@@ -2219,7 +2219,7 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
       SVN_ERR(read_p2l_entry_from_proto_index(proto_index, &entry,
                                               &eof, iterpool));
 
-      if (entry.item_count && !eof)
+      if (!eof && entry.item_count)
         {
           entry.items = apr_palloc(iterpool,
                                    entry.item_count * sizeof(*entry.items));
