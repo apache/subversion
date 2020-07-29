@@ -21,7 +21,7 @@ Candidate changes:
    Justification:
      Annoying failure, encountered in real use.
    Votes:
-     +1: julianfoad
+     +1: julianfoad, hartmannathan
 
  * r1880192
    Fix issue #4862 "Merge: the resulting mergeinfo is non-deterministic".
@@ -30,7 +30,7 @@ Candidate changes:
    Depends:
      r1878997, r1879192, r1879474, r1879959 (Fix issue #4859)
    Votes:
-     +1: julianfoad
+     +1: julianfoad, hartmannathan
 
 Veto-blocked changes:
 =====================
