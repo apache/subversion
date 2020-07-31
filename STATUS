@@ -32,6 +32,15 @@ Candidate changes:
    Votes:
      +1: julianfoad, hartmannathan
 
+ * r1880374:subversion/libsvn_fs_fs
+   Fix an uninitialized read in svn_fs_fs__index_append().
+   Justification:
+     Uninitialized reads are potentially undefined behaviour.
+   Branch:
+     1.14.x-r1880374-fsfs
+   Votes:
+     +1: danielsh, hartmannathan
+
 Veto-blocked changes:
 =====================
 
