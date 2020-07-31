@@ -506,6 +506,12 @@ I.    INTRODUCTION
       reached end of life.  All users are strongly encouraged to move
       to Python 3.
 
+      Note: If you are using a Subversion distribution tarball and want
+      to build the Python bindings for Python 2, you should rebuild
+      the build environment in non-release mode by running
+      'sh autogen.sh' before running the ./configure script; see
+      section II.B for more about autogen.sh.
+
 
       13. Perl 5.8 or newer (Windows only)  (OPTIONAL)
 
