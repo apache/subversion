@@ -48,8 +48,8 @@ Approved changes:
 =================
 
  * r1877960
-   * INSTALL (I.C.12): Add Note that non-release mode is required for building
-     SWIG Python 2 bindings.
+   INSTALL (I.C.12): Add Note that non-release mode is required for building
+   SWIG Python 2 bindings.
    Justification:
      We've not entirely dropped Python 2 bindings support on 1.14.x yet
    Votes:
