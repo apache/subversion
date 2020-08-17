@@ -32,6 +32,19 @@ Candidate changes:
    Votes:
      +1: julianfoad, hartmannathan
 
+ * r1880886
+   Fix crash in JavaHL JNI wrapper caused by object lifetimes
+   Justification:
+     Fixes a crash encountered with GCC 10.
+   Votes:
+     +1: hartmannathan, jamessan
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1880374:subversion/libsvn_fs_fs
    Fix an uninitialized read in svn_fs_fs__index_append().
    Justification:
@@ -39,17 +52,5 @@ Candidate changes:
    Branch:
      1.14.x-r1880374-fsfs
    Votes:
-     +1: danielsh, hartmannathan
+     +1: danielsh, hartmannathan, jamessan
 
- * r1880886
-   Fix crash in JavaHL JNI wrapper caused by object lifetimes
-   Justification:
-     Fixes a crash encountered with GCC 10.
-   Votes:
-     +1: hartmannathan
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
