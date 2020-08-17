@@ -95,7 +95,7 @@ Candidate changes:
    Justification:
      Fixes a crash encountered with GCC 10.
    Votes:
-     +1: hartmannathan
+     +1: hartmannathan, jamessan
 
 Veto-blocked changes:
 =====================
