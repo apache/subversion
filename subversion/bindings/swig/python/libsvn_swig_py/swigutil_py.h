@@ -98,11 +98,18 @@ int svn_swig_py_convert_ptr(PyObject *input, void **obj, swig_type_info *type);
 
 /* Wrapper for SWIG_MustGetPtr */
 void *svn_swig_py_must_get_ptr(void *input, swig_type_info *type, int argnum);
+
 
 /*** Functions to expose a custom SubversionException ***/
 
-/* raise a subversion exception, created from a normal subversion
-   error.  consume the error.  */
+/* Get a SubversionException class object and its instance built from
+   error_chain, but do not raise it immediately.  Consume the
+   error_chain.  */
+void svn_swig_py_build_svn_exception(
+    PyObject **exc_class, PyObject **exc_ob, svn_error_t *error_chain);
+
+/* Raise a SubversionException, created from a normal subversion
+   error.  Consume the error.  */
 void svn_swig_py_svn_exception(svn_error_t *err);
 
 

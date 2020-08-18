@@ -93,23 +93,68 @@
 %apply apr_hash_t *MERGEINFO { apr_hash_t *mergeinhash };
 
 /* -----------------------------------------------------------------------
-   Fix the return value for svn_fs_commit_txn(). If the conflict result is
-   NULL, then %append_output() is passed Py_None, but that goofs up
-   because that is *also* the marker for "I haven't started assembling a
-   multi-valued return yet" which means the second return value (new_rev)
-   will not cause a 2-tuple to be manufactured.
-
-   The answer is to explicitly create a 2-tuple return value.
-
-   FIXME: Do the Perl and Ruby bindings need to do something similar?
+   Tweak a SubversionException instance when it is raised in
+   svn_fs_merge(), svn_fs_commit_txn() and svn_repos_fs_commit_txn().
+   Those APIs return conflicts (and revision number on svn_fs_commit_txn
+   and svn_repos_fs_commit_txn) related to the conflict error when it  
+   is occured.  As Python wrapper functions report errors by raising
+   exceptions and don't return values, we use attributes of the exception 
+   to pass these values to the caller.
 */
+
 #ifdef SWIGPYTHON
-%typemap(argout) (const char **conflict_p, svn_revnum_t *new_rev) {
-    /* this is always Py_None */
-    Py_DECREF($result);
-    /* build the result tuple */
-    $result = Py_BuildValue("zi", *$1, (long)*$2);
+%typemap(argout) (const char **conflict_p) (PyObject* conflict_ob) {
+    if (*$1 == NULL)
+      {
+        Py_INCREF(Py_None);
+        conflict_ob = Py_None;
+      }
+    else
+      {
+        /* Note: We can check if apr_err == SVN_ERR_FS_CONFLICT or not
+           before access to *$1 */
+        conflict_ob = PyBytes_FromString((const char *)*$1);
+        if (conflict_ob == NULL)
+          {
+            Py_XDECREF(exc_ob);
+            Py_XDECREF($result);
+            SWIG_fail;
+          }
+      }
+    if (exc_ob != NULL)
+      {
+        PyObject_SetAttrString(exc_ob, "$1_name", conflict_ob); 
+        Py_DECREF(conflict_ob);
+      }
+    else
+      {
+        %append_output(conflict_ob);
+      }
 }
+
+%typemap(argout) svn_revnum_t *new_rev (PyObject *rev_ob) {
+    rev_ob = PyInt_FromLong((long)*$1);
+    if (rev_ob == NULL)
+      {
+        Py_XDECREF(exc_ob);
+        Py_XDECREF($result);
+        SWIG_fail;
+      }
+    if (exc_ob != NULL)
+      {
+        PyObject_SetAttrString(exc_ob, "$1_name", rev_ob); 
+        Py_DECREF(rev_ob);
+      }
+    else
+      {
+        %append_output(rev_ob);
+      }
+}
+
+%apply svn_error_t *SVN_ERR_WITH_ATTRS  {
+    svn_error_t * svn_fs_commit_txn,
+    svn_error_t * svn_fs_merge
+};
 #endif
 
 /* Ruby fixups for functions not following the pool convention. */

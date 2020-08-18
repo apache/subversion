@@ -411,10 +411,12 @@ void *svn_swig_py_must_get_ptr(void *input, swig_type_info *type, int argnum)
 
 /*** Custom SubversionException stuffs. ***/
 
-void svn_swig_py_svn_exception(svn_error_t *error_chain)
+void svn_swig_py_build_svn_exception(PyObject **exc_class,
+                                     PyObject **exc_ob,
+                                     svn_error_t *error_chain)
 {
   PyObject *args_list, *args, *apr_err_ob, *message_ob, *file_ob, *line_ob;
-  PyObject *svn_module, *exc_class, *exc_ob;
+  PyObject *svn_module;
   svn_error_t *err;
 
   if (error_chain == NULL)
@@ -422,7 +424,7 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
 
   /* Start with no references. */
   args_list = args = apr_err_ob = message_ob = file_ob = line_ob = NULL;
-  svn_module = exc_class = exc_ob = NULL;
+  svn_module = *exc_class = *exc_ob = NULL;
 
   if ((args_list = PyList_New(0)) == NULL)
     goto finished;
@@ -481,15 +483,12 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
   /* Create the exception object chain. */
   if ((svn_module = PyImport_ImportModule((char *)"svn.core")) == NULL)
     goto finished;
-  if ((exc_class = PyObject_GetAttrString(svn_module,
-                                       (char *)"SubversionException")) == NULL)
-    goto finished;
-  if ((exc_ob = PyObject_CallMethod(exc_class, (char *)"_new_from_err_list",
-                                    (char *)"O", args_list)) == NULL)
-    goto finished;
-
-  /* Raise the exception. */
-  PyErr_SetObject(exc_class, exc_ob);
+  if ((*exc_class = PyObject_GetAttrString(svn_module,
+                                       (char *)"SubversionException")) != NULL)
+    {
+      *exc_ob = PyObject_CallMethod(*exc_class, (char *)"_new_from_err_list",
+                                    (char *)"O", args_list);
+    }
 
  finished:
   /* Release any references. */
@@ -500,8 +499,30 @@ void svn_swig_py_svn_exception(svn_error_t *error_chain)
   Py_XDECREF(file_ob);
   Py_XDECREF(line_ob);
   Py_XDECREF(svn_module);
-  Py_XDECREF(exc_class);
-  Py_XDECREF(exc_ob);
+}
+
+void svn_swig_py_svn_exception(svn_error_t *error_chain)
+{
+  PyObject *exc_class, *exc_ob;
+
+  /* First, we create the exception... */
+  svn_swig_py_build_svn_exception(&exc_class, &exc_ob, error_chain);
+  
+  /* ...then, we raise it.  If got only an exception class but no
+     instance, we'll raise the class without an instance. */
+  if (exc_class != NULL)
+    {
+      if (exc_ob != NULL)
+        {
+          PyErr_SetObject(exc_class, exc_ob);
+          Py_DECREF(exc_ob);
+        }
+      else 
+        {
+          PyErr_SetNone(exc_class);
+        }
+      Py_DECREF(exc_class);
+    }
 }
 
 

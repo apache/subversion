@@ -109,6 +109,16 @@
 #endif
 
 /* -----------------------------------------------------------------------
+   Tweak a SubversionException instance (See svn_fs.i for detail).
+*/
+
+#ifdef SWIGPYTHON
+%apply svn_error_t *SVN_ERR_WITH_ATTRS  {
+    svn_error_t * svn_repos_fs_commit_txn
+};
+#endif
+
+/* -----------------------------------------------------------------------
    handle svn_repos_get_committed_info().
 */
 #ifdef SWIGRUBY

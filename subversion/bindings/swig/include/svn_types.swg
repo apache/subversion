@@ -438,6 +438,55 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
     Py_INCREF(Py_None);
     $result = Py_None;
 }
+
+%typemap(out) svn_error_t * SVN_ERR_WITH_ATTRS (apr_status_t apr_err, 
+                                                PyObject *exc_class,
+                                                PyObject *exc_ob) {
+    apr_err = 0;
+    exc_class = exc_ob = NULL;
+    if ($1 != NULL)
+      {
+        apr_err = $1->apr_err;
+        if (apr_err != SVN_ERR_SWIG_PY_EXCEPTION_SET)
+          {
+            svn_swig_py_build_svn_exception(&exc_class, &exc_ob, $1);
+            if (exc_ob == NULL)
+              { 
+                /* We couldn't get an exception instance. */
+                if (exc_class != NULL)
+                  {
+                    /* Raise an exception without instance ... */
+                    PyErr_SetNone(exc_class);
+                    Py_DECREF(exc_class);
+                  }
+                SWIG_fail;
+              }
+            /* We have an exeception instance, but we don't raise it.
+               Our caller will have to do that. */
+          }
+        else
+          {
+            svn_error_clear($1);
+            SWIG_fail;
+          }
+      }
+    else
+      {
+        Py_INCREF(Py_None);
+        $result = Py_None;
+      }
+}
+
+%typemap(ret) svn_error_t * SVN_ERR_WITH_ATTRS {
+    if (exc_ob != NULL)
+      {
+        PyErr_SetObject(exc_class, exc_ob);
+        Py_DECREF(exc_class);
+        Py_DECREF(exc_ob);
+        Py_XDECREF($result);
+        SWIG_fail;
+      }
+}
 #endif
 
 #ifdef SWIGPERL
