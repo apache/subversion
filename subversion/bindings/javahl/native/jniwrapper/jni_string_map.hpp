@@ -144,7 +144,8 @@ protected:
       {
         const jstring jkey =
           jstring(m_env.CallObjectMethod(m_jthis, impl().m_mid_get_key));
-        const String::Contents key(String(m_env, jkey));
+        const String str(m_env, jkey);
+        const String::Contents key(str);
         return std::string(key.c_str());
       }
 
