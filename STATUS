@@ -32,6 +32,13 @@ Candidate changes:
    Votes:
      +1: julianfoad, hartmannathan
 
+ * r1878855, r1878859
+   Make the hot-backup.py script work with Python 3.
+   Justification:
+     Script should work with Python3
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
