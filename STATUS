@@ -32,6 +32,12 @@ Candidate changes:
    Votes:
      +1: julianfoad, hartmannathan
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1880886
    Fix crash in JavaHL JNI wrapper caused by object lifetimes
    Justification:
@@ -39,8 +45,3 @@ Candidate changes:
    Votes:
      +1: hartmannathan, jamessan
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
