@@ -38,7 +38,7 @@ AC_DEFUN(SVN_LIB_MACHO_ITERATE,
     AC_MSG_RESULT([yes])
   ],[
     AC_MSG_RESULT([no])
-  ])
+  ],[:])
 ])
 
 dnl SVN_LIB_MACOS_PLIST
