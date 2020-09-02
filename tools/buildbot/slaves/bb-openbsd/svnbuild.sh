@@ -28,4 +28,4 @@ url="$(svn info --show-item url)"
 branch="${url##*/}"
 mkdir -p ../objdir/svn-${branch}
 touch ../objdir/svn-${branch}/.retrieved
-(cd .. && gmake BRANCH="$branch" THREADING="no" JAVA="no" MAKE_JOBS=8)
+(cd .. && gmake BRANCH="$branch" THREADING="no" JAVA="no" MAKE_JOBS=2)
