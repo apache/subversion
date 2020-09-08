@@ -39,6 +39,13 @@ Candidate changes:
    Votes:
      +1: jamessan
 
+ * r1881534
+   Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
+   Justification:
+     Unblocks cross-compiling SVN.
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
