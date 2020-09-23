@@ -46,6 +46,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1881958
+   Restoring support for building with APR 1.4.
+   Justification:
+     Allow building on older distros such as CentOS 7.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
