@@ -53,7 +53,7 @@ Candidate changes:
    Votes:
      +1: julianfoad
 
- * r1881985
+ * r1881985, r1882105
    Follow up to r1880192: Fix an EOL issue in test on Windows.
    Justification:
      We should test correctly on Windows environment, too.
