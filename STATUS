@@ -46,12 +46,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
- * r1881958
+ * r1881958, 1882128
    Restoring support for building with APR 1.4.
    Justification:
      Allow building on older distros such as CentOS 7.
    Votes:
-     +1: julianfoad
+     +1: brane
+     +1: julianfoad (only r1881958)
 
  * r1881985, r1882105
    Follow up to r1880192: Fix an EOL issue in test on Windows.
