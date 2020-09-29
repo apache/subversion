@@ -125,4 +125,11 @@ APR_DECLARE(apr_status_t) apr_escape_shell(char *escaped, const char *str,
     return APR_SUCCESS;
 }
 
-#endif
+#else  /* APR_VERSION_AT_LEAST(1,5,0) */
+
+/* Silence OSX ranlib warnings about object files with no symbols. */
+#include <apr.h>
+extern const apr_uint32_t svn__fake__apr_escape;
+const apr_uint32_t svn__fake__apr_escape = 0xdeadbeef;
+
+#endif /* !APR_VERSION_AT_LEAST(1,5,0) */
