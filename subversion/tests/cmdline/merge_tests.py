@@ -18644,8 +18644,7 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
   # client converts to local encoding and local eol style.
   # Therefore, the expected output must contain the right kind of eoln
   # strings. That's why we use os.linesep in the tests below, not just
-  # plain '\n'. The _last_ \n is also from the client, but it's not
-  # part of the prop value and it doesn't get converted in the pipe.
+  # plain '\n'.
 
   expected_mergeinfo = [
     ('A',       ['/branch_A:3-7']),
