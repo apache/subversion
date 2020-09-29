@@ -1325,69 +1325,89 @@ value_from_dict(CFDictionaryRef plist, CFStringRef key, apr_pool_t *pool)
   return value;
 }
 
-/* Return the minor version the operating system, given the number in
-   a format that matches the regular expression /^10\.\d+(\..*)?$/ */
-static int
-macos_minor_version(const char *osver)
+/* Return the major and minor versions the operating system, given
+   the number in a format that matches the regular expression
+   /^\d+\.\d+(\..*)?$/ */
+static void
+macos_version_number(int *major, int *minor, const char *osver)
 {
   char *end = NULL;
   unsigned long num = strtoul(osver, &end, 10);
 
-  if (!end || *end != '.' || num != 10)
-    return -1;
+  if (!end || *end != '.' || num < 10)
+    return;
+
+  if (major)
+    *major = (int)num;
 
   osver = end + 1;
   end = NULL;
   num = strtoul(osver, &end, 10);
   if (!end || (*end && *end != '.'))
-    return -1;
+    return;
 
-  return (int)num;
+  if (minor)
+    *minor = (int)num;
 }
 
 /* Return the product name of the operating system. */
 static const char *
-product_name_from_minor_version(int minor, const char* product_name)
+product_name_from_version(int major, int minor, const char* product_name)
 {
   /* We can only do this if we know the official product name. */
   if (0 != strcmp(product_name, "Mac OS X"))
     return product_name;
 
-  if (minor <= 7)
-    return product_name;
+  if (major == 10)
+    {
+      if (minor <= 7)
+        return product_name;
 
-  if (minor <= 11)
-    return "OS X";
+      if (minor <= 11)
+        return "OS X";
+    }
 
   return "macOS";
 }
 
 /* Return the commercial name of the operating system. */
 static const char *
-release_name_from_minor_version(int minor, const char* product_name)
+release_name_from_version(int major, int minor, const char* product_name)
 {
   /* We can only do this if we know the official product name. */
   if (0 == strcmp(product_name, "Mac OS X"))
     {
       /* See https://en.wikipedia.org/wiki/MacOS_version_history#Releases */
-      switch(minor)
+      switch(major)
         {
-        case  0: return "Cheetah";
-        case  1: return "Puma";
-        case  2: return "Jaguar";
-        case  3: return "Panther";
-        case  4: return "Tiger";
-        case  5: return "Leopard";
-        case  6: return "Snow Leopard";
-        case  7: return "Lion";
-        case  8: return "Mountain Lion";
-        case  9: return "Mavericks";
-        case 10: return "Yosemite";
-        case 11: return "El Capitan";
-        case 12: return "Sierra";
-        case 13: return "High Sierra";
-        case 14: return "Mojave";
-        case 15: return "Catalina";
+        case 10:
+          switch(minor)
+            {
+            case  0: return "Cheetah";
+            case  1: return "Puma";
+            case  2: return "Jaguar";
+            case  3: return "Panther";
+            case  4: return "Tiger";
+            case  5: return "Leopard";
+            case  6: return "Snow Leopard";
+            case  7: return "Lion";
+            case  8: return "Mountain Lion";
+            case  9: return "Mavericks";
+            case 10: return "Yosemite";
+            case 11: return "El Capitan";
+            case 12: return "Sierra";
+            case 13: return "High Sierra";
+            case 14: return "Mojave";
+            case 15: return "Catalina";
+            }
+          break;
+
+        case 11:
+          switch(minor)
+            {
+            case  0: return "Big Sur";
+            }
+          break;
         }
     }
   return NULL;
@@ -1412,13 +1432,14 @@ macos_release_name(apr_pool_t *pool)
                                           CFSTR("ProductBuildVersion"),
                                           pool);
       const char *release;
-      int minor_version;
+      int major_version = -1;
+      int minor_version = -1;
 
       if (!osver)
         osver = value_from_dict(plist, CFSTR("ProductVersion"), pool);
-      minor_version = macos_minor_version(osver);
-      release = release_name_from_minor_version(minor_version, osname);
-      osname = product_name_from_minor_version(minor_version, osname);
+      macos_version_number(&major_version, &minor_version, osver);
+      release = release_name_from_version(major_version, minor_version, osname);
+      osname = product_name_from_version(major_version, minor_version, osname);
 
       CFRelease(plist);
       return apr_psprintf(pool, "%s%s%s%s%s%s%s%s",
