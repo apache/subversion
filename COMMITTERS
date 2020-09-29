@@ -108,6 +108,7 @@ Commit access for specific areas:
        rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
         stilor   Alexey Neyman <stilor@att.net>              (Python bindings,
                                                              svn-vendor.py)
+ amiloslavskiy   Alexandr Miloslavskiy <amiloslavskiy@apache.org> (JavaHL bindings)
 
   Packages:
 
