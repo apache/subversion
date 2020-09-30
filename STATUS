@@ -63,6 +63,13 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1882157
+   Do not suggest --help -v for commands which do not support -v.
+   Justification:
+     The --help message for several commands is misleading. User complained.
+   Votes:
+     +1: stsp
+  
 Veto-blocked changes:
 =====================
 
