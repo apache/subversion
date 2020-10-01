@@ -224,8 +224,8 @@ def svnauthz_accessof_file_test(sbox):
   svntest.actions.run_and_verify_svnauthz(["r\n"], None, 0, False, "accessof",
                                           authz_path, "--path", "/jokes")
 
-  # Anonymous access on /jokes on slapstick repo should be no
-  svntest.actions.run_and_verify_svnauthz(["no\n"], None, 0, False, "accessof",
+  # Anonymous access on /jokes on slapstick repo should be r via rules on [/]
+  svntest.actions.run_and_verify_svnauthz(["r\n"], None, 0, False, "accessof",
                                           authz_path, "--path", "/jokes",
                                           "--repository", "slapstick")
 
@@ -289,8 +289,8 @@ def svnauthz_accessof_repo_test(sbox):
   svntest.actions.run_and_verify_svnauthz(["r\n"], None, 0, False, "accessof",
                                           authz_url, "--path", "/jokes")
 
-  # Anonymous access on /jokes on slapstick repo should be no
-  svntest.actions.run_and_verify_svnauthz(["no\n"], None, 0, False, "accessof",
+  # Anonymous access on /jokes on slapstick repo should be r via rules on [/]
+  svntest.actions.run_and_verify_svnauthz(["r\n"], None, 0, False, "accessof",
                                           authz_url, "--path", "/jokes",
                                           "--repository", "slapstick")
 
@@ -356,8 +356,8 @@ def svnauthz_accessof_groups_file_test(sbox):
                                           "--repository", "comedy")
 
   # User stafford (@musicians) specified on /jokes with the repo comedy
-  # will be no.
-  svntest.actions.run_and_verify_svnauthz(["no\n"], None,
+  # will be rw.
+  svntest.actions.run_and_verify_svnauthz(["rw\n"], None,
                                           0, False, "accessof", authz_path,
                                           "--groups-file", groups_path,
                                           "--path", "jokes",
@@ -440,8 +440,8 @@ def svnauthz_accessof_groups_repo_test(sbox):
                                           "--repository", "comedy")
 
   # User stafford (@musicians) specified on /jokes with the repo comedy
-  # will be no.
-  svntest.actions.run_and_verify_svnauthz(["no\n"], None,
+  # will be rw via rules on [/].
+  svntest.actions.run_and_verify_svnauthz(["rw\n"], None,
                                           0, False, "accessof", authz_url,
                                           "--groups-file", groups_url,
                                           "--path", "jokes",
@@ -508,19 +508,19 @@ def svnauthz_accessof_is_file_test(sbox):
                                           authz_path, "--path", "/jokes",
                                           "--is", "no")
 
-  # Anonymous access on /jokes on slapstick repo should be no
-  # Test --is no returns 0.
+  # Anonymous access on /jokes on slapstick repo should be r via rules on [/]
+  # Test --is r returns 0.
   svntest.actions.run_and_verify_svnauthz(None, None, 0, False, "accessof",
                                           authz_path, "--path", "/jokes",
                                           "--repository", "slapstick",
-                                          "--is", "no")
+                                          "--is", "r")
   # Test --is rw returns 3.
   svntest.actions.run_and_verify_svnauthz(None, None, 3, False, "accessof",
                                           authz_path, "--path", "/jokes",
                                           "--repository", "slapstick",
                                           "--is", "rw")
-  # Test --is r returns 3.
-  svntest.actions.run_and_verify_svnauthz(None, None, 3, False, "accessof",
+  # Test --is r returns 0.
+  svntest.actions.run_and_verify_svnauthz(None, None, 0, False, "accessof",
                                           authz_path, "--path", "/jokes",
                                           "--repository", "slapstick",
                                           "--is", "r")
@@ -666,19 +666,19 @@ def svnauthz_accessof_is_repo_test(sbox):
                                           authz_url, "--path", "/jokes",
                                           "--is", "no")
 
-  # Anonymous access on /jokes on slapstick repo should be no
-  # Test --is no returns 0.
+  # Anonymous access on /jokes on slapstick repo should be r via rules on [/]
+  # Test --is r returns 0.
   svntest.actions.run_and_verify_svnauthz(None, None, 0, False, "accessof",
                                           authz_url, "--path", "/jokes",
                                           "--repository", "slapstick",
-                                          "--is", "no")
+                                          "--is", "r")
   # Test --is rw returns 3.
   svntest.actions.run_and_verify_svnauthz(None, None, 3, False, "accessof",
                                           authz_url, "--path", "/jokes",
                                           "--repository", "slapstick",
                                           "--is", "rw")
-  # Test --is r returns 3.
-  svntest.actions.run_and_verify_svnauthz(None, None, 3, False, "accessof",
+  # Test --is r returns 0.
+  svntest.actions.run_and_verify_svnauthz(None, None, 0, False, "accessof",
                                           authz_url, "--path", "/jokes",
                                           "--repository", "slapstick",
                                           "--is", "r")
