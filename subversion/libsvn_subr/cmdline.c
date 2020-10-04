@@ -1406,6 +1406,9 @@ svn_cmdline__edit_file_externally(const char *path,
 {
   const char *editor, *cmd, *base_dir, *file_name, *base_dir_apr;
   const char *file_name_local;
+#ifdef WIN32
+  const WCHAR *wcmd;
+#endif
   char *old_cwd;
   int sys_err;
   apr_status_t apr_err;
@@ -1434,7 +1437,12 @@ svn_cmdline__edit_file_externally(const char *path,
   /* editor is explicitly documented as being interpreted by the user's shell,
      and as such should already be quoted/escaped as needed. */
   cmd = apr_psprintf(pool, "%s %s", editor, file_name_local);
+#ifndef WIN32
   sys_err = system(cmd);
+#else
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&wcmd, cmd, NULL, pool));
+  sys_err = _wsystem(wcmd);
+#endif
 
   apr_err = apr_filepath_set(old_cwd, pool);
   if (apr_err)
@@ -1466,6 +1474,9 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
 {
   const char *editor;
   const char *cmd;
+#ifdef WIN32
+  const WCHAR *wcmd;
+#endif
   apr_file_t *tmp_file;
   const char *tmpfile_name;
   const char *tmpfile_native;
@@ -1607,7 +1618,12 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     }
 
   /* Now, run the editor command line.  */
+#ifndef WIN32
   sys_err = system(cmd);
+#else
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&wcmd, cmd, NULL, pool));
+  sys_err = _wsystem(wcmd);
+#endif
   if (sys_err != 0)
     {
       /* Extracting any meaning from sys_err is platform specific, so just
