@@ -1641,6 +1641,9 @@ test_authz_prefixes(apr_pool_t *pool)
       contents = apr_psprintf(iterpool, contents_format,
                               glob1, repo1, test_path,
                               glob2, repo2, test_path);
+      fprintf(stderr, "testing authz %d:\n[[[\n", combi);
+      fprintf(stderr, "%s", contents);
+      fprintf(stderr, "]]]\n");
       SVN_ERR(authz_get_handle(&authz_cfg, contents, FALSE, iterpool));
 
       /* iterate over all test paths */

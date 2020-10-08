@@ -69,14 +69,6 @@ Candidate changes:
      The --help message for several commands is misleading. User complained.
    Votes:
      +1: stsp
-  
-  * r1882186
-    Fix issue #4762 "authz doesn't combine global and repository rules"
-    Justification:
-      Backwards-incompatible change introduced in SVN 1.10. Users complained.
-      https://issues.apache.org/jira/browse/SVN-4762
-    Votes:
-      +1: stsp
 
 Veto-blocked changes:
 =====================
