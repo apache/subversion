@@ -1601,7 +1601,20 @@ test_authz_prefixes(apr_pool_t *pool)
   enum { PATH_COUNT = 2 };
   const char *test_paths[PATH_COUNT] = { "/", "/A" };
 
-  struct check_access_tests test_set[] = {
+  /* Definition of the paths to test and expected replies for each. */
+  struct check_access_tests test_set1[] = {
+    /* Test that read rules are correctly used. */
+    { "", "greek", NULL, svn_authz_read, FALSE },
+    /* Test that write rules are correctly used. */
+    { "", "greek", "plato", svn_authz_read, TRUE },
+    { "", "greek", "plato", svn_authz_write, FALSE },
+    /* Sentinel */
+    { NULL, NULL, NULL, svn_authz_none, FALSE }
+  };
+
+  /* To be used when global rules are specified after per-repos rules.
+   * In that case, the global rules still win. */
+  struct check_access_tests test_set2[] = {
     /* Test that read rules are correctly used. */
     { "", "greek", NULL, svn_authz_read, TRUE },
     { "", "greek", NULL, svn_authz_write, FALSE },
@@ -1621,6 +1634,7 @@ test_authz_prefixes(apr_pool_t *pool)
       const char *repo1 = (combi & 4) ? "greek:" : "";
       const char *repo2 = (combi & 4) ? "" : "greek:";
       const char *test_path = test_paths[combi / 8];
+      struct check_access_tests *test_set = (combi & 4) ? test_set2 : test_set1;
 
       /* Create and parse the authz rules. */
       svn_pool_clear(iterpool);

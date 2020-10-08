@@ -1674,13 +1674,23 @@ svn_repos_authz_parse2(svn_authz_t **authz_p,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-authz_check_access(svn_authz_t *authz, const char *path,
-                   authz_user_rules_t *rules,
-                   svn_repos_authz_access_t required_access,
-                   authz_access_t required,
-                   svn_boolean_t *access_granted, apr_pool_t *pool)
+svn_error_t *
+svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
+                             const char *path, const char *user,
+                             svn_repos_authz_access_t required_access,
+                             svn_boolean_t *access_granted,
+                             apr_pool_t *pool)
 {
+  const authz_access_t required =
+    ((required_access & svn_authz_read ? authz_access_read_flag : 0)
+     | (required_access & svn_authz_write ? authz_access_write_flag : 0));
+
+  /* Pick or create the suitable pre-filtered path rule tree. */
+  authz_user_rules_t *rules = get_user_rules(
+      authz,
+      (repos_name ? repos_name : AUTHZ_ANY_REPOSITORY),
+      user);
+
   /* In many scenarios, users have uniform access to a repository
    * (blanket access or no access at all).
    *
@@ -1724,41 +1734,5 @@ authz_check_access(svn_authz_t *authz, const char *path,
   *access_granted = lookup(rules->lookup_state, path, required,
                            !!(required_access & svn_authz_recursive), pool);
 
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_repos_authz_check_access(svn_authz_t *authz, const char *repos_name,
-                             const char *path, const char *user,
-                             svn_repos_authz_access_t required_access,
-                             svn_boolean_t *access_granted,
-                             apr_pool_t *pool)
-{
-  svn_error_t *err;
-  const authz_access_t required =
-    ((required_access & svn_authz_read ? authz_access_read_flag : 0)
-     | (required_access & svn_authz_write ? authz_access_write_flag : 0));
-  authz_user_rules_t *rules;
-  svn_boolean_t access_granted_by_any = FALSE;
-  svn_boolean_t access_granted_by_repos = FALSE;
-
-  *access_granted = FALSE;
-
-  rules = get_user_rules(authz, AUTHZ_ANY_REPOSITORY, user);
-  err = authz_check_access(authz, path, rules, required_access, required,
-                           &access_granted_by_any, pool);
-  if (err)
-    return err;
-
-  if (repos_name)
-    {
-      rules = get_user_rules(authz, repos_name, user);
-      err = authz_check_access(authz, path, rules, required_access, required,
-                               &access_granted_by_repos, pool);
-      if (err)
-        return err;
-    }
-
-  *access_granted = (access_granted_by_any || access_granted_by_repos);
   return SVN_NO_ERROR;
 }
