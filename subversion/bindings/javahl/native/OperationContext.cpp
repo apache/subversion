@@ -629,23 +629,17 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
           jtunnel_name, juser, jhostname, jint(port)),
       SVN_ERR_BASE);
 
+  if (tc->jclosecb)
+    {
+      tc->jclosecb = env->NewGlobalRef(tc->jclosecb);
+      SVN_JNI_CATCH(, SVN_ERR_BASE);
+    }
+
   return SVN_NO_ERROR;
 }
 
-void
-OperationContext::closeTunnel(void *tunnel_context, void *)
+void callCloseTunnelCallback(JNIEnv* env, jobject jclosecb)
 {
-  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
-  jobject jclosecb = tc->jclosecb;
-  delete tc;
-
-  if (!jclosecb)
-    return;
-
-  JNIEnv *env = JNIUtil::getEnv();
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
-
   static jmethodID mid = 0;
   if (0 == mid)
     {
@@ -656,4 +650,20 @@ OperationContext::closeTunnel(void *tunnel_context, void *)
       SVN_JNI_CATCH_VOID(mid = env->GetMethodID(cls, "closeTunnel", "()V"));
     }
   SVN_JNI_CATCH_VOID(env->CallVoidMethod(jclosecb, mid));
+  env->DeleteGlobalRef(jclosecb);
+}
+
+void
+OperationContext::closeTunnel(void *tunnel_context, void *)
+{
+  TunnelContext* tc = static_cast<TunnelContext*>(tunnel_context);
+  jobject jclosecb = tc->jclosecb;
+  delete tc;
+
+  JNIEnv *env = JNIUtil::getEnv();
+  if (JNIUtil::isJavaExceptionThrown())
+    return;
+
+  if (jclosecb)
+    callCloseTunnelCallback(env, jclosecb);
 }
