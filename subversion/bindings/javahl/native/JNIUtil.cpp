@@ -551,6 +551,11 @@ std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
                                          jstring *jerror_message,
                                          jobject *jmessage_stack)
 {
+  // This function may be called with a pending Java exception.
+  // It is incorrect to call Java methods (see code below) with a pending
+  // exception. Stash it away until this function exits.
+  StashException stash(getEnv());
+
   if (jerror_message)
     *jerror_message = NULL;
   if (jmessage_stack)
@@ -761,7 +766,13 @@ namespace {
 const char* known_exception_to_cstring(apr_pool_t* pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
+  // This function may be called with a pending Java exception.
+  // It is incorrect to call Java methods (see code below) with a pending
+  // exception. Stash it away until this function exits.
   jthrowable t = env->ExceptionOccurred();
+  StashException stashed(env);
+
   jclass cls = env->GetObjectClass(t);
 
   jstring jclass_name;
