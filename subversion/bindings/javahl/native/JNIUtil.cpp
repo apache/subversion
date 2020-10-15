@@ -1169,3 +1169,28 @@ jthrowable JNIUtil::unwrapJavaException(const svn_error_t *err)
     return
         WrappedException::get_exception(err->pool);
 }
+
+StashException::StashException(JNIEnv* env)
+{
+  m_env = env;
+  m_stashed = NULL;
+  stashException();
+}
+
+StashException::~StashException()
+{
+  if (m_stashed)
+    m_env->Throw(m_stashed);
+}
+
+void StashException::stashException()
+{
+  jthrowable jexc = m_env->ExceptionOccurred();
+  if (!jexc)
+    return;
+
+  if (!m_stashed)
+    m_stashed = jexc;
+
+  m_env->ExceptionClear();
+}
