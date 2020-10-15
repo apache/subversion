@@ -779,9 +779,14 @@ const char* known_exception_to_cstring(apr_pool_t* pool)
   {
     jmethodID mid = env->GetMethodID(cls, "getClass", "()Ljava/lang/Class;");
     jobject clsobj = env->CallObjectMethod(t, mid);
+    if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
+
     jclass basecls = env->GetObjectClass(clsobj);
     mid = env->GetMethodID(basecls, "getName", "()Ljava/lang/String;");
     jclass_name = (jstring) env->CallObjectMethod(clsobj, mid);
+    if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
   }
 
   jstring jmessage;
@@ -789,6 +794,8 @@ const char* known_exception_to_cstring(apr_pool_t* pool)
     jmethodID mid = env->GetMethodID(cls, "getMessage",
                                      "()Ljava/lang/String;");
     jmessage = (jstring) env->CallObjectMethod(t, mid);
+    if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
   }
 
   JNIStringHolder class_name(jclass_name);
