@@ -25,6 +25,7 @@ package org.apache.subversion.javahl;
 import static org.junit.Assert.*;
 
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.remote.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.io.File;
@@ -36,6 +37,7 @@ import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.text.ParseException;
@@ -4415,6 +4417,298 @@ public class BasicTests extends SVNTests
             cl.dispose();
         }
         assertEquals("fake", new String(revprop));
+    }
+
+    public static int FLAG_ECHO          = 0x00000001;
+    public static int FLAG_THROW_IN_OPEN = 0x00000002;
+
+    public enum Actions
+    {
+        READ_CLIENT,    // Read a request from SVN client
+        EMUL_SERVER,    // Emulate server response
+        WAIT_TUNNEL,    // Wait for tunnel to be closed
+    };
+
+    public static class ScriptItem
+    {
+        Actions action;
+        String value;
+
+        ScriptItem(Actions action, String value)
+        {
+            this.action = action;
+            this.value = value;
+        }
+    }
+
+    private static class TestTunnelAgent extends Thread
+        implements TunnelAgent
+    {
+        ScriptItem[] script;
+        int flags;
+        String error = null;
+        ReadableByteChannel request;
+        WritableByteChannel response;
+        
+        final CloseTunnelCallback closeTunnelCallback = () ->
+        {
+            if ((flags & FLAG_ECHO) != 0)
+                System.out.println("TunnelAgent.CloseTunnelCallback");
+        };
+
+        TestTunnelAgent(int flags, ScriptItem[] script)
+        {
+            this.flags = flags;
+            this.script = script;
+        }
+
+        public void joinAndTest()
+        {
+            try
+            {
+                join();
+            }
+            catch (InterruptedException e)
+            {
+                fail("InterruptedException was caught");
+            }
+
+            if (error != null)
+                fail(error);
+        }
+
+        @Override
+        public boolean checkTunnel(String name)
+        {
+            return true;
+        }
+
+        private String readClient(ByteBuffer readBuffer)
+			throws IOException
+		{
+			readBuffer.reset();
+			request.read(readBuffer);
+
+			final int offset = readBuffer.arrayOffset();
+			return new String(readBuffer.array(),
+				offset,
+				readBuffer.position() - offset);
+		}
+
+		private void emulateServer(String serverMessage)
+			throws IOException
+		{
+			final byte[] responseBytes = serverMessage.getBytes();
+			response.write(ByteBuffer.wrap(responseBytes));
+		}
+
+        private void doScriptItem(ScriptItem scriptItem, ByteBuffer readBuffer)
+            throws Exception
+        {
+            switch (scriptItem.action)
+            {
+            case READ_CLIENT:
+                final String actualLine = readClient(readBuffer);
+
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("SERVER: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+                if (!actualLine.contains(scriptItem.value))
+                {
+                    System.err.println("Expected: " + scriptItem.value);
+                    System.err.println("Actual:   " + actualLine);
+                    System.err.flush();
+
+                    // Unblock the SVN thread by emulating a server error
+					final String serverError = "( success ( ( ) 0: ) ) ( failure ( ( 160000 39:Test script received unexpected request 0: 0 ) ) ) ";
+					emulateServer(serverError);
+
+                    fail("Unexpected client request");
+                }
+                break;
+            case EMUL_SERVER:
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("CLIENT: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+				emulateServer(scriptItem.value);
+                break;
+            case WAIT_TUNNEL:
+                // The loop will end with an exception when tunnel is closed
+                for (;;)
+                {
+                    readClient(readBuffer);
+                }
+            }
+        }
+
+        public void run()
+        {
+            final ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 1024);
+            readBuffer.mark();
+
+            for (ScriptItem scriptItem : script)
+            {
+                try {
+                    doScriptItem(scriptItem, readBuffer);
+                } catch (ClosedChannelException ex) {
+                    // Expected when closed properly
+                } catch (IOException e) {
+                    // IOException occurs when already-freed apr_file_t was lucky
+                    // to have reasonable fields to avoid the crash. It still
+                    // indicates a problem.
+                    error = "IOException was caught in run()";
+                    return;
+                } catch (Throwable t) {
+                    // No other exceptions are expected here.
+                    error = "Exception was caught in run()";
+                    t.printStackTrace();
+                    return;
+                }
+            }
+        }
+
+        @Override
+        public CloseTunnelCallback openTunnel(ReadableByteChannel request,
+                                              WritableByteChannel response,
+                                              String name,
+                                              String user,
+                                              String hostname,
+                                              int port)
+            throws Throwable
+        {
+            this.request = request;
+            this.response = response;
+
+            start();
+
+            if ((flags & FLAG_THROW_IN_OPEN) != 0)
+                throw ClientException.fromException(new RuntimeException("Test exception"));
+
+            return closeTunnelCallback;
+        }
+    };
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, GC is invoked before closing tunnel.
+     */
+    public void testCrash_RemoteSession_nativeDispose() {
+        final ScriptItem[] script = new ScriptItem[]{
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final RemoteFactory remoteFactory = new RemoteFactory();
+        remoteFactory.setTunnelAgent(tunnelAgent);
+
+        ISVNRemote remote = null;
+        try {
+            remote = remoteFactory.openRemoteSession("svn+test://localhost/test", 1);
+        } catch (SubversionException e) {
+            fail("SubversionException was caught");
+        }
+
+        // 'OperationContext::openTunnel()' doesn't 'NewGlobalRef()' callback returned by 'TunnelAgent.openTunnel()'.
+        // When GC runs, it disposes the callback. When JavaHL tries to call it in 'remote.dispose()', JVM crashes.
+        System.gc();
+        remote.dispose();
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel is not properly closed after exception in
+     * 'TunnelAgent.openTunnel()'.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterException()
+    {
+        // Exception causes TunnelChannel's native side to be destroyed with
+        // the following abbreviated stack:
+        //   TunnelChannel.nativeClose()
+        //   svn_pool_destroy(sesspool)
+        //   svn_ra_open5()
+        // If TunnelAgent is unaware and calls 'RequestChannel.nativeRead()'
+        // or 'ResponseChannel.nativeWrite()', it will either crash or try to
+        // use a random file.
+        final int flags = FLAG_THROW_IN_OPEN;
+
+        final ScriptItem[] script = new ScriptItem[]{
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(flags, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try {
+            svnClient.openRemoteSession("svn+test://localhost/test");
+        } catch (SubversionException e) {
+            // RuntimeException("Test exception") is expected here
+        }
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel is not properly closed after an SVN error.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterSvnError()
+    {
+        final String wcRoot = new File("tempSvnRepo").getAbsolutePath();
+
+        final ScriptItem[] script = new ScriptItem[]{
+            // openRemoteSession
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+            // checkout
+            new ScriptItem(Actions.READ_CLIENT, "( get-latest-rev ( ) ) "),
+            // Error causes a SubversionException to be created, which then
+            // skips closing the Tunnel properly due to 'ExceptionOccurred()'
+            // in 'OperationContext::closeTunnel()'.
+            // If TunnelAgent is unaware and calls 'RequestChannel.nativeRead()',
+            // it will either crash or try to use a random file.
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ) 0: ) ) ( failure ( ( 160006 20:This is a test error 0: 0 ) ) ) "),
+            // TunnelAgent is not aware about the error and just keeps reading.
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try {
+            svnClient.checkout("svn+test://localhost/test",
+                               wcRoot,
+                               Revision.getInstance(1),
+                               null,
+                               Depth.infinity,
+                               true,
+                               false);
+
+            svnClient.dispose();
+        } catch (ClientException ex) {
+            final int SVN_ERR_FS_NO_SUCH_REVISION = 160006;
+            if (SVN_ERR_FS_NO_SUCH_REVISION != ex.getAllMessages().get(0).getCode())
+                ex.printStackTrace();
+        }
+
+        tunnelAgent.joinAndTest();
     }
 
     /**
