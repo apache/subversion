@@ -648,11 +648,20 @@ OperationContext::openTunnel(svn_stream_t **request, svn_stream_t **response,
     }
 
   jobject jtunnelcb = jobject(tunnel_baton);
-  SVN_JNI_CATCH(
-      tc->jclosecb = env->CallObjectMethod(
-          jtunnelcb, mid, tc->jrequest, tc->jresponse,
-          jtunnel_name, juser, jhostname, jint(port)),
-      SVN_ERR_BASE);
+  tc->jclosecb = env->CallObjectMethod(
+    jtunnelcb, mid, tc->jrequest, tc->jresponse,
+    jtunnel_name, juser, jhostname, jint(port));
+  svn_error_t* openTunnelError = JNIUtil::checkJavaException(SVN_ERR_BASE);
+  if (SVN_NO_ERROR != openTunnelError)
+    {
+      // OperationContext::closeTunnel() will never be called, clean up here.
+      // This also prevents a JVM native crash, see comment in
+      // close_TunnelChannel().
+      *close_baton = 0;
+      tc->jclosecb = 0;
+      OperationContext::closeTunnel(tc, 0);
+      SVN_ERR(openTunnelError);
+    }
 
   if (tc->jclosecb)
     {
