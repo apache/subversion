@@ -691,19 +691,25 @@ OperationContext::closeTunnel(void *tunnel_context, void *)
   delete tc;
 
   JNIEnv *env = JNIUtil::getEnv();
-  if (JNIUtil::isJavaExceptionThrown())
-    return;
+
+  // Cleanup is important, otherwise TunnelAgent may crash when
+  // accessing freed native objects. For this reason, cleanup is done
+  // despite a pending exception. If more exceptions occur, they are
+  // stashed as well in order to complete all cleanup steps.
+  StashException ex(env);
 
   if (jclosecb)
     callCloseTunnelCallback(env, jclosecb);
 
   if (jrequest)
     {
+      ex.stashException();
       close_TunnelChannel(env, jrequest);
     }
 
   if (jresponse)
     {
+      ex.stashException();
       close_TunnelChannel(env, jresponse);
     }
 }
