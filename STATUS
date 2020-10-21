@@ -79,7 +79,14 @@ Candidate changes:
      only if both the user and the path match the repository-specific rule.
    Votes:
      +1: stsp
-   
+
+ * r1882115
+   JavaHL: Fix incorrect cache in SVNBase::createCppBoundObject
+   Justification:
+     Fixes a potential crash.
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
