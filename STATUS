@@ -87,6 +87,27 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1875675
+   Rewrite load_normalize_node_props to avoid literal trailing spaces
+   Justification:
+     Prevents bug fixed in r1875620 from recurring.
+   Votes:
+     +1: danielsh
+
+ * r1877310
+   Add test for issue #4711 "invalid xml file by svn log --xml
+   -> --verbose --use-merge-history --search".
+   Justification:
+   Votes:
+     +1: danielsh (with appropriate Skip()/XFail() annotations if needed)
+
+ * r1877794
+   Use Doxygen comment leader for comments with doxygen syntax
+   Justification:
+     Improve $EDITOR's syntax highlighting
+   Votes:
+     +0: danielsh
+
 Veto-blocked changes:
 =====================
 
