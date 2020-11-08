@@ -486,7 +486,7 @@ def run_and_verify_svnsync(expected_stdout, expected_stderr,
 
 def run_and_verify_svnsync2(expected_stdout, expected_stderr,
                             expected_exit, *varargs):
-  """Run svnmucc command and check its output and exit code."""
+  """Run svnsync command and check its output and exit code."""
 
   exit_code, out, err = main.run_svnsync(*varargs)
 
