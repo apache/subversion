@@ -2703,7 +2703,6 @@ svn_io__file_lock_autocreate(const char *lock_file,
 svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
                                        apr_pool_t *pool)
 {
-  apr_os_file_t filehand;
   const char *fname;
   apr_status_t apr_err;
 
@@ -2713,49 +2712,21 @@ svn_error_t *svn_io_file_flush_to_disk(apr_file_t *file,
   if (apr_err)
     return svn_error_wrap_apr(apr_err, _("Can't get file name"));
 
-  /* ### In apr 1.4+ we could delegate most of this function to
-         apr_file_sync(). The only major difference is that this doesn't
-         contain the retry loop for EINTR on linux. */
+  do {
+    apr_err = apr_file_datasync(file);
+  } while(APR_STATUS_IS_EINTR(apr_err));
 
-  /* First make sure that any user-space buffered data is flushed. */
-  SVN_ERR(svn_io_file_flush(file, pool));
+  /* If the file is in a memory filesystem, fsync() may return
+     EINVAL.  Presumably the user knows the risks, and we can just
+     ignore the error. */
+  if (APR_STATUS_IS_EINVAL(apr_err))
+    return SVN_NO_ERROR;
 
-  apr_os_file_get(&filehand, file);
+  if (apr_err)
+    return svn_error_wrap_apr(apr_err,
+                              _("Can't flush file '%s' to disk"),
+                              try_utf8_from_internal_style(fname, pool));
 
-  /* Call the operating system specific function to actually force the
-     data to disk. */
-  {
-#ifdef WIN32
-
-    if (! FlushFileBuffers(filehand))
-        return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file '%s' to disk"),
-                                  try_utf8_from_internal_style(fname, pool));
-
-#else
-      int rv;
-
-      do {
-#ifdef F_FULLFSYNC
-        rv = fcntl(filehand, F_FULLFSYNC, 0);
-#else
-        rv = fsync(filehand);
-#endif
-      } while (rv == -1 && APR_STATUS_IS_EINTR(apr_get_os_error()));
-
-      /* If the file is in a memory filesystem, fsync() may return
-         EINVAL.  Presumably the user knows the risks, and we can just
-         ignore the error. */
-      if (rv == -1 && APR_STATUS_IS_EINVAL(apr_get_os_error()))
-        return SVN_NO_ERROR;
-
-      if (rv == -1)
-        return svn_error_wrap_apr(apr_get_os_error(),
-                                  _("Can't flush file '%s' to disk"),
-                                  try_utf8_from_internal_style(fname, pool));
-
-#endif
-  }
   return SVN_NO_ERROR;
 }
 
