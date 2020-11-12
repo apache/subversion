@@ -23,15 +23,15 @@
  *   of the more specific module files.
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") core
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) core
 #elif defined(SWIGPERL)
 %module "SVN::_Core"
 #elif defined(SWIGRUBY)
 %module "svn::ext::core"
 #endif
-
-%include svn_global.swg
 
 %{
 #include <apr.h>
