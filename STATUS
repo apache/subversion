@@ -110,7 +110,7 @@ Candidate changes:
      +0: danielsh
 
  * r1883355
-   Use the APR-1.4+ API for flusing file contents to disk.
+   Use the APR-1.4+ API for flushing file contents to disk.
    Justification:
      Reduce code duplication between APR and SVN.
    Votes:
