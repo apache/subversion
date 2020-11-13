@@ -32,20 +32,6 @@ Candidate changes:
    Votes:
      +1: julianfoad, hartmannathan
 
- * r1878855, r1878859
-   Make the hot-backup.py script work with Python 3.
-   Justification:
-     Script should work with Python3
-   Votes:
-     +1: jamessan
-
- * r1881534
-   Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
-   Justification:
-     Unblocks cross-compiling SVN.
-   Votes:
-     +1: hartmannathan
-
  * r1881958, 1882128
    Restoring support for building with APR 1.4.
    Justification:
@@ -68,7 +54,7 @@ Candidate changes:
    Justification:
      The --help message for several commands is misleading. User complained.
    Votes:
-     +1: stsp
+     +1: stsp, brane
 
  * r1882326
    Fix issue #4762 "authz doesn't combine global and repository rules"
@@ -78,21 +64,14 @@ Candidate changes:
      level. Such global rules are overridden by repository-specific rules
      only if both the user and the path match the repository-specific rule.
    Votes:
-     +1: stsp
-
- * r1882115
-   JavaHL: Fix incorrect cache in SVNBase::createCppBoundObject
-   Justification:
-     Fixes a potential crash.
-   Votes:
-     +1: hartmannathan
+     +1: stsp, brane
 
  * r1875675
    Rewrite load_normalize_node_props to avoid literal trailing spaces.
    Justification:
      Prevents the bug fixed in r1875620 from recurring.
    Votes:
-     +1: danielsh
+     +1: danielsh, brane
 
  * r1877310
    Add a test for issue #4711 "invalid xml file produced by svn log --xml
@@ -108,6 +87,7 @@ Candidate changes:
      Improve $EDITOR's syntax highlighting.
    Votes:
      +0: danielsh
+     +1: brane
 
  * r1883355
    Use the APR-1.4+ API for flushing file contents to disk.
@@ -119,5 +99,28 @@ Candidate changes:
 Veto-blocked changes:
 =====================
 
+ * r1881534
+   Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
+   Justification:
+     Unblocks cross-compiling SVN.
+   Votes:
+     +1: hartmannathan
+     -1: brane (contains CRLF line endings, needs svn:eol-style + fixup)
+               (+1 once that is fixed)
+
 Approved changes:
 =================
+
+ * r1878855, r1878859
+   Make the hot-backup.py script work with Python 3.
+   Justification:
+     Script should work with Python3
+   Votes:
+     +1: jamessan, brane
+
+ * r1882115
+   JavaHL: Fix incorrect cache in SVNBase::createCppBoundObject
+   Justification:
+     Fixes a potential crash.
+   Votes:
+     +1: hartmannathan, brane
