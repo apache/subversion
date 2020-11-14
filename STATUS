@@ -110,10 +110,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1882115
-   JavaHL: Fix incorrect cache in SVNBase::createCppBoundObject
-   Justification:
-     Fixes a potential crash.
-   Votes:
-     +1: hartmannathan, brane
