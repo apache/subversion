@@ -34,6 +34,11 @@
 #ifdef SWIGPYTHON
 %begin %{
 #define SWIG_PYTHON_STRICT_BYTE_CHAR
+#if defined(_MSC_VER)
+/* Prevent "non-constant aggregate initializer" errors from Python.h in
+ * Python 3.9 */
+# pragma warning(default : 4204)
+#endif
 %}
 #endif
 
