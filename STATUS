@@ -96,6 +96,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1877338
+   Add SWIG4 support for SWIG Python binding on Windows.
+   Justification:
+     SWIG Python bindings should be able to build with SWIG4 on Windows, too
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
