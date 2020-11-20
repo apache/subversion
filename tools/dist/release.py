@@ -1149,7 +1149,7 @@ def clean_dist(args):
         return (version.major, version.minor)
 
     filenames = stdout.split('\n')
-    filenames = filter(lambda x: x.startswith('subversion-'), filenames)
+    filenames = [x for x in filenames if x.startswith('subversion-')]
     versions = set(map(Version, filenames))
     to_keep = set()
     # TODO: When we release 1.A.0 GA we'll have to manually remove 1.(A-2).* artifacts.
@@ -1649,7 +1649,7 @@ def write_changelog(args):
     # Output the sorted changelog entries
     # 1) Uncategorized changes
     print_section(changes_dict, None, None, None)
-    print
+    print()
     # 2) User-visible changes
     print(' User-visible changes:')
     print_section(changes_dict, 'U', None, None)
@@ -1661,7 +1661,7 @@ def write_changelog(args):
     print_section(changes_dict, 'U', 'clientserver', 'Client-side and server-side bugfixes')
     print_section(changes_dict, 'U', 'other', 'Other tool improvements and bugfixes')
     print_section(changes_dict, 'U', 'bindings', 'Bindings bugfixes', mandatory=True)
-    print
+    print()
     # 3) Developer-visible changes
     print(' Developer-visible changes:')
     print_section(changes_dict, 'D', None, None)
