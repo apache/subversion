@@ -56,6 +56,32 @@ SVN_CC_MODE_SETUP
 # Look for a C++ compiler (before anything can set CXXFLAGS)
 CXXUSERFLAGS="$CXXFLAGS"
 AC_PROG_CXX
+dnl Select C++ language level for GNU-like compilers
+dnl This is an advanced option for maintainers
+AC_ARG_ENABLE([c++],
+AS_HELP_STRING([--enable-c++=VER],
+               [Select C++ language standard for g++-like compilers]),
+[
+    if test "$enableval" = "yes"; then
+      cxx_language_level=any
+    elif test  "$enableval" = "no"; then
+      cxx_language_level=any
+      AC_MSG_WARN([--disable-c++ has no effect])
+    else
+      case "$enableval" in
+        [c++[0-9]*])   cxx_language_level="$enableval";;
+        [gnu++[0-9]*]) cxx_language_level="$enableval";;
+        [[0-9]*])      cxx_language_level="c++$enableval";;
+        [*])           cxx_language_level=undefined;;
+      esac
+      if test "$cxx_language_level" = undefined; then
+        AC_MSG_ERROR([--enable-c++ does not accept $enableval])
+      fi
+    fi
+],
+[
+    cxx_language_level=any
+])
 SVN_CXX_MODE_SETUP
 
 # Look for a C pre-processor
