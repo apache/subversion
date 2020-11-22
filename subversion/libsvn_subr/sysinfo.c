@@ -683,14 +683,14 @@ static const unsigned char *
 parse_pointer_value(const char *start, const char *limit, char **end)
 {
   const unsigned char *ptr;
-  const apr_uintptr_t val = (apr_uintptr_t)apr_strtoi64(start, end, 16);
+  const apr_uint64_t val = (apr_uint64_t)apr_strtoi64(start, end, 16);
 
   if (errno                     /* overflow */
       || *end == start          /* no valid digits */
       || *end >= limit)         /* representation too long */
     return NULL;
 
-  ptr = (const unsigned char*)val;
+  ptr = (const unsigned char*)(apr_uintptr_t)val;
   if (val != (apr_uintptr_t)ptr)/* truncated value */
     return NULL;
 
