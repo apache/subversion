@@ -21,7 +21,7 @@ dnl check to see if SWIG is current enough.
 dnl
 dnl if it is, then check to see if we have the correct version of python.
 dnl
-dnl if we do, then set up the appropriate SWIG_ variables to build the 
+dnl if we do, then set up the appropriate SWIG_ variables to build the
 dnl python bindings.
 
 AC_DEFUN(SVN_CHECK_SWIG,
@@ -33,21 +33,18 @@ AC_DEFUN(SVN_CHECK_SWIG,
                               look for a 'swig' binary in your PATH.]),
   [
     case "$withval" in
-      "no")
-        SWIG_SUITABLE=no
-        SVN_FIND_SWIG(no)
-      ;;
-      "yes")
-        SVN_FIND_SWIG(required)
+      yes)
+        svn_find_swig_arg=required
       ;;
       *)
-        SVN_FIND_SWIG($withval)
+        svn_find_swig_arg=$withval
       ;;
     esac
   ],
   [
-    SVN_FIND_SWIG(check)
+    svn_find_swig_arg=required
   ])
+  SVN_FIND_SWIG($svn_find_swig_arg)
 ])
 
 AC_DEFUN(SVN_FIND_SWIG,
@@ -56,7 +53,7 @@ AC_DEFUN(SVN_FIND_SWIG,
 
   if test $where = no; then
     SWIG=none
-  elif test $where = required || test $where = check; then
+  elif test $where = required; then
     AC_PATH_PROG(SWIG, swig, none)
     if test "$SWIG" = "none" && test $where = required; then
       AC_MSG_ERROR([SWIG required, but not found])
@@ -69,7 +66,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     fi
     if test ! -f "$SWIG" || test ! -x "$SWIG"; then
       AC_MSG_ERROR([Could not find swig binary at $SWIG])
-    fi 
+    fi
   fi
 
   if test "$SWIG" != "none"; then
@@ -78,7 +75,7 @@ AC_DEFUN(SVN_FIND_SWIG,
                        $SED -ne 's/^.*Version \(.*\)$/\1/p'`"
     # We want the version as an integer so we can test against
     # which version we're using.  SWIG doesn't provide this
-    # to us so we have to come up with it on our own. 
+    # to us so we have to come up with it on our own.
     # The major is passed straight through,
     # the minor is zero padded to two places,
     # and the patch level is zero padded to three places.
@@ -91,15 +88,12 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
-    if test -n "$SWIG_VERSION" && test "$SWIG_VERSION" -ge "103024"; then
-      SWIG_SUITABLE=yes
-    else
-      SWIG_SUITABLE=no
+    if test ! -n "$SWIG_VERSION" || test "$SWIG_VERSION" -lt "103024"; then
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
       AC_MSG_WARN([Subversion requires SWIG >= 1.3.24])
     fi
   fi
- 
+
   SWIG_PY_COMPILE="none"
   SWIG_PY_LINK="none"
   SWIG_PY_OPTS="none"
@@ -140,12 +134,12 @@ AC_DEFUN(SVN_FIND_SWIG,
             ac_cv_python_compile="`$SWIG_PY_PYTHON ${abs_srcdir}/build/get-py-info.py --compile`"
           ])
           SWIG_PY_COMPILE="$ac_cv_python_compile $CFLAGS"
-      
+
           AC_CACHE_CHECK([for linking Python extensions], [ac_cv_python_link],[
             ac_cv_python_link="`$SWIG_PY_PYTHON ${abs_srcdir}/build/get-py-info.py --link`"
           ])
           SWIG_PY_LINK="$ac_cv_python_link"
-      
+
           AC_CACHE_CHECK([for linking Python libraries], [ac_cv_python_libs],[
             ac_cv_python_libs="`$SWIG_PY_PYTHON ${abs_srcdir}/build/get-py-info.py --libs`"
           ])
@@ -162,7 +156,7 @@ AC_DEFUN(SVN_FIND_SWIG,
               $SWIG_PY_PYTHON -c 'import sys; sys.exit(0x3000000 > sys.hexversion)' && \
                  ac_cv_python_is_py3="yes"
             ])
-  
+
             if test "$ac_cv_python_is_py3" = "yes"; then
               if test "$SWIG_VERSION" -ge "300010"; then
                 dnl SWIG Python bindings successfully configured, clear the error message dnl
