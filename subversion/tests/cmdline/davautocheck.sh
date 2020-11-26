@@ -610,6 +610,15 @@ cat >> "$HTTPD_CFG" <<__EOF__
   </IfModule>
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
+<Location /authz-test-work/in-repos-authz>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  Require           valid-user
+  Satisfy Any
+  AuthzSVNReposRelativeAccessFile "^/authz"
+</Location>
 <Location /authz-test-work/mixed>
 __EOF__
 location_common

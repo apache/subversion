@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import os, re, logging
+import os, re, logging, shutil
 
 logger = logging.getLogger()
 
@@ -1043,6 +1043,39 @@ def authn_sallrall(sbox):
   verify_gets(test_area_url, sallrall_tests)
 
 
+@SkipUnless(svntest.main.is_ra_type_dav)
+def repos_relative_access_file(sbox):
+  "repos-relative access file"
+
+  sbox.build(create_wc = False)
+
+  test_area_url = sbox.repo_url.replace('/svn-test-work/local_tmp/repos',
+                                        '/authz-test-work/in-repos-authz')
+  svntest.main.write_authz_file(sbox, {"/": "", "/A": "%s = rw" % user1})
+
+  expected_output = svntest.wc.State(sbox.wc_dir, { })
+  expected_disk = svntest.main.greek_state.copy()
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], 'checkout',
+      sbox.file_protocol_repo_url(), sbox.wc_dir)
+
+  shutil.copy(sbox.authz_file, os.path.join(sbox.wc_dir, 'authz'))
+  sbox.simple_add('authz')
+  sbox.simple_commit(message="adding in-repository authz rules file")
+
+  in_repos_authz_tests = (
+                 { 'path': '', 'status': 401, },
+                 { 'path': '/authz', 'status': 401, },
+                 { 'path': '/authz', 'user' : user1, 'pw' : user1_pass,
+                   'status': 403, },
+                 { 'path': '/A', 'user' : user1, 'pw' : user1_pass,
+                   'status': 301, },
+                 { 'path': '/A/', 'user' : user1, 'pw' : user1_pass,
+                   'status': 200, },
+  )
+
+  verify_gets(test_area_url, in_repos_authz_tests)
+
+
 ########################################################################
 # Run the tests
 
@@ -1058,6 +1091,7 @@ test_list = [ None,
               authn_group,
               authn_sallrany,
               authn_sallrall,
+              repos_relative_access_file,
              ]
 serial_only = True
 
