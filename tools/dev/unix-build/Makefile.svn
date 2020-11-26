@@ -1946,6 +1946,21 @@ ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
 	echo >>$@.tmp '    SVNPathAuthz short_circuit'
 endif
 	echo >>$@.tmp '</Location>'
+	echo >>$@.tmp '<Location /authz-test-work/in-repo-authz>'
+	echo >>$@.tmp '  DAV svn'
+	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
+	echo >>$@.tmp '  AuthzSVNReposRelativeAccessFile "^/authz"'
+	echo >>$@.tmp '  AuthType Basic'
+	echo >>$@.tmp '  AuthName "Subversion Repository"'
+	echo >>$@.tmp '  AuthUserFile $(HTTPD_CHECK_USERS)'
+	echo >>$@.tmp '  Require valid-user'
+ifeq ($(USE_HTTPV1),yes)
+	echo >>$@.tmp '  SVNAdvertiseV2Protocol off'
+endif
+ifeq ($(USE_AUTHZ_SHORT_CIRCUIT),yes)
+	echo >>$@.tmp '    SVNPathAuthz short_circuit'
+endif
+	echo >>$@.tmp '</Location>'
 	echo >>$@.tmp '<Location /authz-test-work/mixed>'
 	echo >>$@.tmp '  DAV               svn'
 	echo >>$@.tmp '  SVNParentPath     $(SVN_WC)/subversion/tests/cmdline/svn-test-work/local_tmp'
