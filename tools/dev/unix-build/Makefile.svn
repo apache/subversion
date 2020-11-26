@@ -1830,6 +1830,7 @@ $(HTTPD_CHECK_CONF): $(MOD_DONTDOTHAT_CONF) $(HTTPD_CHECK_GROUPS)
 	echo > $@.tmp '# httpd config for make check'
 	echo >>$@.tmp 'ServerRoot "$(PREFIX)/httpd"'
 	echo >>$@.tmp 'Listen localhost:$(HTTPD_CHECK_PORT)'
+	echo >>$@.tmp 'LogLevel debug'
 	echo >>$@.tmp 'LoadModule unixd_module modules/mod_unixd.so'
 	echo >>$@.tmp 'LoadModule alias_module modules/mod_alias.so'
 	echo >>$@.tmp 'LoadModule access_compat_module modules/mod_access_compat.so'
