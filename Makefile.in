@@ -456,9 +456,12 @@ fast-clean: doc-clean
           fi                                                         \
         done
 	echo $(CLEAN_FILES) | xargs rm -f --
-	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
-		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
-		-name "*.pyc" -exec rm {} ';'
+	for d in $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
+		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest; \
+	do \
+	  test -e $$d || continue; \
+	  find $$d -name "*.pyc" -exec rm {} ';'; \
+	done
 
 # clean everything, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
@@ -919,7 +922,7 @@ clean-swig-pl:
 	fi
 	for d in $(SWIG_PL_DIR)/libsvn_swig_perl; \
 	do \
-	  cd $$d; \
+	  test -e $$d && cd $$d || continue; \
 	  rm -rf *.lo *.la *.o .libs; \
 	done
 	if [ -f "$(SWIG_PL_DIR)/native/Makefile" ]; then \
@@ -956,9 +959,14 @@ clean-swig-py:
 	fi
 	for d in $(SWIG_PY_DIR) $(SWIG_PY_DIR)/libsvn_swig_py; \
 	do \
-	  cd $$d && rm -rf *.lo *.la *.o *.pyc .libs; \
+	  test -e $$d && cd $$d || continue; \
+	  rm -rf *.lo *.la *.o *.pyc .libs; \
 	done
-	find $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) -name "*.pyc" -exec rm {} ';'
+	for d in $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR); \
+	do \
+	  test -e $$d || continue; \
+	  find $$d -name "*.pyc" -exec rm {} ';'; \
+	done
 
 extraclean-swig-py: clean-swig-py
 	$(EXTRACLEAN_SWIG_PY)
@@ -989,7 +997,7 @@ clean-swig-rb:
 	fi
 	for d in $(SWIG_RB_DIR) $(SWIG_RB_DIR)/libsvn_swig_ruby; \
 	do \
-	  cd $$d; \
+	  test -e $$d && cd $$d || continue; \
 	  rm -rf *.lo *.la *.o .libs; \
 	done
 
