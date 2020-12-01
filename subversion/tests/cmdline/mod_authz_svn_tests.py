@@ -1047,19 +1047,16 @@ def authn_sallrall(sbox):
 def repos_relative_access_file(sbox):
   "repos-relative access file"
 
-  sbox.build(create_wc = False)
+  sbox.build()
 
-  test_area_url = sbox.repo_url.replace('/svn-test-work/local_tmp/repos',
-                                        '/authz-test-work/in-repos-authz')
+  test_area_url = sbox.repo_url.replace('/svn-test-work/repositories/',
+                                        '/authz-test-work/in-repos-authz/')
+
   svntest.main.write_authz_file(sbox, {"/": "", "/A": "%s = rw" % user1})
-
-  expected_output = svntest.wc.State(sbox.wc_dir, { })
-  expected_disk = svntest.main.greek_state.copy()
-  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], 'checkout',
-      sbox.file_protocol_repo_url(), sbox.wc_dir)
-
-  shutil.copy(sbox.authz_file, os.path.join(sbox.wc_dir, 'authz'))
+  shutil.move(sbox.authz_file, os.path.join(sbox.wc_dir, 'authz'))
   sbox.simple_add('authz')
+  svntest.actions.run_and_verify_svn(None, [], 'relocate',
+      sbox.file_protocol_repo_url(), sbox.wc_dir)
   sbox.simple_commit(message="adding in-repository authz rules file")
 
   in_repos_authz_tests = (

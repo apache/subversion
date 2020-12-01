@@ -614,7 +614,7 @@ cat >> "$HTTPD_CFG" <<__EOF__
 __EOF__
 location_common
 cat >> "$HTTPD_CFG" <<__EOF__
-  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
   Require           valid-user
   Satisfy Any
   AuthzSVNReposRelativeAccessFile "^/authz"
