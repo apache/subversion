@@ -248,6 +248,8 @@ SVN_EXPAND_VAR(svn_localedir, "${exp_localedir}")
 AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
+dnl Libtool has been broken for decades, incorrectly passing 'cru' to 'ar'
+AR_FLAGS=${AR_FLAGS:-cr}
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 AC_MSG_NOTICE([configuring libtool now])
 ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
