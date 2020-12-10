@@ -167,12 +167,17 @@ class Sandbox:
   def _ensure_authz(self):
     "make sure the repository is accessible"
 
+    def get_content(f):
+      with open(f, 'r') as fp:
+        content = fp.read()
+      return content
+
     if self.repo_url.startswith("http"):
       default_authz = "[/]\n* = rw\n"
 
       if (svntest.main.options.parallel == 0
           and (not os.path.isfile(self.authz_file)
-               or open(self.authz_file,'r').read() != default_authz)):
+               or get_content(self.authz_file) != default_authz)):
 
         tmp_authz_file = os.path.join(svntest.main.work_dir, "authz-" + self.name)
         with open(tmp_authz_file, 'w') as f:

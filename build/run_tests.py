@@ -215,8 +215,9 @@ class TestHarness:
         authzparent = os.path.join(self.builddir, subdir)
         if not os.path.exists(authzparent):
           os.makedirs(authzparent);
-        open(os.path.join(authzparent, 'authz'), 'w').write('[/]\n'
-                                                            '* = rw\n')
+        with open(os.path.join(authzparent, 'authz'), 'w') as fp:
+          fp.write('[/]\n'
+                   '* = rw\n')
 
     # ### Support --repos-template
     if self.opts.list_tests is not None:
@@ -363,15 +364,15 @@ class TestHarness:
 
     def execute(self, harness):
       start_time = datetime.now()
-      prog = subprocess.Popen(self._command_line(harness),
+      with subprocess.Popen(self._command_line(harness),
                               stdout=subprocess.PIPE,
                               stderr=subprocess.PIPE,
-                              cwd=self.progdir)
+                              cwd=self.progdir) as prog:
 
-      self.stdout_lines = prog.stdout.readlines()
-      self.stderr_lines = prog.stderr.readlines()
-      prog.wait()
-      self.result = prog.returncode
+        self.stdout_lines = prog.stdout.readlines()
+        self.stderr_lines = prog.stderr.readlines()
+        prog.wait()
+        self.result = prog.returncode
       self.taken = datetime.now() - start_time
 
   class CollectingThread(threading.Thread):
@@ -389,21 +390,23 @@ class TestHarness:
     def _count_c_tests(self, progabs, progdir, progbase):
       'Run a c test, escaping parameters as required.'
       cmdline = [ progabs, '--list' ]
-      prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
-      lines = prog.stdout.readlines()
-      self.result.append(TestHarness.Job(len(lines) - 2, False, progabs,
-                                         progdir, progbase))
-      prog.wait()
+      with subprocess.Popen(cmdline, stdout=subprocess.PIPE,
+                            cwd=progdir) as prog:
+        lines = prog.stdout.readlines()
+        self.result.append(TestHarness.Job(len(lines) - 2, False, progabs,
+                                           progdir, progbase))
+        prog.wait()
 
     def _count_py_tests(self, progabs, progdir, progbase):
       'Run a c test, escaping parameters as required.'
       cmdline = [ sys.executable, progabs, '--list' ]
-      prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
-      lines = prog.stdout.readlines()
+      with subprocess.Popen(cmdline, stdout=subprocess.PIPE,
+                            cwd=progdir) as prog:
+        lines = prog.stdout.readlines()
 
-      for i in range(0, len(lines) - 2):
-        self.result.append(TestHarness.Job(i + 1, True, progabs,
-                                           progdir, progbase))
+        for i in range(0, len(lines) - 2):
+          self.result.append(TestHarness.Job(i + 1, True, progabs,
+                                             progdir, progbase))
       prog.wait()
 
     def run(self):

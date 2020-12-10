@@ -507,7 +507,8 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None,
               normalize_props = False):
   "Loads the dumpfile into sbox"
   if not dump_str:
-    dump_str = open(dumpfile_path, "rb").read()
+    with open(dumpfile_path, "rb") as fp:
+      dump_str = fp.read()
 
   # Create a virgin repos and working copy
   main.safe_rmtree(sbox.repo_dir, 1)
@@ -2076,7 +2077,9 @@ def get_wc_base_rev(wc_dir):
 
 def load_dumpfile(filename):
   "Return the contents of the FILENAME assuming that it is a dump file"
-  return open(filename, "rb").readlines()
+  with open(filename, "rb") as fp:
+    dump_str = fp.readlines()
+  return dump_str
 
 def hook_failure_message(hook_name):
   """Return the error message that the client prints for failure of the

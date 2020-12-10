@@ -742,9 +742,9 @@ def trust_ssl_cert(cfgdir, ssl_cert, ssl_url):
   """
 
   cert_rep = ''
-  fp = open(ssl_cert, 'r')
-  for line in fp.readlines()[1:-1]:
-    cert_rep = cert_rep + line.strip()
+  with open(ssl_cert, 'r') as fp:
+    for line in fp.readlines()[1:-1]:
+      cert_rep = cert_rep + line.strip()
 
   parsed_url = urlparse(ssl_url)
   netloc_url = '%s://%s' % (parsed_url.scheme, parsed_url.netloc)
