@@ -50,10 +50,10 @@ def tweak_dates(pool, home='.'):
 
   for i in range(fs.youngest_rev(fsob, pool)):
     # convert secs into microseconds, then a string
-    date = core.svn_time_to_cstring((DATE_BASE+i*DATE_INCR) * 1000000L, pool)
+    date = core.svn_time_to_cstring((DATE_BASE+i*DATE_INCR) * 1000000, pool)
     #print date
     fs.change_rev_prop(fsob, i+1, core.SVN_PROP_REVISION_DATE, date, pool)
-    fs.change_rev_prop(fsob, i+1, core.SVN_PROP_REVISION_AUTHOR, 'mailer test', pool)
+    fs.change_rev_prop(fsob, i+1, core.SVN_PROP_REVISION_AUTHOR, b'mailer test', pool)
 
 def main():
   if len(sys.argv) != 2:
