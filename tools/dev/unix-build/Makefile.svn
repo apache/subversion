@@ -1417,6 +1417,7 @@ $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 		env MAKEFLAGS= \
 		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
 		make install)
+	ln -sf $(PREFIX)/python/bin/python3 $(PREFIX)/python/bin/python
 	touch $@
 
 #######################################################################
