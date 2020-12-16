@@ -21,15 +21,16 @@
  * svn_delta.i: SWIG interface file for svn_delta.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") delta
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) delta
 #elif defined(SWIGPERL)
 %module "SVN::_Delta"
 #elif defined(SWIGRUBY)
 %module "svn::ext::delta"
 #endif
 
-%include svn_global.swg
 %import core.i
 
 #ifdef SWIGRUBY

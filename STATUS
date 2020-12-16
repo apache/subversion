@@ -111,13 +111,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1883335
-   Fix unable to load *.pyd files with Python 3.8.x on Windows.
-   Justification:
-     Make Python bindings available with Python 3.8+ on Windows.
-   Votes:
-     +1: jun66j5, jcorvel
-
  * r1883337
    Remove uses of os.dup2() from run_tests.py in order to adapt the new
    console reader and writer on Windows since Python 3.6.

@@ -21,15 +21,16 @@
  * svn_client.i: SWIG interface file for svn_client.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") client
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) client
 #elif defined(SWIGPERL)
 %module "SVN::_Client"
 #elif defined(SWIGRUBY)
 %module "svn::ext::client"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 %import svn_wc.i
