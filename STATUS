@@ -111,13 +111,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1877338
-   Add SWIG4 support for SWIG Python binding on Windows.
-   Justification:
-     SWIG Python bindings should be able to build with SWIG4 on Windows, too
-   Votes:
-     +1: futatuki, jun66j5, jcorvel
-
  * r1883335
    Fix unable to load *.pyd files with Python 3.8.x on Windows.
    Justification:
