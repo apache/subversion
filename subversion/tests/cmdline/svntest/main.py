@@ -2080,6 +2080,23 @@ class AbbreviatedFormatter(logging.Formatter):
     record.levelshort = self._level_short[record.levelno]
     return logging.Formatter.format(self, record)
 
+
+class LoggingStdoutHandler(logging.StreamHandler):
+  """
+  The handler is always writing using sys.stdout at call time rather than the
+  value of sys.stdout at construction time.
+
+  Inspired by logging._StderrHandler on Python 3.
+  """
+
+  def __init__(self, level=logging.NOTSET):
+    logging.Handler.__init__(self, level)
+
+  @property
+  def stream(self):
+    return sys.stdout
+
+
 def _create_parser(usage=None):
   """Return a parser for our test suite."""
 
@@ -2272,7 +2289,7 @@ def parse_options(arglist=sys.argv[1:], usage=None):
                                        datefmt='%Y-%m-%d %H:%M:%S')
     else:
       formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
-    handler = logging.StreamHandler(sys.stdout)
+    handler = LoggingStdoutHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
