@@ -49,13 +49,6 @@ Candidate changes:
    Votes:
      +1: futatuki
 
- * r1882157
-   Do not suggest --help -v for commands which do not support -v.
-   Justification:
-     The --help message for several commands is misleading. User complained.
-   Votes:
-     +1: stsp, brane
-
  * r1882326
    Fix issue #4762 "authz doesn't combine global and repository rules"
    Justification:
@@ -96,28 +89,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1877338
-   Add SWIG4 support for SWIG Python binding on Windows.
-   Justification:
-     SWIG Python bindings should be able to build with SWIG4 on Windows, too
-   Votes:
-     +1: futatuki, jun66j5
-
- * r1883335
-   Fix unable to load *.pyd files with Python 3.8.x on Windows.
-   Justification:
-     Make Python bindings available with Python 3.8+ on Windows.
-   Votes:
-     +1: jun66j5
-
- * r1883337
-   Remove uses of os.dup2() from run_tests.py in order to adapt the new
-   console reader and writer on Windows since Python 3.6.
-   Justification:
-     PYTHONLEGACYWINDOWSSTDIO is no longer needed to run unit tests on Windows.
-   Votes:
-     +1: jun66j5
-
  * r1883570
    Fix C4204 errors while building swig-py with Python 3.9 on Windows.
    Justification:
@@ -139,3 +110,32 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1882157
+   Do not suggest --help -v for commands which do not support -v.
+   Justification:
+     The --help message for several commands is misleading. User complained.
+   Votes:
+     +1: stsp, brane, jcorvel
+
+ * r1877338
+   Add SWIG4 support for SWIG Python binding on Windows.
+   Justification:
+     SWIG Python bindings should be able to build with SWIG4 on Windows, too
+   Votes:
+     +1: futatuki, jun66j5, jcorvel
+
+ * r1883335
+   Fix unable to load *.pyd files with Python 3.8.x on Windows.
+   Justification:
+     Make Python bindings available with Python 3.8+ on Windows.
+   Votes:
+     +1: jun66j5, jcorvel
+
+ * r1883337
+   Remove uses of os.dup2() from run_tests.py in order to adapt the new
+   console reader and writer on Windows since Python 3.6.
+   Justification:
+     PYTHONLEGACYWINDOWSSTDIO is no longer needed to run unit tests on Windows.
+   Votes:
+     +1: jun66j5, jcorvel
