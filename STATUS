@@ -103,10 +103,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1883570
-   Fix C4204 errors while building swig-py with Python 3.9 on Windows.
-   Justification:
-     Allow building Python bindings with Python 3.9 on Windows.
-   Votes:
-     +1: jun66j5, jcorvel

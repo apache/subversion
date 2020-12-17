@@ -26,6 +26,12 @@
 /* Avoid deprecation warnings about PY_SSIZE_T_CLEAN since Python 3.8 */
 #define PY_SSIZE_T_CLEAN
 
+#if defined(_MSC_VER)
+/* Prevent "non-constant aggregate initializer" errors from Python.h in
+ * Python 3.9 */
+# pragma warning(default : 4204)
+#endif
+
 #include <Python.h>
 
 
