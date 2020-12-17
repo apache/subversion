@@ -15,14 +15,6 @@ Status of 1.14.1:
 Candidate changes:
 ==================
 
- * r1878997, r1879192, r1879474, r1879959
-   Fix issue #4859, Merge removing a folder with non-inheritable mergeinfo
-   -> E155023: can't set properties: invalid status for updating properties
-   Justification:
-     Annoying failure, encountered in real use.
-   Votes:
-     +1: julianfoad, hartmannathan
-
  * r1880192
    Fix issue #4862 "Merge: the resulting mergeinfo is non-deterministic".
    Justification:
@@ -102,3 +94,11 @@ Approved changes:
      only if both the user and the path match the repository-specific rule.
    Votes:
      +1: stsp, brane, jcorvel
+
+ * r1878997, r1879192, r1879474, r1879959
+   Fix issue #4859, Merge removing a folder with non-inheritable mergeinfo
+   -> E155023: can't set properties: invalid status for updating properties
+   Justification:
+     Annoying failure, encountered in real use.
+   Votes:
+     +1: julianfoad, hartmannathan, jcorvel
