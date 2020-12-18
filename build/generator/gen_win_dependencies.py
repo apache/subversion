@@ -345,7 +345,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_apr(self):
     "Find the APR library and version"
 
-    minimal_apr_version = (1, 5, 0)
+    minimal_apr_version = (1, 4, 0)
 
     if not self.apr_path:
       sys.stderr.write("ERROR: Use '--with-apr' option to configure APR " + \

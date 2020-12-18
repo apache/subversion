@@ -73,13 +73,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1881958, 1882128
-   Restoring support for building with APR 1.4.
-   Justification:
-     Allow building on older distros such as CentOS 7.
-   Votes:
-     +1: brane, hartmannathan, julianfoad
-
  * r1882326
    Fix issue #4762 "authz doesn't combine global and repository rules"
    Justification:

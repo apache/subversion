@@ -39,7 +39,12 @@
 
 #include <apr.h>                /* for STDIN_FILENO */
 #include <apr_errno.h>          /* for apr_strerror */
+#include <apr_version.h>
+#if APR_VERSION_AT_LEAST(1,5,0)
 #include <apr_escape.h>
+#else
+#include "private/svn_dep_compat.h"
+#endif
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
 #include <apr_strings.h>        /* for apr_snprintf */
 #include <apr_pools.h>
