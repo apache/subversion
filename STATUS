@@ -90,13 +90,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1876054
-   Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
-   Justification:
-     Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
-   Votes:
-    +1: stsp, jamessan, jcorvel
-
  * r1879198
    Fix an invalid quoting in working copy upgrade system that only works
    because SQLite automatically fixed this. More recent SQLite functions
