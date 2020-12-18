@@ -55,18 +55,6 @@ Candidate changes:
    Votes:
      +1: jamessan
 
- * r1879198
-   Fix an invalid quoting in working copy upgrade system that only works
-   because SQLite automatically fixed this. More recent SQLite functions
-   will signal an error when deprecated features are disabled.
-   Justification:
-     Causes user-visible errors.
-   Note:
-     This filechange by itself doesn't trigger a change that make will
-     handle. So make sure you recompile the sql queries for testing.
-   Votes:
-     +1: rhuijben, danielsh
-
  * r1878997, r1879192, r1879474, r1879959
    Fix issue #4859, Merge removing a folder with non-inheritable mergeinfo
    -> E155023: can't set properties: invalid status for updating properties
@@ -97,3 +85,15 @@ Approved changes:
      Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
    Votes:
     +1: stsp, jamessan, jcorvel
+
+ * r1879198
+   Fix an invalid quoting in working copy upgrade system that only works
+   because SQLite automatically fixed this. More recent SQLite functions
+   will signal an error when deprecated features are disabled.
+   Justification:
+     Causes user-visible errors.
+   Note:
+     This filechange by itself doesn't trigger a change that make will
+     handle. So make sure you recompile the sql queries for testing.
+   Votes:
+     +1: rhuijben, danielsh, jcorvel
