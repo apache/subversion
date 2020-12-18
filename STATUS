@@ -33,7 +33,7 @@ Candidate changes:
    Depends:
      r1880192
    Votes:
-     +1: futatuki, jcorvel
+     +1: futatuki, jcorvel, hartmannathan
 
  * r1877310
    Add a test for issue #4711 "invalid xml file produced by svn log --xml
