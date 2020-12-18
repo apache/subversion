@@ -1321,21 +1321,36 @@ SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
 AC_ARG_WITH(swig_perl,
 [AS_HELP_STRING([[--with-swig-perl[=PATH|auto|no]|--without-swig-perl]],
-                [specify path to SWIG bindings target Perl interpreter [default=auto]])],
+                [Specify path to SWIG bindings target Perl interpreter
+                 [default=auto]. If the option value is 'auto' or it is not
+                  specfied, search for the Perl program.]
+                m4_ifndef([SVN_RELEASE_MODE],
+                  [[Implies --with-swig=yes if PATH is specfied or Perl 
+                    is found on 'auto' detection.]]))
+],
 [],
 [
-if test "$PERL" = "no" -o "$PERL" = "none"; then
-  with_swig_perl=no
-  AC_MSG_WARN([Disabling the SWIG Perl bindings' build by setting the PERL])
-  AC_MSG_WARN([environment variable to "none" is deprecated.])
-  AC_MSG_WARN([])
-  AC_MSG_WARN([Please use --without-swig-perl instead.])
+if test -n "$PERL"; then
+  if test "$PERL" = "no" -o "$PERL" = "none"; then
+    with_swig_perl=no
+    AC_MSG_WARN([Disabling the SWIG Perl bindings' build by setting the PERL])
+    AC_MSG_WARN([environment variable to "none" is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --without-swig-perl instead.])
+  else
+    with_swig_perl=auto
+    AC_MSG_WARN([Specfying the Perl path for SWIG Perl bindings' build])
+    AC_MSG_WARN([by setting the PERL environment variable is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --with-swig-perl=PATH instead.])
+  fi
 else
   with_swig_perl=auto
 fi
 ])
 case $with_swig_perl in
   yes|auto|"")
+    # honor PERL variable only if it is set and is full path. 
     AC_PATH_PROG(PERL, perl, none)
     SWIG_PL_PERL="$PERL"
     ;;
@@ -1351,14 +1366,16 @@ AC_SUBST(SWIG_PL_PERL)
 # Python: as a target of SWIG Python bindings
 AC_ARG_WITH(swig_python,
 [AS_HELP_STRING([[--with-swig-python[=PATH|auto|no]|--without-swig-python]],
-                [specify path to SWIG bindings target Python interpreter [default=auto]])],
+                [Specify path to SWIG bindings target Python interpreter
+                 [default=auto]. If the option value is 'auto' or it is not
+                 specfied, search for the Python program.]
+                m4_ifndef([SVN_RELEASE_MODE],
+                  [[Implies --with-swig=yes if PATH is specfied or Python
+                    is found on 'auto' detection.]]))
+],
 [],
 [
-if test "$PYTHON" = "no" -o "$PYTHON" = "none"; then
-  with_swig_python=no
-else
   with_swig_python=auto
-fi
 ])
 case $with_swig_python in
   yes|auto|"")
@@ -1375,21 +1392,36 @@ AC_SUBST(SWIG_PY_PYTHON)
 
 AC_ARG_WITH(swig_ruby,
 [AS_HELP_STRING([[--with-swig-ruby[=PATH|auto|no]|--without-swig-ruby]],
-                [specify path to SWIG bindings target Ruby interpreter [default=auto]])],
+                [specify path to SWIG bindings target Ruby interpreter
+                 [default=auto]. If the option value is 'auto' or it is not
+                  specfied, search for the Ruby program.] 
+                m4_ifndef([SVN_RELEASE_MODE],
+                  [[Implies --with-swig=yes if PATH is specfied or Ruby
+                    is found on 'auto' detection.]]))
+],
 [],
 [
-if test "$RUBY" = "no" -o "$RUBY" = "none"; then
-  with_swig_ruby=no
-  AC_MSG_WARN([Disabling the SWIG Ruby bindings' build by setting the RUBY])
-  AC_MSG_WARN([environment variable to "none" is deprecated.])
-  AC_MSG_WARN([])
-  AC_MSG_WARN([Please use --without-swig-ruby instead.])
+if test -n "$RUBY"; then
+  if test "$RUBY" = "no" -o "$RUBY" = "none"; then
+    with_swig_ruby=no
+    AC_MSG_WARN([Disabling the SWIG Ruby bindings' build by setting the RUBY])
+    AC_MSG_WARN([environment variable to "none" is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --without-swig-ruby instead.])
+  else
+    with_swig_ruby="$RUBY"
+    AC_MSG_WARN([Specfying the Ruby path for SWIG Ruby bindings' build])
+    AC_MSG_WARN([by setting the RUBY environment variable is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --with-swig-ruby=PATH instead.])
+  fi
 else
   with_swig_ruby=auto
 fi
 ])
 case $with_swig_ruby in
   yes|auto|"")
+    # honor RUBY variable only if it is set and is full path. 
     AC_PATH_PROGS(RUBY, ruby ruby1 ruby1.8 ruby18 ruby1.9 ruby19 ruby1.9.3 ruby193 ruby2 ruby2.0 ruby20 ruby2.1 ruby21 ruby2.2 ruby22 ruby2.3 ruby23 ruby2.4 ruby24, none)
     SWIG_RB_RUBY="$RUBY"
     ;;

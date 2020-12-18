@@ -141,7 +141,13 @@ Step 2:  Build and Install Subversion.
 
   See Subversion's own INSTALL file for details.
 
-  Make sure that Subversion's ./configure script sees your installed SWIG!
+  If you are using a Subversion distribution tarball and want to rebuild
+  the SWIG language bindings C source files with your installed SWIG, 
+  you need to execute autogen.sh, because the bundled configure script 
+  and makefiles don't support it.
+
+  If you don't use SWIG bindings C source files already generated,
+  make sure that Subversion's ./configure script sees your installed SWIG!
   It tries to detect SWIG near the very end of its output.
   You can find it by running 'grep "^SWIG=" config.log'.
 

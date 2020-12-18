@@ -478,6 +478,7 @@ local-distclean: local-clean
 local-extraclean: extraclean-bindings local-distclean
 	rm -f $(top_srcdir)/build-outputs.mk \
               $(top_srcdir)/subversion/svn_private_config.h.in \
+              $(top_srcdir)/aclocal.m4 \
               $(top_srcdir)/configure \
               $(top_srcdir)/gen-make.opts \
               $(top_srcdir)/build/config.guess \
