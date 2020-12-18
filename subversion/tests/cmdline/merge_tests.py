@@ -18500,6 +18500,146 @@ def merge_dir_delete_force(sbox):
                                      'merge', '-c2', '^/', sbox.wc_dir,
                                      '--ignore-ancestry', '--force')
 
+# Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
+# E155023: can't set properties: invalid status for updating properties
+@Issue(4859)
+def merge_deleted_folder_with_mergeinfo(sbox):
+  "merge deleted folder with mergeinfo"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # Some non-inheritable mergeinfo
+  sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
+  sbox.simple_commit() # r2
+
+  # Branching
+  sbox.simple_repo_copy('A', 'branch_A')  # r3
+  sbox.simple_update()
+
+  # On branch, remove a folder that has non-inheritable mergeinfo
+  sbox.simple_rm('branch_A/D')
+  sbox.simple_commit() # r4
+
+  sbox.simple_update()
+
+  # A merge that removes that folder
+  # (merge revision 4 only from 'branch_A' to 'A')
+  expected_output = wc.State(sbox.ospath(''), {
+    'A/D'    : Item(status='D '),
+    })
+  expected_mergeinfo_output = wc.State(sbox.ospath(''), {
+    'A'      : Item(status=' U'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.ospath('A'), 4).subtree('A')
+  expected_status.add({ '': Item(status=' M', wc_rev=4) })
+  expected_status.tweak_some(
+    lambda path, item: [True] if path.split('/')[0] == 'D' else [],
+    status='D ')
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'), 3, 4,
+                                       '^/branch_A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       None,
+                                       None,
+                                       expected_status,
+                                       wc.State('', {}),
+                                       [],
+                                       check_props=False,
+                                       dry_run=False  # as dry run is broken
+                                       )
+
+  os.chdir(was_cwd)
+
+# Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
+# E155023: can't set properties: invalid status for updating properties
+#
+# In this test we split the merge into two separate operable parts, a
+# delete followed later by an add, to check it will set the mergeinfo on the
+# subtree paths if the deleted folder is later replaced within the same
+# overall merge.
+@Issue(4859)
+def merge_deleted_folder_with_mergeinfo_2(sbox):
+  "merge deleted folder with mergeinfo 2"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # Some non-inheritable mergeinfo
+  sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
+  sbox.simple_commit() # r2
+
+  # Branching
+  sbox.simple_repo_copy('A', 'branch_A')  # r3
+  sbox.simple_update()
+
+  # On branch, remove a folder that has non-inheritable mergeinfo
+  sbox.simple_rm('branch_A/D')
+  sbox.simple_commit() # r4
+
+  # A commit that we don't want to merge from the branch, to split the merge
+  # into two separate operable parts.
+  sbox.simple_mkdir('branch_A/IgnoreThis')
+  sbox.simple_commit() # r5
+
+  # On branch, replace the deleted folder with a new one, with mergeinfo,
+  # to check we don't omit setting mergeinfo on this.
+  sbox.simple_mkdir('branch_A/D')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C:1*', 'branch_A/D')
+  sbox.simple_mkdir('branch_A/D/G', 'branch_A/D/G2')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C/G:1*', 'branch_A/D/G')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C/G2:1*', 'branch_A/D/G2')
+  sbox.simple_commit() # r6
+
+  sbox.simple_propset('svn:mergeinfo', '/branch_A:5', 'A')
+  sbox.simple_commit() # r7
+
+  sbox.simple_update()
+
+  # A merge that removes that folder
+  expected_output = wc.State(sbox.ospath(''), {
+    'A/D'    : Item(status='A ', prev_status='D '),
+    'A/D/G'  : Item(status='A '),
+    'A/D/G2' : Item(status='A '),
+    })
+  # verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+  #expected_mergeinfo_output = wc.State(sbox.ospath(''), {
+  #  'A'      : Item(status=' U'),
+  #  'A/D'    : Item(status=' G'),
+  #  'A/D/G'  : Item(status=' G'),  # varies, G or U: see issue #4862
+  #  'A/D/G2' : Item(status=' G'),  # varies, G or U: see issue #4862
+  #  })
+  expected_status = svntest.actions.get_virginal_state(sbox.ospath('A'), 7).subtree('A')
+  expected_status.tweak_some(
+    lambda path, item: [True] if path.split('/')[0] == 'D' else [],
+    status='D ')
+  expected_status.add({
+    ''     : Item(status=' M', wc_rev=7),
+    'D'    : Item(status='RM', copied='+', wc_rev='-'),
+    'D/G'  : Item(status=' M', copied='+', wc_rev='-'),
+    'D/G2' : Item(status=' M', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'), None, None,
+                                       '^/branch_A', None,
+                                       expected_output,
+                                       None, #expected_mergeinfo_output
+                                       None,
+                                       None,
+                                       expected_status,
+                                       wc.State('', {}),
+                                       [],
+                                       check_props=False,
+                                       dry_run=False  # as dry run is broken
+                                       )
+
+  os.chdir(was_cwd)
+
 ########################################################################
 # Run the tests
 
@@ -18647,6 +18787,8 @@ test_list = [ None,
               merge_to_empty_target_merge_to_infinite_target,
               conflict_naming,
               merge_dir_delete_force,
+              merge_deleted_folder_with_mergeinfo,
+              merge_deleted_folder_with_mergeinfo_2,
              ]
 
 if __name__ == '__main__':
