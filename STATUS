@@ -62,7 +62,7 @@ Candidate changes:
      Annoying failure, encountered in real use.
    Branch: ^/subversion/branches/1.10.x-issue4859
    Votes:
-     +1: julianfoad
+     +1: julianfoad, jcorvel
 
  * r1880192
    Fix issue #4862 "Merge: the resulting mergeinfo is non-deterministic".
@@ -72,6 +72,17 @@ Candidate changes:
      r1878997, r1879192, r1879474, r1879959 (Fix issue #4859)
    Votes:
      +1: julianfoad
+     -1: jcorvel (test FAIL on Windows;
+                  +1 if r1881985 group (see below) is backported too)
+
+ * r1881985, r1882105
+   Follow up to r1880192: Fix an EOL issue in test on Windows.
+   Justification:
+     We should test correctly on Windows environment, too.
+   Depends:
+     r1880192
+   Votes:
+     +1: jcorvel
 
 Veto-blocked changes:
 =====================
