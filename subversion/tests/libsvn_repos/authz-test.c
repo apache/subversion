@@ -522,7 +522,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_authz__get_global_rights"),
     SVN_TEST_PASS2(issue_4741_groups,
                    "issue 4741 groups"),
-    SVN_TEST_XFAIL2(reposful_reposless_stanzas_inherit,
+    SVN_TEST_PASS2(reposful_reposless_stanzas_inherit,
                     "[foo:/] inherits [/]"),
     SVN_TEST_NULL
   };
