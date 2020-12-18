@@ -35,13 +35,6 @@ Candidate changes:
    Votes:
      +1: futatuki, jcorvel
 
- * r1875675
-   Rewrite load_normalize_node_props to avoid literal trailing spaces.
-   Justification:
-     Prevents the bug fixed in r1875620 from recurring.
-   Votes:
-     +1: danielsh, brane
-
  * r1877310
    Add a test for issue #4711 "invalid xml file produced by svn log --xml
    --verbose --use-merge-history --search".
@@ -104,3 +97,10 @@ Approved changes:
      Annoying failure, encountered in real use.
    Votes:
      +1: julianfoad, hartmannathan, jcorvel
+
+ * r1875675
+   Rewrite load_normalize_node_props to avoid literal trailing spaces.
+   Justification:
+     Prevents the bug fixed in r1875620 from recurring.
+   Votes:
+     +1: danielsh, brane, jcorvel
