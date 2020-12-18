@@ -39,19 +39,14 @@ Candidate changes:
    Votes:
      +1: stsp, jamessan
 
- * r1876054
-   Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
-   Justification:
-     Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
-   Votes:
-    +1: stsp, jamessan
-
  * r1874850
    Update copyright year to 2020.
    Justification:
      The future is here!
    Votes:
      +1: stsp
+     +1: jcorvel (though by the time we get to this, we might need 2021,
+                  in that case, +1 too)
 
  * r1875602
    Remove incorrect include paths from svn_cv_ruby_includes.
@@ -95,3 +90,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1876054
+   Fix undefined behavior when constructing ID for txn_node_cache in fsfs.
+   Justification:
+     Fixes potential crash in apr_pstrcat(). Pretty obvious fix.
+   Votes:
+    +1: stsp, jamessan, jcorvel
