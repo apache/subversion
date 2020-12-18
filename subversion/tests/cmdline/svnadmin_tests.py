@@ -4000,7 +4000,7 @@ V 27
 2005-05-03T19:10:19.975578Z
 PROPS-END
 
-Node-path: 
+Node-path:\x20
 Node-kind: dir
 Node-action: change
 Prop-content-length: 32
