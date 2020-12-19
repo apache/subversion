@@ -38,6 +38,14 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1878379, r1883719, r1883722, r1884610
+   Distinguish configure scripts on release mode and non release mode.
+   Justification:
+     Building process should not be prevented by swig installed in users'
+     environment when users use release tar balls.
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
