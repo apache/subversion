@@ -18639,11 +18639,18 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
                                        )
 
   # verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+
+  # NOTE: When writing out multi-line prop values in svn:* props, the
+  # client converts to local encoding and local eol style.
+  # Therefore, the expected output must contain the right kind of eoln
+  # strings. That's why we use os.linesep in the tests below, not just
+  # plain '\n'.
+
   expected_mergeinfo = [
     ('A',       ['/branch_A:3-7']),
-    ('A/D',     ['/branch_A/D:5-7\n', '/branch_B/C:1*']),
-    ('A/D/G',   ['/branch_A/D/G:5-7\n', '/branch_B/C/G:1*']),
-    ('A/D/G2',  ['/branch_A/D/G2:5-7\n', '/branch_B/C/G2:1*']),
+    ('A/D',     ['/branch_A/D:5-7'+os.linesep, '/branch_B/C:1*']),
+    ('A/D/G',   ['/branch_A/D/G:5-7'+os.linesep, '/branch_B/C/G:1*']),
+    ('A/D/G2',  ['/branch_A/D/G2:5-7'+os.linesep, '/branch_B/C/G2:1*']),
     ]
   for path, mergeinfo in expected_mergeinfo:
     svntest.actions.check_prop('svn:mergeinfo', sbox.ospath(path),
