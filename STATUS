@@ -46,6 +46,14 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1884642
+   Fix win-tests.py is unable to load Python bindgins with debug configuration
+   since Python 3.5.
+   Justification:
+     Allow unit tests with debug configuration on Windows.
+   Votes:
+     +1: jun66j5
+
 Veto-blocked changes:
 =====================
 
