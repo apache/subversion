@@ -24,6 +24,34 @@
 ######################################################################
 
 from libsvn.fs import *
+
+######################################################################
+# Any adjustment of SWIG generated wrapper functions on svn.fs module
+# should be placed before adding alternative names for them.
+
+# fs.commit_txn() should return a 2-tupple of conflict_p and new_rev.
+# However if conflict_p is None, SWIG generated wrapper function
+# libsvn.fs.svn_fs_commit_txn returns an integer value of new_rev.
+# This is a bug of SWIG generated wrapper function, so we fix it here.
+#
+# (There was discussion about this behavior because C API
+# svn_fs_commit_txn() always set NULL to conflict_p if it returns
+# SVN_NO_ERROR and so it seems to be reasonable that fs.commit_txn()
+# returns only rev_new value. However for compatibility, we decided
+# that # fs.commit_txn always returns 2-tuple if it does not raises
+# an exception.)
+
+_svn_fs_commit_txn = svn_fs_commit_txn
+
+def svn_fs_commit_txn(*args):
+    r"""svn_fs_commit_txn(svn_fs_txn_t txn, apr_pool_t pool) -> svn_error_t"""
+    ret = _svn_fs_commit_txn(*args)
+    if not isinstance(ret, tuple):
+      ret = (None, ret)
+    return ret
+
+######################################################################
+
 from svn.core import _unprefix_names, Pool, _as_list
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
