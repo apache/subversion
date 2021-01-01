@@ -38,7 +38,7 @@ from libsvn.fs import *
 # svn_fs_commit_txn() always set NULL to conflict_p if it returns
 # SVN_NO_ERROR and so it seems to be reasonable that fs.commit_txn()
 # returns only rev_new value. However for compatibility, we decided
-# that # fs.commit_txn always returns 2-tuple if it does not raises
+# that fs.commit_txn always returns 2-tuple if it does not raises
 # an exception.)
 
 _svn_fs_commit_txn = svn_fs_commit_txn
