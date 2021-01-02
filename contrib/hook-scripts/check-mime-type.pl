@@ -1,28 +1,36 @@
 #!/usr/bin/env perl
 
 # ====================================================================
-# commit-mime-type-check.pl: check that every added file has the
-# svn:mime-type property set and every added file with a mime-type
-# matching text/* also has svn:eol-style set. If any file fails this
-# test the user is sent a verbose error message suggesting solutions and
-# the commit is aborted.
+# check-mime-type.pl: check that every added or property-modified file
+# has the svn:mime-type property set and every added or property-modified
+# file with a mime-type matching text/* also has svn:eol-style set.
+# If any file fails this test the user is sent a verbose error message
+# suggesting solutions and the commit is aborted.
 #
-# Usage: commit-mime-type-check.pl REPOS TXN-NAME
+# Usage: check-mime-type.pl REPOS TXN-NAME
 # ====================================================================
-# Most of commit-mime-type-check.pl was taken from
+# Most of check-mime-type.pl was taken from
 # commit-access-control.pl, Revision 9986, 2004-06-14 16:29:22 -0400.
 # ====================================================================
-# Copyright (c) 2000-2004 CollabNet.  All rights reserved.
+# Copyright (c) 2000-2009 CollabNet.  All rights reserved.
+# Copyright (c) 2010-2020 Apache Software Foundation (ASF).
+# ====================================================================
+#    Licensed to the Apache Software Foundation (ASF) under one
+#    or more contributor license agreements.  See the NOTICE file
+#    distributed with this work for additional information
+#    regarding copyright ownership.  The ASF licenses this file
+#    to you under the Apache License, Version 2.0 (the
+#    "License"); you may not use this file except in compliance
+#    with the License.  You may obtain a copy of the License at
 #
-# This software is licensed as described in the file COPYING, which
-# you should have received as part of this distribution.  The terms
-# are also available at http://subversion.tigris.org/license.html.
-# If newer versions of this license are posted there, you may use a
-# newer version instead, at your option.
+#      http://www.apache.org/licenses/LICENSE-2.0
 #
-# This software consists of voluntary contributions made by many
-# individuals.  For exact contribution history, see the revision
-# history and logs, available at http://subversion.tigris.org/.
+#    Unless required by applicable law or agreed to in writing,
+#    software distributed under the License is distributed on an
+#    "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+#    KIND, either express or implied.  See the License for the
+#    specific language governing permissions and limitations
+#    under the License.
 # ====================================================================
 
 # Turn on warnings the best way depending on the Perl version.
@@ -39,6 +47,12 @@ use Carp;
 
 ######################################################################
 # Configuration section.
+
+# Toggle: Check files of mime-type text/* for svn:eol-style property.
+my $check_text_eol = 1;
+
+# Toggle: Check property-modified files too.
+my $check_prop_modified_files = 0;
 
 # Svnlook path.
 my $svnlook = "/usr/bin/svnlook";
@@ -100,19 +114,28 @@ my $tmp_dir = '/tmp';
 chdir($tmp_dir)
   or die "$0: cannot chdir `$tmp_dir': $!\n";
 
-# Figure out what files have added using svnlook.
-my @files_added;
+# Figure out what files have been added/property-modified using svnlook.
+my $regex_files_to_check;
+if ($check_prop_modified_files)
+  {
+    $regex_files_to_check = qr/^(?:A.|.U)  (.*[^\/])$/;
+  }
+else
+  {
+    $regex_files_to_check = qr/^A.  (.*[^\/])$/;
+  }
+my @files_to_check;
 foreach my $line (&read_from_process($svnlook, 'changed', $repos, '-t', $txn))
   {
-		# Add only files that were added to @files_added
-    if ($line =~ /^A.  (.*[^\/])$/)
+    # Add only files that were added/property-modified to @files_to_check
+    if ($line =~ /$regex_files_to_check/)
       {
-        push(@files_added, $1);
+        push(@files_to_check, $1);
       }
   }
 
 my @errors;
-foreach my $path ( @files_added )
+foreach my $path ( @files_to_check )
 	{
 		my $mime_type;
 		my $eol_style;
@@ -168,7 +191,7 @@ foreach my $path ( @files_added )
 			{
 				push @errors, "$path : svn:mime-type is not set";
 			}
-		elsif ($mime_type =~ /^text\// and not $eol_style)
+		elsif ($check_text_eol and $mime_type =~ /^text\// and not $eol_style)
 			{
 				push @errors, "$path : svn:mime-type=$mime_type but svn:eol-style is not set";
 			}
@@ -179,20 +202,30 @@ foreach my $path ( @files_added )
 # and will not see this verbose message more than once.
 if (@errors)
   {
+    my $addition1 = '';
+    my $addition2 = '';
+    my $addition3 = '';
+    if ($check_prop_modified_files)
+      {
+        $addition1 = '/property-modified';
+      }
+    if ($check_text_eol)
+      {
+        $addition2 = "    In addition text files must have the svn:eol-style property set.\n";
+        $addition3 = "    svn propset svn:eol-style native path/of/file\n";
+      }
     warn "$0:\n\n",
          join("\n", @errors), "\n\n",
-				 <<EOS;
+				 <<"EOS";
 
-    Every added file must have the svn:mime-type property set. In
-    addition text files must have the svn:eol-style property set.
-
+    Every added$addition1 file must have the svn:mime-type property set.
+$addition2
     For binary files try running
     svn propset svn:mime-type application/octet-stream path/of/file
 
     For text files try
     svn propset svn:mime-type text/plain path/of/file
-    svn propset svn:eol-style native path/of/file
-
+$addition3
     You may want to consider uncommenting the auto-props section
     in your ~/.subversion/config file. Read the Subversion book
     (http://svnbook.red-bean.com/), Chapter 7, Properties section,
