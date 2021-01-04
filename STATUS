@@ -46,6 +46,14 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1885112
+   swig-py: Fix a typo in tests.
+   Justification:
+     This typo causes DeprecationWarning since Python 3.6 and it will be
+     Syntax error.
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
