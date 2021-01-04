@@ -8,6 +8,41 @@ Version 1.15.0
 (?? ??? 20XX, from /branches/1.15.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.15.0
 
+Version 1.14.1
+(?? ??? 2021, from /branches/1.14.x)
+ User-visible changes:
+  - Client-side improvesments and bugfixes:
+    * Fix non-deterministic generation of mergeinfo (issue #4862)
+    * Fix merge removing a folder with non-inheritable mergeinfo (issue #4859)
+    * Do not suggest --help -v for commands which do not support -v (r1882157)
+    * Fix invalid SQL quoting in working copy upgrade system (r1879198)
+    * Fix problems in human-readable file size formatting (r1878909, -18, -50)
+    * Improve an error message from svnmucc (r1877072)
+
+  - Server-side improvements and bugfixes:
+    * Fix authz doesn't combine global and repository rules (issue #4762)
+    * Make the hot-backup.py script work with Python 3 (r1878855, r1878859)
+    * Fix an uninitialized read in FSFS (r1880374)
+
+ Developer-visible changes:
+  - General:
+    * Restore support for building with APR 1.4 (r1881958, r1882128)
+    * Rewrite internal test data to avoid literal trailing spaces (r1875675)
+    * Remove use of os.dup2() from tests for Python 3.6 on Windows (r1883337)
+    * Note in INSTALL that non-release mode is required for Python 2 (r1877960)
+    * Make gen-make.py --debug work with Python 3 (r1876906)
+    * Make test suite run correctly with Python 3 on Windows (r1876707 et al)
+    * Fix compilation errors with Visual Studio 2008 (r1877259)
+  - Bindings:
+    * Fix win-tests.py to load Python 3 bindings with debug config (r1884642)
+    * Fix C4204 errors building swig-py with Python 3.9 on Windows (r1883570)
+    * Fix unable to load *.pyd files with Python 3.8.x on Windows (r1883335)
+    * Add SWIG4 support for SWIG Python binding on Windows (r1877338)
+    * Fix incorrect cache in JavaHL SVNBase::createCppBoundObject (r1882115)
+    * Fix crash in JavaHL JNI wrapper caused by object lifetimes (r1880886)
+    * autogen.sh: Remove .swig_*_checked files from release tarballs (r1878413)
+    * Avoid version check for Python if --without-swig is used (r1876662)
+
 Version 1.14.0
 (27 May 2020, from /branches/1.14.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.14.0
