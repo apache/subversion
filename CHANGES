@@ -11,7 +11,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.15.0
 Version 1.14.1
 (?? ??? 2021, from /branches/1.14.x)
  User-visible changes:
-  - Client-side improvesments and bugfixes:
+  - Client-side improvements and bugfixes:
     * Fix non-deterministic generation of mergeinfo (issue #4862)
     * Fix merge removing a folder with non-inheritable mergeinfo (issue #4859)
     * Do not suggest --help -v for commands which do not support -v (r1882157)
