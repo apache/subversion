@@ -240,7 +240,7 @@ class SubversionCoreTestCase(unittest.TestCase):
   # of \u0000 ~ \u007f.
   @unittest.skipUnless(IS_PY3, "test for Python 3 only")
   def test_stream_write_str(self):
-    o1_str = u'Python\x00\u3071\u3044\u305d\83093\r\n'
+    o1_str = u'Python\x00\u3071\u3044\u305d\u3093\r\n'
     o2_str = u'subVersioN\x00\u3055\u3076\u3070\u30fc\u3058\u3087\u3093'
     o3_str = u'swig\x00\u3059\u3046\u3043\u3050\rend'
     out_str = o1_str + o2_str + o3_str
