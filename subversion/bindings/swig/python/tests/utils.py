@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import os.path, sys, tempfile
+import os.path, sys, tempfile, codecs
 from svn import core, repos
 from io import BytesIO
 try:
@@ -27,6 +27,8 @@ try:
 except ImportError:
   # Python <3.0
   from urllib import pathname2url
+
+IS_PY3 = sys.hexversion >= 0x3000000
 
 class Temper(object):
   """Class to simplify allocation and cleanup of dummy Subversion
@@ -87,3 +89,9 @@ def file_uri_for_path(path):
   # it returns both the authority and path parts for no reason, which
   # means we have to trim the leading slashes to "normalize" the result.
   return b'file:///' + uri_path.lstrip(b'/')
+
+def codecs_eq(a, b):
+  return codecs.lookup(a) == codecs.lookup(b)
+
+def is_defaultencoding_utf8():
+  return codecs_eq(sys.getdefaultencoding(), 'utf-8')
