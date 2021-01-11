@@ -517,6 +517,59 @@ class SubversionClientTestCase(unittest.TestCase):
                      self.proplist_receiver_dir1, self.client_ctx)
     self.assertEqual(self.proplist_receiver_dir1_calls, 1)
 
+  def test_propset_local(self):
+    """Test svn_client_propset_local.
+(also, testing const svn_string_t * input)"""
+
+    head = core.svn_opt_revision_t()
+    head.kind = core.svn_opt_revision_head
+    unspecified = core.svn_opt_revision_t()
+    unspecified.kind = core.svn_opt_revision_working
+
+    path = self.temper.alloc_empty_dir('-propset_local')
+
+    target_path = os.path.join(path, b'trunk', b'README.txt') 
+    target_prop = b'local_prop_test'
+    prop_val1 = b'foo'
+
+    co_rev = client.checkout3(self.repos_uri, path, head, head, 
+                              core.svn_depth_infinity, True, True,
+                              self.client_ctx)
+
+    client.propset_local(target_prop, prop_val1, [target_path],
+                         core.svn_depth_empty, False, None, self.client_ctx)
+    props, iprops, prop_rev = client.propget5(target_prop, target_path,
+                                              unspecified, unspecified,
+                                              core.svn_depth_empty,
+                                              None, self.client_ctx)
+    self.assertFalse(iprops)
+    self.assertEqual(prop_rev, co_rev)
+    self.assertEqual(props, { target_path : prop_val1 })
+
+    # Using str(unicode) to specify property value.
+    prop_val2 = b'bar'
+    client.propset_local(target_prop, prop_val2.decode('utf-8'), [target_path],
+                         core.svn_depth_empty, False, None, self.client_ctx)
+    props, iprops, prop_rev = client.propget5(target_prop, target_path,
+                                              unspecified, unspecified,
+                                              core.svn_depth_empty,
+                                              None, self.client_ctx)
+    self.assertEqual(props, { target_path : prop_val2 })
+
+    # Using str(unicode) and check if it uses 'utf-8' codecs on Python 3
+    # (or Python 2, only if its default encoding is 'utf-8') 
+    if utils.IS_PY3 or not utils.is_defaultencoding_utf8():
+      # prop_val3 = '(checkmark)UNICODE'
+      prop_val3_str = (u'\u2705\U0001F1FA\U0001F1F3\U0001F1EE'
+                       u'\U0001F1E8\U0001F1F4\U0001F1E9\U0001F1EA')
+      client.propset_local(target_prop, prop_val3_str, [target_path],
+                           core.svn_depth_empty, False, None, self.client_ctx)
+      props, iprops, prop_rev = client.propget5(target_prop, target_path,
+                                                unspecified, unspecified,
+                                              core.svn_depth_empty,
+                                              None, self.client_ctx)
+      self.assertEqual(props, { target_path : prop_val3_str.encode('utf-8') })
+
   def test_update4(self):
     """Test update and the notify function callbacks"""
 

@@ -74,19 +74,32 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPYTHON
 %typemap(in) svn_stringbuf_t * {
-    if (!PyBytes_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "not a bytes object");
-        SWIG_fail;
+    if ($input == Py_None) {
+        $1 = NULL;
     }
-    {
-      Py_ssize_t strBufLen;
-      char *strBufChar;
-      if (-1 == PyBytes_AsStringAndSize($input, &strBufChar, &strBufLen)) {
-        SWIG_fail;
-      }
-      $1 = svn_stringbuf_ncreate(strBufChar, strBufLen,
-                                 /* ### gah... what pool to use? */
-                                 _global_pool);
+    else {
+        Py_ssize_t strBufLen;
+        char *strBufChar;
+        if (PyBytes_Check($input)) {
+            if (-1 == PyBytes_AsStringAndSize($input, &strBufChar,
+                                              &strBufLen)) {
+                SWIG_fail;
+            }
+        }
+        else if (PyUnicode_Check($input)) {
+            strBufChar = (char *)PyStr_AsUTF8AndSize($input, &strBufLen);
+            if (PyErr_Occurred()) {
+                SWIG_fail;
+            }
+        }
+        else {
+            PyErr_SetString(PyExc_TypeError,
+                            "not a bytes, str or None object");
+            SWIG_fail;
+        }
+        $1 = svn_stringbuf_ncreate((const char *)strBufChar, strBufLen,
+                                   /* ### gah... what pool to use? */
+                                   _global_pool);
     }
 }
 #endif
@@ -176,16 +189,26 @@ typedef struct svn_string_t svn_string_t;
 /* const svn_string_t * is always an input parameter */
 #ifdef SWIGPYTHON
 %typemap(in) const svn_string_t * (svn_string_t value) {
-    if ($input == Py_None)
+    if ($input == Py_None) {
         $1 = NULL;
+    }
     else {
         Py_ssize_t pyStrLen;
-        if (!PyBytes_Check($input)) {
-            PyErr_SetString(PyExc_TypeError, "not a bytes object");
-            SWIG_fail;
+        if (PyBytes_Check($input)) {
+            if (PyBytes_AsStringAndSize($input, (char **)&(value.data),
+                                        &pyStrLen) == -1) {
+                SWIG_fail;
+            }
         }
-        if (PyBytes_AsStringAndSize($input, (char **)&(value.data),
-                                    &pyStrLen) == -1) {
+        else if (PyUnicode_Check($input)) {
+            value.data = PyStr_AsUTF8AndSize($input, &pyStrLen);
+            if ((value.data == NULL) || PyErr_Occurred()) {
+                SWIG_fail;
+            }
+        }
+        else {
+            PyErr_SetString(PyExc_TypeError,
+                            "not a bytes, str, or None object");
             SWIG_fail;
         }
         value.len = pyStrLen;

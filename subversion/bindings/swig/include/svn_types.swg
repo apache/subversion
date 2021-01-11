@@ -529,11 +529,19 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #ifdef SWIGPYTHON
 %typemap(in) (const char *PTR, apr_size_t LEN) {
     Py_ssize_t pyStrLen;
-    if (!PyBytes_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "expecting a bytes");
-        SWIG_fail;
+    if (PyBytes_Check($input)) {
+        if (PyBytes_AsStringAndSize($input, (char **)&$1, &pyStrLen) == -1) {
+            SWIG_fail;
+        }
     }
-    if (PyBytes_AsStringAndSize($input, &$1, &pyStrLen) == -1) {
+    else if (PyUnicode_Check($input)) {
+        $1 = (char *)PyStr_AsUTF8AndSize($input, &pyStrLen);
+        if (PyErr_Occurred()) {
+            SWIG_fail;
+        }
+    }
+    else {
+        PyErr_SetString(PyExc_TypeError, "expecting a bytes or str");
         SWIG_fail;
     }
     $2 = pyStrLen;
