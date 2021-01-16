@@ -50,10 +50,11 @@ import configparser
 from urllib.parse import quote as urllib_parse_quote
 import time
 import subprocess
-from io import BytesIO, StringIO
+from io import BytesIO
 import smtplib
 import re
 import tempfile
+import locale
 
 # Minimal version of Subversion's bindings required
 _MIN_SVN_VERSION = [1, 5, 0]
@@ -88,10 +89,10 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     messenger = Commit(pool, cfg, repos)
   elif cmd == 'propchange' or cmd == 'propchange2':
     revision = int(cmd_args[0])
-    author = cmd_args[1].decode('utf-8')
-    propname = cmd_args[2].decode('utf-8')
+    author = cmd_args[1]
+    propname = cmd_args[2]
     if cmd == 'propchange2' and cmd_args[3]:
-      action = cmd_args[3].decode('utf-8')
+      action = cmd_args[3]
     else:
       action = 'A'
     repos = Repository(repos_dir, revision, pool)
@@ -103,7 +104,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
                  })
     messenger = PropChange(pool, cfg, repos, author, propname, action)
   elif cmd == 'lock' or cmd == 'unlock':
-    author = cmd_args[0].decode('utf-8')
+    author = cmd_args[0]
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
     # Override the repos revision author with the author of the lock/unlock
     repos.author = author
@@ -169,9 +170,13 @@ class OutputBase:
     representation."""
     raise NotImplementedError
 
-  def write(self, output):
+  def write_binary(self, output):
     """Override this method.
-    Append the literal text string OUTPUT to the output representation."""
+    Append the binary data OUTPUT to the output representation."""
+    raise NotImplementedError
+
+  def write(self, output):
+    """Append the literal text string OUTPUT to the output representation."""
     return self.write_binary(output.encode('utf-8'))
 
   def run(self, cmd):
@@ -184,7 +189,7 @@ class OutputBase:
 
     buf = pipe_ob.stdout.read(self._CHUNKSIZE)
     while buf:
-      self.write(buf)
+      self.write_binary(buf)
       buf = pipe_ob.stdout.read(self._CHUNKSIZE)
 
     # wait on the child so we don't end up with a billion zombies
@@ -360,6 +365,11 @@ class StandardOutput(OutputBase):
   def finish(self):
     pass
 
+  def write(self, output):
+    """Write text as *default* encoding string"""
+    return self.write_binary(output.encode(locale.getpreferredencoding(),
+                                           'backslashreplace'))
+
 
 class PipeOutput(MailedOutput):
   "Deliver a mail message to an MTA via a pipe."
@@ -532,7 +542,7 @@ class PropChange(Messenger):
         elif self.action == 'M':
           self.output.write('Property diff:\n')
           tempfile1 = tempfile.NamedTemporaryFile()
-          tempfile1.write(sys.stdin.read())
+          tempfile1.write(sys.stdin.buffer.read())
           tempfile1.flush()
           tempfile2 = tempfile.NamedTemporaryFile()
           tempfile2.write(self.repos.get_rev_prop(self.propname))
@@ -594,9 +604,8 @@ class Lock(Messenger):
                         or 'unlock_subject_prefix'))
 
     # read all the locked paths from STDIN and strip off the trailing newlines
-    self.dirlist = [x for x in sys.stdin.readlines()]
-    for i in range(len(self.dirlist)):
-      self.dirlist[i] = self.dirlist[i].decode('utf-8')
+    self.dirlist = [x.decode('utf-8').rstrip()
+                    for x in sys.stdin.buffer.readlines()]
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
@@ -910,7 +919,7 @@ class DiffGenerator:
             kind = 'C'
             if self.diffsels.copy:
               diff = svn.fs.FileDiff(None, None, self.repos.root_this,
-                                     change.path.decode('utf-8'), self.pool)
+                                     change.path, self.pool)
               label1 = '/dev/null\t00:00:00 1970\t' \
                        '(empty, because file is newly added)'
               label2 = '%s\t%s\t(r%s, copy of r%s, %s)' \
@@ -1092,7 +1101,7 @@ class TextCommitRenderer:
 
     w = self.output.write
 
-    w('Author: %s\nDate: %s\nNew Revision: %s\n' % (data.author.decode('utf-8'),
+    w('Author: %s\nDate: %s\nNew Revision: %s\n' % (data.author,
                                                       data.date,
                                                       data.rev))
 
@@ -1221,6 +1230,8 @@ class Repository:
     self.root_this = self.get_root(rev)
 
     self.author = self.get_rev_prop(svn.core.SVN_PROP_REVISION_AUTHOR)
+    if self.author is not None:
+      self.author = self.author.decode('utf-8')
 
   def get_rev_prop(self, propname, rev = None):
     if not rev:
@@ -1510,7 +1521,7 @@ if the property was added, modified or deleted, respectively.
     usage()
 
   cmd = sys.argv[1]
-  repos_dir = svn.core.svn_path_canonicalize(sys.argv[2])
+  repos_dir = svn.core.svn_path_canonicalize(sys.argv[2].encode('utf-8'))
   repos_dir = repos_dir.decode('utf-8')
   try:
     expected_args = cmd_list[cmd]
