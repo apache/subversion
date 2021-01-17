@@ -47,7 +47,7 @@
 import os
 import sys
 import configparser
-from urllib.parse import quote as urllib_parse_quote
+from urllib.parse import quote as _url_quote
 import time
 import subprocess
 from io import BytesIO
@@ -120,7 +120,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
 
 
 def remove_leading_slashes(path):
-  while path and path[0] == '/':
+  while path and path[0:1] == b'/':
     path = path[1:]
   return path
 
@@ -431,8 +431,8 @@ class Commit(Messenger):
 
     self.changelist = sorted(editor.get_changes().items())
 
-    log = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or ''
-    log = log.decode('utf-8')
+    log = (repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG)
+           or b'').decode('utf-8')
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
@@ -708,9 +708,9 @@ class DiffURLSelections:
     # parameters for the configuration module, otherwise we may get
     # KeyError exceptions.
     params = self.params.copy()
-    params['path'] = change.path and urllib_parse_quote(change.path) or None
-    params['base_path'] = change.base_path and urllib_parse_quote(change.base_path) \
-                          or None
+    params['path'] = _url_quote(change.path) if change.path else None
+    params['base_path'] = (_url_quote(change.base_path)  
+                           if change.base_path else None)
     params['rev'] = repos_rev
     params['base_rev'] = change.base_rev
 
@@ -764,7 +764,8 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
     author=repos.author,
     date=date,
     rev=repos.rev,
-    log=repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or '',
+    log=(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG)
+         or b'').decode('utf-8'),
     commit_url=commit_url,
     added_data=generate_list('A', changelist, paths, True),
     replaced_data=generate_list('R', changelist, paths, True),
@@ -1110,7 +1111,7 @@ class TextCommitRenderer:
     else:
       w('\n')
 
-    w('Log:\n%s\n\n' % data.log.strip().decode('utf-8'))
+    w('Log:\n%s\n\n' % data.log.strip())
 
     # print summary sections
     self._render_list('Added', data.added_data)
