@@ -46,13 +46,6 @@ Candidate changes:
    Votes:
      +1: futatuki, stsp
 
- * r1884427, r1885557, r1885600, r1885656, r1885784, r1885785
-   Make mailer.py work properly with Python 3.
-   Justification:
-     Hook scripts should support Python 3 on 1.14.x.
-   Votes:
-     +1: stsp, futatuki
-
 Veto-blocked changes:
 =====================
 
@@ -74,3 +67,10 @@ Approved changes:
      The future is here!
    Votes:
      +1: stsp, futatuki, jcorvel
+
+ * r1884427, r1885557, r1885600, r1885656, r1885784, r1885785
+   Make mailer.py work properly with Python 3.
+   Justification:
+     Hook scripts should support Python 3 on 1.14.x.
+   Votes:
+     +1: stsp, futatuki
