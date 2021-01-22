@@ -53,7 +53,7 @@ Candidate changes:
    Justification:
      Fixes building with latest Ruby
    Votes:
-     +1: jamessan
+     +1: jamessan, stsp
 
  * r1878997, r1879192, r1879474, r1879959
    Fix issue #4859, Merge removing a folder with non-inheritable mergeinfo
