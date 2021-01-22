@@ -283,33 +283,33 @@ two copies
 
 Added:
    dir2/file7
-      - copied unchanged from r2, /file1
+      - copied unchanged from r2, file1
    dir3/   (props changed)
-      - copied from r2, /dir1/
+      - copied from r2, dir1/
 Replaced:
    dir3/file3
-      - copied unchanged from r1, /dir1/file3
+      - copied unchanged from r1, dir1/file3
    dir3/file4
-      - copied unchanged from r1, /dir1/file4
+      - copied unchanged from r1, dir1/file4
 
-Copied: dir2/file7 (from r2, /file1)
+Copied: dir2/file7 (from r2, file1)
 ==============================================================================
 --- /dev/null	00:00:00 1970	(empty, because file is newly added)
-+++ dir2/file7	Sun Sep  9 07:20:00 2001	(r3, copy of r2, /file1)
++++ dir2/file7	Sun Sep  9 07:20:00 2001	(r3, copy of r2, file1)
 @@ -0,0 +1 @@
 +file1
 
-Copied: dir3/file3 (from r1, /dir1/file3)
+Copied: dir3/file3 (from r1, dir1/file3)
 ==============================================================================
 --- /dev/null	00:00:00 1970	(empty, because file is newly added)
-+++ dir3/file3	Sun Sep  9 07:20:00 2001	(r3, copy of r1, /dir1/file3)
++++ dir3/file3	Sun Sep  9 07:20:00 2001	(r3, copy of r1, dir1/file3)
 @@ -0,0 +1 @@
 +file3
 
-Copied: dir3/file4 (from r1, /dir1/file4)
+Copied: dir3/file4 (from r1, dir1/file4)
 ==============================================================================
 --- /dev/null	00:00:00 1970	(empty, because file is newly added)
-+++ dir3/file4	Sun Sep  9 07:20:00 2001	(r3, copy of r1, /dir1/file4)
++++ dir3/file4	Sun Sep  9 07:20:00 2001	(r3, copy of r1, dir1/file4)
 @@ -0,0 +1 @@
 +file4
 Group: All
@@ -324,11 +324,11 @@ copied and changed
 
 Added:
    dir3/file8
-      - copied, changed from r2, /file1
+      - copied, changed from r2, file1
 
-Copied and modified: dir3/file8 (from r2, /file1)
+Copied and modified: dir3/file8 (from r2, file1)
 ==============================================================================
---- /file1	Sun Sep  9 04:33:20 2001	(r2, copy source)
+--- file1	Sun Sep  9 04:33:20 2001	(r2, copy source)
 +++ dir3/file8	Sun Sep  9 10:06:40 2001	(r4)
 @@ -1 +1,2 @@
  file1
@@ -639,26 +639,26 @@ copy dir, then make a change
 
 Added:
    dir6/
-      - copied from r6, /dir3/
+      - copied from r6, dir3/
    dir6/dir5/
-      - copied from r7, /dir3/dir5/
+      - copied from r7, dir3/dir5/
 Replaced:
    dir6/file3
-      - copied unchanged from r7, /dir3/file3
+      - copied unchanged from r7, dir3/file3
 Modified:
    dir6/file4
 
-Copied: dir6/file3 (from r7, /dir3/file3)
+Copied: dir6/file3 (from r7, dir3/file3)
 ==============================================================================
 --- /dev/null	00:00:00 1970	(empty, because file is newly added)
-+++ dir6/file3	Sun Sep  9 21:13:20 2001	(r8, copy of r7, /dir3/file3)
++++ dir6/file3	Sun Sep  9 21:13:20 2001	(r8, copy of r7, dir3/file3)
 @@ -0,0 +1,2 @@
 +file3
 +change C5
 
 Modified: dir6/file4
 ==============================================================================
---- /dir3/file4	Sun Sep  9 15:40:00 2001	(r6)
+--- dir3/file4	Sun Sep  9 15:40:00 2001	(r6)
 +++ dir6/file4	Sun Sep  9 21:13:20 2001	(r8)
 @@ -1 +1,2 @@
  file4
