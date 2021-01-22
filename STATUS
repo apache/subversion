@@ -46,13 +46,6 @@ Candidate changes:
    Votes:
      +1: futatuki
 
- * r1884427, r1885557, r1885600, r1885656
-   Make mailer.py work properly with Python 3.
-   Justification:
-     Hook scripts should support Python 3 on 1.14.x.
-   Votes:
-     +1: futatuki
-
 Veto-blocked changes:
 =====================
 
@@ -64,6 +57,14 @@ Veto-blocked changes:
      +1: hartmannathan
      -1: brane (contains CRLF line endings, needs svn:eol-style + fixup)
                (+1 once that is fixed)
+
+ * r1884427, r1885557, r1885600, r1885656
+   Make mailer.py work properly with Python 3.
+   Justification:
+     Hook scripts should support Python 3 on 1.14.x.
+   Votes:
+     +1: futatuki
+     -1: stsp (mailer.py tests are failing)
 
 Approved changes:
 =================
