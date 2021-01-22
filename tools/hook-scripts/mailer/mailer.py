@@ -1021,7 +1021,7 @@ class DiffGenerator:
       # return a data item for this diff
       return _data(
         path=change.path,
-        base_path=base_path,
+        base_path=base_path_bytes,
         base_rev=change.base_rev,
         diff=diff,
         diff_url=diff_url,
