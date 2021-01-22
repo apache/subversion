@@ -51,8 +51,7 @@ Candidate changes:
    Justification:
      Hook scripts should support Python 3 on 1.14.x.
    Votes:
-     +1: futatuki (without r1885784, r1885785)
-     +1: stsp
+     +1: stsp, futatuki
 
  * r1885795
    Update copyright year to 2021.
