@@ -44,7 +44,7 @@ Candidate changes:
      Building process should not be prevented by swig installed in users'
      environment when users use release tar balls.
    Votes:
-     +1: futatuki
+     +1: futatuki, stsp
 
  * r1884427, r1885557, r1885600, r1885656, r1885784, r1885785
    Make mailer.py work properly with Python 3.
