@@ -44,9 +44,7 @@ Candidate changes:
    Justification:
      The future is here!
    Votes:
-     +1: stsp
-     +1: jcorvel (though by the time we get to this, we might need 2021,
-                  in that case, +1 too)
+     +1: stsp, jcorvel
 
  * r1875602
    Remove incorrect include paths from svn_cv_ruby_includes.
