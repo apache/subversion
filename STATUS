@@ -82,7 +82,7 @@ Candidate changes:
      only if both the user and the path match the repository-specific rule.
    Branch: ^/subversion/branches/1.10.x-issue4762
    Votes:
-     +1: stsp
+     +1: stsp, jcorvel
 
 Veto-blocked changes:
 =====================
