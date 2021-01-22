@@ -22,6 +22,9 @@ has a property section.  How are they to be combined?
 2. The section on the semantics of kinds of operations documents a
 minor bug at r39883 in the behavior of "add".  Has this been fixed?
 
+3. The diff format and compression (if any) used in Version 3
+format are not described.
+
 Portions of text relevant to these questions are tagged with FIXME.
 
 == Syntax ==
@@ -98,7 +101,7 @@ that can parse RFC-822 messages.
 A revision record is followed by zero or more Node records (see below).
 
 Revisions are always dumped in monotonically increasing
-revision-number order. The date proprty of a revision may be
+revision-number order. The date property of a revision may be
 explicitly set to any value, or even unset, but normally a sequence of
 commits will have monotonically increasing timestamps.
 
