@@ -53,13 +53,6 @@ Candidate changes:
    Votes:
      +1: stsp, futatuki
 
- * r1885795
-   Update copyright year to 2021.
-   Justification:
-     The future is here!
-   Votes:
-     +1: stsp, futatuki
-
 Veto-blocked changes:
 =====================
 
@@ -74,3 +67,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1885795
+   Update copyright year to 2021.
+   Justification:
+     The future is here!
+   Votes:
+     +1: stsp, futatuki, jcorvel
