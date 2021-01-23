@@ -61,13 +61,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1885795
-   Update copyright year to 2021.
-   Justification:
-     The future is here!
-   Votes:
-     +1: stsp, futatuki, jcorvel
-
  * r1884427, r1885557, r1885600, r1885656, r1885784, r1885785
    Make mailer.py work properly with Python 3.
    Justification:
