@@ -89,12 +89,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1878997, r1879192, r1879474, r1879959
-   Fix issue #4859, Merge removing a folder with non-inheritable mergeinfo
-   -> E155023: can't set properties: invalid status for updating properties
-   Justification:
-     Annoying failure, encountered in real use.
-   Branch: ^/subversion/branches/1.10.x-issue4859
-   Votes:
-     +1: julianfoad, jcorvel, stsp
