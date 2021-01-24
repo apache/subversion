@@ -1,0 +1,54 @@
+This branch is aimed at fixing issue #4869 [1] and adding regression tests for
+the issue.
+
+The problem is that while 'svn info' on a file with tree conflicts shows the
+correct left and right sides of conflict, 'svn info --xml' shows the correct
+left side but incorrect right side; specifically, it repeats the same
+information for left and right sides.
+
+The bug was reported in the users@ mail thread "svn info tree conflicts bug
+using svn 1.10.6" archived at [2] and [3]. It affects all versions from
+1.10.0 through trunk HEAD at the time of this branch. The bug was introduced
+due to a simple copy-paste mistake in r1687415 because no regression test
+existed to catch it. The feature works correctly in 1.9.x.
+
+The reporter provided the following reproduction script:
+
+[[[
+
+#!/bin/bash
+set -eu
+svn --version | head -1
+TEST_DIR=$(mktemp -d)
+svnadmin create $TEST_DIR/test-repos
+REPOS_URL="file://$TEST_DIR/test-repos"
+svn mkdir -q -m "" $REPOS_URL/trunk
+svn copy -q -m "" $REPOS_URL/trunk@1 $REPOS_URL/branch1
+svn copy -q -m "" $REPOS_URL/trunk@1 $REPOS_URL/branch2
+svn checkout -q $REPOS_URL/branch1 $TEST_DIR/wc
+cd $TEST_DIR/wc
+echo "Test 1" > file
+svn add -q file
+svn commit -q -m ""
+svn switch -q $REPOS_URL/branch2
+echo "Test 2" > file
+svn add -q file
+svn commit -q -m ""
+svn update -q
+svn merge --non-interactive $REPOS_URL/branch1
+echo === svn info file
+svn info file
+echo === svn info --xml file
+svn info --xml file
+cd $OLDPWD
+rm -rf $TEST_DIR
+
+]]]
+
+References:
+
+[1] https://issues.apache.org/jira/browse/SVN-4869
+
+[2] https://mail-archives.apache.org/mod_mbox/subversion-users/202101.mbox/%3cCWLP265MB20020002023DA2E042EDFE6AB3A30@CWLP265MB2002.GBRP265.PROD.OUTLOOK.COM%3e
+
+[3] https://lists.apache.org/thread.html/re696b9a171392e96315220eff1e51c4a64d810299ea632951b641b51%40%3Cusers.subversion.apache.org%3E
