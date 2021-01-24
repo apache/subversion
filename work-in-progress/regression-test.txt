@@ -1,0 +1,97 @@
+@Issue(4869)
+def info_tree_conflict_source(sbox):
+  """info --xml with tree conflicts, verify correct source-left and
+     source-right."""
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  B_path = os.path.join(wc_dir, 'A', 'B')
+  lambda_path = os.path.join(B_path, 'lambda')
+
+  B2_url = sbox.repo_url + '/A/B2'
+
+  # Rev 2 copy B to B2
+  sbox.simple_repo_copy('A/B', 'A/B2')
+  sbox.simple_update()
+
+  # Rev 3:
+  # - edit A/B/lambda
+  #   (tests text_conflicted case of svn_cl__append_conflict_info_xml())
+  # - add property to A/B/E/alpha
+  #   (tests props_conflicted case of svn_cl__append_conflict_info_xml())
+  # - rename A/B/F to A/B/Z
+  #   (tests the case in append_tree_conflict_info_xml())
+
+  svntest.main.file_write('A/B/lambda', 'B/lambda side of conflict')
+  sbox.simple_propset('blue', 'azul', 'A/B/E/alpha')
+  sbox.simple_move('A/B/F', 'A/B/Z');
+  sbox.simple_commit()
+
+  # Rev 4:
+  # edit A/B2/lambda
+  # add property to A/B2/E/alpha
+  # rename A/B2/F to A/B2/Y
+
+  svntest.main.file_write('A/B2/lambda', 'B2/lambda side of conflict')
+  sbox.simple_propset('blue', 'bleue', 'A/B2/E/alpha')
+  sbox.simple_move('A/B2/F', 'A/B2/Y');
+  sbox.simple_commit()
+
+  # Now try to merge B2 into B and cause a text conflict, property conflict,
+  # and tree conflict
+  sbox.simple_update()
+
+  # Stuff missing here:
+  # .
+  # .
+  # .
+
+  svntest.actions.run_and_verify_merge2(B_path, None, None,
+                                        B2_url, None,
+                                        expected_output,
+                                        expected_mergeinfo_output,
+                                        expected_elision_output,
+                                        expected_disk,
+                                        expected_status,
+                                        expected_skip,
+                                        [], False, False, False)
+
+  # Verify 'svn info --xml' on the text conflicted case
+
+  exit_code, output, error = svntest.actions.run_and_verify_svn(None,
+                                                                [], 'info',
+                                                                lambda_path,
+                                                                '--xml')
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '3',
+                                    'side'         : 'source-left',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B/lambda',
+                                    'repos-url'    : '.*',
+                                   },
+                       )])
+
+  verify_xml_elements(output,
+                      [('version', {'revision'     : '4',
+                                    'side'         : 'source-right',
+                                    'kind'         : 'file',
+                                    'path-in-repos': 'A/B2/lambda',
+                                    'repos-url'    : '.*',
+                                   },
+                       )])
+
+  # Verify 'svn info --xml' on the property conflicted case
+
+  # Stuff missing here:
+  # .
+  # .
+  # .
+
+  # Verify 'svn info --xml' on the tree conflicted case
+
+  # Stuff missing here:
+  # .
+  # .
+  # .
