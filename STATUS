@@ -32,24 +32,6 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
- * r1880192
-   Fix issue #4862 "Merge: the resulting mergeinfo is non-deterministic".
-   Justification:
-     Non-deterministic merge result is bad.
-   Depends:
-     r1878997, r1879192, r1879474, r1879959 (Fix issue #4859)
-   Votes:
-     +1: julianfoad, stsp, jcorvel
-
- * r1881985, r1882105
-   Follow up to r1880192: Fix an EOL issue in test on Windows.
-   Justification:
-     We should test correctly on Windows environment, too.
-   Depends:
-     r1880192
-   Votes:
-     +1: jcorvel, stsp, hartmannathan
-
  * r1835049, r1882326
    Fix issue #4762 "authz doesn't combine global and repository rules"
    Justification:
@@ -80,3 +62,21 @@ Approved changes:
      release.py didn't catch this error when 1.14.0-rc1 release was created
    Votes:
      +1: stsp, jamessan, hartmannathan
+
+ * r1880192
+   Fix issue #4862 "Merge: the resulting mergeinfo is non-deterministic".
+   Justification:
+     Non-deterministic merge result is bad.
+   Depends:
+     r1878997, r1879192, r1879474, r1879959 (Fix issue #4859)
+   Votes:
+     +1: julianfoad, stsp, jcorvel
+
+ * r1881985, r1882105
+   Follow up to r1880192: Fix an EOL issue in test on Windows.
+   Justification:
+     We should test correctly on Windows environment, too.
+   Depends:
+     r1880192
+   Votes:
+     +1: jcorvel, stsp, hartmannathan
