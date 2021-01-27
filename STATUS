@@ -25,13 +25,6 @@ Candidate changes:
      +1: stsp
      +1: julianfoad (without r1875188,r1875189)
 
- * r1875726
-   Error out if generating SWIG-related files fails in autogen.sh --release
-   Justification:
-     release.py didn't catch this error when 1.14.0-rc1 release was created
-   Votes:
-     +1: stsp, jamessan
-
  * r1875602
    Remove incorrect include paths from svn_cv_ruby_includes.
    Justification:
@@ -82,3 +75,10 @@ Approved changes:
      Fixes a crash seen when using git-svn with kwallet
    Votes:
      +1: jamessan, stsp, hartmannathan
+
+ * r1875726
+   Error out if generating SWIG-related files fails in autogen.sh --release
+   Justification:
+     release.py didn't catch this error when 1.14.0-rc1 release was created
+   Votes:
+     +1: stsp, jamessan, hartmannathan
