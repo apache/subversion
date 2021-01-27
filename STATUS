@@ -39,9 +39,7 @@ Candidate changes:
    Depends:
      r1878997, r1879192, r1879474, r1879959 (Fix issue #4859)
    Votes:
-     +1: julianfoad, stsp
-     -1: jcorvel (test FAIL on Windows;
-                  +1 if r1881985 group (see below) is backported too)
+     +1: julianfoad, stsp, jcorvel
 
  * r1881985, r1882105
    Follow up to r1880192: Fix an EOL issue in test on Windows.
