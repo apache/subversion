@@ -25,13 +25,6 @@ Candidate changes:
      +1: stsp
      +1: julianfoad (without r1875188,r1875189)
 
- * r1875680
-   Construct KAboutData using QString rather than QStringLiteral
-   Justification:
-     Fixes a crash seen when using git-svn with kwallet
-   Votes:
-     +1: jamessan, stsp
-
  * r1875726
    Error out if generating SWIG-related files fails in autogen.sh --release
    Justification:
@@ -82,3 +75,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1875680
+   Construct KAboutData using QString rather than QStringLiteral
+   Justification:
+     Fixes a crash seen when using git-svn with kwallet
+   Votes:
+     +1: jamessan, stsp, hartmannathan
