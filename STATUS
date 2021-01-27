@@ -39,13 +39,6 @@ Candidate changes:
    Votes:
      +1: stsp, jamessan
 
- * r1874850, r1885795
-   Update copyright year to 2020 and then to 2021.
-   Justification:
-     The future is here!
-   Votes:
-     +1: stsp, jcorvel
-
  * r1875602
    Remove incorrect include paths from svn_cv_ruby_includes.
    Justification:
@@ -89,3 +82,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1874850, r1885795
+   Update copyright year to 2020 and then to 2021.
+   Justification:
+     The future is here!
+   Votes:
+     +1: stsp, jcorvel, jamessan
+
