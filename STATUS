@@ -52,12 +52,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1877794
-   Use Doxygen comment leader for comments with doxygen syntax.
-   Justification:
-     Improve $EDITOR's syntax highlighting.
-   Votes:
-     +0: danielsh
-     +1: brane, jamessan
-
