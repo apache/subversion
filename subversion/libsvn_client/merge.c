@@ -7875,18 +7875,23 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
                                     apr_pool_t *pool)
 {
   apr_pool_t *iterpool;
-  apr_hash_index_t *hi;
+  apr_array_header_t *a;
+  int i;
 
   if (!merge_b->paths_with_new_mergeinfo || merge_b->dry_run)
     return SVN_NO_ERROR;
 
   /* Iterate over each path with explicit mergeinfo added by the merge. */
+  /* Iterate over the paths in a parent-to-child order so that inherited
+   * mergeinfo is propagated consistently from each parent path to its
+   * children. (Issue #4862) */
+  a = svn_sort__hash(merge_b->paths_with_new_mergeinfo,
+                     svn_sort_compare_items_as_paths, pool);
   iterpool = svn_pool_create(pool);
-  for (hi = apr_hash_first(pool, merge_b->paths_with_new_mergeinfo);
-       hi;
-       hi = apr_hash_next(hi))
+  for (i = 0; i < a->nelts; i++)
     {
-      const char *abspath_with_new_mergeinfo = apr_hash_this_key(hi);
+      svn_sort__item_t *item = &APR_ARRAY_IDX(a, i, svn_sort__item_t);
+      const char *abspath_with_new_mergeinfo = item->key;
       svn_mergeinfo_t path_inherited_mergeinfo;
       svn_mergeinfo_t path_explicit_mergeinfo;
       svn_client__merge_path_t *new_child;
