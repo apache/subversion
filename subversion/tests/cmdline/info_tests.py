@@ -864,12 +864,9 @@ def info_tree_conflict_source(sbox):
   sbox.simple_update()
 
   # Rev 3:
-  # - edit A/B/lambda
-  #   (tests text_conflicted case of svn_cl__append_conflict_info_xml())
-  # - add property to A/B/E/alpha
-  #   (tests props_conflicted case of svn_cl__append_conflict_info_xml())
-  # - rename A/B/F to A/B/Z
-  #   (tests the case in append_tree_conflict_info_xml())
+  # edit A/B/lambda to test text conflict case
+  # add property to A/B/E/alpha to test property conflict case
+  # rename A/B/F to A/B/Z to test tree conflict case
 
   svntest.main.file_write(lambda_path, 'B/lambda side of conflict')
   sbox.simple_propset('blue', 'azul', 'A/B/E/alpha')
@@ -886,7 +883,7 @@ def info_tree_conflict_source(sbox):
   sbox.simple_move('A/B2/F', 'A/B2/Y');
   sbox.simple_commit()
 
-  # Now merge B2 into B and cause a text conflict, property conflict, and
+  # Now merge B2 into B to cause a text conflict, property conflict, and
   # tree conflict
   sbox.simple_update()
 
