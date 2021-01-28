@@ -38,6 +38,18 @@ Candidate changes:
    Votes:
      +1: futatuki, stsp
 
+ * r1881534 (without CRLF problem)
+   Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
+   Justification:
+     Unblocks cross-compiling SVN.
+   Notes:
+     Replacement for veto-blocked r1881534 group (see below) without the
+     inconsistent line endings that instigated said veto blockage.
+   Branch:
+     1.14.x-r1881534-no-crlf
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
