@@ -48,12 +48,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1881985, r1882105
-   Follow up to r1880192: Fix an EOL issue in test on Windows.
-   Justification:
-     We should test correctly on Windows environment, too.
-   Depends:
-     r1880192
-   Votes:
-     +1: jcorvel, stsp, hartmannathan
