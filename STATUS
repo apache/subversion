@@ -58,7 +58,7 @@ Candidate changes:
    Depends:
      r1882234
    Votes:
-     +1: jcorvel
+     +1: jcorvel, futatuki
 
  * r1885983
    Fix issue #4869: 'svn info --xml' gives wrong 'source-right' of conflict
