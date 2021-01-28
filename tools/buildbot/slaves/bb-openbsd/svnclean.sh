@@ -40,6 +40,11 @@ if [ -d .svn ]; then
   branch="${url##*/}"
   if [ "$lastchangedrev" != "$newlastchangedrev" ]; then
     (cd .. && gmake BRANCH="$branch" reset clean)
+    rm -f ../prefix/httpd/conf/httpd-svn-check-*.conf
+    rm -f ../prefix/httpd/conf/httpd-svn-proxy-*.conf
+    rm -f ../prefix/httpd/conf/httpd-svn-check-users
+    rm -f ../prefix/httpd/conf/httpd-svn-check-groups
+    rm -f ../prefix/httpd/conf/dontdothat
   else
     (cd .. && gmake BRANCH="$branch" svn-reset svn-bindings-reset svn-clean)
   fi
