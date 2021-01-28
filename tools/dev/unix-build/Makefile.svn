@@ -87,8 +87,12 @@ else
 BRANCH		= $(TAG)
 endif
 WC		?= $(BRANCH)
-BRANCH_MAJOR	= $(shell echo $(BRANCH) | \
-			sed -e 's/\([0-9]\)\.\([0-9]\)\.[x0-9].*$$/\1.\2/')
+BRANCH_MAJOR	:= $(shell echo $(BRANCH) | sed -E 's/([0-9]+)\.([0-9]+)\..*/\1.\2/')
+ifeq ($(BRANCH_MAJOR), $(filter 1.5 1.6 1.7 1.8 1.9 1.10 1.11 1.12 1.13, $(BRANCH_MAJOR)))
+PYTHON = python2
+else
+PYTHON = python
+endif
 SVN_REL_WC	= svn-$(WC)
 SVN_WC		= $(PWD)/$(SVN_REL_WC)
 PREFIX		= $(PWD)/prefix
@@ -114,6 +118,7 @@ LIBMAGIC_VER	= 5.30
 RUBY_VER	= 2.4.4
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 3.7.5
+PYTHON2_VER	= 2.7.13
 PY3C_VER	= 1.1
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.19.8.1
@@ -131,6 +136,7 @@ LIBMAGIC_DIST	= file-$(LIBMAGIC_VER).tar.gz
 RUBY_DIST	= ruby-$(RUBY_VER).tar.gz
 BZ2_DIST	= bzip2-$(BZ2_VER).tar.gz
 PYTHON_DIST	= Python-$(PYTHON_VER).tgz
+PYTHON2_DIST	= Python-$(PYTHON2_VER).tgz
 PY3C_DIST	= py3c-$(PY3C_VER).tar.gz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
@@ -148,6 +154,7 @@ SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773
 SHA256_${RUBY_DIST} = 254f1c1a79e4cc814d1e7320bc5bdd995dc57e08727d30a767664619a9c8ae5a
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
 SHA256_${PYTHON_DIST} = 8ecc681ea0600bbfb366f2b173f727b205bb825d93d2f0b286bc4e58d37693da
+SHA256_${PYTHON2_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${PY3C_DIST} = c7ffc22bc92dded0ca859db53ef3a0b466f89a9f8aad29359c9fe4ff18ebdd20
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
 SHA256_${GETTEXT_DIST} = ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43
@@ -178,6 +185,7 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(RUBY_DIST) \
 		$(DISTDIR)/$(BZ2_DIST) \
 		$(DISTDIR)/$(PYTHON_DIST) \
+		$(DISTDIR)/$(PYTHON2_DIST) \
 		$(DISTDIR)/$(PY3C_DIST) \
 		$(DISTDIR)/$(JUNIT_DIST) \
 		$(DISTDIR)/$(GETTEXT_DIST)
@@ -202,6 +210,7 @@ LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.4/$(RUBY_DIST)
 BZ2_URL		= https://stsp.name/distfiles/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
+PYTHON2_URL	= https://python.org/ftp/python/$(PYTHON2_VER)/$(PYTHON2_DIST)
 PY3C_URL	= https://stsp.name/distfiles/py3c-${PY3C_VER}.tar.gz
 JUNIT_URL	= https://stsp.name/distfiles/$(JUNIT_DIST)
 GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
@@ -224,6 +233,7 @@ LIBMAGIC_SRCDIR	= $(SRCDIR)/file-$(LIBMAGIC_VER)
 RUBY_SRCDIR	= $(SRCDIR)/ruby-$(RUBY_VER)
 BZ2_SRCDIR	= $(SRCDIR)/bzip2-$(BZ2_VER)
 PYTHON_SRCDIR	= $(SRCDIR)/Python-$(PYTHON_VER)
+PYTHON2_SRCDIR	= $(SRCDIR)/Python-$(PYTHON2_VER)
 PY3C_SRCDIR	= $(SRCDIR)/py3c-$(PY3C_VER)
 GETTEXT_SRCDIR	= $(SRCDIR)/gettext-$(GETTEXT_VER)
 LZ4_SRCDIR	= ${SRCDIR}/lz4-$(LZ4_VER)
@@ -245,6 +255,7 @@ LIBMAGIC_OBJDIR	= $(OBJDIR)/file-$(LIBMAGIC_VER)
 RUBY_OBJDIR	= $(OBJDIR)/ruby-$(RUBY_VER)
 BZ2_OBJDIR	= $(OBJDIR)/bzip2-$(BZ2_VER)
 PYTHON_OBJDIR	= $(OBJDIR)/python-$(PYTHON_VER)
+PYTHON2_OBJDIR	= $(OBJDIR)/python-$(PYTHON2_VER)
 PY3C_OBJDIR	= $(OBJDIR)/py3c-$(PY3C_VER)
 GETTEXT_OBJDIR	= $(OBJDIR)/gettext-$(GETTEXT_VER)
 LZ4_OBJDIR	= ${OBJDIR}/lz4-$(LZ4_VER)
@@ -260,10 +271,10 @@ PROFILE_CFLAGS=-pg
 endif
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/python/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/svn-$(WC)/lib
 
 # We need this to make sure some targets below pick up the right pkg-config files
-PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFIX)/serf/lib/pkgconfig:$(PREFIX)/sqlite/lib/pkgconfig:$(PREFIX)/ruby/lib/pkgconfig:$(PREFIX)/python/lib/pkgconfig:$(PREFIX)/lz4/lib/pkgconfig
+PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFIX)/serf/lib/pkgconfig:$(PREFIX)/sqlite/lib/pkgconfig:$(PREFIX)/ruby/lib/pkgconfig:$(PREFIX)/lz4/lib/pkgconfig
 
 
 #######################################################################
@@ -275,20 +286,20 @@ PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFI
 all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	pcre-install httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
-	ruby-install bz2-install python-install py3c-retrieve gettext-install \
-	lz4-install svn-install svn-bindings-install
+	ruby-install bz2-install python-install python2-install py3c-retrieve \
+	gettext-install lz4-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	pcre-reset httpd-reset neon-reset serf-reset serf-old-reset \
 	sqlite-reset cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	bz2-reset gettext-reset lz4-reset svn-reset
+	python2-reset bz2-reset gettext-reset lz4-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean pcre-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
-	libmagic-clean ruby-clean bz2-clean python-clean gettext-clean \
-	lz4-clean svn-clean
+	libmagic-clean ruby-clean bz2-clean python-clean python2-clean \
+	gettext-clean lz4-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -1392,7 +1403,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 		CC=$(CC) CXX=$(CXX) \
 		CPPFLAGS="-I$(PREFIX)/bz2/include" \
 		LDFLAGS="-Wl,-rpath=$(PREFIX)/python/lib -L$(PREFIX)/bz2/lib" \
-		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python/lib:$$LD_LIBRARY_PATH" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(PYTHON_SRCDIR)/configure \
 		--prefix=$(PREFIX)/python \
@@ -1407,7 +1418,7 @@ $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 $(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
 	(cd $(PYTHON_OBJDIR) && \
 		env MAKEFLAGS= \
-		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python/lib:$$LD_LIBRARY_PATH" \
 		make -j${MAKE_JOBS})
 	touch $@
 
@@ -1415,9 +1426,96 @@ $(PYTHON_OBJDIR)/.compiled: $(PYTHON_OBJDIR)/.configured
 $(PYTHON_OBJDIR)/.installed: $(PYTHON_OBJDIR)/.compiled
 	(cd $(PYTHON_OBJDIR) && \
 		env MAKEFLAGS= \
-		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python/lib:$$LD_LIBRARY_PATH" \
 		make install)
 	ln -sf $(PREFIX)/python/bin/python3 $(PREFIX)/python/bin/python
+	touch $@
+
+#######################################################################
+# python 2
+#######################################################################
+
+python2-retrieve:	$(PYTHON2_OBJDIR)/.retrieved
+python2-configure:	$(PYTHON2_OBJDIR)/.configured
+python2-compile:	$(PYTHON2_OBJDIR)/.compiled
+python2-install:	$(PYTHON2_OBJDIR)/.installed
+python2-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(PYTHON2_OBJDIR)/$(f);)
+
+python2-clean:
+	-(cd $(PYTHON2_OBJDIR) && env MAKEFLAGS= make distclean)
+
+# fetch distfile for python 2
+$(DISTDIR)/$(PYTHON2_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(PYTHON2_URL)
+
+# https://bugs.python.org/issue12560
+$(DISTDIR)/python-issue12560.patch:
+	cd $(DISTDIR) && $(FETCH_CMD) -O "$@" \
+		https://hg.python.org/cpython/raw-rev/32cc37a89b58
+
+# retrieve python 2
+#
+$(PYTHON2_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON2_DIST) $(DISTDIR)/python-issue12560.patch
+	$(call do_check_sha256,$(PYTHON2_DIST))
+	[ -d $(PYTHON2_OBJDIR) ] || mkdir -p $(PYTHON2_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON2_DIST)
+	# Make setup.py use our own dependencies instead of system ones
+	sed -e "s#sqlite_inc_paths = \[ '/usr/include',#sqlite_inc_paths = [ '$(PREFIX)/sqlite/include',#" \
+		-e "s#'/usr/include/db4'#'$(PREFIX)/bdb/include'#" \
+		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|pass #\1|" \
+		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|pass #\1|" \
+		-e "s#find_library_file(lib_dirs, 'bz2'#find_library_file(['$(PREFIX)/bz2/lib'] + lib_dirs, 'bz2'#" \
+		< $(PYTHON2_SRCDIR)/setup.py \
+		> $(PYTHON2_SRCDIR)/setup.py.patched
+	mv $(PYTHON2_SRCDIR)/setup.py.patched $(PYTHON2_SRCDIR)/setup.py
+	chmod +x $(PYTHON2_SRCDIR)/setup.py
+	cd $(PYTHON2_SRCDIR) && patch -p1 < $(DISTDIR)/python-issue12560.patch
+	mkdir -p $(PYTHON2_OBJDIR)/bin
+	ln -s "`which python2`" $(PYTHON2_OBJDIR)/bin/python
+	touch $@
+
+# configure python 2
+ifdef PROFILE
+PYTHON2_PROFILING=--enable-profiling
+endif
+$(PYTHON2_OBJDIR)/.configured: $(PYTHON2_OBJDIR)/.retrieved \
+	$(BZ2_OBJDIR)/.installed
+	cd $(PYTHON2_OBJDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
+		CC=$(CC) CXX=$(CXX) \
+		CPPFLAGS="-I$(PREFIX)/bz2/include" \
+		LDFLAGS="-Wl,-rpath=$(PREFIX)/python2/lib -L$(PREFIX)/bz2/lib" \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python2/lib:$$LD_LIBRARY_PATH" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+		PATH=$(PYTHON2_OBJDIR)/bin:$$PATH \
+		$(PYTHON2_SRCDIR)/configure \
+		--prefix=$(PREFIX)/python2 \
+		--enable-shared \
+		--with-system-expat \
+		--with-dbmliborder=bdb \
+		--without-pymalloc \
+		$(PYTHON2_PROFILING)
+	touch $@
+
+# compile python 2
+$(PYTHON2_OBJDIR)/.compiled: $(PYTHON2_OBJDIR)/.configured
+	(cd $(PYTHON2_OBJDIR) && \
+		env MAKEFLAGS= \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python2/lib:$$LD_LIBRARY_PATH" \
+		PATH=$(PYTHON2_OBJDIR)/bin:$$PATH \
+		make -j${MAKE_JOBS})
+	touch $@
+
+# install python 2
+$(PYTHON2_OBJDIR)/.installed: $(PYTHON2_OBJDIR)/.compiled
+	(cd $(PYTHON2_OBJDIR) && \
+		env MAKEFLAGS= \
+		LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/python2/lib:$$LD_LIBRARY_PATH" \
+		PATH=$(PYTHON2_OBJDIR)/bin:$$PATH \
+		make install)
+	ln -sf $(PREFIX)/python2/bin/python2 $(PREFIX)/python2/bin/python
 	touch $@
 
 #######################################################################
@@ -1628,7 +1726,7 @@ DISABLE_NEON_VERSION_CHECK=--disable-neon-version-check
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
-else ifeq ($(BRANCH_MAJOR), $(filter $(BRANCH_MAJOR), 1.8 1.9))
+else ifeq ($(BRANCH_MAJOR), $(filter 1.8 1.9, $(BRANCH_MAJOR)))
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1639,7 +1737,7 @@ MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
-else # 1.10
+else # 1.10, 1.11, 1.12, 1.13, 1.14, trunk
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1697,11 +1795,11 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			CC=$(CC) CXX=$(CXX) \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
-			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$$LD_LIBRARY_PATH" \
-			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
-			PYTHON=$(PREFIX)/python/bin/python3 \
+			LD_LIBRARY_PATH="$(LD_LIBRARY_PATH):$(PREFIX)/$(PYTHON)/lib:$$LD_LIBRARY_PATH" \
+			PKG_CONFIG_PATH=$(PKG_CONFIG_PATH):$(PREFIX)/$(PYTHON)/lib/pkgconfig \
+			PYTHON=$(PREFIX)/$(PYTHON)/bin/python \
 			GREP="`which grep`" \
-			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/python/bin:$(PREFIX)/gettext/bin:$$PATH \
+			PATH=$(PREFIX)/ruby/bin:$(PREFIX)/$(PYTHON)/bin:$(PREFIX)/gettext/bin:$$PATH \
 			$(SVN_SRCDIR)/configure \
 			--enable-maintainer-mode \
 			--prefix="$(SVN_PREFIX)" \
