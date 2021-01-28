@@ -55,6 +55,8 @@ Candidate changes:
    Justification:
      Invoking editor with special character or spaces in path is broken
      on Windows.
+   Depends:
+     r1882234
    Votes:
      +1: jcorvel
 
