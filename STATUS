@@ -50,6 +50,14 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1885953
+   Fix file name encoding and quoting when invoking editor on Windows.
+   Justification:
+     Invoking editor with special character or spaces in path is broken
+     on Windows.
+   Votes:
+     +1: jcorvel
+
 Veto-blocked changes:
 =====================
 
