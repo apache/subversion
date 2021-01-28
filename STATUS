@@ -72,7 +72,7 @@ Candidate changes:
    Justification:
      Editor invocation should work correctly in any valid locale.
    Votes:
-     +1: futatuki
+     +1: futatuki, jcorvel
 
 Veto-blocked changes:
 =====================
