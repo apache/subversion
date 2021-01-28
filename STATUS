@@ -43,6 +43,15 @@ Candidate changes:
    Votes:
      +1: stsp, jcorvel
 
+ * r1885983
+   Fix issue #4869: 'svn info --xml' gives wrong 'source-right' of conflict
+   Justification:
+     Bugfix; 'svn info --xml' should give correct results; user complained.
+   Branch:
+     1.10.x-r1885983
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
