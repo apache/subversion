@@ -558,7 +558,7 @@ class SubversionClientTestCase(unittest.TestCase):
 
     # Using str(unicode) and check if it uses 'utf-8' codecs on Python 3
     # (or Python 2, only if its default encoding is 'utf-8') 
-    if utils.IS_PY3 or not utils.is_defaultencoding_utf8():
+    if utils.IS_PY3 or utils.is_defaultencoding_utf8():
       # prop_val3 = '(checkmark)UNICODE'
       prop_val3_str = (u'\u2705\U0001F1FA\U0001F1F3\U0001F1EE'
                        u'\U0001F1E8\U0001F1F4\U0001F1E9\U0001F1EA')
