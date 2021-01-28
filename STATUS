@@ -65,6 +65,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1882234
+   Fix file name to edit from utf8 to local style.
+   Justification:
+     Editor invocation should work correctly in any valid locale.
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
