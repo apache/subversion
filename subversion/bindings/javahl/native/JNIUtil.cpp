@@ -551,6 +551,11 @@ std::string JNIUtil::makeSVNErrorMessage(svn_error_t *err,
                                          jstring *jerror_message,
                                          jobject *jmessage_stack)
 {
+  // This function may be called with a pending Java exception.
+  // It is incorrect to call Java methods (see code below) with a pending
+  // exception. Stash it away until this function exits.
+  StashException stash(getEnv());
+
   if (jerror_message)
     *jerror_message = NULL;
   if (jmessage_stack)
@@ -761,16 +766,27 @@ namespace {
 const char* known_exception_to_cstring(apr_pool_t* pool)
 {
   JNIEnv *env = JNIUtil::getEnv();
+
+  // This function may be called with a pending Java exception.
+  // It is incorrect to call Java methods (see code below) with a pending
+  // exception. Stash it away until this function exits.
   jthrowable t = env->ExceptionOccurred();
+  StashException stashed(env);
+
   jclass cls = env->GetObjectClass(t);
 
   jstring jclass_name;
   {
     jmethodID mid = env->GetMethodID(cls, "getClass", "()Ljava/lang/Class;");
     jobject clsobj = env->CallObjectMethod(t, mid);
+    if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
+
     jclass basecls = env->GetObjectClass(clsobj);
     mid = env->GetMethodID(basecls, "getName", "()Ljava/lang/String;");
     jclass_name = (jstring) env->CallObjectMethod(clsobj, mid);
+    if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
   }
 
   jstring jmessage;
@@ -778,6 +794,8 @@ const char* known_exception_to_cstring(apr_pool_t* pool)
     jmethodID mid = env->GetMethodID(cls, "getMessage",
                                      "()Ljava/lang/String;");
     jmessage = (jstring) env->CallObjectMethod(t, mid);
+    if (JNIUtil::isJavaExceptionThrown())
+      return NULL;
   }
 
   JNIStringHolder class_name(jclass_name);
@@ -1168,4 +1186,29 @@ jthrowable JNIUtil::unwrapJavaException(const svn_error_t *err)
         return NULL;
     return
         WrappedException::get_exception(err->pool);
+}
+
+StashException::StashException(JNIEnv* env)
+{
+  m_env = env;
+  m_stashed = NULL;
+  stashException();
+}
+
+StashException::~StashException()
+{
+  if (m_stashed)
+    m_env->Throw(m_stashed);
+}
+
+void StashException::stashException()
+{
+  jthrowable jexc = m_env->ExceptionOccurred();
+  if (!jexc)
+    return;
+
+  if (!m_stashed)
+    m_stashed = jexc;
+
+  m_env->ExceptionClear();
 }
