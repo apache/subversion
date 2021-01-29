@@ -5,11 +5,14 @@
 #   https://subversion.apache.org/issue-XXXX
 
 Version 1.10.7
-(?? ??? 2021, from /branches/1.10.x)
+(10 Feb 2021, from /branches/1.10.x)
  User-visible changes:
   - Client-side bugfixes:
     * Fix 'svn patch' setting mode 0600 on patched files with props (r1864440)
     * Fix invalid SQL quoting in working copy upgrade system (r1879198)
+    * Fix non-deterministic generation of mergeinfo (issue #4862)
+    * Fix a crash seen when using git-svn with kwallet (r1875680)
+    * Fix merge removing a folder with non-inheritable mergeinfo (issue #4859)
 
   - Server-side bugfixes:
     * mod_dav_svn: install cleanup handler for FS warning logging (r1865266)
@@ -20,6 +23,7 @@ Version 1.10.7
  Developer-visible changes:
     * Fix Requires(.private) fields in pkg-config files (r1863987, -90)
     * Fix crash in JavaHL JNI wrapper caused by object lifetimes (r1880886)
+    * Fix an EOL issue in tests on Windows (r1881985 et al)
 
 Version 1.10.6
 (24 Jul 2019, from /branches/1.10.x)
