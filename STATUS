@@ -57,7 +57,7 @@ Candidate changes:
    Justification:
      Missing return value check. C is hard.
    Votes:
-     +1: stsp
+     +1: stsp, hartmannathan
 
 Veto-blocked changes:
 =====================
