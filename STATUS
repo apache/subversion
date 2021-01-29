@@ -50,29 +50,12 @@ Candidate changes:
    Votes:
      +1: hartmannathan, stsp
 
- * r1885953
-   Fix file name encoding and quoting when invoking editor on Windows.
-   Justification:
-     Invoking editor with special character or spaces in path is broken
-     on Windows.
-   Depends:
-     r1882234
-   Votes:
-     +1: jcorvel, futatuki
-
  * r1885983
    Fix issue #4869: 'svn info --xml' gives wrong 'source-right' of conflict
    Justification:
      Bugfix; 'svn info --xml' should give correct results; user complained.
    Votes:
      +1: hartmannathan, stsp
-
- * r1882234
-   Fix file name to edit from utf8 to local style.
-   Justification:
-     Editor invocation should work correctly in any valid locale.
-   Votes:
-     +1: futatuki, jcorvel
 
 Veto-blocked changes:
 =====================
@@ -90,3 +73,20 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1882234
+   Fix file name to edit from utf8 to local style.
+   Justification:
+     Editor invocation should work correctly in any valid locale.
+   Votes:
+     +1: futatuki, jcorvel, stsp
+
+ * r1885953
+   Fix file name encoding and quoting when invoking editor on Windows.
+   Justification:
+     Invoking editor with special character or spaces in path is broken
+     on Windows.
+   Depends:
+     r1882234
+   Votes:
+     +1: jcorvel, futatuki, stsp
