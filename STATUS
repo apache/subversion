@@ -50,13 +50,6 @@ Candidate changes:
    Votes:
      +1: hartmannathan, stsp
 
- * r1886029
-   Fix several crashes and JNI warnings in javahl TunnelAgent.
-   Justification:
-     JavaHL shouldn't crash.
-   Votes:
-     +1: jcorvel
-
 Veto-blocked changes:
 =====================
 
@@ -104,3 +97,10 @@ Approved changes:
      Bugfix; 'svn info --xml' should give correct results; user complained.
    Votes:
      +1: hartmannathan, stsp, jcorvel
+
+ * r1886029
+   Fix several crashes and JNI warnings in javahl TunnelAgent.
+   Justification:
+     JavaHL shouldn't crash.
+   Votes:
+     +1: jcorvel, amiloslavskiy
