@@ -9,7 +9,7 @@ Version 1.15.0
 https://svn.apache.org/repos/asf/subversion/tags/1.15.0
 
 Version 1.14.1
-(?? ??? 2021, from /branches/1.14.x)
+(10 Feb 2021, from /branches/1.14.x)
  User-visible changes:
   - Client-side improvements and bugfixes:
     * Fix non-deterministic generation of mergeinfo (issue #4862)
@@ -262,7 +262,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
 
 
 Version 1.10.7
-(?? ??? 2021, from /branches/1.10.x)
+(10 Feb 2021, from /branches/1.10.x)
  User-visible changes:
   - Client-side bugfixes:
     * Fix 'svn patch' setting mode 0600 on patched files with props (r1864440)
