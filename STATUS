@@ -52,15 +52,15 @@ Candidate changes:
    Votes:
      +1: hartmannathan, stsp
 
- * r1886019
-   Fix a potential NULL dereference in the config file parser.
-   Justification:
-     Missing return value check. C is hard.
-   Votes:
-     +1: stsp, hartmannathan
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1886019
+   Fix a potential NULL dereference in the config file parser.
+   Justification:
+     Missing return value check. C is hard.
+   Votes:
+     +1: stsp, hartmannathan, jcorvel
