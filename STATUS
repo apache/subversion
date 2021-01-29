@@ -48,7 +48,7 @@ Candidate changes:
    Branch:
      1.14.x-r1881534-no-crlf
    Votes:
-     +1: hartmannathan
+     +1: hartmannathan, stsp
 
  * r1885953
    Fix file name encoding and quoting when invoking editor on Windows.
@@ -65,7 +65,7 @@ Candidate changes:
    Justification:
      Bugfix; 'svn info --xml' should give correct results; user complained.
    Votes:
-     +1: hartmannathan
+     +1: hartmannathan, stsp
 
  * r1882234
    Fix file name to edit from utf8 to local style.
