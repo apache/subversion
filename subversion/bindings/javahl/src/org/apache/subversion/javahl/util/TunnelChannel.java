@@ -50,6 +50,39 @@ abstract class TunnelChannel implements Channel
             nativeClose(channel);
     }
 
+    /**
+     * Wait for current read/write to complete, then close() channel.
+     * Compared to close(), it has the following differences:
+     * <ul>
+     *   <li>
+     *     Prevents race condition where read/write could use incorrect file :
+     *     <ol>
+     *       <li>Writer thread extracts OS file descriptor from nativeChannel.</li>
+     *       <li>Writer thread calls OS API to write to file, passing file descriptor.</li>
+     *       <li>Writer thread is interrupted.</li>
+     *       <li>Closer thread closes OS file descriptor. The file descriptor number is now free.</li>
+     *       <li>Unrelated thread opens a new file. OS reuses the old file descriptor (currently free).</li>
+     *       <li>Writer thread resumes inside OS API to write to file.</li>
+     *       <li>Writer thread writes to unrelated file, corrupting it with unexpected data.</li>
+     *     </ol>
+     *   </li>
+     *   <li>
+     *     It can no longer cancel a read/write operation already in progress.
+     *     The native implementation closes the other end of the pipe, breaking the pipe,
+     *     which prevents the risk of never-completing read/write.
+     *   </li>
+     * <ul/>
+     *
+     * @throws IOException
+     */
+    public void syncClose() throws IOException
+    {
+        synchronized (nativeChannel)
+        {
+            close();
+        }
+    }
+
     private native static void nativeClose(long nativeChannel)
         throws IOException;
 

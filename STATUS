@@ -66,10 +66,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1886029
-   Fix several crashes and JNI warnings in javahl TunnelAgent.
-   Justification:
-     JavaHL shouldn't crash.
-   Votes:
-     +1: jcorvel, amiloslavskiy

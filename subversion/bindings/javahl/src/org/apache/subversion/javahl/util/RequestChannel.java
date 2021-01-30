@@ -42,15 +42,18 @@ class RequestChannel
 
     public int read(ByteBuffer dst) throws IOException
     {
-        long channel = nativeChannel.get();
-        if (channel != 0)
-            try {
-                return nativeRead(channel, dst);
-            } catch (IOException ex) {
-                nativeChannel.set(0); // Close the channel
-                throw ex;
-            }
-        throw new ClosedChannelException();
+        synchronized (nativeChannel)
+        {
+            long channel = nativeChannel.get();
+            if (channel != 0)
+                try {
+                    return nativeRead(channel, dst);
+                } catch (IOException ex) {
+                    nativeChannel.set(0); // Close the channel
+                    throw ex;
+                }
+            throw new ClosedChannelException();
+        }
     }
 
     private static native int nativeRead(long nativeChannel, ByteBuffer dst)
