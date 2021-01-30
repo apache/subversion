@@ -67,16 +67,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1885953
-   Fix file name encoding and quoting when invoking editor on Windows.
-   Justification:
-     Invoking editor with special character or spaces in path is broken
-     on Windows.
-   Depends:
-     r1882234
-   Votes:
-     +1: jcorvel, futatuki, stsp
-
  * r1886019
    Fix a potential NULL dereference in the config file parser.
    Justification:
