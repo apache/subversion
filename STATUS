@@ -67,13 +67,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1885983
-   Fix issue #4869: 'svn info --xml' gives wrong 'source-right' of conflict
-   Justification:
-     Bugfix; 'svn info --xml' should give correct results; user complained.
-   Votes:
-     +1: hartmannathan, stsp, jcorvel
-
  * r1886029
    Fix several crashes and JNI warnings in javahl TunnelAgent.
    Justification:
