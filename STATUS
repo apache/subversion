@@ -49,13 +49,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1886019
-   Fix a potential NULL dereference in the config file parser.
-   Justification:
-     Missing return value check. C is hard.
-   Votes:
-     +1: stsp, hartmannathan, jcorvel
-
  * r1885983
    Fix issue #4869: 'svn info --xml' gives wrong 'source-right' of conflict
    Justification:
