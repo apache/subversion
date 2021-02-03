@@ -669,7 +669,8 @@ def drop(revision_url_pattern):
   # the top -- that way we know whom to look at first for commit access
   # proposals.
   sorted_contributors = sorted(Contributor.all_contributors.values(),
-                               key = Contributor.sort_key)
+                               key=Contributor.sort_key,
+                               reverse=True)
   for c in sorted_contributors:
     if c not in seen_contributors:
       if c.score() > 0:
