@@ -721,6 +721,9 @@ def process_committers(committers):
       c.is_committer = True
       c.is_full_committer = in_full_committers
     line = committers.readline()
+  svn_role = Contributor.parse('svn-role <svnsvn{_AT_}svn-qavm.apache.org>')
+  Contributor.get(*svn_role).is_committer = True 
+  Contributor.get(*svn_role).is_full_committer = True # elide it from the listing
 
 
 def usage():
