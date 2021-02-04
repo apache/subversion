@@ -48,7 +48,7 @@ Version 1.14.1
     * Fix crash in JavaHL JNI wrapper caused by object lifetimes (r1880886)
     * autogen.sh: Remove .swig_*_checked files from release tarballs (r1878413)
     * Avoid version check for Python if --without-swig is used (r1876662)
-    * siwg-py: Fix a syntax error for Python 3.6 and later (r1885112)
+    * swig-py: Fix a syntax error for Python 3.6 and later (r1885112)
     * Fix several crashes and JNI warnings in javahl TunnelAgent (r1886029)
 
 Version 1.14.0
