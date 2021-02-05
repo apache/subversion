@@ -7921,8 +7921,8 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
   if (!merge_b->paths_with_new_mergeinfo || merge_b->dry_run)
     return SVN_NO_ERROR;
 
-  /* Iterate over each path with explicit mergeinfo added by the merge. */
-  /* Iterate over the paths in a parent-to-child order so that inherited
+  /* Iterate over each path with explicit mergeinfo added by the merge.
+   * Iterate in a parent-to-child order so that inherited
    * mergeinfo is propagated consistently from each parent path to its
    * children. (Issue #4862) */
   a = svn_sort__hash(merge_b->paths_with_new_mergeinfo,
