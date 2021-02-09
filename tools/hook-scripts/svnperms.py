@@ -137,7 +137,8 @@ class Permission:
                     try:
                         groupusers.extend(self._group[token[1:]])
                     except KeyError:
-                        raise Error, "group '%s' not found" % token[1:]
+                        raise Error("group '%s' not found" % \
+                                     token[1:])
                 else:
                     groupusers.append(token)
             self._group[option] = groupusers
