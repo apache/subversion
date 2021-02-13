@@ -305,21 +305,22 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
       /* Consistency checks.  Verify both files exist and match.
        * ### We could check much more. */
       {
-        apr_finfo_t finfo1, finfo2;
+        apr_finfo_t finfo;
+        apr_off_t size;
 
-        SVN_ERR(svn_stream__install_get_info(&finfo1, install_stream, APR_FINFO_SIZE,
+        SVN_ERR(svn_stream__install_get_info(NULL, &size, install_stream,
                                              scratch_pool));
 
-        SVN_ERR(svn_io_stat(&finfo2, pristine_abspath, APR_FINFO_SIZE,
+        SVN_ERR(svn_io_stat(&finfo, pristine_abspath, APR_FINFO_SIZE,
                             scratch_pool));
-        if (finfo1.size != finfo2.size)
+        if (size != finfo.size)
           {
             return svn_error_createf(
               SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
               _("New pristine text '%s' has different size: %s versus %s"),
               svn_checksum_to_cstring_display(sha1_checksum, scratch_pool),
-              apr_off_t_toa(scratch_pool, finfo1.size),
-              apr_off_t_toa(scratch_pool, finfo2.size));
+              apr_off_t_toa(scratch_pool, size),
+              apr_off_t_toa(scratch_pool, finfo.size));
           }
       }
 #endif
@@ -332,16 +333,17 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
   /* Move the file to its target location.  (If it is already there, it is
    * an orphan file and it doesn't matter if we overwrite it.) */
   {
-    apr_finfo_t finfo;
-    SVN_ERR(svn_stream__install_get_info(&finfo, install_stream,
-                                         APR_FINFO_SIZE, scratch_pool));
+    apr_off_t size;
+
+    SVN_ERR(svn_stream__install_get_info(NULL, &size, install_stream,
+                                         scratch_pool));
     SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
                                        TRUE, scratch_pool));
 
     SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_INSERT_PRISTINE));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
-    SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
+    SVN_ERR(svn_sqlite__bind_int64(stmt, 3, size));
     SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
     SVN_ERR(svn_io_set_file_read_only(pristine_abspath, FALSE, scratch_pool));

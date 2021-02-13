@@ -119,12 +119,12 @@ svn_error_t *
 svn_stream__install_delete(svn_stream_t *install_stream,
                            apr_pool_t *scratch_pool);
 
-/* Optimized apr_file_stat / apr_file_info_get operating on a closed
-   install stream */
+/* Retrieves file information for the specified install stream.
+   MTIME_P and SIZE_P both may be NULL to allow for partial queries. */
 svn_error_t *
-svn_stream__install_get_info(apr_finfo_t *finfo,
+svn_stream__install_get_info(apr_time_t *mtime_p,
+                             apr_off_t *size_p,
                              svn_stream_t *install_stream,
-                             apr_int32_t wanted,
                              apr_pool_t *scratch_pool);
 
 /* Internal version of svn_stream_from_aprfile2() supporting the

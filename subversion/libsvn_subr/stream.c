@@ -2399,18 +2399,34 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 }
 
 svn_error_t *
-svn_stream__install_get_info(apr_finfo_t *finfo,
+svn_stream__install_get_info(apr_time_t *mtime_p,
+                             apr_off_t *size_p,
                              svn_stream_t *install_stream,
-                             apr_int32_t wanted,
                              apr_pool_t *scratch_pool)
 {
   struct install_baton_t *ib = install_stream->baton;
   apr_status_t status;
+  apr_int32_t wanted;
+  apr_finfo_t finfo;
 
-  status = apr_file_info_get(finfo, wanted, ib->baton_apr.file);
+  wanted = 0;
+  if (mtime_p)
+    wanted |= APR_FINFO_MTIME;
+  if (size_p)
+    wanted |= APR_FINFO_SIZE;
 
-  if (status)
-    return svn_error_wrap_apr(status, NULL);
+  if (wanted)
+    {
+      status = apr_file_info_get(&finfo, wanted, ib->baton_apr.file);
+      if (status)
+        return svn_error_wrap_apr(status, NULL);
+    }
+
+  if (mtime_p)
+    *mtime_p = finfo.mtime;
+
+  if (size_p)
+    *size_p = finfo.size;
 
   return SVN_NO_ERROR;
 }
