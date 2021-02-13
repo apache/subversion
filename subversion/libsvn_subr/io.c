@@ -144,6 +144,14 @@
 #ifdef WIN32
 
 #if _WIN32_WINNT < 0x600 /* Does the SDK assume Windows Vista+? */
+typedef struct _FILE_BASIC_INFO {
+  LARGE_INTEGER CreationTime;
+  LARGE_INTEGER LastAccessTime;
+  LARGE_INTEGER LastWriteTime;
+  LARGE_INTEGER ChangeTime;
+  DWORD FileAttributes;
+} FILE_BASIC_INFO, *PFILE_BASIC_INFO;
+
 typedef struct _FILE_RENAME_INFO {
   BOOL   ReplaceIfExists;
   HANDLE RootDirectory;
@@ -160,6 +168,7 @@ typedef struct _FILE_ATTRIBUTE_TAG_INFO {
   DWORD ReparseTag;
 } FILE_ATTRIBUTE_TAG_INFO, *PFILE_ATTRIBUTE_TAG_INFO;
 
+#define FileBasicInfo 0
 #define FileRenameInfo 3
 #define FileDispositionInfo 4
 #define FileAttributeTagInfo 9
@@ -2316,6 +2325,62 @@ svn_io__win_rename_open_file(apr_file_t *file,
       return svn_error_wrap_apr(status, _("Can't move '%s' to '%s'"),
                                 svn_dirent_local_style(from_path, pool),
                                 svn_dirent_local_style(to_path, pool));
+    }
+
+  return SVN_NO_ERROR;
+}
+
+/* Number of micro-seconds between the beginning of the Windows epoch
+ * (Jan. 1, 1601) and the Unix epoch (Jan. 1, 1970)
+ */
+#ifndef APR_DELTA_EPOCH_IN_USEC
+#define APR_DELTA_EPOCH_IN_USEC   APR_TIME_C(11644473600000000)
+#endif
+
+svn_error_t *
+svn_io__win_set_file_basic_info(apr_file_t *file,
+                                const char *path,
+                                apr_time_t set_mtime,
+                                svn_boolean_t set_read_only,
+                                apr_pool_t *pool)
+{
+  FILE_BASIC_INFO info;
+  HANDLE hFile;
+  apr_status_t status;
+
+  apr_os_file_get(&hFile, file);
+
+  if (set_read_only)
+    {
+      status = win32_get_file_information_by_handle(hFile, FileBasicInfo,
+                                                    &info, sizeof(info));
+      if (status)
+        {
+          return svn_error_wrap_apr(status, _("Can't get attributes of '%s'"),
+                                    svn_dirent_local_style(path, pool));
+        }
+    }
+
+  info.CreationTime.QuadPart = 0;
+  info.LastAccessTime.QuadPart = 0;
+  info.ChangeTime.QuadPart = 0;
+
+  if (set_mtime >= 0)
+    info.LastWriteTime.QuadPart = (set_mtime + APR_DELTA_EPOCH_IN_USEC) * 10;
+  else
+    info.LastWriteTime.QuadPart = 0;
+
+  if (set_read_only)
+    info.FileAttributes |= FILE_ATTRIBUTE_READONLY;
+  else
+    info.FileAttributes = 0;
+
+  status = win32_set_file_information_by_handle(hFile, FileBasicInfo,
+                                                &info, sizeof(info));
+  if (status)
+    {
+      return svn_error_wrap_apr(status, _("Can't set attributes of '%s'"),
+                                svn_dirent_local_style(path, pool));
     }
 
   return SVN_NO_ERROR;

@@ -102,6 +102,24 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
+/* Configure value of the read-only attribute that will be set when
+   the stream is installed. */
+void
+svn_stream__install_stream_set_read_only(svn_stream_t *install_stream,
+                                         svn_boolean_t read_only);
+
+/* Configure value of the executable bit that will be set when the
+   stream is installed. */
+void
+svn_stream__install_stream_set_executable(svn_stream_t *install_stream,
+                                          svn_boolean_t executable);
+
+/* Configure value of the last modification time that will be set
+   when the stream is installed. */
+void
+svn_stream__install_stream_set_affected_time(svn_stream_t *install_stream,
+                                             apr_time_t mtime);
+
 /* Installs a stream created with svn_stream__create_for_install in its final
    location FINAL_ABSPATH, potentially using platform specific optimizations.
 
@@ -171,6 +189,18 @@ svn_io__win_rename_open_file(apr_file_t *file,
                              const char *from_path,
                              const char *to_path,
                              apr_pool_t *pool);
+
+/* This Windows-specific function sets the basic file information using an
+   existing file handle. If SET_MTIME is non-negative, it will be set as
+   the new LastWriteTime value. If SET_READ_ONLY is non-zero, the file
+   attributes will be updated to include FILE_ATTRIBUTE_READONLY.
+   Return SVN_ERR_UNSUPPORTED_FEATURE if not supported by OS. */
+svn_error_t *
+svn_io__win_set_file_basic_info(apr_file_t *file,
+                                const char *path,
+                                apr_time_t set_mtime,
+                                svn_boolean_t set_read_only,
+                                apr_pool_t *pool);
 
 #endif /* WIN32 */
 

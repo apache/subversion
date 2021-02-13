@@ -49,6 +49,8 @@
 
 #include "svn_private_config.h"
 
+#include "working_file_writer.h"
+
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */
@@ -503,6 +505,10 @@ svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
    Unless KEEP_RECORDED_INFO is set to TRUE, recorded size and timestamp values
    will be cleared.
 
+   If FILE_WRITER is not NULL, atomically complete installation of the file to
+   LOCAL_ABSPATH together with updating the DB.  If RECORD_FILEINFO is non-zero,
+   also record the size and timestamp values of the installed file.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -526,6 +532,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
+                         svn_wc__working_file_writer_t *file_writer,
+                         svn_boolean_t record_fileinfo,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 

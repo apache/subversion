@@ -1752,6 +1752,59 @@ svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
 }
 
 
+/* Record RECORDED_SIZE and RECORDED_TIME into top layer in NODES */
+static svn_error_t *
+db_record_fileinfo(svn_wc__db_wcroot_t *wcroot,
+                   const char *local_relpath,
+                   apr_int64_t recorded_size,
+                   apr_int64_t recorded_time,
+                   apr_pool_t *scratch_pool)
+{
+  svn_sqlite__stmt_t *stmt;
+  int affected_rows;
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
+                                    STMT_UPDATE_NODE_FILEINFO));
+  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
+                            recorded_size, recorded_time));
+  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
+
+  SVN_ERR_ASSERT(affected_rows == 1);
+
+  return SVN_NO_ERROR;
+}
+
+
+/* Install the working file provided by FILE_WRITER, optionally
+   recording its fileinfo. */
+static svn_error_t *
+install_working_file(svn_wc__db_wcroot_t *wcroot,
+                     const char *local_relpath,
+                     svn_wc__working_file_writer_t *file_writer,
+                     svn_boolean_t record_fileinfo,
+                     apr_pool_t *scratch_pool)
+{
+  const char *local_abspath;
+
+  if (record_fileinfo)
+    {
+      apr_time_t mtime;
+      apr_off_t size;
+
+      SVN_ERR(svn_wc__working_file_writer_get_info(&mtime, &size, file_writer,
+                                                   scratch_pool));
+      SVN_ERR(db_record_fileinfo(wcroot, local_relpath, size, mtime,
+                                 scratch_pool));
+    }
+
+  local_abspath = svn_dirent_join(wcroot->abspath, local_relpath, scratch_pool);
+  SVN_ERR(svn_wc__working_file_writer_install(file_writer, local_abspath,
+                                              scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
 svn_error_t *
 svn_wc__db_base_add_file(svn_wc__db_t *db,
                          const char *local_abspath,
@@ -1773,6 +1826,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
+                         svn_wc__working_file_writer_t *file_writer,
+                         svn_boolean_t record_fileinfo,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool)
 {
@@ -1828,9 +1883,22 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
   ibb.conflict = conflict;
   ibb.work_items = work_items;
 
-  SVN_WC__DB_WITH_TXN(
-            insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
-            wcroot);
+  if (file_writer)
+    {
+      /* Atomically update the db and install the file (installation
+       * of the file is atomic, because it happens as a rename). */
+      SVN_WC__DB_WITH_TXN2(
+        insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
+        install_working_file(wcroot, local_relpath, file_writer,
+                             record_fileinfo, scratch_pool),
+        wcroot);
+    }
+  else
+    {
+      SVN_WC__DB_WITH_TXN(
+        insert_base_node(&ibb, wcroot, local_relpath, scratch_pool),
+        wcroot);
+    }
 
   /* If this used to be a directory we should remove children so pass
    * depth infinity. */
@@ -6042,28 +6110,6 @@ svn_wc__db_op_add_symlink(svn_wc__db_t *db,
             insert_working_node(&iwb, wcroot, local_relpath, scratch_pool),
             wcroot);
   SVN_ERR(flush_entries(wcroot, local_abspath, svn_depth_empty, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
-/* Record RECORDED_SIZE and RECORDED_TIME into top layer in NODES */
-static svn_error_t *
-db_record_fileinfo(svn_wc__db_wcroot_t *wcroot,
-                   const char *local_relpath,
-                   apr_int64_t recorded_size,
-                   apr_int64_t recorded_time,
-                   apr_pool_t *scratch_pool)
-{
-  svn_sqlite__stmt_t *stmt;
-  int affected_rows;
-
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
-                                    STMT_UPDATE_NODE_FILEINFO));
-  SVN_ERR(svn_sqlite__bindf(stmt, "isii", wcroot->wc_id, local_relpath,
-                            recorded_size, recorded_time));
-  SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
-
-  SVN_ERR_ASSERT(affected_rows == 1);
 
   return SVN_NO_ERROR;
 }

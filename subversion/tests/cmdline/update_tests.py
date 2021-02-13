@@ -6840,11 +6840,13 @@ def update_delete_switched(sbox):
   svntest.actions.run_and_verify_update(wc_dir, None, None, expected_status,
                                         [], False, sbox.ospath('A'), '-r', 0)
 
-@XFail()
 def update_add_missing_local_add(sbox):
   "update adds missing local addition"
 
   sbox.build(read_only=True)
+
+  ### This used to insert an invalid workqueue item, but the issue vanished
+  ### when the update editor was changed.  Annotate this line for more info.
 
   # Note that updating 'A' to r0 doesn't reproduce this issue...
   sbox.simple_update('', revision='0')

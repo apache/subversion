@@ -2172,6 +2172,9 @@ struct install_baton_t
 {
   struct baton_apr baton_apr;
   const char *tmp_path;
+  svn_boolean_t set_read_only;
+  svn_boolean_t set_executable;
+  apr_time_t set_mtime;
 };
 
 #ifdef WIN32
@@ -2313,11 +2316,41 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
   (*install_stream)->baton = ib;
 
   ib->tmp_path = tmp_path;
+  ib->set_read_only = FALSE;
+  ib->set_executable = FALSE;
+  ib->set_mtime = -1;
 
   /* Don't close the file on stream close; flush instead */
   svn_stream_set_close(*install_stream, install_close);
 
   return SVN_NO_ERROR;
+}
+
+void
+svn_stream__install_stream_set_read_only(svn_stream_t *install_stream,
+                                         svn_boolean_t read_only)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+  ib->set_read_only = read_only;
+}
+
+void
+svn_stream__install_stream_set_executable(svn_stream_t *install_stream,
+                                          svn_boolean_t executable)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+  ib->set_executable = executable;
+}
+
+void
+svn_stream__install_stream_set_affected_time(svn_stream_t *install_stream,
+                                             apr_time_t mtime)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+  ib->set_mtime = mtime;
 }
 
 svn_error_t *
@@ -2331,23 +2364,38 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(final_abspath));
 #ifdef WIN32
-  err = svn_io__win_rename_open_file(ib->baton_apr.file,  ib->tmp_path,
-                                     final_abspath, scratch_pool);
-  if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
+  err = SVN_NO_ERROR;
+
+  /* Windows doesn't have an executable bit. */
+  if (ib->set_mtime >= 0 || ib->set_read_only)
     {
-      svn_error_t *err2;
+      err = svn_io__win_set_file_basic_info(ib->baton_apr.file,
+                                            ib->tmp_path,
+                                            ib->set_mtime,
+                                            ib->set_read_only,
+                                            scratch_pool);
+    }
 
-      err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
-                                                    scratch_pool),
-                                         scratch_pool);
-
-      if (err2)
-        return svn_error_trace(svn_error_compose_create(err, err2));
-      else
-        svn_error_clear(err);
-
+  if (!err)
+    {
       err = svn_io__win_rename_open_file(ib->baton_apr.file, ib->tmp_path,
                                          final_abspath, scratch_pool);
+      if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_t *err2;
+
+          err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
+                                                                scratch_pool),
+                                             scratch_pool);
+
+          if (err2)
+            return svn_error_trace(svn_error_compose_create(err, err2));
+          else
+            svn_error_clear(err);
+
+          err = svn_io__win_rename_open_file(ib->baton_apr.file, ib->tmp_path,
+                                             final_abspath, scratch_pool);
+        }
     }
 
   /* ### rhuijben: I wouldn't be surprised if we later find out that we
@@ -2371,6 +2419,13 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 
   /* Close temporary file. */
   SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+
+  if (ib->set_read_only)
+    SVN_ERR(svn_io_set_file_read_only(ib->tmp_path, FALSE, scratch_pool));
+  if (ib->set_executable)
+    SVN_ERR(svn_io_set_file_executable(ib->tmp_path, TRUE, FALSE, scratch_pool));
+  if (ib->set_mtime >= 0)
+    SVN_ERR(svn_io_set_file_affected_time(ib->set_mtime, ib->tmp_path, scratch_pool));
 
   err = svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool);
 
@@ -2409,8 +2464,10 @@ svn_stream__install_get_info(apr_time_t *mtime_p,
   apr_int32_t wanted;
   apr_finfo_t finfo;
 
+  /* If we are instructed to set a specific timestamp, return it.
+     For everything else, stat the file to get the information. */
   wanted = 0;
-  if (mtime_p)
+  if (mtime_p && ib->set_mtime < 0)
     wanted |= APR_FINFO_MTIME;
   if (size_p)
     wanted |= APR_FINFO_SIZE;
@@ -2422,7 +2479,9 @@ svn_stream__install_get_info(apr_time_t *mtime_p,
         return svn_error_wrap_apr(status, NULL);
     }
 
-  if (mtime_p)
+  if (mtime_p && ib->set_mtime >= 0)
+    *mtime_p = ib->set_mtime;
+  else if (mtime_p)
     *mtime_p = finfo.mtime;
 
   if (size_p)

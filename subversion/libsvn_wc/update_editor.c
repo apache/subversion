@@ -48,6 +48,7 @@
 #include "conflicts.h"
 #include "translate.h"
 #include "workqueue.h"
+#include "working_file_writer.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
@@ -765,6 +766,12 @@ struct file_baton
 
   /* The tree conflict to install once the node is really edited */
   svn_skel_t *edit_conflict;
+
+  /* Cached copy of the base properties for this file. */
+  apr_hash_t *base_props;
+
+  /* Writer with the provisioned content of the working file.  May be NULL. */
+  svn_wc__working_file_writer_t *file_writer;
 };
 
 
@@ -1013,6 +1020,12 @@ window_handler(svn_txdelta_window_t *window, void *baton)
         {
           svn_error_clear(svn_wc__db_pristine_install_abort(hb->install_data,
                                                             hb->pool));
+        }
+
+      if (fb->file_writer)
+        {
+          svn_error_clear(svn_wc__working_file_writer_close(fb->file_writer));
+          fb->file_writer = NULL;
         }
     }
   else
@@ -3560,6 +3573,112 @@ open_file(const char *path,
   return SVN_NO_ERROR;
 }
 
+/* Return the, possibly cached, base properties for file associated
+   with the delta editor baton FB. */
+static svn_error_t *
+get_file_base_props(apr_hash_t **props_p,
+                    struct file_baton *fb,
+                    apr_pool_t *scratch_pool)
+{
+  if (!fb->base_props)
+    {
+      apr_hash_t *props;
+
+      if (fb->add_existed)
+        {
+          /* This node already exists. Grab the current pristine properties. */
+          SVN_ERR(svn_wc__db_read_pristine_props(&props,
+                                                 fb->edit_baton->db,
+                                                 fb->local_abspath,
+                                                 fb->pool, scratch_pool));
+        }
+      else if (!fb->adding_file)
+        {
+          /* Get the BASE properties for proper merging. */
+          SVN_ERR(svn_wc__db_base_get_props(&props,
+                                            fb->edit_baton->db,
+                                            fb->local_abspath,
+                                            fb->pool, scratch_pool));
+        }
+      else
+        props = apr_hash_make(fb->pool);
+
+      fb->base_props = props;
+    }
+
+  *props_p = fb->base_props;
+  return SVN_NO_ERROR;
+}
+
+/* Create the writer of the working file based on the state of
+   the file associated with the delta editor baton FB. */
+static svn_error_t *
+open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
+                         struct file_baton *fb,
+                         apr_pool_t *result_pool,
+                         apr_pool_t *scratch_pool)
+{
+  apr_hash_t *base_props;
+  apr_hash_t *props;
+  const char *lock_token;
+  const char *temp_dir_abspath;
+  const char *cmt_rev_str;
+  svn_revnum_t cmt_rev;
+  const char *cmt_date_str;
+  apr_time_t cmt_date;
+  const char *cmt_author;
+  apr_time_t final_mtime;
+
+  SVN_ERR(get_file_base_props(&base_props, fb, scratch_pool));
+  props = svn_prop__patch(base_props, fb->propchanges, scratch_pool);
+
+  cmt_rev_str = svn_prop_get_value(props, SVN_PROP_ENTRY_COMMITTED_REV);
+  if (cmt_rev_str)
+    {
+      apr_int64_t rev;
+      SVN_ERR(svn_cstring_atoi64(&rev, cmt_rev_str));
+      cmt_rev = (svn_revnum_t)rev;
+    }
+  else
+    cmt_rev = SVN_INVALID_REVNUM;
+
+  cmt_date_str = svn_prop_get_value(props, SVN_PROP_ENTRY_COMMITTED_DATE);
+  if (cmt_date_str)
+    SVN_ERR(svn_time_from_cstring(&cmt_date, cmt_date_str, scratch_pool));
+  else
+    cmt_date = 0;
+
+  cmt_author = svn_prop_get_value(props, SVN_PROP_ENTRY_LAST_AUTHOR);
+
+  if (fb->edit_baton->use_commit_times && cmt_date)
+    final_mtime = cmt_date;
+  else
+    final_mtime = -1;
+
+  lock_token = svn_prop_get_value(props, SVN_PROP_ENTRY_LOCK_TOKEN);
+
+  SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
+                                         fb->edit_baton->db,
+                                         fb->edit_baton->wcroot_abspath,
+                                         scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_wc__working_file_writer_open(writer_p,
+                                           temp_dir_abspath,
+                                           final_mtime,
+                                           props,
+                                           cmt_rev,
+                                           cmt_date,
+                                           cmt_author,
+                                           lock_token != NULL,
+                                           fb->adding_file,
+                                           fb->edit_baton->repos_root,
+                                           fb->new_repos_relpath,
+                                           fb->pool,
+                                           scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* Implements svn_stream_lazyopen_func_t. */
 static svn_error_t *
 lazy_open_source(svn_stream_t **stream,
@@ -3580,29 +3699,61 @@ lazy_open_source(svn_stream_t **stream,
 
 /* Implements svn_stream_lazyopen_func_t. */
 static svn_error_t *
-lazy_open_target(svn_stream_t **stream,
+lazy_open_target(svn_stream_t **stream_p,
                  void *baton,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
   struct handler_baton *hb = baton;
-  svn_wc__db_install_data_t *install_data;
+  struct file_baton *fb = hb->fb;
+  svn_wc__db_install_data_t *pristine_install_data;
+  svn_stream_t *pristine_install_stream;
+  svn_wc__working_file_writer_t *file_writer;
+  svn_stream_t *stream;
 
   /* By convention return value is undefined on error, but we rely
      on HB->INSTALL_DATA value in window_handler() and abort
      INSTALL_STREAM if is not NULL on error.
      So we store INSTALL_DATA to local variable first, to leave
      HB->INSTALL_DATA unchanged on error. */
-  SVN_ERR(svn_wc__db_pristine_prepare_install(stream,
-                                              &install_data,
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_install_stream,
+                                              &pristine_install_data,
                                               &hb->new_text_base_sha1_checksum,
                                               NULL,
-                                              hb->fb->edit_baton->db,
-                                              hb->fb->dir_baton->local_abspath,
+                                              fb->edit_baton->db,
+                                              fb->dir_baton->local_abspath,
                                               result_pool, scratch_pool));
 
-  hb->install_data = install_data;
+  if (fb->shadowed || fb->obstruction_found || fb->edit_obstructed)
+    {
+      /* No need to provision the working file. */
+      file_writer = NULL;
+    }
+  else
+    {
+      SVN_ERR(open_working_file_writer(&file_writer, fb, fb->pool,
+                                       scratch_pool));
+    }
 
+  hb->install_data = pristine_install_data;
+  fb->file_writer = file_writer;
+
+  /* Configure the incoming data to be written to both the pristine and the
+     provisioned working file.  This allows us to properly stream data and
+     avoid having to re-read and copy the contents of the pristine file as
+     some post-op.  Streaming is essential if we want the underlying transport
+     such as HTTP to work without timeouts and without any limits on the
+     sizes of the directories that can be checked out. */
+  stream = pristine_install_stream;
+  if (file_writer)
+    {
+      stream = svn_stream_tee(
+                 pristine_install_stream,
+                 svn_wc__working_file_writer_get_stream(file_writer),
+                 result_pool);
+    }
+
+  *stream_p = stream;
   return SVN_NO_ERROR;
 }
 
@@ -4214,6 +4365,9 @@ close_file(void *file_baton,
   svn_boolean_t keep_recorded_info = FALSE;
   const svn_checksum_t *new_checksum;
   apr_array_header_t *iprops = NULL;
+  svn_boolean_t install_pristine;
+  const char *install_from = NULL;
+  svn_boolean_t record_fileinfo;
 
   if (fb->skip_this)
     {
@@ -4318,22 +4472,8 @@ close_file(void *file_baton,
   if (local_actual_props == NULL)
     local_actual_props = apr_hash_make(scratch_pool);
 
-  if (fb->add_existed)
-    {
-      /* This node already exists. Grab the current pristine properties. */
-      SVN_ERR(svn_wc__db_read_pristine_props(&current_base_props,
-                                             eb->db, fb->local_abspath,
-                                             scratch_pool, scratch_pool));
-      current_actual_props = local_actual_props;
-    }
-  else if (!fb->adding_file)
-    {
-      /* Get the BASE properties for proper merging. */
-      SVN_ERR(svn_wc__db_base_get_props(&current_base_props,
-                                        eb->db, fb->local_abspath,
-                                        scratch_pool, scratch_pool));
-      current_actual_props = local_actual_props;
-    }
+  SVN_ERR(get_file_base_props(&current_base_props, fb, scratch_pool));
+  current_actual_props = local_actual_props;
 
   /* Note: even if the node existed before, it may not have
      pristine props (e.g a local-add)  */
@@ -4348,9 +4488,6 @@ close_file(void *file_baton,
 
   if (! fb->shadowed)
     {
-      svn_boolean_t install_pristine;
-      const char *install_from = NULL;
-
       /* Merge the 'regular' props into the existing working proplist. */
       /* This will merge the old and new props into a new prop db, and
          write <cp> commands to the logfile to install the merged
@@ -4419,29 +4556,8 @@ close_file(void *file_baton,
             content_state = svn_wc_notify_state_unchanged;
         }
 
-      if (install_pristine)
-        {
-          svn_boolean_t record_fileinfo;
-
-          /* If we are installing from the pristine contents, then go ahead and
-             record the fileinfo. That will be the "proper" values. Installing
-             from some random file means the fileinfo does NOT correspond to
-             the pristine (in which case, the fileinfo will be cleared for
-             safety's sake).  */
-          record_fileinfo = (install_from == NULL);
-
-          SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                                eb->db,
-                                                fb->local_abspath,
-                                                install_from,
-                                                eb->use_commit_times,
-                                                record_fileinfo,
-                                                scratch_pool, scratch_pool));
-          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                            scratch_pool);
-        }
-      else if (lock_state == svn_wc_notify_lock_state_unlocked
-               && !fb->obstruction_found)
+      if (lock_state == svn_wc_notify_lock_state_unlocked
+          && !fb->obstruction_found)
         {
           /* If a lock was removed and we didn't update the text contents, we
              might need to set the file read-only.
@@ -4459,20 +4575,6 @@ close_file(void *file_baton,
         {
           /* It is safe to keep the current recorded timestamp and size */
           keep_recorded_info = TRUE;
-        }
-
-      /* Clean up any temporary files.  */
-
-      /* Remove the INSTALL_FROM file, as long as it doesn't refer to the
-         working file.  */
-      if (install_from != NULL
-          && strcmp(install_from, fb->local_abspath) != 0)
-        {
-          SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                               fb->local_abspath, install_from,
-                                               scratch_pool, scratch_pool));
-          all_work_items = svn_wc__wq_merge(all_work_items, work_item,
-                                            scratch_pool);
         }
     }
   else
@@ -4505,6 +4607,8 @@ close_file(void *file_baton,
         content_state = svn_wc_notify_state_changed;
       else
         content_state = svn_wc_notify_state_unchanged;
+
+      install_pristine = FALSE;
     }
 
   /* Insert/replace the BASE node with all of the new metadata.  */
@@ -4558,6 +4662,54 @@ close_file(void *file_baton,
         svn_hash_sets(eb->wcroot_iprops, fb->local_abspath, NULL);
     }
 
+  /* We have to install the working file from the pristine, but we did not
+     receive it as the part of this edit.  Or we did receive it, but have to
+     install from a different file.  Either way, reset the writer and copy
+     appropriate contents to it.  */
+  if (install_pristine && (fb->file_writer == NULL || install_from))
+    {
+      svn_stream_t *src_stream;
+      svn_stream_t *dst_stream;
+
+      if (!fb->file_writer)
+        {
+          SVN_ERR(open_working_file_writer(&fb->file_writer, fb, fb->pool,
+                                           scratch_pool));
+        }
+
+      dst_stream = svn_wc__working_file_writer_get_stream(fb->file_writer);
+      SVN_ERR(svn_stream_reset(dst_stream));
+
+      if (install_from)
+        {
+          apr_file_t *file;
+          /* Open an unbuffered file, as svn_wc__db_pristine_read() does. */
+          SVN_ERR(svn_io_file_open(&file, install_from, APR_READ,
+                                   APR_OS_DEFAULT, scratch_pool));
+          src_stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
+        }
+      else
+        {
+          SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, eb->db,
+                                           eb->wcroot_abspath, new_checksum,
+                                           scratch_pool, scratch_pool));
+        }
+
+      SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, scratch_pool));
+
+      /* Remove the INSTALL_FROM file, as long as it doesn't refer to the
+         working file.  */
+      if (install_from && strcmp(install_from, fb->local_abspath) != 0)
+        SVN_ERR(svn_io_remove_file2(install_from, TRUE, scratch_pool));
+    }
+
+  /* If we are installing from the pristine contents, then go ahead and
+     record the fileinfo. That will be the "proper" values. Installing
+     from some random file means the fileinfo does NOT correspond to
+     the pristine (in which case, the fileinfo will be cleared for
+     safety's sake).  */
+  record_fileinfo = (install_from == NULL);
+
   SVN_ERR(svn_wc__db_base_add_file(eb->db, fb->local_abspath,
                                    eb->wcroot_abspath,
                                    fb->new_repos_relpath,
@@ -4580,8 +4732,16 @@ close_file(void *file_baton,
                                    keep_recorded_info,
                                    (fb->shadowed && fb->obstruction_found),
                                    conflict_skel,
+                                   install_pristine ? fb->file_writer : NULL,
+                                   record_fileinfo,
                                    all_work_items,
                                    scratch_pool));
+
+  if (fb->file_writer)
+    {
+      SVN_ERR(svn_wc__working_file_writer_close(fb->file_writer));
+      fb->file_writer = NULL;
+    }
 
   if (conflict_skel && eb->conflict_func)
     SVN_ERR(svn_wc__conflict_invoke_resolver(eb->db, fb->local_abspath,
