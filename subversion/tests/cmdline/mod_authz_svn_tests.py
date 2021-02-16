@@ -1072,7 +1072,7 @@ def repos_relative_access_file(sbox):
 
   verify_gets(test_area_url, in_repos_authz_tests)
 
-# test for the bug also known as CVS-2020-17525
+# test for the bug also known as CVE-2020-17525
 @SkipUnless(svntest.main.is_ra_type_dav)
 def nonexistent_repos_relative_access_file(sbox):
   "repos-relative access file with bad repository URL"
