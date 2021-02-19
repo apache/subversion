@@ -1140,6 +1140,8 @@ test_install_stream_get_info(apr_pool_t *pool)
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
   SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  /* Ensure that we will notice a timestamp change, if it happens. */
+  svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
