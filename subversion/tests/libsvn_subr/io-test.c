@@ -1062,7 +1062,7 @@ test_install_stream_set_read_only(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
-  svn_stream__install_stream_set_read_only(stream, TRUE);
+  svn_stream__install_set_read_only(stream, TRUE);
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
@@ -1100,7 +1100,7 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
-  svn_stream__install_stream_set_affected_time(stream, 123456789);
+  svn_stream__install_set_affected_time(stream, 123456789);
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
@@ -1374,9 +1374,9 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_install_stream_over_readonly_file,
                    "test svn_stream__install_stream over RO file"),
     SVN_TEST_PASS2(test_install_stream_set_read_only,
-                   "test svn_stream__install_stream_set_read_only"),
+                   "test svn_stream__install_set_read_only"),
     SVN_TEST_PASS2(test_install_stream_set_affected_time,
-                   "test svn_stream__install_stream_set_affected_time"),
+                   "test svn_stream__install_set_affected_time"),
     SVN_TEST_PASS2(test_install_stream_get_info,
                    "test svn_stream__install_stream_get_info"),
     SVN_TEST_PASS2(test_file_size_get,

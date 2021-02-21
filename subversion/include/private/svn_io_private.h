@@ -105,20 +105,20 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
 /* Configure value of the read-only attribute that will be set when
    the stream is installed. */
 void
-svn_stream__install_stream_set_read_only(svn_stream_t *install_stream,
-                                         svn_boolean_t read_only);
+svn_stream__install_set_read_only(svn_stream_t *install_stream,
+                                  svn_boolean_t read_only);
 
 /* Configure value of the executable bit that will be set when the
    stream is installed. */
 void
-svn_stream__install_stream_set_executable(svn_stream_t *install_stream,
-                                          svn_boolean_t executable);
+svn_stream__install_set_executable(svn_stream_t *install_stream,
+                                   svn_boolean_t executable);
 
 /* Configure value of the last modification time that will be set
    when the stream is installed. */
 void
-svn_stream__install_stream_set_affected_time(svn_stream_t *install_stream,
-                                             apr_time_t mtime);
+svn_stream__install_set_affected_time(svn_stream_t *install_stream,
+                                      apr_time_t mtime);
 
 /* Installs a stream created with svn_stream__create_for_install in its final
    location FINAL_ABSPATH, potentially using platform specific optimizations.

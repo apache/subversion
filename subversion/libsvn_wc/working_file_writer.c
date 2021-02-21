@@ -109,11 +109,11 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
                                          result_pool, scratch_pool));
 
   if (needs_lock && !is_added && !has_lock)
-    svn_stream__install_stream_set_read_only(install_stream, TRUE);
+    svn_stream__install_set_read_only(install_stream, TRUE);
   if (executable)
-    svn_stream__install_stream_set_executable(install_stream, TRUE);
+    svn_stream__install_set_executable(install_stream, TRUE);
   if (final_mtime >= 0)
-    svn_stream__install_stream_set_affected_time(install_stream, final_mtime);
+    svn_stream__install_set_affected_time(install_stream, final_mtime);
 
   write_stream = install_stream;
 

@@ -2327,8 +2327,8 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
 }
 
 void
-svn_stream__install_stream_set_read_only(svn_stream_t *install_stream,
-                                         svn_boolean_t read_only)
+svn_stream__install_set_read_only(svn_stream_t *install_stream,
+                                  svn_boolean_t read_only)
 {
   struct install_baton_t *ib = install_stream->baton;
 
@@ -2336,8 +2336,8 @@ svn_stream__install_stream_set_read_only(svn_stream_t *install_stream,
 }
 
 void
-svn_stream__install_stream_set_executable(svn_stream_t *install_stream,
-                                          svn_boolean_t executable)
+svn_stream__install_set_executable(svn_stream_t *install_stream,
+                                   svn_boolean_t executable)
 {
   struct install_baton_t *ib = install_stream->baton;
 
@@ -2345,8 +2345,8 @@ svn_stream__install_stream_set_executable(svn_stream_t *install_stream,
 }
 
 void
-svn_stream__install_stream_set_affected_time(svn_stream_t *install_stream,
-                                             apr_time_t mtime)
+svn_stream__install_set_affected_time(svn_stream_t *install_stream,
+                                      apr_time_t mtime)
 {
   struct install_baton_t *ib = install_stream->baton;
 
