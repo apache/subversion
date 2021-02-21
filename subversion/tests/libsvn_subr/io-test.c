@@ -31,6 +31,7 @@
 #include "svn_pools.h"
 #include "svn_string.h"
 #include "svn_io.h"
+#include "svn_time.h"
 #include "private/svn_skel.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_io_private.h"
@@ -1087,6 +1088,7 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
   const char *tmp_dir;
   const char *final_abspath;
   svn_stream_t *stream;
+  apr_time_t expected_timestamp;
   svn_stringbuf_t *actual_content;
   apr_finfo_t finfo;
 
@@ -1100,7 +1102,12 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
-  svn_stream__install_set_affected_time(stream, 123456789);
+
+  SVN_ERR(svn_time_from_cstring(&expected_timestamp,
+                                "2002-05-13T19:00:50.966679Z",
+                                pool));
+  svn_stream__install_set_affected_time(stream, expected_timestamp);
+
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
@@ -1113,7 +1120,7 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
 
   SVN_ERR(svn_io_stat(&finfo, final_abspath, APR_FINFO_MTIME, pool));
-  SVN_TEST_INT_ASSERT(finfo.mtime, 123456789);
+  SVN_TEST_INT_ASSERT(finfo.mtime, expected_timestamp);
 
   return SVN_NO_ERROR;
 }
