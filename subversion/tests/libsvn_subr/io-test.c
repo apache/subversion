@@ -1159,8 +1159,8 @@ test_install_stream_get_info(apr_pool_t *pool)
   SVN_ERR(svn_io_stat(&finfo, final_abspath,
                       APR_FINFO_MTIME | APR_FINFO_SIZE,
                       pool));
-  SVN_TEST_INT_ASSERT(mtime, finfo.mtime);
-  SVN_TEST_INT_ASSERT(size, finfo.size);
+  SVN_TEST_INT_ASSERT(finfo.mtime, mtime);
+  SVN_TEST_INT_ASSERT(finfo.size, size);
 
   SVN_ERR(svn_stringbuf_from_file2(&actual_content,
                                    final_abspath,
