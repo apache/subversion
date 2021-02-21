@@ -972,7 +972,11 @@ test_install_stream_to_longpath(apr_pool_t *pool)
   const char *final_abspath;
   const char *deep_dir;
   svn_stream_t *stream;
+  apr_time_t mtime;
+  apr_off_t size;
+  svn_boolean_t is_read_only;
   svn_stringbuf_t *actual_content;
+  apr_finfo_t finfo;
   int i;
 
   /* Create an empty directory. */
@@ -993,10 +997,21 @@ test_install_stream_to_longpath(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, deep_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  /* Ensure that we will notice a timestamp change, if it happens. */
+  svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
                                      pool));
+  SVN_ERR(svn_io_stat(&finfo, final_abspath,
+                      APR_FINFO_MTIME | APR_FINFO_SIZE | SVN__APR_FINFO_READONLY,
+                      pool));
+  /* Should see the same values as before the install. */
+  SVN_TEST_INT_ASSERT(finfo.mtime, mtime);
+  SVN_TEST_INT_ASSERT(finfo.size, size);
+  SVN_ERR(svn_io__is_finfo_read_only(&is_read_only, &finfo, pool));
+  SVN_TEST_ASSERT(!is_read_only);
 
   SVN_ERR(svn_stringbuf_from_file2(&actual_content,
                                    final_abspath,
@@ -1013,7 +1028,11 @@ test_install_stream_over_readonly_file(apr_pool_t *pool)
   const char *tmp_dir;
   const char *final_abspath;
   svn_stream_t *stream;
+  apr_time_t mtime;
+  apr_off_t size;
+  svn_boolean_t is_read_only;
   svn_stringbuf_t *actual_content;
+  apr_finfo_t finfo;
 
   /* Create an empty directory. */
   SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
@@ -1029,10 +1048,21 @@ test_install_stream_over_readonly_file(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  /* Ensure that we will notice a timestamp change, if it happens. */
+  svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
                                      pool));
+  SVN_ERR(svn_io_stat(&finfo, final_abspath,
+                      APR_FINFO_MTIME | APR_FINFO_SIZE | SVN__APR_FINFO_READONLY,
+                      pool));
+  /* Should see the same values as before the install. */
+  SVN_TEST_INT_ASSERT(finfo.mtime, mtime);
+  SVN_TEST_INT_ASSERT(finfo.size, size);
+  SVN_ERR(svn_io__is_finfo_read_only(&is_read_only, &finfo, pool));
+  SVN_TEST_ASSERT(!is_read_only);
 
   SVN_ERR(svn_stringbuf_from_file2(&actual_content,
                                    final_abspath,
@@ -1049,9 +1079,11 @@ test_install_stream_set_read_only(apr_pool_t *pool)
   const char *tmp_dir;
   const char *final_abspath;
   svn_stream_t *stream;
+  apr_time_t mtime;
+  apr_off_t size;
+  svn_boolean_t is_read_only;
   svn_stringbuf_t *actual_content;
   apr_finfo_t finfo;
-  svn_boolean_t is_read_only;
 
   /* Create an empty directory. */
   SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
@@ -1064,20 +1096,27 @@ test_install_stream_set_read_only(apr_pool_t *pool)
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
   svn_stream__install_set_read_only(stream, TRUE);
+  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  /* Ensure that we will notice a timestamp change, if it happens. */
+  svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
                                      pool));
+  SVN_ERR(svn_io_stat(&finfo, final_abspath,
+                      APR_FINFO_MTIME | APR_FINFO_SIZE | SVN__APR_FINFO_READONLY,
+                      pool));
+  /* Should see the same values as before the install. */
+  SVN_TEST_INT_ASSERT(finfo.mtime, mtime);
+  SVN_TEST_INT_ASSERT(finfo.size, size);
+  SVN_ERR(svn_io__is_finfo_read_only(&is_read_only, &finfo, pool));
+  SVN_TEST_ASSERT(is_read_only);
 
   SVN_ERR(svn_stringbuf_from_file2(&actual_content,
                                    final_abspath,
                                    pool));
 
   SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
-
-  SVN_ERR(svn_io_stat(&finfo, final_abspath, SVN__APR_FINFO_READONLY, pool));
-  SVN_ERR(svn_io__is_finfo_read_only(&is_read_only, &finfo, pool));
-  SVN_TEST_ASSERT(is_read_only);
 
   return SVN_NO_ERROR;
 }
@@ -1089,6 +1128,9 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
   const char *final_abspath;
   svn_stream_t *stream;
   apr_time_t expected_timestamp;
+  apr_time_t mtime;
+  apr_off_t size;
+  svn_boolean_t is_read_only;
   svn_stringbuf_t *actual_content;
   apr_finfo_t finfo;
 
@@ -1108,21 +1150,30 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
                                 pool));
   svn_stream__install_set_affected_time(stream, expected_timestamp);
 
+  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  /* Ensure that we will notice a timestamp change, if it happens. */
+  svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
                                      final_abspath,
                                      TRUE,
                                      pool));
+  SVN_ERR(svn_io_stat(&finfo, final_abspath,
+                      APR_FINFO_MTIME | APR_FINFO_SIZE | SVN__APR_FINFO_READONLY,
+                      pool));
+  /* Should see the same values as before the install. */
+  SVN_TEST_INT_ASSERT(finfo.mtime, mtime);
+  SVN_TEST_INT_ASSERT(finfo.size, size);
+  /* The actual filesystem might have a different timestamp precision,
+     so compare with proximity. */
+  SVN_TEST_TIME_ASSERT(finfo.mtime, expected_timestamp, apr_time_from_sec(10));
+  SVN_ERR(svn_io__is_finfo_read_only(&is_read_only, &finfo, pool));
+  SVN_TEST_ASSERT(!is_read_only);
 
   SVN_ERR(svn_stringbuf_from_file2(&actual_content,
                                    final_abspath,
                                    pool));
 
   SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
-
-  SVN_ERR(svn_io_stat(&finfo, final_abspath, APR_FINFO_MTIME, pool));
-  /* The actual filesystem might have a different timestamp precision,
-     so compare with proximity. */
-  SVN_TEST_TIME_ASSERT(finfo.mtime, expected_timestamp, apr_time_from_sec(10));
 
   return SVN_NO_ERROR;
 }
@@ -1135,6 +1186,7 @@ test_install_stream_get_info(apr_pool_t *pool)
   svn_stream_t *stream;
   apr_time_t mtime;
   apr_off_t size;
+  svn_boolean_t is_read_only;
   svn_stringbuf_t *actual_content;
   apr_finfo_t finfo;
 
@@ -1155,12 +1207,14 @@ test_install_stream_get_info(apr_pool_t *pool)
                                      final_abspath,
                                      TRUE,
                                      pool));
-  /* Should see the same values as before the install. */
   SVN_ERR(svn_io_stat(&finfo, final_abspath,
-                      APR_FINFO_MTIME | APR_FINFO_SIZE,
+                      APR_FINFO_MTIME | APR_FINFO_SIZE | SVN__APR_FINFO_READONLY,
                       pool));
+  /* Should see the same values as before the install. */
   SVN_TEST_INT_ASSERT(finfo.mtime, mtime);
   SVN_TEST_INT_ASSERT(finfo.size, size);
+  SVN_ERR(svn_io__is_finfo_read_only(&is_read_only, &finfo, pool));
+  SVN_TEST_ASSERT(!is_read_only);
 
   SVN_ERR(svn_stringbuf_from_file2(&actual_content,
                                    final_abspath,
