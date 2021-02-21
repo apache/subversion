@@ -1791,10 +1791,15 @@ install_working_file(svn_wc__db_wcroot_t *wcroot,
       apr_time_t mtime;
       apr_off_t size;
 
-      SVN_ERR(svn_wc__working_file_writer_get_info(&mtime, &size, file_writer,
+      SVN_ERR(svn_wc__working_file_writer_finalize(&mtime, &size, file_writer,
                                                    scratch_pool));
       SVN_ERR(db_record_fileinfo(wcroot, local_relpath, size, mtime,
                                  scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, file_writer,
+                                                   scratch_pool));
     }
 
   local_abspath = svn_dirent_join(wcroot->abspath, local_relpath, scratch_pool);

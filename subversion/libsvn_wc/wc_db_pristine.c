@@ -308,7 +308,7 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
         apr_finfo_t finfo;
         apr_off_t size;
 
-        SVN_ERR(svn_stream__install_get_info(NULL, &size, install_stream,
+        SVN_ERR(svn_stream__install_finalize(NULL, &size, install_stream,
                                              scratch_pool));
 
         SVN_ERR(svn_io_stat(&finfo, pristine_abspath, APR_FINFO_SIZE,
@@ -335,7 +335,7 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
   {
     apr_off_t size;
 
-    SVN_ERR(svn_stream__install_get_info(NULL, &size, install_stream,
+    SVN_ERR(svn_stream__install_finalize(NULL, &size, install_stream,
                                          scratch_pool));
     SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
                                        TRUE, scratch_pool));

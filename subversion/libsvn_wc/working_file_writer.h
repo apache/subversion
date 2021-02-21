@@ -61,15 +61,18 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
 svn_stream_t *
 svn_wc__working_file_writer_get_stream(svn_wc__working_file_writer_t *writer);
 
-/* Retrieve file information for WRITER.
-   MTIME_P and SIZE_P both may be NULL to allow for partial queries. */
+/* Finalize the content, attributes and the timestamps of the underlying
+   temporary file.  Return the properties of the finalized file in MTIME_P
+   and SIZE_P.  MTIME_P and SIZE_P both may be NULL. */
 svn_error_t *
-svn_wc__working_file_writer_get_info(apr_time_t *mtime_p,
+svn_wc__working_file_writer_finalize(apr_time_t *mtime_p,
                                      apr_off_t *size_p,
                                      svn_wc__working_file_writer_t *writer,
                                      apr_pool_t *scratch_pool);
 
-/* Atomically install the contents of WRITER to TARGET_ABSPATH. */
+/* Atomically install the contents of WRITER to TARGET_ABSPATH.
+   If the writer has not been previously finalized with a call to
+   svn_wc__working_file_writer_finalize(), the behavior is undefined. */
 svn_error_t *
 svn_wc__working_file_writer_install(svn_wc__working_file_writer_t *writer,
                                     const char *target_abspath,

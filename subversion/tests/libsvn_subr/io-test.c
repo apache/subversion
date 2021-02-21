@@ -997,7 +997,7 @@ test_install_stream_to_longpath(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, deep_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  SVN_ERR(svn_stream__install_finalize(&mtime, &size, stream, pool));
   /* Ensure that we will notice a timestamp change, if it happens. */
   svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
@@ -1048,7 +1048,7 @@ test_install_stream_over_readonly_file(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  SVN_ERR(svn_stream__install_finalize(&mtime, &size, stream, pool));
   /* Ensure that we will notice a timestamp change, if it happens. */
   svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
@@ -1096,7 +1096,7 @@ test_install_stream_set_read_only(apr_pool_t *pool)
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
   svn_stream__install_set_read_only(stream, TRUE);
-  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  SVN_ERR(svn_stream__install_finalize(&mtime, &size, stream, pool));
   /* Ensure that we will notice a timestamp change, if it happens. */
   svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
@@ -1150,7 +1150,7 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
                                 pool));
   svn_stream__install_set_affected_time(stream, expected_timestamp);
 
-  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  SVN_ERR(svn_stream__install_finalize(&mtime, &size, stream, pool));
   /* Ensure that we will notice a timestamp change, if it happens. */
   svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
@@ -1200,7 +1200,7 @@ test_install_stream(apr_pool_t *pool)
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, pool, pool));
   SVN_ERR(svn_stream_puts(stream, "stream1 content"));
   SVN_ERR(svn_stream_close(stream));
-  SVN_ERR(svn_stream__install_get_info(&mtime, &size, stream, pool));
+  SVN_ERR(svn_stream__install_finalize(&mtime, &size, stream, pool));
   /* Ensure that we will notice a timestamp change, if it happens. */
   svn_io_sleep_for_timestamps(NULL, pool);
   SVN_ERR(svn_stream__install_stream(stream,
@@ -1220,6 +1220,65 @@ test_install_stream(apr_pool_t *pool)
                                    final_abspath,
                                    pool));
   SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_install_stream_delete(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *final_abspath;
+  apr_pool_t *subpool;
+  svn_stream_t *stream;
+  apr_hash_t *dirents;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "test_install_stream_delete",
+                                    pool));
+
+  final_abspath = svn_dirent_join(tmp_dir, "stream1", pool);
+
+  subpool = svn_pool_create(pool);
+  SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, subpool, subpool));
+  SVN_ERR(svn_stream_puts(stream, "stream1 content"));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream__install_delete(stream, subpool));
+  svn_pool_destroy(subpool);
+
+  SVN_ERR(svn_io_get_dirents3(&dirents, tmp_dir, TRUE, pool, pool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(dirents), 0);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_install_stream_delete_after_finalize(apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  const char *final_abspath;
+  apr_pool_t *subpool;
+  svn_stream_t *stream;
+  apr_hash_t *dirents;
+
+  /* Create an empty directory. */
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "test_install_stream_delete_after_finalize",
+                                    pool));
+
+  final_abspath = svn_dirent_join(tmp_dir, "stream1", pool);
+
+  subpool = svn_pool_create(pool);
+  SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, subpool, subpool));
+  SVN_ERR(svn_stream_puts(stream, "stream1 content"));
+  SVN_ERR(svn_stream_close(stream));
+  SVN_ERR(svn_stream__install_finalize(NULL, NULL, stream, subpool));
+  SVN_ERR(svn_stream__install_delete(stream, subpool));
+  svn_pool_destroy(subpool);
+
+  SVN_ERR(svn_io_get_dirents3(&dirents, tmp_dir, TRUE, pool, pool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(dirents), 0);
 
   return SVN_NO_ERROR;
 }
@@ -1442,6 +1501,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_stream__install_set_affected_time"),
     SVN_TEST_PASS2(test_install_stream,
                    "test svn_stream__install_stream"),
+    SVN_TEST_PASS2(test_install_stream_delete,
+                   "test svn_stream__install_delete"),
+    SVN_TEST_PASS2(test_install_stream_delete_after_finalize,
+                   "test svn_stream__install_delete after finalize"),
     SVN_TEST_PASS2(test_file_size_get,
                    "test svn_io_file_size_get"),
     SVN_TEST_PASS2(test_file_rename2,

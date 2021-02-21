@@ -150,12 +150,12 @@ svn_wc__working_file_writer_get_stream(svn_wc__working_file_writer_t *writer)
 }
 
 svn_error_t *
-svn_wc__working_file_writer_get_info(apr_time_t *mtime_p,
+svn_wc__working_file_writer_finalize(apr_time_t *mtime_p,
                                      apr_off_t *size_p,
                                      svn_wc__working_file_writer_t *writer,
                                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_stream__install_get_info(mtime_p, size_p, writer->install_stream,
+  SVN_ERR(svn_stream__install_finalize(mtime_p, size_p, writer->install_stream,
                                        scratch_pool));
 
   return SVN_NO_ERROR;

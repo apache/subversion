@@ -574,6 +574,8 @@ run_file_install(work_item_baton_t *wqb,
                            cancel_func, cancel_baton,
                            scratch_pool));
 
+  SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, file_writer,
+                                               scratch_pool));
   SVN_ERR(svn_wc__working_file_writer_install(file_writer, local_abspath,
                                               scratch_pool));
 

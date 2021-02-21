@@ -120,8 +120,20 @@ void
 svn_stream__install_set_affected_time(svn_stream_t *install_stream,
                                       apr_time_t mtime);
 
+/* Finalize the content, attributes and the timestamps of the underlying
+   temporary file. Return the properties of the finalized file in MTIME_P
+   and SIZE_P. The returned properties are guaranteed to be preserved
+   after the stream is installed. MTIME_P and SIZE_P both may be NULL.*/
+svn_error_t *
+svn_stream__install_finalize(apr_time_t *mtime_p,
+                             apr_off_t *size_p,
+                             svn_stream_t *install_stream,
+                             apr_pool_t *scratch_pool);
+
 /* Installs a stream created with svn_stream__create_for_install in its final
    location FINAL_ABSPATH, potentially using platform specific optimizations.
+   If the stream has not been finalized with svn_stream__install_finalize(),
+   the behavior is undefined.
 
    If MAKE_PARENTS is TRUE, this function will create missing parent
    directories if needed.
@@ -136,14 +148,6 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 svn_error_t *
 svn_stream__install_delete(svn_stream_t *install_stream,
                            apr_pool_t *scratch_pool);
-
-/* Retrieves file information for the specified install stream.
-   MTIME_P and SIZE_P both may be NULL to allow for partial queries. */
-svn_error_t *
-svn_stream__install_get_info(apr_time_t *mtime_p,
-                             apr_off_t *size_p,
-                             svn_stream_t *install_stream,
-                             apr_pool_t *scratch_pool);
 
 /* Internal version of svn_stream_from_aprfile2() supporting the
    additional TRUNCATE_ON_SEEK argument. */
@@ -190,11 +194,29 @@ svn_io__win_rename_open_file(apr_file_t *file,
                              const char *to_path,
                              apr_pool_t *pool);
 
+/* Special value that indicates that the file system should not update
+   timestamp values such as LastAccessTime, LastWriteTime, and ChangeTime
+   during this I/O operation.
+   Corresponds to the predefined value of "0" in:
+   https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+ */
+#define SVN_IO__WIN_TIME_UNCHANGED APR_INT64_MIN + 0
+
+/* Special value that indicates that the file system should suspend updates
+   for timestamp values such as LastAccessTime, LastWriteTime, and ChangeTime
+   during subsequent I/O operations on the file handle.
+   Corresponds to the predefined value of "-1" in:
+   https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+ */
+#define SVN_IO__WIN_TIME_SUSPEND_UPDATE APR_INT64_MIN + 1
+
 /* This Windows-specific function sets the basic file information using an
-   existing file handle. If SET_MTIME is non-negative, it will be set as
-   the new LastWriteTime value. If SET_READ_ONLY is non-zero, the file
-   attributes will be updated to include FILE_ATTRIBUTE_READONLY.
-   Return SVN_ERR_UNSUPPORTED_FEATURE if not supported by OS. */
+   existing file handle. The SET_MTIME will be set as the new LastWriteTime
+   value, unless it is equal to one of the predefined special values such
+   as SVN_IO__WIN_TIME_UNCHANGED or SVN_IO__WIN_TIME_SUSPEND_UPDATE.
+   If SET_READ_ONLY is non-zero, the file attributes will be updated to
+   include FILE_ATTRIBUTE_READONLY. Return SVN_ERR_UNSUPPORTED_FEATURE
+   if not supported by OS. */
 svn_error_t *
 svn_io__win_set_file_basic_info(apr_file_t *file,
                                 const char *path,

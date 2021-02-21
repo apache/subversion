@@ -2365,10 +2365,31 @@ svn_io__win_set_file_basic_info(apr_file_t *file,
   info.LastAccessTime.QuadPart = 0;
   info.ChangeTime.QuadPart = 0;
 
-  if (set_mtime >= 0)
-    info.LastWriteTime.QuadPart = (set_mtime + APR_DELTA_EPOCH_IN_USEC) * 10;
+  if (set_mtime == SVN_IO__WIN_TIME_UNCHANGED)
+    {
+      /* If you specify a value of zero for any of the XxxTime members of the
+         FILE_BASIC_INFORMATION structure, the ZwSetInformationFile function
+         keeps a file's current setting for that time.
+         https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+       */
+      info.LastWriteTime.QuadPart = 0;
+    }
+  else if (set_mtime == SVN_IO__WIN_TIME_SUSPEND_UPDATE)
+    {
+      /* File system updates the values of the LastAccessTime, LastWriteTime,
+         and ChangeTime members as appropriate after an I/O operation is
+         performed on a file. A driver or application can request that the
+         file system not update one or more of these members for I/O operations
+         that are performed on the caller's file handle by setting the
+         appropriate members to -1.
+         https://docs.microsoft.com/windows-hardware/drivers/ddi/wdm/ns-wdm-_file_basic_information#remarks
+       */
+      info.LastWriteTime.QuadPart = -1;
+    }
   else
-    info.LastWriteTime.QuadPart = 0;
+    {
+      info.LastWriteTime.QuadPart = (set_mtime + APR_DELTA_EPOCH_IN_USEC) * 10;
+    }
 
   if (set_read_only)
     info.FileAttributes |= FILE_ATTRIBUTE_READONLY;
