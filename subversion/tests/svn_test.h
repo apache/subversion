@@ -37,6 +37,7 @@
 #include "svn_error.h"
 #include "svn_string.h"
 #include "svn_auth.h"
+#include "svn_time.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -145,6 +146,40 @@ extern "C" {
           "     Found: %" APR_INT64_T_FMT "\n"                    \
           "  at %s:%d",                                           \
           tst_int2, tst_int1, __FILE__, __LINE__);                \
+  } while(0)
+
+/** Handy macro for testing apr_time_t equality.
+ *
+ * WITHIN_EXPR specifies the proximity of the comparison.
+ */
+#define SVN_TEST_TIME_ASSERT(expr, expected_expr, within_expr)    \
+  do {                                                            \
+    apr_time_t actual_time = (expr);                              \
+    apr_time_t expected_time = (expected_expr);                   \
+    apr_interval_time_t within_time = (within_expr);              \
+                                                                  \
+    if (actual_time < expected_time - within_time ||              \
+        actual_time > expected_time + within_time)                \
+      {                                                           \
+        svn_error_t *err =                                        \
+          svn_error_create(SVN_ERR_TEST_FAILED, NULL, NULL);      \
+                                                                  \
+        err->message = apr_psprintf(                              \
+          err->pool,                                              \
+          "Time values not equal\n"                               \
+          "  Expected: %s (%" APR_TIME_T_FMT ")\n"                \
+          "     Found: %s (%" APR_TIME_T_FMT ")\n"                \
+          " Proximity: %" APR_TIME_T_FMT "ms\n"                   \
+          "  at %s:%d",                                           \
+          svn_time_to_cstring(expected_time, err->pool),          \
+          expected_time,                                          \
+          svn_time_to_cstring(actual_time, err->pool),            \
+          actual_time,                                            \
+          apr_time_as_msec(within_time),                          \
+          __FILE__, __LINE__);                                    \
+                                                                  \
+        return err;                                               \
+      }                                                           \
   } while(0)
 
 

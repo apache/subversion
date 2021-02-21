@@ -1120,7 +1120,9 @@ test_install_stream_set_affected_time(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(actual_content->data, "stream1 content");
 
   SVN_ERR(svn_io_stat(&finfo, final_abspath, APR_FINFO_MTIME, pool));
-  SVN_TEST_INT_ASSERT(finfo.mtime, expected_timestamp);
+  /* The actual filesystem might have a different timestamp precision,
+     so compare with proximity. */
+  SVN_TEST_TIME_ASSERT(finfo.mtime, expected_timestamp, apr_time_from_sec(10));
 
   return SVN_NO_ERROR;
 }
