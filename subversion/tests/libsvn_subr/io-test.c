@@ -1228,7 +1228,6 @@ static svn_error_t *
 test_install_stream_delete(apr_pool_t *pool)
 {
   const char *tmp_dir;
-  const char *final_abspath;
   apr_pool_t *subpool;
   svn_stream_t *stream;
   apr_hash_t *dirents;
@@ -1237,8 +1236,6 @@ test_install_stream_delete(apr_pool_t *pool)
   SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
                                     "test_install_stream_delete",
                                     pool));
-
-  final_abspath = svn_dirent_join(tmp_dir, "stream1", pool);
 
   subpool = svn_pool_create(pool);
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, subpool, subpool));
@@ -1257,7 +1254,6 @@ static svn_error_t *
 test_install_stream_delete_after_finalize(apr_pool_t *pool)
 {
   const char *tmp_dir;
-  const char *final_abspath;
   apr_pool_t *subpool;
   svn_stream_t *stream;
   apr_hash_t *dirents;
@@ -1266,8 +1262,6 @@ test_install_stream_delete_after_finalize(apr_pool_t *pool)
   SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
                                     "test_install_stream_delete_after_finalize",
                                     pool));
-
-  final_abspath = svn_dirent_join(tmp_dir, "stream1", pool);
 
   subpool = svn_pool_create(pool);
   SVN_ERR(svn_stream__create_for_install(&stream, tmp_dir, subpool, subpool));
