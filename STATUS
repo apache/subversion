@@ -55,6 +55,13 @@ Candidate changes:
     Votes:
       +1: stsp
 
+ * r1886708
+   swig-py: Fix dependency of make copy-swig-py target.
+   Justification:
+     Fix a regression introduced between 1.13.0 and 1.14.0.
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
