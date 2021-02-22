@@ -3673,7 +3673,7 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
                                            fb->adding_file,
                                            fb->edit_baton->repos_root,
                                            fb->new_repos_relpath,
-                                           fb->pool,
+                                           result_pool,
                                            scratch_pool));
 
   return SVN_NO_ERROR;
