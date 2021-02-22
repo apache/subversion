@@ -58,51 +58,23 @@ svn_error_t *
 svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
                                  const char *tmp_abspath,
                                  apr_time_t final_mtime,
-                                 apr_hash_t *props,
-                                 svn_revnum_t changed_rev,
-                                 apr_time_t changed_date,
-                                 const char *changed_author,
+                                 svn_subst_eol_style_t eol_style,
+                                 const char *eol,
+                                 svn_boolean_t repair_eol,
+                                 apr_hash_t *keywords,
+                                 svn_boolean_t is_special,
+                                 svn_boolean_t is_executable,
+                                 svn_boolean_t needs_lock,
                                  svn_boolean_t has_lock,
                                  svn_boolean_t is_added,
-                                 const char *repos_root_url,
-                                 const char *repos_relpath,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
   svn_wc__working_file_writer_t *writer;
-  const char *url;
-  svn_boolean_t special;
-  svn_boolean_t executable;
-  svn_boolean_t needs_lock;
-  const char *keywords_propval;
-  apr_hash_t *keywords;
-  const char *eol_propval;
-  svn_subst_eol_style_t eol_style;
-  const char *eol;
   svn_stream_t *install_stream;
   svn_stream_t *write_stream;
 
-  url = svn_path_url_add_component2(repos_root_url, repos_relpath, scratch_pool);
-
-  special = svn_prop_get_value(props, SVN_PROP_SPECIAL) != NULL;
-  executable = svn_prop_get_value(props, SVN_PROP_EXECUTABLE) != NULL;
-  needs_lock = svn_prop_get_value(props, SVN_PROP_NEEDS_LOCK) != NULL;
-
-  eol_propval = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
-  svn_subst_eol_style_from_value(&eol_style, &eol, eol_propval);
-
-  keywords_propval = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
-  if (keywords_propval)
-    {
-      SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_propval,
-                                        apr_psprintf(scratch_pool, "%ld",
-                                                     changed_rev),
-                                        url, repos_root_url, changed_date,
-                                        changed_author, scratch_pool));
-      if (apr_hash_count(keywords) <= 0)
-        keywords = NULL;
-    }
-  else
+  if (keywords && apr_hash_count(keywords) <= 0)
     keywords = NULL;
 
   SVN_ERR(svn_stream__create_for_install(&install_stream, tmp_abspath,
@@ -110,7 +82,7 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
 
   if (needs_lock && !is_added && !has_lock)
     svn_stream__install_set_read_only(install_stream, TRUE);
-  if (executable)
+  if (is_executable)
     svn_stream__install_set_executable(install_stream, TRUE);
   if (final_mtime >= 0)
     svn_stream__install_set_affected_time(install_stream, final_mtime);
@@ -119,11 +91,11 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
 
   if (svn_subst_translation_required(eol_style, eol, keywords,
                                      FALSE /* special */,
-                                     TRUE /* force_eol_check */))
+                                     repair_eol))
     {
       write_stream = svn_subst_stream_translated(write_stream,
                                                  eol,
-                                                 TRUE /* repair */,
+                                                 repair_eol,
                                                  keywords,
                                                  TRUE /* expand */,
                                                  result_pool);
@@ -132,7 +104,7 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
   writer = apr_pcalloc(result_pool, sizeof(*writer));
   writer->pool = result_pool;
   writer->tmp_abspath = apr_pstrdup(result_pool, tmp_abspath);
-  writer->is_special = special;
+  writer->is_special = is_special;
   writer->install_stream = install_stream;
   writer->write_stream = write_stream;
 

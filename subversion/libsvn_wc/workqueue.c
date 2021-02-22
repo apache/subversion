@@ -30,6 +30,7 @@
 #include "svn_subst.h"
 #include "svn_hash.h"
 #include "svn_io.h"
+#include "svn_path.h"
 
 #include "wc.h"
 #include "wc_db.h"
@@ -471,6 +472,14 @@ run_file_install(work_item_baton_t *wqb,
   const char *source_abspath;
   const svn_checksum_t *checksum;
   apr_hash_t *props;
+  svn_boolean_t is_special;
+  svn_boolean_t is_executable;
+  svn_boolean_t needs_lock;
+  const char *eol_propval;
+  svn_subst_eol_style_t eol_style;
+  const char *eol;
+  const char *keywords_propval;
+  apr_hash_t *keywords;
   apr_time_t changed_date;
   svn_revnum_t changed_rev;
   const char *changed_author;
@@ -547,6 +556,30 @@ run_file_install(work_item_baton_t *wqb,
                                         db, local_abspath,
                                         scratch_pool, scratch_pool));
 
+  is_special = svn_prop_get_value(props, SVN_PROP_SPECIAL) != NULL;
+  is_executable = svn_prop_get_value(props, SVN_PROP_EXECUTABLE) != NULL;
+  needs_lock = svn_prop_get_value(props, SVN_PROP_NEEDS_LOCK) != NULL;
+
+  eol_propval = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  svn_subst_eol_style_from_value(&eol_style, &eol, eol_propval);
+
+  keywords_propval = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
+  if (keywords_propval)
+    {
+      const char *url =
+        svn_path_url_add_component2(repos_root_url, repos_relpath, scratch_pool);
+
+      SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_propval,
+                                        apr_psprintf(scratch_pool, "%ld",
+                                                     changed_rev),
+                                        url, repos_root_url, changed_date,
+                                        changed_author, scratch_pool));
+    }
+  else
+    {
+      keywords = NULL;
+    }
+
   if (use_commit_times && changed_date)
     final_mtime = changed_date;
   else
@@ -555,14 +588,15 @@ run_file_install(work_item_baton_t *wqb,
   SVN_ERR(svn_wc__working_file_writer_open(&file_writer,
                                            temp_dir_abspath,
                                            final_mtime,
-                                           props,
-                                           changed_rev,
-                                           changed_date,
-                                           changed_author,
+                                           eol_style,
+                                           eol,
+                                           TRUE /* repair_eol */,
+                                           keywords,
+                                           is_special,
+                                           is_executable,
+                                           needs_lock,
                                            lock != NULL,
                                            status == svn_wc__db_status_added,
-                                           repos_root_url,
-                                           repos_relpath,
                                            scratch_pool,
                                            scratch_pool));
 

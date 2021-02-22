@@ -3620,10 +3620,17 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
 {
   apr_hash_t *base_props;
   apr_hash_t *props;
+  svn_boolean_t is_special;
+  svn_boolean_t is_executable;
+  svn_boolean_t needs_lock;
+  const char *eol_propval;
+  svn_subst_eol_style_t eol_style;
+  const char *eol;
+  const char *keywords_propval;
+  apr_hash_t *keywords;
   const char *lock_token;
   const char *temp_dir_abspath;
   const char *cmt_rev_str;
-  svn_revnum_t cmt_rev;
   const char *cmt_date_str;
   apr_time_t cmt_date;
   const char *cmt_author;
@@ -3632,15 +3639,14 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
   SVN_ERR(get_file_base_props(&base_props, fb, scratch_pool));
   props = svn_prop__patch(base_props, fb->propchanges, scratch_pool);
 
+  is_special = svn_prop_get_value(props, SVN_PROP_SPECIAL) != NULL;
+  is_executable = svn_prop_get_value(props, SVN_PROP_EXECUTABLE) != NULL;
+  needs_lock = svn_prop_get_value(props, SVN_PROP_NEEDS_LOCK) != NULL;
+
+  eol_propval = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  svn_subst_eol_style_from_value(&eol_style, &eol, eol_propval);
+
   cmt_rev_str = svn_prop_get_value(props, SVN_PROP_ENTRY_COMMITTED_REV);
-  if (cmt_rev_str)
-    {
-      apr_int64_t rev;
-      SVN_ERR(svn_cstring_atoi64(&rev, cmt_rev_str));
-      cmt_rev = (svn_revnum_t)rev;
-    }
-  else
-    cmt_rev = SVN_INVALID_REVNUM;
 
   cmt_date_str = svn_prop_get_value(props, SVN_PROP_ENTRY_COMMITTED_DATE);
   if (cmt_date_str)
@@ -3650,10 +3656,24 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
 
   cmt_author = svn_prop_get_value(props, SVN_PROP_ENTRY_LAST_AUTHOR);
 
-  if (fb->edit_baton->use_commit_times && cmt_date)
-    final_mtime = cmt_date;
+  keywords_propval = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
+  if (keywords_propval)
+    {
+      const char *url =
+        svn_path_url_add_component2(fb->edit_baton->repos_root,
+                                    fb->new_repos_relpath,
+                                    scratch_pool);
+
+      SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_propval,
+                                        cmt_rev_str, url,
+                                        fb->edit_baton->repos_root,
+                                        cmt_date, cmt_author,
+                                        scratch_pool));
+    }
   else
-    final_mtime = -1;
+    {
+      keywords = NULL;
+    }
 
   lock_token = svn_prop_get_value(props, SVN_PROP_ENTRY_LOCK_TOKEN);
 
@@ -3662,17 +3682,23 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
                                          fb->edit_baton->wcroot_abspath,
                                          scratch_pool, scratch_pool));
 
+  if (fb->edit_baton->use_commit_times && cmt_date)
+    final_mtime = cmt_date;
+  else
+    final_mtime = -1;
+
   SVN_ERR(svn_wc__working_file_writer_open(writer_p,
                                            temp_dir_abspath,
                                            final_mtime,
-                                           props,
-                                           cmt_rev,
-                                           cmt_date,
-                                           cmt_author,
+                                           eol_style,
+                                           eol,
+                                           TRUE /* repair_eol */,
+                                           keywords,
+                                           is_special,
+                                           is_executable,
+                                           needs_lock,
                                            lock_token != NULL,
                                            fb->adding_file,
-                                           fb->edit_baton->repos_root,
-                                           fb->new_repos_relpath,
                                            result_pool,
                                            scratch_pool));
 

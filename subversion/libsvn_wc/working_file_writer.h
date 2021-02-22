@@ -27,6 +27,7 @@
 #include <apr_pools.h>
 #include "svn_types.h"
 #include "svn_io.h"
+#include "svn_subst.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -45,14 +46,15 @@ svn_error_t *
 svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
                                  const char *tmp_abspath,
                                  apr_time_t final_mtime,
-                                 apr_hash_t *props,
-                                 svn_revnum_t changed_rev,
-                                 apr_time_t changed_date,
-                                 const char *changed_author,
+                                 svn_subst_eol_style_t eol_style,
+                                 const char *eol,
+                                 svn_boolean_t repair_eol,
+                                 apr_hash_t *keywords,
+                                 svn_boolean_t is_special,
+                                 svn_boolean_t is_executable,
+                                 svn_boolean_t needs_lock,
                                  svn_boolean_t has_lock,
                                  svn_boolean_t is_added,
-                                 const char *repos_root_url,
-                                 const char *repos_relpath,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 
