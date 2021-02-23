@@ -1380,11 +1380,8 @@ test_apr_trunc_workaround(apr_pool_t *pool)
   char dummy;
 
   /* create a temp folder & schedule it for automatic cleanup */
-  SVN_ERR(svn_dirent_get_absolute(&tmp_dir, "test_apr_trunc_workaround",
-                                  pool));
-  SVN_ERR(svn_io_remove_dir2(tmp_dir, TRUE, NULL, NULL, pool));
-  SVN_ERR(svn_io_make_dir_recursively(tmp_dir, pool));
-  svn_test_add_dir_cleanup(tmp_dir);
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir, "test_apr_trunc_workaround",
+                                    pool));
 
   /* create an r/w file */
   tmp_file = svn_dirent_join(tmp_dir, "file", pool);
