@@ -1473,7 +1473,7 @@ $(PYTHON2_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON2_DIST) $(DISTDIR)/python-issue
 	chmod +x $(PYTHON2_SRCDIR)/setup.py
 	cd $(PYTHON2_SRCDIR) && patch -p1 < $(DISTDIR)/python-issue12560.patch
 	mkdir -p $(PYTHON2_OBJDIR)/bin
-	ln -s "`which python2`" $(PYTHON2_OBJDIR)/bin/python
+	ln -sf "`which python2`" $(PYTHON2_OBJDIR)/bin/python
 	touch $@
 
 # configure python 2
