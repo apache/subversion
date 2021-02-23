@@ -151,6 +151,7 @@ svn_wc__working_file_writer_install(svn_wc__working_file_writer_t *writer,
       SVN_ERR(svn_stream__install_stream(writer->install_stream, temp_path,
                                          TRUE, scratch_pool));
       writer->install_stream = NULL;
+      apr_pool_cleanup_kill(writer->pool, writer, cleanup_file_writer);
 
       /* When this stream is closed, the resulting special file will
          atomically be created/moved into place at LOCAL_ABSPATH. */
@@ -173,6 +174,7 @@ svn_wc__working_file_writer_install(svn_wc__working_file_writer_t *writer,
                                          target_abspath, TRUE,
                                          scratch_pool));
       writer->install_stream = NULL;
+      apr_pool_cleanup_kill(writer->pool, writer, cleanup_file_writer);
     }
 
   return SVN_NO_ERROR;
