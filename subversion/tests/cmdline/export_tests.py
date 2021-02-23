@@ -1124,6 +1124,35 @@ def export_revision_with_root_relative_external(sbox):
                                         expected_disk,
                                         '-r', 2)
 
+def export_keyword_translation_inconsistent_eol(sbox):
+  "export keyword translation with inconsistent EOLs"
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  # Create a file with keywords and inconsistent EOLs, don't set svn:eol-style.
+  sbox.simple_add_text('$LastChangedRevision$\n\r\n', 'dir/file')
+  sbox.simple_propset('svn:keywords', 'LastChangedRevision', 'dir/file')
+  sbox.simple_commit()
+
+  export_target = sbox.add_wc_path('export')
+
+  expected_disk = svntest.wc.State('', {
+    'dir'      : Item(),
+    'dir/file' : Item("$LastChangedRevision: 1 $\n\r\n"),
+  })
+
+  expected_output = svntest.wc.State(export_target, {
+    ''         : Item(status='A '),
+    'dir'      : Item(status='A '),
+    'dir/file' : Item(status='A ')
+  })
+
+  # We should be able to export without any unexpected errors.
+  svntest.actions.run_and_verify_export2(sbox.repo_url,
+                                         export_target,
+                                         expected_output,
+                                         expected_disk,
+                                         keep_eol_style=True)
+
 
 ########################################################################
 # Run the tests
@@ -1162,6 +1191,7 @@ test_list = [ None,
               export_file_external,
               export_file_externals2,
               export_revision_with_root_relative_external,
+              export_keyword_translation_inconsistent_eol,
              ]
 
 if __name__ == '__main__':
