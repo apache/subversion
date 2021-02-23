@@ -187,6 +187,7 @@ svn_wc__working_file_writer_close(svn_wc__working_file_writer_t *writer)
       /* Do not retry deleting if it fails, as the stream may already
          be in an invalid state. */
       writer->install_stream = NULL;
+      apr_pool_cleanup_kill(writer->pool, writer, cleanup_file_writer);
       SVN_ERR(svn_stream__install_delete(stream, writer->pool));
     }
 
