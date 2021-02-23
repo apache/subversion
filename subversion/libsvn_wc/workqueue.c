@@ -38,9 +38,9 @@
 #include "adm_files.h"
 #include "conflicts.h"
 #include "translate.h"
-#include "working_file_writer.h"
 
 #include "private/svn_io_private.h"
+#include "private/svn_wc_private.h"
 #include "private/svn_skel.h"
 
 

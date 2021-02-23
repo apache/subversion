@@ -48,7 +48,6 @@
 #include "conflicts.h"
 #include "translate.h"
 #include "workqueue.h"
-#include "working_file_writer.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"

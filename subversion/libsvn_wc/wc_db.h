@@ -49,8 +49,6 @@
 
 #include "svn_private_config.h"
 
-#include "working_file_writer.h"
-
 #ifdef __cplusplus
 extern "C" {
 #endif /* __cplusplus */

@@ -27,8 +27,7 @@
 #include "svn_path.h"
 
 #include "private/svn_io_private.h"
-
-#include "working_file_writer.h"
+#include "private/svn_wc_private.h"
 
 struct svn_wc__working_file_writer_t
 {
