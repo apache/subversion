@@ -2353,6 +2353,21 @@ svn_stream__install_set_affected_time(svn_stream_t *install_stream,
   ib->set_mtime = mtime;
 }
 
+/* Helper function that closes the underlying file of the install stream
+   and update the state in the baton. */
+static svn_error_t *
+install_stream_close_file(struct install_baton_t *ib,
+                          apr_pool_t *scratch_pool)
+{
+  if (ib->baton_apr.file)
+    {
+      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+      ib->baton_apr.file = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_stream__install_finalize(apr_time_t *mtime_p,
                              apr_off_t *size_p,
@@ -2438,8 +2453,7 @@ svn_stream__install_finalize(apr_time_t *mtime_p,
 
   if (!finalized)
     {
-      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
-      ib->baton_apr.file = NULL;
+      SVN_ERR(install_stream_close_file(ib, scratch_pool));
 
       if (ib->set_read_only)
         SVN_ERR(svn_io_set_file_read_only(ib->tmp_path, FALSE,
@@ -2530,13 +2544,12 @@ svn_stream__install_stream(svn_stream_t *install_stream,
           }
         else
           {
-            return svn_error_compose_create(err,
-                                            svn_io_file_close(ib->baton_apr.file,
-                                                              scratch_pool));
+            return svn_error_compose_create(
+                     err, install_stream_close_file(ib, scratch_pool));
           }
 #endif
 
-        SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+        SVN_ERR(install_stream_close_file(ib, scratch_pool));
     }
 
   err = svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool);
@@ -2582,7 +2595,7 @@ svn_stream__install_delete(svn_stream_t *install_stream,
                                              scratch_pool);
       if (err == SVN_NO_ERROR)
         {
-          SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+          SVN_ERR(install_stream_close_file(ib, scratch_pool));
           return SVN_NO_ERROR; /* File is already gone */
         }
 
@@ -2591,7 +2604,7 @@ svn_stream__install_delete(svn_stream_t *install_stream,
       svn_error_clear(err);
 #endif
 
-      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+      SVN_ERR(install_stream_close_file(ib, scratch_pool));
     }
 
   return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,
