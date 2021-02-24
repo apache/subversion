@@ -61,27 +61,6 @@ def svn_test__set_file_contents(root, path, contents):
 def svn_test__get_file_contents(root, path):
   return svn_test__stream_to_string(fs.file_contents(root, path))
 
-
-def _svn_path_join_internal(base, component):
-  """Join a base path (base) with a component (component), in str"""
-
-  # If the component is absolute, then return it.
-  if component[0:1] == '/':
-    return component
-  # If either is empty return the other
-  if base == '':
-    return component
-  if component == '':
-    return base
-
-  if base == '/':
-    # Ignore base, just return separator + component
-    return '/' + component
-
-  # Construnct the new, combined path.
-  return base + '/' + component
-
-
 def _get_dir_entries(root, path, tree_entries=None):
   if tree_entries is None:
     tree_entries = {}
@@ -95,10 +74,9 @@ def _get_dir_entries(root, path, tree_entries=None):
 
     # Calculate the full path of this entry (by appending the name
     # to the path thus far)
-    name = dirent.name
-    if not isinstance(name, str):
-      name = name.decode('utf-8')
-    full_path = _svn_path_join_internal(path, name)
+    full_path = core.svn_dirent_join(bpath, dirent.name)
+    if not isinstance(full_path, str):
+      full_path = full_path.decode('utf-8')
 
     # Now, copy this dirent to the master hash, but this time, use
     # the full path for the key
