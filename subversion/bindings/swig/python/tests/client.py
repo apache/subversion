@@ -528,7 +528,7 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = self.temper.alloc_empty_dir('-propset_local')
 
-    target_path = os.path.join(path, b'trunk', b'README.txt') 
+    target_path = core.svn_dirent_join(path, b'trunk/README.txt')
     target_prop = b'local_prop_test'
     prop_val1 = b'foo'
 
