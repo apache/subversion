@@ -137,9 +137,11 @@ def handle_one_error(repo_dir, rev, error_lines):
   for line in error_lines:
     verbose_print(line)
 
-  match = re.match(r"svn.*: Filesystem is corrupt", error_lines[0])
-  if match:
-    # This is an additional line in v1.7+ error messages: skip it.
+  # Skip uninteresting lines
+  #   svnadmin 1.9+: r"\* Error verifying revision .*"
+  #   svnadmin 1.7+: r"svn.*: Filesystem is corrupt"
+  while (re.match(r"\* Error verifying revision .*", error_lines[0]) or
+         re.match(r"svn.*: Filesystem is corrupt", error_lines[0])):
     error_lines = error_lines[1:]
 
   line1 = error_lines[0]
