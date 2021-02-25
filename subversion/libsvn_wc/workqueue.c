@@ -80,11 +80,11 @@ struct work_item_dispatch {
 };
 
 /* Forward definition */
-static svn_error_t *
-get_and_record_fileinfo(work_item_baton_t *wqb,
-                        const char *local_abspath,
-                        svn_boolean_t ignore_enoent,
-                        apr_pool_t *scratch_pool);
+static void
+wq_record_fileinfo(work_item_baton_t *wqb,
+                   const char *local_abspath,
+                   apr_time_t mtime,
+                   svn_filesize_t size);
 
 /* ------------------------------------------------------------------------ */
 /* OP_REMOVE_BASE  */
@@ -489,6 +489,8 @@ run_file_install(work_item_baton_t *wqb,
   const char *repos_relpath;
   const char *repos_root_url;
   svn_wc__working_file_writer_t *file_writer;
+  apr_time_t record_mtime;
+  apr_off_t record_size;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
@@ -608,17 +610,25 @@ run_file_install(work_item_baton_t *wqb,
                            cancel_func, cancel_baton,
                            scratch_pool));
 
-  SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, file_writer,
-                                               scratch_pool));
+  if (record_fileinfo)
+    {
+      SVN_ERR(svn_wc__working_file_writer_finalize(&record_mtime, &record_size,
+                                                   file_writer, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, file_writer,
+                                                   scratch_pool));
+      record_mtime = -1;
+      record_size = -1;
+    }
+
   SVN_ERR(svn_wc__working_file_writer_install(file_writer, local_abspath,
                                               scratch_pool));
 
-  /* ### this should happen before we rename the file into place.  */
   if (record_fileinfo)
     {
-      SVN_ERR(get_and_record_fileinfo(wqb, local_abspath,
-                                      FALSE /* ignore_enoent */,
-                                      scratch_pool));
+      wq_record_fileinfo(wqb, local_abspath, record_mtime, record_size);
     }
 
   return SVN_NO_ERROR;
@@ -1173,6 +1183,7 @@ run_record_fileinfo(work_item_baton_t *wqb,
   const char *local_relpath;
   const char *local_abspath;
   apr_time_t set_time = 0;
+  const svn_io_dirent2_t *dirent;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
 
@@ -1206,10 +1217,17 @@ run_record_fileinfo(work_item_baton_t *wqb,
          filesystem might have a different timestamp granularity */
     }
 
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath,
+                              FALSE /* verify_truename */,
+                              TRUE /* ignore_enoent */,
+                              scratch_pool, scratch_pool));
 
-  return svn_error_trace(get_and_record_fileinfo(wqb, local_abspath,
-                                                 TRUE /* ignore_enoent */,
-                                                 scratch_pool));
+  if (dirent->kind == svn_node_file)
+    {
+      wq_record_fileinfo(wqb, local_abspath, dirent->mtime, dirent->filesize);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1407,7 +1425,7 @@ struct work_item_baton_t
 
   svn_boolean_t used; /* needs reset */
 
-  apr_hash_t *record_map; /* const char * -> svn_io_dirent2_t map */
+  apr_hash_t *record_map; /* const char * -> svn_wc__db_fileinfo_t map */
 };
 
 
@@ -1608,27 +1626,23 @@ svn_wc__wq_merge(svn_skel_t *work_item1,
 }
 
 
-static svn_error_t *
-get_and_record_fileinfo(work_item_baton_t *wqb,
-                        const char *local_abspath,
-                        svn_boolean_t ignore_enoent,
-                        apr_pool_t *scratch_pool)
+static void
+wq_record_fileinfo(work_item_baton_t *wqb,
+                   const char *local_abspath,
+                   apr_time_t mtime,
+                   svn_filesize_t size)
 {
-  const svn_io_dirent2_t *dirent;
-
-  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, ignore_enoent,
-                              wqb->result_pool, scratch_pool));
-
-  if (dirent->kind != svn_node_file)
-    return SVN_NO_ERROR;
+  svn_wc__db_fileinfo_t *info;
 
   wqb->used = TRUE;
 
   if (! wqb->record_map)
     wqb->record_map = apr_hash_make(wqb->result_pool);
 
-  svn_hash_sets(wqb->record_map, apr_pstrdup(wqb->result_pool, local_abspath),
-                dirent);
+  info = apr_pcalloc(wqb->result_pool, sizeof(*info));
+  info->mtime = mtime;
+  info->size = size;
 
-  return SVN_NO_ERROR;
+  svn_hash_sets(wqb->record_map, apr_pstrdup(wqb->result_pool, local_abspath),
+                info);
 }

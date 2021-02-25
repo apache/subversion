@@ -202,6 +202,15 @@ typedef struct svn_wc__db_lock_t {
   apr_time_t date;
 } svn_wc__db_lock_t;
 
+/* Structure holding the size and timestamp values for a file.  */
+typedef struct svn_wc__db_fileinfo_t {
+  /* The time the file was last modified. */
+  apr_time_t mtime;
+
+  /* The size of this file. */
+  svn_filesize_t size;
+} svn_wc__db_fileinfo_t;
+
 
 /* ### NOTE: I have not provided docstrings for most of this file at this
    ### point in time. The shape and extent of this API is still in massive

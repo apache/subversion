@@ -13597,7 +13597,7 @@ wq_record(svn_wc__db_wcroot_t *wcroot,
        hi = apr_hash_next(hi))
     {
       const char *local_abspath = apr_hash_this_key(hi);
-      const svn_io_dirent2_t *dirent = apr_hash_this_val(hi);
+      const svn_wc__db_fileinfo_t *info = apr_hash_this_val(hi);
       const char *local_relpath = svn_dirent_skip_ancestor(wcroot->abspath,
                                                            local_abspath);
 
@@ -13607,7 +13607,7 @@ wq_record(svn_wc__db_wcroot_t *wcroot,
         continue;
 
       SVN_ERR(db_record_fileinfo(wcroot, local_relpath,
-                                 dirent->filesize, dirent->mtime,
+                                 info->size, info->mtime,
                                  iterpool));
     }
 
