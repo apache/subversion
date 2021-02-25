@@ -66,7 +66,14 @@
 /* For work queue debugging. Generates output about its operation.  */
 /* #define SVN_DEBUG_WORK_QUEUE */
 
-typedef struct work_item_baton_t work_item_baton_t;
+typedef struct work_item_baton_t
+{
+  apr_pool_t *result_pool; /* Pool to allocate result in */
+
+  svn_boolean_t used; /* needs reset */
+
+  apr_hash_t *record_map; /* const char * -> svn_wc__db_fileinfo_t map */
+} work_item_baton_t;
 
 struct work_item_dispatch {
   const char *name;
@@ -79,12 +86,26 @@ struct work_item_dispatch {
                        apr_pool_t *scratch_pool);
 };
 
-/* Forward definition */
 static void
 wq_record_fileinfo(work_item_baton_t *wqb,
                    const char *local_abspath,
                    apr_time_t mtime,
-                   svn_filesize_t size);
+                   svn_filesize_t size)
+{
+  svn_wc__db_fileinfo_t *info;
+
+  wqb->used = TRUE;
+
+  if (! wqb->record_map)
+    wqb->record_map = apr_hash_make(wqb->result_pool);
+
+  info = apr_pcalloc(wqb->result_pool, sizeof(*info));
+  info->mtime = mtime;
+  info->size = size;
+
+  svn_hash_sets(wqb->record_map, apr_pstrdup(wqb->result_pool, local_abspath),
+                info);
+}
 
 /* ------------------------------------------------------------------------ */
 /* OP_REMOVE_BASE  */
@@ -1419,16 +1440,6 @@ static const struct work_item_dispatch dispatch_table[] = {
   { NULL }
 };
 
-struct work_item_baton_t
-{
-  apr_pool_t *result_pool; /* Pool to allocate result in */
-
-  svn_boolean_t used; /* needs reset */
-
-  apr_hash_t *record_map; /* const char * -> svn_wc__db_fileinfo_t map */
-};
-
-
 static svn_error_t *
 dispatch_work_item(work_item_baton_t *wqb,
                    svn_wc__db_t *db,
@@ -1623,26 +1634,4 @@ svn_wc__wq_merge(svn_skel_t *work_item1,
      as we only want its children.  */
   svn_skel__append(work_item1, work_item2->children);
   return work_item1;
-}
-
-
-static void
-wq_record_fileinfo(work_item_baton_t *wqb,
-                   const char *local_abspath,
-                   apr_time_t mtime,
-                   svn_filesize_t size)
-{
-  svn_wc__db_fileinfo_t *info;
-
-  wqb->used = TRUE;
-
-  if (! wqb->record_map)
-    wqb->record_map = apr_hash_make(wqb->result_pool);
-
-  info = apr_pcalloc(wqb->result_pool, sizeof(*info));
-  info->mtime = mtime;
-  info->size = size;
-
-  svn_hash_sets(wqb->record_map, apr_pstrdup(wqb->result_pool, local_abspath),
-                info);
 }
