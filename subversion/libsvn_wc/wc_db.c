@@ -13584,7 +13584,7 @@ svn_wc__db_wq_fetch_next(apr_uint64_t *id,
   return SVN_NO_ERROR;
 }
 
-/* Records timestamp and date for one or more files in wcroot */
+/* Records timestamp and size for one or more files in wcroot */
 static svn_error_t *
 wq_record(svn_wc__db_wcroot_t *wcroot,
           apr_hash_t *record_map,
