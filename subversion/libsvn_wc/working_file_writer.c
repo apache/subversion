@@ -154,7 +154,7 @@ svn_wc__working_file_writer_install(svn_wc__working_file_writer_t *writer,
       apr_pool_cleanup_kill(writer->pool, writer, cleanup_file_writer);
 
       /* When this stream is closed, the resulting special file will
-         atomically be created/moved into place at LOCAL_ABSPATH. */
+         atomically be created/moved into place at TARGET_ABSPATH. */
       SVN_ERR(svn_subst_create_specialfile(&dst_stream, target_abspath,
                                            scratch_pool, scratch_pool));
       SVN_ERR(svn_stream_open_readonly(&src_stream, temp_path, scratch_pool,
