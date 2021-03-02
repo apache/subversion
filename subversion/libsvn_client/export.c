@@ -182,16 +182,18 @@ export_node(void *baton,
 {
   struct export_info_baton *eib = baton;
   svn_wc_context_t *wc_ctx = eib->wc_ctx;
-  apr_hash_t *kw = NULL;
+  apr_hash_t *kw;
   svn_subst_eol_style_t style;
   apr_hash_t *props;
   svn_string_t *eol_style, *keywords, *executable, *special;
-  const char *eol = NULL;
+  const char *eol_style_val;
+  const char *eol;
   svn_boolean_t local_mod = FALSE;
   apr_time_t tm;
   svn_stream_t *source;
   svn_stream_t *dst_stream;
-  const char *dst_tmp;
+  const char *tmp_abspath;
+  svn_wc__working_file_writer_t *file_writer;
   svn_error_t *err;
 
   const char *to_abspath = svn_dirent_join(
@@ -340,26 +342,17 @@ export_node(void *baton,
         local_mod = TRUE;
     }
 
-  /* We can early-exit if we're creating a special file. */
   special = svn_hash_gets(props, SVN_PROP_SPECIAL);
-  if (special != NULL)
-    {
-      /* Create the destination as a special file, and copy the source
-         details into the destination stream. */
-      /* ### And forget the notification */
-      SVN_ERR(svn_subst_create_specialfile(&dst_stream, to_abspath,
-                                           scratch_pool, scratch_pool));
-      return svn_error_trace(
-        svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool));
-    }
-
-
   eol_style = svn_hash_gets(props, SVN_PROP_EOL_STYLE);
   keywords = svn_hash_gets(props, SVN_PROP_KEYWORDS);
   executable = svn_hash_gets(props, SVN_PROP_EXECUTABLE);
 
   if (eol_style)
-    SVN_ERR(get_eol_style(&style, &eol, eol_style->data, eib->native_eol));
+    eol_style_val = eol_style->data;
+  else
+    eol_style_val = NULL;
+
+  SVN_ERR(get_eol_style(&style, &eol, eol_style_val, eib->native_eol));
 
   if (local_mod)
     {
@@ -372,7 +365,7 @@ export_node(void *baton,
       tm = status->changed_date;
     }
 
-  if (keywords)
+  if (keywords && !eib->ignore_keywords)
     {
       svn_revnum_t changed_rev = status->changed_rev;
       const char *suffix;
@@ -400,39 +393,35 @@ export_node(void *baton,
                                         url, status->repos_root_url, tm,
                                         author, scratch_pool));
     }
+  else
+    {
+      kw = NULL;
+    }
 
-  /* For atomicity, we translate to a tmp file and then rename the tmp file
-     over the real destination. */
-  SVN_ERR(svn_stream_open_unique(&dst_stream, &dst_tmp,
-                                 svn_dirent_dirname(to_abspath, scratch_pool),
-                                 svn_io_file_del_none, scratch_pool,
-                                 scratch_pool));
-
-  /* If some translation is needed, then wrap the output stream (this is
-     more efficient than wrapping the input). */
-  if (eol || (kw && (apr_hash_count(kw) > 0)))
-    dst_stream = svn_subst_stream_translated(dst_stream,
-                                             eol,
-                                             FALSE /* repair */,
-                                             kw,
-                                             ! eib->ignore_keywords /* expand */,
-                                             scratch_pool);
+  tmp_abspath = svn_dirent_dirname(to_abspath, scratch_pool);
+  SVN_ERR(svn_wc__working_file_writer_open(&file_writer,
+                                           tmp_abspath,
+                                           tm,
+                                           style,
+                                           eol,
+                                           FALSE /* repair_eol */,
+                                           kw,
+                                           special != NULL,
+                                           executable != NULL,
+                                           FALSE,
+                                           FALSE,
+                                           FALSE,
+                                           scratch_pool,
+                                           scratch_pool));
 
   /* ###: use cancel func/baton in place of NULL/NULL below. */
-  err = svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool);
+  dst_stream = svn_wc__working_file_writer_get_stream(file_writer);
+  SVN_ERR(svn_stream_copy3(source, dst_stream, NULL, NULL, scratch_pool));
 
-  if (!err && executable)
-    err = svn_io_set_file_executable(dst_tmp, TRUE, FALSE, scratch_pool);
-
-  if (!err)
-    err = svn_io_set_file_affected_time(tm, dst_tmp, scratch_pool);
-
-  if (err)
-    return svn_error_compose_create(err, svn_io_remove_file2(dst_tmp, FALSE,
-                                                             scratch_pool));
-
-  /* Now that dst_tmp contains the translated data, do the atomic rename. */
-  SVN_ERR(svn_io_file_rename2(dst_tmp, to_abspath, FALSE, scratch_pool));
+  SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, file_writer,
+                                               scratch_pool));
+  SVN_ERR(svn_wc__working_file_writer_install(file_writer, to_abspath,
+                                              scratch_pool));
 
   if (eib->notify_func)
     {
