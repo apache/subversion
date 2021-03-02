@@ -90,7 +90,7 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
 
   if (svn_subst_translation_required(eol_style, eol, keywords,
                                      FALSE /* special */,
-                                     repair_eol))
+                                     TRUE /* force_eol_check */))
     {
       write_stream = svn_subst_stream_translated(write_stream,
                                                  eol,

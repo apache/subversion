@@ -493,6 +493,116 @@ test_internal_file_modified(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_working_file_writer_simple(const svn_test_opts_t *opts,
+                                apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  svn_wc__working_file_writer_t *writer;
+  svn_stream_t *stream;
+  const char *final_abspath;
+  svn_stringbuf_t *actual_content;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "working_file_writer_simple",
+                                    pool));
+
+  SVN_ERR(svn_wc__working_file_writer_open(&writer, tmp_dir, -1,
+                                           svn_subst_eol_style_none, NULL,
+                                           FALSE, NULL, FALSE, FALSE,
+                                           FALSE, FALSE, FALSE,
+                                           pool, pool));
+
+  stream = svn_wc__working_file_writer_get_stream(writer);
+  SVN_ERR(svn_stream_puts(stream, "content"));
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, writer, pool));
+  final_abspath = svn_dirent_join(tmp_dir, "file", pool);
+  SVN_ERR(svn_wc__working_file_writer_install(writer, final_abspath, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_working_file_writer_eol_repair(const svn_test_opts_t *opts,
+                                    apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  svn_wc__working_file_writer_t *writer;
+  svn_stream_t *stream;
+  const char *final_abspath;
+  svn_stringbuf_t *actual_content;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "working_file_writer_eol_repair",
+                                    pool));
+
+  SVN_ERR(svn_wc__working_file_writer_open(&writer, tmp_dir, -1,
+                                           svn_subst_eol_style_fixed, "\r\n",
+                                           TRUE /* repair_eol */,
+                                           NULL, FALSE, FALSE,
+                                           FALSE, FALSE, FALSE,
+                                           pool, pool));
+
+  stream = svn_wc__working_file_writer_get_stream(writer);
+  SVN_ERR(svn_stream_puts(stream, "content\n\r\n"));
+  SVN_ERR(svn_stream_close(stream));
+
+  SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, writer, pool));
+  final_abspath = svn_dirent_join(tmp_dir, "file", pool);
+  SVN_ERR(svn_wc__working_file_writer_install(writer, final_abspath, pool));
+
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content,
+                                   final_abspath,
+                                   pool));
+
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content\r\n\r\n");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_working_file_writer_eol_inconsistent(const svn_test_opts_t *opts,
+                                          apr_pool_t *pool)
+{
+  const char *tmp_dir;
+  svn_wc__working_file_writer_t *writer;
+  svn_stream_t *stream;
+  apr_hash_t *dirents;
+  svn_error_t *err;
+
+  SVN_ERR(svn_test_make_sandbox_dir(&tmp_dir,
+                                    "working_file_writer_eol_inconsistent",
+                                    pool));
+
+  SVN_ERR(svn_wc__working_file_writer_open(&writer, tmp_dir, -1,
+                                           svn_subst_eol_style_fixed, "\r\n",
+                                           FALSE /* repair_eol */,
+                                           NULL, FALSE, FALSE,
+                                           FALSE, FALSE, FALSE,
+                                           pool, pool));
+
+  /* With REPAIR_EOL disabled, expect to see an error when the line ending
+     inconsistency is detected by the stream. */
+  stream = svn_wc__working_file_writer_get_stream(writer);
+  err = svn_stream_puts(stream, "content\n\r\n");
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_IO_INCONSISTENT_EOL);
+
+  SVN_ERR(svn_wc__working_file_writer_close(writer));
+
+  SVN_ERR(svn_io_get_dirents3(&dirents, tmp_dir, TRUE, pool, pool));
+  SVN_TEST_INT_ASSERT(apr_hash_count(dirents), 0);
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -515,6 +625,12 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test legacy commit2"),
     SVN_TEST_OPTS_PASS(test_internal_file_modified,
                        "test internal_file_modified"),
+    SVN_TEST_OPTS_PASS(test_working_file_writer_simple,
+                       "working file writer simple"),
+    SVN_TEST_OPTS_PASS(test_working_file_writer_eol_repair,
+                       "working file writer eol repair"),
+    SVN_TEST_OPTS_PASS(test_working_file_writer_eol_inconsistent,
+                       "working file writer eol inconsistent"),
     SVN_TEST_NULL
   };
 
