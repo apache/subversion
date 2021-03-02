@@ -88,9 +88,7 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
 
   write_stream = install_stream;
 
-  if (svn_subst_translation_required(eol_style, eol, keywords,
-                                     FALSE /* special */,
-                                     TRUE /* force_eol_check */))
+  if (keywords || eol_style != svn_subst_eol_style_none)
     {
       write_stream = svn_subst_stream_translated(write_stream,
                                                  eol,
