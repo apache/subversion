@@ -12,7 +12,7 @@ $LastChangedRevision$
 import os, sys, re, subprocess
 from subprocess import Popen, PIPE
 
-from find_good_id import FixError, rev_file_path, find_good_id, find_good_rep_header
+from find_good_id import FixError, Repository, find_good_id, find_good_rep_header
 from fixer_config import *
 
 
@@ -70,11 +70,11 @@ def replace_in_file(filename, old, new):
                 "    with '" + new + "'")
   os.remove(filename + '.bak')
 
-def replace_in_rev_file(repo_dir, rev, old, new):
+def replace_in_rev_file(repo, rev, old, new):
   """Replace all occurrences of the string OLD with the string NEW in the
      revision file for revision REV in the repository at REPO_DIR.  Raise an
      error if nothing changes."""
-  rev_file = rev_file_path(repo_dir, rev)
+  rev_file = repo.rev_file_path(rev)
   replace_in_file(rev_file, old, new)
 
 # Fix a node-rev ID that has a bad byte-offset part.  Look up the correct
@@ -85,10 +85,10 @@ def replace_in_rev_file(repo_dir, rev, old, new):
 #   since the error reported for <REV> might actually exist in an older
 #   revision that is referenced by <REV>.
 #
-def fix_id(repo_dir, rev, bad_id):
+def fix_id(repo, rev, bad_id):
 
   # Find the GOOD_ID to replace BAD_ID.
-  good_id = find_good_id(repo_dir, bad_id)
+  good_id = find_good_id(repo, bad_id)
 
   # Replacement ID must be the same length, otherwise I don't know how to
   # reconstruct the file so as to preserve all offsets.
@@ -100,37 +100,37 @@ def fix_id(repo_dir, rev, bad_id):
     raise FixError("The ID supplied is already correct: " +
                    "good id '" + good_id + "'")
 
-  replace_in_rev_file(repo_dir, rev, bad_id, good_id)
+  replace_in_rev_file(repo, rev, bad_id, good_id)
   print("Fixed id: " + bad_id + " -> " + good_id)
   fixed_ids[bad_id] = good_id
 
-def fix_checksum(repo_dir, rev, old_checksum, new_checksum):
+def fix_checksum(repo, rev, old_checksum, new_checksum):
   """Change all occurrences of OLD_CHECKSUM to NEW_CHECKSUM in the revision
      file for REV in REPO_DIR."""
 
   assert len(old_checksum) and len(new_checksum)
   assert old_checksum != new_checksum
 
-  replace_in_rev_file(repo_dir, rev, old_checksum, new_checksum)
+  replace_in_rev_file(repo, rev, old_checksum, new_checksum)
   print("Fixed checksum: " + old_checksum + " -> " + new_checksum)
   fixed_checksums[old_checksum] = new_checksum
 
-def fix_rep_ref(repo_dir, rev, prefix, rep_rev, bad_offset, rep_size):
+def fix_rep_ref(repo, rev, prefix, rep_rev, bad_offset, rep_size):
   """Fix a "DELTA <REP_REV> <BAD_OFFSET> <REP_SIZE>"
         or "text: <REP_REV> <BAD_OFFSET> <REP_SIZE> ..."
      line in the revision file for REV in REPO_DIR, where <BAD_OFFSET> is
      wrong.  PREFIX is 'DELTA' or 'text:'.
   """
-  good_offset = find_good_rep_header(repo_dir, rep_rev, rep_size)
+  good_offset = find_good_rep_header(repo, rep_rev, rep_size)
   old_line = ' '.join([prefix, rep_rev, bad_offset, rep_size])
   new_line = ' '.join([prefix, rep_rev, good_offset, rep_size])
   if good_offset == bad_offset:
     raise FixError("Attempting to fix a rep ref that appears to be correct: " + old_line)
-  replace_in_rev_file(repo_dir, rev, old_line, new_line)
+  replace_in_rev_file(repo, rev, old_line, new_line)
   print("Fixed rep ref:", old_line, "->", new_line)
 
 
-def handle_one_error(repo_dir, rev, error_lines):
+def handle_one_error(repo, rev, error_lines):
   """If ERROR_LINES describes an error we know how to fix, then fix it.
      Return True if fixed, False if not fixed."""
 
@@ -151,7 +151,7 @@ def handle_one_error(repo_dir, rev, error_lines):
     # Fix it.
     bad_id = match.group(1)
     verbose_print(error_lines[0])
-    fix_id(repo_dir, rev, bad_id)
+    fix_id(repo, rev, bad_id)
 
     # Verify again, and expect to discover a checksum mismatch.
     # verbose_print("Fixed an ID; now verifying to discover the checksum we need to update")
@@ -163,7 +163,7 @@ def handle_one_error(repo_dir, rev, error_lines):
     #
     # expected = ...
     # actual   = ...
-    # fix_checksum(repo_dir, rev, expected, actual)
+    # fix_checksum(repo, rev, expected, actual)
 
     return True
 
@@ -171,7 +171,7 @@ def handle_one_error(repo_dir, rev, error_lines):
   if match:
     expected = re.match(r' *expected: *([^ ]*)', error_lines[1]).group(1)
     actual   = re.match(r' *actual: *([^ ]*)',   error_lines[2]).group(1)
-    fix_checksum(repo_dir, rev, expected, actual)
+    fix_checksum(repo, rev, expected, actual)
     return True
 
   match = re.match(r"svn.*: Corrupt representation '([0-9]*) ([0-9]*) ([0-9]*) .*'", line1)
@@ -196,11 +196,11 @@ def handle_one_error(repo_dir, rev, error_lines):
     # a knock-on effect, invalidating the checksum of the rep so that all
     # references to this rep will then need their checksums correcting.
     try:
-      fix_rep_ref(repo_dir, rev, 'DELTA', bad_rev, bad_offset, bad_size)
+      fix_rep_ref(repo, rev, 'DELTA', bad_rev, bad_offset, bad_size)
     except FixError:
       # In at least one case of corruption, every bad reference has been in a
       # 'text:' line.  Fixing this has no knock-on effect.
-      fix_rep_ref(repo_dir, rev, 'text:', bad_rev, bad_offset, bad_size)
+      fix_rep_ref(repo, rev, 'text:', bad_rev, bad_offset, bad_size)
 
     return True
 
@@ -213,18 +213,18 @@ def grab_stderr(child_argv):
   child_err = [line for line in stderr.splitlines() if '(apr_err=' not in line]
   return child_err
 
-def fix_one_error(repo_dir, rev):
+def fix_one_error(repo, rev):
   """Verify, and if there is an error we know how to fix, then fix it.
      Return False if no error, True if fixed, exception if can't fix."""
 
   # Capture the output of 'svnadmin verify' (ignoring any debug-build output)
-  svnadmin_err = grab_stderr([SVNADMIN, 'verify', '-q', '-r'+rev, repo_dir])
+  svnadmin_err = grab_stderr([SVNADMIN, 'verify', '-q', '-r'+rev, repo.path])
 
   if svnadmin_err == []:
     return False
 
   try:
-    if handle_one_error(repo_dir, rev, svnadmin_err):
+    if handle_one_error(repo, rev, svnadmin_err):
       return True
     else:
       verbose_print("Unrecognized error message; trying 'svnlook' instead.")
@@ -237,51 +237,48 @@ def fix_one_error(repo_dir, rev):
   # one that we *can* handle.
 
   # Capture the output of 'svnlook tree' (ignoring any debug-build output)
-  svnlook_err = grab_stderr([SVNLOOK, 'tree', '-r'+rev, repo_dir])
+  svnlook_err = grab_stderr([SVNLOOK, 'tree', '-r'+rev, repo.path])
 
   if svnlook_err == []:
     print('warning: svnlook did not find an error')
   else:
-    if handle_one_error(repo_dir, rev, svnlook_err):
+    if handle_one_error(repo, rev, svnlook_err):
       return True
     else:
       verbose_print("Unrecognized error message.")
 
   raise FixError("unable to fix r" + str(rev))
 
-def check_formats(repo_dir):
+def check_formats(repo):
   """Check that REPO_DIR isn't newer than we know how to handle."""
 
-  repos_format = int(open(os.path.join(repo_dir, 'format')).readline())
-  if repos_format not in [3,5]:
+  if repo.repo_format not in [3,5]:
     raise FixError("Repository '%s' too new (format %d); try the version at %s"
-                   % (repo_dir, repos_format, URL))
+                   % (repo.path, repo.repo_format, URL))
 
-  fs_type = open(os.path.join(repo_dir, 'db', 'fs-type')).read().rstrip()
-  if fs_type != 'fsfs':
+  if repo.fs_type != 'fsfs':
     raise FixError("Repository '%s' has wrong FS backend: "
-                   "found '%s', expected '%s'" % (repo_dir, fs_type, 'fsfs'))
+                   "found '%s', expected '%s'" % (repo.path, repo.fs_type, 'fsfs'))
 
-  fsfs_format = int(open(os.path.join(repo_dir, 'db', 'format')).readline())
-  if fsfs_format > MAX_FSFS_FORMAT:
+  if repo.db_format > MAX_FSFS_FORMAT:
     raise FixError("Filesystem '%s' is too new (format %d); try the version at %s"
-                   % (os.path.join(repo_dir, 'db'), fsfs_format, URL))
+                   % (os.path.join(repo.path, 'db'), repo.db_format, URL))
 
 # ----------------------------------------------------------------------
 # Main program
 
-def fix_rev(repo_dir, rev):
+def fix_rev(repo, rev):
   """"""
 
-  check_formats(repo_dir)
+  check_formats(repo)
 
   # Back up the file
-  if not os.path.exists(rev_file_path(repo_dir, rev) + '.orig'):
+  if not os.path.exists(repo.rev_file_path(rev) + '.orig'):
     pass
     # cp -a "$FILE" "$FILE.orig"
 
   # Keep looking for verification errors in r$REV and fixing them while we can.
-  while fix_one_error(repo_dir, rev):
+  while fix_one_error(repo, rev):
     pass
   print("Revision " + rev + " verifies OK.")
 
@@ -295,8 +292,9 @@ if __name__ == '__main__':
   repo_dir = sys.argv[1]
   rev = sys.argv[2]
 
+  repo = Repository(repo_dir)
   try:
-    fix_rev(repo_dir, rev)
+    fix_rev(repo, rev)
   except FixError as e:
     print('error:', e)
     sys.exit(1)
