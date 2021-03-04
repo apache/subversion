@@ -510,7 +510,7 @@ test_working_file_writer_simple(const svn_test_opts_t *opts,
   SVN_ERR(svn_wc__working_file_writer_open(&writer, tmp_dir, -1,
                                            svn_subst_eol_style_none, NULL,
                                            FALSE, NULL, FALSE, FALSE,
-                                           FALSE, FALSE, FALSE,
+                                           FALSE,
                                            pool, pool));
 
   stream = svn_wc__working_file_writer_get_stream(writer);
@@ -548,7 +548,7 @@ test_working_file_writer_eol_repair(const svn_test_opts_t *opts,
                                            svn_subst_eol_style_fixed, "\r\n",
                                            TRUE /* repair_eol */,
                                            NULL, FALSE, FALSE,
-                                           FALSE, FALSE, FALSE,
+                                           FALSE,
                                            pool, pool));
 
   stream = svn_wc__working_file_writer_get_stream(writer);
@@ -586,7 +586,7 @@ test_working_file_writer_eol_inconsistent(const svn_test_opts_t *opts,
                                            svn_subst_eol_style_fixed, "\r\n",
                                            FALSE /* repair_eol */,
                                            NULL, FALSE, FALSE,
-                                           FALSE, FALSE, FALSE,
+                                           FALSE,
                                            pool, pool));
 
   /* With REPAIR_EOL disabled, expect to see an error when the line ending

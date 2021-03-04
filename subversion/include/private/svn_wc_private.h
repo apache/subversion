@@ -2148,9 +2148,7 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
                                  apr_hash_t *keywords,
                                  svn_boolean_t is_special,
                                  svn_boolean_t is_executable,
-                                 svn_boolean_t needs_lock,
-                                 svn_boolean_t has_lock,
-                                 svn_boolean_t is_added,
+                                 svn_boolean_t is_readonly,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 

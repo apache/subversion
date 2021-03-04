@@ -3634,6 +3634,7 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
   apr_time_t cmt_date;
   const char *cmt_author;
   apr_time_t final_mtime;
+  svn_boolean_t is_readonly;
 
   SVN_ERR(get_file_base_props(&base_props, fb, scratch_pool));
   props = svn_prop__patch(base_props, fb->propchanges, scratch_pool);
@@ -3686,6 +3687,11 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
   else
     final_mtime = -1;
 
+  if (needs_lock && !lock_token && !fb->adding_file)
+    is_readonly = TRUE;
+  else
+    is_readonly = FALSE;
+
   SVN_ERR(svn_wc__working_file_writer_open(writer_p,
                                            temp_dir_abspath,
                                            final_mtime,
@@ -3695,9 +3701,7 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
                                            keywords,
                                            is_special,
                                            is_executable,
-                                           needs_lock,
-                                           lock_token != NULL,
-                                           fb->adding_file,
+                                           is_readonly,
                                            result_pool,
                                            scratch_pool));
 

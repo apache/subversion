@@ -63,9 +63,7 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
                                  apr_hash_t *keywords,
                                  svn_boolean_t is_special,
                                  svn_boolean_t is_executable,
-                                 svn_boolean_t needs_lock,
-                                 svn_boolean_t has_lock,
-                                 svn_boolean_t is_added,
+                                 svn_boolean_t is_readonly,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
@@ -76,7 +74,7 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
   SVN_ERR(svn_stream__create_for_install(&install_stream, tmp_abspath,
                                          result_pool, scratch_pool));
 
-  if (needs_lock && !is_added && !has_lock)
+  if (is_readonly)
     svn_stream__install_set_read_only(install_stream, TRUE);
   if (is_executable)
     svn_stream__install_set_executable(install_stream, TRUE);

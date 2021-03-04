@@ -408,9 +408,7 @@ export_node(void *baton,
                                            kw,
                                            special != NULL,
                                            executable != NULL,
-                                           FALSE,
-                                           FALSE,
-                                           FALSE,
+                                           FALSE /* is_readonly */,
                                            scratch_pool,
                                            scratch_pool));
 
@@ -723,9 +721,7 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
                                            keywords,
                                            fb->special,
                                            fb->executable_val != NULL,
-                                           FALSE,
-                                           FALSE,
-                                           FALSE,
+                                           FALSE /* is_readonly */,
                                            result_pool,
                                            scratch_pool));
 

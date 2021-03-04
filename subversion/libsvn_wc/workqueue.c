@@ -512,6 +512,7 @@ run_file_install(work_item_baton_t *wqb,
   svn_wc__working_file_writer_t *file_writer;
   apr_time_t record_mtime;
   apr_off_t record_size;
+  svn_boolean_t is_readonly;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
@@ -608,6 +609,11 @@ run_file_install(work_item_baton_t *wqb,
   else
     final_mtime = -1;
 
+  if (needs_lock && !lock && status != svn_wc__db_status_added)
+    is_readonly = TRUE;
+  else
+    is_readonly = FALSE;
+
   SVN_ERR(svn_wc__working_file_writer_open(&file_writer,
                                            temp_dir_abspath,
                                            final_mtime,
@@ -617,9 +623,7 @@ run_file_install(work_item_baton_t *wqb,
                                            keywords,
                                            is_special,
                                            is_executable,
-                                           needs_lock,
-                                           lock != NULL,
-                                           status == svn_wc__db_status_added,
+                                           is_readonly,
                                            scratch_pool,
                                            scratch_pool));
 
