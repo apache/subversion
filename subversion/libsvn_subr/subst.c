@@ -1484,10 +1484,6 @@ stream_translated(svn_stream_t *stream,
                   svn_boolean_t expand,
                   apr_pool_t *result_pool)
 {
-  struct translated_stream_baton *baton
-    = apr_palloc(result_pool, sizeof(*baton));
-  svn_stream_t *s = svn_stream_create(baton, result_pool);
-
   /* Make sure EOL_STR and KEYWORDS are allocated in RESULT_POOL
      so they have the same lifetime as the stream. */
   if (eol_str)
@@ -1520,32 +1516,44 @@ stream_translated(svn_stream_t *stream,
         }
     }
 
-  /* Setup the baton fields */
-  baton->stream = stream;
-  baton->in_baton
-    = create_translation_baton(eol_str, translated_eol, repair, keywords,
-                               expand, result_pool);
-  baton->out_baton
-    = create_translation_baton(eol_str, translated_eol, repair, keywords,
-                               expand, result_pool);
-  baton->written = FALSE;
-  baton->readbuf = svn_stringbuf_create_empty(result_pool);
-  baton->readbuf_off = 0;
-  baton->iterpool = svn_pool_create(result_pool);
-  baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
-
-  /* Setup the stream methods */
-  svn_stream_set_read2(s, NULL /* only full read support */,
-                       translated_stream_read);
-  svn_stream_set_write(s, translated_stream_write);
-  svn_stream_set_close(s, translated_stream_close);
-  if (svn_stream_supports_mark(stream))
+  if (eol_str || keywords)
     {
-      svn_stream_set_mark(s, translated_stream_mark);
-      svn_stream_set_seek(s, translated_stream_seek);
-    }
+      struct translated_stream_baton *baton
+        = apr_palloc(result_pool, sizeof(*baton));
+      svn_stream_t *s = svn_stream_create(baton, result_pool);
 
-  return s;
+      /* Setup the baton fields */
+      baton->stream = stream;
+      baton->in_baton
+        = create_translation_baton(eol_str, translated_eol, repair, keywords,
+                                   expand, result_pool);
+      baton->out_baton
+        = create_translation_baton(eol_str, translated_eol, repair, keywords,
+                                   expand, result_pool);
+      baton->written = FALSE;
+      baton->readbuf = svn_stringbuf_create_empty(result_pool);
+      baton->readbuf_off = 0;
+      baton->iterpool = svn_pool_create(result_pool);
+      baton->buf = apr_palloc(result_pool, SVN__TRANSLATION_BUF_SIZE);
+
+      /* Setup the stream methods */
+      svn_stream_set_read2(s, NULL /* only full read support */,
+                           translated_stream_read);
+      svn_stream_set_write(s, translated_stream_write);
+      svn_stream_set_close(s, translated_stream_close);
+      if (svn_stream_supports_mark(stream))
+        {
+          svn_stream_set_mark(s, translated_stream_mark);
+          svn_stream_set_seek(s, translated_stream_seek);
+        }
+
+      return s;
+    }
+  else
+    {
+      /* No translation is necessary, return the original stream. */
+      return stream;
+    }
 }
 
 svn_stream_t *
