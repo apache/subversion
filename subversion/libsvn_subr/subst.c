@@ -111,7 +111,8 @@ svn_subst_translation_required(svn_subst_eol_style_t style,
                                svn_boolean_t special,
                                svn_boolean_t force_eol_check)
 {
-  return (special || keywords
+  return (special
+          || (keywords && apr_hash_count(keywords) > 0)
           || (style != svn_subst_eol_style_none && force_eol_check)
           || (style == svn_subst_eol_style_native &&
               strcmp(APR_EOL_STR, SVN_SUBST_NATIVE_EOL_STR) != 0)
