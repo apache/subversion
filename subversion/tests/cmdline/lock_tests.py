@@ -2479,6 +2479,36 @@ def replace_dir_with_lots_of_locked_files(sbox):
   # This problem was introduced on the 1.8.x branch in r1606976.
   sbox.simple_commit()
 
+def update_add_file_needs_lock(sbox):
+  "update adding a file with svn:needs-lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_update(revision=0)
+  sbox.simple_update(revision=1)
+  is_readonly(sbox.ospath('dir/file'))
+
+def update_edit_file_needs_lock(sbox):
+  "update editing a file with svn:needs-lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_append('dir/file', 'edited\n', truncate=True)
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_update(revision=1)
+  is_writable(sbox.ospath('dir/file'))
+  sbox.simple_update(revision=2)
+  is_readonly(sbox.ospath('dir/file'))
+
 ########################################################################
 # Run the tests
 
@@ -2547,6 +2577,8 @@ test_list = [ None,
               delete_dir_with_lots_of_locked_files,
               delete_locks_on_depth_commit,
               replace_dir_with_lots_of_locked_files,
+              update_add_file_needs_lock,
+              update_edit_file_needs_lock,
             ]
 
 if __name__ == '__main__':

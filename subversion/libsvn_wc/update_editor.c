@@ -3687,7 +3687,7 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
   else
     final_mtime = -1;
 
-  if (needs_lock && !lock_token && !fb->adding_file)
+  if (needs_lock && !lock_token)
     is_readonly = TRUE;
   else
     is_readonly = FALSE;
