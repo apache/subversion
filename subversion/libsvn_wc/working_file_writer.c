@@ -73,9 +73,6 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
   svn_stream_t *install_stream;
   svn_stream_t *write_stream;
 
-  if (keywords && apr_hash_count(keywords) <= 0)
-    keywords = NULL;
-
   SVN_ERR(svn_stream__create_for_install(&install_stream, tmp_abspath,
                                          result_pool, scratch_pool));
 
