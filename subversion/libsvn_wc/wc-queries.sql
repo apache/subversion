@@ -1807,6 +1807,12 @@ WHERE wc_id = ?1 AND repos_path = ?2 AND kind = ?3
                     AND w.local_relpath = n.local_relpath)
 ORDER BY local_relpath ASC
 
+-- STMT_GET_LOCK
+SELECT lock_token, lock_owner, lock_comment, lock_date
+FROM lock
+WHERE repos_id = ?1 AND (repos_relpath = ?2)
+
+
 /* ------------------------------------------------------------------------- */
 
 /* Grab all the statements related to the schema.  */

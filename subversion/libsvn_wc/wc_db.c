@@ -12560,6 +12560,43 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__db_lock_get(svn_wc__db_lock_t **lock_p,
+                    svn_wc__db_t *db,
+                    const char *wri_abspath,
+                    const char *repos_relpath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *wri_relpath;
+  svn_sqlite__stmt_t *stmt;
+  svn_boolean_t have_row;
+  svn_wc__db_lock_t *lock;
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &wri_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_GET_LOCK));
+  SVN_ERR(svn_sqlite__bindf(stmt, "is", wcroot->wc_id, repos_relpath));
+  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+
+  if (have_row)
+    lock = lock_from_columns(stmt, 0, 1, 2, 3, result_pool);
+  else
+    lock = NULL;
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+
+  *lock_p = lock;
+  return SVN_NO_ERROR;
+}
+
+
 /* A helper for scan_addition().
  * Compute moved-from information for the node at LOCAL_RELPATH which
  * has been determined as having been moved-here.

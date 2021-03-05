@@ -2509,6 +2509,64 @@ def update_edit_file_needs_lock(sbox):
   sbox.simple_update(revision=2)
   is_readonly(sbox.ospath('dir/file'))
 
+def update_add_file_has_lock(sbox):
+  "update adding svn:needs-lock file with lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  # Acquire the lock for a file.
+  svntest.actions.run_and_verify_svn(".*locked by user", [], 'lock',
+                                     '-m', '', sbox.ospath('dir/file'))
+
+  sbox.simple_update(revision=0)
+  sbox.simple_update(revision=1)
+  # We have a lock for that file, so it should be writable.
+  is_writable(sbox.ospath('dir/file'))
+
+def update_edit_file_has_lock(sbox):
+  "update editing svn:needs-lock file with lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_append('dir/file', 'edited\n', truncate=True)
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  # Acquire the lock for a file.
+  svntest.actions.run_and_verify_svn(".*locked by user", [], 'lock',
+                                     '-m', '', sbox.ospath('dir/file'))
+
+  sbox.simple_update(revision=1)
+  # No svn:needs-lock on the file, so it should be writable.
+  is_writable(sbox.ospath('dir/file'))
+  sbox.simple_update(revision=2)
+  # We have a lock for that file, so it should be writable.
+  is_writable(sbox.ospath('dir/file'))
+
+def update_remove_needs_lock(sbox):
+  "update removing svn:needs-lock on a file"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_propdel('svn:needs-lock', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_update(revision=1)
+  is_readonly(sbox.ospath('dir/file'))
+  sbox.simple_update(revision=2)
+  is_writable(sbox.ospath('dir/file'))
+
 ########################################################################
 # Run the tests
 
@@ -2579,6 +2637,9 @@ test_list = [ None,
               replace_dir_with_lots_of_locked_files,
               update_add_file_needs_lock,
               update_edit_file_needs_lock,
+              update_add_file_has_lock,
+              update_edit_file_has_lock,
+              update_remove_needs_lock,
             ]
 
 if __name__ == '__main__':

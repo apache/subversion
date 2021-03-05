@@ -3627,7 +3627,6 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
   const char *eol;
   const char *keywords_propval;
   apr_hash_t *keywords;
-  const char *lock_token;
   const char *temp_dir_abspath;
   const char *cmt_rev_str;
   const char *cmt_date_str;
@@ -3675,8 +3674,6 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
       keywords = NULL;
     }
 
-  lock_token = svn_prop_get_value(props, SVN_PROP_ENTRY_LOCK_TOKEN);
-
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
                                          fb->edit_baton->db,
                                          fb->edit_baton->wcroot_abspath,
@@ -3687,10 +3684,22 @@ open_working_file_writer(svn_wc__working_file_writer_t **writer_p,
   else
     final_mtime = -1;
 
-  if (needs_lock && !lock_token)
-    is_readonly = TRUE;
+  if (needs_lock)
+    {
+      svn_wc__db_lock_t *lock;
+
+      SVN_ERR(svn_wc__db_lock_get(&lock,
+                                  fb->edit_baton->db,
+                                  fb->edit_baton->wcroot_abspath,
+                                  fb->new_repos_relpath,
+                                  scratch_pool,
+                                  scratch_pool));
+      is_readonly = (lock == NULL);
+    }
   else
-    is_readonly = FALSE;
+    {
+      is_readonly = FALSE;
+    }
 
   SVN_ERR(svn_wc__working_file_writer_open(writer_p,
                                            temp_dir_abspath,

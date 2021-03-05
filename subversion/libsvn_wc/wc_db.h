@@ -2711,6 +2711,18 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
+/* Fetch the information about the lock which corresponds to REPOS_RELPATH
+   within the working copy indicated by WRI_ABSPATH. Set *LOCK_P to NULL
+   if there is no such lock.  */
+svn_error_t *
+svn_wc__db_lock_get(svn_wc__db_lock_t **lock_p,
+                    svn_wc__db_t *db,
+                    const char *wri_abspath,
+                    const char *repos_relpath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
 /* @} */
 
 
