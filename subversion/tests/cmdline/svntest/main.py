@@ -129,7 +129,7 @@ else:
 if windows:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
 else:
-  svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
+  svneditor_script = os.path.join(sys.path[0], 'svneditor.sh')
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
