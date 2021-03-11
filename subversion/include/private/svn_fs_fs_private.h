@@ -272,7 +272,7 @@ typedef struct svn_fs_fs__id_part_t
   svn_revnum_t revision;
 
   /* sub-id value relative to REVISION.  Its interpretation depends on
-     the part itself.  In rev_item, it is the index_index value, in others
+     the part itself.  In rev_item, it is the item_index value, in others
      it represents a unique counter value. */
   apr_uint64_t number;
 } svn_fs_fs__id_part_t;
