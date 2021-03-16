@@ -43,10 +43,18 @@ Candidate changes:
    Votes:
      +1: stsp, jcorvel
 
-  * r1883838, r1883989, r1886460, r1886582
-    Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
-    Votes:
-      +1: stsp
+ * r1883838, r1883989, r1886460, r1886582
+   Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
+   Votes:
+     +1: stsp
+
+  * r1887704
+   Follow up to r1866587, r1866588: Unbreak a msgid.
+   Justification:
+     subversion.pot should be built correctly.
+   Branch: ^/subversion/branches/1.10.x-r1887704
+   Votes:
+     +1: futatuki
 
 Veto-blocked changes:
 =====================
