@@ -69,6 +69,13 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1887704
+   Follow up to r1866587, r1866588: Unbreak a msgid.
+   Justification:
+     subversion.pot should be built correctly.
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
