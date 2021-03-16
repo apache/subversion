@@ -6562,7 +6562,7 @@ msgstr "P2L-Indexeintrag für Revision r%ld ist nicht zusammenhängend zwischen 
 
 #: ../libsvn_fs_fs/verify.c:696
 #, fuzzy, c-format
-msgid "p2l index entry for changes in revision r%ld is item %ld of type %d at offset %s"
+msgid "p2l index entry for changes in revision r%ld is item %s of type %u at offset %s"
 msgstr "P2L-Indexeintrag für Revision r%ld ist nicht zusammenhängend zwischen Offsets  %s und %s"
 
 #: ../libsvn_fs_util/fs-util.c:164
