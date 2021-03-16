@@ -2926,11 +2926,16 @@ subcommand_rev_size(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(revision_size(&rev_size, svn_repos_fs(repos), revision, pool));
 
   if (opt_state->quiet)
-    SVN_ERR(svn_cmdline_printf(pool, "%"APR_OFF_T_FMT"\n", rev_size));
+    {
+      SVN_ERR(svn_cmdline_printf(pool, "%"APR_OFF_T_FMT"\n", rev_size));
+    }
   else
-    SVN_ERR(svn_cmdline_printf(pool, _("%12"APR_OFF_T_FMT" bytes in revision %ld\n"),
-                               rev_size, revision));
-
+    {
+      const char *rev_size_str = apr_psprintf(pool,
+                                              "%12" APR_INT64_T_FMT, rev_size);
+      SVN_ERR(svn_cmdline_printf(pool, _("%s bytes in revision %ld\n"),
+                                 rev_size_str, revision));
+    }
   return SVN_NO_ERROR;
 }
 
