@@ -2932,7 +2932,7 @@ subcommand_rev_size(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   else
     {
       const char *rev_size_str = apr_psprintf(pool,
-                                              "%12" APR_INT64_T_FMT, rev_size);
+                                              "%12" APR_OFF_T_FMT, rev_size);
       SVN_ERR(svn_cmdline_printf(pool, _("%s bytes in revision %ld\n"),
                                  rev_size_str, revision));
     }
