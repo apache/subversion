@@ -129,7 +129,10 @@ else:
 if windows:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
 else:
-  svneditor_script = os.path.join(sys.path[0], 'svneditor.sh')
+  # This script is in the build tree, not in the source tree.  
+  svneditor_script = os.path.join(os.path.dirname(
+                                      os.path.dirname(os.path.abspath('.'))),
+                                  'tests/cmdline/svneditor.sh')
 
 # Username and password used by the working copies
 wc_author = 'jrandom'

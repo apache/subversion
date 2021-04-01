@@ -25,5 +25,4 @@
 #    under the License.
 ######################################################################
 
-script_dir=`dirname "$0"`
-exec @PYTHON@ "$script_dir"/svneditor.py "$@"
+exec @PYTHON@ "@abs_srcdir@"/svneditor.py "$@"
