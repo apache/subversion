@@ -21,7 +21,6 @@
  */
 
 #include <apr_thread_pool.h>
-#include <apr_thread_cond.h>
 
 #include "batch_fsync.h"
 #include "svn_pools.h"
@@ -33,6 +32,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_mutex.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_thread_cond.h"
 
 /* Handy macro to check APR function results and turning them into
  * svn_error_t upon failure. */
@@ -42,59 +42,6 @@
     if (status_)                                \
       return svn_error_wrap_apr(status_, msg);  \
   }
-
-
-/* A simple SVN-wrapper around the apr_thread_cond_* API */
-#if APR_HAS_THREADS
-typedef apr_thread_cond_t svn_thread_cond__t;
-#else
-typedef int svn_thread_cond__t;
-#endif
-
-static svn_error_t *
-svn_thread_cond__create(svn_thread_cond__t **cond,
-                        apr_pool_t *result_pool)
-{
-#if APR_HAS_THREADS
-
-  WRAP_APR_ERR(apr_thread_cond_create(cond, result_pool),
-               _("Can't create condition variable"));
-
-#else
-
-  *cond = apr_pcalloc(result_pool, sizeof(**cond));
-
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svn_thread_cond__broadcast(svn_thread_cond__t *cond)
-{
-#if APR_HAS_THREADS
-
-  WRAP_APR_ERR(apr_thread_cond_broadcast(cond),
-               _("Can't broadcast condition variable"));
-
-#endif
-
-  return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-svn_thread_cond__wait(svn_thread_cond__t *cond,
-                      svn_mutex__t *mutex)
-{
-#if APR_HAS_THREADS
-
-  WRAP_APR_ERR(apr_thread_cond_wait(cond, svn_mutex__get(mutex)),
-               _("Can't broadcast condition variable"));
-
-#endif
-
-  return SVN_NO_ERROR;
-}
 
 /* Utility construct:  Clients can efficiently wait for the encapsulated
  * counter to reach a certain value.  Currently, only increments have been
