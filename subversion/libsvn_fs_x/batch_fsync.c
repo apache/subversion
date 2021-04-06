@@ -33,6 +33,7 @@
 #include "private/svn_mutex.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_thread_cond.h"
+#include "private/svn_waitable_counter.h"
 
 /* Handy macro to check APR function results and turning them into
  * svn_error_t upon failure. */
@@ -42,87 +43,6 @@
     if (status_)                                \
       return svn_error_wrap_apr(status_, msg);  \
   }
-
-/* Utility construct:  Clients can efficiently wait for the encapsulated
- * counter to reach a certain value.  Currently, only increments have been
- * implemented.  This whole structure can be opaque to the API users.
- */
-typedef struct waitable_counter_t
-{
-  /* Current value, initialized to 0. */
-  int value;
-
-  /* Synchronization objects. */
-  svn_thread_cond__t *cond;
-  svn_mutex__t *mutex;
-} waitable_counter_t;
-
-/* Set *COUNTER_P to a new waitable_counter_t instance allocated in
- * RESULT_POOL.  The initial counter value is 0. */
-static svn_error_t *
-waitable_counter__create(waitable_counter_t **counter_p,
-                         apr_pool_t *result_pool)
-{
-  waitable_counter_t *counter = apr_pcalloc(result_pool, sizeof(*counter));
-  counter->value = 0;
-
-  SVN_ERR(svn_thread_cond__create(&counter->cond, result_pool));
-  SVN_ERR(svn_mutex__init(&counter->mutex, TRUE, result_pool));
-
-  *counter_p = counter;
-
-  return SVN_NO_ERROR;
-}
-
-/* Increment the value in COUNTER by 1. */
-static svn_error_t *
-waitable_counter__increment(waitable_counter_t *counter)
-{
-  SVN_ERR(svn_mutex__lock(counter->mutex));
-  counter->value++;
-
-  SVN_ERR(svn_thread_cond__broadcast(counter->cond));
-  SVN_ERR(svn_mutex__unlock(counter->mutex, SVN_NO_ERROR));
-
-  return SVN_NO_ERROR;
-}
-
-/* Efficiently wait for COUNTER to assume VALUE. */
-static svn_error_t *
-waitable_counter__wait_for(waitable_counter_t *counter,
-                           int value)
-{
-  svn_boolean_t done = FALSE;
-
-  /* This loop implicitly handles spurious wake-ups. */
-  do
-    {
-      SVN_ERR(svn_mutex__lock(counter->mutex));
-
-      if (counter->value == value)
-        done = TRUE;
-      else
-        SVN_ERR(svn_thread_cond__wait(counter->cond, counter->mutex));
-
-      SVN_ERR(svn_mutex__unlock(counter->mutex, SVN_NO_ERROR));
-    }
-  while (!done);
-
-  return SVN_NO_ERROR;
-}
-
-/* Set the value in COUNTER to 0. */
-static svn_error_t *
-waitable_counter__reset(waitable_counter_t *counter)
-{
-  SVN_ERR(svn_mutex__lock(counter->mutex));
-  counter->value = 0;
-  SVN_ERR(svn_mutex__unlock(counter->mutex, SVN_NO_ERROR));
-
-  SVN_ERR(svn_thread_cond__broadcast(counter->cond));
-
-  return SVN_NO_ERROR;
-}
 
 /* Entry type for the svn_fs_x__batch_fsync_t collection.  There is one
  * instance per file handle.
@@ -140,7 +60,7 @@ typedef struct to_sync_t
   svn_error_t *result;
 
   /* Counter to increment when we completed the task. */
-  waitable_counter_t *counter;
+  svn_waitable_counter_t *counter;
 } to_sync_t;
 
 /* The actual collection object. */
@@ -150,7 +70,7 @@ struct svn_fs_x__batch_fsync_t
   apr_hash_t *files;
 
   /* Counts the number of completed fsync tasks. */
-  waitable_counter_t *counter;
+  svn_waitable_counter_t *counter;
 
   /* Perform fsyncs only if this flag has been set. */
   svn_boolean_t flush_to_disk;
@@ -277,7 +197,7 @@ svn_fs_x__batch_fsync_create(svn_fs_x__batch_fsync_t **result_p,
   result->files = svn_hash__make(result_pool);
   result->flush_to_disk = flush_to_disk;
 
-  SVN_ERR(waitable_counter__create(&result->counter, result_pool));
+  SVN_ERR(svn_waitable_counter__create(&result->counter, result_pool));
   apr_pool_cleanup_register(result_pool, result, fsync_batch_cleanup,
                             apr_pool_cleanup_null);
 
@@ -430,7 +350,7 @@ flush_task(apr_thread_t *tid,
      OTOH, the main thread will probably deadlock anyway if we got
      an error here, thus there is no point in trying to tell the
      main thread what the problem was. */
-  svn_error_clear(waitable_counter__increment(to_sync->counter));
+  svn_error_clear(svn_waitable_counter__increment(to_sync->counter));
 
   return NULL;
 }
@@ -465,7 +385,7 @@ svn_fs_x__batch_fsync_run(svn_fs_x__batch_fsync_t *batch,
 
   /* Make sure the task completion counter is set to 0. */
   chain = svn_error_compose_create(chain,
-                                   waitable_counter__reset(batch->counter));
+                                   svn_waitable_counter__reset(batch->counter));
 
   /* Start the actual fsyncing process. */
   if (batch->flush_to_disk)
@@ -509,8 +429,8 @@ svn_fs_x__batch_fsync_run(svn_fs_x__batch_fsync_t *batch,
 
   /* Wait for all outstanding flush operations to complete. */
   chain = svn_error_compose_create(chain,
-                                   waitable_counter__wait_for(batch->counter,
-                                                              tasks));
+                                   svn_waitable_counter__wait_for(
+                                       batch->counter, tasks));
 
   /* Collect the results, close all files and release memory. */
   for (hi = apr_hash_first(scratch_pool, batch->files);
