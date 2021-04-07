@@ -83,6 +83,10 @@ Candidate changes:
      encountered in real life.
    Votes:
      +1: julianfoad
+      0: danielsh (concerned about introducing a hard error in a patch release;
+		   proposing downgrading the error to a warning at least for 1.14;
+                   see <https://mail-archives.apache.org/mod_mbox/subversion-dev/202104.mbox/%3C20210407195656.GA27545%40tarpaulin.shahaf.local2%3E>;
+		   discussion is ongoing, hence the non-vote)
 
 Veto-blocked changes:
 =====================
