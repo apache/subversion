@@ -76,6 +76,14 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1888474
+   Fix issue #4874 "Avoid foreign repository merge if repository UUIDs match"
+   Justification:
+     Erroneous/inconsistent merge behaviour that was previously uncaught,
+     encountered in real life.
+   Votes:
+     +1: julianfoad
+
 Veto-blocked changes:
 =====================
 
