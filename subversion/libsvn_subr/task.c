@@ -197,6 +197,7 @@ struct svn_task__t
   output_t *output;
 };
 
+
 /* Adding tasks to the tree. */
 
 /* Return the index of the first immediate sub-task of TASK with a ready
