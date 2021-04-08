@@ -324,7 +324,7 @@ static svn_error_t *add_task(
 }
 
 svn_error_t *svn_task__add(
-  svn_task__t *task,
+  svn_task__t *current,
   apr_pool_t *process_pool,
   void *partial_output,
   svn_task__process_func_t process_func,
@@ -333,24 +333,24 @@ svn_error_t *svn_task__add(
   void *output_baton)
 {
   callbacks_t *callbacks;
-  SVN_ERR(alloc_callbacks(&callbacks, task->root->task_pool));
+  SVN_ERR(alloc_callbacks(&callbacks, current->root->task_pool));
 
   callbacks->process_func = process_func;
   callbacks->output_func = output_func;
   callbacks->output_baton = output_baton;
 
-  return svn_error_trace(add_task(task, process_pool, partial_output,
+  return svn_error_trace(add_task(current, process_pool, partial_output,
                                   callbacks, process_baton));
 }
 
 svn_error_t* svn_task__add_similar(
-  svn_task__t* task,
+  svn_task__t* current,
   apr_pool_t *process_pool,
   void* partial_output,
   void* process_baton)
 {
-  return svn_error_trace(add_task(task, process_pool, partial_output,
-                                  task->callbacks, process_baton));
+  return svn_error_trace(add_task(current, process_pool, partial_output,
+                                  current->callbacks, process_baton));
 }
 
 apr_pool_t *svn_task__create_process_pool(

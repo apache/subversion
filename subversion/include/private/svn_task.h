@@ -40,23 +40,30 @@ extern "C" {
  *
  * During execution, a task may add further sub-tasks - equivalent to
  * sub-function calls.  They will be executed after their parent task
- * has been processed forming an growing tree of *isolated* tasks.
+ * has been processed forming a growing tree of *isolated* tasks.
  *
  * Tasks may be executed in arbitrary order, concurrently and in parallel.
  * To guarantee consistent output order and error handling, every task
  * consists of two functions.  The first is the "process function" that
  * should perform the bulk of the work, may be executed in some worker
- * thread and may produce some result.  The latter is later passed into
- * the second function, the "output function".  This one is called in the
- * main thread and strictly in pre-order wrt. the position of the respective
- * task within the tree.  Both, process and output functions, may add
- * further sub-tasks as needed.
+ * thread and may produce some result.
  * 
- * Errors are detected in strictly the same order, with only the first one
+ * The latter is later passed into the second function, the "output function".
+ * This one is called in the main thread and strictly in post-order wrt.
+ * the position of the respective task within the tree.  However, a task
+ * may produce output that needs to be processed before any sub-task or
+ * in between them - just like you would in normal function / sub-function
+ * code.  Such partial outputs can be handed in whenever a new sub-task
+ * is being added and the output function will be called on them right
+ * before handling the output of the respective sub-task.
+ * 
+ * Both, process and output functions, may add further sub-tasks as needed.
+ * 
+ * Errors are detected in strictly in post-order, with only the first one
  * being returned from the task runner.  In particular, it may not be the
  * first error that occurs timewise but only the first one encountered when
  * walking the tree and checking the processing results for errors.  Because
- * it takes some time make the workers cancel all outstanding tasks,
+ * it takes some time to make the workers cancel all outstanding tasks,
  * additional errors may occur before and after the one that ultimately
  * gets reported.  All those errors are being swallowed.
  *
@@ -181,15 +188,15 @@ svn_error_t *svn_task__run(
  * into either @a svn_task__add() or @a svn_task__add_similar() - even if
  * you use a @c NULL process baton.
  *
- * @todo Consider replace these pools with a single pool at the parent
- * and turn this into a simple getter.  We will end up with a lot fewer
+ * @todo Consider replacing these pools with a single pool at the parent
+ * and turning this into a simple getter.  We will end up with a lot fewer
  * pools that OTOH may live a lot longer.
  */
 apr_pool_t *svn_task__create_process_pool(
   svn_task__t *parent);
 
 /**
- * Append a new sub-task to the current @a task with the given
+ * Append a new sub-task to the @a current task with the given
  * @a process_pool.  The latter must have been allocated with
  * @a svn_task__create_process_pool() for @a task.
  *
@@ -205,7 +212,7 @@ apr_pool_t *svn_task__create_process_pool(
  * and / or processing will take place.
  */
 svn_error_t *svn_task__add(
-  svn_task__t *task,
+  svn_task__t *current,
   apr_pool_t *process_pool,
   void *partial_output,
   svn_task__process_func_t process_func,
@@ -220,7 +227,7 @@ svn_error_t *svn_task__add(
  * as for the current task.  This is useful for recursive tasks.
  */
 svn_error_t *svn_task__add_similar(
-  svn_task__t *task,
+  svn_task__t *current,
   apr_pool_t *process_pool,
   void *partial_output,
   void *process_baton);
