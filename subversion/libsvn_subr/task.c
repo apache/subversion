@@ -359,6 +359,7 @@ apr_pool_t *svn_task__create_process_pool(
   return svn_pool_create(parent->root->process_pool);
 }
 
+
 /* Removing tasks from the tree */
 
 /* Remove TASK from the parent tree.
@@ -401,6 +402,7 @@ static void free_sub_tasks(svn_task__t *task)
     task->parent->first_sub = task->next;
 }
 
+
 /* Picking the next task to process */
 
 /* Utility function that follows the chain of siblings and returns the first
@@ -459,6 +461,7 @@ static void unready_task(svn_task__t *task)
     }
 }
 
+
 /* Task processing and outputting results */
 
 /* The forground output_processed() function will now consider TASK's
@@ -617,6 +620,7 @@ static svn_error_t *output_processed(
   return SVN_NO_ERROR;
 }
 
+
 /* Execution models */
 
 /* Run the (root) TASK to completion, including dynamically added sub-tasks.
@@ -673,6 +677,7 @@ static svn_error_t *execute_serially(
   return svn_error_trace(task_err);
 }
 
+
 /* Root data structure */
 
 svn_error_t *svn_task__run(
