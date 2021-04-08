@@ -27,9 +27,10 @@
 #include "private/svn_atomic.h"
 #include "private/svn_thread_cond.h"
 
+
 /* Top of the task tree.
  *
- * It is accessible from all tasks and contains all necessary ressource
+ * It is accessible from all tasks and contains all necessary resource
  * pools and synchronization mechanisms.
  */
 typedef struct root_t
@@ -49,7 +50,7 @@ typedef struct root_t
 
   /* Allocate per-task parameters (process_baton) from sub-pools of this.
    * They should be cleaned up as soon as the respective task has been
-   * has been processed (the parameters will not be needed anymore).
+   * processed (the parameters will not be needed anymore).
    */
   apr_pool_t *process_pool;
 
@@ -72,7 +73,7 @@ typedef struct output_t
 {
   /* (Last part of the) output produced by the task.
    * If the task has sub-tasks, additional output (produced before creating
-   * the sub-task) may be found in the respective sub-tasks
+   * each sub-task) may be found in the respective sub-task's
    * PRIOR_PARENT_OUTPUT.  NULL, if no output was produced.
    */
   void *output;
@@ -80,11 +81,11 @@ typedef struct output_t
   /* Error code returned by the proccessing function. */
   svn_error_t *error;
 
-  /* Parent tasks output before this task has been created, i.e. the part
-   * that shall be passed to the output function before this tasks' output.
+  /* Parent task's output before this task has been created, i.e. the part
+   * that shall be passed to the output function before this task's output.
    * NULL, if there is no prior parent output.
    *
-   * This has to be allocated in the parant's OUTPUT->POOL.
+   * This has to be allocated in the parent's OUTPUT->POOL.
    */
   void *prior_parent_output;
 
@@ -93,7 +94,7 @@ typedef struct output_t
    * of those sub-tasks but have been allocated in (their parent's) POOL.
    *
    * This flag indicates if such partial results exist.  POOL must not be
-   * destroyed in that case, until all sub-tasks outputs have been handled.
+   * destroyed in that case, until all sub-tasks' outputs have been handled.
    */
   svn_boolean_t has_partial_results;
 
@@ -165,10 +166,10 @@ struct svn_task__t
 
   /* The first task, in pre-order, of this sub-tree whose processing has not
    * been started yet.  This will be NULL, iff for all tasks in this sub-tree,
-   * processing has at least been started.  If *this==FIRST_READY, this task
+   * processing has at least been started.  If this==FIRST_READY, this task
    * itself waits for being proccessed.
    *
-   * Note that immediate and / or indirect sub-tasks may already have been
+   * Note that immediate and/or indirect sub-tasks may already have been
    * processed before this one.
    */
   svn_task__t *first_ready;
@@ -476,7 +477,7 @@ static void set_processed(svn_task__t *task)
  * Pending sub-tasks will be ignored. */
 static svn_boolean_t is_processed(const svn_task__t *task)
 {
-  return task->process_pool == NULL;
+  return (task->process_pool == NULL);
 }
 
 /* Process a single TASK within the given THREAD_CONTEXT.  It may add
@@ -563,8 +564,8 @@ static svn_error_t *output_processed(
 
           /* We will handle this sub-task in the next iteration but we
            * may have to process results produced before or in between
-           * sub-tasks.  Also note that PRIOR_PARENT_OUTPUT will only be
-           * set, of the OUTPUT_FUNC is not NULL. */
+           * sub-tasks.  Also note that PRIOR_PARENT_OUTPUT being true
+           * implies that OUTPUT_FUNC is not NULL. */
           if (output && output->prior_parent_output)
             SVN_ERR(callbacks->output_func(
                         current->parent, output->prior_parent_output,
