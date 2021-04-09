@@ -54,12 +54,12 @@ typedef struct root_t
    */
   apr_pool_t *process_pool;
 
-  /* Allocate per-task output_t as well as the actual outputs here.
+  /* Allocate per-task results_t as well as the actual outputs here.
    * Allocation will happen just before calling the processing function.
    * Release the memory immediately afterwards, unless some actual output
    * has been produced.
    */
-  apr_pool_t *output_pool;
+  apr_pool_t *results_pool;
 
   /* Context construction parameters as passed in to svn_task__run(). */
   svn_task__thread_context_constructor_t context_constructor;
@@ -67,9 +67,9 @@ typedef struct root_t
 
 } root_t;
 
-/* Sub-structure of svn_task__t containing that task's output.
+/* Sub-structure of svn_task__t containing that task's processing output.
  */
-typedef struct output_t
+typedef struct results_t
 {
   /* (Last part of the) output produced by the task.
    * If the task has sub-tasks, additional output (produced before creating
@@ -102,7 +102,7 @@ typedef struct output_t
    * and PRIOR_PARENT_OUTPUT in any immediate sub-task. */
   apr_pool_t *pool;
 
-} output_t;
+} results_t;
 
 /* The task's callbacks.
  *
@@ -139,7 +139,7 @@ struct svn_task__t
 
   /* Parent task.
    * NULL for the root node:
-   * (PARENT==NULL) == (*this==ROOT->TASK).
+   * (PARENT==NULL) == (this==ROOT->TASK).
    */
   svn_task__t *parent;
 
@@ -166,11 +166,10 @@ struct svn_task__t
 
   /* The first task, in pre-order, of this sub-tree whose processing has not
    * been started yet.  This will be NULL, iff for all tasks in this sub-tree,
-   * processing has at least been started.  If this==FIRST_READY, this task
-   * itself waits for being proccessed.
-   *
-   * Note that immediate and/or indirect sub-tasks may already have been
-   * processed before this one.
+   * processing has at least been started.
+   * 
+   * If this==FIRST_READY, this task itself waits for being proccessed.
+   * In that case, there can't be any sub-tasks.
    */
   svn_task__t *first_ready;
 
@@ -186,7 +185,7 @@ struct svn_task__t
    * Sub-pool of ROOT->PROCESS_POOL.
    *
    * NULL, iff processing of this task has completed (sub-tasks may still
-   * need processing).  Used to check whether processing has been completed.
+   * need processing).
    */
   apr_pool_t *process_pool;
 
@@ -195,20 +194,23 @@ struct svn_task__t
    * Will be NULL before processing and may be NULL afterwards, if all
    * fields would be NULL.
    */
-  output_t *output;
+  results_t *results;
 };
 
 
 /* Adding tasks to the tree. */
 
 /* Return the index of the first immediate sub-task of TASK with a ready
- * sub-task in its respective sub-tree.  TASK must have at least one such
+ * sub-task in its respective sub-tree.  TASK must have at least one proper
  * sub-task.
  */
 static apr_size_t first_ready_sub_task_idx(const svn_task__t *task)
 {
   svn_task__t *sub_task = task->first_ready;
+
+  /* Don't use this function if there is no ready sub-task. */
   assert(sub_task);
+  assert(sub_task != task);
 
   while (sub_task->parent != task)
     sub_task = sub_task->parent;
@@ -246,23 +248,35 @@ static svn_error_t *link_new_task(svn_task__t *task)
       parent->first_ready = task;
     }
 
+  /* Test invariants for new tasks.
+   *
+   * We have to do it while still holding task tree mutex; background
+   * processing of this task may already have started otherwise. */
+  assert(task->parent != NULL);
+  assert(task->first_sub == NULL);
+  assert(task->last_sub == NULL);
+  assert(task->next == NULL);
+  assert(task->first_ready == task);
+  assert(task->callbacks != NULL);
+  assert(task->process_pool != NULL);
+
   return SVN_NO_ERROR;
 }
 
-/* If TASK has no OUTPUT sub-structure, add one.  Return the OUTPUT struct.
+/* If TASK has no RESULTS sub-structure, add one.  Return the RESULTS struct.
  *
  * In multi-threaded environments, calls to this must be serialized with
  * root_t changes. */
-static output_t *ensure_output(svn_task__t *task)
+static results_t *ensure_results(svn_task__t *task)
 {
-  if (!task->output)
+  if (!task->results)
     {
-      apr_pool_t * output_pool = svn_pool_create(task->root->output_pool);
-      task->output = apr_pcalloc(output_pool, sizeof(*task->output));
-      task->output->pool = output_pool;
+      apr_pool_t * results_pool = svn_pool_create(task->root->results_pool);
+      task->results = apr_pcalloc(results_pool, sizeof(*task->results));
+      task->results->pool = results_pool;
     }
 
-  return task->output;
+  return task->results;
 }
 
 /* Allocate a new task in POOL and return it in *RESULT.
@@ -303,6 +317,14 @@ static svn_error_t *add_task(
   void *process_baton)
 {
   svn_task__t *new_task;
+
+  /* The root node has its own special construction code and does not use
+   * this function.  So, here we will always have a parent. */
+  assert(parent != NULL);
+
+  /* Catch construction snafus early in the process. */
+  assert(callbacks != NULL);
+
   SVN_ERR(alloc_task(&new_task, parent->root->task_pool));
 
   new_task->root = parent->root;
@@ -312,8 +334,8 @@ static svn_error_t *add_task(
   new_task->parent = parent;
   if (partial_output && parent->callbacks->output_func)
     {
-      ensure_output(parent)->has_partial_results = TRUE;
-      ensure_output(new_task)->prior_parent_output = partial_output;
+      ensure_results(parent)->has_partial_results = TRUE;
+      ensure_results(new_task)->prior_parent_output = partial_output;
     }
 
   /* The new task will be ready for execution once we link it up in PARENT. */
@@ -386,22 +408,15 @@ static svn_error_t *remove_task(svn_task__t *task)
 }
 
 /* Recursively free all errors in TASK.
- *
- * Don't try to clean up pools etc. because we will call this function
- * mainly to prevent error leaks when terminating the task runner early.
- * It is better to have the standard pool cleanups to deal with memory
- * management in that case.
  */
-static void free_sub_tasks(svn_task__t *task)
+static void clear_errors(svn_task__t *task)
 {
-  while (task->first_sub)
-    free_sub_tasks(task->first_sub);
+  svn_task__t *sub_task;
+  for (sub_task = task->first_sub; sub_task; sub_task = sub_task->next)
+    clear_errors(sub_task);
 
-  if (task->output)
-    svn_error_clear(task->output->error);
-
-  if (task->parent && task->parent->first_sub == task)
-    task->parent->first_sub = task->next;
+  if (task->results)
+    svn_error_clear(task->results->error);
 }
 
 
@@ -503,27 +518,27 @@ static void process(svn_task__t *task,
     {
       /* Depending on whether there is prior parent output, we may or 
        * may not have already an OUTPUT structure allocated for TASK. */
-      output_t *output = ensure_output(task);
-      output->error = callbacks->process_func(&output->output, task,
-                                              thread_context,
-                                              task->process_baton,
-                                              cancel_func, cancel_baton,
-                                              output->pool, scratch_pool);
+      results_t *results = ensure_results(task);
+      results->error = callbacks->process_func(&results->output, task,
+                                               thread_context,
+                                               task->process_baton,
+                                               cancel_func, cancel_baton,
+                                               results->pool, scratch_pool);
 
       /* If there is no way to output the results, we simply ignore them. */
       if (!callbacks->output_func)
-        output->output = NULL;
+        results->output = NULL;
 
       /* Anything left that we may want to output? */
-      if (   !output->error
-          && !output->output
-          && !output->prior_parent_output
-          && !output->has_partial_results)
+      if (   !results->error
+          && !results->output
+          && !results->prior_parent_output
+          && !results->has_partial_results)
         {
           /* Nope.  Release the memory and reset OUTPUT such that
            * output_processed() can quickly skip it. */
-          svn_pool_destroy(output->pool);
-          task->output = NULL;
+          svn_pool_destroy(results->pool);
+          task->results = NULL;
         }
     }
 
@@ -545,7 +560,7 @@ static svn_error_t *output_processed(
 {
   svn_task__t *current = *task;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
-  output_t *output;
+  results_t *results;
   callbacks_t *callbacks;
 
   while (current && is_processed(current))
@@ -554,21 +569,27 @@ static svn_error_t *output_processed(
 
       /* Post-order, i.e. dive into sub-tasks first.
        *
-       * Note that the "background" processing for CURRENT has completed
-       * and only the output function may add no further sub-tasks. */
+       * Note that the post-order refers to the task ordering and the output
+       * plus errors returned by the processing function.  The CURRENT task
+       * may have produced additional, partial outputs and attached them to
+       * the sub-tasks.  These outputs will be processed with the respective
+       * sub-tasks.
+       *
+       * Also note that the "background" processing for CURRENT has completed
+       * and only the output function may add further sub-tasks. */
       if (current->first_sub)
         {
           current = current->first_sub;
-          output = current->output;
+          results = current->results;
           callbacks = current->parent->callbacks;
 
           /* We will handle this sub-task in the next iteration but we
            * may have to process results produced before or in between
-           * sub-tasks.  Also note that PRIOR_PARENT_OUTPUT being true
-           * implies that OUTPUT_FUNC is not NULL. */
-          if (output && output->prior_parent_output)
+           * sub-tasks.  Also note that PRIOR_PARENT_OUTPUT not being NULL
+           * implies that OUTPUT_FUNC is also not NULL. */
+          if (results && results->prior_parent_output)
             SVN_ERR(callbacks->output_func(
-                        current->parent, output->prior_parent_output,
+                        current->parent, results->prior_parent_output,
                         callbacks->output_baton,
                         cancel_func, cancel_baton,
                         result_pool, iterpool));
@@ -576,20 +597,20 @@ static svn_error_t *output_processed(
       else
         {
           /* No deeper sub-task.  Process the results from CURRENT. */
-          output = current->output;
-          if (output)
+          results = current->results;
+          if (results)
             {
               /* Return errors.
                * Make sure they don't get cleaned up with the task tree. */
-              svn_error_t *err = output->error;
-              output->error = SVN_NO_ERROR;
+              svn_error_t *err = results->error;
+              results->error = SVN_NO_ERROR;
               SVN_ERR(err);
 
               /* Handle remaining output of the CURRENT task. */
               callbacks = current->callbacks;
-              if (output->output)
+              if (results->output)
                 SVN_ERR(callbacks->output_func(
-                            current, output->output,
+                            current, results->output,
                             callbacks->output_baton,
                             cancel_func, cancel_baton,
                             result_pool, iterpool));
@@ -610,8 +631,8 @@ static svn_error_t *output_processed(
               /* We have output all sub-nodes, including all partial results.
                * Therefore, the last used thing allocated in OUTPUT->POOL is
                * OUTPUT itself and it is safe to clean that up. */
-              if (output)
-                svn_pool_destroy(output->pool);
+              if (results)
+                svn_pool_destroy(results->pool);
             }
         }
     }
@@ -670,9 +691,9 @@ static svn_error_t *execute_serially(
                                   result_pool, scratch_pool);
     }
 
-  /* Explicitly release any (other) error and pool not cleaned up so far.
+  /* Explicitly release any (other) error.  Leave pools as they are.
    * This is important in the case of early exists due to error returns. */
-  free_sub_tasks(task);
+  clear_errors(task);
   svn_pool_destroy(iterpool);
 
   /* Get rid of all remaining tasks. */
@@ -705,7 +726,7 @@ svn_error_t *svn_task__run(
    * So, no special consideration required regarding pools & serialization.*/
   root->task_pool = scratch_pool;
   root->process_pool = scratch_pool;
-  root->output_pool = scratch_pool;
+  root->results_pool = scratch_pool;
 
   callbacks.process_func = process_func;
   callbacks.output_func = output_func;

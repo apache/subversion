@@ -98,6 +98,10 @@ typedef struct svn_task__t svn_task__t;
  * respective pool can be reclaimed immediately.  This may result in
  * significant runtime and memory savings.  Error reporting is not affected.
  *
+ * @note The @a *result is only an intermediate result, hence its lifetime
+ * beyond the output function call is not guaranteed.  The actual output of
+ * svn_task__run() needs to be copied/constructed by the output function.
+ *
  * @a cancel_func, @a cancel_baton and @a scratch_pool are the usual things.
  */
 typedef svn_error_t *(*svn_task__process_func_t)(
@@ -117,7 +121,10 @@ typedef svn_error_t *(*svn_task__process_func_t)(
  * All data that shall be returned by @a svn_task__run() needs to be
  * allocated from @a result_pool.
  *
- * @a cancel_func, @a cancel_baton and @a scratch_pool are the usual things.
+ * @note The lifetime of @a result is not guaranteed. If it is to be returned
+ * from svn_task__run(), it needs to be copied to @a result_pool.
+ *
+ *@a cancel_func, @a cancel_baton and @a scratch_pool are the usual things.
  */
 typedef svn_error_t *(*svn_task__output_func_t)(
   svn_task__t *task,
