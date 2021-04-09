@@ -168,6 +168,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.disable_shared = None
     self.static_apr = None
     self.static_openssl = None
+    self.static_serf = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.sasl_path = None
@@ -225,8 +226,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.disable_shared = 1
       elif opt == '--with-static-apr':
         self.static_apr = 1
+        self.static_serf = 1 # Can't mix apr versions
       elif opt == '--with-static-openssl':
         self.static_openssl = 1
+      elif opt == '--with-static-serf':
+        self.static_serf = 1
       elif opt == '-D':
         self.cpp_defines.append(val)
       elif opt == '--vsnet-version':
@@ -1334,6 +1338,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_name = 'serf-%d.lib' % (serf_ver_maj,)
     else:
       lib_name = 'serf.lib'
+    
+    if not self.static_serf and os.path.isfile(os.path.join(lib_dir, 'lib' + lib_name)):
+      lib_name = 'lib' + lib_name
 
     defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_RA_LINKS_RA_SERF']
 
