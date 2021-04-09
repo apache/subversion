@@ -596,9 +596,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     # apr-Util 0.9-1.4 compiled expat to 'xml.lib', but apr-util 1.5 switched
     # to the more common 'libexpat.lib'
-    libname = 'libexpat.lib'
-    if not os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
-      libname = 'xml.lib'
+    if os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
+      # Shared or completely static build
+      libname = 'libexpat.lib'
+    elif os.path.exists(os.path.join(lib_dir, 'libexpatMD.lib')):
+      # libexpat CMake build. static build against Multithreaded DLL CRT
+      libname = 'libexpatMD.lib'
+    else:
+        libname = 'xml.lib'
 
     version = (major, minor, patch)
     xml_version = '%d.%d.%d' % version
