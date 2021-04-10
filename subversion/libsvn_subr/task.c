@@ -466,6 +466,12 @@ static svn_error_t *remove_task(svn_task__t *task)
       if (parent->last_sub == task)
         parent->last_sub = NULL;
     }
+  else
+    {
+      /* Root task.  Keep it because we might rely on it being present.
+       * However, make sure nobody tries to process its outputs twice. */
+      task->results = NULL;
+    }
 
   return SVN_NO_ERROR;
 }
