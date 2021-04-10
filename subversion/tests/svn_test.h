@@ -124,8 +124,17 @@ extern "C" {
                                                                     \
     if (tst_str2 == NULL && tst_str1 == NULL)                       \
       break;                                                        \
-    if ((tst_str1 == NULL) || (tst_str2 == NULL)                    \
-        || (strcmp(tst_str2, tst_str1) != 0))                       \
+    if (tst_str1 == NULL)                                           \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
+          "Strings not equal\n  Expected: '%s'\n  Found:    NULL"   \
+          "\n  at %s:%d",                                           \
+          tst_str2, __FILE__, __LINE__);                            \
+    if (tst_str2 == NULL)                                           \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
+          "Strings not equal\n  Expected: NULL\n  Found:    '%s'"   \
+          "\n  at %s:%d",                                           \
+          tst_str1, __FILE__, __LINE__);                            \
+    if (strcmp(tst_str2, tst_str1) != 0)                            \
       return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
           "Strings not equal\n  Expected: '%s'\n  Found:    '%s'"   \
           "\n  at %s:%d",                                           \
