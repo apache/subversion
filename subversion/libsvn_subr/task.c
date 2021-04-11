@@ -39,7 +39,7 @@ typedef struct root_t
   /* Global mutex protecting the whole task tree.
    * Any modification on the tree structure or task state requires
    * serialization through this mutex.
-   * 
+   *
    * In single-threaded execution, this will be a no-op dummy.
    */
   svn_mutex__t *mutex;
@@ -60,7 +60,7 @@ typedef struct root_t
   /* Signals to the foreground thread that some tasks may have been processed
    * and output process may commence.  However, there is no guarantee that
    * any task actually completed nor that it is the one whose output needs
-   * to be processed next. 
+   * to be processed next.
    *
    * Waiting tasks must hold the MUTEX when entering the waiting state.
    *
@@ -210,7 +210,7 @@ struct svn_task__t
   /* The first task, in pre-order, of this sub-tree whose processing has not
    * been started yet.  This will be NULL, iff for all tasks in this sub-tree,
    * processing has at least been started.
-   * 
+   *
    * If this==FIRST_READY, this task itself waits for being proccessed.
    * In that case, there can't be any sub-tasks.
    */
@@ -231,7 +231,7 @@ struct svn_task__t
   /* Process baton to pass into CALLBACKS->PROCESS_FUNC. */
   void *process_baton;
 
-  /* Pool used to allocate the PROCESS_BATON. 
+  /* Pool used to allocate the PROCESS_BATON.
    * Sub-pool of ROOT->PROCESS_POOL.
    *
    * NULL, iff processing of this task has completed (sub-tasks may still
@@ -493,7 +493,7 @@ static void clear_errors(svn_task__t *task)
 
 /* Utility function that follows the chain of siblings and returns the first
  * that has *some* unprocessed task in its sub-tree.
- * 
+ *
  * Returns TASK if either TASK or any of its sub-tasks is unprocessed.
  * Returns NULL if all direct or indirect sub-tasks of TASK->PARENT are
  * already being processed or have been completed.
@@ -509,7 +509,7 @@ static svn_task__t *next_ready(svn_task__t *task)
 
 /* Utility function that follows the chain of siblings and returns the
  * first unprocessed task.
- * 
+ *
  * Returns TASK if TASK is unprocessed.  Returns NULL if all direct sub-
  * tasks of TASK->PARENT are already being processed or have been completed.
  */
@@ -536,7 +536,7 @@ static void unready_task(svn_task__t *task)
   /* Also, there should be no sub-tasks before processing this one.
    * Sub-tasks may only be added by processing the immediate parent. */
   assert(task->first_sub == NULL);
- 
+
   /* There are no sub-tasks, hence nothing in the sub-tree could be ready. */
   task->first_ready = NULL;
 
@@ -709,7 +709,7 @@ static void process(svn_task__t *task,
 
   if (callbacks->process_func)
     {
-      /* Depending on whether there is prior parent output, we may or 
+      /* Depending on whether there is prior parent output, we may or
        * may not have already an OUTPUT structure allocated for TASK. */
       results_t *results = ensure_results(task);
       results->error = callbacks->process_func(&results->output, task,
@@ -743,7 +743,7 @@ static void process(svn_task__t *task,
  *
  * Pass CANCEL_FUNC, CANCEL_BATON and RESULT_POOL into the respective task
  * output functions.  Use SCRATCH_POOL for temporary allocations.
- */  
+ */
 static svn_error_t *output_processed(
   svn_task__t **task,
   svn_cancel_func_t cancel_func,
@@ -895,7 +895,7 @@ static svn_error_t *next_task(svn_task__t **task, root_t *root)
 
           return SVN_NO_ERROR;
         }
-      
+
       /* No task, no termination.  Wait for one of these to happen. */
       SVN_ERR(svn_thread_cond__wait(root->worker_wakeup, root->mutex));
     }
@@ -909,7 +909,7 @@ static svn_error_t *next_task(svn_task__t **task, root_t *root)
  * This simply checks for cancellation by the forground thread.
  * Normal cancellation is handled by the output function and then simply
  * indicated by flag.
- * 
+ *
  * Note that termination due to errors returned by other tasks will also
  * be treated as a cancellation with the respective SVN_ERR_CANCELLED
  * error being returned from the current tasks in all workers.
@@ -1001,7 +1001,7 @@ worker_thread(apr_thread_t *thread, void *data)
       result = err->apr_err;
       svn_error_clear(err);
     }
-  
+
   svn_pool_destroy(pool);
 
   /* End thread explicitly to prevent APR_INCOMPLETE return codes in
@@ -1013,7 +1013,7 @@ worker_thread(apr_thread_t *thread, void *data)
 /* If TASK has not been processed, yet, wait for it.  Before waiting for
  * the "task processed" signal, start a new worker thread, allocated in a
  * THREAD_SAFE_POOL, and add it to the array of THREADS.
- * 
+ *
  * So, everytime we run out of processing results, we add a new worker.
  * This results in a slightly delayed spawning of new threads.  The total
  * number of worker threads is limited to THREAD_COUNT.
@@ -1082,7 +1082,7 @@ static svn_error_t *execute_concurrently(
   /* We need a thread-safe-pool to create the actual thread objects. */
   apr_pool_t *thread_safe_pool = svn_pool_create(root->results_pool);
 
-  /* Main execution loop */ 
+  /* Main execution loop */
   while (current && !task_err)
     {
       svn_pool_clear(iterpool);
@@ -1103,7 +1103,7 @@ static svn_error_t *execute_concurrently(
                                   cancel_func, cancel_baton,
                                   result_pool, iterpool);
     }
-  
+
   /* Tell all worker threads to terminate. */
   SVN_MUTEX__WITH_LOCK(root->mutex, send_terminate(root));
 
@@ -1113,18 +1113,18 @@ static svn_error_t *execute_concurrently(
       apr_thread_t *thread = APR_ARRAY_IDX(threads, i, apr_thread_t *);
       apr_status_t retval;
       apr_status_t sync_status = apr_thread_join(&retval, thread);
-      
+
       if (retval != APR_SUCCESS)
         sync_err = svn_error_compose_create(sync_err,
                         svn_error_wrap_apr(retval,
                                           "Worker thread returned error"));
-        
+
       if (sync_status != APR_SUCCESS)
         sync_err = svn_error_compose_create(sync_err,
                         svn_error_wrap_apr(sync_status,
                                           "Worker thread join error"));
     }
-  
+
   /* Explicitly release any (other) error.  Leave pools as they are.
    * This is important in the case of early exists due to error returns.
    *
@@ -1276,7 +1276,7 @@ svn_error_t *svn_task__run(
   callbacks.process_func = process_func;
   callbacks.output_func = output_func;
   callbacks.output_baton = output_baton;
-  
+
   root->task = apr_pcalloc(scratch_pool, sizeof(*root->task));
   root->task->root = root;
   root->task->first_ready = root->task;
@@ -1300,7 +1300,7 @@ svn_error_t *svn_task__run(
      SVN_ERR(execute_serially(root->task,
                               cancel_func, cancel_baton,
                               result_pool, scratch_pool));
-   }    
+   }
 
   return SVN_NO_ERROR;
 }
