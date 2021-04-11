@@ -856,6 +856,8 @@ static svn_error_t *output_processed(
 
 /* Execution models */
 
+#if APR_HAS_THREADS
+
 /* From ROOT, find the first unprocessed task - in pre-order - mark it as
  * "in process" and return it in *TASK.  If no such task exists, wait for
  * the ROOT->WORKER_WAKEUP condition and retry.
@@ -1055,6 +1057,8 @@ static svn_error_t *wait_for_outputting_state(
   return SVN_NO_ERROR;
 }
 
+#endif /* APR_HAS_THREADS */
+
 /* Run the (root) TASK to completion, including dynamically added sub-tasks.
  * Use up to THREAD_COUNT worker threads for that.
  *
@@ -1070,6 +1074,8 @@ static svn_error_t *execute_concurrently(
   apr_pool_t *result_pool,
   apr_pool_t *scratch_pool)
 {
+#if APR_HAS_THREADS
+
   int i;
   svn_task__t *current = task;
   root_t *root = task->root;
@@ -1138,6 +1144,14 @@ static svn_error_t *execute_concurrently(
 
   /* Get rid of all remaining tasks. */
   return svn_error_trace(svn_error_compose_create(sync_err, task_err));
+
+#else
+
+  /* How the hell did we end up here? */
+  SVN_ERR_MALFUNCTION();
+  return SVN_NO_ERROR;
+
+#endif
 }
 
 /* Run the (root) TASK to completion, including dynamically added sub-tasks.
