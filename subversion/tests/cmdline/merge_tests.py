@@ -18716,9 +18716,9 @@ def merge_error_if_ambiguous_foreign_merge(sbox):
   # target URLs.
 
   # expect warning or error (E195012 SVN_ERR_CLIENT_UNRELATED_RESOURCES)?
-  expected_stdout = None  #if SVN_VER_MINOR < 16 else []
-  expected_stderr = '.*: E195012: .*'  #if SVN_VER_MINOR >= 15 else []
-  expected_exit = 0  #if SVN_VER_MINOR < 16 else 1
+  expected_stdout = None if svntest.main.SVN_VER_MINOR < 16 else []
+  expected_stderr = '.*: E195012: .*' if svntest.main.SVN_VER_MINOR >= 15 else []
+  expected_exit = 0 if svntest.main.SVN_VER_MINOR < 16 else 1
 
   # two-URL merge
   svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr,
