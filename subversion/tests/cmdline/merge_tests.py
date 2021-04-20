@@ -18660,7 +18660,12 @@ def merge_deleted_folder_with_mergeinfo_2(sbox):
 
 #----------------------------------------------------------------------
 # Test that mismatched source repository root URLs in a two-URL merge
-# throws an error.
+# throws an error E170000 SVN_ERR_RA_ILLEGAL_URL.
+#
+# (Since issue 4874 (Subversion 1.15) that error is also wrapped in
+# E195012 SVN_ERR_CLIENT_UNRELATED_RESOURCES for consistency with
+# the source-target mismatch errors.)
+#
 # For mismatched URLs we use two repositories with the same UUID.
 @Issue(4874)
 def merge_error_if_source_urls_differ(sbox):
@@ -18676,10 +18681,8 @@ def merge_error_if_source_urls_differ(sbox):
   other_wc_dir = sbox.add_wc_path("other")
   svntest.main.copy_repos(repo_dir, other_repo_dir, 6, ignore_uuid=False)
 
-  # With Issue #4874 implemented, the attempted merge should error out with
-  # SVN_ERR_CLIENT_UNRELATED_RESOURCES, because of mismatched source URLs.
   G_COPY_path = sbox.ospath('A_COPY/D/G')
-  svntest.actions.run_and_verify_svn2(None, '.*: E195012: .*', 1,
+  svntest.actions.run_and_verify_svn2(None, '.*: E170000: .*', 1,
                                       'merge',
                                       sbox.repo_url + '/A/D/G@3',
                                       other_repo_url + '/A/D/G@4',
@@ -18687,12 +18690,16 @@ def merge_error_if_source_urls_differ(sbox):
 
 #----------------------------------------------------------------------
 # Test that a merge with mismatched source and target repository root URLs
-# throws an error.
+# but identical repository UUIDs throws a warning error, for two-URL and
+# pegged merges.
+#
+# Issue #4874 makes this a warning in Subversion 1.15 and an error in 1.16.
+# Previously it was treated as a foreign repository merge.
+#
 # For mismatched URLs we use two repositories with the same UUID.
-# We test the several entry points to merge.
 @Issue(4874)
-def merge_error_if_target_url_differs_and_same_uuid(sbox):
-  "merge error if target url differs and same uuid"
+def merge_error_if_ambiguous_foreign_merge(sbox):
+  "merge error if ambiguous foreign merge"
 
   sbox.build()
   expected_disk, expected_status = set_up_branch(sbox)
@@ -18707,28 +18714,61 @@ def merge_error_if_target_url_differs_and_same_uuid(sbox):
   # With Issue #4874 implemented, the attempted merges should error out with
   # SVN_ERR_CLIENT_UNRELATED_RESOURCES, because of mismatched source and
   # target URLs.
-  G_COPY_path = sbox.ospath('A_COPY/D/G')
+
+  # expect warning or error (E195012 SVN_ERR_CLIENT_UNRELATED_RESOURCES)?
+  expected_stdout = None  #if SVN_VER_MINOR < 16 else []
+  expected_stderr = '.*: E195012: .*'  #if SVN_VER_MINOR >= 15 else []
+  expected_exit = 0  #if SVN_VER_MINOR < 16 else 1
+
   # two-URL merge
-  svntest.actions.run_and_verify_svn2(None, '.*: E195012: .*', 1,
+  svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr,
+                                      expected_exit,
                                       'merge',
                                       other_repo_url + '/A/D/G@3',
                                       other_repo_url + '/A/D/G@4',
-                                      G_COPY_path)
+                                      sbox.ospath('A_COPY/D/G'))
+  svntest.main.run_svn(False, 'revert', '-qR', sbox.wc_dir)
   # pegged merge
-  svntest.actions.run_and_verify_svn2(None, '.*: E195012: .*', 1,
+  svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr,
+                                      expected_exit,
                                       'merge', '-c4',
                                       other_repo_url + '/A/D/G',
-                                      G_COPY_path)
+                                      sbox.ospath('A_COPY/D/G'))
+  svntest.main.run_svn(False, 'revert', '-qR', sbox.wc_dir)
+
+#----------------------------------------------------------------------
+# Test that a merge with mismatched source and target repository root URLs
+# throws an error, for automatic and reintegrate merges.
+#
+# This behaviour is unchanged by issue #4874, just reinforced and with more
+# informative error messages.
+#
+# For mismatched URLs we use two repositories with the same UUID.
+@Issue(4874)
+def merge_error_if_source_target_url_mismatch(sbox):
+  "merge error if source target url mismatch"
+
+  sbox.build()
+  expected_disk, expected_status = set_up_branch(sbox)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Create a second repository with the same content, same UUID
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 6, ignore_uuid=False)
+
+  expected_stderr = '.*: E195012: .*'  # SVN_ERR_CLIENT_UNRELATED_RESOURCES
   # automatic merge
-  svntest.actions.run_and_verify_svn2(None, '.*: E195012: .*', 1,
+  svntest.actions.run_and_verify_svn2([], expected_stderr, 1,
                                       'merge',
                                       other_repo_url + '/A/D/G',
-                                      G_COPY_path)
+                                      sbox.ospath('A_COPY/D/G'))
   # reintegrate merge
-  svntest.actions.run_and_verify_svn2(None, '.*: E195012: .*', 1,
+  svntest.actions.run_and_verify_svn2([], expected_stderr, 1,
                                       'merge', '--reintegrate',
                                       other_repo_url + '/A/D/G',
-                                      G_COPY_path)
+                                      sbox.ospath('A_COPY/D/G'))
 
 ########################################################################
 # Run the tests
@@ -18880,7 +18920,8 @@ test_list = [ None,
               merge_deleted_folder_with_mergeinfo,
               merge_deleted_folder_with_mergeinfo_2,
               merge_error_if_source_urls_differ,
-              merge_error_if_target_url_differs_and_same_uuid,
+              merge_error_if_ambiguous_foreign_merge,
+              merge_error_if_source_target_url_mismatch,
              ]
 
 if __name__ == '__main__':

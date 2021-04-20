@@ -1197,6 +1197,12 @@ notify_body(struct notify_baton *nb,
       SVN_ERR(svn_cmdline_printf(pool, _("Committing transaction...\n")));
       break;
 
+    case svn_wc_notify_warning:
+      /* using handle_error rather than handle_warning in order to show the
+       * whole error chain; the latter only shows one error in the chain */
+      svn_handle_error2(n->err, stderr, FALSE, "svn: warning: ");
+      break;
+
     default:
       break;
     }
