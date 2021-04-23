@@ -1089,9 +1089,9 @@ svn_test_main(int argc, const char *argv[], int max_threads,
               svn_pool_clear(cleanup_pool);
             }
         }
-#if APR_HAS_THREADS
       else
         {
+#if APR_HAS_THREADS
           got_error = do_tests_concurrently(opts.prog_name, test_funcs,
                                             array_size, max_threads,
                                             &opts, test_pool);
@@ -1099,8 +1099,11 @@ svn_test_main(int argc, const char *argv[], int max_threads,
           /* Execute all cleanups */
           svn_pool_clear(test_pool);
           svn_pool_clear(cleanup_pool);
-        }
+#else
+          /* Can't happen */
+          SVN_ERR_MALFUNCTION();
 #endif
+        }
     }
 
   /* Clean up APR */
