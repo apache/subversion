@@ -124,32 +124,32 @@ counter_func(void **result,
 
   if (value > 1)
     {
-      partial_result = apr_palloc(result_pool, sizeof(partial_result));
+      partial_result = apr_palloc(result_pool, sizeof(*partial_result));
       *partial_result = 1;
       value -= *partial_result;
 
       sub_task_pool = svn_task__create_process_pool(task);
 
-      partial_baton = apr_palloc(sub_task_pool, sizeof(partial_baton));      
+      partial_baton = apr_palloc(sub_task_pool, sizeof(*partial_baton));
       *partial_baton = MAX(1, value / 2);
       value -= *partial_baton;
 
-      SVN_ERR(svn_task__add_similar(task, sub_task_pool, 
+      SVN_ERR(svn_task__add_similar(task, sub_task_pool,
                                     partial_result, partial_baton));
     }
 
   if (cancel_func)
     SVN_ERR(cancel_func(cancel_baton));
-    
+
   if (value > 1)
     {
-      partial_result = apr_palloc(result_pool, sizeof(partial_result));
+      partial_result = apr_palloc(result_pool, sizeof(*partial_result));
       *partial_result = 1;
       value -= *partial_result;
 
       sub_task_pool = svn_task__create_process_pool(task);
 
-      partial_baton = apr_palloc(sub_task_pool, sizeof(partial_baton));    
+      partial_baton = apr_palloc(sub_task_pool, sizeof(*partial_baton));
       *partial_baton = value - 1;
       value -= *partial_baton;
 
@@ -157,7 +157,7 @@ counter_func(void **result,
                                     partial_result, partial_baton));
     }
 
-  partial_result = apr_palloc(result_pool, sizeof(partial_result));
+  partial_result = apr_palloc(result_pool, sizeof(*partial_result));
   *partial_result = value;
   *result = partial_result;
 
@@ -175,7 +175,7 @@ sum_func(svn_task__t *task,
 {
   apr_int64_t *result_p = result;
   apr_int64_t *output_p = output_baton;
-  
+
   if (result_p)
     *output_p += *result_p;
 
@@ -228,7 +228,7 @@ test_cancellation(apr_pool_t *pool)
                                       pool, pool),
                         SVN_ERR_CANCELLED);
   SVN_TEST_ASSERT(result == 10000);
-  
+
   return SVN_NO_ERROR;
 }
 
