@@ -70,7 +70,7 @@ Candidate changes:
      +1: futatuki
 
  * r1887704
-   Follow up to r1866587, r1866588: Unbreak a msgid.
+   Follow up to r1865987, r1866588: Unbreak a msgid.
    Justification:
      subversion.pot should be built correctly.
    Votes:
@@ -79,7 +79,7 @@ Candidate changes:
  * r1889487
    swig-py: Fix doubly destroying memory pool with cyclic garbage collector.
    Votes:
-     +1: jun66j5
+     +1: jun66j5, futatuki
 
 Veto-blocked changes:
 =====================
