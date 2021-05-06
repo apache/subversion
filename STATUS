@@ -28,7 +28,7 @@ Candidate changes:
    Justification:
      Reduce code duplication between APR and SVN.
    Votes:
-     +1: brane
+     +1: brane, jun66j5
 
  * r1878379, r1883719, r1883722, r1884610
    Distinguish configure scripts on release mode and non release mode.
@@ -60,7 +60,7 @@ Candidate changes:
    Justification:
      Fix a regression introduced between 1.13.0 and 1.14.0.
    Votes:
-     +1: futatuki
+     +1: futatuki, jun66j5
 
  * r1887641
    Fix encoding of error message on failure of system() call.
@@ -74,7 +74,12 @@ Candidate changes:
    Justification:
      subversion.pot should be built correctly.
    Votes:
-     +1: futatuki
+     +1: futatuki, jun66j5
+
+ * r1889487
+   swig-py: Fix doubly destroying memory pool with cyclic garbage collector.
+   Votes:
+     +1: jun66j5
 
 Veto-blocked changes:
 =====================
