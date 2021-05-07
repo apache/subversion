@@ -76,6 +76,13 @@ Candidate changes:
    Votes:
      +1: futatuki, jun66j5
 
+ * r1889629
+   Document how the port number is passed to custom tunnels.
+   Justification:
+     Documentation should be complete.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
