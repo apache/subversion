@@ -1442,11 +1442,12 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### is defined.  The command (or environment variable) may contain" NL
         "### arguments, using standard shell quoting for arguments with"     NL
         "### spaces.  The command will be invoked as:"                       NL
-        "###   <command> <hostname> svnserve -t"                             NL
-        "### (If the URL includes a username, then the hostname will be"     NL
-        "### passed to the tunnel agent as <user>@<hostname>.)  If the"      NL
-        "### built-in ssh scheme were not predefined, it could be defined"   NL
-        "### as:"                                                            NL
+        "###   <command> <hostinfo> svnserve -t"                             NL
+        "### where <hostinfo> is the hostname part of the URL.  If the URL"  NL
+        "### specified a username and/or a port, those are included in the"  NL
+        "### <hostinfo> argument in the usual way: <user>@<hostname>:<port>."NL
+        "### If the built-in ssh scheme were not predefined, it could be"    NL
+        "### defined as:"                                                    NL
         "# ssh = $SVN_SSH ssh -q --"                                         NL
         "### If you wanted to define a new 'rsh' scheme, to be used with"    NL
         "### 'svn+rsh:' URLs, you could do so as follows:"                   NL
