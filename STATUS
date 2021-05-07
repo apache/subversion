@@ -76,11 +76,6 @@ Candidate changes:
    Votes:
      +1: futatuki, jun66j5
 
- * r1889487
-   swig-py: Fix doubly destroying memory pool with cyclic garbage collector.
-   Votes:
-     +1: jun66j5, futatuki
-
 Veto-blocked changes:
 =====================
 
@@ -97,3 +92,8 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1889487
+   swig-py: Fix doubly destroying memory pool with cyclic garbage collector.
+   Votes:
+     +1: jun66j5, futatuki
