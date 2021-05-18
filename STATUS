@@ -62,7 +62,7 @@ Candidate changes:
    Votes:
      +1: futatuki, jun66j5
 
- * r1887641
+ * r1887641, r1890013
    Fix encoding of error message on failure of system() call.
    Justification:
      Error messages should be displayed correctly even if non UTF-8 locale.
