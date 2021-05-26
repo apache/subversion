@@ -39,6 +39,10 @@
 #define SVN_BUILD_TARGET "ia64-microsoft-windows"
 #elif defined( _M_IX86)
 #define SVN_BUILD_TARGET "x86-microsoft-windows"
+#elif defined(_M_ARM64)
+#define SVN_BUILD_TARGET "arm64-microsoft-windows"
+#elif defined(_M_ARM)
+#define SVN_BUILD_TARGET "arm-microsoft-windows"
 #else
 #error Unsupported build target.
 #endif
