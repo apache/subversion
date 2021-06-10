@@ -83,6 +83,13 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1890223, r1890668, r1890673
+   Support building on Win64/ARM64.
+   Justification:
+     At user request (via SharpSvn)
+   votes:
+     +1: rhuijben
+
 Veto-blocked changes:
 =====================
 
