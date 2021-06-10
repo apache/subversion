@@ -256,7 +256,34 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 context->SegCs, context->SegSs, context->SegDs,
                 context->SegEs, context->SegFs, context->SegGs);
 #elif defined(_M_ARM64)
-  /* TODO: Print ARM64 registers */
+  fprintf(log_file,
+          "X0 = %016I64x  X1 = %016I64x  X2 = %016I64x  X3 = %016I64x\n",
+          context->X0, context->X1, context->X2, context->X3);
+  fprintf(log_file,
+          "X4 = %016I64x  X5 = %016I64x  X6 = %016I64x  X7 = %016I64x\n",
+          context->X4, context->X5, context->X6, context->X7);
+  fprintf(log_file,
+          "X8 = %016I64x  X9 = %016I64x  X10= %016I64x  X11= %016I64x\n",
+          context->X8, context->X9, context->X10, context->X11);
+  fprintf(log_file,
+          "X12= %016I64x  X13= %016I64x  X14= %016I64x  X15= %016I64x\n",
+          context->X12, context->X13, context->X14, context->X15);
+  fprintf(log_file,
+          "X16= %016I64x  X17= %016I64x  X18= %016I64x  X19= %016I64x\n",
+          context->X16, context->X17, context->X18, context->X19);
+  fprintf(log_file,
+          "X20= %016I64x  X21= %016I64x  X22= %016I64x  X23= %016I64x\n",
+          context->X20, context->X21, context->X22, context->X23);
+  fprintf(log_file,
+          "X24= %016I64x  X25= %016I64x  X26= %016I64x  X27= %016I64x\n",
+          context->X24, context->X25, context->X26, context->X27);
+  fprintf(log_file,
+          "X28= %016I64x\n",
+          context->X28);
+  fprintf(log_file,
+          "Fp = %016I64x  Lr = %016I64x  Sp = %016I64x  Pc = %016I64x\n",
+          context->Fp, context->Lr, context->Sp, context->Pc);
+  /* Ignoring debug and floating point registers here */
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
@@ -568,7 +595,9 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
   stack_frame.AddrBStore.Offset = context->RsBSP;
 #elif defined(_M_ARM64)
   machine = IMAGE_FILE_MACHINE_ARM64;
-  return; /* TODO: Find ARM64 settings for stack trace */
+  stack_frame.AddrPC.Offset = context->Pc;
+  stack_frame.AddrStack.Offset = context->Sp;
+  stack_frame.AddrFrame.Offset = context->Fp;
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
