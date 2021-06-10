@@ -61,7 +61,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
 [end]      <AdditionalIncludeDirectories>$(SolutionDir)[configs.name];[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
       <StringPooling>true</StringPooling>
-      <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>[if-any instrument_apr_pools]APR_POOL_DEBUG=[instrument_apr_pools];[end][is platforms "x64"]WIN64;[end][is platforms "ARM64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <WarningLevel>Level4</WarningLevel>
       <DebugInformationFormat>ProgramDatabase</DebugInformationFormat>
       <DisableSpecificWarnings>4100;4127;4206;4512;4701;4706;4800;%(DisableSpecificWarnings)</DisableSpecificWarnings>
@@ -70,7 +70,7 @@
 [end]    </ClCompile>
     <ResourceCompile>
       <AdditionalIncludeDirectories>[for configs.includes][configs.includes];[end]%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is platforms "x64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>SVN_FILE_NAME=[target.output_name];SVN_FILE_DESCRIPTION=[target.desc];[is platforms "x64"]WIN64;[end][is platforms "ARM64"]WIN64;[end][for configs.defines][configs.defines];[end]%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ResourceCompile>
 [is config_type "Application"]    <Link>
       <AdditionalDependencies>[for configs.libs][configs.libs];[end]%(AdditionalDependencies)</AdditionalDependencies>
@@ -92,7 +92,7 @@
 [if-any def_file]      <ModuleDefinitionFile>[def_file]</ModuleDefinitionFile>
 [end]    </Link>
 [else][is config_type "StaticLibrary"]    <Lib>
-      <TargetMachine>[is platforms "X64"]MachineX64[else]MachineX86[end]</TargetMachine>
+      <TargetMachine>[is platforms "X64"]MachineX64[else][is platforms "ARM64"]MachineARM64[else]MachineX86[end][end]</TargetMachine>
 [is configs.name "Debug"]      <IgnoreSpecificDefaultLibraries>msvcrt.lib</IgnoreSpecificDefaultLibraries>
 [end]    </Lib>
 [end][end][end]  </ItemDefinitionGroup>

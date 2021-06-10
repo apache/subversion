@@ -128,7 +128,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # VC 2002 and VC 2003 only allow a single platform per project file
     if subdir == 'vcnet-vcproj':
       if self.vcproj_version != '7.00' and self.vcproj_version != '7.10':
-        self.platforms = ['Win32','x64']
+        self.platforms = ['Win32', 'x64', 'ARM64']
 
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']

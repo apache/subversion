@@ -53,6 +53,8 @@ static HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 #define FORMAT_PTR "0x%08Ix"
 #elif defined(_M_X64)
 #define FORMAT_PTR "0x%016Ix"
+#elif defined(_M_ARM64)
+#define FORMAT_PTR "0x%016Ix"
 #endif
 
 /*** Code. ***/
@@ -253,6 +255,8 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x\n",
                 context->SegCs, context->SegSs, context->SegDs,
                 context->SegEs, context->SegFs, context->SegGs);
+#elif defined(_M_ARM64)
+  /* TODO: Print ARM64 registers */
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
@@ -515,7 +519,7 @@ write_function_detail(STACKFRAME64 stack_frame, int nr_of_frame, FILE *log_file)
 static void
 write_stacktrace(CONTEXT *context, FILE *log_file)
 {
-#if defined (_M_IX86) || defined(_M_X64) || defined(_M_IA64)
+#if defined (_M_IX86) || defined(_M_X64) || defined(_M_IA64) || defined(_M_ARM64)
   HANDLE proc = GetCurrentProcess();
   STACKFRAME64 stack_frame;
   DWORD machine;
@@ -562,6 +566,9 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
   stack_frame.AddrStack.Offset  = context->SP;
   stack_frame.AddrBStore.Mode   = AddrModeFlat;
   stack_frame.AddrBStore.Offset = context->RsBSP;
+#elif defined(_M_ARM64)
+  machine = IMAGE_FILE_MACHINE_ARM64;
+  return; /* TODO: Find ARM64 settings for stack trace */
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
