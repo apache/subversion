@@ -403,7 +403,7 @@ one_line_tag(const char * tag, const char * params,
 {
   indent_or_die();
 
-  if ((params) && (strlen(params)))
+  if ((params) && (*params))
     {
       print_or_die("<%s %s>%s</%s>\n", tag, params, contents, tag);
     }
