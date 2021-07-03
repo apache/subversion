@@ -28,5 +28,5 @@
  * intending to use these APIs.  For more information about using Subversion,
  * see the Subversion Book at http://svnbook.red-bean.com/.
  *
- * To learn more about Subversion, please visit http://subversion.apache.org/.
+ * To learn more about Subversion, please visit https://subversion.apache.org/.
  */
