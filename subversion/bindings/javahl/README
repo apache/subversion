@@ -36,7 +36,7 @@ check-all-javahl      run all JavaHL tests, including tests for
 
 (In order to run check-javahl, you must have specified a path to a JUnit
 jar file with --with-junit when running configure; JUnit version 4.11
-has been tested.  JUnit can be downloaded from http://junit.org/ .)
+has been tested.  JUnit can be downloaded from https://junit.org/ .)
 
 
 MacOS X:
@@ -63,8 +63,9 @@ workspace.  The private project/workspace is not used anymore.
 Success stories
 ---------------
 
-Subclipse, Eclipse IDE plug-in <http://subclipse.tigris.org/>
-SmartSVN, cross-platform Subversion client (http://www.smartsvn.com/)
+Subclipse, Eclipse IDE plug-in
+<https://marketplace.eclipse.org/content/subclipse/>
+SmartSVN, cross-platform Subversion client (https://www.smartsvn.com/)
 
 
 Why not 100% pure Java?
@@ -81,7 +82,7 @@ gone into the existing libraries to be leveraged from Java, and allows
 developer time to me more efficiently spent on further development of the
 underlying libraries shared by many implementations.
 
-The SVNKit <http://svnkit.com/> client library (formerly known as
+The SVNKit <https://svnkit.com/> client library (formerly known as
 JavaSVN) is a 100% pure Java implementation, and attempts to track the
 latest changes to Subversion's core libraries; however, this is an
 independent project and the Subversion project cannot make any promises

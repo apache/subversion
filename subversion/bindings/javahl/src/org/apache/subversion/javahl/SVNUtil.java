@@ -101,9 +101,10 @@ public class SVNUtil
      */
     public static class CredentialTypeMismatch extends SubversionException
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         public CredentialTypeMismatch(Credential.Kind kind, String attribute)
@@ -119,9 +120,10 @@ public class SVNUtil
      */
     public static class Credential implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -705,7 +707,7 @@ public class SVNUtil
      *        <code>svn:eol-style</code> property. If it is <code>null</code>,
      *        the extra validation will be skipped.
      * @return a canonicalized representation of the property value
-     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     * @see https://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
      */
     public static byte[] canonicalizeNodeProperty(
         String name, byte[] value, String path, NodeKind kind,
@@ -734,7 +736,7 @@ public class SVNUtil
      *        <code>kind</code> is {@link NodeKind.file} and
      *        <code>mimeType</code> is not <code>null</code>.
      * @return a canonicalized representation of the property value
-     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     * @see https://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
      */
     public static byte[] canonicalizeNodeProperty(
         String name, byte[] value, String path, NodeKind kind,
