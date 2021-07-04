@@ -2334,7 +2334,7 @@ def diff_nonrecursive_checkout_deleted_dir(sbox):
 # example, show an extraneous BASE->WORKING diff for the added directory
 # after the repos->WORKING output).
 def diff_repos_working_added_dir(sbox):
-  "repos->WORKING diff showing added modifed dir"
+  "repos->WORKING diff showing added modified dir"
 
   sbox.build()
 
@@ -3150,7 +3150,7 @@ def diff_url_against_local_mods(sbox):
   make_file_edit_del_add(A2)
 
   # Diff Path of A against working copy of A2.
-  # Output using arbritrary diff handling should be empty.
+  # Output using arbitrary diff handling should be empty.
   expected_output = []
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '--old', A, '--new', A2)
