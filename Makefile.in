@@ -743,7 +743,7 @@ doc-api: mkdir-init
 doc-javahl:
 	$(JAVADOC) -d $(abs_builddir)/doc/javadoc \
 	  -sourcepath $(top_srcdir)/subversion/bindings/javahl/src \
-	  -link http://java.sun.com/javase/6/docs/api/ \
+	  -link https://docs.oracle.com/en/java/javase/11/docs/api/ \
 	  org.tigris.subversion.javahl \
 	  org.apache.subversion.javahl \
 	  org.apache.subversion.javahl.callback \
