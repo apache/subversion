@@ -97,6 +97,7 @@ Candidate changes:
      Small fix.  Prevents spurious hard fails of 'make davautocheck'.
    Votes:
      +1: danielsh
+     +1 (non-binding): dsahlberg
 
 Veto-blocked changes:
 =====================
