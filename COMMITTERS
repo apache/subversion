@@ -65,6 +65,7 @@ Blanket commit access:
  hartmannathan   Nathan Hartman <hartman.nathan@gmail.com>
       futatuki   Yasuhito Futatsuki <futatuki@yf.bsdclub.org>
        jun66j5   Jun Omae <jun66j5@gmail.com>
+     dsahlberg   Daniel Sahlberg <daniel.l.sahlberg@gmail.com>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -175,7 +176,6 @@ Commit access for specific areas:
         schabi   Markus Schaber <schabi@apache.org>          (testsuite)
            gbg   Gabriela Gibson <gabriela.gibson@gmail.com> (gtest)
      lyalyakin   Pavel Lyalyakin <pavel.lyalyakin@visualsvn.com> (site)
-     dsahlberg   Daniel Sahlberg <daniel.l.sahlberg@gmail.com> (site)
 
   Translation of message files:
 
