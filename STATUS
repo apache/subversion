@@ -96,8 +96,7 @@ Candidate changes:
    Justification:
      Small fix.  Prevents spurious hard fails of 'make davautocheck'.
    Votes:
-     +1: danielsh
-     +1 (non-binding): dsahlberg
+     +1: danielsh, dsahlberg
 
 Veto-blocked changes:
 =====================
