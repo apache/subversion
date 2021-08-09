@@ -98,13 +98,6 @@ Candidate changes:
    Votes:
      +1: danielsh, dsahlberg
 
- * r1892121
-   Fix an error message when running make davautocheck.
-   Justification:
-     Enable running make davautocheck
-   Votes:
-     +1: dsahlberg
-
 Veto-blocked changes:
 =====================
 
