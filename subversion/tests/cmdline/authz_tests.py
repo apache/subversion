@@ -1732,6 +1732,38 @@ def empty_group(sbox):
                                      sbox.repo_url)
 
 
+@Issue(4878)
+@XFail(svntest.main.is_ra_type_dav)
+@Skip(svntest.main.is_ra_type_file)
+def delete_file_with_starstar_rules(sbox):
+  "delete file with ** rules"
+
+  # mod_dav_svn unnecessarily requires svn_authz_recursive access on DELETE of
+  # a file.  See:
+  # 
+  #     https://mail-archives.apache.org/mod_mbox/subversion-users/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
+  #     https://mail-archives.apache.org/mod_mbox/subversion-dev/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
+  #     (Both links go to the same message.)
+  #
+  # The test will XPASS if the glob rule is removed.
+  #
+  # Note that the /**/lorem rule can't possibly match ^/iota, but its existence
+  # nevertheless affects the results of the authz check.
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  prefixed_rules = dict()
+  prefixed_rules[':glob:/**/lorem'] = '* = \n'
+  prefixed_rules['/'] = '%s = rw\n' % (svntest.main.wc_author,)
+  prefixed_rules['/A'] = '%s = \n' % (svntest.main.wc_author,)
+  prefixed_rules['/iota'] = '%s = rw\n' % (svntest.main.wc_author,)
+  write_authz_file(sbox, None, prefixed_rules = prefixed_rules)
+
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota', '-m', 'rm by URL')
+
+
 ########################################################################
 # Run the tests
 
@@ -1771,6 +1803,7 @@ test_list = [ None,
               inverted_group_membership,
               group_member_empty_string,
               empty_group,
+              delete_file_with_starstar_rules,
              ]
 serial_only = True
 
