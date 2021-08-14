@@ -56,6 +56,14 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1891908
+   Fix a bug where «make davautocheck» immediately after configure failed
+   hard because of an unbuilt dependency.
+   Justification:
+     Small fix.  Prevents spurious hard fails of 'make davautocheck'.
+   Votes:
+     +1: danielsh, dsahlberg
+
 Veto-blocked changes:
 =====================
 
