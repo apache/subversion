@@ -3028,12 +3028,12 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                                       deleted_basename,
                                                       conflict->pool);
   details->moves = moves;
+  details->wc_move_targets = apr_hash_make(conflict->pool);
   if (details->moves != NULL)
     {
       apr_pool_t *iterpool;
       int i;
 
-      details->wc_move_targets = apr_hash_make(conflict->pool);
       iterpool = svn_pool_create(scratch_pool);
       for (i = 0; i < details->moves->nelts; i++)
         {

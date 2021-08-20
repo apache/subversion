@@ -2364,7 +2364,6 @@ def spurios_tree_conflict_with_added_file(sbox):
                                        [], False, True, '--reintegrate',
                                        sbox.ospath('A_branch'))
 
-@XFail()
 def merge_local_missing_node_kind_none(sbox):
   "crash in resolver triggered by none-type node"
 
