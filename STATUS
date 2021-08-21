@@ -104,6 +104,7 @@ Candidate changes:
      Subversion should not crash. User complained.
    Votes:
      +1: stsp
+     -1: dsahlberg (FAILURE in conflicts-test, see dev@, comments to r1892471)
 
 Veto-blocked changes:
 =====================
