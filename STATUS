@@ -104,8 +104,9 @@ Candidate changes:
      Subversion should not crash. User complained.
    Votes:
      +1: stsp
-     -1: dsahlberg (without r1892541:
-         FAILURE in conflicts-test, see dev@, comments to r1892471)
+     +0: dsahlberg (test suite passes for 'check', 'davautocheck' and
+         'svnserveautocheck'. Not enough C experience for a formal
+         review)
 
 Veto-blocked changes:
 =====================
