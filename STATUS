@@ -98,13 +98,14 @@ Candidate changes:
    Votes:
      +1: danielsh, dsahlberg
 
- * r1892470, r1892471
+ * r1892470, r1892471, r1892541
    Fix an assertion failure triggered by the conflict resolver.
    Justification:
      Subversion should not crash. User complained.
    Votes:
      +1: stsp
-     -1: dsahlberg (FAILURE in conflicts-test, see dev@, comments to r1892471)
+     -1: dsahlberg (without r1892541:
+         FAILURE in conflicts-test, see dev@, comments to r1892471)
 
 Veto-blocked changes:
 =====================
