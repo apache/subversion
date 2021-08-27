@@ -84,10 +84,9 @@
  *
  * If EXACT_COMPARISON is FALSE, translate VERSIONED_FILE_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * calculate checksum and compare the result with PRISTINE_STREAM.  If
- * EXACT_COMPARISON is TRUE, open pristine, translate it's EOL style and
- * keywords to working-copy form according to VERSIONED_FILE_ABSPATH's
- * properties, and compare the result with VERSIONED_FILE_ABSPATH.
+ * calculate checksum and compare the result with PRISTINE_STREAM.
+ * If EXACT_COMPARISON is TRUE, also check that VERSIONED_FILE_ABSPATH
+ * contents remains the same when retranslated according to its properties.
  *
  * HAS_PROPS should be TRUE if the file had properties when it was not
  * modified, otherwise FALSE.
@@ -130,6 +129,9 @@ compare_and_verify(svn_boolean_t *modified_p,
                                          db, versioned_file_abspath, NULL,
                                          !exact_comparison,
                                          scratch_pool, scratch_pool));
+
+      if (eol_style == svn_subst_eol_style_unknown)
+        return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
       need_translation = svn_subst_translation_required(eol_style, eol_str,
                                                         keywords, special,
@@ -178,43 +180,71 @@ compare_and_verify(svn_boolean_t *modified_p,
 
       if (need_translation)
         {
-          if (!exact_comparison)
-            {
-              if (eol_style == svn_subst_eol_style_native)
-                eol_str = SVN_SUBST_NATIVE_EOL_STR;
-              else if (eol_style != svn_subst_eol_style_fixed
-                       && eol_style != svn_subst_eol_style_none)
-                return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL,
-                                        svn_stream_close(v_stream), NULL);
+          const char *pristine_eol_str;
 
+          if (eol_style == svn_subst_eol_style_native)
+            pristine_eol_str = SVN_SUBST_NATIVE_EOL_STR;
+          else
+            pristine_eol_str = eol_str;
+
+          if (exact_comparison)
+            {
+              svn_checksum_t *working_checksum;
+              svn_checksum_t *detranslated_checksum;
+              svn_checksum_t *retranslated_checksum;
+
+              v_stream = svn_stream_checksummed2(v_stream,
+                                                 &working_checksum, NULL,
+                                                 pristine_checksum->kind, TRUE,
+                                                 scratch_pool);
+
+              v_stream = svn_subst_stream_translated(v_stream,
+                                                     pristine_eol_str, TRUE,
+                                                     keywords, FALSE,
+                                                     scratch_pool);
+              v_stream = svn_stream_checksummed2(v_stream,
+                                                 &detranslated_checksum, NULL,
+                                                 pristine_checksum->kind, TRUE,
+                                                 scratch_pool);
+
+              v_stream = svn_subst_stream_translated(v_stream, eol_str, FALSE,
+                                                     keywords, TRUE,
+                                                     scratch_pool);
+              v_stream = svn_stream_checksummed2(v_stream,
+                                                 &retranslated_checksum, NULL,
+                                                 pristine_checksum->kind, TRUE,
+                                                 scratch_pool);
+
+              err = svn_stream_copy3(v_stream, svn_stream_empty(scratch_pool),
+                                     NULL, NULL, scratch_pool);
+              /* Convert EACCESS on working copy path to WC specific error code. */
+              if (err && APR_STATUS_IS_EACCES(err->apr_err))
+                return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
+              else
+                SVN_ERR(err);
+
+              if (svn_checksum_match(detranslated_checksum, pristine_checksum) &&
+                  svn_checksum_match(working_checksum, retranslated_checksum))
+                {
+                  *modified_p = FALSE;
+                }
+              else
+                {
+                  *modified_p = TRUE;
+                }
+
+              return SVN_NO_ERROR;
+            }
+          else
+            {
               /* Wrap file stream to detranslate into normal form,
                * "repairing" the EOL style if it is inconsistent. */
               v_stream = svn_subst_stream_translated(v_stream,
-                                                     eol_str,
+                                                     pristine_eol_str,
                                                      TRUE /* repair */,
                                                      keywords,
                                                      FALSE /* expand */,
                                                      scratch_pool);
-            }
-          else
-            {
-              svn_boolean_t same;
-              svn_stream_t *pristine_stream;
-
-              SVN_ERR(svn_wc__db_pristine_read(&pristine_stream, NULL,
-                                               db, versioned_file_abspath,
-                                               pristine_checksum,
-                                               scratch_pool, scratch_pool));
-              /* Wrap base stream to translate into working copy form, and
-               * arrange to throw an error if its EOL style is inconsistent. */
-              pristine_stream = svn_subst_stream_translated(pristine_stream,
-                                                            eol_str, FALSE,
-                                                            keywords, TRUE,
-                                                            scratch_pool);
-              SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
-                                                scratch_pool));
-              *modified_p = (! same);
-              return SVN_NO_ERROR;
             }
         }
     }
