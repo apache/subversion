@@ -1,0 +1,46 @@
+The purpose of this branch is to try to make the text-bases in the working
+copy optional [1][2].
+
+
+Description of the approach:
+----------------------------
+
+The core idea is that we start to maintain the following invariant: only the
+modified files have their pristine text-base files available on the disk.
+
+- To avoid having to access the text-base, the "is the file modified?" check
+  is performed by calculating the checksum of a file and comparing that to
+  what's recorded in the working copy.
+
+- A text-base of the unmodified file is the file itself, appropriately
+  detranslated.
+
+- To get into the appropriate state at the beginning of the operation, we walk
+  through the current text-base info in the db and check if the corresponding
+  working files are modified.  The missing text-bases are fetched using the
+  svn_ra layer.  The operations also include a final step during which the
+  no longer required text-bases are removed from disk.
+
+- The operations that don't need to access the text-bases (such as "svn ls"
+  or the updated "svn st") do not perform this walk and do not synchronize
+  the text-base state.
+
+
+For the production-ready state, it would probably make sense to also:
+---------------------------------------------------------------------
+
+ 1. Complete the work on ^/subversion/branches/multi-wc-format so that the
+    client would work with both the new and old working copy formats, for
+    a seamless user experience and better compatibility.
+
+ 2. For the new working copy format, incorporate a switch to a different
+    checksum type without known collisions instead of SHA-1.
+
+3. Fix the minor issues written down as TODOs in the code.
+
+
+References:
+-----------
+
+[1] https://issues.apache.org/jira/browse/SVN-525
+[2] https://lists.apache.org/thread.html/r40aa795b9e0c1aabb392c43b64e540432a31e22d8b0d9de7202b4950%40%3Cdev.subversion.apache.org%3E
