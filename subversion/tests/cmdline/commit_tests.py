@@ -3180,6 +3180,27 @@ def commit_sees_tree_conflict_on_unversioned_path(sbox):
 
   os.chdir(was_cwd)
 
+def commit_replaced_file_with_mods(sbox):
+  "commit a replaced file with modification"
+
+  sbox.build(empty=True)
+
+  sbox.simple_append('foo', 'old foo')
+  sbox.simple_add('foo')
+  sbox.simple_append('bar', 'old bar')
+  sbox.simple_add('bar')
+  sbox.simple_commit()
+
+  sbox.simple_rm('foo')
+  sbox.simple_append('foo', 'new foo')
+  sbox.simple_add('foo')
+  sbox.simple_commit()
+
+  sbox.simple_rm('bar')
+  sbox.simple_copy('foo', 'bar')
+  sbox.simple_append('bar', 'new bar')
+  sbox.simple_commit()
+
 
 ########################################################################
 # Run the tests
@@ -3260,6 +3281,7 @@ test_list = [ None,
               commit_xml,
               commit_issue4722_checksum,
               commit_sees_tree_conflict_on_unversioned_path,
+              commit_replaced_file_with_mods,
              ]
 
 if __name__ == '__main__':
