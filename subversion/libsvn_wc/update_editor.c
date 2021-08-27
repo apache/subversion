@@ -4888,6 +4888,7 @@ update_keywords_after_switch_cb(void *baton,
   svn_boolean_t record_fileinfo;
   svn_skel_t *work_items;
   const char *install_from;
+  svn_skel_t *cleanup_work_item;
 
   propval = svn_hash_gets(props, SVN_PROP_KEYWORDS);
   if (!propval)
@@ -4913,11 +4914,18 @@ update_keywords_after_switch_cb(void *baton,
       SVN_ERR(svn_stream_copy3(working_stream, install_from_stream,
                                eb->cancel_func, eb->cancel_baton,
                                scratch_pool));
+      SVN_ERR(svn_wc__wq_build_file_remove(&cleanup_work_item, eb->db,
+                                           local_abspath, install_from,
+                                           scratch_pool, scratch_pool));
       record_fileinfo = FALSE;
     }
   else
     {
-      install_from = NULL;
+      SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                           &cleanup_work_item,
+                                           eb->db, local_abspath, NULL,
+                                           eb->cancel_func, eb->cancel_baton,
+                                           scratch_pool, scratch_pool));
       record_fileinfo = TRUE;
     }
 
@@ -4926,15 +4934,7 @@ update_keywords_after_switch_cb(void *baton,
                                         eb->use_commit_times,
                                         record_fileinfo,
                                         scratch_pool, scratch_pool));
-  if (install_from)
-    {
-      svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                           local_abspath, install_from,
-                                           scratch_pool, scratch_pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
-    }
+  work_items = svn_wc__wq_merge(work_items, cleanup_work_item, scratch_pool);
 
   SVN_ERR(svn_wc__db_wq_add(eb->db, local_abspath, work_items,
                             scratch_pool));
@@ -5623,33 +5623,38 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                    entry_props, pool, pool));
   }
 
+  {
+    const char *tmp_dir_abspath;
+
+    SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir_abspath,
+                                           db, dir_abspath,
+                                           scratch_pool, scratch_pool));
+
+    SVN_ERR(svn_stream_open_unique(&tmp_base_contents, &tmp_text_base_abspath,
+                                   tmp_dir_abspath, svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
+  }
+
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
      it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its
      NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM as we copy. */
   if (copyfrom_url)
     {
-      SVN_ERR(svn_wc__textbase_prepare_install(&tmp_base_contents,
+      svn_stream_t *install_stream;
+
+      SVN_ERR(svn_wc__textbase_prepare_install(&install_stream,
                                                &install_data,
                                                &new_text_base_sha1_checksum,
                                                &new_text_base_md5_checksum,
                                                wc_ctx->db, local_abspath,
                                                scratch_pool, scratch_pool));
+
+      tmp_base_contents = svn_stream_tee(install_stream,
+                                         tmp_base_contents,
+                                         scratch_pool);
     }
   else
     {
-      const char *tmp_dir_abspath;
-
-      /* We are not installing a PRISTINE file, but we use the same code to
-         create whatever we want to install */
-
-      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir_abspath,
-                                             db, dir_abspath,
-                                             scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_stream_open_unique(&tmp_base_contents, &tmp_text_base_abspath,
-                                     tmp_dir_abspath, svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-
       new_text_base_sha1_checksum = NULL;
       new_text_base_md5_checksum = NULL;
     }
@@ -5671,6 +5676,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                      pool, pool));
       SVN_ERR(svn_stream_copy3(new_contents, tmp_contents,
                                cancel_func, cancel_baton, pool));
+    }
+  else
+    {
+      source_abspath = tmp_text_base_abspath;
     }
 
   /* Install new text base for copied files. Added files do NOT have a
@@ -5707,42 +5716,20 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       new_text_base_md5_checksum = NULL;
     }
 
-  /* For added files without NEW_CONTENTS, then generate the working file
-     from the provided "pristine" contents.  */
-  if (new_contents == NULL && copyfrom_url == NULL)
-    source_abspath = tmp_text_base_abspath;
+  /* Install the working copy file (with appropriate translation) from
+     the provided temporary file at SOURCE_ABSPATH.  */
+  SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                        db, local_abspath,
+                                        source_abspath,
+                                        FALSE /* use_commit_times */,
+                                        TRUE  /* record_fileinfo */,
+                                        pool, pool));
+  all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
-  {
-    svn_boolean_t record_fileinfo;
-
-    /* If new contents were provided, then we do NOT want to record the
-       file information. We assume the new contents do not match the
-       "proper" values for RECORDED_SIZE and RECORDED_TIME.  */
-    record_fileinfo = (new_contents == NULL);
-
-    /* Install the working copy file (with appropriate translation) from
-       the appropriate source. SOURCE_ABSPATH will be NULL, indicating an
-       installation from the pristine (available for copied/moved files),
-       or it will specify a temporary file where we placed a "pristine"
-       (for an added file) or a detranslated local-mods file.  */
-    SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                          db, local_abspath,
-                                          source_abspath,
-                                          FALSE /* use_commit_times */,
-                                          record_fileinfo,
-                                          pool, pool));
-    all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-
-    /* If we installed from somewhere besides the official pristine, then
-       it is a temporary file, which needs to be removed.  */
-    if (source_abspath != NULL)
-      {
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, local_abspath,
-                                             source_abspath,
-                                             pool, pool));
-        all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-      }
-  }
+  SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, local_abspath,
+                                       source_abspath,
+                                       pool, pool));
+  all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
   SVN_ERR(svn_wc__db_op_copy_file(db, local_abspath,
                                   new_base_props,

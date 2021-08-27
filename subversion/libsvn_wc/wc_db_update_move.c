@@ -971,15 +971,28 @@ tc_editor_add_file(node_move_baton_t *nmb,
     }
   else
     {
+      const char *src_abspath;
+      const char *install_from;
+      svn_skel_t *cleanup_work_item;
+
+      src_abspath = svn_dirent_join(b->wcroot->abspath, nmb->src_relpath,
+                                    scratch_pool);
+
       /* Update working file. */
+      SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                           &cleanup_work_item,
+                                           b->db, src_abspath, NULL,
+                                           b->cancel_func, b->cancel_baton,
+                                           scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db,
                                             svn_dirent_join(b->wcroot->abspath,
                                                             relpath,
                                                             scratch_pool),
-                                            NULL,
+                                            install_from,
                                             FALSE /*FIXME: use_commit_times?*/,
                                             TRUE  /* record_file_info */,
                                             scratch_pool, scratch_pool));
+      work_item = svn_wc__wq_merge(work_item, cleanup_work_item, scratch_pool);
     }
 
   SVN_ERR(update_move_list_add(b->wcroot, relpath, b->db,
@@ -1370,14 +1383,27 @@ tc_editor_alter_file(node_move_baton_t *nmb,
                                                scratch_pool));
       if (!is_locally_modified)
         {
+          const char *src_abspath;
+          const char *install_from;
+          svn_skel_t *cleanup_work_item;
+
+          src_abspath = svn_dirent_join(b->wcroot->abspath, nmb->src_relpath,
+                                        scratch_pool);
+
+          SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                               &cleanup_work_item,
+                                               b->db, src_abspath, NULL,
+                                               b->cancel_func, b->cancel_baton,
+                                               scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db,
                                                 local_abspath,
-                                                NULL,
+                                                install_from,
                                                 FALSE /* FIXME: use_commit_times? */,
                                                 TRUE  /* record_file_info */,
                                                 scratch_pool, scratch_pool));
 
           work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+          work_items = svn_wc__wq_merge(work_items, cleanup_work_item, scratch_pool);
 
           content_state = svn_wc_notify_state_changed;
         }
@@ -3166,14 +3192,22 @@ tc_editor_update_add_merge_files(added_node_baton_t *nb,
   if (!is_modified)
     {
       svn_skel_t *work_item = NULL;
+      const char *install_from;
+      svn_skel_t *cleanup_work_item;
 
+      SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                           &cleanup_work_item,
+                                           b->db, local_abspath, NULL,
+                                           b->cancel_func, b->cancel_baton,
+                                           scratch_pool, scratch_pool));
       SVN_ERR(svn_wc__wq_build_file_install(&work_item, b->db,
-                                            local_abspath, NULL,
+                                            local_abspath, install_from,
                                             /* FIXME: use_commit_times? */
                                             FALSE,
                                             TRUE,  /* record_file_info */
                                             scratch_pool, scratch_pool));
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      work_items = svn_wc__wq_merge(work_items, cleanup_work_item, scratch_pool);
       content_state = svn_wc_notify_state_changed;
     }
   else
@@ -3398,12 +3432,23 @@ update_locally_added_node(added_node_baton_t *nb,
        * is currently not installed because the base tree is shadowed.
        * Queue an installation of this node into the working copy. */
       if (base_kind == svn_node_file || base_kind == svn_node_symlink)
-        SVN_ERR(svn_wc__wq_build_file_install(&work_item, db, local_abspath,
-                                              NULL,
-                                              /* FIXME: use_commit_times? */
-                                              FALSE,
-                                              TRUE,  /* record_file_info */
-                                              scratch_pool, scratch_pool));
+        {
+          const char *install_from;
+          svn_skel_t *cleanup_work_item;
+
+          SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                               &cleanup_work_item,
+                                               db, local_abspath, NULL,
+                                               b->cancel_func, b->cancel_baton,
+                                               scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__wq_build_file_install(&work_item, db, local_abspath,
+                                                install_from,
+                                                /* FIXME: use_commit_times? */
+                                                FALSE,
+                                                TRUE,  /* record_file_info */
+                                                scratch_pool, scratch_pool));
+          work_item = svn_wc__wq_merge(work_item, cleanup_work_item, scratch_pool);
+        }
       else if (base_kind == svn_node_dir)
         SVN_ERR(svn_wc__wq_build_dir_install(&work_item, db, local_abspath,
                                              scratch_pool, scratch_pool));

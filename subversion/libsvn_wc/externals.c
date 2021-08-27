@@ -889,11 +889,38 @@ close_file(void *file_baton,
           }
         if (install_pristine)
           {
+            svn_stream_t *contents;
+            const char *tmpdir_abspath;
+            svn_stream_t *tmpstream;
+            const char *tmpfile_abspath;
+
+            SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, eb->db,
+                                             eb->wri_abspath,
+                                             eb->new_sha1_checksum,
+                                             pool, pool));
+
+            SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath,
+                                                   eb->db, eb->wri_abspath,
+                                                   pool, pool));
+            SVN_ERR(svn_stream_open_unique(&tmpstream, &tmpfile_abspath,
+                                           tmpdir_abspath,
+                                           svn_io_file_del_none,
+                                           pool, pool));
+            SVN_ERR(svn_stream_copy3(contents, tmpstream, eb->cancel_func,
+                                     eb->cancel_baton, pool));
+
             SVN_ERR(svn_wc__wq_build_file_install(&work_item, eb->db,
                                             eb->local_abspath,
-                                            NULL,
+                                            tmpfile_abspath,
                                             eb->use_commit_times, TRUE,
                                             pool, pool));
+
+            all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+
+            SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                                 eb->wri_abspath,
+                                                 tmpfile_abspath,
+                                                 pool, pool));
 
             all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
           }
