@@ -335,6 +335,8 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
   {
     apr_off_t size;
 
+    svn_stream__install_set_read_only(install_stream, TRUE);
+
     SVN_ERR(svn_stream__install_finalize(NULL, &size, install_stream,
                                          scratch_pool));
     SVN_ERR(svn_stream__install_stream(install_stream, pristine_abspath,
@@ -345,8 +347,6 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
     SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
     SVN_ERR(svn_sqlite__bind_int64(stmt, 3, size));
     SVN_ERR(svn_sqlite__insert(NULL, stmt));
-
-    SVN_ERR(svn_io_set_file_read_only(pristine_abspath, FALSE, scratch_pool));
   }
 
   return SVN_NO_ERROR;
