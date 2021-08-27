@@ -213,6 +213,7 @@ def keywords_off(path):
 ### This test is know to fail when Subversion is built in very deep
 ### directory structures, caused by SVN_KEYWORD_MAX_LEN being defined
 ### as 255.
+@Wimp("Relies on wc.text_base_path()")
 def keywords_from_birth(sbox):
   "commit new files with keywords active from birth"
 
@@ -551,6 +552,7 @@ def update_modified_with_translation(sbox):
 # after the commit, the file and its text-base have been changed to
 # have the new line-ending style.
 @Issue(1085)
+@Wimp("Relies on wc.text_base_path()")
 def eol_change_is_text_mod(sbox):
   "committing eol-style change forces text send"
 

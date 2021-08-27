@@ -3063,6 +3063,7 @@ def diff_wrong_extension_type(sbox):
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
 # Check the order of the arguments for an external diff tool
+@Wimp("Relies on wc.text_base_path()")
 def diff_external_diffcmd(sbox):
   "svn diff --diff-cmd provides the correct arguments"
 

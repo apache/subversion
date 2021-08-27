@@ -216,6 +216,10 @@ svn_client_cat3(apr_hash_t **returned_props,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
                                       scratch_pool));
+
+      SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE,
+                                        ctx, scratch_pool));
+
       SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
                                             local_abspath, revision,
                                             expand_keywords, FALSE,
@@ -229,9 +233,14 @@ svn_client_cat3(apr_hash_t **returned_props,
         SVN_ERR(svn_wc_prop_list2(returned_props, ctx->wc_ctx, local_abspath,
                                   result_pool, scratch_pool));
 
-      return svn_error_trace(svn_stream_copy3(normal_stream, output,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, scratch_pool));
+      SVN_ERR(svn_stream_copy3(normal_stream, output,
+                               ctx->cancel_func,
+                               ctx->cancel_baton, scratch_pool));
+
+      SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE,
+                                        ctx, scratch_pool));
+
+      return SVN_NO_ERROR;
     }
 
   /* Get an RA plugin for this filesystem object. */

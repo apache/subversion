@@ -1110,7 +1110,7 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
       SVN_ERR(svn_wc__textbase_prepare_install(&new_pristine_stream,
                                                &install_data,
                                                &local_sha1_checksum, NULL,
-                                               db, local_abspath,
+                                               db, local_abspath, FALSE,
                                                scratch_pool, scratch_pool));
       local_stream = copying_stream(local_stream, new_pristine_stream,
                                     scratch_pool);

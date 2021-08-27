@@ -728,6 +728,12 @@ svn_client_commit6(const apr_array_header_t *targets,
       if (cmt_err)
         goto cleanup;
 
+      cmt_err = svn_error_trace(
+                    svn_client__textbase_sync(lock_root, TRUE, TRUE,
+                                              ctx, iterpool));
+      if (cmt_err)
+        goto cleanup;
+
       APR_ARRAY_PUSH(locks_obtained, const char *) = lock_root;
     }
 
@@ -1073,6 +1079,11 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                 const char *);
 
           svn_pool_clear(iterpool);
+
+          unlock_err = svn_error_compose_create(
+                           svn_client__textbase_sync(lock_root, FALSE, TRUE,
+                                                     ctx, iterpool),
+                           unlock_err);
 
           unlock_err = svn_error_compose_create(
                            svn_wc__release_write_lock(ctx->wc_ctx, lock_root,

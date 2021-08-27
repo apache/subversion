@@ -66,6 +66,10 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
       const char *local_abspath = APR_ARRAY_IDX(array, i, const char *);
 
       svn_pool_clear(iterpool);
+
+      SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE, ctx,
+                                        iterpool));
+
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
                                         svn_depth_empty,
                                         TRUE /* resolve_text */,
@@ -98,8 +102,40 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
           if (text_c || prop_c || tree_c)
             *conflicts_remain = TRUE;
         }
+
+      SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE, ctx,
+                                        iterpool));
     }
   svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+resolve_locked(const char *local_abspath,
+               const char *root_abspath,
+               svn_depth_t depth,
+               svn_wc_conflict_choice_t conflict_choice,
+               svn_client_ctx_t *ctx,
+               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_client__textbase_sync(root_abspath, TRUE, TRUE, ctx,
+                                    scratch_pool));
+
+  SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
+                                    depth,
+                                    TRUE /* resolve_text */,
+                                    "" /* resolve_prop (ALL props) */,
+                                    TRUE /* resolve_tree */,
+                                    conflict_choice,
+                                    ctx->conflict_func2,
+                                    ctx->conflict_baton2,
+                                    ctx->cancel_func, ctx->cancel_baton,
+                                    ctx->notify_func2, ctx->notify_baton2,
+                                    scratch_pool));
+
+  SVN_ERR(svn_client__textbase_sync(root_abspath, FALSE, TRUE, ctx,
+                                    scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -126,17 +162,9 @@ svn_client_resolve(const char *path,
 
   SVN_ERR(svn_wc__acquire_write_lock_for_resolve(&lock_abspath, ctx->wc_ctx,
                                                  local_abspath, pool, pool));
-  err = svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
-                                  depth,
-                                  TRUE /* resolve_text */,
-                                  "" /* resolve_prop (ALL props) */,
-                                  TRUE /* resolve_tree */,
-                                  conflict_choice,
-                                  ctx->conflict_func2,
-                                  ctx->conflict_baton2,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  ctx->notify_func2, ctx->notify_baton2,
-                                  pool);
+
+  err = resolve_locked(local_abspath, lock_abspath, depth,
+                       conflict_choice, ctx, pool);
 
   err = svn_error_compose_create(err, svn_wc__release_write_lock(ctx->wc_ctx,
                                                                  lock_abspath,

@@ -69,6 +69,9 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   struct revert_with_write_lock_baton *b = baton;
   svn_error_t *err;
 
+  SVN_ERR(svn_client__textbase_sync(b->local_abspath, TRUE, TRUE,
+                                    b->ctx, scratch_pool));
+
   err = svn_wc_revert6(b->ctx->wc_ctx,
                        b->local_abspath,
                        b->depth,
@@ -107,6 +110,9 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
       else
         return svn_error_trace(err);
     }
+
+  SVN_ERR(svn_client__textbase_sync(b->local_abspath, FALSE, TRUE,
+                                    b->ctx, scratch_pool));
 
   return SVN_NO_ERROR;
 }

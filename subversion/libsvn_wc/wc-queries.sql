@@ -884,22 +884,21 @@ SELECT id, work FROM work_queue ORDER BY id LIMIT 1
 DELETE FROM work_queue WHERE id = ?1
 
 -- STMT_INSERT_OR_IGNORE_PRISTINE
-INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
-VALUES (?1, ?2, ?3, 0)
+INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount, hydrated)
+VALUES (?1, ?2, ?3, 0, ?4)
 
--- STMT_INSERT_PRISTINE
-INSERT INTO pristine (checksum, md5_checksum, size, refcount)
-VALUES (?1, ?2, ?3, 0)
+-- STMT_UPSERT_PRISTINE
+/* ### Probably need to bump the minimum SQLite version for UPSERT support
+   https://www.sqlite.org/lang_UPSERT.html
+ */
+INSERT INTO pristine (checksum, md5_checksum, size, refcount, hydrated)
+VALUES (?1, ?2, ?3, 0, ?4)
+ON CONFLICT(checksum) DO UPDATE SET size=?3, hydrated=?4
 
 -- STMT_SELECT_PRISTINE
-SELECT md5_checksum
+SELECT md5_checksum, size, hydrated
 FROM pristine
 WHERE checksum = ?1
-
--- STMT_SELECT_PRISTINE_SIZE
-SELECT size
-FROM pristine
-WHERE checksum = ?1 LIMIT 1
 
 -- STMT_SELECT_PRISTINE_BY_MD5
 SELECT checksum
@@ -917,7 +916,7 @@ WHERE checksum = ?1 AND refcount = 0
 
 -- STMT_SELECT_COPY_PRISTINES
 /* For the root itself */
-SELECT n.checksum, md5_checksum, size
+SELECT n.checksum, md5_checksum, size, p.hydrated
 FROM nodes_current n
 LEFT JOIN pristine p ON n.checksum = p.checksum
 WHERE wc_id = ?1
@@ -925,7 +924,7 @@ WHERE wc_id = ?1
   AND n.checksum IS NOT NULL
 UNION ALL
 /* And all descendants */
-SELECT n.checksum, md5_checksum, size
+SELECT n.checksum, md5_checksum, size, p.hydrated
 FROM nodes n
 LEFT JOIN pristine p ON n.checksum = p.checksum
 WHERE wc_id = ?1
@@ -933,6 +932,10 @@ WHERE wc_id = ?1
   AND op_depth >=
       (SELECT MAX(op_depth) FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2)
   AND n.checksum IS NOT NULL
+
+-- STMT_UPDATE_PRISTINE_HYDRATED
+UPDATE pristine SET hydrated = ?2
+WHERE checksum = ?1
 
 -- STMT_VACUUM
 VACUUM
@@ -1812,6 +1815,53 @@ SELECT lock_token, lock_owner, lock_comment, lock_date
 FROM lock
 WHERE repos_id = ?1 AND (repos_relpath = ?2)
 
+-- STMT_TEXTBASE_ADD_REF
+INSERT OR IGNORE INTO textbase_refs (wc_id, local_relpath, op_depth)
+VALUES (?1, ?2, ?3)
+
+-- STMT_TEXTBASE_REMOVE_REF
+DELETE FROM textbase_refs
+WHERE wc_id = ?1 AND local_relpath = ?2 AND op_depth = ?3
+
+-- STMT_TEXTBASE_WALK
+SELECT refs.wc_id IS NOT NULL,
+       nodes.local_relpath, nodes.op_depth,
+       nodes.checksum, nodes.properties,
+       nodes.translated_size, nodes.last_mod_time,
+       (SELECT properties FROM ACTUAL_NODE a
+        WHERE a.wc_id = ?1
+          AND a.local_relpath = nodes.local_relpath
+        LIMIT 1),
+       (SELECT MAX(op_depth)
+          FROM NODES w
+         WHERE w.wc_id = ?1
+           AND w.local_relpath = nodes.local_relpath)
+FROM nodes
+LEFT OUTER JOIN textbase_refs refs ON nodes.wc_id = refs.wc_id
+                                  AND nodes.local_relpath = refs.local_relpath
+                                  AND nodes.op_depth = refs.op_depth
+WHERE nodes.wc_id = ?1
+  AND (nodes.local_relpath = ?2
+       OR IS_STRICT_DESCENDANT_OF(nodes.local_relpath, ?2))
+  AND nodes.checksum IS NOT NULL
+
+-- STMT_TEXTBASE_SYNC
+SELECT pristine.checksum,
+       MIN(pristine.hydrated != 0),
+       MAX(refs.wc_id IS NOT NULL),
+       nodes.repos_path, nodes.repos_id, nodes.revision
+FROM nodes
+JOIN pristine ON nodes.wc_id = ?1
+             AND nodes.checksum = pristine.checksum
+             AND (nodes.local_relpath = ?2
+                  OR IS_STRICT_DESCENDANT_OF(nodes.local_relpath, ?2))
+LEFT OUTER JOIN textbase_refs refs ON nodes.wc_id = refs.wc_id
+                                  AND nodes.local_relpath = refs.local_relpath
+                                  AND nodes.op_depth = refs.op_depth
+GROUP BY pristine.checksum
+UNION ALL
+SELECT pristine.checksum, pristine.hydrated, 0, NULL, NULL, NULL
+FROM pristine WHERE refcount = 0
 
 /* ------------------------------------------------------------------------- */
 

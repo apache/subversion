@@ -431,14 +431,113 @@ svn_wc__textbase_prepare_install(svn_stream_t **stream_p,
                                  svn_checksum_t **md5_checksum_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
+                                 svn_boolean_t hydrated,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__db_pristine_prepare_install(stream_p, install_data_p,
                                               sha1_checksum_p,
                                               md5_checksum_p,
-                                              db, local_abspath,
+                                              db, local_abspath, hydrated,
                                               result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* A baton for use with textbase_walk_cb() and textbase_sync_cb(). */
+typedef struct textbase_sync_baton_t
+{
+  svn_wc__db_t *db;
+  svn_wc__textbase_hydrate_cb_t hydrate_callback;
+  void *hydrate_baton;
+} textbase_sync_baton_t;
+
+/* Implements svn_wc__db_textbase_walk_cb_t. */
+static svn_error_t *
+textbase_walk_cb(svn_boolean_t *referenced_p,
+                 void *baton,
+                 const char *local_abspath,
+                 int op_depth,
+                 const svn_checksum_t *checksum,
+                 svn_boolean_t have_props,
+                 svn_boolean_t props_mod,
+                 svn_filesize_t recorded_size,
+                 apr_time_t recorded_time,
+                 int max_op_depth,
+                 apr_pool_t *scratch_pool)
+{
+  textbase_sync_baton_t *b = baton;
+  svn_boolean_t referenced;
+
+  if (op_depth < max_op_depth)
+    {
+      /* Pin the text-base with working changes. */
+      referenced = TRUE;
+    }
+  else
+    {
+      svn_boolean_t modified;
+
+      SVN_ERR(check_file_modified(&modified, b->db, local_abspath,
+                                  recorded_size, recorded_time, checksum,
+                                  have_props, props_mod, scratch_pool));
+      /* Pin the text-base for modified files. */
+      referenced = modified;
+    }
+
+  *referenced_p = referenced;
+  return SVN_NO_ERROR;
+}
+
+/* Implements svn_wc__db_textbase_hydrate_cb_t. */
+static svn_error_t *
+textbase_hydrate_cb(void *baton,
+                    const char *repos_root_url,
+                    const char *repos_relpath,
+                    svn_revnum_t revision,
+                    svn_stream_t *contents,
+                    svn_cancel_func_t cancel_func,
+                    void *cancel_baton,
+                    apr_pool_t *scratch_pool)
+{
+  textbase_sync_baton_t *b = baton;
+
+  SVN_ERR(b->hydrate_callback(b->hydrate_baton, repos_root_url,
+                              repos_relpath, revision, contents,
+                              cancel_func, cancel_baton, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
+                      const char *local_abspath,
+                      svn_boolean_t allow_hydrate,
+                      svn_boolean_t allow_dehydrate,
+                      svn_wc__textbase_hydrate_cb_t hydrate_callback,
+                      void *hydrate_baton,
+                      svn_cancel_func_t cancel_func,
+                      void *cancel_baton,
+                      apr_pool_t *scratch_pool)
+{
+  textbase_sync_baton_t baton = {0};
+
+  SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
+
+  baton.db = wc_ctx->db;
+  baton.hydrate_callback = hydrate_callback;
+  baton.hydrate_baton = hydrate_baton;
+
+  SVN_ERR(svn_wc__db_textbase_walk(wc_ctx->db, local_abspath,
+                                   textbase_walk_cb, &baton,
+                                   cancel_func, cancel_baton,
+                                   scratch_pool));
+
+  SVN_ERR(svn_wc__db_textbase_sync(wc_ctx->db, local_abspath,
+                                   allow_hydrate, allow_dehydrate,
+                                   textbase_hydrate_cb, &baton,
+                                   cancel_func, cancel_baton,
+                                   scratch_pool));
 
   return SVN_NO_ERROR;
 }

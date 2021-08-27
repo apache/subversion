@@ -958,6 +958,8 @@ typedef struct svn_wc__db_install_data_t
    set to the MD-5 and SHA-1 checksums respectively of that file.
    MD5_CHECKSUM and/or SHA1_CHECKSUM may be NULL if not wanted.
 
+   If HYDRATED is true, the contents of the pristine will be saved to disk.
+
    Allocate the new stream, path and checksums in RESULT_POOL.
  */
 svn_error_t *
@@ -967,6 +969,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
                                     svn_checksum_t **md5_checksum,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
+                                    svn_boolean_t hydrated,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -1049,13 +1052,25 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
 
 /* Set *PRESENT to true if the pristine store for WRI_ABSPATH in DB contains
    a pristine text with SHA-1 checksum SHA1_CHECKSUM, and to false otherwise.
-*/
+   If the pristine is present, set *HYDRATED to true if its contents are
+   currently available on disk, and to false otherwise.  If the pristine
+   is not present, set *HYDRATED to false. */
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
+                          svn_boolean_t *hydrated,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
                           const svn_checksum_t *sha1_checksum,
                           apr_pool_t *scratch_pool);
+
+/* If the pristine store for WRI_ABSPATH in DB contains a pristine text with
+   SHA-1 checksum SHA1_CHECKSUM with its content available on disk, remove
+   that content and mark the pristine entry as "dehydrated". */
+svn_error_t *
+svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const svn_checksum_t *sha1_checksum,
+                              apr_pool_t *scratch_pool);
 
 /* @defgroup svn_wc__db_external  External management
    @{ */
@@ -3091,6 +3106,77 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
                             svn_boolean_t exact,
                             apr_pool_t *scratch_pool);
 
+/* @} */
+
+
+/* @defgroup svn_wc__db_textbase  Working with text-bases
+   @{
+*/
+
+/* The callback invoked by svn_wc__db_textbase_walk(). */
+typedef svn_error_t * (*svn_wc__db_textbase_walk_cb_t)(
+  svn_boolean_t *referenced_p,
+  void *baton,
+  const char *local_abspath,
+  int op_depth,
+  const svn_checksum_t *checksum,
+  svn_boolean_t have_props,
+  svn_boolean_t props_mod,
+  svn_filesize_t recorded_size,
+  apr_time_t recorded_time,
+  int max_op_depth,
+  apr_pool_t *scratch_pool);
+
+/* Walk the text-bases referenced by the nodes in the LOCAL_ABSPATH
+   tree, invoking the CALLBACK with information about each text-base
+   for a node.
+
+   If the callback sets *REFERENCED_P to true, ensure that a text-base
+   reference exists for the node.  If the callback sets *REFERENCED_P to
+   false, ensure that a text-base reference does not exist for the node.
+
+   See the description of the `TEXTBASE_REFS` table in the schema.
+ */
+svn_error_t *
+svn_wc__db_textbase_walk(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         svn_wc__db_textbase_walk_cb_t callback,
+                         void *callback_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool);
+
+/* The callback invoked by svn_wc__db_textbase_sync(). */
+typedef svn_error_t * (*svn_wc__db_textbase_hydrate_cb_t)(
+  void *baton,
+  const char *repos_root_url,
+  const char *repos_relpath,
+  svn_revnum_t revision,
+  svn_stream_t *contents,
+  svn_cancel_func_t cancel_func,
+  void *cancel_baton,
+  apr_pool_t *scratch_pool);
+
+/* Synchronize the state of the text-bases in DB.
+
+   If ALLOW_HYDRATE is true, fetch the referenced but missing text-base
+   contents using the provided HYDRATE_CALLBACK and HYDRATE_BATON.
+   If ALLOW_DEHYDRATE is true, remove the on disk text-base contents
+   that is no longer referenced.
+ */
+svn_error_t *
+svn_wc__db_textbase_sync(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         svn_boolean_t allow_hydrate,
+                         svn_boolean_t allow_dehydrate,
+                         svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
+                         void *hydrate_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool);
+
+
+/* @} */
 
 
 /* @defgroup svn_wc__db_temp Various temporary functions during transition

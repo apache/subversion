@@ -102,13 +102,13 @@ static const int slow_statements[] =
   STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND,
   STMT_SELECT_COPIES_OF_REPOS_RELPATH,
 
-  /* Designed as slow to avoid penalty on other queries */
-  STMT_SELECT_UNREFERENCED_PRISTINES,
-
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
   STMT_HAVE_STAT1_TABLE, /* Queries sqlite_master which has no index */
+
+  /* Currently uses a temporary B-tree for GROUP BY */
+  STMT_TEXTBASE_SYNC,
 
   -1 /* final marker */
 };

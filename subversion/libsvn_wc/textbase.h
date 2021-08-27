@@ -93,6 +93,10 @@ svn_wc__textbase_setaside_wq(const char **result_abspath_p,
                              apr_pool_t *scratch_pool);
 
 /* Prepare to install the text-base contents for file LOCAL_ABSPATH in DB.
+ * If HYDRATED is true, the contents are guaranteed to be kept and available
+ * on disk.  If HYDRATED is false, the contents MAY not be saved on disk,
+ * but the actual state is a subject to the current working copy state and
+ * configuration.
  *
  * For more detail, see the description of svn_wc__db_pristine_prepare_install().
  */
@@ -103,6 +107,7 @@ svn_wc__textbase_prepare_install(svn_stream_t **stream_p,
                                  svn_checksum_t **md5_checksum_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
+                                 svn_boolean_t hydrated,
                                  apr_pool_t *result_pool,
                                  apr_pool_t *scratch_pool);
 

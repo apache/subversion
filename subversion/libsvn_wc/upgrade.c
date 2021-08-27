@@ -1077,6 +1077,7 @@ migrate_text_bases(apr_hash_t **text_bases_info,
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
+        SVN_ERR(svn_sqlite__bind_int(stmt, 4, TRUE));
         SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
         SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,
@@ -1426,6 +1427,16 @@ bump_to_31(void *baton,
 }
 
 static svn_error_t *
+bump_to_32(void *baton,
+           svn_sqlite__db_t *sdb,
+           apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_32));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                         const char *dir_relpath,
                         apr_int64_t wc_id,
@@ -1685,6 +1696,12 @@ svn_wc__upgrade_sdb(int *result_format,
         SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_31, &bb,
                                              scratch_pool));
         *result_format = 31;
+
+      case 31:
+        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_32, &bb,
+                                             scratch_pool));
+        *result_format = 32;
+
         /* FALLTHROUGH  */
       /* ### future bumps go here.  */
 #if 0

@@ -104,10 +104,27 @@ CREATE TABLE PRISTINE (
 
   /* Alternative MD5 checksum used for communicating with older
      repositories. Not strictly guaranteed to be unique among table rows. */
-  md5_checksum  TEXT NOT NULL
+  md5_checksum  TEXT NOT NULL,
+
+  /* True iff the pristine contents are currently available on disk. */
+  hydrated  INTEGER NOT NULL
+
+  /* Note: we use checksums to detect if the file contents have been modified
+     in textbase.c and in the svn_wc__internal_file_modified_p() function.
+
+     The new working copy format SHOULD incorporate a switch to a different
+     checksum type without known collisions.
+
+     For the updated pristine table schema, we MAY want to add a new column
+     containing a checksum of the first 8KB of the file to allow saying that
+     the file is modified without reading all its content.  That could speed
+     up the check for large modified files whose size did not change, for
+     example if they are allocated in certain extents.
+   */
   );
 
 CREATE INDEX I_PRISTINE_MD5 ON PRISTINE (md5_checksum);
+CREATE INDEX I_PRISTINE_UNREFERENCED ON PRISTINE (refcount, refcount=0);
 
 /* ------------------------------------------------------------------------- */
 
@@ -511,6 +528,10 @@ WHEN OLD.checksum IS NOT NULL
 BEGIN
   UPDATE pristine SET refcount = refcount - 1
   WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
 END;
 
 CREATE TRIGGER nodes_update_checksum_trigger
@@ -522,6 +543,10 @@ BEGIN
   WHERE checksum = NEW.checksum;
   UPDATE pristine SET refcount = refcount - 1
   WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
 END;
 
 CREATE TABLE EXTERNALS (
@@ -561,6 +586,22 @@ CREATE TABLE EXTERNALS (
 CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
+
+/* ------------------------------------------------------------------------- */
+
+/* This table contains references to the on disk text-base contents.
+   Every row corresponds to a row in NODES table with the same key.
+   While a row is present is this table, the contents identified by the
+   corresponding NODES.checksum cannot be dehydrated from the pristine store.
+ */
+CREATE TABLE TEXTBASE_REFS (
+  /* Same key columns as in the NODES table */
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  op_depth  INTEGER NOT NULL,
+
+  PRIMARY KEY (wc_id, local_relpath, op_depth)
+  );
 
 
 PRAGMA user_version =
@@ -697,11 +738,64 @@ WHERE l.op_depth = 0
   AND ((l.repos_id IS NOT r.repos_id)
        OR (l.repos_path IS NOT RELPATH_SKIP_JOIN(r.local_relpath, r.repos_path, l.local_relpath)))
 
+/* ------------------------------------------------------------------------- */
+
+/* Format 32 adds support for optional text-base contents with the
+   following schema changes:
+   - Add the 'hydrated' column to the PRISTINE table.
+   - Add the I_PRISTINE_UNREFERENCED index.
+   - Add the TEXTBASE_REFS table. */
+-- STMT_UPGRADE_TO_32
+ALTER TABLE PRISTINE ADD COLUMN hydrated INTEGER NOT NULL DEFAULT 1;
+
+CREATE INDEX I_PRISTINE_UNREFERENCED ON PRISTINE (refcount, refcount=0);
+
+CREATE TABLE TEXTBASE_REFS (
+  /* Same key columns as in the NODES table */
+  wc_id  INTEGER NOT NULL,
+  local_relpath  TEXT NOT NULL,
+  op_depth  INTEGER NOT NULL,
+
+  PRIMARY KEY (wc_id, local_relpath, op_depth)
+  );
+
+DROP TRIGGER nodes_delete_trigger;
+
+CREATE TRIGGER nodes_delete_trigger
+AFTER DELETE ON nodes
+WHEN OLD.checksum IS NOT NULL
+BEGIN
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
+END;
+
+DROP TRIGGER nodes_update_checksum_trigger;
+
+CREATE TRIGGER nodes_update_checksum_trigger
+AFTER UPDATE OF checksum ON nodes
+WHEN NEW.checksum IS NOT OLD.checksum
+  /* AND (NEW.checksum IS NOT NULL OR OLD.checksum IS NOT NULL) */
+BEGIN
+  UPDATE pristine SET refcount = refcount + 1
+  WHERE checksum = NEW.checksum;
+  UPDATE pristine SET refcount = refcount - 1
+  WHERE checksum = OLD.checksum;
+  DELETE FROM textbase_refs
+  WHERE wc_id = OLD.wc_id
+    AND local_relpath = OLD.local_relpath
+    AND op_depth = OLD.op_depth;
+END;
+
+PRAGMA user_version = 32;
 
 /* ------------------------------------------------------------------------- */
-/* Format 32 ....  */
-/* -- STMT_UPGRADE_TO_32
-PRAGMA user_version = 32; */
+/* Format 33 ....  */
+/* -- STMT_UPGRADE_TO_33
+PRAGMA user_version = 33; */
 
 
 /* ------------------------------------------------------------------------- */

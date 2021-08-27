@@ -827,13 +827,14 @@ typedef struct get_pristine_lazyopen_baton_t
 
 /* Implements svn_stream_lazyopen_func_t */
 static svn_error_t *
-get_pristine_lazyopen_func(svn_stream_t **stream,
+get_pristine_lazyopen_func(svn_stream_t **stream_p,
                            void *baton,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   get_pristine_lazyopen_baton_t *b = baton;
   const svn_checksum_t *sha1_checksum;
+  svn_stream_t *stream;
 
   /* svn_wc__db_pristine_read() wants a SHA1, so if we have an MD5,
      we'll use it to lookup the SHA1. */
@@ -844,9 +845,13 @@ get_pristine_lazyopen_func(svn_stream_t **stream,
                                          b->wri_abspath, b->checksum,
                                          scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_pristine_read(stream, NULL, b->wc_ctx->db,
+  SVN_ERR(svn_wc__db_pristine_read(&stream, NULL, b->wc_ctx->db,
                                    b->wri_abspath, sha1_checksum,
                                    result_pool, scratch_pool));
+  if (!stream)
+    return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+
+  *stream_p = stream;
   return SVN_NO_ERROR;
 }
 
@@ -859,13 +864,14 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           apr_pool_t *scratch_pool)
 {
   svn_boolean_t present;
+  svn_boolean_t hydrated;
 
   *contents = NULL;
 
-  SVN_ERR(svn_wc__db_pristine_check(&present, wc_ctx->db, wri_abspath,
-                                    checksum, scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, wc_ctx->db,
+                                    wri_abspath, checksum, scratch_pool));
 
-  if (present)
+  if (present && hydrated)
     {
       get_pristine_lazyopen_baton_t *gpl_baton;
 

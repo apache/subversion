@@ -645,6 +645,7 @@ apply_textdelta(void *file_baton,
                                            &eb->new_sha1_checksum,
                                            &eb->new_md5_checksum,
                                            eb->db, eb->local_abspath,
+                                           TRUE,
                                            eb->pool, pool));
 
   svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
@@ -898,6 +899,9 @@ close_file(void *file_baton,
                                              eb->wri_abspath,
                                              eb->new_sha1_checksum,
                                              pool, pool));
+            if (!contents)
+              return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                      NULL, NULL);
 
             SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath,
                                                    eb->db, eb->wri_abspath,

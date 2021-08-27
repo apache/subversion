@@ -1236,6 +1236,15 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
+/* Synchronize the state of the text-base contents for the LOCAL_ABSPATH tree.
+ * Internally this calls svn_wc__textbase_sync(), which see for details. */
+svn_error_t *
+svn_client__textbase_sync(const char *local_abspath,
+                          svn_boolean_t allow_hydrate,
+                          svn_boolean_t allow_dehydrate,
+                          svn_client_ctx_t *ctx,
+                          apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

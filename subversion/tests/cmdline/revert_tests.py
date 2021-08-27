@@ -243,6 +243,15 @@ def revert_from_wc_root(sbox):
   svntest.actions.run_and_verify_status('', expected_output)
 
 @Issue(1663)
+# Walking the text-bases automatically repairs timestamps, so now the
+# first and the second reverts in this test behave identically, as if
+# 'svn cleanup' or any other command that repairs the timestamps had been
+# called beforehand.  Judging by the second part of the test, we're fine
+# with revert doing nothing in that case, but that essentially contradicts
+# the expectation in its first part.
+#
+# I temporarily mark the test XFail.  See r1101730 and r1101817 for details.
+@XFail()
 def revert_reexpand_keyword(sbox):
   "revert reexpands manually contracted keyword"
 

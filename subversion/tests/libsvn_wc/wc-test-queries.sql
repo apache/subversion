@@ -61,10 +61,10 @@ INSERT INTO actual_node (local_relpath, parent_relpath, changelist, wc_id)
                 VALUES (?1, ?2, ?3, 1)
 
 -- STMT_ENSURE_EMPTY_PRISTINE
-INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
+INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount, hydrated)
   VALUES ('$sha1$da39a3ee5e6b4b0d3255bfef95601890afd80709',
           '$md5 $d41d8cd98f00b204e9800998ecf8427e',
-          0, 0)
+          0, 0, 1)
 
 -- STMT_NODES_SET_FILE
 UPDATE nodes

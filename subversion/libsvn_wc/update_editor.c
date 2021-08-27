@@ -3766,6 +3766,21 @@ lazy_open_target(svn_stream_t **stream_p,
   svn_stream_t *pristine_install_stream;
   svn_wc__working_file_writer_t *file_writer;
   svn_stream_t *stream;
+  svn_boolean_t hydrated;
+
+  if (fb->shadowed || fb->obstruction_found || fb->edit_obstructed)
+    {
+      hydrated = TRUE;
+    }
+  else if (fb->adding_file && !fb->add_existed)
+    {
+      /* Clean new file, hint that we don't need the text-base. */
+      hydrated = FALSE;
+    }
+  else
+    {
+      hydrated = TRUE;
+    }
 
   /* By convention return value is undefined on error, but we rely
      on HB->INSTALL_DATA value in window_handler() and abort
@@ -3778,6 +3793,7 @@ lazy_open_target(svn_stream_t **stream_p,
                                            NULL,
                                            fb->edit_baton->db,
                                            fb->local_abspath,
+                                           hydrated,
                                            result_pool, scratch_pool));
 
   if (fb->shadowed || fb->obstruction_found || fb->edit_obstructed)
@@ -5647,6 +5663,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                                &new_text_base_sha1_checksum,
                                                &new_text_base_md5_checksum,
                                                wc_ctx->db, local_abspath,
+                                               copyfrom_url != NULL,
                                                scratch_pool, scratch_pool));
 
       tmp_base_contents = svn_stream_tee(install_stream,

@@ -355,6 +355,7 @@ def basic_mkdir_wc_with_parents(sbox):
 
 
 #----------------------------------------------------------------------
+@Wimp("Relies on wc.text_base_path()")
 def basic_commit_corruption(sbox):
   "basic corruption detection on commit"
 
@@ -420,6 +421,7 @@ def basic_commit_corruption(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+@Wimp("Relies on wc.text_base_path()")
 def basic_update_corruption(sbox):
   "basic corruption detection on update"
 
