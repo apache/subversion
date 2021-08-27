@@ -35,6 +35,7 @@
 #include "svn_wc.h"
 #include "svn_client.h"
 #include "svn_hash.h"
+#include "svn_props.h"
 
 #include "utils.h"
 
@@ -603,6 +604,173 @@ test_working_file_writer_eol_inconsistent(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_internal_file_modified_keywords(const svn_test_opts_t *opts,
+                                     apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t modified;
+  const char *iota_path;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "internal_file_modified_keywords",
+                                   opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  iota_path = sbox_wc_path(&b, "iota");
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Set svn:keywords, edit the file.  The file is modified. */
+  SVN_ERR(sbox_wc_propset(&b, SVN_PROP_KEYWORDS, "Revision", iota_path));
+  SVN_ERR(sbox_file_write(&b, iota_path, "$Revision$\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Commit the changes.  The file is not modified. */
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Manually contract the keywords.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "$Revision$\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_internal_file_modified_eol_style(const svn_test_opts_t *opts,
+                                      apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t modified;
+  const char *iota_path;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "internal_file_modified_eol_style",
+                                   opts, pool));
+  SVN_ERR(sbox_add_and_commit_greek_tree(&b));
+
+  iota_path = sbox_wc_path(&b, "iota");
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Set svn:eol-style, edit the file.  The file is modified. */
+  SVN_ERR(sbox_wc_propset(&b, SVN_PROP_EOL_STYLE, "CRLF", iota_path));
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Commit the changes.  The file is not modified. */
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Manually change the line ending to LF.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Manually change the line ending to CR.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  /* Change the line ending back to CRLF.  The file is not modified. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Add an empty line and commit.  The file is not modified. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\r\n\r\n"));
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  /* Change one of the line endings to LF.  The file is modified, but only
+     if we ask for the exact comparison. */
+  SVN_ERR(sbox_file_write(&b, iota_path, "contents\n\r\n"));
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, FALSE, pool));
+  SVN_TEST_ASSERT(!modified);
+
+  SVN_ERR(svn_wc__internal_file_modified_p(&modified, b.wc_ctx->db,
+                                           iota_path, TRUE, pool));
+  SVN_TEST_ASSERT(modified);
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -631,6 +799,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "working file writer eol repair"),
     SVN_TEST_OPTS_PASS(test_working_file_writer_eol_inconsistent,
                        "working file writer eol inconsistent"),
+    SVN_TEST_OPTS_PASS(test_internal_file_modified_keywords,
+                       "test internal_file_modified with keywords"),
+    SVN_TEST_OPTS_PASS(test_internal_file_modified_eol_style,
+                       "test internal_file_modified with eol-style"),
     SVN_TEST_NULL
   };
 
