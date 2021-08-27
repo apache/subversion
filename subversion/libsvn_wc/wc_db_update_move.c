@@ -154,6 +154,7 @@
 #include "conflicts.h"
 #include "workqueue.h"
 #include "token-map.h"
+#include "textbase.h"
 
 /* Helper functions */
 /* Return the absolute path, in local path style, of LOCAL_RELPATH
@@ -1382,20 +1383,30 @@ tc_editor_alter_file(node_move_baton_t *nmb,
         }
       else
         {
+          svn_skel_t *cleanup_queue = NULL;
+
           /*
            * Run a 3-way merge to update the file, using the pre-update
            * pristine text as the merge base, the post-update pristine
            * text as the merge-left version, and the current content of the
            * moved-here working file as the merge-right version.
            */
-          SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
-                                               b->db, b->wcroot->abspath,
+          SVN_ERR(svn_wc__textbase_setaside_wq(&old_pristine_abspath,
+                                               &work_item, b->db,
+                                               local_abspath,
                                                old_version.checksum,
+                                               b->cancel_func, b->cancel_baton,
                                                scratch_pool, scratch_pool));
-          SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
-                                               b->db, b->wcroot->abspath,
+          cleanup_queue = svn_wc__wq_merge(cleanup_queue, work_item, scratch_pool);
+
+          SVN_ERR(svn_wc__textbase_setaside_wq(&new_pristine_abspath,
+                                               &work_item, b->db,
+                                               local_abspath,
                                                new_version.checksum,
+                                               b->cancel_func, b->cancel_baton,
                                                scratch_pool, scratch_pool));
+          cleanup_queue = svn_wc__wq_merge(cleanup_queue, work_item, scratch_pool);
+
           SVN_ERR(svn_wc__internal_merge(&work_item, &conflict_skel,
                                          &merge_outcome, b->db,
                                          old_pristine_abspath,
@@ -1412,6 +1423,7 @@ tc_editor_alter_file(node_move_baton_t *nmb,
                                          scratch_pool, scratch_pool));
 
           work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+          work_items = svn_wc__wq_merge(work_items, cleanup_queue, scratch_pool);
 
           if (merge_outcome == svn_wc_merge_conflict)
             content_state = svn_wc_notify_state_conflicted;
@@ -1599,6 +1611,7 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
           const char *src_abspath;
           const char *label_left;
           const char *label_target;
+          svn_skel_t *cleanup_queue = NULL;
 
           /*
            * Run a 3-way merge to update the file at its post-move location,
@@ -1607,12 +1620,17 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
            * content of the working file at the pre-move location as the
            * merge-left version.
            */
-          SVN_ERR(svn_wc__db_pristine_get_path(&old_pristine_abspath,
-                                               b->db, b->wcroot->abspath,
-                                               src_checksum,
-                                               scratch_pool, scratch_pool));
           src_abspath = svn_dirent_join(b->wcroot->abspath, src_relpath,
                                         scratch_pool);
+
+          SVN_ERR(svn_wc__textbase_setaside_wq(&old_pristine_abspath,
+                                               &work_item, b->db,
+                                               src_abspath,
+                                               src_checksum,
+                                               b->cancel_func, b->cancel_baton,
+                                               scratch_pool, scratch_pool));
+          cleanup_queue = svn_wc__wq_merge(cleanup_queue, work_item, scratch_pool);
+
           label_left = apr_psprintf(scratch_pool, ".r%ld",
                                     b->old_version->peg_rev);
           label_target = apr_psprintf(scratch_pool, ".r%ld",
@@ -1635,6 +1653,7 @@ tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
                                          scratch_pool, scratch_pool));
 
           work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+          work_items = svn_wc__wq_merge(work_items, cleanup_queue, scratch_pool);
 
           if (merge_outcome == svn_wc_merge_conflict)
             content_state = svn_wc_notify_state_conflicted;
@@ -3162,6 +3181,7 @@ tc_editor_update_add_merge_files(added_node_baton_t *nb,
       const char *empty_file_abspath;
       const char *pristine_abspath;
       svn_skel_t *work_item = NULL;
+      svn_skel_t *cleanup_queue = NULL;
 
       /*
        * Run a 3-way merge to update the file, using the empty file
@@ -3172,9 +3192,13 @@ tc_editor_update_add_merge_files(added_node_baton_t *nb,
       SVN_ERR(svn_io_open_unique_file3(NULL, &empty_file_abspath, NULL,
                                        svn_io_file_del_on_pool_cleanup,
                                        scratch_pool, scratch_pool));
-      SVN_ERR(svn_wc__db_pristine_get_path(&pristine_abspath, b->db,
-                                           b->wcroot->abspath, base_checksum,
+      SVN_ERR(svn_wc__textbase_setaside_wq(&pristine_abspath,
+                                           &work_item, b->db,
+                                           local_abspath,
+                                           base_checksum,
+                                           b->cancel_func, b->cancel_baton,
                                            scratch_pool, scratch_pool));
+      cleanup_queue = svn_wc__wq_merge(cleanup_queue, work_item, scratch_pool);
 
       /* Create a property diff which shows all props as added. */
       SVN_ERR(svn_prop_diffs(&propchanges, working_props,
@@ -3196,6 +3220,7 @@ tc_editor_update_add_merge_files(added_node_baton_t *nb,
                                      scratch_pool, scratch_pool));
 
       work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
+      work_items = svn_wc__wq_merge(work_items, cleanup_queue, scratch_pool);
 
       if (merge_outcome == svn_wc_merge_conflict)
         content_state = svn_wc_notify_state_conflicted;

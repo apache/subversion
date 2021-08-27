@@ -53,6 +53,7 @@
 #include "adm_files.h"
 #include "conflicts.h"
 #include "workqueue.h"
+#include "textbase.h"
 
 #include "private/svn_dep_compat.h"
 #include "private/svn_sorts_private.h"
@@ -779,8 +780,8 @@ svn_wc_get_pristine_copy_path(const char *path,
      may use repeatedly despite error return values. The rest of this
      function should aggressively close DB, even in the error case.  */
 
-  err = svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
-                                       pool, pool);
+  err = svn_wc__textbase_setaside(pristine_path, db, local_abspath,
+                                  NULL, NULL, NULL, pool, pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
     {
       /* The node doesn't exist, so return a non-existent path located
@@ -806,9 +807,10 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__get_pristine_contents(contents, NULL,
+  return svn_error_trace(svn_wc__textbase_get_contents(contents,
                                                        wc_ctx->db,
                                                        local_abspath,
+                                                       NULL, TRUE,
                                                        result_pool,
                                                        scratch_pool));
 }

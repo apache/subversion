@@ -914,21 +914,6 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
    @{
 */
 
-/* Set *PRISTINE_ABSPATH to the path to the pristine text file
-   identified by SHA1_CHECKSUM.  Error if it does not exist.
-
-   ### This is temporary - callers should not be looking at the file
-   directly.
-
-   Allocate the path in RESULT_POOL. */
-svn_error_t *
-svn_wc__db_pristine_get_path(const char **pristine_abspath,
-                             svn_wc__db_t *db,
-                             const char *wri_abspath,
-                             const svn_checksum_t *checksum,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
 /* Set *PRISTINE_ABSPATH to the path under WCROOT_ABSPATH that will be
    used by the pristine text identified by SHA1_CHECKSUM.  The file
    need not exist.

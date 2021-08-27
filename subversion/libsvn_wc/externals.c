@@ -53,6 +53,7 @@
 #include "translate.h"
 #include "workqueue.h"
 #include "conflicts.h"
+#include "textbase.h"
 
 #include "svn_private_config.h"
 
@@ -631,19 +632,20 @@ apply_textdelta(void *file_baton,
                                                            pool)));
         }
 
-      SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, eb->db,
-                                       eb->wri_abspath, eb->original_checksum,
-                                       pool, pool));
+      SVN_ERR(svn_wc__textbase_get_contents(&src_stream, eb->db,
+                                            eb->local_abspath,
+                                            eb->original_checksum,
+                                            FALSE, pool, pool));
     }
   else
     src_stream = svn_stream_empty(pool);
 
-  SVN_ERR(svn_wc__db_pristine_prepare_install(&dest_stream,
-                                              &eb->install_data,
-                                              &eb->new_sha1_checksum,
-                                              &eb->new_md5_checksum,
-                                              eb->db, eb->wri_abspath,
-                                              eb->pool, pool));
+  SVN_ERR(svn_wc__textbase_prepare_install(&dest_stream,
+                                           &eb->install_data,
+                                           &eb->new_sha1_checksum,
+                                           &eb->new_md5_checksum,
+                                           eb->db, eb->local_abspath,
+                                           eb->pool, pool));
 
   svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
                     handler, handler_baton);
