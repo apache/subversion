@@ -1450,8 +1450,8 @@ IV.   PLATFORM-SPECIFIC ISSUES
           https://www.apache.org/dist/httpd/binaries/win32/#xpbug
 
       And there's an item about this in the Subversion FAQ:
-ttps://subversion.apache.org/faq.html#windows-xp-server
-          h
+
+      https://subversion.apache.org/faq.html#windows-xp-server
 
       The only known workaround for now is to update to Windows XP
       SP1 (or higher).
