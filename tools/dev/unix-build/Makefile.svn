@@ -53,6 +53,12 @@ PWD		= $(shell pwd)
 UNAME		= $(shell uname)
 RUBY		= $(shell which ruby 2>/dev/null)
 ifeq ($(RUBY),)
+RUBY		= $(shell which ruby27 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby26 2>/dev/null)
+ifeq ($(RUBY),)
+RUBY		= $(shell which ruby25 2>/dev/null)
+ifeq ($(RUBY),)
 RUBY		= $(shell which ruby24 2>/dev/null)
 ifeq ($(RUBY),)
 RUBY		= $(shell which ruby23 2>/dev/null)
@@ -73,6 +79,9 @@ endif # 2.1
 endif # 2.2
 endif # 2.3
 endif # 2.4
+endif # 2.5
+endif # 2.6
+endif # 2.7
 
 ifeq ($(UNAME),OpenBSD)
 # Pick the correct base compiler (ie. clang rather than ancient gcc 4.2.1)
@@ -115,7 +124,7 @@ SERF_OLD_VER	= 0.3.1
 CYRUS_SASL_VER	= 2.1.25
 SQLITE_VER	= 3160200
 LIBMAGIC_VER	= 5.30
-RUBY_VER	= 2.4.4
+RUBY_VER	= 2.7.4
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 3.7.5
 PYTHON2_VER	= 2.7.13
@@ -151,7 +160,7 @@ SHA256_${NEON_DIST} = db0bd8cdec329b48f53a6f00199c92d5ba40b0f015b153718d1b15d3d9
 SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
 SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c8693263615
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
-SHA256_${RUBY_DIST} = 254f1c1a79e4cc814d1e7320bc5bdd995dc57e08727d30a767664619a9c8ae5a
+SHA256_${RUBY_DIST} = 3043099089608859fc8cce7f9fdccaa1f53a462457e3838ec3b25a7d609fbc5b
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
 SHA256_${PYTHON_DIST} = 8ecc681ea0600bbfb366f2b173f727b205bb825d93d2f0b286bc4e58d37693da
 SHA256_${PYTHON2_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
@@ -207,7 +216,7 @@ SERF_OLD_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_OLD_VER)
 SQLITE_URL	= https://www.sqlite.org/2017/$(SQLITE_DIST)
 CYRUS_SASL_URL	= https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-${CYRUS_SASL_VER}/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
-RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.4/$(RUBY_DIST)
+RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.7/$(RUBY_DIST)
 BZ2_URL		= https://stsp.name/distfiles/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 PYTHON2_URL	= https://python.org/ftp/python/$(PYTHON2_VER)/$(PYTHON2_DIST)
@@ -1241,33 +1250,6 @@ $(RUBY_OBJDIR)/sparc64_buserror.patch:
 	echo >> $@.tmp ' #ifdef STRICT_ALIGNMENT'
 	echo >> $@.tmp '   #if defined(HAVE_TRUE_LONG_LONG) && SIZEOF_LONG_LONG > SIZEOF_VALUE'
 	echo >> $@.tmp '     #define ALIGNMENT_SIZE SIZEOF_LONG_LONG'
-	echo >> $@.tmp '@@ -2094,7 +2104,8 @@'
-	echo >> $@.tmp ' 	    unref_destination(iobj, 0);'
-	echo >> $@.tmp ' 	    REMOVE_ELEM(&iobj->link);'
-	echo >> $@.tmp ' 	}'
-	echo >> $@.tmp '-	else if (iobj != diobj && IS_INSN_ID(diobj, jump) &&'
-	echo >> $@.tmp '+	else if (iobj != diobj && IS_INSN(&diobj->link) &&'
-	echo >> $@.tmp '+		 IS_INSN_ID(diobj, jump) &&'
-	echo >> $@.tmp ' 		 OPERAND_AT(iobj, 0) != OPERAND_AT(diobj, 0)) {'
-	echo >> $@.tmp ' 	    replace_destination(iobj, diobj);'
-	echo >> $@.tmp ' 	    remove_unreachable_chunk(iseq, iobj->link.next);'
-	echo >> $@.tmp '@@ -2136,6 +2147,7 @@'
-	echo >> $@.tmp ' 	 * L2:'
-	echo >> $@.tmp ' 	 */'
-	echo >> $@.tmp ' 	else if ((piobj = (INSN *)get_prev_insn(iobj)) != 0 &&'
-	echo >> $@.tmp '+		 IS_INSN(&piobj->link) &&'
-	echo >> $@.tmp ' 		 (IS_INSN_ID(piobj, branchif) ||'
-	echo >> $@.tmp ' 		  IS_INSN_ID(piobj, branchunless))) {'
-	echo >> $@.tmp ' 	    if (niobj == (INSN *)get_destination_insn(piobj)) {'
-	echo >> $@.tmp '@@ -2176,7 +2188,7 @@'
-	echo >> $@.tmp ' 	}'
-	echo >> $@.tmp ' '
-	echo >> $@.tmp ' 	for (;;) {'
-	echo >> $@.tmp '-	    if (IS_INSN_ID(nobj, jump)) {'
-	echo >> $@.tmp '+	    if (IS_INSN(&nobj->link) && IS_INSN_ID(nobj, jump)) {'
-	echo >> $@.tmp ' 		replace_destination(iobj, nobj);'
-	echo >> $@.tmp ' 	    }'
-	echo >> $@.tmp ' 	    else if (prev_dup && IS_INSN_ID(nobj, dup) &&'
 	mv -f $@.tmp $@
 
 ifeq ($(UNAME),OpenBSD)
