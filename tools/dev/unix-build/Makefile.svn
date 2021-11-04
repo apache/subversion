@@ -556,6 +556,8 @@ $(GNU_ICONV_OBJDIR)/.retrieved: $(DISTDIR)/$(GNU_ICONV_DIST) \
 	cd $(SRCDIR)/libiconv-$(GNU_ICONV_VER) && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_encodings.def.diff && \
 		patch -p0 < $(GNU_ICONV_OBJDIR)/lib_aliases.gperf.diff
+	cd $(SRCDIR)/libiconv-${GNU_ICONV_VER} && \
+		sed -i 's/gcc/${CC}/' Makefile.devel
 	touch $@
 
 # configure gnu-iconv
