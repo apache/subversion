@@ -7881,7 +7881,7 @@ resolve_merge_incoming_added_dir_merge(svn_client_conflict_option_t *option,
       if (details->added_rev == SVN_INVALID_REVNUM)
         return svn_error_createf(SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE, NULL,
                                  _("Could not determine when '%s' was "
-                                   "added the repository"),
+                                   "added to the repository"),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
       rev1 = rev_below(details->added_rev);
