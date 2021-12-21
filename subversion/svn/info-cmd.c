@@ -46,6 +46,8 @@
 #include "svn_private_config.h"
 #include "cl-conflicts.h"
 
+#include "private/svn_string_private.h"
+
 
 /*** Code. ***/
 
@@ -376,26 +378,24 @@ typedef struct info_item_map_t
   const info_item_t print_what;
 } info_item_map_t;
 
-#define MAKE_STRING(x) { x, sizeof(x) - 1 }
 static const info_item_map_t info_item_map[] =
   {
-    { MAKE_STRING("kind"),                info_item_kind },
-    { MAKE_STRING("url"),                 info_item_url },
-    { MAKE_STRING("relative-url"),        info_item_relative_url },
-    { MAKE_STRING("repos-root-url"),      info_item_repos_root_url },
-    { MAKE_STRING("repos-uuid"),          info_item_repos_uuid },
-    { MAKE_STRING("repos-size"),          info_item_repos_size },
-    { MAKE_STRING("revision"),            info_item_revision },
-    { MAKE_STRING("last-changed-revision"),
-                                          info_item_last_changed_rev },
-    { MAKE_STRING("last-changed-date"),   info_item_last_changed_date },
-    { MAKE_STRING("last-changed-author"), info_item_last_changed_author },
-    { MAKE_STRING("wc-root"),             info_item_wc_root },
-    { MAKE_STRING("schedule"),            info_item_schedule },
-    { MAKE_STRING("depth"),               info_item_depth },
-    { MAKE_STRING("changelist"),          info_item_changelist },
+    { SVN__STATIC_STRING("kind"),                info_item_kind },
+    { SVN__STATIC_STRING("url"),                 info_item_url },
+    { SVN__STATIC_STRING("relative-url"),        info_item_relative_url },
+    { SVN__STATIC_STRING("repos-root-url"),      info_item_repos_root_url },
+    { SVN__STATIC_STRING("repos-uuid"),          info_item_repos_uuid },
+    { SVN__STATIC_STRING("repos-size"),          info_item_repos_size },
+    { SVN__STATIC_STRING("revision"),            info_item_revision },
+    { SVN__STATIC_STRING("last-changed-revision"),
+                                                 info_item_last_changed_rev },
+    { SVN__STATIC_STRING("last-changed-date"),   info_item_last_changed_date },
+    { SVN__STATIC_STRING("last-changed-author"), info_item_last_changed_author },
+    { SVN__STATIC_STRING("wc-root"),             info_item_wc_root },
+    { SVN__STATIC_STRING("schedule"),            info_item_schedule },
+    { SVN__STATIC_STRING("depth"),               info_item_depth },
+    { SVN__STATIC_STRING("changelist"),          info_item_changelist },
   };
-#undef MAKE_STRING
 
 static const apr_size_t info_item_map_len =
   (sizeof(info_item_map) / sizeof(info_item_map[0]));
