@@ -1052,7 +1052,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
 
 /* Find the last-change info within ENTRY_PROPS, and return then in the
    CHANGED_* parameters. Each parameter will be initialized to its "none"
-   value, and will contain the relavent info if found.
+   value, and will contain the relevant info if found.
 
    CHANGED_AUTHOR will be allocated in RESULT_POOL. SCRATCH_POOL will be
    used for some temporary allocations.
