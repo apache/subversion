@@ -352,7 +352,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "2. Delete the property NAME on transaction TXN.\n"
    )},
    {'r', 't', svnadmin__use_pre_revprop_change_hook,
-    svnadmin__use_post_revprop_change_hook} },
+    svnadmin__use_post_revprop_change_hook},
+   { {'r', "specify revision number ARG"} } },
 
   {"deltify", subcommand_deltify, {0}, {N_(
     "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
@@ -541,7 +542,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "The size includes revision properties and excludes FSFS indexes.\n"
    )},
    {'r', 'q', 'M'},
-   { {'q', "print only the size and a newline"} } },
+   { {'r', "specify revision number ARG"},
+     {'q', "print only the size and a newline"} }, },
 
   {"rmlocks", subcommand_rmlocks, {0}, {N_(
     "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
@@ -570,7 +572,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "NOTE: Revision properties are not versioned, so this command will\n"
     "overwrite the previous log message.\n"
    )},
-   {'r', svnadmin__bypass_hooks} },
+   {'r', svnadmin__bypass_hooks},
+   { {'r', "specify revision number ARG"} }, }, 
 
   {"setrevprop", subcommand_setrevprop, {0}, {N_(
     "usage: 1. svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
@@ -588,7 +591,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "2. Set the property NAME on transaction TXN to the contents of FILE.\n"
    )},
    {'r', 't', svnadmin__use_pre_revprop_change_hook,
-    svnadmin__use_post_revprop_change_hook} },
+    svnadmin__use_post_revprop_change_hook},
+   { {'r', "specify revision number ARG"} }, }, 
 
   {"setuuid", subcommand_setuuid, {0}, {N_(
     "usage: svnadmin setuuid REPOS_PATH [NEW_UUID]\n"
