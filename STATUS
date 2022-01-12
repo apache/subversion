@@ -131,10 +131,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-  * r1896877
-    Fix misleading -r option documentation for some svnadmin subcommands.
-    Justification:
-      Documentation should be correct.
-    Votes:
-      +1: stsp, dsahlberg, hartmannathan
