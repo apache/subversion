@@ -54,7 +54,7 @@ AC_DEFUN(SVN_UTF8PROC,
       SVN_UTF8PROC_PREFIX
     fi
     if test "$utf8proc_found" != "yes"; then
-      AC_MSG_ERROR([Subversion requires UTF8PROC])
+      AC_MSG_ERROR([Subversion requires UTF8PROC; install it or re-run configure with "--with-utf8proc=internal"])
     fi
   fi
   AC_SUBST(SVN_UTF8PROC_INCLUDES)

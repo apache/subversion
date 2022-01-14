@@ -55,8 +55,9 @@ except ImportError:
 import svntest
 from svntest import Failure
 from svntest import Skip
+from svntest.wc import StateItem as Item
 
-SVN_VER_MINOR = 12
+SVN_VER_MINOR = 15
 
 ######################################################################
 #
@@ -128,7 +129,10 @@ else:
 if windows:
   svneditor_script = os.path.join(sys.path[0], 'svneditor.bat')
 else:
-  svneditor_script = os.path.join(sys.path[0], 'svneditor.py')
+  # This script is in the build tree, not in the source tree.  
+  svneditor_script = os.path.join(os.path.dirname(
+                                      os.path.dirname(os.path.abspath('.'))),
+                                  'tests/cmdline/svneditor.sh')
 
 # Username and password used by the working copies
 wc_author = 'jrandom'
@@ -199,6 +203,7 @@ svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
+pristine_trojan_repos_url = None
 
 # Global variable to track all of our options
 options = None
@@ -235,7 +240,9 @@ temp_dir = os.path.join(work_dir, 'local_tmp')
 
 # (derivatives of the tmp dir.)
 pristine_greek_repos_dir = os.path.join(temp_dir, "repos")
+pristine_trojan_repos_dir = os.path.join(temp_dir, "trojan")
 greek_dump_dir = os.path.join(temp_dir, "greekfiles")
+trojan_dump_dir = os.path.join(temp_dir, "trojanfiles")
 default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 
 #
@@ -245,28 +252,57 @@ default_config_dir = os.path.abspath(os.path.join(temp_dir, "config"))
 # call main.greek_state.copy().  That method will return a copy of this
 # State object which can then be edited.
 #
-_item = svntest.wc.StateItem
 greek_state = svntest.wc.State('', {
-  'iota'        : _item("This is the file 'iota'.\n"),
-  'A'           : _item(),
-  'A/mu'        : _item("This is the file 'mu'.\n"),
-  'A/B'         : _item(),
-  'A/B/lambda'  : _item("This is the file 'lambda'.\n"),
-  'A/B/E'       : _item(),
-  'A/B/E/alpha' : _item("This is the file 'alpha'.\n"),
-  'A/B/E/beta'  : _item("This is the file 'beta'.\n"),
-  'A/B/F'       : _item(),
-  'A/C'         : _item(),
-  'A/D'         : _item(),
-  'A/D/gamma'   : _item("This is the file 'gamma'.\n"),
-  'A/D/G'       : _item(),
-  'A/D/G/pi'    : _item("This is the file 'pi'.\n"),
-  'A/D/G/rho'   : _item("This is the file 'rho'.\n"),
-  'A/D/G/tau'   : _item("This is the file 'tau'.\n"),
-  'A/D/H'       : _item(),
-  'A/D/H/chi'   : _item("This is the file 'chi'.\n"),
-  'A/D/H/psi'   : _item("This is the file 'psi'.\n"),
-  'A/D/H/omega' : _item("This is the file 'omega'.\n"),
+  'iota'        : Item("This is the file 'iota'.\n"),
+  'A'           : Item(),
+  'A/mu'        : Item("This is the file 'mu'.\n"),
+  'A/B'         : Item(),
+  'A/B/lambda'  : Item("This is the file 'lambda'.\n"),
+  'A/B/E'       : Item(),
+  'A/B/E/alpha' : Item("This is the file 'alpha'.\n"),
+  'A/B/E/beta'  : Item("This is the file 'beta'.\n"),
+  'A/B/F'       : Item(),
+  'A/C'         : Item(),
+  'A/D'         : Item(),
+  'A/D/gamma'   : Item("This is the file 'gamma'.\n"),
+  'A/D/G'       : Item(),
+  'A/D/G/pi'    : Item("This is the file 'pi'.\n"),
+  'A/D/G/rho'   : Item("This is the file 'rho'.\n"),
+  'A/D/G/tau'   : Item("This is the file 'tau'.\n"),
+  'A/D/H'       : Item(),
+  'A/D/H/chi'   : Item("This is the file 'chi'.\n"),
+  'A/D/H/psi'   : Item("This is the file 'psi'.\n"),
+  'A/D/H/omega' : Item("This is the file 'omega'.\n"),
+  })
+
+# Likewise our pristine trojan-tree state (for peg revision parsing tests)
+# NOTE: We don't use precooked trojan repositories.
+trojan_state = svntest.wc.State('', {
+  'iota'        : Item("This is the file 'iota'.\n"),
+  '@zeta'       : Item("This is the file 'zeta'.\n"),
+  '_@theta'     : Item("This is the file 'theta'.\n"),
+  '.@kappa'     : Item("This is the file 'kappa'.\n"),
+  'lambda@'     : Item("This is the file 'lambda'.\n"),
+  '@omicron@'   : Item("This is the file 'omicron'.\n"),
+  '@'           : Item(),
+  '@@'          : Item(),
+  '_@'          : Item(),
+  '.@'          : Item(),
+  'A'           : Item(),
+  'A/@@'        : Item("This is the file 'A/@@'.\n"),
+  'A/alpha'     : Item("This is the file 'alpha'.\n"),
+  'A/@omega@'   : Item("This is the file 'omega'.\n"),
+  'B'           : Item(),
+  'B/@'         : Item("This is the file 'B/@'.\n"),
+  'B/@beta'     : Item("This is the file 'beta'.\n"),
+  'B/pi@'       : Item("This is the file 'pi'.\n"),
+  'G'           : Item(),
+  'G/_@'        : Item("This is the file 'G/_@'.\n"),
+  'G/_@gamma'   : Item("This is the file 'gamma'.\n"),
+  'D'           : Item(),
+  'D/.@'        : Item("This is the file 'D/.@'.\n"),
+  'D/.@delta'   : Item("This is the file 'delta'.\n"),
+  'E'           : Item(),
   })
 
 
@@ -494,10 +530,10 @@ def wait_on_pipe(waiter, binary_mode, stdin=None):
 
   # We always expect STDERR to be strings, not byte-arrays.
   if not isinstance(stderr, str):
-    stderr = stderr.decode("utf-8")
+    stderr = stderr.decode("utf-8", 'surrogateescape')
   if not binary_mode:
     if not isinstance(stdout, str):
-      stdout = stdout.decode("utf-8")
+      stdout = stdout.decode("utf-8", 'surrogateescape')
 
     # Normalize Windows line endings if in text mode.
     if windows:
@@ -709,9 +745,9 @@ def trust_ssl_cert(cfgdir, ssl_cert, ssl_url):
   """
 
   cert_rep = ''
-  fp = open(ssl_cert, 'r')
-  for line in fp.readlines()[1:-1]:
-    cert_rep = cert_rep + line.strip()
+  with open(ssl_cert, 'r') as fp:
+    for line in fp.readlines()[1:-1]:
+      cert_rep = cert_rep + line.strip()
 
   parsed_url = urlparse(ssl_url)
   netloc_url = '%s://%s' % (parsed_url.scheme, parsed_url.netloc)
@@ -869,8 +905,6 @@ def run_entriesdump(path):
     ### report on this? or continue to just skip it?
     return None
 
-  class Entry(object):
-    pass
   entries = { }
   exec(''.join(filter_dbg(stdout_lines)))
   return entries
@@ -894,8 +928,6 @@ def run_entriesdump_tree(path):
     ### report on this? or continue to just skip it?
     return None
 
-  class Entry(object):
-    pass
   dirs = { }
   exec(''.join(filter_dbg(stdout_lines)))
   return dirs
@@ -1318,30 +1350,29 @@ def create_http_connection(url, debuglevel=9):
   h.set_debuglevel(debuglevel)
   return h
 
-def write_restrictive_svnserve_conf(repo_dir, anon_access="none"):
+def write_restrictive_svnserve_conf(repo_dir, anon_access="none",
+                                    separate_groups_db=False):
   "Create a restrictive authz file ( no anynomous access )."
 
   fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
-  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
-           "authz-db = authz\n" % anon_access)
+  fp.write("[general]\n"
+           "anon-access = %s\n"
+           "auth-access = write\n"
+           "authz-db = authz\n" % anon_access);
+  if separate_groups_db:
+    fp.write("groups-db = groups\n")
   if options.enable_sasl:
-    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
+    fp.write("realm = svntest\n"
+             "[sasl]\n",
+             "use-sasl = true\n");
   else:
     fp.write("password-db = passwd\n")
   fp.close()
 
-def write_restrictive_svnserve_conf_with_groups(repo_dir,
-                                                anon_access="none"):
+def write_restrictive_svnserve_conf_with_groups(repo_dir, anon_access="none"):
   "Create a restrictive configuration with groups stored in a separate file."
 
-  fp = open(get_svnserve_conf_file_path(repo_dir), 'w')
-  fp.write("[general]\nanon-access = %s\nauth-access = write\n"
-           "authz-db = authz\ngroups-db = groups\n" % anon_access)
-  if options.enable_sasl:
-    fp.write("realm = svntest\n[sasl]\nuse-sasl = true\n");
-  else:
-    fp.write("password-db = passwd\n")
-  fp.close()
+  return write_restrictive_svnserve_conf(repo_dir, anon_access, True)
 
 # Warning: because mod_dav_svn uses one shared authz file for all
 # repositories, you *cannot* use write_authz_file in any test that
@@ -1662,7 +1693,6 @@ def is_plaintext_password_storage_disabled():
     return False
   return True
 
-
 # https://issues.apache.org/bugzilla/show_bug.cgi?id=56480
 # https://issues.apache.org/bugzilla/show_bug.cgi?id=55397
 __mod_dav_url_quoting_broken_versions = frozenset([
@@ -1685,6 +1715,10 @@ def is_httpd_authz_provider_enabled():
       v = options.httpd_version.split('.')
       return (v[0] == '2' and int(v[1]) >= 3) or int(v[0]) > 2
     return None
+
+def is_remote_http_connection_allowed():
+  return options.allow_remote_http_connection
+
 
 ######################################################################
 
@@ -1766,6 +1800,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--fsfs-compression=' + options.fsfs_compression)
     if options.fsfs_dir_deltification:
       args.append('--fsfs-dir-deltification=' + options.fsfs_dir_deltification)
+    if options.allow_remote_http_connection:
+      args.append('--allow-remote-http-connection')
     if options.svn_bin:
       args.append('--bin=' + options.svn_bin)
 
@@ -2047,6 +2083,23 @@ class AbbreviatedFormatter(logging.Formatter):
     record.levelshort = self._level_short[record.levelno]
     return logging.Formatter.format(self, record)
 
+
+class LoggingStdoutHandler(logging.StreamHandler):
+  """
+  The handler is always writing using sys.stdout at call time rather than the
+  value of sys.stdout at construction time.
+
+  Inspired by logging._StderrHandler on Python 3.
+  """
+
+  def __init__(self, level=logging.NOTSET):
+    logging.Handler.__init__(self, level)
+
+  @property
+  def stream(self):
+    return sys.stdout
+
+
 def _create_parser(usage=None):
   """Return a parser for our test suite."""
 
@@ -2184,6 +2237,8 @@ def _create_parser(usage=None):
                     help='Set compression type (for fsfs)')
   parser.add_option('--fsfs-dir-deltification', action='store', type='str',
                     help='Set directory deltification option (for fsfs)')
+  parser.add_option('--allow-remote-http-connection', action='store_true',
+                    help='Run tests that connect to remote HTTP(S) servers')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2237,7 +2292,7 @@ def parse_options(arglist=sys.argv[1:], usage=None):
                                        datefmt='%Y-%m-%d %H:%M:%S')
     else:
       formatter = AbbreviatedFormatter('%(levelshort)s: %(message)s')
-    handler = logging.StreamHandler(sys.stdout)
+    handler = LoggingStdoutHandler()
     handler.setFormatter(formatter)
     logger.addHandler(handler)
 
@@ -2353,6 +2408,7 @@ def execute_tests(test_list, serial_only = False, test_name = None,
 
   global pristine_url
   global pristine_greek_repos_url
+  global pristine_trojan_repos_url
   global other_dav_root_url
   global non_dav_root_url
   global svn_binary
@@ -2432,6 +2488,12 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   pristine_greek_repos_url = options.test_area_url + '/' + \
                                 svntest.wc.svn_uri_quote(
                                   pristine_greek_repos_dir.replace(
+                                      os.path.sep, '/'))
+
+  # Calculate pristine_trojan_repos_url from test_area_url.
+  pristine_trojan_repos_url = options.test_area_url + '/' + \
+                                svntest.wc.svn_uri_quote(
+                                  pristine_trojan_repos_dir.replace(
                                       os.path.sep, '/'))
 
   other_dav_root_url = options.test_area_url + '/fsdavroot'
@@ -2530,8 +2592,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                         http_proxy=options.http_proxy,
                         exclusive_wc_locks=options.exclusive_wc_locks)
 
-      # Setup the pristine repository
-      svntest.actions.setup_pristine_greek_repository()
+      # Setup the pristine repositories
+      svntest.actions.setup_pristine_repositories()
 
     # Run the tests.
     exit_code = _internal_run_tests(test_list, testnums, options.parallel,

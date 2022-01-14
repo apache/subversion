@@ -561,8 +561,8 @@ static svn_error_t *make_tunnel(const char **args, svn_ra_svn_conn_t **conn,
   return SVN_NO_ERROR;
 }
 
-/* Parse URL inot URI, validating it and setting the default port if none
-   was given.  Allocate the URI fileds out of POOL. */
+/* Parse URL into URI, validating it and setting the default port if none
+   was given.  Allocate the URI fields out of POOL. */
 static svn_error_t *parse_url(const char *url, apr_uri_t *uri,
                               apr_pool_t *pool)
 {
@@ -841,6 +841,7 @@ is_valid_hostinfo(const char *hostinfo)
 
 static svn_error_t *ra_svn_open(svn_ra_session_t *session,
                                 const char **corrected_url,
+                                const char **redirect_url,
                                 const char *url,
                                 const svn_ra_callbacks2_t *callbacks,
                                 void *callback_baton,
@@ -858,6 +859,8 @@ static svn_error_t *ra_svn_open(svn_ra_session_t *session,
   /* We don't support server-prescribed redirections in ra-svn. */
   if (corrected_url)
     *corrected_url = NULL;
+  if (redirect_url)
+    *redirect_url = NULL;
 
   SVN_ERR(parse_url(url, &uri, sess_pool));
 
@@ -913,7 +916,7 @@ static svn_error_t *ra_svn_dup_session(svn_ra_session_t *new_session,
 {
   svn_ra_svn__session_baton_t *old_sess = old_session->priv;
 
-  SVN_ERR(ra_svn_open(new_session, NULL, new_session_url,
+  SVN_ERR(ra_svn_open(new_session, NULL, NULL, new_session_url,
                       old_sess->callbacks, old_sess->callbacks_baton,
                       old_sess->auth_baton, old_sess->config,
                       result_pool, scratch_pool));
@@ -1613,7 +1616,7 @@ static svn_error_t *ra_svn_get_dir(svn_ra_session_t *session,
 
          Note: they should NOT be "fixed" to send NULL, as that would break
          any older clients which received that NULL. But we may as well
-         be defensive against a malicous server.  */
+         be defensive against a malicious server.  */
       if (cdate == NULL)
         dirent->time = 0;
       else
@@ -3105,6 +3108,7 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
+  svn_error_t *err;
 
   path = reparent_path(session, path, pool);
 
@@ -3116,8 +3120,20 @@ ra_svn_get_deleted_rev(svn_ra_session_t *session,
   SVN_ERR(handle_unsupported_cmd(handle_auth_request(sess_baton, pool),
                                  N_("'get-deleted-rev' not implemented")));
 
-  return svn_error_trace(svn_ra_svn__read_cmd_response(conn, pool, "r",
-                                                       revision_deleted));
+  err = svn_error_trace(svn_ra_svn__read_cmd_response(conn, pool, "r",
+                                                      revision_deleted));
+  /* The protocol does not allow for a reply of SVN_INVALID_REVNUM directly.
+     Instead, a new enough server returns SVN_ERR_ENTRY_MISSING_REVISION to
+     indicate the answer to the query is SVN_INVALID_REVNUM. (An older server
+     closes the connection and returns SVN_ERR_RA_SVN_CONNECTION_CLOSED.) */
+  if (err && err->apr_err == SVN_ERR_ENTRY_MISSING_REVISION)
+    {
+      *revision_deleted = SVN_INVALID_REVNUM;
+      svn_error_clear(err);
+    }
+  else
+    SVN_ERR(err);
+  return SVN_NO_ERROR;
 }
 
 static svn_error_t *

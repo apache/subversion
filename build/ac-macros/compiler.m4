@@ -100,9 +100,33 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
   CXXFLAGS=""
 
   if test "$GXX" = "yes"; then
-    dnl Find flags to force C++98 mode
+    dnl Find flags to force C++ mode
                   dnl g++ and clang++
-    SVN_CXXFLAGS_ADD_IFELSE([-std=c++98])
+    if test "$cxx_language_level" = "any"; then
+      SVN_CXXFLAGS_ADD_IFELSE([-std=c++20],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-std=c++17],[],[
+          SVN_CXXFLAGS_ADD_IFELSE([-std=c++11])
+        ])
+      ])
+    else
+      SVN_CXXFLAGS_ADD_IFELSE([-std=$cxx_language_level],[],[
+        AC_MSG_ERROR([$CXX does not accept -std=$cxx_language_level (see option --enable-c++)])
+      ])
+      dnl We require at least C++11
+      AC_MSG_CHECKING([if '$CXX $CXXFLAGS' supports at least a C++11])
+      AC_LANG_PUSH([C++])
+      AC_COMPILE_IFELSE([
+        AC_LANG_SOURCE([
+          #if !defined(__cplusplus) || __cplusplus < 201103
+          #error "Not C++11"
+          #endif
+        ])
+      ],[AC_MSG_RESULT([yes])],[
+        AC_MSG_RESULT([no])
+        AC_MSG_ERROR([JavHL and C++ bindings require at least C++11])
+      ])
+      AC_LANG_POP([C++])
+    fi
   fi
 
   CXXMODEFLAGS="$CXXFLAGS"
@@ -125,19 +149,4 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
     dnl Tell clang++ to not accept unknown warning flags
     SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
   fi
-])
-
-dnl The KWallet provider needs to use C++11 mode when using KDE 5
-AC_DEFUN([SVN_CXX_MODE_SETUP11],
-[
-  CXXFLAGS_KEEP="$CXXFLAGS"
-  CXXFLAGS=""
-
-  if test "$GXX" = "yes"; then
-    SVN_CXXFLAGS_ADD_IFELSE([-std=c++11])
-  fi
-
-  CXXMODEFLAGS="$CXXFLAGS"
-  CXXFLAGS="$CXXFLAGS_KEEP"
-  AC_SUBST(CXXMODEFLAGS)
 ])

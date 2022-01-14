@@ -1606,7 +1606,7 @@ def status_dash_u_deleted_directories(sbox):
                                         os.path.join("B", "E", "alpha"),
           "D                1        1 jrandom      %s\n" % \
                                         os.path.join("B", "E", "beta"),
-          "D                1        1 jrandom      %s\n" % 
+          "D                1        1 jrandom      %s\n" %
           os.path.join("B", "F"),
           "Status against revision:      1\n" ])
   svntest.actions.run_and_verify_svn(expected,

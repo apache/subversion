@@ -281,26 +281,6 @@ svn_client__wc_node_get_origin(svn_client__pathrev_t **origin_p,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Copy the file or directory on URL in some repository to DST_ABSPATH,
- * copying node information and properties. Resolve URL using PEG_REV and
- * REVISION.
- *
- * If URL specifies a directory, create the copy using depth DEPTH.
- *
- * If MAKE_PARENTS is TRUE and DST_ABSPATH doesn't have an added parent
- * create missing parent directories
- */
-svn_error_t *
-svn_client__copy_foreign(const char *url,
-                         const char *dst_abspath,
-                         svn_opt_revision_t *peg_revision,
-                         svn_opt_revision_t *revision,
-                         svn_depth_t depth,
-                         svn_boolean_t make_parents,
-                         svn_boolean_t already_locked,
-                         svn_client_ctx_t *ctx,
-                         apr_pool_t *scratch_pool);
-
 /* Same as the public svn_client_mergeinfo_log2 API, except for the addition
  * of the TARGET_MERGEINFO_CATALOG and RESULT_POOL parameters.
  *
@@ -373,33 +353,10 @@ svn_client__get_diff_writer_svn(
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool);
 
-/** Output the subtree of @a shelf_version rooted at @a shelf_relpath
- * as a diff to @a diff_processor.
- *
- * ### depth and ignore_ancestry are currently ignored.
- *
- * @warning EXPERIMENTAL.
- */
-SVN_EXPERIMENTAL
-svn_error_t *
-svn_client__shelf_diff(svn_client__shelf_version_t *shelf_version,
-                       const char *shelf_relpath,
-                       svn_depth_t depth,
-                       svn_boolean_t ignore_ancestry,
-                       const svn_diff_tree_processor_t *diff_processor,
-                       apr_pool_t *scratch_pool);
-
 /*** Editor for diff summary ***/
 
 /* Set *DIFF_PROCESSOR to a diff processor that will report a diff summary
    to SUMMARIZE_FUNC.
-
-   P_ROOT_RELPATH will return a pointer to a string that must be set,
-   before the processor is called, to a prefix that will be found on
-   every DIFF_PROCESSOR relpath, that will be removed before passing
-   the path to SUMMARIZE_FUNC.
-
-   ORIGINAL_TARGET is not used.
 
    SUMMARIZE_FUNC is called with SUMMARIZE_BATON as parameter by the
    created callbacks for each changed item.
@@ -411,6 +368,172 @@ svn_client__get_diff_summarize_callbacks(
                         void *summarize_baton,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
+
+/** Copy a directory tree or a file (according to @a kind) from @a src_url at
+ * @a src_rev, to @a dst_abspath in a WC.
+ *
+ * The caller should be holding a WC write lock that allows @a dst_abspath to
+ * be created, such as on the parent of @a dst_abspath.
+ *
+ * If not same repositories, then remove any svn:mergeinfo property.
+ *
+ * Use @a ra_session to fetch the data. The session may point to any URL
+ * within the source repository.
+ *
+ * This API does not process any externals definitions that may be present
+ * on copied directories.
+ */
+svn_error_t *
+svn_client__repos_to_wc_copy_internal(svn_boolean_t *timestamp_sleep,
+                             svn_node_kind_t kind,
+                             const char *src_url,
+                             svn_revnum_t src_rev,
+                             const char *dst_abspath,
+                             svn_ra_session_t *ra_session,
+                             svn_client_ctx_t *ctx,
+                             apr_pool_t *scratch_pool);
+
+/** Copy a directory tree or a file (according to @a kind) from @a src_url at
+ * @a src_rev, to @a dst_abspath in a WC.
+ *
+ * The caller should be holding a WC write lock that allows @a dst_abspath to
+ * be created, such as on the parent of @a dst_abspath.
+ *
+ * If not same repositories, then remove any svn:mergeinfo property.
+ *
+ * Use @a ra_session to fetch the data. The session may point to a different
+ * URL after returning.
+ *
+ * This API does not process any externals definitions that may be present
+ * on copied directories.
+ */
+svn_error_t *
+svn_client__repos_to_wc_copy_by_editor(svn_boolean_t *timestamp_sleep,
+                svn_node_kind_t kind,
+                const char *src_url,
+                svn_revnum_t src_rev,
+                const char *dst_abspath,
+                svn_ra_session_t *ra_session,
+                svn_client_ctx_t *ctx,
+                apr_pool_t *scratch_pool);
+
+/** Return an editor for applying local modifications to a WC.
+ *
+ * Return an editor in @a *editor_p, @a *edit_baton_p that will apply
+ * local modifications to the WC subdirectory at @a dst_abspath.
+ *
+ * The @a path arguments to the editor methods shall be local WC paths,
+ * relative to @a dst_abspath. The @a copyfrom_path arguments to the
+ * editor methods shall be URLs.
+ *
+ * Send notifications via @a notify_func / @a notify_baton.
+ * ### INCOMPLETE
+ *
+ * @a ra_session is used to fetch the original content for copies.
+ *
+ * Ignore changes to non-regular property (entry-props, DAV/WC-props).
+ *
+ * Acquire the WC write lock in 'open_root' and release it in
+ * 'close_edit', in 'abort_edit', or when @a result_pool is cleared.
+ */
+svn_error_t *
+svn_client__wc_editor(const svn_delta_editor_t **editor_p,
+                      void **edit_baton_p,
+                      const char *dst_abspath,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      svn_ra_session_t *ra_session,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *result_pool);
+
+/* Return an editor for applying local modifications to a WC.
+ *
+ * Like svn_client__wc_editor() but with additional options.
+ *
+ * If @a root_dir_add is true, then create and schedule for addition
+ * the root directory of this edit, else assume it is already a versioned,
+ * existing directory.
+ *
+ * If @a ignore_mergeinfo_changes is true, ignore any incoming changes
+ * to the 'svn:mergeinfo' property.
+ *
+ * If @a manage_wc_write_lock is true, acquire the WC write lock in
+ * 'open_root' and release it in 'close_edit', in 'abort_edit', or
+ * when @a result_pool is cleared.
+ */
+svn_error_t *
+svn_client__wc_editor_internal(const svn_delta_editor_t **editor_p,
+                               void **edit_baton_p,
+                               const char *dst_abspath,
+                               svn_boolean_t root_dir_add,
+                               svn_boolean_t ignore_mergeinfo_changes,
+                               svn_boolean_t manage_wc_write_lock,
+                               svn_wc_notify_func2_t notify_func,
+                               void *notify_baton,
+                               svn_ra_session_t *ra_session,
+                               svn_client_ctx_t *ctx,
+                               apr_pool_t *result_pool);
+
+/** Send committable changes found in the WC to a delta-editor.
+ *
+ * Committable changes are found in TARGETS:DEPTH:CHANGELISTS.
+ *
+ * Send the changes to @a editor:@a edit_baton. The @a path arguments
+ * to the editor methods are URL-paths relative to the URL of
+ * @a src_wc_abspath.
+ *
+ *    ### We will presumably need to change this so that the @a path
+ *        arguments to the editor will be local WC relpaths, in order
+ *        to handle switched paths.
+ *
+ * The @a copyfrom_path arguments to the editor methods are URLs. As the
+ * WC does not store copied-from-foreign-repository metadata, the URL will
+ * be in the same repository as the URL of its parent path.
+ *
+ * Compared with svn_client__do_commit(), this (like svn_client_commit6)
+ * handles:
+ *  - condense targets and find committable paths
+ *  - checking only one repository is involved
+ *
+ * Compared with svn_client_commit6(), this does not handle:
+ *  - externals
+ *  - log message
+ *  - revprops
+ *  - checking the commit includes both halves of each local move
+ *  - changing the copy revision of each local move to ~HEAD
+ *  - WC write locks
+ *  - bumping revisions in WC
+ *  - removing locks and changelists in WC
+ */
+svn_error_t *
+svn_client__wc_replay(const char *src_wc_abspath,
+                      const apr_array_header_t *targets,
+                      svn_depth_t depth,
+                      const apr_array_header_t *changelists,
+                      const svn_delta_editor_t *editor,
+                      void *edit_baton,
+                      svn_wc_notify_func2_t notify_func,
+                      void *notify_baton,
+                      svn_client_ctx_t *ctx,
+                      apr_pool_t *scratch_pool);
+
+/** Copy local modifications from one WC subtree to another.
+ *
+ * Find local modifications under @a src_wc_abspath, in the same way as
+ * for a commit.
+ *
+ * Edit the WC at @a dst_wc_abspath, applying those modifications to the
+ * current working state to produce a new working state.
+ *
+ * The source and destination may be in the same WC or in different WCs.
+ */
+svn_error_t *
+svn_client__wc_copy_mods(const char *src_wc_abspath,
+                         const char *dst_wc_abspath,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         svn_client_ctx_t *ctx,
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }

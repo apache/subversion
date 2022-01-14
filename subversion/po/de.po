@@ -1556,7 +1556,7 @@ msgid "Certificate signature mismatch"
 msgstr "Signatur des Zertifikats stimmt nicht überein"
 
 #: ../include/svn_error_codes.h:1772
-msgid "Certficate verification failed"
+msgid "Certificate verification failed"
 msgstr "Überprüfung des Zertifikats fehlgeschlagen"
 
 #: ../libsvn_auth_gnome_keyring/gnome_keyring.c:290
@@ -6562,7 +6562,7 @@ msgstr "P2L-Indexeintrag für Revision r%ld ist nicht zusammenhängend zwischen 
 
 #: ../libsvn_fs_fs/verify.c:696
 #, fuzzy, c-format
-msgid "p2l index entry for changes in revision r%ld is item %ld of type %d at offset %s"
+msgid "p2l index entry for changes in revision r%ld is item %s of type %u at offset %s"
 msgstr "P2L-Indexeintrag für Revision r%ld ist nicht zusammenhängend zwischen Offsets  %s und %s"
 
 #: ../libsvn_fs_util/fs-util.c:164
@@ -17977,7 +17977,7 @@ msgid ""
 "Print the names of uncommitted transactions. With -rN skip the output\n"
 "of those that have a base revision more recent than rN.  Transactions\n"
 "with base revisions much older than HEAD are likely to have been\n"
-"abandonded and are candidates to be removed.\n"
+"abandoned and are candidates to be removed.\n"
 msgstr ""
 
 #: ../svnadmin/svnadmin.c:501

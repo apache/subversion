@@ -22,7 +22,10 @@
  */
 package org.apache.subversion.javahl;
 
+import static org.junit.Assert.*;
+
 import org.apache.subversion.javahl.callback.*;
+import org.apache.subversion.javahl.remote.*;
 import org.apache.subversion.javahl.types.*;
 
 import java.io.File;
@@ -34,6 +37,7 @@ import java.io.PrintWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
+import java.nio.channels.ClosedChannelException;
 import java.nio.channels.ReadableByteChannel;
 import java.nio.channels.WritableByteChannel;
 import java.text.ParseException;
@@ -2736,7 +2740,7 @@ public class BasicTests extends SVNTests
                 public void singleMessage(Set<ChangePath> changedPaths,
                     long revision, Map<String, byte[]> revprops,
                     boolean hasChildren)
-                { revList.add(new Long(revision)); }
+                { revList.add(Long.valueOf(revision)); }
             });
 
         long[] revisions = new long[revList.size()];
@@ -4093,6 +4097,7 @@ public class BasicTests extends SVNTests
      * @throws Throwable
      * @since 1.5
      */
+    @SuppressWarnings("deprecation")
     public void testBasicBlame() throws Throwable
     {
         OneTest thisTest = new OneTest();
@@ -4122,6 +4127,7 @@ public class BasicTests extends SVNTests
      * Test blame with diff options.
      * @since 1.9
      */
+    @SuppressWarnings("deprecation")
     public void testBlameWithDiffOptions() throws Throwable
     {
         OneTest thisTest = new OneTest();
@@ -4152,6 +4158,49 @@ public class BasicTests extends SVNTests
         assertEquals(1, line.getRevision());
         assertEquals("jrandom", line.getAuthor());
         assertEquals("This   is   the   file   'iota'.\t", line.getLine());
+    }
+
+    /**
+     * Test the new 1.12 blame interface on a file with null bytes.
+     * @throws Throwable
+     * @since 1.12
+     */
+    public void testBinaryBlame() throws Throwable
+    {
+        final byte[] lineIn = {0x0, 0x0, 0x0, 0xa};
+        final byte[] lineOut = {0x0, 0x0, 0x0};
+
+        OneTest thisTest = new OneTest();
+        // Modify the file iota, adding null bytes.
+        File iota = new File(thisTest.getWorkingCopy(), "iota");
+        FileOutputStream stream = new FileOutputStream(iota, false);
+        stream.write(lineIn);
+        stream.close();
+        Set<String> srcPaths = new HashSet<String>(1);
+        srcPaths.add(thisTest.getWCPath());
+        try {
+            client.username("rayjandom");
+            client.commit(srcPaths, Depth.infinity, false, false, null, null,
+                          new ConstMsg("NUL bytes written to /iota"), null);
+        } finally {
+            client.username("jrandom");
+        }
+
+        // Test the current interface
+        BlameRangeCallbackImpl rangeCallback = new BlameRangeCallbackImpl();
+        BlameLineCallbackImpl lineCallback = new BlameLineCallbackImpl();
+        client.blame(thisTest.getWCPath() + "/iota", Revision.HEAD,
+                     Revision.getInstance(0), Revision.HEAD,
+                     false, false, null, rangeCallback, lineCallback);
+        assertEquals(0, rangeCallback.startRevnum);
+        assertEquals(2, rangeCallback.endRevnum);
+        assertEquals(1, lineCallback.numberOfLines());
+
+        BlameLineCallbackImpl.BlameLine line = lineCallback.getBlameLine(0);
+        assertNotNull(line);
+        assertEquals(2, line.getRevision());
+        assertEquals("rayjandom", line.getAuthor());
+        assertArrayEquals(lineOut, line.getLine());
     }
 
     /**
@@ -4368,6 +4417,320 @@ public class BasicTests extends SVNTests
             cl.dispose();
         }
         assertEquals("fake", new String(revprop));
+    }
+
+    public static int FLAG_ECHO          = 0x00000001;
+    public static int FLAG_THROW_IN_OPEN = 0x00000002;
+
+    public enum Actions
+    {
+        READ_CLIENT,    // Read a request from SVN client
+        EMUL_SERVER,    // Emulate server response
+        WAIT_TUNNEL,    // Wait for tunnel to be closed
+    };
+
+    public static class ScriptItem
+    {
+        Actions action;
+        String value;
+
+        ScriptItem(Actions action, String value)
+        {
+            this.action = action;
+            this.value = value;
+        }
+    }
+
+    private static class TestTunnelAgent extends Thread
+        implements TunnelAgent
+    {
+        ScriptItem[] script;
+        int flags;
+        String error = null;
+        ReadableByteChannel request;
+        WritableByteChannel response;
+
+        final CloseTunnelCallback closeTunnelCallback = () ->
+        {
+            if ((flags & FLAG_ECHO) != 0)
+                System.out.println("TunnelAgent.CloseTunnelCallback");
+        };
+
+        TestTunnelAgent(int flags, ScriptItem[] script)
+        {
+            this.flags = flags;
+            this.script = script;
+        }
+
+        public void joinAndTest()
+        {
+            try
+            {
+                join();
+            }
+            catch (InterruptedException e)
+            {
+                fail("InterruptedException was caught");
+            }
+
+            if (error != null)
+                fail(error);
+        }
+
+        @Override
+        public boolean checkTunnel(String name)
+        {
+            return true;
+        }
+
+        private String readClient(ByteBuffer readBuffer)
+            throws IOException
+        {
+            readBuffer.reset();
+            request.read(readBuffer);
+
+            final int offset = readBuffer.arrayOffset();
+            return new String(readBuffer.array(),
+                offset,
+                readBuffer.position() - offset);
+        }
+
+        private void emulateServer(String serverMessage)
+            throws IOException
+        {
+            final byte[] responseBytes = serverMessage.getBytes();
+            response.write(ByteBuffer.wrap(responseBytes));
+        }
+
+        private void doScriptItem(ScriptItem scriptItem, ByteBuffer readBuffer)
+            throws Exception
+        {
+            switch (scriptItem.action)
+            {
+            case READ_CLIENT:
+                final String actualLine = readClient(readBuffer);
+
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("SERVER: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+                if (!actualLine.contains(scriptItem.value))
+                {
+                    System.err.println("Expected: " + scriptItem.value);
+                    System.err.println("Actual:   " + actualLine);
+                    System.err.flush();
+
+                    // Unblock the SVN thread by emulating a server error
+                    final String serverError = "( success ( ( ) 0: ) ) ( failure ( ( 160000 39:Test script received unexpected request 0: 0 ) ) ) ";
+                    emulateServer(serverError);
+
+                    fail("Unexpected client request");
+                }
+                break;
+            case EMUL_SERVER:
+                if ((flags & FLAG_ECHO) != 0)
+                {
+                    System.out.println("CLIENT: " + scriptItem.value);
+                    System.out.flush();
+                }
+
+                emulateServer(scriptItem.value);
+                break;
+            case WAIT_TUNNEL:
+                // The loop will end with an exception when tunnel is closed
+                for (;;)
+                {
+                    readClient(readBuffer);
+                }
+            }
+        }
+
+        public void run()
+        {
+            final ByteBuffer readBuffer = ByteBuffer.allocate(1024 * 1024);
+            readBuffer.mark();
+
+            for (ScriptItem scriptItem : script)
+            {
+                try
+                {
+                    doScriptItem(scriptItem, readBuffer);
+                }
+                catch (ClosedChannelException ex)
+                {
+                    // Expected when closed properly
+                }
+                catch (IOException e)
+                {
+                    // IOException occurs when already-freed apr_file_t was lucky
+                    // to have reasonable fields to avoid the crash. It still
+                    // indicates a problem.
+                    error = "IOException was caught in run()";
+                    return;
+                }
+                catch (Throwable t)
+                {
+                    // No other exceptions are expected here.
+                    error = "Exception was caught in run()";
+                    t.printStackTrace();
+                    return;
+                }
+            }
+        }
+
+        @Override
+        public CloseTunnelCallback openTunnel(ReadableByteChannel request,
+                                              WritableByteChannel response,
+                                              String name,
+                                              String user,
+                                              String hostname,
+                                              int port)
+            throws Throwable
+        {
+            this.request = request;
+            this.response = response;
+
+            start();
+
+            if ((flags & FLAG_THROW_IN_OPEN) != 0)
+                throw ClientException.fromException(new RuntimeException("Test exception"));
+
+            return closeTunnelCallback;
+        }
+    };
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, GC is invoked before closing tunnel.
+     */
+    public void testCrash_RemoteSession_nativeDispose()
+    {
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final RemoteFactory remoteFactory = new RemoteFactory();
+        remoteFactory.setTunnelAgent(tunnelAgent);
+
+        ISVNRemote remote = null;
+        try
+        {
+            remote = remoteFactory.openRemoteSession("svn+test://localhost/test", 1);
+        }
+        catch (SubversionException e)
+        {
+            fail("SubversionException was caught");
+        }
+
+        // Previously, 'OperationContext::openTunnel()' didn't 'NewGlobalRef()'
+        // callback returned by 'TunnelAgent.openTunnel()'. This caused JVM to
+        // dispose it on next GC. JavaHL calls callback in 'remote.dispose()'.
+        // If the callback was disposed, this caused a JVM crash.
+        System.gc();
+        remote.dispose();
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel was not properly closed after exception in
+     * 'TunnelAgent.openTunnel()'.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterException()
+    {
+        // Previously, exception caused TunnelChannel's native side to be
+        // destroyed with the following abbreviated stack:
+        //   TunnelChannel.nativeClose()
+        //   svn_pool_destroy(sesspool)
+        //   svn_ra_open5()
+        // TunnelAgent was unaware and called 'RequestChannel.nativeRead()'
+        // or 'ResponseChannel.nativeWrite()', causing either a crash or
+        // an attempt to use a random file.
+        final int flags = FLAG_THROW_IN_OPEN;
+
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(flags, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try
+        {
+            svnClient.openRemoteSession("svn+test://localhost/test");
+        }
+        catch (SubversionException e)
+        {
+            // RuntimeException("Test exception") is expected here
+        }
+
+        tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test scenario which previously caused a JVM crash.
+     * In this scenario, tunnel was not properly closed after an SVN error.
+     */
+    public void testCrash_RequestChannel_nativeRead_AfterSvnError()
+    {
+        final String wcRoot = new File("tempSvnRepo").getAbsolutePath();
+
+        final ScriptItem[] script = new ScriptItem[]
+        {
+            // openRemoteSession
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( 2 2 ( ) ( edit-pipeline svndiff1 absent-entries commit-revprops depth log-revprops atomic-revprops partial-replay inherited-props ephemeral-txnprops file-revs-reverse ) ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "edit-pipeline"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ANONYMOUS ) 36:0113e071-0208-4a7b-9f20-3038f9caf0f0 ) ) "),
+            new ScriptItem(Actions.READ_CLIENT, "ANONYMOUS"),
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ) ) ( success ( 36:00000000-0000-0000-0000-000000000000 25:svn+test://localhost/test ( mergeinfo ) ) ) "),
+            // checkout
+            new ScriptItem(Actions.READ_CLIENT, "( get-latest-rev ( ) ) "),
+            // Previously, error caused a SubversionException to be created,
+            // which then skipped closing the Tunnel properly due to
+            // 'ExceptionOccurred()' in 'OperationContext::closeTunnel()'.
+            // If TunnelAgent was unaware and called 'RequestChannel.nativeRead()',
+            // it either crashed or tried to use a random file.
+            new ScriptItem(Actions.EMUL_SERVER, "( success ( ( ) 0: ) ) ( failure ( ( 160006 20:This is a test error 0: 0 ) ) ) "),
+            // Pretend that TunnelAgent tries to read more
+            new ScriptItem(Actions.WAIT_TUNNEL, ""),
+        };
+
+        final TestTunnelAgent tunnelAgent = new TestTunnelAgent(0, script);
+        final SVNClient svnClient = new SVNClient();
+        svnClient.setTunnelAgent(tunnelAgent);
+
+        try
+        {
+            svnClient.checkout("svn+test://localhost/test",
+                               wcRoot,
+                               Revision.getInstance(1),
+                               null,
+                               Depth.infinity,
+                               true,
+                               false);
+
+            svnClient.dispose();
+        }
+        catch (ClientException ex)
+        {
+            final int SVN_ERR_FS_NO_SUCH_REVISION = 160006;
+            if (SVN_ERR_FS_NO_SUCH_REVISION != ex.getAllMessages().get(0).getCode())
+                ex.printStackTrace();
+        }
+
+        tunnelAgent.joinAndTest();
     }
 
     /**
@@ -4679,6 +5042,7 @@ public class BasicTests extends SVNTests
         return callback.getMessages();
     }
 
+    @SuppressWarnings("deprecation")
     private byte[] collectBlameLines(String path, Revision pegRevision,
                                      Revision revisionStart,
                                      Revision revisionEnd,
@@ -4766,6 +5130,7 @@ public class BasicTests extends SVNTests
     }
 
     /* A blame callback implementation. */
+    @SuppressWarnings("deprecation")
     protected class BlameCallbackImpl implements BlameCallback
     {
 
@@ -4975,6 +5340,158 @@ public class BasicTests extends SVNTests
                 }
 
                 sb.append(val);
+            }
+        }
+    }
+
+    /* A blame range callback implementation. */
+    protected class BlameRangeCallbackImpl implements BlameRangeCallback
+    {
+        public long startRevnum = -1;
+        public long endRevnum = -1;
+        public void setRange(long start, long end)
+        {
+            startRevnum = start;
+            endRevnum = end;
+        }
+    }
+
+    /* A blame line callback implementation. */
+    protected class BlameLineCallbackImpl implements BlameLineCallback
+    {
+
+        /** list of blame records (lines) */
+        private List<BlameLine> lines = new ArrayList<BlameLine>();
+
+        public void singleLine(long lineNum, long rev,
+                               Map<String, byte[]> revProps,
+                               long mergedRevision,
+                               Map<String, byte[]> mergedRevProps,
+                               String mergedPath, boolean localChange,
+                               byte[] line)
+            throws ClientException
+        {
+            DateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS");
+
+            try {
+                insertLine(
+                    df.parse(new String(revProps.get("svn:date"))),
+                    rev,
+                    new String(revProps.get("svn:author")),
+                    mergedRevProps == null ? null
+                        : df.parse(new String(mergedRevProps.get("svn:date"))),
+                    mergedRevision,
+                    mergedRevProps == null ? null
+                        : new String(mergedRevProps.get("svn:author")),
+                    mergedPath, line);
+            } catch (ParseException e) {
+                throw ClientException.fromException(e);
+            }
+        }
+
+        private Date getDate(Date date, Date merged_date) {
+            return (merged_date == null ? date : merged_date);
+        }
+
+        private String getAuthor(String author, String merged_author) {
+            return (merged_author == null ? author : merged_author);
+        }
+
+        private long getRevision(long revision, long merged_revision) {
+            return (merged_revision == -1 ? revision : merged_revision);
+        }
+
+        private void insertLine(Date date, long revision, String author,
+                                Date merged_date, long merged_revision,
+                                String merged_author, String merged_path,
+                                byte[] line)
+        {
+            this.lines.add(new BlameLine(getRevision(revision, merged_revision),
+                                         getAuthor(author, merged_author),
+                                         getDate(date, merged_date),
+                                         line));
+        }
+
+        /**
+         * Retrieve the number of line of blame information
+         * @return number of lines of blame information
+         */
+        public int numberOfLines()
+        {
+            return this.lines.size();
+        }
+
+        /**
+         * Retrieve blame information for specified line number
+         * @param i the line number to retrieve blame information about
+         * @return  Returns object with blame information for line
+         */
+        public BlameLine getBlameLine(int i)
+        {
+            if (i >= this.lines.size())
+            {
+                return null;
+            }
+            return this.lines.get(i);
+        }
+
+        /**
+         * Class represeting one line of the lines, i.e. a blame record
+         */
+        public final class BlameLine
+        {
+            private long revision;
+            private String author;
+            private Date changed;
+            private byte[] line;
+
+            /**
+             * Constructor
+             *
+             * @param revision
+             * @param author
+             * @param changed
+             * @param line
+             */
+            public BlameLine(long revision, String author,
+                             Date changed, byte[] line)
+            {
+                this.revision = revision;
+                this.author = author;
+                this.changed = changed;
+                this.line = line;
+            }
+
+            /**
+             * @return Returns the author.
+             */
+            public String getAuthor()
+            {
+                return author;
+            }
+
+            /**
+             * @return Returns the date changed.
+             */
+            public Date getChanged()
+            {
+                return changed;
+            }
+
+            /**
+             * @return Returns the source line content.
+             */
+            public byte[] getLine()
+            {
+                return line;
+            }
+
+            /**
+             * @return Returns the revision.
+             */
+            public long getRevision()
+            {
+                return revision;
             }
         }
     }

@@ -183,7 +183,7 @@ class SVNTests extends TestCase
                 rootUrl = rootUrl.replaceFirst("file:/", "file:///");
 
             // According to
-            // http://java.sun.com/j2se/1.5.0/docs/api/java/io/File.html#toURL()
+            // https://docs.oracle.com/javase/1.5.0/docs/api/java/io/File.html#toURL()
             // the URL from rootDir.toURI() may end with a trailing /
             // if rootDir exists and is a directory, so depending if
             // the test suite has been previously run and rootDir

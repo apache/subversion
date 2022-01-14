@@ -1,7 +1,7 @@
 Introduction
 ============
 Makefile.svn aids Subversion developers on unix-like systems set up an
-SVN development environment without requiring root priviliges. It does
+SVN development environment without requiring root privileges. It does
 this by fetching Subversion along with many of its dependencies from
 the internet and building them using sane defaults suitable for
 development (for example, it invokes --enable-maintainer-mode while

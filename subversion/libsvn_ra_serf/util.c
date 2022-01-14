@@ -798,7 +798,7 @@ apr_status_t svn_ra_serf__handle_client_cert_pw(void *data,
  *
  * If CONTENT_TYPE is not-NULL, it will be sent as the Content-Type header.
  *
- * If DAV_HEADERS is non-zero, it will add standard DAV capabilites headers
+ * If DAV_HEADERS is non-zero, it will add standard DAV capabilities headers
  * to request.
  *
  * REQUEST_POOL should live for the duration of the request. Serf will
@@ -997,7 +997,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
 /* Ensure that a handler is no longer scheduled on the connection.
 
    Eventually serf will have a reliable way to cancel existing requests,
-   but currently it doesn't even have a way to relyable identify a request
+   but currently it doesn't even have a way to reliable identify a request
    after rescheduling, for auth reasons.
 
    So the only thing we can do today is reset the connection, which
@@ -1116,19 +1116,17 @@ response_get_location(serf_bucket_t *response,
         return NULL;
 
       /* Replace the path path with what we got */
-      uri.path = (char*)svn_urlpath__canonicalize(location, scratch_pool);
+      uri.path = apr_pstrdup(scratch_pool, location);
 
       /* And make APR produce a proper full url for us */
-      location = apr_uri_unparse(scratch_pool, &uri, 0);
-
-      /* Fall through to ensure our canonicalization rules */
+      return apr_uri_unparse(result_pool, &uri, 0);
     }
   else if (!svn_path_is_url(location))
     {
       return NULL; /* Any other formats we should support? */
     }
 
-  return svn_uri_canonicalize(location, result_pool);
+  return apr_pstrdup(result_pool, location);
 }
 
 
@@ -1552,7 +1550,7 @@ handle_response_cb(serf_request_t *request,
          If we would return an error outer-status the connection
          would have to be restarted. With scheduled still TRUE
          destroying the handler's pool will still reset the
-         connection, avoiding the posibility of returning
+         connection, avoiding the possibility of returning
          an error for this handler when a new request is
          scheduled. */
       outer_status = APR_EAGAIN; /* Exit context loop */

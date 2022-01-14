@@ -528,7 +528,7 @@ def backport_double_conflict(sbox):
   #    ...
   #    Warning summary
   #    ===============
-  #    
+  #
   #    r4 (default logsummary): subshell exited with code 256
   # And backport.pl would exit with exit code 1.
 

@@ -21,7 +21,7 @@
  * @endcopyright
  *
  * @file svn_branch_impl.h
- * @brief Declarations needed by implementators of branch classes
+ * @brief Declarations needed by implementors of branch classes
  *
  * @since New in ???.
  */
@@ -36,7 +36,7 @@ extern "C" {
 #endif
 
 
-/* Common aspects od a txn/branch 'editor' class (derived from Ev2) */
+/* Common aspects of a txn/branch 'editor' class (derived from Ev2) */
 typedef struct svn_branch__vtable_priv_t
 {
   /* Standard cancellation function. Called before each callback.  */

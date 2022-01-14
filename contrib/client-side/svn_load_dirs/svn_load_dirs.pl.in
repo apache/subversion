@@ -196,7 +196,7 @@ elsif ( -f "$ENV{HOME}/.subversion/config" )
       {
         if ( /^global-ignores\s*=\s*(.*?)\s*$/ )
           {
-	    $ignores_str = $1;
+            $ignores_str = $1;
             last;
           }
       }
@@ -1344,6 +1344,8 @@ sub usage
       "  -p filename    table listing properties to apply to matching files\n",
       "  -svn_username  username to perform commits as\n",
       "  -svn_password  password to supply to svn commit\n",
+      "                 WARNING: passing the password in a command-line argument\n",
+      "                 may make it visible to other local OS users\n",
       "  -t tag_dir     create a tag copy in tag_dir, relative to svn_url\n",
       "  -v             increase program verbosity, multiple -v's allowed\n",
       "  -wc path       use the already checked-out working copy at path\n",
@@ -1500,6 +1502,18 @@ sub file_info
   return '?';
 }
 
+# Copy arguments and replace what follows --password with '*'s.
+sub sanitize_pwd
+{
+  my @str = @_;
+  my $hide_next = 0;
+  foreach(@str) {
+    $_ = '*' x length if ( $hide_next );
+    $hide_next = ($_ eq '--password');
+  }
+  @str;
+}
+
 # Start a child process safely without using /bin/sh.
 sub safe_read_from_pipe
 {
@@ -1511,7 +1525,7 @@ sub safe_read_from_pipe
   my $openfork_available = "MSWin32" ne $OSNAME;
   if ($openfork_available)
     {
-      print "Running @_\n";
+      print join(' ', &sanitize_pwd("Running", @_, "\n") );
       my $pid = open(SAFE_READ, "-|");
       unless (defined $pid)
         {
@@ -1523,7 +1537,9 @@ sub safe_read_from_pipe
           open(STDERR, ">&STDOUT")
             or die "$0: cannot dup STDOUT: $!\n";
           exec(@_)
-            or die "$0: cannot exec '@_': $!\n";
+            or die "$0: cannot exec '"
+              . join(' ', &sanitize_pwd(@_) )
+              . "': $!\n";
         }
     }
   else
@@ -1560,7 +1576,7 @@ sub safe_read_from_pipe
             }
         }
 
-      print "Running @commandline\n";
+      print join(' ', &sanitize_pwd("Running", @commandline, "\n") );
       if ( $comment ) { print $comment; }
 
       # Now do the pipe.
@@ -1582,7 +1598,9 @@ sub safe_read_from_pipe
   my $cd     = $result & 128 ? "with core dump" : "";
   if ($signal or $cd)
     {
-      warn "$0: pipe from '@_' failed $cd: exit=$exit signal=$signal\n";
+      warn "$0: pipe from '"
+        . join(' ', &sanitize_pwd(@_) )
+        . "' failed $cd: exit=$exit signal=$signal\n";
     }
   if (wantarray)
     {
@@ -1605,8 +1623,9 @@ sub read_from_process
   my ($status, @output) = &safe_read_from_pipe(@_);
   if ($status)
     {
-      print STDERR "$0: @_ failed with this output:\n", join("\n", @output),
-                   "\n";
+      print STDERR
+        join(' ', &sanitize_pwd("$0:", @_, "failed with this output:\n") ),
+        join("\n", @output), "\n";
       unless ($opt_no_user_input)
         {
           print STDERR
@@ -1658,7 +1677,7 @@ sub recursive_ls_and_hash
     };
   find({no_chdir   => 1,
         preprocess => sub
-	  {
+          {
             grep
               {
                 my $ok=1;
@@ -2054,5 +2073,6 @@ sub new
 sub DESTROY
 {
   print "Cleaning up $temp_dir\n";
+  chdir( $temp_dir . "/.." );
   File::Path::rmtree([$temp_dir], 0, 0);
 }

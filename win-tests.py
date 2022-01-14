@@ -772,6 +772,9 @@ class Httpd:
     local_tmp = os.path.join(self.abs_builddir,
                              CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                              'svn-test-work', 'local_tmp')
+    repositories = os.path.join(self.abs_builddir,
+                                CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                'svn-test-work', 'repositories')
     return \
       '<Location /authz-test-work/anon>' + '\n' \
       '  DAV               svn' + '\n' \
@@ -785,6 +788,17 @@ class Httpd:
       '  <IfModule !mod_authz_core.c>' + '\n' \
       '    Allow from all' + '\n' \
       '  </IfModule>' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/in-repos-authz>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + repositories + '\n' \
+      '  AuthzSVNReposRelativeAccessFile "^/authz"\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
       '  SVNPathAuthz ' + self.path_authz_option + '\n' \
       '</Location>' + '\n' \
       '<Location /authz-test-work/mixed>' + '\n' \
@@ -1263,7 +1277,11 @@ elif test_swig == 'python':
         or isinstance(i, gen_base.TargetSWIGLib)) and i.lang == 'python':
 
       src = os.path.join(abs_objdir, i.filename)
-      copy_changed_file(src, to_dir=swig_py_libsvn)
+      basename = os.path.basename(src)
+      if sys.version_info[:2] >= (3, 5) \
+          and basename.endswith('.pyd') and objdir == 'Debug':
+        basename = basename[:-4] + '_d.pyd'
+      copy_changed_file(src, os.path.join(swig_py_libsvn, basename))
 
   py_src = os.path.join(abs_srcdir, 'subversion', 'bindings', 'swig', 'python')
 
@@ -1285,7 +1303,8 @@ elif test_swig == 'python':
   if 'PYTHONPATH' in os.environ:
     pythonpath += os.pathsep + os.environ['PYTHONPATH']
 
-  python_exe = 'python.exe'
+  python_exe = sys.executable if objdir != 'Debug' else \
+               os.path.join(os.path.dirname(sys.executable), 'python_d.exe')
   old_cwd = os.getcwd()
   try:
     os.environ['PYTHONPATH'] = pythonpath

@@ -18,7 +18,7 @@ Blanket commit access:
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
-      cmpilato   C. Michael Pilato <cmpilato@collab.net>
+      cmpilato   C. Michael Pilato <cmpilato@apache.org>
         philip   Philip Martin <philip@apache.org>
    jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
         rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
@@ -41,7 +41,7 @@ Blanket commit access:
        hwright   Hyrum Wright <hyrum@hyrumwright.org>
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
        kameshj   Kamesh Jayachandran <kamesh.jayachandran@gmail.com>
-      markphip   Mark Phippard <mphippard@collab.net>
+      markphip   Mark Phippard <markphip@gmail.com>
       arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
           stsp   Stefan Sperling <stsp@elego.de>
            kou   Kouhei Sutou <kou@cozmixng.org>
@@ -61,6 +61,11 @@ Blanket commit access:
       astieger   Andreas Stieger <andreas.stieger@gmx.de>
       jamessan   James McCoy <jamessan@jamessan.com>
       luke1410   Stefan Hett <luke1410@posteo.de>
+  troycurtisjr   Troy Curtis, Jr <troycurtisjr@gmail.com>
+ hartmannathan   Nathan Hartman <hartman.nathan@gmail.com>
+      futatuki   Yasuhito Futatsuki <futatuki@yf.bsdclub.org>
+       jun66j5   Jun Omae <jun66j5@gmail.com>
+     dsahlberg   Daniel Sahlberg <daniel.l.sahlberg@gmail.com>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -104,7 +109,7 @@ Commit access for specific areas:
        rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
         stilor   Alexey Neyman <stilor@att.net>              (Python bindings,
                                                              svn-vendor.py)
-  troycurtisjr   Troy Curtis, Jr <troycurtisjr@gmail.com>    (Swig bindings)
+ amiloslavskiy   Alexandr Miloslavskiy <amiloslavskiy@apache.org> (JavaHL bindings)
 
   Packages:
 

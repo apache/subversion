@@ -881,7 +881,7 @@ unparse_dir_entry(svn_fs_x__dirent_t *dirent,
   apr_size_t to_write;
   apr_size_t name_len = strlen(dirent->name);
 
-  /* A buffer with sufficient space for 
+  /* A buffer with sufficient space for
    * - entry name + 1 terminating NUL
    * - 1 byte for the node kind
    * - 2 numbers in 7b/8b encoding for the noderev-id
@@ -3066,7 +3066,7 @@ get_final_id(svn_fs_x__id_t *part,
     part->change_set = svn_fs_x__change_set_by_rev(revision);
 }
 
-/* Copy a node-revision specified by id ID in fileystem FS from a
+/* Copy a node-revision specified by id ID in filesystem FS from a
    transaction into the proto-rev-file FILE.  Set *NEW_ID_P to a
    pointer to the new noderev-id.  If this is a directory, copy all
    children as well.
@@ -3738,7 +3738,7 @@ promote_cached_directories(svn_fs_t *fs,
 
       /* Currently, the entry for KEY - if it still exists - is marked
        * as "stale" and would not be used.  Mark it as current for in-
-       * revison data. */
+       * revision data. */
       SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
                                      svn_fs_x__reset_txn_filesize, NULL,
                                      iterpool));

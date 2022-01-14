@@ -1726,7 +1726,7 @@ def verify_non_utf8_paths(sbox):
       # also fix up the 'created path' field
       fp_new.write(b"cpath: /\xE6\n")
     elif line == b"_0.0.t0-0 add-file true true /A\n":
-      # and another occurrance
+      # and another occurrence
       fp_new.write(b"_0.0.t0-0 add-file true true /\xE6\n")
     else:
       fp_new.write(line)
@@ -3177,7 +3177,7 @@ def load_txdelta(sbox):
 
   sbox.build(empty=True)
 
-  # This dumpfile produced a BDB repository that generated cheksum
+  # This dumpfile produced a BDB repository that generated checksum
   # mismatches on read caused by the improper handling of
   # svn_txdelta_target ops.  The bug was fixed by r1640832.
 
@@ -3220,7 +3220,7 @@ def load_no_svndate_r0(sbox):
               b"Content-length: 10\n", b"\n",
               b"PROPS-END\n", b"\n"]
   svntest.actions.run_and_verify_load(sbox.repo_dir, dump_old)
-  
+
   # svn:date should have been removed
   svntest.actions.run_and_verify_svnlook([], [],
                                          'proplist', '--revprop', '-r0',
@@ -3859,7 +3859,7 @@ def dump_no_canonicalize_svndate(sbox):
                                      sbox.repo_url)
 
   dump_lines = svntest.actions.run_and_verify_dump(sbox.repo_dir)
-  assert propval + '\n' in dump_lines
+  assert propval.encode() + b'\n' in dump_lines
 
 def check_recover_prunes_rep_cache(sbox, enable_rep_sharing):
   """Check 'recover' prunes the rep-cache while enable-rep-sharing is
@@ -3919,6 +3919,145 @@ def recover_prunes_rep_cache_when_disabled(sbox):
   sbox.build()
 
   check_recover_prunes_rep_cache(sbox, enable_rep_sharing=False)
+
+@Issue(4760)
+def dump_include_copied_directory(sbox):
+  "include copied directory with nested nodes"
+
+  sbox.build(create_wc=False)
+
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [], "copy",
+                                     sbox.repo_url + '/A/D',
+                                     sbox.repo_url + '/COPY',
+                                     "-m", "Create branch.")
+
+  # Dump repository with only /COPY path included.
+  _, dump, _ = svntest.actions.run_and_verify_svnadmin(None, [],
+                                                       'dump', '-q',
+                                                       '--include', '/COPY',
+                                                       sbox.repo_dir)
+
+  # Load repository from dump.
+  sbox2 = sbox.clone_dependent()
+  sbox2.build(create_wc=False, empty=True)
+  load_and_verify_dumpstream(sbox2, None, [], None, False, dump)
+
+  # Check log.
+  expected_output = svntest.verify.RegexListOutput([
+    '-+\\n',
+    'r2\ .*\n',
+    # Only '/COPY' is added
+    re.escape('Changed paths:\n'),
+    re.escape('   A /COPY'),
+    re.escape('   A /COPY/G'),
+    re.escape('   A /COPY/G/pi'),
+    re.escape('   A /COPY/G/rho'),
+    re.escape('   A /COPY/G/tau'),
+    re.escape('   A /COPY/H'),
+    re.escape('   A /COPY/H/chi'),
+    re.escape('   A /COPY/H/omega'),
+    re.escape('   A /COPY/H/psi'),
+    re.escape('   A /COPY/gamma'),
+    '-+\\n',
+    'r1\ .*\n',
+    '-+\\n'
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-v', '-q', sbox2.repo_url)
+
+def load_normalize_node_props(sbox):
+  "svnadmin load --normalize node props"
+
+  dump_str = b"""SVN-fs-dump-format-version: 2
+
+UUID: dc40867b-38f6-0310-9f5f-f81aa277e06f
+
+Revision-number: 0
+Prop-content-length: 56
+Content-length: 56
+
+K 8
+svn:date
+V 27
+2005-05-03T19:09:41.129900Z
+PROPS-END
+
+Revision-number: 1
+Prop-content-length: 99
+Content-length: 99
+
+K 7
+svn:log
+V 0
+
+K 10
+svn:author
+V 2
+pl
+K 8
+svn:date
+V 27
+2005-05-03T19:10:19.975578Z
+PROPS-END
+
+Node-path:\x20
+Node-kind: dir
+Node-action: change
+Prop-content-length: 32
+Content-length: 32
+
+K 10
+svn:ignore
+V 3
+\n\r\n
+PROPS-END
+
+
+"""
+  sbox.build(empty=True)
+
+  # Try to load the dumpstream, expecting a failure (because of mixed
+  # EOLs in the svn:ignore property value).
+  exp_err = svntest.verify.RegexListOutput(['svnadmin: E125005:.*',
+                                            'svnadmin: E125017:.*'],
+                                           match_all=False)
+  load_and_verify_dumpstream(sbox, [], exp_err, dumpfile_revisions,
+                             False, dump_str, '--ignore-uuid')
+
+  # Now try it again with prop normalization.
+  svntest.actions.load_repo(sbox, dump_str=dump_str,
+                            bypass_prop_validation=False,
+                            normalize_props=True)
+  # We should get the normalized property value.
+  exit_code, output, _ = svntest.main.run_svn(None, 'pg', 'svn:ignore',
+                                              '--no-newline',
+                                              sbox.repo_url)
+  svntest.verify.verify_exit_code(None, exit_code, 0)
+  if output != ['\n', '\n']:
+    raise svntest.Failure("Unexpected property value %s" % output)
+
+@SkipUnless(svntest.main.is_fs_type_fsfs)
+@SkipUnless(svntest.main.fs_has_rep_sharing)
+@SkipUnless(svntest.main.python_sqlite_can_read_without_rowid)
+def build_repcache(sbox):
+  "svnadmin build-repcache"
+
+  sbox.build(create_wc = False)
+
+  # Remember and remove the existing rep-cache.
+  rep_cache = read_rep_cache(sbox.repo_dir)
+  rep_cache_path = os.path.join(sbox.repo_dir, 'db', 'rep-cache.db')
+  os.remove(rep_cache_path)
+
+  # Build a new rep-cache and compare with the original one.
+  expected_output = ["* Processed revision 1.\n"]
+  svntest.actions.run_and_verify_svnadmin(expected_output, [],
+                                          "build-repcache", sbox.repo_dir)
+
+  new_rep_cache = read_rep_cache(sbox.repo_dir)
+  if new_rep_cache != rep_cache:
+    raise svntest.Failure
+
 
 ########################################################################
 # Run the tests
@@ -3997,6 +4136,9 @@ test_list = [ None,
               dump_no_canonicalize_svndate,
               recover_prunes_rep_cache_when_enabled,
               recover_prunes_rep_cache_when_disabled,
+              dump_include_copied_directory,
+              load_normalize_node_props,
+              build_repcache,
              ]
 
 if __name__ == '__main__':

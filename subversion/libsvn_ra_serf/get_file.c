@@ -137,7 +137,7 @@ cancel_fetch(serf_request_t *request,
  * using SESSION->wc_callbacks->get_wc_contents() if sha1 property is
  * present in PROPS.
  *
- * Sets *FOUND_P to TRUE if file contents was successfuly fetched.
+ * Sets *FOUND_P to TRUE if file contents was successfully fetched.
  *
  * Performs all temporary allocations in POOL.
  */

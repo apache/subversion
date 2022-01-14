@@ -490,7 +490,7 @@ svn_wc__diff7(svn_boolean_t anchor_at_given_paths,
       SVN_ERR(svn_hash_from_cstring_keys(&changelist_hash, changelist_filter,
                                          result_pool));
       diff_processor = svn_wc__changelist_filter_tree_processor_create(
-                         diff_processor, wc_ctx, local_abspath,
+                         diff_processor, wc_ctx, eb.anchor_abspath,
                          changelist_hash, result_pool);
     }
 

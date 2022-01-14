@@ -46,6 +46,10 @@ Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 Item = wc.StateItem
 
+def shelf3_enabled():
+  v = os.getenv('SVN_EXPERIMENTAL_COMMANDS')
+  return v is not None and v.find('shelf3') >= 0
+
 #----------------------------------------------------------------------
 
 def state_from_status(wc_dir,
@@ -126,6 +130,12 @@ def shelve_unshelve_verify(sbox, modifier, cannot_shelve=False):
     ])
   svntest.actions.run_and_verify_svn(expected_output, [], 'x-shelves')
 
+  # Diff; ensure something comes out and it doesn't crash
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
+                                     'x-shelf-diff', 'foo')
+  svntest.actions.run_and_verify_svn(svntest.verify.AnyOutput, [],
+                                     'x-shelf-diff', '--summarize', 'foo')
+
   # Unshelve; check the original modifications are here again
   svntest.actions.run_and_verify_svn(None, [],
                                      'x-unshelve', 'foo')
@@ -153,6 +163,7 @@ def shelve_unshelve(sbox, modifier, cannot_shelve=False):
 #
 #   Each test must return on success or raise on failure.
 
+@SkipUnless(shelf3_enabled)
 def shelve_text_mods(sbox):
   "shelve text mods"
 
@@ -163,6 +174,7 @@ def shelve_text_mods(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_prop_changes(sbox):
   "shelve prop changes"
 
@@ -174,6 +186,7 @@ def shelve_prop_changes(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_adds(sbox):
   "shelve adds"
 
@@ -187,6 +200,7 @@ def shelve_adds(sbox):
 #----------------------------------------------------------------------
 
 @Issue(4709)
+@SkipUnless(shelf3_enabled)
 def shelve_deletes(sbox):
   "shelve deletes"
 
@@ -197,6 +211,7 @@ def shelve_deletes(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_replace(sbox):
   "shelve replace"
 
@@ -209,6 +224,7 @@ def shelve_replace(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_empty_adds(sbox):
   "shelve empty adds"
   sbox.build(empty=True)
@@ -222,6 +238,7 @@ def shelve_empty_adds(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_empty_deletes(sbox):
   "shelve empty deletes"
   sbox.build(empty=True)
@@ -237,6 +254,7 @@ def shelve_empty_deletes(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_from_inner_path(sbox):
   "shelve from inner path"
 
@@ -297,6 +315,7 @@ def save_revert_restore(sbox, modifier1, modifier2):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def checkpoint_basic(sbox):
   "checkpoint basic"
 
@@ -312,6 +331,7 @@ def checkpoint_basic(sbox):
 #----------------------------------------------------------------------
 
 @Issue(3747)
+@SkipUnless(shelf3_enabled)
 def shelve_mergeinfo(sbox):
   "shelve mergeinfo"
 
@@ -323,6 +343,7 @@ def shelve_mergeinfo(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def unshelve_refuses_if_conflicts(sbox):
   "unshelve refuses if conflicts"
 
@@ -366,6 +387,7 @@ def unshelve_refuses_if_conflicts(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_binary_file_mod(sbox):
   "shelve binary file mod"
 
@@ -387,6 +409,7 @@ def shelve_binary_file_mod(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_binary_file_add(sbox):
   "shelve binary file add"
 
@@ -408,6 +431,7 @@ def shelve_binary_file_add(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_binary_file_del(sbox):
   "shelve binary file del"
 
@@ -429,6 +453,7 @@ def shelve_binary_file_del(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_binary_file_replace(sbox):
   "shelve binary file replace"
 
@@ -451,6 +476,7 @@ def shelve_binary_file_replace(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_with_log_message(sbox):
   "shelve with log message"
 
@@ -500,6 +526,7 @@ def run_and_verify_shelf_status(wc_dir, expected_status, shelf):
   run_and_verify_status(wc_dir, expected_status,
                         changelists=['svn:shelf:' + shelf])
 
+@SkipUnless(shelf3_enabled)
 def shelf_status(sbox):
   "shelf status"
 
@@ -525,6 +552,8 @@ def shelf_status(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@SkipUnless(shelf3_enabled)
 def shelve_mkdir(sbox):
   "shelve mkdir"
 
@@ -534,10 +563,11 @@ def shelve_mkdir(sbox):
     sbox.simple_mkdir('D', 'D/D2')
     sbox.simple_propset('p', 'v', 'D', 'D/D2')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_rmdir(sbox):
   "shelve rmdir"
 
@@ -548,10 +578,12 @@ def shelve_rmdir(sbox):
   def modifier(sbox):
     sbox.simple_rm('A/C', 'A/D/G')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
+@XFail()
+@SkipUnless(shelf3_enabled)
 def shelve_replace_dir(sbox):
   "shelve replace dir"
 
@@ -563,10 +595,11 @@ def shelve_replace_dir(sbox):
     sbox.simple_rm('A/C', 'A/D/G')
     sbox.simple_mkdir('A/C', 'A/C/D2')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_file_copy(sbox):
   "shelve file copy"
 
@@ -576,10 +609,11 @@ def shelve_file_copy(sbox):
     sbox.simple_copy('iota', 'A/ii')
     sbox.simple_propset('p', 'v', 'A/ii')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def shelve_dir_copy(sbox):
   "shelve dir copy"
 
@@ -589,10 +623,11 @@ def shelve_dir_copy(sbox):
     sbox.simple_copy('A/B', 'BB')
     sbox.simple_propset('p', 'v', 'BB')
 
-  shelve_unshelve(sbox, modifier, cannot_shelve=True)
+  shelve_unshelve(sbox, modifier)
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def list_shelves(sbox):
   "list_shelves"
 
@@ -635,6 +670,7 @@ def list_shelves(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def refuse_to_shelve_conflict(sbox):
   "refuse to shelve conflict"
 
@@ -643,31 +679,21 @@ def refuse_to_shelve_conflict(sbox):
   os.chdir(sbox.wc_dir)
   sbox.wc_dir = ''
 
-  # create a tree conflict victim at an unversioned path
+  # create a conflict
   sbox.simple_mkdir('topdir')
-  sbox.simple_commit()
-  sbox.simple_mkdir('topdir/subdir')
-  sbox.simple_commit()
-  sbox.simple_update()
-  sbox.simple_rm('topdir')
   sbox.simple_commit()
   sbox.simple_update()
   svntest.actions.run_and_verify_svn(
     None, [],
-    'merge', '-c2', '.', '--ignore-ancestry', '--accept', 'postpone')
+    'merge', '-c1', '.', '--ignore-ancestry', '--accept', 'postpone')
+  # check that we did create a conflict
   svntest.actions.run_and_verify_svn(
-    None, 'svn: E155015:.*existing.*conflict.*',
+    None, 'svn: E155035:.*conflict.*',
     'merge', '-c1', '.', '--ignore-ancestry', '--accept', 'postpone')
 
   # attempt to shelve
-  expected_out = svntest.verify.RegexListOutput([
-    r'--- .*',
-    r'--- .*',
-    r'\?     C topdir',
-    r'      > .*',
-    r'      >   not shelved'])
-  svntest.actions.run_and_verify_svn(expected_out,
-                                     '.* 1 path could not be shelved',
+  expected_err = "svn: E155015: .* '.*topdir' remains in conflict"
+  svntest.actions.run_and_verify_svn(None, expected_err,
                                      'x-shelf-save', 'foo')
 
   os.chdir(was_cwd)
@@ -711,6 +737,8 @@ def unshelve_with_merge(sbox, setup, modifier1, modifier2, tweak_expected_state)
 
   os.chdir(was_cwd)
 
+@XFail()
+@SkipUnless(shelf3_enabled)
 def unshelve_text_mod_merge(sbox):
   "unshelve text mod merge"
 
@@ -735,6 +763,8 @@ def unshelve_text_mod_merge(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@SkipUnless(shelf3_enabled)
 def unshelve_text_mod_conflict(sbox):
   "unshelve text mod conflict"
 
@@ -765,6 +795,8 @@ def unshelve_text_mod_conflict(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@SkipUnless(shelf3_enabled)
 def unshelve_undeclared_binary_mod_conflict(sbox):
   "unshelve undeclared binary mod conflict"
 
@@ -795,6 +827,8 @@ def unshelve_undeclared_binary_mod_conflict(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@SkipUnless(shelf3_enabled)
 def unshelve_binary_mod_conflict(sbox):
   "unshelve binary mod conflict"
 
@@ -824,6 +858,7 @@ def unshelve_binary_mod_conflict(sbox):
 
 #----------------------------------------------------------------------
 
+@SkipUnless(shelf3_enabled)
 def unshelve_text_prop_merge(sbox):
   "unshelve text prop merge"
 
@@ -845,6 +880,8 @@ def unshelve_text_prop_merge(sbox):
 
 #----------------------------------------------------------------------
 
+@XFail()
+@SkipUnless(shelf3_enabled)
 def unshelve_text_prop_conflict(sbox):
   "unshelve text prop conflict"
 
@@ -903,7 +940,10 @@ def run_and_verify_shelf_diff_summarize(output_tree, shelf, *args):
     svntest.verify.display_trees(None, 'DIFF OUTPUT TREE', output_tree, actual)
     raise
 
+#----------------------------------------------------------------------
+
 # Exercise a very basic case of shelf-diff.
+@SkipUnless(shelf3_enabled)
 def shelf_diff_simple(sbox):
   "shelf diff simple"
 
@@ -918,6 +958,8 @@ def shelf_diff_simple(sbox):
     sbox.simple_propset('p2', 'v', 'A/mu')
 
   def modifier1(sbox):
+    sbox.simple_rm('A/B/lambda')
+    sbox.simple_add_text('This is a new file.\n', 'A/B/new')
     sbox.simple_append('A/mu', 'New line.\n')
     sbox.simple_propset('p1', 'changed', 'A/mu')
 
@@ -933,7 +975,15 @@ def shelf_diff_simple(sbox):
                                      'x-shelf-save', 'foo')
 
   # basic svn-style diff
-  expected_output = make_diff_header('A/mu', 'revision 2', 'working copy') + [
+  expected_output = make_diff_header('A/B/lambda', 'revision 2', 'nonexistent') + [
+                      "@@ -1 +0,0 @@\n",
+                      "-This is the file 'lambda'.\n"
+                    ]
+  expected_output += make_diff_header('A/B/new', 'nonexistent', 'working copy') + [
+                      "@@ -0,0 +1 @@\n",
+                      "+This is a new file.\n"
+                    ]
+  expected_output += make_diff_header('A/mu', 'revision 2', 'working copy') + [
                       "@@ -1 +1,2 @@\n",
                       " This is the file 'mu'.\n",
                       "+New line.\n",
@@ -944,9 +994,29 @@ def shelf_diff_simple(sbox):
 
   # basic summary diff
   expected_diff = svntest.wc.State(wc_dir, {
+    'A/B/lambda':     Item(status='D '),
+    'A/B/new':        Item(status='A '),
     'A/mu':           Item(status='MM'),
   })
   run_and_verify_shelf_diff_summarize(expected_diff, 'foo')
+
+#----------------------------------------------------------------------
+
+@XFail()
+@Issue(4827)
+@SkipUnless(shelf3_enabled)
+def shelve_with_kw_translation(sbox):
+  "shelve with kw translation"
+  sbox.build(empty=True)
+  sbox.simple_add_text('$Rev$\n', 'file')
+  sbox.simple_propset('svn:keywords', 'rev', 'file')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  def modifier(sbox):
+    sbox.simple_append('file', 'New line\n')
+
+  shelve_unshelve(sbox, modifier)
 
 
 ########################################################################
@@ -985,6 +1055,7 @@ test_list = [ None,
               unshelve_text_prop_merge,
               unshelve_text_prop_conflict,
               shelf_diff_simple,
+              shelve_with_kw_translation,
              ]
 
 if __name__ == '__main__':

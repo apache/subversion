@@ -34,11 +34,13 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 
+#include "shelf-cmd.h"
 #include "cl.h"
 
 #include "svn_private_config.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_client_private.h"
+#include "private/svn_client_shelf.h"
 
 
 /* Open the newest version of SHELF; error if no versions found. */
@@ -838,8 +840,13 @@ shelf_shelve(int *new_version,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+svn_cl__shelf_shelve(apr_getopt_t *os,
+                     void *baton,
+                     apr_pool_t *pool);
+
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_save(apr_getopt_t *os,
                    void *baton,
                    apr_pool_t *pool)
@@ -852,7 +859,7 @@ svn_cl__shelf_save(apr_getopt_t *os,
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_shelve(apr_getopt_t *os,
                      void *baton,
                      apr_pool_t *pool)
@@ -890,7 +897,7 @@ svn_cl__shelf_shelve(apr_getopt_t *os,
     else
       SVN_ERR(err);
 
-      if (! opt_state->quiet)
+    if (! opt_state->quiet)
       {
         if (opt_state->keep_local)
           SVN_ERR(svn_cmdline_printf(pool,
@@ -907,7 +914,7 @@ svn_cl__shelf_shelve(apr_getopt_t *os,
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_unshelve(apr_getopt_t *os,
                        void *baton,
                        apr_pool_t *scratch_pool)
@@ -959,7 +966,7 @@ svn_cl__shelf_unshelve(apr_getopt_t *os,
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_list(apr_getopt_t *os,
                    void *baton,
                    apr_pool_t *pool)
@@ -1083,7 +1090,7 @@ shelf_list_by_paths(apr_array_header_t *target_relpaths,
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_list_by_paths(apr_getopt_t *os,
                             void *baton,
                             apr_pool_t *pool)
@@ -1103,7 +1110,7 @@ svn_cl__shelf_list_by_paths(apr_getopt_t *os,
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_diff(apr_getopt_t *os,
                    void *baton,
                    apr_pool_t *pool)
@@ -1135,7 +1142,7 @@ svn_cl__shelf_diff(apr_getopt_t *os,
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_drop(apr_getopt_t *os,
                    void *baton,
                    apr_pool_t *pool)
@@ -1173,7 +1180,7 @@ svn_cl__shelf_drop(apr_getopt_t *os,
 }
 
 /* This implements the `svn_opt_subcommand_t' interface. */
-svn_error_t *
+static svn_error_t *
 svn_cl__shelf_log(apr_getopt_t *os,
                   void *baton,
                   apr_pool_t *pool)
@@ -1207,3 +1214,192 @@ svn_cl__shelf_log(apr_getopt_t *os,
 
   return SVN_NO_ERROR;
 }
+
+/**************************************************************************/
+
+/* This implements the `svn_opt_subcommand_t' interface. */
+static svn_error_t *
+svn_cl__wc_copy_mods(apr_getopt_t *os,
+                     void *baton,
+                     apr_pool_t *pool)
+{
+  svn_client_ctx_t *ctx = ((svn_cl__cmd_baton_t *) baton)->ctx;
+  const char *src_wc_abspath, *dst_wc_abspath;
+
+  SVN_ERR(get_next_argument(&src_wc_abspath, os, pool, pool));
+  SVN_ERR(svn_dirent_get_absolute(&src_wc_abspath, src_wc_abspath, pool));
+
+  SVN_ERR(get_next_argument(&dst_wc_abspath, os, pool, pool));
+  SVN_ERR(svn_dirent_get_absolute(&dst_wc_abspath, dst_wc_abspath, pool));
+
+  SVN_ERR(svn_client__wc_copy_mods(src_wc_abspath, dst_wc_abspath,
+                                   ctx->notify_func2, ctx->notify_baton2,
+                                   ctx, pool));
+
+  return SVN_NO_ERROR;
+}
+
+const svn_opt_subcommand_desc3_t
+svn_cl__cmd_table_shelf3[] =
+{
+  { "x-shelf-diff", svn_cl__shelf_diff, {0}, {N_(
+     "Show shelved changes as a diff.\n"
+     "usage: x-shelf-diff SHELF [VERSION]\n"
+     "\n"), N_(
+     "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
+     "\n"), N_(
+     "  See also: 'svn diff --cl=svn:shelf:SHELF' which supports most options of\n"
+     "  'svn diff'.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {opt_summarize},
+  },
+
+  { "x-shelf-drop", svn_cl__shelf_drop, {0}, {N_(
+     "Delete a shelf.\n"
+     "usage: x-shelf-drop SHELF [PATH ...]\n"
+     "\n"), N_(
+     "  Delete the shelves named SHELF from the working copies containing PATH\n"
+     "  (default PATH is '.')\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+  },
+
+  { "x-shelf-list", svn_cl__shelf_list, {"x-shelves"}, {N_(
+     "List shelves.\n"
+     "usage: x-shelf-list [PATH ...]\n"
+     "\n"), N_(
+     "  List shelves for each working copy containing PATH (default is '.')\n"
+     "  Include the first line of any log message and some details about the\n"
+     "  contents of the shelf, unless '-q' is given.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', 'v'}
+  },
+
+  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {0}, {N_(
+     "List which shelf affects each path.\n"
+     "usage: x-shelf-list-by-paths [PATH...]\n"
+     "\n"), N_(
+     "  List which shelf most recently affects each path below the given PATHs.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+  },
+
+  { "x-shelf-log", svn_cl__shelf_log, {0}, {N_(
+     "Show the versions of a shelf.\n"
+     "usage: x-shelf-log SHELF [PATH...]\n"
+     "\n"), N_(
+     "  Show all versions of SHELF for each working copy containing PATH (the\n"
+     "  default PATH is '.').\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', 'v'}
+  },
+
+  { "x-shelf-save", svn_cl__shelf_save, {0}, {N_(
+     "Copy local changes onto a new version of a shelf.\n"
+     "usage: x-shelf-save SHELF [PATH...]\n"
+     "\n"), N_(
+     "  Save local changes in the given PATHs as a new version of SHELF.\n"
+     "  The shelf's log message can be set with -m, -F, etc.\n"
+     "\n"), N_(
+     "  The same as 'svn shelve --keep-local'.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', opt_dry_run,
+     opt_depth, opt_targets, opt_changelist,
+     SVN_CL__LOG_MSG_OPTIONS,
+    }
+  },
+
+  { "x-shelve", svn_cl__shelf_shelve, {0}, {N_(
+     "Move local changes onto a shelf.\n"
+     "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
+     "\n"), N_(
+     "  Save the local changes in the given PATHs to a new or existing SHELF.\n"
+     "  Revert those changes from the WC unless '--keep-local' is given.\n"
+     "  The shelf's log message can be set with -m, -F, etc.\n"
+     "\n"), N_(
+     "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
+     "\n"), N_(
+     "  The kinds of change you can shelve are committable changes to files and\n"
+     "  properties, except the following kinds which are not yet supported:\n"
+     "     * copies and moves\n"
+     "     * mkdir and rmdir\n"
+     "  Uncommittable states such as conflicts, unversioned and missing cannot\n"
+     "  be shelved.\n"
+     "\n"), N_(
+     "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
+     "\n"), N_(
+     "  Shelves are currently stored under <WC>/.svn/experimental/shelves/ .\n"
+     "  (In Subversion 1.10, shelves were stored under <WC>/.svn/shelves/ as\n"
+     "  patch files. To recover a shelf created by 1.10, either use a 1.10\n"
+     "  client to find and unshelve it, or find the patch file and use any\n"
+     "  1.10 or later 'svn patch' to apply it.)\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {'q', opt_dry_run, opt_keep_local,
+     opt_depth, opt_targets, opt_changelist,
+     SVN_CL__LOG_MSG_OPTIONS,
+    } },
+
+  { "x-unshelve", svn_cl__shelf_unshelve, {0}, {N_(
+     "Copy shelved changes back into the WC.\n"
+     "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
+     "\n"), N_(
+     "  Apply the changes stored in SHELF to the working copy.\n"
+     "  SHELF defaults to the newest shelf.\n"
+     "\n"), N_(
+     "  Apply the newest version of the shelf, by default. If VERSION is\n"
+     "  specified, apply that version and discard all versions newer than that.\n"
+     "  In any case, retain the unshelved version and versions older than that\n"
+     "  (unless --drop is specified).\n"
+     "\n"), N_(
+     "  With --drop, delete the entire shelf (like 'svn shelf-drop') after\n"
+     "  successfully unshelving with no conflicts.\n"
+     "\n"), N_(
+     "  The working files involved should be in a clean, unmodified state\n"
+     "  before using this command. To roll back to an older version of the\n"
+     "  shelf, first ensure any current working changes are removed, such as\n"
+     "  by shelving or reverting them, and then unshelve the desired version.\n"
+     "\n"), N_(
+     "  Unshelve normally refuses to apply any changes if any path involved is\n"
+     "  already modified (or has any other abnormal status) in the WC. With\n"
+     "  --force, it does not check and may error out and/or produce partial or\n"
+     "  unexpected results.\n"
+     "\n"), N_(
+     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+    {opt_drop, 'q', opt_dry_run, opt_force} },
+
+  { "x-wc-copy-mods", svn_cl__wc_copy_mods, {0}, {N_(
+     "Copy local modifications from one WC to another.\n"
+     "usage: x-wc-copy-mods SRC_WC_PATH DST_WC_PATH\n"
+     "\n"), N_(
+     "  The source and destination WC paths may be in the same WC or in different"
+     "  WCs.\n"
+     "\n"), N_(
+     "  This feature is EXPERIMENTAL. This command is likely to change\n"
+     "  in the next release, and there is no promise of backward compatibility.\n"
+    )},
+  },
+
+  { NULL, NULL, {0}, {NULL}, {0} }
+};
+

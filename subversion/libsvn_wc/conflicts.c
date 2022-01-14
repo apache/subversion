@@ -660,7 +660,7 @@ svn_wc__conflict_skel_resolve(svn_boolean_t *completely_resolved,
           /* If no conflicted property names left */
           if (!c->next->next->children)
             {
-              /* Remove the propery conflict skel from the linked list */
+              /* Remove the property conflict skel from the linked list */
              *pconflict = (*pconflict)->next;
              continue;
             }
@@ -1386,7 +1386,7 @@ generate_propconflict(svn_boolean_t *conflict_remains,
         }
       case svn_wc_conflict_choose_merged:
         {
-          if (!cdesc->merged_file 
+          if (!cdesc->merged_file
               && (!result->merged_file && !result->merged_value))
             return svn_error_create
                 (SVN_ERR_WC_CONFLICT_RESOLVER_FAILURE,
@@ -2381,7 +2381,7 @@ svn_wc__read_conflict_descriptions2_t(const apr_array_header_t **conflicts,
                                       apr_pool_t *result_pool,
                                       apr_pool_t *scratch_pool)
 {
-  return svn_wc__read_conflicts(conflicts, NULL, wc_ctx->db, local_abspath, 
+  return svn_wc__read_conflicts(conflicts, NULL, wc_ctx->db, local_abspath,
                                 FALSE, FALSE, result_pool, scratch_pool);
 }
 
@@ -2637,7 +2637,7 @@ resolve_prop_conflict_on_node(svn_boolean_t *did_resolve,
   return SVN_NO_ERROR;
 }
 
-/* 
+/*
  * Record a tree conflict resolution failure due to error condition ERR
  * in the RESOLVE_LATER hash table. If the hash table is not available
  * (meaning the caller does not wish to retry resolution later), or if
@@ -3899,7 +3899,7 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
    * cannot be modified (e.g. replaced or deleted nodes) don't count.
    * Nodes which are of a different node kind don't count either.
    * Ignore switched nodes as well, since that is an unlikely case during
-   * update/swtich/merge conflict resolution. And externals shouldn't even
+   * update/switch/merge conflict resolution. And externals shouldn't even
    * be on our candidate list in the first place.
    * If multiple candidates match these criteria, choose the one which
    * shares the longest common ancestor with the victim. */
@@ -3938,7 +3938,7 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
           status != svn_wc__db_status_added)
         continue;
 
-      if (node_kind != victim_node_kind)
+      if (victim_node_kind != svn_node_none && node_kind != victim_node_kind)
         continue;
 
       SVN_ERR(svn_wc__db_is_switched(&is_wcroot, &is_switched, NULL,
@@ -3965,8 +3965,8 @@ svn_wc__guess_incoming_move_target_nodes(apr_array_header_t **possible_targets,
         {
           insert_index = (*possible_targets)->nelts; /* append */
         }
-      svn_sort__array_insert(*possible_targets, &moved_to_abspath,
-                             insert_index);
+      SVN_ERR(svn_sort__array_insert2(*possible_targets, &moved_to_abspath,
+                                      insert_index));
     }
 
   svn_pool_destroy(iterpool);

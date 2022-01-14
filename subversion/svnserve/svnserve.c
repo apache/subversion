@@ -1349,7 +1349,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           status = apr_proc_fork(&proc, connection->pool);
           if (status == APR_INCHILD)
             {
-              /* the child would't listen to the main server's socket */
+              /* the child wouldn't listen to the main server's socket */
               apr_socket_close(sock);
 
               /* serve_socket() logs any error it returns, so ignore it. */

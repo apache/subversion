@@ -1639,7 +1639,7 @@ svn_wc__version_string_from_format(int wc_format)
       case 29: return "1.7";
       case 31: return "1.8";
 #ifdef SVN_TEST_MULTI_WC_FORMAT
-      case 32: return "1.12";
+      case 32: return "1.15";
 #endif
     }
   return _("(unreleased development version)");
@@ -1670,11 +1670,14 @@ svn_wc__format_from_version(int *format,
       case 5:  *format = 9; break;
       case 6:  *format = 10; break;
       case 7:  *format = 29; break;
-      case 8:  /* Same as 1.11.x. */
-      case 9:  /* Same as 1.11.x. */
-      case 10: /* Same as 1.11.x. */
-      case 11: *format = 31; break;
-      case 12: /* Same as the current version. */
+      case 8:  /* Same as 1.14.x. */
+      case 9:  /* Same as 1.14.x. */
+      case 10: /* Same as 1.14.x. */
+      case 11: /* Same as 1.14.x. */
+      case 12: /* Same as 1.14.x. */
+      case 13: /* Same as 1.14.x. */
+      case 14: *format = 31; break;
+      case 15: /* Same as the current version. */
       default: *format = SVN_WC__VERSION; break;
     }
 

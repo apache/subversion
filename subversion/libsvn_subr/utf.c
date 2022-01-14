@@ -72,7 +72,7 @@ typedef apr_xlate_t xlate_handle_t;
  * If there is no handle for a particular key when needed, a new is
  * handle is created and put in the cache after use.
  * This means that there will be at most N handles open for a key, where N
- * is the number of simultanous handles in use for that key. */
+ * is the number of simultaneous handles in use for that key. */
 
 typedef struct xlate_handle_node_t {
   xlate_handle_t *handle;

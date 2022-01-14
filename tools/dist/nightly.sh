@@ -21,7 +21,7 @@
 #
 set -e
 
-repo=http://svn.apache.org/repos/asf/subversion
+repo=https://svn.apache.org/repos/asf/subversion
 svn=svn
 olds=7
 

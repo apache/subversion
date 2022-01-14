@@ -65,7 +65,7 @@ public class SVNRepos implements ISVNRepos
 
     /**
      * Build the native peer
-     * @return the adress of the peer
+     * @return the address of the peer
      */
     private native long ctNative();
 
@@ -81,7 +81,7 @@ public class SVNRepos implements ISVNRepos
     public native void finalize();
 
     /**
-     * slot for the adress of the native peer. The JNI code is the only user
+     * slot for the address of the native peer. The JNI code is the only user
      * of this member
      */
     protected long cppAddr;

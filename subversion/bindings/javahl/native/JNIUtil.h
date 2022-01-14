@@ -248,7 +248,7 @@ class JNIUtil
  * A statement macro used for checking for errors, in the style of
  * SVN_ERR().
  *
- * Evalute @a expr.  If it yields an error, handle the JNI error, and
+ * Evaluate @a expr.  If it yields an error, handle the JNI error, and
  * return @a ret_val.  Otherwise, continue.
  *
  * Note that if the enclosing function returns <tt>void</tt>, @a ret_val may
@@ -329,5 +329,38 @@ class JNIUtil
       return;                                           \
     }                                                   \
   } while(0)
+
+/**
+ * If there's an exception pending, temporarily stash it away, then
+ * re-throw again in destructor. The goal is to allow some Java calls
+ * to be made despite a pending exception. For example, doing some
+ * necessary cleanup.
+ */
+class StashException
+{
+ public:
+  /*
+   * Works like stashException().
+   */
+   StashException(JNIEnv* env);
+
+  /**
+   * If there's an exception stashed, re-throws it.
+   */
+  ~StashException();
+
+  /**
+   * Check for a pending exception.
+   * If present, stash it away until this class's destructor.
+   * If another exception is already stashed, forget the _new_ one. The
+   * reason behind it is that usually the first exception is the most
+   * informative.
+   */
+  void stashException();
+
+ private:
+   JNIEnv* m_env;
+   jthrowable m_stashed;
+};
 
 #endif  // JNIUTIL_H

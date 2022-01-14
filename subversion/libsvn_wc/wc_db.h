@@ -202,6 +202,15 @@ typedef struct svn_wc__db_lock_t {
   apr_time_t date;
 } svn_wc__db_lock_t;
 
+/* Structure holding the size and timestamp values for a file.  */
+typedef struct svn_wc__db_fileinfo_t {
+  /* The time the file was last modified. */
+  apr_time_t mtime;
+
+  /* The size of this file. */
+  svn_filesize_t size;
+} svn_wc__db_fileinfo_t;
+
 
 /* ### NOTE: I have not provided docstrings for most of this file at this
    ### point in time. The shape and extent of this API is still in massive
@@ -516,6 +525,10 @@ svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
    Unless KEEP_RECORDED_INFO is set to TRUE, recorded size and timestamp values
    will be cleared.
 
+   If FILE_WRITER is not NULL, atomically complete installation of the file to
+   LOCAL_ABSPATH together with updating the DB.  If RECORD_FILEINFO is non-zero,
+   also record the size and timestamp values of the installed file.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -539,6 +552,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
+                         svn_wc__working_file_writer_t *file_writer,
+                         svn_boolean_t record_fileinfo,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
@@ -965,7 +980,7 @@ typedef struct svn_wc__db_install_data_t
 /* Open a writable stream to a temporary text base, ready for installing
    into the pristine store.  Set *STREAM to the opened stream.  The temporary
    file will have an arbitrary unique name. Return as *INSTALL_DATA a baton
-   for eiter installing or removing the file
+   for either installing or removing the file
 
    Arrange that, on stream closure, *MD5_CHECKSUM and *SHA1_CHECKSUM will be
    set to the MD-5 and SHA-1 checksums respectively of that file.
@@ -2709,6 +2724,18 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
+/* Fetch the information about the lock which corresponds to REPOS_RELPATH
+   within the working copy indicated by WRI_ABSPATH. Set *LOCK_P to NULL
+   if there is no such lock.  */
+svn_error_t *
+svn_wc__db_lock_get(svn_wc__db_lock_t **lock_p,
+                    svn_wc__db_t *db,
+                    const char *wri_abspath,
+                    const char *repos_relpath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
 /* @} */
 
 
@@ -3535,6 +3562,24 @@ svn_wc__db_find_working_nodes_with_basename(apr_array_header_t **local_abspaths,
                                             svn_node_kind_t kind,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool);
+
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * are copies of REPOS_RELPATH and have node kind KIND.
+ * If no such nodes exist, return an empty array.
+ *
+ * This function returns only paths to nodes which are present in the highest
+ * layer of the WC. In other words, paths to deleted and/or excluded nodes are
+ * never returned.
+ */
+svn_error_t *
+svn_wc__db_find_copies_of_repos_path(apr_array_header_t **local_abspaths,
+                                     svn_wc__db_t *db,
+                                     const char *wri_abspath,
+                                     const char *repos_relpath,
+                                     svn_node_kind_t kind,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 /* @} */
 
 typedef svn_error_t * (*svn_wc__db_verify_cb_t)(void *baton,

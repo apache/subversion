@@ -1650,15 +1650,11 @@ def conflict_markers_matching_eol(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
-    crlf = '\n'
+    native_nl = '\r\n'
   else:
-    crlf = '\r\n'
-
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
+    native_nl = '\n'
+  crlf = '\r\n'
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -1677,7 +1673,7 @@ def conflict_markers_matching_eol(sbox):
 
   # do the test for each eol-style
   for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
-                          [crlf, '\015', '\n', '\012']):
+                          [crlf, '\015', native_nl, '\012']):
     # rewrite file mu and set the eol-style property.
     svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
@@ -1704,8 +1700,8 @@ def conflict_markers_matching_eol(sbox):
     svntest.main.run_svn(None, 'update', wc_backup)
 
     # Make a local mod to mu
-    svntest.main.file_append(mu_path,
-                             'Original appended text for mu' + eolchar)
+    svntest.main.file_append_binary(mu_path,
+                                    'Original appended text for mu' + eolchar)
 
     # Commit the original change and note the 'theirs' revision number
     svntest.main.run_svn(None, 'commit', '-m', 'test log', wc_dir)
@@ -1713,8 +1709,9 @@ def conflict_markers_matching_eol(sbox):
     theirs_rev = cur_rev
 
     # Make a local mod to mu, will conflict with the previous change
-    svntest.main.file_append(path_backup,
-                             'Conflicting appended text for mu' + eolchar)
+    svntest.main.file_append_binary(path_backup,
+                                    'Conflicting appended text for mu'
+                                    + eolchar)
 
     # Create expected output tree for an update of the wc_backup.
     expected_backup_output = svntest.wc.State(wc_backup, {
@@ -1764,7 +1761,7 @@ def conflict_markers_matching_eol(sbox):
                                            expected_backup_output,
                                            expected_backup_disk,
                                            expected_backup_status,
-                                           keep_eol_style=keep_eol_style)
+                                           keep_eol_style=True)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -1785,15 +1782,7 @@ def update_eolstyle_handling(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
-  if os.name == 'nt':
-    crlf = '\n'
-  else:
-    crlf = '\r\n'
-
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
+  crlf = '\r\n'
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -1825,7 +1814,7 @@ def update_eolstyle_handling(sbox):
                                          expected_backup_output,
                                          expected_backup_disk,
                                          expected_backup_status,
-                                         keep_eol_style=keep_eol_style)
+                                         keep_eol_style=True)
 
   # Test 2: now change the eol-style property to another value and commit,
   # update the still changed mu in the second working copy; there should be
@@ -1851,7 +1840,7 @@ def update_eolstyle_handling(sbox):
                                          expected_backup_output,
                                          expected_backup_disk,
                                          expected_backup_status,
-                                         keep_eol_style=keep_eol_style)
+                                         keep_eol_style=True)
 
   # Test 3: now delete the eol-style property and commit, update the still
   # changed mu in the second working copy; there should be no conflict!
@@ -1876,7 +1865,7 @@ def update_eolstyle_handling(sbox):
                                          expected_backup_output,
                                          expected_backup_disk,
                                          expected_backup_status,
-                                         keep_eol_style=keep_eol_style)
+                                         keep_eol_style=True)
 
 # Bug in which "update" put a bogus revision number on a schedule-add file,
 # causing the wrong version of it to be committed.
@@ -3046,13 +3035,12 @@ def mergeinfo_update_elision(sbox):
 
   # Make a branch A/B_COPY
   expected_stdout =  verify.UnorderedOutput([
-     "A    " + sbox.ospath('A/B_COPY/lambda') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/E') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/E/alpha') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/E/beta') + "\n",
-     "A    " + sbox.ospath('A/B_COPY/F') + "\n",
-     "Checked out revision 1.\n",
      "A         " + B_COPY_path + "\n",
+     "A         " + sbox.ospath('A/B_COPY/lambda') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/E') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/E/alpha') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/E/beta') + "\n",
+     "A         " + sbox.ospath('A/B_COPY/F') + "\n",
     ])
   svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_path)
@@ -3643,10 +3631,6 @@ def update_accept_conflicts(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  # Make a backup copy of the working copy
-  wc_backup = sbox.add_wc_path('backup')
-  svntest.actions.duplicate_dir(wc_dir, wc_backup)
-
   # Make a few local mods to files which will be committed
   iota_path = sbox.ospath('iota')
   lambda_path = sbox.ospath('A/B/lambda')
@@ -3654,13 +3638,25 @@ def update_accept_conflicts(sbox):
   alpha_path = sbox.ospath('A/B/E/alpha')
   beta_path = sbox.ospath('A/B/E/beta')
   pi_path = sbox.ospath('A/D/G/pi')
+  p_i_path = sbox.ospath('A/D/G/p; i')
   rho_path = sbox.ospath('A/D/G/rho')
+
+  # Rename pi to "p; i" so we can exercise SVN_EDITOR's handling of paths with
+  # special characters
+  sbox.simple_move('A/D/G/pi', 'A/D/G/p; i')
+  sbox.simple_commit()
+  sbox.simple_update()
+
+  # Make a backup copy of the working copy
+  wc_backup = sbox.add_wc_path('backup')
+  svntest.actions.duplicate_dir(wc_dir, wc_backup)
+
   svntest.main.file_append(lambda_path, 'Their appended text for lambda\n')
   svntest.main.file_append(iota_path, 'Their appended text for iota\n')
   svntest.main.file_append(mu_path, 'Their appended text for mu\n')
   svntest.main.file_append(alpha_path, 'Their appended text for alpha\n')
   svntest.main.file_append(beta_path, 'Their appended text for beta\n')
-  svntest.main.file_append(pi_path, 'Their appended text for pi\n')
+  svntest.main.file_append(p_i_path, 'Their appended text for pi\n')
   svntest.main.file_append(rho_path, 'Their appended text for rho\n')
 
   # Make a few local mods to files which will be conflicted
@@ -3669,7 +3665,7 @@ def update_accept_conflicts(sbox):
   mu_path_backup = os.path.join(wc_backup, 'A', 'mu')
   alpha_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'alpha')
   beta_path_backup = os.path.join(wc_backup, 'A', 'B', 'E', 'beta')
-  pi_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'pi')
+  p_i_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'p; i')
   rho_path_backup = os.path.join(wc_backup, 'A', 'D', 'G', 'rho')
   svntest.main.file_append(iota_path_backup,
                            'My appended text for iota\n')
@@ -3681,7 +3677,7 @@ def update_accept_conflicts(sbox):
                            'My appended text for alpha\n')
   svntest.main.file_append(beta_path_backup,
                            'My appended text for beta\n')
-  svntest.main.file_append(pi_path_backup,
+  svntest.main.file_append(p_i_path_backup,
                            'My appended text for pi\n')
   svntest.main.file_append(rho_path_backup,
                            'My appended text for rho\n')
@@ -3693,18 +3689,19 @@ def update_accept_conflicts(sbox):
     'A/mu' : Item(verb='Sending'),
     'A/B/E/alpha': Item(verb='Sending'),
     'A/B/E/beta': Item(verb='Sending'),
-    'A/D/G/pi' : Item(verb='Sending'),
+    'A/D/G/p; i' : Item(verb='Sending'),
     'A/D/G/rho' : Item(verb='Sending'),
     })
 
-  expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
-  expected_status.tweak('iota', wc_rev=2)
-  expected_status.tweak('A/B/lambda', wc_rev=2)
-  expected_status.tweak('A/mu', wc_rev=2)
-  expected_status.tweak('A/B/E/alpha', wc_rev=2)
-  expected_status.tweak('A/B/E/beta', wc_rev=2)
-  expected_status.tweak('A/D/G/pi', wc_rev=2)
-  expected_status.tweak('A/D/G/rho', wc_rev=2)
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.tweak('iota', wc_rev=3)
+  expected_status.tweak('A/B/lambda', wc_rev=3)
+  expected_status.tweak('A/mu', wc_rev=3)
+  expected_status.tweak('A/B/E/alpha', wc_rev=3)
+  expected_status.tweak('A/B/E/beta', wc_rev=3)
+  expected_status.rename({'A/D/G/pi': 'A/D/G/p; i'})
+  expected_status.tweak('A/D/G/p; i', wc_rev=3)
+  expected_status.tweak('A/D/G/rho', wc_rev=3)
 
   # Commit.
   svntest.actions.run_and_verify_commit(wc_dir, expected_output,
@@ -3720,14 +3717,14 @@ def update_accept_conflicts(sbox):
   # Just leave the conflicts alone, since run_and_verify_svn already uses
   # the --non-interactive option.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       2, iota_path_backup),
+                                       3, iota_path_backup),
                                      [],
                                      'update', iota_path_backup)
 
   # lambda: --accept=postpone
   # Just leave the conflicts alone.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       2, lambda_path_backup),
+                                       3, lambda_path_backup),
                                      [],
                                      'update', '--accept=postpone',
                                      lambda_path_backup)
@@ -3735,7 +3732,7 @@ def update_accept_conflicts(sbox):
   # mu: --accept=base
   # Accept the pre-update base file.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       2, mu_path_backup),
+                                       3, mu_path_backup),
                                      [],
                                      'update', '--accept=base',
                                      mu_path_backup)
@@ -3743,7 +3740,7 @@ def update_accept_conflicts(sbox):
   # alpha: --accept=mine
   # Accept the user's working file.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       2, alpha_path_backup),
+                                       3, alpha_path_backup),
                                      [],
                                      'update', '--accept=mine-full',
                                      alpha_path_backup)
@@ -3751,7 +3748,7 @@ def update_accept_conflicts(sbox):
   # beta: --accept=theirs
   # Accept their file.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       2, beta_path_backup),
+                                       3, beta_path_backup),
                                      [],
                                      'update', '--accept=theirs-full',
                                      beta_path_backup)
@@ -3761,16 +3758,16 @@ def update_accept_conflicts(sbox):
   # conflicts in place, so expect a message on stderr, but expect
   # svn to exit with an exit code of 0.
   svntest.actions.run_and_verify_svn2(update_output_with_conflicts_resolved(
-                                        2, pi_path_backup),
+                                        3, p_i_path_backup),
                                       "system(.*) returned.*", 0,
                                       'update', '--accept=edit',
                                       '--force-interactive',
-                                      pi_path_backup)
+                                      p_i_path_backup)
 
   # rho: --accept=launch
   # Run the external merge tool, it should leave conflict markers in place.
   svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       2, rho_path_backup),
+                                       3, rho_path_backup),
                                      [],
                                      'update', '--accept=launch',
                                      '--force-interactive',
@@ -3782,55 +3779,57 @@ def update_accept_conflicts(sbox):
   expected_disk.tweak('iota', contents=("This is the file 'iota'.\n"
                                         '<<<<<<< .mine\n'
                                         'My appended text for iota\n'
-                                        '||||||| .r1\n'
+                                        '||||||| .r2\n'
                                         '=======\n'
                                         'Their appended text for iota\n'
-                                        '>>>>>>> .r2\n'))
+                                        '>>>>>>> .r3\n'))
   expected_disk.tweak('A/B/lambda', contents=("This is the file 'lambda'.\n"
                                               '<<<<<<< .mine\n'
                                               'My appended text for lambda\n'
-                                              '||||||| .r1\n'
+                                              '||||||| .r2\n'
                                               '=======\n'
                                               'Their appended text for lambda\n'
-                                              '>>>>>>> .r2\n'))
+                                              '>>>>>>> .r3\n'))
   expected_disk.tweak('A/mu', contents="This is the file 'mu'.\n")
   expected_disk.tweak('A/B/E/alpha', contents=("This is the file 'alpha'.\n"
                                                'My appended text for alpha\n'))
   expected_disk.tweak('A/B/E/beta', contents=("This is the file 'beta'.\n"
                                               'Their appended text for beta\n'))
-  expected_disk.tweak('A/D/G/pi', contents=("This is the file 'pi'.\n"
-                                             '<<<<<<< .mine\n'
-                                             'My appended text for pi\n'
-                                             '||||||| .r1\n'
-                                             '=======\n'
-                                             'Their appended text for pi\n'
-                                             '>>>>>>> .r2\n'
-                                             'foo\n'))
+  expected_disk.rename({'A/D/G/pi': 'A/D/G/p; i'})
+  expected_disk.tweak('A/D/G/p; i', contents=("This is the file 'pi'.\n"
+                                              '<<<<<<< .mine\n'
+                                              'My appended text for pi\n'
+                                              '||||||| .r2\n'
+                                              '=======\n'
+                                              'Their appended text for pi\n'
+                                              '>>>>>>> .r3\n'
+                                              'foo\n'))
   expected_disk.tweak('A/D/G/rho', contents=("This is the file 'rho'.\n"
                                              '<<<<<<< .mine\n'
                                              'My appended text for rho\n'
-                                             '||||||| .r1\n'
+                                             '||||||| .r2\n'
                                              '=======\n'
                                              'Their appended text for rho\n'
-                                             '>>>>>>> .r2\n'
+                                             '>>>>>>> .r3\n'
                                              'foo\n'))
 
   # Set the expected extra files for the test
-  extra_files = ['iota.*\.r1', 'iota.*\.r2', 'iota.*\.mine',
-                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine']
+  extra_files = ['iota.*\.r2', 'iota.*\.r3', 'iota.*\.mine',
+                 'lambda.*\.r2', 'lambda.*\.r3', 'lambda.*\.mine',
+                 'rho.*\.r2', 'rho.*\.r3', 'rho.*\.mine']
 
   # Set the expected status for the test
-  expected_status = svntest.actions.get_virginal_state(wc_backup, 2)
+  expected_status = svntest.actions.get_virginal_state(wc_backup, 3)
+  expected_status.rename({'A/D/G/pi': 'A/D/G/p; i'})
   expected_status.tweak('iota', 'A/B/lambda', 'A/mu',
                         'A/B/E/alpha', 'A/B/E/beta',
-                        'A/D/G/pi', 'A/D/G/rho', wc_rev=2)
+                        'A/D/G/p; i', 'A/D/G/rho', wc_rev=3)
   expected_status.tweak('iota', status='C ')
   expected_status.tweak('A/B/lambda', status='C ')
   expected_status.tweak('A/mu', status='M ')
   expected_status.tweak('A/B/E/alpha', status='M ')
   expected_status.tweak('A/B/E/beta', status='  ')
-  expected_status.tweak('A/D/G/pi', status='M ')
+  expected_status.tweak('A/D/G/p; i', status='M ')
   expected_status.tweak('A/D/G/rho', status='C ')
 
   # Set the expected output for the test
@@ -6841,20 +6840,64 @@ def update_delete_switched(sbox):
   svntest.actions.run_and_verify_update(wc_dir, None, None, expected_status,
                                         [], False, sbox.ospath('A'), '-r', 0)
 
-@XFail()
 def update_add_missing_local_add(sbox):
   "update adds missing local addition"
-  
+
   sbox.build(read_only=True)
-  
+
+  ### This used to insert an invalid workqueue item, but the issue vanished
+  ### when the update editor was changed.  Annotate this line for more info.
+
   # Note that updating 'A' to r0 doesn't reproduce this issue...
   sbox.simple_update('', revision='0')
   sbox.simple_mkdir('A')
   sbox.simple_add_text('mumumu', 'A/mu')
   os.unlink(sbox.ospath('A/mu'))
   os.rmdir(sbox.ospath('A'))
-  
+
   sbox.simple_update()
+
+# Verify that deleting an unmodified directory leaves behind any unversioned
+# items on disk
+def update_keeps_unversioned_items_in_deleted_dir(sbox):
+  "update keeps unversioned items in deleted dir"
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_rm('A/D/G')
+  sbox.simple_commit()
+
+  sbox.simple_update('', revision='1')
+
+  os.mkdir(sbox.ospath('A/D/G/unversioned-dir'))
+  svntest.main.file_write(sbox.ospath('A/D/G/unversioned.txt'),
+                          'unversioned file', 'wb')
+
+  expected_output = svntest.wc.State(wc_dir, {
+    'A/D/G' : Item(status='D '),
+    })
+
+  expected_disk = svntest.main.greek_state.copy()
+  # The unversioned items should be left behind on disk
+  expected_disk.add({
+    'A/D/G/unversioned-dir' : Item(),
+    'A/D/G/unversioned.txt' : Item('unversioned file'),
+    })
+  expected_disk.remove('A/D/G/pi')
+  expected_disk.remove('A/D/G/rho')
+  expected_disk.remove('A/D/G/tau')
+
+  expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
+  expected_status.remove('A/D/G')
+  expected_status.remove('A/D/G/pi')
+  expected_status.remove('A/D/G/rho')
+  expected_status.remove('A/D/G/tau')
+
+  svntest.actions.run_and_verify_update(wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], True)
 
 #######################################################################
 # Run the tests
@@ -6947,6 +6990,7 @@ test_list = [ None,
               missing_tmp_update,
               update_delete_switched,
               update_add_missing_local_add,
+              update_keeps_unversioned_items_in_deleted_dir,
              ]
 
 if __name__ == '__main__':

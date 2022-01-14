@@ -32,6 +32,7 @@ import fnmatch
 import re
 import subprocess
 import string
+from collections import namedtuple
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -45,6 +46,8 @@ else:
 
 import gen_base
 import ezt
+
+UserMacro = namedtuple('UserMacro', ['name', 'value'])
 
 class SVNCommonLibrary:
 
@@ -117,6 +120,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'swig',
         'perl',
         'python',
+        'py3c',
         'ruby',
         'java_sdk',
         'openssl',
@@ -124,6 +128,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
         # So optional, we don't even have any code to detect them on Windows
         'magic',
+        'macos-plist',
+        'macos-keychain',
   ]
 
   # When build.conf contains a 'when = SOMETHING' where SOMETHING is not in
@@ -146,6 +152,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.jdk_path = None
     self.junit_path = None
     self.swig_path = None
+    self.py3c_path = None
     self.vs_version = '2002'
     self.sln_version = '7.00'
     self.vcproj_version = '7.00'
@@ -161,10 +168,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     self.disable_shared = None
     self.static_apr = None
     self.static_openssl = None
+    self.shared_serf = None
     self.instrument_apr_pools = None
     self.instrument_purify_quantify = None
     self.sasl_path = None
     self.cpp_defines = []
+    self.user_macros = []
 
     # NLS options
     self.enable_nls = None
@@ -196,6 +205,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.zlib_path = val
       elif opt == '--with-swig':
         self.swig_path = val
+      elif opt == '--with-py3c':
+        self.py3c_path = val
       elif opt == '--with-sqlite':
         self.sqlite_path = val
       elif opt == '--with-sasl':
@@ -215,8 +226,12 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         self.disable_shared = 1
       elif opt == '--with-static-apr':
         self.static_apr = 1
+        self.shared_serf = 0 # Can't mix apr versions
       elif opt == '--with-static-openssl':
         self.static_openssl = 1
+      elif opt == '--with-shared-serf':
+        if not self.static_apr:
+          self.shared_serf = 1
       elif opt == '-D':
         self.cpp_defines.append(val)
       elif opt == '--vsnet-version':
@@ -264,6 +279,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
           self.vs_version = '2017'
           self.sln_version = '12.00'
           self.vcproj_version = '14.1'
+          self.vcproj_extension = '.vcxproj'
+        elif val == '2019' or val == '16':
+          self.vs_version = '2019'
+          self.sln_version = '12.00'
+          self.vcproj_version = '14.2'
           self.vcproj_extension = '.vcxproj'
         elif re.match('^20\d+$', val):
           print('WARNING: Unknown VS.NET version "%s",'
@@ -322,13 +342,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     # Swig (optional) dependencies
     if self._find_swig(show_warnings):
       self._find_perl(show_warnings)
-      self._find_python(show_warnings)
+      # py3c is required to build python bindings, show check it first
+      if self._find_py3c(show_warnings):
+        self._find_python(show_warnings)
       self._find_ruby(show_warnings)
 
   def _find_apr(self):
     "Find the APR library and version"
 
-    minimal_apr_version = (1, 3, 0)
+    minimal_apr_version = (1, 4, 0)
 
     if not self.apr_path:
       sys.stderr.write("ERROR: Use '--with-apr' option to configure APR " + \
@@ -574,9 +596,14 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     # apr-Util 0.9-1.4 compiled expat to 'xml.lib', but apr-util 1.5 switched
     # to the more common 'libexpat.lib'
-    libname = 'libexpat.lib'
-    if not os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
-      libname = 'xml.lib'
+    if os.path.exists(os.path.join(lib_dir, 'libexpat.lib')):
+      # Shared or completely static build
+      libname = 'libexpat.lib'
+    elif os.path.exists(os.path.join(lib_dir, 'libexpatMD.lib')):
+      # libexpat CMake build. static build against Multithreaded DLL CRT
+      libname = 'libexpatMD.lib'
+    else:
+        libname = 'xml.lib'
 
     version = (major, minor, patch)
     xml_version = '%d.%d.%d' % version
@@ -763,7 +790,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     if self.bdb_path:
       bdb_path = self.bdb_path
-    
+
     inc_path = os.path.join(bdb_path, 'include')
     db_h_path = os.path.join(inc_path, 'db.h')
 
@@ -1020,8 +1047,63 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     except ImportError:
       return
 
+    if sys.version_info[0] >= 3:
+      if self.swig_version < (3, 0, 10):
+        if show_warnings:
+          print("WARNING: Subversion Python bindings for Python 3 require SWIG 3.0.10 or newer")
+        return
+      if self.swig_version < (4, 0, 0):
+        opts = "-python -py3 -nofastunpack -modern"
+      else:
+        opts = "-python -py3 -nofastunpack"
+    else:
+      if not ((1, 3, 24) <= self.swig_version < (4, 0, 0)):
+        if show_warnings:
+          print("WARNING: Subversion Python bindings for Python 2 require 1.3.24 <= SWIG < 4.0.0")
+        return
+      opts = "-python -classic"
+
+    self.user_macros.append(UserMacro("SWIG_PY_OPTS", opts))
     self._libraries['python'] = SVNCommonLibrary('python', inc_dir, lib_dir, None,
                                                  sys.version.split(' ')[0])
+
+  def _find_py3c(self, show_warnings):
+    "Find the py3c library which is used in SWIG python bindings"
+    show_warnings = True
+    # Assume a default path, unless otherwise specified
+    py3c_path = "py3c"
+
+    if self.py3c_path:
+      py3c_path = self.py3c_path
+
+    py3c_path = os.path.abspath(py3c_path)
+    inc_path = os.path.join(py3c_path, 'include')
+    py3c_hdr_path = os.path.join(inc_path, 'py3c.h')
+
+    pc_path = os.path.join(py3c_path, 'py3c.pc.in')
+
+    if not os.path.isfile(py3c_hdr_path):
+      if show_warnings:
+        print('WARNING: "%s" not found' % py3c_hdr_path)
+        print('Use "--with-py3c" to configure py3c location.')
+      return False
+
+    with open(pc_path) as fp:
+      txt = fp.read()
+
+    ver_match = re.search(r'Version:\s+([0-9.]+)', txt)
+
+    if not ver_match:
+      if show_warnings:
+        print("WARNING: Failed to find version in '%s'" % pc_path)
+      return False
+
+    py3c_version = ver_match.group(1)
+
+    self._libraries['py3c'] = SVNCommonLibrary('py3c', inc_path, None,
+                                               None, py3c_version)
+
+    return True
 
   def _find_jdk(self, show_warnings):
     "Find details about an installed jdk"
@@ -1073,7 +1155,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       outfp = subprocess.Popen([os.path.join(jdk_path, 'bin', 'javac.exe'),
                                '-version'], stdout=subprocess.PIPE,
                                stderr=subprocess.STDOUT).stdout
-      line = outfp.read()
+      line = outfp.read().decode('utf8')
       if line:
         vermatch = re.search(r'(([0-9]+(\.[0-9]+)+)(_[._0-9]+)?)', line, re.M)
       else:
@@ -1131,7 +1213,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     try:
       fp = subprocess.Popen([self.swig_exe, '-version'],
                             stdout=subprocess.PIPE).stdout
-      txt = fp.read()
+      txt = fp.read().decode('utf8')
       if txt:
         vermatch = re.search(r'^SWIG\ Version\ (\d+)\.(\d+)\.(\d+)', txt, re.M)
       else:
@@ -1159,7 +1241,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     try:
       fp = subprocess.Popen([self.swig_exe, '-swiglib'],
                             stdout=subprocess.PIPE).stdout
-      lib_dir = fp.readline().strip()
+      lib_dir = fp.readline().decode('utf8').strip()
       fp.close()
     except OSError:
       lib_dir = None
@@ -1262,6 +1344,9 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       lib_name = 'serf-%d.lib' % (serf_ver_maj,)
     else:
       lib_name = 'serf.lib'
+    
+    if self.shared_serf:
+      lib_name = 'lib' + lib_name
 
     defines = ['SVN_HAVE_SERF', 'SVN_LIBSVN_RA_LINKS_RA_SERF']
 

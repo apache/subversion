@@ -58,7 +58,7 @@ delta_handler(svn_txdelta_window_t *window, void *baton)
   return SVN_NO_ERROR;
 }
 
-/* Implementes svn_file_rev_handler_t */
+/* Implements svn_file_rev_handler_t */
 static svn_error_t *
 file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                  apr_hash_t *rev_props,

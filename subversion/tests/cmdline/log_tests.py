@@ -2094,7 +2094,7 @@ def merge_sensitive_log_copied_path_inherited_mergeinfo(sbox):
   svntest.main.run_svn(None, 'move', old_gamma_path, new_gamma_path)
   sbox.simple_commit(message='Move file')
 
-  # 'svn log -g --stop-on-copy ^/A/C/gamma' hould return *only* r5
+  # 'svn log -g --stop-on-copy ^/A/C/gamma' should return *only* r5
   # Previously this test failed because the change in gamma's inherited
   # mergeinfo between r4 and r5, due to the move, was understood as a merge:
   #
@@ -2779,6 +2779,42 @@ def log_on_deleted_deep(sbox):
                                      '',
                                      '-q', '-c', '1-2')
 
+@XFail()
+@Issue(4711)
+def log_with_merge_history_and_search(sbox):
+  "log --use-merge-history --search"
+  
+  sbox.build()
+
+  # r2: create branch
+  sbox.simple_repo_copy('A', 'A2') # r2
+
+  # r3: mod in trunk
+  sbox.simple_append('A/mu', 'line 2')
+  sbox.simple_commit(message='r3: mod')
+  sbox.simple_update()
+
+  # r4: merge
+  svntest.main.run_svn(None, 'merge', sbox.repo_url + '/A', sbox.ospath('A2'))
+  sbox.simple_commit(message='r4: merge')
+  sbox.simple_update()
+
+  # Helper function
+  def count(haystack, needle):
+    """Return the number of times the string NEEDLE occurs in the string
+    HAYSTACK."""
+    return len(haystack.split(needle)) - 1
+
+  # Check the output is valid
+  # ### Since the test is currently XFail, we only smoke test the output.
+  # ### When fixing this test to PASS, extend this validation.
+  _, output, _ = svntest.main.run_svn(None, 'log', '--xml', '-g',
+                                      '--search', "this will have no matches",
+                                      sbox.ospath('A2'))
+
+  output = '\n'.join(output)
+  if count(output, "<logentry") != count(output, "</logentry"):
+    raise svntest.Failure("Apparently invalid XML in " + repr(output))
 
 ########################################################################
 # Run the tests
@@ -2830,6 +2866,7 @@ test_list = [ None,
               merge_sensitive_log_xml_reverse_merges,
               log_revision_move_copy,
               log_on_deleted_deep,
+              log_with_merge_history_and_search,
              ]
 
 if __name__ == '__main__':

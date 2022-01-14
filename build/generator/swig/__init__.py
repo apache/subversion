@@ -62,7 +62,7 @@ class Generator:
     if os.access(self.swig_path, os.X_OK):
       # ### TODO: What's the reason for this os.access() check?  It was added
       # ### in r873265 (== r33191).
-      self.swig_libdir = subprocess.check_output([self.swig_path, "-swiglib"]).strip()
+      self.swig_libdir = subprocess.check_output([self.swig_path, "-swiglib"]).decode('utf8').strip()
     else:
       self.swig_libdir = None
 
@@ -71,7 +71,7 @@ class Generator:
     """Get the version number of SWIG"""
 
     if not self._swigVersion:
-      swig_version = subprocess.check_output([self.swig_path, "-version"])
+      swig_version = subprocess.check_output([self.swig_path, "-version"]).decode('utf8')
       m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
       if m:
         self._swigVersion = tuple(map(int, m.groups()))

@@ -23,22 +23,25 @@ dnl SVN_LIB_MACHO_ITERATE
 dnl Check for _dyld_image_name and _dyld_image_header availability
 AC_DEFUN(SVN_LIB_MACHO_ITERATE,
 [
-  AC_MSG_CHECKING([for Mach-O dynamic module iteration functions])
-  AC_RUN_IFELSE([AC_LANG_PROGRAM([[
-    #include <mach-o/dyld.h>
-    #include <mach-o/loader.h>
-  ]],[[
-    const struct mach_header *header = _dyld_get_image_header(0);
-    const char *name = _dyld_get_image_name(0);
-    if (name && header) return 0;
-    return 1;
-  ]])],[
+  AC_CACHE_CHECK([for Mach-O dynamic module iteration functions],
+    [ac_cv_mach_o_dynamic_module_iteration_works], [
+    AC_RUN_IFELSE([AC_LANG_PROGRAM([[
+      #include <mach-o/dyld.h>
+      #include <mach-o/loader.h>
+    ]],[[
+      const struct mach_header *header = _dyld_get_image_header(0);
+      const char *name = _dyld_get_image_name(0);
+      if (name && header) return 0;
+      return 1;
+    ]])],
+    [ac_cv_mach_o_dynamic_module_iteration_works=yes],
+    [ac_cv_mach_o_dynamic_module_iteration_works=no],
+    [ac_cv_mach_o_dynamic_module_iteration_works=no])
+  ])
+  if test "$ac_cv_mach_o_dynamic_module_iteration_works" = yes; then
     AC_DEFINE([SVN_HAVE_MACHO_ITERATE], [1],
               [Is Mach-O low-level _dyld API available?])
-    AC_MSG_RESULT([yes])
-  ],[
-    AC_MSG_RESULT([no])
-  ])
+  fi
 ])
 
 dnl SVN_LIB_MACOS_PLIST
@@ -55,19 +58,8 @@ AC_DEFUN(SVN_LIB_MACOS_PLIST,
     #error ProperyList API unavailable.
     #endif
   ]],[[]])],[
-    dnl ### Hack.  We should only need to pass the -framework options when
-    dnl linking libsvn_subr, since it is the only library that uses Keychain.
-    dnl
-    dnl Unfortunately, libtool 1.5.x doesn't track transitive dependencies for
-    dnl OS X frameworks like it does for normal libraries, so we need to
-    dnl explicitly pass the option to all the users of libsvn_subr to allow
-    dnl static builds to link successfully.
-    dnl
-    dnl This does mean that all executables we link will be linked directly
-    dnl to these frameworks - even when building shared libraries - but that
-    dnl shouldn't cause any problems.
-
-    LIBS="$LIBS -framework CoreFoundation"
+    SVN_MACOS_PLIST_LIBS="-framework CoreFoundation"
+    AC_SUBST(SVN_MACOS_PLIST_LIBS)
     AC_DEFINE([SVN_HAVE_MACOS_PLIST], [1],
               [Is Mac OS property list API available?])
     AC_MSG_RESULT([yes])
@@ -97,9 +89,8 @@ AC_DEFUN(SVN_LIB_MACOS_KEYCHAIN,
       #error KeyChain API unavailable.
       #endif
     ]],[[]])],[
-      dnl ### Hack, see SVN_LIB_MACOS_PLIST
-      LIBS="$LIBS -framework Security"
-      LIBS="$LIBS -framework CoreServices"
+      SVN_MACOS_KEYCHAIN_LIBS="-framework Security -framework CoreServices"
+      AC_SUBST(SVN_MACOS_KEYCHAIN_LIBS)
       AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
       AC_MSG_RESULT([yes])
     ],[

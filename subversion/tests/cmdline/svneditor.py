@@ -1,4 +1,3 @@
-#!/usr/bin/env python
 #
 #  svneditor.py: a mock $SVN_EDITOR for the Subversion test suite
 #

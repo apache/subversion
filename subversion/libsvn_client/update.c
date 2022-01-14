@@ -96,7 +96,7 @@ svn_client__dirent_fetcher(void *baton,
    folder. ANCHOR_ABSPATH is the w/c root and LOCAL_ABSPATH will still
    be considered empty, if it is equal to ANCHOR_ABSPATH and only
    contains the admin sub-folder.
-   If the w/c folder already exists but cannot be openend, we return
+   If the w/c folder already exists but cannot be opened, we return
    "unclean" - just in case. Most likely, the caller will have to bail
    out later due to the same error we got here.
  */

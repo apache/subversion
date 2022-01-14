@@ -39,8 +39,15 @@
 
 #include <apr.h>                /* for STDIN_FILENO */
 #include <apr_errno.h>          /* for apr_strerror */
+#include <apr_version.h>
+#if APR_VERSION_AT_LEAST(1,5,0)
+#include <apr_escape.h>
+#else
+#include "private/svn_dep_compat.h"
+#endif
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
 #include <apr_strings.h>        /* for apr_snprintf */
+#include <apr_env.h>            /* for apr_env_get */
 #include <apr_pools.h>
 #include <apr_signal.h>
 
@@ -73,7 +80,7 @@
 
 #if defined(WIN32) && defined(_MSC_VER) && (_MSC_VER < 1400)
 /* Before Visual Studio 2005, the C runtime didn't handle encodings for the
-   for the stdio output handling. */
+   stdio output handling. */
 #define CMDLINE_USE_CUSTOM_ENCODING
 
 /* The stdin encoding. If null, it's the same as the native encoding. */
@@ -1233,39 +1240,85 @@ svn_cmdline__be_interactive(svn_boolean_t non_interactive,
 }
 
 
-/* Helper for the next two functions.  Set *EDITOR to some path to an
-   editor binary.  Sources to search include: the EDITOR_CMD argument
-   (if not NULL), $SVN_EDITOR, the runtime CONFIG variable (if CONFIG
+/* Helper for the edit_externally functions.  Set *EDITOR to some path to an
+   editor binary, in native C string on Unix/Linux platforms and in UTF-8
+   string on Windows platform.  Sources to search include: the EDITOR_CMD
+   argument (if not NULL), $SVN_EDITOR, the runtime CONFIG variable (if CONFIG
    is not NULL), $VISUAL, $EDITOR.  Return
    SVN_ERR_CL_NO_EXTERNAL_EDITOR if no binary can be found. */
 static svn_error_t *
 find_editor_binary(const char **editor,
                    const char *editor_cmd,
-                   apr_hash_t *config)
+                   apr_hash_t *config,
+                   apr_pool_t *pool)
 {
   const char *e;
+  const char *e_cfg;
   struct svn_config_t *cfg;
+  apr_status_t status;
 
   /* Use the editor specified on the command line via --editor-cmd, if any. */
+#ifdef WIN32
+  /* On Windows, editor_cmd is transcoded to the system active code page
+     because we use main() as a entry point without APR's (or our own) wrapper
+     in command line tools. */
+  if (editor_cmd)
+    {
+      SVN_ERR(svn_utf_cstring_to_utf8(&e, editor_cmd, pool));
+    }
+  else
+    {
+      e = NULL;
+    }
+#else
   e = editor_cmd;
+#endif
 
   /* Otherwise look for the Subversion-specific environment variable. */
   if (! e)
-    e = getenv("SVN_EDITOR");
+    {
+      status = apr_env_get((char **)&e, "SVN_EDITOR", pool);
+      if (status || ! *e)
+        {
+           e = NULL;
+        }
+    }
 
   /* If not found then fall back on the config file. */
   if (! e)
     {
       cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
-      svn_config_get(cfg, &e, SVN_CONFIG_SECTION_HELPERS,
+      svn_config_get(cfg, &e_cfg, SVN_CONFIG_SECTION_HELPERS,
                      SVN_CONFIG_OPTION_EDITOR_CMD, NULL);
+#ifdef WIN32
+      if (e_cfg)
+        {
+          /* On Windows, we assume that config values are set in system active
+             code page, so we need transcode it here. */
+          SVN_ERR(svn_utf_cstring_to_utf8(&e, e_cfg, pool));
+        }
+#else
+      e = e_cfg;
+#endif
     }
 
   /* If not found yet then try general purpose environment variables. */
   if (! e)
-    e = getenv("VISUAL");
+    {
+      status = apr_env_get((char**)&e, "VISUAL", pool);
+      if (status || ! *e)
+        {
+           e = NULL;
+        }
+    }
   if (! e)
-    e = getenv("EDITOR");
+    {
+      status = apr_env_get((char**)&e, "EDITOR", pool);
+      if (status || ! *e)
+        {
+           e = NULL;
+        }
+    }
 
 #ifdef SVN_CLIENT_EDITOR
   /* If still not found then fall back on the hard-coded default. */
@@ -1299,6 +1352,98 @@ find_editor_binary(const char **editor,
   return SVN_NO_ERROR;
 }
 
+/* Wrapper around apr_pescape_shell() which also escapes whitespace. */
+static const char *
+escape_path(apr_pool_t *pool, const char *orig_path)
+{
+  apr_size_t len, esc_len;
+  apr_status_t status;
+
+  len = strlen(orig_path);
+  esc_len = 0;
+
+  status = apr_escape_shell(NULL, orig_path, len, &esc_len);
+
+  if (status == APR_NOTFOUND)
+    {
+      /* No special characters found by APR, so just surround it in double
+         quotes in case there is whitespace, which APR (as of 1.6.5) doesn't
+         consider special. */
+      return apr_psprintf(pool, "\"%s\"", orig_path);
+    }
+  else
+    {
+#ifdef WIN32
+      const char *p;
+      /* Following the advice from
+         https://docs.microsoft.com/en-us/archive/blogs/twistylittlepassagesallalike/everyone-quotes-command-line-arguments-the-wrong-way
+         1. Surround argument with double-quotes
+         2. Escape backslashes, if they're followed by a double-quote, and double-quotes
+         3. Escape any metacharacter, including double-quotes, with ^ */
+
+      /* Use APR's buffer size as an approximation for how large the escaped
+         string should be, plus 4 bytes for the leading/trailing ^" */
+      svn_stringbuf_t *buf = svn_stringbuf_create_ensure(esc_len + 4, pool);
+      svn_stringbuf_appendcstr(buf, "^\"");
+      for (p = orig_path; *p; p++)
+        {
+          int nr_backslash = 0;
+          while (*p && *p == '\\')
+            {
+              nr_backslash++;
+              p++;
+            }
+
+          if (!*p)
+            /* We've reached the end of the argument, so we need 2n backslash
+               characters.  That will be interpreted as n backslashes and the
+               final double-quote character will be interpreted as the final
+               string delimiter. */
+            svn_stringbuf_appendfill(buf, '\\', nr_backslash * 2);
+          else if (*p == '"')
+            {
+              /* Double-quote as part of the argument means we need to double
+                 any preceding backslashes and then add one to escape the
+                 double-quote. */
+              svn_stringbuf_appendfill(buf, '\\', nr_backslash * 2 + 1);
+              svn_stringbuf_appendbyte(buf, '^');
+              svn_stringbuf_appendbyte(buf, *p);
+            }
+          else
+            {
+              /* Since there's no double-quote, we just insert any backslashes
+                 literally.  No escaping needed. */
+              svn_stringbuf_appendfill(buf, '\\', nr_backslash);
+              if (strchr("()%!^<>&|", *p))
+                svn_stringbuf_appendbyte(buf, '^');
+              svn_stringbuf_appendbyte(buf, *p);
+            }
+        }
+      svn_stringbuf_appendcstr(buf, "^\"");
+      return buf->data;
+#else
+      char *path, *p, *esc_path;
+
+      /* Account for whitespace, since APR doesn't */
+      for (p = (char *)orig_path; *p; p++)
+        if (strchr(" \t\n\r", *p))
+          esc_len++;
+
+      path = apr_pcalloc(pool, esc_len);
+      apr_escape_shell(path, orig_path, len, NULL);
+
+      p = esc_path = apr_pcalloc(pool, len + esc_len + 1);
+      while (*path)
+        {
+          if (strchr(" \t\n\r", *path))
+            *p++ = '\\';
+          *p++ = *path++;
+        }
+
+      return esc_path;
+#endif
+    }
+}
 
 svn_error_t *
 svn_cmdline__edit_file_externally(const char *path,
@@ -1307,13 +1452,17 @@ svn_cmdline__edit_file_externally(const char *path,
                                   apr_pool_t *pool)
 {
   const char *editor, *cmd, *base_dir, *file_name, *base_dir_apr;
+  const char *file_name_local;
+#ifdef WIN32
+  const WCHAR *wcmd;
+#endif
   char *old_cwd;
   int sys_err;
   apr_status_t apr_err;
 
   svn_dirent_split(&base_dir, &file_name, path, pool);
 
-  SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
+  SVN_ERR(find_editor_binary(&editor, editor_cmd, config, pool));
 
   apr_err = apr_filepath_get(&old_cwd, APR_FILEPATH_NATIVE, pool);
   if (apr_err)
@@ -1330,8 +1479,18 @@ svn_cmdline__edit_file_externally(const char *path,
     return svn_error_wrap_apr
       (apr_err, _("Can't change working directory to '%s'"), base_dir);
 
-  cmd = apr_psprintf(pool, "%s %s", editor, file_name);
+  SVN_ERR(svn_path_cstring_from_utf8(&file_name_local,
+                                     escape_path(pool, file_name), pool));
+  /* editor is explicitly documented as being interpreted by the user's shell,
+     and as such should already be quoted/escaped as needed. */
+#ifndef WIN32
+  cmd = apr_psprintf(pool, "%s %s", editor, file_name_local);
   sys_err = system(cmd);
+#else
+  cmd = apr_psprintf(pool, "\"%s %s\"", editor, file_name_local);
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&wcmd, cmd, NULL, pool));
+  sys_err = _wsystem(wcmd);
+#endif
 
   apr_err = apr_filepath_set(old_cwd, pool);
   if (apr_err)
@@ -1340,10 +1499,16 @@ svn_cmdline__edit_file_externally(const char *path,
                       stderr, TRUE /* fatal */, "svn: ");
 
   if (sys_err)
-    /* Extracting any meaning from sys_err is platform specific, so just
-       use the raw value. */
-    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                             _("system('%s') returned %d"), cmd, sys_err);
+    {
+      const char *cmd_utf8;
+
+      /* Extracting any meaning from sys_err is platform specific, so just
+         use the raw value. */
+      SVN_ERR(svn_path_cstring_to_utf8(&cmd_utf8, cmd, pool));
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                               _("system('%s') returned %d"),
+                               cmd_utf8, sys_err);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1363,6 +1528,9 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
 {
   const char *editor;
   const char *cmd;
+#ifdef WIN32
+  const WCHAR *wcmd;
+#endif
   apr_file_t *tmp_file;
   const char *tmpfile_name;
   const char *tmpfile_native;
@@ -1376,7 +1544,7 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
   int sys_err;
   svn_boolean_t remove_file = TRUE;
 
-  SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
+  SVN_ERR(find_editor_binary(&editor, editor_cmd, config, pool));
 
   /* Convert file contents from UTF-8/LF if desired. */
   if (as_text)
@@ -1486,10 +1654,18 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     goto cleanup;
 
   /* Prepare the editor command line.  */
-  err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
+  err = svn_path_cstring_from_utf8(&tmpfile_native,
+                                   escape_path(pool, tmpfile_name), pool);
   if (err)
     goto cleanup;
+
+  /* editor is explicitly documented as being interpreted by the user's shell,
+     and as such should already be quoted/escaped as needed. */
+#ifndef WIN32
   cmd = apr_psprintf(pool, "%s %s", editor, tmpfile_native);
+#else
+  cmd = apr_psprintf(pool, "\"%s %s\"", editor, tmpfile_native);
+#endif
 
   /* If the caller wants us to leave the file around, return the path
      of the file we'll use, and make a note not to destroy it.  */
@@ -1500,13 +1676,22 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     }
 
   /* Now, run the editor command line.  */
+#ifndef WIN32
   sys_err = system(cmd);
+#else
+  SVN_ERR(svn_utf__win32_utf8_to_utf16(&wcmd, cmd, NULL, pool));
+  sys_err = _wsystem(wcmd);
+#endif
   if (sys_err != 0)
     {
+      const char *cmd_utf8;
+
       /* Extracting any meaning from sys_err is platform specific, so just
          use the raw value. */
+      SVN_ERR(svn_path_cstring_to_utf8(&cmd_utf8, cmd, pool));
       err =  svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                               _("system('%s') returned %d"), cmd, sys_err);
+                               _("system('%s') returned %d"),
+                               cmd_utf8, sys_err);
       goto cleanup;
     }
 

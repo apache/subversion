@@ -1183,7 +1183,7 @@ svn_repos_create(svn_repos_t **repos_p,
   if ((err = svn_fs_create2(&repos->fs, repos->db_path, fs_config,
                             result_pool, scratch_pool)))
     {
-      /* If there was an error making the filesytem, e.g. unknown/supported
+      /* If there was an error making the filesystem, e.g. unknown/supported
        * filesystem type.  Clean up after ourselves.  Yes this is safe because
        * create_repos_structure will fail if the path existed before we started
        * so we can't accidentally remove a directory that previously existed.
@@ -1452,7 +1452,7 @@ svn_repos_upgrade2(const char *path,
   if (notify_func)
     {
       /* We notify *twice* here, because there are two different logistical
-         actions occuring. */
+         actions occurring. */
       svn_repos_notify_t *notify = svn_repos_notify_create(
                                     svn_repos_notify_mutex_acquired, subpool);
       notify_func(notify_baton, notify, subpool);
@@ -1702,7 +1702,7 @@ svn_repos_recover4(const char *path,
   if (notify_func)
     {
       /* We notify *twice* here, because there are two different logistical
-         actions occuring. */
+         actions occurring. */
       svn_repos_notify_t *notify = svn_repos_notify_create(
                                     svn_repos_notify_mutex_acquired, subpool);
       notify_func(notify_baton, notify, subpool);

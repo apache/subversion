@@ -36,6 +36,8 @@
 ######################################################################
 
 import sys, os, getopt, stat, re, time, shutil, subprocess
+import locale
+import functools
 
 ######################################################################
 # Global Settings
@@ -193,7 +195,7 @@ def comparator(a, b):
     if not inca:
       return -1
     elif not incb:
-      return 1;
+      return 1
     elif (int(inca) < int(incb)):
       return -1
     else:
@@ -203,10 +205,18 @@ def get_youngest_revision():
   """Examine the repository REPO_DIR using the svnlook binary
   specified by SVNLOOK, and return the youngest revision."""
 
-  p = subprocess.Popen([svnlook, 'youngest', '--', repo_dir],
-                       stdin=subprocess.PIPE,
-                       stdout=subprocess.PIPE,
-                       stderr=subprocess.PIPE)
+  if b'' == '':
+    p = subprocess.Popen([svnlook, 'youngest', '--', repo_dir],
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE)
+  else:
+    p = subprocess.Popen([svnlook, 'youngest', '--', repo_dir],
+                         stdin=subprocess.PIPE,
+                         stdout=subprocess.PIPE,
+                         stderr=subprocess.PIPE,
+                         errors='backslashreplace', # foolproof
+                         encoding=locale.getpreferredencoding())
   infile, outfile, errfile = p.stdin, p.stdout, p.stderr
 
   stdout_lines = outfile.readlines()
@@ -255,7 +265,7 @@ regexp = re.compile("^" + re.escape(repo) + "-" + re.escape(youngest) +
 directory_list = os.listdir(backup_dir)
 young_list = [x for x in directory_list if regexp.search(x)]
 if young_list:
-  young_list.sort(comparator)
+  young_list.sort(key = functools.cmp_to_key(comparator))
   increment = regexp.search(young_list.pop()).groupdict()['increment']
   if increment:
     backup_subdir = os.path.join(backup_dir, repo + "-" + youngest + "-"
@@ -348,7 +358,7 @@ if num_backups > 0:
   regexp = re.compile("^" + re.escape(repo) + "-[0-9]+(-[0-9]+)?" + ext_re + "$")
   directory_list = os.listdir(backup_dir)
   old_list = [x for x in directory_list if regexp.search(x)]
-  old_list.sort(comparator)
+  old_list.sort(key = functools.cmp_to_key(comparator))
   del old_list[max(0,len(old_list)-num_backups):]
   for item in old_list:
     old_backup_item = os.path.join(backup_dir, item)

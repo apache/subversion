@@ -587,7 +587,7 @@ unparse_dir_entry(svn_fs_dirent_t *dirent,
                       : sizeof(SVN_FS_FS__KIND_DIR);
   apr_size_t value_len = type_len + id_str->len;
 
-  /* A buffer with sufficient space for 
+  /* A buffer with sufficient space for
    * - both string lines
    * - 4 newlines
    * - 2 lines K/V lines containing a number each
@@ -3713,7 +3713,7 @@ promote_cached_directories(svn_fs_t *fs,
 
       /* Currently, the entry for KEY - if it still exists - is marked
        * as "stale" and would not be used.  Mark it as current for in-
-       * revison data. */
+       * revision data. */
       SVN_ERR(svn_cache__set_partial(ffd->dir_cache, key,
                                      svn_fs_fs__reset_txn_filesize, NULL,
                                      iterpool));

@@ -50,6 +50,12 @@ extern "C" {
 apr_status_t svn_swig_py_initialize(void);
 
 
+/* Returns the provided python object as a FILE *object.
+ * Return the underlying FILE or NULL if the object is not a File instance.
+ */
+FILE *svn_swig_py_as_file(PyObject *pyfile);
+
+
 
 /* Functions to manage python's global interpreter lock */
 void svn_swig_py_release_py_lock(void);
@@ -92,15 +98,33 @@ int svn_swig_py_convert_ptr(PyObject *input, void **obj, swig_type_info *type);
 
 /* Wrapper for SWIG_MustGetPtr */
 void *svn_swig_py_must_get_ptr(void *input, swig_type_info *type, int argnum);
+
 
 /*** Functions to expose a custom SubversionException ***/
 
-/* raise a subversion exception, created from a normal subversion
-   error.  consume the error.  */
+/* Get a SubversionException class object and its instance built from
+   error_chain, but do not raise it immediately.  Consume the
+   error_chain.  */
+void svn_swig_py_build_svn_exception(
+    PyObject **exc_class, PyObject **exc_ob, svn_error_t *error_chain);
+
+/* Raise a SubversionException, created from a normal subversion
+   error.  Consume the error.  */
 void svn_swig_py_svn_exception(svn_error_t *err);
 
 
 
+/* Function to get char * representation of bytes/str object. This is
+   the replacement of typemap(in, parse="s") and typemap(in, parse="z")
+   to accept both of bytes object and str object, and it assumes to be
+   used from those typemaps only.
+   Note: type of return value should be char const *, however, as SWIG
+   produces variables for C function without 'const' modifier, to avoid
+   ton of cast in SWIG produced C code we drop it from return value
+   types as well  */
+char *svn_swig_py_string_to_cstring(PyObject *input, int maybe_null,
+                                    const char * funcsym, const char * argsym);
+
 /* helper function to convert an apr_hash_t* (char* -> svnstring_t*) to
    a Python dict */
 PyObject *svn_swig_py_prophash_to_dict(apr_hash_t *hash);
@@ -226,7 +250,10 @@ svn_swig_py_seq_to_array(PyObject *seq,
                          apr_pool_t *pool);
 
 /* An svn_swig_py_object_unwrap_t that extracts a char pointer from a Python
-   string. */
+   string.
+
+   Note the lifetime of the returned string is tied to the provided Python
+   object. */
 int
 svn_swig_py_unwrap_string(PyObject *source,
                           void *destination,
@@ -292,6 +319,13 @@ void svn_swig_py_notify_func2(void *baton,
 void svn_swig_py_status_func(void *baton,
                              const char *path,
                              svn_wc_status_t *status);
+
+/* a client status function that executes a Python function that is passed in
+   via the baton argument */
+svn_error_t *svn_swig_py_client_status_func(void *baton,
+                                            const char *path,
+                                            const svn_client_status_t *status,
+                                            apr_pool_t *scratch_pool);
 
 /* a svn_delta_path_driver callback that executes a Python function
   that is passed in via the baton argument */

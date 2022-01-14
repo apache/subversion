@@ -141,7 +141,7 @@ list_receiver(const char *path,
     }
 
   SVN_ERR(maybe_send_header(b));
- 
+
   /* If we need to close the element, then send the attributes
      that apply to all changed items and then close the element. */
   SVN_ERR(dav_svn__brigade_printf(b->bb, b->output,
@@ -161,7 +161,7 @@ list_receiver(const char *path,
 
   /* In general APR will flush the brigade every 8000 bytes through the filter
      stack, but log items may not be generated that fast, especially in
-     combination with authz and busy servers. We now explictly flush after
+     combination with authz and busy servers. We now explicitly flush after
      direntry 4, 16, 64 and 256 to produce a few results fast.
 
      This introduces 4 full flushes of our brigade and the installed output
@@ -201,7 +201,7 @@ dav_svn__list_report(const dav_resource *resource,
   dav_svn__authz_read_baton arb;
   const dav_svn_repos *repos = resource->info->repos;
   int ns;
-  const char *full_path;
+  const char *full_path = NULL;
   svn_boolean_t path_info_only;
   svn_fs_root_t *root;
   svn_depth_t depth = svn_depth_unknown;
@@ -278,6 +278,12 @@ dav_svn__list_report(const dav_resource *resource,
             lrb.dirent_fields |= SVN_DIRENT_ALL;
         }
       /* else unknown element; skip it */
+    }
+
+  if (! full_path)
+    {
+      return dav_svn__new_error_svn(resource->pool, HTTP_BAD_REQUEST, 0, 0,
+                                    "Request was missing the path argument");
     }
 
   /* Build authz read baton */

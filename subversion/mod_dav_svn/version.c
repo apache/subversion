@@ -185,7 +185,7 @@ get_option(const dav_resource *resource,
   svn_version_t *master_version = dav_svn__get_master_version(r);
 
   /* These capabilities are used during commit and when configured as
-     a WebDAV slave (SVNMasterURI is set) their availablity should
+     a WebDAV slave (SVNMasterURI is set) their availability should
      depend on the master version (SVNMasterVersion is set) if it is
      older than our own version.  Also, although SVNDIFF1 is available
      before 1.10 none of those earlier servers advertised it so for
@@ -354,7 +354,7 @@ get_option(const dav_resource *resource,
         }
     }
 
-  /* Report commit capabilites. */
+  /* Report commit capabilities. */
   for (i = 0; i < sizeof(capabilities)/sizeof(capabilities[0]); ++i)
     {
       /* If a master version is declared filter out unsupported

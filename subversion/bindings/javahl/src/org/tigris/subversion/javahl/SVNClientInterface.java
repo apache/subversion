@@ -27,7 +27,7 @@ import java.io.OutputStream;
 import java.util.Map;
 
 /**
- * This interface is the commom interface for all subversion
+ * This interface is the common interface for all subversion
  * operations. It is implemented by SVNClient and SVNClientSynchronized
  */
 public interface SVNClientInterface
@@ -47,7 +47,7 @@ public interface SVNClientInterface
      * @return The name of the working copy's administrative
      * directory, which is usually <code>.svn</code>.
      * @see <a
-     * href="http://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt">
+     * href="https://svn.apache.org/repos/asf/subversion/trunk/notes/asp-dot-net-hack.txt">
      * Instructions on changing this as a work-around for the behavior of
      * ASP.Net on Windows.</a>
      * @since 1.3
@@ -107,7 +107,7 @@ public interface SVNClientInterface
      * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteresting (unchanged) files.
-     * @param noIgnore  get status for normaly ignored files and directories.
+     * @param noIgnore  get status for normally ignored files and directories.
      * @return Array of Status entries.
      * @deprecated Use {@link #status(String, int, boolean, boolean,
      *                                boolean, boolean, StatusCallback)}
@@ -124,7 +124,7 @@ public interface SVNClientInterface
      * @param descend   Recurse into subdirectories if they exist.
      * @param onServer  Request status information from server.
      * @param getAll    get status for uninteresting (unchanged) files.
-     * @param noIgnore  get status for normaly ignored files and directories.
+     * @param noIgnore  get status for normally ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
      * @return Array of Status entries.
      * @deprecated Use {@link #status(String, int, boolean, boolean,
@@ -143,7 +143,7 @@ public interface SVNClientInterface
      * @param depth       How deep to recurse into subdirectories.
      * @param onServer    Request status information from server.
      * @param getAll      get status for uninteresting (unchanged) files.
-     * @param noIgnore    get status for normaly ignored files and directories.
+     * @param noIgnore    get status for normally ignored files and directories.
      * @param ignoreExternals if externals are ignored during status
      * @param changelists changelists to filter by
      * @since 1.5
@@ -931,7 +931,7 @@ public interface SVNClientInterface
      * @param depth     depth to traverse into subdirectories
      * @param noIgnore  whether to add files matched by ignore patterns
      * @param ignoreUnknownNodeTypes whether to ignore files which
-     *                  the node type is not konwn, just as pipes
+     *                  the node type is not known, just as pipes
      * @param revpropTable A string-to-string mapping of revision properties
      *                     to values which will be set if this operation
      *                     results in a commit.

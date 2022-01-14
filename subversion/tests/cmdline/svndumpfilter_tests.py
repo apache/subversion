@@ -71,7 +71,7 @@ def filter_and_return_output(dump, bufsize=0, *varargs):
   # Since we call svntest.main.run_command_stdin() in binary mode,
   # normalize the stderr line endings on Windows ourselves.
   if sys.platform == 'win32':
-    errput = map(lambda x : x.replace('\r\n', '\n'), errput)
+    errput = [x.replace('\r\n', '\n') for x in errput]
 
   return output, errput
 
@@ -608,7 +608,7 @@ def match_empty_prefix(sbox):
                                                              '--quiet',
                                                              *dumpargs)
     if filtered_err:
-      raise verify.UnexpectedStderr(filtered_err)
+      raise SVNExpectedStderr(filtered_err)
 
     # Load the filtered dump into a repo and check the result
     sbox.build(empty=True)

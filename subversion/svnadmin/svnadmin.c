@@ -42,6 +42,7 @@
 #include "svn_time.h"
 #include "svn_user.h"
 #include "svn_xml.h"
+#include "svn_fs.h"
 
 #include "private/svn_cmdline_private.h"
 #include "private/svn_opt_private.h"
@@ -49,6 +50,7 @@
 #include "private/svn_subr_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_fspath.h"
+#include "private/svn_fs_fs_private.h"
 
 #include "svn_private_config.h"
 
@@ -95,6 +97,7 @@ check_lib_versions(void)
 /** Subcommands. **/
 
 static svn_opt_subcommand_t
+  subcommand_build_repcache,
   subcommand_crashtest,
   subcommand_create,
   subcommand_delrevprop,
@@ -114,6 +117,7 @@ static svn_opt_subcommand_t
   subcommand_lstxns,
   subcommand_pack,
   subcommand_recover,
+  subcommand_rev_size,
   subcommand_rmlocks,
   subcommand_rmtxns,
   subcommand_setlog,
@@ -303,6 +307,16 @@ static const apr_getopt_option_t options_table[] =
  */
 static const svn_opt_subcommand_desc3_t cmd_table[] =
 {
+  {"build-repcache", subcommand_build_repcache, {0}, {N_(
+    "usage: svnadmin build-repcache REPOS_PATH [-r LOWER[:UPPER]]\n"
+    "\n"), N_(
+    "Add missing entries to the representation cache for the repository\n"
+    "at REPOS_PATH. Process data in revisions LOWER through UPPER.\n"
+    "If no revision arguments are given, process all revisions. If only\n"
+    "LOWER revision argument is given, process only that single revision.\n"
+   )},
+   {'r', 'q', 'M'} },
+
   {"crashtest", subcommand_crashtest, {0}, {N_(
     "usage: svnadmin crashtest REPOS_PATH\n"
     "\n"), N_(
@@ -338,7 +352,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "2. Delete the property NAME on transaction TXN.\n"
    )},
    {'r', 't', svnadmin__use_pre_revprop_change_hook,
-    svnadmin__use_post_revprop_change_hook} },
+    svnadmin__use_post_revprop_change_hook},
+   { {'r', "specify revision number ARG"} } },
 
   {"deltify", subcommand_deltify, {0}, {N_(
     "usage: svnadmin deltify [-r LOWER[:UPPER]] REPOS_PATH\n"
@@ -495,7 +510,7 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "Print the names of uncommitted transactions. With -rN skip the output\n"
     "of those that have a base revision more recent than rN.  Transactions\n"
     "with base revisions much older than HEAD are likely to have been\n"
-    "abandonded and are candidates to be removed.\n"
+    "abandoned and are candidates to be removed.\n"
    )},
    {'r'},
    { {'r', "transaction base revision ARG"} } },
@@ -517,6 +532,18 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "exit if the repository is in use by another process.\n"
    )},
    {svnadmin__wait} },
+
+  {"rev-size", subcommand_rev_size, {0}, {N_(
+    "usage: svnadmin rev-size REPOS_PATH -r REVISION\n"
+    "\n"), N_(
+    "Print the total size in bytes of the representation on disk of\n"
+    "revision REVISION.\n"
+    "\n"), N_(
+    "The size includes revision properties and excludes FSFS indexes.\n"
+   )},
+   {'r', 'q', 'M'},
+   { {'r', "specify revision number ARG"},
+     {'q', "print only the size and a newline"} }, },
 
   {"rmlocks", subcommand_rmlocks, {0}, {N_(
     "usage: svnadmin rmlocks REPOS_PATH LOCKED_PATH...\n"
@@ -545,7 +572,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "NOTE: Revision properties are not versioned, so this command will\n"
     "overwrite the previous log message.\n"
    )},
-   {'r', svnadmin__bypass_hooks} },
+   {'r', svnadmin__bypass_hooks},
+   { {'r', "specify revision number ARG"} }, }, 
 
   {"setrevprop", subcommand_setrevprop, {0}, {N_(
     "usage: 1. svnadmin setrevprop REPOS_PATH -r REVISION NAME FILE\n"
@@ -563,7 +591,8 @@ static const svn_opt_subcommand_desc3_t cmd_table[] =
     "2. Set the property NAME on transaction TXN to the contents of FILE.\n"
    )},
    {'r', 't', svnadmin__use_pre_revprop_change_hook,
-    svnadmin__use_post_revprop_change_hook} },
+    svnadmin__use_post_revprop_change_hook},
+   { {'r', "specify revision number ARG"} }, }, 
 
   {"setuuid", subcommand_setuuid, {0}, {N_(
     "usage: svnadmin setuuid REPOS_PATH [NEW_UUID]\n"
@@ -1819,7 +1848,7 @@ subcommand_lstxns(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
   SVN_ERR(get_revnum(&limit, &opt_state->start_revision, youngest, repos,
                      pool));
-  
+
   iterpool = svn_pool_create(pool);
   for (i = 0; i < txns->nelts; i++)
     {
@@ -2846,6 +2875,174 @@ subcommand_delrevprop(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   return set_revprop(prop_name, NULL, opt_state, pool);
 }
 
+
+/* Set *REV_SIZE to the total size in bytes of the representation on disk
+ * of revision REVISION in FS.
+ *
+ * This is implemented only for FSFS repositories, and otherwise returns
+ * an SVN_ERR_UNSUPPORTED_FEATURE error.
+ *
+ * The size includes revision properties and excludes FSFS indexes.
+ */
+static svn_error_t *
+revision_size(apr_off_t *rev_size,
+              svn_fs_t *fs,
+              svn_revnum_t revision,
+              apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_fs_fs__ioctl_revision_size_input_t input = {0};
+  svn_fs_fs__ioctl_revision_size_output_t *output;
+
+  input.revision = revision;
+  err = svn_fs_ioctl(fs, SVN_FS_FS__IOCTL_REVISION_SIZE,
+                     &input, (void **)&output,
+                     check_cancel, NULL, scratch_pool, scratch_pool);
+  if (err && err->apr_err == SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE)
+    {
+      return svn_error_quick_wrapf(err,
+                                   _("Revision size query is not implemented "
+                                     "for the filesystem type found in '%s'"),
+                                   svn_fs_path(fs, scratch_pool));
+    }
+  SVN_ERR(err);
+
+  *rev_size = output->rev_size;
+  return SVN_NO_ERROR;
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+svn_error_t *
+subcommand_rev_size(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_revnum_t revision;
+  apr_off_t rev_size;
+  svn_repos_t *repos;
+
+  if (opt_state->start_revision.kind != svn_opt_revision_number
+      || opt_state->end_revision.kind != svn_opt_revision_unspecified)
+    return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                            _("Invalid revision specifier"));
+  revision = opt_state->start_revision.value.number;
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
+  SVN_ERR(revision_size(&rev_size, svn_repos_fs(repos), revision, pool));
+
+  if (opt_state->quiet)
+    {
+      SVN_ERR(svn_cmdline_printf(pool, "%"APR_OFF_T_FMT"\n", rev_size));
+    }
+  else
+    {
+      const char *rev_size_str = apr_psprintf(pool,
+                                              "%12" APR_OFF_T_FMT, rev_size);
+      SVN_ERR(svn_cmdline_printf(pool, _("%s bytes in revision %ld\n"),
+                                 rev_size_str, revision));
+    }
+  return SVN_NO_ERROR;
+}
+
+static void
+build_rep_cache_progress_func(svn_revnum_t revision,
+                              void *baton,
+                              apr_pool_t *pool)
+{
+  svn_error_clear(svn_cmdline_printf(pool,
+                                     _("* Processed revision %ld.\n"),
+                                     revision));
+}
+
+static svn_error_t *
+build_rep_cache(svn_fs_t *fs,
+                svn_revnum_t start_rev,
+                svn_revnum_t end_rev,
+                struct svnadmin_opt_state *opt_state,
+                apr_pool_t *pool)
+{
+  svn_fs_fs__ioctl_build_rep_cache_input_t input = {0};
+  svn_error_t *err;
+
+  input.start_rev = start_rev;
+  input.end_rev = end_rev;
+
+  if (opt_state->quiet)
+    {
+      input.progress_func = NULL;
+      input.progress_baton = NULL;
+    }
+  else
+    {
+      input.progress_func = build_rep_cache_progress_func;
+      input.progress_baton = NULL;
+    }
+
+  err = svn_fs_ioctl(fs, SVN_FS_FS__IOCTL_BUILD_REP_CACHE,
+                     &input, NULL,
+                     check_cancel, NULL, pool, pool);
+  if (err && err->apr_err == SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE)
+    {
+      return svn_error_quick_wrapf(err,
+                                   _("Building rep-cache is not implemented "
+                                     "for the filesystem type found in '%s'"),
+                                   svn_fs_path(fs, pool));
+    }
+  else if (err && err->apr_err == SVN_ERR_FS_REP_SHARING_NOT_ALLOWED)
+    {
+      svn_error_clear(err);
+      SVN_ERR(svn_cmdline_printf(pool,
+                                 _("svnadmin: Warning - this repository has rep-sharing disabled."
+                                   " Building rep-cache has no effect.\n")));
+      return SVN_NO_ERROR;
+    }
+  else
+    {
+      return err;
+    }
+}
+
+/* This implements `svn_opt_subcommand_t'. */
+static svn_error_t *
+subcommand_build_repcache(apr_getopt_t *os, void *baton, apr_pool_t *pool)
+{
+  struct svnadmin_opt_state *opt_state = baton;
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  svn_revnum_t youngest;
+  svn_revnum_t lower;
+  svn_revnum_t upper;
+
+  /* Expect no more arguments. */
+  SVN_ERR(parse_args(NULL, os, 0, 0, pool));
+
+  SVN_ERR(open_repos(&repos, opt_state->repository_path, opt_state, pool));
+  fs = svn_repos_fs(repos);
+  SVN_ERR(svn_fs_youngest_rev(&youngest, fs, pool));
+
+  SVN_ERR(get_revnum(&lower, &opt_state->start_revision,
+                     youngest, repos, pool));
+  SVN_ERR(get_revnum(&upper, &opt_state->end_revision,
+                     youngest, repos, pool));
+
+  if (SVN_IS_VALID_REVNUM(lower) && SVN_IS_VALID_REVNUM(upper))
+    {
+      if (lower > upper)
+        return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                _("First revision cannot be higher than second"));
+    }
+  else if (SVN_IS_VALID_REVNUM(lower))
+    {
+      upper = lower;
+    }
+  else
+    {
+      upper = youngest;
+    }
+
+  SVN_ERR(build_rep_cache(fs, lower, upper, opt_state, pool));
+
+  return SVN_NO_ERROR;
+}
 
 
 /** Main. **/

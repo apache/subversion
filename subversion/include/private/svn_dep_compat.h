@@ -29,6 +29,7 @@
 #define SVN_DEP_COMPAT_H
 
 #include <apr_version.h>
+#include <apr_errno.h>
 
 #ifdef __cplusplus
 extern "C" {
@@ -106,12 +107,6 @@ extern "C" {
 #endif
 #ifndef APR_OPENINFO
 #define APR_OPENINFO  0x00100000
-#endif
-
-#if !APR_VERSION_AT_LEAST(1,4,0)
-#ifndef apr_time_from_msec
-#define apr_time_from_msec(msec) ((apr_time_t)(msec) * 1000)
-#endif
 #endif
 
 /**
@@ -198,6 +193,16 @@ extern "C" {
 #define SQLITE_VERSION_AT_LEAST(major,minor,patch)                     \
 ((major*1000000 + minor*1000 + patch) <= SVN_SQLITE_MIN_VERSION_NUMBER)
 #endif /* SQLITE_VERSION_AT_LEAST */
+
+/**
+ * Support for 'apr_escape_shell() which was introduced in APR 1.5.
+ */
+#if !APR_VERSION_AT_LEAST(1,5,0)
+/* from apr_escape.h */
+#define APR_ESCAPE_STRING      (-1)
+APR_DECLARE(apr_status_t) apr_escape_shell(char *escaped, const char *str,
+        apr_ssize_t slen, apr_size_t *len);
+#endif
 
 #ifdef __cplusplus
 }

@@ -39,6 +39,10 @@
 #define SVN_BUILD_TARGET "ia64-microsoft-windows"
 #elif defined( _M_IX86)
 #define SVN_BUILD_TARGET "x86-microsoft-windows"
+#elif defined(_M_ARM64)
+#define SVN_BUILD_TARGET "arm64-microsoft-windows"
+#elif defined(_M_ARM)
+#define SVN_BUILD_TARGET "arm-microsoft-windows"
 #else
 #error Unsupported build target.
 #endif
@@ -119,7 +123,7 @@
 #define SVN__PREDICT_FALSE(x)  (x)
 
 /* Macro used to specify that a variable is intentionally left unused.
-   Supresses compiler warnings about the variable being unused.  */
+   Suppresses compiler warnings about the variable being unused.  */
 #define SVN_UNUSED(v) ( (void)(v) )
 
 #if defined(_MSC_VER) && _MSC_VER >= 1600

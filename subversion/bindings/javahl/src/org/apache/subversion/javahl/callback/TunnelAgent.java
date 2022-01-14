@@ -80,7 +80,7 @@ public interface TunnelAgent
      * @param hostname the host part of the svn+tunnel:// URL
      * @param port the port part of the svn+tunnel:// URL
      *
-     * @return an instance od {@link CloseTunnelCallback}, which will
+     * @return an instance of {@link CloseTunnelCallback}, which will
      *         be invoked when the connection is closed, or
      *         <code>null</code>.
      *

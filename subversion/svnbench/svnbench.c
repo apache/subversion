@@ -174,7 +174,7 @@ const apr_getopt_option_t svn_cl__options[] =
 
   /* Long-opt Aliases
    *
-   * These have NULL desriptions, but an option code that matches some
+   * These have NULL descriptions, but an option code that matches some
    * other option (whose description should probably mention its aliases).
   */
 

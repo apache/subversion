@@ -43,7 +43,7 @@
 #    9
 #
 # The script runs with an ID in the range 0-9, and when it modifies a
-# file it modifes the line that starts with its ID. Thus scripts with
+# file it modifies the line that starts with its ID. Thus scripts with
 # different IDs will make changes that can be merged automatically.
 #
 # The main loop is then:
@@ -430,7 +430,7 @@ where
 # stress testing one could remove this fixed seed and Perl will
 # automatically use a pseudo-random seed.  However it doesn't much
 # matter, the stress testing really depends on the real-time timing
-# differences between mutiple instances of the script, rather than the
+# differences between multiple instances of the script, rather than the
 # randomness of the chosen files.
 srand 123456789;
 

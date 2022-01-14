@@ -3323,15 +3323,11 @@ def merge_conflict_markers_matching_eol(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
   if os.name == 'nt':
-    crlf = '\n'
+    native_nl = '\r\n'
   else:
-    crlf = '\r\n'
-
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
+    native_nl = '\n'
+  crlf = '\r\n'
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -3349,8 +3345,8 @@ def merge_conflict_markers_matching_eol(sbox):
   path_backup = os.path.join(wc_backup, 'A', 'mu')
 
   # do the test for each eol-style
-  for eol, eolchar in zip(['CRLF', 'CR', 'native', 'LF'],
-                          [crlf, '\015', '\n', '\012']):
+  for eol, eolchar in zip(['CRLF', 'CR','native', 'LF'],
+                          [crlf, '\015', native_nl, '\012']):
     # rewrite file mu and set the eol-style property.
     svntest.main.file_write(mu_path, "This is the file 'mu'."+ eolchar, 'wb')
     svntest.main.run_svn(None, 'propset', 'svn:eol-style', eol, mu_path)
@@ -3375,8 +3371,8 @@ def merge_conflict_markers_matching_eol(sbox):
     svntest.main.run_svn(None, 'update', wc_backup)
 
     # Make a local mod to mu
-    svntest.main.file_append(mu_path,
-                             'Original appended text for mu' + eolchar)
+    svntest.main.file_append_binary(mu_path,
+                                    'Original appended text for mu' + eolchar)
 
     # Commit the original change and note the 'theirs' revision number
     svntest.main.run_svn(None, 'commit', '-m', 'test log', wc_dir)
@@ -3384,8 +3380,9 @@ def merge_conflict_markers_matching_eol(sbox):
     theirs_rev = cur_rev
 
     # Make a local mod to mu, will conflict with the previous change
-    svntest.main.file_append(path_backup,
-                             'Conflicting appended text for mu' + eolchar)
+    svntest.main.file_append_binary(path_backup,
+                                    'Conflicting appended text for mu'
+                                    + eolchar)
 
     # Create expected output tree for an update of the wc_backup.
     expected_backup_output = svntest.wc.State(wc_backup, {
@@ -3445,7 +3442,7 @@ def merge_conflict_markers_matching_eol(sbox):
                                           expected_backup_disk,
                                           expected_backup_status,
                                           expected_backup_skip,
-                                          keep_eol_style=keep_eol_style)
+                                          keep_eol_style=True)
 
     # cleanup for next run
     svntest.main.run_svn(None, 'revert', '-R', wc_backup)
@@ -3468,15 +3465,7 @@ def merge_eolstyle_handling(sbox):
 
   mu_path = sbox.ospath('A/mu')
 
-  # CRLF is a string that will match a CRLF sequence read from a text file.
-  # ### On Windows, we assume CRLF will be read as LF, so it's a poor test.
-  if os.name == 'nt':
-    crlf = '\n'
-  else:
-    crlf = '\r\n'
-
-  # Strict EOL style matching breaks Windows tests at least with Python 2
-  keep_eol_style = not svntest.main.is_os_windows()
+  crlf = '\r\n'
 
   # Checkout a second working copy
   wc_backup = sbox.add_wc_path('backup')
@@ -3518,7 +3507,7 @@ def merge_eolstyle_handling(sbox):
                                         expected_backup_disk,
                                         expected_backup_status,
                                         expected_backup_skip,
-                                        keep_eol_style=keep_eol_style)
+                                        keep_eol_style=True)
 
   # Test 2: now change the eol-style property to another value and commit,
   # merge this revision in the still changed mu in the second working copy;
@@ -3549,7 +3538,7 @@ def merge_eolstyle_handling(sbox):
                                         expected_backup_disk,
                                         expected_backup_status,
                                         expected_backup_skip,
-                                        keep_eol_style=keep_eol_style)
+                                        keep_eol_style=True)
 
   # Test 3: now delete the eol-style property and commit, merge this revision
   # in the still changed mu in the second working copy; there should be no
@@ -3578,7 +3567,7 @@ def merge_eolstyle_handling(sbox):
                                         expected_backup_disk,
                                         expected_backup_status,
                                         expected_backup_skip,
-                                        keep_eol_style=keep_eol_style)
+                                        keep_eol_style=True)
 
 #----------------------------------------------------------------------
 def create_deep_trees(wc_dir):
@@ -4794,7 +4783,7 @@ def mergeinfo_inheritance_and_discontinuous_ranges(sbox):
   # Merge r2:6 into A_COPY/D
   #
   # A_COPY/D should inherit the mergeinfo '/A:4' from A_COPY
-  # combine it with the discontinous merges performed directly on
+  # combine it with the discontinuous merges performed directly on
   # it (A/D/ 2:3 and A/D 4:6) resulting in '/A/D:3-6'.
   expected_output = wc.State(D_COPY_path, {
     'H/psi'   : Item(status='U '),
@@ -4966,11 +4955,11 @@ def merge_to_switched_path(sbox):
   A_COPY_D_G_rho_path = sbox.ospath('A_COPY/D/G/rho')
 
   expected = svntest.verify.UnorderedOutput(
-         ["A    " + os.path.join(G_COPY_path, "pi") + "\n",
-          "A    " + os.path.join(G_COPY_path, "rho") + "\n",
-          "A    " + os.path.join(G_COPY_path, "tau") + "\n",
-          "Checked out revision 6.\n",
-          "A         " + G_COPY_path + "\n"])
+         ["A         " + G_COPY_path + "\n",
+          "A         " + os.path.join(G_COPY_path, "pi") + "\n",
+          "A         " + os.path.join(G_COPY_path, "rho") + "\n",
+          "A         " + os.path.join(G_COPY_path, "tau") + "\n",
+          ])
 
   # r7 - Copy A/D/G to A/D/G_COPY and commit.
   svntest.actions.run_and_verify_svn(expected, [], 'copy',
@@ -12848,6 +12837,39 @@ def natural_history_filtering(sbox):
   #      the revisions on 'trunk' which occurred after 'branch2' was copied as
   #      these are not part of 'branch2's natural history.
 
+  def path_join(head, tail):
+    if not head: return tail
+    if not tail: return head
+    return head + '/' + tail
+
+  def greek_file_item(path):
+    if path[-1:].islower():
+      basename = re.sub('.*/', '', path)
+      return Item("This is the file '" + basename + "'.\n")
+    return Item()
+
+  A_paths = [
+    "",
+    "B",
+    "B/lambda",
+    "B/E",
+    "B/E/alpha",
+    "B/E/beta",
+    "B/F",
+    "mu",
+    "C",
+    "D",
+    "D/gamma",
+    "D/G",
+    "D/G/pi",
+    "D/G/rho",
+    "D/G/tau",
+    "D/H",
+    "D/H/chi",
+    "D/H/omega",
+    "D/H/psi",
+    ]
+
   sbox.build()
   wc_dir = sbox.wc_dir
 
@@ -12861,68 +12883,16 @@ def natural_history_filtering(sbox):
 
   # r7: Make a second 'branch': Copy A to A_COPY_2
   expected = svntest.verify.UnorderedOutput(
-    ["A    " + os.path.join(A_COPY_2_path, "B") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "lambda") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "E") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "E", "alpha") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "E", "beta") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "B", "F") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "mu") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "C") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "gamma") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G", "pi") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G", "rho") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "G", "tau") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H", "chi") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H", "omega") + "\n",
-     "A    " + os.path.join(A_COPY_2_path, "D", "H", "psi") + "\n",
-     "Checked out revision 6.\n",
-     "A         " + A_COPY_2_path + "\n"])
-  wc_status.add({
-    "A_COPY_2" + "/B"         : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/lambda"  : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/E"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/E/alpha" : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/E/beta"  : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/B/F"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/mu"        : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/C"         : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D"         : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/gamma"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G/pi"    : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G/rho"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/G/tau"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H"       : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H/chi"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H/omega" : Item(status='  ', wc_rev=7),
-    "A_COPY_2" + "/D/H/psi"   : Item(status='  ', wc_rev=7),
-    "A_COPY_2"                : Item(status='  ', wc_rev=7),
-    })
-  wc_disk.add({
-    "A_COPY_2"                : Item(),
-    "A_COPY_2" + '/B'         : Item(),
-    "A_COPY_2" + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
-    "A_COPY_2" + '/B/E'       : Item(),
-    "A_COPY_2" + '/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-    "A_COPY_2" + '/B/E/beta'  : Item("New content"),
-    "A_COPY_2" + '/B/F'       : Item(),
-    "A_COPY_2" + '/mu'        : Item("This is the file 'mu'.\n"),
-    "A_COPY_2" + '/C'         : Item(),
-    "A_COPY_2" + '/D'         : Item(),
-    "A_COPY_2" + '/D/gamma'   : Item("This is the file 'gamma'.\n"),
-    "A_COPY_2" + '/D/G'       : Item(),
-    "A_COPY_2" + '/D/G/pi'    : Item("This is the file 'pi'.\n"),
-    "A_COPY_2" + '/D/G/rho'   : Item("New content"),
-    "A_COPY_2" + '/D/G/tau'   : Item("This is the file 'tau'.\n"),
-    "A_COPY_2" + '/D/H'       : Item(),
-    "A_COPY_2" + '/D/H/chi'   : Item("New content"),
-    "A_COPY_2" + '/D/H/omega' : Item("This is the file 'omega'.\n"),
-    "A_COPY_2" + '/D/H/psi'   : Item("New content"),
-    })
+    [ "A         " + sbox.ospath(path_join("A_COPY_2", p)) + "\n"
+      for p in A_paths ])
+  wc_status.add(
+    { path_join("A_COPY_2", p) : Item(status='  ', wc_rev=7)
+      for p in A_paths })
+  wc_disk.add(
+    { path_join("A_COPY_2", p) :
+        Item("New content") if p in ['B/E/beta', 'D/G/rho', 'D/H/chi', 'D/H/psi']
+                            else greek_file_item(p)
+      for p in A_paths })
   svntest.actions.run_and_verify_svn(expected, [], 'copy',
                                      sbox.repo_url + "/A",
                                      A_COPY_2_path)
@@ -13380,7 +13350,7 @@ def no_self_referential_filtering_on_added_path(sbox):
 def merge_range_prior_to_rename_source_existence(sbox):
   "merge prior to rename src existence still dels src"
 
-  # Replicate a merge bug found while synching up a feature branch on the
+  # Replicate a merge bug found while syncing up a feature branch on the
   # Subversion repository with trunk.  See r874121 of
   # http://svn.apache.org/repos/asf/subversion/branches/ignore-mergeinfo, in which
   # a move was merged to the target, but the delete half of the move
@@ -18530,6 +18500,276 @@ def merge_dir_delete_force(sbox):
                                      'merge', '-c2', '^/', sbox.wc_dir,
                                      '--ignore-ancestry', '--force')
 
+# Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
+# E155023: can't set properties: invalid status for updating properties
+@Issue(4859)
+def merge_deleted_folder_with_mergeinfo(sbox):
+  "merge deleted folder with mergeinfo"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # Some non-inheritable mergeinfo
+  sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
+  sbox.simple_commit() # r2
+
+  # Branching
+  sbox.simple_repo_copy('A', 'branch_A')  # r3
+  sbox.simple_update()
+
+  # On branch, remove a folder that has non-inheritable mergeinfo
+  sbox.simple_rm('branch_A/D')
+  sbox.simple_commit() # r4
+
+  sbox.simple_update()
+
+  # A merge that removes that folder
+  # (merge revision 4 only from 'branch_A' to 'A')
+  expected_output = wc.State(sbox.ospath(''), {
+    'A/D'    : Item(status='D '),
+    })
+  expected_mergeinfo_output = wc.State(sbox.ospath(''), {
+    'A'      : Item(status=' U'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.ospath('A'), 4).subtree('A')
+  expected_status.add({ '': Item(status=' M', wc_rev=4) })
+  expected_status.tweak_some(
+    lambda path, item: [True] if path.split('/')[0] == 'D' else [],
+    status='D ')
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'), 3, 4,
+                                       '^/branch_A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       None,
+                                       None,
+                                       expected_status,
+                                       wc.State('', {}),
+                                       [],
+                                       check_props=False,
+                                       dry_run=False  # as dry run is broken
+                                       )
+
+  os.chdir(was_cwd)
+
+# Issue #4859: Merge removing a folder with non-inheritable mergeinfo ->
+# E155023: can't set properties: invalid status for updating properties
+#
+# In this test we split the merge into two separate operable parts, a
+# delete followed later by an add, to check it will set the mergeinfo on the
+# subtree paths if the deleted folder is later replaced within the same
+# overall merge.
+@Issue(4859)
+def merge_deleted_folder_with_mergeinfo_2(sbox):
+  "merge deleted folder with mergeinfo 2"
+
+  sbox.build()
+
+  was_cwd = os.getcwd()
+  os.chdir(sbox.wc_dir)
+  sbox.wc_dir = ''
+
+  # Some non-inheritable mergeinfo
+  sbox.simple_propset('svn:mergeinfo', '/A/C:1*', 'A/D')
+  sbox.simple_commit() # r2
+
+  # Branching
+  sbox.simple_repo_copy('A', 'branch_A')  # r3
+  sbox.simple_update()
+
+  # On branch, remove a folder that has non-inheritable mergeinfo
+  sbox.simple_rm('branch_A/D')
+  sbox.simple_commit() # r4
+
+  # A commit that we don't want to merge from the branch, to split the merge
+  # into two separate operable parts.
+  sbox.simple_mkdir('branch_A/IgnoreThis')
+  sbox.simple_commit() # r5
+
+  # On branch, replace the deleted folder with a new one, with mergeinfo,
+  # to check we don't omit setting mergeinfo on this.
+  sbox.simple_mkdir('branch_A/D')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C:1*', 'branch_A/D')
+  sbox.simple_mkdir('branch_A/D/G', 'branch_A/D/G2')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C/G:1*', 'branch_A/D/G')
+  sbox.simple_propset('svn:mergeinfo', '/branch_B/C/G2:1*', 'branch_A/D/G2')
+  sbox.simple_commit() # r6
+
+  sbox.simple_propset('svn:mergeinfo', '/branch_A:5', 'A')
+  sbox.simple_commit() # r7
+
+  sbox.simple_update()
+
+  # A merge that removes that folder
+  expected_output = wc.State(sbox.ospath(''), {
+    'A/D'    : Item(status='A ', prev_status='D '),
+    'A/D/G'  : Item(status='A '),
+    'A/D/G2' : Item(status='A '),
+    })
+  # verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+  expected_mergeinfo_output = wc.State(sbox.ospath(''), {
+    'A'      : Item(status=' U'),
+    'A/D'    : Item(status=' G'),
+    'A/D/G'  : Item(status=' G'),
+    'A/D/G2' : Item(status=' G'),
+    })
+  expected_status = svntest.actions.get_virginal_state(sbox.ospath('A'), 7).subtree('A')
+  expected_status.tweak_some(
+    lambda path, item: [True] if path.split('/')[0] == 'D' else [],
+    status='D ')
+  expected_status.add({
+    ''     : Item(status=' M', wc_rev=7),
+    'D'    : Item(status='RM', copied='+', wc_rev='-'),
+    'D/G'  : Item(status=' M', copied='+', wc_rev='-'),
+    'D/G2' : Item(status=' M', copied='+', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'), None, None,
+                                       '^/branch_A', None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       None,
+                                       None,
+                                       expected_status,
+                                       wc.State('', {}),
+                                       [],
+                                       check_props=False,
+                                       dry_run=False  # as dry run is broken
+                                       )
+
+  # verify that mergeinfo is set/changed on A/D, A/D/G, A/D/G2.
+
+  # NOTE: When writing out multi-line prop values in svn:* props, the
+  # client converts to local encoding and local eol style.
+  # Therefore, the expected output must contain the right kind of eoln
+  # strings. That's why we use os.linesep in the tests below, not just
+  # plain '\n'.
+
+  expected_mergeinfo = [
+    ('A',       ['/branch_A:3-7']),
+    ('A/D',     ['/branch_A/D:5-7'+os.linesep, '/branch_B/C:1*']),
+    ('A/D/G',   ['/branch_A/D/G:5-7'+os.linesep, '/branch_B/C/G:1*']),
+    ('A/D/G2',  ['/branch_A/D/G2:5-7'+os.linesep, '/branch_B/C/G2:1*']),
+    ]
+  for path, mergeinfo in expected_mergeinfo:
+    svntest.actions.check_prop('svn:mergeinfo', sbox.ospath(path),
+                               [m.encode() for m in mergeinfo])
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
+# Test that mismatched source repository root URLs in a two-URL merge
+# throws an error E170000 SVN_ERR_RA_ILLEGAL_URL.
+#
+# (Since issue 4874 (Subversion 1.15) that error is also wrapped in
+# E195012 SVN_ERR_CLIENT_UNRELATED_RESOURCES for consistency with
+# the source-target mismatch errors.)
+#
+# For mismatched URLs we use two repositories with the same UUID.
+@Issue(4874)
+def merge_error_if_source_urls_differ(sbox):
+  "merge error if source urls differ"
+
+  sbox.build()
+  expected_disk, expected_status = set_up_branch(sbox)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Create a second repository with the same content, same UUID
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 6, ignore_uuid=False)
+
+  G_COPY_path = sbox.ospath('A_COPY/D/G')
+  svntest.actions.run_and_verify_svn2(None, '.*: E170000: .*', 1,
+                                      'merge',
+                                      sbox.repo_url + '/A/D/G@3',
+                                      other_repo_url + '/A/D/G@4',
+                                      G_COPY_path)
+
+#----------------------------------------------------------------------
+# Test that a merge with mismatched source and target repository root URLs
+# but identical repository UUIDs throws a warning error, for two-URL and
+# pegged merges.
+#
+# Issue #4874 makes this a warning in Subversion 1.15 and an error in 1.16.
+# Previously it was treated as a foreign repository merge.
+#
+# For mismatched URLs we use two repositories with the same UUID.
+@Issue(4874)
+def merge_error_if_ambiguous_foreign_merge(sbox):
+  "merge error if ambiguous foreign merge"
+
+  sbox.build()
+  expected_disk, expected_status = set_up_branch(sbox)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Create a second repository with the same content, same UUID
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 6, ignore_uuid=False)
+
+  # With Issue #4874 implemented, the attempted merges should error out with
+  # SVN_ERR_CLIENT_UNRELATED_RESOURCES, because of mismatched source and
+  # target URLs.
+
+  # expect warning or error (E195012 SVN_ERR_CLIENT_UNRELATED_RESOURCES)?
+  expected_stdout = None if svntest.main.SVN_VER_MINOR < 16 else []
+  expected_stderr = '.*: E195012: .*' if svntest.main.SVN_VER_MINOR >= 15 else []
+  expected_exit = 0 if svntest.main.SVN_VER_MINOR < 16 else 1
+
+  # two-URL merge
+  svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr,
+                                      expected_exit,
+                                      'merge',
+                                      other_repo_url + '/A/D/G@3',
+                                      other_repo_url + '/A/D/G@4',
+                                      sbox.ospath('A_COPY/D/G'))
+  svntest.main.run_svn(False, 'revert', '-qR', sbox.wc_dir)
+  # pegged merge
+  svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr,
+                                      expected_exit,
+                                      'merge', '-c4',
+                                      other_repo_url + '/A/D/G',
+                                      sbox.ospath('A_COPY/D/G'))
+  svntest.main.run_svn(False, 'revert', '-qR', sbox.wc_dir)
+
+#----------------------------------------------------------------------
+# Test that a merge with mismatched source and target repository root URLs
+# throws an error, for automatic and reintegrate merges.
+#
+# This behaviour is unchanged by issue #4874, just reinforced and with more
+# informative error messages.
+#
+# For mismatched URLs we use two repositories with the same UUID.
+@Issue(4874)
+def merge_error_if_source_target_url_mismatch(sbox):
+  "merge error if source target url mismatch"
+
+  sbox.build()
+  expected_disk, expected_status = set_up_branch(sbox)
+  wc_dir = sbox.wc_dir
+  repo_dir = sbox.repo_dir
+
+  # Create a second repository with the same content, same UUID
+  other_repo_dir, other_repo_url = sbox.add_repo_path("other")
+  other_wc_dir = sbox.add_wc_path("other")
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 6, ignore_uuid=False)
+
+  expected_stderr = '.*: E195012: .*'  # SVN_ERR_CLIENT_UNRELATED_RESOURCES
+  # automatic merge
+  svntest.actions.run_and_verify_svn2([], expected_stderr, 1,
+                                      'merge',
+                                      other_repo_url + '/A/D/G',
+                                      sbox.ospath('A_COPY/D/G'))
+  # reintegrate merge
+  svntest.actions.run_and_verify_svn2([], expected_stderr, 1,
+                                      'merge', '--reintegrate',
+                                      other_repo_url + '/A/D/G',
+                                      sbox.ospath('A_COPY/D/G'))
+
 ########################################################################
 # Run the tests
 
@@ -18677,6 +18917,11 @@ test_list = [ None,
               merge_to_empty_target_merge_to_infinite_target,
               conflict_naming,
               merge_dir_delete_force,
+              merge_deleted_folder_with_mergeinfo,
+              merge_deleted_folder_with_mergeinfo_2,
+              merge_error_if_source_urls_differ,
+              merge_error_if_ambiguous_foreign_merge,
+              merge_error_if_source_target_url_mismatch,
              ]
 
 if __name__ == '__main__':

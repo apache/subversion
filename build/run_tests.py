@@ -34,6 +34,7 @@
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             [--fsfs-compression=<type>] [--fsfs-dir-deltification=<true|false>]
+            [--allow-remote-http-connection]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -46,10 +47,10 @@ and filename of a test program, optionally followed by '#' and a comma-
 separated list of test numbers; the default is to run all the tests in it.
 '''
 
-import os, sys, shutil, codecs
+import os, sys, shutil
 import re
 import logging
-import optparse, subprocess, imp, threading, traceback
+import optparse, subprocess, threading, traceback
 from datetime import datetime
 
 try:
@@ -62,6 +63,13 @@ except ImportError:
 if sys.version_info < (3, 0):
   # Python >= 3.0 already has this build in
   import exceptions
+
+if sys.version_info < (3, 5):
+  import imp
+else:
+  # The imp module is deprecated since Python 3.4; the replacement we use,
+  # module_from_spec(), is available since Python 3.5.
+  import importlib.util
 
 # Ensure the compiled C tests use a known locale (Python tests set the locale
 # explicitly).
@@ -81,6 +89,29 @@ class TextColors:
     cls.ENDC = ''
     cls.FAILURE = ''
     cls.SUCCESS = ''
+
+
+if hasattr(subprocess.Popen, '__enter__'):
+  Popen = subprocess.Popen
+else:
+  class Popen(subprocess.Popen):
+    """Popen objects are supported as context managers since Python 3.2.
+    This class provides backwards-compatibility with Python 2.
+    """
+
+    def __enter__(self):
+      return self
+
+    def __exit__(self, type, value, traceback):
+      if self.stdout:
+        self.stdout.close()
+      if self.stderr:
+        self.stderr.close()
+      try:
+        if self.stdin:
+          self.stdin.close()
+      finally:
+        self.wait()
 
 
 def _get_term_width():
@@ -132,6 +163,18 @@ def ensure_str(s):
     return s
   else:
     return s.decode("latin-1")
+
+def open_logfile(filename, mode, encoding='utf-8'):
+  if sys.version_info[0] != 2:
+    return open(filename, mode, encoding=encoding, errors='surrogateescape')
+  else:
+    class Wrapper(object):
+      def __init__(self, stream, encoding):
+        self._stream = stream
+        self.encoding = encoding
+      def __getattr__(self, name):
+        return getattr(self._stream, name)
+    return Wrapper(open(filename, mode), encoding)
 
 class TestHarness:
   '''Test harness for Subversion tests.
@@ -195,8 +238,9 @@ class TestHarness:
         authzparent = os.path.join(self.builddir, subdir)
         if not os.path.exists(authzparent):
           os.makedirs(authzparent);
-        open(os.path.join(authzparent, 'authz'), 'w').write('[/]\n'
-                                                            '* = rw\n')
+        with open(os.path.join(authzparent, 'authz'), 'w') as fp:
+          fp.write('[/]\n'
+                   '* = rw\n')
 
     # ### Support --repos-template
     if self.opts.list_tests is not None:
@@ -280,6 +324,8 @@ class TestHarness:
       cmdline.append('--fsfs-compression=%s' % self.opts.fsfs_compression)
     if self.opts.fsfs_dir_deltification is not None:
       cmdline.append('--fsfs-dir-deltification=%s' % self.opts.fsfs_dir_deltification)
+    if self.opts.allow_remote_http_connection is not None:
+      cmdline.append('--allow-remote-http-connection')
 
     self.py_test_cmdline = cmdline
 
@@ -341,15 +387,15 @@ class TestHarness:
 
     def execute(self, harness):
       start_time = datetime.now()
-      prog = subprocess.Popen(self._command_line(harness),
-                              stdout=subprocess.PIPE,
-                              stderr=subprocess.PIPE,
-                              cwd=self.progdir)
+      with Popen(self._command_line(harness),
+                 stdout=subprocess.PIPE,
+                 stderr=subprocess.PIPE,
+                 cwd=self.progdir) as prog:
 
-      self.stdout_lines = prog.stdout.readlines()
-      self.stderr_lines = prog.stderr.readlines()
-      prog.wait()
-      self.result = prog.returncode
+        self.stdout_lines = prog.stdout.readlines()
+        self.stderr_lines = prog.stderr.readlines()
+        prog.wait()
+        self.result = prog.returncode
       self.taken = datetime.now() - start_time
 
   class CollectingThread(threading.Thread):
@@ -367,22 +413,20 @@ class TestHarness:
     def _count_c_tests(self, progabs, progdir, progbase):
       'Run a c test, escaping parameters as required.'
       cmdline = [ progabs, '--list' ]
-      prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
-      lines = prog.stdout.readlines()
-      self.result.append(TestHarness.Job(len(lines) - 2, False, progabs,
-                                         progdir, progbase))
-      prog.wait()
+      with Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir) as prog:
+        lines = prog.stdout.readlines()
+        self.result.append(TestHarness.Job(len(lines) - 2, False, progabs,
+                                           progdir, progbase))
 
     def _count_py_tests(self, progabs, progdir, progbase):
       'Run a c test, escaping parameters as required.'
       cmdline = [ sys.executable, progabs, '--list' ]
-      prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir)
-      lines = prog.stdout.readlines()
+      with Popen(cmdline, stdout=subprocess.PIPE, cwd=progdir) as prog:
+        lines = prog.stdout.readlines()
 
-      for i in range(0, len(lines) - 2):
-        self.result.append(TestHarness.Job(i + 1, True, progabs, 
-                                           progdir, progbase))
-      prog.wait()
+        for i in range(0, len(lines) - 2):
+          self.result.append(TestHarness.Job(i + 1, True, progabs,
+                                             progdir, progbase))
 
     def run(self):
       "Run a single test. Return the test's exit code."
@@ -690,7 +734,7 @@ class TestHarness:
     # Copy the truly interesting verbose logs to a separate file, for easier
     # viewing.
     if xpassed or failed_list:
-      faillog = codecs.open(self.faillogfile, 'w', encoding="latin-1")
+      faillog = open_logfile(self.faillogfile, 'w')
       last_start_lineno = None
       last_start_re = re.compile('^(FAIL|SKIP|XFAIL|PASS|START|CLEANUP|END):')
       for lineno, line in enumerate(log_lines):
@@ -710,9 +754,11 @@ class TestHarness:
 
     # Summary.
     if failed or xpassed or failed_list:
-      print("SUMMARY: Some tests failed.\n")
+      summary = "Some tests failed"
     else:
-      print("SUMMARY: All tests successful.\n")
+      summary = "All tests successful"
+    print("Python version: %d.%d.%d." % sys.version_info[:3])
+    print("SUMMARY: %s\n" % summary)
 
     self._close_log()
     return failed
@@ -721,7 +767,7 @@ class TestHarness:
     'Open the log file with the required MODE.'
     if self.logfile:
       self._close_log()
-      self.log = codecs.open(self.logfile, mode, encoding="latin-1")
+      self.log = open_logfile(self.logfile, mode)
 
   def _close_log(self):
     'Close the log file.'
@@ -775,8 +821,8 @@ class TestHarness:
       total = len(test_nums)
     else:
       total_cmdline = [cmdline[0], '--list']
-      prog = subprocess.Popen(total_cmdline, stdout=subprocess.PIPE)
-      lines = prog.stdout.readlines()
+      with Popen(total_cmdline, stdout=subprocess.PIPE) as prog:
+        lines = prog.stdout.readlines()
       total = len(lines) - 2
 
     # This has to be class-scoped for use in the progress_func()
@@ -792,23 +838,22 @@ class TestHarness:
       self.dots_written = dots
 
     tests_completed = 0
-    prog = subprocess.Popen(cmdline, stdout=subprocess.PIPE,
-                            stderr=self.log)
-    line = prog.stdout.readline()
-    while line:
-      line = ensure_str(line)
-      if self._process_test_output_line(line):
-        tests_completed += 1
-        progress_func(tests_completed)
-
+    with Popen(cmdline, stdout=subprocess.PIPE, stderr=self.log) as prog:
       line = prog.stdout.readline()
+      while line:
+        line = ensure_str(line)
+        if self._process_test_output_line(line):
+          tests_completed += 1
+          progress_func(tests_completed)
 
-    # If we didn't run any tests, still print out the dots
-    if not tests_completed:
-      os.write(sys.stdout.fileno(), b'.' * dot_count)
+        line = prog.stdout.readline()
 
-    prog.wait()
-    return prog.returncode
+      # If we didn't run any tests, still print out the dots
+      if not tests_completed:
+        os.write(sys.stdout.fileno(), b'.' * dot_count)
+
+      prog.wait()
+      return prog.returncode
 
   def _run_py_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a python test, passing parameters as needed.'
@@ -816,24 +861,28 @@ class TestHarness:
       if sys.version_info < (3, 0):
         prog_mod = imp.load_module(progbase[:-3], open(progabs, 'r'), progabs,
                                    ('.py', 'U', imp.PY_SOURCE))
-      else:
+      elif sys.version_info < (3, 5):
         prog_mod = imp.load_module(progbase[:-3],
                                    open(progabs, 'r', encoding="utf-8"),
                                    progabs, ('.py', 'U', imp.PY_SOURCE))
+      else:
+         spec = importlib.util.spec_from_file_location(progbase[:-3], progabs)
+         prog_mod = importlib.util.module_from_spec(spec)
+         sys.modules[progbase[:-3]] = prog_mod
+         spec.loader.exec_module(prog_mod)
     except:
       print("\nError loading test (details in following traceback): " + progbase)
       traceback.print_exc()
       sys.exit(1)
 
     # setup the output pipes
+    old_stdout = sys.stdout.fileno()
     if self.log:
       sys.stdout.flush()
       sys.stderr.flush()
       self.log.flush()
-      old_stdout = os.dup(sys.stdout.fileno())
-      old_stderr = os.dup(sys.stderr.fileno())
-      os.dup2(self.log.fileno(), sys.stdout.fileno())
-      os.dup2(self.log.fileno(), sys.stderr.fileno())
+      saved_stds = sys.stdout, sys.stderr
+      sys.stdout = sys.stderr = self.log
 
     # These have to be class-scoped for use in the progress_func()
     self.dots_written = 0
@@ -874,12 +923,8 @@ class TestHarness:
 
     # restore some values
     if self.log:
-      sys.stdout.flush()
-      sys.stderr.flush()
-      os.dup2(old_stdout, sys.stdout.fileno())
-      os.dup2(old_stderr, sys.stderr.fileno())
-      os.close(old_stdout)
-      os.close(old_stderr)
+      self.log.flush()
+      sys.stdout, sys.stderr = saved_stds
 
     return failed
 
@@ -1033,6 +1078,8 @@ def create_parser():
                     help='Set compression type (for fsfs)')
   parser.add_option('--fsfs-dir-deltification', action='store', type='str',
                     help='Set directory deltification option (for fsfs)')
+  parser.add_option('--allow-remote-http-connection', action='store_true',
+                    help='Run tests that connect to remote HTTP(S) servers')
 
   parser.set_defaults(set_log_level=None)
   return parser

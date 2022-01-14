@@ -74,14 +74,14 @@ extern "C" {
  * To cleanup the implementation and make it easier on diff processors to
  * handle the results I also added the following constraints.
  *
- *   * Diffs should be fully reversable: anything that is deleted should be
+ *   * Diffs should be fully reversible: anything that is deleted should be
  *     available, just like something that is added.
  *     (Proven via svn_diff__tree_processor_reverse_create)
  *     ### Still in doubt if *_deleted() needs a copy_to argument, for the
  *     ### 99% -> 100%.
  *
  *   * Diff processors should have an easy way to communicate that they are
- *     not interrested in certain expensive to obtain results.
+ *     not interested in certain expensive to obtain results.
  *
  *   * Directories should have clear open and close events to allow adding them
  *     before their children, but still allowing property changes to have

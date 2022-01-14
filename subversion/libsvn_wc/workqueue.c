@@ -30,6 +30,7 @@
 #include "svn_subst.h"
 #include "svn_hash.h"
 #include "svn_io.h"
+#include "svn_path.h"
 
 #include "wc.h"
 #include "wc_db.h"
@@ -39,6 +40,7 @@
 #include "translate.h"
 
 #include "private/svn_io_private.h"
+#include "private/svn_wc_private.h"
 #include "private/svn_skel.h"
 
 
@@ -64,7 +66,14 @@
 /* For work queue debugging. Generates output about its operation.  */
 /* #define SVN_DEBUG_WORK_QUEUE */
 
-typedef struct work_item_baton_t work_item_baton_t;
+typedef struct work_item_baton_t
+{
+  apr_pool_t *result_pool; /* Pool to allocate result in */
+
+  svn_boolean_t used; /* needs reset */
+
+  apr_hash_t *record_map; /* const char * -> svn_wc__db_fileinfo_t map */
+} work_item_baton_t;
 
 struct work_item_dispatch {
   const char *name;
@@ -77,12 +86,26 @@ struct work_item_dispatch {
                        apr_pool_t *scratch_pool);
 };
 
-/* Forward definition */
-static svn_error_t *
-get_and_record_fileinfo(work_item_baton_t *wqb,
-                        const char *local_abspath,
-                        svn_boolean_t ignore_enoent,
-                        apr_pool_t *scratch_pool);
+static void
+wq_record_fileinfo(work_item_baton_t *wqb,
+                   const char *local_abspath,
+                   apr_time_t mtime,
+                   svn_filesize_t size)
+{
+  svn_wc__db_fileinfo_t *info;
+
+  wqb->used = TRUE;
+
+  if (! wqb->record_map)
+    wqb->record_map = apr_hash_make(wqb->result_pool);
+
+  info = apr_pcalloc(wqb->result_pool, sizeof(*info));
+  info->mtime = mtime;
+  info->size = size;
+
+  svn_hash_sets(wqb->record_map, apr_pstrdup(wqb->result_pool, local_abspath),
+                info);
+}
 
 /* ------------------------------------------------------------------------ */
 /* OP_REMOVE_BASE  */
@@ -463,19 +486,33 @@ run_file_install(work_item_baton_t *wqb,
   const char *local_abspath;
   svn_boolean_t use_commit_times;
   svn_boolean_t record_fileinfo;
-  svn_boolean_t special;
   svn_stream_t *src_stream;
-  svn_subst_eol_style_t style;
-  const char *eol;
-  apr_hash_t *keywords;
   const char *temp_dir_abspath;
-  svn_stream_t *dst_stream;
   apr_int64_t val;
   const char *wcroot_abspath;
   const char *source_abspath;
   const svn_checksum_t *checksum;
   apr_hash_t *props;
+  svn_boolean_t is_special;
+  svn_boolean_t is_executable;
+  svn_boolean_t needs_lock;
+  const char *eol_propval;
+  svn_subst_eol_style_t eol_style;
+  const char *eol;
+  const char *keywords_propval;
+  apr_hash_t *keywords;
   apr_time_t changed_date;
+  svn_revnum_t changed_rev;
+  const char *changed_author;
+  apr_time_t final_mtime;
+  svn_wc__db_status_t status;
+  svn_wc__db_lock_t *lock;
+  const char *repos_relpath;
+  const char *repos_root_url;
+  svn_wc__working_file_writer_t *file_writer;
+  apr_time_t record_mtime;
+  apr_off_t record_size;
+  svn_boolean_t is_readonly;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
   SVN_ERR(svn_wc__db_from_relpath(&local_abspath, db, wri_abspath,
@@ -524,108 +561,99 @@ run_file_install(work_item_baton_t *wqb,
                                                   scratch_pool, scratch_pool));
     }
 
-  SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
-                                   scratch_pool, scratch_pool));
-
-  /* Fetch all the translation bits.  */
-  SVN_ERR(svn_wc__get_translate_info(&style, &eol,
-                                     &keywords,
-                                     &special, db, local_abspath,
-                                     props, FALSE,
-                                     scratch_pool, scratch_pool));
-  if (special)
-    {
-      /* When this stream is closed, the resulting special file will
-         atomically be created/moved into place at LOCAL_ABSPATH.  */
-      SVN_ERR(svn_subst_create_specialfile(&dst_stream, local_abspath,
-                                           scratch_pool, scratch_pool));
-
-      /* Copy the "repository normal" form of the special file into the
-         special stream.  */
-      SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
-                               cancel_func, cancel_baton,
-                               scratch_pool));
-
-      /* No need to set exec or read-only flags on special files.  */
-
-      /* ### Shouldn't this record a timestamp and size, etc.? */
-      return SVN_NO_ERROR;
-    }
-
-  if (svn_subst_translation_required(style, eol, keywords,
-                                     FALSE /* special */,
-                                     TRUE /* force_eol_check */))
-    {
-      /* Wrap it in a translating (expanding) stream.  */
-      src_stream = svn_subst_stream_translated(src_stream, eol,
-                                               TRUE /* repair */,
-                                               keywords,
-                                               TRUE /* expand */,
-                                               scratch_pool);
-    }
-
   /* Where is the Right Place to put a temp file in this working copy?  */
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath,
                                          db, wcroot_abspath,
                                          scratch_pool, scratch_pool));
 
-  /* Translate to a temporary file. We don't want the user seeing a partial
-     file, nor let them muck with it while we translate. We may also need to
-     get its TRANSLATED_SIZE before the user can monkey it.  */
-  SVN_ERR(svn_stream__create_for_install(&dst_stream, temp_dir_abspath,
-                                         scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
+                               &repos_root_url, NULL, &changed_rev, NULL,
+                               &changed_author, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &lock, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               db, local_abspath,
+                               scratch_pool, scratch_pool));
+  /* Handle special statuses (e.g. added) */
+  if (!repos_relpath)
+     SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
+                                        &repos_root_url, NULL,
+                                        db, local_abspath,
+                                        scratch_pool, scratch_pool));
 
-  /* Copy from the source to the dest, translating as we go. This will also
-     close both streams.  */
-  SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
+  is_special = svn_prop_get_value(props, SVN_PROP_SPECIAL) != NULL;
+  is_executable = svn_prop_get_value(props, SVN_PROP_EXECUTABLE) != NULL;
+  needs_lock = svn_prop_get_value(props, SVN_PROP_NEEDS_LOCK) != NULL;
+
+  eol_propval = svn_prop_get_value(props, SVN_PROP_EOL_STYLE);
+  svn_subst_eol_style_from_value(&eol_style, &eol, eol_propval);
+
+  keywords_propval = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
+  if (keywords_propval)
+    {
+      const char *url =
+        svn_path_url_add_component2(repos_root_url, repos_relpath, scratch_pool);
+
+      SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_propval,
+                                        apr_psprintf(scratch_pool, "%ld",
+                                                     changed_rev),
+                                        url, repos_root_url, changed_date,
+                                        changed_author, scratch_pool));
+    }
+  else
+    {
+      keywords = NULL;
+    }
+
+  if (use_commit_times && changed_date)
+    final_mtime = changed_date;
+  else
+    final_mtime = -1;
+
+  if (needs_lock && !lock && status != svn_wc__db_status_added)
+    is_readonly = TRUE;
+  else
+    is_readonly = FALSE;
+
+  SVN_ERR(svn_wc__working_file_writer_open(&file_writer,
+                                           temp_dir_abspath,
+                                           final_mtime,
+                                           eol_style,
+                                           eol,
+                                           TRUE /* repair_eol */,
+                                           keywords,
+                                           is_special,
+                                           is_executable,
+                                           is_readonly,
+                                           scratch_pool,
+                                           scratch_pool));
+
+  SVN_ERR(svn_stream_open_readonly(&src_stream, source_abspath,
+                                   scratch_pool, scratch_pool));
+
+  SVN_ERR(svn_stream_copy3(src_stream,
+                           svn_wc__working_file_writer_get_stream(file_writer),
                            cancel_func, cancel_baton,
                            scratch_pool));
 
-  /* All done. Move the file into place.  */
-  /* With a single db we might want to install files in a missing directory.
-     Simply trying this scenario on error won't do any harm and at least
-     one user reported this problem on IRC. */
-  SVN_ERR(svn_stream__install_stream(dst_stream, local_abspath,
-                                     TRUE /* make_parents*/, scratch_pool));
-
-  /* Tweak the on-disk file according to its properties.  */
-#ifndef WIN32
-  if (props && svn_hash_gets(props, SVN_PROP_EXECUTABLE))
-    SVN_ERR(svn_io_set_file_executable(local_abspath, TRUE, FALSE,
-                                       scratch_pool));
-#endif
-
-  /* Note that this explicitly checks the pristine properties, to make sure
-     that when the lock is locally set (=modification) it is not read only */
-  if (props && svn_hash_gets(props, SVN_PROP_NEEDS_LOCK))
-    {
-      svn_wc__db_status_t status;
-      svn_wc__db_lock_t *lock;
-      SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, &lock, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, NULL, NULL,
-                                   db, local_abspath,
-                                   scratch_pool, scratch_pool));
-
-      if (!lock && status != svn_wc__db_status_added)
-        SVN_ERR(svn_io_set_file_read_only(local_abspath, FALSE, scratch_pool));
-    }
-
-  if (use_commit_times)
-    {
-      if (changed_date)
-        SVN_ERR(svn_io_set_file_affected_time(changed_date,
-                                              local_abspath,
-                                              scratch_pool));
-    }
-
-  /* ### this should happen before we rename the file into place.  */
   if (record_fileinfo)
     {
-      SVN_ERR(get_and_record_fileinfo(wqb, local_abspath,
-                                      FALSE /* ignore_enoent */,
-                                      scratch_pool));
+      SVN_ERR(svn_wc__working_file_writer_finalize(&record_mtime, &record_size,
+                                                   file_writer, scratch_pool));
+    }
+  else
+    {
+      SVN_ERR(svn_wc__working_file_writer_finalize(NULL, NULL, file_writer,
+                                                   scratch_pool));
+      record_mtime = -1;
+      record_size = -1;
+    }
+
+  SVN_ERR(svn_wc__working_file_writer_install(file_writer, local_abspath,
+                                              scratch_pool));
+
+  if (record_fileinfo)
+    {
+      wq_record_fileinfo(wqb, local_abspath, record_mtime, record_size);
     }
 
   return SVN_NO_ERROR;
@@ -1180,6 +1208,7 @@ run_record_fileinfo(work_item_baton_t *wqb,
   const char *local_relpath;
   const char *local_abspath;
   apr_time_t set_time = 0;
+  const svn_io_dirent2_t *dirent;
 
   local_relpath = apr_pstrmemdup(scratch_pool, arg1->data, arg1->len);
 
@@ -1213,10 +1242,17 @@ run_record_fileinfo(work_item_baton_t *wqb,
          filesystem might have a different timestamp granularity */
     }
 
+  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath,
+                              FALSE /* verify_truename */,
+                              TRUE /* ignore_enoent */,
+                              scratch_pool, scratch_pool));
 
-  return svn_error_trace(get_and_record_fileinfo(wqb, local_abspath,
-                                                 TRUE /* ignore_enoent */,
-                                                 scratch_pool));
+  if (dirent->kind == svn_node_file)
+    {
+      wq_record_fileinfo(wqb, local_abspath, dirent->mtime, dirent->filesize);
+    }
+
+  return SVN_NO_ERROR;
 }
 
 /* ------------------------------------------------------------------------ */
@@ -1407,16 +1443,6 @@ static const struct work_item_dispatch dispatch_table[] = {
   /* Sentinel.  */
   { NULL }
 };
-
-struct work_item_baton_t
-{
-  apr_pool_t *result_pool; /* Pool to allocate result in */
-
-  svn_boolean_t used; /* needs reset */
-
-  apr_hash_t *record_map; /* const char * -> svn_io_dirent2_t map */
-};
-
 
 static svn_error_t *
 dispatch_work_item(work_item_baton_t *wqb,
@@ -1612,30 +1638,4 @@ svn_wc__wq_merge(svn_skel_t *work_item1,
      as we only want its children.  */
   svn_skel__append(work_item1, work_item2->children);
   return work_item1;
-}
-
-
-static svn_error_t *
-get_and_record_fileinfo(work_item_baton_t *wqb,
-                        const char *local_abspath,
-                        svn_boolean_t ignore_enoent,
-                        apr_pool_t *scratch_pool)
-{
-  const svn_io_dirent2_t *dirent;
-
-  SVN_ERR(svn_io_stat_dirent2(&dirent, local_abspath, FALSE, ignore_enoent,
-                              wqb->result_pool, scratch_pool));
-
-  if (dirent->kind != svn_node_file)
-    return SVN_NO_ERROR;
-
-  wqb->used = TRUE;
-
-  if (! wqb->record_map)
-    wqb->record_map = apr_hash_make(wqb->result_pool);
-
-  svn_hash_sets(wqb->record_map, apr_pstrdup(wqb->result_pool, local_abspath),
-                dirent);
-
-  return SVN_NO_ERROR;
 }

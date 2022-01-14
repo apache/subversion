@@ -22,9 +22,9 @@
 
 #include "svn_pools.h"
 
-#include "private/svn_fs_fs_private.h"
 #include "private/svn_sorts_private.h"
 
+#include "fs_fs.h"
 #include "index.h"
 #include "util.h"
 #include "transaction.h"

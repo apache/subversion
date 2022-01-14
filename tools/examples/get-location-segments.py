@@ -73,7 +73,7 @@ def parse_args(args):
 
 
 def prompt_func_ssl_unknown_cert(realm, failures, cert_info, may_save, pool):
-  print( "The certficate details are as follows:")
+  print( "The certificate details are as follows:")
   print("--------------------------------------")
   print("Issuer     : " + str(cert_info.issuer_dname))
   print("Hostname   : " + str(cert_info.hostname))

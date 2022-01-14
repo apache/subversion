@@ -136,7 +136,7 @@ typedef struct scan_moves_log_receiver_baton {
    *   rB: mv b->c
    *   rC: mv c->d
    * we map each revision number to all moves which happened in the
-   * revision, which looks as follows: 
+   * revision, which looks as follows:
    *   rA : [(rA, x->z), (rA, a->b)]
    *   rB : [(rB, b->c)]
    *   rC : [(rC, c->d)]

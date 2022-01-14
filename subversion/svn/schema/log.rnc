@@ -28,7 +28,8 @@ log = element log { logentry* }
 logentry =
   element logentry { attlist.logentry, author?, date?, paths?, msg?, revprops?, logentry* }
 attlist.logentry &=
-  attribute revision { revnum.type }
+  attribute revision { revnum.type },
+  attribute reverse-merge { "true" | "false" }?
 
 ## Changed paths information.
 paths = element paths { path+ }

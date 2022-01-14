@@ -185,7 +185,7 @@ def test_stats(sbox):
                            '.*\d+ bytes in .*\d+ file property representations',
                            '.*\d+ average delta chain length',
                            '.*\d+ bytes in header & footer overhead' ],
-    '.* representation statistics:' : 
+    '.* representation statistics:' :
                           ['.*\d+ bytes in .*\d+ reps',
                            '.*\d+ bytes in .*\d+ shared reps',
                            '.*\d+ bytes expanded size',

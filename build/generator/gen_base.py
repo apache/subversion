@@ -663,7 +663,7 @@ class TargetExe(TargetLinked):
     TargetLinked.add_dependencies(self)
 
     # collect test programs
-    if 'svnauthz' in self.name: # special case
+    if 'svnauthz' in self.name or 'svnmover' in self.name: # special case
       self.gen_obj.test_deps.append(self.filename)
       self.gen_obj.test_helpers.append(self.filename)
     elif self.install == 'test':
@@ -1273,7 +1273,8 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
-    for line in fileinput.input(fname):
+
+    for line in fileinput.FileInput(fname, openhook=fileinput.hook_encoded("utf-8")):
       match = self._re_include.match(line)
       if not match:
         continue

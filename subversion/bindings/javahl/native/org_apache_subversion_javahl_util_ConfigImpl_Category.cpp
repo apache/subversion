@@ -185,12 +185,12 @@ Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_get_1yna(
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_set_1str(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
-    jstring jsection, jstring joption, jstring jvalue)
+    jstring jsection, jstring joption, jstring jconfigval)
 {
   JNIEntry(ConfigImpl$Category, set_str);
   const ImplContext ctx(env, jthis, jcategory, jcontext, jsection, joption);
 
-  JNIStringHolder value(jvalue);
+  JNIStringHolder value(jconfigval);
   if (JNIUtil::isJavaExceptionThrown())
     return;
 
@@ -202,27 +202,27 @@ Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_set_1str(
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_set_1bool(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
-    jstring jsection, jstring joption, jboolean jvalue)
+    jstring jsection, jstring joption, jboolean jconfigval)
 {
   JNIEntry(ConfigImpl$Category, set_bool);
   const ImplContext ctx(env, jthis, jcategory, jcontext, jsection, joption);
 
   svn_config_set_bool(ctx.m_config,
                       ctx.m_section.c_str(), ctx.m_option.c_str(),
-                      bool(jvalue));
+                      bool(jconfigval));
 }
 
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_set_1long(
     JNIEnv* env, jobject jthis, jstring jcategory, jlong jcontext,
-    jstring jsection, jstring joption, jlong jvalue)
+    jstring jsection, jstring joption, jlong jconfigval)
 {
   JNIEntry(ConfigImpl$Category, set_long);
   const ImplContext ctx(env, jthis, jcategory, jcontext, jsection, joption);
 
   svn_config_set_int64(ctx.m_config,
                        ctx.m_section.c_str(), ctx.m_option.c_str(),
-                       apr_int64_t(jvalue));
+                       apr_int64_t(jconfigval));
 }
 
 JNIEXPORT jobject JNICALL
@@ -287,16 +287,16 @@ Java_org_apache_subversion_javahl_util_ConfigImpl_00024Category_enumerate(
         jstring jname = JNIUtil::makeJString(name);
         if (JNIUtil::isJavaExceptionThrown())
           return false;
-        jstring jvalue = JNIUtil::makeJString(value);
+        jstring jconfigval = JNIUtil::makeJString(value);
         if (JNIUtil::isJavaExceptionThrown())
           return false;
 
-        e->CallVoidMethod(jh, mid, jname, jvalue);
+        e->CallVoidMethod(jh, mid, jname, jconfigval);
         if (JNIUtil::isJavaExceptionThrown())
           return false;
 
         e->DeleteLocalRef(jname);
-        e->DeleteLocalRef(jvalue);
+        e->DeleteLocalRef(jconfigval);
         return true;
       }
 

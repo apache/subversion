@@ -66,7 +66,7 @@ public class SVNUtil
      * remote.RemoteFactory#setPrompt}) will be called every time the
      * underlying library needs access to the credentials.
      * <p>
-     * This mode is intented to support client implementations that
+     * This mode is intended to support client implementations that
      * use their own credentials store.
      * <p>
      * The standard credentials store is enabled by default.
@@ -101,9 +101,10 @@ public class SVNUtil
      */
     public static class CredentialTypeMismatch extends SubversionException
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         public CredentialTypeMismatch(Credential.Kind kind, String attribute)
@@ -119,9 +120,10 @@ public class SVNUtil
      */
     public static class Credential implements java.io.Serializable
     {
-        // Update the serialVersionUID when there is a incompatible change made to
-        // this class.  See the java documentation for when a change is incompatible.
-        // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
         private static final long serialVersionUID = 1L;
 
         /**
@@ -701,11 +703,11 @@ public class SVNUtil
      *        owns the property; only used for error messages
      * @param kind The node kind of the file or dir that owns the property
      * @param mimeType If <code>kind</code> is {@link NodeKind.file}, this is
-     *        tye file's mime-type, used for extra validation for the
+     *        the file's mime-type, used for extra validation for the
      *        <code>svn:eol-style</code> property. If it is <code>null</code>,
      *        the extra validation will be skipped.
      * @return a canonicalized representation of the property value
-     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     * @see https://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
      */
     public static byte[] canonicalizeNodeProperty(
         String name, byte[] value, String path, NodeKind kind,
@@ -725,7 +727,7 @@ public class SVNUtil
      *        owns the property; only used for error messages
      * @param kind The node kind of the file or dir that owns the property
      * @param mimeType If <code>kind</code> is {@link NodeKind.file}, this is
-     *        tye file's mime-type, used for extra validation for the
+     *        the file's mime-type, used for extra validation for the
      *        <code>svn:eol-style</code> property. If it is <code>null</code>,
      *        the extra validation will be skipped.
      * @param fileContents A stream with the file's contents. Only used
@@ -734,7 +736,7 @@ public class SVNUtil
      *        <code>kind</code> is {@link NodeKind.file} and
      *        <code>mimeType</code> is not <code>null</code>.
      * @return a canonicalized representation of the property value
-     * @see http://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
+     * @see https://subversion.apache.org/docs/api/latest/group__svn__wc__properties.html#ga83296313ec59cc825176224ac8282ec2
      */
     public static byte[] canonicalizeNodeProperty(
         String name, byte[] value, String path, NodeKind kind,
@@ -752,7 +754,7 @@ public class SVNUtil
      * parsed external items.
      * @param description The externals description.
      * @param parentDirectory Used to construct error messages.
-     * @param canonicalizeUrl Whe <code>true</code>, canonicalize the
+     * @param canonicalizeUrl When <code>true</code>, canonicalize the
      *     <code>url</code> member of the returned objects. If the
      *     <code>url</code> member refers to an absolute URL, it will
      *     be canonicalized as URL consistent with the way URLs are
@@ -877,7 +879,7 @@ public class SVNUtil
      * Build a dictionary of expanded keyword values, given the
      * contents of a file's <code>svn:keywords</code> property, its
      * revision, URL, the date it was committed on, the author of the
-     * commit and teh URL of the repository root.
+     * commit and the URL of the repository root.
      *<p>
      * Custom keywords defined in <code>svn:keywords</code> properties
      * are expanded using the provided parameters and in accordance

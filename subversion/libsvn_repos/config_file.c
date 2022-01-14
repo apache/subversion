@@ -237,6 +237,10 @@ get_repos_config(svn_stream_t **stream,
     {
       /* Search for a repository in the full path. */
       repos_root_dirent = svn_repos_find_root_path(dirent, scratch_pool);
+      if (repos_root_dirent == NULL)
+        return svn_error_trace(handle_missing_file(stream, checksum, access,
+                                                   url, must_exist,
+                                                   svn_node_none));
 
       /* Attempt to open a repository at repos_root_dirent. */
       SVN_ERR(svn_repos_open3(&access->repos, repos_root_dirent, NULL,
@@ -342,7 +346,7 @@ svn_repos__create_config_access(svn_repos_t *repos_hint,
   return result;
 }
 
-void 
+void
 svn_repos__destroy_config_access(config_access_t *access)
 {
   svn_pool_destroy(access->pool);

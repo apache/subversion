@@ -341,7 +341,7 @@ svn_cmdline_auth_plaintext_passphrase_prompt(svn_boolean_t *may_save_plaintext,
  * from the future.
  *
  * @a trust_server_cert_other_failure: If @c TRUE, accept certificates
- * even if any other verification failure than the above occured.
+ * even if any other verification failure than the above occurred.
  *
  * @a cfg is the @c SVN_CONFIG_CATEGORY_CONFIG configuration, and
  * @a cancel_func and @a cancel_baton control the cancellation of the

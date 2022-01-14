@@ -714,6 +714,8 @@ parse_uri(dav_resource_combined *comb,
       && ((ch = uri[len2]) == '/' || ch == '\0')
       && memcmp(uri, special_uri, len2) == 0)
     {
+      comb->priv.is_public_uri = FALSE;
+
       if (ch == '\0')
         {
           /* URI was "/root/!svn". It exists, but has restricted usage. */
@@ -789,6 +791,8 @@ parse_uri(dav_resource_combined *comb,
       /* The location of these resources corresponds directly to the URI,
          and we keep the leading "/". */
       comb->priv.repos_path = comb->priv.uri_path->data;
+
+      comb->priv.is_public_uri = TRUE;
     }
 
   return FALSE;
@@ -1225,25 +1229,32 @@ create_private_resource(const dav_resource *base,
   return &comb->res;
 }
 
-
-static void log_warning(void *baton, svn_error_t *err)
+static void log_warning_req(void *baton, svn_error_t *err)
 {
   request_rec *r = baton;
   const char *continuation = "";
-
-  /* ### hmm. the FS is cleaned up at request cleanup time. "r" might
-     ### not really be valid. we should probably put the FS into a
-     ### subpool to ensure it gets cleaned before the request.
-
-     ### is there a good way to create and use a subpool for all
-     ### of our functions ... ??
-  */
 
   /* Not showing file/line so no point in tracing */
   err = svn_error_purge_tracing(err);
   while (err)
     {
       ap_log_rerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, r, "%s%s",
+                    continuation, err->message);
+      continuation = "-";
+      err = err->child;
+    }
+}
+
+static void log_warning_conn(void *baton, svn_error_t *err)
+{
+  conn_rec *c = baton;
+  const char *continuation = "";
+
+  /* Not showing file/line so no point in tracing */
+  err = svn_error_purge_tracing(err);
+  while (err)
+    {
+      ap_log_cerror(APLOG_MARK, APLOG_ERR, APR_EGENERAL, c, "%s%s",
                     continuation, err->message);
       continuation = "-";
       err = err->child;
@@ -1547,6 +1558,24 @@ cleanup_fs_access(void *data)
   return APR_SUCCESS;
 }
 
+/* Context for cleanup handler. */
+struct cleanup_req_logging_baton
+{
+  svn_fs_t *fs;
+  conn_rec *connection;
+};
+
+static apr_status_t
+cleanup_req_logging(void *data)
+{
+  struct cleanup_req_logging_baton *baton = data;
+
+  /* The request about to be freed. Log future warnings with a connection
+   * context instead of a request context. */
+  svn_fs_set_warning_func(baton->fs, log_warning_conn, baton->connection);
+
+  return APR_SUCCESS;
+}
 
 /* Helper func to construct a special 'parentpath' private resource. */
 static dav_error *
@@ -1571,6 +1600,7 @@ get_parentpath_resource(request_rec *r,
   comb->priv.r = r;
   comb->priv.repos_path = "Collection of Repositories";
   comb->priv.root = *droot;
+  comb->priv.is_public_uri = TRUE;
   droot->rev = SVN_INVALID_REVNUM;
 
   comb->priv.repos = repos;
@@ -1945,7 +1975,7 @@ do_out_of_date_check(dav_resource_combined *comb, request_rec *r)
          We have to check if whatever the node is in HEAD is equivalent
          to what it was in the provided BASE revision.
 
-         If the node was copied, we would process it before its decendants
+         If the node was copied, we would process it before its descendants
          and we already performed quite a few checks when making it mutable
          via its descendant, so what we should really check here is if the
          properties changed since the BASE version.
@@ -2180,6 +2210,7 @@ get_resource(request_rec *r,
   int had_slash;
   dav_locktoken_list *ltl;
   struct cleanup_fs_access_baton *cleanup_baton;
+  struct cleanup_req_logging_baton *cleanup_req_logging_baton;
   void *userdata;
   apr_hash_t *fs_config;
 
@@ -2486,7 +2517,15 @@ get_resource(request_rec *r,
   repos->fs = svn_repos_fs(repos->repos);
 
   /* capture warnings during cleanup of the FS */
-  svn_fs_set_warning_func(repos->fs, log_warning, r);
+  svn_fs_set_warning_func(repos->fs, log_warning_req, r);
+
+  /* We must degrade the logging context when the request is freed. */
+  cleanup_req_logging_baton =
+    apr_pcalloc(r->pool, sizeof(*cleanup_req_logging_baton));
+  cleanup_req_logging_baton->fs = repos->fs;
+  cleanup_req_logging_baton->connection = r->connection;
+  apr_pool_pre_cleanup_register(r->pool, cleanup_req_logging_baton,
+                                cleanup_req_logging);
 
   /* if an authenticated username is present, attach it to the FS */
   if (r->user)
@@ -3185,6 +3224,45 @@ set_headers(request_rec *r, const dav_resource *resource)
   if (!resource->exists)
     return NULL;
 
+  if ((resource->type == DAV_RESOURCE_TYPE_REGULAR)
+      && resource->info->is_public_uri)
+    {
+      /* Include Last-Modified header for 'external' GET or HEAD requests
+         (i.e. requests to URI's not under /!svn), to support usage of an
+         SVN server as a file server, where the client needs timestamps
+         for instance to use as "last modification time" of files on disk. */
+
+      svn_revnum_t created_rev;
+      svn_string_t *date_str = NULL;
+
+      serr = svn_fs_node_created_rev(&created_rev, resource->info->root.root,
+                                     resource->info->repos_path,
+                                     resource->pool);
+
+      if (serr == NULL)
+        {
+          serr = svn_fs_revision_prop2(&date_str, resource->info->repos->fs,
+                                       created_rev, SVN_PROP_REVISION_DATE,
+                                       TRUE, resource->pool, resource->pool);
+        }
+
+      if ((serr == NULL) && date_str && date_str->data)
+        {
+          apr_time_t mtime;
+          serr = svn_time_from_cstring(&mtime, date_str->data, resource->pool);
+
+          if (serr == NULL)
+            {
+              /* Note the modification time for the requested resource, and
+                 include the Last-Modified header in the response. */
+              ap_update_mtime(r, mtime);
+              ap_set_last_modified(r);
+            }
+        }
+
+      svn_error_clear(serr);
+    }
+
   /* generate our etag and place it into the output */
   apr_table_setn(r->headers_out, "ETag",
                  dav_svn__getetag(resource, resource->pool));
@@ -3491,7 +3569,7 @@ emit_collection_entry(const dav_resource *resource,
 
   /* According to httpd-2.0.54/include/httpd.h, ap_os_escape_path()
      behaves differently on different platforms.  It claims to
-     "convert an OS path to a URL in an OS dependant way".
+     "convert an OS path to a URL in an OS dependent way".
      Nevertheless, there appears to be only one implementation
      of the function in httpd, and the code seems completely
      platform independent, so we'll assume it's appropriate for
@@ -4028,7 +4106,7 @@ create_collection(dav_resource *resource)
                               "autoversioning is not active.");
 
   /* ### note that the parent was checked out at some point, and this
-     ### is being preformed relative to the working rsrc for that parent */
+     ### is being performed relative to the working rsrc for that parent */
 
   /* Auto-versioning mkcol of regular resource: */
   if (resource->type == DAV_RESOURCE_TYPE_REGULAR)
@@ -4207,7 +4285,7 @@ remove_resource(dav_resource *resource, dav_response **response)
     }
 
   /* ### note that the parent was checked out at some point, and this
-     ### is being preformed relative to the working rsrc for that parent */
+     ### is being performed relative to the working rsrc for that parent */
 
   /* NOTE: strictly speaking, we cannot determine whether the parent was
      ever checked out, and that this working resource is relative to that

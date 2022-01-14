@@ -21,15 +21,16 @@
  * svn_repos.i: SWIG interface file for svn_repos.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") repos
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) repos
 #elif defined(SWIGPERL)
 %module "SVN::_Repos"
 #elif defined(SWIGRUBY)
 %module "svn::ext::repos"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 %import svn_fs.i
@@ -106,6 +107,16 @@
                   ,
                   ,
                   svn_swig_rb_repos_authz_callback)
+#endif
+
+/* -----------------------------------------------------------------------
+   Tweak a SubversionException instance (See svn_fs.i for detail).
+*/
+
+#ifdef SWIGPYTHON
+%apply svn_error_t *SVN_ERR_WITH_ATTRS  {
+    svn_error_t * svn_repos_fs_commit_txn
+};
 #endif
 
 /* -----------------------------------------------------------------------

@@ -1663,6 +1663,106 @@ def remove_access_after_commit(sbox):
                                         expected_status,
                                         [], True)
 
+@Issue(4793)
+@Skip(svntest.main.is_ra_type_file)
+def inverted_group_membership(sbox):
+  "access rights for user in inverted group"
+
+  sbox.build(create_wc = False)
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox,
+                   {"/" : ("$anonymous =\n"
+                           "~@readonly = rw\n"
+                           "@readonly = r\n")},
+                   {"groups": "readonly = %s\n" % svntest.main.wc_author2})
+
+  expected_output = svntest.verify.UnorderedOutput(['A/\n', 'iota\n'])
+
+  # User mentioned in the @readonly group can read ...
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author2,
+                                     sbox.repo_url)
+
+  # ... but the access control entry for the inverted group isn't applied.
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author,
+                                     sbox.repo_url)
+
+@Skip(svntest.main.is_ra_type_file)
+def group_member_empty_string(sbox):
+  "group definition ignores empty member"
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox,
+                   {"/" : ("$anonymous =\n"
+                           "@readonly = r\n")},
+                   {"groups": "readonly = , %s\n" % svntest.main.wc_author})
+
+  expected_output = svntest.verify.UnorderedOutput(['A/\n', 'iota\n'])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author,
+                                     sbox.repo_url)
+
+@Issue(4802)
+@Skip(svntest.main.is_ra_type_file)
+def empty_group(sbox):
+  "empty group is ignored"
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+  write_authz_file(sbox,
+                   {"/" : ("$anonymous =\n"
+                           "@empty = rw\n"
+                           "@readonly = r\n")},
+                   {"groups": ("empty = \n"
+                               "readonly = %s\n" % svntest.main.wc_author)})
+
+  expected_output = svntest.verify.UnorderedOutput(['A/\n', 'iota\n'])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'list',
+                                     '--username', svntest.main.wc_author,
+                                     sbox.repo_url)
+
+
+@Issue(4878)
+@XFail(svntest.main.is_ra_type_dav)
+@Skip(svntest.main.is_ra_type_file)
+def delete_file_with_starstar_rules(sbox):
+  "delete file with ** rules"
+
+  # mod_dav_svn unnecessarily requires svn_authz_recursive access on DELETE of
+  # a file.  See:
+  # 
+  #     https://mail-archives.apache.org/mod_mbox/subversion-users/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
+  #     https://mail-archives.apache.org/mod_mbox/subversion-dev/202107.mbox/%3C20210731004148.GA26581%40tarpaulin.shahaf.local2%3E
+  #     (Both links go to the same message.)
+  #
+  # The test will XPASS if the glob rule is removed.
+  #
+  # Note that the /**/lorem rule can't possibly match ^/iota, but its existence
+  # nevertheless affects the results of the authz check.
+
+  sbox.build(create_wc = False)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  prefixed_rules = dict()
+  prefixed_rules[':glob:/**/lorem'] = '* = \n'
+  prefixed_rules['/'] = '%s = rw\n' % (svntest.main.wc_author,)
+  prefixed_rules['/A'] = '%s = \n' % (svntest.main.wc_author,)
+  prefixed_rules['/iota'] = '%s = rw\n' % (svntest.main.wc_author,)
+  write_authz_file(sbox, None, prefixed_rules = prefixed_rules)
+
+  svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota', '-m', 'rm by URL')
+
 
 ########################################################################
 # Run the tests
@@ -1700,6 +1800,10 @@ test_list = [ None,
               authz_file_external_to_authz,
               authz_log_censor_revprops,
               remove_access_after_commit,
+              inverted_group_membership,
+              group_member_empty_string,
+              empty_group,
+              delete_file_with_starstar_rules,
              ]
 serial_only = True
 

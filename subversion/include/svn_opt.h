@@ -27,6 +27,8 @@
 #ifndef SVN_OPT_H
 #define SVN_OPT_H
 
+#include "svn_opt_impl.h"
+
 #include <apr.h>
 #include <apr_pools.h>
 #include <apr_getopt.h>
@@ -443,43 +445,7 @@ svn_opt_subcommand_help(const char *subcommand,
 
 
 /* Parsing revision and date options. */
-
-/**
- * Various ways of specifying revisions.
- *
- * @note
- * In contexts where local mods are relevant, the `working' kind
- * refers to the uncommitted "working" revision, which may be modified
- * with respect to its base revision.  In other contexts, `working'
- * should behave the same as `committed' or `current'.
- */
-enum svn_opt_revision_kind {
-  /** No revision information given. */
-  svn_opt_revision_unspecified,
-
-  /** revision given as number */
-  svn_opt_revision_number,
-
-  /** revision given as date */
-  svn_opt_revision_date,
-
-  /** rev of most recent change */
-  svn_opt_revision_committed,
-
-  /** (rev of most recent change) - 1 */
-  svn_opt_revision_previous,
-
-  /** .svn/entries current revision */
-  svn_opt_revision_base,
-
-  /** current, plus local mods */
-  svn_opt_revision_working,
-
-  /** repository youngest */
-  svn_opt_revision_head
-
-  /* please update svn_opt__revision_to_string() when extending this enum */
-};
+/* NOTE: svn_opt_revision_kind is defined in svn_opt_impl.h */
 
 /**
  * A revision value, which can be specified as a number or a date.

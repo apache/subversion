@@ -922,7 +922,7 @@ readline_apr_lf(apr_file_t *file,
       }
 
     /* Otherwise, prepare to read the next chunk. */
-    svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+    svn_stringbuf_ensure(buf, buf->len + SVN__LINE_CHUNK_SIZE);
   }
 }
 
@@ -982,7 +982,7 @@ readline_apr_generic(apr_file_t *file,
         }
 
       /* Prepare to read the next chunk. */
-      svn_stringbuf_ensure(buf, buf->blocksize + SVN__LINE_CHUNK_SIZE);
+      svn_stringbuf_ensure(buf, buf->len + SVN__LINE_CHUNK_SIZE);
     }
 }
 
@@ -2172,6 +2172,9 @@ struct install_baton_t
 {
   struct baton_apr baton_apr;
   const char *tmp_path;
+  svn_boolean_t set_read_only;
+  svn_boolean_t set_executable;
+  apr_time_t set_mtime;
 };
 
 #ifdef WIN32
@@ -2313,9 +2316,184 @@ svn_stream__create_for_install(svn_stream_t **install_stream,
   (*install_stream)->baton = ib;
 
   ib->tmp_path = tmp_path;
+  ib->set_read_only = FALSE;
+  ib->set_executable = FALSE;
+  ib->set_mtime = -1;
 
   /* Don't close the file on stream close; flush instead */
   svn_stream_set_close(*install_stream, install_close);
+
+  return SVN_NO_ERROR;
+}
+
+void
+svn_stream__install_set_read_only(svn_stream_t *install_stream,
+                                  svn_boolean_t read_only)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+  ib->set_read_only = read_only;
+}
+
+void
+svn_stream__install_set_executable(svn_stream_t *install_stream,
+                                   svn_boolean_t executable)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+  ib->set_executable = executable;
+}
+
+void
+svn_stream__install_set_affected_time(svn_stream_t *install_stream,
+                                      apr_time_t mtime)
+{
+  struct install_baton_t *ib = install_stream->baton;
+
+  ib->set_mtime = mtime;
+}
+
+/* Helper function that closes the underlying file of the install stream
+   and update the state in the baton. */
+static svn_error_t *
+install_stream_close_file(struct install_baton_t *ib,
+                          apr_pool_t *scratch_pool)
+{
+  if (ib->baton_apr.file)
+    {
+      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+      ib->baton_apr.file = NULL;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_stream__install_finalize(apr_time_t *mtime_p,
+                             apr_off_t *size_p,
+                             svn_stream_t *install_stream,
+                             apr_pool_t *scratch_pool)
+{
+  struct install_baton_t *ib = install_stream->baton;
+  svn_boolean_t finalized = FALSE;
+  apr_finfo_t finfo;
+  apr_int32_t wanted;
+
+#ifdef WIN32
+  /* If the caller asked us for the timestamp with a non-null MTIME_P,
+     ensure that subsequent I/O operations won't change it; see below.
+   */
+  if (ib->set_mtime >= 0 || ib->set_read_only || mtime_p)
+    {
+      apr_time_t set_mtime;
+      svn_error_t *err;
+
+      /* On Windows, the file systems may defer processing of timestamps until
+         the file handle is closed, as specified in [1].  Since we peek and
+         return the current timestamp, we MUST ensure that the timestamp does
+         not change after the call to finalize().
+
+         Luckily, there are two options that guarantee that the file will keep
+         its current timestamp after close.  We can either explicitly set a new
+         timestamp, or use a special option that instructs the file system to
+         suspend updates for timestamp values for all subsequent I/O operations.
+         Both of these options guarantee [2, 3] that no other operation will
+         change the final timestamp.  So we use both of them, depending on
+         whether the caller wants us to set a specific timestamp, or not.
+
+         [1: MS-FSA, 2.1.4.17, Note <42>]
+         File systems may choose to defer processing for a file that has been
+         modified to a later time, favoring performance over accuracy. The NTFS
+         file system on versions prior to Windows 10 v1809 operating system,
+         Windows Server v1809 operating system, and Windows Server 2019, and
+         non-NTFS file systems on all versions of Windows, defer this processing
+         until the Open gets closed.
+         https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/4e3695bd-7574-4f24-a223-b4679c065b63#Appendix_A_42
+
+         [2: MS-FSA 2.1.5.14.2]
+         If InputBuffer.LastWriteTime != 0:
+           If InputBuffer.LastWriteTime != -2:
+             The object store MUST set Open.UserSetModificationTime to TRUE.
+         https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/a36513b4-73c8-4888-ad29-8f3a196567e8
+
+         [3: MS-FSA 2.1.4.17]
+         If Open.UserSetModificationTime is FALSE, set Open.File.LastModificationTime
+         to the current system time.
+         https://docs.microsoft.com/en-us/openspecs/windows_protocols/ms-fsa/75cdaba1-4401-4c53-b09c-69ba6cd50ce6
+       */
+      if (ib->set_mtime >= 0)
+        set_mtime = ib->set_mtime;
+      else
+        set_mtime = SVN_IO__WIN_TIME_SUSPEND_UPDATE;
+
+      err = svn_io__win_set_file_basic_info(ib->baton_apr.file, ib->tmp_path,
+                                            set_mtime, ib->set_read_only,
+                                            scratch_pool);
+
+      if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+        {
+          /* Setting information by handle is not supported on this platform:
+             fallback to setting it by path. */
+          svn_error_clear(err);
+        }
+      else if (err)
+        {
+          return svn_error_trace(err);
+        }
+      else
+        {
+          finalized = TRUE;
+        }
+    }
+  else
+    {
+      finalized = TRUE;
+    }
+#endif
+
+  if (!finalized)
+    {
+      SVN_ERR(install_stream_close_file(ib, scratch_pool));
+
+      if (ib->set_read_only)
+        SVN_ERR(svn_io_set_file_read_only(ib->tmp_path, FALSE,
+                                          scratch_pool));
+      if (ib->set_executable)
+        SVN_ERR(svn_io_set_file_executable(ib->tmp_path, TRUE, FALSE,
+                                           scratch_pool));
+      if (ib->set_mtime >= 0)
+        SVN_ERR(svn_io_set_file_affected_time(ib->set_mtime, ib->tmp_path,
+                                              scratch_pool));
+
+      finalized = TRUE;
+    }
+
+  wanted = 0;
+  if (mtime_p)
+    wanted |= APR_FINFO_MTIME;
+  if (size_p)
+    wanted |= APR_FINFO_SIZE;
+
+  /* Note that we always fetch the values such as MTIME_P from the filesystem,
+     because it might have a lower timestamp granularity than apr_time_t.
+   */
+  if (wanted)
+    {
+      apr_status_t status;
+
+      if (ib->baton_apr.file)
+        status = apr_file_info_get(&finfo, wanted, ib->baton_apr.file);
+      else
+        status = apr_stat(&finfo, ib->tmp_path, wanted, scratch_pool);
+
+      if (status)
+        return svn_error_wrap_apr(status, NULL);
+    }
+
+  if (mtime_p)
+    *mtime_p = finfo.mtime;
+  if (size_p)
+    *size_p = finfo.size;
 
   return SVN_NO_ERROR;
 }
@@ -2330,47 +2508,49 @@ svn_stream__install_stream(svn_stream_t *install_stream,
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(final_abspath));
-#ifdef WIN32
-  err = svn_io__win_rename_open_file(ib->baton_apr.file,  ib->tmp_path,
-                                     final_abspath, scratch_pool);
-  if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
+
+  if (ib->baton_apr.file)
     {
-      svn_error_t *err2;
-
-      err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
-                                                    scratch_pool),
-                                         scratch_pool);
-
-      if (err2)
-        return svn_error_trace(svn_error_compose_create(err, err2));
-      else
-        svn_error_clear(err);
-
+#ifdef WIN32
       err = svn_io__win_rename_open_file(ib->baton_apr.file, ib->tmp_path,
                                          final_abspath, scratch_pool);
-    }
+      if (make_parents && err && APR_STATUS_IS_ENOENT(err->apr_err))
+        {
+          svn_error_t *err2;
 
-  /* ### rhuijben: I wouldn't be surprised if we later find out that we
-                   have to fall back to close+rename on some specific
-                   error values here, to support some non standard NAS
-                   and filesystem scenarios. */
-  if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
-    {
-      /* Rename open files is not supported on this platform: fallback to
-         svn_io_file_rename2(). */
-      svn_error_clear(err);
-      err = SVN_NO_ERROR;
-    }
-  else
-    {
-      return svn_error_compose_create(err,
-                                      svn_io_file_close(ib->baton_apr.file,
-                                                        scratch_pool));
-    }
+          err2 = svn_io_make_dir_recursively(svn_dirent_dirname(final_abspath,
+                                                                scratch_pool),
+                                             scratch_pool);
+
+          if (err2)
+            return svn_error_trace(svn_error_compose_create(err, err2));
+          else
+            svn_error_clear(err);
+
+          err = svn_io__win_rename_open_file(ib->baton_apr.file, ib->tmp_path,
+                                             final_abspath, scratch_pool);
+        }
+
+        /* ### rhuijben: I wouldn't be surprised if we later find out that we
+                         have to fall back to close+rename on some specific
+                         error values here, to support some non standard NAS
+                         and filesystem scenarios. */
+        if (err && err->apr_err == SVN_ERR_UNSUPPORTED_FEATURE)
+          {
+            /* Rename open files is not supported on this platform: fallback to
+               svn_io_file_rename2(). */
+            svn_error_clear(err);
+            err = SVN_NO_ERROR;
+          }
+        else
+          {
+            return svn_error_compose_create(
+                     err, install_stream_close_file(ib, scratch_pool));
+          }
 #endif
 
-  /* Close temporary file. */
-  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+        SVN_ERR(install_stream_close_file(ib, scratch_pool));
+    }
 
   err = svn_io_file_rename2(ib->tmp_path, final_abspath, FALSE, scratch_pool);
 
@@ -2399,47 +2579,33 @@ svn_stream__install_stream(svn_stream_t *install_stream,
 }
 
 svn_error_t *
-svn_stream__install_get_info(apr_finfo_t *finfo,
-                             svn_stream_t *install_stream,
-                             apr_int32_t wanted,
-                             apr_pool_t *scratch_pool)
-{
-  struct install_baton_t *ib = install_stream->baton;
-  apr_status_t status;
-
-  status = apr_file_info_get(finfo, wanted, ib->baton_apr.file);
-
-  if (status)
-    return svn_error_wrap_apr(status, NULL);
-
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
 svn_stream__install_delete(svn_stream_t *install_stream,
                            apr_pool_t *scratch_pool)
 {
   struct install_baton_t *ib = install_stream->baton;
 
-#ifdef WIN32
-  svn_error_t *err;
-
-  /* Mark the file as delete on close to avoid having to reopen
-     the file as part of the delete handling. */
-  err = svn_io__win_delete_file_on_close(ib->baton_apr.file,  ib->tmp_path,
-                                         scratch_pool);
-  if (err == SVN_NO_ERROR)
+  if (ib->baton_apr.file)
     {
-      SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
-      return SVN_NO_ERROR; /* File is already gone */
-    }
+#ifdef WIN32
+      svn_error_t *err;
 
-  /* Deleting file on close may be unsupported, so ignore errors and
-     fallback to svn_io_remove_file2(). */
-  svn_error_clear(err);
+      /* Mark the file as delete on close to avoid having to reopen
+         the file as part of the delete handling. */
+      err = svn_io__win_delete_file_on_close(ib->baton_apr.file, ib->tmp_path,
+                                             scratch_pool);
+      if (err == SVN_NO_ERROR)
+        {
+          SVN_ERR(install_stream_close_file(ib, scratch_pool));
+          return SVN_NO_ERROR; /* File is already gone */
+        }
+
+      /* Deleting file on close may be unsupported, so ignore errors and
+         fallback to svn_io_remove_file2(). */
+      svn_error_clear(err);
 #endif
 
-  SVN_ERR(svn_io_file_close(ib->baton_apr.file, scratch_pool));
+      SVN_ERR(install_stream_close_file(ib, scratch_pool));
+    }
 
   return svn_error_trace(svn_io_remove_file2(ib->tmp_path, FALSE,
                                              scratch_pool));

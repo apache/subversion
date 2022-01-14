@@ -100,6 +100,7 @@ static const int slow_statements[] =
   STMT_SELECT_UPDATE_MOVE_LIST,
   STMT_FIND_REPOS_PATH_IN_WC,
   STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND,
+  STMT_SELECT_COPIES_OF_REPOS_RELPATH,
 
   /* Designed as slow to avoid penalty on other queries */
   STMT_SELECT_UNREFERENCED_PRISTINES,
@@ -266,6 +267,14 @@ struct explanation_item
   const char *compound_right;
   svn_boolean_t create_btree;
 
+  svn_boolean_t create_union;
+  svn_boolean_t union_all;
+
+  svn_boolean_t merge;
+
+  svn_boolean_t multi_index;
+  svn_boolean_t multi_index_or;
+
   int expression_vars;
   int expected_rows;
 };
@@ -311,6 +320,18 @@ parse_explanation_item(struct explanation_item **parsed_item,
         {
           item->table = apr_psprintf(result_pool, "SUBQUERY-%s",
                                      apr_strtok(NULL, " ", &last));
+        }
+      else if (MATCH_TOKEN(token, "CONSTANT"))
+        {
+          item->table = "sqlite_master"; /* not worth checking.
+                                            Just a lookup */
+          token = apr_strtok(NULL, " ", &last);
+          if (!MATCH_TOKEN(token, "ROW"))
+            {
+              printf("DBG: Expected 'ROW', got '%s' in '%s'\n",
+                     token, text);
+              return SVN_NO_ERROR;
+            }
         }
       else
         {
@@ -433,39 +454,44 @@ parse_explanation_item(struct explanation_item **parsed_item,
       /* Handling temporary table (E.g. UNION) */
 
       token = apr_strtok(NULL, " ", &last);
-      if (!MATCH_TOKEN(token, "SUBQUERIES"))
+      if (MATCH_TOKEN(token, "SUBQUERIES"))
+        {
+          item->compound_left = apr_strtok(NULL, " ", &last);
+          token = apr_strtok(NULL, " ", &last);
+
+          if (!MATCH_TOKEN(token, "AND"))
+            {
+              printf("DBG: Expected 'AND', got '%s' in '%s'\n", token, text);
+              return SVN_NO_ERROR;
+            }
+
+          item->compound_right = apr_strtok(NULL, " ", &last);
+
+          token = apr_strtok(NULL, " ", &last);
+          if (MATCH_TOKEN(token, "USING"))
+            {
+              token = apr_strtok(NULL, " ", &last);
+              if (!MATCH_TOKEN(token, "TEMP"))
+                {
+                  printf("DBG: Expected 'TEMP', got '%s' in '%s'\n", token, text);
+                }
+              token = apr_strtok(NULL, " ", &last);
+              if (!MATCH_TOKEN(token, "B-TREE"))
+                {
+                  printf("DBG: Expected 'B-TREE', got '%s' in '%s'\n", token,
+                         text);
+                }
+              item->create_btree = TRUE;
+            }
+        }
+      else if (MATCH_TOKEN(token, "QUERY"))
+        {
+        }
+      else
         {
           printf("DBG: Expected 'SUBQUERIES', got '%s' in '%s'\n", token,
                  text);
           return SVN_NO_ERROR;
-        }
-
-      item->compound_left = apr_strtok(NULL, " ", &last);
-      token = apr_strtok(NULL, " ", &last);
-
-      if (!MATCH_TOKEN(token, "AND"))
-        {
-          printf("DBG: Expected 'AND', got '%s' in '%s'\n", token, text);
-          return SVN_NO_ERROR;
-        }
-
-      item->compound_right = apr_strtok(NULL, " ", &last);
-
-      token = apr_strtok(NULL, " ", &last);
-      if (MATCH_TOKEN(token, "USING"))
-        {
-          token = apr_strtok(NULL, " ", &last);
-          if (!MATCH_TOKEN(token, "TEMP"))
-            {
-              printf("DBG: Expected 'TEMP', got '%s' in '%s'\n", token, text);
-            }
-          token = apr_strtok(NULL, " ", &last);
-          if (!MATCH_TOKEN(token, "B-TREE"))
-            {
-              printf("DBG: Expected 'B-TREE', got '%s' in '%s'\n", token,
-                     text);
-            }
-          item->create_btree = TRUE;
         }
     }
   else if (MATCH_TOKEN(item->operation, "USE"))
@@ -473,6 +499,48 @@ parse_explanation_item(struct explanation_item **parsed_item,
       /* Using a temporary table for ordering results */
       /* ### Need parsing */
       item->create_btree = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "UNION"))
+    {
+      item->create_union = TRUE;
+
+      token = apr_strtok(NULL, " ", &last);
+      if (MATCH_TOKEN(token, "ALL"))
+        item->union_all = TRUE;
+      else
+        item->union_all = FALSE;
+    }
+  else if (MATCH_TOKEN(item->operation, "INDEX"))
+    {
+
+    }
+  else if (MATCH_TOKEN(item->operation, "MULTI-INDEX"))
+    {
+      item->multi_index = TRUE;
+      token = apr_strtok(NULL, " ", &last);
+      if (MATCH_TOKEN(token, "OR"))
+        item->multi_index_or = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "MERGE"))
+    {
+      item->merge = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "LEFT")
+           || MATCH_TOKEN(item->operation, "RIGHT"))
+    {
+    }
+  else if (MATCH_TOKEN(item->operation, "CORRELATED"))
+    {
+      item->merge = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "CO-ROUTINE"))
+    {
+    }
+  else if (MATCH_TOKEN(item->operation, "SCALAR"))
+    {
+    }
+  else if (MATCH_TOKEN(item->operation, "LEFT-MOST"))
+    {
     }
   else
     {
@@ -670,7 +738,20 @@ test_query_expectations(apr_pool_t *scratch_pool)
                        || (item->expression_vars < 1))
                    && !is_result_table(item->table))
             {
-              if (in_list(primary_key_statements, i))
+              if (MATCH_TOKEN(item->table, "sqlite_master"))
+                {
+                  /* The sqlite_master table does not have an index.
+                     Query explanations that say 'SCAN TABLE sqlite_master'
+                     will appear if SQLite was compiled with the option
+                     SQLITE_ENABLE_STMT_SCANSTATUS, for queries such
+                     as 'DROP TABLE foo', but the performance of such
+                     statements is not our concern here. */
+
+                  /* "Slow" statements do expect to see a warning, however. */
+                  if (is_slow_statement(i))
+                    warned = TRUE;
+                }
+              else if (in_list(primary_key_statements, i))
                 {
                   /* Reported as primary key index usage in Sqlite 3.7,
                      as table scan in 3.8+, while the execution plan is

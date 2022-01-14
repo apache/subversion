@@ -107,13 +107,9 @@ jobject SVNBase::createCppBoundObject(const char *clazzName)
   if (JNIUtil::isJavaExceptionThrown())
     return NULL;
 
-  static jmethodID ctor = 0;
-  if (ctor == 0)
-    {
-      ctor = env->GetMethodID(clazz, "<init>", "(J)V");
-      if (JNIUtil::isJavaExceptionThrown())
-        return NULL;
-    }
+  jmethodID ctor = env->GetMethodID(clazz, "<init>", "(J)V");
+  if (JNIUtil::isJavaExceptionThrown())
+    return NULL;
 
   jlong cppAddr = this->getCppAddr();
 

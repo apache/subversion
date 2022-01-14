@@ -19,23 +19,20 @@
 #
 #
 import unittest, setup_path
+import os
+import tempfile
 import svn.delta
 import svn.core
 from sys import version_info # For Python version check
-if version_info[0] >= 3:
-  # Python >=3.0
-  from io import StringIO
-else:
-  # Python <3.0
-  from cStringIO import StringIO
+from io import BytesIO
 
 # Test case for svn.delta
 class DeltaTestCase(unittest.TestCase):
 
   def testTxWindowHandler(self):
     """Test tx_invoke_window_handler"""
-    src_stream = StringIO("hello world")
-    target_stream = StringIO("bye world")
+    src_stream = BytesIO("hello world".encode('UTF-8'))
+    target_stream = BytesIO("bye world".encode('UTF-8'))
 
     # Invoke the window_handler using a helper function
     window_handler, baton = \
@@ -47,17 +44,72 @@ class DeltaTestCase(unittest.TestCase):
        svn.delta.tx_apply(src_stream, target_stream, None)
     window_handler(None, baton)
 
+  def testTxWindowHandler_stream_IF(self):
+    """Test tx_invoke_window_handler, with svn.core.svn_stream_t object"""
+    pool = svn.core.Pool()
+    in_str = b"hello world"
+    src_stream = svn.core.svn_stream_from_stringbuf(in_str)
+    content_str = b"bye world"
+    content_stream = svn.core.svn_stream_from_stringbuf(content_str)
+    fd, fname = tempfile.mkstemp()
+    fname_bytes = fname if isinstance(fname, bytes) else fname.encode('UTF-8')
+    os.close(fd)
+    try:
+      target_stream = svn.core.svn_stream_from_aprfile2(fname_bytes, False)
+      window_handler, baton = \
+          svn.delta.tx_apply(src_stream, target_stream, None)
+      svn.delta.tx_send_stream(content_stream, window_handler, baton, pool)
+      fp = open(fname, 'rb')
+      out_str = fp.read()
+      fp.close()
+      self.assertEqual(content_str, out_str)
+    finally:
+      del pool
+      try:
+        os.remove(fname)
+      except OSError:
+        pass
+
+  def testTxWindowHandler_Stream_IF(self):
+    """Test tx_invoke_window_handler, with svn.core.Stream object"""
+    pool = svn.core.Pool()
+    in_str = b"hello world"
+    src_stream = svn.core.Stream(
+                    svn.core.svn_stream_from_stringbuf(in_str))
+    content_str = b"bye world"
+    content_stream = svn.core.Stream(
+                    svn.core.svn_stream_from_stringbuf(content_str))
+    fd, fname = tempfile.mkstemp()
+    fname_bytes = fname if isinstance(fname, bytes) else fname.encode('UTF-8')
+    os.close(fd)
+    try:
+      target_stream = svn.core.Stream(
+                    svn.core.svn_stream_from_aprfile2(fname_bytes, False))
+      window_handler, baton = \
+          svn.delta.tx_apply(src_stream, target_stream, None)
+      svn.delta.tx_send_stream(content_stream, window_handler, baton, None)
+      fp = open(fname, 'rb')
+      out_str = fp.read()
+      fp.close()
+      self.assertEqual(content_str, out_str)
+    finally:
+      del pool
+      try:
+        os.remove(fname)
+      except OSError:
+        pass
+
   def testTxdeltaWindowT(self):
     """Test the svn_txdelta_window_t wrapper."""
-    a = StringIO("abc\ndef\n")
-    b = StringIO("def\nghi\n")
+    a = BytesIO("abc\ndef\n".encode('UTF-8'))
+    b = BytesIO("def\nghi\n".encode('UTF-8'))
 
     delta_stream = svn.delta.svn_txdelta(a, b)
     window = svn.delta.svn_txdelta_next_window(delta_stream)
 
-    self.assert_(window.sview_offset + window.sview_len <= len(a.getvalue()))
-    self.assert_(window.tview_len <= len(b.getvalue()))
-    self.assert_(len(window.new_data) > 0)
+    self.assertTrue(window.sview_offset + window.sview_len <= len(a.getvalue()))
+    self.assertTrue(window.tview_len <= len(b.getvalue()))
+    self.assertTrue(len(window.new_data) > 0)
     self.assertEqual(window.num_ops, len(window.ops))
     self.assertEqual(window.src_ops, len([op for op in window.ops
       if op.action_code == svn.delta.svn_txdelta_source]))

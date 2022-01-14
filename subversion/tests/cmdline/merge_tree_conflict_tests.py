@@ -2364,6 +2364,233 @@ def spurios_tree_conflict_with_added_file(sbox):
                                        [], False, True, '--reintegrate',
                                        sbox.ospath('A_branch'))
 
+def merge_local_missing_node_kind_none(sbox):
+  "crash in resolver triggered by none-type node"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  sbox.simple_mkdir('branches')
+  sbox.simple_commit() # r2
+  sbox.simple_update()
+
+  # Create a feature branch of A
+  sbox.simple_copy('A', 'branches/feature1')
+  sbox.simple_commit() #r3
+  sbox.simple_update()
+
+  # On the branch, move file alpha to another directory
+  sbox.simple_move('branches/feature1/B/E/alpha',
+                   'branches/feature1/D/H/alpha-from-B-E')
+  sbox.simple_commit() # r4
+  sbox.simple_update()
+
+  # Cherry-pick the delete-half of the above move into A (the trunk)
+  expected_output = svntest.wc.State(sbox.ospath('A/B/E'), {
+    'alpha'          : Item(status='D '),
+  })
+  expected_mergeinfo_output = wc.State(sbox.ospath('A/B/E'), {
+    ''                  : Item(status=' U')
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'beta'              : Item(contents="This is the file 'beta'.\n"),
+    '.'                 : Item(props={u'svn:mergeinfo':
+                                      u'/branches/feature1/B/E:4'}),
+  })
+  expected_status = wc.State(sbox.ospath('A/B/E'), {
+    ''                  : Item(status=' M', wc_rev='4'),
+    'alpha'             : Item(status='D ', wc_rev='4'),
+    'beta'              : Item(status='  ', wc_rev='4'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A/B/E'), 3, 4,
+                                       sbox.repo_url + '/branches/feature1/B/E',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+  sbox.simple_commit() # r5
+  sbox.simple_update()
+
+  # Create a new file on the feature branch
+  sbox.simple_add_text("This is the file 'pi'\n", 'branches/feature1/B/E/pi')
+  sbox.simple_commit() #r6
+  sbox.simple_update()
+
+  # Create a second branch based on the feature branch.
+  sbox.simple_copy('branches/feature1', 'branches/feature2')
+  sbox.simple_commit() #r7
+  sbox.simple_update()
+
+  # Create a new file kappa on this second branch
+  sbox.simple_add_text("This is the file 'kappa'\n",
+                       'branches/feature2/B/E/kappa')
+  sbox.simple_commit() #r8
+  sbox.simple_update()
+
+  # An unrelated additional change on the second branch.
+  sbox.simple_append('branches/feature2/B/E/beta',
+                     "This is a change to file 'beta'.\n")
+  sbox.simple_commit() #r9
+  sbox.simple_update()
+
+  # Merge the second branch back into the feature branch
+  expected_output = svntest.wc.State(sbox.ospath('branches/feature1'), {
+    'B/E/kappa'         : Item(status='A '),
+    'B/E/beta'          : Item(status='U '),
+    })
+  expected_mergeinfo_output = wc.State(sbox.ospath('branches/feature1'), {
+    '.'                 : Item(status=' U'),
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'C'                 : Item(),
+    'B/E/kappa'         : Item(contents="This is the file 'kappa'\n"),
+    'B/E/pi'            : Item(contents="This is the file 'pi'\n"),
+    'B/E/beta'          : Item(contents="This is the file 'beta'.\n" +
+                                        "This is a change to file 'beta'.\n"),
+    'B/lambda'          : Item(contents="This is the file 'lambda'.\n"),
+    'B/F'               : Item(),
+    'D/H/omega'         : Item(contents="This is the file 'omega'.\n"),
+    'D/H/alpha-from-B-E': Item(contents="This is the file 'alpha'.\n"),
+    'D/H/psi'           : Item(contents="This is the file 'psi'.\n"),
+    'D/H/chi'           : Item(contents="This is the file 'chi'.\n"),
+    'D/G/pi'            : Item(contents="This is the file 'pi'.\n"),
+    'D/G/rho'           : Item(contents="This is the file 'rho'.\n"),
+    'D/G/tau'           : Item(contents="This is the file 'tau'.\n"),
+    'D/gamma'           : Item(contents="This is the file 'gamma'.\n"),
+    'mu'                : Item(contents="This is the file 'mu'.\n"),
+    '.'                 : Item(props={u'svn:mergeinfo':
+                                      u'/branches/feature2:7-9'}),
+  })
+  expected_status = wc.State(sbox.ospath('branches/feature1'), {
+    ''                  : Item(status=' M', wc_rev='9'),
+    'mu'                : Item(status='  ', wc_rev='9'),
+    'D'                 : Item(status='  ', wc_rev='9'),
+    'D/H'               : Item(status='  ', wc_rev='9'),
+    'D/H/alpha-from-B-E': Item(status='  ', wc_rev='9'),
+    'D/H/psi'           : Item(status='  ', wc_rev='9'),
+    'D/H/chi'           : Item(status='  ', wc_rev='9'),
+    'D/H/omega'         : Item(status='  ', wc_rev='9'),
+    'D/G'               : Item(status='  ', wc_rev='9'),
+    'D/G/pi'            : Item(status='  ', wc_rev='9'),
+    'D/G/tau'           : Item(status='  ', wc_rev='9'),
+    'D/G/rho'           : Item(status='  ', wc_rev='9'),
+    'D/gamma'           : Item(status='  ', wc_rev='9'),
+    'B'                 : Item(status='  ', wc_rev='9'),
+    'B/E'               : Item(status='  ', wc_rev='9'),
+    'B/E/beta'          : Item(status='M ', wc_rev='9'),
+    'B/E/kappa'         : Item(status='A ', copied='+', wc_rev='-'),
+    'B/E/pi'            : Item(status='  ', wc_rev='9'),
+    'B/lambda'          : Item(status='  ', wc_rev='9'),
+    'B/F'               : Item(status='  ', wc_rev='9'),
+    'C'                 : Item(status='  ', wc_rev='9'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('branches/feature1'),
+                                       None, None,
+                                       sbox.repo_url + '/branches/feature2',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+  sbox.simple_commit() # r10
+  sbox.simple_update()
+
+  # On the feature branch, rename the file kappa
+  sbox.simple_move('branches/feature1/B/E/kappa',
+                   'branches/feature1/B/E/kappanew')
+  sbox.simple_commit() # r11
+  sbox.simple_update()
+
+  # On the feature branch, move file kappanew to another directory
+  sbox.simple_move('branches/feature1/B/E/kappanew',
+                   'branches/feature1/D/H/kappanew')
+  sbox.simple_commit() # r12
+  sbox.simple_update()
+
+  # Cherry-pick r12 into A (the trunk)
+  # This triggers an assertion failure in Subversion 1.14.1 because of
+  # a node type lookup which uses the wrong token map:
+  # W: subversion/libsvn_subr/token.c:40: (apr_err=SVN_ERR_ASSERTION_FAIL)
+  # svn: E235000: In file 'subversion/libsvn_subr/token.c' line 40: internal malfunction
+  expected_output = svntest.wc.State(sbox.ospath('A'), {
+    'B/E/kappanew'      : Item(status='  ', treeconflict='C'),
+    'D/H/kappanew'      : Item(status='A '),
+  })
+  expected_mergeinfo_output = wc.State(sbox.ospath('A'), {
+    ''                 : Item(status=' U'),
+    'B/E'              : Item(status=' U'),
+  })
+  expected_elision_output = wc.State(wc_dir, {
+  })
+  expected_disk = wc.State('', {
+    'C'                 : Item(),
+    'B/E'               : Item(props={u'svn:mergeinfo':
+                                      u'/branches/feature1/B/E:4,12'}),
+    'B/E/beta'          : Item(contents="This is the file 'beta'.\n"),
+    'B/lambda'          : Item(contents="This is the file 'lambda'.\n"),
+    'B/F'               : Item(),
+    'D/H/omega'         : Item(contents="This is the file 'omega'.\n"),
+    'D/H/kappanew'      : Item(contents="This is the file 'kappa'\n"),
+    'D/H/psi'           : Item(contents="This is the file 'psi'.\n"),
+    'D/H/chi'           : Item(contents="This is the file 'chi'.\n"),
+    'D/G/pi'            : Item(contents="This is the file 'pi'.\n"),
+    'D/G/rho'           : Item(contents="This is the file 'rho'.\n"),
+    'D/G/tau'           : Item(contents="This is the file 'tau'.\n"),
+    'D/gamma'           : Item(contents="This is the file 'gamma'.\n"),
+    'mu'                : Item(contents="This is the file 'mu'.\n"),
+    '.'                 : Item(props={u'svn:mergeinfo':
+                                      u'/branches/feature1:12'}),
+  })
+  expected_status = wc.State(sbox.ospath('A'), {
+    ''                  : Item(status=' M', wc_rev='12'),
+    'D'                 : Item(status='  ', wc_rev='12'),
+    'D/H'               : Item(status='  ', wc_rev='12'),
+    'D/H/chi'           : Item(status='  ', wc_rev='12'),
+    'D/H/psi'           : Item(status='  ', wc_rev='12'),
+    'D/H/kappanew'      : Item(status='A ', copied='+', wc_rev='-'),
+    'D/H/omega'         : Item(status='  ', wc_rev='12'),
+    'D/G'               : Item(status='  ', wc_rev='12'),
+    'D/G/pi'            : Item(status='  ', wc_rev='12'),
+    'D/G/tau'           : Item(status='  ', wc_rev='12'),
+    'D/G/rho'           : Item(status='  ', wc_rev='12'),
+    'D/gamma'           : Item(status='  ', wc_rev='12'),
+    'B'                 : Item(status='  ', wc_rev='12'),
+    'B/E'               : Item(status=' M', wc_rev='12'),
+    'B/E/beta'          : Item(status='  ', wc_rev='12'),
+    'B/E/kappanew'      : Item(status='! ', treeconflict='C'),
+    'B/F'               : Item(status='  ', wc_rev='12'),
+    'B/lambda'          : Item(status='  ', wc_rev='12'),
+    'mu'                : Item(status='  ', wc_rev='12'),
+    'C'                 : Item(status='  ', wc_rev='12'),
+  })
+  expected_skip = wc.State('', {
+  })
+  svntest.actions.run_and_verify_merge(sbox.ospath('A'), 11, 12,
+                                       sbox.repo_url + '/branches/feature1',
+                                       None,
+                                       expected_output,
+                                       expected_mergeinfo_output,
+                                       expected_elision_output,
+                                       expected_disk,
+                                       expected_status,
+                                       expected_skip,
+                                       check_props=True)
+
 
 ########################################################################
 # Run the tests
@@ -2399,6 +2626,7 @@ test_list = [ None,
               merge_obstruction_recording,
               added_revision_recording_in_tree_conflict,
               spurios_tree_conflict_with_added_file,
+              merge_local_missing_node_kind_none,
              ]
 
 if __name__ == '__main__':

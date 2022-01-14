@@ -896,6 +896,105 @@ def svnauthz_compat_mode_repo_test(sbox):
       repo_url + "/zilch"
   )
 
+
+@Issue(4793)
+def svnauthz_inverted_selector_test(sbox):
+  "test inverted selector rights"
+
+  # build an authz file
+  authz_content = ("[groups]\n"
+                   "grouped = grouper\n"
+
+                   "[aliases]\n"
+                   "aliased = aliaser\n"
+
+                   "[A:/]\n"
+                   "@grouped = r\n"
+                   "~@grouped = rw\n"
+
+                   "[B:/]\n"
+                   "&aliased = r\n"
+                   "~&aliased = rw\n"
+
+                   "[C:/]\n"
+                   "user = r\n"
+                   "~user = rw\n"
+
+                   "[D:/]\n"
+                   "~@grouped = rw\n"
+                   "not-grouper = r\n"
+
+                   "[E:/]\n"
+                   "~&aliased = rw\n"
+                   "not-aliaser = r\n"
+
+                   "[F:/]\n"
+                   "~user = rw\n"
+                   "not-user = r\n")
+
+  (authz_fd, authz_path) = tempfile.mkstemp()
+  svntest.main.file_write(authz_path, authz_content)
+
+  def accessof(repos, user, expected_stdout):
+    return svntest.actions.run_and_verify_svnauthz(
+      expected_stdout, None, 0, False, 'accessof',
+      '--repository', repos, '--username', user, authz_path)
+
+  accessof('A', 'grouper', 'r')
+  accessof('A', 'not-grouper', 'rw')
+
+  accessof('B', 'aliaser', 'r')
+  accessof('B', 'not-aliaser', 'rw')
+
+  accessof('C', 'user', 'r')
+  accessof('C', 'not-user', 'rw')
+
+  accessof('D', 'grouper', 'no')
+  accessof('D', 'not-grouper', 'r')
+  accessof('D', 'other', 'rw')
+
+  accessof('E', 'aliaser', 'no')
+  accessof('E', 'not-aliaser', 'r')
+  accessof('E', 'other', 'rw')
+
+  accessof('F', 'user', 'no')
+  accessof('F', 'not-user', 'r')
+  accessof('F', 'other', 'rw')
+
+  os.close(authz_fd)
+  os.remove(authz_path)
+
+
+@Issues(4802, 4803)
+def svnauthz_empty_group_test(sbox):
+  "test empty group definition"
+
+  # build an authz file
+  authz_content = ("[groups]\n"
+                   "group1 =\n"
+                   "group2 = @group1\n"
+                   "group3 = @group2, user\n"
+
+
+                   "[A:/]\n"
+                   "@group1 = rw\n"
+                   "@group2 = rw\n"
+                   "@group3 = r\n")
+
+  (authz_fd, authz_path) = tempfile.mkstemp()
+  svntest.main.file_write(authz_path, authz_content)
+
+  expected_stderr = svntest.verify.RegexOutput(
+    r".*warning: W220003:.*", match_all=False)
+
+  svntest.actions.run_and_verify_svnauthz(
+    [], expected_stderr, 0, False, 'validate', authz_path)
+
+  svntest.actions.run_and_verify_svnauthz(
+    'r', expected_stderr, 0, False, 'accessof',
+    '--repository', 'A', '--username', 'user', authz_path)
+
+
 ########################################################################
 # Run the tests
 
@@ -914,6 +1013,8 @@ test_list = [ None,
               svnauthz_accessof_txn_test,
               svnauthz_compat_mode_file_test,
               svnauthz_compat_mode_repo_test,
+              svnauthz_inverted_selector_test,
+              svnauthz_empty_group_test,
              ]
 
 if __name__ == '__main__':

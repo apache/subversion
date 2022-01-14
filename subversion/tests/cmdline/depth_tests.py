@@ -2846,7 +2846,7 @@ def commit_excluded(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'D' : Item(verb='Adding'),
   })
-  
+
   expected_status.add({
     'D'          : Item(status='  ', wc_rev='2'),
     'D/H'        : Item(status='  ', wc_rev='2'),
@@ -2971,10 +2971,10 @@ def fold_tree_with_unversioned_items(sbox):
 
   # Set A to be excluded.
   svntest.main.run_svn(None, 'update', '--set-depth=exclude', A_path)
-  
+
   # try a simple update afterwards
   sbox.simple_update()
-  
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,

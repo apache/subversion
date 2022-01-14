@@ -574,6 +574,7 @@ static fs_vtable_t fs_vtable = {
   base_bdb_verify_root,
   base_bdb_freeze,
   base_bdb_set_errcall,
+  NULL /* ioctl */
 };
 
 /* Where the format number is stored. */
@@ -906,7 +907,7 @@ bdb_recover(const char *path, svn_boolean_t fatal, apr_pool_t *pool)
      will simply join it instead, and will then be running with
      incorrectly sized (and probably terribly small) caches.  */
 
-  /* Note that since we're using a private environment, we shoudl
+  /* Note that since we're using a private environment, we should
      /not/ initialize locking. We want the environment files to go
      away. */
 
@@ -1077,7 +1078,7 @@ base_bdb_logfiles(apr_array_header_t **logfiles,
 /* Copying a live Berkeley DB-base filesystem.  */
 
 /**
- * Delete all unused log files from DBD enviroment at @a live_path that exist
+ * Delete all unused log files from DBD environment at @a live_path that exist
  * in @a backup_path.
  */
 static svn_error_t *
@@ -1515,7 +1516,8 @@ static fs_library_vtable_t library_vtable = {
   base_bdb_logfiles,
   svn_fs_base__id_parse,
   base_set_svn_fs_open,
-  NULL /* info_fsap_dup */
+  NULL /* info_fsap_dup */,
+  NULL /* ioctl */
 };
 
 svn_error_t *

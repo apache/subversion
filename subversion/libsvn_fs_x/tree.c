@@ -2072,7 +2072,7 @@ text_stream_writer(void *baton,
   return svn_stream_write(tb->file_stream, data, len);
 }
 
-/* Close function for the publically returned stream. */
+/* Close function for the publicly returned stream. */
 static svn_error_t *
 text_stream_closer(void *baton)
 {

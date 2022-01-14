@@ -1336,25 +1336,23 @@ def mergeinfo_switch_elision(sbox):
 
   # Make branches A/B_COPY_1 and A/B_COPY_2
   expected_stdout = verify.UnorderedOutput([
-     "A    " + sbox.ospath('A/B_COPY_1/lambda') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/E') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/E/alpha') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/E/beta') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_1/F') + "\n",
-     "Checked out revision 1.\n",
      "A         " + B_COPY_1_path + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/lambda') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/E') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/E/alpha') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/E/beta') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_1/F') + "\n",
     ])
   svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_1_path)
 
   expected_stdout = verify.UnorderedOutput([
-     "A    " + sbox.ospath('A/B_COPY_2/lambda') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/E') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/E/alpha') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/E/beta') + "\n",
-     "A    " + sbox.ospath('A/B_COPY_2/F') + "\n",
-     "Checked out revision 1.\n",
      "A         " + B_COPY_2_path + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/lambda') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/E') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/E/alpha') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/E/beta') + "\n",
+     "A         " + sbox.ospath('A/B_COPY_2/F') + "\n",
     ])
   svntest.actions.run_and_verify_svn(expected_stdout, [], 'copy',
                                      sbox.repo_url + "/A/B", B_COPY_2_path)
@@ -2029,8 +2027,9 @@ def tolerate_local_mods(sbox):
   svntest.main.run_svn(None, 'add', L_path)
   sbox.simple_commit(message='Commit added folder')
 
-  # locally modified unversioned file
+  # locally modified versioned file
   svntest.main.file_write(LM_path, 'Locally modified file.\n', 'w+')
+  sbox.simple_add('A/L/local_mod')
 
   expected_output = svntest.wc.State(wc_dir, {
     'A/L' : Item(status='  ', treeconflict='C'),
@@ -2046,7 +2045,8 @@ def tolerate_local_mods(sbox):
   expected_status.tweak('', 'iota', wc_rev=1)
   expected_status.tweak('A', switched='S')
   expected_status.add({
-    'A/L' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-')
+    'A/L' : Item(status='A ', copied='+', treeconflict='C', wc_rev='-'),
+    'A/L/local_mod' : Item(status='A ', wc_rev='-'),
   })
 
   # Used to fail with locally modified or unversioned files
@@ -2870,7 +2870,7 @@ def switch_moves(sbox):
 
   # In Subversion 1.8 this scenario causes an Sqlite row not found error.
   # It would be nice if we could handle the tree conflict more intelligent, as
-  # the working copy matches the incomming change.
+  # the working copy matches the incoming change.
   svntest.actions.run_and_verify_switch(sbox.wc_dir, sbox.ospath(''), branch_url,
                                         None, expected_disk, expected_status)
 

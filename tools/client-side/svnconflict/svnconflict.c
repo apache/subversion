@@ -373,7 +373,7 @@ svnconflict_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   for (i = 0; i < props_conflicted->nelts; i++)
     {
-      const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *); 
+      const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *);
       SVN_ERR(svn_cmdline_printf(pool, "prop-conflict: %s\n", propname));
     }
 
@@ -717,7 +717,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_config_dir:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
+        SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
+                                               utf8_opt_arg, pool, pool));
         break;
       case opt_config_options:
         if (!opt_state.config_options)

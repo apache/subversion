@@ -260,7 +260,7 @@ WHERE wc_id = ?1 AND IS_STRICT_DESCENDANT_OF(local_relpath, ?2)
 
 -- STMT_DELETE_BASE_RECURSIVE
 DELETE FROM nodes
-WHERE wc_id = ?1 AND (local_relpath = ?2 
+WHERE wc_id = ?1 AND (local_relpath = ?2
                       OR IS_STRICT_DESCENDANT_OF(local_relpath, ?2))
   AND op_depth = 0
 
@@ -1795,6 +1795,23 @@ WHERE wc_id = ?1
 -- STMT_HAVE_STAT1_TABLE
 SELECT 1 FROM sqlite_master WHERE name='sqlite_stat1' AND type='table'
 LIMIT 1
+
+-- STMT_SELECT_COPIES_OF_REPOS_RELPATH
+SELECT local_relpath
+FROM nodes n
+WHERE wc_id = ?1 AND repos_path = ?2 AND kind = ?3
+  AND presence = MAP_NORMAL
+  AND op_depth = (SELECT MAX(op_depth)
+                  FROM NODES w
+                  WHERE w.wc_id = ?1
+                    AND w.local_relpath = n.local_relpath)
+ORDER BY local_relpath ASC
+
+-- STMT_GET_LOCK
+SELECT lock_token, lock_owner, lock_comment, lock_date
+FROM lock
+WHERE repos_id = ?1 AND (repos_relpath = ?2)
+
 
 /* ------------------------------------------------------------------------- */
 

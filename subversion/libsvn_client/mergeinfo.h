@@ -74,8 +74,6 @@ typedef struct svn_client__merge_path_t
                                            prior to a merge.  May be NULL. */
   svn_boolean_t inherited_mergeinfo;    /* Whether PRE_MERGE_MERGEINFO was
                                            explicit or inherited. */
-  svn_boolean_t scheduled_for_deletion; /* ABSPATH is scheduled for
-                                           deletion. */
   svn_boolean_t immediate_child_dir;    /* ABSPATH is an immediate child
                                            directory of the merge target,
                                            has no explicit mergeinfo prior
@@ -316,7 +314,7 @@ svn_client__get_history_as_mergeinfo(svn_mergeinfo_t *mergeinfo_p,
 
 /* Parse any explicit mergeinfo on LOCAL_ABSPATH and store it in
    *MERGEINFO.  If no record of any mergeinfo exists, set *MERGEINFO to NULL.
-   Does not acount for inherited mergeinfo.
+   Does not account for inherited mergeinfo.
 
    Allocate the result deeply in @a result_pool. */
 svn_error_t *

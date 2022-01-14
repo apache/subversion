@@ -1556,7 +1556,7 @@ msgid "Certificate signature mismatch"
 msgstr "Certifikatssignaturen stämmer ej"
 
 #: ../include/svn_error_codes.h:1772
-msgid "Certficate verification failed"
+msgid "Certificate verification failed"
 msgstr "Certifikatskontrollen misslyckades"
 
 #: ../libsvn_auth_gnome_keyring/gnome_keyring.c:296
@@ -6854,8 +6854,8 @@ msgstr "p2l-indexpost för revision r%ld på position %s innehåller ogiltig obj
 
 #: ../libsvn_fs_fs/verify.c:696
 #, c-format
-msgid "p2l index entry for changes in revision r%ld is item %ld of type %d at offset %s"
-msgstr "p2l-indexpost för ändringar i revision r%ld är objekt %ld av typ %d på position %s"
+msgid "p2l index entry for changes in revision r%ld is item %s of type %u at offset %s"
+msgstr "p2l-indexpost för ändringar i revision r%ld är objekt %s av typ %u på position %s"
 
 #: ../libsvn_fs_util/fs-util.c:164
 msgid "Filesystem object has not been opened yet"
@@ -19164,7 +19164,7 @@ msgid ""
 "Print the names of uncommitted transactions. With -rN skip the output\n"
 "of those that have a base revision more recent than rN.  Transactions\n"
 "with base revisions much older than HEAD are likely to have been\n"
-"abandonded and are candidates to be removed.\n"
+"abandoned and are candidates to be removed.\n"
 msgstr ""
 "Skriv namnen på oarkiverade transaktioner. Med -rN, hoppa över transaktioner\n"
 "med basrevision nyare än rN. Transaktioner med basrevisioner som är mycket\n"

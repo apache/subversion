@@ -46,6 +46,8 @@
 #include "svn_private_config.h"
 #include "cl-conflicts.h"
 
+#include "private/svn_string_private.h"
+
 
 /*** Code. ***/
 
@@ -352,6 +354,7 @@ typedef enum
   info_item_relative_url,
   info_item_repos_root_url,
   info_item_repos_uuid,
+  info_item_repos_size,
 
   /* Working copy revision or repository HEAD revision */
   info_item_revision,
@@ -365,6 +368,7 @@ typedef enum
   info_item_wc_root,
   info_item_schedule,
   info_item_depth,
+  info_item_changelist,
   info_item_wc_format,
   info_item_wc_format_min,
   info_item_wc_format_max
@@ -377,27 +381,27 @@ typedef struct info_item_map_t
   const info_item_t print_what;
 } info_item_map_t;
 
-#define MAKE_STRING(x) { x, sizeof(x) - 1 }
 static const info_item_map_t info_item_map[] =
   {
-    { MAKE_STRING("kind"),                info_item_kind },
-    { MAKE_STRING("url"),                 info_item_url },
-    { MAKE_STRING("relative-url"),        info_item_relative_url },
-    { MAKE_STRING("repos-root-url"),      info_item_repos_root_url },
-    { MAKE_STRING("repos-uuid"),          info_item_repos_uuid },
-    { MAKE_STRING("revision"),            info_item_revision },
-    { MAKE_STRING("last-changed-revision"),
-                                          info_item_last_changed_rev },
-    { MAKE_STRING("last-changed-date"),   info_item_last_changed_date },
-    { MAKE_STRING("last-changed-author"), info_item_last_changed_author },
-    { MAKE_STRING("wc-root"),             info_item_wc_root },
-    { MAKE_STRING("schedule"),            info_item_schedule },
-    { MAKE_STRING("depth"),               info_item_depth },
-    { MAKE_STRING("wc-format"),           info_item_wc_format },
-    { MAKE_STRING("wc-format-min"),       info_item_wc_format_min },
-    { MAKE_STRING("wc-format-max"),       info_item_wc_format_max },
+    { SVN__STATIC_STRING("kind"),                info_item_kind },
+    { SVN__STATIC_STRING("url"),                 info_item_url },
+    { SVN__STATIC_STRING("relative-url"),        info_item_relative_url },
+    { SVN__STATIC_STRING("repos-root-url"),      info_item_repos_root_url },
+    { SVN__STATIC_STRING("repos-uuid"),          info_item_repos_uuid },
+    { SVN__STATIC_STRING("repos-size"),          info_item_repos_size },
+    { SVN__STATIC_STRING("revision"),            info_item_revision },
+    { SVN__STATIC_STRING("last-changed-revision"),
+                                                 info_item_last_changed_rev },
+    { SVN__STATIC_STRING("last-changed-date"),   info_item_last_changed_date },
+    { SVN__STATIC_STRING("last-changed-author"), info_item_last_changed_author },
+    { SVN__STATIC_STRING("wc-root"),             info_item_wc_root },
+    { SVN__STATIC_STRING("schedule"),            info_item_schedule },
+    { SVN__STATIC_STRING("depth"),               info_item_depth },
+    { SVN__STATIC_STRING("changelist"),          info_item_changelist },
+    { SVN__STATIC_STRING("wc-format"),           info_item_wc_format },
+    { SVN__STATIC_STRING("wc-format-min"),       info_item_wc_format_min },
+    { SVN__STATIC_STRING("wc-format-max"),       info_item_wc_format_max },
   };
-#undef MAKE_STRING
 
 static const apr_size_t info_item_map_len =
   (sizeof(info_item_map) / sizeof(info_item_map[0]));
@@ -424,6 +428,9 @@ typedef struct print_info_baton_t
 
   /* Did we already print a line of output? */
   svn_boolean_t start_new_line;
+
+  /* Format for file sizes */
+  svn_cl__size_unit_t file_size_unit;
 
   /* The client context. */
   svn_client_ctx_t *ctx;
@@ -513,21 +520,40 @@ print_info_xml(void *baton,
                apr_pool_t *pool)
 {
   svn_stringbuf_t *sb = svn_stringbuf_create_empty(pool);
-  const char *rev_str;
   print_info_baton_t *const receiver_baton = baton;
 
-  if (SVN_IS_VALID_REVNUM(info->rev))
-    rev_str = apr_psprintf(pool, "%ld", info->rev);
-  else
-    rev_str = apr_pstrdup(pool, _("Resource is not under version control."));
+  const char *const path_str =
+    svn_cl__local_style_skip_ancestor(
+        receiver_baton->path_prefix, target, pool);
+  const char *const kind_str = svn_cl__node_kind_str_xml(info->kind);
+  const char *const rev_str =
+    (SVN_IS_VALID_REVNUM(info->rev)
+     ? apr_psprintf(pool, "%ld", info->rev)
+     : apr_pstrdup(pool, _("Resource is not under version control.")));
 
   /* "<entry ...>" */
-  svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
-                        "path", svn_cl__local_style_skip_ancestor(
-                                  receiver_baton->path_prefix, target, pool),
-                        "kind", svn_cl__node_kind_str_xml(info->kind),
-                        "revision", rev_str,
-                        SVN_VA_NULL);
+  if (info->kind == svn_node_file && info->size != SVN_INVALID_FILESIZE)
+    {
+      const char *size_str;
+      SVN_ERR(svn_cl__format_file_size(&size_str, info->size,
+                                       SVN_CL__SIZE_UNIT_XML,
+                                       FALSE, pool));
+
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
+                            "path", path_str,
+                            "kind", kind_str,
+                            "revision", rev_str,
+                            "size", size_str,
+                            SVN_VA_NULL);
+    }
+  else
+    {
+      svn_xml_make_open_tag(&sb, pool, svn_xml_normal, "entry",
+                            "path", path_str,
+                            "kind", kind_str,
+                            "revision", rev_str,
+                            SVN_VA_NULL);
+    }
 
   /* "<url> xx </url>" */
   svn_cl__xml_tagged_cdata(&sb, pool, "url", info->URL);
@@ -747,6 +773,16 @@ print_info(void *baton,
     default:
       SVN_ERR(svn_cmdline_printf(pool, _("Node Kind: unknown\n")));
       break;
+    }
+
+  if (info->kind == svn_node_file && info->size != SVN_INVALID_FILESIZE)
+    {
+      const char *sizestr;
+      SVN_ERR(svn_cl__format_file_size(&sizestr, info->size,
+                                       receiver_baton->file_size_unit,
+                                       TRUE, pool));
+      SVN_ERR(svn_cmdline_printf(pool, _("Size in Repository: %s\n"),
+                                 sizestr));
     }
 
   if (info->wc_info)
@@ -1103,11 +1139,12 @@ print_info_item(void *baton,
                   apr_pool_t *pool)
 {
   print_info_baton_t *const receiver_baton = baton;
+  const char *const actual_target_path =
+    (!receiver_baton->target_is_path ? info->URL
+     : svn_cl__local_style_skip_ancestor(
+         receiver_baton->path_prefix, target, pool));
   const char *const target_path =
-    (!receiver_baton->multiple_targets ? NULL
-     : (!receiver_baton->target_is_path ? info->URL
-        : svn_cl__local_style_skip_ancestor(
-            receiver_baton->path_prefix, target, pool)));
+    (receiver_baton->multiple_targets ? actual_target_path : NULL);
 
   if (receiver_baton->start_new_line)
     SVN_ERR(svn_cmdline_fputs("\n", stdout, pool));
@@ -1134,6 +1171,36 @@ print_info_item(void *baton,
 
     case info_item_repos_uuid:
       SVN_ERR(print_info_item_string(info->repos_UUID, target_path, pool));
+      break;
+
+    case info_item_repos_size:
+      if (info->kind != svn_node_file)
+        {
+          receiver_baton->start_new_line = FALSE;
+          return SVN_NO_ERROR;
+        }
+
+      if (info->size == SVN_INVALID_FILESIZE)
+        {
+          if (receiver_baton->multiple_targets)
+            {
+              receiver_baton->start_new_line = FALSE;
+              return SVN_NO_ERROR;
+            }
+
+          return svn_error_createf(
+              SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+              _("can't show in-repository size of working copy file '%s'"),
+              actual_target_path);
+        }
+
+      {
+        const char *sizestr;
+        SVN_ERR(svn_cl__format_file_size(&sizestr, info->size,
+                                         receiver_baton->file_size_unit,
+                                         TRUE, pool));
+        SVN_ERR(print_info_item_string(sizestr, target_path, pool));
+      }
       break;
 
     case info_item_revision:
@@ -1196,6 +1263,13 @@ print_info_item(void *baton,
                                   target_path, pool));
       break;
 
+    case info_item_changelist:
+      SVN_ERR(print_info_item_string(
+                  ((info->wc_info && info->wc_info->changelist)
+                   ? info->wc_info->changelist : NULL),
+                  target_path, pool));
+      break;
+
     default:
       SVN_ERR_MALFUNCTION();
     }
@@ -1236,6 +1310,7 @@ svn_cl__info(apr_getopt_t *os,
   svn_opt_push_implicit_dot_target(targets, pool);
 
   receiver_baton.ctx = ctx;
+  receiver_baton.file_size_unit = opt_state->file_size_unit;
 
   if (opt_state->xml)
     {
@@ -1249,6 +1324,10 @@ svn_cl__info(apr_getopt_t *os,
         return svn_error_create(
             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
             _("--no-newline is not valid in --xml mode"));
+      if (opt_state->file_size_unit != SVN_CL__SIZE_UNIT_NONE)
+        return svn_error_create(
+            SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+            _("--human-readable is not valid in --xml mode"));
 
       /* If output is not incremental, output the XML header and wrap
          everything in a top-level element. This makes the output in

@@ -208,7 +208,9 @@ class Generator(gen_base.GeneratorBase):
       swig_lang_deps[objname.lang].append(str(objname))
 
     for lang in self.swig.langs:
-      data.swig_langs.append(_eztdata(short=self.swig.short[lang],
+      data.swig_langs.append(_eztdata(name=lang,
+                                      short=self.swig.short[lang],
+                                      short_upper=self.swig.short[lang].upper(),
                                       deps=swig_lang_deps[lang]))
 
     ########################################
@@ -445,7 +447,7 @@ class Generator(gen_base.GeneratorBase):
         ### we should turn AREA into an object, then test it instead of this
         if area[:5] == 'swig-' and area[-4:] != '-lib' \
            or area[:7] == 'javahl-' \
-           or area[:6] == 'cxxhl-' \
+           or area[:6] == 'svnxx-' \
            or area == 'tools':
           ezt_area.extra_install = 'yes'
 
@@ -509,6 +511,9 @@ class Generator(gen_base.GeneratorBase):
     standalone.write('top_srcdir = .\n')
     standalone.write('top_builddir = .\n')
     standalone.write('SWIG = swig\n')
+    swig_py_opts = os.environ.get('SWIG_PY_OPTS',
+                                  '-python -py3 -nofastunpack -modern')
+    standalone.write('SWIG_PY_OPTS = %s\n' % (swig_py_opts))
     standalone.write('PYTHON = ' + sys.executable + '\n')
     standalone.write('\n')
     standalone.write(open("build-outputs.mk","r").read())
@@ -633,9 +638,10 @@ DIR=`pwd`
         lib_deps=[],
         lib_required=[],
         lib_required_private=[],
+        version=self.version,
         )
-      # libsvn_foo -> -lsvn_foo
-      data.lib_deps.append('-l%s' % lib_name.replace('lib', '', 1))
+      # libsvn_foo -> -lsvn_foo-1
+      data.lib_deps.append('-l%s-%s' % (lib_name.replace('lib', '', 1), data.version))
       for lib_dep in lib_deps.split():
         if lib_dep == 'apriconv':
           # apriconv is part of apr-util, skip it

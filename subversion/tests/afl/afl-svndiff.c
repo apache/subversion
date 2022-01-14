@@ -56,7 +56,7 @@ parse(const char *filename, apr_pool_t *pool)
 
   stream = svn_txdelta_parse_svndiff(txdelta_window_handler, NULL, TRUE, pool);
   SVN_ERR(svn_stream_copy3(svndiff, stream, NULL, NULL, pool));
-  
+
   return SVN_NO_ERROR;
 }
 

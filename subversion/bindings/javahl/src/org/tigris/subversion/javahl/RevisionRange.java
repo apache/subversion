@@ -30,13 +30,10 @@ package org.tigris.subversion.javahl;
  */
 public class RevisionRange implements Comparable, java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change
-    // made to this class.  See any of the following, depending upon
-    // the Java release.
-    // http://java.sun.com/j2se/1.3/docs/guide/serialization/spec/version.doc7.html
-    // http://java.sun.com/j2se/1.4/pdf/serial-spec.pdf
-    // http://java.sun.com/j2se/1.5.0/docs/guide/serialization/spec/version.html#6678
-    // http://java.sun.com/javase/6/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
     private static final long serialVersionUID = 1L;
 
     private Revision from;

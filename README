@@ -18,12 +18,12 @@ I.    A FEW POINTERS
 
       For an overview of the Subversion project, visit
 
-         http://subversion.apache.org/
+         https://subversion.apache.org/
 
       Once you have a Subversion client you can get the latest version
       of the code with the command:
 
-         $ svn co http://svn.apache.org/repos/asf/subversion/trunk subversion
+         $ svn co https://svn.apache.org/repos/asf/subversion/trunk subversion
 
 
 
@@ -36,7 +36,7 @@ II.   DOCUMENTATION
 
       It is written in DocBook XML, and the sources can be found at:
 
-         http://svn.code.sf.net/p/svnbook/source/trunk/
+         https://svn.code.sf.net/p/svnbook/source/trunk/
          
       If you wish to build the documentation from source, read the
       en/README file within the book source.
@@ -45,13 +45,13 @@ II.   DOCUMENTATION
 
 III.  PARTICIPATING IN THE SUBVERSION COMMUNITY
 
-      First, read http://subversion.apache.org/docs/community-guide/
+      First, read https://subversion.apache.org/docs/community-guide/
       It describes Subversion coding and log message standards, as well
       as how to join discussion lists.
 
-      Talk on IRC with developers:  irc.freenode.net, channel #svn-dev.
+      Talk on IRC with developers:  irc.libera.chat, channel #svn-dev.
 
-      Read the FAQ:  http://subversion.apache.org/faq.html
+      Read the FAQ:  https://subversion.apache.org/faq.html
 
 
 
@@ -66,17 +66,19 @@ V.    CONVERTING FROM CVS
       If you're a CVS user trying to move your CVS history over to
       Subversion, then be sure to visit the 'cvs2svn' project:
 
-         http://cvs2svn.tigris.org
+         https://github.com/mhagger/cvs2svn
 
-      You can get the latest released version of the cvs2svn converter
-      from the project downloads area:
+      If you are running a Linux or BSD-based system, your distribution
+      might have a cvs2svn package.
 
-         http://cvs2svn.tigris.org/servlets/ProjectDocumentList?folderID=2976
+      If cvs2svn doesn't meet your needs, you might try refinecvs
+      written by Lev Serebryakov:
 
-      Please note that the cvs2svn project is a *separate* project from
-      Subversion.  If you have problems with cvs2svn or are confused,
-      please email the cvs2svn project's mailing lists, not the
-      Subversion lists.
+        http://lev.serebryakov.spb.ru/refinecvs/
+
+      Please note that cvs2svn and refinecvs are *separate* projects
+      from Subversion.  If you have problems or are confused, contact
+      the authors, not the Subversion lists.
 
       Finally, be sure to see Appendix B in the Subversion Book.  It
       contains a very quick overview of the major differences between

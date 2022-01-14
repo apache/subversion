@@ -31,6 +31,17 @@
 #define SVN_DEPRECATED
 #endif
 
+#ifdef SWIGPYTHON
+%begin %{
+#define SWIG_PYTHON_STRICT_BYTE_CHAR
+#if defined(_MSC_VER)
+/* Prevent "non-constant aggregate initializer" errors from Python.h in
+ * Python 3.9 */
+# pragma warning(default : 4204)
+#endif
+%}
+#endif
+
 %include typemaps.i
 %include constraints.i
 %include exception.i
@@ -54,6 +65,7 @@
 #ifdef SWIGPYTHON
 %{
 #include "swigutil_py.h"
+#include "swigutil_py3c.h"
 %}
 #endif
 #ifdef SWIGPERL
@@ -135,9 +147,8 @@ static PyObject * _global_py_pool = NULL;
 /* Python format specifiers. Use Python instead of SWIG to parse
    these basic types, because Python reports better error messages
    (with correct argument numbers). */
-%typemap (in, parse="s")
-  char *, char const *, char * const, char const * const "";
 %typemap (in, parse="c") char "";
+
 %typemap (in, fragment=SWIG_As_frag(long)) long
 {
   $1 = ($1_ltype)SWIG_As(long)($input);
@@ -236,3 +247,40 @@ static VALUE *_global_vresult_address = &vresult;
 /* Now, include the main Subversion typemap library. */
 %include svn_types.swg
 %include proxy.swg
+
+
+#ifdef SWIGPYTHON
+/* Since Python 3.8+ on Windows, DLL dependencies when loading *.pyd file
+ * searches only the system paths, the directory containing the *.pyd file and
+ * the directories added with os.add_dll_directory().
+ * See also https://bugs.python.org/issue36085.
+ */
+%define SVN_PYTHON_MODULEIMPORT
+"
+def _dll_paths():
+    import os
+    if hasattr(os, 'add_dll_directory'):  # Python 3.8+ on Windows
+        cookies = []
+        for path in os.environ.get('PATH', '').split(os.pathsep):
+            if path and os.path.isabs(path):
+                try:
+                    cookie = os.add_dll_directory(path)
+                except OSError:
+                    continue
+                else:
+                    cookies.append(cookie)
+        return cookies
+    else:
+        return ()
+
+_dll_paths = _dll_paths()
+try:
+    from . import $module
+finally:
+    _dll_path = None
+    for _dll_path in _dll_paths:
+        _dll_path.close()
+    del _dll_paths, _dll_path
+"
+%enddef
+#endif

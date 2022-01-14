@@ -21,15 +21,16 @@
  * svn_wc.i: SWIG interface file for svn_wc.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") wc
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) wc
 #elif defined(SWIGPERL)
 %module "SVN::_Wc"
 #elif defined(SWIGRUBY)
 %module "svn::ext::wc"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 %import svn_ra.i

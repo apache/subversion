@@ -38,10 +38,6 @@ import svntest
 
 #----------------------------------------------------------------------
 
-# This directory contains all the expected output from svn.
-getopt_output_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                                 'getopt_tests_data')
-
 # Naming convention for golden files: take the svn command line as a
 # single string and apply the following sed transformations:
 #   echo svn option1 option2 ... | sed -e 's/ /_/g' -e 's/_--/--/g'
@@ -50,6 +46,10 @@ getopt_output_dir = os.path.join(os.path.dirname(sys.argv[0]),
 
 def load_expected_output(basename):
   "load the expected standard output and standard error"
+
+  # This directory contains all the expected output from svn.
+  getopt_output_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'getopt_tests_data')
 
   stdout_filename = os.path.join(getopt_output_dir, basename + '_stdout')
   stderr_filename = os.path.join(getopt_output_dir, basename + '_stderr')
@@ -233,7 +233,7 @@ def getopt_config_option(sbox):
   expected_stderr = '.*W205000.*did you mean.*'
   expected_stdout = svntest.verify.AnyOutput
   svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr, 0,
-                                      'info', 
+                                      'info',
                                       '--config-option',
                                       'config:miscellanous:diff-extensions=' +
                                         '-u -p',

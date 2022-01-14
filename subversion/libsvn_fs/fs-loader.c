@@ -438,7 +438,7 @@ svn_fs_initialize(apr_pool_t *pool)
 static void
 default_warning_func(void *baton, svn_error_t *err)
 {
-  /* The one unforgiveable sin is to fail silently.  Dumping to stderr
+  /* The one unforgivable sin is to fail silently.  Dumping to stderr
      or /dev/tty is not acceptable default behavior for server
      processes, since those may both be equivalent to /dev/null.
 
@@ -2221,3 +2221,42 @@ svn_fs_info_dup(const void *info_void,
     return apr_pmemdup(result_pool, info, sizeof(*info));
 }
 
+svn_error_t *
+svn_fs_ioctl(svn_fs_t *fs,
+             svn_fs_ioctl_code_t ctlcode,
+             void *input,
+             void **output_p,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *result_pool,
+             apr_pool_t *scratch_pool)
+{
+  void *output;
+
+  if (fs)
+    {
+      if (!fs->vtable->ioctl)
+        return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
+
+      SVN_ERR(fs->vtable->ioctl(fs, ctlcode, input, &output,
+                                cancel_func, cancel_baton,
+                                result_pool, scratch_pool));
+    }
+  else
+    {
+      fs_library_vtable_t *vtable;
+
+      SVN_ERR(get_library_vtable(&vtable, ctlcode.fs_type, scratch_pool));
+
+      if (!vtable->ioctl)
+        return svn_error_create(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE, NULL, NULL);
+
+      SVN_ERR(vtable->ioctl(ctlcode, input, &output,
+                            cancel_func, cancel_baton,
+                            result_pool, scratch_pool));
+    }
+
+  if (output_p)
+    *output_p = output;
+  return SVN_NO_ERROR;
+}

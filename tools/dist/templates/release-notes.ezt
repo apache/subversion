@@ -1,0 +1,251 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" 
+   "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>Apache Subversion [major-minor] Release Notes</title>
+<meta http-equiv="Content-Type" content="text/html;charset=utf-8" />
+<style type="text/css">
+  @import url("/style/site.css");
+</style>
+</head>
+
+<body>
+<!--#include virtual="/site-banner.html" -->
+<!--#include virtual="/site-nav.html" -->
+<div id="site-content">
+<!--#include virtual="/site-notice.html" -->
+<!-- **************** BEGIN CONTENT ***************** -->
+
+<!-- ************************************************ -->
+<!-- Sections start with "###" are either templates   -->
+<!-- or TODOs.  Remove them before release.           -->
+<!-- ************************************************ -->
+
+<h1 style="text-align: center">Apache Subversion [major-minor] Release Notes</h1>
+
+<div class="notice">
+<p><span style="color: red"><b>This is work in progress.
+  Subversion [major-minor] has not been released yet.</b></span></p>
+</div>
+
+<div class="h2" id="news">
+<h2>What's New in Apache Subversion [major-minor]
+  <a class="sectionlink" href="#news"
+    title="Link to this section">&para;</a>
+</h2>
+
+<ul>
+  <!-- The main changes...
+  <li><a href="#"
+      >###</a></li>
+  -->
+  <li><a href="#enhancements"
+      >Many enhancements and bug fixes</a></li>
+  <li><a href="#issues"
+      >Known issues in the release</a></li>
+  <!--
+  <li><a href="#troubleshooting"
+      >Troubleshooting issues specific to this release</a></li>
+  -->
+</ul>
+
+<p>Apache Subversion [major-minor] is a superset of all previous Subversion
+releases, and is as of the time of its release considered the current
+"best" release.  Any feature or bugfix in 1.0.x through [previous-major-minor].x is also
+in [major-minor], but [major-minor] contains features and bugfixes not present in any
+earlier release.</p>
+
+<p>This page describes only major changes.  For a complete list of
+changes, see the [major-minor] section of the <a
+href="https://svn.apache.org/repos/asf/subversion/trunk/CHANGES" >CHANGES</a>
+file.</p>
+
+</div>  <!-- news -->
+
+<div class="h2" id="compatibility">
+<h2>Compatibility Concerns
+  <a class="sectionlink" href="#compatibility"
+    title="Link to this section">&para;</a>
+</h2>
+
+<p>Older clients and servers interoperate transparently with [major-minor]
+servers and clients.  However, some of the new [major-minor] features may not be
+available unless both client and server are the latest version.  There are
+also cases where a new feature will work but will run less efficiently if
+the client is new and the server old.</p>
+
+<p>There is <strong>no need</strong> to <a href="http://svnbook.red-bean.com/en/1.8/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate.svnadmin"
+>dump and reload</a> your repositories. 
+Subversion [major-minor] servers can read and write to repositories created by
+earlier versions.  To upgrade an existing server installation, just install the
+newest libraries and binaries on top of the older ones.</p>
+
+<p>Subversion [major-minor] maintains API/ABI compatibility with earlier
+releases, by only adding new functions, never removing old ones.  A
+program written to any previous 1.x API can both compile
+and run using [major-minor] libraries.  However, a program written for [major-minor]
+cannot necessarily compile or run against older libraries.</p>
+
+<p>There may be limited cases where the behavior of old APIs has been
+slightly modified from previous releases.  These are cases where edge cases
+of the functionality has been deemed buggy, and therefore improved or removed.
+Please consult the
+<a href="https://svn.apache.org/repos/asf/subversion/trunk/notes/api-errata/[major-minor]/"
+>API errata</a> for more detailed information on what these APIs are
+and what impact these changes may have.</p>
+
+<div class="h3" id="new-feature-compatibility-table">
+<h3>New Feature Compatibility Table
+  <a class="sectionlink" href="#new-feature-compatibility-table"
+    title="Link to this section">&para;</a>
+</h3>
+<table border="1">
+  <tr>
+    <th>New Feature</th>
+    <th>Minimum Client<sup>1</sup></th>
+    <th>Minimum Server</th>
+    <th>Minimum Repository</th>
+    <th>Notes</th></tr>
+</table>
+
+</div>  <!-- new-feature-compatibility-table -->
+
+<div class="h3" id="wc-upgrade">
+<h3>Upgrading the Working Copy
+  <a class="sectionlink" href="#wc-upgrade"
+    title="Link to this section">&para;</a>
+</h3>
+
+<p>Subversion [major-minor] uses the same working copy format as Subversion 1.8 through [previous-major-minor].</p>
+
+<p>Before using Subversion [major-minor] with an existing Subversion 1.7 or older
+working copy, users will be required to run the <tt>svn upgrade</tt> command
+to upgrade working copy metadata to the new format. This command may take a
+while in some cases, and for some users, it may be more practical to simply
+checkout a new working copy.</p>
+
+<p><strong>Note:</strong> Subversion [major-minor] cannot upgrade working copies that
+a 1.6 client would have refused to operate upon before an <tt>svn cleanup</tt>
+was run (with a 1.6 client).  In other words, before upgrading to 1.8 or newer,
+a 1.6
+or older client must be used to run <tt>svn cleanup</tt> on all 1.6 or older
+working copies that require cleanup.  Likewise, Subversion [major-minor] cannot upgrade
+corrupt working copies. Unfixable problems can arise from missing or corrupt
+meta-data inside <tt>.svn</tt> directories.  Such damage to the working copy
+is permanent, and cannot be fixed even if <tt>svn cleanup</tt> is run prior
+to the upgrade.</p>
+
+<p>If your working copy does not upgrade cleanly, please check out a new one.
+</p>
+
+</div>  <!-- wc-upgrade -->
+
+<!-- (This section only makes sense when there are some issues listed in it.)
+<div class="h3" id="compat-misc">
+<h3>Miscellaneous Compatibility Notes
+  <a class="sectionlink" href="#compat-misc"
+    title="Link to this section">&para;</a>
+</h3>
+
+<p>There are some additional specific areas where changes made in this
+release might necessitate further adjustment by administrators or
+users.  We'll cover those in this section.</p>
+
+</div>  <!- - compat-misc - ->
+-->
+
+</div>  <!-- compatibility -->
+
+<div class="h2" id="new-features">
+<h2>New Features
+  <a class="sectionlink" href="#new-features"
+    title="Link to this section">&para;</a>
+</h2>
+
+</div>  <!-- new-features -->
+
+<div class="h2" id="enhancements">
+<h2>Enhancements and Bugfixes
+  <a class="sectionlink" href="#enhancements"
+    title="Link to this section">&para;</a>
+</h2>
+
+<!-- Don't need to highlight every bugfix, just major ones which aren't in
+     any patch release. -->
+
+<div class="h3" id="cmdline">
+<h3>Command-line client improvements (<em>client</em>)
+  <a class="sectionlink" href="#cmdline"
+    title="Link to this section">&para;</a>
+</h3>
+
+</div> <!-- cmdline -->
+
+<div class="h3" id="server-side-improvements">
+<h3>Server-side improvements
+  <a class="sectionlink" href="#server-side-improvements"
+     title="Link to this section">&para;</a>
+</h3>
+
+</div> <!-- server-side-improvements -->
+
+<div class="h3" id="client-server-improvements">
+<h3>Client- and server-side improvements
+  <a class="sectionlink" href="#client-server-improvements"
+     title="Link to this section">&para;</a>
+</h3>
+
+</div> <!-- client-server-improvements -->
+
+</div>  <!-- enhancements -->
+
+<div class="h2" id="issues">
+<h2>Known issues in the release
+  <a class="sectionlink" href="#issues"
+    title="Link to this section">&para;</a>
+</h2>
+
+<p>There are no known issues specific to this release at the moment.</p>
+
+<!--
+<p>There are some known issues in the Subversion [major-minor] releases.  These
+may be fixed in later [major-minor].x releases.</p>
+-->
+
+</div>  <!-- issues -->
+
+<!-- (This section only makes sense when there are some issues listed in it.)
+<div class="h2" id="troubleshooting">
+<h2>Troubleshooting issues specific to this release
+  <a class="sectionlink" href="#troubleshooting"
+    title="Link to this section">&para;</a>
+</h2>
+
+<p>Subversion [major-minor] introduces new features and makes use of new techniques
+which can trigger problems not encountered in previous versions. In contrast to
+known issues, things listed here are not due to some bug or issue in Subversion
+itself and therefore cannot be fixed with a new patch release.
+This section lists all known problems and provides instructions to solve them,
+if they occur.</p>
+
+<p>There are no known issues specific to this release at the moment.</p>
+
+</div>  <!- - troubleshooting - ->
+-->
+
+<div class="h2" id="non-lts-release">
+<h2>Subversion [major-minor].x is a Regular Release
+  <a class="sectionlink" href="#non-lts-release"
+    title="Link to this section">&para;</a>
+</h2>
+
+<p>[major-minor] is a regular release, not a Long-Term Support release.
+   See <a href="/docs/release-notes/#supported-versions">Supported Versions</a>
+   and <a href="/roadmap.html#release-planning">How We Plan Releases</a>.</p>
+
+</div>  <!-- non-lts-release -->
+
+<!-- ***************** END CONTENT ****************** -->
+</div> <!-- #site-content -->
+</body>
+</html>

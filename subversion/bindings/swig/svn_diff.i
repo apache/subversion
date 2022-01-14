@@ -21,15 +21,16 @@
  * svn_diff.i: SWIG interface file for svn_diff.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") diff
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) diff
 #elif defined(SWIGPERL)
 %module "SVN::_Diff"
 #elif defined(SWIGRUBY)
 %module "svn::ext::diff"
 #endif
 
-%include svn_global.swg
 %import core.i
 
 /* -----------------------------------------------------------------------

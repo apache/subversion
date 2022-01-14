@@ -28,6 +28,7 @@ import sys
 import re
 import logging
 import pprint
+import io
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -686,11 +687,20 @@ class State:
         if os.path.isfile(node):
           try:
             if keep_eol_style:
-              contents = open(node, 'r', newline='').read()
+              with io.open(node, 'r', newline='', encoding='utf-8') as fp:
+                contents = fp.read()
             else:
-              contents = open(node, 'r').read()
+              with io.open(node, 'r', encoding='utf-8') as fp:
+                contents = fp.read()
+            if not isinstance(contents, str):
+              # Python 2: contents is read as an unicode object,
+              # but we expect it is a str.
+              contents = contents.encode()
           except:
-            contents = open(node, 'rb').read()
+            # If the file contains non UTF-8 character, we treat its
+            # content as binary represented as a bytes object.
+            with open(node, 'rb') as fp:
+              contents = fp.read()
         else:
           contents = None
         desc[repos_join(parent, name)] = StateItem(contents=contents)
@@ -829,7 +839,7 @@ class State:
       match = _re_parse_eid_ele.search(line)
       if match and match.group(2) != 'none':
         eid = match.group(1)
-        parent_eid = match.group(3) 
+        parent_eid = match.group(3)
         path = match.group(4)
         if path == '.':
           path = ''
@@ -851,7 +861,7 @@ class State:
     add_to_desc(eids, desc, branch_id)
 
     return cls('', desc)
-  
+
 
 class StateItem:
   """Describes an individual item within a working copy.
