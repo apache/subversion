@@ -4214,10 +4214,6 @@ msgstr ""
 msgid "authorization failed: %s"
 msgstr "autorizzazione non riuscita: %s"
 
-#: ../libsvn_ra_neon/util.c:630
-msgid "authorization failed"
-msgstr "autorizzazione fallita"
-
 #: ../libsvn_ra_neon/util.c:635
 msgid "could not connect to server"
 msgstr "non ho potuto connettermi al server"
