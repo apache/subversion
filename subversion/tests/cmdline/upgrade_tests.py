@@ -57,7 +57,7 @@ wc_is_too_old_regex = (".*is too old \(format \d+.*\).*")
 def get_current_format():
   # Get current format from subversion/libsvn_wc/wc.h
   format_file = open(os.path.join(os.path.dirname(__file__), "..", "..", "libsvn_wc", "wc.h")).read()
-  return int(re.search("\n#define SVN_WC__VERSION (\d+)\n", format_file).group(1))
+  return int(re.search("\n *# *define +SVN_WC__VERSION +(\d+)\n", format_file).group(1))
 
 
 def replace_sbox_with_tarfile(sbox, tar_filename,

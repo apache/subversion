@@ -435,7 +435,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
         return svn_error_createf(
             SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
             _("Format %d doesn't match existing format %d in '%s'"),
-            target_format, present_format, db_revision, local_abspath);
+            target_format, present_format, local_abspath);
 
       /* ### Should we match copyfrom_revision? */
       if (db_revision != revision)
