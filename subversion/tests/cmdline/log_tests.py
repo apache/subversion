@@ -2816,6 +2816,59 @@ def log_with_merge_history_and_search(sbox):
   if count(output, "<logentry") != count(output, "</logentry"):
     raise svntest.Failure("Apparently invalid XML in " + repr(output))
 
+@XFail()
+@Issue(4856)
+def log_xml_with_merge_history(sbox):
+  "log --use-merge-history --xml"
+  
+  sbox.build()
+
+  # r2-r4: create branches
+  sbox.simple_repo_copy('A', 'A2')
+  sbox.simple_repo_copy('A', 'A3')
+  sbox.simple_repo_copy('A', 'A4')
+
+  # r5: mod in trunk
+  sbox.simple_append('A/mu', 'line 2')
+  sbox.simple_commit(message='r5: mod')
+  sbox.simple_update()
+
+  # r6-r7: merge A=>A2, A2=>A3
+  svntest.main.run_svn(None, 'merge', '-c', '5', sbox.repo_url + '/A', sbox.ospath('A2'))
+  sbox.simple_commit(message='r6: merge A=>A2')
+  sbox.simple_update()
+  svntest.main.run_svn(None, 'merge', '-c', '6', sbox.repo_url + '/A2', sbox.ospath('A3'))
+  sbox.simple_commit(message='r7: merge A2=>A3')
+  sbox.simple_update()
+
+  # r8: add file in A3
+  xi_path = os.path.join(sbox.wc_dir, 'A3/xi')
+  svntest.main.file_write(xi_path, "This is the file 'A3/xi'.\n")
+  svntest.main.run_svn(None, 'add', xi_path)
+  sbox.simple_commit(message='r8: add A3/xi')
+  sbox.simple_update()
+
+  # r9: merge A3=>A4
+  svntest.main.run_svn(None, 'merge', '-r', '6:8', sbox.repo_url + '/A3', sbox.ospath('A4'))
+  sbox.simple_commit(message='r9: merge A3=>A4')
+  sbox.simple_update()
+
+  # Helper function
+  def count(haystack, needle):
+    """Return the number of times the string NEEDLE occurs in the string
+    HAYSTACK."""
+    return len(haystack.split(needle)) - 1
+
+  # Check the output is valid
+  # ### Since the test is currently XFail, we only smoke test the output.
+  # ### When fixing this test to PASS, extend this validation.
+  _, output, _ = svntest.main.run_svn(None, 'log', '--xml', '-g', '-r', '8:9',
+                                      sbox.ospath('A4'))
+
+  output = '\n'.join(output)
+  if count(output, "<logentry") != count(output, "</logentry"):
+    raise svntest.Failure("Apparently invalid XML in " + repr(output))
+
 ########################################################################
 # Run the tests
 
@@ -2867,6 +2920,7 @@ test_list = [ None,
               log_revision_move_copy,
               log_on_deleted_deep,
               log_with_merge_history_and_search,
+              log_xml_with_merge_history,
              ]
 
 if __name__ == '__main__':
