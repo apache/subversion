@@ -452,7 +452,14 @@ typedef struct textbase_sync_baton_t
   void *hydrate_baton;
 } textbase_sync_baton_t;
 
-/* Implements svn_wc__db_textbase_walk_cb_t. */
+/* Decide whether the text base should be referenced (or "pinned")
+ * for the WC node {LOCAL_ABSPATH, OP_DEPTH}.
+ *
+ * The node's text base should be referenced if either
+ *   - the node is locally deleted or replaced
+ *   - the node's text is locally modified
+ *
+ * Implements svn_wc__db_textbase_walk_cb_t. */
 static svn_error_t *
 textbase_walk_cb(svn_boolean_t *referenced_p,
                  void *baton,
