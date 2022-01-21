@@ -729,7 +729,7 @@ svn_client_commit6(const apr_array_header_t *targets,
         goto cleanup;
 
       cmt_err = svn_error_trace(
-                    svn_client__textbase_sync(lock_root, TRUE, TRUE,
+                    svn_client__textbase_sync(lock_root, FALSE, TRUE,
                                               ctx, iterpool));
       if (cmt_err)
         goto cleanup;
