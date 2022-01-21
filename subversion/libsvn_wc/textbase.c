@@ -117,14 +117,14 @@ compare_and_verify(svn_boolean_t *modified_p,
           else
             pristine_eol_str = eol_str;
 
-            /* Wrap file stream to detranslate into normal form,
-             * "repairing" the EOL style if it is inconsistent. */
-            v_stream = svn_subst_stream_translated(v_stream,
-                                                   pristine_eol_str,
-                                                   TRUE /* repair */,
-                                                   keywords,
-                                                   FALSE /* expand */,
-                                                   scratch_pool);
+          /* Wrap file stream to detranslate into normal form,
+           * "repairing" the EOL style if it is inconsistent. */
+          v_stream = svn_subst_stream_translated(v_stream,
+                                                 pristine_eol_str,
+                                                 TRUE /* repair */,
+                                                 keywords,
+                                                 FALSE /* expand */,
+                                                 scratch_pool);
         }
     }
 
