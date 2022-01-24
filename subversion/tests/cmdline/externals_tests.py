@@ -73,15 +73,15 @@ def externals_test_setup(sbox):
     
     Properties on 'A/C':
       svn:externals
-        exdir_G       <scheme>:///<other_repos>/A/D/G
+        exdir_G       <scheme>://<...>/<other_repos_basename>/A/D/G
         ../../../<other_repos_basename>/A/D/H@1 exdir_H
     
     Properties on 'A/D':
       svn:externals
         ^/../<other_repos_basename>/A exdir_A
-        //<other_repos>/A/D/G/ exdir_A/G/
-        exdir_A/H -r 1 <scheme>:///<other_repos>/A/D/H
-        /<some_paths>/A/B x/y/z/blah
+        //<scheme-relative URI to other_repos>/A/D/G/ exdir_A/G/
+        exdir_A/H -r 1 <scheme>://<...>/<other_repos_basename>/A/D/H
+        /<root-relative URI to other_repos>/A/B x/y/z/blah
 
   A dictionary is returned keyed by the directory created by the
   external whose value is the URL of the external.
