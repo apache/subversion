@@ -2816,7 +2816,7 @@ def log_with_merge_history_and_search(sbox):
   if count(output, "<logentry") != count(output, "</logentry"):
     raise svntest.Failure("Apparently invalid XML in " + repr(output))
 
-@XFail()
+@XFail(svntest.main.is_ra_type_file)
 @Issue(4856)
 def log_xml_with_merge_history(sbox):
   "log --use-merge-history --xml"
