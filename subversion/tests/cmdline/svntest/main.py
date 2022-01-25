@@ -637,8 +637,7 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
       break
     # Does the server leak the repository on-disk path?
     # (prop_tests-12 installs a hook script that does that intentionally)
-    if any(map(_line_contains_repos_diskpath, lines)) \
-       and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
+    if any(map(_line_contains_repos_diskpath, lines)):
       raise Failure("Repository diskpath in %s: %r" % (name, lines))
 
   valgrind_diagnostic = False
