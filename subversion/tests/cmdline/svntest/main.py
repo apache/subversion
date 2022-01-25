@@ -616,6 +616,8 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
 
   start = time.time()
 
+  assert all(isinstance(arg, (str, unicode, int)) for arg in varargs)
+
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
                                                         bufsize,
                                                         binary_mode,
