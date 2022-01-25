@@ -115,6 +115,14 @@ Candidate changes:
     Votes:
       +1: stsp
 
+ * r1897449
+   tests: Include additional information in an error message.
+   Justification:
+     Trivial test harness change that may help investigate unreproducible
+     errors.
+   Votes:
+     +1: danielsh
+
 Veto-blocked changes:
 =====================
 
