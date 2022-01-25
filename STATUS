@@ -123,6 +123,21 @@ Candidate changes:
    Votes:
      +1: danielsh
 
+ * r1885199
+   swig-py: Skip some tests on Python 2 if default encoding is 'utf-8'.
+   Justification:
+     Fix check-swig-py not working at all since r1889654 merged from r1889487
+     (r1889487 depends on r1885199).
+   Votes:
+     +1: jun66j5
+
+ * r1897441
+   swig-py: Fix cleanup failing in unit tests with Python 3 on Windows.
+   Justification:
+     Make check-swig-py passed.
+   Votes:
+     +1: jun66j5
+
 Veto-blocked changes:
 =====================
 
