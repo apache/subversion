@@ -616,7 +616,12 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
 
   start = time.time()
 
-  assert all(isinstance(arg, (str, unicode, int)) for arg in varargs)
+  if sys.version_info >= (3, 0):
+    # Don't include 'bytes' since spawn_process() would raise.
+    assert all(isinstance(arg, (str, int)) for arg in varargs)
+  else:
+    # Include 'unicode' since svnrdump_tests pass b''.decode().
+    assert all(isinstance(arg, (str, unicode, int)) for arg in varargs)
 
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
                                                         bufsize,
