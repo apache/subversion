@@ -47,7 +47,7 @@
    the delta between the source and target revs.
 
    Spill-buffer content format: we use a simple ad-hoc format to store the
-   report operations.  Each report operation is the concatention of
+   report operations.  Each report operation is the concatenation of
    the following ("+/-" indicates the single character '+' or '-';
    <length> and <revnum> are written out as decimal strings):
 

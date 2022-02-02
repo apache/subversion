@@ -1034,6 +1034,12 @@ II.   INSTALLATION
       Note that you'd make sure to define ZLIB_WINAPI in the ZLib config
       header and move the lib-file into the zlib root-directory.
 
+      Please note that you MUST NOT build ZLib with the included assembler
+      optimized code. It is known to be buggy, see for example the discussion
+      https://svn.haxx.se/dev/archive-2013-10/0109.shtml.
+      This means that you must not define ASMV or ASMINF. Note that the VS
+      projects in contrib\visualstudio define these in the Debug configuration.
+
       Apache Serf
 
       ### Section about Apache Serf might be required/useful to add.
@@ -1445,7 +1451,7 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
       And there's an item about this in the Subversion FAQ:
 
-          https://subversion.apache.org/faq.html#windows-xp-server
+      https://subversion.apache.org/faq.html#windows-xp-server
 
       The only known workaround for now is to update to Windows XP
       SP1 (or higher).

@@ -28,6 +28,8 @@
 #include "svn_pools.h"
 #include "svn_utf.h"
 
+#include "private/svn_string_private.h"
+
 /* Used to terminate lines in large multi-line string literals. */
 #define NL APR_EOL_STR
 
@@ -2071,15 +2073,13 @@ test_three_way_merge_conflict_styles(apr_pool_t *pool)
 }
 
 
-#define MAKE_STRING(cstr) { (cstr), sizeof((cstr))-1 }
-
 static svn_error_t *
 test_diff4(apr_pool_t *pool)
 {
   svn_diff_t *diff;
   svn_stream_t *actual, *expected;
   svn_boolean_t same;
-  static svn_string_t B2 = MAKE_STRING(
+  static svn_string_t B2 = SVN__STATIC_STRING(
     "int main (int argc, char **argv)\n"
     "{\n"
     "  /* line minus-five of context */\n"
@@ -2094,7 +2094,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t B2new = MAKE_STRING(
+  static svn_string_t B2new = SVN__STATIC_STRING(
     "int main (int argc, char **argv)\n"
     "{\n"
     "  /* line minus-five of context */\n"
@@ -2109,7 +2109,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t T1 = MAKE_STRING(
+  static svn_string_t T1 = SVN__STATIC_STRING(
     "int main (int argc, char **argv)\n"
     "{\n"
     "  /* line minus-five of context */\n"
@@ -2124,7 +2124,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t T2 = MAKE_STRING(
+  static svn_string_t T2 = SVN__STATIC_STRING(
     "#include <stdio.h>\n"
     "\n"
     "int main (int argc, char **argv)\n"
@@ -2141,7 +2141,7 @@ test_diff4(apr_pool_t *pool)
     "  /* line plus-four of context */\n"
     "  /* line plus-five of context */\n"
     "}\n");
-  static svn_string_t T3 = MAKE_STRING(
+  static svn_string_t T3 = SVN__STATIC_STRING(
     "#include <stdio.h>\n"
     "\n"
     "int main (int argc, char **argv)\n"

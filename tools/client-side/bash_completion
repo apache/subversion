@@ -1127,7 +1127,7 @@ _svn()
 	COMPREPLY=( $( compgen -W "$cmdOpts" -- $cur ) )
 	return 0
 }
-complete -F _svn -o default -X '@(*/.svn|*/.svn/|.svn|.svn/)' svn
+complete -F _svn -o bashdefault -o default -X '@(*/.svn|*/.svn/|.svn|.svn/)' svn
 
 _svnadmin ()
 {
@@ -1280,7 +1280,7 @@ _svnadmin ()
 
 	return 0
 }
-complete -F _svnadmin -o default svnadmin
+complete -F _svnadmin -o bashdefault -o default svnadmin
 
 _svndumpfilter ()
 {
@@ -1354,7 +1354,7 @@ _svndumpfilter ()
 
 	return 0
 }
-complete -F _svndumpfilter -o default svndumpfilter
+complete -F _svndumpfilter -o bashdefault -o default svndumpfilter
 
 _svnlook ()
 {
@@ -1485,7 +1485,7 @@ _svnlook ()
 
 	return 0
 }
-complete -F _svnlook -o default svnlook
+complete -F _svnlook -o bashdefault -o default svnlook
 
 _svnsync ()
 {
@@ -1568,7 +1568,7 @@ _svnsync ()
 
 	return 0
 }
-complete -F _svnsync -o default svnsync
+complete -F _svnsync -o bashdefault -o default svnsync
 
 # reasonable completion for 'svnversion'
 _svnversion ()

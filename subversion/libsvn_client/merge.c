@@ -12948,7 +12948,7 @@ do_automatic_merge_locked(svn_client__conflict_report_t **conflict_report,
          for the root path of the merge).
 
          An improvement would be to change find_automatic_merge() to
-         find the base for each sutree, and then here use the oldest base
+         find the base for each subtree, and then here use the oldest base
          among all subtrees. */
       apr_array_header_t *merge_sources;
       svn_ra_session_t *ra_session = NULL;

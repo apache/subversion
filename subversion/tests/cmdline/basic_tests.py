@@ -3244,6 +3244,42 @@ def filtered_ls_top_level_path(sbox):
     exit_code, output, error = svntest.actions.run_and_verify_svn(
       [], [], 'ls', f_path, '--search=*/*', *extra_opts)
 
+def keep_local_reverted_properly(sbox):
+  "rm --keep-local, /bin/rm, revert"
+
+  sbox.build(read_only=True)
+  wc_dir = sbox.wc_dir
+
+  lambda_path = sbox.ospath('A/B/lambda')
+  E_path =  sbox.ospath('A/B/E')
+  targets = [ lambda_path, E_path ]
+
+  # Modify
+  sbox.simple_append('A/B/lambda', "added text\n")
+  svntest.main.run_svn(None, 'ps', 'k', 'v', E_path)
+
+  # Schedule for removal
+  svntest.main.run_svn(None, 'rm', '--keep-local', *targets)
+
+  # Remove from disk
+  os.unlink(lambda_path)
+  shutil.rmtree(E_path)
+
+  # Revert
+  svntest.main.run_svn(None, 'revert', *targets)
+
+  # Check that the modifications are absent
+  # 
+  # alpha and beta are still scheduled for deletion because 'revert' doesn't
+  # recurse by default.
+  expected_disk = svntest.main.greek_state.copy()
+  expected_disk.remove('A/B/E/alpha', 'A/B/E/beta')
+  expected_output = svntest.actions.get_virginal_state(wc_dir, 1)
+  expected_output.tweak('A/B/E/alpha', 'A/B/E/beta', status='D ')
+  #
+  svntest.actions.verify_disk(sbox.wc_dir, expected_disk, check_props=True)
+  svntest.actions.run_and_verify_status(wc_dir, expected_output)
+
 
 ########################################################################
 # Run the tests
@@ -3320,6 +3356,7 @@ test_list = [ None,
               null_update_last_changed_revision,
               null_prop_update_last_changed_revision,
               filtered_ls_top_level_path,
+              keep_local_reverted_properly,
              ]
 
 if __name__ == '__main__':

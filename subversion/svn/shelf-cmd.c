@@ -897,7 +897,7 @@ svn_cl__shelf_shelve(apr_getopt_t *os,
     else
       SVN_ERR(err);
 
-      if (! opt_state->quiet)
+    if (! opt_state->quiet)
       {
         if (opt_state->keep_local)
           SVN_ERR(svn_cmdline_printf(pool,

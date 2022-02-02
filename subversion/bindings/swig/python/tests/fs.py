@@ -346,13 +346,12 @@ class SubversionFSTestCase(unittest.TestCase):
     if (isinstance(expected_conflict, bytes)
         and not isinstance(expected_conflict, str)):
       expected_conflict = expected_conflict.decode('utf-8')
-    err = None
+
     new_rev = None
     conflict = None
     try:
       conflict, new_rev = fs.commit_txn(txn, pool)
     except core.SubversionException as e:
-      err = e
       self.assertTrue(hasattr(e, 'conflict_p'))
       conflict = e.conflict_p
       if isinstance(conflict, bytes) and not isinstance(conflict, str):
@@ -360,41 +359,42 @@ class SubversionFSTestCase(unittest.TestCase):
       self.assertTrue(hasattr(e, 'new_rev'))
       new_rev = e.new_rev
 
-    if err and err.apr_err == core.SVN_ERR_FS_CONFLICT:
-      self.assertIsNotNone(expected_conflict,
-          "commit conflicted at '%s', but no conflict expected"
-          % conflict if conflict else '(missing conflict info!)')
-      self.assertIsNotNone(conflict,
-          "commit conflicted as expected, "
-          "but no conflict path was returned ('%s' expected)"
-          % expected_conflict)
-      if expected_conflict:
-        self.assertEqual(conflict, expected_conflict,
-            "commit conflicted at '%s', but expected conflict at '%s'"
-            % (conflict, expected_conflict))
+      if e.apr_err == core.SVN_ERR_FS_CONFLICT:
+        self.assertIsNotNone(expected_conflict,
+            "commit conflicted at '%s', but no conflict expected"
+            % conflict if conflict else '(missing conflict info!)')
+        self.assertIsNotNone(conflict,
+            "commit conflicted as expected, "
+            "but no conflict path was returned ('%s' expected)"
+            % expected_conflict)
+        if expected_conflict:
+          self.assertEqual(conflict, expected_conflict,
+              "commit conflicted at '%s', but expected conflict at '%s'"
+              % (conflict, expected_conflict))
 
-      # The svn_fs_commit_txn() API promises to set *NEW_REV to an
-      # invalid revision number in the case of a conflict.
-      self.assertEqual(new_rev, core.SVN_INVALID_REVNUM,
-                       "conflicting commit returned valid new revision")
+        # The svn_fs_commit_txn() API promises to set *NEW_REV to an
+        # invalid revision number in the case of a conflict.
+        self.assertEqual(new_rev, core.SVN_INVALID_REVNUM,
+                         "conflicting commit returned valid new revision")
 
-    elif err:
-      # commit may have succeeded, but always report an error
-      if new_rev != core.SVN_INVALID_REVNUM:
-        raise core.SubversionException(
-                    "commit succeeded but something else failed",
-                    err.apr_err, err)
       else:
-        raise core.SubversionException(
-                    "commit failed due to something other than conflict",
-                    err.apr_err, err)
+        # commit may have succeeded, but always report an error
+        if new_rev != core.SVN_INVALID_REVNUM:
+          raise core.SubversionException(
+                      "commit succeeded but something else failed",
+                      e.apr_err, e)
+        else:
+          raise core.SubversionException(
+                      "commit failed due to something other than conflict",
+                      e.apr_err, e)
     else:
-      # err == None, commit should have succeeded
+      # commit should have succeeded
       self.assertNotEqual(new_rev, core.SVN_INVALID_REVNUM,
                           "commit failed but no error was returned")
       self.assertIsNone(expected_conflict,
                         "commit succeeded that was expected to fail at '%s'"
                         % expected_conflict)
+
     return new_rev
 
 

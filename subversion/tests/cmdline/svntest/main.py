@@ -616,6 +616,13 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
 
   start = time.time()
 
+  if sys.version_info >= (3, 0):
+    # Don't include 'bytes' since spawn_process() would raise.
+    assert all(isinstance(arg, (str, int)) for arg in varargs)
+  else:
+    # Include 'unicode' since svnrdump_tests pass b''.decode().
+    assert all(isinstance(arg, (str, unicode, int)) for arg in varargs)
+
   exit_code, stdout_lines, stderr_lines = spawn_process(command,
                                                         bufsize,
                                                         binary_mode,
@@ -637,8 +644,7 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
       break
     # Does the server leak the repository on-disk path?
     # (prop_tests-12 installs a hook script that does that intentionally)
-    if any(map(_line_contains_repos_diskpath, lines)) \
-       and not any(map(lambda arg: 'prop_tests-12' in arg, varargs)):
+    if any(map(_line_contains_repos_diskpath, lines)):
       raise Failure("Repository diskpath in %s: %r" % (name, lines))
 
   valgrind_diagnostic = False
