@@ -166,11 +166,7 @@ extern "C" {
  */
 
 /* The default WC version created by the client. */
-#ifdef SVN_TEST_MULTI_WC_FORMAT
-#  define SVN_WC__VERSION 32
-#else
-#  define SVN_WC__VERSION 31
-#endif
+#define SVN_WC__VERSION 32
 
 /* The minimum WC version supported by the client.
    IMPORTANT: Update the implementation of svn_client_supported_wc_version()
