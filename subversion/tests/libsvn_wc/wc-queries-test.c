@@ -70,6 +70,7 @@ static const int schema_statements[] =
 {
   /* Usual tables */
   STMT_CREATE_SCHEMA,
+  STMT_UPGRADE_TO_32,
   STMT_INSTALL_SCHEMA_STATISTICS,
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
