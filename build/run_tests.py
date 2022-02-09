@@ -29,7 +29,8 @@
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
-            [--server-minor-version=<version>] [--http-proxy=<host>:<port>]
+            [--server-minor-version=<version>] [--wc-format=<format>]
+            [--http-proxy=<host>:<port>]
             [--httpd-version=<version>] [--httpd-whitelist=<version>]
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
@@ -257,6 +258,8 @@ class TestHarness:
     if self.opts.server_minor_version is not None:
       cmdline.append('--server-minor-version=%d' %
                      self.opts.server_minor_version)
+    if self.opts.wc_format is not None:
+      cmdline.append('--wc-format=%d' % self.opts.wc_format)
     if self.opts.mode_filter is not None:
       cmdline.append('--mode-filter=' + self.opts.mode_filter)
     if self.opts.parallel is not None:
@@ -292,6 +295,8 @@ class TestHarness:
       cmdline.append('--fsfs-version=%d' % self.opts.fsfs_version)
     if self.opts.server_minor_version is not None:
       cmdline.append('--server-minor-version=%d' % self.opts.server_minor_version)
+    if self.opts.wc_format is not None:
+      cmdline.append('--wc-format=%d' % self.opts.wc_format)
     if self.opts.dump_load_cross_check is not None:
       cmdline.append('--dump-load-cross-check')
     if self.opts.enable_sasl is not None:
@@ -1035,6 +1040,8 @@ def create_parser():
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--server-minor-version', type='int', action='store',
                     help="Set the minor version for the server")
+  parser.add_option('--wc-format', type='int', action='store',
+                    help="Set the WC format")
   parser.add_option('--skip-c-tests', '--skip-C-tests', action='store_true',
                     help="Run only the Python tests")
   parser.add_option('--dump-load-cross-check', action='store_true',

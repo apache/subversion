@@ -51,6 +51,7 @@
 #include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_wc_private.h"
 
 #include "svn_private_config.h"
 
@@ -99,6 +100,7 @@ enum test_options_e {
   quiet_opt,
   config_opt,
   server_minor_version_opt,
+  wc_format_opt,
   allow_segfault_opt,
   srcdir_opt,
   reposdir_opt,
@@ -133,6 +135,8 @@ static const apr_getopt_option_t cl_options[] =
   {"server-minor-version", server_minor_version_opt, 1,
                     N_("set the minor version for the server ('3', '4', "
                        "'5', or '6')")},
+  {"wc-format",     wc_format_opt, 1,
+                    N_("set the WC format to use for all tests")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {"allow-segfaults", allow_segfault_opt, 0,
@@ -990,6 +994,26 @@ svn_test_main(int argc, const char *argv[], int max_threads,
                 || (opts.server_minor_version > SVN_VER_MINOR))
               {
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
+                exit(1);
+              }
+            break;
+          }
+        case wc_format_opt:
+          {
+            char *end;
+            opts.wc_format = (int) strtol(opt_arg, &end, 10);
+            if (end == opt_arg || *end != '\0')
+              {
+                fprintf(stderr, "FAIL: Non-numeric WC format given\n");
+                exit(1);
+              }
+            if (!svn_wc__is_supported_format(opts.wc_format))
+              {
+                fprintf(stderr, "FAIL: Unsupported WC format given (%d); "
+                                "supported formats are %d to %d\n",
+                                opts.wc_format,
+                                svn_wc__min_supported_format(),
+                                svn_wc__max_supported_format());
                 exit(1);
               }
             break;
