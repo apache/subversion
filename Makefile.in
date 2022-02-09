@@ -576,8 +576,8 @@ check: bin @TRANSFORM_LIBTOOL_SCRIPTS@ $(TEST_DEPS) @BDB_TEST_DEPS@
 	  if test "$(SERVER_MINOR_VERSION)" != ""; then                      \
 	    flags="--server-minor-version $(SERVER_MINOR_VERSION) $$flags";  \
 	  fi;                                                                \
-	  if test "$(WC_FORMAT)" != ""; then                      	     \
-	    flags="--wc-format $(WC_FORMAT) $$flags";  			     \
+	  if test "$(WC_FORMAT_VERSION)" != ""; then                         \
+	    flags="--wc-format-version $(WC_FORMAT_VERSION) $$flags";        \
 	  fi;                                                                \
 	  if test "$(ENABLE_SASL)" != ""; then                               \
 	    flags="--enable-sasl $$flags";                                   \

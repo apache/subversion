@@ -58,8 +58,16 @@ from svntest import Skip
 from svntest.wc import StateItem as Item
 
 SVN_VER_MINOR = 15
-SVN_WC__VERSION = 32
-SVN_WC__SUPPORTED_VERSION = 31
+
+def svn_wc__min_supported_format_version():
+  return '1.8'
+
+def svn_wc__max_supported_format_version():
+  return '1.15'
+
+def svn_wc__is_supported_format_version(v):
+  major, minor = v.split('.')
+  return int(major) == 1 and int(minor) in range(8, 15+1)
 
 ######################################################################
 #
@@ -1770,8 +1778,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-library=' + options.http_library)
     if options.server_minor_version:
       args.append('--server-minor-version=' + str(options.server_minor_version))
-    if options.wc_format:
-      args.append('--wc-format=' + str(options.wc_format))
+    if options.wc_format_version:
+      args.append('--wc-format-version=' + options.wc_format_version)
     if options.mode_filter:
       args.append('--mode-filter=' + options.mode_filter)
     if options.milestone_filter:
@@ -2189,9 +2197,10 @@ def _create_parser(usage=None):
   parser.add_option('--server-minor-version', type='int', action='store',
                     help="Set the minor version for the server ('3'..'%d')."
                     % SVN_VER_MINOR)
-  parser.add_option('--wc-format', type='int', action='store',
-                    help="Set the WC format for all tests ('%d'..'%d')."
-                    % (SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION))
+  parser.add_option('--wc-format-version', action='store',
+                    help="Set the WC format version for all tests ('%s'..'%s')."
+                    % (svn_wc__min_supported_format_version(),
+                       svn_wc__max_supported_format_version()))
   parser.add_option('--fsfs-packing', action='store_true',
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
@@ -2250,7 +2259,7 @@ def _create_parser(usage=None):
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
-        wc_format=SVN_WC__VERSION,
+        wc_format_version=svn_wc__max_supported_format_version(),
         url=file_scheme_prefix + \
                         svntest.wc.svn_uri_quote(
                            os.path.abspath(
@@ -2319,9 +2328,11 @@ def parse_options(arglist=sys.argv[1:], usage=None):
     parser.error("test harness only supports server minor versions 3-%d"
                  % SVN_VER_MINOR)
 
-  if options.wc_format not in range(SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION+1):
-    parser.error("test harness only supports WC formats %d-%d"
-                 % (SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION))
+  if not svn_wc__is_supported_format_version(options.wc_format_version):
+    parser.error("test harness only supports WC formats %s to %s, not '%s'"
+                 % (svn_wc__min_supported_format_version(),
+                    svn_wc__max_supported_format_version(),
+                    options.wc_format_version))
 
   pass
 

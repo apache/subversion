@@ -2211,6 +2211,24 @@ int
 svn_wc__min_supported_format(void);
 
 /**
+ * Return true iff @a version is a supported format version.
+ */
+svn_boolean_t
+svn_wc__is_supported_format_version(const svn_version_t *version);
+
+/**
+ * Return the highest WC format supported by this client.
+ */
+const svn_version_t *
+svn_wc__max_supported_format_version(void);
+
+/**
+ * Return the lowest WC format supported by this client.
+ */
+const svn_version_t *
+svn_wc__min_supported_format_version(void);
+
+/**
  * Set @a format to the format of the nearest parent working copy root of
  * @a local_abspath in @a wc_ctx, or to the oldest format of any root stored
  * there. If @a wc_ctx is empty, return the newset supported format.

@@ -1698,6 +1698,31 @@ svn_wc__min_supported_format(void)
   return SVN_WC__SUPPORTED_VERSION;
 }
 
+svn_boolean_t
+svn_wc__is_supported_format_version(const svn_version_t *version)
+{
+  return (version->major == 1
+          && (version->minor >= 8 && version->minor <= 15));
+}
+
+const svn_version_t *
+svn_wc__max_supported_format_version(void)
+{
+  /* NOTE: For consistency, always return the version
+     that first introduced the latest supported format. */
+  static const svn_version_t version = { 1, 15, 0, NULL };
+  return &version;
+}
+
+const svn_version_t *
+svn_wc__min_supported_format_version(void)
+{
+  /* NOTE: For consistency, always return the version
+     that first introduced the earliest supported format. */
+  static const svn_version_t version = { 1, 8, 0, NULL };
+  return &version;
+}
+
 svn_error_t *
 svn_wc__upgrade_sdb(int *result_format,
                     const char *wcroot_abspath,
