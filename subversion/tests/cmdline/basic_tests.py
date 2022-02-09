@@ -2541,8 +2541,10 @@ def basic_auth_test(sbox):
   # Set up a custom config directory
   config_dir = sbox.create_config_dir()
 
-  common_opts = ('--config-dir', config_dir,
-                 '--compatible-version', svntest.main.options.wc_format_version)
+  common_opts = ('--config-dir', config_dir)
+  if svntest.main.options.wc_format_version:
+    common_opts += ('--compatible-version',
+                    svntest.main.options.wc_format_version)
 
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(

@@ -794,7 +794,7 @@ def copy_trust(dst_cfgdir, src_cfgdir):
     shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
 def _with_wc_format_version(args):
-  if '--wc-format-version' in args:
+  if '--wc-format-version' in args or options.wc_format_version is None:
     return args
   non_opt_args = [a for a in args if not str(a).startswith('-')]
   if non_opt_args:
@@ -1740,9 +1740,13 @@ def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
 def wc_format():
-  minor = int(options.wc_format_version.split('.')[1])
-  if minor >= 15 and minor <= SVN_VER_MINOR: return 32
-  if minor >= 8 and minor <= 14: return 31
+  minor = (int(options.wc_format_version.split('.')[1])
+           if options.wc_format_version
+           else SVN_VER_MINOR)
+  if minor >= 15 and minor <= SVN_VER_MINOR:
+    return 32
+  if minor >= 8 and minor <= 14:
+    return 31
   raise Exception("Unrecognized wc_format_version '%s'" %
                   options.wc_format_version)
 
@@ -2276,7 +2280,6 @@ def _create_parser(usage=None):
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
         server_minor_version=SVN_VER_MINOR,
-        wc_format_version=svn_wc__max_supported_format_version(),
         url=file_scheme_prefix + \
                         svntest.wc.svn_uri_quote(
                            os.path.abspath(
@@ -2345,7 +2348,8 @@ def parse_options(arglist=sys.argv[1:], usage=None):
     parser.error("test harness only supports server minor versions 3-%d"
                  % SVN_VER_MINOR)
 
-  if not svn_wc__is_supported_format_version(options.wc_format_version):
+  if not (options.wc_format_version is None or
+          svn_wc__is_supported_format_version(options.wc_format_version)):
     parser.error("test harness only supports WC formats %s to %s, not '%s'"
                  % (svn_wc__min_supported_format_version(),
                     svn_wc__max_supported_format_version(),

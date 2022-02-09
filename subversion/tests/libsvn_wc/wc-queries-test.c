@@ -26,6 +26,7 @@
 #include "svn_ctype.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_wc_private.h"
+#include "../../libsvn_wc/wc.h"
 
 #include "svn_private_config.h"
 
@@ -157,10 +158,11 @@ create_memory_db(sqlite3 **db,
 {
   sqlite3 *sdb;
   int i;
-  int target_format;
+  int target_format = SVN_WC__VERSION;
 
-  SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
-                                      pool));
+  if (opts->wc_format_version)
+    SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
+                                        pool));
 
   /* Create an in-memory raw database */
   SVN_TEST_ASSERT(sqlite3_initialize() == SQLITE_OK);
