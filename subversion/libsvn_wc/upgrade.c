@@ -1680,6 +1680,24 @@ svn_wc__format_from_version(int *format,
   return SVN_NO_ERROR;
 }
 
+svn_boolean_t
+svn_wc__is_supported_format(int format)
+{
+  return format >= SVN_WC__SUPPORTED_VERSION && format <= SVN_WC__VERSION;
+}
+
+int
+svn_wc__max_supported_format(void)
+{
+  return SVN_WC__VERSION;
+}
+
+int
+svn_wc__min_supported_format(void)
+{
+  return SVN_WC__SUPPORTED_VERSION;
+}
+
 svn_error_t *
 svn_wc__upgrade_sdb(int *result_format,
                     const char *wcroot_abspath,
