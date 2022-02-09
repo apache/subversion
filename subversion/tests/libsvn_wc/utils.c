@@ -107,7 +107,7 @@ create_repos_and_wc(const char **repos_url,
                                  &head_rev, &head_rev, svn_depth_infinity,
                                  FALSE /* ignore_externals */,
                                  FALSE /* allow_unver_obstructions */,
-                                 /* TODO: */NULL /* wc_format_verison */,
+                                 opts->wc_format_version,
                                  ctx, subpool));
     svn_pool_destroy(subpool);
   }
@@ -125,7 +125,7 @@ svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
                          const svn_test__nodes_data_t nodes[],
                          const svn_test__actual_data_t actuals[],
-
+                         const svn_version_t *wc_format_version,
                          apr_pool_t *scratch_pool)
 {
   const char *dotsvn_abspath = svn_dirent_join(wc_abspath, ".svn",
@@ -135,14 +135,21 @@ svn_test__create_fake_wc(const char *wc_abspath,
   int i;
   svn_sqlite__stmt_t *stmt;
   const apr_int64_t wc_id = 1;
+  int target_format;
+
+  SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
+                                      scratch_pool));
 
   /* Allocate MY_STATEMENTS in RESULT_POOL because the SDB will continue to
    * refer to it over its lifetime. */
   my_statements = apr_palloc(scratch_pool, 7 * sizeof(const char *));
-  my_statements[0] = statements[STMT_CREATE_SCHEMA];
-  my_statements[1] = statements[STMT_INSTALL_SCHEMA_STATISTICS];
-  my_statements[2] = extra_statements;
-  my_statements[3] = NULL;
+  i = 0;
+  my_statements[i++] = statements[STMT_CREATE_SCHEMA];
+  if (target_format >= 32)
+    my_statements[i++] = statements[STMT_UPGRADE_TO_32];
+  my_statements[i++] = statements[STMT_INSTALL_SCHEMA_STATISTICS];
+  my_statements[i++] = extra_statements;
+  my_statements[i++] = NULL;
 
   /* Create fake-wc/SUBDIR/.svn/ for placing the metadata. */
   SVN_ERR(svn_io_make_dir_recursively(dotsvn_abspath, scratch_pool));

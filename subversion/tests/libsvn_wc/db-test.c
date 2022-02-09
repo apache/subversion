@@ -292,6 +292,7 @@ static svn_error_t *
 create_open(svn_wc__db_t **db,
             const char **local_abspath,
             const char *subdir,
+            const svn_test_opts_t *opts,
             apr_pool_t *pool)
 {
   SVN_ERR(svn_dirent_get_absolute(local_abspath,
@@ -304,7 +305,8 @@ create_open(svn_wc__db_t **db,
 
   SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
   SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA,
-                                   nodes_init_data, actual_init_data, pool));
+                                   nodes_init_data, actual_init_data,
+                                   opts->wc_format_version, pool));
 
   svn_test_add_dir_cleanup(*local_abspath);
 
@@ -339,7 +341,8 @@ validate_abspath(const char *wcroot_abspath,
 
 
 static svn_error_t *
-test_getting_info(apr_pool_t *pool)
+test_getting_info(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_node_kind_t kind;
@@ -361,7 +364,7 @@ test_getting_info(apr_pool_t *pool)
   svn_wc__db_t *db;
   svn_error_t *err;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_getting_info", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_getting_info", opts, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -596,7 +599,8 @@ validate_node(svn_wc__db_t *db,
 
 
 static svn_error_t *
-test_inserting_nodes(apr_pool_t *pool)
+test_inserting_nodes(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_checksum_t *checksum;
@@ -604,7 +608,7 @@ test_inserting_nodes(apr_pool_t *pool)
   apr_hash_t *props;
   const apr_array_header_t *children;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_insert_nodes", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_insert_nodes", opts, pool));
 
   props = apr_hash_make(pool);
   set_prop(props, "p1", "v1", pool);
@@ -721,14 +725,15 @@ test_inserting_nodes(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_children(apr_pool_t *pool)
+test_children(const svn_test_opts_t *opts,
+              apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
   const apr_array_header_t *children;
   int i;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_children", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_children", opts, pool));
 
   SVN_ERR(svn_wc__db_base_get_children(&children,
                                        db, local_abspath,
@@ -773,7 +778,8 @@ test_children(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_working_info(apr_pool_t *pool)
+test_working_info(const svn_test_opts_t *opts,
+                  apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_node_kind_t kind;
@@ -805,7 +811,7 @@ test_working_info(apr_pool_t *pool)
   svn_wc__db_lock_t *lock;
   svn_wc__db_t *db;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_working_info", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_working_info", opts, pool));
 
   /* Test: basic fetching of data. */
   SVN_ERR(svn_wc__db_read_info(
@@ -880,12 +886,13 @@ test_working_info(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_pdh(apr_pool_t *pool)
+test_pdh(const svn_test_opts_t *opts,
+         apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_pdh", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_pdh", opts, pool));
 
   /* NOTE: this test doesn't do anything apparent -- it simply exercises
      some internal functionality of wc_db.  This is a handy driver for
@@ -917,7 +924,8 @@ test_pdh(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_scan_addition(apr_pool_t *pool)
+test_scan_addition(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
@@ -935,7 +943,7 @@ test_scan_addition(apr_pool_t *pool)
   const char *move_op_root_src;
   const char *delete_op_root_abspath;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_scan_addition", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_scan_addition", opts, pool));
 
   /* Simple addition of a directory. */
   SVN_ERR(svn_wc__db_scan_addition(
@@ -1069,7 +1077,8 @@ test_scan_addition(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_scan_deletion(apr_pool_t *pool)
+test_scan_deletion(const svn_test_opts_t *opts,
+                   apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
@@ -1078,7 +1087,7 @@ test_scan_deletion(apr_pool_t *pool)
   const char *moved_to_abspath;
   const char *copy_op_root_abspath;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_scan_deletion", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_scan_deletion", opts, pool));
 
   /* Node was moved elsewhere. */
   SVN_ERR(svn_wc__db_scan_deletion(
@@ -1248,7 +1257,8 @@ test_scan_deletion(apr_pool_t *pool)
 
 
 static svn_error_t *
-test_global_relocate(apr_pool_t *pool)
+test_global_relocate(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
 {
   const char *local_abspath;
   svn_wc__db_t *db;
@@ -1256,7 +1266,7 @@ test_global_relocate(apr_pool_t *pool)
   const char *repos_root_url;
   const char *repos_uuid;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_global_relocate", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_global_relocate", opts, pool));
 
   /* Initial sanity check. */
   SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL,
@@ -1338,7 +1348,8 @@ detect_work_item(const svn_skel_t *work_item)
 
 
 static svn_error_t *
-test_work_queue(apr_pool_t *pool)
+test_work_queue(const svn_test_opts_t *opts,
+                apr_pool_t *pool)
 {
   svn_wc__db_t *db;
   const char *local_abspath;
@@ -1347,7 +1358,7 @@ test_work_queue(apr_pool_t *pool)
   int fetches = 0;
   apr_int64_t last_id = 0;
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_work_queue", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_work_queue", opts, pool));
 
   /* Create three work items.  */
   work_item = svn_skel__make_empty_list(pool);
@@ -1403,7 +1414,8 @@ test_work_queue(apr_pool_t *pool)
 }
 
 static svn_error_t *
-test_externals_store(apr_pool_t *pool)
+test_externals_store(const svn_test_opts_t *opts,
+                     apr_pool_t *pool)
 {
   svn_wc__db_t *db;
   const char *local_abspath;
@@ -1416,7 +1428,7 @@ test_externals_store(apr_pool_t *pool)
 
   apr_hash_set(props, "key", APR_HASH_KEY_STRING, value);
 
-  SVN_ERR(create_open(&db, &local_abspath, "test_externals_store", pool));
+  SVN_ERR(create_open(&db, &local_abspath, "test_externals_store", opts, pool));
 
   /* Directory I exists in the standard test db */
   subdir = svn_dirent_join(local_abspath, "I", pool);
@@ -1530,26 +1542,26 @@ static int max_threads = 2;
 static struct svn_test_descriptor_t test_funcs[] =
   {
     SVN_TEST_NULL,
-    SVN_TEST_PASS2(test_getting_info,
-                   "get information from wc.db"),
-    SVN_TEST_PASS2(test_inserting_nodes,
-                   "insert different nodes into wc.db"),
-    SVN_TEST_PASS2(test_children,
-                   "getting the list of BASE or WORKING children"),
-    SVN_TEST_PASS2(test_working_info,
-                   "reading information about the WORKING tree"),
-    SVN_TEST_PASS2(test_pdh,
-                   "creation of per-directory handles"),
-    SVN_TEST_PASS2(test_scan_addition,
-                   "scanning added working nodes"),
-    SVN_TEST_PASS2(test_scan_deletion,
-                   "deletion introspection functions"),
-    SVN_TEST_PASS2(test_global_relocate,
-                   "relocating a node"),
-    SVN_TEST_PASS2(test_work_queue,
-                   "work queue processing"),
-    SVN_TEST_PASS2(test_externals_store,
-                   "externals store"),
+    SVN_TEST_OPTS_PASS(test_getting_info,
+                       "get information from wc.db"),
+    SVN_TEST_OPTS_PASS(test_inserting_nodes,
+                       "insert different nodes into wc.db"),
+    SVN_TEST_OPTS_PASS(test_children,
+                       "getting the list of BASE or WORKING children"),
+    SVN_TEST_OPTS_PASS(test_working_info,
+                       "reading information about the WORKING tree"),
+    SVN_TEST_OPTS_PASS(test_pdh,
+                       "creation of per-directory handles"),
+    SVN_TEST_OPTS_PASS(test_scan_addition,
+                       "scanning added working nodes"),
+    SVN_TEST_OPTS_PASS(test_scan_deletion,
+                       "deletion introspection functions"),
+    SVN_TEST_OPTS_PASS(test_global_relocate,
+                       "relocating a node"),
+    SVN_TEST_OPTS_PASS(test_work_queue,
+                       "work queue processing"),
+    SVN_TEST_OPTS_PASS(test_externals_store,
+                       "externals store"),
     SVN_TEST_NULL
   };
 
