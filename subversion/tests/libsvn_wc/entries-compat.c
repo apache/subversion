@@ -86,7 +86,7 @@ static const char * const TESTING_DATA = (
    "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
    "insert into wcroot values (1, null); "
 
-   "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "'); "
+   "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "', 1); "
    );
 
 #define NOT_MOVED FALSE, NULL

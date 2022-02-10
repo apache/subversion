@@ -2134,9 +2134,10 @@ def disable_revprop_changes(repo_dir):
   main.create_python_hook_script(hook_path,
                                  'import sys\n'
                                  'sys.stderr.write("pre-revprop-change %s" %'
-                                                  ' " ".join(sys.argv[1:]))\n'
+                                                  ' " ".join(sys.argv[2:]))\n'
                                  'sys.exit(1)\n',
                                  cmd_alternative=
+                                       '@shift\n'
                                        '@echo pre-revprop-change %* 1>&2\n'
                                        '@exit 1\n')
 

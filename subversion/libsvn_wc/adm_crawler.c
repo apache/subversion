@@ -46,6 +46,7 @@
 #include "translate.h"
 #include "workqueue.h"
 #include "conflicts.h"
+#include "textbase.h"
 
 #include "svn_private_config.h"
 
@@ -74,13 +75,22 @@ restore_file(svn_wc__db_t *db,
              apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_item;
+  const char *install_from;
+  svn_skel_t *cleanup_work_item;
 
+  SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                       &cleanup_work_item,
+                                       db, local_abspath, NULL,
+                                       cancel_func, cancel_baton,
+                                       scratch_pool, scratch_pool));
   SVN_ERR(svn_wc__wq_build_file_install(&work_item,
                                         db, local_abspath,
-                                        NULL /* source_abspath */,
+                                        install_from,
                                         use_commit_times,
                                         TRUE /* record_fileinfo */,
                                         scratch_pool, scratch_pool));
+  work_item = svn_wc__wq_merge(work_item, cleanup_work_item, scratch_pool);
+
   /* ### we need an existing path for wq_add. not entirely WRI_ABSPATH yet  */
   SVN_ERR(svn_wc__db_wq_add(db,
                             svn_dirent_dirname(local_abspath, scratch_pool),
@@ -980,8 +990,8 @@ read_and_checksum_pristine_text(svn_stream_t **stream,
 {
   svn_stream_t *base_stream;
 
-  SVN_ERR(svn_wc__get_pristine_contents(&base_stream, NULL, db, local_abspath,
-                                        result_pool, scratch_pool));
+  SVN_ERR(svn_wc__textbase_get_contents(&base_stream, db, local_abspath, NULL,
+                                        TRUE, result_pool, scratch_pool));
   if (base_stream == NULL)
     {
       base_stream = svn_stream_empty(result_pool);
@@ -1097,11 +1107,11 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
     {
       svn_stream_t *new_pristine_stream;
 
-      SVN_ERR(svn_wc__db_pristine_prepare_install(&new_pristine_stream,
-                                                  &install_data,
-                                                  &local_sha1_checksum, NULL,
-                                                  db, local_abspath,
-                                                  scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__textbase_prepare_install(&new_pristine_stream,
+                                               &install_data,
+                                               &local_sha1_checksum, NULL,
+                                               db, local_abspath, FALSE,
+                                               scratch_pool, scratch_pool));
       local_stream = copying_stream(local_stream, new_pristine_stream,
                                     scratch_pool);
     }

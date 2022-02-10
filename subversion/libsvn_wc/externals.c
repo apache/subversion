@@ -53,6 +53,7 @@
 #include "translate.h"
 #include "workqueue.h"
 #include "conflicts.h"
+#include "textbase.h"
 
 #include "svn_private_config.h"
 
@@ -631,19 +632,21 @@ apply_textdelta(void *file_baton,
                                                            pool)));
         }
 
-      SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, eb->db,
-                                       eb->wri_abspath, eb->original_checksum,
-                                       pool, pool));
+      SVN_ERR(svn_wc__textbase_get_contents(&src_stream, eb->db,
+                                            eb->local_abspath,
+                                            eb->original_checksum,
+                                            FALSE, pool, pool));
     }
   else
     src_stream = svn_stream_empty(pool);
 
-  SVN_ERR(svn_wc__db_pristine_prepare_install(&dest_stream,
-                                              &eb->install_data,
-                                              &eb->new_sha1_checksum,
-                                              &eb->new_md5_checksum,
-                                              eb->db, eb->wri_abspath,
-                                              eb->pool, pool));
+  SVN_ERR(svn_wc__textbase_prepare_install(&dest_stream,
+                                           &eb->install_data,
+                                           &eb->new_sha1_checksum,
+                                           &eb->new_md5_checksum,
+                                           eb->db, eb->local_abspath,
+                                           TRUE,
+                                           eb->pool, pool));
 
   svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
                     handler, handler_baton);
@@ -887,11 +890,41 @@ close_file(void *file_baton,
           }
         if (install_pristine)
           {
+            svn_stream_t *contents;
+            const char *tmpdir_abspath;
+            svn_stream_t *tmpstream;
+            const char *tmpfile_abspath;
+
+            SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, eb->db,
+                                             eb->wri_abspath,
+                                             eb->new_sha1_checksum,
+                                             pool, pool));
+            if (!contents)
+              return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+                                      NULL, NULL);
+
+            SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath,
+                                                   eb->db, eb->wri_abspath,
+                                                   pool, pool));
+            SVN_ERR(svn_stream_open_unique(&tmpstream, &tmpfile_abspath,
+                                           tmpdir_abspath,
+                                           svn_io_file_del_none,
+                                           pool, pool));
+            SVN_ERR(svn_stream_copy3(contents, tmpstream, eb->cancel_func,
+                                     eb->cancel_baton, pool));
+
             SVN_ERR(svn_wc__wq_build_file_install(&work_item, eb->db,
                                             eb->local_abspath,
-                                            NULL,
+                                            tmpfile_abspath,
                                             eb->use_commit_times, TRUE,
                                             pool, pool));
+
+            all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
+
+            SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
+                                                 eb->wri_abspath,
+                                                 tmpfile_abspath,
+                                                 pool, pool));
 
             all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
           }

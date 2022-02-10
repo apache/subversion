@@ -1613,6 +1613,7 @@ def authz_log_censor_revprops(sbox):
           '-r1', sbox.repo_url])
 
 @Skip(svntest.main.is_ra_type_file)
+@Wimp("Applying delta to a local mod needs access to the text base")
 def remove_access_after_commit(sbox):
   "remove a subdir with authz file"
 

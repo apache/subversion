@@ -67,14 +67,21 @@ def externals_test_setup(sbox):
 
   The arrangement of the externals in the first repository is:
 
-    /A/B/ ==>  ^/A/D/gamma                      gamma
-    /A/C/ ==>  exdir_G                          <scheme>:///<other_repos>/A/D/G
-               ../../../<other_repos_basename>/A/D/H@1 exdir_H
-
-    /A/D/ ==>  ^/../<other_repos_basename>/A    exdir_A
-               //<other_repos>/A/D/G/           exdir_A/G/
-               exdir_A/H -r 1                   <scheme>:///<other_repos>/A/D/H
-               /<some_paths>/A/B                x/y/z/blah
+    Properties on 'A/B':
+      svn:externals
+        ^/A/D/gamma gamma
+    
+    Properties on 'A/C':
+      svn:externals
+        exdir_G       <scheme>://<...>/<other_repos_basename>/A/D/G
+        ../../../<other_repos_basename>/A/D/H@1 exdir_H
+    
+    Properties on 'A/D':
+      svn:externals
+        ^/../<other_repos_basename>/A exdir_A
+        //<scheme-relative URI to other_repos>/A/D/G/ exdir_A/G/
+        exdir_A/H -r 1 <scheme>://<...>/<other_repos_basename>/A/D/H
+        /<root-relative URI to other_repos>/A/B x/y/z/blah
 
   A dictionary is returned keyed by the directory created by the
   external whose value is the URL of the external.
@@ -1625,6 +1632,8 @@ def merge_target_with_externals(sbox):
      "    /A-branch:8\n"],
     [], 'pg', svntest.main.SVN_PROP_MERGEINFO, '-vR', wc_dir)
 
+# Existing issue: `src_stream` not closed in externals.c:apply_textdelta()
+@XFail(svntest.main.is_os_windows)
 def update_modify_file_external(sbox):
   "update that modifies a file external"
 
@@ -2790,6 +2799,8 @@ def shadowing(sbox):
 # Test for issue #4093 'remapping a file external can segfault due to
 # "deleted" props'.
 @Issue(4093)
+# Existing issue: `src_stream` not closed in externals.c:apply_textdelta()
+@XFail(svntest.main.is_os_windows)
 def remap_file_external_with_prop_del(sbox):
   "file external remap segfaults due to deleted props"
 
@@ -4167,6 +4178,8 @@ def file_external_to_normal_file(sbox):
                                         expected_status)
 
 @Issue(4580)
+# Existing issue: `src_stream` not closed in externals.c:apply_textdelta()
+@XFail(svntest.main.is_os_windows)
 def file_external_recorded_info(sbox):
   "check file external recorded info"
 

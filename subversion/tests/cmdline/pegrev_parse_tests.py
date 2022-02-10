@@ -52,7 +52,7 @@ Item = wc.StateItem
 # commands, because the parser may have (and as of this writing does have)
 # edge-case bugs that we can only expose in this way. Therefore, these helpers
 # ensure that we run 'svn' with the CWD at the root of the working copy.
-def run_svn(sbox, expected_status, expected_stderr, *varargs):
+def run_svn_at_wcdir(sbox, expected_status, expected_stderr, *varargs):
   if expected_stderr is None:
     expected_stderr = []
 
@@ -96,8 +96,8 @@ def do_add_file(sbox, dst, dst_cmdline,
     expected_status.add({dst: Item(status='A ', wc_rev='-')})
 
   main.file_write(sbox.ospath(dst), "This is file '"  + dst + "'.")
-  run_svn(sbox, expected_status, expected_stderr,
-          'add', dst_cmdline)
+  run_svn_at_wcdir(sbox, expected_status, expected_stderr,
+                   'add', dst_cmdline)
 
 def do_add_file_e(sbox, dst, dst_cmdline, expected_stderr=None):
   "like do_add_file() but with an empty sandbox"
@@ -109,8 +109,8 @@ def do_make_dir(sbox, dst, dst_cmdline,
   if expected_status is not None:
     expected_status.add({dst: Item(status='A ', wc_rev='-')})
 
-  run_svn(sbox, expected_status, expected_stderr,
-          'mkdir', dst_cmdline)
+  run_svn_at_wcdir(sbox, expected_status, expected_stderr,
+                   'mkdir', dst_cmdline)
 
 def do_make_dir_e(sbox, dst, dst_cmdline, expected_stderr=None):
   "like do_make_dir() but with an empty sandbox"
@@ -121,8 +121,8 @@ def do_remove(sbox, dst, dst_cmdline, expected_stderr=None):
   if expected_status is not None and dst in expected_status.desc:
     expected_status.tweak(dst, status='D ')
 
-  run_svn(sbox, expected_status, expected_stderr,
-          'remove', dst_cmdline)
+  run_svn_at_wcdir(sbox, expected_status, expected_stderr,
+                   'remove', dst_cmdline)
 
 def do_rename(sbox, src, src_cmdline, dst, dst_cmdline,
               expected_stderr=None):
@@ -132,8 +132,8 @@ def do_rename(sbox, src, src_cmdline, dst, dst_cmdline,
     expected_status.add({dst: Item(status='A ', copied='+',
                                    moved_from=src, wc_rev='-')})
 
-  run_svn(sbox, expected_status, expected_stderr,
-          'rename', src_cmdline, dst_cmdline)
+  run_svn_at_wcdir(sbox, expected_status, expected_stderr,
+                   'rename', src_cmdline, dst_cmdline)
 
 
 ######################################################################

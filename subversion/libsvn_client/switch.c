@@ -202,6 +202,8 @@ switch_internal(svn_revnum_t *result_rev,
                                   pool));
     }
 
+  SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE, ctx, pool));
+
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
                                             switch_url, anchor_abspath,
@@ -368,6 +370,8 @@ switch_internal(svn_revnum_t *result_rev,
                                            depth, timestamp_sleep, ra_session,
                                            ctx, pool));
     }
+
+  SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE, ctx, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

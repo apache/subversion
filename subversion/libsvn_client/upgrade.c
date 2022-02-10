@@ -181,6 +181,10 @@ upgrade_internal(const char *path,
       SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath, wc_format,
                                                 &info_baton, scratch_pool));
     }
+
+  SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE,
+                                    ctx, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 

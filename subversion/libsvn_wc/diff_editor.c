@@ -75,6 +75,7 @@
 #include "adm_files.h"
 #include "translate.h"
 #include "diff.h"
+#include "textbase.h"
 
 #include "svn_private_config.h"
 
@@ -476,15 +477,17 @@ svn_wc__diff_base_working_diff(svn_wc__db_t *db,
   if (skip)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file,
-                                       db, local_abspath, checksum,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__textbase_setaside(&pristine_file,
+                                    db, local_abspath, checksum,
+                                    cancel_func, cancel_baton,
+                                    scratch_pool, scratch_pool));
 
   if (diff_pristine)
-    SVN_ERR(svn_wc__db_pristine_get_path(&local_file,
-                                         db, local_abspath,
-                                         working_checksum,
-                                         scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__textbase_setaside(&local_file,
+                                      db, local_abspath,
+                                      working_checksum,
+                                      cancel_func, cancel_baton,
+                                      scratch_pool, scratch_pool));
   else if (! (had_props || props_mod))
     local_file = local_abspath;
   else if (files_same)
@@ -1019,8 +1022,9 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
     right_props = svn_prop_hash_dup(pristine_props, scratch_pool);
 
   if (checksum)
-    SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file, db, local_abspath,
-                                         checksum, scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__textbase_setaside(&pristine_file, db, local_abspath,
+                                      checksum, cancel_func, cancel_baton,
+                                      scratch_pool, scratch_pool));
   else
     pristine_file = NULL;
 
@@ -1415,9 +1419,10 @@ svn_wc__diff_base_only_file(svn_wc__db_t *db,
   if (skip)
     return SVN_NO_ERROR;
 
-  SVN_ERR(svn_wc__db_pristine_get_path(&pristine_file,
-                                       db, local_abspath, checksum,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__textbase_setaside(&pristine_file,
+                                    db, local_abspath, checksum,
+                                    NULL, NULL,
+                                    scratch_pool, scratch_pool));
 
   SVN_ERR(processor->file_deleted(relpath,
                                   left_src,
@@ -2111,17 +2116,17 @@ apply_textdelta(void *file_baton,
                                                pool));
         }
 
-      SVN_ERR(svn_wc__db_pristine_read(&source, NULL,
-                                       eb->db, fb->local_abspath,
-                                       fb->base_checksum,
-                                       pool, pool));
+      SVN_ERR(svn_wc__textbase_get_contents(&source,
+                                            eb->db, fb->local_abspath,
+                                            fb->base_checksum, FALSE,
+                                            pool, pool));
     }
   else if (fb->base_checksum)
     {
-      SVN_ERR(svn_wc__db_pristine_read(&source, NULL,
-                                       eb->db, fb->local_abspath,
-                                       fb->base_checksum,
-                                       pool, pool));
+      SVN_ERR(svn_wc__textbase_get_contents(&source,
+                                            eb->db, fb->local_abspath,
+                                            fb->base_checksum, FALSE,
+                                            pool, pool));
     }
   else
     source = svn_stream_empty(pool);
@@ -2215,10 +2220,11 @@ close_file(void *file_baton,
     if (! repos_file)
       {
         assert(fb->base_checksum);
-        SVN_ERR(svn_wc__db_pristine_get_path(&repos_file,
-                                             eb->db, eb->anchor_abspath,
-                                             fb->base_checksum,
-                                             scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__textbase_setaside(&repos_file,
+                                          eb->db, fb->local_abspath,
+                                          fb->base_checksum,
+                                          eb->cancel_func, eb->cancel_baton,
+                                          scratch_pool, scratch_pool));
       }
   }
 
@@ -2251,10 +2257,11 @@ close_file(void *file_baton,
                                                 eb->db, fb->local_abspath,
                                                 scratch_pool, scratch_pool));
           assert(checksum);
-          SVN_ERR(svn_wc__db_pristine_get_path(&localfile,
-                                               eb->db, eb->anchor_abspath,
-                                               checksum,
-                                               scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__textbase_setaside(&localfile,
+                                            eb->db, fb->local_abspath,
+                                            checksum,
+                                            eb->cancel_func, eb->cancel_baton,
+                                            scratch_pool, scratch_pool));
         }
       else
         {

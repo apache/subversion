@@ -1078,6 +1078,7 @@ migrate_text_bases(apr_hash_t **text_bases_info,
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
+        SVN_ERR(svn_sqlite__bind_int(stmt, 4, TRUE));
         SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
         SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,

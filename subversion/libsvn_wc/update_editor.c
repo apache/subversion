@@ -48,6 +48,7 @@
 #include "conflicts.h"
 #include "translate.h"
 #include "workqueue.h"
+#include "textbase.h"
 
 #include "private/svn_subr_private.h"
 #include "private/svn_wc_private.h"
@@ -439,7 +440,8 @@ struct handler_baton
 
 /* Get an empty file in the temporary area for WRI_ABSPATH.  The file will
    not be set for automatic deletion, and the name will be returned in
-   TMP_FILENAME.
+   TMP_FILENAME_P.  Set *CLEANUP_WORK_ITEM_P to a new work item that will
+   remove the temporary file.
 
    This implementation creates a new empty file with a unique name.
 
@@ -451,19 +453,35 @@ struct handler_baton
    ### file name to create later.  A better way may not be readily available.
  */
 static svn_error_t *
-get_empty_tmp_file(const char **tmp_filename,
+get_empty_tmp_file(const char **tmp_filename_p,
+                   svn_skel_t **cleanup_work_item_p,
                    svn_wc__db_t *db,
                    const char *wri_abspath,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
   const char *temp_dir_abspath;
+  const char *tmp_filename;
+  svn_skel_t *work_item;
+  svn_error_t *err;
 
   SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&temp_dir_abspath, db, wri_abspath,
                                          scratch_pool, scratch_pool));
-  SVN_ERR(svn_io_open_unique_file3(NULL, tmp_filename, temp_dir_abspath,
+  SVN_ERR(svn_io_open_unique_file3(NULL, &tmp_filename, temp_dir_abspath,
                                    svn_io_file_del_none,
                                    scratch_pool, scratch_pool));
+  err = svn_wc__wq_build_file_remove(&work_item, db, wri_abspath,
+                                     tmp_filename,
+                                     result_pool, scratch_pool);
+  if (err)
+    {
+      return svn_error_compose_create(
+               err,
+               svn_io_remove_file2(tmp_filename, TRUE, scratch_pool));
+    }
+
+  *tmp_filename_p = tmp_filename;
+  *cleanup_work_item_p = work_item;
 
   return SVN_NO_ERROR;
 }
@@ -3726,10 +3744,10 @@ lazy_open_source(svn_stream_t **stream,
 {
   struct file_baton *fb = baton;
 
-  SVN_ERR(svn_wc__db_pristine_read(stream, NULL, fb->edit_baton->db,
-                                   fb->local_abspath,
-                                   fb->original_checksum,
-                                   result_pool, scratch_pool));
+  SVN_ERR(svn_wc__textbase_get_contents(stream, fb->edit_baton->db,
+                                        fb->local_abspath,
+                                        fb->original_checksum, FALSE,
+                                        result_pool, scratch_pool));
 
 
   return SVN_NO_ERROR;
@@ -3748,19 +3766,35 @@ lazy_open_target(svn_stream_t **stream_p,
   svn_stream_t *pristine_install_stream;
   svn_wc__working_file_writer_t *file_writer;
   svn_stream_t *stream;
+  svn_boolean_t hydrated;
+
+  if (fb->shadowed || fb->obstruction_found || fb->edit_obstructed)
+    {
+      hydrated = TRUE;
+    }
+  else if (fb->adding_file && !fb->add_existed)
+    {
+      /* Clean new file, hint that we don't need the text-base. */
+      hydrated = FALSE;
+    }
+  else
+    {
+      hydrated = TRUE;
+    }
 
   /* By convention return value is undefined on error, but we rely
      on HB->INSTALL_DATA value in window_handler() and abort
      INSTALL_STREAM if is not NULL on error.
      So we store INSTALL_DATA to local variable first, to leave
      HB->INSTALL_DATA unchanged on error. */
-  SVN_ERR(svn_wc__db_pristine_prepare_install(&pristine_install_stream,
-                                              &pristine_install_data,
-                                              &hb->new_text_base_sha1_checksum,
-                                              NULL,
-                                              fb->edit_baton->db,
-                                              fb->dir_baton->local_abspath,
-                                              result_pool, scratch_pool));
+  SVN_ERR(svn_wc__textbase_prepare_install(&pristine_install_stream,
+                                           &pristine_install_data,
+                                           &hb->new_text_base_sha1_checksum,
+                                           NULL,
+                                           fb->edit_baton->db,
+                                           fb->local_abspath,
+                                           hydrated,
+                                           result_pool, scratch_pool));
 
   if (fb->shadowed || fb->obstruction_found || fb->edit_obstructed)
     {
@@ -4062,17 +4096,19 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
      the textual changes into the working file. */
   const char *oldrev_str, *newrev_str, *mine_str;
   const char *merge_left;
-  svn_boolean_t delete_left = FALSE;
   const char *path_ext = "";
   const char *new_pristine_abspath;
   enum svn_wc_merge_outcome_t merge_outcome = svn_wc_merge_unchanged;
   svn_skel_t *work_item;
+  svn_skel_t *cleanup_queue = NULL;
 
   *work_items = NULL;
 
-  SVN_ERR(svn_wc__db_pristine_get_path(&new_pristine_abspath,
-                                       db, wri_abspath, new_checksum,
-                                       scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__textbase_setaside_wq(&new_pristine_abspath, &work_item,
+                                       db, local_abspath, new_checksum,
+                                       cancel_func, cancel_baton,
+                                       result_pool, scratch_pool));
+  cleanup_queue = svn_wc__wq_merge(cleanup_queue, work_item, result_pool);
 
   /* If we have any file extensions we're supposed to
      preserve in generated conflict file names, then find
@@ -4106,14 +4142,19 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
 
   if (! original_checksum)
     {
-      SVN_ERR(get_empty_tmp_file(&merge_left, db, wri_abspath,
+      SVN_ERR(get_empty_tmp_file(&merge_left, &work_item, db, wri_abspath,
                                  result_pool, scratch_pool));
-      delete_left = TRUE;
+      cleanup_queue = svn_wc__wq_merge(cleanup_queue, work_item, result_pool);
     }
   else
-    SVN_ERR(svn_wc__db_pristine_get_path(&merge_left, db, wri_abspath,
-                                         original_checksum,
-                                         result_pool, scratch_pool));
+    {
+      SVN_ERR(svn_wc__textbase_setaside_wq(&merge_left, &work_item,
+                                           db, local_abspath,
+                                           original_checksum,
+                                           cancel_func, cancel_baton,
+                                           result_pool, scratch_pool));
+      cleanup_queue = svn_wc__wq_merge(cleanup_queue, work_item, result_pool);
+    }
 
   /* Merge the changes from the old textbase to the new
      textbase into the file we're updating.
@@ -4134,16 +4175,9 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                                  result_pool, scratch_pool));
 
   *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-  *found_conflict = (merge_outcome == svn_wc_merge_conflict);
+  *work_items = svn_wc__wq_merge(*work_items, cleanup_queue, result_pool);
 
-  /* If we created a temporary left merge file, get rid of it. */
-  if (delete_left)
-    {
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, wri_abspath,
-                                           merge_left,
-                                           result_pool, scratch_pool));
-      *work_items = svn_wc__wq_merge(*work_items, work_item, result_pool);
-    }
+  *found_conflict = (merge_outcome == svn_wc_merge_conflict);
 
   return SVN_NO_ERROR;
 }
@@ -4728,9 +4762,9 @@ close_file(void *file_baton,
         }
       else
         {
-          SVN_ERR(svn_wc__db_pristine_read(&src_stream, NULL, eb->db,
-                                           eb->wcroot_abspath, new_checksum,
-                                           scratch_pool, scratch_pool));
+          SVN_ERR(svn_wc__textbase_get_contents(&src_stream, eb->db,
+                                                fb->local_abspath, new_checksum,
+                                                FALSE, scratch_pool, scratch_pool));
         }
 
       SVN_ERR(svn_stream_copy3(src_stream, dst_stream, NULL, NULL, scratch_pool));
@@ -4870,6 +4904,7 @@ update_keywords_after_switch_cb(void *baton,
   svn_boolean_t record_fileinfo;
   svn_skel_t *work_items;
   const char *install_from;
+  svn_skel_t *cleanup_work_item;
 
   propval = svn_hash_gets(props, SVN_PROP_KEYWORDS);
   if (!propval)
@@ -4895,11 +4930,18 @@ update_keywords_after_switch_cb(void *baton,
       SVN_ERR(svn_stream_copy3(working_stream, install_from_stream,
                                eb->cancel_func, eb->cancel_baton,
                                scratch_pool));
+      SVN_ERR(svn_wc__wq_build_file_remove(&cleanup_work_item, eb->db,
+                                           local_abspath, install_from,
+                                           scratch_pool, scratch_pool));
       record_fileinfo = FALSE;
     }
   else
     {
-      install_from = NULL;
+      SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                           &cleanup_work_item,
+                                           eb->db, local_abspath, NULL,
+                                           eb->cancel_func, eb->cancel_baton,
+                                           scratch_pool, scratch_pool));
       record_fileinfo = TRUE;
     }
 
@@ -4908,15 +4950,7 @@ update_keywords_after_switch_cb(void *baton,
                                         eb->use_commit_times,
                                         record_fileinfo,
                                         scratch_pool, scratch_pool));
-  if (install_from)
-    {
-      svn_skel_t *work_item;
-
-      SVN_ERR(svn_wc__wq_build_file_remove(&work_item, eb->db,
-                                           local_abspath, install_from,
-                                           scratch_pool, scratch_pool));
-      work_items = svn_wc__wq_merge(work_items, work_item, scratch_pool);
-    }
+  work_items = svn_wc__wq_merge(work_items, cleanup_work_item, scratch_pool);
 
   SVN_ERR(svn_wc__db_wq_add(eb->db, local_abspath, work_items,
                             scratch_pool));
@@ -5605,33 +5639,39 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                    entry_props, pool, pool));
   }
 
+  {
+    const char *tmp_dir_abspath;
+
+    SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir_abspath,
+                                           db, dir_abspath,
+                                           scratch_pool, scratch_pool));
+
+    SVN_ERR(svn_stream_open_unique(&tmp_base_contents, &tmp_text_base_abspath,
+                                   tmp_dir_abspath, svn_io_file_del_none,
+                                   scratch_pool, scratch_pool));
+  }
+
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
      it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its
      NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM as we copy. */
   if (copyfrom_url)
     {
-      SVN_ERR(svn_wc__db_pristine_prepare_install(&tmp_base_contents,
-                                                  &install_data,
-                                                  &new_text_base_sha1_checksum,
-                                                  &new_text_base_md5_checksum,
-                                                  wc_ctx->db, local_abspath,
-                                                  scratch_pool, scratch_pool));
+      svn_stream_t *install_stream;
+
+      SVN_ERR(svn_wc__textbase_prepare_install(&install_stream,
+                                               &install_data,
+                                               &new_text_base_sha1_checksum,
+                                               &new_text_base_md5_checksum,
+                                               wc_ctx->db, local_abspath,
+                                               copyfrom_url != NULL,
+                                               scratch_pool, scratch_pool));
+
+      tmp_base_contents = svn_stream_tee(install_stream,
+                                         tmp_base_contents,
+                                         scratch_pool);
     }
   else
     {
-      const char *tmp_dir_abspath;
-
-      /* We are not installing a PRISTINE file, but we use the same code to
-         create whatever we want to install */
-
-      SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmp_dir_abspath,
-                                             db, dir_abspath,
-                                             scratch_pool, scratch_pool));
-
-      SVN_ERR(svn_stream_open_unique(&tmp_base_contents, &tmp_text_base_abspath,
-                                     tmp_dir_abspath, svn_io_file_del_none,
-                                     scratch_pool, scratch_pool));
-
       new_text_base_sha1_checksum = NULL;
       new_text_base_md5_checksum = NULL;
     }
@@ -5653,6 +5693,10 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                      pool, pool));
       SVN_ERR(svn_stream_copy3(new_contents, tmp_contents,
                                cancel_func, cancel_baton, pool));
+    }
+  else
+    {
+      source_abspath = tmp_text_base_abspath;
     }
 
   /* Install new text base for copied files. Added files do NOT have a
@@ -5689,42 +5733,20 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
       new_text_base_md5_checksum = NULL;
     }
 
-  /* For added files without NEW_CONTENTS, then generate the working file
-     from the provided "pristine" contents.  */
-  if (new_contents == NULL && copyfrom_url == NULL)
-    source_abspath = tmp_text_base_abspath;
+  /* Install the working copy file (with appropriate translation) from
+     the provided temporary file at SOURCE_ABSPATH.  */
+  SVN_ERR(svn_wc__wq_build_file_install(&work_item,
+                                        db, local_abspath,
+                                        source_abspath,
+                                        FALSE /* use_commit_times */,
+                                        TRUE  /* record_fileinfo */,
+                                        pool, pool));
+  all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
-  {
-    svn_boolean_t record_fileinfo;
-
-    /* If new contents were provided, then we do NOT want to record the
-       file information. We assume the new contents do not match the
-       "proper" values for RECORDED_SIZE and RECORDED_TIME.  */
-    record_fileinfo = (new_contents == NULL);
-
-    /* Install the working copy file (with appropriate translation) from
-       the appropriate source. SOURCE_ABSPATH will be NULL, indicating an
-       installation from the pristine (available for copied/moved files),
-       or it will specify a temporary file where we placed a "pristine"
-       (for an added file) or a detranslated local-mods file.  */
-    SVN_ERR(svn_wc__wq_build_file_install(&work_item,
-                                          db, local_abspath,
-                                          source_abspath,
-                                          FALSE /* use_commit_times */,
-                                          record_fileinfo,
-                                          pool, pool));
-    all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-
-    /* If we installed from somewhere besides the official pristine, then
-       it is a temporary file, which needs to be removed.  */
-    if (source_abspath != NULL)
-      {
-        SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, local_abspath,
-                                             source_abspath,
-                                             pool, pool));
-        all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
-      }
-  }
+  SVN_ERR(svn_wc__wq_build_file_remove(&work_item, db, local_abspath,
+                                       source_abspath,
+                                       pool, pool));
+  all_work_items = svn_wc__wq_merge(all_work_items, work_item, pool);
 
   SVN_ERR(svn_wc__db_op_copy_file(db, local_abspath,
                                   new_base_props,
