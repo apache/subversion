@@ -58,6 +58,7 @@ from svntest import Skip
 from svntest.wc import StateItem as Item
 
 SVN_VER_MINOR = 15
+DEFAULT_COMPATIBLE_VERSION = "1.8"
 
 def svn_wc__min_supported_format_version():
   return '1.8'
@@ -1740,9 +1741,8 @@ def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
 def wc_format():
-  minor = (int(options.wc_format_version.split('.')[1])
-           if options.wc_format_version
-           else SVN_VER_MINOR)
+  ver = (options.wc_format_version or DEFAULT_COMPATIBLE_VERSION)
+  minor = int(ver.split('.')[1])
   if minor >= 15 and minor <= SVN_VER_MINOR:
     return 32
   if minor >= 8 and minor <= 14:
