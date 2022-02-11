@@ -107,6 +107,9 @@ typedef struct svn_wc__db_wcroot_t {
      const char *local_abspath -> svn_wc_adm_access_t *adm_access */
   apr_hash_t *access_cache;
 
+  /* How to manage the pristines ("local-only" or "on-demand") */
+  const char *pristines_mode;
+
 } svn_wc__db_wcroot_t;
 
 

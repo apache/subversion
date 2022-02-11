@@ -106,6 +106,52 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
   return SVN_NO_ERROR;
 }
 
+/* Read *HAVE_ROW, *MD5_CHECKSUM, *SIZE, *HYDRATED for WCROOT:SHA1_CHECKSUM.
+ * If it returns with *HAVE_ROW=FALSE, other outputs are null/zero/false.
+ */
+static svn_error_t *
+stmt_select_pristine(svn_boolean_t *have_row,
+                     const svn_checksum_t **md5_checksum,
+                     svn_filesize_t *size,
+                     svn_boolean_t *hydrated,
+                     svn_wc__db_wcroot_t *wcroot,
+                     const svn_checksum_t *sha1_checksum,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  int stmt_num;
+  svn_sqlite__stmt_t *stmt;
+
+  /* Check that this pristine text is present in the store.  (The presence
+   * of the file is not sufficient.) */
+  stmt_num = (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+              ? STMT_SELECT_PRISTINE_F32
+              : STMT_SELECT_PRISTINE_F31);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_num));
+  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
+  SVN_ERR(svn_sqlite__step(have_row, stmt));
+  if (!*have_row)
+    {
+      if (md5_checksum)
+        *md5_checksum = NULL;
+      if (size)
+        *size = 0;
+      if (hydrated)
+        *hydrated = FALSE;
+      return svn_sqlite__reset(stmt);
+    }
+
+  if (md5_checksum)
+    SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, result_pool));
+  if (size)
+    *size = svn_sqlite__column_int64(stmt, 1);
+  if (hydrated)
+    *hydrated = svn_sqlite__column_boolean(stmt, 2);
+
+  SVN_ERR(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
+}
+
 /* Set *CONTENTS to a readable stream from which the pristine text
  * identified by SHA1_CHECKSUM and PRISTINE_ABSPATH can be read from the
  * pristine store of WCROOT.  If the pristine contents are currently not
@@ -131,22 +177,14 @@ pristine_read_txn(svn_stream_t **contents,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
 {
-  svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_boolean_t hydrated;
 
   /* Check that this pristine text is present in the store.  (The presence
    * of the file is not sufficient.) */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (size)
-    *size = svn_sqlite__column_int64(stmt, 1);
-
-  hydrated = svn_sqlite__column_boolean(stmt, 2);
-
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(stmt_select_pristine(&have_row, NULL, size, &hydrated,
+                               wcroot, sha1_checksum,
+                               result_pool, scratch_pool));
   if (! have_row)
     {
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
@@ -291,7 +329,7 @@ pristine_get_tempdir(svn_wc__db_wcroot_t *wcroot,
  * Implements 'notes/wc-ng/pristine-store' section A-3(a).
  */
 static svn_error_t *
-pristine_install_txn(svn_sqlite__db_t *sdb,
+pristine_install_txn(svn_wc__db_wcroot_t *wcroot,
                      svn_wc__db_install_data_t *install_data,
                      /* The target path for the file (within the pristine store). */
                      const char *pristine_abspath,
@@ -302,20 +340,14 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
                      apr_pool_t *scratch_pool)
 {
   svn_stream_t *install_stream = install_data->inner_stream;
+  int stmt_num;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
   svn_boolean_t hydrated;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (have_row)
-    hydrated = svn_sqlite__column_boolean(stmt, 2);
-  else
-    hydrated = FALSE;
-
-  SVN_ERR(svn_sqlite__reset(stmt));
+  SVN_ERR(stmt_select_pristine(&have_row, NULL, NULL, &hydrated,
+                               wcroot, sha1_checksum,
+                               scratch_pool, scratch_pool));
 
   if (have_row && hydrated)
     {
@@ -345,11 +377,14 @@ pristine_install_txn(svn_sqlite__db_t *sdb,
       SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE, scratch_pool));
     }
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_UPSERT_PRISTINE));
+  stmt_num = (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+              ? STMT_UPSERT_PRISTINE_F32 : STMT_UPSERT_PRISTINE_F31);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_num));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, install_data->size));
-  SVN_ERR(svn_sqlite__bind_int(stmt, 4, install_stream != NULL));
+  if (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION)
+    SVN_ERR(svn_sqlite__bind_int(stmt, 4, install_stream != NULL));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
   return SVN_NO_ERROR;
@@ -383,7 +418,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream_p,
   install_data = apr_pcalloc(result_pool, sizeof(*install_data));
   install_data->wcroot = wcroot;
 
-  if (hydrated)
+  if (hydrated || strcmp(wcroot->pristines_mode, "local-only") == 0)
     {
       SVN_ERR_W(svn_stream__create_for_install(&install_data->inner_stream,
                                                temp_dir_abspath,
@@ -436,7 +471,7 @@ svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
   /* Ensure the SQL txn has at least a 'RESERVED' lock before we start looking
    * at the disk, to ensure no concurrent pristine install/delete txn. */
   SVN_SQLITE__WITH_IMMEDIATE_TXN(
-    pristine_install_txn(wcroot->sdb,
+    pristine_install_txn(wcroot,
                          install_data, pristine_abspath,
                          sha1_checksum, md5_checksum,
                          scratch_pool),
@@ -468,7 +503,6 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
@@ -479,20 +513,19 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
+  SVN_ERR(stmt_select_pristine(&have_row, md5_checksum, NULL, NULL,
+                               wcroot, sha1_checksum,
+                               result_pool, scratch_pool));
   if (!have_row)
-    return svn_error_createf(SVN_ERR_WC_DB_ERROR, svn_sqlite__reset(stmt),
+    return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
                              _("The pristine text with checksum '%s' was "
                                "not found"),
                              svn_checksum_to_cstring_display(sha1_checksum,
                                                              scratch_pool));
 
-  SVN_ERR(svn_sqlite__column_checksum(md5_checksum, stmt, 0, result_pool));
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
 
-  return svn_error_trace(svn_sqlite__reset(stmt));
+  return SVN_NO_ERROR;
 }
 
 
@@ -548,15 +581,19 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
                             void *cancel_baton,
                             apr_pool_t *scratch_pool)
 {
+  int stmt_num;
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb,
-                                    STMT_INSERT_OR_IGNORE_PRISTINE));
+  stmt_num = (dst_wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+              ? STMT_INSERT_OR_IGNORE_PRISTINE_F32
+              : STMT_INSERT_OR_IGNORE_PRISTINE_F31);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb, stmt_num));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, size));
-  SVN_ERR(svn_sqlite__bind_int(stmt, 4, hydrated));
+  if (dst_wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION)
+    SVN_ERR(svn_sqlite__bind_int(stmt, 4, hydrated));
 
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
@@ -635,12 +672,15 @@ pristine_transfer_txn(svn_wc__db_wcroot_t *src_wcroot,
                        void *cancel_baton,
                        apr_pool_t *scratch_pool)
 {
+  int stmt_num;
   svn_sqlite__stmt_t *stmt;
   svn_boolean_t got_row;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb,
-                                    STMT_SELECT_COPY_PRISTINES));
+  stmt_num = (dst_wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+              ? STMT_SELECT_COPY_PRISTINES_F32
+              : STMT_SELECT_COPY_PRISTINES_F31);
+  SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb, stmt_num));
   SVN_ERR(svn_sqlite__bindf(stmt, "is", src_wcroot->wc_id, src_relpath));
 
   /* This obtains an sqlite read lock on src_wcroot */
@@ -912,7 +952,6 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_sqlite__stmt_t *stmt;
   svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
@@ -932,15 +971,9 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   VERIFY_USABLE_WCROOT(wcroot);
 
   /* Check that there is an entry in the PRISTINE table. */
-  SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, STMT_SELECT_PRISTINE));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
-  SVN_ERR(svn_sqlite__step(&have_row, stmt));
-
-  if (hydrated)
-    *hydrated = svn_sqlite__column_boolean(stmt, 2);
-
-  SVN_ERR(svn_sqlite__reset(stmt));
-
+  SVN_ERR(stmt_select_pristine(&have_row, NULL, NULL, hydrated,
+                               wcroot, sha1_checksum,
+                               scratch_pool, scratch_pool));
   *present = have_row;
   return SVN_NO_ERROR;
 }

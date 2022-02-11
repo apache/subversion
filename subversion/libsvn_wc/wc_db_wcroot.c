@@ -390,6 +390,12 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
                                           sizeof(svn_wc__db_wclock_t));
   (*wcroot)->access_cache = apr_hash_make(result_pool);
+  /* Determine the pristines-mode for this WC. */
+  /* ### TODO: read this from per-WC storage instead of locked to wc format */
+  if (format < SVN_WC__PRISTINES_ON_DEMAND_VERSION)
+    (*wcroot)->pristines_mode = "local-only";
+  else
+    (*wcroot)->pristines_mode = "on-demand";
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -1111,4 +1117,22 @@ svn_wc__format_from_context(int *format,
     *format = oldest_format;
     return SVN_NO_ERROR;
   }
+}
+
+svn_error_t *
+svn_wc__db_pristines_mode(const char **pristines_mode,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool)
+{
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                                                local_abspath, scratch_pool,
+                                                scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  *pristines_mode = wcroot->pristines_mode;
+  return SVN_NO_ERROR;
 }

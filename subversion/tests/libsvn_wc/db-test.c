@@ -36,6 +36,7 @@
 
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
+#include "svn_version.h"
 
 #include "private/svn_sqlite.h"
 
@@ -77,7 +78,20 @@
 #define F_TC_DATA "(conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
 #define G_TC_DATA "(conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
 
-static const char * const TESTING_DATA = (
+static const char * const TESTING_DATA_F31 = (
+   /* Load our test data.
+
+      Note: do not use named-column insertions. This allows us to test
+      the column count in the schema matches our expectation here. */
+
+   "insert into repository values (1, '" ROOT_ONE "', '" UUID_ONE "'); "
+   "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
+   "insert into wcroot values (1, null); "
+
+   "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "'); "
+   );
+
+static const char * const TESTING_DATA_F32 = (
    /* Load our test data.
 
       Note: do not use named-column insertions. This allows us to test
@@ -88,7 +102,7 @@ static const char * const TESTING_DATA = (
    "insert into wcroot values (1, null); "
 
    "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "', 1); "
-);
+   );
 
 #define NOT_MOVED FALSE, NULL
 #define NO_COPY_FROM 0, NULL, SVN_INVALID_REVNUM
@@ -288,6 +302,13 @@ static const svn_test__actual_data_t actual_init_data[] = {
   { 0 }
 };
 
+/* Are we testing WC format 32+? */
+static svn_boolean_t
+testing_wc_format_32(const svn_test_opts_t *opts)
+{
+  return opts->wc_format_version->minor >= 15;
+}
+
 static svn_error_t *
 create_open(svn_wc__db_t **db,
             const char **local_abspath,
@@ -304,7 +325,9 @@ create_open(svn_wc__db_t **db,
   SVN_ERR(svn_io_remove_dir2(*local_abspath, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_wc__db_open(db, NULL, FALSE, TRUE, pool, pool));
-  SVN_ERR(svn_test__create_fake_wc(*local_abspath, TESTING_DATA,
+  SVN_ERR(svn_test__create_fake_wc(*local_abspath,
+                                   testing_wc_format_32(opts)
+                                     ? TESTING_DATA_F32 : TESTING_DATA_F31,
                                    nodes_init_data, actual_init_data,
                                    opts->wc_format_version, pool));
 

@@ -24,6 +24,7 @@
 #include "svn_pools.h"
 #include "svn_hash.h"
 #include "svn_ctype.h"
+#include "svn_version.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_wc_private.h"
 #include "../../libsvn_wc/wc.h"
@@ -216,6 +217,38 @@ test_sqlite_version(apr_pool_t *scratch_pool)
 #endif
 }
 
+/* Return TRUE iff statement STMT_NUM is valid in the schema for
+ * WC format FORMAT. */
+static svn_boolean_t
+stmt_matches_wc_format(int stmt_num,
+                       const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  int wc_format = -1;
+
+  svn_error_clear(svn_wc__format_from_version(
+                    &wc_format, opts->wc_format_version, pool));
+  switch (stmt_num)
+    {
+    case STMT_INSERT_OR_IGNORE_PRISTINE_F31:
+    case STMT_UPSERT_PRISTINE_F31:
+    case STMT_SELECT_PRISTINE_F31:
+    case STMT_SELECT_COPY_PRISTINES_F31:
+      return (wc_format <= 31);
+    case STMT_INSERT_OR_IGNORE_PRISTINE_F32:
+    case STMT_UPSERT_PRISTINE_F32:
+    case STMT_SELECT_PRISTINE_F32:
+    case STMT_SELECT_COPY_PRISTINES_F32:
+    case STMT_UPDATE_PRISTINE_HYDRATED:
+    case STMT_TEXTBASE_ADD_REF:
+    case STMT_TEXTBASE_REMOVE_REF:
+    case STMT_TEXTBASE_WALK:
+    case STMT_TEXTBASE_SYNC:
+      return (wc_format >= 32);
+    }
+  return TRUE;
+}
+
 /* Parse all normal queries */
 static svn_error_t *
 test_parsable(const svn_test_opts_t *opts,
@@ -232,6 +265,9 @@ test_parsable(const svn_test_opts_t *opts,
       const char *text = wc_queries[i];
 
       if (is_schema_statement(i))
+        continue;
+
+      if (!stmt_matches_wc_format(i, opts, scratch_pool))
         continue;
 
       /* Some of our statement texts contain multiple queries. We prepare
@@ -672,6 +708,9 @@ test_query_expectations(const svn_test_opts_t *opts,
       apr_array_header_t *rows = NULL;
 
       if (is_schema_statement(i))
+        continue;
+
+      if (!stmt_matches_wc_format(i, opts, scratch_pool))
         continue;
 
       /* Prepare statement to find if it is a single statement. */

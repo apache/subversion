@@ -37,6 +37,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
+#include "svn_version.h"
 
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"
@@ -76,7 +77,20 @@
 #define F_TC_DATA "(conflict F file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
 #define G_TC_DATA "(conflict G file update edited deleted (version 22 " ROOT_ONE " 1 2 branch1/ft/F none) (version 22 " ROOT_ONE " 1 3 branch1/ft/F file))"
 
-static const char * const TESTING_DATA = (
+static const char * const TESTING_DATA_F31 = (
+   /* Load our test data.
+
+      Note: do not use named-column insertions. This allows us to test
+      the column count in the schema matches our expectation here. */
+
+   "insert into repository values (1, '" ROOT_ONE "', '" UUID_ONE "'); "
+   "insert into repository values (2, '" ROOT_TWO "', '" UUID_TWO "'); "
+   "insert into wcroot values (1, null); "
+
+   "insert into pristine values ('$sha1$" SHA1_1 "', NULL, 15, 1, '$md5 $" MD5_1 "'); "
+   );
+
+static const char * const TESTING_DATA_F32 = (
    /* Load our test data.
 
       Note: do not use named-column insertions. This allows us to test
@@ -286,6 +300,13 @@ static const char * const M_TESTING_DATA = (
    );
 
 
+/* Are we testing WC format 32+? */
+static svn_boolean_t
+testing_wc_format_32(const svn_test_opts_t *opts)
+{
+  return opts->wc_format_version->minor >= 15;
+}
+
 static svn_error_t *
 create_fake_wc(const char *subdir,
                const svn_test_opts_t *opts,
@@ -299,7 +320,10 @@ create_fake_wc(const char *subdir,
   SVN_ERR(svn_io_remove_dir2(root, TRUE, NULL, NULL, pool));
 
   SVN_ERR(svn_dirent_get_absolute(&wc_abspath, root, pool));
-  SVN_ERR(svn_test__create_fake_wc(wc_abspath, TESTING_DATA, nodes, actuals,
+  SVN_ERR(svn_test__create_fake_wc(wc_abspath,
+                                   testing_wc_format_32(opts)
+                                     ? TESTING_DATA_F32 : TESTING_DATA_F31,
+                                   nodes, actuals,
                                    opts->wc_format_version, pool));
 
   return SVN_NO_ERROR;

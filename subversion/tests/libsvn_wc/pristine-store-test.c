@@ -39,6 +39,7 @@
 #include "svn_repos.h"
 #include "svn_wc.h"
 #include "svn_client.h"
+#include "svn_version.h"
 
 #include "utils.h"
 
@@ -51,6 +52,13 @@
 
 #include "../svn_test.h"
 
+
+/* Are we testing WC format 32+? */
+static svn_boolean_t
+testing_wc_format_32(const svn_test_opts_t *opts)
+{
+  return opts->wc_format_version->minor >= 15;
+}
 
 /* Create repos and WC, set *WC_ABSPATH to the WC path, and set *DB to a new
  * DB context. */
@@ -366,7 +374,7 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
     SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, db, wc_abspath,
                                       data_sha1, pool));
     SVN_TEST_ASSERT(present);
-    SVN_TEST_ASSERT(! hydrated);
+    SVN_TEST_ASSERT(hydrated == !testing_wc_format_32(opts));
   }
 
   /* Look up its MD-5 from its SHA-1, and check it's the same MD-5. */
@@ -386,7 +394,10 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
 
     SVN_ERR(svn_wc__db_pristine_read(&actual_contents, &actual_size,
                                      db, wc_abspath, data_sha1, pool, pool));
-    SVN_TEST_ASSERT(actual_contents == NULL);
+    if (testing_wc_format_32(opts))
+      SVN_TEST_ASSERT(actual_contents == NULL);
+    else
+      SVN_TEST_ASSERT(actual_contents != NULL);
     SVN_TEST_INT_ASSERT(actual_size, sz);
   }
 
@@ -430,6 +441,10 @@ pristine_dehydrate(const svn_test_opts_t *opts,
   const char data[] = "Blah";
   svn_string_t *data_string = svn_string_create(data, pool);
   svn_checksum_t *data_sha1, *data_md5;
+
+  if (!testing_wc_format_32(opts))
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "dehydrate not available in WC format under test");
 
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_dehydrate", opts, pool));

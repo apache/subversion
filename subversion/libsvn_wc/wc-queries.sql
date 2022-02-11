@@ -883,19 +883,33 @@ SELECT id, work FROM work_queue ORDER BY id LIMIT 1
 -- STMT_DELETE_WORK_ITEM
 DELETE FROM work_queue WHERE id = ?1
 
--- STMT_INSERT_OR_IGNORE_PRISTINE
+-- STMT_INSERT_OR_IGNORE_PRISTINE_F31
+INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount)
+VALUES (?1, ?2, ?3, 0)
+
+-- STMT_INSERT_OR_IGNORE_PRISTINE_F32
 INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount, hydrated)
 VALUES (?1, ?2, ?3, 0, ?4)
 
--- STMT_UPSERT_PRISTINE
+-- STMT_UPSERT_PRISTINE_F31
 /* ### Probably need to bump the minimum SQLite version for UPSERT support
    https://www.sqlite.org/lang_UPSERT.html
  */
+INSERT INTO pristine (checksum, md5_checksum, size, refcount)
+VALUES (?1, ?2, ?3, 0)
+ON CONFLICT(checksum) DO UPDATE SET size=?3
+
+-- STMT_UPSERT_PRISTINE_F32
 INSERT INTO pristine (checksum, md5_checksum, size, refcount, hydrated)
 VALUES (?1, ?2, ?3, 0, ?4)
 ON CONFLICT(checksum) DO UPDATE SET size=?3, hydrated=?4
 
--- STMT_SELECT_PRISTINE
+-- STMT_SELECT_PRISTINE_F31
+SELECT md5_checksum, size, 1
+FROM pristine
+WHERE checksum = ?1
+
+-- STMT_SELECT_PRISTINE_F32
 SELECT md5_checksum, size, hydrated
 FROM pristine
 WHERE checksum = ?1
@@ -914,7 +928,26 @@ WHERE refcount = 0
 DELETE FROM pristine
 WHERE checksum = ?1 AND refcount = 0
 
--- STMT_SELECT_COPY_PRISTINES
+-- STMT_SELECT_COPY_PRISTINES_F31
+/* For the root itself */
+SELECT n.checksum, md5_checksum, size, 1
+FROM nodes_current n
+LEFT JOIN pristine p ON n.checksum = p.checksum
+WHERE wc_id = ?1
+  AND n.local_relpath = ?2
+  AND n.checksum IS NOT NULL
+UNION ALL
+/* And all descendants */
+SELECT n.checksum, md5_checksum, size, 1
+FROM nodes n
+LEFT JOIN pristine p ON n.checksum = p.checksum
+WHERE wc_id = ?1
+  AND IS_STRICT_DESCENDANT_OF(n.local_relpath, ?2)
+  AND op_depth >=
+      (SELECT MAX(op_depth) FROM nodes WHERE wc_id = ?1 AND local_relpath = ?2)
+  AND n.checksum IS NOT NULL
+
+-- STMT_SELECT_COPY_PRISTINES_F32
 /* For the root itself */
 SELECT n.checksum, md5_checksum, size, p.hydrated
 FROM nodes_current n

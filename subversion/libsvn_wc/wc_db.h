@@ -971,7 +971,8 @@ typedef struct svn_wc__db_install_data_t
    set to the MD-5 and SHA-1 checksums respectively of that file.
    MD5_CHECKSUM and/or SHA1_CHECKSUM may be NULL if not wanted.
 
-   If HYDRATED is true, the contents of the pristine will be saved to disk.
+   The contents of the pristine will be saved to disk if HYDRATED is true or
+   if the WC version or configuration doesn't allow dehydrated pristines.
 
    Allocate the new stream, path and checksums in RESULT_POOL.
  */
@@ -1084,6 +1085,14 @@ svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
                               const char *wri_abspath,
                               const svn_checksum_t *sha1_checksum,
                               apr_pool_t *scratch_pool);
+
+/* Return the *PRISTINES_MODE for the WC at (DB, LOCAL_ABSPATH).
+ */
+svn_error_t *
+svn_wc__db_pristines_mode(const char **pristines_mode,
+                          svn_wc__db_t *db,
+                          const char *local_abspath,
+                          apr_pool_t *scratch_pool);
 
 /* @defgroup svn_wc__db_external  External management
    @{ */

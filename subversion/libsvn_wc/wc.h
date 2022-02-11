@@ -206,6 +206,10 @@ extern "C" {
    sqlite_stat1 table on opening */
 #define SVN_WC__ENSURE_STAT1_TABLE 31
 
+/* Starting from this version, pristines can be missing and fetched on
+ * demand.  */
+#define SVN_WC__PRISTINES_ON_DEMAND_VERSION 32
+
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other
  * suitable string if no released version used WC_FORMAT.

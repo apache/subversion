@@ -2063,6 +2063,31 @@ typedef struct actual_row_t {
   const char *changelist;
 } actual_row_t;
 
+/* Return STMT_FOR_F31 or STMT_FOR_F32 according to the format (31 or 32)
+ * of the WC in sandbox B. On error, return -1 to trigger a SQLite API error.
+ */
+static int
+stmt_for_f31_or_f32(svn_test__sandbox_t *b,
+                    int stmt_for_f31,
+                    int stmt_for_f32)
+{
+  svn_error_t *err;
+  svn_wc__db_wcroot_t *wcroot;
+  const char *local_relpath;
+
+  err = svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath,
+                                              b->wc_ctx->db, b->wc_abspath,
+                                              b->pool, b->pool);
+  if (err)
+    {
+      svn_error_clear(err);
+      return -1;
+    }
+
+  return (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+          ? stmt_for_f31 : stmt_for_f32);
+}
+
 static svn_error_t *
 insert_actual(svn_test__sandbox_t *b,
               actual_row_t *actual)
@@ -2092,7 +2117,10 @@ insert_actual(svn_test__sandbox_t *b,
       if (actual->changelist)
         {
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                            STMT_ENSURE_EMPTY_PRISTINE));
+                                            stmt_for_f31_or_f32(
+                                              b,
+                                              STMT_ENSURE_EMPTY_PRISTINE_F32,
+                                              STMT_ENSURE_EMPTY_PRISTINE_F31)));
           SVN_ERR(svn_sqlite__step_done(stmt));
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_NODES_SET_FILE));
           SVN_ERR(svn_sqlite__bindf(stmt, "s", actual->local_relpath));
