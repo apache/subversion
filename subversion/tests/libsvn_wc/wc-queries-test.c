@@ -158,11 +158,10 @@ create_memory_db(sqlite3 **db,
 {
   sqlite3 *sdb;
   int i;
-  int target_format = SVN_WC__VERSION;
+  int target_format;
 
-  if (opts->wc_format_version)
-    SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
-                                        pool));
+  SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
+                                      pool));
 
   /* Create an in-memory raw database */
   SVN_TEST_ASSERT(sqlite3_initialize() == SQLITE_OK);

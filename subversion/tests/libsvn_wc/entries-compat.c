@@ -602,7 +602,7 @@ test_access_baton_like_locking(const svn_test_opts_t *opts,
   {
     const char *url, *repos_root_url, *repos_uuid;
     const char *subdir = svn_dirent_join(local_abspath, "sub-wc", pool);
-    int target_format = SVN_WC__VERSION;
+    int target_format;
     const char *repos_relpath;
 
     svn_boolean_t is_root;
@@ -613,9 +613,8 @@ test_access_baton_like_locking(const svn_test_opts_t *opts,
     url = svn_path_url_add_component2(repos_root_url, repos_relpath, pool);
 
     SVN_ERR(svn_io_make_dir_recursively(subdir, pool));
-    if (opts->wc_format_version)
-      SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
-                                          pool));
+    SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
+                                        pool));
     SVN_ERR(svn_wc__ensure_adm(wc_ctx, target_format,
                                subdir,
                                svn_path_url_add_component2(url, "sub-wc", pool),

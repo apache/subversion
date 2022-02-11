@@ -1647,7 +1647,11 @@ svn_wc__format_from_version(int *format,
                             const svn_version_t* version,
                             apr_pool_t *scratch_pool)
 {
-  SVN_ERR_ASSERT(version != NULL);
+  if (!version)
+    {
+      *format = SVN_WC__DEFAULT_VERSION;
+      return SVN_NO_ERROR;
+    }
 
   if (version->major != SVN_VER_MAJOR || version->minor > SVN_VER_MINOR)
     return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,

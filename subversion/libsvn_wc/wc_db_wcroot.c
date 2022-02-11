@@ -1050,11 +1050,11 @@ svn_wc__format_from_context(int *format,
   apr_array_header_t *keys;
   int index;
 
-  /* Thsi is what we return if we don't find a concrete format version. */
+  /* This is what we return if we don't find a concrete format version. */
   SVN_ERR(svn_hash_keys(&keys, dir_data, scratch_pool));
   if (0 == keys->nelts)
     {
-      *format = SVN_WC__VERSION;
+      *format = SVN_WC__DEFAULT_VERSION;
       return SVN_NO_ERROR;
     }
 
