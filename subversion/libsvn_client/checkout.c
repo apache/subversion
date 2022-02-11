@@ -98,6 +98,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
+  /* Here the default for wc_format_version is determined from WC context,
+   * rather than the library's default version. */
   if (wc_format_version)
     SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
                                         scratch_pool));

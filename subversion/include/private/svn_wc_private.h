@@ -2183,6 +2183,8 @@ svn_wc__working_file_writer_close(svn_wc__working_file_writer_t *writer);
  * Convert @a version to that version's characteristic working copy
  * format, returned in @a format.
  *
+ * A NULL @a version translates to the library's default version.
+ *
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.15.
@@ -2231,7 +2233,7 @@ svn_wc__min_supported_format_version(void);
 /**
  * Set @a format to the format of the nearest parent working copy root of
  * @a local_abspath in @a wc_ctx, or to the oldest format of any root stored
- * there. If @a wc_ctx is empty, return the newset supported format.
+ * there. If @a wc_ctx is empty, return the library's default format.
  *
  * Use @a scratch_pool for temporary allocations.
  *

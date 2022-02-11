@@ -135,11 +135,10 @@ svn_test__create_fake_wc(const char *wc_abspath,
   int i;
   svn_sqlite__stmt_t *stmt;
   const apr_int64_t wc_id = 1;
-  int target_format = SVN_WC__VERSION;
+  int target_format;
 
-  if (wc_format_version)
-    SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
-                                        scratch_pool));
+  SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
+                                      scratch_pool));
 
   /* Allocate MY_STATEMENTS in RESULT_POOL because the SDB will continue to
    * refer to it over its lifetime. */

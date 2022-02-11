@@ -541,9 +541,8 @@ svn_client__update_internal(svn_revnum_t *result_rev,
 
    A new working copy, if needed, will be created in the format corresponding
    to the WC_FORMAT_VERSION of the client. If this parameter is NULL, the
-   format from CTX->WC_CTX will be and an error will be returned if the format
-   cannot be determined. The format of any existing working copy will remain
-   unchanged.
+   format will be determined from context (see svn_wc__format_from_context).
+   The format of any existing working copy will remain unchanged.
 
    If RA_SESSION is NOT NULL, it may be used to avoid creating a new
    session. The session may point to a different URL after returning.

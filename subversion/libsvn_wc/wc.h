@@ -173,6 +173,10 @@ extern "C" {
               whenever you change this value! */
 #define SVN_WC__SUPPORTED_VERSION 31
 
+/* The default WC version that the Subversion library should create
+ * (or upgrade to) when not otherwise specified. */
+#define SVN_WC__DEFAULT_VERSION SVN_WC__SUPPORTED_VERSION
+
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
 

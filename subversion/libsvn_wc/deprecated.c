@@ -580,7 +580,7 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
-      svn_wc__ensure_adm(wc_ctx, SVN_WC__VERSION, local_abspath,
+      svn_wc__ensure_adm(wc_ctx, SVN_WC__DEFAULT_VERSION, local_abspath,
                          url, repos_root_url, repos_uuid, revision, depth,
                          scratch_pool));
 }
@@ -4900,7 +4900,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                void *notify_baton,
                apr_pool_t *scratch_pool)
 {
-  return svn_wc__upgrade(wc_ctx, local_abspath, SVN_WC__VERSION,
+  return svn_wc__upgrade(wc_ctx, local_abspath, SVN_WC__DEFAULT_VERSION,
                          repos_info_func, repos_info_baton,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,
