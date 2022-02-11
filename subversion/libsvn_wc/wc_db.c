@@ -1506,13 +1506,6 @@ svn_wc__db_init(svn_wc__db_t *db,
                         FALSE /* auto-upgrade */,
                         db->state_pool, scratch_pool));
 
-#define FORMAT_EXPECTED 32
-  if (wcroot->format != FORMAT_EXPECTED)
-    {
-      SVN_DBG(("### format is %d; expected %d", wcroot->format, FORMAT_EXPECTED));
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
-
   /* Any previously cached children may now have a new WCROOT, most likely that
      of the new WCROOT, but there might be descendant directories that are their
      own working copy, in which case setting WCROOT to our new WCROOT might
@@ -13468,12 +13461,6 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                        *sdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
                                        wc_db->state_pool, scratch_pool));
-
-  if (wcroot->format != FORMAT_EXPECTED)
-    {
-      SVN_DBG(("### format is %d; expected %d", wcroot->format, FORMAT_EXPECTED));
-      SVN_ERR_MALFUNCTION_NO_RETURN();
-    }
 
   /* The WCROOT is complete. Stash it into DB.  */
   svn_hash_sets(wc_db->dir_data, wcroot->abspath, wcroot);
