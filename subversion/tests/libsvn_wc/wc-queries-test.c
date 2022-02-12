@@ -118,6 +118,16 @@ static const int slow_statements[] =
   -1 /* final marker */
 };
 
+/* These statements are slow in WC format 31, but not in latest format. */
+static const int slow_statements_f31[] =
+{
+  /* Format 31: "designed as slow to avoid penalty on other queries"
+   * Format 32: now indexed. */
+  STMT_SELECT_UNREFERENCED_PRISTINES,
+
+  -1 /* final marker */
+};
+
 /* Statements that just read the first record from a table,
    using the primary key. Specialized as different sqlite
    versions produce different results */
@@ -146,7 +156,9 @@ in_list(const int list[], int stmt_idx)
 }
 
 /* Helpers to determine if a statement is in a common list */
-#define is_slow_statement(stmt_idx) in_list(slow_statements, stmt_idx)
+#define is_slow_statement(stmt_idx, wc_format) \
+    (in_list(slow_statements, stmt_idx) \
+     || (wc_format == 31 && in_list(slow_statements_f31, stmt_idx)))
 #define is_schema_statement(stmt_idx) \
     ((stmt_idx >= STMT_SCHEMA_FIRST) || in_list(schema_statements, stmt_idx))
 
@@ -687,6 +699,10 @@ test_query_expectations(const svn_test_opts_t *opts,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_error_t *warnings = NULL;
   svn_boolean_t supports_query_info;
+  int wc_format;
+
+  SVN_ERR(svn_wc__format_from_version(&wc_format, opts->wc_format_version,
+                                      scratch_pool));
 
   SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
@@ -773,7 +789,7 @@ test_query_expectations(const svn_test_opts_t *opts,
               && item->automatic_index)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 {
                   warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
@@ -800,7 +816,7 @@ test_query_expectations(const svn_test_opts_t *opts,
                      statements is not our concern here. */
 
                   /* "Slow" statements do expect to see a warning, however. */
-                  if (is_slow_statement(i))
+                  if (is_slow_statement(i, wc_format))
                     warned = TRUE;
                 }
               else if (in_list(primary_key_statements, i))
@@ -809,7 +825,7 @@ test_query_expectations(const svn_test_opts_t *opts,
                      as table scan in 3.8+, while the execution plan is
                      identical: read first record from table */
                 }
-              else if (!is_slow_statement(i))
+              else if (!is_slow_statement(i, wc_format))
                 {
                   warned = TRUE;
                   warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
@@ -825,7 +841,7 @@ test_query_expectations(const svn_test_opts_t *opts,
           else if (item->search && !item->index)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
                                 "Query on %s doesn't use an index:\n%s",
@@ -834,7 +850,7 @@ test_query_expectations(const svn_test_opts_t *opts,
           else if (item->scan && !is_result_table(item->table))
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "Query %s: "
                                 "Performs scan on %s:\n%s",
@@ -843,7 +859,7 @@ test_query_expectations(const svn_test_opts_t *opts,
           else if (item->create_btree)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "Query %s: Creates a temporary B-TREE:\n%s",
                                 wc_query_info[i][0], wc_queries[i]);
@@ -852,13 +868,13 @@ test_query_expectations(const svn_test_opts_t *opts,
       SQLITE_ERR(sqlite3_reset(stmt));
       SQLITE_ERR(sqlite3_finalize(stmt));
 
-      if (!warned && is_slow_statement(i))
+      if (!warned && is_slow_statement(i, wc_format))
         {
           printf("DBG: Expected %s to be reported as slow, but it wasn't\n",
                  wc_query_info[i][0]);
         }
 
-      if (rows && warned != is_slow_statement(i))
+      if (rows && warned != is_slow_statement(i, wc_format))
         {
           int w;
           svn_error_t *info = NULL;
