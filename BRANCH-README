@@ -1,3 +1,16 @@
+This branch is the rebase of the 'pristines-on-demand' branch on top
+of the 'multi-format-wc' branch, as part of resolving issue #525.
+
+Each of the two original branches had its own 'BRANCH-README' file;
+what follows is just those two files concatenated one after the other.
+(If this combined branch turns out to be long-lived, then we may do a
+more thoughtful merge of the two files at some point, but for now we
+expect this branch to be merged to trunk pretty soon anyway.)
+
+============================================================================
+BRANCH-README from 'multi-format-wc':
+============================================================================
+
 Client support for multiple working copy versions
 -------------------------------------------------
 
@@ -50,6 +63,8 @@ OPTIONAL: The "svn upgrade" command may grow an option to only show
    copy.
 
    
+============================================================================
+BRANCH-README from 'pristines-on-demand':
 ============================================================================
 
 Pristines-on-Demand
