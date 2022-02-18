@@ -298,7 +298,7 @@ class RegexListOutput(ExpectedOutput):
                     (len(self.expected), len(actual)))
       for e, a in itertools.zip_longest(self.expected_res, actual):
         if e is not None and a is not None and regex_fullmatch(e, a):
-          logger.warn("|  " + a.rstrip())
+          logger.warn("|  " + repr(a))
         else:
           if e is not None:
             logger.warn("| -" + repr(e.pattern))
