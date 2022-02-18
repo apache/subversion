@@ -58,6 +58,17 @@ from svntest import Skip
 from svntest.wc import StateItem as Item
 
 SVN_VER_MINOR = 15
+DEFAULT_COMPATIBLE_VERSION = "1.8"
+
+def svn_wc__min_supported_format_version():
+  return '1.8'
+
+def svn_wc__max_supported_format_version():
+  return '1.15'
+
+def svn_wc__is_supported_format_version(v):
+  major, minor = v.split('.')
+  return int(major) == 1 and int(minor) in range(8, 15+1)
 
 ######################################################################
 #
@@ -789,6 +800,16 @@ def copy_trust(dst_cfgdir, src_cfgdir):
   for f in os.listdir(src_ssl_dir):
     shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
+def _with_wc_format_version(args):
+  if '--wc-format-version' in args or options.wc_format_version is None:
+    return args
+  non_opt_args = [a for a in args if not str(a).startswith('-')]
+  if non_opt_args:
+    subcommand = non_opt_args[0]
+    if subcommand in ['co', 'checkout', 'upgrade']:
+      return args + ('--compatible-version', options.wc_format_version)
+  return args
+
 def _with_config_dir(args):
   if '--config-dir' in args:
     return args
@@ -824,7 +845,7 @@ def run_svn(error_expected, *varargs):
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
   return run_command(svn_binary, error_expected, False,
-                     *(_with_auth(_with_config_dir(varargs))))
+                     *(_with_wc_format_version(_with_auth(_with_config_dir(varargs)))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -1725,6 +1746,16 @@ def is_httpd_authz_provider_enabled():
 def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
+def wc_format():
+  ver = (options.wc_format_version or DEFAULT_COMPATIBLE_VERSION)
+  minor = int(ver.split('.')[1])
+  if minor >= 15 and minor <= SVN_VER_MINOR:
+    return 32
+  if minor >= 8 and minor <= 14:
+    return 31
+  raise Exception("Unrecognized wc_format_version '%s'" %
+                  options.wc_format_version)
+
 
 ######################################################################
 
@@ -1774,6 +1805,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--http-library=' + options.http_library)
     if options.server_minor_version:
       args.append('--server-minor-version=' + str(options.server_minor_version))
+    if options.wc_format_version:
+      args.append('--wc-format-version=' + options.wc_format_version)
     if options.mode_filter:
       args.append('--mode-filter=' + options.mode_filter)
     if options.milestone_filter:
@@ -2191,6 +2224,10 @@ def _create_parser(usage=None):
   parser.add_option('--server-minor-version', type='int', action='store',
                     help="Set the minor version for the server ('3'..'%d')."
                     % SVN_VER_MINOR)
+  parser.add_option('--wc-format-version', action='store',
+                    help="Set the WC format version for all tests ('%s'..'%s')."
+                    % (svn_wc__min_supported_format_version(),
+                       svn_wc__max_supported_format_version()))
   parser.add_option('--fsfs-packing', action='store_true',
                     help="Run 'svnadmin pack' automatically")
   parser.add_option('--fsfs-sharding', action='store', type='int',
@@ -2316,6 +2353,13 @@ def parse_options(arglist=sys.argv[1:], usage=None):
   if options.server_minor_version not in range(3, SVN_VER_MINOR+1):
     parser.error("test harness only supports server minor versions 3-%d"
                  % SVN_VER_MINOR)
+
+  if not (options.wc_format_version is None or
+          svn_wc__is_supported_format_version(options.wc_format_version)):
+    parser.error("test harness only supports WC formats %s to %s, not '%s'"
+                 % (svn_wc__min_supported_format_version(),
+                    svn_wc__max_supported_format_version(),
+                    options.wc_format_version))
 
   pass
 

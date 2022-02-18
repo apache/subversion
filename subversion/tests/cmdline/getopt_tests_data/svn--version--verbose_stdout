@@ -6,6 +6,8 @@ This software consists of contributions made by many people;
 see the NOTICE file for more information.
 Subversion is open source software, see http://subversion.apache.org/
 
+Supported working copy (WC) versions: from 1.8 to 1.15
+
 The following repository access (RA) modules are available:
 
 * ra_svn : Module for accessing a repository using the svn network protocol.

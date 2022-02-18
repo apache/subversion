@@ -31,6 +31,8 @@
 #include "svn_pools.h"
 #include "svn_version.h"
 
+#include "private/svn_sorts_private.h"
+
 #include "wc.h"
 #include "adm_files.h"
 #include "wc_db_private.h"
@@ -337,7 +339,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   /* Verify that no work items exists. If they do, then our integrity is
      suspect and, thus, we cannot upgrade this database.  */
   if (format >= SVN_WC__HAS_WORK_QUEUE &&
-      format < SVN_WC__VERSION && verify_format)
+      format < SVN_WC__SUPPORTED_VERSION && verify_format)
     {
       svn_error_t *err = svn_wc__db_verify_no_work(sdb);
       if (err)
@@ -345,7 +347,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
           /* Special message for attempts to upgrade a 1.7-dev wc with
              outstanding workqueue items. */
           if (err->apr_err == SVN_ERR_WC_CLEANUP_REQUIRED
-              && format < SVN_WC__VERSION && verify_format)
+              && format < SVN_WC__SUPPORTED_VERSION && verify_format)
             err = svn_error_quick_wrap(err, _("Cleanup with an older 1.7 "
                                               "client before upgrading with "
                                               "this client"));
@@ -354,16 +356,27 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
     }
 
   /* Auto-upgrade the SDB if possible.  */
-  if (format < SVN_WC__VERSION && verify_format)
+  if (format < SVN_WC__SUPPORTED_VERSION && verify_format)
     {
-      return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
-                               _("The working copy at '%s'\nis too old "
-                                 "(format %d) to work with client version "
-                                 "'%s' (expects format %d). You need to "
-                                 "upgrade the working copy first.\n"),
-                               svn_dirent_local_style(wcroot_abspath,
-                                                      scratch_pool),
-                               format, SVN_VERSION, SVN_WC__VERSION);
+      if (SVN_WC__SUPPORTED_VERSION == SVN_WC__VERSION)
+        return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                                 _("The working copy at '%s'\nis too old "
+                                   "(format %d) to work with client version "
+                                   "'%s' (expects format %d). You need "
+                                   "to upgrade the working copy first.\n"),
+                                 svn_dirent_local_style(wcroot_abspath,
+                                                        scratch_pool),
+                                 format, SVN_VERSION, SVN_WC__VERSION);
+      else
+        return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
+                                 _("The working copy at '%s'\nis too old "
+                                   "(format %d) to work with client version "
+                                   "'%s' (expects format %d to %d). You need "
+                                   "to upgrade the working copy first.\n"),
+                                 svn_dirent_local_style(wcroot_abspath,
+                                                        scratch_pool),
+                                 format, SVN_VERSION,
+                                 SVN_WC__SUPPORTED_VERSION, SVN_WC__VERSION);
     }
 
   *wcroot = apr_palloc(result_pool, sizeof(**wcroot));
@@ -1016,4 +1029,86 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
     return svn_error_wrap_apr(result, NULL);
 
   return SVN_NO_ERROR;
+}
+
+
+/*
+ * ### FIXME:
+ *
+ * There must surely be a better way to find the nearest enclosing wcroot of a
+ * path than by copying the hash keys to an array and sorting the array.
+ *
+ * TODO: Convert the svn_wc__db_t::dir_data hash to a sorted dictionary?.
+ */
+svn_error_t *
+svn_wc__format_from_context(int *format,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool)
+{
+  apr_hash_t *const dir_data = wc_ctx->db->dir_data;
+  apr_array_header_t *keys;
+  int index;
+
+  /* This is what we return if we don't find a concrete format version. */
+  SVN_ERR(svn_hash_keys(&keys, dir_data, scratch_pool));
+  if (0 == keys->nelts)
+    {
+      *format = SVN_WC__DEFAULT_VERSION;
+      return SVN_NO_ERROR;
+    }
+
+  svn_sort__array(keys, svn_sort_compare_paths);
+  index = svn_sort__bsearch_lower_bound(keys, &local_abspath,
+                                        svn_sort_compare_paths);
+
+  /* If the previous key is a parent of the local_abspath, use its format. */
+  {
+    const char *const here = (index >= keys->nelts ? NULL
+                              : APR_ARRAY_IDX(keys, index, const char*));
+    const char *const prev = (index == 0 ? NULL
+                              : APR_ARRAY_IDX(keys, index - 1, const char*));
+
+    if (here)
+      {
+        const char *const child = svn_dirent_skip_ancestor(here, local_abspath);
+        if (child && !*child)
+          {
+            /* Found an exact match in the WC context. */
+            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, here);
+            *format = wcroot->format;
+            return SVN_NO_ERROR;
+          }
+      }
+
+    if (prev)
+      {
+        const char *const child = svn_dirent_skip_ancestor(prev, local_abspath);
+        if (child)
+          {
+            /* Found the parent path in the WC context. */
+            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, prev);
+            *format = wcroot->format;
+            return SVN_NO_ERROR;
+          }
+      }
+  }
+
+  /* Find the oldest format recorded in the WC context. */
+  {
+    int oldest_format = SVN_WC__VERSION;
+    apr_hash_index_t *hi;
+
+    for (hi = apr_hash_first(scratch_pool, dir_data);
+         hi;
+         hi = apr_hash_next(hi))
+      {
+        svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
+        if (wcroot->format < oldest_format)
+          oldest_format = wcroot->format;
+      }
+
+    *format = oldest_format;
+    return SVN_NO_ERROR;
+  }
 }

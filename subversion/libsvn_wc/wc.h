@@ -160,12 +160,22 @@ extern "C" {
  * == 1.8.x shipped with format 31
  * == 1.9.x shipped with format 31
  * == 1.10.x shipped with format 31
+ * == 1.11.x shipped with format 31
  *
  * Please document any further format changes here.
  */
 
-#define SVN_WC__VERSION 31
+/* The default WC version created by the client. */
+#define SVN_WC__VERSION 32
 
+/* The minimum WC version supported by the client.
+   IMPORTANT: Update the implementation of svn_client_supported_wc_version()
+              whenever you change this value! */
+#define SVN_WC__SUPPORTED_VERSION 31
+
+/* The default WC version that the Subversion library should create
+ * (or upgrade to) when not otherwise specified. */
+#define SVN_WC__DEFAULT_VERSION SVN_WC__SUPPORTED_VERSION
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
@@ -504,6 +514,7 @@ svn_wc__internal_transmit_prop_deltas(svn_wc__db_t *db,
 /* Library-internal version of svn_wc_ensure_adm4(). */
 svn_error_t *
 svn_wc__internal_ensure_adm(svn_wc__db_t *db,
+                            int target_format,
                             const char *local_abspath,
                             const char *url,
                             const char *repos_root_url,
@@ -585,7 +596,8 @@ svn_wc__internal_get_origin(svn_boolean_t *is_copy,
                             apr_pool_t *scratch_pool);
 
 /* Upgrade the wc sqlite database given in SDB for the wc located at
-   WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT.
+   WCROOT_ABSPATH. It's current/starting format is given by START_FORMAT,
+   and the intended format is given by TARGET_FORMAT.
    After the upgrade is complete (to as far as the automatic upgrade will
    perform), the resulting format is RESULT_FORMAT. All allocations are
    performed in SCRATCH_POOL.  */
@@ -594,7 +606,17 @@ svn_wc__upgrade_sdb(int *result_format,
                     const char *wcroot_abspath,
                     svn_sqlite__db_t *sdb,
                     int start_format,
+                    int target_format,
                     apr_pool_t *scratch_pool);
+
+/* The schema-update part of svn_wc__upgrade_sdb. */
+svn_error_t *
+svn_wc__update_schema(int *result_format,
+                      const char *wcroot_abspath,
+                      svn_sqlite__db_t *sdb,
+                      int start_format,
+                      int target_format,
+                      apr_pool_t *scratch_pool);
 
 /* Create a conflict skel from the old separated data */
 svn_error_t *

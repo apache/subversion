@@ -344,49 +344,7 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                             "
                           "current revision (recommended when tagging)")},
   {"show-item", opt_show_item, 1,
-                       N_("print only the item identified by ARG:\n"
-                          "                             "
-                          "   'kind'       node kind of TARGET\n"
-                          "                             "
-                          "   'url'        URL of TARGET in the repository\n"
-                          "                             "
-                          "   'relative-url'\n"
-                          "                             "
-                          "                repository-relative URL of TARGET\n"
-                          "                             "
-                          "   'repos-root-url'\n"
-                          "                             "
-                          "                root URL of repository\n"
-                          "                             "
-                          "   'repos-uuid' UUID of repository\n"
-                          "                             "
-                          "   'repos-size' for files, the size of TARGET\n"
-                          "                             "
-                          "                in the repository\n"
-                          "                             "
-                          "   'revision'   specified or implied revision\n"
-                          "                             "
-                          "   'last-changed-revision'\n"
-                          "                             "
-                          "                last change of TARGET at or before\n"
-                          "                             "
-                          "                'revision'\n"
-                          "                             "
-                          "   'last-changed-date'\n"
-                          "                             "
-                          "                date of 'last-changed-revision'\n"
-                          "                             "
-                          "   'last-changed-author'\n"
-                          "                             "
-                          "                author of 'last-changed-revision'\n"
-                          "                             "
-                          "   'wc-root'    root of TARGET's working copy\n"
-                          "                             "
-                          "   'schedule'   'normal','add','delete','replace'\n"
-                          "                             "
-                          "   'depth'      checkout depth of TARGET in WC\n"
-                          "                             "
-                          "   'changelist' changelist of TARGET in WC")},
+                       N_("print only the item identified by ARG")},
 
   {"adds-as-modification", opt_adds_as_modification, 0,
                        N_("Local additions are merged with incoming additions\n"
@@ -407,6 +365,11 @@ const apr_getopt_option_t svn_cl__options[] =
                        N_("print the working copy layout, formatted according\n"
                           "                             "
                           "to ARG: 'classic' or 'svn11'")},
+
+  {"compatible-version", opt_compatible_version, 1,
+                       N_("use working copy format compatible with Subversion\n"
+                       "                             "
+                       "version ARG (\"1.8\", \"1.9.5\", etc.)")},
 
   /* Long-opt Aliases
    *
@@ -573,7 +536,8 @@ svn_cl__cmd_table_main[] =
      "  See also 'svn help update' for a list of possible characters\n"
      "  reporting the action taken.\n"
     )},
-    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals},
+    {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals,
+     opt_compatible_version},
     {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "cleanup", svn_cl__cleanup, {0}, {N_(
@@ -781,7 +745,56 @@ svn_cl__cmd_table_main[] =
               "                             "
               "and Petabyte), limiting the number of digits\n"
               "                             "
-              "to three or less")}}
+              "to three or less")},
+     {opt_show_item, N_("print only the item identified by ARG:\n"
+                        "                             "
+                        "   'kind'       node kind of TARGET\n"
+                        "                             "
+                        "   'url'        URL of TARGET in the repository\n"
+                        "                             "
+                        "   'relative-url'\n"
+                        "                             "
+                        "                repository-relative URL of TARGET\n"
+                        "                             "
+                        "   'repos-root-url'\n"
+                        "                             "
+                        "                root URL of repository\n"
+                        "                             "
+                        "   'repos-uuid' UUID of repository\n"
+                        "                             "
+                        "   'repos-size' for files, the size of TARGET\n"
+                        "                             "
+                        "                in the repository\n"
+                        "                             "
+                        "   'revision'   specified or implied revision\n"
+                        "                             "
+                        "   'last-changed-revision'\n"
+                        "                             "
+                        "                last change of TARGET at or before\n"
+                        "                             "
+                        "                'revision'\n"
+                        "                             "
+                        "   'last-changed-date'\n"
+                        "                             "
+                        "                date of 'last-changed-revision'\n"
+                        "                             "
+                        "   'last-changed-author'\n"
+                        "                             "
+                        "                author of 'last-changed-revision'\n"
+                        "                             "
+                        "   'wc-root'    root of TARGET's working copy\n"
+                        "                             "
+                        "   'schedule'   'normal','add','delete','replace'\n"
+                        "                             "
+                        "   'depth'      checkout depth of TARGET in WC\n"
+                        "                             "
+                        "   'wc-format'  TARGET's working copy format\n"
+                        "                             "
+                        "   'wc-format-min'   oldest supported WC format\n"
+                        "                             "
+                        "   'wc-format-min'   newest supported WC format\n"
+                        "                             "
+                        "   'changelist' changelist of TARGET in WC")}},
   },
 
   { "list", svn_cl__list, {"ls"},
@@ -1898,7 +1911,7 @@ svn_cl__cmd_table_main[] =
      "\n"), N_(
      "  Local modifications are preserved.\n"
     )},
-    { 'q' } },
+    { 'q', opt_compatible_version } },
 
   { NULL, NULL, {0}, {NULL}, {0} }
 };
@@ -2008,6 +2021,84 @@ add_commands(const svn_opt_subcommand_desc3_t *cmds_add,
   memcpy(&cmds_new[n_cmds_old], cmds_add, n_cmds_add * elt_size);
 
   svn_cl__cmd_table = cmds_new;
+}
+
+static svn_error_t *
+parse_compatible_version(svn_cl__opt_state_t* opt_state,
+                         const char *opt_arg,
+                         apr_pool_t *result_pool)
+{
+  const char *utf8_opt_arg;
+  svn_version_t *target;
+
+  /* Get the the latest and oldest supported version from the current
+     libsvn_client versions. WC formats are always defined by a X.Y.0
+     release, and svn_client_supported_wc_version() should return such
+     a value. */
+  const svn_version_t *supported = svn_client_supported_wc_version();
+  const svn_version_t *current = svn_client_version();
+  const svn_version_t latest = {current->major, current->minor, 0, NULL};
+
+  /* Double check that the oldest supported version is sane. */
+  SVN_ERR_ASSERT(supported->patch == 0);
+  SVN_ERR_ASSERT(svn_version__at_least(&latest,
+                                       supported->major,
+                                       supported->minor,
+                                       supported->patch));
+
+  /* Parse the requested version. */
+  SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, result_pool));
+  SVN_ERR(svn_version__parse_version_string(&target, utf8_opt_arg,
+                                            result_pool));
+
+  /* Check the earliest supported version. */
+  if (!svn_version__at_least(target,
+                             supported->major,
+                             supported->minor,
+                             supported->patch))
+    {
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Cannot create working copies older "
+                                 "than version %d.%d.%d"),
+                               supported->major,
+                               supported->minor,
+                               supported->patch);
+    }
+
+  /* Check the latest supported version. */
+  /* FIXME: ### Should we return an error here instead? It seems
+            ### more friendly to issue a warning and continue with
+            ### the latest supported format. */
+  if (svn_version__at_least(target,
+                            latest.major,
+                            latest.minor,
+                            latest.patch)
+      && (target->major != latest.major
+          || target->minor != latest.minor
+          || target->patch != latest.patch))
+    {
+      svn_error_t *w1 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                          _("Cannot create working copies "
+                                            "for version %s"),
+                                          opt_arg);
+      svn_error_t *w2 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                                          _("Creating working copy version "
+                                            "%d.%d instead"),
+                                          latest.major,
+                                          latest.minor);
+
+      svn_handle_warning2(stderr, w1, "svn: ");
+      svn_handle_warning2(stderr, w2, "svn: ");
+      svn_error_clear(w1);
+      svn_error_clear(w2);
+
+      target->major = latest.major;
+      target->minor = latest.minor;
+      target->patch = latest.patch;
+    }
+
+  opt_state->compatible_version = target;
+  return SVN_NO_ERROR;
 }
 
 
@@ -2642,6 +2733,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         opt_state.viewspec = TRUE;
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(viewspec_from_word(&opt_state.viewspec, utf8_opt_arg));
+        break;
+      case opt_compatible_version:
+        SVN_ERR(parse_compatible_version(&opt_state, opt_arg, pool));
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

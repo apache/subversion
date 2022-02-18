@@ -165,13 +165,14 @@ svn_cl__checkout(apr_getopt_t *os,
           revision.kind = svn_opt_revision_head;
       }
 
-      SVN_ERR(svn_client_checkout3
+      SVN_ERR(svn_client_checkout4
               (NULL, true_url, target_dir,
                &peg_revision,
                &revision,
                opt_state->depth,
                opt_state->ignore_externals,
                opt_state->force,
+               opt_state->compatible_version,
                ctx, subpool));
     }
   svn_pool_destroy(subpool);

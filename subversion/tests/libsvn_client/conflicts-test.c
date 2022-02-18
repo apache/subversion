@@ -6113,10 +6113,11 @@ test_file_vs_dir_move_merge_assertion_failure(const svn_test_opts_t *opts,
   opt_rev.value.number = SVN_INVALID_REVNUM;
   peg_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_test__create_client_ctx(&ctx, b, pool));
-  SVN_ERR(svn_client_checkout3(NULL, svn_path_url_add_component2(b->repos_url,
+  SVN_ERR(svn_client_checkout4(NULL, svn_path_url_add_component2(b->repos_url,
                                                                  "A1", pool),
                                wc_path, &peg_rev, &opt_rev, svn_depth_infinity,
-                               TRUE, FALSE, ctx, pool));
+                               TRUE, FALSE,
+                               opts->wc_format_version, ctx, pool));
 
   SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",
                                                             pool),

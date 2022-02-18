@@ -539,6 +539,11 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    the repos are tolerated; if FALSE, these obstructions cause the checkout
    to fail.
 
+   A new working copy, if needed, will be created in the format corresponding
+   to the WC_FORMAT_VERSION of the client. If this parameter is NULL, the
+   format will be determined from context (see svn_wc__format_from_context).
+   The format of any existing working copy will remain unchanged.
+
    If RA_SESSION is NOT NULL, it may be used to avoid creating a new
    session. The session may point to a different URL after returning.
    */
@@ -552,6 +557,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
+                              const svn_version_t *wc_format_version,
                               svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);

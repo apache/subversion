@@ -28,6 +28,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_hash.h"
+#include "svn_version.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -1426,6 +1427,15 @@ bump_to_31(void *baton,
 }
 
 static svn_error_t *
+bump_to_32(void *baton,
+           svn_sqlite__db_t *sdb,
+           apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_32));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                         const char *dir_relpath,
                         apr_int64_t wc_id,
@@ -1624,8 +1634,97 @@ svn_wc__version_string_from_format(int wc_format)
       case 9: return "1.5";
       case 10: return "1.6";
       case SVN_WC__WC_NG_VERSION: return "1.7";
+      case 29: return "1.7";
+      case 31: return "1.8";
+      case 32: return "1.15";
     }
   return _("(unreleased development version)");
+}
+
+svn_error_t *
+svn_wc__format_from_version(int *format,
+                            const svn_version_t* version,
+                            apr_pool_t *scratch_pool)
+{
+  if (!version)
+    {
+      *format = SVN_WC__DEFAULT_VERSION;
+      return SVN_NO_ERROR;
+    }
+
+  if (version->major != SVN_VER_MAJOR || version->minor > SVN_VER_MINOR)
+    return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                             _("Can't determine working copy format "
+                               "for Subversion %d.%d.%d"),
+                             version->major,
+                             version->minor,
+                             version->patch);
+
+  switch (version->minor)
+    {
+      case 0:  /* Same as 1.3.x. */
+      case 1:  /* Same as 1.3.x. */
+      case 2:  /* Same as 1.3.x. */
+      case 3:  *format = 4; break;
+      case 4:  *format = 8; break;
+      case 5:  *format = 9; break;
+      case 6:  *format = 10; break;
+      case 7:  *format = 29; break;
+      case 8:  /* Same as 1.14.x. */
+      case 9:  /* Same as 1.14.x. */
+      case 10: /* Same as 1.14.x. */
+      case 11: /* Same as 1.14.x. */
+      case 12: /* Same as 1.14.x. */
+      case 13: /* Same as 1.14.x. */
+      case 14: *format = 31; break;
+      case 15: /* Same as the current version. */
+      default: *format = SVN_WC__VERSION; break;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_wc__is_supported_format(int format)
+{
+  return format >= SVN_WC__SUPPORTED_VERSION && format <= SVN_WC__VERSION;
+}
+
+int
+svn_wc__max_supported_format(void)
+{
+  return SVN_WC__VERSION;
+}
+
+int
+svn_wc__min_supported_format(void)
+{
+  return SVN_WC__SUPPORTED_VERSION;
+}
+
+svn_boolean_t
+svn_wc__is_supported_format_version(const svn_version_t *version)
+{
+  return (version->major == 1
+          && (version->minor >= 8 && version->minor <= 15));
+}
+
+const svn_version_t *
+svn_wc__max_supported_format_version(void)
+{
+  /* NOTE: For consistency, always return the version
+     that first introduced the latest supported format. */
+  static const svn_version_t version = { 1, 15, 0, NULL };
+  return &version;
+}
+
+const svn_version_t *
+svn_wc__min_supported_format_version(void)
+{
+  /* NOTE: For consistency, always return the version
+     that first introduced the earliest supported format. */
+  static const svn_version_t version = { 1, 8, 0, NULL };
+  return &version;
 }
 
 svn_error_t *
@@ -1633,12 +1732,9 @@ svn_wc__upgrade_sdb(int *result_format,
                     const char *wcroot_abspath,
                     svn_sqlite__db_t *sdb,
                     int start_format,
+                    int target_format,
                     apr_pool_t *scratch_pool)
 {
-  struct bump_baton bb;
-
-  bb.wcroot_abspath = wcroot_abspath;
-
   if (start_format < SVN_WC__WC_NG_VERSION /* 12 */)
     return svn_error_createf(SVN_ERR_WC_UPGRADE_REQUIRED, NULL,
                              _("Working copy '%s' is too old (format %d, "
@@ -1669,40 +1765,42 @@ svn_wc__upgrade_sdb(int *result_format,
                                                     scratch_pool),
                              start_format);
 
-  /* ### need lock-out. only one upgrade at a time. note that other code
-     ### cannot use this un-upgraded database until we finish the upgrade.  */
+  if (start_format > target_format)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy '%s' is already at version %s "
+                               "(format %d) and cannot be downgraded to "
+                               "version %s (format %d)"),
+                             svn_dirent_local_style(wcroot_abspath,
+                                                    scratch_pool),
+                             svn_wc__version_string_from_format(start_format),
+                             start_format,
+                             svn_wc__version_string_from_format(target_format),
+                             target_format);
 
-  /* Note: none of these have "break" statements; the fall-through is
-     intentional. */
-  switch (start_format)
-    {
-      case 29:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_30, &bb,
-                                             scratch_pool));
-        *result_format = 30;
+  if (target_format < SVN_WC__SUPPORTED_VERSION)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy version %s (format %d) "
+                               "is not supported by client version %s."),
+                             svn_wc__version_string_from_format(target_format),
+                             target_format, SVN_VER_NUM);
 
-      case 30:
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_31, &bb,
-                                             scratch_pool));
-        *result_format = 31;
-        /* FALLTHROUGH  */
-      /* ### future bumps go here.  */
-#if 0
-      case XXX-1:
-        /* Revamp the recording of tree conflicts.  */
-        SVN_ERR(svn_sqlite__with_transaction(sdb, bump_to_XXX, &bb,
-                                             scratch_pool));
-        *result_format = XXX;
-        /* FALLTHROUGH  */
-#endif
-      case SVN_WC__VERSION:
-        /* already upgraded */
-        *result_format = SVN_WC__VERSION;
+  if (target_format > SVN_WC__VERSION)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy with format %d "
+                               "can't be created by client version %s."),
+                             target_format, SVN_VER_NUM);
 
-        SVN_SQLITE__WITH_LOCK(
-            svn_wc__db_install_schema_statistics(sdb, scratch_pool),
-            sdb);
-    }
+  /* FIXME:
+     ### need lock-out. only one upgrade at a time. note that other code
+     ### _can_ use this un-upgraded database before we finish the upgrade. */
+  /* Update the schema */
+  SVN_ERR(svn_wc__update_schema(result_format, wcroot_abspath, sdb,
+                                start_format, target_format, scratch_pool));
+
+  /* Make sure that the stats1 table is populated. */
+  SVN_SQLITE__WITH_LOCK(
+      svn_wc__db_install_schema_statistics(sdb, scratch_pool),
+      sdb);
 
 #ifdef SVN_DEBUG
   if (*result_format != start_format)
@@ -1718,6 +1816,46 @@ svn_wc__upgrade_sdb(int *result_format,
   /* Zap anything that might be remaining or escaped our notice.  */
   wipe_obsolete_files(wcroot_abspath, scratch_pool);
 
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__update_schema(int *result_format,
+                      const char *wcroot_abspath,
+                      svn_sqlite__db_t *sdb,
+                      int start_format,
+                      int target_format,
+                      apr_pool_t *scratch_pool)
+{
+  struct bump_baton bb;
+  bb.wcroot_abspath = wcroot_abspath;
+
+  /* Repeatedly upgrade until the target format version is reached. */
+  for (*result_format = start_format;
+       *result_format < target_format;)
+    {
+#define UPDATE_TO_FORMAT(X) \
+          case ((X) - 1):   \
+            SVN_ERR(svn_sqlite__with_lock(sdb, bump_to_##X, &bb, scratch_pool)); \
+            *result_format = (X); \
+            break;
+
+      switch (*result_format)
+        {
+          UPDATE_TO_FORMAT(30);
+          UPDATE_TO_FORMAT(31);
+          UPDATE_TO_FORMAT(32);
+
+          /* ### future bumps go here.  */
+#if 0
+          UPDATE_TO_FORMAT(XXX);
+#endif
+        }
+#undef UPDATE_TO_FORMAT
+    }
+
+  SVN_ERR_ASSERT(*result_format == target_format);
   return SVN_NO_ERROR;
 }
 
@@ -1885,15 +2023,16 @@ is_old_wcroot(const char *local_abspath,
 }
 
 svn_error_t *
-svn_wc_upgrade(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               svn_wc_upgrade_get_repos_info_t repos_info_func,
-               void *repos_info_baton,
-               svn_cancel_func_t cancel_func,
-               void *cancel_baton,
-               svn_wc_notify_func2_t notify_func,
-               void *notify_baton,
-               apr_pool_t *scratch_pool)
+svn_wc__upgrade(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                int target_format,
+                svn_wc_upgrade_get_repos_info_t repos_info_func,
+                void *repos_info_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db;
   struct upgrade_data_t data = { NULL };
@@ -1913,7 +2052,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
 
 
   err = svn_wc__db_bump_format(&result_format, &bumped_format,
-                               db, local_abspath,
+                               db, local_abspath, target_format,
                                scratch_pool);
   if (err)
     {
@@ -1933,7 +2072,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
       /* Auto-upgrade worked! */
       SVN_ERR(svn_wc__db_close(db));
 
-      SVN_ERR_ASSERT(result_format == SVN_WC__VERSION);
+      SVN_ERR_ASSERT(result_format == target_format);
 
       if (bumped_format && notify_func)
         {
@@ -1987,7 +2126,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
   /* Create an empty sqlite database for this directory and store it in DB. */
   SVN_ERR(svn_wc__db_upgrade_begin(&data.sdb,
                                    &data.repos_id, &data.wc_id,
-                                   db, data.root_abspath,
+                                   db, target_format, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
                                    scratch_pool));
 

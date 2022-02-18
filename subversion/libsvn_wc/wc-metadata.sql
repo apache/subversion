@@ -39,7 +39,16 @@
  *   "base-deleted" -- node represents a delete of a BASE node
  */
 
-/* One big list of statements to create our (current) schema.  */
+/* One big list of statements to create our initial schema.
+
+   STMT_CREATE_SCHEMA creates the schema for the minimum WC format
+   supported by the client (SVN_WC__SUPPORTED_VERSION).
+
+   When we're creating a new working copy, we first execute
+   STMT_CREATE_SCHEMA, and then use the normal WC upgrade code (using
+   STMT_UPGRADE_TO_xx) to bring the schema up to any higher requested
+   format.
+ */
 -- STMT_CREATE_SCHEMA
 
 /* ------------------------------------------------------------------------- */
@@ -227,7 +236,6 @@ CREATE TABLE WC_LOCK (
 
   PRIMARY KEY (wc_id, local_dir_relpath)
  );
-
 
 /* ------------------------------------------------------------------------- */
 
@@ -563,8 +571,9 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       local_relpath);
 
 
+/* Identify the WC format corresponding to the schema we have created. */
 PRAGMA user_version =
--- define: SVN_WC__VERSION
+-- define: SVN_WC__SUPPORTED_VERSION
 ;
 
 
@@ -700,8 +709,8 @@ WHERE l.op_depth = 0
 
 /* ------------------------------------------------------------------------- */
 /* Format 32 ....  */
-/* -- STMT_UPGRADE_TO_32
-PRAGMA user_version = 32; */
+-- STMT_UPGRADE_TO_32
+PRAGMA user_version = 32;
 
 
 /* ------------------------------------------------------------------------- */

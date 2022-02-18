@@ -570,6 +570,22 @@ svn_wc_transmit_prop_deltas(const char *path,
 
 /*** From adm_files.c ***/
 svn_error_t *
+svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
+                   const char *local_abspath,
+                   const char *url,
+                   const char *repos_root_url,
+                   const char *repos_uuid,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(
+      svn_wc__ensure_adm(wc_ctx, SVN_WC__DEFAULT_VERSION, local_abspath,
+                         url, repos_root_url, repos_uuid, revision, depth,
+                         scratch_pool));
+}
+
+svn_error_t *
 svn_wc_ensure_adm3(const char *path,
                    const char *uuid,
                    const char *url,
@@ -4871,4 +4887,22 @@ svn_wc__conflict_description2_dup(const svn_wc_conflict_description2_t *conflict
                                   apr_pool_t *pool)
 {
   return svn_wc_conflict_description2_dup(conflict, pool);
+}
+
+svn_error_t *
+svn_wc_upgrade(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_wc_upgrade_get_repos_info_t repos_info_func,
+               void *repos_info_baton,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool)
+{
+  return svn_wc__upgrade(wc_ctx, local_abspath, SVN_WC__DEFAULT_VERSION,
+                         repos_info_func, repos_info_baton,
+                         cancel_func, cancel_baton,
+                         notify_func, notify_baton,
+                         scratch_pool);
 }

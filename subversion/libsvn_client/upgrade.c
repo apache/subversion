@@ -34,8 +34,10 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_pools.h"
-#include "client.h"
 #include "svn_props.h"
+#include "svn_version.h"
+
+#include "client.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -89,13 +91,15 @@ fetch_repos_info(const char **repos_root,
 static svn_error_t *
 upgrade_externals_from_properties(svn_client_ctx_t *ctx,
                                   const char *local_abspath,
+                                  int wc_format,
                                   struct repos_info_baton *info_baton,
                                   apr_pool_t *scratch_pool);
 
-svn_error_t *
-svn_client_upgrade(const char *path,
-                   svn_client_ctx_t *ctx,
-                   apr_pool_t *scratch_pool)
+static svn_error_t *
+upgrade_internal(const char *path,
+                 int wc_format,
+                 svn_client_ctx_t *ctx,
+                 apr_pool_t *scratch_pool)
 {
   const char *local_abspath;
   apr_hash_t *externals;
@@ -111,11 +115,11 @@ svn_client_upgrade(const char *path,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(svn_wc_upgrade(ctx->wc_ctx, local_abspath,
-                         fetch_repos_info, &info_baton,
-                         ctx->cancel_func, ctx->cancel_baton,
-                         ctx->notify_func2, ctx->notify_baton2,
-                         scratch_pool));
+  SVN_ERR(svn_wc__upgrade(ctx->wc_ctx, local_abspath, wc_format,
+                          fetch_repos_info, &info_baton,
+                          ctx->cancel_func, ctx->cancel_baton,
+                          ctx->notify_func2, ctx->notify_baton2,
+                          scratch_pool));
 
   SVN_ERR(svn_wc__externals_defined_below(&externals,
                                           ctx->wc_ctx, local_abspath,
@@ -149,7 +153,8 @@ svn_client_upgrade(const char *path,
 
           if (kind == svn_node_dir)
             {
-              svn_error_t *err = svn_client_upgrade(ext_abspath, ctx, iterpool);
+              svn_error_t *err = upgrade_internal(ext_abspath, wc_format,
+                                                  ctx, iterpool);
 
               if (err)
                 {
@@ -173,16 +178,40 @@ svn_client_upgrade(const char *path,
       /* Upgrading from <= 1.6, or no svn:properties defined.
          (There is no way to detect the difference from libsvn_client :( ) */
 
-      SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath,
+      SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath, wc_format,
                                                 &info_baton, scratch_pool));
     }
   return SVN_NO_ERROR;
 }
 
+svn_error_t *
+svn_client_upgrade2(const char *path,
+                    const svn_version_t *wc_format_version,
+                    svn_client_ctx_t *ctx,
+                    apr_pool_t *scratch_pool)
+{
+  int wc_format;
+
+  SVN_ERR(svn_wc__format_from_version(&wc_format,
+                                      wc_format_version,
+                                      scratch_pool));
+  SVN_ERR(upgrade_internal(path, wc_format, ctx, scratch_pool));
+  return SVN_NO_ERROR;
+}
+
+const svn_version_t *
+svn_client_supported_wc_version(void)
+{
+  /* NOTE: For consistency, always return the version of the client
+     that first introduced the earliest supported format. */
+  static const svn_version_t version = { 1, 8, 0, NULL };
+  return &version;
+}
+
 /* Helper for upgrade_externals_from_properties: upgrades one external ITEM
    in EXTERNALS_PARENT. Uses SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-upgrade_external_item(svn_client_ctx_t *ctx,
+upgrade_external_item(svn_client_ctx_t *ctx, int wc_format,
                       const char *externals_parent_abspath,
                       const char *externals_parent_url,
                       const char *externals_parent_repos_root_url,
@@ -211,7 +240,7 @@ upgrade_external_item(svn_client_ctx_t *ctx,
               externals_parent_url,
               scratch_pool, scratch_pool));
 
-  /* This is a hack. We only need to call svn_wc_upgrade() on external
+  /* This is a hack. We only need to call svn_wc__upgrade() on external
    * dirs, as file externals are upgraded along with their defining
    * WC.  Reading the kind will throw an exception on an external dir,
    * saying that the wc must be upgraded.  If it's a file, the lookup
@@ -225,7 +254,7 @@ upgrade_external_item(svn_client_ctx_t *ctx,
     {
       svn_error_clear(err);
 
-      SVN_ERR(svn_client_upgrade(external_abspath, ctx, scratch_pool));
+      SVN_ERR(upgrade_internal(external_abspath, wc_format, ctx, scratch_pool));
     }
   else if (err)
     return svn_error_trace(err);
@@ -298,6 +327,7 @@ upgrade_external_item(svn_client_ctx_t *ctx,
 static svn_error_t *
 upgrade_externals_from_properties(svn_client_ctx_t *ctx,
                                   const char *local_abspath,
+                                  int wc_format,
                                   struct repos_info_baton *info_baton,
                                   apr_pool_t *scratch_pool)
 {
@@ -386,7 +416,8 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
           svn_pool_clear(inner_iterpool);
-          err = upgrade_external_item(ctx, externals_parent_abspath,
+          err = upgrade_external_item(ctx, wc_format,
+                                      externals_parent_abspath,
                                       externals_parent_url,
                                       externals_parent_repos_root_url,
                                       item, info_baton, inner_iterpool);

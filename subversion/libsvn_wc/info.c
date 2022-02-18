@@ -105,6 +105,11 @@ build_info_for_node(svn_wc__info2_t **info,
   tmpinfo->wc_info = wc_info;
 
   wc_info->copyfrom_rev = SVN_INVALID_REVNUM;
+  wc_info->wc_format_min = SVN_WC__SUPPORTED_VERSION;
+  wc_info->wc_format_max = SVN_WC__VERSION;
+
+  SVN_ERR(svn_wc__db_get_format(&wc_info->wc_format,
+                                db, local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, &db_kind, &tmpinfo->rev,
                                &repos_relpath,

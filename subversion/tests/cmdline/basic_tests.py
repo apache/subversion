@@ -2541,33 +2541,35 @@ def basic_auth_test(sbox):
   # Set up a custom config directory
   config_dir = sbox.create_config_dir()
 
+  common_opts = ('--config-dir', config_dir)
+  if svntest.main.options.wc_format_version:
+    common_opts += ('--compatible-version',
+                    svntest.main.options.wc_format_version)
+
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jrandom', '--password', 'rayjandom',
-    '--config-dir', config_dir)
+    '--username', 'jrandom', '--password', 'rayjandom', *common_opts)
 
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+    '--username', 'jrandom', '--non-interactive', *common_opts)
 
   # Checkout with jconstant
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jconstant', '--password', 'rayjandom',
-    '--config-dir', config_dir)
+    '--username', 'jconstant', '--password', 'rayjandom', *common_opts)
 
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, None, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jconstant', '--non-interactive',
-    '--config-dir', config_dir)
+    '--username', 'jconstant', '--non-interactive', *common_opts)
 
   # Checkout with jrandom which should fail since we do not provide
   # a password and the above cached password belongs to jconstant
   expected_err = ["authorization failed: Could not authenticate to server:"]
   exit_code, output, errput = svntest.main.run_command(
     svntest.main.svn_binary, expected_err, True, 'co', sbox.repo_url, wc_dir,
-    '--username', 'jrandom', '--non-interactive', '--config-dir', config_dir)
+    '--username', 'jrandom', '--non-interactive', *common_opts)
 
 def basic_add_svn_format_file(sbox):
   'test add --parents .svn/format'

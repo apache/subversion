@@ -7,6 +7,9 @@
 Version 1.15.0
 (?? ??? 20XX, from /branches/1.15.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.15.0
+ User-visible changes:
+  - Client-side improvements and bugfixes:
+    * Support multiple working copy formats (1.8-onward, 1.15) (issue #????)
 
 Version 1.14.1
 (10 Feb 2021, from /branches/1.14.x)

@@ -3292,6 +3292,24 @@ typedef struct svn_wc_info_t
   /** The path the node was moved to, if it was moved away. Else NULL.
    * @since New in 1.8. */
   const char *moved_to_abspath;
+
+  /**
+   * The format of the working copy.
+   * @since New in 1.15.
+   */
+  int wc_format;
+
+  /**
+   * The oldest supporter working copy format.
+   * @since New in 1.15.
+   */
+  int wc_format_min;
+
+  /**
+   * The newest supporter working copy format.
+   * @since New in 1.15.
+   */
+  int wc_format_max;
 } svn_wc_info_t;
 
 /**
@@ -3526,7 +3544,8 @@ svn_wc_mark_missing_deleted(const char *path,
                             apr_pool_t *pool);
 
 
-/** Ensure that an administrative area exists for @a local_abspath, so
+/**
+ * Ensure that an administrative area exists for @a local_abspath, so
  * that @a local_abspath is a working copy subdir based on @a url at @a
  * revision, with depth @a depth, and with repository UUID @a repos_uuid
  * and repository root URL @a repos_root_url.
@@ -3536,7 +3555,8 @@ svn_wc_mark_missing_deleted(const char *path,
  * @a repos_root_url must be a prefix of @a url.
  *
  * If the administrative area does not exist, then create it and
- * initialize it to an unlocked state.
+ * initialize it to an unlocked state. The format of the new
+ * administrative area will always be the newset supported format.
  *
  * If the administrative area already exists then the given @a url
  * must match the URL in the administrative area and the given
@@ -3550,7 +3570,9 @@ svn_wc_mark_missing_deleted(const char *path,
  * Use @a scratch_pool for temporary allocations.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.14 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
                    const char *local_abspath,
@@ -7451,8 +7473,10 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
  * repository uuid, @a repos_info_func (if non-NULL) will be called
  * with @a repos_info_baton to provide the missing information.
  *
- * @since New in 1.7.
+ * @since New in 1.7
+ * @deprecated Provided for backward compatibility with the 1.14 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                const char *local_abspath,

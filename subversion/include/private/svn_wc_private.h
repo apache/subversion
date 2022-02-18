@@ -2179,6 +2179,141 @@ svn_error_t *
 svn_wc__working_file_writer_close(svn_wc__working_file_writer_t *writer);
 
 
+/**
+ * Convert @a version to that version's characteristic working copy
+ * format, returned in @a format.
+ *
+ * A NULL @a version translates to the library's default version.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__format_from_version(int *format,
+                            const svn_version_t* version,
+                            apr_pool_t *scratch_pool);
+
+/**
+ * Return true iff @a format is a supported format.
+ */
+svn_boolean_t
+svn_wc__is_supported_format(int format);
+
+/**
+ * Return the highest WC format supported by this client.
+ */
+int
+svn_wc__max_supported_format(void);
+
+/**
+ * Return the lowest WC format supported by this client.
+ */
+int
+svn_wc__min_supported_format(void);
+
+/**
+ * Return true iff @a version is a supported format version.
+ */
+svn_boolean_t
+svn_wc__is_supported_format_version(const svn_version_t *version);
+
+/**
+ * Return the highest WC format supported by this client.
+ */
+const svn_version_t *
+svn_wc__max_supported_format_version(void);
+
+/**
+ * Return the lowest WC format supported by this client.
+ */
+const svn_version_t *
+svn_wc__min_supported_format_version(void);
+
+/**
+ * Set @a format to the format of the nearest parent working copy root of
+ * @a local_abspath in @a wc_ctx, or to the oldest format of any root stored
+ * there. If @a wc_ctx is empty, return the library's default format.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__format_from_context(int *format,
+                            svn_wc_context_t *wc_ctx,
+                            const char *local_abspath,
+                            apr_pool_t *scratch_pool);
+
+/**
+ * Ensure that an administrative area exists for @a local_abspath, so that @a
+ * local_abspath is a working copy subdir with schema version @a target_format
+ * based on @a url at @a revision, with depth @a depth, and with repository UUID
+ * @a repos_uuid and repository root URL @a repos_root_url.
+ *
+ * @a depth must be a definite depth, it cannot be #svn_depth_unknown.
+ * @a repos_uuid and @a repos_root_url MUST NOT be @c NULL, and
+ * @a repos_root_url must be a prefix of @a url.
+ *
+ * If the administrative area does not exist, then create it and
+ * initialize it to an unlocked state.
+ *
+ * If the administrative area already exists then the given @a url
+ * must match the URL in the administrative area and the given
+ * @a revision must match the BASE of the working copy dir unless
+ * the admin directory is scheduled for deletion or the
+ * #SVN_ERR_WC_OBSTRUCTED_UPDATE error will be returned.
+ *
+ * Do not ensure existence of @a local_abspath itself; if @a local_abspath
+ * does not exist, return error.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
+                   int target_format,
+                   const char *local_abspath,
+                   const char *url,
+                   const char *repos_root_url,
+                   const char *repos_uuid,
+                   svn_revnum_t revision,
+                   svn_depth_t depth,
+                   apr_pool_t *scratch_pool);
+
+/**
+ * Upgrade the working copy at @a local_abspath to the metadata
+ * storage format indicated by @a target_format.  @a local_abspath
+ * should be an absolute path to the root of the working copy.
+ *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
+ * various points during the operation.  If it returns an error
+ * (typically #SVN_ERR_CANCELLED), return that error immediately.
+ *
+ * For each directory converted, @a notify_func will be called with
+ * in @a notify_baton action #svn_wc_notify_upgraded_path and as path
+ * the path of the upgraded directory. @a notify_func may be @c NULL
+ * if this notification is not needed.
+ *
+ * If the old working copy doesn't contain a repository root and/or
+ * repository uuid, @a repos_info_func (if non-NULL) will be called
+ * with @a repos_info_baton to provide the missing information.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__upgrade(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                int target_format,
+                svn_wc_upgrade_get_repos_info_t repos_info_func,
+                void *repos_info_baton,
+                svn_cancel_func_t cancel_func,
+                void *cancel_baton,
+                svn_wc_notify_func2_t notify_func,
+                void *notify_baton,
+                apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

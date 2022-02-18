@@ -155,7 +155,8 @@ svn_wc__db_verify_no_work(svn_sqlite__db_t *sdb);
 /* Assert that the given WCROOT is usable.
    NOTE: the expression is multiply-evaluated!!  */
 #define VERIFY_USABLE_WCROOT(wcroot)  SVN_ERR_ASSERT(               \
-    (wcroot) != NULL && (wcroot)->format == SVN_WC__VERSION)
+    (wcroot) != NULL && (wcroot)->format <= SVN_WC__VERSION         \
+    && (wcroot)->format >= SVN_WC__SUPPORTED_VERSION)
 
 /* Check if the WCROOT is usable for light db operations such as path
    calculations */

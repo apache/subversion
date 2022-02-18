@@ -278,7 +278,8 @@ svn_error_t *
 svn_wc__db_close(svn_wc__db_t *db);
 
 
-/* Initialize the SDB for LOCAL_ABSPATH, which should be a working copy path.
+/* Initialize the SDB with format TARGET_FORMAT for LOCAL_ABSPATH, which should
+   be a working copy path.
 
    A REPOSITORY row will be constructed for the repository identified by
    REPOS_ROOT_URL and REPOS_UUID. Neither of these may be NULL.
@@ -296,10 +297,13 @@ svn_wc__db_close(svn_wc__db_t *db);
    DEPTH is the initial depth of the working copy; it must be a definite
    depth, not svn_depth_unknown.
 
+   Create the working copy with the given TARGET_FORMAT.
+
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
 svn_wc__db_init(svn_wc__db_t *db,
+                int target_format,
                 const char *local_abspath,
                 const char *repos_relpath,
                 const char *repos_root_url,
@@ -308,6 +312,15 @@ svn_wc__db_init(svn_wc__db_t *db,
                 svn_depth_t depth,
                 apr_pool_t *scratch_pool);
 
+/* Return the working copy format for LOCAL_ABSPATH in DB in *FORMAT.
+
+   Use SCRATCH_POOL for temporary allocations.
+*/
+svn_error_t *
+svn_wc__db_get_format(int *format,
+                      svn_wc__db_t *db,
+                      const char *local_abspath,
+                      apr_pool_t *scratch_pool);
 
 /* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH, relative
    from wri_abspath.
@@ -2962,6 +2975,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          apr_int64_t *repos_id,
                          apr_int64_t *wc_id,
                          svn_wc__db_t *wc_db,
+                         int target_format,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
@@ -2982,7 +2996,7 @@ svn_wc__db_upgrade_insert_external(svn_wc__db_t *db,
                                    apr_pool_t *scratch_pool);
 
 /* Upgrade the metadata concerning the WC at WCROOT_ABSPATH, in DB,
- * to the SVN_WC__VERSION format.
+ * to the TARGET_FORMAT metadata format version.
  *
  * This function is used for upgrading wc-ng working copies to a newer
  * wc-ng format. If a pre-1.7 working copy is found, this function
@@ -3000,6 +3014,7 @@ svn_wc__db_bump_format(int *result_format,
                        svn_boolean_t *bumped_format,
                        svn_wc__db_t *db,
                        const char *wcroot_abspath,
+                       int target_format,
                        apr_pool_t *scratch_pool);
 
 /* @} */

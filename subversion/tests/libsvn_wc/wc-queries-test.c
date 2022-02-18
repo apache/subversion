@@ -25,6 +25,8 @@
 #include "svn_hash.h"
 #include "svn_ctype.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_wc_private.h"
+#include "../../libsvn_wc/wc.h"
 
 #include "svn_private_config.h"
 
@@ -70,6 +72,8 @@ static const int schema_statements[] =
 {
   /* Usual tables */
   STMT_CREATE_SCHEMA,
+  /* (executing STMT_UPGRADE_TO_xx is conditional on desired WC format) */
+  STMT_UPGRADE_TO_32,
   STMT_INSTALL_SCHEMA_STATISTICS,
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
@@ -149,10 +153,15 @@ in_list(const int list[], int stmt_idx)
 /* Create an in-memory db for evaluating queries */
 static svn_error_t *
 create_memory_db(sqlite3 **db,
+                 const svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   sqlite3 *sdb;
   int i;
+  int target_format;
+
+  SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
+                                      pool));
 
   /* Create an in-memory raw database */
   SVN_TEST_ASSERT(sqlite3_initialize() == SQLITE_OK);
@@ -163,6 +172,8 @@ create_memory_db(sqlite3 **db,
   /* Create schema */
   for (i = 0; schema_statements[i] != -1; i++)
     {
+      if (target_format < 32 && schema_statements[i] == STMT_UPGRADE_TO_32)
+        continue;
       SQLITE_ERR(sqlite3_exec(sdb, wc_queries[schema_statements[i]], NULL, NULL, NULL));
     }
 
@@ -207,12 +218,13 @@ test_sqlite_version(apr_pool_t *scratch_pool)
 
 /* Parse all normal queries */
 static svn_error_t *
-test_parsable(apr_pool_t *scratch_pool)
+test_parsable(const svn_test_opts_t *opts,
+              apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   for (i=0; i < STMT_SCHEMA_FIRST; i++)
     {
@@ -631,7 +643,8 @@ is_result_table(const char *table_name)
 }
 
 static svn_error_t *
-test_query_expectations(apr_pool_t *scratch_pool)
+test_query_expectations(const svn_test_opts_t *opts,
+                        apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
@@ -639,7 +652,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
   svn_error_t *warnings = NULL;
   svn_boolean_t supports_query_info;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SVN_ERR(supported_explain_query_plan(&supports_query_info, sdb,
                                        scratch_pool));
@@ -829,7 +842,8 @@ test_query_expectations(apr_pool_t *scratch_pool)
 }
 
 static svn_error_t *
-test_query_duplicates(apr_pool_t *scratch_pool)
+test_query_duplicates(const svn_test_opts_t *opts,
+                      apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
@@ -838,7 +852,7 @@ test_query_duplicates(apr_pool_t *scratch_pool)
   svn_boolean_t supports_query_info;
   apr_hash_t *sha_to_query = apr_hash_make(scratch_pool);
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SVN_ERR(supported_explain_query_plan(&supports_query_info, sdb,
       scratch_pool));
@@ -964,12 +978,13 @@ parse_stat_data(const char *stat)
 }
 
 static svn_error_t *
-test_schema_statistics(apr_pool_t *scratch_pool)
+test_schema_statistics(const svn_test_opts_t *opts,
+                       apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   sqlite3_stmt *stmt;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SQLITE_ERR(
       sqlite3_exec(sdb,
@@ -1085,12 +1100,13 @@ static void relpath_depth_sqlite(sqlite3_context* context,
 
 /* Parse all verify/check queries */
 static svn_error_t *
-test_verify_parsable(apr_pool_t *scratch_pool)
+test_verify_parsable(const svn_test_opts_t *opts,
+                     apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SQLITE_ERR(sqlite3_create_function(sdb, "relpath_depth", 1, SQLITE_ANY, NULL,
                                      relpath_depth_sqlite, NULL, NULL));
@@ -1134,16 +1150,16 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_sqlite_version,
                    "sqlite up-to-date"),
-    SVN_TEST_PASS2(test_parsable,
-                   "queries are parsable"),
-    SVN_TEST_PASS2(test_query_expectations,
-                   "test query expectations"),
-    SVN_TEST_PASS2(test_query_duplicates,
-                   "test query duplicates"),
-    SVN_TEST_PASS2(test_schema_statistics,
-                   "test schema statistics"),
-    SVN_TEST_PASS2(test_verify_parsable,
-                   "verify queries are parsable"),
+    SVN_TEST_OPTS_PASS(test_parsable,
+                       "queries are parsable"),
+    SVN_TEST_OPTS_PASS(test_query_expectations,
+                       "test query expectations"),
+    SVN_TEST_OPTS_PASS(test_query_duplicates,
+                       "test query duplicates"),
+    SVN_TEST_OPTS_PASS(test_schema_statistics,
+                       "test schema statistics"),
+    SVN_TEST_OPTS_PASS(test_verify_parsable,
+                       "verify queries are parsable"),
     SVN_TEST_NULL
   };
 

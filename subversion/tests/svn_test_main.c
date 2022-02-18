@@ -51,6 +51,8 @@
 #include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_wc_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -99,6 +101,7 @@ enum test_options_e {
   quiet_opt,
   config_opt,
   server_minor_version_opt,
+  wc_format_version_opt,
   allow_segfault_opt,
   srcdir_opt,
   reposdir_opt,
@@ -133,6 +136,9 @@ static const apr_getopt_option_t cl_options[] =
   {"server-minor-version", server_minor_version_opt, 1,
                     N_("set the minor version for the server ('3', '4', "
                        "'5', or '6')")},
+  {"wc-format-version", wc_format_version_opt, 1,
+                    N_("set the WC format version to use for all tests "
+                       "(1.8 to 1.15)")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {"allow-segfaults", allow_segfault_opt, 0,
@@ -802,6 +808,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   svn_test_opts_t opts = { NULL };
 
   opts.fs_type = DEFAULT_FS_TYPE;
+  opts.wc_format_version = svn_wc__min_supported_format_version();
 
   /* Initialize APR (Apache pools) */
   if (apr_initialize() != APR_SUCCESS)
@@ -992,6 +999,22 @@ svn_test_main(int argc, const char *argv[], int max_threads,
                 fprintf(stderr, "FAIL: Invalid minor version given\n");
                 exit(1);
               }
+            break;
+          }
+        case wc_format_version_opt:
+          {
+            svn_version_t *ver;
+            SVN_INT_ERR(svn_version__parse_version_string(&ver, opt_arg, pool));
+            if (!svn_wc__is_supported_format_version(ver))
+              {
+                fprintf(stderr, "FAIL: Unsupported WC format version given (%s); "
+                                "supported format versions are 1.%d to 1.%d\n",
+                                opt_arg,
+                                svn_wc__min_supported_format_version()->minor,
+                                svn_wc__max_supported_format_version()->minor);
+                exit(1);
+              }
+            opts.wc_format_version = ver;
             break;
           }
         case sqlite_log_opt:
