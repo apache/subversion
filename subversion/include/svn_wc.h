@@ -3300,13 +3300,13 @@ typedef struct svn_wc_info_t
   int wc_format;
 
   /**
-   * The oldest supporter working copy format.
+   * The oldest supported working copy format, #SVN_WC__SUPPORTED_VERSION.
    * @since New in 1.15.
    */
   int wc_format_min;
 
   /**
-   * The newest supporter working copy format.
+   * The newest supported working copy format, #SVN_WC__VERSION.
    * @since New in 1.15.
    */
   int wc_format_max;
@@ -3556,7 +3556,8 @@ svn_wc_mark_missing_deleted(const char *path,
  *
  * If the administrative area does not exist, then create it and
  * initialize it to an unlocked state. The format of the new
- * administrative area will always be the newset supported format.
+ * administrative area will be the library's default format
+ * (#SVN_WC__DEFAULT_VERSION).
  *
  * If the administrative area already exists then the given @a url
  * must match the URL in the administrative area and the given
@@ -7456,9 +7457,10 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
 
 
 /**
- * Upgrade the working copy at @a local_abspath to the latest metadata
- * storage format.  @a local_abspath should be an absolute path to the
- * root of the working copy.
+ * Upgrade the working copy at @a local_abspath to the library's
+ * default metadata storage format (#SVN_WC__DEFAULT_VERSION).
+ * @a local_abspath should be an absolute path to the root of the
+ * working copy.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -7473,8 +7475,9 @@ typedef svn_error_t * (*svn_wc_upgrade_get_repos_info_t)(
  * repository uuid, @a repos_info_func (if non-NULL) will be called
  * with @a repos_info_baton to provide the missing information.
  *
- * @since New in 1.7
+ * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.14 API.
+ * @see svn_wc__upgrade()
  */
 SVN_DEPRECATED
 svn_error_t *
