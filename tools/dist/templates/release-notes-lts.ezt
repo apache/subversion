@@ -88,7 +88,7 @@ cannot necessarily compile or run against older libraries.</p>
 
 <p>There may be limited cases where the behavior of old APIs has been
 slightly modified from previous releases.  These are cases where edge cases
-of the functionality has been deemed buggy, and therefore improved or removed.
+of the functionality have been deemed buggy, and therefore improved or removed.
 Please consult the
 <a href="https://svn.apache.org/repos/asf/subversion/trunk/notes/api-errata/[major-minor]/"
 >API errata</a> for more detailed information on what these APIs are
