@@ -3296,7 +3296,7 @@ def file_external_versioned_obstruction(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  expected_output = verify.RegexOutput('r2 committed .*')
+  expected_output = verify.RegexOutput(b'r2 committed .*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                            '-U', sbox.repo_url, '-m', 'r2: set external',
                            'propset', 'svn:externals', '^/A/mu mu-ext', 'A')
@@ -3321,7 +3321,7 @@ def file_external_versioned_obstruction(sbox):
   # external obstruction then when the external is deleted the
   # versioned node is missing from disk and wc.db.  Not really sure
   # what should happen, perhaps a not-present node?
-  expected_output = verify.RegexOutput('r3 committed .*')
+  expected_output = verify.RegexOutput(b'r3 committed .*')
   svntest.actions.run_and_verify_svnmucc(expected_output, [],
                            '-U', sbox.repo_url, '-m', 'r3: copy file',
                            'cp', 'head', 'A/mu', 'A/mu-ext',
