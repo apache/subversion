@@ -88,7 +88,7 @@ PYTHON=${PYTHON:-python}
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
-STOPSCRIPT=$SCRIPTDIR/.$SCRIPT.stop
+STOPSCRIPT=$(pwd)/.$SCRIPT.stop
 
 trap stop_httpd_and_die HUP TERM INT
 
