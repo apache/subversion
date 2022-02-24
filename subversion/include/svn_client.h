@@ -4451,6 +4451,14 @@ typedef struct svn_client_wc_format_t {
     int wc_format;
 } svn_client_wc_format_t;
 
+/** Return the version of the Subversion library that first supported
+ * the given WC format, @a wc_format.
+ */
+const svn_version_t *
+svn_client__wc_version_from_format(int wc_format,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
 /**
  * Returns a list of the WC formats supported by the client library.
  *

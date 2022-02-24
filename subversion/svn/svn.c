@@ -790,6 +790,10 @@ svn_cl__cmd_table_main[] =
                         "                             "
                         "   'wc-format'  TARGET's working copy format\n"
                         "                             "
+                        "   'wc-compatible-version'\n"
+                        "                             "
+                        "                first version supporting TARGET WC\n"
+                        "                             "
                         "   'changelist' changelist of TARGET in WC")}},
   },
 

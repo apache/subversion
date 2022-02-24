@@ -40,6 +40,7 @@
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_time.h"
+#include "svn_version.h"
 #include "svn_xml.h"
 #include "cl.h"
 
@@ -369,7 +370,8 @@ typedef enum
   info_item_schedule,
   info_item_depth,
   info_item_changelist,
-  info_item_wc_format
+  info_item_wc_format,
+  info_item_wc_compatible_version
 } info_item_t;
 
 /* Mapping between option keywords and info_item_t. */
@@ -397,6 +399,8 @@ static const info_item_map_t info_item_map[] =
     { SVN__STATIC_STRING("depth"),               info_item_depth },
     { SVN__STATIC_STRING("changelist"),          info_item_changelist },
     { SVN__STATIC_STRING("wc-format"),           info_item_wc_format },
+    { SVN__STATIC_STRING("wc-compatible-version"),
+                                                 info_item_wc_compatible_version },
   };
 
 static const apr_size_t info_item_map_len =
@@ -1245,6 +1249,18 @@ print_info_item(void *baton,
       SVN_ERR(print_info_item_int((info->wc_info
                                    ? info->wc_info->wc_format : -1),
                                   target_path, pool));
+      break;
+
+    case info_item_wc_compatible_version:
+      {
+        const svn_version_t *wc_ver
+          = svn_client__wc_version_from_format(info->wc_info->wc_format,
+                                               pool, pool);
+        const char *s = apr_psprintf(pool, "%d.%d",
+                                     wc_ver->major,
+                                     wc_ver->minor);
+        SVN_ERR(print_info_item_string(s, target_path, pool));
+      }
       break;
 
     case info_item_changelist:
