@@ -716,6 +716,14 @@ PRAGMA user_version = 32;
 
 
 /* ------------------------------------------------------------------------- */
+/* When bumping the format, also update:
+ *
+ *   * subversion/tests/libsvn_wc/wc-queries-test.c
+ *     (schema_statements, create_memory_db)
+ */
+
+
+/* ------------------------------------------------------------------------- */
 
 /* Format 99 drops all columns not needed due to previous format upgrades.
    Before we release 1.7, these statements will be pulled into a format bump
