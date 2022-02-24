@@ -708,7 +708,9 @@ WHERE l.op_depth = 0
 
 
 /* ------------------------------------------------------------------------- */
-/* Format 32 ....  */
+/* Format 32 is identical to format 31.
+   Its purpose is as a place-holder in developing and testing the
+   multi-wc-format support feature. */
 -- STMT_UPGRADE_TO_32
 PRAGMA user_version = 32;
 
