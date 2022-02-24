@@ -41,6 +41,47 @@
 
 /*** Code. ***/
 
+/* Append a textual list of the supported WC formats to OUTPUT. */
+static svn_error_t *
+print_supported_wc_formats(svn_stringbuf_t *output,
+                           const char *prefix,
+                           apr_pool_t *pool)
+{
+  const svn_client_wc_format_t *wc_formats
+    = svn_client_supported_wc_formats(pool, pool);
+  int i;
+
+  for (i = 0; wc_formats[i].version_min; i++)
+    {
+      const svn_client_wc_format_t *v = &wc_formats[i];
+      const char *s;
+
+      if (v->version_min->major == v->version_min->major &&
+          v->version_min->minor == v->version_max->minor)
+        {
+          s = apr_psprintf(
+                pool,
+                _("%scompatible with Subversion v%d.%d (WC format %d)\n"),
+                prefix,
+                v->version_min->major, v->version_min->minor,
+                v->wc_format);
+        }
+      else
+        {
+          s = apr_psprintf(
+                pool,
+                _("%scompatible with Subversion v%d.%d to v%d.%d (WC format %d)\n"),
+                prefix,
+                v->version_min->major, v->version_min->minor,
+                v->version_max->major, v->version_max->minor,
+                v->wc_format);
+        }
+
+      svn_stringbuf_appendcstr(output, s);
+    }
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__help(apr_getopt_t *os,
@@ -50,9 +91,6 @@ svn_cl__help(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = NULL;
   svn_stringbuf_t *version_footer = svn_stringbuf_create_empty(pool);
   const char *config_path;
-  const svn_version_t* min_wc_version;
-  const svn_version_t* max_wc_version;
-  const char *wc_version_footer;
 
   char help_header[] =
   N_("usage: svn <subcommand> [options] [args]\n"
@@ -133,27 +171,17 @@ svn_cl__help(apr_getopt_t *os,
       opt_state = cmd_baton->opt_state;
     }
 
-  min_wc_version = svn_client_supported_wc_version();
-  max_wc_version = svn_client_version();
-  if (min_wc_version->major == max_wc_version->major
-      && min_wc_version->minor == max_wc_version->minor)
-    {
-      wc_version_footer =
-        apr_psprintf(pool,
-                     _("Supported working copy (WC) version: %d.%d\n\n"),
-                     min_wc_version->major, min_wc_version->minor);
-    }
-  else
-    {
-      wc_version_footer =
-        apr_psprintf(
-            pool,
-            _("Supported working copy (WC) versions: from %d.%d to %d.%d\n\n"),
-            min_wc_version->major, min_wc_version->minor,
-            max_wc_version->major, max_wc_version->minor);
-    }
-  svn_stringbuf_appendcstr(version_footer, wc_version_footer);
+  /*
+   * Show supported working copy versions.
+   */
+  svn_stringbuf_appendcstr(version_footer,
+                           _("Supported working copy (WC) formats:\n\n"));
+  SVN_ERR(print_supported_wc_formats(version_footer, "* ", pool));
+  svn_stringbuf_appendcstr(version_footer, "\n");
 
+  /*
+   * Show available repository access modules.
+   */
   svn_stringbuf_appendcstr(
       version_footer,
       _("The following repository access (RA) modules are available:\n\n"));
