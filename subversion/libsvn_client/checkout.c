@@ -239,7 +239,7 @@ svn_client_checkout4(svn_revnum_t *result_rev,
 
   /* A NULL wc_format_version translates to the default version. */
   if (!wc_format_version)
-    wc_format_version = svn_client_supported_wc_version();
+    wc_format_version = svn_client_default_wc_version(pool);
 
   err = svn_client__checkout_internal(result_rev, &sleep_here,
                                       URL, local_abspath,

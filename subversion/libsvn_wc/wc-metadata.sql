@@ -785,6 +785,13 @@ PRAGMA user_version = 32;
 /* -- STMT_UPGRADE_TO_33
 PRAGMA user_version = 33; */
 
+/* ------------------------------------------------------------------------- */
+/* When bumping the format, also update:
+ *
+ *   * subversion/tests/libsvn_wc/wc-queries-test.c
+ *     (schema_statements, create_memory_db)
+ */
+
 
 /* ------------------------------------------------------------------------- */
 

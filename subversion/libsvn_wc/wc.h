@@ -169,7 +169,8 @@ extern "C" {
 #define SVN_WC__VERSION 32
 
 /* The minimum WC version supported by the client.
-   IMPORTANT: Update the implementation of svn_client_supported_wc_version()
+   IMPORTANT: Update the implementation of svn_client_default_wc_version()
+              and svn_client_supported_wc_formats()
               whenever you change this value! */
 #define SVN_WC__SUPPORTED_VERSION 31
 

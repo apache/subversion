@@ -41,6 +41,7 @@
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "../libsvn_wc/wc.h"
 
 
 /*** Code. ***/
@@ -203,11 +204,25 @@ svn_client_upgrade2(const char *path,
   return SVN_NO_ERROR;
 }
 
+const svn_client_wc_format_t *
+svn_client_supported_wc_formats(apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool)
+{
+  static const svn_version_t version_1_8 = { 1, 8, 0, NULL };
+  static const svn_version_t version_1_15 = { 1, 15, 0, NULL };
+  static const svn_client_wc_format_t versions[] = {
+    { &version_1_8,   &version_1_15,  SVN_WC__SUPPORTED_VERSION },
+    { &version_1_15,  &version_1_15,  SVN_WC__VERSION           },
+    { NULL,           NULL,           0 }
+  };
+  return versions;
+}
+
 const svn_version_t *
-svn_client_supported_wc_version(void)
+svn_client_default_wc_version(apr_pool_t *result_pool)
 {
   /* NOTE: For consistency, always return the version of the client
-     that first introduced the earliest supported format. */
+     that first introduced the format. */
   static const svn_version_t version = { 1, 8, 0, NULL };
   return &version;
 }

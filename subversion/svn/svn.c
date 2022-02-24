@@ -2031,11 +2031,12 @@ parse_compatible_version(svn_cl__opt_state_t* opt_state,
   const char *utf8_opt_arg;
   svn_version_t *target;
 
-  /* Get the the latest and oldest supported version from the current
-     libsvn_client versions. WC formats are always defined by a X.Y.0
-     release, and svn_client_supported_wc_version() should return such
+  /* Get the supported WC formats.  WC formats are always defined by a X.Y.0
+     release, and svn_client_supported_wc_formats() should return such
      a value. */
-  const svn_version_t *supported = svn_client_supported_wc_version();
+  const svn_client_wc_format_t *formats_supported
+    = svn_client_supported_wc_formats(result_pool, result_pool);
+  const svn_version_t *supported = formats_supported[0].version_min;
   const svn_version_t *current = svn_client_version();
   const svn_version_t latest = {current->major, current->minor, 0, NULL};
 

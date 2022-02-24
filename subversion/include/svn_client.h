@@ -1243,8 +1243,8 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  * @param[in] wc_format_version is the version number of the Subversion
  *              client that supports the metadata format of the
  *              created working copy; @c NULL means the library's default
- *              format. The earliest supported version is returned by
- *              svn_client_supported_wc_version().
+ *              format. See svn_client_default_wc_version(),
+ *              svn_client_supported_wc_formats().
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.
  * @param[in] pool  Used for any temporary allocation.
@@ -4401,8 +4401,8 @@ svn_client_cleanup(const char *dir,
  *
  * @a wc_format_version is the version number of the Subversion client
  * that supports a given WC metadata format; @c NULL means the library's
- * default format. The earliest supported version is returned by
- * svn_client_supported_wc_version().
+ * default format. See svn_client_default_wc_version(),
+ * svn_client_supported_wc_formats().
  *
  * Use @a scratch_pool for any temporary allocations.
  *
@@ -4428,13 +4428,40 @@ svn_client_upgrade(const char *wcroot_dir,
                    apr_pool_t *scratch_pool);
 
 /**
- * Returns the version related to the earliest supported
+ * Returns the version related to the library's default
  * working copy metadata format.
  *
  * @since New in 1.15.
  */
 const svn_version_t *
-svn_client_supported_wc_version(void);
+svn_client_default_wc_version(apr_pool_t *result_pool);
+
+/**
+ * Information about a WC version.
+ *
+ * Only the @c .major and @c .minor version fields are significant: so a
+ * version_max value of 1.15.0 for example means "up to 1.15.x".
+ */
+typedef struct svn_client_wc_format_t {
+    /* Oldest version of svn libraries known to support this WC version */
+    const svn_version_t *version_min;
+    /* Newest version of svn libraries known to support this WC version. */
+    const svn_version_t *version_max;
+    /* The WC format number of this format, as defined by libsvn_wc. */
+    int wc_format;
+} svn_client_wc_format_t;
+
+/**
+ * Returns a list of the WC formats supported by the client library.
+ *
+ * The list is sorted from oldest to newest, and terminated by an entry
+ * containing all null/zero fields.
+ *
+ * The returned data are allocated in @a result_pool and/or statically.
+ */
+const svn_client_wc_format_t *
+svn_client_supported_wc_formats(apr_pool_t *result_pool,
+                                apr_pool_t *scratch_pool);
 
 /** @} */
 

@@ -6,7 +6,10 @@ This software consists of contributions made by many people;
 see the NOTICE file for more information.
 Subversion is open source software, see http://subversion.apache.org/
 
-Supported working copy (WC) versions: from 1.8 to 1.15
+Supported working copy (WC) formats:
+
+* compatible with Subversion v1.8 to v1.15 (WC format 31)
+* compatible with Subversion v1.15 (WC format 32)
 
 The following repository access (RA) modules are available:
 
