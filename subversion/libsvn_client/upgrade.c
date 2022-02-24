@@ -251,6 +251,15 @@ svn_client_default_wc_version(apr_pool_t *result_pool)
   return &version;
 }
 
+const svn_version_t *
+svn_client_latest_wc_version(apr_pool_t *result_pool)
+{
+  /* NOTE: For consistency, always return the version of the client
+     that first introduced the format. */
+  static const svn_version_t version = { 1, 15, 0, NULL };
+  return &version;
+}
+
 /* Helper for upgrade_externals_from_properties: upgrades one external ITEM
    in EXTERNALS_PARENT. Uses SCRATCH_POOL for temporary allocations. */
 static svn_error_t *

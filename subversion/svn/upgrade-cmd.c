@@ -32,6 +32,8 @@
 #include "svn_error_codes.h"
 #include "svn_error.h"
 #include "svn_path.h"
+#include "svn_version.h"
+#include "private/svn_subr_private.h"
 #include "cl.h"
 #include "svn_private_config.h"
 
@@ -50,6 +52,10 @@ svn_cl__upgrade(apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_pool_t *iterpool;
   int i;
+  const svn_version_t *default_version
+    = svn_client_default_wc_version(scratch_pool);
+  const svn_version_t *latest_version
+    = svn_client_latest_wc_version(scratch_pool);
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -75,6 +81,25 @@ svn_cl__upgrade(apr_getopt_t *os,
                                   ctx, scratch_pool));
     }
   svn_pool_destroy(iterpool);
+
+  /* Remind the user they can upgrade further if:
+   *   - no upgrade was performed
+   *   - the user did not specify compatible-version explicitly
+   *   - a higher version is available. */
+  if (! svn_cl__notifier_get_wc_was_upgraded(ctx->notify_baton2)
+      && ! opt_state->compatible_version
+      && ! svn_version__at_least(default_version,
+                                 latest_version->major, latest_version->minor, 0)
+      && ! opt_state->quiet)
+    {
+      const char *msg
+        = _("Working copy is already at version %d.%d. "
+            "The highest version supported by this client can be "
+            "specified with '--compatible-version=%d.%d'.\n");
+      SVN_ERR(svn_cmdline_printf(scratch_pool, msg,
+                                 default_version->major, default_version->minor,
+                                 latest_version->major, latest_version->minor));
+    }
 
   return SVN_NO_ERROR;
 }
