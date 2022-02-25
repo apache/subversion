@@ -720,6 +720,7 @@ PRAGMA user_version = 32;
  *
  *   * subversion/tests/libsvn_wc/wc-queries-test.c
  *     (schema_statements, create_memory_db)
+ *   * The implementation of svn_client_latest_wc_version()
  */
 
 
