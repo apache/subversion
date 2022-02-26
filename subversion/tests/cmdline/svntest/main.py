@@ -1763,8 +1763,7 @@ def wc_format(ver=None):
     return 32
   if minor >= 8 and minor <= 14:
     return 31
-  raise Exception("Unrecognized wc_format_version '%s'" %
-                  options.wc_format_version)
+  raise Exception("Unrecognized version number '%s'" % (ver,))
 
 
 ######################################################################
