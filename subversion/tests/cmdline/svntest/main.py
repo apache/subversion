@@ -801,7 +801,7 @@ def copy_trust(dst_cfgdir, src_cfgdir):
     shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
 def _with_wc_format_version(args):
-  if '--wc-format-version' in args or options.wc_format_version is None:
+  if '--compatible-version' in args or options.wc_format_version is None:
     return args
   non_opt_args = [a for a in args if not str(a).startswith('-')]
   if non_opt_args:
