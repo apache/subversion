@@ -1748,8 +1748,16 @@ def is_httpd_authz_provider_enabled():
 def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
-def wc_format():
-  ver = (options.wc_format_version or DEFAULT_COMPATIBLE_VERSION)
+def wc_format(ver=None):
+  """Return the WC format number used by Subversion version VER.
+
+  VER should be a version string such as '1.15' or '1.15.0' or '1.15.0-beta2'.
+
+  If omitted, the format number of new working copies, as expected to be
+  created by 'svn checkout' without '--compatible-version', is returned.
+  """
+  if not ver:
+    ver = (options.wc_format_version or DEFAULT_COMPATIBLE_VERSION)
   minor = int(ver.split('.')[1])
   if minor >= 15 and minor <= SVN_VER_MINOR:
     return 32
