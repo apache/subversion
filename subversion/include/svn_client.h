@@ -4450,6 +4450,11 @@ svn_client_latest_wc_version(apr_pool_t *result_pool);
  *
  * Only the @c .major and @c .minor version fields are significant: so a
  * version_max value of 1.15.0 for example means "up to 1.15.x".
+ *
+ * @warning Do not manually allocate structs of this type, as fields may
+ * be added in the future.
+ *
+ * @since New in 1.15.
  */
 typedef struct svn_client_wc_format_t {
     /* Oldest version of svn libraries known to support this WC version */
@@ -4462,6 +4467,8 @@ typedef struct svn_client_wc_format_t {
 
 /** Return the version of the Subversion library that first supported
  * the given WC format, @a wc_format.
+ *
+ * @since New in 1.15.
  */
 const svn_version_t *
 svn_client__wc_version_from_format(int wc_format,
@@ -4475,6 +4482,8 @@ svn_client__wc_version_from_format(int wc_format,
  * containing all null/zero fields.
  *
  * The returned data are allocated in @a result_pool and/or statically.
+ *
+ * @since New in 1.15.
  */
 const svn_client_wc_format_t *
 svn_client_supported_wc_formats(apr_pool_t *result_pool,
