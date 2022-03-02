@@ -514,6 +514,12 @@ svn_cl__cmd_table_main[] =
      "Check out a working copy from a repository.\n"
      "usage: checkout URL[@REV]... [PATH]\n"
      "\n"), N_(
+     "  By default Subversion will create a WC format compatible with\n"
+     "  Subversion 1.8 and newer. To create a different WC format,\n"
+     "  use an option such as '--compatible-version=1.15'.\n"
+     "  The versions available are the same as in the 'upgrade' command.\n"
+     "  Use 'svn --version' to see the compatible versions supported.\n"
+     "\n"), N_(
      "  If specified, REV determines in which revision the URL is first\n"
      "  looked up.\n"
      "\n"), N_(
@@ -1908,6 +1914,14 @@ svn_cl__cmd_table_main[] =
   { "upgrade", svn_cl__upgrade, {0}, {N_(
      "Upgrade the metadata storage format for a working copy.\n"
      "usage: upgrade [WCPATH...]\n"
+     "\n"), N_(
+     "  By default Subversion will upgrade the working copy to a version\n"
+     "  compatible with Subversion 1.8 and newer. To upgrade to a different\n"
+     "  version, use an option such as '--compatible-version=1.15'.\n"
+     "  The versions available are the same as in the 'checkout' command.\n"
+     "  Use 'svn --version' to see the compatible versions supported.\n"
+     "\n"), N_(
+     "  Only upgrades are supported, not downgrades.\n"
      "\n"), N_(
      "  Local modifications are preserved.\n"
     )},
