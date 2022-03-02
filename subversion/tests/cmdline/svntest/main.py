@@ -802,7 +802,7 @@ def copy_trust(dst_cfgdir, src_cfgdir):
 
 def _with_wc_format_version(args):
   if '--compatible-version' in args \
-      or any(one_arg.startswith('--compatible-version=') for one_arg in args) \
+      or any(str(one_arg).startswith('--compatible-version=') for one_arg in args) \
       or options.wc_format_version is None:
     return args
   non_opt_args = [a for a in args if not str(a).startswith('-')]
