@@ -514,6 +514,12 @@ svn_cl__cmd_table_main[] =
      "Check out a working copy from a repository.\n"
      "usage: checkout URL[@REV]... [PATH]\n"
      "\n"), N_(
+     "  By default Subversion will create a WC format compatible with\n"
+     "  Subversion 1.8 and newer. To create a different WC format,\n"
+     "  use an option such as '--compatible-version=1.15'.\n"
+     "  The versions available are the same as in the 'upgrade' command.\n"
+     "  Use 'svn --version' to see the compatible versions supported.\n"
+     "\n"), N_(
      "  If specified, REV determines in which revision the URL is first\n"
      "  looked up.\n"
      "\n"), N_(
@@ -790,9 +796,9 @@ svn_cl__cmd_table_main[] =
                         "                             "
                         "   'wc-format'  TARGET's working copy format\n"
                         "                             "
-                        "   'wc-format-min'   oldest supported WC format\n"
+                        "   'wc-compatible-version'\n"
                         "                             "
-                        "   'wc-format-min'   newest supported WC format\n"
+                        "                first version supporting TARGET WC\n"
                         "                             "
                         "   'changelist' changelist of TARGET in WC")}},
   },
@@ -1909,6 +1915,14 @@ svn_cl__cmd_table_main[] =
      "Upgrade the metadata storage format for a working copy.\n"
      "usage: upgrade [WCPATH...]\n"
      "\n"), N_(
+     "  By default Subversion will upgrade the working copy to a version\n"
+     "  compatible with Subversion 1.8 and newer. To upgrade to a different\n"
+     "  version, use an option such as '--compatible-version=1.15'.\n"
+     "  The versions available are the same as in the 'checkout' command.\n"
+     "  Use 'svn --version' to see the compatible versions supported.\n"
+     "\n"), N_(
+     "  Only upgrades are supported, not downgrades.\n"
+     "\n"), N_(
      "  Local modifications are preserved.\n"
     )},
     { 'q', opt_compatible_version } },
@@ -2023,6 +2037,14 @@ add_commands(const svn_opt_subcommand_desc3_t *cmds_add,
   svn_cl__cmd_table = cmds_new;
 }
 
+/* Parse OPT_ARG as a version number, into OPT_STATE->compatible_version.
+ *
+ * Ensure it is between the oldest and newest supported WC formats.
+ *
+ * WC formats are always defined by a X.Y.0 release. Quietly ignore any
+ * 'patch' and 'tag' fields in the requested version number, and set them to
+ * zero/null in the output.
+ */
 static svn_error_t *
 parse_compatible_version(svn_cl__opt_state_t* opt_state,
                          const char *opt_arg,
@@ -2031,71 +2053,45 @@ parse_compatible_version(svn_cl__opt_state_t* opt_state,
   const char *utf8_opt_arg;
   svn_version_t *target;
 
-  /* Get the supported WC formats.  WC formats are always defined by a X.Y.0
-     release, and svn_client_supported_wc_formats() should return such
-     a value. */
-  const svn_client_wc_format_t *formats_supported
-    = svn_client_supported_wc_formats(result_pool, result_pool);
-  const svn_version_t *supported = formats_supported[0].version_min;
-  const svn_version_t *current = svn_client_version();
-  const svn_version_t latest = {current->major, current->minor, 0, NULL};
+  const svn_version_t *oldest = svn_client_oldest_wc_version(result_pool);
+  const svn_version_t *latest = svn_client_latest_wc_version(result_pool);
 
-  /* Double check that the oldest supported version is sane. */
-  SVN_ERR_ASSERT(supported->patch == 0);
-  SVN_ERR_ASSERT(svn_version__at_least(&latest,
-                                       supported->major,
-                                       supported->minor,
-                                       supported->patch));
+  /* Double check that the oldest and latest versions are sane. */
+  SVN_ERR_ASSERT(oldest->patch == 0);
+  SVN_ERR_ASSERT(latest->patch == 0);
+  SVN_ERR_ASSERT(svn_version__at_least(latest,
+                                       oldest->major, oldest->minor, 0));
 
   /* Parse the requested version. */
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, result_pool));
   SVN_ERR(svn_version__parse_version_string(&target, utf8_opt_arg,
                                             result_pool));
+  /* Quietly ignore 'patch' and 'tag' fields. */
+  target->patch = 0;
+  target->tag = NULL;
 
-  /* Check the earliest supported version. */
+  /* Check the oldest supported version. */
   if (!svn_version__at_least(target,
-                             supported->major,
-                             supported->minor,
-                             supported->patch))
+                             oldest->major, oldest->minor, 0))
     {
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("Cannot create working copies older "
-                                 "than version %d.%d.%d"),
-                               supported->major,
-                               supported->minor,
-                               supported->patch);
+                               _("Cannot make working copies compatible "
+                                 "with the requested version %d.%d; "
+                                 "the oldest supported version is %d.%d"),
+                               target->major, target->minor,
+                               oldest->major, oldest->minor);
     }
 
   /* Check the latest supported version. */
-  /* FIXME: ### Should we return an error here instead? It seems
-            ### more friendly to issue a warning and continue with
-            ### the latest supported format. */
-  if (svn_version__at_least(target,
-                            latest.major,
-                            latest.minor,
-                            latest.patch)
-      && (target->major != latest.major
-          || target->minor != latest.minor
-          || target->patch != latest.patch))
+  if (!svn_version__at_least(latest,
+                             target->major, target->minor, 0))
     {
-      svn_error_t *w1 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                          _("Cannot create working copies "
-                                            "for version %s"),
-                                          opt_arg);
-      svn_error_t *w2 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                          _("Creating working copy version "
-                                            "%d.%d instead"),
-                                          latest.major,
-                                          latest.minor);
-
-      svn_handle_warning2(stderr, w1, "svn: ");
-      svn_handle_warning2(stderr, w2, "svn: ");
-      svn_error_clear(w1);
-      svn_error_clear(w2);
-
-      target->major = latest.major;
-      target->minor = latest.minor;
-      target->patch = latest.patch;
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Cannot guarantee working copy compatibility "
+                                 "with the requested version %d.%d; "
+                                 "the latest supported version is %d.%d"),
+                               target->major, target->minor,
+                               latest->major, latest->minor);
     }
 
   opt_state->compatible_version = target;

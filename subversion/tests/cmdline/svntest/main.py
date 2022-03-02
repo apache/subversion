@@ -801,7 +801,9 @@ def copy_trust(dst_cfgdir, src_cfgdir):
     shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
 def _with_wc_format_version(args):
-  if '--wc-format-version' in args or options.wc_format_version is None:
+  if '--compatible-version' in args \
+      or any(one_arg.startswith('--compatible-version=') for one_arg in args) \
+      or options.wc_format_version is None:
     return args
   non_opt_args = [a for a in args if not str(a).startswith('-')]
   if non_opt_args:
@@ -1746,15 +1748,22 @@ def is_httpd_authz_provider_enabled():
 def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
-def wc_format():
-  ver = (options.wc_format_version or DEFAULT_COMPATIBLE_VERSION)
+def wc_format(ver=None):
+  """Return the WC format number used by Subversion version VER.
+
+  VER should be a version string such as '1.15' or '1.15.0' or '1.15.0-beta2'.
+
+  If omitted, the format number of new working copies, as expected to be
+  created by 'svn checkout' without '--compatible-version', is returned.
+  """
+  if not ver:
+    ver = (options.wc_format_version or DEFAULT_COMPATIBLE_VERSION)
   minor = int(ver.split('.')[1])
   if minor >= 15 and minor <= SVN_VER_MINOR:
     return 32
   if minor >= 8 and minor <= 14:
     return 31
-  raise Exception("Unrecognized wc_format_version '%s'" %
-                  options.wc_format_version)
+  raise Exception("Unrecognized version number '%s'" % (ver,))
 
 
 ######################################################################

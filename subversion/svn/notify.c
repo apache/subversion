@@ -57,6 +57,7 @@ struct notify_baton
   svn_revnum_t progress_revision;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
                                     when we've already had one print error. */
+  svn_boolean_t wc_was_upgraded;
 
   svn_cl__conflict_stats_t *conflict_stats;
 
@@ -282,6 +283,14 @@ svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool)
 
   SVN_ERR(svn_cl__print_conflict_stats(nb->conflict_stats, scratch_pool));
   return SVN_NO_ERROR;
+}
+
+svn_boolean_t
+svn_cl__notifier_get_wc_was_upgraded(void *baton)
+{
+  struct notify_baton *nb = baton;
+
+  return nb->wc_was_upgraded;
 }
 
 /* The body for notify() function with standard error handling semantic.
@@ -1145,6 +1154,7 @@ notify_body(struct notify_baton *nb,
 
     case svn_wc_notify_upgraded_path:
       SVN_ERR(svn_cmdline_printf(pool, _("Upgraded '%s'\n"), path_local));
+      nb->wc_was_upgraded = TRUE;
       break;
 
     case svn_wc_notify_url_redirect:

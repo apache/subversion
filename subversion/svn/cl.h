@@ -733,6 +733,10 @@ svn_cl__check_externals_failed_notify_wrapper(void *baton,
 svn_error_t *
 svn_cl__notifier_print_conflict_stats(void *baton, apr_pool_t *scratch_pool);
 
+/* Get whether a WC upgrade notification was received. */
+svn_boolean_t
+svn_cl__notifier_get_wc_was_upgraded(void *baton);
+
 
 /*** Log message callback stuffs. ***/
 

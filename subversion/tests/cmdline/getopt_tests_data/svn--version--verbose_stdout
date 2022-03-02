@@ -8,8 +8,8 @@ Subversion is open source software, see http://subversion.apache.org/
 
 Supported working copy (WC) formats:
 
-* compatible with Subversion v1.8 to v1.15 (WC format 31)
-* compatible with Subversion v1.15 (WC format 32)
+* WC format 31, compatible with Subversion v1.8 and newer
+* WC format 32, compatible with Subversion v1.15 and newer
 
 The following repository access (RA) modules are available:
 

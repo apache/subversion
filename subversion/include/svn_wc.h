@@ -3298,18 +3298,6 @@ typedef struct svn_wc_info_t
    * @since New in 1.15.
    */
   int wc_format;
-
-  /**
-   * The oldest supported working copy format, #SVN_WC__SUPPORTED_VERSION.
-   * @since New in 1.15.
-   */
-  int wc_format_min;
-
-  /**
-   * The newest supported working copy format, #SVN_WC__VERSION.
-   * @since New in 1.15.
-   */
-  int wc_format_max;
 } svn_wc_info_t;
 
 /**

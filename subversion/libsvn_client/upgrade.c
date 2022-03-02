@@ -204,18 +204,51 @@ svn_client_upgrade2(const char *path,
   return SVN_NO_ERROR;
 }
 
-const svn_client_wc_format_t *
-svn_client_supported_wc_formats(apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
+const svn_version_t *
+svn_client_wc_version_from_format(int wc_format,
+                                  apr_pool_t *result_pool)
 {
-  static const svn_version_t version_1_8 = { 1, 8, 0, NULL };
-  static const svn_version_t version_1_15 = { 1, 15, 0, NULL };
-  static const svn_client_wc_format_t versions[] = {
-    { &version_1_8,   &version_1_15,  SVN_WC__SUPPORTED_VERSION },
-    { &version_1_15,  &version_1_15,  SVN_WC__VERSION           },
-    { NULL,           NULL,           0 }
+  static const svn_version_t
+    version_1_0  = { 1, 0, 0, NULL },
+    version_1_4  = { 1, 4, 0, NULL },
+    version_1_5  = { 1, 5, 0, NULL },
+    version_1_6  = { 1, 6, 0, NULL },
+    version_1_7  = { 1, 7, 0, NULL },
+    version_1_8  = { 1, 8, 0, NULL },
+    version_1_15 = { 1, 15, 0, NULL };
+
+  switch (wc_format)
+    {
+      case  4: return &version_1_0;
+      case  8: return &version_1_4;
+      case  9: return &version_1_5;
+      case 10: return &version_1_6;
+      case 29: return &version_1_7;
+      case 31: return &version_1_8;
+      case 32: return &version_1_15;
+    }
+  return NULL;
+}
+
+const int *
+svn_client_get_wc_formats_supported(apr_pool_t *result_pool)
+{
+  static const int versions[] = {
+    SVN_WC__SUPPORTED_VERSION,
+    SVN_WC__VERSION,
+    0
   };
+
   return versions;
+}
+
+const svn_version_t *
+svn_client_oldest_wc_version(apr_pool_t *result_pool)
+{
+  /* NOTE: For consistency, always return the version of the client
+     that first introduced the format. */
+  static const svn_version_t version = { 1, 8, 0, NULL };
+  return &version;
 }
 
 const svn_version_t *
@@ -224,6 +257,15 @@ svn_client_default_wc_version(apr_pool_t *result_pool)
   /* NOTE: For consistency, always return the version of the client
      that first introduced the format. */
   static const svn_version_t version = { 1, 8, 0, NULL };
+  return &version;
+}
+
+const svn_version_t *
+svn_client_latest_wc_version(apr_pool_t *result_pool)
+{
+  /* NOTE: For consistency, always return the version of the client
+     that first introduced the format. */
+  static const svn_version_t version = { 1, 15, 0, NULL };
   return &version;
 }
 

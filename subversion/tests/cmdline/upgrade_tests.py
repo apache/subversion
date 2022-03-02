@@ -290,7 +290,30 @@ def basic_upgrade(sbox):
   check_format(sbox, get_current_format())
 
   # Now check the contents of the working copy
+  # This verification is repeated below.
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  check_pristine(sbox, ['iota', 'A/mu'])
+
+  # Upgrade again to the latest format.
+  #
+  # This may or may not be a no-op, depending on whether the test suite was
+  # launched with --wc-format-version / WC_FORMAT_VERSION set a version that
+  # uses the same format as SVN_VER_MAJOR.SVN_VER_MINOR.
+  to_version = svntest.main.svn_wc__max_supported_format_version()
+  if svntest.main.wc_format() == svntest.main.wc_format(to_version):
+    # Upgrade is a no-op
+    expected_stdout = []
+  else:
+    # Upgrade is not a no-op
+    expected_stdout = "Upgraded '.*'"
+  svntest.actions.run_and_verify_svn(expected_stdout, [],
+                                     'upgrade',
+                                     '--compatible-version',
+                                     to_version, sbox.wc_dir)
+  check_format(sbox, svntest.main.wc_format(to_version))
+
+  # Repeat the same verification as above
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
   check_pristine(sbox, ['iota', 'A/mu'])
 
