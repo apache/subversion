@@ -3063,7 +3063,6 @@ def diff_wrong_extension_type(sbox):
                                      'diff', '-x', sbox.wc_dir, '-r', '1')
 
 # Check the order of the arguments for an external diff tool
-@Wimp("Relies on wc.text_base_path()")
 def diff_external_diffcmd(sbox):
   "svn diff --diff-cmd provides the correct arguments"
 
@@ -3083,15 +3082,15 @@ def diff_external_diffcmd(sbox):
   if sys.platform == 'win32':
     diff_script_path = "%s.bat" % diff_script_path
 
-  expected_output = svntest.verify.ExpectedOutput([
+  expected_output = svntest.verify.RegexListOutput([
     "Index: iota\n",
     "===================================================================\n",
     "-u\n",
     "-L\n",
-    "iota\t(revision 1)\n",
+    r"iota\t\(revision 1\)\n",
     "-L\n",
-    "iota\t(working copy)\n",
-    os.path.abspath(svntest.wc.text_base_path("iota")) + "\n",
+    r"iota\t\(working copy\)\n",
+    os.path.abspath(svntest.main.get_admin_name()) + '.*' + "\n",
     os.path.abspath("iota") + "\n"])
 
   # Check that the output of diff corresponds with the expected arguments,
