@@ -1390,7 +1390,6 @@ def upgrade_1_7_dir_external(sbox):
   svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
 
 @SkipUnless(svntest.wc.python_sqlite_can_read_wc)
-@Wimp("Test calls status on a non-upgraded wc")
 def auto_analyze(sbox):
   """automatic SQLite ANALYZE"""
 
