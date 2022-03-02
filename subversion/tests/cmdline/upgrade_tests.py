@@ -103,7 +103,7 @@ def check_format(sbox, expected_format):
                           (found_format, expected_format, sbox.wc_dir))
 
 def expect_pristines_all_present(sbox):
-  return sbox_read_wc_format(sbox) <= 31
+  return sbox.read_wc_format() <= 31
 
 def check_pristine(sbox, files):
   for file in files:
