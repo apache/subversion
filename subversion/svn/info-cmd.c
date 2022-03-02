@@ -1254,8 +1254,7 @@ print_info_item(void *baton,
     case info_item_wc_compatible_version:
       {
         const svn_version_t *wc_ver
-          = svn_client__wc_version_from_format(info->wc_info->wc_format,
-                                               pool, pool);
+          = svn_client_wc_version_from_format(info->wc_info->wc_format, pool);
         const char *s = apr_psprintf(pool, "%d.%d",
                                      wc_ver->major,
                                      wc_ver->minor);

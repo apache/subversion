@@ -201,9 +201,8 @@ svn_client_upgrade2(const char *path,
 }
 
 const svn_version_t *
-svn_client__wc_version_from_format(int wc_format,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool)
+svn_client_wc_version_from_format(int wc_format,
+                                  apr_pool_t *result_pool)
 {
   static const svn_version_t
     version_1_0  = { 1, 0, 0, NULL },
@@ -227,17 +226,15 @@ svn_client__wc_version_from_format(int wc_format,
   return NULL;
 }
 
-const svn_client_wc_format_t *
-svn_client_supported_wc_formats(apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool)
+const int *
+svn_client_get_wc_formats_supported(apr_pool_t *result_pool)
 {
-  static const svn_version_t version_1_8 = { 1, 8, 0, NULL };
-  static const svn_version_t version_1_15 = { 1, 15, 0, NULL };
-  static const svn_client_wc_format_t versions[] = {
-    { &version_1_8,   &version_1_15,  SVN_WC__SUPPORTED_VERSION },
-    { &version_1_15,  &version_1_15,  SVN_WC__VERSION           },
-    { NULL,           NULL,           0 }
+  static const int versions[] = {
+    SVN_WC__SUPPORTED_VERSION,
+    SVN_WC__VERSION,
+    0
   };
+
   return versions;
 }
 

@@ -1244,7 +1244,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *              client that supports the metadata format of the
  *              created working copy; @c NULL means the library's default
  *              format. See svn_client_default_wc_version(),
- *              svn_client_supported_wc_formats().
+ *              svn_client_get_wc_formats_supported().
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.
  * @param[in] pool  Used for any temporary allocation.
@@ -4402,7 +4402,7 @@ svn_client_cleanup(const char *dir,
  * @a wc_format_version is the version number of the Subversion client
  * that supports a given WC metadata format; @c NULL means the library's
  * default format. See svn_client_default_wc_version(),
- * svn_client_supported_wc_formats().
+ * svn_client_get_wc_formats_supported().
  *
  * Use @a scratch_pool for any temporary allocations.
  *
@@ -4446,24 +4446,16 @@ const svn_version_t *
 svn_client_latest_wc_version(apr_pool_t *result_pool);
 
 /**
- * Information about a WC version.
+ * Returns a list of the WC formats supported by the client library.
  *
- * Only the @c .major and @c .minor version fields are significant: so a
- * version_max value of 1.15.0 for example means "up to 1.15.x".
+ * The list is sorted from oldest to newest, and terminated by a zero entry.
  *
- * @warning Do not manually allocate structs of this type, as fields may
- * be added in the future.
+ * The result is allocated in @a result_pool and/or statically.
  *
  * @since New in 1.15.
  */
-typedef struct svn_client_wc_format_t {
-    /* Oldest version of svn libraries known to support this WC version */
-    const svn_version_t *version_min;
-    /* Newest version of svn libraries known to support this WC version. */
-    const svn_version_t *version_max;
-    /* The WC format number of this format, as defined by libsvn_wc. */
-    int wc_format;
-} svn_client_wc_format_t;
+const int *
+svn_client_get_wc_formats_supported(apr_pool_t *result_pool);
 
 /** Return the version of the Subversion library that first supported
  * the given WC format, @a wc_format.
@@ -4471,23 +4463,8 @@ typedef struct svn_client_wc_format_t {
  * @since New in 1.15.
  */
 const svn_version_t *
-svn_client__wc_version_from_format(int wc_format,
-                                   apr_pool_t *result_pool,
-                                   apr_pool_t *scratch_pool);
-
-/**
- * Returns a list of the WC formats supported by the client library.
- *
- * The list is sorted from oldest to newest, and terminated by an entry
- * containing all null/zero fields.
- *
- * The returned data are allocated in @a result_pool and/or statically.
- *
- * @since New in 1.15.
- */
-const svn_client_wc_format_t *
-svn_client_supported_wc_formats(apr_pool_t *result_pool,
-                                apr_pool_t *scratch_pool);
+svn_client_wc_version_from_format(int wc_format,
+                                  apr_pool_t *result_pool);
 
 /** @} */
 
