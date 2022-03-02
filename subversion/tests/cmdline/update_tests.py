@@ -6782,7 +6782,6 @@ def update_add_conflicted_deep(sbox):
   # This final update used to segfault using 1.9.0 and 1.9.1
   sbox.simple_update('A/z/z', 3)
 
-@Wimp("The error message has changed")
 def missing_tmp_update(sbox):
   "missing tmp update caused segfault"
 
@@ -6793,7 +6792,7 @@ def missing_tmp_update(sbox):
 
   os.rmdir(sbox.ospath(svntest.main.get_admin_name() + '/tmp'))
 
-  svntest.actions.run_and_verify_svn(None, '.*Unable to create.*',
+  svntest.actions.run_and_verify_svn(None, ".*(Unable to create|Can't create).*",
                                      'up', wc_dir, '--set-depth', 'infinity')
 
   # This re-creates .svn/tmp as a side-effect.
