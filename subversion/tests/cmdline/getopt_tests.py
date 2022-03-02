@@ -99,10 +99,6 @@ rep_lines_res = [
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
-
-                 # In svn --version, the supported WC versions vary.
-                 (re.compile(r'^Supported working copy (WC) version.*$'),
-                  'Supported working copy (WC) versions: from X.Y to X.Y')
                 ]
 
 # This is a trigger pattern that selects the secondary set of

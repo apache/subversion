@@ -600,6 +600,15 @@ class Sandbox:
                        self.read_only and "true" or "false"))
     pass
 
+  def read_wc_format(self):
+    dot_svn = svntest.main.get_admin_name()
+    db = svntest.sqlite3.connect(os.path.join(self.wc_dir, dot_svn, 'wc.db'))
+    c = db.cursor()
+    c.execute('pragma user_version;')
+    found_format = c.fetchone()[0]
+    db.close()
+    return found_format
+
 def is_url(target):
   return (target.startswith('^/')
           or target.startswith('file://')
