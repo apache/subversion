@@ -97,22 +97,10 @@ def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
   shutil.move(os.path.join(extract_dir, dir), sbox.repo_dir)
 
 def check_format(sbox, expected_format):
-  dot_svn = svntest.main.get_admin_name()
-  for root, dirs, files in os.walk(sbox.wc_dir):
-    db = svntest.sqlite3.connect(os.path.join(root, dot_svn, 'wc.db'))
-    c = db.cursor()
-    c.execute('pragma user_version;')
-    found_format = c.fetchone()[0]
-    db.close()
-
-    if found_format != expected_format:
-      raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
-                            (found_format, expected_format, root))
-
-    dirs[:] = []
-
-    if dot_svn in dirs:
-      dirs.remove(dot_svn)
+  found_format = sbox.read_wc_format()
+  if found_format != expected_format:
+    raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
+                          (found_format, expected_format, sbox.wc_dir))
 
 def check_pristine(sbox, files):
   for file in files:
