@@ -102,14 +102,22 @@ def check_format(sbox, expected_format):
     raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
                           (found_format, expected_format, sbox.wc_dir))
 
+def expect_pristines_all_present(sbox):
+  return sbox_read_wc_format(sbox) <= 31
+
 def check_pristine(sbox, files):
   for file in files:
     file_path = sbox.ospath(file)
     file_text = open(file_path, 'r').read()
-    # The file at wc.text_base_path() may not exist:
-    # file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
-    # if (file_text != file_pristine):
-    #  raise svntest.Failure("pristine mismatch for '%s'" % (file))
+    try:
+      file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
+    except:
+      if expect_pristines_all_present(sbox):
+        raise
+      # Pristine missing; pristines optional so ignore it
+      continue
+    if (file_text != file_pristine):
+      raise svntest.Failure("pristine mismatch for '%s'" % (file))
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
