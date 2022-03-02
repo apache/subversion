@@ -239,6 +239,15 @@ svn_client_get_wc_formats_supported(apr_pool_t *result_pool)
 }
 
 const svn_version_t *
+svn_client_oldest_wc_version(apr_pool_t *result_pool)
+{
+  /* NOTE: For consistency, always return the version of the client
+     that first introduced the format. */
+  static const svn_version_t version = { 1, 8, 0, NULL };
+  return &version;
+}
+
+const svn_version_t *
 svn_client_default_wc_version(apr_pool_t *result_pool)
 {
   /* NOTE: For consistency, always return the version of the client

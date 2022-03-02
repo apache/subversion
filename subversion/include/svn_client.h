@@ -4428,6 +4428,15 @@ svn_client_upgrade(const char *wcroot_dir,
                    apr_pool_t *scratch_pool);
 
 /**
+ * Returns the first version that supported the library's oldest
+ * working copy metadata format.
+ *
+ * @since New in 1.15.
+ */
+const svn_version_t *
+svn_client_oldest_wc_version(apr_pool_t *result_pool);
+
+/**
  * Returns the first version that supported the library's default
  * working copy metadata format.
  *

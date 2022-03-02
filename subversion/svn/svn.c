@@ -2039,19 +2039,14 @@ parse_compatible_version(svn_cl__opt_state_t* opt_state,
   const char *utf8_opt_arg;
   svn_version_t *target;
 
-  const int *formats_supported
-    = svn_client_get_wc_formats_supported(result_pool);
-  const svn_version_t *supported
-    = svn_client_wc_version_from_format(formats_supported[0], result_pool);
-  const svn_version_t *current = svn_client_version();
-  const svn_version_t latest = {current->major, current->minor, 0, NULL};
+  const svn_version_t *oldest = svn_client_oldest_wc_version(result_pool);
+  const svn_version_t *latest = svn_client_latest_wc_version(result_pool);
 
-  /* Double check that the oldest supported version is sane. */
-  SVN_ERR_ASSERT(supported->patch == 0);
-  SVN_ERR_ASSERT(svn_version__at_least(&latest,
-                                       supported->major,
-                                       supported->minor,
-                                       supported->patch));
+  /* Double check that the oldest and latest versions are sane. */
+  SVN_ERR_ASSERT(oldest->patch == 0);
+  SVN_ERR_ASSERT(latest->patch == 0);
+  SVN_ERR_ASSERT(svn_version__at_least(latest,
+                                       oldest->major, oldest->minor, 0));
 
   /* Parse the requested version. */
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, result_pool));
@@ -2061,30 +2056,28 @@ parse_compatible_version(svn_cl__opt_state_t* opt_state,
   target->patch = 0;
   target->tag = NULL;
 
-  /* Check the earliest supported version. */
+  /* Check the oldest supported version. */
   if (!svn_version__at_least(target,
-                             supported->major,
-                             supported->minor,
-                             supported->patch))
+                             oldest->major, oldest->minor, 0))
     {
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Cannot make working copies compatible "
                                  "with the requested version %d.%d; "
                                  "the oldest supported version is %d.%d"),
                                target->major, target->minor,
-                               supported->major, supported->minor);
+                               oldest->major, oldest->minor);
     }
 
   /* Check the latest supported version. */
-  if (!svn_version__at_least(&latest,
-                             target->major, target->minor, target->patch))
+  if (!svn_version__at_least(latest,
+                             target->major, target->minor, 0))
     {
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
                                _("Cannot guarantee working copy compatibility "
                                  "with the requested version %d.%d; "
                                  "the latest supported version is %d.%d"),
                                target->major, target->minor,
-                               latest.major, latest.minor);
+                               latest->major, latest->minor);
     }
 
   opt_state->compatible_version = target;
