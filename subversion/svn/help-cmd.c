@@ -54,28 +54,12 @@ print_supported_wc_formats(svn_stringbuf_t *output,
   for (i = 0; wc_formats[i].version_min; i++)
     {
       const svn_client_wc_format_t *v = &wc_formats[i];
-      const char *s;
-
-      if (v->version_min->major == v->version_min->major &&
-          v->version_min->minor == v->version_max->minor)
-        {
-          s = apr_psprintf(
-                pool,
-                _("%scompatible with Subversion v%d.%d (WC format %d)\n"),
-                prefix,
-                v->version_min->major, v->version_min->minor,
-                v->wc_format);
-        }
-      else
-        {
-          s = apr_psprintf(
-                pool,
-                _("%scompatible with Subversion v%d.%d to v%d.%d (WC format %d)\n"),
-                prefix,
-                v->version_min->major, v->version_min->minor,
-                v->version_max->major, v->version_max->minor,
-                v->wc_format);
-        }
+      const svn_version_t *ver = v->version_min;
+      const char *s
+        = apr_psprintf(
+            pool,
+            _("%sWC format %d, compatible with Subversion v%d.%d and newer\n"),
+            prefix, v->wc_format, ver->major, ver->minor);
 
       svn_stringbuf_appendcstr(output, s);
     }
