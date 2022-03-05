@@ -138,6 +138,13 @@ Candidate changes:
    Votes:
      +1: jun66j5
 
+ * r1898633
+   Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
+   Justification:
+     Fix test failure
+   Votes:
+     +1: jamessan
+
 Veto-blocked changes:
 =====================
 
