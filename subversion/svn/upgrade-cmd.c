@@ -83,11 +83,9 @@ svn_cl__upgrade(apr_getopt_t *os,
   svn_pool_destroy(iterpool);
 
   /* Remind the user they can upgrade further if:
-   *   - no upgrade was performed
    *   - the user did not specify compatible-version explicitly
    *   - a higher version is available. */
-  if (! svn_cl__notifier_get_wc_was_upgraded(ctx->notify_baton2)
-      && ! opt_state->compatible_version
+  if (! opt_state->compatible_version
       && ! svn_version__at_least(default_version,
                                  latest_version->major, latest_version->minor, 0)
       && ! opt_state->quiet)

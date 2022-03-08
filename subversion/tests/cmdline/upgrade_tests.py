@@ -58,6 +58,11 @@ def get_current_format():
   """Get the expected WC format."""
   return svntest.main.wc_format()
 
+def target_ver():
+  """Get the default value of --compatible-version to use.
+  
+  Compare svntest.main.wc_format()."""
+  return (svntest.main.options.wc_format_version or svntest.main.DEFAULT_COMPATIBLE_VERSION)
 
 def replace_sbox_with_tarfile(sbox, tar_filename,
                               dir=None):
@@ -772,8 +777,12 @@ def dirs_only_upgrade(sbox):
   expected_output = ["Upgraded '%s'\n" % (sbox.ospath('').rstrip(os.path.sep)),
                      "Upgraded '%s'\n" % (sbox.ospath('A'))]
 
+  # Pass --compatible-version explicitly to silence the "You upgraded to
+  # a version other than the latest" message.
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'upgrade', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir,
+                                     '--compatible-version',
+                                     target_ver())
 
   expected_status = svntest.wc.State(sbox.wc_dir, {
       ''                  : Item(status='  ', wc_rev='1'),
@@ -1039,8 +1048,12 @@ def upgrade_with_missing_subdir(sbox):
     "Upgraded '%s'\n" % sbox.ospath('A/D/G'),
     "Upgraded '%s'\n" % sbox.ospath('A/D/H'),
   ])
+  # Pass --compatible-version explicitly to silence the "You upgraded to
+  # a version other than the latest" message.
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'upgrade', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir,
+                                     '--compatible-version',
+                                     target_ver())
 
   # And now perform an update. (This used to fail with an assertion)
   expected_output = svntest.wc.State(wc_dir, {
