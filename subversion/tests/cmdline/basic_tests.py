@@ -428,11 +428,10 @@ def basic_update_corruption(sbox):
   ##
   ##    1. Make a working copy at rev 1, duplicate it.  Now we have
   ##        two working copies at rev 1.  Call them first and second.
-  ##    2. Make a local mod to `first/A/mu'.
-  ##    3. Repair the text-base, commit again, expect success.
-  ##    4. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
-  ##    5. Try to update `second', expect failure.
-  ##    6. Repair the text-base, update again, expect success.
+  ##    2. Make a local mod to `first/A/mu' and commit it.
+  ##    3. Intentionally corrupt `second/A/.svn/text-base/mu.svn-base'.
+  ##    4. Try to update `second', expect failure.
+  ##    5. Repair the text-base, update again, expect success.
   ##
   ## Here we go...
 
