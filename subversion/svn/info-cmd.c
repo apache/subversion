@@ -592,6 +592,21 @@ print_info_xml(void *baton,
         svn_cl__xml_tagged_cdata(&sb, pool, "wcroot-abspath",
                                  info->wc_info->wcroot_abspath);
 
+      /* "<wc-compatible-version> xx </wc-compatible-version>" */
+      /* "<wc-format> xx </wc-format>" */
+      if (info->wc_info->wc_format > 0)
+        {
+          const svn_version_t *wc_ver
+            = svn_client_wc_version_from_format(info->wc_info->wc_format, pool);
+
+          svn_cl__xml_tagged_cdata(&sb, pool, "wc-compatible-version",
+                                   apr_psprintf(pool, "%d.%d", wc_ver->major,
+                                                wc_ver->minor));
+          svn_cl__xml_tagged_cdata(&sb, pool, "wc-format",
+                                   apr_psprintf(pool, "%d",
+                                                info->wc_info->wc_format));
+        }
+
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->wc_info->schedule));
@@ -736,6 +751,18 @@ print_info(void *baton,
                                svn_dirent_local_style(
                                             info->wc_info->wcroot_abspath,
                                             pool)));
+
+  if (info->wc_info && info->wc_info->wc_format > 0)
+    {
+      const svn_version_t *wc_ver
+        = svn_client_wc_version_from_format(info->wc_info->wc_format, pool);
+
+      SVN_ERR(svn_cmdline_printf(pool, _("Working Copy Compatible With Version: %d.%d\n"),
+                                 wc_ver->major, wc_ver->minor));
+      SVN_ERR(svn_cmdline_printf(pool, _("Working Copy Format: %d\n"),
+                                 info->wc_info->wc_format));
+    }
+
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
