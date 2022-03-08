@@ -270,6 +270,14 @@ def basic_upgrade(sbox):
   svntest.actions.run_and_verify_svn(None, not_wc % 'A',
                                      'upgrade', sbox.ospath('A'))
 
+  # Upgrading to a future version gives an error
+  expected_stderr = 'svn: E200007: Cannot guarantee working copy compatibility' \
+                    ' with the requested version.*3[.]0'
+  svntest.actions.run_and_verify_svn(None, expected_stderr,
+                                     sbox.wc_dir, 'upgrade',
+                                     '--compatible-version',
+                                     '3.0')
+
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
