@@ -2135,11 +2135,7 @@ def disable_revprop_changes(repo_dir):
                                  'import sys\n'
                                  'sys.stderr.write("pre-revprop-change %s" %'
                                                   ' " ".join(sys.argv[2:]))\n'
-                                 'sys.exit(1)\n',
-                                 cmd_alternative=
-                                       '@shift\n'
-                                       '@echo pre-revprop-change %* 1>&2\n'
-                                       '@exit 1\n')
+                                 'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
   """Create a post-commit hook script in the repository at REPO_DIR that always
