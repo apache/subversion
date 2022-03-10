@@ -69,8 +69,11 @@ Notes on previously *offline* operations,:
 Each of the following operations, that previously were *online* operations,
 also will now require the same.
 
+  - `svn diff` (comparing repository to WC)
+  - `svn merge`
   - `svn switch`
   - `svn update`
+  - `svn checkout --force` (similar to update)
 
 Additional notes on previously *online* operations:
 
