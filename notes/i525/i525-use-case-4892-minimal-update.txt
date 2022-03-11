@@ -1,0 +1,35 @@
+A use case in which it is considered unacceptable for 'svn update' to
+fetch pristines of files that have become locally modified since the
+previous fetch opportunity, but that are not actually being updated by
+this update.
+
+In this use cases a developer locally modifies some large files. The
+developer also modifies some small files (such as 'readme' files
+describing the large files). The developer doesn't need to diff or
+revert the large files, and so chooses the checkout mode which doesn't
+keep the pristines initially.
+
+Before committing, the developer runs 'update', expecting to fetch any
+remote changes to the small files (and not large files, not in this
+case), expecting it to be quick, and then the developer continues work
+and eventually commits.
+
+The time taken to fetch the pristines of the large, modified files would
+be long (for example, ten minutes). Taking a long time for the commit is
+acceptable because the commit is the end of the work flow (and the
+developer can go away or move on to something else while it proceeds).
+The concern is that taking a long time at the update stage would be too
+disruptive.
+
+It wouldn't be a problem for an operation that really needs the
+pristines taking a long time. (Revert, for example.) The perception is
+that update doesn't really need them. That is, while it obviously needs
+in principle to fetch the new pristines of the files that need updating
+to a new version from the server (or fetch a delta and so be able to
+generate the pristine), it doesn't, in principle, need pristines of
+files that it isn't going to update. In this use case, it isn't going to
+update the large, locally modified files. And fetching their pristines
+wouldn't massively benefit the commit either, because they are poorly
+diffable kinds of files. So it is wasted time.
+
+Filed as https://subversion.apache.org/issue/4892 .
