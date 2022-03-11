@@ -110,57 +110,6 @@ restore_file(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-svn_error_t *
-svn_wc_restore(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               svn_boolean_t use_commit_times,
-               apr_pool_t *scratch_pool)
-{
-  /* ### If ever revved: Add cancel func. */
-  svn_wc__db_status_t status;
-  svn_node_kind_t kind;
-  svn_node_kind_t disk_kind;
-  const svn_checksum_t *checksum;
-
-  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
-
-  if (disk_kind != svn_node_none)
-    return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
-                             _("The existing node '%s' can not be restored."),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &checksum, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, NULL,
-                               wc_ctx->db, local_abspath,
-                               scratch_pool, scratch_pool));
-
-  if (status != svn_wc__db_status_normal
-      && !((status == svn_wc__db_status_added
-            || status == svn_wc__db_status_incomplete)
-           && (kind == svn_node_dir
-               || (kind == svn_node_file && checksum != NULL)
-               /* || (kind == svn_node_symlink && target)*/)))
-    {
-      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                               _("The node '%s' can not be restored."),
-                               svn_dirent_local_style(local_abspath,
-                                                      scratch_pool));
-    }
-
-  if (kind == svn_node_file || kind == svn_node_symlink)
-    SVN_ERR(restore_file(wc_ctx->db, local_abspath, use_commit_times,
-                         FALSE /*mark_resolved_text_conflict*/,
-                         NULL, NULL /* cancel func, baton */,
-                         scratch_pool));
-  else
-    SVN_ERR(svn_io_dir_make(local_abspath, APR_OS_DEFAULT, scratch_pool));
-
-  return SVN_NO_ERROR;
-}
-
 /* Try to restore LOCAL_ABSPATH of node type KIND and if successful,
    notify that the node is restored.  Use DB for accessing the working copy.
    If USE_COMMIT_TIMES is set, then set working file's timestamp to
@@ -203,6 +152,120 @@ restore_node(svn_wc__db_t *db,
       notify->kind = svn_node_file;
       (*notify_func)(notify_baton, notify, scratch_pool);
     }
+
+  return SVN_NO_ERROR;
+}
+
+/* Check the node at LOCAL_ABSPATH. If it is missing on disk and has
+   a suitable status in the metadata, then restore it on disk and if
+   successful, notify that the node is restored.
+ */
+static svn_error_t *
+maybe_restore_node(svn_wc__db_t *db,
+                   const char *local_abspath,
+                   svn_boolean_t use_commit_times,
+                   svn_cancel_func_t cancel_func,
+                   void *cancel_baton,
+                   svn_wc_notify_func2_t notify_func,
+                   void *notify_baton,
+                   apr_pool_t *scratch_pool)
+{
+  svn_error_t *err;
+  svn_wc__db_status_t wrk_status;
+  svn_node_kind_t wrk_kind;
+  const svn_checksum_t *checksum;
+  svn_boolean_t conflicted;
+
+  err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL,
+                             NULL, NULL, NULL, NULL, NULL, &checksum, NULL,
+                             NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                             NULL, &conflicted, NULL, NULL, NULL, NULL,
+                             NULL, NULL,
+                             db, local_abspath,
+                             scratch_pool, scratch_pool);
+
+
+  if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
+    {
+      svn_error_clear(err);
+      wrk_status = svn_wc__db_status_not_present;
+      wrk_kind = svn_node_file;
+    }
+  else
+    SVN_ERR(err);
+
+  if ((wrk_status == svn_wc__db_status_normal
+      || wrk_status == svn_wc__db_status_added
+      || wrk_status == svn_wc__db_status_incomplete)
+      && (wrk_kind == svn_node_dir || checksum))
+    {
+      svn_node_kind_t dirent_kind;
+
+      /* It is possible on a case insensitive system that the
+         entry is not really missing, but just cased incorrectly.
+         In this case we can't overwrite it with the pristine
+         version */
+      SVN_ERR(svn_io_check_path(local_abspath, &dirent_kind, scratch_pool));
+
+      if (dirent_kind == svn_node_none)
+        {
+          SVN_ERR(restore_node(db, local_abspath,
+                               wrk_kind, conflicted, use_commit_times,
+                               cancel_func, cancel_baton,
+                               notify_func, notify_baton,
+                               scratch_pool));
+        }
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc_restore(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t use_commit_times,
+               apr_pool_t *scratch_pool)
+{
+  /* ### If ever revved: Add cancel func. */
+  svn_wc__db_status_t status;
+  svn_node_kind_t kind;
+  svn_node_kind_t disk_kind;
+  const svn_checksum_t *checksum;
+
+  SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
+
+  if (disk_kind != svn_node_none)
+    return svn_error_createf(SVN_ERR_WC_PATH_FOUND, NULL,
+                             _("The existing node '%s' can not be restored."),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, &checksum, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                               NULL, NULL, NULL, NULL,
+                               wc_ctx->db, local_abspath,
+                               scratch_pool, scratch_pool));
+
+  if (status != svn_wc__db_status_normal
+      && !((status == svn_wc__db_status_added
+            || status == svn_wc__db_status_incomplete)
+           && (kind == svn_node_dir
+               || (kind == svn_node_file && checksum != NULL)
+               /* || (kind == svn_node_symlink && target)*/)))
+    {
+      return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                               _("The node '%s' can not be restored."),
+                               svn_dirent_local_style(local_abspath,
+                                                      scratch_pool));
+    }
+
+  SVN_ERR(restore_node(wc_ctx->db, local_abspath,
+                       kind, FALSE /*mark_resolved_text_conflict*/,
+                       use_commit_times,
+                       NULL, NULL /* cancel func, baton */,
+                       NULL, NULL /* notify func, baton */,
+                       scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -392,39 +455,11 @@ report_revisions_and_depths(svn_wc__db_t *db,
       if (restore_files
           && svn_hash_gets(dirents, child) == NULL)
         {
-          svn_wc__db_status_t wrk_status;
-          svn_node_kind_t wrk_kind;
-          const svn_checksum_t *checksum;
-          svn_boolean_t conflicted;
-
-          SVN_ERR(svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       &checksum, NULL, NULL, NULL, NULL, NULL,
-                                       NULL, NULL, NULL, NULL, &conflicted,
-                                       NULL, NULL, NULL, NULL, NULL, NULL,
-                                       db, this_abspath, iterpool, iterpool));
-
-          if ((wrk_status == svn_wc__db_status_normal
-               || wrk_status == svn_wc__db_status_added
-               || wrk_status == svn_wc__db_status_incomplete)
-              && (wrk_kind == svn_node_dir || checksum))
-            {
-              svn_node_kind_t dirent_kind;
-
-              /* It is possible on a case insensitive system that the
-                 entry is not really missing, but just cased incorrectly.
-                 In this case we can't overwrite it with the pristine
-                 version */
-              SVN_ERR(svn_io_check_path(this_abspath, &dirent_kind, iterpool));
-
-              if (dirent_kind == svn_node_none)
-                {
-                  SVN_ERR(restore_node(db, this_abspath, wrk_kind,
-                                       conflicted, use_commit_times,
-                                       cancel_func, cancel_baton,
-                                       notify_func, notify_baton, iterpool));
-                }
-            }
+          SVN_ERR(maybe_restore_node(db, this_abspath,
+                                     use_commit_times,
+                                     cancel_func, cancel_baton,
+                                     notify_func, notify_baton,
+                                     iterpool));
         }
 
       /* And finally prepare for reporting */
@@ -664,7 +699,6 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
   const char *repos_relpath, *repos_root_url;
   svn_depth_t target_depth;
   svn_wc__db_lock_t *target_lock;
-  svn_node_kind_t disk_kind;
   svn_depth_t report_depth;
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -718,49 +752,14 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       start_empty = TRUE;
     }
 
-  if (restore_files)
-    SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
-  else
-    disk_kind = svn_node_unknown;
-
   /* Determine if there is a missing node that should be restored */
-  if (restore_files
-      && disk_kind == svn_node_none)
+  if (restore_files)
     {
-      svn_wc__db_status_t wrk_status;
-      svn_node_kind_t wrk_kind;
-      const svn_checksum_t *checksum;
-      svn_boolean_t conflicted;
-
-      err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, &checksum, NULL,
-                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                                 NULL, &conflicted, NULL, NULL, NULL, NULL,
-                                 NULL, NULL,
-                                 db, local_abspath,
-                                 scratch_pool, scratch_pool);
-
-
-      if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)
-        {
-          svn_error_clear(err);
-          wrk_status = svn_wc__db_status_not_present;
-          wrk_kind = svn_node_file;
-        }
-      else
-        SVN_ERR(err);
-
-      if ((wrk_status == svn_wc__db_status_normal
-          || wrk_status == svn_wc__db_status_added
-          || wrk_status == svn_wc__db_status_incomplete)
-          && (wrk_kind == svn_node_dir || checksum))
-        {
-          SVN_ERR(restore_node(wc_ctx->db, local_abspath,
-                               wrk_kind, conflicted, use_commit_times,
-                               cancel_func, cancel_baton,
-                               notify_func, notify_baton,
-                               scratch_pool));
-        }
+      SVN_ERR(maybe_restore_node(db, local_abspath,
+                                 use_commit_times,
+                                 cancel_func, cancel_baton,
+                                 notify_func, notify_baton,
+                                 scratch_pool));
     }
 
   {
