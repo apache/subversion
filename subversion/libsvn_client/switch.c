@@ -442,6 +442,9 @@ svn_client__switch_internal(svn_revnum_t *result_rev,
    * resolve any conflicts that were raised. */
   if (! err1 && ctx->conflict_func2)
     {
+      SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE,
+                                        ctx, pool));
+
       err1 = svn_client__resolve_conflicts(NULL, conflicted_paths, ctx, pool);
     }
 

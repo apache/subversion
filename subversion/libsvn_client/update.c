@@ -327,6 +327,8 @@ update_internal(svn_revnum_t *result_rev,
   svn_config_t *cfg = ctx->config
                       ? svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG)
                       : NULL;
+  svn_wc__textbase_hydrate_cb_t hydrate_func;
+  void *hydrate_baton;
 
   if (result_rev)
     *result_rev = SVN_INVALID_REVNUM;
@@ -467,7 +469,7 @@ update_internal(svn_revnum_t *result_rev,
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
-  SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE,
+  SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE,
                                     ctx, scratch_pool));
 
   SVN_ERR(reuse_ra_session(ra_session_p, &corrected_url, anchor_url,
@@ -496,6 +498,10 @@ update_internal(svn_revnum_t *result_rev,
        * we don't use it. */
       anchor_url = corrected_url;
     }
+
+  SVN_ERR(svn_client__textbase_get_hydrator(&hydrate_func, &hydrate_baton,
+                                            NULL /*hydrate_ra_session*/,
+                                            ctx, scratch_pool));
 
   /* Resolve unspecified REVISION now, because we need to retrieve the
      correct inherited props prior to the editor drive and we need to
@@ -533,6 +539,7 @@ update_internal(svn_revnum_t *result_rev,
                                     server_supports_depth,
                                     clean_checkout,
                                     diff3_cmd, preserved_exts,
+                                    hydrate_func, hydrate_baton,
                                     svn_client__dirent_fetcher, &dfb,
                                     conflicted_paths ? record_conflict : NULL,
                                     conflicted_paths,
@@ -560,14 +567,15 @@ update_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      LOCAL_ABSPATH.  When this calls reporter->finish_report, the
      reporter will drive the update_editor. */
-  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
-                                  report_baton, TRUE,
-                                  depth, (! depth_is_sticky),
-                                  (! server_supports_depth),
-                                  use_commit_times,
-                                  ctx->cancel_func, ctx->cancel_baton,
-                                  ctx->notify_func2, ctx->notify_baton2,
-                                  scratch_pool));
+  SVN_ERR(svn_wc__crawl_revisions6(ctx->wc_ctx, local_abspath, reporter,
+                                   report_baton, TRUE,
+                                   depth, (! depth_is_sticky),
+                                   (! server_supports_depth),
+                                   use_commit_times,
+                                   hydrate_func, hydrate_baton,
+                                   ctx->cancel_func, ctx->cancel_baton,
+                                   ctx->notify_func2, ctx->notify_baton2,
+                                   scratch_pool));
 
   /* We handle externals after the update is complete, so that
      handling external items (and any errors therefrom) doesn't delay
@@ -711,6 +719,9 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    * resolve any conflicts that were raised. */
   if (! err && ctx->conflict_func2 && apr_hash_count(conflicted_paths))
     {
+      SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE,
+                                        ctx, pool));
+
       err = svn_client__resolve_conflicts(NULL, conflicted_paths, ctx, pool);
     }
 

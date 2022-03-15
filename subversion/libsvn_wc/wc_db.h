@@ -3181,6 +3181,21 @@ typedef svn_error_t * (*svn_wc__db_textbase_hydrate_cb_t)(
   void *cancel_baton,
   apr_pool_t *scratch_pool);
 
+/* Hydrate the pristine for one file.
+ */
+svn_error_t *
+svn_wc__db_textbase_hydrate(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
+                            void *hydrate_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            const svn_checksum_t *checksum,
+                            const char *repos_root_url,
+                            const char *repos_relpath,
+                            svn_revnum_t revision,
+                            apr_pool_t *scratch_pool);
+
 /* Synchronize the state of the text-bases in DB.
 
    If ALLOW_HYDRATE is true, fetch the referenced but missing text-base

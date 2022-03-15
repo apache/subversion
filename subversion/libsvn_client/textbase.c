@@ -85,6 +85,24 @@ textbase_hydrate_cb(void *baton,
 }
 
 svn_error_t *
+svn_client__textbase_get_hydrator(svn_wc__textbase_hydrate_cb_t *hydrate_func,
+                                  void **hydrate_baton,
+                                  svn_ra_session_t *ra_session,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool)
+{
+  textbase_hydrate_baton_t *baton = apr_pcalloc(result_pool, sizeof(*baton));
+
+  baton->pool = result_pool;
+  baton->ctx = ctx;
+  baton->ra_session = ra_session;
+
+  *hydrate_func = textbase_hydrate_cb;
+  *hydrate_baton = baton;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_client__textbase_sync(const char *local_abspath,
                           svn_boolean_t allow_hydrate,
                           svn_boolean_t allow_dehydrate,
@@ -99,6 +117,7 @@ svn_client__textbase_sync(const char *local_abspath,
   baton.ctx = ctx;
   baton.ra_session = NULL;
 
+  SVN_DBG(("svn_client__textbase_sync(%d,%d)", allow_hydrate, allow_dehydrate));
   SVN_ERR(svn_wc__textbase_sync(ctx->wc_ctx, local_abspath,
                                 allow_hydrate, allow_dehydrate,
                                 textbase_hydrate_cb, &baton,

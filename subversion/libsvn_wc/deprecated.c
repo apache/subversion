@@ -3643,6 +3643,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                               clean_checkout,
                               diff3_cmd,
                               preserved_exts,
+                              NULL, NULL, /* hydrate func/baton */
                               fetch_dirents_func, fetch_dirents_baton,
                               conflict_func, conflict_baton,
                               external_func, external_baton,

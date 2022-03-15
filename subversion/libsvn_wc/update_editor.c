@@ -244,6 +244,10 @@ struct edit_baton
   svn_wc_conflict_resolver_func2_t conflict_func;
   void *conflict_baton;
 
+  /* Hydrate callback... */
+  svn_wc__textbase_hydrate_cb_t hydrate_func;
+  void *hydrate_baton;
+
   /* Subtrees that were skipped during the edit, and therefore shouldn't
      have their revision/url info updated at the end.  If a path is a
      directory, its descendants will also be skipped.  The keys are paths
@@ -3743,12 +3747,27 @@ lazy_open_source(svn_stream_t **stream,
                  apr_pool_t *scratch_pool)
 {
   struct file_baton *fb = baton;
+  struct edit_baton *eb = fb->edit_baton;
 
-  SVN_ERR(svn_wc__textbase_get_contents(stream, fb->edit_baton->db,
-                                        fb->local_abspath,
-                                        fb->original_checksum, FALSE,
+  SVN_ERR(svn_wc__textbase_get_contents(stream, eb->db, fb->local_abspath,
+                                        fb->original_checksum, TRUE,
                                         result_pool, scratch_pool));
-
+  /* If the pristine was missing, hydrate it and then try again. */
+  /* (### Alternative: If pristine was missing, try to pull it from the repo
+   * via a callback. But we don't have a repo pull function available.) */
+  if (! *stream)
+    {
+      SVN_ERR(svn_wc__db_textbase_hydrate(eb->db, fb->local_abspath,
+                                          eb->hydrate_func, eb->hydrate_baton,
+                                          eb->cancel_func, eb->cancel_baton,
+                                          fb->original_checksum,
+                                          eb->repos_root, fb->new_repos_relpath,
+                                          fb->old_revision,
+                                          scratch_pool));
+      SVN_ERR(svn_wc__textbase_get_contents(stream, eb->db, fb->local_abspath,
+                                            fb->original_checksum, FALSE,
+                                            result_pool, scratch_pool));
+    }
 
   return SVN_NO_ERROR;
 }
@@ -5115,6 +5134,8 @@ make_editor(svn_revnum_t *target_revision,
             svn_boolean_t adds_as_modification,
             svn_boolean_t server_performs_filtering,
             svn_boolean_t clean_checkout,
+            svn_wc__textbase_hydrate_cb_t hydrate_func,
+            void *hydrate_baton,
             svn_wc_notify_func2_t notify_func,
             void *notify_baton,
             svn_cancel_func_t cancel_func,
@@ -5193,6 +5214,8 @@ make_editor(svn_revnum_t *target_revision,
 
   eb->requested_depth          = depth;
   eb->depth_is_sticky          = depth_is_sticky;
+  eb->hydrate_func             = hydrate_func;
+  eb->hydrate_baton            = hydrate_baton;
   eb->notify_func              = notify_func;
   eb->notify_baton             = notify_baton;
   eb->external_func            = external_func;
@@ -5405,6 +5428,8 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           svn_boolean_t clean_checkout,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
+                          svn_wc__textbase_hydrate_cb_t hydrate_func,
+                          void *hydrate_baton,
                           svn_wc_dirents_func_t fetch_dirents_func,
                           void *fetch_dirents_baton,
                           svn_wc_conflict_resolver_func2_t conflict_func,
@@ -5423,6 +5448,7 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                      NULL, depth, depth_is_sticky, allow_unver_obstructions,
                      adds_as_modification, server_performs_filtering,
                      clean_checkout,
+                     hydrate_func, hydrate_baton,
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
                      fetch_dirents_func, fetch_dirents_baton,
@@ -5470,6 +5496,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
                      FALSE /* adds_as_modification */,
                      server_performs_filtering,
                      FALSE /* clean_checkout */,
+                     NULL, NULL,  /* hydrate func/baton */
                      notify_func, notify_baton,
                      cancel_func, cancel_baton,
                      fetch_dirents_func, fetch_dirents_baton,

@@ -209,11 +209,17 @@ maybe_restore_node(svn_wc__db_t *db,
 
       if (dirent_kind == svn_node_none)
         {
-          SVN_ERR(restore_node(db, local_abspath,
+  return SVN_NO_ERROR;
+          err = (restore_node(db, local_abspath,
                                wrk_kind, conflicted, use_commit_times,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool));
+          if (err)
+            {
+              svn_handle_warning2(stdout, err, "DBG: ");
+              svn_error_clear(err);
+            }
         }
     }
 
@@ -675,20 +681,22 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
-                        const char *local_abspath,
-                        const svn_ra_reporter3_t *reporter,
-                        void *report_baton,
-                        svn_boolean_t restore_files,
-                        svn_depth_t depth,
-                        svn_boolean_t honor_depth_exclude,
-                        svn_boolean_t depth_compatibility_trick,
-                        svn_boolean_t use_commit_times,
-                        svn_cancel_func_t cancel_func,
-                        void *cancel_baton,
-                        svn_wc_notify_func2_t notify_func,
-                        void *notify_baton,
-                        apr_pool_t *scratch_pool)
+svn_wc__crawl_revisions6(svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         const svn_ra_reporter3_t *reporter,
+                         void *report_baton,
+                         svn_boolean_t restore_files,
+                         svn_depth_t depth,
+                         svn_boolean_t honor_depth_exclude,
+                         svn_boolean_t depth_compatibility_trick,
+                         svn_boolean_t use_commit_times,
+                         svn_wc__textbase_hydrate_cb_t hydrate_func,
+                         void *hydrate_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         apr_pool_t *scratch_pool)
 {
   svn_wc__db_t *db = wc_ctx->db;
   svn_error_t *fserr, *err;
@@ -875,6 +883,36 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       svn_error_compose(err, fserr);
     }
   return svn_error_trace(err);
+}
+
+svn_error_t *
+svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__crawl_revisions6(wc_ctx, local_abspath,
+                                   reporter, report_baton,
+                                   restore_files,
+                                   depth,
+                                   honor_depth_exclude,
+                                   depth_compatibility_trick,
+                                   use_commit_times,
+                                   NULL, NULL,
+                                   cancel_func, cancel_baton,
+                                   notify_func, notify_baton,
+                                   scratch_pool));
+  return SVN_NO_ERROR;
 }
 
 /*** Copying stream ***/

@@ -168,18 +168,18 @@ svn_wc__db_textbase_walk(svn_wc__db_t *db,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *
-textbase_hydrate(svn_wc__db_t *db,
-                 const char *wri_abspath,
-                 svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
-                 void *hydrate_baton,
-                 svn_cancel_func_t cancel_func,
-                 void *cancel_baton,
-                 const svn_checksum_t *checksum,
-                 const char *repos_root_url,
-                 const char *repos_relpath,
-                 svn_revnum_t revision,
-                 apr_pool_t *scratch_pool)
+svn_error_t *
+svn_wc__db_textbase_hydrate(svn_wc__db_t *db,
+                            const char *wri_abspath,
+                            svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
+                            void *hydrate_baton,
+                            svn_cancel_func_t cancel_func,
+                            void *cancel_baton,
+                            const svn_checksum_t *checksum,
+                            const char *repos_root_url,
+                            const char *repos_relpath,
+                            svn_revnum_t revision,
+                            apr_pool_t *scratch_pool)
 {
   svn_stream_t *install_stream;
   svn_wc__db_install_data_t *install_data;
@@ -326,10 +326,12 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                            svn_checksum_to_cstring_display(checksum, iterpool));
                 }
 
-              err = textbase_hydrate(db, local_abspath, hydrate_callback,
-                                     hydrate_baton, cancel_func, cancel_baton,
-                                     checksum, repos_root_url, repos_relpath,
-                                     revision, iterpool);
+              err = svn_wc__db_textbase_hydrate(db, local_abspath,
+                                                hydrate_callback, hydrate_baton,
+                                                cancel_func, cancel_baton,
+                                                checksum, repos_root_url,
+                                                repos_relpath, revision,
+                                                iterpool);
               /* If read access is unauthorized, for some operations we need
                * to continue even though we failed to fetch the textbase. */
               if (err && err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)

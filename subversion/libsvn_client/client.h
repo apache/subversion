@@ -40,6 +40,7 @@
 #include "private/svn_client_private.h"
 #include "private/svn_diff_tree.h"
 #include "private/svn_editor.h"
+#include "private/svn_wc_private.h"
 
 #ifdef __cplusplus
 extern "C" {
@@ -1250,6 +1251,17 @@ svn_client__textbase_sync(const char *local_abspath,
                           svn_boolean_t allow_dehydrate,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *scratch_pool);
+
+/* ...
+ *
+ * RA_SESSION may be null; in that case, it will open a new session upon
+ * first use. */
+svn_error_t *
+svn_client__textbase_get_hydrator(svn_wc__textbase_hydrate_cb_t *hydrate_func,
+                                  void **hydrate_baton,
+                                  svn_ra_session_t *ra_session,
+                                  svn_client_ctx_t *ctx,
+                                  apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

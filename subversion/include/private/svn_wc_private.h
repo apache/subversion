@@ -47,6 +47,18 @@ extern "C" {
 #endif /* __cplusplus */
 
 
+/* The callback invoked by svn_wc__textbase_sync() to fetch the text-base
+   contents identified by REPOS_ROOT_URL, REPOS_RELPATH and REVISION. */
+typedef svn_error_t *(*svn_wc__textbase_hydrate_cb_t)(
+  void *baton,
+  const char *repos_root_url,
+  const char *repos_relpath,
+  svn_revnum_t revision,
+  svn_stream_t *contents,
+  svn_cancel_func_t cancel_func,
+  void *cancel_baton,
+  apr_pool_t *scratch_pool);
+
 /* Return TRUE iff CLHASH (a hash whose keys are const char *
    changelist names) is NULL or if LOCAL_ABSPATH is part of a changelist in
    CLHASH. */
@@ -1523,6 +1535,8 @@ svn_wc__get_update_editor(const svn_delta_editor_t **editor,
                           svn_boolean_t clean_checkout,
                           const char *diff3_cmd,
                           const apr_array_header_t *preserved_exts,
+                          svn_wc__textbase_hydrate_cb_t hydrate_func,
+                          void *hydrate_baton,
                           svn_wc_dirents_func_t fetch_dirents_func,
                           void *fetch_dirents_baton,
                           svn_wc_conflict_resolver_func2_t conflict_func,
@@ -2314,18 +2328,6 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                 void *notify_baton,
                 apr_pool_t *scratch_pool);
 
-/* The callback invoked by svn_wc__textbase_sync() to fetch the text-base
-   contents identified by REPOS_ROOT_URL, REPOS_RELPATH and REVISION. */
-typedef svn_error_t *(*svn_wc__textbase_hydrate_cb_t)(
-  void *baton,
-  const char *repos_root_url,
-  const char *repos_relpath,
-  svn_revnum_t revision,
-  svn_stream_t *contents,
-  svn_cancel_func_t cancel_func,
-  void *cancel_baton,
-  apr_pool_t *scratch_pool);
-
 /* Synchronize the state of the text-base contents for the LOCAL_ABSPATH tree.
    If ALLOW_HYDRATE is true, fetch the required but missing text-base contents
    using the provided HYDRATE_CALLBACK and HYDRATE_BATON.  If ALLOW_DEHYDRATE
@@ -2340,6 +2342,27 @@ svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       apr_pool_t *scratch_pool);
+
+/**
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc__crawl_revisions6(svn_wc_context_t *wc_ctx,
+                         const char *local_abspath,
+                         const svn_ra_reporter3_t *reporter,
+                         void *report_baton,
+                         svn_boolean_t restore_files,
+                         svn_depth_t depth,
+                         svn_boolean_t honor_depth_exclude,
+                         svn_boolean_t depth_compatibility_trick,
+                         svn_boolean_t use_commit_times,
+                         svn_wc__textbase_hydrate_cb_t hydrate_func,
+                         void *hydrate_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         svn_wc_notify_func2_t notify_func,
+                         void *notify_baton,
+                         apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
