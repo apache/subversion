@@ -116,7 +116,7 @@ def check_pristine(sbox, files):
     file_text = open(file_path, 'r').read()
     try:
       file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
-    except:
+    except (FileNotFoundError, svntest.Failure): # FileNotFoundError
       if expect_pristines_all_present(sbox):
         raise
       # Pristine missing; pristines optional so ignore it
