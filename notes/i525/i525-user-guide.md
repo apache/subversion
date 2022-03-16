@@ -141,8 +141,8 @@ In brief:
 "i525pod" is an optional feature in Subversion 1.15. It can be enabled
 separately for each WC. By default "i525pod" is not enabled and WCs remain
 compatible with Subversion 1.8 through 1.14. To enable "i525pod" for a given
-WC, check out or upgrade the WC to 1.15-compatible format. A WC in
-1.15-compatible format is no longer compatible with older Subversion
+WC, check out or upgrade the WC to 1.15's format. A WC in
+1.15's format is no longer compatible with older Subversion
 clients.
 
 For details: see "Working Copy Format Upgrade and Compatibility" section.
@@ -228,7 +228,7 @@ locally modified files, are:
   - `H` `D` `svn revert`
   - `H` `D` `svn switch`
   - `H` `D` `svn update`
-  - `-` `D` `svn upgrade` (upgrade to 1.15-compatible WC format)
+  - `-` `D` `svn upgrade --compatible-version=1.15` (upgrade to 1.15's WC format enables "i525pod")
 
 ### Which files does Subversion "hydrate" or "dehydrate" ("sync scope")?
 
@@ -268,6 +268,7 @@ Not minimal:
   - Subversion 1.15 by default uses 1.8-compatible WC format, with "i525pod"
     inactive in those WCs, the same as Subversion 1.8 through 1.14.
   - Subversion 1.14 and older cannot read or write a 1.15-compatible WC.
+  - Working copies cannot be downgraded
 
 ## Details
 
