@@ -251,7 +251,7 @@ Not minimal:
 
   - The operation in the end may not look at all the files in "sync scope":
     for example, because of filtering options (such as `--depth`,
-    `--changelists`), or because the operation terminated early (for
+    `--changelist`), or because the operation terminated early (for
     example, `svn resolve`... and choose `quit`).
   - The operation in the end may not read the pristine copy of every file it
     processes: for example, `svn diff --properties-only`.
