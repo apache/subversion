@@ -171,7 +171,7 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-/* The default WC version created by the client. */
+/* The newest WC format this client supports. */
 #define SVN_WC__VERSION 32
 
 /* The minimum WC version supported by the client.
