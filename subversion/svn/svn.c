@@ -514,9 +514,9 @@ svn_cl__cmd_table_main[] =
      "Check out a working copy from a repository.\n"
      "usage: checkout URL[@REV]... [PATH]\n"
      "\n"), N_(
-     "  By default Subversion will create a WC format compatible with\n"
-     "  Subversion 1.8 and newer. To create a different WC format,\n"
-     "  use an option such as '--compatible-version=1.15'.\n"
+     "  The new working copy (WC) will be compatible with Subversion 1.8 and\n"
+     "  newer (this default may change in the future). To create a different\n"
+     "  WC format, use an option such as '--compatible-version=1.15'.\n"
      "  The versions available are the same as in the 'upgrade' command.\n"
      "  Use 'svn --version' to see the compatible versions supported.\n"
      "\n"), N_(
@@ -1915,8 +1915,8 @@ svn_cl__cmd_table_main[] =
      "Upgrade the metadata storage format for a working copy.\n"
      "usage: upgrade [WCPATH...]\n"
      "\n"), N_(
-     "  By default Subversion will upgrade the working copy to a version\n"
-     "  compatible with Subversion 1.8 and newer. To upgrade to a different\n"
+     "  The upgraded working copy will be compatible with Subversion 1.8 and\n"
+     "  newer (this default may change in the future. To upgrade to a different\n"
      "  version, use an option such as '--compatible-version=1.15'.\n"
      "  The versions available are the same as in the 'checkout' command.\n"
      "  Use 'svn --version' to see the compatible versions supported.\n"
