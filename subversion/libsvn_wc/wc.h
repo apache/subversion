@@ -171,11 +171,17 @@ extern "C" {
  * Please document any further format changes here.
  */
 
-/* The newest WC format this client supports. */
+/* The newest WC format this client supports.
+ *
+ * @see svn_wc__max_supported_format()
+ */
 #define SVN_WC__VERSION 32
 
 /* The minimum WC version supported by the client.
-   IMPORTANT: Update the implementation of svn_client_default_wc_version()
+ *
+ * @see svn_wc__min_supported_format()
+ */
+/* IMPORTANT: Update the implementation of svn_client_default_wc_version()
               and svn_client_get_wc_formats_supported()
               whenever you change this value! */
 #define SVN_WC__SUPPORTED_VERSION 31
