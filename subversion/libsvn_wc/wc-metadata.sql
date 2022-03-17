@@ -722,6 +722,7 @@ PRAGMA user_version = 32;
  *     (schema_statements, create_memory_db)
  *   * The implementation of svn_client_latest_wc_version()
  *   * The implementation of svn_wc__format_from_version()
+ *   * The implementation of svn_client_get_wc_formats_supported()
  *   * The comment above the comment above SVN_WC__VERSION
  *   * The value of SVN_WC__VERSION, if needed
  */
