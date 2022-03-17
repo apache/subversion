@@ -721,6 +721,7 @@ PRAGMA user_version = 32;
  *   * subversion/tests/libsvn_wc/wc-queries-test.c
  *     (schema_statements, create_memory_db)
  *   * The implementation of svn_client_latest_wc_version()
+ *   * The implementation of svn_wc__format_from_version()
  *   * The comment above the comment above SVN_WC__VERSION
  *   * The value of SVN_WC__VERSION, if needed
  */
