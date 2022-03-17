@@ -162,6 +162,12 @@ extern "C" {
  * == 1.10.x shipped with format 31
  * == 1.11.x shipped with format 31
  *
+ * The bump to 32 is a no-op, used for testing the multi-wc-format branch.
+ * Downgrading from format 32 to format 31 is just a matter of running
+ * "PRAGMA user_version = 31;".
+ *
+ * == 1.15.x shipped with format 32
+ *
  * Please document any further format changes here.
  */
 
