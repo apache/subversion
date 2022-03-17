@@ -83,18 +83,16 @@ svn_cl__upgrade(apr_getopt_t *os,
   svn_pool_destroy(iterpool);
 
   /* Remind the user they can upgrade further if:
-   *   - no upgrade was performed
    *   - the user did not specify compatible-version explicitly
    *   - a higher version is available. */
-  if (! svn_cl__notifier_get_wc_was_upgraded(ctx->notify_baton2)
-      && ! opt_state->compatible_version
+  if (! opt_state->compatible_version
       && ! svn_version__at_least(default_version,
                                  latest_version->major, latest_version->minor, 0)
       && ! opt_state->quiet)
     {
       const char *msg
-        = _("Working copy is already at version %d.%d. "
-            "The highest version supported by this client can be "
+        = _("svn: The target working copies are already at version %d.%d; "
+            "the highest version supported by this client can be "
             "specified with '--compatible-version=%d.%d'.\n");
       SVN_ERR(svn_cmdline_printf(scratch_pool, msg,
                                  default_version->major, default_version->minor,
