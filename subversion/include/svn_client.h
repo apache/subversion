@@ -1240,10 +1240,10 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *              set equal to the base properties. <br>
  *              If @c FALSE, then abort if there are any unversioned
  *              obstructing items.
- * @param[in] wc_format_version is the version number of the Subversion
- *              client that supports the metadata format of the
- *              created working copy; @c NULL means the library's default
- *              format. See svn_client_default_wc_version(),
+ * @param[in] wc_format_version is the version number of the oldest Subversion
+ *              client with which the created working copy should be compatible;
+ *              @c NULL means the library's version.
+ *              See svn_client_default_wc_version(),
  *              svn_client_get_wc_formats_supported().
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.
@@ -4396,12 +4396,14 @@ svn_client_cleanup(const char *dir,
 
 /**
  * Recursively upgrade a working copy and nested externals working
- * copies from any older format to the given WC metadata storage
- * format.  @a wcroot_dir is the path to the WC root.
+ * copies from any older format to a WC metadata storage
+ * format supported by Subversion @a wc_format_version.
  *
- * @a wc_format_version is the version number of the Subversion client
- * that supports a given WC metadata format; @c NULL means the library's
- * default format. See svn_client_default_wc_version(),
+ * If @a wc_format_version is @c NULL, the library's version is used.
+ *
+ * @a wcroot_dir is the path to the WC root.
+ *
+ * @see svn_client_default_wc_version(),
  * svn_client_get_wc_formats_supported().
  *
  * Use @a scratch_pool for any temporary allocations.

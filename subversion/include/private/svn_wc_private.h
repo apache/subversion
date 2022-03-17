@@ -2180,7 +2180,7 @@ svn_wc__working_file_writer_close(svn_wc__working_file_writer_t *writer);
 
 
 /**
- * Convert @a version to that version's characteristic working copy
+ * Convert @a version to that version's newest working copy
  * format, returned in @a format.
  *
  * A NULL @a version translates to the library's default version.
