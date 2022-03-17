@@ -469,7 +469,17 @@ def basic_upgrade_1_0(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
-  # And the separate working copy below COPIED or check_format() fails
+  # And the separate working copy below COPIED
+  #
+  # ### This was originally added in r919021, during 1.7 development, because
+  # ### check_format() recursed into the separate working copy.
+  # ### 
+  # ### The remainder of the test passes if this call is removed.
+  # ### 
+  # ### So, for now, this call serves only as a smoke test, to confirm that the
+  # ### upgrade returns 0.  However:
+  # ###
+  # ### TODO: Verify the results of this upgrade
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
@@ -1475,7 +1485,18 @@ def upgrade_1_0_with_externals(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
-  # And the separate working copy below COPIED or check_format() fails
+  # And the separate working copy below COPIED
+  #
+  # ### This was originally added in r1702474, during 1.10 development, because
+  # ### check_format() recursed into the separate working copy.  It was copied
+  # ### from basic_upgrade_1_0() above.
+  # ### 
+  # ### The remainder of the test passes if this call is removed.
+  # ### 
+  # ### So, for now, this call serves only as a smoke test, to confirm that the
+  # ### upgrade returns 0.  However:
+  # ###
+  # ### TODO: Verify the results of this upgrade
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
