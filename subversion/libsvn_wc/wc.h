@@ -162,6 +162,11 @@ extern "C" {
  * == 1.10.x shipped with format 31
  * == 1.11.x shipped with format 31
  *
+ * The bump to 32 adds the pristine-on-demand feature; see the docstring
+ * of STMT_UPGRADE_TO_32 for details.
+ *
+ * == 1.15.x shipped with format 32 and multi-wc-format support
+ *
  * Please document any further format changes here.
  */
 
