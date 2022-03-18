@@ -102,10 +102,20 @@ def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
   shutil.move(os.path.join(extract_dir, dir), sbox.repo_dir)
 
 def check_format(sbox, expected_format):
+  assert isinstance(expected_format, int)
   formats = sbox.read_wc_formats()
   if formats[''] != expected_format:
     raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
                           (formats[''], expected_format, sbox.wc_dir))
+
+def check_formats(sbox, expected_formats):
+  assert isinstance(expected_formats, dict)
+  formats = sbox.read_wc_formats()
+  ### If we ever need better error messages here, reuse run_and_verify_info().
+  if formats != expected_formats:
+    raise svntest.Failure("found format '%s'; expected '%s'; in wc '%s'" %
+                          (formats, expected_formats, sbox.wc_dir))
+
 
 def check_pristine(sbox, files):
   for file in files:
@@ -334,7 +344,18 @@ def upgrade_with_externals(sbox):
                                      'upgrade', sbox.wc_dir)
 
   # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  check_formats(sbox,
+      {relpath: get_current_format()
+       for relpath in (
+         '',
+         'A/D/exdir_A',
+         'A/D/exdir_A/G',
+         'A/D/exdir_A/H',
+         'A/D/x',
+         'A/C/exdir_G',
+         'A/C/exdir_H',
+       )})
+
   check_pristine(sbox, ['iota', 'A/mu',
                         'A/D/x/lambda', 'A/D/x/E/alpha'])
 
