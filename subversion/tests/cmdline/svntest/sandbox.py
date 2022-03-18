@@ -601,10 +601,9 @@ class Sandbox:
     pass
 
   @staticmethod
-  def _wc_format_of(working_copy_root_path):
-    """Return the working copy format of the given working copy."""
-    dot_svn = svntest.main.get_admin_name()
-    db = svntest.sqlite3.connect(os.path.join(working_copy_root_path, dot_svn, 'wc.db'))
+  def _wc_format_of(wc_db_path):
+    """Return the working copy format of the given wc.db file."""
+    db = svntest.sqlite3.connect(wc_db_path)
     c = db.cursor()
     c.execute('pragma user_version;')
     found_format = c.fetchone()[0]
@@ -621,7 +620,11 @@ class Sandbox:
     ret = dict()
     for root, dirs, files in os.walk(self.wc_dir):
       if dot_svn in dirs:
-        ret[root[len(self.wc_dir)+1:]] = self._wc_format_of(root)
+        wc_db_path = os.path.join(root, dot_svn, 'wc.db')
+        # If we didn't check existence, wc.db would be auto-created if .svn
+        # exists and .svn/wc.db doesn't.
+        if os.path.exists(wc_db_path):
+          ret[root[len(self.wc_dir)+1:]] = self._wc_format_of(wc_db_path)
     # r1898536
     return ret
 
