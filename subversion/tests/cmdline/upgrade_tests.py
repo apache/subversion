@@ -105,7 +105,7 @@ def check_format(sbox, expected_format):
   formats = sbox.read_wc_formats()
   if formats[''] != expected_format:
     raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
-                          (found_format, expected_format, sbox.wc_dir))
+                          (formats[''], expected_format, sbox.wc_dir))
 
 def check_pristine(sbox, files):
   for file in files:
