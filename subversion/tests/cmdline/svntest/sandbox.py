@@ -611,8 +611,10 @@ class Sandbox:
     return found_format
 
   def read_wc_formats(self):
-    """Return a dictionary mapping working copy root paths relative to wc_dir
-    to their format numbers.
+    """Return a dictionary mapping working copy root relpaths to their
+    format numbers.
+
+    The relpaths are relative to self.wc_dir.
 
     The return value will always contain an empty string key.
     """
@@ -625,7 +627,7 @@ class Sandbox:
         # exists and .svn/wc.db doesn't.
         if os.path.exists(wc_db_path):
           ret[root[len(self.wc_dir)+1:]] = self._wc_format_of(wc_db_path)
-    return ret
+    return { k.replace(os.sep, '/') : ret[k] for k in ret }
 
 def is_url(target):
   return (target.startswith('^/')
