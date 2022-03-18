@@ -102,8 +102,8 @@ def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
   shutil.move(os.path.join(extract_dir, dir), sbox.repo_dir)
 
 def check_format(sbox, expected_format):
-  found_format = sbox.read_wc_format()
-  if found_format != expected_format:
+  formats = sbox.read_wc_formats()
+  if formats[''] != expected_format:
     raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
                           (found_format, expected_format, sbox.wc_dir))
 
