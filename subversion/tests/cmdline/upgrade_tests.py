@@ -490,6 +490,12 @@ def basic_upgrade_1_0(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
+
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy (implicitly)
+  current_format = get_current_format()
+  check_formats(sbox, {'': current_format})
+
   # And the separate working copy below COPIED
   #
   # ### This was originally added in r919021, during 1.7 development, because
@@ -505,8 +511,9 @@ def basic_upgrade_1_0(sbox):
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
 
-  # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  # Actually check the format number of the upgraded working copy and of
+  # the separate working copy
+  check_formats(sbox, {k: current_format for k in ('', 'COPIED/G')})
 
   # Now check the contents of the working copy
   # #### This working copy is not just a basic tree,
@@ -1506,6 +1513,12 @@ def upgrade_1_0_with_externals(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
+
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy (implicitly)
+  current_format = get_current_format()
+  check_formats(sbox, {'': current_format, 'exdir_G': current_format})
+
   # And the separate working copy below COPIED
   #
   # ### This was originally added in r1702474, during 1.10 development, because
@@ -1522,8 +1535,9 @@ def upgrade_1_0_with_externals(sbox):
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
 
-  # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy
+  check_formats(sbox, {k: current_format for k in ('', 'exdir_G', 'COPIED/G')})
 
   # Now check the contents of the working copy
   # #### This working copy is not just a basic tree,
