@@ -625,7 +625,6 @@ class Sandbox:
         # exists and .svn/wc.db doesn't.
         if os.path.exists(wc_db_path):
           ret[root[len(self.wc_dir)+1:]] = self._wc_format_of(wc_db_path)
-    # r1898536
     return ret
 
 def is_url(target):
