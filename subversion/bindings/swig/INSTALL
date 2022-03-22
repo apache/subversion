@@ -171,12 +171,11 @@ Step 3:  Install Specific Language Bindings
 
 *  Python
 
-   1.  (Optional) If you want to build Python bindings for a version of
-       Python than other than that the prebuilt bindings C sources target
-       (e.g., if you use the Subversion distribution tarball but want to build
-       Python 2 bindings), run 'make clean-swig-py' from the top of the
-       Subversion build tree, to ensure not to use incompatible version of
-       bindings source files.
+   1.  (Optional) Run 'make clean-swig-py' from the top of the Subversion
+       build tree.  This will clean any prebuilt or previously built bindings
+       to avoid a mixture of incompatible bindings source files (e.g., if you
+       use the Subversion distribution tarball but want to build Python 2
+       bindings).
 
    2.  Run 'make swig-py' from the top of the Subversion build tree,
        to build the bindings.
