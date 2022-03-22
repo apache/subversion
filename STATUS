@@ -129,7 +129,7 @@ Candidate changes:
      Fix check-swig-py not working at all since r1889654 merged from r1889487
      (r1889487 depends on r1885199).
    Votes:
-     +1: jun66j5
+     +1: jun66j5, futatuki
 
  * r1897441
    swig-py: Fix cleanup failing in unit tests with Python 3 on Windows.
