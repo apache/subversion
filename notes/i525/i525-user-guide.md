@@ -1,6 +1,9 @@
 
 This is a detailed user guide to the "i525pod" feature.
 
+$LastChangedDate$
+$LastChangedRevision$
+$URL$
 
 # Terminology
 
