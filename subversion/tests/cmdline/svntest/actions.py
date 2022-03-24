@@ -527,7 +527,7 @@ def expected_noop_update_output(rev):
   """Return an ExpectedOutput object describing what we'd expect to
   see from an update to revision REV that was effectively a no-op (no
   server changes transmitted)."""
-  return verify.createExpectedOutput("Updating '.*':|At revision %d."
+  return verify.createExpectedOutput("Updating '.*':|Fetching text bases [.]+done|At revision %d."
                                      % (rev),
                                      "no-op update")
 
@@ -1931,8 +1931,12 @@ def _run_and_verify_resolve(cmd, expected_paths, *args):
         expected_paths]),
     ],
     match_all=False)
-  run_and_verify_svn(expected_output, [],
-                     cmd, *args)
+  exit_code, out, err = main.run_svn(None, cmd, *args)
+  out = [line for line in out
+         if not re.match(r'Fetching text bases [.]+done\n', line)]
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_output, [])
+  verify.verify_exit_code("Unexpected return code", exit_code, 0)
 
 def run_and_verify_resolve(expected_paths, *args):
   """Run "svn resolve" with arguments ARGS, and verify that it resolves the
@@ -1955,8 +1959,18 @@ def run_and_verify_revert(expected_paths, *args):
   expected_output = verify.UnorderedOutput([
     "Reverted '" + path + "'\n" for path in
     expected_paths])
-  run_and_verify_svn(expected_output, [],
-                     "revert", *args)
+  run_and_verify_revert_output(expected_output, *args)
+
+def run_and_verify_revert_output(expected_output, *args):
+  """Run "svn revert" with arguments ARGS, and verify that it outputs
+     the text in EXPECTED_OUTPUT (and no stderr or exit code).
+  """
+  exit_code, out, err = main.run_svn(None, "revert", *args)
+  out = [line for line in out
+         if not re.match(r'Fetching text bases [.]+done\n', line)]
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_output, [])
+  verify.verify_exit_code("Unexpected return code", exit_code, 0)
 
 
 ######################################################################

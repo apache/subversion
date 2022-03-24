@@ -60,8 +60,8 @@ def run_and_verify_revert(targets, options=[],
   if reverted_paths is None:
     reverted_paths = targets
   expected_output = expected_output_revert(reverted_paths, skipped_paths)
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     *(['revert'] + options + targets))
+  svntest.actions.run_and_verify_revert_output(expected_output,
+                                               *(options + targets))
 
 def revert_replacement_with_props(sbox, wc_copy):
   """Helper implementing the core of

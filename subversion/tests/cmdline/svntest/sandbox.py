@@ -609,6 +609,9 @@ class Sandbox:
     db.close()
     return found_format
 
+  def pristines_on_demand_enabled(self):
+    return self.read_wc_format() == 32
+
 def is_url(target):
   return (target.startswith('^/')
           or target.startswith('file://')

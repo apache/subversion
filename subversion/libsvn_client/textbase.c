@@ -75,6 +75,16 @@ textbase_hydrate_cb(void *baton,
       b->ra_session = session;
     }
 
+  if (b->ctx->notify_func2)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(".", svn_wc_notify_hydrating_file,
+                               scratch_pool);
+      notify->revision = revision;
+      notify->url = url;
+      b->ctx->notify_func2(b->ctx->notify_baton2, notify, scratch_pool);
+    }
+
   SVN_ERR(svn_client__ensure_ra_session_url(&old_url, b->ra_session, url,
                                             scratch_pool));
   err = svn_ra_get_file(b->ra_session, "", revision, contents,
@@ -99,11 +109,27 @@ svn_client__textbase_sync(const char *local_abspath,
   baton.ctx = ctx;
   baton.ra_session = NULL;
 
+  if (ctx->notify_func2 && allow_hydrate)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_hydrating_start,
+                               scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
+
   SVN_ERR(svn_wc__textbase_sync(ctx->wc_ctx, local_abspath,
                                 allow_hydrate, allow_dehydrate,
                                 textbase_hydrate_cb, &baton,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 scratch_pool));
+
+  if (ctx->notify_func2 && allow_hydrate)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_hydrating_end,
+                               scratch_pool);
+      ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }

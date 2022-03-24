@@ -1188,10 +1188,13 @@ def another_hudson_problem(sbox):
                      'D    '+G_path+'\n',
                      'Updated to revision 3.\n',
                     ]
+  expected_output = [re.escape(s) for s in expected_output]
+  if sbox.pristines_on_demand_enabled():
+    expected_output.append('Fetching text bases [.]*done\n')
 
   # Sigh, I can't get run_and_verify_update to work (but not because
   # of issue 919 as far as I can tell)
-  expected_output = svntest.verify.UnorderedOutput(expected_output)
+  expected_output = svntest.verify.UnorderedRegexListOutput(expected_output)
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'up', G_path)
 
@@ -3713,65 +3716,74 @@ def update_accept_conflicts(sbox):
   # Setup SVN_EDITOR and SVN_MERGE for --accept={edit,launch}.
   svntest.main.use_editor('append_foo')
 
+  def run_and_verify_update_output(expected_stdout, expected_stderr, *args):
+    expected_exit = 0
+    exit_code, out, err = svntest.main.run_svn(True, *args)
+    out = [line for line in out
+           if not re.match(r'Fetching text bases [.]+done\n', line)]
+    verify.verify_outputs("Unexpected output", out, err,
+                          expected_stdout, expected_stderr)
+    verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
+
   # iota: no accept option
   # Just leave the conflicts alone, since run_and_verify_svn already uses
   # the --non-interactive option.
-  svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       3, iota_path_backup),
-                                     [],
-                                     'update', iota_path_backup)
+  run_and_verify_update_output(update_output_with_conflicts(
+                                 3, iota_path_backup),
+                               [],
+                               'update', iota_path_backup)
 
   # lambda: --accept=postpone
   # Just leave the conflicts alone.
-  svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       3, lambda_path_backup),
-                                     [],
-                                     'update', '--accept=postpone',
-                                     lambda_path_backup)
+  run_and_verify_update_output(update_output_with_conflicts(
+                                 3, lambda_path_backup),
+                               [],
+                               'update', '--accept=postpone',
+                               lambda_path_backup)
 
   # mu: --accept=base
   # Accept the pre-update base file.
-  svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       3, mu_path_backup),
-                                     [],
-                                     'update', '--accept=base',
-                                     mu_path_backup)
+  run_and_verify_update_output(update_output_with_conflicts_resolved(
+                                 3, mu_path_backup),
+                               [],
+                               'update', '--accept=base',
+                               mu_path_backup)
 
   # alpha: --accept=mine
   # Accept the user's working file.
-  svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       3, alpha_path_backup),
-                                     [],
-                                     'update', '--accept=mine-full',
-                                     alpha_path_backup)
+  run_and_verify_update_output(update_output_with_conflicts_resolved(
+                                 3, alpha_path_backup),
+                               [],
+                               'update', '--accept=mine-full',
+                               alpha_path_backup)
 
   # beta: --accept=theirs
   # Accept their file.
-  svntest.actions.run_and_verify_svn(update_output_with_conflicts_resolved(
-                                       3, beta_path_backup),
-                                     [],
-                                     'update', '--accept=theirs-full',
-                                     beta_path_backup)
+  run_and_verify_update_output(update_output_with_conflicts_resolved(
+                                 3, beta_path_backup),
+                               [],
+                               'update', '--accept=theirs-full',
+                               beta_path_backup)
 
   # pi: --accept=edit
   # Run editor and accept the edited file. The merge tool will leave
   # conflicts in place, so expect a message on stderr, but expect
   # svn to exit with an exit code of 0.
-  svntest.actions.run_and_verify_svn2(update_output_with_conflicts_resolved(
-                                        3, p_i_path_backup),
-                                      "system(.*) returned.*", 0,
-                                      'update', '--accept=edit',
-                                      '--force-interactive',
-                                      p_i_path_backup)
+  run_and_verify_update_output(update_output_with_conflicts_resolved(
+                                 3, p_i_path_backup),
+                               "system(.*) returned.*",
+                               'update', '--accept=edit',
+                               '--force-interactive',
+                               p_i_path_backup)
 
   # rho: --accept=launch
   # Run the external merge tool, it should leave conflict markers in place.
-  svntest.actions.run_and_verify_svn(update_output_with_conflicts(
-                                       3, rho_path_backup),
-                                     [],
-                                     'update', '--accept=launch',
-                                     '--force-interactive',
-                                     rho_path_backup)
+  run_and_verify_update_output(update_output_with_conflicts(
+                                 3, rho_path_backup),
+                               [],
+                               'update', '--accept=launch',
+                               '--force-interactive',
+                               rho_path_backup)
 
   # Set the expected disk contents for the test
   expected_disk = svntest.main.greek_state.copy()

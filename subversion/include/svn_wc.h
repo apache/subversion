@@ -1305,6 +1305,22 @@ typedef enum svn_wc_notify_action_t
    * @since New in 1.10. */
   svn_wc_notify_end_search_tree_conflict_details,
 
+  /** Hydrating (fetching text-bases): starting a batch of fetching
+   * within the WC subtree at @c svn_wc_notify_t.path. (Zero or more files
+   * may be fetched, each preceded by @c svn_wc_notify_hydrating_file.)
+   * @since New in 1.15. */
+  svn_wc_notify_hydrating_start,
+
+  /** Hydrating (fetching text-bases): about to fetch a file
+   * from @c svn_wc_notify_t.url at @c svn_wc_notify_t.revision.
+   * @since New in 1.15. */
+  svn_wc_notify_hydrating_file,
+
+  /** Hydrating (fetching text-bases): finished a batch of fetching
+   * within the WC subtree at @c svn_wc_notify_t.path.
+   * @since New in 1.15. */
+  svn_wc_notify_hydrating_end,
+
   /** A warning, specified in #svn_wc_notify_t.err.
    * @since New in 1.15. */
   svn_wc_notify_warning,

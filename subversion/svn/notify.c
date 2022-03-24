@@ -53,6 +53,7 @@ struct notify_baton
   svn_boolean_t is_export;
   svn_boolean_t is_wc_to_repos_copy;
   svn_boolean_t sent_first_txdelta;
+  svn_boolean_t hydrating_printed_start;
   int in_external;
   svn_revnum_t progress_revision;
   svn_boolean_t had_print_error; /* Used to not keep printing error messages
@@ -1207,6 +1208,26 @@ notify_body(struct notify_baton *nb,
       SVN_ERR(svn_cmdline_printf(pool, _("Committing transaction...\n")));
       break;
 
+    case svn_wc_notify_hydrating_start:
+      nb->hydrating_printed_start = FALSE;
+      break;
+
+    case svn_wc_notify_hydrating_file:
+      if (!nb->hydrating_printed_start)
+        {
+          SVN_ERR(svn_cmdline_printf(pool, _("Fetching text bases ")));
+          nb->hydrating_printed_start = TRUE;
+        }
+      SVN_ERR(svn_cmdline_printf(pool, "."));
+      break;
+
+    case svn_wc_notify_hydrating_end:
+      if (nb->hydrating_printed_start)
+        {
+          SVN_ERR(svn_cmdline_printf(pool, _("done\n")));
+        }
+      break;
+
     case svn_wc_notify_warning:
       /* using handle_error rather than handle_warning in order to show the
        * whole error chain; the latter only shows one error in the chain */
@@ -1261,6 +1282,7 @@ svn_cl__get_notifier(svn_wc_notify_func2_t *notify_func_p,
 
   nb->received_some_change = FALSE;
   nb->sent_first_txdelta = FALSE;
+  nb->hydrating_printed_start = FALSE;
   nb->is_checkout = FALSE;
   nb->is_export = FALSE;
   nb->is_wc_to_repos_copy = FALSE;

@@ -5067,11 +5067,10 @@ def merge_to_switched_path(sbox):
   # but as it is switched this empty mergeinfo just elides to the
   # repository (empty mergeinfo on a path can elide if that path doesn't
   # inherit *any* mergeinfo).
-  svntest.actions.run_and_verify_svn(["Reverted '" + A_COPY_path+ "'\n",
-                                      "Reverted '" + A_COPY_D_G_path+ "'\n",
-                                      "Reverted '" + A_COPY_D_G_rho_path +
-                                      "'\n"],
-                                     [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_revert([A_COPY_path,
+                                         A_COPY_D_G_path,
+                                         A_COPY_D_G_rho_path],
+                                        '-R', wc_dir)
   svntest.actions.run_and_verify_svn(["property '" + SVN_PROP_MERGEINFO +
                                       "' set on '" + A_COPY_D_path+ "'" +
                                       "\n"], [], 'ps', SVN_PROP_MERGEINFO,
@@ -9635,9 +9634,9 @@ def dont_add_mergeinfo_from_own_history(sbox):
                                        '--allow-mixed-revisions', A_path)
 
   # Revert all local mods
-  svntest.actions.run_and_verify_svn(["Reverted '" + A_path + "'\n",
-                                      "Reverted '" + mu_path + "'\n"],
-                                     [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_revert([A_path,
+                                         mu_path],
+                                        '-R', wc_dir)
 
   # Move 'A' to 'A_MOVED' and once again merge r7 from 'A_COPY', this time
   # to 'A_MOVED'.  This attempts to add the mergeinfo '/A:3' to
@@ -9772,9 +9771,9 @@ def dont_add_mergeinfo_from_own_history(sbox):
                                        check_props=True)
 
   # Revert all local mods
-  svntest.actions.run_and_verify_svn(["Reverted '" + A_MOVED_path + "'\n",
-                                      "Reverted '" + mu_MOVED_path + "'\n"],
-                                     [], 'revert', '-R', wc_dir)
+  svntest.actions.run_and_verify_revert([A_MOVED_path,
+                                         mu_MOVED_path],
+                                        '-R', wc_dir)
 
   # Create a new 'A' unrelated to the old 'A' which was moved.  Then merge
   # r7 from 'A_COPY' to this new 'A'.  Since the new 'A' shares no history
