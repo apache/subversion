@@ -53,35 +53,21 @@ Candidate changes:
   * r1883838, r1883989, r1886460, r1886582
     Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
     Votes:
-      +1: stsp
-
- * r1886708
-   swig-py: Fix dependency of make copy-swig-py target.
-   Justification:
-     Fix a regression introduced between 1.13.0 and 1.14.0.
-   Votes:
-     +1: futatuki, jun66j5
+      +1: stsp, markphip
 
  * r1887641, r1890013
    Fix encoding of error message on failure of system() call.
    Justification:
      Error messages should be displayed correctly even if non UTF-8 locale.
    Votes:
-     +1: futatuki
-
- * r1887704
-   Follow up to r1865987, r1866588: Unbreak a msgid.
-   Justification:
-     subversion.pot should be built correctly.
-   Votes:
-     +1: futatuki, jun66j5
+     +1: futatuki, markphip
 
  * r1889629
    Document how the port number is passed to custom tunnels.
    Justification:
      Documentation should be complete.
    Votes:
-     +1: danielsh
+     +1: danielsh, markphip
 
  * r1890223, r1890668, r1890673
    Support building on Win64/ARM64.
@@ -89,14 +75,6 @@ Candidate changes:
      At user request (via SharpSvn)
    votes:
      +1: rhuijben
-
- * r1891908
-   Fix a bug where «make davautocheck» immediately after configure failed
-   hard because of an unbuilt dependency.
-   Justification:
-     Small fix.  Prevents spurious hard fails of 'make davautocheck'.
-   Votes:
-     +1: danielsh, dsahlberg
 
  * r1892470, r1892471, r1892541
    Fix an assertion failure triggered by the conflict resolver.
@@ -121,22 +99,7 @@ Candidate changes:
      Trivial test harness change that may help investigate unreproducible
      errors.
    Votes:
-     +1: danielsh
-
- * r1885199
-   swig-py: Skip some tests on Python 2 if default encoding is 'utf-8'.
-   Justification:
-     Fix check-swig-py not working at all since r1889654 merged from r1889487
-     (r1889487 depends on r1885199).
-   Votes:
-     +1: jun66j5, futatuki
-
- * r1897441
-   swig-py: Fix cleanup failing in unit tests with Python 3 on Windows.
-   Justification:
-     Make check-swig-py passed.
-   Votes:
-     +1: jun66j5
+     +1: danielsh, markphip
 
  * r1898633
    Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
@@ -161,3 +124,40 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1887704
+   Follow up to r1865987, r1866588: Unbreak a msgid.
+   Justification:
+     subversion.pot should be built correctly.
+   Votes:
+     +1: futatuki, jun66j5, markphip
+
+ * r1891908
+   Fix a bug where «make davautocheck» immediately after configure failed
+   hard because of an unbuilt dependency.
+   Justification:
+     Small fix.  Prevents spurious hard fails of 'make davautocheck'.
+   Votes:
+     +1: danielsh, dsahlberg, markphip
+
+ * r1885199
+   swig-py: Skip some tests on Python 2 if default encoding is 'utf-8'.
+   Justification:
+     Fix check-swig-py not working at all since r1889654 merged from r1889487
+     (r1889487 depends on r1885199).
+   Votes:
+     +1: jun66j5, futatuki
+
+ * r1897441
+   swig-py: Fix cleanup failing in unit tests with Python 3 on Windows.
+   Justification:
+     Make check-swig-py passed.
+   Votes:
+     +1: jun66j5, markphip
+
+ * r1886708
+   swig-py: Fix dependency of make copy-swig-py target.
+   Justification:
+     Fix a regression introduced between 1.13.0 and 1.14.0.
+   Votes:
+     +1: futatuki, jun66j5
