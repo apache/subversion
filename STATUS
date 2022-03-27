@@ -39,7 +39,7 @@ Candidate changes:
    Votes:
      +1: futatuki, stsp
 
- * r1881534 (without CRLF problem)
+ * r1881534
    Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
    Justification:
      Unblocks cross-compiling SVN.
