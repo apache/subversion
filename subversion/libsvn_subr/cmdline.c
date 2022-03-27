@@ -1499,10 +1499,16 @@ svn_cmdline__edit_file_externally(const char *path,
                       stderr, TRUE /* fatal */, "svn: ");
 
   if (sys_err)
-    /* Extracting any meaning from sys_err is platform specific, so just
-       use the raw value. */
-    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                             _("system('%s') returned %d"), cmd, sys_err);
+    {
+      const char *cmd_utf8;
+
+      /* Extracting any meaning from sys_err is platform specific, so just
+         use the raw value. */
+      SVN_ERR(svn_path_cstring_to_utf8(&cmd_utf8, cmd, pool));
+      return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
+                               _("system('%s') returned %d"),
+                               cmd_utf8, sys_err);
+    }
 
   return SVN_NO_ERROR;
 }
@@ -1648,8 +1654,8 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
     goto cleanup;
 
   /* Prepare the editor command line.  */
-  err = svn_utf_cstring_from_utf8(&tmpfile_native,
-                                  escape_path(pool, tmpfile_name), pool);
+  err = svn_path_cstring_from_utf8(&tmpfile_native,
+                                   escape_path(pool, tmpfile_name), pool);
   if (err)
     goto cleanup;
 
@@ -1678,10 +1684,14 @@ svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
 #endif
   if (sys_err != 0)
     {
+      const char *cmd_utf8;
+
       /* Extracting any meaning from sys_err is platform specific, so just
          use the raw value. */
+      SVN_ERR(svn_path_cstring_to_utf8(&cmd_utf8, cmd, pool));
       err =  svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                               _("system('%s') returned %d"), cmd, sys_err);
+                               _("system('%s') returned %d"),
+                               cmd_utf8, sys_err);
       goto cleanup;
     }
 
