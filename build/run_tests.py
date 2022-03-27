@@ -776,10 +776,12 @@ class TestHarness:
     # ### Even if failure==1 it could be that the test didn't run at all.
     if test_failed and test_failed != 1:
       if self.log:
-        log.write('FAIL:  %s: Unknown test failure; see tests.log.\n' % progbase)
+        log.write('FAIL:  %s: Unknown test failure (%s); see tests.log.\n'
+                  % (progbase, test_failed))
         log.flush()
       else:
-        log.write('FAIL:  %s: Unknown test failure.\n' % progbase)
+        log.write('FAIL:  %s: Unknown test failure (%s).\n'
+                  % (progbase, test_failed))
 
   def _run_c_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a c test, escaping parameters as required.'
