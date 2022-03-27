@@ -233,9 +233,17 @@ class SubversionClientTestCase(unittest.TestCase):
                                                         u" message")
     self.client_ctx.log_msg_baton3 = bogus_log_message_func
 
-    with self.assertRaises(UnicodeEncodeError):
-      commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
-                                  self.client_ctx)
+    if not utils.IS_PY3 and utils.is_defaultencoding_utf8():
+      # 'utf-8' codecs on Python 2 does not raise UnicodeEncodeError
+      # on surrogate code point U+dc00 - U+dcff, however it causes
+      # Subversion error on property validation of svn:log
+      with self.assertRaises(core.SubversionException):
+        commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
+                                    self.client_ctx)
+    else:
+      with self.assertRaises(UnicodeEncodeError):
+        commit_info = client.mkdir3((directory,), 1, {b'customprop':b'value'},
+                                    self.client_ctx)
 
   def test_log3_url(self):
     """Test svn_client_log3 on a file:// URL"""
@@ -302,10 +310,14 @@ class SubversionClientTestCase(unittest.TestCase):
     self.assertEqual(revprops[b'svn:author'], b"john")
     with self.assertRaises(KeyError):
       commit_date = revprops['svn:date']
-    with self.assertRaises(UnicodeEncodeError):
-      client.log5((directory,), start, (rev_range,), 1, True, False, False,
-                  (u'svn:\udc61uthor', b'svn:log'),
-                  log_entry_receiver_whole, self.client_ctx)
+    if utils.IS_PY3 or not utils.is_defaultencoding_utf8():
+      # 'utf-8' codecs on Python 2 does not raise UnicodeEncodeError
+      # on surrogate code point U+dc00 - U+dcff. So we need to skip
+      # below in such a case.
+      with self.assertRaises(UnicodeEncodeError):
+        client.log5((directory,), start, (rev_range,), 1, True, False, False,
+                    (u'svn:\udc61uthor', b'svn:log'),
+                    log_entry_receiver_whole, self.client_ctx)
 
   def test_uuid_from_url(self):
     """Test svn_client_uuid_from_url on a file:// URL"""

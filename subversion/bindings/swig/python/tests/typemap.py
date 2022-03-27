@@ -23,6 +23,7 @@ import os
 import tempfile
 
 import svn.core
+import utils
 
 class SubversionTypemapTestCase(unittest.TestCase):
   """Test cases for the SWIG typemaps argments and return values transration"""
@@ -47,6 +48,8 @@ class SubversionTypemapTestCase(unittest.TestCase):
                      "svn_dirent_join() argument component must be"
                      " bytes or str, not int")
 
+  @unittest.skipIf(not utils.IS_PY3 and utils.is_defaultencoding_utf8(),
+                   "'utf-8' codecs of Python 2 accepts any unicode strings")
   def test_char_ptr_in_unicode_exception(self):
     """Check %typemap(in) IN_STRING handles unicode encode error correctly"""
     with self.assertRaises(UnicodeEncodeError):
@@ -67,6 +70,8 @@ class SubversionTypemapTestCase(unittest.TestCase):
                      " must be bytes or str or None, not %s"
                      % self.__class__.__name__)
 
+  @unittest.skipIf(not utils.IS_PY3 and utils.is_defaultencoding_utf8(),
+                   "'utf-8' codecs of Python 2 accepts any unicode strings")
   def test_char_ptr_may_be_null_unicode_exception(self):
     """Check %typemap(in) char *MAY_BE_NULL handles unicode encode error correctly"""
     cfg = svn.core.svn_config_create2(False, False)
@@ -101,6 +106,8 @@ class SubversionTypemapTestCase(unittest.TestCase):
     self.assertEqual(svn.core.svn_prop_diffs(target_props, source_props),
                      expected)
 
+  @unittest.skipIf(not utils.IS_PY3 and utils.is_defaultencoding_utf8(),
+                   "'utf-8' codecs of Python 2 accepts any unicode strings")
   def test_make_string_from_ob_unicode_exception(self):
     """Check make_string_from_ob  handles unicode encode error correctly"""
     source_props = { b'a'      : b'foo',
@@ -112,6 +119,8 @@ class SubversionTypemapTestCase(unittest.TestCase):
     with self.assertRaises(UnicodeEncodeError):
       svn.core.svn_prop_diffs(target_props, source_props)
 
+  @unittest.skipIf(not utils.IS_PY3 and utils.is_defaultencoding_utf8(),
+                   "'utf-8' codecs of Python 2 accepts any unicode strings")
   def test_make_svn_string_from_ob_unicode_exception(self):
     """Check make_string_from_ob handles unicode encode error correctly"""
     source_props = { b'a' : b'foo',
