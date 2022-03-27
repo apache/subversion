@@ -116,11 +116,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-  * r1883838, r1883989, r1886460, r1886582
-    Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
-    Votes:
-      +1: stsp, markphip, hartmannathan
-
  * r1887641, r1890013
    Fix encoding of error message on failure of system() call.
    Justification:
