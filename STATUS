@@ -116,13 +116,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1886708
-   swig-py: Fix dependency of make copy-swig-py target.
-   Justification:
-     Fix a regression introduced between 1.13.0 and 1.14.0.
-   Votes:
-     +1: futatuki, jun66j5
-
   * r1883838, r1883989, r1886460, r1886582
     Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
     Votes:
