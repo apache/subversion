@@ -22,6 +22,7 @@ Candidate changes:
      Increase test coverage.
    Votes:
      +0: danielsh (with appropriate Skip()/XFail() annotations if needed)
+     +1: hartmannathan
 
  * r1883355
    Use the APR-1.4+ API for flushing file contents to disk.
@@ -50,25 +51,6 @@ Candidate changes:
    Votes:
      +1: hartmannathan, stsp
 
-  * r1883838, r1883989, r1886460, r1886582
-    Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
-    Votes:
-      +1: stsp, markphip
-
- * r1887641, r1890013
-   Fix encoding of error message on failure of system() call.
-   Justification:
-     Error messages should be displayed correctly even if non UTF-8 locale.
-   Votes:
-     +1: futatuki, markphip
-
- * r1889629
-   Document how the port number is passed to custom tunnels.
-   Justification:
-     Documentation should be complete.
-   Votes:
-     +1: danielsh, markphip
-
  * r1890223, r1890668, r1890673
    Support building on Win64/ARM64.
    Justification:
@@ -91,15 +73,7 @@ Candidate changes:
     Justification:
       Subversion should not crash. User complained.
     Votes:
-      +1: stsp
-
- * r1897449
-   tests: Include additional information in an error message.
-   Justification:
-     Trivial test harness change that may help investigate unreproducible
-     errors.
-   Votes:
-     +1: danielsh, markphip
+      +1: stsp, hartmannathan
 
  * r1898633
    Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
@@ -170,3 +144,30 @@ Approved changes:
      Fix a regression introduced between 1.13.0 and 1.14.0.
    Votes:
      +1: futatuki, jun66j5
+
+  * r1883838, r1883989, r1886460, r1886582
+    Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
+    Votes:
+      +1: stsp, markphip, hartmannathan
+
+ * r1887641, r1890013
+   Fix encoding of error message on failure of system() call.
+   Justification:
+     Error messages should be displayed correctly even if non UTF-8 locale.
+   Votes:
+     +1: futatuki, markphip, hartmannathan
+
+ * r1889629
+   Document how the port number is passed to custom tunnels.
+   Justification:
+     Documentation should be complete.
+   Votes:
+     +1: danielsh, markphip, hartmannathan
+
+ * r1897449
+   tests: Include additional information in an error message.
+   Justification:
+     Trivial test harness change that may help investigate unreproducible
+     errors.
+   Votes:
+     +1: danielsh, markphip, hartmannathan
