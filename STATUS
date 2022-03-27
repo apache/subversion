@@ -69,7 +69,7 @@ Candidate changes:
     Justification:
       Subversion should not crash. User complained.
     Votes:
-      +1: stsp
+      +1: stsp, hartmannathan
 
  * r1899227
    Don't show unreadable copyfrom paths in 'svn log -v' 
