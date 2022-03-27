@@ -591,10 +591,10 @@ sub parse_entry {
   # summary
   do {
     push @logsummary, shift
-  } until $_[0] =~ /^\s*[A-Z][][\w]*:/ or not defined $_[0];
+  } until not defined $_[0] or $_[0] =~ /^\s*[A-Z][][\w]*:/;
 
   # votes
-  unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
+  unshift @votes, pop until not defined $_[-1] or $_[-1] =~ /^\s*Votes:/;
   pop;
 
   # depends, branch, notes
