@@ -108,13 +108,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1887704
-   Follow up to r1865987, r1866588: Unbreak a msgid.
-   Justification:
-     subversion.pot should be built correctly.
-   Votes:
-     +1: futatuki, jun66j5, markphip
-
  * r1891908
    Fix a bug where «make davautocheck» immediately after configure failed
    hard because of an unbuilt dependency.

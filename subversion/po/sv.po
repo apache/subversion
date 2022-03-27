@@ -6854,8 +6854,8 @@ msgstr "p2l-indexpost för revision r%ld på position %s innehåller ogiltig obj
 
 #: ../libsvn_fs_fs/verify.c:696
 #, c-format
-msgid "p2l index entry for changes in revision r%ld is item %ld of type %d at offset %s"
-msgstr "p2l-indexpost för ändringar i revision r%ld är objekt %ld av typ %d på position %s"
+msgid "p2l index entry for changes in revision r%ld is item %s of type %u at offset %s"
+msgstr "p2l-indexpost för ändringar i revision r%ld är objekt %s av typ %u på position %s"
 
 #: ../libsvn_fs_util/fs-util.c:164
 msgid "Filesystem object has not been opened yet"
