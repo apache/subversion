@@ -116,13 +116,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1889629
-   Document how the port number is passed to custom tunnels.
-   Justification:
-     Documentation should be complete.
-   Votes:
-     +1: danielsh, markphip, hartmannathan
-
  * r1897449
    tests: Include additional information in an error message.
    Justification:
