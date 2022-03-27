@@ -1731,6 +1731,60 @@ def empty_group(sbox):
                                      '--username', svntest.main.wc_author,
                                      sbox.repo_url)
 
+@Skip(svntest.main.is_ra_type_file)
+def log_inaccessible_copyfrom(sbox):
+  "log doesn't leak inaccessible copyfrom paths"
+
+  sbox.build(empty=True)
+  sbox.simple_add_text('secret', 'private')
+  sbox.simple_commit(message='log message for r1')
+  sbox.simple_copy('private', 'public')
+  sbox.simple_commit(message='log message for r2')
+
+  svntest.actions.enable_revprop_changes(sbox.repo_dir)
+  # Remove svn:date and svn:author for predictable output.
+  svntest.actions.run_and_verify_svn(None, [], 'propdel', '--revprop',
+                                     '-r2', 'svn:date', sbox.repo_url)
+  svntest.actions.run_and_verify_svn(None, [], 'propdel', '--revprop',
+                                     '-r2', 'svn:author', sbox.repo_url)
+
+  write_restrictive_svnserve_conf(sbox.repo_dir)
+
+  # First test with blanket access.
+  write_authz_file(sbox,
+                   {"/" : "* = rw"})
+  expected_output = svntest.verify.ExpectedOutput([
+    "------------------------------------------------------------------------\n",
+    "r2 | (no author) | (no date) | 1 line\n",
+    "Changed paths:\n",
+    "   A /public (from /private:1)\n",
+    "\n",
+    "log message for r2\n",
+    "------------------------------------------------------------------------\n",
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-r2', '-v',
+                                     sbox.repo_url)
+
+  # Now test with an inaccessible copy source (/private).
+  write_authz_file(sbox,
+                   {"/" : "* = rw"},
+                   {"/private" : "* ="})
+  expected_output = svntest.verify.ExpectedOutput([
+    "------------------------------------------------------------------------\n",
+    "r2 | (no author) | (no date) | 1 line\n",
+    "Changed paths:\n",
+    # The copy is shown as a plain add with no copyfrom info.
+    "   A /public\n",
+    "\n",
+    # No log message, as the revision is only partially visible.
+    "\n",
+    "------------------------------------------------------------------------\n",
+  ])
+  svntest.actions.run_and_verify_svn(expected_output, [],
+                                     'log', '-r2', '-v',
+                                     sbox.repo_url)
+
 
 ########################################################################
 # Run the tests
@@ -1771,6 +1825,7 @@ test_list = [ None,
               inverted_group_membership,
               group_member_empty_string,
               empty_group,
+              log_inaccessible_copyfrom,
              ]
 serial_only = True
 
