@@ -71,6 +71,15 @@ Candidate changes:
     Votes:
       +1: stsp
 
+ * r1899227
+   Don't show unreadable copyfrom paths in 'svn log -v' 
+   Justification:
+     Makes 'svn log -v' consistent with spec.
+   Branch:
+     1.10.x-r1899227
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
