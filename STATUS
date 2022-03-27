@@ -105,15 +105,16 @@ Veto-blocked changes:
      -1: brane (contains CRLF line endings, needs svn:eol-style + fixup)
                (+1 once that is fixed)
 
-Approved changes:
-=================
-
  * r1897441
    swig-py: Fix cleanup failing in unit tests with Python 3 on Windows.
    Justification:
      Make check-swig-py passed.
    Votes:
      +1: jun66j5, markphip
+     -1: dsahlberg (doesn't apply cleanly, +0 once fixed)
+     
+Approved changes:
+=================
 
  * r1886708
    swig-py: Fix dependency of make copy-swig-py target.
