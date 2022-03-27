@@ -91,6 +91,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan, dsahlberg
 
+ * r1892121
+   Fix an error message when running make davautocheck.
+   Justification:
+     davautocheck should work
+   Votes:
+     +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
