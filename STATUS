@@ -54,7 +54,7 @@ Candidate changes:
      subversion.pot should be built correctly.
    Branch: ^/subversion/branches/1.10.x-r1887704
    Votes:
-     +1: futatuki
+     +1: futatuki, stsp
 
  * r1891908
    Fix a bug where «make davautocheck» immediately after configure failed
