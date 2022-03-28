@@ -43,14 +43,6 @@ Candidate changes:
    Votes:
      +1: stsp, jcorvel
 
-  * r1887704
-   Follow up to r1866587, r1866588: Unbreak a msgid.
-   Justification:
-     subversion.pot should be built correctly.
-   Branch: ^/subversion/branches/1.10.x-r1887704
-   Votes:
-     +1: futatuki, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -85,4 +77,12 @@ Approved changes:
      Small fix.  Prevents spurious hard fails of 'make davautocheck'.
    Votes:
      +1: danielsh, dsahlberg, markphip
+
+ * r1887704
+   Follow up to r1866587, r1866588: Unbreak a msgid.
+   Justification:
+     subversion.pot should be built correctly.
+   Branch: ^/subversion/branches/1.10.x-r1887704
+   Votes:
+     +1: futatuki, stsp, markphip
 
