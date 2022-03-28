@@ -32,17 +32,6 @@ Candidate changes:
    Votes:
      +1: jamessan, stsp
 
- * r1835049, r1882326
-   Fix issue #4762 "authz doesn't combine global and repository rules"
-   Justification:
-     Restore behaviour of SVN 1.9: It is now again possible to override
-     per-path access rules for specific users (and groups) at the global
-     level. Such global rules are overridden by repository-specific rules
-     only if both the user and the path match the repository-specific rule.
-   Branch: ^/subversion/branches/1.10.x-issue4762
-   Votes:
-     +1: stsp, jcorvel
-
 Veto-blocked changes:
 =====================
 
@@ -85,4 +74,15 @@ Approved changes:
    Branch: ^/subversion/branches/1.10.x-r1887704
    Votes:
      +1: futatuki, stsp, markphip
+
+ * r1835049, r1882326
+   Fix issue #4762 "authz doesn't combine global and repository rules"
+   Justification:
+     Restore behaviour of SVN 1.9: It is now again possible to override
+     per-path access rules for specific users (and groups) at the global
+     level. Such global rules are overridden by repository-specific rules
+     only if both the user and the path match the repository-specific rule.
+   Branch: ^/subversion/branches/1.10.x-issue4762
+   Votes:
+     +1: stsp, jcorvel, markphip
 
