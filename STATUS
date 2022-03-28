@@ -44,7 +44,7 @@ Candidate changes:
    Justification:
      Subversion should not crash. User complained.
    Votes:
-     +1: stsp
+     +1: stsp, markphip
      +0: dsahlberg (test suite passes for 'check', 'davautocheck' and
          'svnserveautocheck'. Not enough C experience for a formal
          review)
