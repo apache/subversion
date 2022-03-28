@@ -68,13 +68,6 @@ Candidate changes:
          'svnserveautocheck'. Not enough C experience for a formal
          review)
 
- * r1898633
-   Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
-   Justification:
-     Fix test failure
-   Votes:
-     +1: jamessan
-
  * r1892121
    Fix an error message when running make davautocheck.
    Justification:
@@ -122,3 +115,10 @@ Approved changes:
      1.14.x-r1899227
    Votes:
      +1: hartmannathan, dsahlberg, rhuijben
+
+ * r1898633
+   Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
+   Justification:
+     Fix test failure
+   Votes:
+     +1: jamessan, stsp
