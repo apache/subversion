@@ -60,6 +60,16 @@ Veto-blocked changes:
      +1: jun66j5, markphip
      -1: dsahlberg (doesn't apply cleanly, +0 once fixed)
 
+* r1899227
+   Don't show unreadable copyfrom paths in 'svn log -v' 
+   Justification:
+     Makes 'svn log -v' consistent with spec.
+   Branch:
+     1.14.x-r1899227
+   Votes:
+     +1: hartmannathan, dsahlberg, rhuijben
+     -1: markphip (doesn't apply cleanly, +1 once fixed)
+
 Approved changes:
 =================
 
@@ -70,15 +80,6 @@ Approved changes:
     Votes:
       +1: stsp, hartmannathan, rhuijben
  
- * r1899227
-   Don't show unreadable copyfrom paths in 'svn log -v' 
-   Justification:
-     Makes 'svn log -v' consistent with spec.
-   Branch:
-     1.14.x-r1899227
-   Votes:
-     +1: hartmannathan, dsahlberg, rhuijben
-
  * r1898633
    Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
    Justification:
