@@ -43,10 +43,11 @@ Candidate changes:
    Votes:
      +1: stsp, jcorvel
 
- * r1883838, r1883989, r1886460, r1886582
+ * r1883838, r1883989, r1886460, r1886582, r1892121
    Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
    Votes:
-     +1: stsp
+     +1: stsp (without r1892121)
+     +1: markphip
 
   * r1887704
    Follow up to r1866587, r1866588: Unbreak a msgid.
