@@ -32,18 +32,6 @@ Candidate changes:
    Votes:
      +1: futatuki, stsp
 
- * r1881534
-   Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
-   Justification:
-     Unblocks cross-compiling SVN.
-   Notes:
-     Replacement for veto-blocked r1881534 group (see below) without the
-     inconsistent line endings that instigated said veto blockage.
-   Branch:
-     1.14.x-r1881534-no-crlf
-   Votes:
-     +1: hartmannathan, stsp
-
  * r1890223, r1890668, r1890673
    Support building on Win64/ARM64.
    Justification:
@@ -63,17 +51,6 @@ Candidate changes:
 
 Veto-blocked changes:
 =====================
-
- * r1881534, r1883388
-   Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
-   Justification:
-     Unblocks cross-compiling SVN.
-   Notes:
-     Replacement nomination above (the 1.14.x-r1881534-no-crlf branch)
-   Votes:
-     +1: hartmannathan
-     -1: brane (contains CRLF line endings, needs svn:eol-style + fixup)
-               (+1 once that is fixed)
 
  * r1897441
    swig-py: Fix cleanup failing in unit tests with Python 3 on Windows.
@@ -122,3 +99,15 @@ Approved changes:
      Reduce code duplication between APR and SVN.
    Votes:
      +1: brane, jun66j5, markphip
+
+ * r1881534
+   Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
+   Justification:
+     Unblocks cross-compiling SVN.
+   Notes:
+     Replacement for veto-blocked r1881534 group (see below) without the
+     inconsistent line endings that instigated said veto blockage.
+   Branch:
+     1.14.x-r1881534-no-crlf
+   Votes:
+     +1: hartmannathan, stsp, markphip
