@@ -68,28 +68,12 @@ Candidate changes:
          'svnserveautocheck'. Not enough C experience for a formal
          review)
 
-  * r1894734
-    Fix issue #4880, "Use-after-free of object-pools when running in httpd"
-    Justification:
-      Subversion should not crash. User complained.
-    Votes:
-      +1: stsp, hartmannathan
-
  * r1898633
    Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
    Justification:
      Fix test failure
    Votes:
      +1: jamessan
-
- * r1899227
-   Don't show unreadable copyfrom paths in 'svn log -v' 
-   Justification:
-     Makes 'svn log -v' consistent with spec.
-   Branch:
-     1.14.x-r1899227
-   Votes:
-     +1: hartmannathan, dsahlberg
 
  * r1892121
    Fix an error message when running make davautocheck.
@@ -122,3 +106,19 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+  * r1894734
+    Fix issue #4880, "Use-after-free of object-pools when running in httpd"
+    Justification:
+      Subversion should not crash. User complained.
+    Votes:
+      +1: stsp, hartmannathan, rhuijben
+ 
+ * r1899227
+   Don't show unreadable copyfrom paths in 'svn log -v' 
+   Justification:
+     Makes 'svn log -v' consistent with spec.
+   Branch:
+     1.14.x-r1899227
+   Votes:
+     +1: hartmannathan, dsahlberg, rhuijben
