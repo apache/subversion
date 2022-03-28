@@ -25,13 +25,6 @@ Candidate changes:
      +1: stsp
      +1: julianfoad (without r1875188,r1875189)
 
- * r1875602
-   Remove incorrect include paths from svn_cv_ruby_includes.
-   Justification:
-     Fixes building with latest Ruby
-   Votes:
-     +1: jamessan, stsp
-
 Veto-blocked changes:
 =====================
 
@@ -86,3 +79,9 @@ Approved changes:
    Votes:
      +1: stsp, jcorvel, markphip
 
+ * r1875602
+   Remove incorrect include paths from svn_cv_ruby_includes.
+   Justification:
+     Fixes building with latest Ruby
+   Votes:
+     +1: jamessan, stsp, markphip
