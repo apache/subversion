@@ -610,7 +610,7 @@ svn_dirent_create(apr_pool_t *result_pool);
  * keywords (e.g., $NetBSD$).  See
  *
  * @verbatim
-      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8921
+      https://svn.haxx.se/dev/archive-2001-12/0479.shtml
       =====
       From: "Jonathan M. Manning" <jmanning@alisa-jon.net>
       To: dev@subversion.tigris.org
@@ -621,7 +621,7 @@ svn_dirent_create(apr_pool_t *result_pool);
  * and Eric Gillespie's support of same:
  *
  * @verbatim
-      http://subversion.tigris.org/servlets/ReadMsg?list=dev&msgNo=8757
+      https://svn.haxx.se/dev/archive-2001-12/0315.shtml
       =====
       From: "Eric Gillespie, Jr." <epg@pretzelnet.org>
       To: dev@subversion.tigris.org
@@ -878,7 +878,7 @@ typedef struct svn_log_entry_t
    * value as changed_paths for compatibility with users assuming an older
    * version.
    *
-   * @note See http://svn.haxx.se/dev/archive-2010-08/0362.shtml for
+   * @note See https://svn.haxx.se/dev/archive-2010-08/0362.shtml for
    * further explanation.
    *
    * @since New in 1.6.
