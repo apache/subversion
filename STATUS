@@ -68,13 +68,6 @@ Candidate changes:
          'svnserveautocheck'. Not enough C experience for a formal
          review)
 
- * r1892121
-   Fix an error message when running make davautocheck.
-   Justification:
-     davautocheck should work
-   Votes:
-     +1: dsahlberg, markphip
-
 Veto-blocked changes:
 =====================
 
@@ -122,3 +115,10 @@ Approved changes:
      Fix test failure
    Votes:
      +1: jamessan, stsp
+
+ * r1892121
+   Fix an error message when running make davautocheck.
+   Justification:
+     davautocheck should work
+   Votes:
+     +1: dsahlberg, markphip, stsp
