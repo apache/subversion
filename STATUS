@@ -30,10 +30,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1875602
-   Remove incorrect include paths from svn_cv_ruby_includes.
-   Justification:
-     Fixes building with latest Ruby
-   Votes:
-     +1: jamessan, stsp, markphip

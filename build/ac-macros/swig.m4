@@ -162,7 +162,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_CACHE_CHECK([for Ruby include path], [svn_cv_ruby_includes],[
     if test -d "$rbconfig_rubyhdrdir"; then
       dnl Ruby >=1.9
-      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir -I$rbconfig_rubyhdrdir/ruby -I$rbconfig_rubyhdrdir/ruby/backward"
+      svn_cv_ruby_includes="-I. -I$rbconfig_rubyhdrdir"
       if test -d "$rbconfig_rubyarchhdrdir"; then
         dnl Ruby >=2.0
         svn_cv_ruby_includes="$svn_cv_ruby_includes -I$rbconfig_rubyarchhdrdir"
