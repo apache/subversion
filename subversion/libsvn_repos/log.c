@@ -337,42 +337,36 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       if (   (change->change_kind == svn_fs_path_change_add)
           || (change->change_kind == svn_fs_path_change_replace))
         {
-          const char *copyfrom_path = change->copyfrom_path;
-          svn_revnum_t copyfrom_rev = change->copyfrom_rev;
-
           /* the following is a potentially expensive operation since on FSFS
              we will follow the DAG from ROOT to PATH and that requires
              actually reading the directories along the way. */
           if (!change->copyfrom_known)
             {
-              SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+              SVN_ERR(svn_fs_copied_from(&change->copyfrom_rev, &change->copyfrom_path,
                                         root, path, iterpool));
               change->copyfrom_known = TRUE;
             }
 
-          if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+          if (change->copyfrom_path && SVN_IS_VALID_REVNUM(change->copyfrom_rev))
             {
-              svn_boolean_t readable = TRUE;
-
               if (callbacks->authz_read_func)
                 {
                   svn_fs_root_t *copyfrom_root;
+                  svn_boolean_t readable;
 
                   SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
-                                               copyfrom_rev, iterpool));
+                                               change->copyfrom_rev, iterpool));
                   SVN_ERR(callbacks->authz_read_func(&readable,
                                                      copyfrom_root,
-                                                     copyfrom_path,
+                                                     change->copyfrom_path,
                                                      callbacks->authz_read_baton,
                                                      iterpool));
                   if (! readable)
-                    found_unreadable = TRUE;
-                }
-
-              if (readable)
-                {
-                  change->copyfrom_path = copyfrom_path;
-                  change->copyfrom_rev = copyfrom_rev;
+                    {
+                      found_unreadable = TRUE;
+                      change->copyfrom_path = NULL;
+                      change->copyfrom_rev = SVN_INVALID_REVNUM;
+                    }
                 }
             }
         }

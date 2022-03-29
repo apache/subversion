@@ -31,15 +31,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1899227
-   Don't show unreadable copyfrom paths in 'svn log -v' 
-   Justification:
-     Makes 'svn log -v' consistent with spec.
-   Branch:
-     1.10.x-r1899227
-   Votes:
-     +1: hartmannathan, dsahlberg, stsp
-
  * r1883838, r1883989, r1886460, r1886582, r1892121
    Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref)
    Votes:
