@@ -61,7 +61,7 @@ Approved changes:
       1.14.x-r1899227
     Votes:
       +1: hartmannathan, dsahlberg, rhuijben
- 
+
  * r1898633
    Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
    Justification:
