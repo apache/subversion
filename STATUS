@@ -79,13 +79,6 @@ Approved changes:
    Votes:
      +1: jamessan, stsp
 
- * r1883355
-   Use the APR-1.4+ API for flushing file contents to disk.
-   Justification:
-     Reduce code duplication between APR and SVN.
-   Votes:
-     +1: brane, jun66j5, markphip
-
  * r1881534
    Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
    Justification:
