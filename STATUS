@@ -31,13 +31,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1894734
-   Fix issue #4880, "Use-after-free of object-pools when running in httpd"
-   Justification:
-     Subversion should not crash. User complained.
-   Votes:
-     +1: stsp, hartmannathan, markphip
-
  * r1891908
    Fix a bug where «make davautocheck» immediately after configure failed
    hard because of an unbuilt dependency.
