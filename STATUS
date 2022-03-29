@@ -31,14 +31,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1887704
-   Follow up to r1866587, r1866588: Unbreak a msgid.
-   Justification:
-     subversion.pot should be built correctly.
-   Branch: ^/subversion/branches/1.10.x-r1887704
-   Votes:
-     +1: futatuki, stsp, markphip
-
  * r1835049, r1882326
    Fix issue #4762 "authz doesn't combine global and repository rules"
    Justification:
