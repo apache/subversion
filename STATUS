@@ -39,16 +39,6 @@ Candidate changes:
    votes:
      +1: rhuijben
 
- * r1892470, r1892471, r1892541
-   Fix an assertion failure triggered by the conflict resolver.
-   Justification:
-     Subversion should not crash. User complained.
-   Votes:
-     +1: stsp, markphip
-     +0: dsahlberg (test suite passes for 'check', 'davautocheck' and
-         'svnserveautocheck'. Not enough C experience for a formal
-         review)
-
 Veto-blocked changes:
 =====================
 
@@ -90,3 +80,13 @@ Approved changes:
      1.14.x-r1881534-no-crlf
    Votes:
      +1: hartmannathan, stsp, markphip
+
+ * r1892470, r1892471, r1892541
+   Fix an assertion failure triggered by the conflict resolver.
+   Justification:
+     Subversion should not crash. User complained.
+   Votes:
+     +1: stsp, markphip, rhuijben
+     +0: dsahlberg (test suite passes for 'check', 'davautocheck' and
+         'svnserveautocheck'. Not enough C experience for a formal
+         review)
