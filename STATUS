@@ -79,13 +79,6 @@ Approved changes:
    Votes:
      +1: jamessan, stsp
 
- * r1892121
-   Fix an error message when running make davautocheck.
-   Justification:
-     davautocheck should work
-   Votes:
-     +1: dsahlberg, markphip, stsp
-
  * r1883355
    Use the APR-1.4+ API for flushing file contents to disk.
    Justification:

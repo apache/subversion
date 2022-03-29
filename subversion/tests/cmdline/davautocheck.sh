@@ -547,10 +547,9 @@ Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
 
 <Location /svn-test-work/repositories>
 __EOF__
-location_common() {
+location_common_without_authz() {
 cat >> "$HTTPD_CFG" <<__EOF__
   DAV               svn
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
@@ -558,6 +557,12 @@ cat >> "$HTTPD_CFG" <<__EOF__
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   SVNListParentPath On
   SVNBlockRead      ${BLOCK_READ_SETTING}
+__EOF__
+}
+location_common() {
+location_common_without_authz
+cat >> "$HTTPD_CFG" <<__EOF__
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
 __EOF__
 }
 location_common
@@ -612,7 +617,7 @@ cat >> "$HTTPD_CFG" <<__EOF__
 </Location>
 <Location /authz-test-work/in-repos-authz>
 __EOF__
-location_common
+location_common_without_authz
 cat >> "$HTTPD_CFG" <<__EOF__
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
   Require           valid-user
