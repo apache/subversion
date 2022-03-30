@@ -54,7 +54,7 @@ are found to be locally modified and currently "dehydrated".
 
   - `svn cat` (default case: base version)
   - `svn diff` (default case: base against working)
-  - `svn resolve` (also conflicts resolver in `merge`, `update`)
+  - `svn resolve` (some cases; also conflicts resolver in `merge`, `update`)
   - `svn revert`
 
 Notes on previously *offline* operations,:
@@ -65,17 +65,19 @@ Notes on previously *offline* operations,:
   - This contact may be needed as a result of a file being modified that is
     not of interest in the current operation, as the "sync scope" is a
     superset of the pristines that this operation will actually need.
-  - The "hydrating" phase may take a long time, and (currently) gives no
-    progress feedback, before the operation begins its usual (previous)
-    behaviour.
-
-[TODO: update that if we add progress feedback]
+  - The "hydrating" phase may take a long time, before the operation begins
+    its usual (previous) behaviour. To help the user know why there is a
+    delay, most commands will output progress notifications, "Fetching text
+    bases ..." with one dot per file fetched. However, the data-output
+    commands 'diff' and 'cat' give no progress feedback. (See issue #4897
+    for any updates on this.)
 
 Each of the following operations, that previously were *online* operations,
 also will now require the same.
 
   - `svn diff` (comparing repository to WC)
   - `svn merge`
+  - `svn resolve` (some cases; also conflicts resolver in `merge`, `update`)
   - `svn switch`
   - `svn update`
   - `svn checkout --force` (similar to update)
