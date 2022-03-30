@@ -127,6 +127,16 @@ svn_sort__array_insert(apr_array_header_t *array,
                        const void *new_element,
                        int insert_index);
 
+/* Like svn_sort__array_insert() but raise an error if @a insert_index
+ * is less than 0 or greater than the length of the array.
+ *
+ * @note Private. For use by Subversion's own code only.
+ */
+svn_error_t *
+svn_sort__array_insert2(apr_array_header_t *array,
+                        const void *new_element,
+                        int insert_index);
+
 
 /* Remove @a elements_to_delete elements starting at @a delete_index from the
  * array @a arr. If @a delete_index is not a valid element of @a arr,
@@ -140,6 +150,16 @@ void
 svn_sort__array_delete(apr_array_header_t *arr,
                        int delete_index,
                        int elements_to_delete);
+
+/* Like svn_sort__array_delete() but raise an error if attempting
+ * to delete a range of elements that goes out of bounds of the array.
+ *
+ * @note Private. For use by Subversion's own code only.
+ */
+svn_error_t *
+svn_sort__array_delete2(apr_array_header_t *arr,
+                        int delete_index,
+                        int elements_to_delete);
 
 /* Reverse the order of elements in @a array, in place.
  *

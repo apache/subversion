@@ -5951,7 +5951,7 @@ get_most_inclusive_rev(const apr_array_header_t *children_with_mergeinfo,
    remaining_ranges is inclusive of END_REV, Slice the first range in
    to two at END_REV. All the allocations are persistent and allocated
    from POOL. */
-static void
+static svn_error_t *
 slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
                        svn_boolean_t is_rollback, svn_revnum_t end_rev,
                        apr_pool_t *pool)
@@ -5981,10 +5981,12 @@ slice_remaining_ranges(apr_array_header_t *children_with_mergeinfo,
               split_range2->start = end_rev;
               APR_ARRAY_IDX(child->remaining_ranges, 0,
                             svn_merge_range_t *) = split_range1;
-              svn_sort__array_insert(child->remaining_ranges, &split_range2, 1);
+              SVN_ERR(svn_sort__array_insert2(child->remaining_ranges,
+                                              &split_range2, 1));
             }
         }
     }
+  return SVN_NO_ERROR;
 }
 
 /* Helper for do_directory_merge().
@@ -6106,7 +6108,7 @@ get_child_with_mergeinfo(const apr_array_header_t *children_with_mergeinfo,
        out of order and then sort afterwards. (One caller is doing a qsort
        after calling this anyway.)
  */
-static void
+static svn_error_t *
 insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
                       const svn_client__merge_path_t *insert_element,
                       apr_pool_t *pool)
@@ -6120,7 +6122,9 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
                                   compare_merge_path_t_as_paths);
 
   new_element = svn_client__merge_path_dup(insert_element, pool);
-  svn_sort__array_insert(children_with_mergeinfo, &new_element, insert_index);
+  SVN_ERR(svn_sort__array_insert2(children_with_mergeinfo,
+                                  &new_element, insert_index));
+  return SVN_NO_ERROR;
 }
 
 /* Helper for get_mergeinfo_paths().
@@ -6181,7 +6185,7 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
       parent->missing_child = child->absent;
       parent->switched_child = child->switched;
       /* Insert PARENT into CHILDREN_WITH_MERGEINFO. */
-      insert_child_to_merge(children_with_mergeinfo, parent, pool);
+      SVN_ERR(insert_child_to_merge(children_with_mergeinfo, parent, pool));
       /* Increment for loop index so we don't process the inserted element. */
       (*curr_index)++;
     } /*(parent == NULL) */
@@ -6218,8 +6222,8 @@ insert_parent_and_sibs_of_sw_absent_del_subtree(
 
           sibling_of_missing = svn_client__merge_path_create(child_abspath,
                                                              pool);
-          insert_child_to_merge(children_with_mergeinfo, sibling_of_missing,
-                                pool);
+          SVN_ERR(insert_child_to_merge(children_with_mergeinfo,
+                                        sibling_of_missing, pool));
         }
     }
 
@@ -6560,8 +6564,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                svn_client__merge_path_t *switched_child =
                  svn_client__merge_path_create(wc_path, result_pool);
                switched_child->switched = TRUE;
-               insert_child_to_merge(children_with_mergeinfo, switched_child,
-                                     result_pool);
+               SVN_ERR(insert_child_to_merge(children_with_mergeinfo,
+                                             switched_child, result_pool));
              }
         }
     }
@@ -6613,8 +6617,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
             }
 
           if (new_shallow_child)
-            insert_child_to_merge(children_with_mergeinfo, shallow_child,
-                                  result_pool);
+            SVN_ERR(insert_child_to_merge(children_with_mergeinfo,
+                                          shallow_child, result_pool));
        }
     }
 
@@ -6643,8 +6647,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                svn_client__merge_path_t *absent_child =
                  svn_client__merge_path_create(wc_path, result_pool);
                absent_child->absent = TRUE;
-               insert_child_to_merge(children_with_mergeinfo, absent_child,
-                                     result_pool);
+               SVN_ERR(insert_child_to_merge(children_with_mergeinfo,
+                                             absent_child, result_pool));
              }
         }
     }
@@ -6657,8 +6661,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
       svn_client__merge_path_t *target_child =
         svn_client__merge_path_create(target->abspath,
                                       result_pool);
-      insert_child_to_merge(children_with_mergeinfo, target_child,
-                            result_pool);
+      SVN_ERR(insert_child_to_merge(children_with_mergeinfo, target_child,
+                                    result_pool));
     }
 
   /* Case 8: Path is an immediate *directory* child of
@@ -6701,8 +6705,8 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                       && depth == svn_depth_immediates)
                     immediate_child->immediate_child_dir = TRUE;
 
-                  insert_child_to_merge(children_with_mergeinfo,
-                                        immediate_child, result_pool);
+                  SVN_ERR(insert_child_to_merge(children_with_mergeinfo,
+                                                immediate_child, result_pool));
                 }
             }
         }
@@ -6794,9 +6798,9 @@ get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
                   child_of_noninheritable =
                     svn_client__merge_path_create(child_abspath, result_pool);
                   child_of_noninheritable->child_of_noninheritable = TRUE;
-                  insert_child_to_merge(children_with_mergeinfo,
-                                        child_of_noninheritable,
-                                        result_pool);
+                  SVN_ERR(insert_child_to_merge(children_with_mergeinfo,
+                                                child_of_noninheritable,
+                                                result_pool));
                   if (!dry_run && same_repos)
                     {
                       svn_mergeinfo_t mergeinfo;
@@ -7220,7 +7224,7 @@ normalize_merge_sources_internal(apr_array_header_t **merge_sources_p,
                   new_segment->path = original_repos_relpath;
                   new_segment->range_start = original_revision;
                   new_segment->range_end = original_revision;
-                  svn_sort__array_insert(segments, &new_segment, 0);
+                  SVN_ERR(svn_sort__array_insert2(segments, &new_segment, 0));
                 }
             }
         }
@@ -7969,7 +7973,8 @@ process_children_with_new_mergeinfo(merge_cmd_baton_t *merge_b,
               /* Set the path's remaining_ranges equal to its parent's. */
               new_child->remaining_ranges = svn_rangelist_dup(
                  parent->remaining_ranges, pool);
-              insert_child_to_merge(children_with_mergeinfo, new_child, pool);
+              SVN_ERR(insert_child_to_merge(children_with_mergeinfo,
+                                            new_child, pool));
             }
         }
     }
@@ -9501,8 +9506,9 @@ do_mergeinfo_aware_dir_merge(svn_mergeinfo_catalog_t result_catalog,
 
               svn_pool_clear(iterpool);
 
-              slice_remaining_ranges(children_with_mergeinfo,
-                                     is_rollback, end_rev, scratch_pool);
+              SVN_ERR(slice_remaining_ranges(children_with_mergeinfo,
+                                             is_rollback, end_rev,
+                                             scratch_pool));
 
               /* Reset variables that must be reset for every drive */
               merge_b->notify_begin.last_abspath = NULL;

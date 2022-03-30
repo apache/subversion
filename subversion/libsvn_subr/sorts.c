@@ -34,6 +34,8 @@
 #include "svn_error.h"
 #include "private/svn_sorts_private.h"
 
+#include "svn_private_config.h"
+
 
 
 /*** svn_sort__hash() ***/
@@ -324,6 +326,20 @@ svn_sort__array_insert(apr_array_header_t *array,
   memcpy(new_position, new_element, array->elt_size);
 }
 
+svn_error_t *
+svn_sort__array_insert2(apr_array_header_t *array,
+                        const void *new_element,
+                        int insert_index)
+{
+  if (insert_index < 0 || insert_index > array->nelts)
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("svn_sort__array_insert2: Attempted insert "
+                               "at index %d in array length %d"),
+                             insert_index, array->nelts);
+  svn_sort__array_insert(array, new_element, insert_index);
+  return SVN_NO_ERROR;
+}
+
 void
 svn_sort__array_delete(apr_array_header_t *arr,
                        int delete_index,
@@ -347,6 +363,23 @@ svn_sort__array_delete(apr_array_header_t *arr,
       /* Delete the last ELEMENTS_TO_DELETE elements. */
       arr->nelts -= elements_to_delete;
     }
+}
+
+svn_error_t *
+svn_sort__array_delete2(apr_array_header_t *arr,
+                        int delete_index,
+                        int elements_to_delete)
+{
+  if (!(delete_index >= 0
+        && delete_index < arr->nelts
+        && elements_to_delete > 0
+        && (arr->nelts - delete_index) >= elements_to_delete))
+    return svn_error_createf(SVN_ERR_INCORRECT_PARAMS, NULL,
+                             _("svn_sort__array_delete2: Attempted delete "
+                               "at index %d, %d elements, in array length %d"),
+                             delete_index, elements_to_delete, arr->nelts);
+  svn_sort__array_delete(arr, delete_index, elements_to_delete);
+  return SVN_NO_ERROR;
 }
 
 void
