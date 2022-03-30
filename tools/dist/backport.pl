@@ -9,11 +9,11 @@ use v5.10.0; # needed for $^V
 # experimental and "subject to change" in v5.18 (see perl5180delta).  Every
 # use of it now triggers a warning.
 #
-# As of Perl v5.30.0, the semantics of given/when provided by Perl are
+# As of Perl v5.34.0, the semantics of given/when provided by Perl are
 # compatible with those expected by the script, so disable the warning for
 # those Perls.  But don't try to disable the the warning category on Perls
 # that don't know that category, since that breaks compilation.
-no if (v5.17.0 le $^V and $^V le v5.30.0),
+no if (v5.17.0 le $^V and $^V le v5.34.0),
    warnings => 'experimental::smartmatch';
 
 # Licensed to the Apache Software Foundation (ASF) under one
@@ -591,10 +591,10 @@ sub parse_entry {
   # summary
   do {
     push @logsummary, shift
-  } until $_[0] =~ /^\s*[A-Z][][\w]*:/ or not defined $_[0];
+  } until not defined $_[0] or $_[0] =~ /^\s*[A-Z][][\w]*:/;
 
   # votes
-  unshift @votes, pop until $_[-1] =~ /^\s*Votes:/ or not defined $_[-1];
+  unshift @votes, pop until not defined $_[-1] or $_[-1] =~ /^\s*Votes:/;
   pop;
 
   # depends, branch, notes

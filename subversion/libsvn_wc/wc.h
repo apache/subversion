@@ -182,6 +182,7 @@ extern "C" {
  */
 /* IMPORTANT: Update the implementation of svn_client_default_wc_version()
               and svn_client_get_wc_formats_supported()
+              and svntest.main.wc_format()
               whenever you change this value! */
 #define SVN_WC__SUPPORTED_VERSION 31
 

@@ -84,8 +84,10 @@ Step 1: [Optional] Install a suitable version of SWIG
       following notes:
       - SWIG 1.3.24 and later 1.3.x may work, but we do not test these
         versions on our latest source code.
-      - For Python 2 bindings, SWIG 4.0.0 or later is not supported.
-      - For Python 3 bindings, SWIG 3.0.10 or later is required.
+      - For Python 3 bindings, use SWIG 3.0.10 or later. (SWIG 4.0.0
+        or later is supported as well.)
+      - For Python 2 bindings, use SWIG 2.x-3.x. (SWIG 4.0.0 or later
+        is not supported as it lacks the '-classic' option.)
       - Note that SWIG 3.0.9 has some trouble with Python support.
         (See https://sourceforge.net/p/swig/news/2016/06/swig-3010-released/)
       - For Perl 5.16 and later, SWIG 2.0.8 or later is required.
@@ -171,12 +173,11 @@ Step 3:  Install Specific Language Bindings
 
 *  Python
 
-   1.  (Optional) If you want to build Python bindings for a version of
-       Python than other than that the prebuilt bindings C sources target
-       (e.g., if you use the Subversion distribution tarball but want to build
-       Python 2 bindings), run 'make clean-swig-py' from the top of the
-       Subversion build tree, to ensure not to use incompatible version of
-       bindings source files.
+   1.  (Optional) Run 'make clean-swig-py' from the top of the Subversion
+       build tree.  This will clean any prebuilt or previously built bindings
+       to avoid a mixture of incompatible bindings source files (e.g., if you
+       use the Subversion distribution tarball but want to build Python 2
+       bindings).
 
    2.  Run 'make swig-py' from the top of the Subversion build tree,
        to build the bindings.

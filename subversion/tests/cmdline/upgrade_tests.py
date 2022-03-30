@@ -102,13 +102,19 @@ def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
   shutil.move(os.path.join(extract_dir, dir), sbox.repo_dir)
 
 def check_format(sbox, expected_format):
-  found_format = sbox.read_wc_format()
-  if found_format != expected_format:
+  assert isinstance(expected_format, int)
+  formats = sbox.read_wc_formats()
+  if formats[''] != expected_format:
     raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
-                          (found_format, expected_format, sbox.wc_dir))
+                          (formats[''], expected_format, sbox.wc_dir))
 
-def expect_pristines_all_present(sbox):
-  return sbox.read_wc_format() <= 31
+def check_formats(sbox, expected_formats):
+  assert isinstance(expected_formats, dict)
+  formats = sbox.read_wc_formats()
+  ### If we ever need better error messages here, reuse run_and_verify_info().
+  if formats != expected_formats:
+    raise svntest.Failure("found format '%s'; expected '%s'; in wc '%s'" %
+                          (formats, expected_formats, sbox.wc_dir))
 
 def check_pristine(sbox, files):
   for file in files:
@@ -117,10 +123,10 @@ def check_pristine(sbox, files):
     try:
       file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
     except (FileNotFoundError, svntest.Failure): # FileNotFoundError
-      if expect_pristines_all_present(sbox):
-        raise
-      # Pristine missing; pristines optional so ignore it
-      continue
+      if sbox.pristines_on_demand_enabled(''):
+        # Pristine missing; pristines optional so ignore it
+        continue
+      raise
     if (file_text != file_pristine):
       raise svntest.Failure("pristine mismatch for '%s'" % (file))
 
@@ -342,7 +348,18 @@ def upgrade_with_externals(sbox):
                                      'upgrade', sbox.wc_dir)
 
   # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  check_formats(sbox,
+      {relpath: get_current_format()
+       for relpath in (
+         '',
+         'A/D/exdir_A',
+         'A/D/exdir_A/G',
+         'A/D/exdir_A/H',
+         'A/D/x',
+         'A/C/exdir_G',
+         'A/C/exdir_H',
+       )})
+
   check_pristine(sbox, ['iota', 'A/mu',
                         'A/D/x/lambda', 'A/D/x/E/alpha'])
 
@@ -477,13 +494,30 @@ def basic_upgrade_1_0(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
-  # And the separate working copy below COPIED or check_format() fails
+
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy (implicitly)
+  current_format = get_current_format()
+  check_formats(sbox, {'': current_format})
+
+  # And the separate working copy below COPIED
+  #
+  # ### This was originally added in r919021, during 1.7 development, because
+  # ### check_format() recursed into the separate working copy.
+  # ### 
+  # ### The remainder of the test passes if this call is removed.
+  # ### 
+  # ### So, for now, this call serves only as a smoke test, to confirm that the
+  # ### upgrade returns 0.  However:
+  # ###
+  # ### TODO: Verify the results of this upgrade
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
 
-  # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  # Actually check the format number of the upgraded working copy and of
+  # the separate working copy
+  check_formats(sbox, {k: current_format for k in ('', 'COPIED/G')})
 
   # Now check the contents of the working copy
   # #### This working copy is not just a basic tree,
@@ -1484,13 +1518,31 @@ def upgrade_1_0_with_externals(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
-  # And the separate working copy below COPIED or check_format() fails
+
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy (implicitly)
+  current_format = get_current_format()
+  check_formats(sbox, {'': current_format, 'exdir_G': current_format})
+
+  # And the separate working copy below COPIED
+  #
+  # ### This was originally added in r1702474, during 1.10 development, because
+  # ### check_format() recursed into the separate working copy.  It was copied
+  # ### from basic_upgrade_1_0() above.
+  # ### 
+  # ### The remainder of the test passes if this call is removed.
+  # ### 
+  # ### So, for now, this call serves only as a smoke test, to confirm that the
+  # ### upgrade returns 0.  However:
+  # ###
+  # ### TODO: Verify the results of this upgrade
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
 
-  # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy
+  check_formats(sbox, {k: current_format for k in ('', 'exdir_G', 'COPIED/G')})
 
   # Now check the contents of the working copy
   # #### This working copy is not just a basic tree,
