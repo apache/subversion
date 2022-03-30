@@ -53,6 +53,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1890231
+   README: Document new home of our IRC channels at libera.chat
+   Justification:
+     Don't send users to the wrong place!
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
