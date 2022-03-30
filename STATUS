@@ -46,6 +46,13 @@ Candidate changes:
    votes:
      +1: markphip
 
+ * r1896609
+   Bumps copyright date to 2022
+   Justification:
+     Show correct year in output.
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
