@@ -3014,12 +3014,12 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
                                                       deleted_basename,
                                                       conflict->pool);
   details->moves = moves;
+  details->wc_move_targets = apr_hash_make(conflict->pool);
   if (details->moves != NULL)
     {
       apr_pool_t *iterpool;
       int i;
 
-      details->wc_move_targets = apr_hash_make(conflict->pool);
       iterpool = svn_pool_create(scratch_pool);
       for (i = 0; i < details->moves->nelts; i++)
         {
@@ -8583,13 +8583,20 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
        * Merge from the local move's target location to the
        * incoming move's target location. */
       struct conflict_tree_local_missing_details *local_details;
-      apr_array_header_t *moves;
 
       local_details = conflict->tree_conflict_local_details;
-      moves = svn_hash_gets(local_details->wc_move_targets,
-                            local_details->move_target_repos_relpath);
-      merge_source_abspath =
-        APR_ARRAY_IDX(moves, local_details->wc_move_target_idx, const char *);
+      if (local_details->wc_move_targets &&
+          local_details->move_target_repos_relpath)
+        {
+          apr_array_header_t *moves;
+          moves = svn_hash_gets(local_details->wc_move_targets,
+                                local_details->move_target_repos_relpath);
+          merge_source_abspath =
+            APR_ARRAY_IDX(moves, local_details->wc_move_target_idx,
+            const char *);
+        }
+      else
+        merge_source_abspath = victim_abspath;
     }
   else
     merge_source_abspath = victim_abspath;
@@ -9769,7 +9776,7 @@ resolve_local_move_dir_merge(svn_client_conflict_option_t *option,
             NULL, conflict, scratch_pool,
             scratch_pool));
 
-  if (details->wc_move_targets)
+  if (details->wc_move_targets && details->move_target_repos_relpath)
     {
       apr_array_header_t *moves;
 
@@ -10718,7 +10725,8 @@ describe_incoming_move_merge_conflict_option(
           struct conflict_tree_incoming_delete_details *details;
 
           details = conflict->tree_conflict_incoming_details;
-          if (details->wc_move_targets)
+          if (details->wc_move_targets &&
+              details->move_target_repos_relpath)
             {
               apr_array_header_t *moves;
 
@@ -12251,7 +12259,7 @@ svn_client_conflict_option_get_moved_to_abspath_candidates2(
 
       *possible_moved_to_abspaths = apr_array_make(result_pool, 1,
                                                    sizeof (const char *));
-      if (details->wc_move_targets)
+      if (details->wc_move_targets && details->move_target_repos_relpath)
         {
           apr_array_header_t *move_target_wc_abspaths;
           move_target_wc_abspaths =
@@ -12445,7 +12453,7 @@ svn_client_conflict_option_set_moved_to_abspath2(
                 svn_dirent_skip_ancestor(wcroot_abspath, preferred_sibling),
                 scratch_pool));
         }
-      else if (details->wc_move_targets)
+      else if (details->wc_move_targets && details->move_target_repos_relpath)
        {
           apr_array_header_t *move_target_wc_abspaths;
           move_target_wc_abspaths =

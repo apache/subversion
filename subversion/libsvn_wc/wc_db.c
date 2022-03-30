@@ -16644,7 +16644,7 @@ svn_wc__db_find_working_nodes_with_basename(apr_array_header_t **local_abspaths,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
             STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND));
   SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, basename,
-                            kind_map, kind));
+                            kind_map_none, kind));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   *local_abspaths = apr_array_make(result_pool, 1, sizeof(const char *));
@@ -16688,7 +16688,7 @@ svn_wc__db_find_copies_of_repos_path(apr_array_header_t **local_abspaths,
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
             STMT_SELECT_COPIES_OF_REPOS_RELPATH));
   SVN_ERR(svn_sqlite__bindf(stmt, "ist", wcroot->wc_id, repos_relpath,
-                            kind_map, kind));
+                            kind_map_none, kind));
   SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
   *local_abspaths = apr_array_make(result_pool, 1, sizeof(const char *));
