@@ -45,13 +45,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1898633
-   Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure
-   Justification:
-     Fix test failure
-   Votes:
-     +1: jamessan, stsp
-
  * r1881534
    Fix issue #4864 "build/ac-macros/macosx.m4: workaround AC_RUN_IFELSE"
    Justification:
