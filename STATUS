@@ -28,13 +28,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1890231
-   README: Document new home of our IRC channels at libera.chat
-   Justification:
-     Don't send users to the wrong place!
-   Votes:
-     +1: hartmannathan, dsahlberg
-
  * r1894491
    INSTALL: Document not to build ZLib with ASM optimizations
    Justification:
