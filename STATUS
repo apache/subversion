@@ -51,12 +51,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1894491
-   INSTALL: Document not to build ZLib with ASM optimizations
-   Justification:
-     Building ZLib that way causes SVN to segfault. User complained.
-   Branch:
-     1.14.x-r1894491
-   Votes:
-     +1: hartmannathan, dsahlberg

@@ -1034,6 +1034,12 @@ II.   INSTALLATION
       Note that you'd make sure to define ZLIB_WINAPI in the ZLib config
       header and move the lib-file into the zlib root-directory.
 
+      Please note that you MUST NOT build ZLib with the included assembler
+      optimized code. It is known to be buggy, see for example the discussion
+      https://svn.haxx.se/dev/archive-2013-10/0109.shtml.
+      This means that you must not define ASMV or ASMINF. Note that the VS
+      projects in contrib\visualstudio define these in the Debug configuration.
+
       Apache Serf
 
       ### Section about Apache Serf might be required/useful to add.
