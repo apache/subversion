@@ -15,6 +15,13 @@ Status of 1.10.8:
 Candidate changes:
 ==================
 
+ * r1884474
+   Fixes authz tests on Windows
+   Justification:
+     Should have been part of the r1883838 group that was backported
+   votes:
+     +1: jun66j5, markphip
+
 Veto-blocked changes:
 =====================
 
@@ -43,10 +50,3 @@ Approved changes:
      1.10.x-r1894491
    Votes:
      +1: hartmannathan, dsahlberg
-
- * r1884474
-   Fixes authz tests on Windows
-   Justification:
-     Should have been part of the r1883838 group that was backported
-   votes:
-     +1: jun66j5, markphip
