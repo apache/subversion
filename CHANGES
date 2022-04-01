@@ -9,25 +9,28 @@ Version 1.14.2
  User-visible changes:
   - Client-side bugfixes:
     * Don't show unreadable copyfrom paths in 'svn log -v'  (r1899227)
-    * Fix misleading -r option documentation for some svnadmin subcommands (r1896877)
-    * Fix encoding of error message on failure of system() call (r1887641, r1890013)
-    * Fix an assertion failure triggered by the conflict resolver (r1892470, r1892471, r1892541)
+    * Fix -r option documentation for some svnadmin subcommands (r1896877)
+    * Fix error message encoding when system() call fails (r1887641, r1890013)
+    * Fix assertion failure in conflict resolver (r1892470, -471, -541)
+ User-visible changes:
+  - Client-side improvements and bugfixes:
+    * Support multiple working copy formats (1.8-onward, 1.15) (issue #????)
 
   - Server-side bugfixes:
-    * Fix Use-after-free of object-pools when running in httpd (issue #4880 r1894734)
+    * Fix use-after-free of object-pools when running in httpd (issue #4880)
  
  Developer-visible changes:
-    * Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref) (r1883838, r1883989, r1886460, r1886582, r1892121, r1884474)
-    * Fix «make davautocheck» failure because of an unbuilt dependency (r1891908)
+    * Add test coverage for CVE-2020-17525 (r1883838 et al)
+    * Fix «make davautocheck» failure due to unbuilt dependency (r1891908)
     * Follow up to r1866587, r1866588: Unbreak a msgid. (r1887704)
-    * swig-py: Fix doubly destroying memory pool with cyclic garbage collector (r1889487)
-    * swig-py: Skip some tests on Python 2 if default encoding is 'utf-8' (r1885199)
+    * swig-py: Fix double-free with cyclic garbage collector (r1889487)
+    * swig-py: Skip some tests on Python2 if encoding is 'utf-8' (r1885199)
     * swig-py: Fix dependency of make copy-swig-py target (r1886708)
     * Document how the port number is passed to custom tunnels (r1889629)
     * tests: Include additional information in an error message (r1897449)
     * Fix an error message when running make davautocheck (r1892121)
     * Use the APR-1.4+ API for flushing file contents to disk (r1883355)
-    * JavaHL: Fix sporadic testCrash_RequestChannel_nativeRead_AfterException failure (r1898633)
+    * JavaHL: Fix RequestChannel_nativeRead_AfterException failure (r1898633)
 
 Version 1.14.1
 (10 Feb 2021, from /branches/1.14.x)
@@ -48,7 +51,7 @@ Version 1.14.1
     * Make the hot-backup.py script work with Python 3 (r1878855, r1878859)
     * Fix an uninitialized read in FSFS (r1880374)
     * Make mailer.py work properly with Python 3 (r1884427 et al)
-    * Fix a potential NULL dereference in the config file parser (r1886019)
+    * Fix CVE-2020-17525: NULL dereference in mod_authz_svn (r1886019)
 
  Developer-visible changes:
   - General:
@@ -69,7 +72,7 @@ Version 1.14.1
     * Fix crash in JavaHL JNI wrapper caused by object lifetimes (r1880886)
     * autogen.sh: Remove .swig_*_checked files from release tarballs (r1878413)
     * Avoid version check for Python if --without-swig is used (r1876662)
-    * siwg-py: Fix a syntax error for Python 3.6 and later (r1885112)
+    * swig-py: Fix a syntax error for Python 3.6 and later (r1885112)
     * Fix several crashes and JNI warnings in javahl TunnelAgent (r1886029)
 
 Version 1.14.0
@@ -289,6 +292,22 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Enable building against Java 10 (r1841180 et al)
     * Fix a potential crash in JavaHL (issue #4764)
 
+Version 1.10.8
+(12 Apr 2022, from /branches/1.10.x)
+ User-visible changes:
+  - Client-side bugfixes:
+    * Don't show unreadable copyfrom paths in 'svn log -v'  (r1899227)
+    * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
+
+  - Server-side bugfixes:
+    * Fix use-after-free of object-pools when running in httpd (issue #4880)
+    * Fix authz doesn't combine global and repository rules (issue #4762)
+
+ Developer-visible changes:
+    * Add test coverage for CVE-2020-17525 (r1883838 et al)
+    * Fix «make davautocheck» failure due to unbuilt dependency (r1891908)
+    * Follow up to r1866587, r1866588: Unbreak a msgid (r1887704)
+    * Remove incorrect include paths from svn_cv_ruby_includes (r1875602)
 
 Version 1.10.7
 (10 Feb 2021, from /branches/1.10.x)
@@ -306,7 +325,7 @@ Version 1.10.7
     * mod_dav_svn: Fix missing Last-Modified header on 'external' GET requests (r1866425)
     * Fix formatting type size mismatches in FSFS (r1865987, -8)
     * Fix an undefined behavior problem in FSFS caching code (r1876054)
-    * Fix a potential NULL dereference in the config file parser (r1886019)
+    * Fix CVE-2020-17525: NULL dereference in mod_authz_svn (r1886019)
 
  Developer-visible changes:
     * Fix Requires(.private) fields in pkg-config files (r1863987, -90)
