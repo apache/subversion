@@ -4,6 +4,23 @@
 # To view an issue listed as (issue #XXXX), visit:
 #   https://subversion.apache.org/issue-XXXX
 
+Version 1.10.8
+(12 Apr 2022, from /branches/1.10.x)
+ User-visible changes:
+  - Client-side bugfixes:
+    * Don't show unreadable copyfrom paths in 'svn log -v'  (r1899227)
+    * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
+
+  - Server-side bugfixes:
+    * Fix Use-after-free of object-pools when running in httpd (issue #4880 r1894734)
+    * Fix authz doesn't combine global and repository rules (issue #4762  r1835049, r1882326)
+
+ Developer-visible changes:
+    * Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref) (r1883838, r1883989, r1886460, r1886582, r1892121, r1884474)
+    * Fix «make davautocheck» failure because of an unbuilt dependency. (r1891908)
+    * Follow up to r1866587, r1866588: Unbreak a msgid (r1887704)
+    * Remove incorrect include paths from svn_cv_ruby_includes (r1875602)
+
 Version 1.10.7
 (10 Feb 2021, from /branches/1.10.x)
  User-visible changes:
