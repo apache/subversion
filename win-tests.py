@@ -772,6 +772,9 @@ class Httpd:
     local_tmp = os.path.join(self.abs_builddir,
                              CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                              'svn-test-work', 'local_tmp')
+    repositories = os.path.join(self.abs_builddir,
+                                CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                'svn-test-work', 'repositories')
     return \
       '<Location /authz-test-work/anon>' + '\n' \
       '  DAV               svn' + '\n' \
@@ -785,6 +788,17 @@ class Httpd:
       '  <IfModule !mod_authz_core.c>' + '\n' \
       '    Allow from all' + '\n' \
       '  </IfModule>' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/in-repos-authz>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + repositories + '\n' \
+      '  AuthzSVNReposRelativeAccessFile "^/authz"\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
       '  SVNPathAuthz ' + self.path_authz_option + '\n' \
       '</Location>' + '\n' \
       '<Location /authz-test-work/mixed>' + '\n' \
