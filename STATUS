@@ -20,10 +20,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1884474
-   Fixes authz tests on Windows
-   Justification:
-     Should have been part of the r1883838 group that was backported
-   votes:
-     +1: jun66j5, markphip, jcorvel
