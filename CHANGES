@@ -310,7 +310,7 @@ Version 1.10.8
  Developer-visible changes:
     * Add test coverage for CVE-2020-17525 (mod_authz_svn NULL deref) (r1883838, r1883989, r1886460, r1886582, r1892121, r1884474)
     * Fix «make davautocheck» failure because of an unbuilt dependency. (r1891908)
-    * Follow up to r1866587, r1866588: Unbreak a msgid. (r1887704)
+    * Follow up to r1866587, r1866588: Unbreak a msgid (r1887704)
     * Remove incorrect include paths from svn_cv_ruby_includes (r1875602)
 
 Version 1.10.7
