@@ -37,7 +37,7 @@ Version 1.10.7
     * mod_dav_svn: Fix missing Last-Modified header on 'external' GET requests (r1866425)
     * Fix formatting type size mismatches in FSFS (r1865987, -8)
     * Fix an undefined behavior problem in FSFS caching code (r1876054)
-    * Fix a potential NULL dereference in the config file parser (r1886019)
+    * Fix CVE-2020-17525: NULL dereference in mod_authz_svn (r1886019)
 
  Developer-visible changes:
     * Fix Requires(.private) fields in pkg-config files (r1863987, -90)
