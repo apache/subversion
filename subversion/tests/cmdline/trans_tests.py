@@ -552,7 +552,6 @@ def update_modified_with_translation(sbox):
 # after the commit, the file and its text-base have been changed to
 # have the new line-ending style.
 @Issue(1085)
-@Wimp("Relies on wc.text_base_path()")
 def eol_change_is_text_mod(sbox):
   "committing eol-style change forces text send"
 
@@ -599,10 +598,11 @@ def eol_change_is_text_mod(sbox):
     if contents != b"1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
 
-  foo_base_path = svntest.wc.text_base_path(foo_path)
-  base_contents = open(foo_base_path, 'rb').read()
-  if contents != base_contents:
-    raise svntest.Failure
+  if not sbox.pristines_on_demand_enabled():
+    foo_base_path = svntest.wc.text_base_path(foo_path)
+    base_contents = open(foo_base_path, 'rb').read()
+    if contents != base_contents:
+      raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Regression test for issue #1151.  A single file in a directory
