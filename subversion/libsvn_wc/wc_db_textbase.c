@@ -330,13 +330,6 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                                      hydrate_baton, cancel_func, cancel_baton,
                                      checksum, repos_root_url, repos_relpath,
                                      revision, iterpool);
-              /* If read access is unauthorized, for some operations we need
-               * to continue even though we failed to fetch the textbase. */
-              if (err && err->apr_err == SVN_ERR_RA_NOT_AUTHORIZED)
-                {
-                  svn_error_clear(err);
-                  err = SVN_NO_ERROR;
-                }
               if (err)
                 return svn_error_compose_create(err, svn_sqlite__reset(stmt));
             }
