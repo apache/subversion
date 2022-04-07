@@ -281,8 +281,9 @@ def revert_reexpand_keyword(sbox):
     fp = open(path, 'r')
     lines = fp.readlines()
     fp.close()
-    if lines[0] != "This is newfile: $Rev: 3 $.\n":
-      raise svntest.Failure
+    expected = "This is newfile: $Rev: 3 $.\n"
+    if lines[0] != expected:
+      raise svntest.Failure({"actual": lines[0], "expected": expected})
 
   check_expanded(newfile_path)
 
