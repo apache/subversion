@@ -132,6 +132,7 @@ PY3C_VER	= 1.1
 JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.19.8.1
 LZ4_VER		= 1.7.5
+SWIG_OLD_VER	= 3.0.12
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -150,6 +151,7 @@ PY3C_DIST	= py3c-$(PY3C_VER).tar.gz
 JUNIT_DIST	= junit-${JUNIT_VER}.jar
 GETTEXT_DIST	= gettext-$(GETTEXT_VER).tar.gz
 LZ4_DIST	= lz4-$(LZ4_VER).tar.gz
+SWIG_OLD_DIST	= swig-$(SWIG_OLD_VER).tar.gz
 
 SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
 SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
@@ -168,6 +170,7 @@ SHA256_${PY3C_DIST} = c7ffc22bc92dded0ca859db53ef3a0b466f89a9f8aad29359c9fe4ff18
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
 SHA256_${GETTEXT_DIST} = ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43
 SHA256_${LZ4_DIST} = 0190cacd63022ccb86f44fa5041dc6c3804407ad61550ca21c382827319e7e7e
+SHA256_${SWIG_OLD_DIST} = 7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d
 
 define do_check_sha256
 if [ -x /bin/sha256 ]; then \
@@ -197,7 +200,8 @@ DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(PYTHON2_DIST) \
 		$(DISTDIR)/$(PY3C_DIST) \
 		$(DISTDIR)/$(JUNIT_DIST) \
-		$(DISTDIR)/$(GETTEXT_DIST)
+		$(DISTDIR)/$(GETTEXT_DIST) \
+		$(DISTDIR)/$(SWIG_OLD_DIST)
 
 FETCH_CMD	= wget -c
 
@@ -224,6 +228,7 @@ PY3C_URL	= https://stsp.name/distfiles/py3c-${PY3C_VER}.tar.gz
 JUNIT_URL	= https://stsp.name/distfiles/$(JUNIT_DIST)
 GETTEXT_URL	= https://ftp.gnu.org/pub/gnu/gettext/$(GETTEXT_DIST)
 LZ4_URL		= https://github.com/lz4/lz4/archive/v$(LZ4_VER).tar.gz
+SWIG_OLD_URL	= https://downloads.sourceforge.net/sourceforge/swig/swig-$(SWIG_OLD_VER).tar.gz
 
 
 BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
@@ -246,6 +251,7 @@ PYTHON2_SRCDIR	= $(SRCDIR)/Python-$(PYTHON2_VER)
 PY3C_SRCDIR	= $(SRCDIR)/py3c-$(PY3C_VER)
 GETTEXT_SRCDIR	= $(SRCDIR)/gettext-$(GETTEXT_VER)
 LZ4_SRCDIR	= ${SRCDIR}/lz4-$(LZ4_VER)
+SWIG_OLD_SRCDIR	= ${SRCDIR}/swig-$(SWIG_OLD_VER)
 SVN_SRCDIR	= $(SVN_WC)
 
 BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
@@ -268,6 +274,7 @@ PYTHON2_OBJDIR	= $(OBJDIR)/python-$(PYTHON2_VER)
 PY3C_OBJDIR	= $(OBJDIR)/py3c-$(PY3C_VER)
 GETTEXT_OBJDIR	= $(OBJDIR)/gettext-$(GETTEXT_VER)
 LZ4_OBJDIR	= ${OBJDIR}/lz4-$(LZ4_VER)
+SWIG_OLD_OBJDIR	= ${OBJDIR}/swig-$(SWIG_OLD_VER)
 SVN_OBJDIR	= $(OBJDIR)/$(SVN_REL_WC)
 
 # Tweak this for out-of-tree builds. Note that running individual
@@ -296,19 +303,20 @@ all: dirs-create bdb-install apr-install iconv-install apr-util-install \
 	pcre-install httpd-install neon-install serf-install serf-old-install \
 	sqlite-install cyrus-sasl-install libmagic-install \
 	ruby-install bz2-install python-install python2-install py3c-retrieve \
-	gettext-install lz4-install svn-install svn-bindings-install
+	gettext-install lz4-install swig-old-install svn-install \
+	svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	pcre-reset httpd-reset neon-reset serf-reset serf-old-reset \
 	sqlite-reset cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	python2-reset bz2-reset gettext-reset lz4-reset svn-reset
+	python2-reset bz2-reset gettext-reset lz4-reset swig-old-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean pcre-clean httpd-clean \
 	neon-clean serf-clean serf-old-clean sqlite-clean cyrus-sasl-clean \
 	libmagic-clean ruby-clean bz2-clean python-clean python2-clean \
-	gettext-clean lz4-clean svn-clean
+	gettext-clean lz4-clean swig-old-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -1636,6 +1644,56 @@ $(LZ4_OBJDIR)/.installed: $(LZ4_OBJDIR)/.compiled
 	touch $@
 
 #######################################################################
+# swig-old
+#######################################################################
+
+swig-old-retrieve:	$(SWIG_OLD_OBJDIR)/.retrieved
+swig-old-configure:	$(SWIG_OLD_OBJDIR)/.configured
+swig-old-compile:	$(SWIG_OLD_OBJDIR)/.compiled
+swig-old-install:	$(SWIG_OLD_OBJDIR)/.installed
+swig-old-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(SWIG_OLD_OBJDIR)/$(f);)
+
+swig-old-clean:
+	-(cd $(SWIG_OLD_SRCDIR) && env MAKEFLAGS= $(MAKE) clean)
+
+# fetch distfile for swig-old
+$(DISTDIR)/$(SWIG_OLD_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) -O $(SWIG_OLD_DIST) $(SWIG_OLD_URL)
+
+# retrieve swig-old
+$(SWIG_OLD_OBJDIR)/.retrieved: $(DISTDIR)/$(SWIG_OLD_DIST)
+	$(call do_check_sha256,$(SWIG_OLD_DIST))
+	[ -d $(SWIG_OLD_OBJDIR) ] || mkdir -p $(SWIG_OLD_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(SWIG_OLD_DIST)
+	touch $@
+
+# configure swig-old
+$(SWIG_OLD_OBJDIR)/.configured: $(SWIG_OLD_OBJDIR)/.retrieved
+	cd $(SWIG_OLD_SRCDIR) \
+		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`"\
+		CC=$(CC) CXX=$(CXX) \
+		LDFLAGS="-L$(PREFIX)/iconv/lib" \
+		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+		$(SWIG_OLD_SRCDIR)/configure \
+		--prefix=$(PREFIX)/swig-old
+	touch $@
+
+# compile swig-old
+$(SWIG_OLD_OBJDIR)/.compiled: $(SWIG_OLD_OBJDIR)/.configured
+	(cd $(SWIG_OLD_SRCDIR) && \
+		env MAKEFLAGS= $(MAKE) CC=$(CC) CXX=$(CXX) \
+			-j${MAKE_JOBS} PREFIX=$(PREFIX)/swig-old)
+	touch $@
+
+# install swig-old
+$(SWIG_OLD_OBJDIR)/.installed: $(SWIG_OLD_OBJDIR)/.compiled
+	(cd $(SWIG_OLD_SRCDIR) && \
+		env MAKEFLAGS= $(MAKE) PREFIX=$(PREFIX)/swig-old install)
+	touch $@
+
+#######################################################################
 # svn
 #######################################################################
 
@@ -1690,6 +1748,7 @@ MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
+SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
@@ -1700,6 +1759,7 @@ MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
+SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
 else ifeq ($(BRANCH_MAJOR),1.5)
 BDB_FLAG=$(PREFIX)/bdb
 SERF_FLAG=--with-serf="$(PREFIX)/serf-old"
@@ -1721,7 +1781,23 @@ MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
 MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
-else # 1.10, 1.11, 1.12, 1.13, 1.14, trunk
+SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
+else ifeq ($(BRANCH_MAJOR), $(filter 1.10 1.11, 1.12, 1.13 $(BRANCH_MAJOR)))
+BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
+SERF_FLAG=--with-serf="$(PREFIX)/serf"
+# serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
+# so we have to do that ourselves :(
+SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
+LZ4_LDFLAG=-Wl,-rpath,$(PREFIX)/lz4/lib
+MOD_DAV_SVN=modules/svn-$(WC)/mod_dav_svn.so
+MOD_AUTHZ_SVN=modules/svn-$(WC)/mod_authz_svn.so
+MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
+LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
+JAVAHL_CHECK_TARGET=check-all-javahl
+LZ4_FLAG=--with-lz4=$(PREFIX)/lz4
+UTF8PROC_FLAG=--with-utf8proc=internal
+SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
+else # 1.14, trunk
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_FLAG=--with-serf="$(PREFIX)/serf"
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1804,6 +1880,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			$(LIBMAGIC_FLAG) \
 			$(LZ4_FLAG) \
 			$(UTF8PROC_FLAG) \
+			$(SWIG_OLD_FLAG) \
 			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
@@ -2443,7 +2520,11 @@ ifdef LZ4_FLAG
 	@echo "lz4:        $(LZ4_VER)"
 endif
 	@echo "libssl:     `openssl version`"
+ifdef SWIG_OLD_FLAG
+	@echo "swig:       `$(PREFIX)/swig-old/bin/swig -version | grep Version | cut -d' ' -f3`"
+else
 	@echo "swig:       `swig -version | grep Version | cut -d' ' -f3`"
+endif
 	@echo "python:     $(PYTHON_VER)"
 	@echo "perl:       `eval \`perl -V:version\`; echo $$version`"
 	@echo "ruby:       $(RUBY_VER)"

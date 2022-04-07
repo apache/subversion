@@ -1451,7 +1451,7 @@ IV.   PLATFORM-SPECIFIC ISSUES
 
       And there's an item about this in the Subversion FAQ:
 
-      https://subversion.apache.org/faq.html#windows-xp-server
+          https://subversion.apache.org/faq.html#windows-xp-server
 
       The only known workaround for now is to update to Windows XP
       SP1 (or higher).

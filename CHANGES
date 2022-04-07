@@ -11,6 +11,31 @@ https://svn.apache.org/repos/asf/subversion/tags/1.15.0
   - Client-side improvements and bugfixes:
     * Support multiple working copy formats (1.8-onward, 1.15) (issue #????)
 
+Version 1.14.2
+(12 Apr 2022, from /branches/1.14.x)
+ User-visible changes:
+  - Client-side bugfixes:
+    * Don't show unreadable copyfrom paths in 'svn log -v'  (r1899227)
+    * Fix -r option documentation for some svnadmin subcommands (r1896877)
+    * Fix error message encoding when system() call fails (r1887641, r1890013)
+    * Fix assertion failure in conflict resolver (r1892470, -471, -541)
+
+  - Server-side bugfixes:
+    * Fix use-after-free of object-pools when running in httpd (issue #4880)
+ 
+ Developer-visible changes:
+    * Add test coverage for CVE-2020-17525 (r1883838 et al)
+    * Fix «make davautocheck» failure due to unbuilt dependency (r1891908)
+    * Follow up to r1866587, r1866588: Unbreak a msgid. (r1887704)
+    * swig-py: Fix double-free with cyclic garbage collector (r1889487)
+    * swig-py: Skip some tests on Python2 if encoding is 'utf-8' (r1885199)
+    * swig-py: Fix dependency of make copy-swig-py target (r1886708)
+    * Document how the port number is passed to custom tunnels (r1889629)
+    * tests: Include additional information in an error message (r1897449)
+    * Fix an error message when running make davautocheck (r1892121)
+    * Use the APR-1.4+ API for flushing file contents to disk (r1883355)
+    * JavaHL: Fix RequestChannel_nativeRead_AfterException failure (r1898633)
+
 Version 1.14.1
 (10 Feb 2021, from /branches/1.14.x)
  User-visible changes:
@@ -271,6 +296,22 @@ http://svn.apache.org/repos/asf/subversion/tags/1.11.0
     * Enable building against Java 10 (r1841180 et al)
     * Fix a potential crash in JavaHL (issue #4764)
 
+Version 1.10.8
+(12 Apr 2022, from /branches/1.10.x)
+ User-visible changes:
+  - Client-side bugfixes:
+    * Don't show unreadable copyfrom paths in 'svn log -v'  (r1899227)
+    * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
+
+  - Server-side bugfixes:
+    * Fix use-after-free of object-pools when running in httpd (issue #4880)
+    * Fix authz doesn't combine global and repository rules (issue #4762)
+
+ Developer-visible changes:
+    * Add test coverage for CVE-2020-17525 (r1883838 et al)
+    * Fix «make davautocheck» failure due to unbuilt dependency (r1891908)
+    * Follow up to r1866587, r1866588: Unbreak a msgid (r1887704)
+    * Remove incorrect include paths from svn_cv_ruby_includes (r1875602)
 
 Version 1.10.7
 (10 Feb 2021, from /branches/1.10.x)

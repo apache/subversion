@@ -19,7 +19,7 @@ The scripts are:
 
 backport.pl:
     oldest script, implements [F1], [F2], and [F3].  As of Feb 2018, used in
-    production by svn-role (running on svn-qavm3) and by svn-backport-conflicts-1.9.x
+    production by svn-role (running on svn-qavm) and by svn-backport-conflicts-1.9.x
     (a buildbot job).
 
 nominate.pl:
