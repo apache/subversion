@@ -3090,8 +3090,8 @@ def diff_external_diffcmd(sbox):
     r"iota\t\(revision 1\)\n",
     "-L\n",
     r"iota\t\(working copy\)\n",
-    os.path.abspath(svntest.main.get_admin_name()) + '.*' + "\n",
-    os.path.abspath("iota") + "\n"])
+    re.escape(os.path.abspath(svntest.main.get_admin_name())) + '.*' + "\n",
+    re.escape(os.path.abspath("iota")) + "\n"])
 
   # Check that the output of diff corresponds with the expected arguments,
   # in the correct order.
