@@ -1326,6 +1326,7 @@ PUBLIC_KEY_ALGORITHMS = {
     # The values are callables that produce gpg1-like key length and type
     # indications, e.g., "4096R" for a 4096-bit RSA key.
     1: (lambda keylen: str(keylen) + 'R'), # RSA
+    22: (lambda keylen: str(keylen) + 'EDD'), # EDDSA
 }
 
 def _make_human_readable_fingerprint(fingerprint):
