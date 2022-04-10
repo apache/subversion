@@ -208,7 +208,7 @@ svn_cl__help(apr_getopt_t *os,
   svn_stringbuf_appendcstr(version_footer, "* GPG-Agent\n");
 #endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
-  svn_stringbuf_appendcstr(version_footer, "* Mac OS X Keychain\n");
+  svn_stringbuf_appendcstr(version_footer, "* macOS Keychain\n");
 #endif
 #ifdef SVN_HAVE_KWALLET
   svn_stringbuf_appendcstr(version_footer, "* KWallet (KDE)\n");
