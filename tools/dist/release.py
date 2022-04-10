@@ -1323,10 +1323,13 @@ PUBLIC_KEY_ALGORITHMS = {
     # These values are taken from the RFC's registry at:
     # https://www.iana.org/assignments/pgp-parameters/pgp-parameters.xhtml#pgp-parameters-12
     #
-    # The values are callables that produce gpg1-like key length and type
-    # indications, e.g., "4096R" for a 4096-bit RSA key.
-    1: (lambda keylen: str(keylen) + 'R'), # RSA
-    22: (lambda keylen: str(keylen) + 'EDD'), # EDDSA
+    # The values are callables that produce gpg2-like key length and type
+    # indications, e.g., "rsa4096" for a 4096-bit RSA key.
+    1:  lambda keylen, _: 'rsa' + str(keylen),  # RSA
+    3:  lambda keylen, _: 'rsa' + str(keylen),  # RSA Sign Only
+    17: lambda keylen, _: 'dsa' + str(keylen),  # DSA
+    # This index is not registered with IANA but is used by gpg2
+    22: lambda _, parts: parts[16],             # EdDSA
 }
 
 def _make_human_readable_fingerprint(fingerprint):
@@ -1420,7 +1423,7 @@ def get_siginfo(args, quiet=False):
                 keytype = int(parts[3])
                 formatter = PUBLIC_KEY_ALGORITHMS[keytype]
                 long_key_id = parts[4]
-                length_and_type = formatter(keylen) + '/' + long_key_id
+                length_and_type = formatter(keylen, parts) + '/' + long_key_id
                 del keylen, keytype, formatter, long_key_id
                 break
         else:
