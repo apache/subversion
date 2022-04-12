@@ -15,13 +15,13 @@ Version 1.14.2
 (12 Apr 2022, from /branches/1.14.x)
  User-visible changes:
   - Client-side bugfixes:
-    * Don't show unreadable copyfrom paths in 'svn log -v'  (r1899227)
+    * Fix CVE-2021-28544: authz protected copyfrom paths regression (r1899227)
     * Fix -r option documentation for some svnadmin subcommands (r1896877)
     * Fix error message encoding when system() call fails (r1887641, r1890013)
     * Fix assertion failure in conflict resolver (r1892470, -471, -541)
 
   - Server-side bugfixes:
-    * Fix use-after-free of object-pools when running in httpd (issue #4880)
+    * Fix CVE-2022-24070: use-after-free in mod_dav_svn (issue #4880)
  
  Developer-visible changes:
     * Add test coverage for CVE-2020-17525 (r1883838 et al)
@@ -300,11 +300,11 @@ Version 1.10.8
 (12 Apr 2022, from /branches/1.10.x)
  User-visible changes:
   - Client-side bugfixes:
-    * Don't show unreadable copyfrom paths in 'svn log -v'  (r1899227)
+    * Fix CVE-2021-28544: authz protected copyfrom paths regression (r1899227)
     * Fix merge assertion failure in svn_sort__array_insert (issue #4840)
 
   - Server-side bugfixes:
-    * Fix use-after-free of object-pools when running in httpd (issue #4880)
+    * Fix CVE-2022-24070: use-after-free in mod_dav_svn (issue #4880)
     * Fix authz doesn't combine global and repository rules (issue #4762)
 
  Developer-visible changes:
