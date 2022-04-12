@@ -1763,6 +1763,7 @@ def delete_file_with_starstar_rules(sbox):
 
   svntest.main.run_svn(None, 'rm', sbox.repo_url + '/iota', '-m', 'rm by URL')
 
+# test for the bug also known as CVE-2021-28544
 @Skip(svntest.main.is_ra_type_file)
 def log_inaccessible_copyfrom(sbox):
   "log doesn't leak inaccessible copyfrom paths"
