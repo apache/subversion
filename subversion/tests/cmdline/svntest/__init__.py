@@ -23,11 +23,14 @@
 __all__ = [ ]
 
 import sys
-if sys.hexversion < 0x2070000:
-  sys.stderr.write('[SKIPPED] at least Python 2.7 is required\n')
+if sys.hexversion < 0x3000000:
+  sys.stderr.write('[SKIPPED] at least Python 3.0 is required\n')
+  # Yes, it really is required: some tests will FAIL under Python 2 but PASS
+  # under Python 3.  See, for example,
+  # https://issues.apache.org/jira/browse/SVN-4891?focusedCommentId=17518154#comment-17518154
 
   # note: exiting is a bit harsh for a library module, but we really do
-  # require Python 2.7. this package isn't going to work otherwise.
+  # require Python 3.0. this package isn't going to work otherwise.
 
   # we're skipping this test, not failing, so exit with 0
   sys.exit(0)
