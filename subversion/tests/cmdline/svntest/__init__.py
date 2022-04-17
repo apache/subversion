@@ -18,8 +18,6 @@
 # under the License.
 #
 
-# any bozos that do "from svntest import *" should die. export nothing
-# to the dumbasses.
 __all__ = [ ]
 
 import sys
