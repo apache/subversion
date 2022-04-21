@@ -1818,6 +1818,29 @@ def log_inaccessible_copyfrom(sbox):
                                      'log', '-r2', '-v',
                                      sbox.repo_url)
 
+@Skip(svntest.main.is_ra_type_file)
+def cat_base_after_repo_access_removed(sbox):
+  "cat_base_after_repo_access_removed"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  svntest.main.write_restrictive_svnserve_conf(sbox.repo_dir)
+  svntest.main.write_authz_file(sbox, { "/"      : "*=rw",
+                                        "/A/D"   : "*="})
+
+  # Local modification so base can't be derived from working version
+  sbox.simple_append('A/D/G/pi', 'appended\n')
+
+  # With repository read access denied, expect we can still access the
+  # text base locally, if and only if text bases are present.
+  if sbox.pristines_on_demand_enabled():
+    svntest.actions.run_and_verify_svn(None, '.*E170001: Authorization failed',
+                                       'cat', sbox.ospath('A/D/G/pi') + '@BASE')
+  else:
+    svntest.actions.run_and_verify_svn("This is the file 'pi'.\n", [],
+                                       'cat', sbox.ospath('A/D/G/pi') + '@BASE')
+
 
 ########################################################################
 # Run the tests
@@ -1860,6 +1883,7 @@ test_list = [ None,
               empty_group,
               delete_file_with_starstar_rules,
               log_inaccessible_copyfrom,
+              cat_base_after_repo_access_removed,
              ]
 serial_only = True
 
