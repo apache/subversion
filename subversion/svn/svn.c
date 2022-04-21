@@ -3244,6 +3244,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                                    conflict_stats, pool));
+
+      /* Data-outputting commands should not print progress notifications
+       * (such as hydrating text bases) on stdout. */
+      if (subcommand->cmd_func == svn_cl__cat
+          || subcommand->cmd_func == svn_cl__diff)
+        SVN_ERR(svn_cl__notifier_suppress_progress_output(ctx->notify_baton2));
     }
 
   /* Get password from stdin if necessary */

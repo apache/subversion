@@ -222,9 +222,6 @@ svn_cl__diff(apr_getopt_t *os,
     opt_state->diff.patch_compatible || opt_state->diff.ignore_properties;
   int i;
 
-  /* Don't print any feedback notifications. (At least not on stdout.) */
-  ctx->notify_func2 = NULL;
-
   if (opt_state->extensions)
     options = svn_cstring_split(opt_state->extensions, " \t\n\r", TRUE, pool);
   else

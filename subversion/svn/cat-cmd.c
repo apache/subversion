@@ -53,9 +53,6 @@ svn_cl__cat(apr_getopt_t *os,
   apr_array_header_t *errors = apr_array_make(pool, 0, sizeof(apr_status_t));
   svn_error_t *err;
 
-  /* Don't print any feedback notifications. (At least not on stdout.) */
-  ctx->notify_func2 = NULL;
-
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
                                                       ctx, FALSE, pool));

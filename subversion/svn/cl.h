@@ -709,6 +709,11 @@ svn_cl__notifier_mark_export(void *baton);
 svn_error_t *
 svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
 
+/* Make the notifier for use with BATON suppress progress notifications
+ */
+svn_error_t *
+svn_cl__notifier_suppress_progress_output(void *baton);
+
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton
 {
