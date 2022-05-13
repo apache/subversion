@@ -127,8 +127,8 @@ static const char *git_tree_and_text_unidiff =
   "-This is the file 'lambda'."                                         NL
   ""                                                                    NL;
 
-  /* Only the last git diff header is valid. The other ones either misses a
-   * path element or has noise between lines that must be continous. See
+  /* Only the last git diff header is valid. The other ones either miss a
+   * path element or have noise between lines that must be continuous. See
    * issue #3809. */
 static const char *bad_git_diff_header =
   "Index: iota.copied"                                                  NL
