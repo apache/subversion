@@ -76,7 +76,7 @@ class GeneratorBase:
 
     # Now read and parse build.conf
     parser = configparser.ConfigParser()
-    parser.readfp(open(fname))
+    parser.read_file(open(fname))
 
     self.conf = build_path(os.path.abspath(fname))
 
