@@ -35,6 +35,7 @@ try:
 except ImportError:
   # Python <3.0
   import ConfigParser as configparser
+  configparser.ConfigParser.read_file = configparser.ConfigParser.readfp
 import generator.swig
 
 import getversion
