@@ -40,7 +40,7 @@ Candidate changes:
      +1: rhuijben
 
  * r1900882
-   Replace a call to a function deprecated upstream.
+   SVN-4899: Replace a call to a function deprecated upstream.
    Justification:
      No-op on Python 3.2 and newer, but will allow Subversion 1.14.x to be
      built by future Python 3.12.  Note that Python 3.2 was released 9 years
