@@ -366,7 +366,7 @@ bail_on_tree_conflicted_ancestor(svn_wc_context_t *wc_ctx,
    If CANCEL_FUNC is non-null, call it with CANCEL_BATON to see
    if the user has cancelled the operation.
 
-   Any items added to COMMITTABLES are allocated from the COMITTABLES
+   Any items added to COMMITTABLES are allocated from the COMMITTABLES
    hash pool, not POOL.  SCRATCH_POOL is used for temporary allocations. */
 
 struct harvest_baton
