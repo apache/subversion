@@ -11636,7 +11636,7 @@ msgstr "Misslyckades med att behandla arbetskopians databaskö kopplad till \"%s
 
 #: ../svn/add-cmd.c:101
 msgid "Could not add all targets because some targets don't exist"
-msgstr "Kunde inte lätta till alla mål eftersom några inte finns"
+msgstr "Kunde inte lägga till alla mål eftersom några inte finns"
 
 #: ../svn/add-cmd.c:105
 msgid "Could not add all targets because some targets are already versioned"
