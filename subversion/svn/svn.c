@@ -1916,7 +1916,7 @@ svn_cl__cmd_table_main[] =
      "usage: upgrade [WCPATH...]\n"
      "\n"), N_(
      "  The upgraded working copy will be compatible with Subversion 1.8 and\n"
-     "  newer (this default may change in the future. To upgrade to a different\n"
+     "  newer (this default may change in the future). To upgrade to a different\n"
      "  version, use an option such as '--compatible-version=1.15'.\n"
      "  The versions available are the same as in the 'checkout' command.\n"
      "  Use 'svn --version' to see the compatible versions supported.\n"
