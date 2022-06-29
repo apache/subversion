@@ -9944,7 +9944,9 @@ msgstr ""
 msgid ""
 "\n"
 "Experimental subcommands:\n"
-msgstr "Experimentella underkommandon:\n"
+msgstr ""
+"\n"
+"Experimentella underkommandon:\n"
 
 #: ../libsvn_subr/opt.c:374
 msgid ""
@@ -11808,7 +11810,7 @@ msgid ""
 "is too old (format %d) to work with client version '%s' (expects format %d to %d). You need to upgrade the working copy first.\n"
 msgstr ""
 "Arbetskopian vid \"%s\"\n"
-"är för gammal (format %d) för att kunna användas med en klient som har version \"%s\" (format %d förväntas). Arbetskopian måste uppgraderas först.\n"
+"är för gammal (format %d) för att kunna användas med en klient som har version \"%s\" (format %d till %d förväntas). Arbetskopian måste uppgraderas först.\n"
 
 #: ../libsvn_wc/wc_db_wcroot.c:451
 #, c-format
