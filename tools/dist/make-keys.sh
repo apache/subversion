@@ -15,12 +15,32 @@
 #
 # Requires curl. (Could be reworked to use wget, too, I suppose.)
 
-if [ ! -f COMMITTERS ]; then
+COMMITTERS=`pwd`/COMMITTERS
+OUTPUT=`pwd`/KEYS
+TMP=`mktemp -d`
+OLDPWD=`pwd`
+
+while getopts ":c:o:h" ARG; do
+    case "$ARG" in
+	c) COMMITTERS=$OPTARG ;;
+	o) OUTPUT=$OPTARG ;;
+	h) echo "USAGE: $0 [-c PATH/TO/COMMITTERS] [-o PATH/TO/OUTPUT/KEYS] [-h]";
+	   echo "";
+	   echo "-c  Set the path to the COMMITTERS file. Default current directory.";
+	   echo "-o  Set the path/name of the resulting KEYS file. Default current directory/KEYS.";
+	   echo "-h  Display this message";
+	   return ;;
+    esac
+done
+
+if [ ! -f $COMMITTERS/COMMITTERS ]; then
 	echo "COMMITTERS file not found."
 	exit 1
 fi
 
-for availid in $( perl -anE 'say $F[0] if (/^Blanket/../END ACTIVE FULL.*SCRIPTS LOOK FOR IT/ and /@/)' < COMMITTERS )
+cd $TMP
+
+for availid in $( perl -anE 'say $F[0] if (/^Blanket/../END ACTIVE FULL.*SCRIPTS LOOK FOR IT/ and /@/)' < $COMMITTERS/COMMITTERS )
 do
 	key_url=https://people.apache.org/keys/committer/${availid}.asc
 	
@@ -34,4 +54,6 @@ do
 	fi
 done
 
-cat *.asc > KEYS
+cat *.asc > $OUTPUT
+cd $OLDPWD
+rm -rf $TMP
