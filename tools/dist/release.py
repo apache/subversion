@@ -98,7 +98,6 @@ dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
 buildbot_repos = os.getenv('SVN_RELEASE_BUILDBOT_REPOS',
                            'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster')
-KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
@@ -980,7 +979,12 @@ def roll_tarballs(args):
         # from a committer's LDAP profile down the road)
         basename = 'subversion-%s.KEYS' % (str(args.version),)
         filepath = os.path.join(get_tempdir(args.base_dir), basename)
-        download_file(KEYS, filepath, None)
+        # The following code require release.py to be executed within a
+        # complete wc, not a shallow wc as indicated in HACKING as one option.
+        # We /could/ download COMMITTERS from /trunk if it doesn't exist...
+        subprocess.check_call([os.path.dirname(__file__) + '/make-keys.sh',
+                               '-c', os.path.dirname(__file__) + '/../..',
+                               '-o', filepath])
         shutil.move(filepath, get_target(args))
 
     # And we're done!
@@ -1465,12 +1469,11 @@ def check_sigs(args):
 
 def get_keys(args):
     'Import the LDAP-based KEYS file to gpg'
-    # We use a tempfile because urlopen() objects don't have a .fileno()
-    with tempfile.SpooledTemporaryFile() as fd:
-        fd.write(urlopen(KEYS).read())
-        fd.flush()
-        fd.seek(0)
-        subprocess.check_call(['gpg', '--import'], stdin=fd)
+    with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+      keyspath = tmpfile.name
+    subprocess.check_call([os.path.dirname(__file__) + '/make-keys.sh', '-c', os.path.dirname(__file__) + '/../..', '-o', keyspath])
+    subprocess.check_call(['gpg', '--import', keyspath])
+    os.remove(keyspath)
 
 def add_to_changes_dict(changes_dict, audience, section, change, revision):
     # Normalize arguments
