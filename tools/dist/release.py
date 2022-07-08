@@ -1916,7 +1916,10 @@ def main():
     os.environ['TZ'] = 'UTC'
 
     # finally, run the subcommand, and give it the parsed arguments
-    args.func(args)
+    try:
+      args.func(args)
+    except AttributeError:
+      parser.print_help()
 
 
 if __name__ == '__main__':
