@@ -143,7 +143,7 @@ def main():
     parser = argparse.ArgumentParser(
         description=PARSERDESCR,
         formatter_class=argparse.RawDescriptionHelpFormatter)
-    parser.add_argument('realm', help='Server authentication real')
+    parser.add_argument('realm', help='Server authentication realm')
     parser.add_argument('-u', '--user', help='Set username')
     args = parser.parse_args()
 
