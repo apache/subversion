@@ -1469,11 +1469,10 @@ def check_sigs(args):
 
 def get_keys(args):
     'Import the LDAP-based KEYS file to gpg'
-    with tempfile.NamedTemporaryFile(delete=False) as tmpfile:
+    with tempfile.NamedTemporaryFile() as tmpfile:
       keyspath = tmpfile.name
-    subprocess.check_call([os.path.dirname(__file__) + '/make-keys.sh', '-c', os.path.dirname(__file__) + '/../..', '-o', keyspath])
-    subprocess.check_call(['gpg', '--import', keyspath])
-    os.remove(keyspath)
+      subprocess.check_call([os.path.dirname(__file__) + '/make-keys.sh', '-c', os.path.dirname(__file__) + '/../../COMMITTERS', '-o', keyspath])
+      subprocess.check_call(['gpg', '--import', keyspath])
 
 def add_to_changes_dict(changes_dict, audience, section, change, revision):
     # Normalize arguments

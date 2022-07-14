@@ -26,21 +26,21 @@ while getopts ":c:o:h" ARG; do
 	o) OUTPUT=$OPTARG ;;
 	h) echo "USAGE: $0 [-c PATH/TO/COMMITTERS] [-o PATH/TO/OUTPUT/KEYS] [-h]";
 	   echo "";
-	   echo "-c  Set the path to the COMMITTERS file. Default current directory.";
+	   echo "-c  Set the path/name to the COMMITTERS file. Default current directory/COMMITTERS.";
 	   echo "-o  Set the path/name of the resulting KEYS file. Default current directory/KEYS.";
 	   echo "-h  Display this message";
 	   return ;;
     esac
 done
 
-if [ ! -f $COMMITTERS/COMMITTERS ]; then
+if [ ! -f $COMMITTERS ]; then
 	echo "COMMITTERS file not found."
 	exit 1
 fi
 
 cd $TMP
 
-for availid in $( perl -anE 'say $F[0] if (/^Blanket/../END ACTIVE FULL.*SCRIPTS LOOK FOR IT/ and /@/)' < $COMMITTERS/COMMITTERS )
+for availid in $( perl -anE 'say $F[0] if (/^Blanket/../END ACTIVE FULL.*SCRIPTS LOOK FOR IT/ and /@/)' < $COMMITTERS )
 do
 	key_url=https://people.apache.org/keys/committer/${availid}.asc
 	
