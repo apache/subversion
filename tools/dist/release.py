@@ -1470,7 +1470,6 @@ def check_sigs(args):
 def get_keys(args):
     'Import the LDAP-based KEYS file to gpg'
     with tempfile.NamedTemporaryFile() as keysfile:
-      keyspath = tmpfile.name
       subprocess.check_call([
           os.path.dirname(__file__) + '/make-keys.sh',
           '-c', os.path.dirname(__file__) + '/../../COMMITTERS',
