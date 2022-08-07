@@ -47,6 +47,18 @@ Candidate changes:
      before Subversion 1.14.0.
    Votes:
      +1: danielsh
+     -0: futatuki (This breaks Python 2.7 support;
+                   +1 if r1900890 (see below) is also backported)
+
+ * r1900890
+   Follow up to r1900882: Restore Python 2.7 support on autogen.sh
+   Justification:
+     autogen.sh is need to build SWIG Python 2 bindings.
+     We have not actively dropped Python 2.7 support, at least on 1.14.x.
+   Depends:
+     r1900882
+   Votes:
+     +1: futatuki
 
 Veto-blocked changes:
 =====================
