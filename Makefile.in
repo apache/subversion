@@ -456,8 +456,9 @@ fast-clean: doc-clean
         done
 	echo $(CLEAN_FILES) | xargs rm -f --
 	find $(CTYPES_PYTHON_SRC_DIR) $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
-		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline/svntest \
-		-name "*.pyc" -exec rm {} ';'
+		$(abs_srcdir)/build $(top_srcdir)/subversion/tests/cmdline \
+		'(' -name "__pycache__" -prune -o -name "*.pyc" ')' \
+		-exec rm -rf {} ';'; \
 
 # clean everything, returning to before './configure' was run.
 SVN_CONFIG_SCRIPT_FILES = @SVN_CONFIG_SCRIPT_FILES@
@@ -957,7 +958,9 @@ clean-swig-py:
 	do \
 	  cd $$d && rm -rf *.lo *.la *.o *.pyc .libs; \
 	done
-	find $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) -name "*.pyc" -exec rm {} ';'
+	find $(SWIG_PY_SRC_DIR) $(SWIG_PY_DIR) \
+		'(' -name "__pycache__" -prune -o -name "*.pyc" ')' \
+		-exec rm -rf {} ';'
 
 extraclean-swig-py: clean-swig-py
 	$(EXTRACLEAN_SWIG_PY)
