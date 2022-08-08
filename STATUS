@@ -60,6 +60,16 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1903267
+   Makefile.in (fast-clean, clean-swig-py): Remove __pycache__ directory
+   as well as *.pyc
+   Justification:
+     We don't want that the release tarballs contains extra directories.
+   Branch:
+     1.14.x-r1903267
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
