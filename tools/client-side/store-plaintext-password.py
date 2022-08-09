@@ -76,7 +76,9 @@ def _read_one_datum(fd, letter):
 
     return datum
 
-def svn_hash_read(fd):
+# Our version of svn_hash_read2(), named without "svn_" prefix to avoid
+# potential naming conflicts with stuff star-imported from svn.core.
+def hash_read(fd):
     """\
     Read an svn_hash_write2()-formatted file from FD, terminated by "END".
 
@@ -165,7 +167,7 @@ def main():
 
     # In an existing file, we add/replace password/username/passtype
     if existingFile:
-        hash = svn_hash_read(open(authfileName, 'rb'))
+        hash = hash_read(open(authfileName, 'rb'))
         if args.user is not None:
             hash[b'username'] = args.user.encode('utf-8')
         hash[b'password'] = password.encode('utf-8')
