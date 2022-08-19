@@ -3,7 +3,7 @@
 #  create_wc_for_upgrade.sh : create a working copy for upgrade testing
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org/ for more information.
+#  See https://subversion.apache.org/ for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one

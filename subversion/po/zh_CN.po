@@ -3694,8 +3694,8 @@ msgstr "不支持的FSFS之FS加载器版本 (%d)"
 
 #: ../libsvn_fs_fs/fs_fs.c:443
 #, c-format
-msgid "Found format '%d', only created by unreleased dev builds; see http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
-msgstr "发现了文件系统格式“%d”，它是由未发布的开发版本创建的；参见 http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
+msgid "Found format '%d', only created by unreleased dev builds; see https://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
+msgstr "发现了文件系统格式“%d”，它是由未发布的开发版本创建的；参见 https://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
 
 #: ../libsvn_fs_fs/fs_fs.c:454 ../libsvn_fs_x/fs_x.c:101
 #, c-format
@@ -7625,11 +7625,11 @@ msgid ""
 "Copyright (C) 2014 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people;\n"
 "see the NOTICE file for more information.\n"
-"Subversion is open source software, see http://subversion.apache.org/\n"
+"Subversion is open source software, see https://subversion.apache.org/\n"
 msgstr ""
 "版权所有 (C) 2013 Apache 软件基金会。\n"
 "此软件包含了许多人的贡献，请查看文件 NOTICE 以获得更多信息。\n"
-"Subversion 是开放源代码软件，请参阅 http://subversion.apache.org/ 站点。\n"
+"Subversion 是开放源代码软件，请参阅 https://subversion.apache.org/ 站点。\n"
 "\n"
 
 #: ../libsvn_subr/version.c:217 ../libsvn_subr/version.c:228
@@ -8830,11 +8830,11 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 "此客户端对于工作副本“%s”太旧(格式 %d)。\n"
 "你需要取得更新的 Subversion 客户端。参见\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 "以获得更详细的信息。\n"
 
 #: ../libsvn_wc/wc_db_wcroot.c:315
@@ -8922,10 +8922,10 @@ msgstr ""
 #: ../svn-bench/help-cmd.c:62 ../svn/help-cmd.c:66
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.apache.org/\n"
+"For additional information, see https://subversion.apache.org/\n"
 msgstr ""
 "Subversion 是版本控制工具。\n"
-"欲取得详细资料，请参阅 http://subversion.apache.org/\n"
+"欲取得详细资料，请参阅 https://subversion.apache.org/\n"
 
 #: ../svn-bench/help-cmd.c:66 ../svn/help-cmd.c:70 ../svnrdump/svnrdump.c:700
 #: ../svnsync/svnsync.c:1910

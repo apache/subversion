@@ -330,7 +330,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
         _("This client is too old to work with the working copy at\n"
           "'%s' (format %d).\n"
           "You need to get a newer Subversion client. For more details, see\n"
-          "  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+          "  https://subversion.apache.org/faq.html#working-copy-format-change\n"
           ),
         svn_dirent_local_style(wcroot_abspath, scratch_pool),
         format);

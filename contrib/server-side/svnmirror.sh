@@ -17,7 +17,7 @@ VERSION="0.0.7"
 #
 # 1. You need write access to the directory structure on both boxes
 #    for more see the warning at:
-#    http://svnbook.red-bean.com/html-chunk/ch06s03.html
+#    https://svnbook.red-bean.com/html-chunk/ch06s03.html
 #
 # 2. For running it from cron i suggest the use of the ssh agent e.g
 #    via keychain <http://www.gentoo.org/proj/en/keychain.xml>

@@ -2460,7 +2460,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.8.1
     * svnadmin upgrade: fix data loss when cancelling in last stage (r1494298)
     * mod_dav_svn: fix incorrect path canonicalization (r1503528)
             See CVE-2013-4131, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-4131-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-4131-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fsfs-stats (tool): resolve segfault when passing invalid path (r1492164)
@@ -3057,12 +3057,12 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.11
   - Server-side bugfixes:
     * mod_dav_svn: fix incorrect path canonicalization (r1503528)
             See CVE-2013-4131, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-4131-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-4131-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fix argument processing in contrib hook scripts (r1485350)
             See CVE-2013-2088, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-2088-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-2088-advisory.txt
 
  Developer-visible changes:
   - Bindings:
@@ -3089,10 +3089,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.10
   - Server-side bugfixes:
     * fix FSFS repository corruption due to newline in filename (issue #4340)
             See CVE-2013-1968, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-1968-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-1968-advisory.txt
     * fix svnserve exiting when a client connection is aborted (r1482759)
             See CVE-2013-2112, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-2112-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-2112-advisory.txt
     * fix svnserve memory use after clear (issue #4365)
     * fix repository corruption on power/disk failure on Windows (r1483781)
 
@@ -3120,7 +3120,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.7.9
   - Server-side bugfixes:
       See CVE-2013-1845, CVE-2013-1846, CVE-2013-1847, CVE-2013-1849,
       and CVE-2013-1884, and descriptive advisories at
-            http://subversion.apache.org/security/
+            https://subversion.apache.org/security/
     * svnserve will log the replayed rev not the low-water rev. (r1461278)
     * mod_dav_svn will omit some property values for activity urls (r1453780)
     * fix an assertion in mod_dav_svn when acting as a proxy on / (issue #4272)
@@ -3460,7 +3460,7 @@ Version 1.7.0
 http://svn.apache.org/repos/asf/subversion/tags/1.7.0
 
 See the 1.7 release notes for a more verbose overview of the changes since
-the 1.6 release:  http://subversion.apache.org/docs/release-notes/1.7.html
+the 1.6 release:  https://subversion.apache.org/docs/release-notes/1.7.html
 
  User-visible changes:
   - General:
@@ -3659,7 +3659,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.23
     * fix FSFS repository corruption due to newline in filename (issue #4340)
     * fix svnserve exiting when a client connection is aborted (r1482759)
             See CVE-2013-2112, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2013-2112-advisory.txt
+            https://subversion.apache.org/security/CVE-2013-2112-advisory.txt
 
   - Other tool improvements and bugfixes:
     * fix argument processing in contrib hook scripts (r1485350)
@@ -3757,7 +3757,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * fixed: file externals cause mixed-revision working copies (issue #3816)
     * fix crash in mod_dav_svn with GETs of baselined resources (r1104126)
             See CVE-2011-1752, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-1752-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-1752-advisory.txt
     * fixed: write-through proxy could directly commit to slave (r917523)
     * detect a particular corruption condition in FSFS (r1100213)
     * improve error message when clients refer to unknown revisions (r939000)
@@ -3770,10 +3770,10 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.17
     * server-side validation of svn:mergeinfo syntax during commit (issue #3895)
     * fix remotely triggerable mod_dav_svn DoS (r1130303)
             See CVE-2011-1783, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-1783-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-1783-advisory.txt
     * fix potential leak of authz-protected file contents (r1130303)
             See CVE-2011-1921, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-1921-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-1921-advisory.txt
 
   Developer-visible changes:
     * fix reporting FS-level post-commit processing errors (r1104098)
@@ -3789,7 +3789,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.16
    * more improvement to the 'blame -g' memory leak from 1.6.15 (r1041438)
    * avoid a crash in mod_dav_svn when using locks (r1071239, -307)
             See CVE-2011-0715, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2011-0715-advisory.txt
+            https://subversion.apache.org/security/CVE-2011-0715-advisory.txt
    * avoid unnecessary globbing for performance (r1068988)
    * don't add tree conflicts when one already exists (issue #3486)
    * fix potential crash when requesting mergeinfo (r902467)
@@ -3864,7 +3864,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.13
    * fixed: record-only merges create self-referential mergeinfo (issue #3646)
    * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
             See CVE-2010-3315, and descriptive advisory at
-            http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
+            https://subversion.apache.org/security/CVE-2010-3315-advisory.txt
    * make 'svnmucc propset' handle existing and non-existing URLs (r1000607)
    * add new 'propsetf' subcommand to svnmucc (r1000612)
    * warn about copied dirs during 'svn ci' with limited depth (r1002094)
@@ -4040,7 +4040,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.6.4
  User-visible changes:
   * fixed: heap overflow vulnerability on server and client
            See CVE-2009-2411, and descriptive advisory at
-           http://subversion.apache.org/security/CVE-2009-2411-advisory.txt
+           https://subversion.apache.org/security/CVE-2009-2411-advisory.txt
 
 
 Version 1.6.3
@@ -4276,7 +4276,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.5.9
   * improve memory performance in 'svn merge' (issue #3393)
   * fixed: 'SVNPathAuthz short_circuit' unsolicited read access (issue #3695)
            See CVE-2010-3315, and descriptive advisory at
-           http://subversion.apache.org/security/CVE-2010-3315-advisory.txt
+           https://subversion.apache.org/security/CVE-2010-3315-advisory.txt
   * prevent crash in mod_dav_svn when using SVNParentPath (r1033166)
   * limit memory fragmentation in svnserve (r1022675)
   * fix server-side memory leaks triggered by 'blame -g' (r1032808)
@@ -4301,7 +4301,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.5.7
  User-visible changes:
   * fixed: heap overflow vulnerability on server and client
            See CVE-2009-2411, and descriptive advisory at
-           http://subversion.apache.org/security/CVE-2009-2411-advisory.txt
+           https://subversion.apache.org/security/CVE-2009-2411-advisory.txt
 
 
 Version 1.5.6
@@ -4734,7 +4734,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.4.5
  User-visible changes:
  * fixed: file placement vulnerability (Win32 clients only)
           See CVE-2007-3846, and descriptive advisory at
-          http://subversion.apache.org/security/CVE-2007-3846-advisory.txt
+          https://subversion.apache.org/security/CVE-2007-3846-advisory.txt
 
 
 Version 1.4.4
@@ -5313,7 +5313,7 @@ Version 1.2.0
 http://svn.apache.org/repos/asf/subversion/tags/1.2.0
 
 See the 1.2 release notes for a more verbose overview of the changes since
-the 1.1 release:  http://subversion.apache.org/docs/release-notes/1.2.html
+the 1.1 release:  https://subversion.apache.org/docs/release-notes/1.2.html
 
  User-visible changes:
   - Client:
@@ -5609,7 +5609,7 @@ Version 1.1.0
 http://svn.apache.org/repos/asf/subversion/tags/1.1.0
 
 See the 1.1 release notes for a more verbose overview of the changes since
-1.0.x: http://subversion.apache.org/docs/release-notes/1.1.html
+1.0.x: https://subversion.apache.org/docs/release-notes/1.1.html
 
  User-visible changes:
  * new non-database repository back-end (libsvn_fs_fs)
@@ -5739,7 +5739,7 @@ http://svn.apache.org/repos/asf/subversion/tags/1.0.8
  User-visible changes:
  * fixed: mod_authz_svn path and log-message metadata leaks.
           See CAN-2004-0749, and descriptive advisory at 
-          http://subversion.apache.org/security/CAN-2004-0749-advisory.txt
+          https://subversion.apache.org/security/CAN-2004-0749-advisory.txt
 
 
 Version 1.0.7

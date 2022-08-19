@@ -147,7 +147,7 @@ svn_version_extended(svn_boolean_t verbose,
              "This software consists of contributions made by many people;\n"
              "see the NOTICE file for more information.\n"
              "Subversion is open source software, see "
-             "http://subversion.apache.org/\n"));
+             "https://subversion.apache.org/\n"));
 
   if (verbose)
     {

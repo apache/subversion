@@ -91,7 +91,7 @@ svn_cl__help(apr_getopt_t *os,
 
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
-     "For additional information, see http://subversion.apache.org/\n");
+     "For additional information, see https://subversion.apache.org/\n");
 
   if (baton)
     {

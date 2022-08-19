@@ -657,7 +657,7 @@ def update_backport_bot(args):
 
   Ask someone with appropriate access to add the %s.x branch
   to the backport merge bot.  See
-  http://subversion.apache.org/docs/community-guide/releasing.html#backport-merge-bot
+  https://subversion.apache.org/docs/community-guide/releasing.html#backport-merge-bot
 
 ***
 

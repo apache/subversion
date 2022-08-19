@@ -5759,7 +5759,7 @@ msgstr "Nieobsługiwana wersja loadera systemu plików (%d) dla fsfs"
 
 #: ../libsvn_fs_fs/fs_fs.c:444
 #, c-format
-msgid "Found format '%d', only created by unreleased dev builds; see http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
+msgid "Found format '%d', only created by unreleased dev builds; see https://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
 msgstr ""
 
 #: ../libsvn_fs_fs/fs_fs.c:455
@@ -10011,7 +10011,7 @@ msgid ""
 "Copyright (C) 2017 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people;\n"
 "see the NOTICE file for more information.\n"
-"Subversion is open source software, see http://subversion.apache.org/\n"
+"Subversion is open source software, see https://subversion.apache.org/\n"
 msgstr ""
 "Copyright (C) 2009 The Subversion Corporation.\n"
 "Niniejsze oprogramowanie składa się ze wkładu dokonanego przez wielu ludzi.\n"
@@ -11297,12 +11297,12 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 "Ten klient jest zbyt stary, by obsługiwać kopię roboczą\n"
 "'%s' (format %d).\n"
 "Musisz zainstalować nowszy klient Subversion. Zobacz szczegóły na stronie:\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 
 #: ../libsvn_wc/wc_db_wcroot.c:349
 msgid "Cleanup with an older 1.7 client before upgrading with this client"
@@ -12180,7 +12180,7 @@ msgstr ""
 #, fuzzy
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.apache.org/\n"
+"For additional information, see https://subversion.apache.org/\n"
 msgstr ""
 "Subversion jest narzędziem zarządzania wersjami.\n"
 "Dla dodatkowych informacji zobacz http://subversion.tigris.org/\n"

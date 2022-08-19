@@ -8,7 +8,7 @@ passwords in plaintext.
 Only use this script if the security implications are understood
 and it is acceptable by your organization to store passwords in plaintext.
 
-See http://subversion.apache.org/faq.html#plaintext-passwords
+See https://subversion.apache.org/faq.html#plaintext-passwords
 """
 
 # ====================================================================

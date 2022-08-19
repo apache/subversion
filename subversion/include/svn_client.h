@@ -326,7 +326,7 @@ svn_client_get_ssl_client_cert_pw_prompt_provider(
  * for local paths.
  *
  * For deeper insight, please see the
- * <a href="http://svnbook.red-bean.com/nightly/en/svn.advanced.pegrevs.html">
+ * <a href="https://svnbook.red-bean.com/nightly/en/svn.advanced.pegrevs.html">
  * Peg and Operative Revisions</a> section of the Subversion Book.
  */
 
