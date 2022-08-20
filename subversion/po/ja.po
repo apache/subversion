@@ -195,12 +195,12 @@
 # zero byte               ゼロバイト文字
 msgid ""
 msgstr ""
-"Project-Id-Version: subversion 1.9\n"
+"Project-Id-Version: subversion 1.15\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
 "POT-Creation-Date: 2022-08-20 14:44+0900\n"
-"PO-Revision-Date: 2007-10-28 01:23+0900\n"
-"Last-Translator: Subversion Developers <dev@subversion.tigris.org>\n"
-"Language-Team: Japanese <dev@subversion.tigris.org>\n"
+"PO-Revision-Date: 2022-08-20 15:00+0900\n"
+"Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
+"Language-Team: Japanese <dev@subversion.apache.org>\n"
 "Language: ja\n"
 "MIME-Version: 1.0\n"
 "Content-Type: text/plain; charset=UTF-8\n"
@@ -12778,13 +12778,12 @@ msgstr ""
 "利用可能なサブコマンド:\n"
 
 #: ../svn/help-cmd.c:93 ../svnbench/help-cmd.c:62
-#, fuzzy
 msgid ""
 "Subversion is a tool for version control.\n"
 "For additional information, see https://subversion.apache.org/\n"
 msgstr ""
 "Subversion はバージョン管理用のツールです。\n"
-"さらに詳しい情報は、http://subversion.tigris.org/ をご覧ください。\n"
+"さらに詳しい情報は、https://subversion.apache.org/ をご覧ください。\n"
 
 #: ../svn/help-cmd.c:149
 msgid ""
