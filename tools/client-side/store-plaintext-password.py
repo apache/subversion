@@ -110,7 +110,7 @@ def outputHash(fd, hash):
     """
     assert 'b' in fd.mode
 
-    for key, val in dict.items():
+    for key, val in hash.items():
         fd.write(b'K ' + bytes(str(len(key)), 'utf-8') + b'\n')
         fd.write(key + b'\n')
         fd.write(b'V ' + bytes(str(len(val)), 'utf-8') + b'\n')
@@ -125,7 +125,7 @@ def writeHashFile(filename, hash):
     tmpFilename = filename + '.tmp'
     try:
         with open(tmpFilename, 'xb') as fd:
-            outputHash(fd, dict)
+            outputHash(fd, hash)
             os.rename(tmpFilename, filename)
     except FileExistsError:
         print('{}: File {!r} already exist. Is the script already running?'
