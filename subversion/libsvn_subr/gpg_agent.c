@@ -224,7 +224,7 @@ bye_gpg_agent(int sd)
 {
   /* don't bother to check the result of the write, it either worked or it
    * didn't, but either way we're closing. */
-  write(sd, "BYE\n", 4);
+  (void)write(sd, "BYE\n", 4);
   close(sd);
 }
 
