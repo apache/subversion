@@ -1,0 +1,10 @@
+Branching to fix issue SVN-4908 because I would like to verify the fix
+before committing to trunk.
+
+See:
+
+https://issues.apache.org/jira/browse/SVN-4908
+
+Mail thread "svn_wc__status2_from_3 does not copy locked info" at
+dev@s.a.o, started 29 Aug 2022, archived:
+https://lists.apache.org/thread/yb3jzl7h07xvxh0p73qwl5f55dc49kdh
