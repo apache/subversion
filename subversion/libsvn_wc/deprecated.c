@@ -2935,7 +2935,7 @@ struct status4_wrapper_baton
   svn_wc_context_t *wc_ctx;
 };
 
-/* */
+/* Implements svn_wc_status_func4_t */
 static svn_error_t *
 status4_wrapper_func(void *baton,
                      const char *local_abspath,
