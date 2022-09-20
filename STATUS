@@ -70,6 +70,14 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1904167
+   swig-py: Fix conditionals by SWIG version and by Python version for proxy
+   code.
+   Justification:
+     swig-py should be built correctly with upcoming SWIG 4.1.0 release.
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
