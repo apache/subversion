@@ -182,14 +182,21 @@ suitable Python interpreter is not found."
                 if test "$SWIG_VERSION" -ge "300010"; then
                   dnl SWIG Python bindings successfully configured, clear the error message dnl
                   SWIG_PY_ERRMSG=""
+                  if test "$SWIG_VERSION" -lt "400000"; then
+                    SWIG_PY_OPTS="-python -py3 -nofastunpack -modern"
+                  elif test "$SWIG_VERSION" -lt "401000"; then 
+                    SWIG_PY_OPTS="-python -py3 -nofastunpack"
+                  else
+                    SWIG_PY_OPTS="-python -nofastunpack"
+                  fi
+                  if test "$SWIG_VERSION" -gt "400002"; then 
+                    AC_MSG_WARN([Subversion Python bindings may work,])
+                    AC_MSG_WARN([but we didn't check with this SWIG version.])
+                  fi
                 else
+                  SWIG_PY_OPTS="-no-such-a-option" # fool proof
                   SWIG_PY_ERRMSG="SWIG version is not suitable"
                   AC_MSG_WARN([Subversion Python bindings for Python 3 require SWIG 3.0.10 or newer])
-                fi
-                if test "$SWIG_VERSION" -lt "400000"; then
-                  SWIG_PY_OPTS="-python -py3 -nofastunpack -modern"
-                else
-                  SWIG_PY_OPTS="-python -py3 -nofastunpack"
                 fi
               else
                 if test "$SWIG_VERSION" -lt "400000"; then
@@ -197,7 +204,7 @@ suitable Python interpreter is not found."
                   dnl SWIG Python bindings successfully configured, clear the error message dnl
                   SWIG_PY_ERRMSG=""
                 else
-                  SWIG_PY_OPTS="-python -nofastunpack"
+                  SWIG_PY_OPTS="-no-such-a-option" # fool proof
                   SWIG_PY_ERRMSG="SWIG version is not suitable"
                   AC_MSG_WARN([Subversion Python bindings for Python 2 require 1.3.24 <= SWIG < 4.0.0])
                 fi
