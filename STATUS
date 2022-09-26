@@ -86,6 +86,15 @@ Candidate changes:
    Votes:
      +1: hartmannathan, rhuijben
 
+ * r1904198, r1904287
+   swig-py: build: Don't pass deperecated options to SWIG >= 4.1.0 release
+   Justification:
+     Reduce extra deperecate warnings from SWIG.
+   Depends:
+     r1878379, r1883719, r1883722, r1884610
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
