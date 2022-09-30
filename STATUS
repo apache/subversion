@@ -58,7 +58,7 @@ Candidate changes:
    Depends:
      r1900882
    Votes:
-     +1: futatuki
+     +1: futatuki, jun66j5
 
  * r1903267
    Makefile.in (fast-clean, clean-swig-py): Remove __pycache__ directory
@@ -76,7 +76,7 @@ Candidate changes:
    Justification:
      swig-py should be built correctly with upcoming SWIG 4.1.0 release.
    Votes:
-     +1: futatuki
+     +1: futatuki, jun66j5
 
  * r1904193
    SVN-4908: Copy 'locked' from svn_wc_status3_t to svn_wc_status2_t
