@@ -4434,7 +4434,7 @@ msgstr "\"%s\" är inte i samma arkiv som \"%s\""
 
 #: ../libsvn_client/merge.c:10611 ../libsvn_client/merge.c:12001
 msgid "The given merge source must have the same repository root URL as the target WC, in the usual case; or, if a foreign repository merge is intended, the repositories must have different root URLs and different UUIDs"
-msgstr "Den angivna källan för sammanslagningen måste ha samma URL till arkivroten som mål-arbetskopian (det normala fallet) eller (om en sammanslagning med ett främmande arkiv önskas) måste arkiven ha olika URL till arkivrötterna och olika UUID"
+msgstr "Den angivna källan för sammanslagningen måste ha samma URL till arkivroten som mål-arbetskopian (det normala fallet) eller om en sammanslagning med ett främmande arkiv önskas måste arkiven ha olika URL till arkivrötterna och olika UUID"
 
 #: ../libsvn_client/merge.c:10790 ../svn/merge-cmd.c:123
 msgid "Merge sources must both be either paths or URLs"
@@ -6242,7 +6242,7 @@ msgstr "Nodursprunget för \"%s\" finns med ett annat värde (%s) än vad som ju
 #: ../libsvn_fs_fs/fs_fs.c:2470
 #, c-format
 msgid "FSFS format (%d) too old for rep-sharing; please upgrade the filesystem."
-msgstr "FSFS-formatet (%d) är för gammalt för att packas; var god uppgradera filsystemet."
+msgstr "FSFS-formatet (%d) är för gammalt för rep-delning; var god uppgradera filsystemet."
 
 #: ../libsvn_fs_fs/fs_fs.c:2478
 msgid "Filesystem does not allow rep-sharing."
@@ -14264,7 +14264,7 @@ msgid ""
 "  default PATH is '.').\n"
 "\n"
 msgstr ""
-"  Visa alla versioner på HYLLA för varje arbetskopia som innehåller SÖKVÄG\n"
+"  Visa alla versioner av HYLLA för varje arbetskopia som innehåller SÖKVÄG\n"
 "  (\".\" om ingen anges).\n"
 "\n"
 
@@ -20331,7 +20331,7 @@ msgstr "Bygga innehållsdelningscache är inte implementerat för filsystem av t
 #: ../svnadmin/svnadmin.c:2994
 #, c-format
 msgid "svnadmin: Warning - this repository has rep-sharing disabled. Building rep-cache has no effect.\n"
-msgstr "svnadmin: varning: detta arkiv är innehållsdelning avstängt. Bygga innehållsdelningscache saknar verkan.\n"
+msgstr "svnadmin: Varning: detta arkiv har innehållsdelning avstängt. Skapande av innehållsdelningscache har ingen verkan.\n"
 
 #: ../svnadmin/svnadmin.c:3119 ../svnfsfs/svnfsfs.c:293
 #: ../svnrdump/svnrdump.c:853
@@ -21783,7 +21783,7 @@ msgstr "Ogiltigt revisionsnummer \"%s\""
 
 #: ../svnrdump/load_editor.c:717
 msgid "This dumpstream reader requires a delta format dumpstream"
-msgstr "Denna dumpströms-läsare kräver den dumpström i deltaformat"
+msgstr "Denna dumpströms-läsare kräver en dumpström i deltaformat"
 
 #: ../svnrdump/load_editor.c:1368 ../svnsync/svnsync.c:358
 #, c-format
