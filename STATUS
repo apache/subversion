@@ -87,9 +87,9 @@ Candidate changes:
      +1: hartmannathan, rhuijben
 
  * r1904198, r1904287
-   swig-py: build: Don't pass deperecated options to SWIG >= 4.1.0 release
+   swig-py: build: Don't pass deprecated options to SWIG >= 4.1.0 release
    Justification:
-     Reduce extra deperecate warnings from SWIG.
+     Reduce extra deprecation warnings from SWIG.
    Depends:
      r1878379, r1883719, r1883722, r1884610
    Votes:
