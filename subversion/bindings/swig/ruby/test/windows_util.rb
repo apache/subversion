@@ -115,7 +115,7 @@ exit 1
           lines = []
           gen_make_opts = File.join(@@top_dir, "gen-make.opts")
           lines =
-            File.read(gen_make_opts).lines.to_a if File.exists?(gen_make_opts)
+            File.read(gen_make_opts).lines.to_a if File.exist?(gen_make_opts)
           config = Hash.new do |hash, key|
             if /^--with-(.*)$/ =~ key
               hash[key] = File.join(@@top_dir, $1)
