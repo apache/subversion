@@ -100,12 +100,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1904472
-   swig-rb: Use Ruby API 'File.exist?' instead of deprecated 'File.exists?'
-   Justification:
-     Deprecated API 'File.exists?' is deprecated as of Ruby 2.1 and removed
-     as of Ruby 3.2.
-   Votes:
-    +1: hartmannathan, dsahlberg
-
