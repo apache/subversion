@@ -95,6 +95,13 @@ Candidate changes:
    Votes:
      +1: futatuki
 
+ * r1904936
+   Add @Deprecated decorations to avoid compiler warnings.
+   Justification:
+     Avoid some compiler warnings
+   Votes:
+     +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
