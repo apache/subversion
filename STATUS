@@ -102,6 +102,13 @@ Candidate changes:
    Votes:
      +1: dsahlberg
 
+ * r1904938
+   Java binding fixes.
+   Justification:
+     Don't crash if someone uses a null message
+   Votes:
+     +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
