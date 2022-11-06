@@ -39,6 +39,39 @@ Candidate changes:
    votes:
      +1: rhuijben
 
+ * r1903267
+   Makefile.in (fast-clean, clean-swig-py): Remove __pycache__ directory
+   as well as *.pyc
+   Justification:
+     We don't want that the release tarballs contains extra directories.
+   Branch:
+     1.14.x-r1903267
+   Votes:
+     +1: futatuki, jamessan
+
+ * r1904167
+   swig-py: Fix conditionals by SWIG version and by Python version for proxy
+   code.
+   Justification:
+     swig-py should be built correctly with upcoming SWIG 4.1.0 release.
+   Votes:
+     +1: futatuki, jun66j5
+
+ * r1904198, r1904287
+   swig-py: build: Don't pass deprecated options to SWIG >= 4.1.0 release
+   Justification:
+     Reduce extra deprecation warnings from SWIG.
+   Depends:
+     r1878379, r1883719, r1883722, r1884610
+   Votes:
+     +1: futatuki
+
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1900882
    SVN-4899: Replace a call to a function deprecated upstream.
    Justification:
@@ -46,7 +79,7 @@ Candidate changes:
      built by future Python 3.12.  Note that Python 3.2 was released 9 years
      before Subversion 1.14.0.
    Votes:
-     +1: danielsh
+     +1: danielsh, jamessan
      -0: futatuki (This breaks Python 2.7 support;
                    +1 if r1900890 (see below) is also backported)
 
@@ -58,25 +91,7 @@ Candidate changes:
    Depends:
      r1900882
    Votes:
-     +1: futatuki, jun66j5
-
- * r1903267
-   Makefile.in (fast-clean, clean-swig-py): Remove __pycache__ directory
-   as well as *.pyc
-   Justification:
-     We don't want that the release tarballs contains extra directories.
-   Branch:
-     1.14.x-r1903267
-   Votes:
-     +1: futatuki
-
- * r1904167
-   swig-py: Fix conditionals by SWIG version and by Python version for proxy
-   code.
-   Justification:
-     swig-py should be built correctly with upcoming SWIG 4.1.0 release.
-   Votes:
-     +1: futatuki, jun66j5
+     +1: futatuki, jun66j5, jamessan
 
  * r1904193
    SVN-4908: Copy 'locked' from svn_wc_status3_t to svn_wc_status2_t
@@ -84,33 +99,19 @@ Candidate changes:
      Allow PySVN (and other deprecated API users) to detect working copy
      locked status.
    Votes:
-     +1: hartmannathan, rhuijben
-
- * r1904198, r1904287
-   swig-py: build: Don't pass deprecated options to SWIG >= 4.1.0 release
-   Justification:
-     Reduce extra deprecation warnings from SWIG.
-   Depends:
-     r1878379, r1883719, r1883722, r1884610
-   Votes:
-     +1: futatuki
+     +1: hartmannathan, rhuijben, jamessan
 
  * r1904936
    Add @Deprecated decorations to avoid compiler warnings.
    Justification:
      Avoid some compiler warnings
    Votes:
-     +1: dsahlberg
+     +1: dsahlberg, jamessan
 
  * r1904938
    Java binding fixes.
    Justification:
      Don't crash if someone uses a null message
    Votes:
-     +1: dsahlberg
+     +1: dsahlberg, jamessan
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
