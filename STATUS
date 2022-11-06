@@ -24,14 +24,6 @@ Candidate changes:
      +0: danielsh (with appropriate Skip()/XFail() annotations if needed)
      +1: hartmannathan
 
- * r1878379, r1883719, r1883722, r1884610
-   Distinguish configure scripts on release mode and non release mode.
-   Justification:
-     Building process should not be prevented by swig installed in users'
-     environment when users use release tar balls.
-   Votes:
-     +1: futatuki, stsp
-
  * r1890223, r1890668, r1890673
    Support building on Win64/ARM64.
    Justification:
@@ -114,4 +106,12 @@ Approved changes:
      Don't crash if someone uses a null message
    Votes:
      +1: dsahlberg, jamessan
+
+ * r1878379, r1883719, r1883722, r1884610
+   Distinguish configure scripts on release mode and non release mode.
+   Justification:
+     Building process should not be prevented by swig installed in users'
+     environment when users use release tar balls.
+   Votes:
+     +1: futatuki, stsp, jamessan
 
