@@ -64,16 +64,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1900890
-   Follow up to r1900882: Restore Python 2.7 support on autogen.sh
-   Justification:
-     autogen.sh is need to build SWIG Python 2 bindings.
-     We have not actively dropped Python 2.7 support, at least on 1.14.x.
-   Depends:
-     r1900882
-   Votes:
-     +1: futatuki, jun66j5, jamessan
-
  * r1904193
    SVN-4908: Copy 'locked' from svn_wc_status3_t to svn_wc_status2_t
    Justification:
