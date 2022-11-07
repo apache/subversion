@@ -22,6 +22,8 @@
  */
 package org.tigris.subversion.javahl;
 
+import org.tigris.subversion.javahl.NativeException;
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.FileNotFoundException;
@@ -3318,6 +3320,17 @@ public class BasicTests extends SVNTests
             assertEquals("revprops check", revprops.get(key),
                          fetchedProps.get(key));
           }
+    }
+
+    /**
+     * Test getMessage in NativeException.
+     * @throws Throwable 
+     */
+    public void testGetMessage() throws Throwable
+    {
+	/* NativeException with a null message previously threw a NullPointerException */
+	assertEquals("", new NativeException(null, null, 0).getMessage());
+	assertEquals("messagesvn: source: (apr_err=0)", new NativeException("message", "source", 0).getMessage());
     }
 
     /**

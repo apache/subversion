@@ -64,13 +64,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1904938
-   Java binding fixes.
-   Justification:
-     Don't crash if someone uses a null message
-   Votes:
-     +1: dsahlberg, jamessan
-
  * r1878379, r1883719, r1883722, r1884610
    Distinguish configure scripts on release mode and non release mode.
    Justification:

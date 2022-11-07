@@ -85,7 +85,11 @@ class NativeException extends SubversionException
      */
     public String getMessage()
     {
-        StringBuffer msg = new StringBuffer(super.getMessage());
+        StringBuilder msg = new StringBuilder();
+        String message = super.getMessage();
+        if (message != null) {
+            msg.append(message);
+        }
         // ### This might be better off in JNIUtil::handleSVNError().
         String src = getSource();
         if (src != null)
