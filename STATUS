@@ -64,14 +64,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1904193
-   SVN-4908: Copy 'locked' from svn_wc_status3_t to svn_wc_status2_t
-   Justification:
-     Allow PySVN (and other deprecated API users) to detect working copy
-     locked status.
-   Votes:
-     +1: hartmannathan, rhuijben, jamessan
-
  * r1904936
    Add @Deprecated decorations to avoid compiler warnings.
    Justification:
