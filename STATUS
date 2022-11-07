@@ -64,13 +64,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1904936
-   Add @Deprecated decorations to avoid compiler warnings.
-   Justification:
-     Avoid some compiler warnings
-   Votes:
-     +1: dsahlberg, jamessan
-
  * r1904938
    Java binding fixes.
    Justification:

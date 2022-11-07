@@ -1200,6 +1200,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean, boolean, int, String)} instead.
      * @since 1.0
      */
+    @Deprecated
     public long doExport(String srcPath, String destPath,
                                 Revision revision, boolean force)
             throws ClientException
@@ -1213,6 +1214,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean, boolean, int, String)} instead.
      * @since 1.2
      */
+    @Deprecated
     public long doExport(String srcPath, String destPath, Revision revision,
                          Revision pegRevision, boolean force,
                          boolean ignoreExternals, boolean recurse,
@@ -1251,6 +1253,7 @@ public class SVNClient implements SVNClientInterface
      *             instead.
      * @since 1.0
      */
+    @Deprecated
     public long doSwitch(String path, String url, Revision revision,
                          boolean recurse)
             throws ClientException
@@ -1265,6 +1268,7 @@ public class SVNClient implements SVNClientInterface
      *                                  boolean)} instead.
      * @since 1.5
      */
+    @Deprecated
     public long doSwitch(String path, String url, Revision revision,
                          Revision pegRevision, int depth,
                          boolean depthIsSticky, boolean ignoreExternals,
@@ -1359,6 +1363,7 @@ public class SVNClient implements SVNClientInterface
      *                               boolean, boolean)} instead.
      * @since 1.0
      */
+    @Deprecated
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath,
                       boolean force, boolean recurse)
@@ -1374,6 +1379,7 @@ public class SVNClient implements SVNClientInterface
      *                               boolean, boolean)} instead.
      * @since 1.2
      */
+    @Deprecated
     public void merge(String path1, Revision revision1, String path2,
                       Revision revision2, String localPath, boolean force,
                       boolean recurse, boolean ignoreAncestry, boolean dryRun)
