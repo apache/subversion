@@ -47,15 +47,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1877310
-   Add a test for issue #4711 "invalid xml file produced by svn log --xml
-   --verbose --use-merge-history --search".
-   Justification:
-     Increase test coverage.
-   Votes:
-     +0: danielsh (with appropriate Skip()/XFail() annotations if needed)
-     +1: hartmannathan, jamessan
-
  * r1904167
    swig-py: Fix conditionals by SWIG version and by Python version for proxy
    code.
@@ -63,4 +54,3 @@ Approved changes:
      swig-py should be built correctly with upcoming SWIG 4.1.0 release.
    Votes:
      +1: futatuki, jun66j5, jamessan
-
