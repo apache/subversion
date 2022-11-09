@@ -15,15 +15,6 @@ Status of 1.14.3:
 Candidate changes:
 ==================
 
- * r1877310
-   Add a test for issue #4711 "invalid xml file produced by svn log --xml
-   --verbose --use-merge-history --search".
-   Justification:
-     Increase test coverage.
-   Votes:
-     +0: danielsh (with appropriate Skip()/XFail() annotations if needed)
-     +1: hartmannathan
-
  * r1890223, r1890668, r1890673
    Support building on Win64/ARM64.
    Justification:
@@ -41,14 +32,6 @@ Candidate changes:
    Votes:
      +1: futatuki, jamessan
 
- * r1904167
-   swig-py: Fix conditionals by SWIG version and by Python version for proxy
-   code.
-   Justification:
-     swig-py should be built correctly with upcoming SWIG 4.1.0 release.
-   Votes:
-     +1: futatuki, jun66j5
-
  * r1904198, r1904287
    swig-py: build: Don't pass deprecated options to SWIG >= 4.1.0 release
    Justification:
@@ -56,10 +39,28 @@ Candidate changes:
    Depends:
      r1878379, r1883719, r1883722, r1884610
    Votes:
-     +1: futatuki
+     +1: futatuki, jamessan
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1877310
+   Add a test for issue #4711 "invalid xml file produced by svn log --xml
+   --verbose --use-merge-history --search".
+   Justification:
+     Increase test coverage.
+   Votes:
+     +0: danielsh (with appropriate Skip()/XFail() annotations if needed)
+     +1: hartmannathan, jamessan
+
+ * r1904167
+   swig-py: Fix conditionals by SWIG version and by Python version for proxy
+   code.
+   Justification:
+     swig-py should be built correctly with upcoming SWIG 4.1.0 release.
+   Votes:
+     +1: futatuki, jun66j5, jamessan
+
