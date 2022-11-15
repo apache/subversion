@@ -1245,6 +1245,11 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *              @c NULL means the library's version.
  *              See svn_client_default_wc_version(),
  *              svn_client_get_wc_formats_supported().
+ * @param[in] store_pristines  If #svn_tristate_true, the pristine contents of
+ *              all files in the working copy will be stored on disk. <br>
+ *              If #svn_tristate_false, the pristine contents will be fetched
+ *              on-demand when required by the operation. <br>
+ *              If #svn_tristate_unknown, the default setting will be used.
  * @param[in] ctx   The standard client context, used for authentication and
  *              notification.
  * @param[in] pool  Used for any temporary allocation.
@@ -1274,6 +1279,7 @@ svn_client_checkout4(svn_revnum_t *result_rev,
                      svn_boolean_t ignore_externals,
                      svn_boolean_t allow_unver_obstructions,
                      const svn_version_t *wc_format_version,
+                     svn_tristate_t store_pristines,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool);
 

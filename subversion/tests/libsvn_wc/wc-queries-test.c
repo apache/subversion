@@ -256,6 +256,8 @@ stmt_matches_wc_format(int stmt_num,
     case STMT_TEXTBASE_REMOVE_REF:
     case STMT_TEXTBASE_WALK:
     case STMT_TEXTBASE_SYNC:
+    case STMT_SELECT_SETTINGS:
+    case STMT_UPSERT_SETTINGS:
       return (wc_format >= 32);
     }
   return TRUE;

@@ -108,6 +108,7 @@ create_repos_and_wc(const char **repos_url,
                                  FALSE /* ignore_externals */,
                                  FALSE /* allow_unver_obstructions */,
                                  opts->wc_format_version,
+                                 opts->store_pristines,
                                  ctx, subpool));
     svn_pool_destroy(subpool);
   }

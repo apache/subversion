@@ -106,8 +106,8 @@ build_info_for_node(svn_wc__info2_t **info,
 
   wc_info->copyfrom_rev = SVN_INVALID_REVNUM;
 
-  SVN_ERR(svn_wc__db_get_format(&wc_info->wc_format,
-                                db, local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_get_settings(&wc_info->wc_format, NULL,
+                                  db, local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, &db_kind, &tmpinfo->rev,
                                &repos_relpath,
@@ -553,6 +553,19 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
       SVN_ERR(receiver(receiver_baton, this_abspath, info, iterpool));
     }
   svn_pool_destroy(iterpool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__get_settings(int *format_p,
+                     svn_boolean_t *store_pristines_p,
+                     svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_wc__db_get_settings(format_p, store_pristines_p, wc_ctx->db,
+                                  local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }

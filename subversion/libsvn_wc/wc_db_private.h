@@ -107,8 +107,9 @@ typedef struct svn_wc__db_wcroot_t {
      const char *local_abspath -> svn_wc_adm_access_t *adm_access */
   apr_hash_t *access_cache;
 
-  /* How to manage the pristines ("local-only" or "on-demand") */
-  const char *pristines_mode;
+  /* Whether to store the pristine contents of all files on disk or
+     to fetch the contents on demand. */
+  svn_boolean_t store_pristines;
 
 } svn_wc__db_wcroot_t;
 
@@ -129,6 +130,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
+                             svn_boolean_t store_pristines,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 

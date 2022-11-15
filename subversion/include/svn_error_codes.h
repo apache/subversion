@@ -576,6 +576,11 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 41,
              "Duplicate targets in svn:externals property")
 
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_INCOMPATIBLE_SETTINGS,
+             SVN_ERR_WC_CATEGORY_START + 42,
+             "Incompatible working copy settings")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

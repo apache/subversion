@@ -310,17 +310,20 @@ svn_wc__db_init(svn_wc__db_t *db,
                 const char *repos_uuid,
                 svn_revnum_t initial_rev,
                 svn_depth_t depth,
+                svn_boolean_t store_pristines,
                 apr_pool_t *scratch_pool);
 
-/* Return the working copy format for LOCAL_ABSPATH in DB in *FORMAT.
+/* Return the working copy settings *FORMAT_P and *STORE_PRISTINES_P for
+   LOCAL_ABSPATH in DB.
 
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__db_get_format(int *format,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool);
+svn_wc__db_get_settings(int *format_p,
+                        svn_boolean_t *store_pristines_p,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
 
 /* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH, relative
    from wri_abspath.
@@ -1085,14 +1088,6 @@ svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
                               const char *wri_abspath,
                               const svn_checksum_t *sha1_checksum,
                               apr_pool_t *scratch_pool);
-
-/* Return the *PRISTINES_MODE for the WC at (DB, LOCAL_ABSPATH).
- */
-svn_error_t *
-svn_wc__db_pristines_mode(const char **pristines_mode,
-                          svn_wc__db_t *db,
-                          const char *local_abspath,
-                          apr_pool_t *scratch_pool);
 
 /* @defgroup svn_wc__db_external  External management
    @{ */
@@ -2988,6 +2983,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
+                         svn_boolean_t store_pristines,
                          apr_pool_t *scratch_pool);
 
 /* Simply insert (or replace) one row in the EXTERNALS table. */

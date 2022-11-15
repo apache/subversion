@@ -540,9 +540,17 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    to fail.
 
    A new working copy, if needed, will be created in the format corresponding
-   to the WC_FORMAT_VERSION of the client. If this parameter is NULL, the
-   format will be determined from context (see svn_wc__format_from_context).
-   The format of any existing working copy will remain unchanged.
+   to the WC_FORMAT_VERSION of the client.  The format of any existing working
+   copy will remain unchanged.
+
+   If STORE_PRISTINES is svn_tristate_true, the pristine contents of all
+   files in the working copy will be stored on disk.  If STORE_PRISTINES is
+   svn_tristate_false, the pristine contents will be fetched on-demand when
+   required by the operation.
+
+   If WC_FORMAT_VERSION is NULL and STORE_PRISTINES is svn_tristate_unknown, the
+   settings will be determined from context (see svn_wc__settings_from_context).
+   Otherwise, both WC_FORMAT_VERSION and STORE_PRISTINES must be defined.
 
    If RA_SESSION is NOT NULL, it may be used to avoid creating a new
    session. The session may point to a different URL after returning.
@@ -558,6 +566,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
                               const svn_version_t *wc_format_version,
+                              svn_tristate_t store_pristines,
                               svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
@@ -1250,6 +1259,11 @@ svn_client__textbase_sync(const char *local_abspath,
                           svn_boolean_t allow_dehydrate,
                           svn_client_ctx_t *ctx,
                           apr_pool_t *scratch_pool);
+
+/* Returns the first version that supported the working copy metadata format
+ * where pristines can be fetched on demand. */
+const svn_version_t *
+svn_client__compatible_wc_version_pristines_on_demand(apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

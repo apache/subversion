@@ -219,6 +219,7 @@ typedef struct svn_test_opts_t
   /* WC format version to use for all tests (except tests for a specific format) */
   const svn_version_t *wc_format_version;
   svn_boolean_t verbose;
+  svn_tristate_t store_pristines;
   /* Add future "arguments" here. */
 } svn_test_opts_t;
 

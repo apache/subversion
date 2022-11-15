@@ -527,14 +527,14 @@ svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
                       void *cancel_baton,
                       apr_pool_t *scratch_pool)
 {
-  const char *mode;
+  svn_boolean_t store_pristines;
   textbase_sync_baton_t baton = {0};
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_pristines_mode(&mode, wc_ctx->db, local_abspath,
-                                    scratch_pool));
-  if (strcmp(mode, "local-only") == 0)
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristines, wc_ctx->db,
+                                  local_abspath, scratch_pool));
+  if (store_pristines)
     return SVN_NO_ERROR;
 
   baton.db = wc_ctx->db;

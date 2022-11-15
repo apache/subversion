@@ -223,6 +223,9 @@ extern "C" {
  * demand.  */
 #define SVN_WC__PRISTINES_ON_DEMAND_VERSION 32
 
+/* Starting from this version, the DB stores per-WC settings. */
+#define SVN_WC__SETTINGS_VERSION 32
+
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other
  * suitable string if no released version used WC_FORMAT.
@@ -538,6 +541,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
+                            svn_boolean_t store_pristines,
                             apr_pool_t *scratch_pool);
 
 

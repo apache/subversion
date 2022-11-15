@@ -809,6 +809,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
 
   opts.fs_type = DEFAULT_FS_TYPE;
   opts.wc_format_version = svn_wc__min_supported_format_version();
+  opts.store_pristines = svn_tristate_unknown;
 
   /* Initialize APR (Apache pools) */
   if (apr_initialize() != APR_SUCCESS)

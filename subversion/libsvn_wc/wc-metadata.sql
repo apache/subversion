@@ -713,7 +713,8 @@ WHERE l.op_depth = 0
    following schema changes:
    - Add the 'hydrated' column to the PRISTINE table.
    - Add the I_PRISTINE_UNREFERENCED index.
-   - Add the TEXTBASE_REFS table. */
+   - Add the TEXTBASE_REFS table.
+   - Add the SETTINGS table. */
 -- STMT_UPGRADE_TO_32
 /* True iff the pristine contents are currently available on disk. */
 ALTER TABLE PRISTINE ADD COLUMN hydrated INTEGER NOT NULL DEFAULT 1;
@@ -777,6 +778,12 @@ BEGIN
     AND local_relpath = OLD.local_relpath
     AND op_depth = OLD.op_depth;
 END;
+
+/* This table contains settings of a working copy, identified by WC_ID. */
+CREATE TABLE SETTINGS (
+  wc_id  INTEGER NOT NULL REFERENCES WCROOT (id) PRIMARY KEY,
+  store_pristines  INTEGER
+);
 
 PRAGMA user_version = 32;
 

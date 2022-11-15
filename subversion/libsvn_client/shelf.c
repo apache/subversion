@@ -1034,6 +1034,7 @@ shelf_copy_base(svn_client__shelf_version_t *new_shelf_version,
                                         TRUE /*ignore_externals*/,
                                         FALSE /*allow_unver_obstructions*/,
                                         NULL, /* default WC format */
+                                        svn_tristate_unknown,
                                         ra_session,
                                         ctx, scratch_pool));
   /* ### hopefully we won't eventually need to sleep_here... */

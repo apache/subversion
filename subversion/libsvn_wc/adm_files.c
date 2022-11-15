@@ -207,6 +207,7 @@ init_adm(svn_wc__db_t *db,
          const char *repos_uuid,
          svn_revnum_t initial_rev,
          svn_depth_t depth,
+         svn_boolean_t store_pristines,
          apr_pool_t *pool)
 {
   /* First, make an empty administrative area. */
@@ -228,7 +229,7 @@ init_adm(svn_wc__db_t *db,
   /* Create the SDB. */
   SVN_ERR(svn_wc__db_init(db, target_format, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
-                          initial_rev, depth, pool));
+                          initial_rev, depth, store_pristines, pool));
 
   /* Stamp ENTRIES and FORMAT files for old clients.  */
   SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
@@ -254,6 +255,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
+                            svn_boolean_t store_pristines,
                             apr_pool_t *scratch_pool)
 {
   int present_format;
@@ -265,12 +267,31 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   const char *db_repos_relpath, *db_repos_root_url, *db_repos_uuid;
   svn_revnum_t db_revision;
+  svn_boolean_t wc_store_pristines;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(url != NULL);
   SVN_ERR_ASSERT(repos_root_url != NULL);
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(repos_relpath != NULL);
+
+  if (target_format < SVN_WC__SUPPORTED_VERSION)
+    return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format %d is not supported by client version %s."),
+        target_format, SVN_VER_NUM);
+
+  if (target_format > SVN_WC__VERSION)
+    return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format %d can't be created by client version %s."),
+        target_format, SVN_VER_NUM);
+
+  if (target_format < SVN_WC__PRISTINES_ON_DEMAND_VERSION && !store_pristines)
+    return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format %d does not support the requested capabilities"),
+        target_format);
 
   SVN_ERR(svn_wc__internal_check_wc(&present_format, db, local_abspath, TRUE,
                                     scratch_pool));
@@ -279,22 +300,30 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
      just create one. */
   if (present_format == 0)
     {
-
-      if (target_format < SVN_WC__SUPPORTED_VERSION)
-        return svn_error_createf(
-            SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-            _("Working copy format %d is not supported by client version %s."),
-            target_format, SVN_VER_NUM);
-
-      if (target_format > SVN_WC__VERSION)
-        return svn_error_createf(
-            SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-            _("Working copy format %d can't be created by client version %s."),
-            target_format, SVN_VER_NUM);
-
       return svn_error_trace(init_adm(db, target_format, local_abspath,
                                       repos_relpath, repos_root_url, repos_uuid,
-                                      revision, depth, scratch_pool));
+                                      revision, depth, store_pristines,
+                                      scratch_pool));
+    }
+  else if (present_format != target_format)
+    {
+      return svn_error_createf(
+          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+          _("Format %d doesn't match existing format %d in '%s'"),
+          target_format, present_format, local_abspath);
+    }
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &wc_store_pristines, db,
+                                  local_abspath, scratch_pool));
+
+  if ((store_pristines && !wc_store_pristines) ||
+      (!store_pristines && wc_store_pristines))
+    {
+      return svn_error_createf(
+          SVN_ERR_WC_INCOMPATIBLE_SETTINGS, NULL,
+          _("'%s' is an existing working copy with different '%s' setting"),
+          svn_dirent_local_style(local_abspath, scratch_pool),
+          "store-pristines");
     }
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
@@ -314,13 +343,6 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   if (status != svn_wc__db_status_deleted
       && status != svn_wc__db_status_not_present)
     {
-      /* Check that the existing format matches the requested format. */
-      if (present_format != target_format)
-        return svn_error_createf(
-            SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-            _("Format %d doesn't match existing format %d in '%s'"),
-            target_format, present_format, local_abspath);
-
       /* ### Should we match copyfrom_revision? */
       if (db_revision != revision)
         return
@@ -389,12 +411,13 @@ svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
                    const char *repos_uuid,
                    svn_revnum_t revision,
                    svn_depth_t depth,
+                   svn_boolean_t store_pristines,
                    apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
     svn_wc__internal_ensure_adm(wc_ctx->db, target_format, local_abspath,
                                 url, repos_root_url, repos_uuid, revision,
-                                depth, scratch_pool));
+                                depth, store_pristines, scratch_pool));
 }
 
 svn_error_t *

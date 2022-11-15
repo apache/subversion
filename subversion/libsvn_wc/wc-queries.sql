@@ -1896,6 +1896,14 @@ UNION ALL
 SELECT pristine.checksum, pristine.hydrated, 0, NULL, NULL, NULL
 FROM pristine WHERE refcount = 0
 
+-- STMT_SELECT_SETTINGS
+SELECT store_pristines FROM settings WHERE wc_id = ?1
+
+-- STMT_UPSERT_SETTINGS
+INSERT INTO settings (wc_id, store_pristines)
+VALUES (?1, ?2)
+ON CONFLICT(wc_id) DO UPDATE SET store_pristines=?2
+
 /* ------------------------------------------------------------------------- */
 
 /* Grab all the statements related to the schema.  */
