@@ -22,6 +22,12 @@ Candidate changes:
    votes:
      +1: rhuijben
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1903267
    Makefile.in (fast-clean, clean-swig-py): Remove __pycache__ directory
    as well as *.pyc
@@ -30,7 +36,7 @@ Candidate changes:
    Branch:
      1.14.x-r1903267
    Votes:
-     +1: futatuki, jamessan
+     +1: futatuki, jamessan, rhuijben
 
  * r1904198, r1904287
    swig-py: build: Don't pass deprecated options to SWIG >= 4.1.0 release
@@ -39,10 +45,4 @@ Candidate changes:
    Depends:
      r1878379, r1883719, r1883722, r1884610
    Votes:
-     +1: futatuki, jamessan
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: futatuki, jamessan, rhuijben
