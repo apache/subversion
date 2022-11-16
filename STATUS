@@ -27,12 +27,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1904198, r1904287
-   swig-py: build: Don't pass deprecated options to SWIG >= 4.1.0 release
-   Justification:
-     Reduce extra deprecation warnings from SWIG.
-   Depends:
-     r1878379, r1883719, r1883722, r1884610
-   Votes:
-     +1: futatuki, jamessan, rhuijben

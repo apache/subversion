@@ -1044,8 +1044,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         return
       if self.swig_version < (4, 0, 0):
         opts = "-python -py3 -nofastunpack -modern"
-      else:
+      elif self.swig_version < (4, 1, 0):
         opts = "-python -py3 -nofastunpack"
+      else:
+        opts = "-python -nofastunpack"
+      if show_warnings and self.swig_version > (4, 0, 2):
+        print("WARNING: Subversion Python bindings may work,\n"
+              "but we didn't check with this SWIG version.")
     else:
       if not ((1, 3, 24) <= self.swig_version < (4, 0, 0)):
         if show_warnings:
