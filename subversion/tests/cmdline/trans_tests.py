@@ -213,7 +213,6 @@ def keywords_off(path):
 ### This test is know to fail when Subversion is built in very deep
 ### directory structures, caused by SVN_KEYWORD_MAX_LEN being defined
 ### as 255.
-@XFail(lambda: svntest.main.options.wc_format_version=='1.15')
 def keywords_from_birth(sbox):
   "commit new files with keywords active from birth"
 
@@ -398,7 +397,8 @@ def keywords_from_birth(sbox):
   # after commit, so read it from the repo.
   if sbox.pristines_on_demand_enabled():
     _, actual_textbase_kw, _ = svntest.main.run_svn(False,
-                                 'cat', '-rHEAD', fixed_length_keywords_path)
+                                 'cat', '-rHEAD', '--ignore-keywords',
+                                 fixed_length_keywords_path)
   else:
     fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
     actual_textbase_kw = fp.readlines()
