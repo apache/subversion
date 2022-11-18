@@ -35,6 +35,7 @@ try:
 except ImportError:
   # Python <3.0
   import ConfigParser as configparser
+  configparser.ConfigParser.read_file = configparser.ConfigParser.readfp
 import generator.swig
 
 import getversion
@@ -76,7 +77,7 @@ class GeneratorBase:
 
     # Now read and parse build.conf
     parser = configparser.ConfigParser()
-    parser.readfp(open(fname))
+    parser.read_file(open(fname))
 
     self.conf = build_path(os.path.abspath(fname))
 

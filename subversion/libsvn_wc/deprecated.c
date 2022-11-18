@@ -2815,6 +2815,7 @@ svn_wc__status2_from_3(svn_wc_status2_t **status,
     }
 
   (*status)->entry = entry;
+  (*status)->locked = old_status->locked;
   (*status)->copied = old_status->copied;
   (*status)->repos_lock = svn_lock_dup(old_status->repos_lock, result_pool);
 
@@ -2935,7 +2936,7 @@ struct status4_wrapper_baton
   svn_wc_context_t *wc_ctx;
 };
 
-/* */
+/* Implements svn_wc_status_func4_t */
 static svn_error_t *
 status4_wrapper_func(void *baton,
                      const char *local_abspath,

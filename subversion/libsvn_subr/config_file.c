@@ -1236,7 +1236,7 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### It does not remove or invalidate existing stored credentials."  NL
         "### To do that, see the 'svn auth --remove' command, or remove the" NL
         "### cache files by hand as described in the Subversion book at"     NL
-        "### http://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.tour.initial.authn-cache-purge"
+        "### https://svnbook.red-bean.com/nightly/en/svn.serverconfig.netmodel.html#svn.tour.initial.authn-cache-purge"
                                                                              NL
         "###"                                                                NL
         "### HTTP timeouts, if given, are specified in seconds.  A timeout"  NL

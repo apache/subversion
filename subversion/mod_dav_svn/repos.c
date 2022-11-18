@@ -3487,7 +3487,7 @@ emit_collection_head(const dav_resource *resource,
       SVN_ERR(dav_svn__brigade_puts(bb, output, xml_index_dtd));
       SVN_ERR(dav_svn__brigade_puts(bb, output,
                          "<svn version=\"" SVN_VERSION "\"\n"
-                         "     href=\"http://subversion.apache.org/\">\n"));
+                         "     href=\"https://subversion.apache.org/\">\n"));
       SVN_ERR(dav_svn__brigade_puts(bb, output, "  <index"));
 
       if (name)
@@ -3644,7 +3644,7 @@ emit_collection_tail(const dav_resource *resource,
           */
           SVN_ERR(dav_svn__brigade_puts(bb, output,
                    " </ul>\n <hr noshade><em>Powered by "
-                   "<a href=\"http://subversion.apache.org/\">"
+                   "<a href=\"https://subversion.apache.org/\">"
                    "Apache Subversion"
                    "</a> version " SVN_VERSION "."
                    "</em>\n</body></html>"));
@@ -3690,7 +3690,7 @@ deliver(const dav_resource *resource, ap_filter_t *unused)
       int i;
 
       /* <svn version="1.3.0 (dev-build)"
-              href="http://subversion.apache.org">
+              href="https://subversion.apache.org">
            <index name="[info->repos->repo_name]"
                   path="[info->repos_path]"
                   rev="[info->root.rev]">

@@ -28,7 +28,7 @@
 #
 # Some Subversion project log messages include parseable data to help
 # track who's contributing what.  The exact syntax is described in
-# http://subversion.apache.org/docs/community-guide/conventions.html#crediting,
+# https://subversion.apache.org/docs/community-guide/conventions.html#crediting,
 # but here's an example, indented by three spaces, i.e., the "Patch by:"
 # starts at the beginning of a line:
 #
@@ -620,7 +620,7 @@ to help us keep track of whom to consider for commit access.  The list
 was generated from "svn&nbsp;log" output by <a
 href="http://svn.apache.org/repos/asf/subversion/trunk/tools/dev/contribulyze.py"
 >contribulyze.py</a>, which looks for log messages that use the <a
-href="http://subversion.apache.org/docs/community-guide/conventions.html#crediting"
+href="https://subversion.apache.org/docs/community-guide/conventions.html#crediting"
 >special contribution format</a>.</p>
 
 <p><i>Please do not use this list as a generic guide to who has
@@ -734,8 +734,8 @@ def usage():
   print('Create HTML files in the current directory, rooted at index.html,')
   print('in which you can browse to see who contributed what.')
   print('')
-  print('The log input should use the contribution-tracking format defined')
-  print('in http://subversion.apache.org/docs/community-guide/conventions.html#crediting.')
+  print('The log input should use the contribution-tracking format defined in')
+  print('https://subversion.apache.org/docs/community-guide/conventions.html#crediting.')
   print('')
   print('Options:')
   print('')

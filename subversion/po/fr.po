@@ -3222,8 +3222,8 @@ msgstr "'%s' contient une option invalide '%s' pour le format de stockage"
 
 #: ../libsvn_fs_fs/fs_fs.c:1071
 #, c-format
-msgid "Found format '%d', only created by unreleased dev builds; see http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
-msgstr "Format '%d' uniquement créé par des versions non officielles ; Voir http://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
+msgid "Found format '%d', only created by unreleased dev builds; see https://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
+msgstr "Format '%d' uniquement créé par des versions non officielles ; Voir https://subversion.apache.org/docs/release-notes/1.7#revprop-packing"
 
 #: ../libsvn_fs_fs/fs_fs.c:1082
 #, c-format
@@ -5894,13 +5894,13 @@ msgid ""
 "Copyright (C) 2012 The Apache Software Foundation.\n"
 "This software consists of contributions made by many people; see the NOTICE\n"
 "file for more information.\n"
-"Subversion is open source software, see http://subversion.apache.org/\n"
+"Subversion is open source software, see https://subversion.apache.org/\n"
 "\n"
 msgstr ""
 "Copyright (C) 2012 The Apache Software Foundation.\n"
 "Ce logiciel est la somme des contributions de nombreuses personnes ;\n"
 "voir le fichier NOTICE pour plus d'information.\n"
-"Subversion est un logiciel libre, voir http://subversion.apache.org/\n"
+"Subversion est un logiciel libre, voir https://subversion.apache.org/\n"
 "\n"
 
 #: ../libsvn_subr/path.c:1090
@@ -7293,11 +7293,11 @@ msgid ""
 "This client is too old to work with the working copy at\n"
 "'%s' (format %d).\n"
 "You need to get a newer Subversion client. For more details, see\n"
-"  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"  https://subversion.apache.org/faq.html#working-copy-format-change\n"
 msgstr ""
 "Ce client est trop vieux pour la copie de travail '%s' (format %d).\n"
 "Vous avez besoin d'une nouvelle version du client Subversion. Voir pour\n"
-"les détails : http://subversion.apache.org/faq.html#working-copy-format-change\n"
+"les détails : https://subversion.apache.org/faq.html#working-copy-format-change\n"
 
 #: ../libsvn_wc/wc_db_wcroot.c:288
 msgid "Cleanup with an older 1.7 client before upgrading with this client"
@@ -7757,10 +7757,10 @@ msgstr ""
 #: ../svn/help-cmd.c:63
 msgid ""
 "Subversion is a tool for version control.\n"
-"For additional information, see http://subversion.apache.org/\n"
+"For additional information, see https://subversion.apache.org/\n"
 msgstr ""
 "Subversion est un outil pour gérer des versions.\n"
-"Pour plus d'informations, voir http://subversion.apache.org/\n"
+"Pour plus d'informations, voir https://subversion.apache.org/\n"
 
 #: ../svn/help-cmd.c:70 ../svnrdump/svnrdump.c:503 ../svnsync/main.c:1854
 msgid ""

@@ -1,4 +1,11 @@
 ;;; psvn.el --- Subversion interface for emacs
+
+;; This file is known to be out of date but has been kept to not break scripts
+;; that might rely on it.
+;;
+;; The latest version is hosted here:
+;; http://www.xsteve.at/prg/emacs/
+
 ;; Copyright (C) 2002-2009 by Stefan Reichoer
 
 ;; Author: Stefan Reichoer <stefan@xsteve.at>
@@ -28,7 +35,7 @@
 ;; if you upgrade to a higher version, you need to do a fresh checkout
 
 ;; psvn.el is an interface for the revision control tool subversion
-;; (see http://subversion.apache.org)
+;; (see https://subversion.apache.org)
 ;; psvn.el provides a similar interface for subversion as pcl-cvs for cvs.
 ;; At the moment the following commands are implemented:
 ;;
@@ -137,8 +144,6 @@
 
 ;; The latest version of psvn.el can be found at:
 ;;   http://www.xsteve.at/prg/emacs/psvn.el
-;; Or you can check it out from the subversion repository:
-;;   svn co http://svn.apache.org/repos/asf/subversion/trunk/contrib/client-side/emacs emacs-svn
 
 ;; TODO:
 ;; * shortcut for svn propset svn:keywords "Date" psvn.el

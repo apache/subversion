@@ -471,7 +471,7 @@ setup(cmdclass={'build': build, 'clean': clean},
       description='Python bindings for the Subversion version control system.',
       author='The Subversion Team',
       author_email='dev@subversion.apache.org',
-      url='http://subversion.apache.org',
+      url='https://subversion.apache.org',
       packages=['csvn', 'csvn.core', 'csvn.ext'],
       license='Apache License, Version 2.0',
      )

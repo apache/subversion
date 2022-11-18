@@ -3,7 +3,7 @@
 #  revert_tests.py:  testing 'svn revert'.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -471,7 +471,7 @@ def revert_file_merge_replace_with_history(sbox):
   # Add the new file
   svntest.actions.run_and_verify_svn(None, [], 'add', rho_path)
 
-  # Commit revsion 3
+  # Commit revision 3
   expected_status.add({
     'A/D/G/rho' : Item(status='A ', wc_rev='0')
     })

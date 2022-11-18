@@ -24,7 +24,7 @@ dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
      [esyscmd($PYTHON build/getversion.py SVN subversion/include/svn_version.h)],
-     [http://subversion.apache.org/])
+     [https://subversion.apache.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR([build])
@@ -1814,7 +1814,7 @@ https://www.gnu.org/licenses/agpl-3.0.html
 http://opensource.org/licenses/AGPL-3.0
 
 The Berkeley DB backend to Subversion is deprecated; see
-http://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
+https://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
 
 The Subversion developers have not tested Subversion with Berkeley DB 6 for
 technical problems or bugs.

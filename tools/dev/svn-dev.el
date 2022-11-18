@@ -194,7 +194,7 @@ the resulting URL."
   (insert (format "http://svn.apache.org/viewcvs?view=revision&revision=%s" 
                   rev)))
 
-(defconst svn-url-base "http://subversion.apache.org/")
+(defconst svn-url-base "https://subversion.apache.org/")
 (defconst svn-faq-url (concat svn-url-base "faq.html"))
 (defconst svn-hacking-url (concat svn-url-base 
                                   "docs/community-guide/community-guide.html"))

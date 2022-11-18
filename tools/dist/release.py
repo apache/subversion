@@ -98,7 +98,6 @@ dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
 buildbot_repos = os.getenv('SVN_RELEASE_BUILDBOT_REPOS',
                            'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster')
-KEYS = 'https://people.apache.org/keys/group/subversion.asc'
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
@@ -658,7 +657,7 @@ def update_backport_bot(args):
 
   Ask someone with appropriate access to add the %s.x branch
   to the backport merge bot.  See
-  http://subversion.apache.org/docs/community-guide/releasing.html#backport-merge-bot
+  https://subversion.apache.org/docs/community-guide/releasing.html#backport-merge-bot
 
 ***
 
@@ -980,7 +979,12 @@ def roll_tarballs(args):
         # from a committer's LDAP profile down the road)
         basename = 'subversion-%s.KEYS' % (str(args.version),)
         filepath = os.path.join(get_tempdir(args.base_dir), basename)
-        download_file(KEYS, filepath, None)
+        # The following code require release.py to be executed within a
+        # complete wc, not a shallow wc as indicated in HACKING as one option.
+        # We /could/ download COMMITTERS from /trunk if it doesn't exist...
+        subprocess.check_call([os.path.dirname(__file__) + '/make-keys.sh',
+                               '-c', os.path.dirname(__file__) + '/../..',
+                               '-o', filepath])
         shutil.move(filepath, get_target(args))
 
     # And we're done!
@@ -1323,9 +1327,13 @@ PUBLIC_KEY_ALGORITHMS = {
     # These values are taken from the RFC's registry at:
     # https://www.iana.org/assignments/pgp-parameters/pgp-parameters.xhtml#pgp-parameters-12
     #
-    # The values are callables that produce gpg1-like key length and type
-    # indications, e.g., "4096R" for a 4096-bit RSA key.
-    1: (lambda keylen: str(keylen) + 'R'), # RSA
+    # The values are callables that produce gpg2-like key length and type
+    # indications, e.g., "rsa4096" for a 4096-bit RSA key.
+    1:  lambda keylen, _: 'rsa' + str(keylen),  # RSA
+    3:  lambda keylen, _: 'rsa' + str(keylen),  # RSA Sign Only
+    17: lambda keylen, _: 'dsa' + str(keylen),  # DSA
+    # This index is not registered with IANA but is used by gpg2
+    22: lambda _, parts: parts[16],             # EdDSA
 }
 
 def _make_human_readable_fingerprint(fingerprint):
@@ -1419,7 +1427,7 @@ def get_siginfo(args, quiet=False):
                 keytype = int(parts[3])
                 formatter = PUBLIC_KEY_ALGORITHMS[keytype]
                 long_key_id = parts[4]
-                length_and_type = formatter(keylen) + '/' + long_key_id
+                length_and_type = formatter(keylen, parts) + '/' + long_key_id
                 del keylen, keytype, formatter, long_key_id
                 break
         else:
@@ -1461,12 +1469,13 @@ def check_sigs(args):
 
 def get_keys(args):
     'Import the LDAP-based KEYS file to gpg'
-    # We use a tempfile because urlopen() objects don't have a .fileno()
-    with tempfile.SpooledTemporaryFile() as fd:
-        fd.write(urlopen(KEYS).read())
-        fd.flush()
-        fd.seek(0)
-        subprocess.check_call(['gpg', '--import'], stdin=fd)
+    with tempfile.NamedTemporaryFile() as keysfile:
+      subprocess.check_call([
+          os.path.dirname(__file__) + '/make-keys.sh',
+          '-c', os.path.dirname(__file__) + '/../../COMMITTERS',
+          '-o', keysfile.name,
+      ])
+      subprocess.check_call(['gpg', '--import', keysfile.name])
 
 def add_to_changes_dict(changes_dict, audience, section, change, revision):
     # Normalize arguments
@@ -1909,7 +1918,10 @@ def main():
     os.environ['TZ'] = 'UTC'
 
     # finally, run the subcommand, and give it the parsed arguments
-    args.func(args)
+    try:
+      args.func(args)
+    except AttributeError:
+      parser.print_help()
 
 
 if __name__ == '__main__':

@@ -178,6 +178,7 @@ if test -z "$PYTHON"; then
   echo "to the Python executable, and re-run autogen.sh"
   exit 1
 fi
+export PYTHON
 
 # Compile SWIG headers into standalone C files if we are in release mode
 if test -n "$RELEASE_MODE"; then

@@ -13,7 +13,7 @@ The ra_neon (formerly, ra_dav) drives delta editors (svn_delta_editor_t) in
 accordance with the constraints of that API [1].
 
 [1] ../../../subversion/include/svn_delta.h:svn_delta_editor_t 
-[1] http://subversion.apache.org/docs/api/latest/structsvn__delta__editor__t.html#_details
+[1] https://subversion.apache.org/docs/api/latest/structsvn__delta__editor__t.html#details
 
 
 == Details of New Behavior ==

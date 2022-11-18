@@ -1375,7 +1375,9 @@ static const char *
 release_name_from_version(int major, int minor, const char* product_name)
 {
   /* We can only do this if we know the official product name. */
-  if (0 == strcmp(product_name, "Mac OS X"))
+  if (0 == strcmp(product_name, "Mac OS X")
+      || 0 == strcmp(product_name, "OS X")
+      || 0 == strcmp(product_name, "macOS"))
     {
       /* See https://en.wikipedia.org/wiki/MacOS_version_history#Releases */
       switch(major)
@@ -1403,10 +1405,11 @@ release_name_from_version(int major, int minor, const char* product_name)
           break;
 
         case 11:
-          switch(minor)
-            {
-            case  0: return "Big Sur";
-            }
+          return "Big Sur";
+          break;
+
+        case 12:
+          return "Monterey";
           break;
         }
     }

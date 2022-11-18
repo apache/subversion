@@ -27,6 +27,7 @@ import static org.junit.Assert.*;
 import org.apache.subversion.javahl.callback.*;
 import org.apache.subversion.javahl.remote.*;
 import org.apache.subversion.javahl.types.*;
+import org.apache.subversion.javahl.NativeException;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -4744,6 +4745,17 @@ public class BasicTests extends SVNTests
         }
 
         tunnelAgent.joinAndTest();
+    }
+
+    /**
+     * Test getMessage in NativeException.
+     * @throws Throwable
+     */
+    public void testGetMessage() throws Throwable
+    {
+	/* NativeException with a null message previously threw a NullPointerException */
+	assertEquals("", new NativeException(null, null, null, 0).getMessage());
+	assertEquals("messagesvn: source: (apr_err=0)", new NativeException("message", "source", null, 0).getMessage());
     }
 
     /**

@@ -74,7 +74,7 @@ available unless both client and server are the latest version.  There are
 also cases where a new feature will work but will run less efficiently if
 the client is new and the server old.</p>
 
-<p>There is <strong>no need</strong> to <a href="http://svnbook.red-bean.com/en/1.8/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate.svnadmin"
+<p>There is <strong>no need</strong> to <a href="https://svnbook.red-bean.com/en/1.8/svn.reposadmin.maint.html#svn.reposadmin.maint.migrate.svnadmin"
 >dump and reload</a> your repositories. 
 Subversion [major-minor] servers can read and write to repositories created by
 earlier versions.  To upgrade an existing server installation, just install the

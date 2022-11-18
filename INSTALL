@@ -646,7 +646,7 @@ I.    INTRODUCTION
 
       The primary documentation for Subversion is the free book
       "Version Control with Subversion", a.k.a. "The Subversion Book",
-      obtainable from http://svnbook.red-bean.com/.
+      obtainable from https://svnbook.red-bean.com/.
 
       Various additional documentation exists in the doc/ subdirectory of
       the Subversion source.  See the file doc/README for more information.
@@ -1282,7 +1282,7 @@ III.  BUILDING A SUBVERSION SERVER
 
       The following section is an abbreviated version of the
       information in the Subversion Book
-      (http://svnbook.red-bean.com).  Please read chapter 6 for more
+      (https://svnbook.red-bean.com).  Please read chapter 6 for more
       details.
 
       The following assumes you have already created a repository.
@@ -1429,7 +1429,7 @@ III.  BUILDING A SUBVERSION SERVER
       can use existing system accounts).  It's also capable of using
       Cyrus SASL if libsasl2 is detected at ./configure time.  Please
       read chapter 6 in the Subversion Book
-      (http://svnbook.red-bean.com) for details on these features.
+      (https://svnbook.red-bean.com) for details on these features.
 
 
 

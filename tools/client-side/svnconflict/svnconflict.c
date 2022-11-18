@@ -287,7 +287,7 @@ svnconflict_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
      "\nAvailable subcommands:\n");
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
-     "For additional information, see http://subversion.apache.org/\n");
+     "For additional information, see https://subversion.apache.org/\n");
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");
   svn_stringbuf_t *version_footer = svn_stringbuf_create_empty(pool);

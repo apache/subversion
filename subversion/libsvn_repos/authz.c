@@ -136,7 +136,7 @@ static svn_atomic_t authz_pool_initialized = FALSE;
  *
  * HTTPD may run pre/post config hooks multiple times and clear
  * its global configuration pool which our authz pools depend on.
- * This happens in a non-threaded context during HTTPD's intialization
+ * This happens in a non-threaded context during HTTPD's initialization
  * and HTTPD's main loop, so it is safe to reset static variables here.
  * (And any applications which cleared this pool while SVN threads
  * were running would crash no matter what.)

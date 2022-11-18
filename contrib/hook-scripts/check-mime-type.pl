@@ -195,7 +195,7 @@ if (@errors)
 
     You may want to consider uncommenting the auto-props section
     in your ~/.subversion/config file. Read the Subversion book
-    (http://svnbook.red-bean.com/), Chapter 7, Properties section,
+    (https://svnbook.red-bean.com/), Chapter 7, Properties section,
     Automatic Property Setting subsection for more help.
 EOS
     exit 1;
