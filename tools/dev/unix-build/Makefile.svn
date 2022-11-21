@@ -937,6 +937,8 @@ $(SERF_OBJDIR)/.retrieved:
 	if [ ! -d $(SERF_SRCDIR) ]; then \
 		svn co $(SERF_URL) $(SERF_SRCDIR); \
 		svn merge ^/serf/branches/1.3.x-sslbuild@1781542 $(SERF_SRCDIR); \
+		svn merge -c 1811083 ^/serf/trunk@1811083 $(SERF_SRCDIR); \
+		svn merge -c 1814604 ^/serf/trunk@1814604 $(SERF_SRCDIR); \
 	fi
 	touch $@
 
@@ -945,7 +947,7 @@ $(SERF_OBJDIR)/.compiled: $(SERF_OBJDIR)/.retrieved \
 	$(APR_UTIL_OBJDIR)/.installed
 	cd $(SERF_SRCDIR) && \
 		scons -j${MAKE_JOBS} DEBUG=1 \
-			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -DAPR_POOL_DEBUG" \
+			CFLAGS="-O0 -g $(PROFILE_CFLAGS) -fPIC -DAPR_POOL_DEBUG" \
 			CC=$(CC) CXX=$(CXX) \
 			APR=$(PREFIX)/apr \
 			APU=$(PREFIX)/apr \
