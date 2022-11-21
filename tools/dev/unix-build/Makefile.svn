@@ -1231,6 +1231,8 @@ $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST) $(RUBY_OBJDIR)/openssl_missin
 	$(RUBY_SSL_EX_NEW_DATA_PATCH) $(RUBY_SRCDIR)/ext/openssl/extconf.rb
 	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/openssl_missing.patch
 	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/sparc64_buserror.patch
+	sed -i 's/X509_num(bs->certs)/X509_num(OCSP_resp_get0_certs(bs))/' \
+		$(RUBY_SRCDIR)/ext/openssl/ossl_ocsp.c
 	touch $@
 
 ifeq ($(THREADING),yes)
