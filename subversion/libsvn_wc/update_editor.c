@@ -3940,11 +3940,12 @@ apply_textdelta(void *file_baton,
   target = svn_stream_lazyopen_create(lazy_open_target, hb, TRUE, handler_pool);
 
   /* Prepare to apply the delta.  */
-  svn_txdelta_apply(source, target,
-                    hb->new_text_base_md5_digest,
-                    fb->local_abspath /* error_info */,
-                    handler_pool,
-                    &hb->apply_handler, &hb->apply_baton);
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(source, handler_pool), target,
+                     hb->new_text_base_md5_digest,
+                     fb->local_abspath /* error_info */,
+                     handler_pool,
+                     &hb->apply_handler, &hb->apply_baton);
 
   hb->pool = handler_pool;
   hb->fb = fb;

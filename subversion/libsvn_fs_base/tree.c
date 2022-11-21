@@ -3845,13 +3845,14 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
   svn_stream_set_write(tb->string_stream, write_to_string);
 
   /* Now, create a custom window handler that uses our two streams. */
-  svn_txdelta_apply(tb->source_stream,
-                    tb->string_stream,
-                    NULL,
-                    tb->path,
-                    tb->pool,
-                    &(tb->interpreter),
-                    &(tb->interpreter_baton));
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(tb->source_stream, tb->pool),
+                     tb->string_stream,
+                     NULL,
+                     tb->path,
+                     tb->pool,
+                     &(tb->interpreter),
+                     &(tb->interpreter_baton));
 
   return SVN_NO_ERROR;
 }

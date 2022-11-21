@@ -648,8 +648,8 @@ apply_textdelta(void *file_baton,
                                            TRUE,
                                            eb->pool, pool));
 
-  svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
-                    handler, handler_baton);
+  svn_txdelta_apply2(src_stream, dest_stream, NULL, eb->local_abspath, pool,
+                     handler, handler_baton);
 
   return SVN_NO_ERROR;
 }

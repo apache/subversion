@@ -2136,11 +2136,13 @@ apply_textdelta(void *file_baton,
                                  svn_io_file_del_on_pool_cleanup,
                                  fb->pool, fb->pool));
 
-  svn_txdelta_apply(source, temp_stream,
-                    fb->result_digest,
-                    fb->local_abspath /* error_info */,
-                    fb->pool,
-                    handler, handler_baton);
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(source, fb->pool),
+                     temp_stream,
+                     fb->result_digest,
+                     fb->local_abspath /* error_info */,
+                     fb->pool,
+                     handler, handler_baton);
 
   return SVN_NO_ERROR;
 }

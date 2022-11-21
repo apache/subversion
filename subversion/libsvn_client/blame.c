@@ -572,10 +572,12 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     {
       /* Proper delta - get window handler for applying delta.
          svn_ra_get_file_revs2 will drive the delta editor. */
-      svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
-                        frb->currpool,
-                        &delta_baton->wrapped_handler,
-                        &delta_baton->wrapped_baton);
+      /* Keep historical behavior by disowning the stream; adjust if needed. */
+      svn_txdelta_apply2(svn_stream_disown(last_stream, frb->currpool),
+                         cur_stream, NULL, NULL,
+                         frb->currpool,
+                         &delta_baton->wrapped_handler,
+                         &delta_baton->wrapped_baton);
       *content_delta_handler = window_handler;
       *content_delta_baton = delta_baton;
     }
