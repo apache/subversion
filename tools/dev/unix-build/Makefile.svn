@@ -120,7 +120,7 @@ PCRE_VER	= 8.41
 HTTPD_VER	= 2.4.37
 NEON_VER	= 0.30.2
 SERF_VER	= 1.3.9
-CYRUS_SASL_VER	= 2.1.25
+CYRUS_SASL_VER	= 2.1.28
 SQLITE_VER	= 3160200
 LIBMAGIC_VER	= 5.30
 RUBY_VER	= 2.7.4
@@ -158,7 +158,7 @@ SHA256_${GNU_ICONV_DIST} = ccf536620a45458d26ba83887a983b96827001e92a13847b45e49
 SHA256_${PCRE_DIST} = 244838e1f1d14f7e2fa7681b857b3a8566b74215f28133f14a8f5e59241b682c
 SHA256_${HTTPD_DIST} = aa97a834a32d51974be8d8a013b561e28d327387cb1da2c3c2762acd0146aabd
 SHA256_${NEON_DIST} = db0bd8cdec329b48f53a6f00199c92d5ba40b0f015b153718d1b15d3d967fbca
-SHA256_${CYRUS_SASL_DIST} = 418c16e6240a4f9b637cbe3d62937b9675627bad27c622191d47de8686fe24fe
+SHA256_${CYRUS_SASL_DIST} = 7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c
 SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c8693263615
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
 SHA256_${RUBY_DIST} = 3043099089608859fc8cce7f9fdccaa1f53a462457e3838ec3b25a7d609fbc5b
@@ -1060,6 +1060,8 @@ endif
 		$(CYRUS_SASL_SRCDIR)/lib/dlopen.c
 	# Fix a weird autotools error about missing cmulocal dir
 	(cd $(CYRUS_SASL_SRCDIR)/saslauthd/ && ln -sf ../cmulocal)
+	# Fix 64-bit time_t format-string issues
+	sed -i 's/t%020ld"/t%020lld"/' $(CYRUS_SASL_SRCDIR)/plugins/otp.c
 	touch $@
 
 # configure cyrus-sasl
@@ -1067,8 +1069,7 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 	$(BDB_OBJDIR)/.installed $(SQLITE_OBJDIR)/.installed
 	cd $(CYRUS_SASL_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" \
-		CPPFLAGS="-I/usr/include/kerberosV" \
-		CC=$(CC) CXX=$(CXX) \
+		CC=$(CC) CXX=$(CXX) MAKE=$(MAKE) \
 		GREP="`which grep`" \
 		PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
 		$(CYRUS_SASL_SRCDIR)/configure \
@@ -1084,12 +1085,12 @@ $(CYRUS_SASL_OBJDIR)/.configured: $(CYRUS_SASL_OBJDIR)/.retrieved \
 
 # compile cyrus-sasl (ignore MAKE_JOBS; multiple jobs cause random build failures)
 $(CYRUS_SASL_OBJDIR)/.compiled: $(CYRUS_SASL_OBJDIR)/.configured
-	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make)
+	(cd $(CYRUS_SASL_OBJDIR) && env MAKE=$(MAKE) MAKEFLAGS= $(MAKE))
 	touch $@
 
 # install cyrus-sasl
 $(CYRUS_SASL_OBJDIR)/.installed: $(CYRUS_SASL_OBJDIR)/.compiled
-	(cd $(CYRUS_SASL_OBJDIR) && env MAKEFLAGS= make install)
+	(cd $(CYRUS_SASL_OBJDIR) && env MAKE=$(MAKE) MAKEFLAGS= $(MAKE) install)
 	touch $@
 
 #######################################################################
