@@ -59,6 +59,7 @@ wc-info =
     wcroot-abspath?,
     wc-compatible-version?,
     wc-format?,
+    store-pristine?,
     schedule?,
     changelist?,
     copy-from-url?,
@@ -74,6 +75,7 @@ wc-info =
 wcroot-abspath = element wcroot-abspath { string }
 wc-compatible-version = element wc-compatible-version { string }
 wc-format = element wc-format { xsd:nonNegativeInteger }
+store-pristine = element store-pristine { "yes" | "no" }
 
 schedule =
   element schedule { "normal" | "add" | "delete" | "replace" | "none" }

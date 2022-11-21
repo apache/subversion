@@ -811,7 +811,11 @@ svn_cl__cmd_table_main[] =
                         "                             "
                         "                first version supporting TARGET WC\n"
                         "                             "
-                        "   'changelist' changelist of TARGET in WC")}},
+                        "   'changelist' changelist of TARGET in WC\n"
+                        "                             "
+                        "   'store-pristine'\n"
+                        "                             "
+                        "                TARGET's working copy pristine mode")}},
   },
 
   { "list", svn_cl__list, {"ls"},

@@ -371,7 +371,8 @@ typedef enum
   info_item_depth,
   info_item_changelist,
   info_item_wc_format,
-  info_item_wc_compatible_version
+  info_item_wc_compatible_version,
+  info_item_store_pristine,
 } info_item_t;
 
 /* Mapping between option keywords and info_item_t. */
@@ -401,6 +402,7 @@ static const info_item_map_t info_item_map[] =
     { SVN__STATIC_STRING("wc-format"),           info_item_wc_format },
     { SVN__STATIC_STRING("wc-compatible-version"),
                                                  info_item_wc_compatible_version },
+    { SVN__STATIC_STRING("store-pristine"),      info_item_store_pristine },
   };
 
 static const apr_size_t info_item_map_len =
@@ -607,6 +609,10 @@ print_info_xml(void *baton,
                                                 info->wc_info->wc_format));
         }
 
+      /* "<store-pristine> xx </store-pristine>" */
+      svn_cl__xml_tagged_cdata(&sb, pool, "store-pristine",
+                               info->wc_info->store_pristine ? "yes" : "no");
+
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->wc_info->schedule));
@@ -763,6 +769,15 @@ print_info(void *baton,
                                  info->wc_info->wc_format));
     }
 
+  if (info->wc_info)
+    {
+      if (info->wc_info->store_pristine)
+        SVN_ERR(svn_cmdline_fputs(_("Working Copy Store Pristine: yes\n"),
+                                  stdout, pool));
+      else
+        SVN_ERR(svn_cmdline_fputs(_("Working Copy Store Pristine: no\n"),
+                                  stdout, pool));
+    }
 
   if (info->URL)
     SVN_ERR(svn_cmdline_printf(pool, _("URL: %s\n"), info->URL));
@@ -1294,6 +1309,19 @@ print_info_item(void *baton,
                   ((info->wc_info && info->wc_info->changelist)
                    ? info->wc_info->changelist : NULL),
                   target_path, pool));
+      break;
+
+    case info_item_store_pristine:
+      {
+        const char *text;
+
+        if (info->wc_info)
+          text = info->wc_info->store_pristine ? "yes" : "no";
+        else
+          text = NULL;
+
+        SVN_ERR(print_info_item_string(text, target_path, pool));
+      }
       break;
 
     default:

@@ -3314,6 +3314,12 @@ typedef struct svn_wc_info_t
    * @since New in 1.15.
    */
   int wc_format;
+
+  /**
+   * Whether pristine content is stored locally or is being fetched on-demand.
+   * @since New in 1.15.
+   */
+  svn_boolean_t store_pristine;
 } svn_wc_info_t;
 
 /**
