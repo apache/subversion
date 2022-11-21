@@ -125,7 +125,7 @@ SQLITE_VER	= 3160200
 LIBMAGIC_VER	= 5.30
 RUBY_VER	= 2.7.4
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 3.7.5
+PYTHON_VER	= 3.10.8
 PYTHON2_VER	= 2.7.13
 PY3C_VER	= 1.1
 JUNIT_VER	= 4.10
@@ -163,7 +163,7 @@ SHA256_${SQLITE_DIST} = 65cc0c3e9366f50c0679c5ccd31432cea894bc4a3e8947dabab88c86
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
 SHA256_${RUBY_DIST} = 3043099089608859fc8cce7f9fdccaa1f53a462457e3838ec3b25a7d609fbc5b
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
-SHA256_${PYTHON_DIST} = 8ecc681ea0600bbfb366f2b173f727b205bb825d93d2f0b286bc4e58d37693da
+SHA256_${PYTHON_DIST} = f400c3fb394b8bef1292f6dc1292c5fadc3533039a5bc0c3e885f3e16738029a
 SHA256_${PYTHON2_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${PY3C_DIST} = c7ffc22bc92dded0ca859db53ef3a0b466f89a9f8aad29359c9fe4ff18ebdd20
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
@@ -1323,9 +1323,19 @@ python-clean:
 $(DISTDIR)/$(PYTHON_DIST):
 	cd $(DISTDIR) && $(FETCH_CMD) $(PYTHON_URL)
 
+$(PYTHON_OBJDIR)/openbsd-march.diff:
+	mkdir -p $(dir $@)
+	echo >$@.tmp '--- configure.ac.orig	Mon Nov 21 13:32:19 2022'
+	echo >>$@.tmp '+++ configure.ac	Mon Nov 21 13:32:40 2022'
+	echo >>$@.tmp '@@ -878,2 +878,3 @@'
+	echo >>$@.tmp '   [FreeBSD*], [MULTIARCH=""],'
+	echo >>$@.tmp '+  [OpenBSD*], [MULTIARCH=""],'
+	echo >>$@.tmp '   [MULTIARCH=$$($$CC --print-multiarch 2>/dev/null)]'
+	mv -f $@.tmp $@
+
 # retrieve python
 #
-$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
+$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(PYTHON_OBJDIR)/openbsd-march.diff
 	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
@@ -1339,6 +1349,7 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST)
 		> $(PYTHON_SRCDIR)/setup.py.patched
 	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
 	chmod +x $(PYTHON_SRCDIR)/setup.py
+	cd $(PYTHON_SRCDIR) && patch -p0 < $(PYTHON_OBJDIR)/openbsd-march.diff
 	touch $@
 
 # configure python
@@ -1347,6 +1358,7 @@ PYTHON_PROFILING=--enable-profiling
 endif
 $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 	$(BZ2_OBJDIR)/.installed
+	cd $(PYTHON_SRCDIR) && autoconf
 	cd $(PYTHON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		CC=$(CC) CXX=$(CXX) \
