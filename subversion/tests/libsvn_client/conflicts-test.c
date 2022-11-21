@@ -6118,7 +6118,7 @@ test_file_vs_dir_move_merge_assertion_failure(const svn_test_opts_t *opts,
                                wc_path, &peg_rev, &opt_rev, svn_depth_infinity,
                                TRUE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   SVN_ERR(svn_client_merge_peg5(svn_path_url_add_component2(b->repos_url, "A",

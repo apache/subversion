@@ -2231,7 +2231,7 @@ const svn_version_t *
 svn_wc__min_supported_format_version(void);
 
 /**
- * Set @a *format_p and @a *store_pristines_p to the settings of the
+ * Set @a *format_p and @a *store_pristine_p to the settings of the
  * nearest parent working copy root of @a local_abspath in @a wc_ctx,
  * or to settings of any root stored there, preferring the one with
  * the oldest format. If @a wc_ctx is empty, return the library's
@@ -2243,7 +2243,7 @@ svn_wc__min_supported_format_version(void);
  */
 svn_error_t *
 svn_wc__settings_from_context(int *format_p,
-                              svn_boolean_t *store_pristines_p,
+                              svn_boolean_t *store_pristine_p,
                               svn_wc_context_t *wc_ctx,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool);
@@ -2253,7 +2253,7 @@ svn_wc__settings_from_context(int *format_p,
  * local_abspath is a working copy subdir with schema version @a target_format
  * based on @a url at @a revision, with depth @a depth, with repository UUID
  * @a repos_uuid and repository root URL @a repos_root_url, and with the
- * @a store_pristines setting value.
+ * @a store_pristine setting value.
  *
  * @a depth must be a definite depth, it cannot be #svn_depth_unknown.
  * @a repos_uuid and @a repos_root_url MUST NOT be @c NULL, and
@@ -2284,12 +2284,12 @@ svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
                    const char *repos_uuid,
                    svn_revnum_t revision,
                    svn_depth_t depth,
-                   svn_boolean_t store_pristines,
+                   svn_boolean_t store_pristine,
                    apr_pool_t *scratch_pool);
 
 /**
  * Upgrade the working copy at @a local_abspath to the metadata storage
- * format indicated by @a target_format.  Use the @a store_pristines
+ * format indicated by @a target_format.  Use the @a store_pristine
  * settings value for the upgraded working copy.  @a local_abspath
  * should be an absolute path to the root of the working copy.
  *
@@ -2312,7 +2312,7 @@ svn_error_t *
 svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
                 int target_format,
-                svn_boolean_t store_pristines,
+                svn_boolean_t store_pristine,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
                 svn_cancel_func_t cancel_func,
@@ -2348,11 +2348,11 @@ svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
                       void *cancel_baton,
                       apr_pool_t *scratch_pool);
 
-/* Return the working copy settings *FORMAT_P and *STORE_PRISTINES_P for
+/* Return the working copy settings *FORMAT_P and *STORE_PRISTINE_P for
    LOCAL_ABSPATH in WC_CTX. */
 svn_error_t *
 svn_wc__get_settings(int *format_p,
-                     svn_boolean_t *store_pristines_p,
+                     svn_boolean_t *store_pristine_p,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);

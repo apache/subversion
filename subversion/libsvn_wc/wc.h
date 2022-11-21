@@ -541,7 +541,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
-                            svn_boolean_t store_pristines,
+                            svn_boolean_t store_pristine,
                             apr_pool_t *scratch_pool);
 
 

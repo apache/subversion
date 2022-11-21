@@ -782,7 +782,7 @@ END;
 /* This table contains settings of a working copy, identified by WC_ID. */
 CREATE TABLE SETTINGS (
   wc_id  INTEGER NOT NULL REFERENCES WCROOT (id) PRIMARY KEY,
-  store_pristines  INTEGER
+  store_pristine  INTEGER
 );
 
 PRAGMA user_version = 32;

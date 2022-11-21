@@ -1897,12 +1897,12 @@ SELECT pristine.checksum, pristine.hydrated, 0, NULL, NULL, NULL
 FROM pristine WHERE refcount = 0
 
 -- STMT_SELECT_SETTINGS
-SELECT store_pristines FROM settings WHERE wc_id = ?1
+SELECT store_pristine FROM settings WHERE wc_id = ?1
 
 -- STMT_UPSERT_SETTINGS
-INSERT INTO settings (wc_id, store_pristines)
+INSERT INTO settings (wc_id, store_pristine)
 VALUES (?1, ?2)
-ON CONFLICT(wc_id) DO UPDATE SET store_pristines=?2
+ON CONFLICT(wc_id) DO UPDATE SET store_pristine=?2
 
 /* ------------------------------------------------------------------------- */
 

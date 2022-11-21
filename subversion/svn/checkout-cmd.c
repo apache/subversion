@@ -173,7 +173,7 @@ svn_cl__checkout(apr_getopt_t *os,
                opt_state->ignore_externals,
                opt_state->force,
                opt_state->compatible_version,
-               opt_state->store_pristines,
+               opt_state->store_pristine,
                ctx, subpool));
     }
   svn_pool_destroy(subpool);

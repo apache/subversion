@@ -559,12 +559,12 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 
 svn_error_t *
 svn_wc__get_settings(int *format_p,
-                     svn_boolean_t *store_pristines_p,
+                     svn_boolean_t *store_pristine_p,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__db_get_settings(format_p, store_pristines_p, wc_ctx->db,
+  SVN_ERR(svn_wc__db_get_settings(format_p, store_pristine_p, wc_ctx->db,
                                   local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;

@@ -54,7 +54,7 @@ def simple_checkout(sbox):
                                           expected_output,
                                           expected_disk,
                                           [],
-                                          "--store-pristines=no")
+                                          "--store-pristine=no")
 
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
 def simple_commit(sbox):
@@ -68,7 +68,7 @@ def simple_commit(sbox):
                                           expected_output,
                                           expected_disk,
                                           [],
-                                          "--store-pristines=no")
+                                          "--store-pristine=no")
 
   sbox.simple_append('file', 'contents')
   sbox.simple_add('file')
@@ -96,7 +96,7 @@ def simple_update(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristines=no")
+                                          "--store-pristine=no")
   sbox.simple_append('file', 'foo')
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')
@@ -133,7 +133,7 @@ def simple_status(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristines=no")
+                                          "--store-pristine=no")
   sbox.simple_append('file', 'foo')
   sbox.simple_add('file')
 
@@ -184,7 +184,7 @@ def simple_diff(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristines=no")
+                                          "--store-pristine=no")
   sbox.simple_append('file', 'foo\n')
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')
@@ -212,7 +212,7 @@ def simple_revert(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristines=no")
+                                          "--store-pristine=no")
   sbox.simple_append('file', 'foo\n')
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')
@@ -240,7 +240,7 @@ def update_modified_file(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristines=no")
+                                          "--store-pristine=no")
   sbox.simple_append('file', 'foo')
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')

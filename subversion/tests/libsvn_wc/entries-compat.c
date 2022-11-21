@@ -644,7 +644,7 @@ test_access_baton_like_locking(const svn_test_opts_t *opts,
                                svn_path_url_add_component2(url, "sub-wc", pool),
                                repos_root_url, repos_uuid,
                                0, svn_depth_infinity,
-                               opts->store_pristines, pool));
+                               opts->store_pristine, pool));
 
     SVN_ERR(svn_wc__db_is_switched(&is_root, NULL, NULL, wc_ctx->db, subdir,
                                    pool));

@@ -2026,7 +2026,7 @@ svn_error_t *
 svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
                 int target_format,
-                svn_boolean_t store_pristines,
+                svn_boolean_t store_pristine,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
                 svn_cancel_func_t cancel_func,
@@ -2129,7 +2129,7 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                                    &data.repos_id, &data.wc_id,
                                    db, target_format, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
-                                   store_pristines, scratch_pool));
+                                   store_pristine, scratch_pool));
 
   /* Migrate the entries over to the new database.
    ### We need to think about atomicity here.

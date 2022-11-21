@@ -303,7 +303,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
-                             svn_boolean_t store_pristines,
+                             svn_boolean_t store_pristine,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
@@ -391,7 +391,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
                                           sizeof(svn_wc__db_wclock_t));
   (*wcroot)->access_cache = apr_hash_make(result_pool);
-  (*wcroot)->store_pristines = store_pristines;
+  (*wcroot)->store_pristine = store_pristine;
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -500,7 +500,7 @@ verify_stats_table(svn_sqlite__db_t *sdb,
 
 /* Read and return the settings for WC_ID in SDB. */
 static svn_error_t *
-read_settings(svn_boolean_t *store_pristines_p,
+read_settings(svn_boolean_t *store_pristine_p,
               svn_sqlite__db_t *sdb,
               int format,
               apr_int64_t wc_id,
@@ -516,15 +516,15 @@ read_settings(svn_boolean_t *store_pristines_p,
       SVN_ERR(svn_sqlite__step(&have_row, stmt));
 
       if (have_row)
-        *store_pristines_p = svn_sqlite__column_boolean(stmt, 0);
+        *store_pristine_p = svn_sqlite__column_boolean(stmt, 0);
       else
-        *store_pristines_p = TRUE;
+        *store_pristine_p = TRUE;
 
       SVN_ERR(svn_sqlite__reset(stmt));
     }
   else
     {
-      *store_pristines_p = TRUE;
+      *store_pristine_p = TRUE;
     }
 
   return SVN_NO_ERROR;
@@ -536,7 +536,7 @@ read_settings(svn_boolean_t *store_pristines_p,
 static svn_error_t *
 fetch_sdb_info(apr_int64_t *wc_id,
                int *format,
-               svn_boolean_t *store_pristines,
+               svn_boolean_t *store_pristine,
                svn_sqlite__db_t *sdb,
                apr_pool_t *scratch_pool)
 {
@@ -547,7 +547,7 @@ fetch_sdb_info(apr_int64_t *wc_id,
         svn_wc__db_util_fetch_wc_id(wc_id, sdb, scratch_pool),
         svn_sqlite__read_schema_version(format, sdb, scratch_pool),
         verify_stats_table(sdb, *format, scratch_pool),
-        read_settings(store_pristines, sdb, *format, *wc_id, scratch_pool),
+        read_settings(store_pristine, sdb, *format, *wc_id, scratch_pool),
         sdb);
 
   return SVN_NO_ERROR;
@@ -800,10 +800,10 @@ try_symlink_as_dir:
 
       apr_int64_t wc_id;
       int format;
-      svn_boolean_t store_pristines;
+      svn_boolean_t store_pristine;
       svn_error_t *err;
 
-      err = fetch_sdb_info(&wc_id, &format, &store_pristines, sdb, scratch_pool);
+      err = fetch_sdb_info(&wc_id, &format, &store_pristine, sdb, scratch_pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_WC_CORRUPT)
@@ -824,7 +824,7 @@ try_symlink_as_dir:
                                           : local_abspath),
                             sdb, wc_id, format,
                             db->verify_format,
-                            store_pristines,
+                            store_pristine,
                             db->state_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
                   err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
@@ -1080,7 +1080,7 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
  */
 svn_error_t *
 svn_wc__settings_from_context(int *format_p,
-                              svn_boolean_t *store_pristines_p,
+                              svn_boolean_t *store_pristine_p,
                               svn_wc_context_t *wc_ctx,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool)
@@ -1094,7 +1094,7 @@ svn_wc__settings_from_context(int *format_p,
   if (0 == keys->nelts)
     {
       *format_p = SVN_WC__DEFAULT_VERSION;
-      *store_pristines_p = TRUE;
+      *store_pristine_p = TRUE;
       return SVN_NO_ERROR;
     }
 
@@ -1117,7 +1117,7 @@ svn_wc__settings_from_context(int *format_p,
             /* Found an exact match in the WC context. */
             svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, here);
             *format_p = wcroot->format;
-            *store_pristines_p = wcroot->store_pristines;
+            *store_pristine_p = wcroot->store_pristine;
             return SVN_NO_ERROR;
           }
       }
@@ -1130,7 +1130,7 @@ svn_wc__settings_from_context(int *format_p,
             /* Found the parent path in the WC context. */
             svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, prev);
             *format_p = wcroot->format;
-            *store_pristines_p = wcroot->store_pristines;
+            *store_pristine_p = wcroot->store_pristine;
             return SVN_NO_ERROR;
           }
       }
@@ -1139,7 +1139,7 @@ svn_wc__settings_from_context(int *format_p,
   /* Find the oldest format recorded in the WC context. */
   {
     int oldest_format = SVN_WC__VERSION;
-    svn_boolean_t store_pristines = TRUE;
+    svn_boolean_t store_pristine = TRUE;
     apr_hash_index_t *hi;
 
     for (hi = apr_hash_first(scratch_pool, dir_data);
@@ -1150,12 +1150,12 @@ svn_wc__settings_from_context(int *format_p,
         if (wcroot->format < oldest_format)
           {
             oldest_format = wcroot->format;
-            store_pristines = wcroot->store_pristines;
+            store_pristine = wcroot->store_pristine;
           }
       }
 
     *format_p = oldest_format;
-    *store_pristines_p = store_pristines;
+    *store_pristine_p = store_pristine;
     return SVN_NO_ERROR;
   }
 }

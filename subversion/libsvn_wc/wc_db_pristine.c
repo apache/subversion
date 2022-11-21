@@ -418,7 +418,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream_p,
   install_data = apr_pcalloc(result_pool, sizeof(*install_data));
   install_data->wcroot = wcroot;
 
-  if (hydrated || wcroot->store_pristines)
+  if (hydrated || wcroot->store_pristine)
     {
       SVN_ERR_W(svn_stream__create_for_install(&install_data->inner_stream,
                                                temp_dir_abspath,

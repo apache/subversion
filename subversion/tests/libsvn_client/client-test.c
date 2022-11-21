@@ -393,7 +393,7 @@ test_patch(const svn_test_opts_t *opts,
                                &peg_rev, &rev, svn_depth_infinity,
                                TRUE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   /* Create the patch file. */
@@ -469,7 +469,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_checkout4(NULL, repos_url, wc_path, &peg_rev, &rev,
                                svn_depth_infinity, FALSE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   /* Now checkout again as wc_path/NEW */
@@ -477,7 +477,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_checkout4(NULL, repos_url, new_dir_path, &peg_rev, &rev,
                                svn_depth_infinity, FALSE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   ex_dir_path = svn_dirent_join(wc_path, "NEW_add", pool);
@@ -639,7 +639,7 @@ test_16k_add(const svn_test_opts_t *opts,
                                &peg_rev, &rev, svn_depth_infinity,
                                TRUE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   for (i = 0; i < 16384; i++)
@@ -772,7 +772,7 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
                                svn_depth_infinity,
                                FALSE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
@@ -843,7 +843,7 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
                                &head_rev, &head_rev, svn_depth_empty,
                                FALSE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   SVN_ERR(svn_client_suggest_merge_sources(&results,
@@ -992,7 +992,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
                                wc_path, &rev, &rev, svn_depth_immediates,
                                FALSE, FALSE,
                                opts->wc_format_version,
-                               opts->store_pristines,
+                               opts->store_pristine,
                                ctx, pool));
 
   /* Add a local file; this is a double-check to make sure that

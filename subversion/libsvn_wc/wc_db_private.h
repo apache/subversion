@@ -109,7 +109,7 @@ typedef struct svn_wc__db_wcroot_t {
 
   /* Whether to store the pristine contents of all files on disk or
      to fetch the contents on demand. */
-  svn_boolean_t store_pristines;
+  svn_boolean_t store_pristine;
 
 } svn_wc__db_wcroot_t;
 
@@ -130,7 +130,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
-                             svn_boolean_t store_pristines,
+                             svn_boolean_t store_pristine,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 

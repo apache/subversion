@@ -371,7 +371,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "version ARG (\"1.8\", \"1.9.5\", etc.)")},
 
-  {"store-pristines", opt_store_pristines, 1,
+  {"store-pristine", opt_store_pristine, 1,
                        N_("Configure the working copy to either store local\n"
                        "                             "
                        "copies of pristine contents ('yes') or to fetch\n"
@@ -554,7 +554,7 @@ svn_cl__cmd_table_main[] =
      "  reporting the action taken.\n"
     )},
     {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals,
-     opt_compatible_version, opt_store_pristines},
+     opt_compatible_version, opt_store_pristine},
     {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "cleanup", svn_cl__cleanup, {0}, {N_(
@@ -2189,7 +2189,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   opt_state.accept_which = svn_cl__accept_unspecified;
   opt_state.show_revs = svn_cl__show_revs_invalid;
   opt_state.file_size_unit = SVN_CL__SIZE_UNIT_NONE;
-  opt_state.store_pristines = svn_tristate_unknown;
+  opt_state.store_pristine = svn_tristate_unknown;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -2746,14 +2746,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_compatible_version:
         SVN_ERR(parse_compatible_version(&opt_state, opt_arg, pool));
         break;
-      case opt_store_pristines:
+      case opt_store_pristine:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.store_pristines = svn_tristate__from_word(utf8_opt_arg);
-        if (opt_state.store_pristines == svn_tristate_unknown)
+        opt_state.store_pristine = svn_tristate__from_word(utf8_opt_arg);
+        if (opt_state.store_pristine == svn_tristate_unknown)
           return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                    _("Unknown value '%s' for %s.\n"
                                      "Supported values: %s"),
-                                   utf8_opt_arg, "--store-pristines", "yes, no");
+                                   utf8_opt_arg, "--store-pristine", "yes, no");
         break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away

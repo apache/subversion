@@ -1366,7 +1366,7 @@ init_db(/* output values */
         const char *root_node_repos_relpath,
         svn_revnum_t root_node_revision,
         svn_depth_t root_node_depth,
-        svn_boolean_t store_pristines,
+        svn_boolean_t store_pristine,
         const char *wcroot_abspath,
         apr_pool_t *scratch_pool)
 {
@@ -1393,7 +1393,7 @@ init_db(/* output values */
   if (target_format >= SVN_WC__SETTINGS_VERSION)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPSERT_SETTINGS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "id", *wc_id, store_pristines));
+      SVN_ERR(svn_sqlite__bindf(stmt, "id", *wc_id, store_pristine));
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
     }
 
@@ -1444,7 +1444,7 @@ create_db(svn_sqlite__db_t **sdb,
           const char *root_node_repos_relpath,
           svn_revnum_t root_node_revision,
           svn_depth_t root_node_depth,
-          svn_boolean_t store_pristines,
+          svn_boolean_t store_pristine,
           svn_boolean_t exclusive,
           apr_int32_t timeout,
           apr_pool_t *result_pool,
@@ -1459,7 +1459,7 @@ create_db(svn_sqlite__db_t **sdb,
   SVN_SQLITE__WITH_LOCK(init_db(repos_id, wc_id,
                                 *sdb, target_format, repos_root_url, repos_uuid,
                                 root_node_repos_relpath, root_node_revision,
-                                root_node_depth, store_pristines, dir_abspath,
+                                root_node_depth, store_pristine, dir_abspath,
                                 scratch_pool),
                         *sdb);
 
@@ -1476,7 +1476,7 @@ svn_wc__db_init(svn_wc__db_t *db,
                 const char *repos_uuid,
                 svn_revnum_t initial_rev,
                 svn_depth_t depth,
-                svn_boolean_t store_pristines,
+                svn_boolean_t store_pristine,
                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__db_t *sdb;
@@ -1506,7 +1506,7 @@ svn_wc__db_init(svn_wc__db_t *db,
   /* Create the SDB and insert the basic rows.  */
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, target_format, local_abspath,
                     repos_root_url, repos_uuid, SDB_FILE,
-                    repos_relpath, initial_rev, depth, store_pristines,
+                    repos_relpath, initial_rev, depth, store_pristine,
                     sqlite_exclusive, sqlite_timeout,
                     db->state_pool, scratch_pool));
 
@@ -1515,7 +1515,7 @@ svn_wc__db_init(svn_wc__db_t *db,
                         apr_pstrdup(db->state_pool, local_abspath),
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
-                        store_pristines,
+                        store_pristine,
                         db->state_pool, scratch_pool));
 
   /* Any previously cached children may now have a new WCROOT, most likely that
@@ -1550,7 +1550,7 @@ svn_wc__db_init(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_get_settings(int *format_p,
-                        svn_boolean_t *store_pristines_p,
+                        svn_boolean_t *store_pristine_p,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
@@ -1567,8 +1567,8 @@ svn_wc__db_get_settings(int *format_p,
 
   if (format_p)
     *format_p = wcroot->format;
-  if (store_pristines_p)
-    *store_pristines_p = wcroot->store_pristines;
+  if (store_pristine_p)
+    *store_pristine_p = wcroot->store_pristine;
 
   return SVN_NO_ERROR;
 }
@@ -13459,7 +13459,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
-                         svn_boolean_t store_pristines,
+                         svn_boolean_t store_pristine,
                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -13469,7 +13469,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                     dir_abspath, repos_root_url, repos_uuid,
                     SDB_FILE,
                     NULL, SVN_INVALID_REVNUM, svn_depth_unknown,
-                    store_pristines,
+                    store_pristine,
                     TRUE /* exclusive */,
                     0 /* timeout */,
                     wc_db->state_pool, scratch_pool));
@@ -13479,7 +13479,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                                    dir_abspath),
                                        *sdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
-                                       store_pristines,
+                                       store_pristine,
                                        wc_db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */

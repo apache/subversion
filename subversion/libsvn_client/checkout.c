@@ -54,7 +54,7 @@ initialize_area(int target_format,
                 const char *local_abspath,
                 const svn_client__pathrev_t *pathrev,
                 svn_depth_t depth,
-                svn_boolean_t store_pristines,
+                svn_boolean_t store_pristine,
                 svn_client_ctx_t *ctx,
                 apr_pool_t *pool)
 {
@@ -65,7 +65,7 @@ initialize_area(int target_format,
   SVN_ERR(svn_wc__ensure_adm(ctx->wc_ctx,
                              target_format, local_abspath, pathrev->url,
                              pathrev->repos_root_url, pathrev->repos_uuid,
-                             pathrev->rev, depth, store_pristines, pool));
+                             pathrev->rev, depth, store_pristine, pool));
   return SVN_NO_ERROR;
 }
 
@@ -81,13 +81,13 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
                               const svn_version_t *wc_format_version,
-                              svn_tristate_t store_pristines,
+                              svn_tristate_t store_pristine,
                               svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *scratch_pool)
 {
   int target_format;
-  svn_boolean_t target_store_pristines;
+  svn_boolean_t target_store_pristine;
   svn_node_kind_t kind;
   svn_client__pathrev_t *pathrev;
   svn_opt_revision_t resolved_rev = { svn_opt_revision_number };
@@ -103,10 +103,10 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  if (wc_format_version == NULL && store_pristines == svn_tristate_unknown)
+  if (wc_format_version == NULL && store_pristine == svn_tristate_unknown)
     {
       SVN_ERR(svn_wc__settings_from_context(&target_format,
-                                            &target_store_pristines,
+                                            &target_store_pristine,
                                             ctx->wc_ctx, local_abspath,
                                             scratch_pool));
     }
@@ -117,12 +117,12 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
                                           scratch_pool));
 
-      SVN_ERR_ASSERT(store_pristines != svn_tristate_unknown);
+      SVN_ERR_ASSERT(store_pristine != svn_tristate_unknown);
 
-      if (store_pristines == svn_tristate_true)
-        target_store_pristines = TRUE;
+      if (store_pristine == svn_tristate_true)
+        target_store_pristine = TRUE;
       else
-        target_store_pristines = FALSE;
+        target_store_pristine = FALSE;
     }
 
   /* Get the RA connection, if needed. */
@@ -176,7 +176,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
          URL, revnum, and an 'incomplete' flag.  */
       SVN_ERR(svn_io_make_dir_recursively(local_abspath, scratch_pool));
       SVN_ERR(initialize_area(target_format, local_abspath, pathrev, depth,
-                              target_store_pristines, ctx, scratch_pool));
+                              target_store_pristine, ctx, scratch_pool));
     }
   else if (kind == svn_node_dir)
     {
@@ -189,23 +189,23 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       if (! present_format)
         {
           SVN_ERR(initialize_area(target_format, local_abspath, pathrev, depth,
-                                  target_store_pristines, ctx, scratch_pool));
+                                  target_store_pristine, ctx, scratch_pool));
         }
       else
         {
-          svn_boolean_t wc_store_pristines;
+          svn_boolean_t wc_store_pristine;
 
-          SVN_ERR(svn_wc__get_settings(NULL, &wc_store_pristines, ctx->wc_ctx,
+          SVN_ERR(svn_wc__get_settings(NULL, &wc_store_pristine, ctx->wc_ctx,
                                        local_abspath, scratch_pool));
 
-          if ((target_store_pristines && !wc_store_pristines) ||
-              (!target_store_pristines && wc_store_pristines))
+          if ((target_store_pristine && !wc_store_pristine) ||
+              (!target_store_pristine && wc_store_pristine))
             {
               return svn_error_createf(
                   SVN_ERR_WC_INCOMPATIBLE_SETTINGS, NULL,
                   _("'%s' is an existing working copy with different '%s' setting"),
                   svn_dirent_local_style(local_abspath, scratch_pool),
-                  "store-pristines");
+                  "store-pristine");
             }
 
           /* Get PATH's URL. */
@@ -261,7 +261,7 @@ svn_client_checkout4(svn_revnum_t *result_rev,
                      svn_boolean_t ignore_externals,
                      svn_boolean_t allow_unver_obstructions,
                      const svn_version_t *wc_format_version,
-                     svn_tristate_t store_pristines,
+                     svn_tristate_t store_pristine,
                      svn_client_ctx_t *ctx,
                      apr_pool_t *pool)
 {
@@ -271,15 +271,15 @@ svn_client_checkout4(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  if (store_pristines == svn_tristate_unknown)
-    store_pristines = svn_tristate_true;
+  if (store_pristine == svn_tristate_unknown)
+    store_pristine = svn_tristate_true;
 
   /* A NULL wc_format_version translates to the minimum compatible version. */
   if (!wc_format_version)
     {
       wc_format_version = svn_client_default_wc_version(pool);
 
-      if (store_pristines == svn_tristate_false)
+      if (store_pristine == svn_tristate_false)
         {
           const svn_version_t *required_version =
             svn_client__compatible_wc_version_pristines_on_demand(pool);
@@ -298,7 +298,7 @@ svn_client_checkout4(svn_revnum_t *result_rev,
                                       ignore_externals,
                                       allow_unver_obstructions,
                                       wc_format_version,
-                                      store_pristines,
+                                      store_pristine,
                                       NULL /* ra_session */,
                                       ctx, pool);
   if (sleep_here)
