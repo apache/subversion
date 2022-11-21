@@ -1832,6 +1832,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			--with-ruby-sitedir="$(SVN_PREFIX)/lib/ruby/site_ruby" \
 			--with-py3c="$(SRCDIR)/py3c-${PY3C_VER}" \
 			--disable-mod-activation \
+			--with-boost=no \
 			$(JAVAHL_FLAG) \
 			$(LIBMAGIC_FLAG) \
 			$(LZ4_FLAG) \
