@@ -1632,8 +1632,6 @@ def merge_target_with_externals(sbox):
      "    /A-branch:8\n"],
     [], 'pg', svntest.main.SVN_PROP_MERGEINFO, '-vR', wc_dir)
 
-# Existing issue: `src_stream` not closed in externals.c:apply_textdelta()
-@XFail(svntest.main.is_os_windows)
 def update_modify_file_external(sbox):
   "update that modifies a file external"
 
@@ -2799,8 +2797,6 @@ def shadowing(sbox):
 # Test for issue #4093 'remapping a file external can segfault due to
 # "deleted" props'.
 @Issue(4093)
-# Existing issue: `src_stream` not closed in externals.c:apply_textdelta()
-@XFail(svntest.main.is_os_windows)
 def remap_file_external_with_prop_del(sbox):
   "file external remap segfaults due to deleted props"
 
@@ -4178,8 +4174,6 @@ def file_external_to_normal_file(sbox):
                                         expected_status)
 
 @Issue(4580)
-# Existing issue: `src_stream` not closed in externals.c:apply_textdelta()
-@XFail(svntest.main.is_os_windows)
 def file_external_recorded_info(sbox):
   "check file external recorded info"
 
