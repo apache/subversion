@@ -1,6 +1,6 @@
 #!/usr/bin/env python
 #
-#  pristines_on_demand_tests.py:  testing pristines-on-demand
+#  store_pristine_tests.py:  testing working copy pristine modes
 #
 #  Subversion is a tool for revision control.
 #  See https://subversion.apache.org for more information.
@@ -42,9 +42,22 @@ Item = svntest.wc.StateItem
 ######################################################################
 # Tests
 
+def simple_checkout_with_pristine(sbox):
+  "simple checkout with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          [],
+                                          "--store-pristine=yes")
+
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
-def simple_checkout(sbox):
-  "simple checkout with pristines-on-demand"
+def simple_checkout_without_pristine(sbox):
+  "simple checkout without pristine"
 
   sbox.build(empty=True, create_wc=False)
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -56,9 +69,36 @@ def simple_checkout(sbox):
                                           [],
                                           "--store-pristine=no")
 
+def simple_commit_with_pristine(sbox):
+  "simple commit with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          [],
+                                          "--store-pristine=yes")
+
+  sbox.simple_append('file', 'contents')
+  sbox.simple_add('file')
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'file' : Item(verb='Adding'),
+    })
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=0),
+    'file' : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_commit(sbox.wc_dir,
+                                        expected_output,
+                                        expected_status)
+
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
-def simple_commit(sbox):
-  "simple commit with pristines-on-demand"
+def simple_commit_without_pristine(sbox):
+  "simple commit without pristine"
 
   sbox.build(empty=True, create_wc=False)
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -84,9 +124,45 @@ def simple_commit(sbox):
                                         expected_output,
                                         expected_status)
 
+def simple_update_with_pristine(sbox):
+  "simple update with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar')
+  sbox.simple_commit(message='r2')
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'file' : Item(status='U '),
+    })
+  expected_disk = svntest.wc.State('', {
+    'file' : Item(contents='foo'),
+    })
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=1),
+    'file' : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status,
+                                        [], False,
+                                        '-r1', sbox.wc_dir)
+
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
-def simple_update(sbox):
-  "simple update with pristines-on-demand"
+def simple_update_without_pristine(sbox):
+  "simple update without pristine"
 
   sbox.build(empty=True, create_wc=False)
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -121,9 +197,59 @@ def simple_update(sbox):
                                         [], False,
                                         '-r1', sbox.wc_dir)
 
+def simple_status_with_pristine(sbox):
+  "simple status with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=0),
+    'file' : Item(status='A ', wc_rev='-'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+  sbox.simple_commit(message='r1')
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=0),
+    'file' : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+  sbox.simple_append('file', 'bar')
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=0),
+    'file' : Item(status='M ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+  # Change back to the unmodified contents
+  sbox.simple_append('file', 'foo', truncate=True)
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=0),
+    'file' : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
-def simple_status(sbox):
-  "simple status with pristines-on-demand"
+def simple_status_without_pristine(sbox):
+  "simple status without pristine"
 
   sbox.build(empty=True, create_wc=False)
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -172,9 +298,36 @@ def simple_status(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir,
                                         expected_status)
 
+def simple_diff_with_pristine(sbox):
+  "simple diff with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  sbox.simple_append('file', 'foo\n')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar\n', truncate=True)
+
+  diff_output = svntest.verify.make_diff_header(
+    sbox.ospath('file'), 'revision 1', 'working copy') + [
+    "@@ -1 +1 @@\n",
+    "-foo\n",
+    "+bar\n"
+  ]
+  svntest.actions.run_and_verify_svn(diff_output, [],
+                                     'diff', sbox.ospath('file'))
+
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
-def simple_diff(sbox):
-  "simple diff with pristines-on-demand"
+def simple_diff_without_pristine(sbox):
+  "simple diff without pristine"
 
   sbox.build(empty=True, create_wc=False)
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -200,9 +353,36 @@ def simple_diff(sbox):
   svntest.actions.run_and_verify_svn(diff_output, [],
                                      'diff', sbox.ospath('file'))
 
+def simple_revert_with_pristine(sbox):
+  "simple revert with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  sbox.simple_append('file', 'foo\n')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar\n', truncate=True)
+
+  svntest.actions.run_and_verify_revert([sbox.ospath('file')])
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=0),
+    'file' : Item(status='  ', wc_rev=1),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
-def simple_revert(sbox):
-  "simple revert with pristines-on-demand"
+def simple_revert_without_pristine(sbox):
+  "simple revert without pristine"
 
   sbox.build(empty=True, create_wc=False)
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -228,9 +408,48 @@ def simple_revert(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir,
                                         expected_status)
 
+def update_modified_file_with_pristine(sbox):
+  "update locally modified file with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar')
+  sbox.simple_commit(message='r2')
+
+  sbox.simple_update(revision=1)
+
+  # Make the same edit again so that the contents would merge.
+  sbox.simple_append('file', 'bar')
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {
+    'file' : Item(status='G '),
+    })
+  expected_disk = svntest.wc.State('', {
+    'file' : Item(contents='foobar'),
+    })
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''     : Item(status='  ', wc_rev=2),
+    'file' : Item(status='  ', wc_rev=2),
+    })
+  svntest.actions.run_and_verify_update(sbox.wc_dir,
+                                        expected_output,
+                                        expected_disk,
+                                        expected_status)
+
 @SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
-def update_modified_file(sbox):
-  "update locally modified file"
+def update_modified_file_without_pristine(sbox):
+  "update locally modified file without pristine"
 
   sbox.build(empty=True, create_wc=False)
   expected_output = svntest.wc.State(sbox.wc_dir, {})
@@ -274,13 +493,20 @@ def update_modified_file(sbox):
 
 # list all tests here, starting with None:
 test_list = [ None,
-              simple_checkout,
-              simple_commit,
-              simple_update,
-              simple_status,
-              simple_diff,
-              simple_revert,
-              update_modified_file,
+              simple_checkout_with_pristine,
+              simple_checkout_without_pristine,
+              simple_commit_with_pristine,
+              simple_commit_without_pristine,
+              simple_update_with_pristine,
+              simple_update_without_pristine,
+              simple_status_with_pristine,
+              simple_status_without_pristine,
+              simple_diff_with_pristine,
+              simple_diff_without_pristine,
+              simple_revert_with_pristine,
+              simple_revert_without_pristine,
+              update_modified_file_with_pristine,
+              update_modified_file_without_pristine,
              ]
 serial_only = True
 
