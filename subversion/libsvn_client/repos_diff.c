@@ -941,11 +941,12 @@ apply_textdelta(void *file_baton,
   result_stream = svn_stream_lazyopen_create(lazy_open_result, fb, TRUE,
                                              scratch_pool);
 
-  svn_txdelta_apply(src_stream,
-                    result_stream,
-                    fb->result_digest,
-                    fb->path, fb->pool,
-                    &(fb->apply_handler), &(fb->apply_baton));
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(src_stream, fb->pool),
+                     result_stream,
+                     fb->result_digest,
+                     fb->path, fb->pool,
+                     &(fb->apply_handler), &(fb->apply_baton));
 
   *handler = window_handler;
   *handler_baton = file_baton;

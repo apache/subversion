@@ -741,10 +741,10 @@ apply_textdelta(void *file_baton,
 
   SVN_ERR(open_working_file_writer(&fb->file_writer, fb, fb->pool, pool));
 
-  svn_txdelta_apply(svn_stream_empty(pool),
-                    svn_wc__working_file_writer_get_stream(fb->file_writer),
-                    fb->text_digest, NULL, pool,
-                    &hb->apply_handler, &hb->apply_baton);
+  svn_txdelta_apply2(svn_stream_empty(pool),
+                     svn_wc__working_file_writer_get_stream(fb->file_writer),
+                     fb->text_digest, NULL, pool,
+                     &hb->apply_handler, &hb->apply_baton);
 
   *handler_baton = hb;
   *handler = window_handler;

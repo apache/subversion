@@ -320,9 +320,9 @@ do_random_test(apr_pool_t *pool,
       apr_pool_t *delta_pool = svn_pool_create(pool);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply(svn_stream_from_aprfile(source_copy, delta_pool),
-                        svn_stream_from_aprfile(target_regen, delta_pool),
-                        NULL, NULL, delta_pool, &handler, &handler_baton);
+      svn_txdelta_apply2(svn_stream_from_aprfile(source_copy, delta_pool),
+                         svn_stream_from_aprfile(target_regen, delta_pool),
+                         NULL, NULL, delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
       stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
@@ -416,9 +416,9 @@ do_random_combine_test(apr_pool_t *pool,
       apr_pool_t *delta_pool = svn_pool_create(pool);
 
       /* Make stage 4: apply the text delta.  */
-      svn_txdelta_apply(svn_stream_from_aprfile(source_copy, delta_pool),
-                        svn_stream_from_aprfile(target_regen, delta_pool),
-                        NULL, NULL, delta_pool, &handler, &handler_baton);
+      svn_txdelta_apply2(svn_stream_from_aprfile(source_copy, delta_pool),
+                         svn_stream_from_aprfile(target_regen, delta_pool),
+                         NULL, NULL, delta_pool, &handler, &handler_baton);
 
       /* Make stage 3: reparse the text delta.  */
       stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
@@ -574,9 +574,9 @@ do_random_txdelta_to_svndiff_stream_test(apr_pool_t *pool,
 
       /* Apply it to a copy of the source file to see if we get the
          same target back. */
-      svn_txdelta_apply(svn_stream_from_aprfile2(source_copy, TRUE, iterpool),
-                        svn_stream_from_aprfile2(new_target, TRUE, iterpool),
-                        NULL, NULL, iterpool, &handler, &handler_baton);
+      svn_txdelta_apply2(svn_stream_from_aprfile2(source_copy, TRUE, iterpool),
+                         svn_stream_from_aprfile2(new_target, TRUE, iterpool),
+                         NULL, NULL, iterpool, &handler, &handler_baton);
       push_stream = svn_txdelta_parse_svndiff(handler, handler_baton, TRUE,
                                               iterpool);
       SVN_ERR(svn_stream_copy3(delta_stream, push_stream, NULL, NULL,

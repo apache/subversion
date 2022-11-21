@@ -6596,9 +6596,9 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   svn_stringbuf_setempty(source);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
-                    svn_stream_from_stringbuf(dest, subpool),
-                    NULL, NULL, subpool, &delta_handler, &delta_baton);
+  svn_txdelta_apply2(svn_stream_from_stringbuf(source, subpool),
+                     svn_stream_from_stringbuf(dest, subpool),
+                     NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
@@ -6613,9 +6613,9 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   svn_stringbuf_set(source, old_content);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
-                    svn_stream_from_stringbuf(dest, subpool),
-                    NULL, NULL, subpool, &delta_handler, &delta_baton);
+  svn_txdelta_apply2(svn_stream_from_stringbuf(source, subpool),
+                     svn_stream_from_stringbuf(dest, subpool),
+                     NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
@@ -6630,9 +6630,9 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   svn_stringbuf_set(source, new_content);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
-                    svn_stream_from_stringbuf(dest, subpool),
-                    NULL, NULL, subpool, &delta_handler, &delta_baton);
+  svn_txdelta_apply2(svn_stream_from_stringbuf(source, subpool),
+                     svn_stream_from_stringbuf(dest, subpool),
+                     NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,

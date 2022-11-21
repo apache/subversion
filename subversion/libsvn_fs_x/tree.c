@@ -1976,13 +1976,14 @@ apply_textdelta(void *baton,
                                         tb->pool));
 
   /* Now, create a custom window handler that uses our two streams. */
-  svn_txdelta_apply(tb->source_stream,
-                    tb->target_stream,
-                    NULL,
-                    tb->path,
-                    tb->pool,
-                    &(tb->interpreter),
-                    &(tb->interpreter_baton));
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(tb->source_stream, tb->pool),
+                     tb->target_stream,
+                     NULL,
+                     tb->path,
+                     tb->pool,
+                     &(tb->interpreter),
+                     &(tb->interpreter_baton));
 
   /* Make a record of this modification in the changes table. */
   return add_change(tb->root->fs, txn_id, tb->path,

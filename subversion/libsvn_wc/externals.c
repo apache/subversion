@@ -645,8 +645,10 @@ apply_textdelta(void *file_baton,
                                               eb->db, eb->wri_abspath,
                                               eb->pool, pool));
 
-  svn_txdelta_apply(src_stream, dest_stream, NULL, eb->local_abspath, pool,
-                    handler, handler_baton);
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(src_stream, pool),
+                     dest_stream, NULL, eb->local_abspath, pool,
+                     handler, handler_baton);
 
   return SVN_NO_ERROR;
 }
