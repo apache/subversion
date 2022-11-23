@@ -2085,7 +2085,7 @@ stmt_for_f31_or_f32(svn_test__sandbox_t *b,
     }
 
   return (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
-          ? stmt_for_f31 : stmt_for_f32);
+          ? stmt_for_f32 : stmt_for_f31);
 }
 
 static svn_error_t *
@@ -2119,8 +2119,8 @@ insert_actual(svn_test__sandbox_t *b,
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                             stmt_for_f31_or_f32(
                                               b,
-                                              STMT_ENSURE_EMPTY_PRISTINE_F32,
-                                              STMT_ENSURE_EMPTY_PRISTINE_F31)));
+                                              STMT_ENSURE_EMPTY_PRISTINE_F31,
+                                              STMT_ENSURE_EMPTY_PRISTINE_F32)));
           SVN_ERR(svn_sqlite__step_done(stmt));
           SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_NODES_SET_FILE));
           SVN_ERR(svn_sqlite__bindf(stmt, "s", actual->local_relpath));
