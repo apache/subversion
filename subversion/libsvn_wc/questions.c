@@ -84,7 +84,7 @@
  *
  * If EXACT_COMPARISON is FALSE, translate VERSIONED_FILE_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * calculate checksum and compare the result with PRISTINE_STREAM.
+ * calculate checksum and compare the result with PRISTINE_CHECKSUM.
  * If EXACT_COMPARISON is TRUE, also check that VERSIONED_FILE_ABSPATH
  * contents remains the same when retranslated according to its properties.
  *
