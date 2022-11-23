@@ -1662,9 +1662,8 @@ def patch_no_svn_eol_style(sbox):
                                             [], True, True,
                                             keep_eol_style=True)
 
-      expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(expected_output, [],
-                                         'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_revert([mu_path],
+                                            '-R', wc_dir)
 
 def patch_with_svn_eol_style(sbox):
   "patch target with svn:eol-style"
@@ -1779,8 +1778,8 @@ def patch_with_svn_eol_style(sbox):
                                             1, # dry-run
                                             keep_eol_style=True)
 
-      expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_revert([mu_path],
+                                            '-R', wc_dir)
 
 def patch_with_svn_eol_style_uncommitted(sbox):
   "patch target with uncommitted svn:eol-style"
@@ -1889,8 +1888,8 @@ def patch_with_svn_eol_style_uncommitted(sbox):
                                             1, # dry-run
                                             keep_eol_style=True)
 
-      expected_output = ["Reverted '" + mu_path + "'\n"]
-      svntest.actions.run_and_verify_svn(expected_output, [], 'revert', '-R', wc_dir)
+      svntest.actions.run_and_verify_revert([mu_path],
+                                            '-R', wc_dir)
 
 def patch_with_ignore_whitespace(sbox):
   "ignore whitespace when patching"
