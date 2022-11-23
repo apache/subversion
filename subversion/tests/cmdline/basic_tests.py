@@ -2546,6 +2546,9 @@ def basic_auth_test(sbox):
   if svntest.main.options.wc_format_version:
     common_opts += ('--compatible-version',
                     svntest.main.options.wc_format_version)
+  if svntest.main.options.store_pristine:
+    common_opts += ('--store-pristine',
+                    svntest.main.options.store_pristine)
 
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(
