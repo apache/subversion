@@ -2089,6 +2089,20 @@ def get_wc_base_rev(wc_dir):
   "Return the BASE revision of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Revision']
 
+def get_wc_store_pristine(wc_dir):
+  "Return whether the working copy at WC_DIR stores pristine contents."
+  _, output, _ = run_and_verify_svn(
+    None, [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    wc_dir)
+
+  if output == ['yes']:
+    return True
+  elif output == ['no']:
+    return False
+  else:
+    raise verify.SVNUnexpectedStdout(output)
+
 def load_dumpfile(filename):
   "Return the contents of the FILENAME assuming that it is a dump file"
   with open(filename, "rb") as fp:

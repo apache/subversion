@@ -119,16 +119,11 @@ def check_formats(sbox, expected_formats):
 def check_pristine(sbox, files):
   for file in files:
     file_path = sbox.ospath(file)
-    file_text = open(file_path, 'r').read()
-    try:
+    if svntest.actions.get_wc_store_pristine(file_path):
+      file_text = open(file_path, 'r').read()
       file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
-    except (FileNotFoundError, svntest.Failure): # FileNotFoundError
-      if sbox.pristines_on_demand_enabled(''):
-        # Pristine missing; pristines optional so ignore it
-        continue
-      raise
-    if (file_text != file_pristine):
-      raise svntest.Failure("pristine mismatch for '%s'" % (file))
+      if (file_text != file_pristine):
+        raise svntest.Failure("pristine mismatch for '%s'" % (file))
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()

@@ -395,14 +395,14 @@ def keywords_from_birth(sbox):
 
   # Read the text base. In pristines-on-demand mode it isn't stored locally
   # after commit, so read it from the repo.
-  if sbox.pristines_on_demand_enabled():
-    _, actual_textbase_kw, _ = svntest.main.run_svn(False,
-                                 'cat', '-rHEAD', '--ignore-keywords',
-                                 fixed_length_keywords_path)
-  else:
+  if svntest.actions.get_wc_store_pristine(wc_dir):
     fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
     actual_textbase_kw = fp.readlines()
     fp.close()
+  else:
+    _, actual_textbase_kw, _ = svntest.main.run_svn(False,
+                                 'cat', '-rHEAD', '--ignore-keywords',
+                                 fixed_length_keywords_path)
 
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
 
@@ -605,7 +605,7 @@ def eol_change_is_text_mod(sbox):
     if contents != b"1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
 
-  if not sbox.pristines_on_demand_enabled():
+  if svntest.actions.get_wc_store_pristine(wc_dir):
     foo_base_path = svntest.wc.text_base_path(foo_path)
     base_contents = open(foo_base_path, 'rb').read()
     if contents != base_contents:

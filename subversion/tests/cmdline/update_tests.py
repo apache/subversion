@@ -1189,7 +1189,7 @@ def another_hudson_problem(sbox):
                      'Updated to revision 3.\n',
                     ]
   expected_output = [re.escape(s) for s in expected_output]
-  if sbox.pristines_on_demand_enabled():
+  if not svntest.actions.get_wc_store_pristine(wc_dir):
     expected_output.append('Fetching text bases [.]*done\n')
 
   # Sigh, I can't get run_and_verify_update to work (but not because

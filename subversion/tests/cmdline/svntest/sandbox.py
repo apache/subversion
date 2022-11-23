@@ -629,9 +629,6 @@ class Sandbox:
           ret[root[len(self.wc_dir)+1:]] = self._wc_format_of(wc_db_path)
     return { k.replace(os.sep, '/') : ret[k] for k in ret }
 
-  def pristines_on_demand_enabled(self, relpath=''):
-    return self.read_wc_formats().get(relpath, 0) == 32
-
 def is_url(target):
   return (target.startswith('^/')
           or target.startswith('file://')

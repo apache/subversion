@@ -1835,11 +1835,11 @@ def cat_base_after_repo_access_removed(sbox):
 
   # With repository read access denied, expect we can still access the
   # text base locally, if and only if text bases are present.
-  if sbox.pristines_on_demand_enabled():
-    svntest.actions.run_and_verify_svn(None, '.*E170001: Authorization failed',
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    svntest.actions.run_and_verify_svn("This is the file 'pi'.\n", [],
                                        'cat', sbox.ospath('A/D/G/pi') + '@BASE')
   else:
-    svntest.actions.run_and_verify_svn("This is the file 'pi'.\n", [],
+    svntest.actions.run_and_verify_svn(None, '.*E170001: Authorization failed',
                                        'cat', sbox.ospath('A/D/G/pi') + '@BASE')
 
 

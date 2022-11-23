@@ -1599,10 +1599,10 @@ def move_conflict_details(sbox):
   sbox.simple_append('B/E/new-dir3', 'something')
   sbox.simple_add('B/E/new-dir3')
 
+  store_pristine = svntest.actions.get_wc_store_pristine(sbox.wc_dir)
 
   expected_output = svntest.verify.RegexListOutput(
-    (["Fetching text bases [.]+done"]
-      if sbox.pristines_on_demand_enabled() else [])
+    ([] if store_pristine else ["Fetching text bases [.]+done"])
     +
     [re.escape(x) for x in [
       " C   %s\n" % sbox.ospath('B'),         # Property conflicted
