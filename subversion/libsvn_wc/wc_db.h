@@ -2270,25 +2270,6 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Read a BASE node's inherited property information.
-
-   Set *IPROPS to to a depth-first ordered array of
-   svn_prop_inherited_item_t * structures representing the cached
-   inherited properties for the BASE node at LOCAL_ABSPATH.
-
-   If no cached properties are found, then set *IPROPS to NULL.
-   If LOCAL_ABSPATH represents the root of the repository, then set
-   *IPROPS to an empty array.
-
-   Allocate *IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
-   allocations. */
-svn_error_t *
-svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
-
 /* Find BASE nodes with cached inherited properties.
 
    Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
