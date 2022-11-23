@@ -1662,8 +1662,7 @@ def patch_no_svn_eol_style(sbox):
                                             [], True, True,
                                             keep_eol_style=True)
 
-      expected_paths = [mu_path]
-      svntest.actions.run_and_verify_revert(expected_paths,
+      svntest.actions.run_and_verify_revert([mu_path],
                                             '-R', wc_dir)
 
 def patch_with_svn_eol_style(sbox):
@@ -1779,8 +1778,7 @@ def patch_with_svn_eol_style(sbox):
                                             1, # dry-run
                                             keep_eol_style=True)
 
-      expected_paths = [mu_path]
-      svntest.actions.run_and_verify_revert(expected_paths,
+      svntest.actions.run_and_verify_revert([mu_path],
                                             '-R', wc_dir)
 
 def patch_with_svn_eol_style_uncommitted(sbox):
@@ -1890,8 +1888,7 @@ def patch_with_svn_eol_style_uncommitted(sbox):
                                             1, # dry-run
                                             keep_eol_style=True)
 
-      expected_paths = [mu_path]
-      svntest.actions.run_and_verify_revert(expected_paths,
+      svntest.actions.run_and_verify_revert([mu_path],
                                             '-R', wc_dir)
 
 def patch_with_ignore_whitespace(sbox):

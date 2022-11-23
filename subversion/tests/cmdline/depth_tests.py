@@ -2781,14 +2781,12 @@ def revert_depth_files(sbox):
 
   sbox.build(read_only = True)
 
-  expected_paths = [sbox.ospath('A/mu')]
-
   # Apply an unrelated delete one level to deep
   sbox.simple_rm('A/D/gamma')
 
   sbox.simple_rm('A/mu')
   # Expect reversion of just 'mu'
-  svntest.actions.run_and_verify_revert(expected_paths,
+  svntest.actions.run_and_verify_revert([sbox.ospath('A/mu')],
                                         '--depth=immediates', sbox.ospath('A'))
 
   # Apply an unrelated directory delete
@@ -2796,7 +2794,7 @@ def revert_depth_files(sbox):
 
   sbox.simple_rm('A/mu')
   # Expect reversion of just 'mu'
-  svntest.actions.run_and_verify_revert(expected_paths,
+  svntest.actions.run_and_verify_revert([sbox.ospath('A/mu')],
                                         '--depth=files', sbox.ospath('A'))
 
 @Issue(4257)
