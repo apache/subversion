@@ -2084,8 +2084,7 @@ stmt_for_f31_or_f32(svn_test__sandbox_t *b,
       return -1;
     }
 
-  return (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
-          ? stmt_for_f32 : stmt_for_f31);
+  return (wcroot->format >= 32 ? stmt_for_f32 : stmt_for_f31);
 }
 
 static svn_error_t *
