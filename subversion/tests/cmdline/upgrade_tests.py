@@ -861,10 +861,6 @@ def delete_in_copy_upgrade(sbox):
                            'b347d1da69df9a6a70433ceeaa0d46c8483e8c03']])
 
 
-# XFAIL when pristines-on-demand enabled: at the revert step the pristines
-# are missing and it can't fetch them as repo no longer exists. See #4891.
-@Issue(4891)
-@XFail(lambda: svntest.main.options.wc_format_version=='1.15')
 def replaced_files(sbox):
   "upgrade with base and working replaced files"
 
