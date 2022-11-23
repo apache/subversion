@@ -162,7 +162,7 @@ extern "C" {
  * == 1.10.x shipped with format 31
  * == 1.11.x shipped with format 31
  *
- * The bump to 32 adds the pristine-on-demand feature; see the docstring
+ * The bump to 32 adds support for optional pristine contents; see the docstring
  * of STMT_UPGRADE_TO_32 for details.
  *
  * == 1.15.x shipped with format 32 and multi-wc-format support
@@ -219,12 +219,12 @@ extern "C" {
    sqlite_stat1 table on opening */
 #define SVN_WC__ENSURE_STAT1_TABLE 31
 
-/* Starting from this version, pristines can be missing and fetched on
- * demand.  */
-#define SVN_WC__PRISTINES_ON_DEMAND_VERSION 32
+/* Starting from this version, pristine content is optional and can be
+ * fetched on demand.  */
+#define SVN_WC__HAS_OPTIONAL_PRISTINE 32
 
 /* Starting from this version, the DB stores per-WC settings. */
-#define SVN_WC__SETTINGS_VERSION 32
+#define SVN_WC__HAS_SETTINGS 32
 
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other

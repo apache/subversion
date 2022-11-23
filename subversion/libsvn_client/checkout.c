@@ -282,7 +282,7 @@ svn_client_checkout4(svn_revnum_t *result_rev,
       if (store_pristine == svn_tristate_false)
         {
           const svn_version_t *required_version =
-            svn_client__compatible_wc_version_pristines_on_demand(pool);
+            svn_client__compatible_wc_version_optional_pristine(pool);
 
           if (!svn_version__at_least(wc_format_version,
                                      required_version->major,

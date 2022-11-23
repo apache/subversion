@@ -506,7 +506,7 @@ read_settings(svn_boolean_t *store_pristine_p,
               apr_int64_t wc_id,
               apr_pool_t *scratch_pool)
 {
-  if (format >= SVN_WC__SETTINGS_VERSION)
+  if (format >= SVN_WC__HAS_SETTINGS)
     {
       svn_sqlite__stmt_t *stmt;
       svn_boolean_t have_row;

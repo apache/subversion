@@ -287,7 +287,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
         _("Working copy format %d can't be created by client version %s."),
         target_format, SVN_VER_NUM);
 
-  if (target_format < SVN_WC__PRISTINES_ON_DEMAND_VERSION && !store_pristine)
+  if (target_format < SVN_WC__HAS_OPTIONAL_PRISTINE && !store_pristine)
     return svn_error_createf(
         SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
         _("Working copy format %d does not support the requested capabilities"),

@@ -1261,9 +1261,9 @@ svn_client__textbase_sync(const char *local_abspath,
                           apr_pool_t *scratch_pool);
 
 /* Returns the first version that supported the working copy metadata format
- * where pristines can be fetched on demand. */
+ * where pristine content is optional and can be fetched on demand. */
 const svn_version_t *
-svn_client__compatible_wc_version_pristines_on_demand(apr_pool_t *result_pool);
+svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

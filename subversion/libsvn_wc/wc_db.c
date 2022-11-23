@@ -1390,7 +1390,7 @@ init_db(/* output values */
   SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_INSERT_WCROOT));
   SVN_ERR(svn_sqlite__insert(wc_id, stmt));
 
-  if (target_format >= SVN_WC__SETTINGS_VERSION)
+  if (target_format >= SVN_WC__HAS_SETTINGS)
     {
       SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPSERT_SETTINGS));
       SVN_ERR(svn_sqlite__bindf(stmt, "id", *wc_id, store_pristine));

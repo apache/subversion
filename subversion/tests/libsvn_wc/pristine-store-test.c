@@ -332,7 +332,7 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_wc__format_from_version(&wc_format, opts->wc_format_version, pool));
 
-  if (wc_format < SVN_WC__PRISTINES_ON_DEMAND_VERSION)
+  if (wc_format < SVN_WC__HAS_OPTIONAL_PRISTINE)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Not supported in WC format under test");
 
@@ -443,7 +443,7 @@ pristine_dehydrate(const svn_test_opts_t *opts,
 
   SVN_ERR(svn_wc__format_from_version(&wc_format, opts->wc_format_version, pool));
 
-  if (wc_format < SVN_WC__PRISTINES_ON_DEMAND_VERSION)
+  if (wc_format < SVN_WC__HAS_OPTIONAL_PRISTINE)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Not supported in WC format under test");
 

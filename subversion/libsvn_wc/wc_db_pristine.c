@@ -124,7 +124,7 @@ stmt_select_pristine(svn_boolean_t *have_row,
 
   /* Check that this pristine text is present in the store.  (The presence
    * of the file is not sufficient.) */
-  stmt_num = (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+  stmt_num = (wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE
               ? STMT_SELECT_PRISTINE_F32
               : STMT_SELECT_PRISTINE_F31);
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_num));
@@ -377,13 +377,13 @@ pristine_install_txn(svn_wc__db_wcroot_t *wcroot,
       SVN_ERR(svn_io_remove_file2(pristine_abspath, TRUE, scratch_pool));
     }
 
-  stmt_num = (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+  stmt_num = (wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE
               ? STMT_UPSERT_PRISTINE_F32 : STMT_UPSERT_PRISTINE_F31);
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_num));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, install_data->size));
-  if (wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION)
+  if (wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE)
     SVN_ERR(svn_sqlite__bind_int(stmt, 4, install_stream != NULL));
   SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
@@ -585,14 +585,14 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
   svn_sqlite__stmt_t *stmt;
   int affected_rows;
 
-  stmt_num = (dst_wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+  stmt_num = (dst_wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE
               ? STMT_INSERT_OR_IGNORE_PRISTINE_F32
               : STMT_INSERT_OR_IGNORE_PRISTINE_F31);
   SVN_ERR(svn_sqlite__get_statement(&stmt, dst_wcroot->sdb, stmt_num));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, size));
-  if (dst_wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION)
+  if (dst_wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE)
     SVN_ERR(svn_sqlite__bind_int(stmt, 4, hydrated));
 
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
@@ -677,7 +677,7 @@ pristine_transfer_txn(svn_wc__db_wcroot_t *src_wcroot,
   svn_boolean_t got_row;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
 
-  stmt_num = (dst_wcroot->format >= SVN_WC__PRISTINES_ON_DEMAND_VERSION
+  stmt_num = (dst_wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE
               ? STMT_SELECT_COPY_PRISTINES_F32
               : STMT_SELECT_COPY_PRISTINES_F31);
   SVN_ERR(svn_sqlite__get_statement(&stmt, src_wcroot->sdb, stmt_num));

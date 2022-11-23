@@ -59,7 +59,7 @@ def simple_checkout_with_pristine(sbox):
     'info', '--show-item=store-pristine', '--no-newline',
     sbox.wc_dir)
 
-@SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
 def simple_checkout_without_pristine(sbox):
   "simple checkout without pristine"
 
@@ -108,7 +108,7 @@ def simple_commit_with_pristine(sbox):
                                         expected_output,
                                         expected_status)
 
-@SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
 def simple_commit_without_pristine(sbox):
   "simple commit without pristine"
 
@@ -181,7 +181,7 @@ def simple_update_with_pristine(sbox):
                                         [], False,
                                         '-r1', sbox.wc_dir)
 
-@SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
 def simple_update_without_pristine(sbox):
   "simple update without pristine"
 
@@ -278,7 +278,7 @@ def simple_status_with_pristine(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir,
                                         expected_status)
 
-@SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
 def simple_status_without_pristine(sbox):
   "simple status without pristine"
 
@@ -366,7 +366,7 @@ def simple_diff_with_pristine(sbox):
   svntest.actions.run_and_verify_svn(diff_output, [],
                                      'diff', sbox.ospath('file'))
 
-@SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
 def simple_diff_without_pristine(sbox):
   "simple diff without pristine"
 
@@ -431,7 +431,7 @@ def simple_revert_with_pristine(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir,
                                         expected_status)
 
-@SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
 def simple_revert_without_pristine(sbox):
   "simple revert without pristine"
 
@@ -508,7 +508,7 @@ def update_modified_file_with_pristine(sbox):
                                         expected_disk,
                                         expected_status)
 
-@SkipUnless(svntest.main.is_wc_pristines_on_demand_supported)
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
 def update_modified_file_without_pristine(sbox):
   "update locally modified file without pristine"
 

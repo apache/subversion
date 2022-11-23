@@ -393,8 +393,7 @@ def keywords_from_birth(sbox):
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
     ]
 
-  # Read the text base. In pristines-on-demand mode it isn't stored locally
-  # after commit, so read it from the repo.
+  # Read the text base, either from a locally stored file or from the repo.
   if svntest.actions.get_wc_store_pristine(wc_dir):
     fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
     actual_textbase_kw = fp.readlines()

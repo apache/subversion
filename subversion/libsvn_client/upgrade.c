@@ -275,7 +275,7 @@ svn_client_latest_wc_version(apr_pool_t *result_pool)
 }
 
 const svn_version_t *
-svn_client__compatible_wc_version_pristines_on_demand(apr_pool_t *result_pool)
+svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool)
 {
   /* NOTE: For consistency, always return the version of the client
      that first introduced the format. */

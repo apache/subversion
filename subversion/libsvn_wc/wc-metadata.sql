@@ -708,7 +708,7 @@ WHERE l.op_depth = 0
 
 
 /* ------------------------------------------------------------------------- */
-/* Format 32 adds support for optional text-base contents with the
+/* Format 32 adds support for optional pristine contents with the
    following schema changes:
    - Add the 'hydrated' column to the PRISTINE table.
    - Add the I_PRISTINE_UNREFERENCED index.
