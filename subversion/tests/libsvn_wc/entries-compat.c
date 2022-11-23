@@ -37,7 +37,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
-#include "svn_version.h"
 
 #include "../../libsvn_wc/wc.h"
 #include "../../libsvn_wc/wc_db.h"

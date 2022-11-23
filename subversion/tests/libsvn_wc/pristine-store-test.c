@@ -39,7 +39,6 @@
 #include "svn_repos.h"
 #include "svn_wc.h"
 #include "svn_client.h"
-#include "svn_version.h"
 
 #include "utils.h"
 

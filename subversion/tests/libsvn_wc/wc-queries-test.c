@@ -24,7 +24,6 @@
 #include "svn_pools.h"
 #include "svn_hash.h"
 #include "svn_ctype.h"
-#include "svn_version.h"
 #include "private/svn_dep_compat.h"
 #include "private/svn_wc_private.h"
 #include "../../libsvn_wc/wc.h"

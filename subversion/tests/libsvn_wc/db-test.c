@@ -36,7 +36,6 @@
 
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
-#include "svn_version.h"
 
 #include "private/svn_sqlite.h"
 
