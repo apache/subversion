@@ -570,6 +570,7 @@ CREATE UNIQUE INDEX I_EXTERNALS_DEFINED ON EXTERNALS (wc_id,
                                                       def_local_relpath,
                                                       local_relpath);
 
+
 /* Identify the WC format corresponding to the schema we have created. */
 PRAGMA user_version =
 -- define: SVN_WC__SUPPORTED_VERSION
@@ -704,6 +705,7 @@ WHERE l.op_depth = 0
   AND l.repos_path != ''
   AND ((l.repos_id IS NOT r.repos_id)
        OR (l.repos_path IS NOT RELPATH_SKIP_JOIN(r.local_relpath, r.repos_path, l.local_relpath)))
+
 
 /* ------------------------------------------------------------------------- */
 /* Format 32 adds support for optional text-base contents with the
