@@ -25,6 +25,7 @@
 #include "svn_subst.h"
 #include "svn_time.h"
 #include "svn_path.h"
+#include "svn_private_config.h"
 
 #include "private/svn_io_private.h"
 #include "private/svn_wc_private.h"
@@ -71,8 +72,9 @@ svn_wc__working_file_writer_open(svn_wc__working_file_writer_t **writer_p,
   svn_stream_t *install_stream;
   svn_stream_t *write_stream;
 
-  SVN_ERR(svn_stream__create_for_install(&install_stream, tmp_abspath,
-                                         result_pool, scratch_pool));
+  SVN_ERR_W(svn_stream__create_for_install(&install_stream, tmp_abspath,
+                                           result_pool, scratch_pool),
+            _("Unable to create file install stream"));
 
   if (is_readonly)
     svn_stream__install_set_read_only(install_stream, TRUE);
