@@ -1839,7 +1839,14 @@ def cat_base_after_repo_access_removed(sbox):
     svntest.actions.run_and_verify_svn("This is the file 'pi'.\n", [],
                                        'cat', sbox.ospath('A/D/G/pi') + '@BASE')
   else:
-    svntest.actions.run_and_verify_svn(None, '.*E170001: Authorization failed',
+    if svntest.main.is_ra_type_dav():
+      expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
+    elif svntest.main.is_ra_type_svn():
+      expected_err = ".*svn: E170001: Authorization failed.*"
+    else:
+      raise svntest.Failure
+
+    svntest.actions.run_and_verify_svn(None, expected_err,
                                        'cat', sbox.ospath('A/D/G/pi') + '@BASE')
 
 
