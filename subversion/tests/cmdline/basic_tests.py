@@ -355,7 +355,6 @@ def basic_mkdir_wc_with_parents(sbox):
 
 
 #----------------------------------------------------------------------
-@Wimp("Relies on wc.text_base_path()")
 def basic_commit_corruption(sbox):
   "basic corruption detection on commit"
 
@@ -377,6 +376,10 @@ def basic_commit_corruption(sbox):
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
   svntest.main.file_append(mu_path, 'appended mu text')
+
+  # We are about to manually edit mu's text-base, so run "diff" to
+  # guarantee that the text-base is available in all pristine modes.
+  svntest.actions.run_and_verify_svn(None, [], 'diff', mu_path)
 
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
