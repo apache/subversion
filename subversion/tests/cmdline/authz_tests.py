@@ -1613,7 +1613,6 @@ def authz_log_censor_revprops(sbox):
           '-r1', sbox.repo_url])
 
 @Skip(svntest.main.is_ra_type_file)
-@Wimp("Applying delta to a local mod needs access to the text base")
 def remove_access_after_commit(sbox):
   "remove a subdir with authz file"
 
@@ -1658,11 +1657,26 @@ def remove_access_after_commit(sbox):
 
   # And expect a mixed rev copy
   expected_status.tweak('A/D/G/rho', status='A ', entry_status='  ')
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        expected_disk,
-                                        expected_status,
-                                        [], True)
+
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          expected_status,
+                                          [], True)
+  else:
+    # We are unable to fetch the pristine without read access.
+    # So in a working copy without local pristines, the update is
+    # currently expected to fail.
+    if svntest.main.is_ra_type_dav():
+      expected_err = ".*svn: E175013: .*[Ff]orbidden.*"
+    elif svntest.main.is_ra_type_svn():
+      expected_err = ".*svn: E170001: Authorization failed.*"
+    else:
+      raise svntest.Failure
+
+    svntest.actions.run_and_verify_update(wc_dir, None, None, None,
+                                          expected_err, True)
 
 @Issue(4793)
 @Skip(svntest.main.is_ra_type_file)
