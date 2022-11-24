@@ -328,16 +328,15 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
   const char data[] = "Blah";
   svn_checksum_t *data_sha1, *data_md5;
 
-  int wc_format;
-
-  SVN_ERR(svn_wc__format_from_version(&wc_format, opts->wc_format_version, pool));
-
-  if (wc_format < SVN_WC__HAS_OPTIONAL_PRISTINE)
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "Not supported in WC format under test");
+  svn_boolean_t store_pristine;
 
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_install_dehydrated", opts, pool));
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, wc_abspath, pool));
+  if (store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy without pristine");
 
   /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
    * to its path and set DATA_SHA1 and DATA_MD5 to its checksums. */
@@ -439,16 +438,15 @@ pristine_dehydrate(const svn_test_opts_t *opts,
   svn_string_t *data_string = svn_string_create(data, pool);
   svn_checksum_t *data_sha1, *data_md5;
 
-  int wc_format;
-
-  SVN_ERR(svn_wc__format_from_version(&wc_format, opts->wc_format_version, pool));
-
-  if (wc_format < SVN_WC__HAS_OPTIONAL_PRISTINE)
-    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
-                            "Not supported in WC format under test");
+  svn_boolean_t store_pristine;
 
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_dehydrate", opts, pool));
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, wc_abspath, pool));
+  if (store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy without pristine");
 
   /* Write DATA into a new temporary pristine file, set PRISTINE_TMP_ABSPATH
    * to its path and set DATA_SHA1 and DATA_MD5 to its checksums. */
