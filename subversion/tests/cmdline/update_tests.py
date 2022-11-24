@@ -6804,7 +6804,7 @@ def missing_tmp_update(sbox):
 
   os.rmdir(sbox.ospath(svntest.main.get_admin_name() + '/tmp'))
 
-  svntest.actions.run_and_verify_svn(None, ".*(Unable to create|Can't create).*",
+  svntest.actions.run_and_verify_svn(None, '.*Unable to create.*',
                                      'up', wc_dir, '--set-depth', 'infinity')
 
   # This re-creates .svn/tmp as a side-effect.
