@@ -31,19 +31,6 @@
 #include "wc-queries.h"
 #include "wc_db_private.h"
 
-/* ### Copied from wc_db.c: SQLITE_PROPERTIES_AVAILABLE() */
-#define SQLITE_PROPERTIES_AVAILABLE(stmt, i) \
-                 (svn_sqlite__column_bytes(stmt, i) > 2)
-
-/* ### Copied from wc_db.c: get_recorded_size() */
-static svn_filesize_t
-get_recorded_size(svn_sqlite__stmt_t *stmt, int slot)
-{
-  if (svn_sqlite__column_is_null(stmt, slot))
-    return SVN_INVALID_FILESIZE;
-  return svn_sqlite__column_int64(stmt, slot);
-}
-
 static svn_error_t *
 textbase_add_ref(svn_wc__db_wcroot_t *wcroot,
                  const char *local_relpath,
@@ -137,8 +124,12 @@ svn_wc__db_textbase_walk(svn_wc__db_t *db,
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
-      have_props = SQLITE_PROPERTIES_AVAILABLE(stmt, 4);
-      recorded_size = get_recorded_size(stmt, 5);
+      /* The empty set of properties is stored as "()". */
+      have_props = svn_sqlite__column_bytes(stmt, 4) > 2;
+      if (svn_sqlite__column_is_null(stmt, 5))
+        recorded_size = SVN_INVALID_FILESIZE;
+      else
+        recorded_size = svn_sqlite__column_int64(stmt, 5);
       recorded_time = svn_sqlite__column_int64(stmt, 6);
       props_mod = !svn_sqlite__column_is_null(stmt, 7);
       max_op_depth = svn_sqlite__column_int(stmt, 8);
