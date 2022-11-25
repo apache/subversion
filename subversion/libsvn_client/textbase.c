@@ -49,7 +49,6 @@ textbase_hydrate_cb(void *baton,
   struct textbase_hydrate_baton_t *b = baton;
   const char *url;
   const char *old_url;
-  svn_error_t *err;
 
   url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                     scratch_pool);
@@ -87,11 +86,10 @@ textbase_hydrate_cb(void *baton,
 
   SVN_ERR(svn_client__ensure_ra_session_url(&old_url, b->ra_session, url,
                                             scratch_pool));
-  err = svn_ra_get_file(b->ra_session, "", revision, contents,
-                        NULL, NULL, scratch_pool);
-  err = svn_error_compose_create(err, svn_stream_close(contents));
+  SVN_ERR(svn_ra_fetch_file_contents(b->ra_session, "", revision, contents,
+                                     scratch_pool));
 
-  return svn_error_trace(err);
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

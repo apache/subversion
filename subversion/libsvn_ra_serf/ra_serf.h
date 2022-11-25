@@ -1511,6 +1511,14 @@ svn_error_t *
 svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
 
+/* Implements svn_ra__vtable_t.fetch_file_contents(). */
+svn_error_t *
+svn_ra_serf__fetch_file_contents(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 svn_stream_t *stream,
+                                 apr_pool_t *scratch_pool);
+
 /*** Authentication handler declarations ***/
 
 /**

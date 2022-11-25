@@ -345,6 +345,13 @@ typedef struct svn_ra__vtable_t {
                        void *receiver_baton,
                        apr_pool_t *scratch_pool);
 
+  /* See svn_ra_fetch_file_contents(). */
+  svn_error_t *(*fetch_file_contents)(svn_ra_session_t *session,
+                                      const char *path,
+                                      svn_revnum_t revision,
+                                      svn_stream_t *stream,
+                                      apr_pool_t *scratch_pool);
+
   /* Experimental support below here */
 
   /* See svn_ra__register_editor_shim_callbacks() */
