@@ -424,7 +424,6 @@ def basic_commit_corruption(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
-@Wimp("Relies on wc.text_base_path()")
 def basic_update_corruption(sbox):
   "basic corruption detection on update"
 
@@ -448,6 +447,12 @@ def basic_update_corruption(sbox):
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'co', sbox.repo_url, other_wc)
+
+  # The test manually edits mu's text-base when mu is unmodified.
+  # Unmodified files don't have their text-bases available with
+  # --store-pristine=no, so skip if that is the case.
+  if not svntest.actions.get_wc_store_pristine(other_wc):
+    raise svntest.Skip('Test assumes a working copy with pristine')
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
