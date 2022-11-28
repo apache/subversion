@@ -271,21 +271,33 @@ open_textbase(svn_stream_t **contents_p,
 
   if (checksum && svn_checksum_match(checksum, target_checksum))
     {
-      svn_boolean_t modified;
+      svn_boolean_t store_pristine;
 
-      SVN_ERR(check_file_modified(&modified, db, local_abspath, recorded_size,
-                                  recorded_time, target_checksum, have_props,
-                                  props_mod, scratch_pool));
-      if (!modified)
+      SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, local_abspath,
+                                      scratch_pool));
+      if (!store_pristine)
         {
-          SVN_ERR(svn_wc__internal_translated_stream(contents_p, db,
-                                                     local_abspath,
-                                                     local_abspath,
-                                                     SVN_WC_TRANSLATE_TO_NF,
-                                                     result_pool,
-                                                     scratch_pool));
+          svn_boolean_t modified;
 
-          return SVN_NO_ERROR;
+          /* If the working copy doesn't store local copies of all pristine
+           * contents, a text-base of the unmodified file is the file itself,
+           * appropriately detranslated. */
+
+          SVN_ERR(check_file_modified(&modified, db, local_abspath,
+                                      recorded_size, recorded_time,
+                                      target_checksum, have_props,
+                                      props_mod, scratch_pool));
+          if (!modified)
+            {
+              SVN_ERR(svn_wc__internal_translated_stream(contents_p, db,
+                                                         local_abspath,
+                                                         local_abspath,
+                                                         SVN_WC_TRANSLATE_TO_NF,
+                                                         result_pool,
+                                                         scratch_pool));
+
+              return SVN_NO_ERROR;
+            }
         }
     }
 
