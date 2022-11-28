@@ -53,6 +53,7 @@ struct revert_with_write_lock_baton {
   svn_boolean_t metadata_only;
   svn_boolean_t added_keep_local;
   svn_client_ctx_t *ctx;
+  svn_ra_session_t **ra_session_p;
 };
 
 /* (Note: All arguments are in the baton above.)
@@ -69,8 +70,9 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
   struct revert_with_write_lock_baton *b = baton;
   svn_error_t *err;
 
-  SVN_ERR(svn_client__textbase_sync(b->local_abspath, TRUE, TRUE,
-                                    b->ctx, scratch_pool));
+  SVN_ERR(svn_client__textbase_sync(b->ra_session_p, b->local_abspath,
+                                    TRUE, TRUE, b->ctx, *b->ra_session_p,
+                                    result_pool, scratch_pool));
 
   err = svn_wc_revert6(b->ctx->wc_ctx,
                        b->local_abspath,
@@ -111,8 +113,8 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
         return svn_error_trace(err);
     }
 
-  SVN_ERR(svn_client__textbase_sync(b->local_abspath, FALSE, TRUE,
-                                    b->ctx, scratch_pool));
+  SVN_ERR(svn_client__textbase_sync(NULL, b->local_abspath, FALSE, TRUE, b->ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -134,6 +136,7 @@ svn_client_revert4(const apr_array_header_t *paths,
   svn_config_t *cfg;
   svn_boolean_t use_commit_times;
   struct revert_with_write_lock_baton baton;
+  svn_ra_session_t *ra_session;
 
   /* Don't even attempt to modify the working copy if any of the
    * targets look like URLs. URLs are invalid input. */
@@ -156,7 +159,7 @@ svn_client_revert4(const apr_array_header_t *paths,
                               FALSE));
 
   iterpool = svn_pool_create(pool);
-
+  ra_session = NULL;
   for (i = 0; i < paths->nelts; i++)
     {
       const char *path = APR_ARRAY_IDX(paths, i, const char *);
@@ -182,6 +185,7 @@ svn_client_revert4(const apr_array_header_t *paths,
       baton.metadata_only = metadata_only;
       baton.added_keep_local = added_keep_local;
       baton.ctx = ctx;
+      baton.ra_session_p = &ra_session;
 
       err = svn_wc__is_wcroot(&wc_root, ctx->wc_ctx, local_abspath, iterpool);
       if (err)
@@ -190,7 +194,7 @@ svn_client_revert4(const apr_array_header_t *paths,
                             : svn_dirent_dirname(local_abspath, pool);
       err = svn_wc__call_with_write_lock(revert, &baton, ctx->wc_ctx,
                                          lock_target, FALSE,
-                                         iterpool, iterpool);
+                                         pool, iterpool);
       if (err)
         goto errorful;
     }

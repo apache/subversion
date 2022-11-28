@@ -188,8 +188,8 @@ upgrade_internal(const char *path,
                                                 &info_baton, scratch_pool));
     }
 
-  SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE,
-                                    ctx, scratch_pool));
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

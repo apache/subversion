@@ -53,6 +53,7 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
 {
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   apr_array_header_t *array;
+  svn_ra_session_t *ra_session;
   int i;
 
   if (conflicts_remain)
@@ -61,14 +62,16 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
   SVN_ERR(svn_hash_keys(&array, conflicted_paths, scratch_pool));
   svn_sort__array(array, svn_sort_compare_paths);
 
+  ra_session = NULL;
   for (i = 0; i < array->nelts; i++)
     {
       const char *local_abspath = APR_ARRAY_IDX(array, i, const char *);
 
       svn_pool_clear(iterpool);
 
-      SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE, ctx,
-                                        iterpool));
+      SVN_ERR(svn_client__textbase_sync(&ra_session, local_abspath,
+                                        TRUE, TRUE, ctx, ra_session,
+                                        scratch_pool, iterpool));
 
       SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
                                         svn_depth_empty,
@@ -103,8 +106,8 @@ svn_client__resolve_conflicts(svn_boolean_t *conflicts_remain,
             *conflicts_remain = TRUE;
         }
 
-      SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE, ctx,
-                                        iterpool));
+      SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                        NULL, iterpool, iterpool));
     }
   svn_pool_destroy(iterpool);
 
@@ -119,8 +122,9 @@ resolve_locked(const char *local_abspath,
                svn_client_ctx_t *ctx,
                apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_client__textbase_sync(root_abspath, TRUE, TRUE, ctx,
-                                    scratch_pool));
+  /* This will open the RA session internally if needed. */
+  SVN_ERR(svn_client__textbase_sync(NULL, root_abspath, TRUE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__resolve_conflicts(ctx->wc_ctx, local_abspath,
                                     depth,
@@ -134,8 +138,8 @@ resolve_locked(const char *local_abspath,
                                     ctx->notify_func2, ctx->notify_baton2,
                                     scratch_pool));
 
-  SVN_ERR(svn_client__textbase_sync(root_abspath, FALSE, TRUE, ctx,
-                                    scratch_pool));
+  SVN_ERR(svn_client__textbase_sync(NULL, root_abspath, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

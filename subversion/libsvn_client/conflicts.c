@@ -6425,7 +6425,9 @@ begin_resolve(const char **root_abspath_p,
                                                  local_abspath,
                                                  result_pool, scratch_pool));
 
-  err = svn_client__textbase_sync(lock_abspath, TRUE, TRUE, ctx, scratch_pool);
+  /* This will open the RA session internally if needed. */
+  err = svn_client__textbase_sync(NULL, lock_abspath, TRUE, TRUE, ctx,
+                                  NULL, scratch_pool, scratch_pool);
   if (err)
     {
       return svn_error_compose_create(
@@ -6448,7 +6450,8 @@ finish_resolve(const char *root_abspath,
 
   err = svn_error_compose_create(
           err,
-          svn_client__textbase_sync(root_abspath, FALSE, TRUE, ctx, scratch_pool));
+          svn_client__textbase_sync(NULL, root_abspath, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   err = svn_error_compose_create(
           err,

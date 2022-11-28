@@ -202,8 +202,6 @@ switch_internal(svn_revnum_t *result_rev,
                                   pool));
     }
 
-  SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE, ctx, pool));
-
   /* Open an RA session to 'source' URL */
   SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &switch_loc,
                                             switch_url, anchor_abspath,
@@ -299,6 +297,9 @@ switch_internal(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_ra_reparent(ra_session, anchor_url, pool));
 
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, TRUE, TRUE, ctx,
+                                    ra_session, pool, pool));
+
   /* Fetch the switch (update) editor.  If REVISION is invalid, that's
      okay; the RA driver will call editor->set_target_revision() later on. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
@@ -371,7 +372,8 @@ switch_internal(svn_revnum_t *result_rev,
                                            ctx, pool));
     }
 
-  SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE, ctx, pool));
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                    NULL, pool, pool));
 
   /* Let everyone know we're finished here. */
   if (ctx->notify_func2)

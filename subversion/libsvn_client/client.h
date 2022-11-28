@@ -1252,12 +1252,27 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *scratch_pool);
 
 /* Synchronize the state of the text-base contents for the LOCAL_ABSPATH tree.
- * Internally this calls svn_wc__textbase_sync(), which see for details. */
+ *
+ * If ALLOW_HYDRATE is true, fetch the required but missing text-base contents
+ * using the provided HYDRATE_CALLBACK and HYDRATE_BATON.  If ALLOW_DEHYDRATE
+ * is true, remove the on disk text-base contents that are not required.
+ *
+ * The missing contents will be fetched using the provided RA_SESSION if it
+ * is not NULL.  If RA_SESSION is NULL and some of the text-bases have to be
+ * fetched, a new RA session will be opened internally.  If RA_SESSION_P is
+ * not NULL, the session used during fetch will be returned in *RA_SESSION_P.
+ * If this is the session that was opened internally, it will be allocated in
+ * RESULT_POOL.  Note that *RA_SESSION_P may be set to NULL if no fetching
+ * took place.
+ */
 svn_error_t *
-svn_client__textbase_sync(const char *local_abspath,
+svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
+                          const char *local_abspath,
                           svn_boolean_t allow_hydrate,
                           svn_boolean_t allow_dehydrate,
                           svn_client_ctx_t *ctx,
+                          svn_ra_session_t *ra_session,
+                          apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool);
 
 /* Returns the first version that supported the working copy metadata format

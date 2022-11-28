@@ -30,7 +30,8 @@
 /* A baton for use with textbase_hydrate_cb(). */
 typedef struct textbase_hydrate_baton_t
 {
-  apr_pool_t *pool;
+  apr_pool_t *result_pool;
+  const char *base_abspath;
   svn_client_ctx_t *ctx;
   svn_ra_session_t *ra_session;
 } textbase_hydrate_baton_t;
@@ -57,20 +58,10 @@ textbase_hydrate_cb(void *baton,
     {
       svn_ra_session_t *session;
 
-      /* ### Transitional: open a *new* RA session for every call to
-         svn_client__textbase_sync().
-
-         What we could do here: make a sync context that accepts an optional
-         RA session.  If it's passed-in, use that session.  Else, open a new
-         session, but pass it on to the caller so that it could be reused
-         further on. */
-
-      /* Open the RA session that does not correspond to a working copy.
-         At this point we know that we don't have a local copy of the contents,
-         so rechecking that in get_wc_contents() is just a waste of time. */
-      SVN_ERR(svn_client__open_ra_session_internal(&session, NULL, url, NULL,
-                                                   NULL, FALSE, FALSE, b->ctx,
-                                                   b->pool, scratch_pool));
+      SVN_ERR(svn_client__open_ra_session_internal(&session, NULL,
+                                                   url, b->base_abspath,
+                                                   NULL, TRUE, TRUE, b->ctx,
+                                                   b->result_pool, scratch_pool));
       b->ra_session = session;
     }
 
@@ -93,19 +84,31 @@ textbase_hydrate_cb(void *baton,
 }
 
 svn_error_t *
-svn_client__textbase_sync(const char *local_abspath,
+svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
+                          const char *local_abspath,
                           svn_boolean_t allow_hydrate,
                           svn_boolean_t allow_dehydrate,
                           svn_client_ctx_t *ctx,
+                          svn_ra_session_t *ra_session,
+                          apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
   textbase_hydrate_baton_t baton = {0};
+  const char *old_session_url = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  baton.pool = scratch_pool;
+  /* A caller may want to reuse the RA session that we open internally.
+     If that's the case, use the result pool.  Otherwise, the session
+     is temporary, so use the scratch pool. */
+  if (ra_session_p)
+    baton.result_pool = result_pool;
+  else
+    baton.result_pool = scratch_pool;
+
+  baton.base_abspath = local_abspath;
   baton.ctx = ctx;
-  baton.ra_session = NULL;
+  baton.ra_session = ra_session;
 
   if (ctx->notify_func2 && allow_hydrate)
     {
@@ -115,11 +118,17 @@ svn_client__textbase_sync(const char *local_abspath,
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
+  if (ra_session)
+    SVN_ERR(svn_ra_get_session_url(ra_session, &old_session_url, scratch_pool));
+
   SVN_ERR(svn_wc__textbase_sync(ctx->wc_ctx, local_abspath,
                                 allow_hydrate, allow_dehydrate,
                                 textbase_hydrate_cb, &baton,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 scratch_pool));
+
+  if (ra_session)
+    SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));
 
   if (ctx->notify_func2 && allow_hydrate)
     {
@@ -128,6 +137,9 @@ svn_client__textbase_sync(const char *local_abspath,
                                scratch_pool);
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
+
+  if (ra_session_p)
+    *ra_session_p = baton.ra_session;
 
   return SVN_NO_ERROR;
 }

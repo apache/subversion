@@ -1866,7 +1866,9 @@ diff_wc_wc(const char *path1,
                           "or between the working versions of two paths"
                           )));
 
-  SVN_ERR(svn_client__textbase_sync(abspath1, TRUE, TRUE, ctx, scratch_pool));
+  /* This will open the RA session internally if needed. */
+  SVN_ERR(svn_client__textbase_sync(NULL, abspath1, TRUE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__diff7(TRUE,
                         ctx->wc_ctx, abspath1, depth,
@@ -1875,7 +1877,8 @@ diff_wc_wc(const char *path1,
                         ctx->cancel_func, ctx->cancel_baton,
                         result_pool, scratch_pool));
 
-  SVN_ERR(svn_client__textbase_sync(abspath1, FALSE, TRUE, ctx, scratch_pool));
+  SVN_ERR(svn_client__textbase_sync(NULL, abspath1, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -2140,8 +2143,6 @@ diff_repos_wc(struct diff_driver_info_t *ddi,
 
   SVN_ERR(svn_dirent_get_absolute(&abspath2, path2, scratch_pool));
 
-  SVN_ERR(svn_client__textbase_sync(abspath2, TRUE, TRUE, ctx, scratch_pool));
-
   /* Check if our diff target is a copied node. */
   SVN_ERR(svn_wc__node_get_origin(&is_copy,
                                   &cf_revision,
@@ -2276,6 +2277,9 @@ diff_repos_wc(struct diff_driver_info_t *ddi,
   if (reverse)
     diff_processor = svn_diff__tree_processor_reverse_create(diff_processor, scratch_pool);
 
+  SVN_ERR(svn_client__textbase_sync(NULL, abspath2, TRUE, TRUE, ctx,
+                                    ra_session, scratch_pool, scratch_pool));
+
   /* Use the diff editor to generate the diff. */
   SVN_ERR(svn_ra_has_capability(ra_session, &server_supports_depth,
                                 SVN_RA_CAPABILITY_DEPTH, scratch_pool));
@@ -2347,7 +2351,8 @@ diff_repos_wc(struct diff_driver_info_t *ddi,
                                       scratch_pool));
     }
 
-  SVN_ERR(svn_client__textbase_sync(abspath2, FALSE, TRUE, ctx, scratch_pool));
+  SVN_ERR(svn_client__textbase_sync(NULL, abspath2, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   return SVN_NO_ERROR;
 }

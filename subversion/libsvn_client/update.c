@@ -467,12 +467,12 @@ update_internal(svn_revnum_t *result_rev,
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
-  SVN_ERR(svn_client__textbase_sync(local_abspath, TRUE, TRUE,
-                                    ctx, scratch_pool));
-
   SVN_ERR(reuse_ra_session(ra_session_p, &corrected_url, anchor_url,
                            anchor_abspath, ctx, result_pool, scratch_pool));
   ra_session = *ra_session_p;
+
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, TRUE, TRUE, ctx,
+                                    ra_session, scratch_pool, scratch_pool));
 
   /* If we got a corrected URL from the RA subsystem, we'll need to
      relocate our working copy first. */
@@ -579,8 +579,8 @@ update_internal(svn_revnum_t *result_rev,
                                repos_root_url, ra_session, ctx, scratch_pool));
     }
 
-  SVN_ERR(svn_client__textbase_sync(local_abspath, FALSE, TRUE,
-                                    ctx, scratch_pool));
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
 
   /* Let everyone know we're finished here (unless we're asked not to). */
   if (ctx->notify_func2 && notify_summary)
