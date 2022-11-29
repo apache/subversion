@@ -174,14 +174,16 @@ textbase_hydrate(svn_wc__db_t *db,
 {
   svn_stream_t *install_stream;
   svn_wc__db_install_data_t *install_data;
-  svn_checksum_t *sha1_checksum;
-  svn_checksum_t *md5_checksum;
+  svn_checksum_t *install_sha1_checksum;
+  svn_checksum_t *install_md5_checksum;
   svn_error_t *err;
 
   /* ### Use svn_wc__db_wcroot_t */
 
-  SVN_ERR(svn_wc__db_pristine_prepare_install(&install_stream, &install_data,
-                                              &sha1_checksum, &md5_checksum,
+  SVN_ERR(svn_wc__db_pristine_prepare_install(&install_stream,
+                                              &install_data,
+                                              &install_sha1_checksum,
+                                              &install_md5_checksum,
                                               db, wri_abspath, TRUE,
                                               scratch_pool, scratch_pool));
 
@@ -197,8 +199,10 @@ textbase_hydrate(svn_wc__db_t *db,
                                                       scratch_pool));
     }
 
-  err = svn_wc__db_pristine_install(install_data, sha1_checksum,
-                                    md5_checksum, scratch_pool);
+  err = svn_wc__db_pristine_install(install_data,
+                                    install_sha1_checksum,
+                                    install_md5_checksum,
+                                    scratch_pool);
   if (err)
     {
       return svn_error_compose_create(
