@@ -196,6 +196,16 @@ textbase_hydrate(svn_wc__db_t *db,
     return svn_error_compose_create(err,
              svn_wc__db_pristine_install_abort(install_data, scratch_pool));
 
+  if (!svn_checksum_match(checksum, install_sha1_checksum))
+    {
+      err = svn_checksum_mismatch_err(
+              checksum, install_sha1_checksum, scratch_pool,
+              _("Checksum mismatch while fetching text base"));
+
+      return svn_error_compose_create(err,
+               svn_wc__db_pristine_install_abort(install_data, scratch_pool));
+    }
+
   err = svn_wc__db_pristine_install(install_data,
                                     install_sha1_checksum,
                                     install_md5_checksum,
