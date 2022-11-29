@@ -193,22 +193,16 @@ textbase_hydrate(svn_wc__db_t *db,
                          cancel_func, cancel_baton,
                          scratch_pool);
   if (err)
-    {
-      return svn_error_compose_create(
-               err, svn_wc__db_pristine_install_abort(install_data,
-                                                      scratch_pool));
-    }
+    return svn_error_compose_create(err,
+             svn_wc__db_pristine_install_abort(install_data, scratch_pool));
 
   err = svn_wc__db_pristine_install(install_data,
                                     install_sha1_checksum,
                                     install_md5_checksum,
                                     scratch_pool);
   if (err)
-    {
-      return svn_error_compose_create(
-               err, svn_wc__db_pristine_install_abort(install_data,
-                                                      scratch_pool));
-    }
+    return svn_error_compose_create(err,
+             svn_wc__db_pristine_install_abort(install_data, scratch_pool));
 
   return SVN_NO_ERROR;
 }
