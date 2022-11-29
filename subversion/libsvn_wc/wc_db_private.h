@@ -566,4 +566,23 @@ svn_wc__db_verify_db_full_internal(svn_wc__db_wcroot_t *wcroot,
                                    void *baton,
                                    apr_pool_t *scratch_pool);
 
+/* Like svn_wc__db_pristine_prepare_install() but taking WCROOT instead
+   of DB+WRI_ABSPATH. */
+svn_error_t *
+svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
+                                             svn_wc__db_install_data_t **install_data_p,
+                                             svn_checksum_t **sha1_checksum_p,
+                                             svn_checksum_t **md5_checksum_p,
+                                             svn_wc__db_wcroot_t *wcroot,
+                                             svn_boolean_t hydrated,
+                                             apr_pool_t *result_pool,
+                                             apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_pristine_dehydrate() but taking WCROOT instead
+   of DB+WRI_ABSPATH. */
+svn_error_t *
+svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
+                                       const svn_checksum_t *sha1_checksum,
+                                       apr_pool_t *scratch_pool);
+
 #endif /* WC_DB_PRIVATE_H */

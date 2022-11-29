@@ -160,8 +160,7 @@ svn_wc__db_textbase_walk(svn_wc__db_t *db,
 }
 
 static svn_error_t *
-textbase_hydrate(svn_wc__db_t *db,
-                 const char *wri_abspath,
+textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
                  svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
                  void *hydrate_baton,
                  svn_cancel_func_t cancel_func,
@@ -178,14 +177,10 @@ textbase_hydrate(svn_wc__db_t *db,
   svn_checksum_t *install_md5_checksum;
   svn_error_t *err;
 
-  /* ### Use svn_wc__db_wcroot_t */
-
-  SVN_ERR(svn_wc__db_pristine_prepare_install(&install_stream,
-                                              &install_data,
-                                              &install_sha1_checksum,
-                                              &install_md5_checksum,
-                                              db, wri_abspath, TRUE,
-                                              scratch_pool, scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_prepare_install_internal(
+            &install_stream, &install_data,
+            &install_sha1_checksum, &install_md5_checksum,
+            wcroot, TRUE, scratch_pool, scratch_pool));
 
   err = hydrate_callback(hydrate_baton, repos_root_url,
                          repos_relpath, revision,
@@ -325,10 +320,10 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                            svn_checksum_to_cstring_display(checksum, iterpool));
                 }
 
-              err = textbase_hydrate(db, local_abspath, hydrate_callback,
-                                     hydrate_baton, cancel_func, cancel_baton,
-                                     checksum, repos_root_url, repos_relpath,
-                                     revision, iterpool);
+              err = textbase_hydrate(wcroot, hydrate_callback, hydrate_baton,
+                                     cancel_func, cancel_baton, checksum,
+                                     repos_root_url, repos_relpath, revision,
+                                     iterpool);
               if (err)
                 return svn_error_compose_create(err, svn_sqlite__reset(stmt));
             }
@@ -337,8 +332,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
         {
           if (allow_dehydrate)
             {
-              err = svn_wc__db_pristine_dehydrate(db, local_abspath,
-                                                  checksum, iterpool);
+              err = svn_wc__db_pristine_dehydrate_internal(wcroot, checksum,
+                                                           iterpool);
               if (err)
                 return svn_error_compose_create(err, svn_sqlite__reset(stmt));
             }

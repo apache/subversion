@@ -401,17 +401,35 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream_p,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
-  svn_stream_t *stream;
-  svn_wc__db_install_data_t *install_data;
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *temp_dir_abspath;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_wc__db_pristine_prepare_install_internal(
+            stream_p, install_data_p, sha1_checksum_p, md5_checksum_p,
+            wcroot, hydrated, result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
+                                             svn_wc__db_install_data_t **install_data_p,
+                                             svn_checksum_t **sha1_checksum_p,
+                                             svn_checksum_t **md5_checksum_p,
+                                             svn_wc__db_wcroot_t *wcroot,
+                                             svn_boolean_t hydrated,
+                                             apr_pool_t *result_pool,
+                                             apr_pool_t *scratch_pool)
+{
+  svn_stream_t *stream;
+  svn_wc__db_install_data_t *install_data;
+  const char *temp_dir_abspath;
 
   temp_dir_abspath = pristine_get_tempdir(wcroot, scratch_pool, scratch_pool);
 
@@ -987,15 +1005,30 @@ svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  const char *pristine_abspath;
-  svn_sqlite__stmt_t *stmt;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
-  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
+
+  SVN_ERR(svn_wc__db_pristine_dehydrate_internal(wcroot, sha1_checksum,
+                                                 scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+
+svn_error_t *
+svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
+                                       const svn_checksum_t *sha1_checksum,
+                                       apr_pool_t *scratch_pool)
+{
+  ;
+  const char *pristine_abspath;
+  svn_sqlite__stmt_t *stmt;
+
+  SVN_ERR_ASSERT(sha1_checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                              sha1_checksum,
