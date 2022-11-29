@@ -5150,9 +5150,6 @@ def revive_children_of_copy(sbox):
     raise svntest.Failure('psi unexpectedly non-existent')
 
 @SkipUnless(svntest.main.is_os_windows)
-# Needs work: the access denied error now happens when we use the
-# working file as the base in update_editor.c:apply_textdelta().
-@Wimp("Need to update the access denied handling in update_editor.c")
 def skip_access_denied(sbox):
   """access denied paths should be skipped"""
 
@@ -5190,14 +5187,27 @@ def skip_access_denied(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_status.tweak('iota', status='M ', wc_rev=2)
 
-  # And now check that update skips the path
-  # *and* status shows the path as modified.
-  svntest.actions.run_and_verify_update(wc_dir,
-                                        expected_output,
-                                        None,
-                                        expected_status,
-                                        [], False,
-                                        wc_dir, '-r', '1')
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    # And now check that update skips the path *and* status shows
+    # the path as modified.
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          expected_output,
+                                          None,
+                                          expected_status,
+                                          [], False,
+                                          wc_dir, '-r', '1')
+  else:
+    # For a working copy that doesn't store local pristine contents, don't
+    # skip access violation errors when determining if a file was modified.
+    # Because if we did that (and treated such files as modified, see above),
+    # we'd also find ourselves uncontrollably fetching and removing pristines
+    # based on transient errors -- which probably is an undesired property.
+    # So we currently expect to receive an error:
+    expected_err = ".*svn: E155039: Couldn't open a working copy file*"
+    svntest.actions.run_and_verify_update(wc_dir,
+                                          None, None, None,
+                                          expected_err, False,
+                                          wc_dir, '-r', '1')
 
   f.close()
 
