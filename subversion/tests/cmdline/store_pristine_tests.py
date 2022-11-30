@@ -553,6 +553,144 @@ def update_modified_file_without_pristine(sbox):
                                         expected_disk,
                                         expected_status)
 
+def simple_copy_with_pristine(sbox):
+  "simple copy with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='  ', wc_rev=1),
+    'file2' : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
+def simple_copy_without_pristine(sbox):
+  "simple copy without pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=no")
+  svntest.actions.run_and_verify_svn(
+    ['no'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='  ', wc_rev=1),
+    'file2' : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+def copy_modified_file_with_pristine(sbox):
+  "copy locally modified file with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar')
+
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='M ', wc_rev=1),
+    'file2' : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
+def copy_modified_file_without_pristine(sbox):
+  "copy locally modified file without pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=no")
+  svntest.actions.run_and_verify_svn(
+    ['no'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar')
+
+  svntest.actions.run_and_verify_svn(None, [], 'copy',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='M ', wc_rev=1),
+    'file2' : Item(status='A ', wc_rev='-', copied='+'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -573,6 +711,10 @@ test_list = [ None,
               simple_revert_without_pristine,
               update_modified_file_with_pristine,
               update_modified_file_without_pristine,
+              simple_copy_with_pristine,
+              simple_copy_without_pristine,
+              copy_modified_file_with_pristine,
+              copy_modified_file_without_pristine,
              ]
 serial_only = True
 
