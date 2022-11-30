@@ -53,7 +53,7 @@ def simple_checkout_with_pristine(sbox):
                                           expected_output,
                                           expected_disk,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -71,7 +71,7 @@ def simple_checkout_without_pristine(sbox):
                                           expected_output,
                                           expected_disk,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -88,7 +88,7 @@ def simple_commit_with_pristine(sbox):
                                           expected_output,
                                           expected_disk,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -120,7 +120,7 @@ def simple_commit_without_pristine(sbox):
                                           expected_output,
                                           expected_disk,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -151,7 +151,7 @@ def simple_update_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -193,7 +193,7 @@ def simple_update_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -234,7 +234,7 @@ def simple_status_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -290,7 +290,7 @@ def simple_status_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -345,7 +345,7 @@ def simple_diff_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -378,7 +378,7 @@ def simple_diff_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -410,7 +410,7 @@ def simple_revert_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -443,7 +443,7 @@ def simple_revert_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -475,7 +475,7 @@ def update_modified_file_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -520,7 +520,7 @@ def update_modified_file_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -564,7 +564,7 @@ def simple_copy_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -598,7 +598,7 @@ def simple_copy_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -631,7 +631,7 @@ def copy_modified_file_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -667,7 +667,7 @@ def copy_modified_file_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -702,7 +702,7 @@ def simple_move_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -736,7 +736,7 @@ def simple_move_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -769,7 +769,7 @@ def move_modified_file_with_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=yes")
+                                          '--store-pristine=yes')
   svntest.actions.run_and_verify_svn(
     ['yes'], [],
     'info', '--show-item=store-pristine', '--no-newline',
@@ -805,7 +805,7 @@ def move_modified_file_without_pristine(sbox):
                                           expected_output,
                                           expected_wc,
                                           [],
-                                          "--store-pristine=no")
+                                          '--store-pristine=no')
   svntest.actions.run_and_verify_svn(
     ['no'], [],
     'info', '--show-item=store-pristine', '--no-newline',
