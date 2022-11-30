@@ -691,6 +691,144 @@ def copy_modified_file_without_pristine(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir,
                                         expected_status)
 
+def simple_move_with_pristine(sbox):
+  "simple move with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  svntest.actions.run_and_verify_svn(None, [], 'move',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='D ', wc_rev=1, moved_to='file2'),
+    'file2' : Item(status='A ', wc_rev='-', copied='+', moved_from='file'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
+def simple_move_without_pristine(sbox):
+  "simple move without pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=no")
+  svntest.actions.run_and_verify_svn(
+    ['no'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  svntest.actions.run_and_verify_svn(None, [], 'move',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='D ', wc_rev=1, moved_to='file2'),
+    'file2' : Item(status='A ', wc_rev='-', copied='+', moved_from='file'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+def move_modified_file_with_pristine(sbox):
+  "move locally modified file with pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=yes")
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar')
+
+  svntest.actions.run_and_verify_svn(None, [], 'move',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='D ', wc_rev=1, moved_to='file2'),
+    'file2' : Item(status='A ', wc_rev='-', copied='+', moved_from='file'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
+def move_modified_file_without_pristine(sbox):
+  "move locally modified file without pristine"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          "--store-pristine=no")
+  svntest.actions.run_and_verify_svn(
+    ['no'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  sbox.simple_append('file', 'foo')
+  sbox.simple_add('file')
+  sbox.simple_commit(message='r1')
+
+  sbox.simple_append('file', 'bar')
+
+  svntest.actions.run_and_verify_svn(None, [], 'move',
+                                     sbox.ospath('file'),
+                                     sbox.ospath('file2'))
+
+  expected_status = svntest.wc.State(sbox.wc_dir, {
+    ''      : Item(status='  ', wc_rev=0),
+    'file'  : Item(status='D ', wc_rev=1, moved_to='file2'),
+    'file2' : Item(status='A ', wc_rev='-', copied='+', moved_from='file'),
+    })
+  svntest.actions.run_and_verify_status(sbox.wc_dir,
+                                        expected_status)
+
 ########################################################################
 # Run the tests
 
@@ -715,6 +853,10 @@ test_list = [ None,
               simple_copy_without_pristine,
               copy_modified_file_with_pristine,
               copy_modified_file_without_pristine,
+              simple_move_with_pristine,
+              simple_move_without_pristine,
+              move_modified_file_with_pristine,
+              move_modified_file_without_pristine,
              ]
 serial_only = True
 
