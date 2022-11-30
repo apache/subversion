@@ -829,6 +829,39 @@ def move_modified_file_without_pristine(sbox):
   svntest.actions.run_and_verify_status(sbox.wc_dir,
                                         expected_status)
 
+@SkipUnless(svntest.main.wc_supports_optional_pristine)
+def checkout_incompatible_setting(sbox):
+  "checkout with incompatible pristine setting"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          [],
+                                          '--store-pristine=yes')
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_wc = svntest.wc.State('', {})
+  expected_error = "svn: E155042: .*" # SVN_ERR_WC_INCOMPATIBLE_SETTINGS
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_wc,
+                                          expected_error,
+                                          '--store-pristine=no')
+  # Ensure that the settings didn't change.
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -857,6 +890,7 @@ test_list = [ None,
               simple_move_without_pristine,
               move_modified_file_with_pristine,
               move_modified_file_without_pristine,
+              checkout_incompatible_setting,
              ]
 serial_only = True
 
