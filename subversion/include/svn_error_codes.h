@@ -584,8 +584,8 @@ SVN_ERROR_START
   /** @since New in 1.15 */
   SVN_ERRDEF(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
              SVN_ERR_WC_CATEGORY_START + 43,
-             "This client was not updated to support working copies "
-             "without local pristines")
+             "This client uses a deprecated API that does not support "
+             "working copies without local pristines")
 
   /* fs errors */
 
