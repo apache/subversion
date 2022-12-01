@@ -22,8 +22,7 @@
  */
 
 #include "svn_path.h"
-
-#include "private/svn_wc_private.h"
+#include "svn_wc.h"
 
 #include "client.h"
 
@@ -36,7 +35,7 @@ typedef struct textbase_fetch_baton_t
   svn_ra_session_t *ra_session;
 } textbase_fetch_baton_t;
 
-/* Implements svn_wc__textbase_fetch_cb_t. */
+/* Implements svn_wc_textbase_fetch_cb_t. */
 static svn_error_t *
 textbase_fetch_cb(void *baton,
                   const char *repos_root_url,
@@ -121,11 +120,11 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
   if (ra_session)
     SVN_ERR(svn_ra_get_session_url(ra_session, &old_session_url, scratch_pool));
 
-  SVN_ERR(svn_wc__textbase_sync(ctx->wc_ctx, local_abspath,
-                                allow_hydrate, allow_dehydrate,
-                                textbase_fetch_cb, &fetch_baton,
-                                ctx->cancel_func, ctx->cancel_baton,
-                                scratch_pool));
+  SVN_ERR(svn_wc_textbase_sync(ctx->wc_ctx, local_abspath,
+                               allow_hydrate, allow_dehydrate,
+                               textbase_fetch_cb, &fetch_baton,
+                               ctx->cancel_func, ctx->cancel_baton,
+                               scratch_pool));
 
   if (ra_session)
     SVN_ERR(svn_ra_reparent(ra_session, old_session_url, scratch_pool));

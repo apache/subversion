@@ -2321,33 +2321,6 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                 void *notify_baton,
                 apr_pool_t *scratch_pool);
 
-/* The callback invoked by svn_wc__textbase_sync() to fetch the text-base
-   contents identified by REPOS_ROOT_URL, REPOS_RELPATH and REVISION. */
-typedef svn_error_t *(*svn_wc__textbase_fetch_cb_t)(
-  void *baton,
-  const char *repos_root_url,
-  const char *repos_relpath,
-  svn_revnum_t revision,
-  svn_stream_t *contents,
-  svn_cancel_func_t cancel_func,
-  void *cancel_baton,
-  apr_pool_t *scratch_pool);
-
-/* Synchronize the state of the text-base contents for the LOCAL_ABSPATH tree.
-   If ALLOW_HYDRATE is true, fetch the required but missing text-base contents
-   using the provided FETCH_CALLBACK and FETCH_BATON.  If ALLOW_DEHYDRATE
-   is true, remove the on disk text-base contents that is not required. */
-svn_error_t *
-svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      svn_boolean_t allow_hydrate,
-                      svn_boolean_t allow_dehydrate,
-                      svn_wc__textbase_fetch_cb_t fetch_callback,
-                      void *fetch_baton,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      apr_pool_t *scratch_pool);
-
 /* Return the working copy settings *FORMAT_P and *STORE_PRISTINE_P for
    LOCAL_ABSPATH in WC_CTX. */
 svn_error_t *

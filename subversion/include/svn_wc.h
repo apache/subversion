@@ -7358,6 +7358,51 @@ svn_wc_get_pristine_copy_path(const char *path,
                               apr_pool_t *pool);
 
 
+/** The callback invoked by svn_wc_textbase_sync() to provide the text-base
+ * contents identified by @a repos_root_url, @a repos_relpath and @a revision.
+ *
+ * The callback is expected to write the contents to @a contents and close
+ * the stream.
+ *
+ * @since New in 1.15.
+ */
+typedef svn_error_t *(*svn_wc_textbase_fetch_cb_t)(
+  void *baton,
+  const char *repos_root_url,
+  const char *repos_relpath,
+  svn_revnum_t revision,
+  svn_stream_t *contents,
+  svn_cancel_func_t cancel_func,
+  void *cancel_baton,
+  apr_pool_t *scratch_pool);
+
+ /** Synchronize the state of the text-base contents for the
+  * @a local_abspath tree.
+  *
+  * If @a allow_hydrate is true, fetch the required but missing text-base
+  * contents using the provided @a fetch_callback and @a fetch_baton.
+  * If @a allow_hydrate is false, @a fetch_callback will not be used and
+  * may be @c NULL.
+  *
+  * If @a allow_dehydrate is true, remove the on disk text-base contents
+  * that is not required.
+  *
+  * @see svn_wc_textbase_hydrate_cb_t
+  * @see svn_client__textbase_sync for usage/implementation example.
+  *
+  * @since New in 1.15.
+  */
+svn_error_t *
+svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     svn_boolean_t allow_hydrate,
+                     svn_boolean_t allow_dehydrate,
+                     svn_wc_textbase_fetch_cb_t fetch_callback,
+                     void *fetch_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool);
+
 /**
  * Recurse from @a local_abspath, cleaning up unfinished tasks.  Perform
  * any temporary allocations in @a scratch_pool.  If @a break_locks is TRUE

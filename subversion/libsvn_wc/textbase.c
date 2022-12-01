@@ -460,7 +460,7 @@ svn_wc__textbase_prepare_install(svn_stream_t **stream_p,
 typedef struct textbase_sync_baton_t
 {
   svn_wc__db_t *db;
-  svn_wc__textbase_fetch_cb_t fetch_callback;
+  svn_wc_textbase_fetch_cb_t fetch_callback;
   void *fetch_baton;
 } textbase_sync_baton_t;
 
@@ -529,15 +529,15 @@ textbase_fetch_cb(void *baton,
 }
 
 svn_error_t *
-svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
-                      const char *local_abspath,
-                      svn_boolean_t allow_hydrate,
-                      svn_boolean_t allow_dehydrate,
-                      svn_wc__textbase_fetch_cb_t fetch_callback,
-                      void *fetch_baton,
-                      svn_cancel_func_t cancel_func,
-                      void *cancel_baton,
-                      apr_pool_t *scratch_pool)
+svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
+                     const char *local_abspath,
+                     svn_boolean_t allow_hydrate,
+                     svn_boolean_t allow_dehydrate,
+                     svn_wc_textbase_fetch_cb_t fetch_callback,
+                     void *fetch_baton,
+                     svn_cancel_func_t cancel_func,
+                     void *cancel_baton,
+                     apr_pool_t *scratch_pool)
 {
   svn_boolean_t store_pristine;
   textbase_sync_baton_t baton = {0};
