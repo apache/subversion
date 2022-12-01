@@ -7516,7 +7516,7 @@ typedef svn_error_t *(*svn_wc_textbase_fetch_cb_t)(
  * If @a allow_dehydrate is true, remove the on disk text-base contents
  * that is not required.
  *
- * @see svn_wc_textbase_hydrate_cb_t
+ * @see svn_wc_textbase_fetch_cb_t
  * @see svn_client__textbase_sync for usage/implementation example.
  *
  * @since New in 1.15.
