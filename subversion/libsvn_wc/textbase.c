@@ -460,8 +460,8 @@ svn_wc__textbase_prepare_install(svn_stream_t **stream_p,
 typedef struct textbase_sync_baton_t
 {
   svn_wc__db_t *db;
-  svn_wc__textbase_hydrate_cb_t hydrate_callback;
-  void *hydrate_baton;
+  svn_wc__textbase_fetch_cb_t fetch_callback;
+  void *fetch_baton;
 } textbase_sync_baton_t;
 
 /* Decide whether the text base should be referenced (or "pinned")
@@ -508,22 +508,22 @@ textbase_walk_cb(svn_boolean_t *referenced_p,
   return SVN_NO_ERROR;
 }
 
-/* Implements svn_wc__db_textbase_hydrate_cb_t. */
+/* Implements svn_wc__db_textbase_fetch_cb_t. */
 static svn_error_t *
-textbase_hydrate_cb(void *baton,
-                    const char *repos_root_url,
-                    const char *repos_relpath,
-                    svn_revnum_t revision,
-                    svn_stream_t *contents,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
+textbase_fetch_cb(void *baton,
+                  const char *repos_root_url,
+                  const char *repos_relpath,
+                  svn_revnum_t revision,
+                  svn_stream_t *contents,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *scratch_pool)
 {
   textbase_sync_baton_t *b = baton;
 
-  SVN_ERR(b->hydrate_callback(b->hydrate_baton, repos_root_url,
-                              repos_relpath, revision, contents,
-                              cancel_func, cancel_baton, scratch_pool));
+  SVN_ERR(b->fetch_callback(b->fetch_baton, repos_root_url,
+                            repos_relpath, revision, contents,
+                            cancel_func, cancel_baton, scratch_pool));
 
   return SVN_NO_ERROR;
 }
@@ -533,8 +533,8 @@ svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
                       const char *local_abspath,
                       svn_boolean_t allow_hydrate,
                       svn_boolean_t allow_dehydrate,
-                      svn_wc__textbase_hydrate_cb_t hydrate_callback,
-                      void *hydrate_baton,
+                      svn_wc__textbase_fetch_cb_t fetch_callback,
+                      void *fetch_baton,
                       svn_cancel_func_t cancel_func,
                       void *cancel_baton,
                       apr_pool_t *scratch_pool)
@@ -550,8 +550,8 @@ svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
     return SVN_NO_ERROR;
 
   baton.db = wc_ctx->db;
-  baton.hydrate_callback = hydrate_callback;
-  baton.hydrate_baton = hydrate_baton;
+  baton.fetch_callback = fetch_callback;
+  baton.fetch_baton = fetch_baton;
 
   SVN_ERR(svn_wc__db_textbase_walk(wc_ctx->db, local_abspath,
                                    textbase_walk_cb, &baton,
@@ -560,7 +560,7 @@ svn_wc__textbase_sync(svn_wc_context_t *wc_ctx,
 
   SVN_ERR(svn_wc__db_textbase_sync(wc_ctx->db, local_abspath,
                                    allow_hydrate, allow_dehydrate,
-                                   textbase_hydrate_cb, &baton,
+                                   textbase_fetch_cb, &baton,
                                    cancel_func, cancel_baton,
                                    scratch_pool));
 

@@ -27,27 +27,27 @@
 
 #include "client.h"
 
-/* A baton for use with textbase_hydrate_cb(). */
-typedef struct textbase_hydrate_baton_t
+/* A baton for use with textbase_fetch_cb(). */
+typedef struct textbase_fetch_baton_t
 {
   apr_pool_t *result_pool;
   const char *base_abspath;
   svn_client_ctx_t *ctx;
   svn_ra_session_t *ra_session;
-} textbase_hydrate_baton_t;
+} textbase_fetch_baton_t;
 
-/* Implements svn_wc__textbase_hydrate_cb_t. */
+/* Implements svn_wc__textbase_fetch_cb_t. */
 static svn_error_t *
-textbase_hydrate_cb(void *baton,
-                    const char *repos_root_url,
-                    const char *repos_relpath,
-                    svn_revnum_t revision,
-                    svn_stream_t *contents,
-                    svn_cancel_func_t cancel_func,
-                    void *cancel_baton,
-                    apr_pool_t *scratch_pool)
+textbase_fetch_cb(void *baton,
+                  const char *repos_root_url,
+                  const char *repos_relpath,
+                  svn_revnum_t revision,
+                  svn_stream_t *contents,
+                  svn_cancel_func_t cancel_func,
+                  void *cancel_baton,
+                  apr_pool_t *scratch_pool)
 {
-  struct textbase_hydrate_baton_t *b = baton;
+  struct textbase_fetch_baton_t *b = baton;
   const char *url;
   const char *old_url;
 
@@ -93,7 +93,7 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  textbase_hydrate_baton_t baton = {0};
+  textbase_fetch_baton_t fetch_baton = {0};
   const char *old_session_url = NULL;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
@@ -102,13 +102,13 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
      If that's the case, use the result pool.  Otherwise, the session
      is temporary, so use the scratch pool. */
   if (ra_session_p)
-    baton.result_pool = result_pool;
+    fetch_baton.result_pool = result_pool;
   else
-    baton.result_pool = scratch_pool;
+    fetch_baton.result_pool = scratch_pool;
 
-  baton.base_abspath = local_abspath;
-  baton.ctx = ctx;
-  baton.ra_session = ra_session;
+  fetch_baton.base_abspath = local_abspath;
+  fetch_baton.ctx = ctx;
+  fetch_baton.ra_session = ra_session;
 
   if (ctx->notify_func2 && allow_hydrate)
     {
@@ -123,7 +123,7 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
 
   SVN_ERR(svn_wc__textbase_sync(ctx->wc_ctx, local_abspath,
                                 allow_hydrate, allow_dehydrate,
-                                textbase_hydrate_cb, &baton,
+                                textbase_fetch_cb, &fetch_baton,
                                 ctx->cancel_func, ctx->cancel_baton,
                                 scratch_pool));
 
@@ -139,7 +139,7 @@ svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
     }
 
   if (ra_session_p)
-    *ra_session_p = baton.ra_session;
+    *ra_session_p = fetch_baton.ra_session;
 
   return SVN_NO_ERROR;
 }

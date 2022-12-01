@@ -3148,7 +3148,7 @@ svn_wc__db_textbase_walk(svn_wc__db_t *db,
                          apr_pool_t *scratch_pool);
 
 /* The callback invoked by svn_wc__db_textbase_sync(). */
-typedef svn_error_t * (*svn_wc__db_textbase_hydrate_cb_t)(
+typedef svn_error_t * (*svn_wc__db_textbase_fetch_cb_t)(
   void *baton,
   const char *repos_root_url,
   const char *repos_relpath,
@@ -3161,7 +3161,7 @@ typedef svn_error_t * (*svn_wc__db_textbase_hydrate_cb_t)(
 /* Synchronize the state of the text-bases in DB.
 
    If ALLOW_HYDRATE is true, fetch the referenced but missing text-base
-   contents using the provided HYDRATE_CALLBACK and HYDRATE_BATON.
+   contents using the provided FETCH_CALLBACK and FETCH_BATON.
    If ALLOW_DEHYDRATE is true, remove the on disk text-base contents
    that is no longer referenced.
  */
@@ -3170,8 +3170,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_boolean_t allow_hydrate,
                          svn_boolean_t allow_dehydrate,
-                         svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
-                         void *hydrate_baton,
+                         svn_wc__db_textbase_fetch_cb_t fetch_callback,
+                         void *fetch_baton,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool);

@@ -161,8 +161,8 @@ svn_wc__db_textbase_walk(svn_wc__db_t *db,
 
 static svn_error_t *
 textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
-                 svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
-                 void *hydrate_baton,
+                 svn_wc__db_textbase_fetch_cb_t fetch_callback,
+                 void *fetch_baton,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
                  const svn_checksum_t *checksum,
@@ -182,11 +182,11 @@ textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
             &install_sha1_checksum, &install_md5_checksum,
             wcroot, TRUE, scratch_pool, scratch_pool));
 
-  err = hydrate_callback(hydrate_baton, repos_root_url,
-                         repos_relpath, revision,
-                         install_stream,
-                         cancel_func, cancel_baton,
-                         scratch_pool);
+  err = fetch_callback(fetch_baton, repos_root_url,
+                       repos_relpath, revision,
+                       install_stream,
+                       cancel_func, cancel_baton,
+                       scratch_pool);
   if (err)
     return svn_error_compose_create(err,
              svn_wc__db_pristine_install_abort(install_data, scratch_pool));
@@ -217,8 +217,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                          const char *local_abspath,
                          svn_boolean_t allow_hydrate,
                          svn_boolean_t allow_dehydrate,
-                         svn_wc__db_textbase_hydrate_cb_t hydrate_callback,
-                         void *hydrate_baton,
+                         svn_wc__db_textbase_fetch_cb_t fetch_callback,
+                         void *fetch_baton,
                          svn_cancel_func_t cancel_func,
                          void *cancel_baton,
                          apr_pool_t *scratch_pool)
@@ -320,7 +320,7 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                            svn_checksum_to_cstring_display(checksum, iterpool));
                 }
 
-              err = textbase_hydrate(wcroot, hydrate_callback, hydrate_baton,
+              err = textbase_hydrate(wcroot, fetch_callback, fetch_baton,
                                      cancel_func, cancel_baton, checksum,
                                      repos_root_url, repos_relpath, revision,
                                      iterpool);
