@@ -772,6 +772,7 @@ svn_wc_get_pristine_copy_path(const char *path,
   svn_wc__db_t *db;
   const char *local_abspath;
   svn_error_t *err;
+  svn_boolean_t store_pristine;
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
@@ -779,6 +780,18 @@ svn_wc_get_pristine_copy_path(const char *path,
   /* DB is now open. This is seemingly a "light" function that a caller
      may use repeatedly despite error return values. The rest of this
      function should aggressively close DB, even in the error case.  */
+
+  err = svn_wc__db_get_settings(NULL, &store_pristine, db, local_abspath, pool);
+  if (err)
+    return svn_error_compose_create(err, svn_wc__db_close(db));
+
+  if (!store_pristine)
+    {
+      err = svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
+                             NULL, NULL);
+
+      return svn_error_compose_create(err, svn_wc__db_close(db));
+    }
 
   err = svn_wc__textbase_setaside(pristine_path, db, local_abspath,
                                   NULL, NULL, NULL, pool, pool);
@@ -801,7 +814,7 @@ svn_wc_get_pristine_copy_path(const char *path,
 
 
 svn_error_t *
-svn_wc_get_pristine_contents2(svn_stream_t **contents,
+svn_wc_get_pristine_contents3(svn_stream_t **contents,
                               svn_wc_context_t *wc_ctx,
                               const char *local_abspath,
                               apr_pool_t *result_pool,

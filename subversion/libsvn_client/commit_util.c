@@ -1937,7 +1937,7 @@ svn_client__do_commit(const char *base_url,
           && ! (item->state_flags & SVN_CLIENT_COMMIT_ITEM_IS_COPY))
         fulltext = TRUE;
 
-      err = svn_wc_transmit_text_deltas3(&new_text_base_md5_checksum,
+      err = svn_wc_transmit_text_deltas4(&new_text_base_md5_checksum,
                                          &new_text_base_sha1_checksum,
                                          ctx->wc_ctx, item->path,
                                          fulltext, editor, mod->file_baton,

@@ -424,7 +424,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
    Property changes sent by the update are provided in PROP_DIFF.
 
-   For a complete description, see svn_wc_merge5() for which this is
+   For a complete description, see svn_wc_merge6() for which this is
    the (loggy) implementation.
 
    *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
@@ -510,7 +510,7 @@ svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
                                 apr_pool_t *scratch_pool);
 
 
-/* Internal version of svn_wc_transmit_text_deltas3(). */
+/* Internal version of svn_wc_transmit_text_deltas4(). */
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,

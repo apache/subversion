@@ -1040,7 +1040,7 @@ svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Like svn_wc_get_pristine_contents2(), but keyed on the CHECKSUM
+/* Like svn_wc_get_pristine_contents3(), but keyed on the CHECKSUM
    rather than on the local absolute path of the working file.
    WRI_ABSPATH is any versioned path of the working copy in whose
    pristine database we'll be looking for these contents.  */
@@ -1657,7 +1657,7 @@ svn_wc__get_switch_editor(const svn_delta_editor_t **editor,
  *      |    |          |       |          |       |          |       out
  *      |    +----------+       +----------+       +----------+
  *      |
- *   3. svn_wc_crawl_revisions5(WC,reporter)
+ *   3. svn_wc_crawl_revisions6(WC,reporter)
  *
  *
  * @since New in 1.8.
@@ -2081,18 +2081,18 @@ svn_wc__acquire_write_lock_for_resolve(const char **lock_root_abspath,
                                        apr_pool_t *result_pool,
                                        apr_pool_t *scratch_pool);
 
-/* The implementation of svn_wc_diff6(), but reporting to a diff processor
+/* The implementation of svn_wc_diff7(), but reporting to a diff processor
  *
  * New mode, when ANCHOR_AT_GIVEN_PATHS is true:
  *
  *   Anchor the DIFF_PROCESSOR at LOCAL_ABSPATH.
  *
- * Backward compatibility mode for svn_wc_diff6(),
+ * Backward compatibility mode for svn_wc_diff7(),
  * when ANCHOR_AT_GIVEN_PATHS is false:
  *
  *   Send diff processor relpaths relative to LOCAL_ABSPATH if it is a
  *   directory; otherwise, relative to the parent of LOCAL_ABSPATH.
- *   This matches the "anchor and target" semantics of svn_wc_diff6().
+ *   This matches the "anchor and target" semantics of svn_wc_diff7().
  */
 svn_error_t *
 svn_wc__diff7(svn_boolean_t anchor_at_given_paths,

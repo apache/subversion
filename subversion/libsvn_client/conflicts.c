@@ -6992,7 +6992,7 @@ resolve_merge_incoming_added_file_text_update(
   /* Revert the path in order to restore the repository's line of
    * history, which is part of the BASE tree. This revert operation
    * is why are being careful about not losing the temporary copy. */
-  err = svn_wc_revert6(ctx->wc_ctx, local_abspath, svn_depth_empty,
+  err = svn_wc_revert7(ctx->wc_ctx, local_abspath, svn_depth_empty,
                        FALSE, NULL, TRUE, FALSE,
                        TRUE /*added_keep_local*/,
                        NULL, NULL, /* no cancellation */
@@ -7002,7 +7002,7 @@ resolve_merge_incoming_added_file_text_update(
     goto unlock_wc;
 
   /* Perform the file merge. ### Merge into tempfile and then rename on top? */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, empty_file_abspath,
                       working_file_tmp_abspath, local_abspath,
                       NULL, NULL, NULL, /* labels */
@@ -7130,12 +7130,12 @@ resolve_merge_incoming_added_file_text_merge(
   /* ### The following WC modifications should be atomic. */
   SVN_ERR(begin_resolve(&lock_abspath, local_abspath, ctx,
                         scratch_pool, scratch_pool));
-  /* Resolve to current working copy state. svn_wc_merge5() requires this. */
+  /* Resolve to current working copy state. svn_wc_merge6() requires this. */
   err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
   if (err)
     return finish_resolve(lock_abspath, ctx, err, scratch_pool);
   /* Perform the file merge. ### Merge into tempfile and then rename on top? */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, empty_file_abspath,
                       incoming_new_tmp_abspath, local_abspath,
                       NULL, NULL, NULL, /* labels */
@@ -7294,7 +7294,7 @@ resolve_merge_incoming_added_file_replace_and_merge(
       ctx->notify_func2(ctx->notify_baton2, notify, scratch_pool);
     }
 
-  /* Resolve to current working copy state. svn_wc_merge5() requires this. */
+  /* Resolve to current working copy state. svn_wc_merge6() requires this. */
   err = svn_wc__del_tree_conflict(ctx->wc_ctx, local_abspath, scratch_pool);
   if (err)
     goto unlock_wc;
@@ -7316,7 +7316,7 @@ resolve_merge_incoming_added_file_replace_and_merge(
     goto unlock_wc;
 
   /* Perform the file merge. */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, empty_file_abspath,
                       working_file_tmp_abspath, local_abspath,
                       NULL, NULL, NULL, /* labels */
@@ -7633,7 +7633,7 @@ merge_added_files(const char *local_abspath,
                          working_props, scratch_pool));
 
   /* Perform the file merge. */
-  SVN_ERR(svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  SVN_ERR(svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                         ctx->wc_ctx, empty_file_abspath,
                         incoming_added_file_abspath, local_abspath,
                         NULL, NULL, NULL, /* labels */
@@ -7977,7 +7977,7 @@ resolve_update_incoming_added_dir_merge(svn_client_conflict_option_t *option,
        * files with files from the repository is impossible because there is
        * no known merge base. No unversioned data will be lost, and any
        * differences to files in the repository will show up in 'svn diff'. */
-      err = svn_wc_revert6(ctx->wc_ctx, local_abspath, svn_depth_infinity,
+      err = svn_wc_revert7(ctx->wc_ctx, local_abspath, svn_depth_infinity,
                            FALSE, NULL, TRUE, TRUE /* metadata_only */,
                            TRUE /*added_keep_local*/,
                            NULL, NULL, /* no cancellation */
@@ -8730,7 +8730,7 @@ resolve_incoming_move_file_text_merge(svn_client_conflict_option_t *option,
     SVN_ERR_MALFUNCTION();
 
   /* Perform the file merge. */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, ancestor_abspath,
                       incoming_abspath, moved_to_abspath,
                       NULL, NULL, NULL, /* labels */
@@ -8949,7 +8949,7 @@ resolve_both_moved_file_text_merge(svn_client_conflict_option_t *option,
     goto unlock_wc;
 
   /* Perform the file merge. */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, ancestor_abspath,
                       incoming_moved_to_abspath, local_moved_to_abspath,
                       NULL, NULL, NULL, /* labels */
@@ -8982,7 +8982,7 @@ resolve_both_moved_file_text_merge(svn_client_conflict_option_t *option,
     }
 
   /* Revert local addition of the incoming move's target. */
-  err = svn_wc_revert6(ctx->wc_ctx, incoming_moved_to_abspath,
+  err = svn_wc_revert7(ctx->wc_ctx, incoming_moved_to_abspath,
                        svn_depth_infinity, FALSE, NULL, TRUE, FALSE,
                        FALSE /*added_keep_local*/,
                        NULL, NULL, /* no cancellation */
@@ -9126,7 +9126,7 @@ resolve_both_moved_dir_merge(svn_client_conflict_option_t *option,
     goto unlock_wc;
 
   /* Revert local addition of the incoming move's target. */
-  err = svn_wc_revert6(ctx->wc_ctx, incoming_moved_to_abspath,
+  err = svn_wc_revert7(ctx->wc_ctx, incoming_moved_to_abspath,
                        svn_depth_infinity, FALSE, NULL, TRUE, FALSE,
                        FALSE /*added_keep_local*/,
                        NULL, NULL, /* no cancellation */
@@ -9245,7 +9245,7 @@ resolve_both_moved_dir_move_merge(svn_client_conflict_option_t *option,
                         ctx, scratch_pool, scratch_pool));
 
   /* Revert the incoming move target directory. */
-  err = svn_wc_revert6(ctx->wc_ctx, incoming_moved_to_abspath,
+  err = svn_wc_revert7(ctx->wc_ctx, incoming_moved_to_abspath,
                        svn_depth_infinity,
                        FALSE, NULL, TRUE, FALSE,
                        TRUE /*added_keep_local*/,
@@ -9445,7 +9445,7 @@ resolve_incoming_move_dir_merge(svn_client_conflict_option_t *option,
       svn_opt_revision_t incoming_new_opt_rev;
 
       /* Revert the incoming move target directory. */
-      err = svn_wc_revert6(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
+      err = svn_wc_revert7(ctx->wc_ctx, moved_to_abspath, svn_depth_infinity,
                            FALSE, NULL, TRUE, FALSE,
                            TRUE /*added_keep_local*/,
                            NULL, NULL, /* no cancellation */
@@ -9668,7 +9668,7 @@ resolve_local_move_file_merge(svn_client_conflict_option_t *option,
                         ctx, scratch_pool, scratch_pool));
 
   /* Perform the file merge. */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx,
                       ancestor_tmp_abspath, incoming_tmp_abspath,
                       merge_target_abspath,
@@ -11216,7 +11216,7 @@ resolve_both_moved_file_update_keep_local_move(
     goto unlock_wc;
 
   /* Perform the file merge. */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, ancestor_abspath,
                       incoming_moved_to_abspath, local_moved_to_abspath,
                       NULL, NULL, NULL, /* labels */
@@ -11423,7 +11423,7 @@ resolve_both_moved_file_update_keep_incoming_move(
     goto unlock_wc;
 
   /* Perform the file merge. */
-  err = svn_wc_merge5(&merge_content_outcome, &merge_props_outcome,
+  err = svn_wc_merge6(&merge_content_outcome, &merge_props_outcome,
                       ctx->wc_ctx, ancestor_abspath,
                       local_moved_to_abspath, incoming_moved_to_abspath,
                       NULL, NULL, NULL, /* labels */
@@ -11457,7 +11457,7 @@ resolve_both_moved_file_update_keep_incoming_move(
 
   /* Revert the copy-half of the local move. The delete-half of this move
    * has already been deleted during the update/switch operation. */
-  err = svn_wc_revert6(ctx->wc_ctx, local_moved_to_abspath, svn_depth_empty,
+  err = svn_wc_revert7(ctx->wc_ctx, local_moved_to_abspath, svn_depth_empty,
                        FALSE, NULL, TRUE, FALSE,
                        TRUE /*added_keep_local*/,
                        NULL, NULL, /* no cancellation */

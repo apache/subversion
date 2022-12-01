@@ -58,7 +58,7 @@ struct revert_with_write_lock_baton {
 
 /* (Note: All arguments are in the baton above.)
 
-   Attempt to revert LOCAL_ABSPATH by calling svn_wc_revert6(), which
+   Attempt to revert LOCAL_ABSPATH by calling svn_wc_revert7(), which
    see for further details.
 
    If the target isn't versioned, send a 'skip' notification and return
@@ -74,7 +74,7 @@ revert(void *baton, apr_pool_t *result_pool, apr_pool_t *scratch_pool)
                                     TRUE, TRUE, b->ctx, *b->ra_session_p,
                                     result_pool, scratch_pool));
 
-  err = svn_wc_revert6(b->ctx->wc_ctx,
+  err = svn_wc_revert7(b->ctx->wc_ctx,
                        b->local_abspath,
                        b->depth,
                        b->use_commit_times,

@@ -981,7 +981,7 @@ revert_partial(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_revert6(svn_wc_context_t *wc_ctx,
+svn_wc_revert7(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,

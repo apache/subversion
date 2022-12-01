@@ -1202,7 +1202,7 @@ svn_wc__internal_merge(svn_skel_t **work_items,
 
 
 svn_error_t *
-svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+svn_wc_merge6(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,

@@ -275,7 +275,7 @@ svn_client__layout_list(const char *local_abspath,
 
   /* Drive the reporter structure, describing the revisions within
      LOCAL_ABSPATH.  */
-  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath,
+  SVN_ERR(svn_wc_crawl_revisions6(ctx->wc_ctx, local_abspath,
                                   &layout_reporter, &lb,
                                   FALSE /* restore_files */,
                                   svn_depth_infinity,

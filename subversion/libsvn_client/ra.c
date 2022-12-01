@@ -1086,7 +1086,7 @@ svn_client__ra_provide_base(svn_stream_t **contents,
       return SVN_NO_ERROR;
     }
 
-  err = svn_wc_get_pristine_contents2(contents, reb->wc_ctx, local_abspath,
+  err = svn_wc_get_pristine_contents3(contents, reb->wc_ctx, local_abspath,
                                       result_pool, scratch_pool);
   if (err)
     {

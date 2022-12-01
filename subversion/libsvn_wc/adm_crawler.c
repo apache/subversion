@@ -221,10 +221,10 @@ maybe_restore_node(svn_wc__db_t *db,
 }
 
 svn_error_t *
-svn_wc_restore(svn_wc_context_t *wc_ctx,
-               const char *local_abspath,
-               svn_boolean_t use_commit_times,
-               apr_pool_t *scratch_pool)
+svn_wc_restore2(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                svn_boolean_t use_commit_times,
+                apr_pool_t *scratch_pool)
 {
   /* ### If ever revved: Add cancel func. */
   svn_wc__db_status_t status;
@@ -307,7 +307,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
    passed here to avoid another database query.
 
    DEPTH_COMPATIBILITY_TRICK means the same thing here as it does
-   in svn_wc_crawl_revisions5().
+   in svn_wc_crawl_revisions6().
 
    If RESTORE_FILES is set, then unexpectedly missing working files
    will be restored from text-base and NOTIFY_FUNC/NOTIFY_BATON
@@ -675,7 +675,7 @@ report_revisions_and_depths(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
+svn_wc_crawl_revisions6(svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
                         const svn_ra_reporter3_t *reporter,
                         void *report_baton,
@@ -1237,7 +1237,7 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
 }
 
 svn_error_t *
-svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
+svn_wc_transmit_text_deltas4(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,
                              svn_wc_context_t *wc_ctx,
                              const char *local_abspath,

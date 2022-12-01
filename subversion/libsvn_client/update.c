@@ -560,7 +560,7 @@ update_internal(svn_revnum_t *result_rev,
   /* Drive the reporter structure, describing the revisions within
      LOCAL_ABSPATH.  When this calls reporter->finish_report, the
      reporter will drive the update_editor. */
-  SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, local_abspath, reporter,
+  SVN_ERR(svn_wc_crawl_revisions6(ctx->wc_ctx, local_abspath, reporter,
                                   report_baton, TRUE,
                                   depth, (! depth_is_sticky),
                                   (! server_supports_depth),

@@ -5551,8 +5551,43 @@ svn_wc_process_committed(const char *path,
  * use_commit_times is TRUE, then set restored files' timestamps to
  * their last-commit-times.
  *
- * @since New in 1.7.
+ * @note This is a relatively low-level function operating directly on a
+ * working copy, so a caller is expected to be able to handle working copies
+ * that do not store local copies of all pristine contents.  This can be
+ * achieved by synchronizing the text-base state before and optionally
+ * after the function call.  @see svn_wc_textbase_sync().
+ *
+ * Currently, the pristine contents may be required when @a restore_files
+ * is TRUE.
+ *
+ * @since New in 1.15.
  */
+svn_error_t *
+svn_wc_crawl_revisions6(svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_crawl_revisions6, but this function can only be used
+ * for working copies that store local copies of all pristine contents.
+ * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
+ * returned.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
                         const char *local_abspath,
@@ -6780,8 +6815,41 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * points during the operation.  If it returns an error (typically
  * #SVN_ERR_CANCELLED), return that error immediately.
  *
- * @since New in 1.7.
+ * @note For general purposes, please consider using APIs from svn_client.h,
+ * @see svn_client_diff7().
+ *
+ * @note This is a relatively low-level function operating directly on a
+ * working copy, so a caller is expected to be able to handle working copies
+ * that do not store local copies of all pristine contents.  This can be
+ * achieved by synchronizing the text-base state before and optionally
+ * after the function call.  @see svn_wc_textbase_sync().
+ *
+ * @since New in 1.15.
  */
+svn_error_t *
+svn_wc_diff7(svn_wc_context_t *wc_ctx,
+             const char *target_abspath,
+             const svn_wc_diff_callbacks4_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
+             const apr_array_header_t *changelist_filter,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_diff7(), but this function can only be used for
+ * working copies that store local copies of all pristine contents.
+ * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
+ * returned.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_diff6(svn_wc_context_t *wc_ctx,
              const char *target_abspath,
@@ -7043,8 +7111,46 @@ typedef enum svn_wc_merge_outcome_t
  *
  * Use @a scratch_pool for any temporary allocation.
  *
- * @since New in 1.8.
+ * @note This is a relatively low-level function operating directly on a
+ * working copy, so a caller is expected to be able to handle working copies
+ * that do not store local copies of all pristine contents.  This can be
+ * achieved by synchronizing the text-base state before and optionally
+ * after the function call.  @see svn_wc_textbase_sync().
+ *
+ * @since New in 1.15.
  */
+svn_error_t *
+svn_wc_merge6(enum svn_wc_merge_outcome_t *merge_content_outcome,
+              enum svn_wc_notify_state_t *merge_props_state,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              const svn_wc_conflict_version_t *left_version,
+              const svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_hash_t *original_props,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func2_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_merge6(), but this function can only be used
+ * for working copies that store local copies of all pristine contents.
+ * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
+ * returned.
+ *
+ * @since New in 1.8.
+ * @deprecated Provided for backwards compatibility with the 1.8 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
               enum svn_wc_notify_state_t *merge_props_state,
@@ -7314,7 +7420,30 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
  * @c SVN_ERR_WC_PATH_NOT_FOUND. Use @a wc_ctx to access the working copy.
  * @a contents may not be @c NULL (unlike @a *contents).
  *
- * @since New in 1.7. */
+ * @note This is a relatively low-level function operating directly on a
+ * working copy, so a caller is expected to be able to handle working copies
+ * that do not store local copies of all pristine contents.  This can be
+ * achieved by synchronizing the text-base state before and optionally
+ * after the function call.  @see svn_wc_textbase_sync().
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_wc_get_pristine_contents3(svn_stream_t **contents,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_get_pristine_contents3, but this function can only be used
+ * for working copies that store local copies of all pristine contents.
+ * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
+ * returned.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_get_pristine_contents2(svn_stream_t **contents,
                               svn_wc_context_t *wc_ctx,
@@ -7713,8 +7842,41 @@ svn_wc_relocate(const char *path,
  * If @a path is not under version control, return the error
  * #SVN_ERR_UNVERSIONED_RESOURCE.
  *
- * @since New in 1.11.
+ * @note For general purposes, please consider using APIs from svn_client.h,
+ * @see svn_client_revert4().
+ *
+ * @note This is a relatively low-level function operating directly on a
+ * working copy, so a caller is expected to be able to handle working copies
+ * that do not store local copies of all pristine contents.  This can be
+ * achieved by synchronizing the text-base state before and optionally
+ * after the function call.  @see svn_wc_textbase_sync().
+ *
+ * @since New in 1.15.
  */
+svn_error_t *
+svn_wc_revert7(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelist_filter,
+               svn_boolean_t clear_changelists,
+               svn_boolean_t metadata_only,
+               svn_boolean_t added_keep_local,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_revert7(), but this function can only be used
+ * for working copies that store local copies of all pristine contents.
+ * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
+ * returned.
+ *
+ * @since New in 1.11.
+ * @deprecated Provided for backward compatibility with the 1.11 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_revert6(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
@@ -7840,8 +8002,30 @@ svn_wc_revert(const char *path,
  * SVN_ERROR_WC_PATH_UNEXPECTED_STATUS if LOCAL_ABSPATH is in a status where
  * it can't be restored.
  *
- * @since New in 1.7.
+ * @note This is a relatively low-level function operating directly on a
+ * working copy, so a caller is expected to be able to handle working copies
+ * that do not store local copies of all pristine contents.  This can be
+ * achieved by synchronizing the text-base state before and optionally
+ * after the function call.  @see svn_wc_textbase_sync().
+ *
+ * @since New in 1.15.
  */
+svn_error_t *
+svn_wc_restore2(svn_wc_context_t *wc_ctx,
+                const char *local_abspath,
+                svn_boolean_t use_commit_times,
+                apr_pool_t *scratch_pool);
+
+/**
+ * Similar to svn_wc_restore2(), but this function can only be used
+ * for working copies that store local copies of all pristine contents.
+ * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
+ * returned.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_restore(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
@@ -8010,8 +8194,37 @@ svn_wc_translated_stream(svn_stream_t **stream,
  * @note This is intended for use with both infix and postfix
  * text-delta styled editor drivers.
  *
- * @since New in 1.7.
+ * @note For general purposes, please consider using APIs from svn_client.h,
+ * @see svn_client_commit6().
+ *
+ * @note This is a relatively low-level function operating directly on a
+ * working copy, so a caller is expected to be able to handle working copies
+ * that do not store local copies of all pristine contents.  This can be
+ * achieved by synchronizing the text-base state before and optionally
+ * after the function call.  @see svn_wc_textbase_sync().
+ *
+ * @since New in 1.15.
  */
+svn_error_t *
+svn_wc_transmit_text_deltas4(const svn_checksum_t **new_text_base_md5_checksum,
+                             const svn_checksum_t **new_text_base_sha1_checksum,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool);
+
+/** Similar to svn_wc_transmit_text_deltas4(), but this function can only be
+ * used for working copies that store local copies of all pristine contents.
+ * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
+ * returned.
+ *
+ * @since New in 1.7.
+ * @deprecated Provided for backwards compatibility with the 1.7 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
                              const svn_checksum_t **new_text_base_sha1_checksum,

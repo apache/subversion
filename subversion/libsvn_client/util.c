@@ -426,7 +426,7 @@ fetch_base_func(const char **filename,
     }
 
   /* Reads the pristine of WORKING, not of BASE */
-  err = svn_wc_get_pristine_contents2(&pristine_stream, scb->wc_ctx,
+  err = svn_wc_get_pristine_contents3(&pristine_stream, scb->wc_ctx,
                                       local_abspath, scratch_pool,
                                       scratch_pool);
   if (err && err->apr_err == SVN_ERR_WC_PATH_NOT_FOUND)

@@ -2341,7 +2341,7 @@ diff_repos_wc(struct diff_driver_info_t *ddi,
     {
       /* Create a txn mirror of path2;  the diff editor will print
          diffs in reverse.  :-)  */
-      SVN_ERR(svn_wc_crawl_revisions5(ctx->wc_ctx, abspath2,
+      SVN_ERR(svn_wc_crawl_revisions6(ctx->wc_ctx, abspath2,
                                       reporter, reporter_baton,
                                       FALSE, depth, TRUE,
                                       (! server_supports_depth),

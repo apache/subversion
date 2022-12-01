@@ -85,7 +85,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
+      SVN_ERR(svn_wc_get_pristine_contents3(&input, wc_ctx, local_abspath,
                                             result_pool, scratch_pool));
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
