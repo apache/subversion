@@ -7505,22 +7505,22 @@ typedef svn_error_t *(*svn_wc_textbase_fetch_cb_t)(
   void *cancel_baton,
   apr_pool_t *scratch_pool);
 
- /** Synchronize the state of the text-base contents for the
-  * @a local_abspath tree.
-  *
-  * If @a allow_hydrate is true, fetch the required but missing text-base
-  * contents using the provided @a fetch_callback and @a fetch_baton.
-  * If @a allow_hydrate is false, @a fetch_callback will not be used and
-  * may be @c NULL.
-  *
-  * If @a allow_dehydrate is true, remove the on disk text-base contents
-  * that is not required.
-  *
-  * @see svn_wc_textbase_hydrate_cb_t
-  * @see svn_client__textbase_sync for usage/implementation example.
-  *
-  * @since New in 1.15.
-  */
+/** Synchronize the state of the text-base contents for the
+ * @a local_abspath tree.
+ *
+ * If @a allow_hydrate is true, fetch the required but missing text-base
+ * contents using the provided @a fetch_callback and @a fetch_baton.
+ * If @a allow_hydrate is false, @a fetch_callback will not be used and
+ * may be @c NULL.
+ *
+ * If @a allow_dehydrate is true, remove the on disk text-base contents
+ * that is not required.
+ *
+ * @see svn_wc_textbase_hydrate_cb_t
+ * @see svn_client__textbase_sync for usage/implementation example.
+ *
+ * @since New in 1.15.
+ */
 svn_error_t *
 svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
