@@ -1253,9 +1253,9 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
 
 /* Synchronize the state of the text-base contents for the LOCAL_ABSPATH tree.
  *
- * If ALLOW_HYDRATE is true, fetch the required but missing text-base contents
- * using the provided HYDRATE_CALLBACK and HYDRATE_BATON.  If ALLOW_DEHYDRATE
- * is true, remove the on disk text-base contents that are not required.
+ * If ALLOW_HYDRATE is true, fetch the required but missing text-base contents.
+ * If ALLOW_DEHYDRATE is true, remove the on disk text-base contents that are
+ * not required.
  *
  * The missing contents will be fetched using the provided RA_SESSION if it
  * is not NULL.  If RA_SESSION is NULL and some of the text-bases have to be
