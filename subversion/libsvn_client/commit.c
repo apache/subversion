@@ -708,6 +708,10 @@ svn_client_commit6(const apr_array_header_t *targets,
                                                    pool, pool));
     }
 
+  /* Optimization: for commit, we avoid fetching the text-bases at the
+     beginning of the operation and only delta against the text-bases that
+     are available locally.  See svn_wc__internal_transmit_text_deltas(). */
+
   SVN_ERR(determine_lock_targets(&lock_targets, ctx->wc_ctx, base_abspath,
                                  rel_targets, pool, iterpool));
 
@@ -725,16 +729,6 @@ svn_client_commit6(const apr_array_header_t *targets,
                     svn_wc__acquire_write_lock(&lock_root, ctx->wc_ctx, target,
                                            FALSE, pool, iterpool));
 
-      if (cmt_err)
-        goto cleanup;
-
-      /* Optimization: for commit, we avoid fetching the text-bases at the
-         beginning of the operation and only delta against the text-bases that
-         are available locally.  See svn_wc__internal_transmit_text_deltas(). */
-      cmt_err = svn_error_trace(
-                    svn_client__textbase_sync(NULL, lock_root,
-                                              FALSE, TRUE, ctx,
-                                              NULL, iterpool, iterpool));
       if (cmt_err)
         goto cleanup;
 
