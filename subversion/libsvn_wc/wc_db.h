@@ -944,7 +944,8 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
 
 /* If requested set *CONTENTS to a readable stream that will yield the pristine
    text identified by SHA1_CHECKSUM (must be a SHA-1 checksum) within the WC
-   identified by WRI_ABSPATH in DB.
+   identified by WRI_ABSPATH in DB.  If the pristine is present in the store,
+   but dehydrated, set *CONTENTS to NULL.
 
    If requested set *SIZE to the size of the pristine stream in bytes,
 
