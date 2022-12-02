@@ -5549,16 +5549,16 @@ svn_wc_process_committed(const char *path,
  * @a notify_baton and the path of the restored file. @a notify_func may
  * be @c NULL if this notification is not required.  If @a
  * use_commit_times is TRUE, then set restored files' timestamps to
- * their last-commit-times.
+ * their last-commit-times.  For working copies that do not store local
+ * pristine contents for all files, return @c SVN_ERR_WC_PRISTINE_DEHYDRATED
+ * on an attempt to restore a file whose pristine contents is not present
+ * locally.
  *
  * @note This is a relatively low-level function operating directly on a
  * working copy, so a caller is expected to be able to handle working copies
  * that do not store local copies of all pristine contents.  This can be
  * achieved by synchronizing the text-base state before and optionally
  * after the function call.  @see svn_wc_textbase_sync().
- *
- * Currently, the pristine contents may be required when @a restore_files
- * is TRUE.
  *
  * @since New in 1.15.
  */
@@ -6815,6 +6815,10 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
  * points during the operation.  If it returns an error (typically
  * #SVN_ERR_CANCELLED), return that error immediately.
  *
+ * For working copies that do not store local pristine contents for all
+ * files, return @c SVN_ERR_WC_PRISTINE_DEHYDRATED on an attempt to diff
+ * a file whose pristine contents is not present locally.
+ *
  * @note For general purposes, please consider using APIs from svn_client.h,
  * @see svn_client_diff7().
  *
@@ -7110,6 +7114,10 @@ typedef enum svn_wc_merge_outcome_t
  *     incoming change regardless of the local-mod state.  Inconsistent.
  *
  * Use @a scratch_pool for any temporary allocation.
+ *
+ * For working copies that do not store local pristine contents for all
+ * files, return @c SVN_ERR_WC_PRISTINE_DEHYDRATED on an attempt to merge
+ * a file whose pristine contents is not present locally.
  *
  * @note This is a relatively low-level function operating directly on a
  * working copy, so a caller is expected to be able to handle working copies
@@ -7419,6 +7427,12 @@ svn_wc_merge_prop_diffs(svn_wc_notify_state_t *state,
  * If @a local_abspath refers to an unversioned or non-existent path, return
  * @c SVN_ERR_WC_PATH_NOT_FOUND. Use @a wc_ctx to access the working copy.
  * @a contents may not be @c NULL (unlike @a *contents).
+ *
+ * For working copies that do not store local pristine contents for all
+ * files, the function may return a detranslated stream to the contents
+ * of the file itself if the file is not modified.  If the file is
+ * modified and its pristine contents is not present locally, return
+ * @c SVN_ERR_WC_PRISTINE_DEHYDRATED.
  *
  * @note This is a relatively low-level function operating directly on a
  * working copy, so a caller is expected to be able to handle working copies
@@ -7842,6 +7856,10 @@ svn_wc_relocate(const char *path,
  * If @a path is not under version control, return the error
  * #SVN_ERR_UNVERSIONED_RESOURCE.
  *
+ * For working copies that do not store local pristine contents for all
+ * files, return @c SVN_ERR_WC_PRISTINE_DEHYDRATED on an attempt to revert
+ * a file whose pristine contents is not present locally.
+ *
  * @note For general purposes, please consider using APIs from svn_client.h,
  * @see svn_client_revert4().
  *
@@ -8001,6 +8019,10 @@ svn_wc_revert(const char *path,
  * Returns SVN_ERROR_WC_PATH_NOT_FOUND if LOCAL_ABSPATH is not versioned and
  * SVN_ERROR_WC_PATH_UNEXPECTED_STATUS if LOCAL_ABSPATH is in a status where
  * it can't be restored.
+ *
+ * For working copies that do not store local pristine contents for all
+ * files, return @c SVN_ERR_WC_PRISTINE_DEHYDRATED on an attempt to restore
+ * a file whose pristine contents is not present locally.
  *
  * @note This is a relatively low-level function operating directly on a
  * working copy, so a caller is expected to be able to handle working copies

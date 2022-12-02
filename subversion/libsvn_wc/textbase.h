@@ -40,12 +40,15 @@ extern "C" {
  * the text-base will correspond to the copy source, even if the file
  * replaces a previously existing base node at this path.
  *
- * If the file is not modified, the function may return a detranslated
- * stream to the contents of the file itself.
+ * If the file is simply added or replaced and does not have a text-base,
+ * set *CONTENTS_P to NULL if IGNORE_ENOENT is true and return an error
+ * if IGNORE_ENOENT is false.
  *
- * If the text-base is not available on disk or if the file does not
- * have a text-base, set *CONTENTS_P to NULL iff IGNORE_ENOENT is true
- * and return an error otherwise.
+ * For working copies that do not store local text-base contents for all
+ * files, the function may return a detranslated stream to the contents
+ * of the file itself if the file is not modified.  If the file is
+ * modified and its text-base contents is not present locally, return
+ * an SVN_ERR_WC_PRISTINE_DEHYDRATED error.
  */
 svn_error_t *
 svn_wc__textbase_get_contents(svn_stream_t **contents_p,

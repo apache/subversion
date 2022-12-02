@@ -862,7 +862,7 @@ get_pristine_lazyopen_func(svn_stream_t **stream_p,
                                    b->wri_abspath, sha1_checksum,
                                    result_pool, scratch_pool));
   if (!stream)
-    return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL, NULL);
+    return svn_error_create(SVN_ERR_WC_PRISTINE_DEHYDRATED, NULL, NULL);
 
   *stream_p = stream;
   return SVN_NO_ERROR;

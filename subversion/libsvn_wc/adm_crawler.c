@@ -1127,11 +1127,23 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
       /* We will be computing a delta against the pristine contents */
       /* We need the expected checksum to be an MD-5 checksum rather than a
        * SHA-1 because we want to pass it to apply_textdelta(). */
-      SVN_ERR(read_and_checksum_pristine_text(&base_stream,
-                                              &expected_md5_checksum,
-                                              &verify_checksum,
-                                              db, local_abspath,
-                                              scratch_pool, scratch_pool));
+      err = read_and_checksum_pristine_text(&base_stream,
+                                            &expected_md5_checksum,
+                                            &verify_checksum,
+                                            db, local_abspath,
+                                            scratch_pool, scratch_pool);
+      if (err && err->apr_err == SVN_ERR_WC_PRISTINE_DEHYDRATED)
+        {
+          /* No local pristine contents to delta against, send a fulltext. */
+          svn_error_clear(err);
+          base_stream = svn_stream_empty(scratch_pool);
+          expected_md5_checksum = NULL;
+          verify_checksum = NULL;
+        }
+      else if (err)
+        {
+          return svn_error_trace(err);
+        }
     }
   else
     {

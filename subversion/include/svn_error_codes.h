@@ -587,6 +587,11 @@ SVN_ERROR_START
              "This client uses a deprecated API that does not support "
              "working copies without local pristines")
 
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_PRISTINE_DEHYDRATED,
+             SVN_ERR_WC_CATEGORY_START + 44,
+             "No local pristine contents for a file")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

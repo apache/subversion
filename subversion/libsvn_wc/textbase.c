@@ -210,6 +210,7 @@ open_textbase(svn_stream_t **contents_p,
   svn_boolean_t have_props;
   svn_boolean_t props_mod;
   const svn_checksum_t *target_checksum;
+  svn_stream_t *contents;
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
                                NULL, NULL, NULL, &checksum, NULL, NULL,
@@ -301,9 +302,14 @@ open_textbase(svn_stream_t **contents_p,
         }
     }
 
-  SVN_ERR(svn_wc__db_pristine_read(contents_p, NULL, db, local_abspath,
+  SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, db, local_abspath,
                                    target_checksum, result_pool, scratch_pool));
+  if (!contents)
+    return svn_error_createf(SVN_ERR_WC_PRISTINE_DEHYDRATED, NULL,
+                             _("No local pristine contents for file '%s'"),
+                             svn_dirent_local_style(local_abspath, scratch_pool));
 
+  *contents_p = contents;
   return SVN_NO_ERROR;
 }
 

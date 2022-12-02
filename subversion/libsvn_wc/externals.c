@@ -900,7 +900,7 @@ close_file(void *file_baton,
                                              eb->new_sha1_checksum,
                                              pool, pool));
             if (!contents)
-              return svn_error_create(SVN_ERR_WC_PATH_UNEXPECTED_STATUS,
+              return svn_error_create(SVN_ERR_WC_PRISTINE_DEHYDRATED,
                                       NULL, NULL);
 
             SVN_ERR(svn_wc__db_temp_wcroot_tempdir(&tmpdir_abspath,
