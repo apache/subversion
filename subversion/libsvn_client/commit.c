@@ -728,6 +728,9 @@ svn_client_commit6(const apr_array_header_t *targets,
       if (cmt_err)
         goto cleanup;
 
+      /* Optimization: for commit, we avoid fetching the text-bases at the
+         beginning of the operation and only delta against the text-bases that
+         are available locally.  See svn_wc__internal_transmit_text_deltas(). */
       cmt_err = svn_error_trace(
                     svn_client__textbase_sync(NULL, lock_root,
                                               FALSE, TRUE, ctx,
