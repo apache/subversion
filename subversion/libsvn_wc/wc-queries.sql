@@ -892,9 +892,6 @@ INSERT OR IGNORE INTO pristine (checksum, md5_checksum, size, refcount, hydrated
 VALUES (?1, ?2, ?3, 0, ?4)
 
 -- STMT_UPSERT_PRISTINE_F31
-/* ### Probably need to bump the minimum SQLite version for UPSERT support
-   https://www.sqlite.org/lang_UPSERT.html
- */
 INSERT INTO pristine (checksum, md5_checksum, size, refcount)
 VALUES (?1, ?2, ?3, 0)
 ON CONFLICT(checksum) DO UPDATE SET size=?3
