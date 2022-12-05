@@ -243,15 +243,6 @@ def revert_from_wc_root(sbox):
   svntest.actions.run_and_verify_status('', expected_output)
 
 @Issue(1663)
-# Walking the text-bases automatically repairs timestamps, so now the
-# first and the second reverts in this test behave identically, as if
-# 'svn cleanup' or any other command that repairs the timestamps had been
-# called beforehand.  Judging by the second part of the test, we're fine
-# with revert doing nothing in that case, but that essentially contradicts
-# the expectation in its first part.
-#
-# I temporarily mark the test XFail.  See r1101730 and r1101817 for details.
-@XFail()
 def revert_reexpand_keyword(sbox):
   "revert reexpands manually contracted keyword"
 
@@ -269,6 +260,34 @@ def revert_reexpand_keyword(sbox):
 
   sbox.build()
   wc_dir = sbox.wc_dir
+
+  # The test expects two different things to happen during revert, depending
+  # on whether an `svn cleanup` or any other command that repairs the
+  # timestamps was called in between:
+  #
+  # - In the first part, we expect a revert to change file contents and
+  #   re-expand its keywords, because a revert happens right after editing
+  #   the file.
+  #
+  # - In the second part, we expect a revert to skip the file with exactly
+  #   the same contents, because there's an in-between operation that has
+  #   recorded the new unmodified timestamp in the db.  (See r1101730 and
+  #   r1101817.)
+  #
+  # This is a problem, because we expect two different things to happen for
+  # two identical on-disk file states.  The only difference is whether any
+  # of the commands that perform the internal timestamp bookkeeping was
+  # called in between.  For example, calling `svn cleanup` after editing the
+  # file makes the first and the second parts of the test behave identically.
+  #
+  # This problem prevents us from properly testing the `--store-pristine=no`
+  # case, because when we walk the text-bases we use that opportunity to
+  # repair timestamps, but that also makes the first and the second reverts
+  # in this test behave identically.  Let's skip testing this case for now,
+  # until we resolve the described problem with opposite expectations.
+  if not svntest.actions.get_wc_store_pristine(wc_dir):
+    raise svntest.Skip()
+
   newfile_path = os.path.join(wc_dir, "newfile")
   unexpanded_contents = "This is newfile: $Rev$.\n"
 
