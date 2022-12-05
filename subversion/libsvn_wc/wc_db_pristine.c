@@ -1024,7 +1024,6 @@ svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
                                        const svn_checksum_t *sha1_checksum,
                                        apr_pool_t *scratch_pool)
 {
-  ;
   const char *pristine_abspath;
   svn_sqlite__stmt_t *stmt;
 
