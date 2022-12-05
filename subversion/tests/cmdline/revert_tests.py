@@ -291,7 +291,7 @@ def revert_reexpand_keyword(sbox):
   svntest.main.file_write(newfile_path, unexpanded_contents)
 
   # Revert the file.  The keyword should reexpand.
-  svntest.main.run_svn(None, 'revert', newfile_path)
+  run_and_verify_revert([newfile_path], [], [newfile_path])
 
   # Verify that the keyword got re-expanded.
   check_expanded(newfile_path)
@@ -324,7 +324,7 @@ def revert_reexpand_keyword(sbox):
                                         '-m', "Shouldn't be committed")
 
   # Revert the file.  The file is not reverted!
-  svntest.actions.run_and_verify_svn([], [], 'revert', newfile_path)
+  run_and_verify_revert([newfile_path], [], [])
 
 
 #----------------------------------------------------------------------
