@@ -41,8 +41,6 @@ For the production-ready state, it would probably make sense to also:
  2. For the new working copy format, incorporate a switch to a different
     checksum type without known collisions instead of SHA-1.
 
-3. Fix the minor issues written down as TODOs in the code.
-
 
 References:
 -----------
