@@ -7533,6 +7533,10 @@ typedef svn_error_t *(*svn_wc_textbase_fetch_cb_t)(
  * If @a allow_dehydrate is true, remove the on disk text-base contents
  * that is not required.
  *
+ * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at various
+ * points during the operation.  If it returns an error (typically
+ * #SVN_ERR_CANCELLED), return that error immediately.
+ *
  * If @a notify_func is non-NULL, invoke it with @a notify_baton to report
  * the progress of the operation.
  *
