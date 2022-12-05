@@ -7533,6 +7533,9 @@ typedef svn_error_t *(*svn_wc_textbase_fetch_cb_t)(
  * If @a allow_dehydrate is true, remove the on disk text-base contents
  * that is not required.
  *
+ * If @a notify_func is non-NULL, invoke it with @a notify_baton to report
+ * the progress of the operation.
+ *
  * @see svn_wc_textbase_fetch_cb_t
  * @see svn_client__textbase_sync for usage/implementation example.
  *
@@ -7547,6 +7550,8 @@ svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
                      void *fetch_baton,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
                      apr_pool_t *scratch_pool);
 
 /**

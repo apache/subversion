@@ -22,6 +22,7 @@
  */
 
 #include "svn_dirent_uri.h"
+#include "svn_path.h"
 
 #include "textbase.h"
 #include "wc.h"
@@ -468,6 +469,8 @@ typedef struct textbase_sync_baton_t
   svn_wc__db_t *db;
   svn_wc_textbase_fetch_cb_t fetch_callback;
   void *fetch_baton;
+  svn_wc_notify_func2_t notify_func;
+  void *notify_baton;
 } textbase_sync_baton_t;
 
 /* Decide whether the text base should be referenced (or "pinned")
@@ -527,6 +530,18 @@ textbase_fetch_cb(void *baton,
 {
   textbase_sync_baton_t *b = baton;
 
+  if (b->notify_func)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(".", svn_wc_notify_hydrating_file,
+                               scratch_pool);
+      notify->revision = revision;
+      notify->url = svn_path_url_add_component2(repos_root_url,
+                                                repos_relpath,
+                                                scratch_pool);
+      b->notify_func(b->notify_baton, notify, scratch_pool);
+    }
+
   SVN_ERR(b->fetch_callback(b->fetch_baton, repos_root_url,
                             repos_relpath, revision, contents,
                             cancel_func, cancel_baton, scratch_pool));
@@ -543,6 +558,8 @@ svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
                      void *fetch_baton,
                      svn_cancel_func_t cancel_func,
                      void *cancel_baton,
+                     svn_wc_notify_func2_t notify_func,
+                     void *notify_baton,
                      apr_pool_t *scratch_pool)
 {
   svn_boolean_t store_pristine;
@@ -558,17 +575,35 @@ svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
   baton.db = wc_ctx->db;
   baton.fetch_callback = fetch_callback;
   baton.fetch_baton = fetch_baton;
+  baton.notify_func = notify_func;
+  baton.notify_baton = notify_baton;
 
   SVN_ERR(svn_wc__db_textbase_walk(wc_ctx->db, local_abspath,
                                    textbase_walk_cb, &baton,
                                    cancel_func, cancel_baton,
                                    scratch_pool));
 
+  if (notify_func && allow_hydrate)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_hydrating_start,
+                               scratch_pool);
+      notify_func(notify_baton, notify, scratch_pool);
+    }
+
   SVN_ERR(svn_wc__db_textbase_sync(wc_ctx->db, local_abspath,
                                    allow_hydrate, allow_dehydrate,
                                    textbase_fetch_cb, &baton,
                                    cancel_func, cancel_baton,
                                    scratch_pool));
+
+  if (notify_func && allow_hydrate)
+    {
+      svn_wc_notify_t *notify
+        = svn_wc_create_notify(local_abspath, svn_wc_notify_hydrating_end,
+                               scratch_pool);
+      notify_func(notify_baton, notify, scratch_pool);
+    }
 
   return SVN_NO_ERROR;
 }
