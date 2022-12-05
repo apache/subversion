@@ -1584,6 +1584,27 @@ def upgrade_1_0_with_externals(sbox):
      })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
+@XFail()
+@SkipUnless(lambda: svntest.main.options.wc_format_version is None)
+def upgrade_latest_format(sbox):
+  "upgrade latest format without arguments"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State('', {})
+  latest_ver = svntest.main.svn_wc__max_supported_format_version()
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          [],
+                                          '--compatible-version',
+                                          latest_ver)
+  # XFAIL:
+  # svn: E155021: Working copy '...' is already at version 1.15 (format 32)
+  # and cannot be downgraded to version 1.8 (format 31)
+  svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
+
 ########################################################################
 # Run the tests
 
@@ -1640,6 +1661,7 @@ test_list = [ None,
               upgrade_1_7_dir_external,
               auto_analyze,
               upgrade_1_0_with_externals,
+              upgrade_latest_format,
              ]
 
 
