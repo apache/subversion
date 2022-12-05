@@ -5579,10 +5579,13 @@ svn_wc_crawl_revisions6(svn_wc_context_t *wc_ctx,
                         apr_pool_t *scratch_pool);
 
 /**
- * Similar to svn_wc_crawl_revisions6, but this function can only be used
- * for working copies that store local copies of all pristine contents.
- * Otherwise, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE error will be
- * returned.
+ * Similar to svn_wc_crawl_revisions6, but if @a restore_files is @c TRUE,
+ * this function can only be used for working copies that store local
+ * copies of all pristine contents.
+ *
+ * If @a restore_files is @c TRUE and a working copy doesn't store local copies
+ * of all pristine contents, an #SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE
+ * error will be returned.
  *
  * @since New in 1.7.
  * @deprecated Provided for compatibility with the 1.7 API.
