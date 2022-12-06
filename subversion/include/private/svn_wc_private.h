@@ -2233,9 +2233,7 @@ svn_wc__min_supported_format_version(void);
 /**
  * Set @a *format_p and @a *store_pristine_p to the settings of the
  * nearest parent working copy root of @a local_abspath in @a wc_ctx,
- * or to settings of any root stored there, preferring the one with
- * the oldest format. If @a wc_ctx is empty, return the library's
- * default settings.
+ * or to the library's default settings if there are no such roots.
  *
  * Use @a scratch_pool for temporary allocations.
  *

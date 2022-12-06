@@ -31,8 +31,6 @@
 #include "svn_pools.h"
 #include "svn_version.h"
 
-#include "private/svn_sorts_private.h"
-
 #include "wc.h"
 #include "adm_files.h"
 #include "wc_db_private.h"
@@ -1070,14 +1068,6 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
 }
 
 
-/*
- * ### FIXME:
- *
- * There must surely be a better way to find the nearest enclosing wcroot of a
- * path than by copying the hash keys to an array and sorting the array.
- *
- * TODO: Convert the svn_wc__db_t::dir_data hash to a sorted dictionary?.
- */
 svn_error_t *
 svn_wc__settings_from_context(int *format_p,
                               svn_boolean_t *store_pristine_p,
@@ -1085,77 +1075,25 @@ svn_wc__settings_from_context(int *format_p,
                               const char *local_abspath,
                               apr_pool_t *scratch_pool)
 {
-  apr_hash_t *const dir_data = wc_ctx->db->dir_data;
-  apr_array_header_t *keys;
-  int index;
+  const char *current_path = local_abspath;
 
-  /* This is what we return if we don't find a concrete format version. */
-  SVN_ERR(svn_hash_keys(&keys, dir_data, scratch_pool));
-  if (0 == keys->nelts)
+  do
     {
-      *format_p = SVN_WC__DEFAULT_VERSION;
-      *store_pristine_p = TRUE;
-      return SVN_NO_ERROR;
+      svn_wc__db_wcroot_t *wcroot;
+
+      wcroot = svn_hash_gets(wc_ctx->db->dir_data, current_path);
+      if (wcroot)
+        {
+          *format_p = wcroot->format;
+          *store_pristine_p = wcroot->store_pristine;
+          return SVN_NO_ERROR;
+        }
+
+      current_path = svn_dirent_dirname(current_path, scratch_pool);
     }
+  while (!svn_dirent_is_root(current_path, strlen(current_path)));
 
-  svn_sort__array(keys, svn_sort_compare_paths);
-  index = svn_sort__bsearch_lower_bound(keys, &local_abspath,
-                                        svn_sort_compare_paths);
-
-  /* If the previous key is a parent of the local_abspath, use its format. */
-  {
-    const char *const here = (index >= keys->nelts ? NULL
-                              : APR_ARRAY_IDX(keys, index, const char*));
-    const char *const prev = (index == 0 ? NULL
-                              : APR_ARRAY_IDX(keys, index - 1, const char*));
-
-    if (here)
-      {
-        const char *const child = svn_dirent_skip_ancestor(here, local_abspath);
-        if (child && !*child)
-          {
-            /* Found an exact match in the WC context. */
-            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, here);
-            *format_p = wcroot->format;
-            *store_pristine_p = wcroot->store_pristine;
-            return SVN_NO_ERROR;
-          }
-      }
-
-    if (prev)
-      {
-        const char *const child = svn_dirent_skip_ancestor(prev, local_abspath);
-        if (child)
-          {
-            /* Found the parent path in the WC context. */
-            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, prev);
-            *format_p = wcroot->format;
-            *store_pristine_p = wcroot->store_pristine;
-            return SVN_NO_ERROR;
-          }
-      }
-  }
-
-  /* Find the oldest format recorded in the WC context. */
-  {
-    int oldest_format = SVN_WC__VERSION;
-    svn_boolean_t store_pristine = TRUE;
-    apr_hash_index_t *hi;
-
-    for (hi = apr_hash_first(scratch_pool, dir_data);
-         hi;
-         hi = apr_hash_next(hi))
-      {
-        svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
-        if (wcroot->format < oldest_format)
-          {
-            oldest_format = wcroot->format;
-            store_pristine = wcroot->store_pristine;
-          }
-      }
-
-    *format_p = oldest_format;
-    *store_pristine_p = store_pristine;
-    return SVN_NO_ERROR;
-  }
+  *format_p = SVN_WC__DEFAULT_VERSION;
+  *store_pristine_p = TRUE;
+  return SVN_NO_ERROR;
 }
