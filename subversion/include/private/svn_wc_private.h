@@ -2232,8 +2232,8 @@ svn_wc__min_supported_format_version(void);
 
 /**
  * Set @a format to the format of the nearest parent working copy root of
- * @a local_abspath in @a wc_ctx, or to the oldest format of any root stored
- * there. If @a wc_ctx is empty, return the library's default format.
+ * @a local_abspath in @a wc_ctx, or to the library's default format if
+ * there are no such roots.
  *
  * Use @a scratch_pool for temporary allocations.
  *
