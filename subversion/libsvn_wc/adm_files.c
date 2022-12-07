@@ -435,7 +435,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
         return svn_error_createf(
             SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
             _("Format %d doesn't match existing format %d in '%s'"),
-            target_format, present_format, local_abspath);
+            target_format, present_format,
+            svn_dirent_local_style(local_abspath, scratch_pool));
 
       /* ### Should we match copyfrom_revision? */
       if (db_revision != revision)
@@ -443,7 +444,9 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
           svn_error_createf(SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                             _("Revision %ld doesn't match existing "
                               "revision %ld in '%s'"),
-                            revision, db_revision, local_abspath);
+                            revision, db_revision,
+                            svn_dirent_local_style(local_abspath,
+                                                   scratch_pool));
 
       if (!db_repos_root_url)
         {
@@ -489,7 +492,8 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                                                             db_repos_relpath,
                                                             scratch_pool),
                                 repos_uuid,
-                                local_abspath);
+                                svn_dirent_local_style(local_abspath,
+                                                       scratch_pool));
         }
     }
 
