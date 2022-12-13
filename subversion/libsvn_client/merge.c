@@ -2126,7 +2126,7 @@ merge_file_changed(const char *relpath,
     }
 
   /* This callback is essentially no more than a wrapper around
-     svn_wc_merge5().  Thank goodness that all the
+     svn_wc_merge6().  Thank goodness that all the
      diff-editor-mechanisms are doing the hard work of getting the
      fulltexts! */
 
@@ -2204,7 +2204,7 @@ merge_file_changed(const char *relpath,
 
       /* Do property merge and text merge in one step so that keyword expansion
          takes into account the new property values. */
-      SVN_ERR(svn_wc_merge5(&content_outcome, &property_state, ctx->wc_ctx,
+      SVN_ERR(svn_wc_merge6(&content_outcome, &property_state, ctx->wc_ctx,
                             left_file, right_file, local_abspath,
                             left_label, right_label, target_label,
                             left, right,

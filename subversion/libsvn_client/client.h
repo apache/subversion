@@ -540,9 +540,17 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    to fail.
 
    A new working copy, if needed, will be created in the format corresponding
-   to the WC_FORMAT_VERSION of the client. If this parameter is NULL, the
-   format will be determined from context (see svn_wc__format_from_context).
-   The format of any existing working copy will remain unchanged.
+   to the WC_FORMAT_VERSION of the client.  The format of any existing working
+   copy will remain unchanged.
+
+   If STORE_PRISTINE is svn_tristate_true, the pristine contents of all
+   files in the working copy will be stored on disk.  If STORE_PRISTINE is
+   svn_tristate_false, the pristine contents will be fetched on-demand when
+   required by the operation.
+
+   If WC_FORMAT_VERSION is NULL and STORE_PRISTINE is svn_tristate_unknown, the
+   settings will be determined from context (see svn_wc__settings_from_context).
+   Otherwise, both WC_FORMAT_VERSION and STORE_PRISTINE must be defined.
 
    If RA_SESSION is NOT NULL, it may be used to avoid creating a new
    session. The session may point to a different URL after returning.
@@ -558,6 +566,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
                               const svn_version_t *wc_format_version,
+                              svn_tristate_t store_pristine,
                               svn_ra_session_t *ra_session,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
@@ -1241,6 +1250,35 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          svn_client_ctx_t *ctx,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
+
+/* Synchronize the state of the text-base contents for the LOCAL_ABSPATH tree.
+ *
+ * If ALLOW_HYDRATE is true, fetch the required but missing text-base contents.
+ * If ALLOW_DEHYDRATE is true, remove the on disk text-base contents that are
+ * not required.
+ *
+ * The missing contents will be fetched using the provided RA_SESSION if it
+ * is not NULL.  If RA_SESSION is NULL and some of the text-bases have to be
+ * fetched, a new RA session will be opened internally.  If RA_SESSION_P is
+ * not NULL, the session used during fetch will be returned in *RA_SESSION_P.
+ * If this is the session that was opened internally, it will be allocated in
+ * RESULT_POOL.  Note that *RA_SESSION_P may be set to NULL if no fetching
+ * took place.
+ */
+svn_error_t *
+svn_client__textbase_sync(svn_ra_session_t **ra_session_p,
+                          const char *local_abspath,
+                          svn_boolean_t allow_hydrate,
+                          svn_boolean_t allow_dehydrate,
+                          svn_client_ctx_t *ctx,
+                          svn_ra_session_t *ra_session,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool);
+
+/* Returns the first version that supported the working copy metadata format
+ * where pristine content is optional and can be fetched on demand. */
+const svn_version_t *
+svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool);
 
 #ifdef __cplusplus
 }

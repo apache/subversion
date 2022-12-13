@@ -1436,11 +1436,11 @@ parse_iproplist(apr_array_header_t **inherited_props,
   return SVN_NO_ERROR;
 }
 
-static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
-                                    svn_revnum_t rev, svn_stream_t *stream,
-                                    svn_revnum_t *fetched_rev,
-                                    apr_hash_t **props,
-                                    apr_pool_t *pool)
+static svn_error_t *get_file(svn_ra_session_t *session, const char *path,
+                             svn_revnum_t rev, svn_stream_t *stream,
+                             svn_revnum_t *fetched_rev,
+                             apr_hash_t **props,
+                             apr_pool_t *pool)
 {
   svn_ra_svn__session_baton_t *sess_baton = session->priv;
   svn_ra_svn_conn_t *conn = sess_baton->conn;
@@ -1496,6 +1496,8 @@ static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
                                &item->u.string.len));
     }
   svn_pool_destroy(iterpool);
+
+  SVN_ERR(svn_stream_close(stream));
 
   SVN_ERR(svn_ra_svn__read_cmd_response(conn, pool, ""));
 
@@ -3258,6 +3260,34 @@ ra_svn_list(svn_ra_session_t *session,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *ra_svn_get_file(svn_ra_session_t *session, const char *path,
+                                    svn_revnum_t rev, svn_stream_t *stream,
+                                    svn_revnum_t *fetched_rev,
+                                    apr_hash_t **props,
+                                    apr_pool_t *pool)
+{
+  /* We are not supposed to close the passed-in stream, so disown it. */
+  if (stream)
+    stream = svn_stream_disown(stream, pool);
+
+  SVN_ERR(get_file(session, path, rev, stream, fetched_rev,
+                   props, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *ra_svn_fetch_file_contents(svn_ra_session_t *session,
+                                               const char *path,
+                                               svn_revnum_t rev,
+                                               svn_stream_t *stream,
+                                               apr_pool_t *scratch_pool)
+{
+  SVN_ERR(get_file(session, path, rev, stream, NULL,
+                   NULL, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 static const svn_ra__vtable_t ra_svn_vtable = {
   svn_ra_svn_version,
   ra_svn_get_description,
@@ -3298,6 +3328,7 @@ static const svn_ra__vtable_t ra_svn_vtable = {
   ra_svn_get_inherited_props,
   NULL /* ra_set_svn_ra_open */,
   ra_svn_list,
+  ra_svn_fetch_file_contents,
   ra_svn_register_editor_shim_callbacks,
   NULL /* commit_ev2 */,
   NULL /* replay_range_ev2 */

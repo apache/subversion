@@ -321,7 +321,7 @@ export_node(void *baton,
 
          We get all this for free from evaluating SOURCE == NULL:
        */
-      SVN_ERR(svn_wc_get_pristine_contents2(&source, wc_ctx, local_abspath,
+      SVN_ERR(svn_wc_get_pristine_contents3(&source, wc_ctx, local_abspath,
                                             scratch_pool, scratch_pool));
       if (source == NULL)
         return SVN_NO_ERROR;

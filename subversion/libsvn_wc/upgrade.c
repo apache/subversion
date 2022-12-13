@@ -1074,7 +1074,7 @@ migrate_text_bases(apr_hash_t **text_bases_info,
 
         /* Insert a row into the pristine table. */
         SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
-                                          STMT_INSERT_OR_IGNORE_PRISTINE));
+                                          STMT_INSERT_OR_IGNORE_PRISTINE_F31));
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, sha1_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, iterpool));
         SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
@@ -2026,6 +2026,7 @@ svn_error_t *
 svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
                 int target_format,
+                svn_boolean_t store_pristine,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
                 svn_cancel_func_t cancel_func,
@@ -2128,7 +2129,7 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                                    &data.repos_id, &data.wc_id,
                                    db, target_format, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
-                                   scratch_pool));
+                                   store_pristine, scratch_pool));
 
   /* Migrate the entries over to the new database.
    ### We need to think about atomicity here.

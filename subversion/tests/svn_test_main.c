@@ -111,7 +111,8 @@ enum test_options_e {
   mode_filter_opt,
   sqlite_log_opt,
   parallel_opt,
-  fsfs_version_opt
+  fsfs_version_opt,
+  store_pristine_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -157,6 +158,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
                     N_("allow concurrent execution of tests")},
+  {"store-pristine", store_pristine_opt, 1,
+                    N_("set the WC pristine mode")},
   {0,               0, 0, 0}
 };
 
@@ -808,6 +811,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   svn_test_opts_t opts = { NULL };
 
   opts.fs_type = DEFAULT_FS_TYPE;
+  opts.store_pristine = svn_tristate_unknown;
 
   /* Initialize APR (Apache pools) */
   if (apr_initialize() != APR_SUCCESS)
@@ -1024,6 +1028,18 @@ svn_test_main(int argc, const char *argv[], int max_threads,
           parallel = TRUE;
           break;
 #endif
+        case store_pristine_opt:
+          {
+            const char *utf8_opt_arg;
+            SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+            opts.store_pristine = svn_tristate__from_word(utf8_opt_arg);
+            if (opts.store_pristine == svn_tristate_unknown)
+              {
+                fprintf(stderr, "FAIL: Invalid --store-pristine option.\n");
+                exit(1);
+              }
+            break;
+          }
       }
     }
   opts.verbose = verbose_mode;

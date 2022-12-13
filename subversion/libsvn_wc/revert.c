@@ -42,6 +42,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "workqueue.h"
+#include "textbase.h"
 
 #include "svn_private_config.h"
 #include "private/svn_io_private.h"
@@ -714,10 +715,21 @@ revert_wc_data(svn_boolean_t *run_wq,
       if (kind == svn_node_file)
         {
           svn_skel_t *work_item;
+          const char *install_from;
+          svn_skel_t *cleanup_work_item;
 
+          SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                               &cleanup_work_item,
+                                               db, local_abspath, NULL,
+                                               cancel_func, cancel_baton,
+                                               scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__wq_build_file_install(&work_item, db, local_abspath,
-                                                NULL, use_commit_times, TRUE,
+                                                install_from,
+                                                use_commit_times, TRUE,
                                                 scratch_pool, scratch_pool));
+          work_item = svn_wc__wq_merge(work_item, cleanup_work_item,
+                                       scratch_pool);
+
           SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item,
                                     scratch_pool));
           *run_wq = TRUE;
@@ -969,7 +981,7 @@ revert_partial(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_revert6(svn_wc_context_t *wc_ctx,
+svn_wc_revert7(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,

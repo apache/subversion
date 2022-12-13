@@ -161,122 +161,6 @@ make_adm_subdir(const char *path,
 
 
 
-/*** Syncing files in the adm area. ***/
-
-
-svn_error_t *
-svn_wc__text_base_path_to_read(const char **result_abspath,
-                               svn_wc__db_t *db,
-                               const char *local_abspath,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_node_kind_t kind;
-  const svn_checksum_t *checksum;
-
-  SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                        &checksum, NULL, NULL, NULL,
-                                        db, local_abspath,
-                                        scratch_pool, scratch_pool));
-
-  /* Sanity */
-  if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                             _("Can only get the pristine contents of files; "
-                               "'%s' is not a file"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  if (status == svn_wc__db_status_not_present)
-    /* We know that the delete of this node has been committed.
-       This should be the same as if called on an unknown path. */
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Cannot get the pristine contents of '%s' "
-                               "because its delete is already committed"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-  else if (status == svn_wc__db_status_server_excluded
-      || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_incomplete)
-    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                             _("Cannot get the pristine contents of '%s' "
-                               "because it has an unexpected status"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  if (checksum == NULL)
-    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                             _("Node '%s' has no pristine text"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-  SVN_ERR(svn_wc__db_pristine_get_path(result_abspath, db, local_abspath,
-                                       checksum,
-                                       result_pool, scratch_pool));
-  return SVN_NO_ERROR;
-}
-
-svn_error_t *
-svn_wc__get_pristine_contents(svn_stream_t **contents,
-                              svn_filesize_t *size,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool)
-{
-  svn_wc__db_status_t status;
-  svn_node_kind_t kind;
-  const svn_checksum_t *sha1_checksum;
-
-  if (size)
-    *size = SVN_INVALID_FILESIZE;
-
-  SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
-                                        &sha1_checksum, NULL, NULL, NULL,
-                                        db, local_abspath,
-                                        scratch_pool, scratch_pool));
-
-  /* Sanity */
-  if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
-                             _("Can only get the pristine contents of files; "
-                               "'%s' is not a file"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-
-  if (status == svn_wc__db_status_added && !sha1_checksum)
-    {
-      /* Simply added. The pristine base does not exist. */
-      *contents = NULL;
-      return SVN_NO_ERROR;
-    }
-  else if (status == svn_wc__db_status_not_present)
-    /* We know that the delete of this node has been committed.
-       This should be the same as if called on an unknown path. */
-    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
-                             _("Cannot get the pristine contents of '%s' "
-                               "because its delete is already committed"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-  else if (status == svn_wc__db_status_server_excluded
-      || status == svn_wc__db_status_excluded
-      || status == svn_wc__db_status_incomplete)
-    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
-                             _("Cannot get the pristine contents of '%s' "
-                               "because it has an unexpected status"),
-                             svn_dirent_local_style(local_abspath,
-                                                    scratch_pool));
-  if (sha1_checksum)
-    SVN_ERR(svn_wc__db_pristine_read(contents, size, db, local_abspath,
-                                     sha1_checksum,
-                                     result_pool, scratch_pool));
-  else
-    *contents = NULL;
-
-  return SVN_NO_ERROR;
-}
-
-
 /*** Opening and closing files in the adm area. ***/
 
 svn_error_t *
@@ -323,6 +207,7 @@ init_adm(svn_wc__db_t *db,
          const char *repos_uuid,
          svn_revnum_t initial_rev,
          svn_depth_t depth,
+         svn_boolean_t store_pristine,
          apr_pool_t *pool)
 {
   /* First, make an empty administrative area. */
@@ -344,7 +229,7 @@ init_adm(svn_wc__db_t *db,
   /* Create the SDB. */
   SVN_ERR(svn_wc__db_init(db, target_format, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
-                          initial_rev, depth, pool));
+                          initial_rev, depth, store_pristine, pool));
 
   /* Stamp ENTRIES and FORMAT files for old clients.  */
   SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
@@ -370,6 +255,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
+                            svn_boolean_t store_pristine,
                             apr_pool_t *scratch_pool)
 {
   int present_format;
@@ -381,12 +267,31 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   svn_wc__db_status_t status;
   const char *db_repos_relpath, *db_repos_root_url, *db_repos_uuid;
   svn_revnum_t db_revision;
+  svn_boolean_t wc_store_pristine;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
   SVN_ERR_ASSERT(url != NULL);
   SVN_ERR_ASSERT(repos_root_url != NULL);
   SVN_ERR_ASSERT(repos_uuid != NULL);
   SVN_ERR_ASSERT(repos_relpath != NULL);
+
+  if (target_format < SVN_WC__SUPPORTED_VERSION)
+    return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format %d is not supported by client version %s."),
+        target_format, SVN_VER_NUM);
+
+  if (target_format > SVN_WC__VERSION)
+    return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format %d can't be created by client version %s."),
+        target_format, SVN_VER_NUM);
+
+  if (target_format < SVN_WC__HAS_OPTIONAL_PRISTINE && !store_pristine)
+    return svn_error_createf(
+        SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+        _("Working copy format %d does not support the requested capabilities"),
+        target_format);
 
   SVN_ERR(svn_wc__internal_check_wc(&present_format, db, local_abspath, TRUE,
                                     scratch_pool));
@@ -395,22 +300,31 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
      just create one. */
   if (present_format == 0)
     {
-
-      if (target_format < SVN_WC__SUPPORTED_VERSION)
-        return svn_error_createf(
-            SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-            _("Working copy format %d is not supported by client version %s."),
-            target_format, SVN_VER_NUM);
-
-      if (target_format > SVN_WC__VERSION)
-        return svn_error_createf(
-            SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-            _("Working copy format %d can't be created by client version %s."),
-            target_format, SVN_VER_NUM);
-
       return svn_error_trace(init_adm(db, target_format, local_abspath,
                                       repos_relpath, repos_root_url, repos_uuid,
-                                      revision, depth, scratch_pool));
+                                      revision, depth, store_pristine,
+                                      scratch_pool));
+    }
+  else if (present_format != target_format)
+    {
+      return svn_error_createf(
+          SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
+          _("Format %d doesn't match existing format %d in '%s'"),
+          target_format, present_format,
+          svn_dirent_local_style(local_abspath, scratch_pool));
+    }
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &wc_store_pristine, db,
+                                  local_abspath, scratch_pool));
+
+  if ((store_pristine && !wc_store_pristine) ||
+      (!store_pristine && wc_store_pristine))
+    {
+      return svn_error_createf(
+          SVN_ERR_WC_INCOMPATIBLE_SETTINGS, NULL,
+          _("'%s' is an existing working copy with different '%s' setting"),
+          svn_dirent_local_style(local_abspath, scratch_pool),
+          "store-pristine");
     }
 
   SVN_ERR(svn_wc__db_read_info(&status, NULL,
@@ -430,14 +344,6 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   if (status != svn_wc__db_status_deleted
       && status != svn_wc__db_status_not_present)
     {
-      /* Check that the existing format matches the requested format. */
-      if (present_format != target_format)
-        return svn_error_createf(
-            SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
-            _("Format %d doesn't match existing format %d in '%s'"),
-            target_format, present_format,
-            svn_dirent_local_style(local_abspath, scratch_pool));
-
       /* ### Should we match copyfrom_revision? */
       if (db_revision != revision)
         return
@@ -509,12 +415,13 @@ svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
                    const char *repos_uuid,
                    svn_revnum_t revision,
                    svn_depth_t depth,
+                   svn_boolean_t store_pristine,
                    apr_pool_t *scratch_pool)
 {
   return svn_error_trace(
     svn_wc__internal_ensure_adm(wc_ctx->db, target_format, local_abspath,
                                 url, repos_root_url, repos_uuid, revision,
-                                depth, scratch_pool));
+                                depth, store_pristine, scratch_pool));
 }
 
 svn_error_t *

@@ -95,6 +95,8 @@ def expected_merge_output(rev_ranges, additional_lines=[], foreign=False,
   if (two_url):
     lines += ["--- Recording mergeinfo for merge between repository URLs .*\n"]
 
+  lines += ["Fetching text bases [.]+done\n"]
+
   # Address "The Backslash Plague"
   #
   # If ADDITIONAL_LINES are present there are possibly paths in it with

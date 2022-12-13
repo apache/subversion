@@ -771,6 +771,52 @@ test_internal_file_modified_eol_style(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_get_pristine_copy_path(const svn_test_opts_t *opts, apr_pool_t *pool)
+{
+  svn_test__sandbox_t b;
+  svn_boolean_t store_pristine;
+  const char *pristine_path;
+  svn_node_kind_t kind;
+  svn_stringbuf_t *actual_content;
+
+  SVN_ERR(svn_test__sandbox_create(&b, "get_pristine_copy_path", opts, pool));
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine,
+                                  b.wc_ctx->db, b.wc_abspath, pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy with pristine");
+
+  SVN_ERR(sbox_file_write(&b, "file", "content"));
+  SVN_ERR(sbox_wc_add(&b, "file"));
+
+  SVN_ERR(svn_wc_get_pristine_copy_path(sbox_wc_path(&b, "file"),
+                                        &pristine_path, pool));
+  SVN_ERR(svn_io_check_path(pristine_path, &kind, pool));
+  SVN_TEST_INT_ASSERT(kind, svn_node_none);
+
+  SVN_ERR(sbox_wc_commit(&b, ""));
+
+  SVN_ERR(svn_wc_get_pristine_copy_path(sbox_wc_path(&b, "file"),
+                                        &pristine_path, pool));
+  SVN_ERR(svn_io_check_path(pristine_path, &kind, pool));
+  SVN_TEST_INT_ASSERT(kind, svn_node_file);
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, pristine_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content");
+
+  SVN_ERR(sbox_wc_copy(&b, "file", "file2"));
+
+  SVN_ERR(svn_wc_get_pristine_copy_path(sbox_wc_path(&b, "file2"),
+                                        &pristine_path, pool));
+  SVN_ERR(svn_io_check_path(pristine_path, &kind, pool));
+  SVN_TEST_INT_ASSERT(kind, svn_node_file);
+  SVN_ERR(svn_stringbuf_from_file2(&actual_content, pristine_path, pool));
+  SVN_TEST_STRING_ASSERT(actual_content->data, "content");
+
+  return SVN_NO_ERROR;
+}
+
 /* ---------------------------------------------------------------------- */
 /* The list of test functions */
 
@@ -803,6 +849,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test internal_file_modified with keywords"),
     SVN_TEST_OPTS_PASS(test_internal_file_modified_eol_style,
                        "test internal_file_modified with eol-style"),
+    SVN_TEST_OPTS_PASS(test_get_pristine_copy_path,
+                       "test svn_wc_get_pristine_copy_path"),
     SVN_TEST_NULL
   };
 

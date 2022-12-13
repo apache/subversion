@@ -35,7 +35,7 @@
             [--config-file=<file>] [--ssl-cert=<file>]
             [--exclusive-wc-locks] [--memcached-server=<url:port>]
             [--fsfs-compression=<type>] [--fsfs-dir-deltification=<true|false>]
-            [--allow-remote-http-connection]
+            [--allow-remote-http-connection] [--store-pristine=<val>]
             <abs_srcdir> <abs_builddir>
             <prog ...>
 
@@ -264,6 +264,8 @@ class TestHarness:
       cmdline.append('--mode-filter=' + self.opts.mode_filter)
     if self.opts.parallel is not None:
       cmdline.append('--parallel')
+    if self.opts.store_pristine is not None:
+      cmdline.append('--store-pristine=%s' % self.opts.store_pristine)
 
     self.c_test_cmdline = cmdline
 
@@ -331,6 +333,8 @@ class TestHarness:
       cmdline.append('--fsfs-dir-deltification=%s' % self.opts.fsfs_dir_deltification)
     if self.opts.allow_remote_http_connection is not None:
       cmdline.append('--allow-remote-http-connection')
+    if self.opts.store_pristine is not None:
+      cmdline.append('--store-pristine=%s' % self.opts.store_pristine)
 
     self.py_test_cmdline = cmdline
 
@@ -1089,6 +1093,8 @@ def create_parser():
                     help='Set directory deltification option (for fsfs)')
   parser.add_option('--allow-remote-http-connection', action='store_true',
                     help='Run tests that connect to remote HTTP(S) servers')
+  parser.add_option('--store-pristine', action='store', type='str',
+                    help='Set the WC pristine mode')
 
   parser.set_defaults(set_log_level=None)
   return parser

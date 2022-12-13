@@ -155,6 +155,51 @@ gather_traversal_info(svn_wc_context_t *wc_ctx,
 /*** From adm_crawler.c ***/
 
 svn_error_t *
+svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
+                        const char *local_abspath,
+                        const svn_ra_reporter3_t *reporter,
+                        void *report_baton,
+                        svn_boolean_t restore_files,
+                        svn_depth_t depth,
+                        svn_boolean_t honor_depth_exclude,
+                        svn_boolean_t depth_compatibility_trick,
+                        svn_boolean_t use_commit_times,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        svn_wc_notify_func2_t notify_func,
+                        void *notify_baton,
+                        apr_pool_t *scratch_pool)
+{
+  if (restore_files)
+    {
+      svn_boolean_t store_pristine;
+
+      SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, local_abspath,
+                                   scratch_pool));
+      if (!store_pristine)
+        return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
+                                NULL, NULL);
+    }
+
+  SVN_ERR(svn_wc_crawl_revisions6(wc_ctx,
+                                  local_abspath,
+                                  reporter,
+                                  report_baton,
+                                  restore_files,
+                                  depth,
+                                  honor_depth_exclude,
+                                  depth_compatibility_trick,
+                                  use_commit_times,
+                                  cancel_func,
+                                  cancel_baton,
+                                  notify_func,
+                                  notify_baton,
+                                  scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_crawl_revisions4(const char *path,
                         svn_wc_adm_access_t *adm_access,
                         const svn_ra_reporter3_t *reporter,
@@ -467,6 +512,37 @@ svn_wc_crawl_revisions(const char *path,
 }
 
 svn_error_t *
+svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
+                             const svn_checksum_t **new_text_base_sha1_checksum,
+                             svn_wc_context_t *wc_ctx,
+                             const char *local_abspath,
+                             svn_boolean_t fulltext,
+                             const svn_delta_editor_t *editor,
+                             void *file_baton,
+                             apr_pool_t *result_pool,
+                             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, local_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
+  SVN_ERR(svn_wc_transmit_text_deltas4(new_text_base_md5_checksum,
+                                       new_text_base_sha1_checksum,
+                                       wc_ctx,
+                                       local_abspath,
+                                       fulltext,
+                                       editor,
+                                       file_baton,
+                                       result_pool,
+                                       scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_transmit_text_deltas2(const char **tempfile,
                              unsigned char digest[],
                              const char *path,
@@ -568,6 +644,27 @@ svn_wc_transmit_prop_deltas(const char *path,
   return svn_error_trace(svn_wc_context_destroy(wc_ctx));
 }
 
+svn_error_t *
+svn_wc_restore(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_boolean_t use_commit_times,
+               apr_pool_t *scratch_pool)
+{
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, local_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
+  SVN_ERR(svn_wc_restore2(wc_ctx,
+                          local_abspath,
+                          use_commit_times,
+                          scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /*** From adm_files.c ***/
 svn_error_t *
 svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
@@ -582,7 +679,7 @@ svn_wc_ensure_adm4(svn_wc_context_t *wc_ctx,
   return svn_error_trace(
       svn_wc__ensure_adm(wc_ctx, SVN_WC__DEFAULT_VERSION, local_abspath,
                          url, repos_root_url, repos_uuid, revision, depth,
-                         scratch_pool));
+                         TRUE, scratch_pool));
 }
 
 svn_error_t *
@@ -677,6 +774,29 @@ svn_wc_create_tmp_file2(apr_file_t **fp,
 
 
 /*** From adm_ops.c ***/
+svn_error_t *
+svn_wc_get_pristine_contents2(svn_stream_t **contents,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, local_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
+  SVN_ERR(svn_wc_get_pristine_contents3(contents,
+                                        wc_ctx,
+                                        local_abspath,
+                                        result_pool,
+                                        scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_get_pristine_contents(svn_stream_t **contents,
                              const char *path,
@@ -1106,6 +1226,45 @@ svn_wc_add(const char *path,
 }
 
 /*** From revert.c ***/
+svn_error_t *
+svn_wc_revert6(svn_wc_context_t *wc_ctx,
+               const char *local_abspath,
+               svn_depth_t depth,
+               svn_boolean_t use_commit_times,
+               const apr_array_header_t *changelist_filter,
+               svn_boolean_t clear_changelists,
+               svn_boolean_t metadata_only,
+               svn_boolean_t added_keep_local,
+               svn_cancel_func_t cancel_func,
+               void *cancel_baton,
+               svn_wc_notify_func2_t notify_func,
+               void *notify_baton,
+               apr_pool_t *scratch_pool)
+{
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, local_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
+  SVN_ERR(svn_wc_revert7(wc_ctx,
+                         local_abspath,
+                         depth,
+                         use_commit_times,
+                         changelist_filter,
+                         clear_changelists,
+                         metadata_only,
+                         added_keep_local,
+                         cancel_func,
+                         cancel_baton,
+                         notify_func,
+                         notify_baton,
+                         scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 svn_error_t *
 svn_wc_revert5(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
@@ -2098,6 +2257,12 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
                         apr_pool_t *scratch_pool)
 {
   const svn_diff_tree_processor_t *diff_processor;
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, anchor_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
   /* --git implies --show-copies-as-adds */
   if (use_git_diff_format)
@@ -2294,6 +2459,43 @@ svn_wc_get_diff_editor(svn_wc_adm_access_t *anchor,
                                  recurse, FALSE, use_text_base, reverse_order,
                                  cancel_func, cancel_baton,
                                  editor, edit_baton, pool);
+}
+
+svn_error_t *
+svn_wc_diff6(svn_wc_context_t *wc_ctx,
+             const char *local_abspath,
+             const svn_wc_diff_callbacks4_t *callbacks,
+             void *callback_baton,
+             svn_depth_t depth,
+             svn_boolean_t ignore_ancestry,
+             svn_boolean_t show_copies_as_adds,
+             svn_boolean_t use_git_diff_format,
+             const apr_array_header_t *changelist_filter,
+             svn_cancel_func_t cancel_func,
+             void *cancel_baton,
+             apr_pool_t *scratch_pool)
+{
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, local_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
+  SVN_ERR(svn_wc_diff7(wc_ctx,
+                       local_abspath,
+                       callbacks,
+                       callback_baton,
+                       depth,
+                       ignore_ancestry,
+                       show_copies_as_adds,
+                       use_git_diff_format,
+                       changelist_filter,
+                       cancel_func,
+                       cancel_baton,
+                       scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *
@@ -2983,6 +3185,13 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, anchor_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
   return svn_error_trace(
     svn_wc__get_status_editor(editor, edit_baton,
                               set_locks_baton,
@@ -3630,6 +3839,13 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, anchor_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
   return svn_error_trace(
     svn_wc__get_update_editor(editor, edit_baton,
                               target_revision,
@@ -3816,6 +4032,13 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, anchor_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
   return svn_error_trace(
     svn_wc__get_switch_editor(editor, edit_baton,
                               target_revision,
@@ -4572,6 +4795,61 @@ svn_wc_copy(const char *src_path,
 /*** From merge.c ***/
 
 svn_error_t *
+svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
+              enum svn_wc_notify_state_t *merge_props_outcome,
+              svn_wc_context_t *wc_ctx,
+              const char *left_abspath,
+              const char *right_abspath,
+              const char *target_abspath,
+              const char *left_label,
+              const char *right_label,
+              const char *target_label,
+              const svn_wc_conflict_version_t *left_version,
+              const svn_wc_conflict_version_t *right_version,
+              svn_boolean_t dry_run,
+              const char *diff3_cmd,
+              const apr_array_header_t *merge_options,
+              apr_hash_t *original_props,
+              const apr_array_header_t *prop_diff,
+              svn_wc_conflict_resolver_func2_t conflict_func,
+              void *conflict_baton,
+              svn_cancel_func_t cancel_func,
+              void *cancel_baton,
+              apr_pool_t *scratch_pool)
+{
+  svn_boolean_t store_pristine;
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, wc_ctx, target_abspath,
+                               scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
+
+  SVN_ERR(svn_wc_merge6(merge_content_outcome,
+                        merge_props_outcome,
+                        wc_ctx,
+                        left_abspath,
+                        right_abspath,
+                        target_abspath,
+                        left_label,
+                        right_label,
+                        target_label,
+                        left_version,
+                        right_version,
+                        dry_run,
+                        diff3_cmd,
+                        merge_options,
+                        original_props,
+                        prop_diff,
+                        conflict_func,
+                        conflict_baton,
+                        cancel_func,
+                        cancel_baton,
+                        scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
 svn_wc_merge4(enum svn_wc_merge_outcome_t *merge_outcome,
               svn_wc_context_t *wc_ctx,
               const char *left_abspath,
@@ -4901,7 +5179,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                void *notify_baton,
                apr_pool_t *scratch_pool)
 {
-  return svn_wc__upgrade(wc_ctx, local_abspath, SVN_WC__DEFAULT_VERSION,
+  return svn_wc__upgrade(wc_ctx, local_abspath, SVN_WC__DEFAULT_VERSION, TRUE,
                          repos_info_func, repos_info_baton,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,

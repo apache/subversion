@@ -590,7 +590,7 @@ class State:
 
     desc = { }
     for line in lines:
-      if line.startswith('DBG:'):
+      if line.startswith('DBG:') or re.match('^Fetching text bases [.]+done$', line):
         continue
 
       match = _re_parse_checkout.search(line)

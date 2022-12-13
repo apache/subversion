@@ -1599,21 +1599,26 @@ def move_conflict_details(sbox):
   sbox.simple_append('B/E/new-dir3', 'something')
   sbox.simple_add('B/E/new-dir3')
 
+  store_pristine = svntest.actions.get_wc_store_pristine(sbox.wc_dir)
 
-  expected_output = [
-    " C   %s\n" % sbox.ospath('B'),         # Property conflicted
-    " U   %s\n" % sbox.ospath('B/E'),       # Just updated
-    "C    %s\n" % sbox.ospath('B/E/alpha'), # Text conflicted
-    "   C %s\n" % sbox.ospath('B/E/beta'),
-    "   C %s\n" % sbox.ospath('B/E/new'),
-    "   C %s\n" % sbox.ospath('B/E/new-dir1'),
-    "   C %s\n" % sbox.ospath('B/E/new-dir2'),
-    "   C %s\n" % sbox.ospath('B/E/new-dir3'),
-    "   C %s\n" % sbox.ospath('B/F'),
-    "   C %s\n" % sbox.ospath('B/lambda'),
-    "Updated to revision 2.\n",
-    "Tree conflict at '%s' marked as resolved.\n" % sbox.ospath('A/B')
-  ]
+  expected_output = svntest.verify.RegexListOutput(
+    ([] if store_pristine else ["Fetching text bases [.]+done"])
+    +
+    [re.escape(x) for x in [
+      " C   %s\n" % sbox.ospath('B'),         # Property conflicted
+      " U   %s\n" % sbox.ospath('B/E'),       # Just updated
+      "C    %s\n" % sbox.ospath('B/E/alpha'), # Text conflicted
+      "   C %s\n" % sbox.ospath('B/E/beta'),
+      "   C %s\n" % sbox.ospath('B/E/new'),
+      "   C %s\n" % sbox.ospath('B/E/new-dir1'),
+      "   C %s\n" % sbox.ospath('B/E/new-dir2'),
+      "   C %s\n" % sbox.ospath('B/E/new-dir3'),
+      "   C %s\n" % sbox.ospath('B/F'),
+      "   C %s\n" % sbox.ospath('B/lambda'),
+      "Updated to revision 2.\n",
+      "Tree conflict at '%s' marked as resolved.\n" % sbox.ospath('A/B')
+    ]]
+  )
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'resolve', sbox.ospath('A/B'),
                                      '--depth', 'empty',

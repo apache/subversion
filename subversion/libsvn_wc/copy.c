@@ -38,6 +38,7 @@
 #include "workqueue.h"
 #include "props.h"
 #include "conflicts.h"
+#include "textbase.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
@@ -138,11 +139,20 @@ copy_to_tmpdir(svn_skel_t **work_item,
 
       if (!modified)
         {
-          /* Why create a temp copy if we can just reinstall from pristine? */
-          SVN_ERR(svn_wc__wq_build_file_install(work_item,
-                                                db, dst_abspath, NULL, FALSE,
-                                                TRUE,
+          const char *install_from;
+          svn_skel_t *cleanup_work_item;
+
+          SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                               &cleanup_work_item,
+                                               db, src_abspath, NULL,
+                                               cancel_func, cancel_baton,
+                                               result_pool, scratch_pool));
+          SVN_ERR(svn_wc__wq_build_file_install(work_item, db, dst_abspath,
+                                                install_from, FALSE, TRUE,
                                                 result_pool, scratch_pool));
+          *work_item = svn_wc__wq_merge(*work_item, cleanup_work_item,
+                                        result_pool);
+
           return SVN_NO_ERROR;
         }
     }

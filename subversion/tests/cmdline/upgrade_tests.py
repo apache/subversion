@@ -116,14 +116,14 @@ def check_formats(sbox, expected_formats):
     raise svntest.Failure("found format '%s'; expected '%s'; in wc '%s'" %
                           (formats, expected_formats, sbox.wc_dir))
 
-
 def check_pristine(sbox, files):
   for file in files:
     file_path = sbox.ospath(file)
-    file_text = open(file_path, 'r').read()
-    file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
-    if (file_text != file_pristine):
-      raise svntest.Failure("pristine mismatch for '%s'" % (file))
+    if svntest.actions.get_wc_store_pristine(file_path):
+      file_text = open(file_path, 'r').read()
+      file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
+      if (file_text != file_pristine):
+        raise svntest.Failure("pristine mismatch for '%s'" % (file))
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
@@ -140,9 +140,8 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   minor = sqlite_ver[1]
   patch = sqlite_ver[2]
 
-  if major < 3 or (major == 3 and minor < 6) \
-     or (major == 3 and minor == 6 and patch < 18):
-       return # We need a newer SQLite
+  if major < 3 or (major == 3 and minor < 9):
+    return # We need a newer SQLite
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
     # NODES conversion is complete enough that we can use it if it exists

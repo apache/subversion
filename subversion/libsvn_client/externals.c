@@ -413,6 +413,7 @@ switch_dir_external(const char *local_abspath,
                                         revision, svn_depth_infinity,
                                         FALSE, FALSE,
                                         NULL, /* default WC format */
+                                        svn_tristate_unknown,
                                         ra_session,
                                         ctx, pool));
 

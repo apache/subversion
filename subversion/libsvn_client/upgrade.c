@@ -93,12 +93,14 @@ static svn_error_t *
 upgrade_externals_from_properties(svn_client_ctx_t *ctx,
                                   const char *local_abspath,
                                   int wc_format,
+                                  svn_boolean_t store_pristine,
                                   struct repos_info_baton *info_baton,
                                   apr_pool_t *scratch_pool);
 
 static svn_error_t *
 upgrade_internal(const char *path,
                  int wc_format,
+                 svn_boolean_t store_pristine,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
 {
@@ -116,7 +118,8 @@ upgrade_internal(const char *path,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(svn_wc__upgrade(ctx->wc_ctx, local_abspath, wc_format,
+  SVN_ERR(svn_wc__upgrade(ctx->wc_ctx, local_abspath,
+                          wc_format, store_pristine,
                           fetch_repos_info, &info_baton,
                           ctx->cancel_func, ctx->cancel_baton,
                           ctx->notify_func2, ctx->notify_baton2,
@@ -155,7 +158,8 @@ upgrade_internal(const char *path,
           if (kind == svn_node_dir)
             {
               svn_error_t *err = upgrade_internal(ext_abspath, wc_format,
-                                                  ctx, iterpool);
+                                                  store_pristine, ctx,
+                                                  iterpool);
 
               if (err)
                 {
@@ -179,9 +183,14 @@ upgrade_internal(const char *path,
       /* Upgrading from <= 1.6, or no svn:properties defined.
          (There is no way to detect the difference from libsvn_client :( ) */
 
-      SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath, wc_format,
+      SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath,
+                                                wc_format, store_pristine,
                                                 &info_baton, scratch_pool));
     }
+
+  SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                    NULL, scratch_pool, scratch_pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -196,7 +205,7 @@ svn_client_upgrade2(const char *path,
   SVN_ERR(svn_wc__format_from_version(&wc_format,
                                       wc_format_version,
                                       scratch_pool));
-  SVN_ERR(upgrade_internal(path, wc_format, ctx, scratch_pool));
+  SVN_ERR(upgrade_internal(path, wc_format, TRUE, ctx, scratch_pool));
   return SVN_NO_ERROR;
 }
 
@@ -265,10 +274,21 @@ svn_client_latest_wc_version(apr_pool_t *result_pool)
   return &version;
 }
 
+const svn_version_t *
+svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool)
+{
+  /* NOTE: For consistency, always return the version of the client
+     that first introduced the format. */
+  static const svn_version_t version = { 1, 15, 0, NULL };
+  return &version;
+}
+
 /* Helper for upgrade_externals_from_properties: upgrades one external ITEM
    in EXTERNALS_PARENT. Uses SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-upgrade_external_item(svn_client_ctx_t *ctx, int wc_format,
+upgrade_external_item(svn_client_ctx_t *ctx,
+                      int wc_format,
+                      svn_boolean_t store_pristine,
                       const char *externals_parent_abspath,
                       const char *externals_parent_url,
                       const char *externals_parent_repos_root_url,
@@ -311,7 +331,8 @@ upgrade_external_item(svn_client_ctx_t *ctx, int wc_format,
     {
       svn_error_clear(err);
 
-      SVN_ERR(upgrade_internal(external_abspath, wc_format, ctx, scratch_pool));
+      SVN_ERR(upgrade_internal(external_abspath, wc_format, store_pristine,
+                               ctx, scratch_pool));
     }
   else if (err)
     return svn_error_trace(err);
@@ -385,6 +406,7 @@ static svn_error_t *
 upgrade_externals_from_properties(svn_client_ctx_t *ctx,
                                   const char *local_abspath,
                                   int wc_format,
+                                  svn_boolean_t store_pristine,
                                   struct repos_info_baton *info_baton,
                                   apr_pool_t *scratch_pool)
 {
@@ -473,7 +495,7 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
           item = APR_ARRAY_IDX(externals_p, i, svn_wc_external_item2_t*);
 
           svn_pool_clear(inner_iterpool);
-          err = upgrade_external_item(ctx, wc_format,
+          err = upgrade_external_item(ctx, wc_format, store_pristine,
                                       externals_parent_abspath,
                                       externals_parent_url,
                                       externals_parent_repos_root_url,

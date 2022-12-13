@@ -576,6 +576,22 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 41,
              "Duplicate targets in svn:externals property")
 
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_INCOMPATIBLE_SETTINGS,
+             SVN_ERR_WC_CATEGORY_START + 42,
+             "Incompatible working copy settings")
+
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
+             SVN_ERR_WC_CATEGORY_START + 43,
+             "This client uses a deprecated API that does not support "
+             "working copies without local pristines")
+
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_PRISTINE_DEHYDRATED,
+             SVN_ERR_WC_CATEGORY_START + 44,
+             "No local pristine contents for a file")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,

@@ -276,6 +276,7 @@ typedef struct svn_cl__opt_state_t
       svn_cl__viewspec_svn11
   } viewspec;                     /* value of --x-viewspec */
   svn_version_t *compatible_version; /* working copy compatibility version */
+  svn_boolean_t store_pristine;
 } svn_cl__opt_state_t;
 
 /* Conflict stats for operations such as update and merge. */
@@ -376,6 +377,7 @@ typedef enum svn_cl__longopt_t {
   opt_drop,
   opt_viewspec,
   opt_compatible_version,
+  opt_store_pristine
 } svn_cl__longopt_t;
 
 /* Options for giving a log message.  (Some of these also have other uses.)
@@ -708,6 +710,11 @@ svn_cl__notifier_mark_export(void *baton);
  */
 svn_error_t *
 svn_cl__notifier_mark_wc_to_repos_copy(void *baton);
+
+/* Make the notifier for use with BATON suppress progress notifications
+ */
+svn_error_t *
+svn_cl__notifier_suppress_progress_output(void *baton);
 
 /* Baton for use with svn_cl__check_externals_failed_notify_wrapper(). */
 struct svn_cl__check_externals_failed_notify_baton

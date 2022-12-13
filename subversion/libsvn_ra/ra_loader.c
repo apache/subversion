@@ -1369,6 +1369,18 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
 }
 
 svn_error_t *
+svn_ra_fetch_file_contents(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t revision,
+                           svn_stream_t *stream,
+                           apr_pool_t *scratch_pool)
+{
+  SVN_ERR_ASSERT(svn_relpath_is_canonical(path));
+  return session->vtable->fetch_file_contents(session, path, revision, stream,
+                                              scratch_pool);
+}
+
+svn_error_t *
 svn_ra__get_commit_ev2(svn_editor_t **editor,
                        svn_ra_session_t *session,
                        apr_hash_t *revprop_table,

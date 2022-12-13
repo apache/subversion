@@ -85,7 +85,7 @@ svn_client__get_normalized_stream(svn_stream_t **normal_stream,
 
   if (revision->kind != svn_opt_revision_working)
     {
-      SVN_ERR(svn_wc_get_pristine_contents2(&input, wc_ctx, local_abspath,
+      SVN_ERR(svn_wc_get_pristine_contents3(&input, wc_ctx, local_abspath,
                                             result_pool, scratch_pool));
       if (input == NULL)
         return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
@@ -216,6 +216,11 @@ svn_client_cat3(apr_hash_t **returned_props,
 
       SVN_ERR(svn_dirent_get_absolute(&local_abspath, path_or_url,
                                       scratch_pool));
+
+      /* This will open the RA session internally if needed. */
+      SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, TRUE, TRUE, ctx,
+                                        NULL, scratch_pool, scratch_pool));
+
       SVN_ERR(svn_client__get_normalized_stream(&normal_stream, ctx->wc_ctx,
                                             local_abspath, revision,
                                             expand_keywords, FALSE,
@@ -229,9 +234,14 @@ svn_client_cat3(apr_hash_t **returned_props,
         SVN_ERR(svn_wc_prop_list2(returned_props, ctx->wc_ctx, local_abspath,
                                   result_pool, scratch_pool));
 
-      return svn_error_trace(svn_stream_copy3(normal_stream, output,
-                                              ctx->cancel_func,
-                                              ctx->cancel_baton, scratch_pool));
+      SVN_ERR(svn_stream_copy3(normal_stream, output,
+                               ctx->cancel_func,
+                               ctx->cancel_baton, scratch_pool));
+
+      SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
+                                        NULL, scratch_pool, scratch_pool));
+
+      return SVN_NO_ERROR;
     }
 
   /* Get an RA plugin for this filesystem object. */

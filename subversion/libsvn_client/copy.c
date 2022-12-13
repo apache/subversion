@@ -2488,6 +2488,7 @@ svn_client__repos_to_wc_copy_dir(svn_boolean_t *timestamp_sleep,
                                         TRUE /*ignore_externals*/,
                                         FALSE, /* we don't allow obstructions */
                                         NULL, /* default WC format */
+                                        svn_tristate_unknown,
                                         ra_session, ctx, scratch_pool);
 
     ctx->notify_func2 = old_notify_func2;

@@ -377,6 +377,10 @@ def basic_commit_corruption(sbox):
   mu_path = sbox.ospath('A/mu')
   svntest.main.file_append(mu_path, 'appended mu text')
 
+  # We are about to manually edit mu's text-base, so run "diff" to
+  # guarantee that the text-base is available in all pristine modes.
+  svntest.actions.run_and_verify_svn(None, [], 'diff', mu_path)
+
   # Created expected output tree for 'svn ci'
   expected_output = wc.State(wc_dir, {
     'A/mu' : Item(verb='Sending'),
@@ -443,6 +447,12 @@ def basic_update_corruption(sbox):
 
   svntest.actions.run_and_verify_svn(None, [],
                                      'co', sbox.repo_url, other_wc)
+
+  # The test manually edits mu's text-base when mu is unmodified.
+  # Unmodified files don't have their text-bases available with
+  # --store-pristine=no, so skip if that is the case.
+  if not svntest.actions.get_wc_store_pristine(other_wc):
+    raise svntest.Skip('Test assumes a working copy with pristine')
 
   # Make a local mod to mu
   mu_path = sbox.ospath('A/mu')
@@ -2544,6 +2554,9 @@ def basic_auth_test(sbox):
   if svntest.main.options.wc_format_version:
     common_opts += ('--compatible-version',
                     svntest.main.options.wc_format_version)
+  if svntest.main.options.store_pristine:
+    common_opts += ('--store-pristine',
+                    svntest.main.options.store_pristine)
 
   # Checkout with jrandom
   exit_code, output, errput = svntest.main.run_command(

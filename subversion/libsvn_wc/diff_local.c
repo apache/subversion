@@ -547,7 +547,7 @@ svn_wc__diff7(svn_boolean_t anchor_at_given_paths,
 }
 
 svn_error_t *
-svn_wc_diff6(svn_wc_context_t *wc_ctx,
+svn_wc_diff7(svn_wc_context_t *wc_ctx,
              const char *local_abspath,
              const svn_wc_diff_callbacks4_t *callbacks,
              void *callback_baton,

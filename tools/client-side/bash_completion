@@ -882,7 +882,7 @@ _svn()
 		;;
 	checkout|co)
 		cmdOpts="$rOpts $qOpts $nOpts $pOpts --ignore-externals \
-                         --force"
+                         --force --store-pristine"
 		;;
 	cleanup)
 		cmdOpts="$pOpts --include-externals -q --quiet\

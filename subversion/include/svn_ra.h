@@ -2164,6 +2164,29 @@ svn_ra_get_inherited_props(svn_ra_session_t *session,
                            apr_pool_t *scratch_pool);
 
 /**
+ * Fetch the contents of file @a path at @a revision.  Interpret @a path
+ * relative to the URL in @a session.  @a revision must be a valid revision
+ * number.  Use @a scratch_pool for scratch allocations.
+ *
+ * The contents of the file will be pushed to @a stream, and the stream will
+ * be closed when finished.  If the closure is not desired, then you can use
+ * svn_stream_disown() to protect the stream from being closed.  The stream
+ * handlers for @a stream may not perform any RA operations using @a session.
+ *
+ * The contents may be expected to be fetched directly from the remote
+ * endpoint, rather from any local caches such as the one provided by
+ * #svn_ra_get_wc_contents_func_t.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_ra_fetch_file_contents(svn_ra_session_t *session,
+                           const char *path,
+                           svn_revnum_t revision,
+                           svn_stream_t *stream,
+                           apr_pool_t *scratch_pool);
+
+/**
  * @defgroup Capabilities Dynamically query the server's capabilities.
  *
  * @{

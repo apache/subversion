@@ -393,9 +393,16 @@ def keywords_from_birth(sbox):
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
     ]
 
-  fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
-  actual_textbase_kw = fp.readlines()
-  fp.close()
+  # Read the text base, either from a locally stored file or from the repo.
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
+    actual_textbase_kw = fp.readlines()
+    fp.close()
+  else:
+    _, actual_textbase_kw, _ = svntest.main.run_svn(False,
+                                 'cat', '-rHEAD', '--ignore-keywords',
+                                 fixed_length_keywords_path)
+
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
 
   # Check the Id keyword for filename with spaces.
@@ -597,10 +604,11 @@ def eol_change_is_text_mod(sbox):
     if contents != b"1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
 
-  foo_base_path = svntest.wc.text_base_path(foo_path)
-  base_contents = open(foo_base_path, 'rb').read()
-  if contents != base_contents:
-    raise svntest.Failure
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    foo_base_path = svntest.wc.text_base_path(foo_path)
+    base_contents = open(foo_base_path, 'rb').read()
+    if contents != base_contents:
+      raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Regression test for issue #1151.  A single file in a directory

@@ -107,6 +107,10 @@ typedef struct svn_wc__db_wcroot_t {
      const char *local_abspath -> svn_wc_adm_access_t *adm_access */
   apr_hash_t *access_cache;
 
+  /* Whether to store the pristine contents of all files on disk or
+     to fetch the contents on demand. */
+  svn_boolean_t store_pristine;
+
 } svn_wc__db_wcroot_t;
 
 
@@ -126,6 +130,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
+                             svn_boolean_t store_pristine,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -560,5 +565,24 @@ svn_wc__db_verify_db_full_internal(svn_wc__db_wcroot_t *wcroot,
                                    svn_wc__db_verify_cb_t callback,
                                    void *baton,
                                    apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_pristine_prepare_install() but taking WCROOT instead
+   of DB+WRI_ABSPATH. */
+svn_error_t *
+svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
+                                             svn_wc__db_install_data_t **install_data_p,
+                                             svn_checksum_t **sha1_checksum_p,
+                                             svn_checksum_t **md5_checksum_p,
+                                             svn_wc__db_wcroot_t *wcroot,
+                                             svn_boolean_t hydrated,
+                                             apr_pool_t *result_pool,
+                                             apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_pristine_dehydrate() but taking WCROOT instead
+   of DB+WRI_ABSPATH. */
+svn_error_t *
+svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
+                                       const svn_checksum_t *sha1_checksum,
+                                       apr_pool_t *scratch_pool);
 
 #endif /* WC_DB_PRIVATE_H */

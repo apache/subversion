@@ -162,11 +162,10 @@ extern "C" {
  * == 1.10.x shipped with format 31
  * == 1.11.x shipped with format 31
  *
- * The bump to 32 is a no-op, used for testing the multi-wc-format branch.
- * Downgrading from format 32 to format 31 is just a matter of running
- * "PRAGMA user_version = 31;".
+ * The bump to 32 adds support for optional pristine contents; see the docstring
+ * of STMT_UPGRADE_TO_32 for details.
  *
- * == 1.15.x shipped with format 32
+ * == 1.15.x shipped with format 32 and multi-wc-format support
  *
  * Please document any further format changes here.
  */
@@ -219,6 +218,13 @@ extern "C" {
 /* While we still have this DB version we should verify if there is
    sqlite_stat1 table on opening */
 #define SVN_WC__ENSURE_STAT1_TABLE 31
+
+/* Starting from this version, pristine content is optional and can be
+ * fetched on demand.  */
+#define SVN_WC__HAS_OPTIONAL_PRISTINE 32
+
+/* Starting from this version, the DB stores per-WC settings. */
+#define SVN_WC__HAS_SETTINGS 32
 
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other
@@ -418,7 +424,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
    Property changes sent by the update are provided in PROP_DIFF.
 
-   For a complete description, see svn_wc_merge5() for which this is
+   For a complete description, see svn_wc_merge6() for which this is
    the (loggy) implementation.
 
    *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
@@ -504,7 +510,7 @@ svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
                                 apr_pool_t *scratch_pool);
 
 
-/* Internal version of svn_wc_transmit_text_deltas3(). */
+/* Internal version of svn_wc_transmit_text_deltas4(). */
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
@@ -535,6 +541,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
+                            svn_boolean_t store_pristine,
                             apr_pool_t *scratch_pool);
 
 

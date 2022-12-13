@@ -106,13 +106,23 @@ static const int slow_statements[] =
   STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND,
   STMT_SELECT_COPIES_OF_REPOS_RELPATH,
 
-  /* Designed as slow to avoid penalty on other queries */
-  STMT_SELECT_UNREFERENCED_PRISTINES,
-
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
   STMT_HAVE_STAT1_TABLE, /* Queries sqlite_master which has no index */
+
+  /* Currently uses a temporary B-tree for GROUP BY */
+  STMT_TEXTBASE_SYNC,
+
+  -1 /* final marker */
+};
+
+/* These statements are slow in WC format 31, but not in latest format. */
+static const int slow_statements_f31[] =
+{
+  /* Format 31: "designed as slow to avoid penalty on other queries"
+   * Format 32: now indexed. */
+  STMT_SELECT_UNREFERENCED_PRISTINES,
 
   -1 /* final marker */
 };
@@ -145,7 +155,9 @@ in_list(const int list[], int stmt_idx)
 }
 
 /* Helpers to determine if a statement is in a common list */
-#define is_slow_statement(stmt_idx) in_list(slow_statements, stmt_idx)
+#define is_slow_statement(stmt_idx, wc_format) \
+    (in_list(slow_statements, stmt_idx) \
+     || (wc_format == 31 && in_list(slow_statements_f31, stmt_idx)))
 #define is_schema_statement(stmt_idx) \
     ((stmt_idx >= STMT_SCHEMA_FIRST) || in_list(schema_statements, stmt_idx))
 
@@ -216,6 +228,40 @@ test_sqlite_version(apr_pool_t *scratch_pool)
 #endif
 }
 
+/* Return TRUE iff statement STMT_NUM is valid in the schema for
+ * WC format FORMAT. */
+static svn_boolean_t
+stmt_matches_wc_format(int stmt_num,
+                       const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  int wc_format = -1;
+
+  svn_error_clear(svn_wc__format_from_version(
+                    &wc_format, opts->wc_format_version, pool));
+  switch (stmt_num)
+    {
+    case STMT_INSERT_OR_IGNORE_PRISTINE_F31:
+    case STMT_UPSERT_PRISTINE_F31:
+    case STMT_SELECT_PRISTINE_F31:
+    case STMT_SELECT_COPY_PRISTINES_F31:
+      return (wc_format <= 31);
+    case STMT_INSERT_OR_IGNORE_PRISTINE_F32:
+    case STMT_UPSERT_PRISTINE_F32:
+    case STMT_SELECT_PRISTINE_F32:
+    case STMT_SELECT_COPY_PRISTINES_F32:
+    case STMT_UPDATE_PRISTINE_HYDRATED:
+    case STMT_TEXTBASE_ADD_REF:
+    case STMT_TEXTBASE_REMOVE_REF:
+    case STMT_TEXTBASE_WALK:
+    case STMT_TEXTBASE_SYNC:
+    case STMT_SELECT_SETTINGS:
+    case STMT_UPSERT_SETTINGS:
+      return (wc_format >= 32);
+    }
+  return TRUE;
+}
+
 /* Parse all normal queries */
 static svn_error_t *
 test_parsable(const svn_test_opts_t *opts,
@@ -232,6 +278,9 @@ test_parsable(const svn_test_opts_t *opts,
       const char *text = wc_queries[i];
 
       if (is_schema_statement(i))
+        continue;
+
+      if (!stmt_matches_wc_format(i, opts, scratch_pool))
         continue;
 
       /* Some of our statement texts contain multiple queries. We prepare
@@ -651,6 +700,10 @@ test_query_expectations(const svn_test_opts_t *opts,
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_error_t *warnings = NULL;
   svn_boolean_t supports_query_info;
+  int wc_format;
+
+  SVN_ERR(svn_wc__format_from_version(&wc_format, opts->wc_format_version,
+                                      scratch_pool));
 
   SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
@@ -672,6 +725,9 @@ test_query_expectations(const svn_test_opts_t *opts,
       apr_array_header_t *rows = NULL;
 
       if (is_schema_statement(i))
+        continue;
+
+      if (!stmt_matches_wc_format(i, opts, scratch_pool))
         continue;
 
       /* Prepare statement to find if it is a single statement. */
@@ -734,7 +790,7 @@ test_query_expectations(const svn_test_opts_t *opts,
               && item->automatic_index)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 {
                   warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
@@ -761,7 +817,7 @@ test_query_expectations(const svn_test_opts_t *opts,
                      statements is not our concern here. */
 
                   /* "Slow" statements do expect to see a warning, however. */
-                  if (is_slow_statement(i))
+                  if (is_slow_statement(i, wc_format))
                     warned = TRUE;
                 }
               else if (in_list(primary_key_statements, i))
@@ -770,7 +826,7 @@ test_query_expectations(const svn_test_opts_t *opts,
                      as table scan in 3.8+, while the execution plan is
                      identical: read first record from table */
                 }
-              else if (!is_slow_statement(i))
+              else if (!is_slow_statement(i, wc_format))
                 {
                   warned = TRUE;
                   warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
@@ -786,7 +842,7 @@ test_query_expectations(const svn_test_opts_t *opts,
           else if (item->search && !item->index)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
                                 "Query on %s doesn't use an index:\n%s",
@@ -795,7 +851,7 @@ test_query_expectations(const svn_test_opts_t *opts,
           else if (item->scan && !is_result_table(item->table))
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "Query %s: "
                                 "Performs scan on %s:\n%s",
@@ -804,7 +860,7 @@ test_query_expectations(const svn_test_opts_t *opts,
           else if (item->create_btree)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "Query %s: Creates a temporary B-TREE:\n%s",
                                 wc_query_info[i][0], wc_queries[i]);
@@ -813,13 +869,13 @@ test_query_expectations(const svn_test_opts_t *opts,
       SQLITE_ERR(sqlite3_reset(stmt));
       SQLITE_ERR(sqlite3_finalize(stmt));
 
-      if (!warned && is_slow_statement(i))
+      if (!warned && is_slow_statement(i, wc_format))
         {
           printf("DBG: Expected %s to be reported as slow, but it wasn't\n",
                  wc_query_info[i][0]);
         }
 
-      if (rows && warned != is_slow_statement(i))
+      if (rows && warned != is_slow_statement(i, wc_format))
         {
           int w;
           svn_error_t *info = NULL;

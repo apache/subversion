@@ -800,6 +800,18 @@ def copy_trust(dst_cfgdir, src_cfgdir):
   for f in os.listdir(src_ssl_dir):
     shutil.copy(os.path.join(src_ssl_dir, f), os.path.join(dst_ssl_dir, f))
 
+def _with_store_pristine(args):
+  if '--store-pristine' in args \
+      or any(str(one_arg).startswith('--store-pristine=') for one_arg in args) \
+      or options.store_pristine is None:
+    return args
+  non_opt_args = [a for a in args if not str(a).startswith('-')]
+  if non_opt_args:
+    subcommand = non_opt_args[0]
+    if subcommand in ['co', 'checkout']:
+      return args + ('--store-pristine', options.store_pristine)
+  return args
+
 def _with_wc_format_version(args):
   if '--compatible-version' in args \
       or any(str(one_arg).startswith('--compatible-version=') for one_arg in args) \
@@ -847,7 +859,8 @@ def run_svn(error_expected, *varargs):
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
   return run_command(svn_binary, error_expected, False,
-                     *(_with_wc_format_version(_with_auth(_with_config_dir(varargs)))))
+                     *(_with_store_pristine(_with_wc_format_version(
+                       _with_auth(_with_config_dir(varargs))))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -1765,6 +1778,11 @@ def wc_format(ver=None):
     return 31
   raise Exception("Unrecognized version number '%s'" % (ver,))
 
+def wc_supports_optional_pristine():
+  if options.wc_format_version is None:
+    return True
+  else:
+    return wc_format(options.wc_format_version) >= 32
 
 ######################################################################
 
@@ -1852,6 +1870,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--allow-remote-http-connection')
     if options.svn_bin:
       args.append('--bin=' + options.svn_bin)
+    if options.store_pristine:
+      args.append('--store-pristine=' + options.store_pristine)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2291,6 +2311,8 @@ def _create_parser(usage=None):
                     help='Set directory deltification option (for fsfs)')
   parser.add_option('--allow-remote-http-connection', action='store_true',
                     help='Run tests that connect to remote HTTP(S) servers')
+  parser.add_option('--store-pristine', action='store', type='str',
+                    help='Set the WC pristine mode')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
