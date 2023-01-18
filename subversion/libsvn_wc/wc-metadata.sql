@@ -784,6 +784,9 @@ CREATE TABLE SETTINGS (
   store_pristine  INTEGER
 );
 
+/* Migrate existing working copy settings. */
+INSERT OR IGNORE INTO SETTINGS SELECT id, 1 FROM WCROOT;
+
 PRAGMA user_version = 32;
 
 /* ------------------------------------------------------------------------- */

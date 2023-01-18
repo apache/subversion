@@ -507,18 +507,14 @@ read_settings(svn_boolean_t *store_pristine_p,
   if (format >= SVN_WC__HAS_SETTINGS)
     {
       svn_sqlite__stmt_t *stmt;
-      svn_boolean_t have_row;
 
       SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_SETTINGS));
       SVN_ERR(svn_sqlite__bindf(stmt, "i", wc_id));
-      SVN_ERR(svn_sqlite__step(&have_row, stmt));
+      SVN_ERR(svn_sqlite__step_row(stmt));
 
-      if (have_row)
-        *store_pristine_p = svn_sqlite__column_boolean(stmt, 0);
-      else
-        *store_pristine_p = TRUE;
+      *store_pristine_p = svn_sqlite__column_boolean(stmt, 0);
 
-      SVN_ERR(svn_sqlite__reset(stmt));
+      SVN_ERR(svn_sqlite__step_done(stmt));
     }
   else
     {
