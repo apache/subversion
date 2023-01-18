@@ -718,19 +718,6 @@ WHERE l.op_depth = 0
 /* True iff the pristine contents are currently available on disk. */
 ALTER TABLE PRISTINE ADD COLUMN hydrated INTEGER NOT NULL DEFAULT 1;
 
-  /* Note: we use checksums to detect if the file contents have been modified
-     in textbase.c and in the svn_wc__internal_file_modified_p() function.
-
-     The new working copy format SHOULD incorporate a switch to a different
-     checksum type without known collisions.
-
-     For the updated pristine table schema, we MAY want to add a new column
-     containing a checksum of the first 8KB of the file to allow saying that
-     the file is modified without reading all its content.  That could speed
-     up the check for large modified files whose size did not change, for
-     example if they are allocated in certain extents.
-   */
-
 CREATE INDEX I_PRISTINE_UNREFERENCED ON PRISTINE (refcount, refcount=0);
 
 /* This table contains references to the on disk text-base contents.
@@ -791,6 +778,19 @@ PRAGMA user_version = 32;
 
 /* ------------------------------------------------------------------------- */
 /* Format 33 ....  */
+
+/* Note: we use checksums to detect if the file contents have been modified
+   in textbase.c and in the svn_wc__internal_file_modified_p() function.
+
+   The new working copy format SHOULD incorporate a switch to a different
+   checksum type without known collisions.
+
+   For the updated pristine table schema, we MAY want to add a new column
+   containing a checksum of the first 8KB of the file to allow saying that
+   the file is modified without reading all its content.  That could speed
+   up the check for large modified files whose size did not change, for
+   example if they are allocated in certain extents. */
+
 /* -- STMT_UPGRADE_TO_33
 PRAGMA user_version = 33; */
 
