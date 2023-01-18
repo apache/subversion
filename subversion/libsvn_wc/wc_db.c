@@ -1409,7 +1409,7 @@ init_db(/* output values */
                                 *wc_id,              /* 1 */
                                 "",                  /* 2 */
                                 0,                   /* op_depth is 0 for base */
-                                SVN_VA_NULL,         /* 4 */
+                                NULL,                /* 4 */
                                 *repos_id,
                                 root_node_repos_relpath,
                                 root_node_revision,
