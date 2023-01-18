@@ -5179,7 +5179,7 @@ svn_wc_upgrade(svn_wc_context_t *wc_ctx,
                void *notify_baton,
                apr_pool_t *scratch_pool)
 {
-  return svn_wc__upgrade(wc_ctx, local_abspath, SVN_WC__DEFAULT_VERSION, TRUE,
+  return svn_wc__upgrade(wc_ctx, local_abspath, SVN_WC__DEFAULT_VERSION,
                          repos_info_func, repos_info_baton,
                          cancel_func, cancel_baton,
                          notify_func, notify_baton,

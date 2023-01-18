@@ -2287,9 +2287,8 @@ svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
 
 /**
  * Upgrade the working copy at @a local_abspath to the metadata storage
- * format indicated by @a target_format.  Use the @a store_pristine
- * settings value for the upgraded working copy.  @a local_abspath
- * should be an absolute path to the root of the working copy.
+ * format indicated by @a target_format.  @a local_abspath should be
+ * an absolute path to the root of the working copy.
  *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
@@ -2310,7 +2309,6 @@ svn_error_t *
 svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
                 int target_format,
-                svn_boolean_t store_pristine,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
                 void *repos_info_baton,
                 svn_cancel_func_t cancel_func,
