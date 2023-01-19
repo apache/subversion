@@ -227,7 +227,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
                          svn_boolean_t keep_changelists,
                          svn_boolean_t keep_locks,
                          svn_boolean_t commit_as_operations,
-                         const svn_checksum_t *sha1_checksum,
+                         const svn_checksum_t *checksum,
                          apr_pool_t *scratch_pool)
 {
   svn_boolean_t loop_recurse = FALSE;
@@ -261,7 +261,7 @@ post_process_commit_item(svn_wc_committed_queue_t *queue,
                                         | SVN_CLIENT_COMMIT_ITEM_PROP_MODS)),
                                  item->incoming_prop_changes,
                                  remove_lock, !keep_changelists,
-                                 sha1_checksum, scratch_pool));
+                                 checksum, scratch_pool));
 }
 
 /* Given a list of committables described by their common base abspath
@@ -616,7 +616,7 @@ svn_client__wc_replay(const char *src_wc_abspath,
   /* BASE_URL is only used here in notifications & errors */
   SVN_ERR(svn_client__do_commit(base_url, commit_items,
                                 editor, edit_baton,
-                                NULL /*notify_prefix*/, NULL /*sha1_checksums*/,
+                                NULL /*notify_prefix*/, NULL /*checksums*/,
                                 ctx, pool, pool));
   ctx->notify_func2 = saved_notify_func;
   ctx->notify_baton2 = saved_notify_baton;
@@ -650,7 +650,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   apr_array_header_t *locks_obtained;
   apr_hash_t *committables_by_path;
   apr_hash_t *lock_tokens;
-  apr_hash_t *sha1_checksums;
+  apr_hash_t *checksums;
   apr_array_header_t *commit_items;
   svn_error_t *cmt_err = SVN_NO_ERROR;
   svn_error_t *bump_err = SVN_NO_ERROR;
@@ -999,7 +999,7 @@ svn_client_commit6(const apr_array_header_t *targets,
   /* Perform the commit. */
   cmt_err = svn_error_trace(
               svn_client__do_commit(base_url, commit_items, editor, edit_baton,
-                                    notify_prefix, &sha1_checksums, ctx, pool,
+                                    notify_prefix, &checksums, ctx, pool,
                                     iterpool));
 
   /* Handle a successful commit. */
@@ -1020,7 +1020,7 @@ svn_client_commit6(const apr_array_header_t *targets,
           bump_err = post_process_commit_item(
                        queue, item, ctx->wc_ctx,
                        keep_changelists, keep_locks, commit_as_operations,
-                       svn_hash_gets(sha1_checksums, item->path),
+                       svn_hash_gets(checksums, item->path),
                        iterpool);
           if (bump_err)
             goto cleanup;

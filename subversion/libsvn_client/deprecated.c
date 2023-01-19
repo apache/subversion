@@ -2890,11 +2890,11 @@ info_from_info2(svn_info_t **new_info,
     {
       const svn_checksum_t *md5_checksum;
 
-      SVN_ERR(svn_wc__node_get_md5_from_sha1(&md5_checksum,
-                                             wc_ctx,
-                                             info2->wc_info->wcroot_abspath,
-                                             info2->wc_info->checksum,
-                                             pool, pool));
+      SVN_ERR(svn_wc__node_get_md5(&md5_checksum,
+                                   wc_ctx,
+                                   info2->wc_info->wcroot_abspath,
+                                   info2->wc_info->checksum,
+                                   pool, pool));
 
       info->checksum = svn_checksum_to_cstring(md5_checksum, pool);
     }

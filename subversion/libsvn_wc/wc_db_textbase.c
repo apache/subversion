@@ -173,13 +173,13 @@ textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
 {
   svn_stream_t *install_stream;
   svn_wc__db_install_data_t *install_data;
-  svn_checksum_t *install_sha1_checksum;
+  svn_checksum_t *install_checksum;
   svn_checksum_t *install_md5_checksum;
   svn_error_t *err;
 
   SVN_ERR(svn_wc__db_pristine_prepare_install_internal(
             &install_stream, &install_data,
-            &install_sha1_checksum, &install_md5_checksum,
+            &install_checksum, &install_md5_checksum,
             wcroot, TRUE, scratch_pool, scratch_pool));
 
   err = fetch_callback(fetch_baton, repos_root_url,
@@ -191,10 +191,10 @@ textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
     return svn_error_compose_create(err,
              svn_wc__db_pristine_install_abort(install_data, scratch_pool));
 
-  if (!svn_checksum_match(checksum, install_sha1_checksum))
+  if (!svn_checksum_match(checksum, install_checksum))
     {
       err = svn_checksum_mismatch_err(
-              checksum, install_sha1_checksum, scratch_pool,
+              checksum, install_checksum, scratch_pool,
               _("Checksum mismatch while fetching text base"));
 
       return svn_error_compose_create(err,
@@ -202,7 +202,7 @@ textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
     }
 
   err = svn_wc__db_pristine_install(install_data,
-                                    install_sha1_checksum,
+                                    install_checksum,
                                     install_md5_checksum,
                                     scratch_pool);
   if (err)

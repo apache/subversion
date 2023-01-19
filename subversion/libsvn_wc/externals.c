@@ -491,7 +491,7 @@ struct edit_baton
 
   /* What we are installing now */
   svn_wc__db_install_data_t *install_data;
-  svn_checksum_t *new_sha1_checksum;
+  svn_checksum_t *new_checksum;
   svn_checksum_t *new_md5_checksum;
 
   /* List of incoming propchanges */
@@ -642,7 +642,7 @@ apply_textdelta(void *file_baton,
 
   SVN_ERR(svn_wc__textbase_prepare_install(&dest_stream,
                                            &eb->install_data,
-                                           &eb->new_sha1_checksum,
+                                           &eb->new_checksum,
                                            &eb->new_md5_checksum,
                                            eb->db, eb->local_abspath,
                                            TRUE,
@@ -717,10 +717,10 @@ close_file(void *file_baton,
 
   /* First move the file in the pristine store; this hands over the cleanup
      behavior to the pristine store. */
-  if (eb->new_sha1_checksum)
+  if (eb->new_checksum)
     {
       SVN_ERR(svn_wc__db_pristine_install(eb->install_data,
-                                          eb->new_sha1_checksum,
+                                          eb->new_checksum,
                                           eb->new_md5_checksum, pool));
 
       eb->install_data = NULL;
@@ -759,8 +759,8 @@ close_file(void *file_baton,
     if (!actual_props)
       actual_props = apr_hash_make(pool);
 
-    if (eb->new_sha1_checksum)
-      new_checksum = eb->new_sha1_checksum;
+    if (eb->new_checksum)
+      new_checksum = eb->new_checksum;
 
     /* Merge the properties */
     {
@@ -824,7 +824,7 @@ close_file(void *file_baton,
     }
 
     /* Merge the text */
-    if (eb->new_sha1_checksum)
+    if (eb->new_checksum)
       {
         svn_node_kind_t disk_kind;
         svn_boolean_t install_pristine = FALSE;
@@ -897,7 +897,7 @@ close_file(void *file_baton,
 
             SVN_ERR(svn_wc__db_pristine_read(&contents, NULL, eb->db,
                                              eb->wri_abspath,
-                                             eb->new_sha1_checksum,
+                                             eb->new_checksum,
                                              pool, pool));
             if (!contents)
               return svn_error_create(SVN_ERR_WC_PRISTINE_DEHYDRATED,

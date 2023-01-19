@@ -910,9 +910,9 @@ svn_client__condense_commit_items2(const char *base_url,
    NOTIFY_PATH_PREFIX will be passed to CTX->notify_func2() as the
    common absolute path prefix of the committed paths.  It can be NULL.
 
-   If SHA1_CHECKSUMS is not NULL, set *SHA1_CHECKSUMS to a hash containing,
+   If CHECKSUMS is not NULL, set *CHECKSUMS to a hash containing,
    for each file transmitted, a mapping from the commit-item's (const
-   char *) path to the (const svn_checksum_t *) SHA1 checksum of its new text
+   char *) path to the (const svn_checksum_t *) checksum of its new text
    base.
 
    Use RESULT_POOL for all allocating the resulting hashes and SCRATCH_POOL
@@ -924,7 +924,7 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **sha1_checksums,
+                      apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool);

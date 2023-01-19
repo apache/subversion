@@ -446,7 +446,7 @@ svn_wc__textbase_setaside_wq(const char **result_abspath_p,
 svn_error_t *
 svn_wc__textbase_prepare_install(svn_stream_t **stream_p,
                                  svn_wc__db_install_data_t **install_data_p,
-                                 svn_checksum_t **sha1_checksum_p,
+                                 svn_checksum_t **checksum_p,
                                  svn_checksum_t **md5_checksum_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
@@ -455,7 +455,7 @@ svn_wc__textbase_prepare_install(svn_stream_t **stream_p,
                                  apr_pool_t *scratch_pool)
 {
   SVN_ERR(svn_wc__db_pristine_prepare_install(stream_p, install_data_p,
-                                              sha1_checksum_p,
+                                              checksum_p,
                                               md5_checksum_p,
                                               db, local_abspath, hydrated,
                                               result_pool, scratch_pool));

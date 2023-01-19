@@ -860,10 +860,10 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   if (md5_checksum != NULL)
     {
       svn_error_t *err;
-      err = svn_wc__db_pristine_get_sha1(&sha1_checksum, wc_ctx->db,
-                                         local_abspath, md5_checksum,
-                                         svn_wc__get_committed_queue_pool(queue),
-                                         scratch_pool);
+      err = svn_wc__db_pristine_lookup_by_md5(&sha1_checksum, wc_ctx->db,
+                                              local_abspath, md5_checksum,
+                                              svn_wc__get_committed_queue_pool(queue),
+                                              scratch_pool);
 
       /* Don't fail on SHA1 not found */
       if (err && err->apr_err == SVN_ERR_WC_DB_ERROR)
@@ -959,9 +959,9 @@ svn_wc_process_committed4(const char *path,
   if (md5_checksum != NULL)
     {
       svn_error_t *err;
-      err = svn_wc__db_pristine_get_sha1(&sha1_checksum, db,
-                                         local_abspath, md5_checksum,
-                                         pool, pool);
+      err = svn_wc__db_pristine_lookup_by_md5(&sha1_checksum, db,
+                                              local_abspath, md5_checksum,
+                                              pool, pool);
 
       if (err && err->apr_err == SVN_ERR_WC_DB_ERROR)
         {

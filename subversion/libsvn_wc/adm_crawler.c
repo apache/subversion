@@ -1063,7 +1063,7 @@ open_txdelta_stream(svn_txdelta_stream_t **txdelta_stream_p,
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
-                                      const svn_checksum_t **new_text_base_sha1_checksum,
+                                      const svn_checksum_t **new_text_base_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
@@ -1073,9 +1073,9 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       apr_pool_t *scratch_pool)
 {
   const svn_checksum_t *expected_md5_checksum;  /* recorded MD5 of BASE_S. */
-  svn_checksum_t *verify_checksum;  /* calc'd MD5 of BASE_STREAM */
+  svn_checksum_t *verify_md5_checksum;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
-  svn_checksum_t *local_sha1_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
+  svn_checksum_t *local_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
   svn_wc__db_install_data_t *install_data = NULL;
   svn_error_t *err;
   svn_error_t *err2;
@@ -1102,13 +1102,13 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
          is closed. */
       local_stream = copying_stream(local_stream, tempstream, scratch_pool);
     }
-  if (new_text_base_sha1_checksum)
+  if (new_text_base_checksum)
     {
       svn_stream_t *new_pristine_stream;
 
       SVN_ERR(svn_wc__textbase_prepare_install(&new_pristine_stream,
                                                &install_data,
-                                               &local_sha1_checksum, NULL,
+                                               &local_checksum, NULL,
                                                db, local_abspath, FALSE,
                                                scratch_pool, scratch_pool));
       local_stream = copying_stream(local_stream, new_pristine_stream,
@@ -1117,19 +1117,19 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
 
   /* If sending a full text is requested, or if there is no pristine text
    * (e.g. the node is locally added), then set BASE_STREAM to an empty
-   * stream and leave EXPECTED_MD5_CHECKSUM and VERIFY_CHECKSUM as NULL.
+   * stream and leave EXPECTED_MD5_CHECKSUM and VERIFY_MD5_CHECKSUM as NULL.
    *
    * Otherwise, set BASE_STREAM to a stream providing the base (source) text
    * for the delta, set EXPECTED_MD5_CHECKSUM to its stored MD5 checksum,
-   * and arrange for its VERIFY_CHECKSUM to be calculated later. */
+   * and arrange for its VERIFY_MD5_CHECKSUM to be calculated later. */
   if (! fulltext)
     {
       /* We will be computing a delta against the pristine contents */
-      /* We need the expected checksum to be an MD-5 checksum rather than a
-       * SHA-1 because we want to pass it to apply_textdelta(). */
+      /* We need the expected checksum to be an MD-5 checksum because we
+       * want to pass it to apply_textdelta(). */
       err = read_and_checksum_pristine_text(&base_stream,
                                             &expected_md5_checksum,
-                                            &verify_checksum,
+                                            &verify_md5_checksum,
                                             db, local_abspath,
                                             scratch_pool, scratch_pool);
       if (err && err->apr_err == SVN_ERR_WC_PRISTINE_DEHYDRATED)
@@ -1138,7 +1138,7 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
           svn_error_clear(err);
           base_stream = svn_stream_empty(scratch_pool);
           expected_md5_checksum = NULL;
-          verify_checksum = NULL;
+          verify_md5_checksum = NULL;
         }
       else if (err)
         {
@@ -1150,7 +1150,7 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
       /* Send a fulltext. */
       base_stream = svn_stream_empty(scratch_pool);
       expected_md5_checksum = NULL;
-      verify_checksum = NULL;
+      verify_md5_checksum = NULL;
     }
 
   /* Arrange the stream to calculate the resulting MD5. */
@@ -1184,9 +1184,9 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
   err2 = svn_stream_close(base_stream);
   if (err2)
     {
-      /* Set verify_checksum to NULL if svn_stream_close() returns error
+      /* Set verify_md5_checksum to NULL if svn_stream_close() returns error
          because checksum will be uninitialized in this case. */
-      verify_checksum = NULL;
+      verify_md5_checksum = NULL;
       err = svn_error_compose_create(err, err2);
     }
 
@@ -1194,8 +1194,8 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
 
   /* If we have an error, it may be caused by a corrupt text base,
      so check the checksum. */
-  if (expected_md5_checksum && verify_checksum
-      && !svn_checksum_match(expected_md5_checksum, verify_checksum))
+  if (expected_md5_checksum && verify_md5_checksum
+      && !svn_checksum_match(expected_md5_checksum, verify_md5_checksum))
     {
       /* The entry checksum does not match the actual text
          base checksum.  Extreme badness. Of course,
@@ -1210,7 +1210,7 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
          too, such as `svn diff'.  */
 
       err = svn_error_compose_create(
-              svn_checksum_mismatch_err(expected_md5_checksum, verify_checksum,
+              svn_checksum_mismatch_err(expected_md5_checksum, verify_md5_checksum,
                             scratch_pool,
                             _("Checksum mismatch for text base of '%s'"),
                             svn_dirent_local_style(local_abspath,
@@ -1230,13 +1230,13 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
   if (new_text_base_md5_checksum)
     *new_text_base_md5_checksum = svn_checksum_dup(local_md5_checksum,
                                                    result_pool);
-  if (new_text_base_sha1_checksum)
+  if (new_text_base_checksum)
     {
       SVN_ERR(svn_wc__db_pristine_install(install_data,
-                                          local_sha1_checksum,
+                                          local_checksum,
                                           local_md5_checksum,
                                           scratch_pool));
-      *new_text_base_sha1_checksum = svn_checksum_dup(local_sha1_checksum,
+      *new_text_base_checksum = svn_checksum_dup(local_checksum,
                                                       result_pool);
     }
 

@@ -1027,18 +1027,18 @@ svn_wc__node_get_commit_status(svn_boolean_t *added,
                                apr_pool_t *result_pool,
                                apr_pool_t *scratch_pool);
 
-/* Gets the md5 checksum for the pristine file identified by a sha1_checksum in the
+/* Gets the md5 checksum for the pristine file identified by checksum in the
    working copy identified by wri_abspath.
 
    Wraps svn_wc__db_pristine_get_md5().
  */
 svn_error_t *
-svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
-                               svn_wc_context_t *wc_ctx,
-                               const char *wri_abspath,
-                               const svn_checksum_t *sha1_checksum,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool);
+svn_wc__node_get_md5(const svn_checksum_t **md5_checksum,
+                     svn_wc_context_t *wc_ctx,
+                     const char *wri_abspath,
+                     const svn_checksum_t *checksum,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool);
 
 /* Like svn_wc_get_pristine_contents3(), but keyed on the CHECKSUM
    rather than on the local absolute path of the working file.

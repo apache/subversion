@@ -514,7 +514,7 @@ svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
-                                      const svn_checksum_t **new_text_base_sha1_checksum,
+                                      const svn_checksum_t **new_text_base_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,

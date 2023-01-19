@@ -862,17 +862,17 @@ svn_wc__node_get_commit_status(svn_boolean_t *added,
 }
 
 svn_error_t *
-svn_wc__node_get_md5_from_sha1(const svn_checksum_t **md5_checksum,
-                               svn_wc_context_t *wc_ctx,
-                               const char *wri_abspath,
-                               const svn_checksum_t *sha1_checksum,
-                               apr_pool_t *result_pool,
-                               apr_pool_t *scratch_pool)
+svn_wc__node_get_md5(const svn_checksum_t **md5_checksum,
+                     svn_wc_context_t *wc_ctx,
+                     const char *wri_abspath,
+                     const svn_checksum_t *checksum,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
 {
   return svn_error_trace(svn_wc__db_pristine_get_md5(md5_checksum,
                                                      wc_ctx->db,
                                                      wri_abspath,
-                                                     sha1_checksum,
+                                                     checksum,
                                                      result_pool,
                                                      scratch_pool));
 }

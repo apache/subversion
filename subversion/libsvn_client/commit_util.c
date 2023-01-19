@@ -1862,7 +1862,7 @@ svn_client__do_commit(const char *base_url,
                       const svn_delta_editor_t *editor,
                       void *edit_baton,
                       const char *notify_path_prefix,
-                      apr_hash_t **sha1_checksums,
+                      apr_hash_t **checksums,
                       svn_client_ctx_t *ctx,
                       apr_pool_t *result_pool,
                       apr_pool_t *scratch_pool)
@@ -1877,8 +1877,8 @@ svn_client__do_commit(const char *base_url,
     apr_array_make(scratch_pool, commit_items->nelts, sizeof(const char *));
 
   /* Ditto for the checksums. */
-  if (sha1_checksums)
-    *sha1_checksums = apr_hash_make(result_pool);
+  if (checksums)
+    *checksums = apr_hash_make(result_pool);
 
   /* Build a hash from our COMMIT_ITEMS array, keyed on the
      relative paths (which come from the item URLs).  And
@@ -1911,7 +1911,7 @@ svn_client__do_commit(const char *base_url,
       struct file_mod_t *mod = apr_hash_this_val(hi);
       const svn_client_commit_item3_t *item = mod->item;
       const svn_checksum_t *new_text_base_md5_checksum;
-      const svn_checksum_t *new_text_base_sha1_checksum;
+      const svn_checksum_t *new_text_base_checksum;
       svn_boolean_t fulltext = FALSE;
       svn_error_t *err;
 
@@ -1938,7 +1938,7 @@ svn_client__do_commit(const char *base_url,
         fulltext = TRUE;
 
       err = svn_wc_transmit_text_deltas4(&new_text_base_md5_checksum,
-                                         &new_text_base_sha1_checksum,
+                                         &new_text_base_checksum,
                                          ctx->wc_ctx, item->path,
                                          fulltext, editor, mod->file_baton,
                                          result_pool, iterpool);
@@ -1953,8 +1953,8 @@ svn_client__do_commit(const char *base_url,
                                                     err, ctx, scratch_pool));
         }
 
-      if (sha1_checksums)
-        svn_hash_sets(*sha1_checksums, item->path, new_text_base_sha1_checksum);
+      if (checksums)
+        svn_hash_sets(*checksums, item->path, new_text_base_checksum);
 
       svn_pool_destroy(mod->file_pool);
     }

@@ -10119,7 +10119,7 @@ svn_wc__db_read_children_walker_info(const apr_array_header_t **items,
 
 svn_error_t *
 svn_wc__db_read_node_install_info(const char **wcroot_abspath,
-                                  const svn_checksum_t **sha1_checksum,
+                                  const svn_checksum_t **checksum,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
                                   svn_wc__db_t *db,
@@ -10168,8 +10168,8 @@ svn_wc__db_read_node_install_info(const char **wcroot_abspath,
 
   if (have_row)
     {
-      if (sha1_checksum)
-        err = svn_sqlite__column_checksum(sha1_checksum, stmt, 6, result_pool);
+      if (checksum)
+        err = svn_sqlite__column_checksum(checksum, stmt, 6, result_pool);
 
       if (!err && pristine_props)
         {
@@ -16227,7 +16227,7 @@ typedef struct commit_queue_item_t
 
   /* The pristine text checksum. NULL if the old value should be kept
      and for directories */
-  const svn_checksum_t *new_sha1_checksum;
+  const svn_checksum_t *new_checksum;
 
   apr_hash_t *new_dav_cache; /* New DAV cache for the node */
 } commit_queue_item_t;
@@ -16280,7 +16280,7 @@ svn_wc__db_commit_queue_add(svn_wc__db_commit_queue_t *queue,
                             svn_boolean_t is_commited,
                             svn_boolean_t remove_lock,
                             svn_boolean_t remove_changelist,
-                            const svn_checksum_t *new_sha1_checksum,
+                            const svn_checksum_t *new_checksum,
                             apr_hash_t *new_dav_cache,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
@@ -16304,7 +16304,7 @@ svn_wc__db_commit_queue_add(svn_wc__db_commit_queue_t *queue,
   cqi->committed = is_commited;
   cqi->remove_lock = remove_lock;
   cqi->remove_changelist = remove_changelist;
-  cqi->new_sha1_checksum = new_sha1_checksum;
+  cqi->new_checksum = new_checksum;
   cqi->new_dav_cache = new_dav_cache;
 
   queue->have_recurse |= recurse;
@@ -16456,7 +16456,7 @@ process_committed_leaf(svn_wc__db_t *db,
  * If @a remove_changelist is set, clear any changeset assignments
  * from @a local_abspath; otherwise, keep such assignments.
  *
- * If @a new_sha1_checksum is non-NULL, use it to identify the node's pristine
+ * If @a new_checksum is non-NULL, use it to identify the node's pristine
  * text.
  *
  * Set TOP_OF_RECURSE to TRUE to show that this the top of a possibly
@@ -16474,7 +16474,7 @@ process_committed_internal(svn_wc__db_t *db,
                            apr_hash_t *new_dav_cache,
                            svn_boolean_t remove_lock,
                            svn_boolean_t remove_changelist,
-                           const svn_checksum_t *new_sha1_checksum,
+                           const svn_checksum_t *new_checksum,
                            apr_hash_t *items_by_relpath,
                            apr_pool_t *scratch_pool)
 {
@@ -16498,7 +16498,7 @@ process_committed_internal(svn_wc__db_t *db,
                                  new_revnum, new_date, rev_author,
                                  new_dav_cache,
                                  remove_lock, remove_changelist,
-                                 new_sha1_checksum,
+                                 new_checksum,
                                  scratch_pool));
 
   /* Only check for recursion on nodes that have children */
@@ -16534,11 +16534,11 @@ process_committed_internal(svn_wc__db_t *db,
 
           this_relpath = svn_dirent_join(local_relpath, name, iterpool);
 
-          new_sha1_checksum = NULL;
+          new_checksum = NULL;
           cqi = svn_hash_gets(items_by_relpath, this_relpath);
 
           if (cqi != NULL)
-            new_sha1_checksum = cqi->new_sha1_checksum;
+            new_checksum = cqi->new_checksum;
 
           /* Recurse.  Pass NULL for NEW_DAV_CACHE, because the
              ones present in the current call are only applicable to
@@ -16552,7 +16552,7 @@ process_committed_internal(svn_wc__db_t *db,
                     NULL /* new_dav_cache */,
                     FALSE /* remove_lock */,
                     remove_changelist,
-                    new_sha1_checksum,
+                    new_checksum,
                     items_by_relpath,
                     iterpool));
         }
@@ -16690,7 +16690,7 @@ db_process_commit_queue(svn_wc__db_t *db,
                                   cqi->new_dav_cache,
                                   cqi->remove_lock,
                                   cqi->remove_changelist,
-                                  cqi->new_sha1_checksum,
+                                  cqi->new_checksum,
                                   items_by_relpath,
                                   iterpool));
         }

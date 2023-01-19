@@ -78,7 +78,7 @@ typedef struct committed_queue_item_t
 
   /* The pristine text checksum. NULL if the old value should be kept
      and for directories */
-  const svn_checksum_t *new_sha1_checksum;
+  const svn_checksum_t *new_checksum;
 
   apr_hash_t *new_dav_cache; /* New DAV cache for the node */
 } committed_queue_item_t;
@@ -135,7 +135,7 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
                         const apr_array_header_t *wcprop_changes,
                         svn_boolean_t remove_lock,
                         svn_boolean_t remove_changelist,
-                        const svn_checksum_t *sha1_checksum,
+                        const svn_checksum_t *checksum,
                         apr_pool_t *scratch_pool)
 {
   const char *wcroot_abspath;
@@ -166,7 +166,7 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
   return svn_error_trace(
           svn_wc__db_commit_queue_add(db_queue, local_abspath, recurse,
                                       is_committed, remove_lock,
-                                      remove_changelist, sha1_checksum,
+                                      remove_changelist, checksum,
                                       svn_wc__prop_array_to_hash(wcprop_changes,
                                                                  queue->pool),
                                       queue->pool, scratch_pool));
@@ -891,20 +891,20 @@ get_pristine_lazyopen_func(svn_stream_t **stream_p,
                            apr_pool_t *scratch_pool)
 {
   get_pristine_lazyopen_baton_t *b = baton;
-  const svn_checksum_t *sha1_checksum;
+  const svn_checksum_t *checksum;
   svn_stream_t *stream;
 
   /* svn_wc__db_pristine_read() wants a SHA1, so if we have an MD5,
      we'll use it to lookup the SHA1. */
   if (b->checksum->kind == svn_checksum_sha1)
-    sha1_checksum = b->checksum;
+    checksum = b->checksum;
   else
-    SVN_ERR(svn_wc__db_pristine_get_sha1(&sha1_checksum, b->wc_ctx->db,
-                                         b->wri_abspath, b->checksum,
-                                         scratch_pool, scratch_pool));
+    SVN_ERR(svn_wc__db_pristine_lookup_by_md5(&checksum, b->wc_ctx->db,
+                                              b->wri_abspath, b->checksum,
+                                              scratch_pool, scratch_pool));
 
   SVN_ERR(svn_wc__db_pristine_read(&stream, NULL, b->wc_ctx->db,
-                                   b->wri_abspath, sha1_checksum,
+                                   b->wri_abspath, checksum,
                                    result_pool, scratch_pool));
   if (!stream)
     return svn_error_create(SVN_ERR_WC_PRISTINE_DEHYDRATED, NULL, NULL);

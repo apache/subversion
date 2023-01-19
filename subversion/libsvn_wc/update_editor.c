@@ -434,7 +434,7 @@ struct handler_baton
 
   /* A calculated SHA-1 of NEW_TEXT_BASE_TMP_ABSPATH, which we'll use for
      eventually writing the pristine. */
-  svn_checksum_t * new_text_base_sha1_checksum;
+  svn_checksum_t * new_text_base_checksum;
 };
 
 
@@ -759,7 +759,7 @@ struct file_baton
   /* If there are file content changes, these are the checksums of the
      resulting new text base, which is in the pristine store, else NULL. */
   const svn_checksum_t *new_text_base_md5_checksum;
-  const svn_checksum_t *new_text_base_sha1_checksum;
+  const svn_checksum_t *new_text_base_checksum;
 
   /* The checksum of the file before the update */
   const svn_checksum_t *original_checksum;
@@ -1050,14 +1050,14 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       /* Tell the file baton about the new text base's checksums. */
       fb->new_text_base_md5_checksum =
         svn_checksum__from_digest_md5(hb->new_text_base_md5_digest, fb->pool);
-      fb->new_text_base_sha1_checksum =
-        svn_checksum_dup(hb->new_text_base_sha1_checksum, fb->pool);
+      fb->new_text_base_checksum =
+        svn_checksum_dup(hb->new_text_base_checksum, fb->pool);
 
       /* Store the new pristine text in the pristine store now.  Later, in a
          single transaction we will update the BASE_NODE to include a
          reference to this pristine text's checksum. */
       SVN_ERR(svn_wc__db_pristine_install(hb->install_data,
-                                          fb->new_text_base_sha1_checksum,
+                                          fb->new_text_base_checksum,
                                           fb->new_text_base_md5_checksum,
                                           hb->pool));
     }
@@ -3789,7 +3789,7 @@ lazy_open_target(svn_stream_t **stream_p,
      HB->INSTALL_DATA unchanged on error. */
   SVN_ERR(svn_wc__textbase_prepare_install(&pristine_install_stream,
                                            &pristine_install_data,
-                                           &hb->new_text_base_sha1_checksum,
+                                           &hb->new_text_base_checksum,
                                            NULL,
                                            fb->edit_baton->db,
                                            fb->local_abspath,
@@ -4232,7 +4232,7 @@ merge_file(svn_skel_t **work_items,
      things are true:
 
          - The new pristine text of F is present in the pristine store
-           iff FB->NEW_TEXT_BASE_SHA1_CHECKSUM is not NULL.
+           iff FB->NEW_TEXT_BASE_CHECKSUM is not NULL.
 
          - The WC metadata still reflects the old version of F.
            (We can still access the old pristine base text of F.)
@@ -4291,7 +4291,7 @@ merge_file(svn_skel_t **work_items,
        * Retranslate from the working file.
    */
   if (! is_locally_modified
-      && fb->new_text_base_sha1_checksum)
+      && fb->new_text_base_checksum)
     {
           /* If there are no local mods, who cares whether it's a text
              or binary file!  Just write a log command to overwrite
@@ -4304,7 +4304,7 @@ merge_file(svn_skel_t **work_items,
 
       *install_pristine = TRUE;
     }
-  else if (fb->new_text_base_sha1_checksum)
+  else if (fb->new_text_base_checksum)
     {
       /* Actual file exists and has local mods:
          Now we need to let loose svn_wc__merge_internal() to merge
@@ -4315,7 +4315,7 @@ merge_file(svn_skel_t **work_items,
                                          eb->db,
                                          fb->local_abspath,
                                          pb->local_abspath,
-                                         fb->new_text_base_sha1_checksum,
+                                         fb->new_text_base_checksum,
                                          fb->add_existed
                                                   ? NULL
                                                   : fb->original_checksum,
@@ -4396,7 +4396,7 @@ merge_file(svn_skel_t **work_items,
 
   if (found_text_conflict)
     *content_state = svn_wc_notify_state_conflicted;
-  else if (fb->new_text_base_sha1_checksum)
+  else if (fb->new_text_base_checksum)
     {
       if (is_locally_modified)
         *content_state = svn_wc_notify_state_merged;
@@ -4623,7 +4623,7 @@ close_file(void *file_baton,
       else
         {
           install_pristine = FALSE;
-          if (fb->new_text_base_sha1_checksum)
+          if (fb->new_text_base_checksum)
             content_state = svn_wc_notify_state_changed;
           else
             content_state = svn_wc_notify_state_unchanged;
@@ -4676,7 +4676,7 @@ close_file(void *file_baton,
                                   scratch_pool,
                                   scratch_pool));
 
-      if (fb->new_text_base_sha1_checksum)
+      if (fb->new_text_base_checksum)
         content_state = svn_wc_notify_state_changed;
       else
         content_state = svn_wc_notify_state_unchanged;
@@ -4687,9 +4687,9 @@ close_file(void *file_baton,
   /* Insert/replace the BASE node with all of the new metadata.  */
 
   /* Set the 'checksum' column of the file's BASE_NODE row to
-   * NEW_TEXT_BASE_SHA1_CHECKSUM.  The pristine text identified by that
+   * NEW_TEXT_BASE_CHECKSUM.  The pristine text identified by that
    * checksum is already in the pristine store. */
-  new_checksum = fb->new_text_base_sha1_checksum;
+  new_checksum = fb->new_text_base_checksum;
 
   /* If we don't have a NEW checksum, then the base must not have changed.
      Just carry over the old checksum.  */
@@ -5510,7 +5510,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_node_kind_t kind;
   const char *tmp_text_base_abspath;
   svn_checksum_t *new_text_base_md5_checksum;
-  svn_checksum_t *new_text_base_sha1_checksum;
+  svn_checksum_t *new_text_base_checksum;
   const char *source_abspath = NULL;
   svn_skel_t *all_work_items = NULL;
   svn_skel_t *work_item;
@@ -5654,14 +5654,14 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
 
   /* Copy NEW_BASE_CONTENTS into a temporary file so our log can refer to
      it, and set TMP_TEXT_BASE_ABSPATH to its path.  Compute its
-     NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_SHA1_CHECKSUM as we copy. */
+     NEW_TEXT_BASE_MD5_CHECKSUM and NEW_TEXT_BASE_CHECKSUM as we copy. */
   if (copyfrom_url)
     {
       svn_stream_t *install_stream;
 
       SVN_ERR(svn_wc__textbase_prepare_install(&install_stream,
                                                &install_data,
-                                               &new_text_base_sha1_checksum,
+                                               &new_text_base_checksum,
                                                &new_text_base_md5_checksum,
                                                wc_ctx->db, local_abspath,
                                                copyfrom_url != NULL,
@@ -5673,7 +5673,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
     }
   else
     {
-      new_text_base_sha1_checksum = NULL;
+      new_text_base_checksum = NULL;
       new_text_base_md5_checksum = NULL;
     }
   SVN_ERR(svn_stream_copy3(new_base_contents, tmp_base_contents,
@@ -5705,7 +5705,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   if (copyfrom_url != NULL)
     {
       SVN_ERR(svn_wc__db_pristine_install(install_data,
-                                          new_text_base_sha1_checksum,
+                                          new_text_base_checksum,
                                           new_text_base_md5_checksum, pool));
     }
   else
@@ -5730,7 +5730,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
          NULL for the missing information, and this function should learn to
          handle that. */
 
-      new_text_base_sha1_checksum = NULL;
+      new_text_base_checksum = NULL;
       new_text_base_md5_checksum = NULL;
     }
 
@@ -5759,7 +5759,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
                                                          : NULL,
                                   original_repos_relpath ? repos_uuid : NULL,
                                   copyfrom_rev,
-                                  new_text_base_sha1_checksum,
+                                  new_text_base_checksum,
                                   TRUE,
                                   new_props,
                                   FALSE /* is_move */,
