@@ -68,6 +68,8 @@ test_checksum_parse(apr_pool_t *pool)
   SVN_ERR(checksum_parse_kind("cafeaffe",
                               svn_checksum_fnv1a_32x4,
                               "modified fnv-1a", pool));
+  SVN_ERR(checksum_parse_kind("c4fb4f348b4b13bb28bf03c2f6f2352f049d66d2",
+                              svn_checksum_sha1_salted, "sha1-salted", pool));
 
   return SVN_NO_ERROR;
 }
@@ -76,7 +78,7 @@ static svn_error_t *
 test_checksum_empty(apr_pool_t *pool)
 {
   svn_checksum_kind_t kind;
-  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1_salted; ++kind)
     {
       svn_checksum_t *checksum;
       char data = '\0';
@@ -119,7 +121,7 @@ static svn_error_t *
 zero_match(apr_pool_t *pool)
 {
   svn_checksum_kind_t kind;
-  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1_salted; ++kind)
     SVN_ERR(zero_match_kind(kind, pool));
 
   return SVN_NO_ERROR;
@@ -132,7 +134,7 @@ zero_cross_match(apr_pool_t *pool)
   svn_checksum_kind_t k_kind;
 
   for (i_kind = svn_checksum_md5;
-       i_kind <= svn_checksum_fnv1a_32x4;
+       i_kind <= svn_checksum_sha1_salted;
        ++i_kind)
     {
       svn_checksum_t *i_zero;
@@ -143,7 +145,7 @@ zero_cross_match(apr_pool_t *pool)
       SVN_ERR(svn_checksum(&i_A, i_kind, "A", 1, pool));
 
       for (k_kind = svn_checksum_md5;
-           k_kind <= svn_checksum_fnv1a_32x4;
+           k_kind <= svn_checksum_sha1_salted;
            ++k_kind)
         {
           svn_checksum_t *k_zero;
@@ -258,7 +260,7 @@ static svn_error_t *
 test_serialization(apr_pool_t *pool)
 {
   svn_checksum_kind_t kind;
-  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1_salted; ++kind)
     {
       const svn_checksum_t *parsed_checksum;
       svn_checksum_t *checksum = svn_checksum_empty_checksum(kind, pool);
@@ -278,7 +280,7 @@ static svn_error_t *
 test_checksum_parse_all_zero(apr_pool_t *pool)
 {
   svn_checksum_kind_t kind;
-  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1_salted; ++kind)
     {
       svn_checksum_t *checksum;
       const char *hex;
@@ -302,7 +304,7 @@ test_checksummed_stream_read(apr_pool_t *pool)
   const svn_string_t *str = svn_string_create("abcde", pool);
   svn_checksum_kind_t kind;
 
-  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1_salted; ++kind)
     {
       svn_stream_t *stream;
       svn_checksum_t *expected_checksum;
@@ -333,7 +335,7 @@ test_checksummed_stream_reset(apr_pool_t *pool)
   const svn_string_t *str = svn_string_create("abcde", pool);
   svn_checksum_kind_t kind;
 
-  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+  for (kind = svn_checksum_md5; kind <= svn_checksum_sha1_salted; ++kind)
     {
       svn_stream_t *stream;
       svn_checksum_t *expected_checksum;
