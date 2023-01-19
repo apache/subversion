@@ -74,6 +74,7 @@ static const int schema_statements[] =
   STMT_CREATE_SCHEMA,
   /* (executing STMT_UPGRADE_TO_xx is conditional on desired WC format) */
   STMT_UPGRADE_TO_32,
+  STMT_UPGRADE_TO_33,
   STMT_INSTALL_SCHEMA_STATISTICS,
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
@@ -185,6 +186,8 @@ create_memory_db(sqlite3 **db,
   for (i = 0; schema_statements[i] != -1; i++)
     {
       if (target_format < 32 && schema_statements[i] == STMT_UPGRADE_TO_32)
+        continue;
+      if (target_format < 33 && schema_statements[i] == STMT_UPGRADE_TO_33)
         continue;
       SQLITE_ERR(sqlite3_exec(sdb, wc_queries[schema_statements[i]], NULL, NULL, NULL));
     }

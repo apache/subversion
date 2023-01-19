@@ -218,8 +218,7 @@ collect_lock_tokens(apr_hash_t **result,
   return SVN_NO_ERROR;
 }
 
-/* Put ITEM onto QUEUE, allocating it in QUEUE's pool...
- * If a checksum is provided, it can be the MD5 and/or the SHA1. */
+/* Put ITEM onto QUEUE, allocating it in QUEUE's pool... */
 static svn_error_t *
 post_process_commit_item(svn_wc_committed_queue_t *queue,
                          const svn_client_commit_item3_t *item,

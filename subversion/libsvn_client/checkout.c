@@ -195,8 +195,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         {
           svn_boolean_t wc_store_pristine;
 
-          SVN_ERR(svn_wc__get_settings(NULL, &wc_store_pristine, ctx->wc_ctx,
-                                       local_abspath, scratch_pool));
+          SVN_ERR(svn_wc__get_settings(NULL, &wc_store_pristine, NULL,
+                                       ctx->wc_ctx, local_abspath, scratch_pool));
 
           if ((target_store_pristine && !wc_store_pristine) ||
               (!target_store_pristine && wc_store_pristine))

@@ -165,7 +165,10 @@ extern "C" {
  * The bump to 32 adds support for optional pristine contents; see the docstring
  * of STMT_UPGRADE_TO_32 for details.
  *
- * == 1.15.x shipped with format 32 and multi-wc-format support
+ * The bump to 33 adds support for configurable pristine checksum kind; see the
+ * docstring of STMT_UPGRADE_TO_33 for details.
+ *
+ * == 1.15.x shipped with format 33 and multi-wc-format support
  *
  * Please document any further format changes here.
  */
@@ -174,7 +177,7 @@ extern "C" {
  *
  * @see svn_wc__max_supported_format()
  */
-#define SVN_WC__VERSION 32
+#define SVN_WC__VERSION 33
 
 /* The minimum WC version supported by the client.
  *
@@ -225,6 +228,13 @@ extern "C" {
 
 /* Starting from this version, the DB stores per-WC settings. */
 #define SVN_WC__HAS_SETTINGS 32
+
+/* Starting from this version, pristine checksum kind can be configured. */
+#define SVN_WC__HAS_PRISTINE_CHECKSUM_KIND 33
+
+/* Starting from this version, salted SHA-1 can be used as the pristine
+   checksum kind. */
+#define SVN_WC__HAS_PRISTINE_CHECKSUM_SHA1_SALTED 33
 
 /* Return a string indicating the released version (or versions) of
  * Subversion that used WC format number WC_FORMAT, or some other

@@ -58,13 +58,14 @@ get_pristine_fname(const char **pristine_abspath,
 {
   const char *base_dir_abspath;
   const char *hexdigest = svn_checksum_to_cstring(checksum, scratch_pool);
-  char subdir[3];
+  const char *checksum_prefix;
+  const char *subdir;
+  char shard[3];
 
   /* ### code is in transition. make sure we have the proper data.  */
   SVN_ERR_ASSERT(pristine_abspath != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wcroot_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
 
   base_dir_abspath = svn_dirent_join_many(scratch_pool,
                                           wcroot_abspath,
@@ -75,10 +76,26 @@ get_pristine_fname(const char **pristine_abspath,
   /* We should have a valid checksum and (thus) a valid digest. */
   SVN_ERR_ASSERT(hexdigest != NULL);
 
-  /* Get the first two characters of the digest, for the subdir. */
-  subdir[0] = hexdigest[0];
-  subdir[1] = hexdigest[1];
-  subdir[2] = '\0';
+  /* Prefix the subdir name with the checksum kind. */
+  switch (checksum->kind)
+    {
+      case svn_checksum_sha1:
+        /* No prefix for SHA1 for historical reasons. */
+        checksum_prefix = "";
+        break;
+      case svn_checksum_sha1_salted:
+        checksum_prefix = "ssh1-";
+        break;
+      default:
+        SVN_ERR_MALFUNCTION();
+    }
+
+  /* Get the first two characters of the digest, for the shard name. */
+  shard[0] = hexdigest[0];
+  shard[1] = hexdigest[1];
+  shard[2] = '\0';
+
+  subdir = apr_pstrcat(scratch_pool, checksum_prefix, shard, SVN_VA_NULL);
 
   hexdigest = apr_pstrcat(scratch_pool, hexdigest, PRISTINE_STORAGE_EXT,
                           SVN_VA_NULL);
@@ -242,8 +259,6 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                                "because no checksum supplied"),
                              svn_dirent_local_style(wri_abspath, scratch_pool));
 
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
-
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
@@ -333,7 +348,7 @@ pristine_install_txn(svn_wc__db_wcroot_t *wcroot,
                      svn_wc__db_install_data_t *install_data,
                      /* The target path for the file (within the pristine store). */
                      const char *pristine_abspath,
-                     /* The pristine text's SHA-1 checksum. */
+                     /* The pristine text's checksum. */
                      const svn_checksum_t *checksum,
                      /* The pristine text's MD-5 checksum. */
                      const svn_checksum_t *md5_checksum,
@@ -460,7 +475,8 @@ svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
                                      svn_checksum_md5, FALSE, result_pool);
   if (checksum_p)
     stream = svn_stream_checksummed2(stream, NULL, checksum_p,
-                                     svn_checksum_sha1, FALSE, result_pool);
+                                     wcroot->pristine_checksum_kind,
+                                     FALSE, result_pool);
 
   *stream_p = stream;
   *install_data_p = install_data;
@@ -478,7 +494,6 @@ svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
   const char *pristine_abspath;
 
   SVN_ERR_ASSERT(checksum != NULL);
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
   SVN_ERR_ASSERT(md5_checksum != NULL);
   SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
 
@@ -525,7 +540,6 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
@@ -580,7 +594,6 @@ svn_wc__db_pristine_lookup_by_md5(const svn_checksum_t **checksum,
                                                              scratch_pool));
 
   SVN_ERR(svn_sqlite__column_checksum(checksum, stmt, 0, result_pool));
-  SVN_ERR_ASSERT((*checksum)->kind == svn_checksum_sha1);
 
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
@@ -640,7 +653,7 @@ maybe_transfer_one_pristine(svn_wc__db_wcroot_t *src_wcroot,
       SVN_ERR(svn_stream_open_readonly(&src_stream, src_abspath,
                                        scratch_pool, scratch_pool));
 
-      /* ### Should we verify the SHA1 or MD5 here, or is that too expensive? */
+      /* ### Should we verify the checksum here, or is that too expensive? */
       SVN_ERR(svn_stream_copy3(src_stream, dst_stream,
                                cancel_func, cancel_baton,
                                scratch_pool));
@@ -842,13 +855,12 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
-  /* ### Transitional: accept MD-5 and look up the SHA-1.  Return an error
+  /* ### Transitional: look up the checksum by MD-5.  Return an error
    * if the pristine text is not in the store. */
-  if (checksum->kind != svn_checksum_sha1)
+  if (checksum->kind == svn_checksum_md5)
     SVN_ERR(svn_wc__db_pristine_lookup_by_md5(&checksum, db, wri_abspath,
                                               checksum,
                                               scratch_pool, scratch_pool));
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
@@ -975,7 +987,11 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
 
-  if (checksum->kind != svn_checksum_sha1)
+  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
+                              wri_abspath, scratch_pool, scratch_pool));
+  VERIFY_USABLE_WCROOT(wcroot);
+
+  if (checksum->kind != wcroot->pristine_checksum_kind)
     {
       *present = FALSE;
       if (hydrated)
@@ -983,10 +999,6 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 
       return SVN_NO_ERROR;
     }
-
-  SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
-                              wri_abspath, scratch_pool, scratch_pool));
-  VERIFY_USABLE_WCROOT(wcroot);
 
   /* Check that there is an entry in the PRISTINE table. */
   SVN_ERR(stmt_select_pristine(&have_row, NULL, NULL, hydrated,
@@ -1026,8 +1038,6 @@ svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
 {
   const char *pristine_abspath;
   svn_sqlite__stmt_t *stmt;
-
-  SVN_ERR_ASSERT(checksum->kind == svn_checksum_sha1);
 
   SVN_ERR(get_pristine_fname(&pristine_abspath, wcroot->abspath,
                              checksum,

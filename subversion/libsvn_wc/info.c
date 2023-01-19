@@ -108,6 +108,7 @@ build_info_for_node(svn_wc__info2_t **info,
 
   SVN_ERR(svn_wc__db_get_settings(&wc_info->wc_format,
                                   &wc_info->store_pristine,
+                                  &wc_info->pristine_checksum_kind,
                                   db, local_abspath, scratch_pool));
 
   SVN_ERR(svn_wc__db_read_info(&status, &db_kind, &tmpinfo->rev,
@@ -561,12 +562,14 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__get_settings(int *format_p,
                      svn_boolean_t *store_pristine_p,
+                     svn_checksum_kind_t *pristine_checksum_kind_p,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool)
 {
-  SVN_ERR(svn_wc__db_get_settings(format_p, store_pristine_p, wc_ctx->db,
-                                  local_abspath, scratch_pool));
+  SVN_ERR(svn_wc__db_get_settings(format_p, store_pristine_p,
+                                  pristine_checksum_kind_p,
+                                  wc_ctx->db, local_abspath, scratch_pool));
 
   return SVN_NO_ERROR;
 }

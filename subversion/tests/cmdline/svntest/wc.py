@@ -1133,12 +1133,23 @@ def text_base_path(file_path):
 
   info = svntest.actions.run_and_parse_info(file_path)[0]
 
+  wc_pristine_checksum_kind = info['Working Copy Checksum Kind']
   checksum = info['Checksum']
   db, root_path, relpath = open_wc_db(file_path)
 
   # Calculate single DB location
   dot_svn = svntest.main.get_admin_name()
-  fn = os.path.join(root_path, dot_svn, 'pristine', checksum[0:2], checksum)
+
+  if wc_pristine_checksum_kind == 'SHA1':
+    subdir_prefix = ''
+  elif wc_pristine_checksum_kind == 'Salted SHA1':
+    subdir_prefix = 'ssh1-'
+  else:
+    raise svntest.Failure
+
+  subdir = subdir_prefix + checksum[0:2]
+
+  fn = os.path.join(root_path, dot_svn, 'pristine', subdir, checksum)
 
   # For SVN_WC__VERSION < 29
   if os.path.isfile(fn):

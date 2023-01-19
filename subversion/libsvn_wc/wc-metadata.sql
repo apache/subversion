@@ -92,8 +92,8 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
    In future, the pristine text file may be compressed.
  */
 CREATE TABLE PRISTINE (
-  /* The SHA-1 checksum of the pristine text. This is a unique key. The
-     SHA-1 checksum of a pristine text is assumed to be unique among all
+  /* The checksum of the pristine text. This is a unique key. The
+     checksum of a pristine text is assumed to be unique among all
      pristine texts referenced from this database. */
   checksum  TEXT NOT NULL PRIMARY KEY,
 
@@ -414,7 +414,7 @@ CREATE TABLE NODES (
   /* ### maybe a WC-to-WC copy can retain a depth?  */
   depth  TEXT,
 
-  /* The SHA-1 checksum of the pristine text, if this node is a file and was
+  /* The checksum of the pristine text, if this node is a file and was
      moved here or copied here, else NULL. */
   checksum  TEXT REFERENCES PRISTINE (checksum),
 
@@ -777,22 +777,29 @@ INSERT OR IGNORE INTO SETTINGS SELECT id, 1 FROM WCROOT;
 PRAGMA user_version = 32;
 
 /* ------------------------------------------------------------------------- */
-/* Format 33 ....  */
+/* Format 33 adds support for configurable pristine checksum kinds with
+   the following schema changes:
+   - Add the 'pristine_checksum_kind' column to the SETTINGS table. */
+-- STMT_UPGRADE_TO_33
+ALTER TABLE SETTINGS ADD COLUMN pristine_checksum_kind INTEGER;
 
-/* Note: we use checksums to detect if the file contents have been modified
-   in textbase.c and in the svn_wc__internal_file_modified_p() function.
+UPDATE SETTINGS
+SET pristine_checksum_kind = 1 /* svn_wc__db_pristine_checksum_sha1 */
+WHERE pristine_checksum_kind IS NULL;
 
-   The new working copy format SHOULD incorporate a switch to a different
-   checksum type without known collisions.
+PRAGMA user_version = 33;
 
-   For the updated pristine table schema, we MAY want to add a new column
+/* ------------------------------------------------------------------------- */
+/* Format 34 ....  */
+
+/* For the updated pristine table schema, we MAY want to add a new column
    containing a checksum of the first 8KB of the file to allow saying that
    the file is modified without reading all its content.  That could speed
    up the check for large modified files whose size did not change, for
    example if they are allocated in certain extents. */
 
-/* -- STMT_UPGRADE_TO_33
-PRAGMA user_version = 33; */
+/* -- STMT_UPGRADE_TO_34
+PRAGMA user_version = 34; */
 
 /* ------------------------------------------------------------------------- */
 /* When bumping the format, also update:

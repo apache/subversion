@@ -127,7 +127,7 @@ pristine_write_read(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(hydrated);
   }
 
-  /* Look up its MD-5 from its SHA-1, and check it's the same MD-5. */
+  /* Look up its MD-5 from its checksum, and check it's the same MD-5. */
   {
     const svn_checksum_t *looked_up_md5;
 
@@ -333,7 +333,8 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_install_dehydrated", opts, pool));
 
-  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, wc_abspath, pool));
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
+                                  wc_abspath, pool));
   if (store_pristine)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Test assumes a working copy without pristine");
@@ -376,7 +377,7 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
     SVN_TEST_ASSERT(! hydrated);
   }
 
-  /* Look up its MD-5 from its SHA-1, and check it's the same MD-5. */
+  /* Look up its MD-5 from its checksum, and check it's the same MD-5. */
   {
     const svn_checksum_t *looked_up_md5;
 
@@ -443,7 +444,8 @@ pristine_dehydrate(const svn_test_opts_t *opts,
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_dehydrate", opts, pool));
 
-  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, wc_abspath, pool));
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
+                                  wc_abspath, pool));
   if (store_pristine)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Test assumes a working copy without pristine");

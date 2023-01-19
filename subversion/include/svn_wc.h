@@ -3320,6 +3320,12 @@ typedef struct svn_wc_info_t
    * @since New in 1.15.
    */
   svn_boolean_t store_pristine;
+
+  /**
+   * Checksum kind used for the pristine content.
+   * @since New in 1.15.
+   */
+  svn_checksum_kind_t pristine_checksum_kind;
 } svn_wc_info_t;
 
 /**

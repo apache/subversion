@@ -405,17 +405,15 @@ struct handler_baton
   /* Where we are assembling the new file. */
   svn_wc__db_install_data_t *install_data;
 
-    /* The expected source checksum of the text source or NULL if no base
-     checksum is available (MD5 if the server provides a checksum, SHA1 if
-     the server doesn't) */
+  /* The expected source checksum of the text source or NULL if no base
+     checksum is available (MD5 if the server provides a checksum). */
   svn_checksum_t *expected_source_checksum;
 
   /* Why two checksums?
      The editor currently provides an md5 which we use to detect corruption
-     during transmission.  We use the sha1 inside libsvn_wc both for pristine
-     handling and corruption detection.  In the future, the editor will also
-     provide a sha1, so we may not have to calculate both, but for the time
-     being, that's the way it is. */
+     during transmission.  We use a different checksum inside libsvn_wc both
+     for pristine handling and corruption detection.  In the future, we may not
+     have to calculate both, but for the time being, that's the way it is. */
 
   /* The calculated checksum of the text source or NULL if the actual
      checksum is not being calculated. The checksum kind is identical to the
@@ -432,7 +430,7 @@ struct handler_baton
      apply_textdelta(). */
   unsigned char new_text_base_md5_digest[APR_MD5_DIGESTSIZE];
 
-  /* A calculated SHA-1 of NEW_TEXT_BASE_TMP_ABSPATH, which we'll use for
+  /* A calculated checksum of NEW_TEXT_BASE_TMP_ABSPATH, which we'll use for
      eventually writing the pristine. */
   svn_checksum_t * new_text_base_checksum;
 };
@@ -3907,9 +3905,6 @@ apply_textdelta(void *file_baton,
 
   if (! fb->adding_file)
     {
-      SVN_ERR_ASSERT(!fb->original_checksum
-                     || fb->original_checksum->kind == svn_checksum_sha1);
-
       source = svn_stream_lazyopen_create(lazy_open_source, fb, FALSE,
                                           handler_pool);
     }

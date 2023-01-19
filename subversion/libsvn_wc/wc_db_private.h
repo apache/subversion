@@ -111,7 +111,19 @@ typedef struct svn_wc__db_wcroot_t {
      to fetch the contents on demand. */
   svn_boolean_t store_pristine;
 
+  /* The checksum kind used for the pristine contents. */
+  svn_checksum_kind_t pristine_checksum_kind;
+
 } svn_wc__db_wcroot_t;
+
+/* The checksum kind used for the pristine contents.  Values of this enum
+   get recorded into the database. */
+typedef enum svn_wc__db_pristine_checksum_kind_t
+{
+  svn_wc__db_pristine_checksum_sha1 = 1,
+  /* Available in working copy format 33 and later. */
+  svn_wc__db_pristine_checksum_sha1_salted = 2
+} svn_wc__db_pristine_checksum_kind_t;
 
 
 /* */
@@ -131,6 +143,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              int format,
                              svn_boolean_t verify_format,
                              svn_boolean_t store_pristine,
+                             svn_checksum_kind_t pristine_checksum_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 

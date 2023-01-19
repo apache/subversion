@@ -225,7 +225,7 @@ svn_client_wc_version_from_format(int wc_format,
       case 10: return &version_1_6;
       case 29: return &version_1_7;
       case 31: return &version_1_8;
-      case 32: return &version_1_15;
+      case 33: return &version_1_15;
     }
   return NULL;
 }

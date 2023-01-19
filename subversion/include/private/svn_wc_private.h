@@ -2317,11 +2317,12 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                 void *notify_baton,
                 apr_pool_t *scratch_pool);
 
-/* Return the working copy settings *FORMAT_P and *STORE_PRISTINE_P for
-   LOCAL_ABSPATH in WC_CTX. */
+/* Return the working copy settings *FORMAT_P, *STORE_PRISTINE_P and
+   *PRISTINE_CHECKSUM_KIND_P for LOCAL_ABSPATH in WC_CTX. */
 svn_error_t *
 svn_wc__get_settings(int *format_p,
                      svn_boolean_t *store_pristine_p,
+                     svn_checksum_kind_t *pristine_checksum_kind_p,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
                      apr_pool_t *scratch_pool);

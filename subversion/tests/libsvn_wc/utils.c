@@ -143,12 +143,14 @@ svn_test__create_fake_wc(const char *wc_abspath,
 
   /* Allocate MY_STATEMENTS in RESULT_POOL because the SDB will continue to
    * refer to it over its lifetime. */
-  my_statements = apr_palloc(scratch_pool, 7 * sizeof(const char *));
+  my_statements = apr_palloc(scratch_pool, 8 * sizeof(const char *));
   i = 0;
   my_statements[i++] = statements[STMT_CREATE_SCHEMA];
   my_statements[i++] = extra_statements;
   if (target_format >= 32)
     my_statements[i++] = statements[STMT_UPGRADE_TO_32];
+  if (target_format >= 33)
+    my_statements[i++] = statements[STMT_UPGRADE_TO_33];
   my_statements[i++] = statements[STMT_INSTALL_SCHEMA_STATISTICS];
   my_statements[i++] = NULL;
 

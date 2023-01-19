@@ -1367,6 +1367,7 @@ init_db(/* output values */
         svn_revnum_t root_node_revision,
         svn_depth_t root_node_depth,
         svn_boolean_t store_pristine,
+        svn_checksum_kind_t pristine_checksum_kind,
         const char *wcroot_abspath,
         apr_pool_t *scratch_pool)
 {
@@ -1392,8 +1393,24 @@ init_db(/* output values */
 
   if (target_format >= SVN_WC__HAS_SETTINGS)
     {
+      svn_wc__db_pristine_checksum_kind_t db_checksum_kind;
+
+      switch (pristine_checksum_kind)
+        {
+          case svn_checksum_sha1:
+            db_checksum_kind = svn_wc__db_pristine_checksum_sha1;
+            break;
+          case svn_checksum_sha1_salted:
+            SVN_ERR_ASSERT(target_format >= SVN_WC__HAS_PRISTINE_CHECKSUM_SHA1_SALTED);
+            db_checksum_kind = svn_wc__db_pristine_checksum_sha1_salted;
+            break;
+          default:
+            SVN_ERR_MALFUNCTION();
+        }
+
       SVN_ERR(svn_sqlite__get_statement(&stmt, db, STMT_UPSERT_SETTINGS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "id", *wc_id, store_pristine));
+      SVN_ERR(svn_sqlite__bindf(stmt, "idd",
+                                *wc_id, store_pristine, db_checksum_kind));
       SVN_ERR(svn_sqlite__insert(NULL, stmt));
     }
 
@@ -1445,6 +1462,7 @@ create_db(svn_sqlite__db_t **sdb,
           svn_revnum_t root_node_revision,
           svn_depth_t root_node_depth,
           svn_boolean_t store_pristine,
+          svn_checksum_kind_t pristine_checksum_kind,
           svn_boolean_t exclusive,
           apr_int32_t timeout,
           apr_pool_t *result_pool,
@@ -1459,7 +1477,8 @@ create_db(svn_sqlite__db_t **sdb,
   SVN_SQLITE__WITH_LOCK(init_db(repos_id, wc_id,
                                 *sdb, target_format, repos_root_url, repos_uuid,
                                 root_node_repos_relpath, root_node_revision,
-                                root_node_depth, store_pristine, dir_abspath,
+                                root_node_depth, store_pristine,
+                                pristine_checksum_kind, dir_abspath,
                                 scratch_pool),
                         *sdb);
 
@@ -1477,6 +1496,7 @@ svn_wc__db_init(svn_wc__db_t *db,
                 svn_revnum_t initial_rev,
                 svn_depth_t depth,
                 svn_boolean_t store_pristine,
+                svn_checksum_kind_t pristine_checksum_kind,
                 apr_pool_t *scratch_pool)
 {
   svn_sqlite__db_t *sdb;
@@ -1506,7 +1526,8 @@ svn_wc__db_init(svn_wc__db_t *db,
   /* Create the SDB and insert the basic rows.  */
   SVN_ERR(create_db(&sdb, &repos_id, &wc_id, target_format, local_abspath,
                     repos_root_url, repos_uuid, SDB_FILE,
-                    repos_relpath, initial_rev, depth, store_pristine,
+                    repos_relpath, initial_rev, depth,
+                    store_pristine, pristine_checksum_kind,
                     sqlite_exclusive, sqlite_timeout,
                     db->state_pool, scratch_pool));
 
@@ -1515,7 +1536,7 @@ svn_wc__db_init(svn_wc__db_t *db,
                         apr_pstrdup(db->state_pool, local_abspath),
                         sdb, wc_id, FORMAT_FROM_SDB,
                         FALSE /* auto-upgrade */,
-                        store_pristine,
+                        store_pristine, pristine_checksum_kind,
                         db->state_pool, scratch_pool));
 
   /* Any previously cached children may now have a new WCROOT, most likely that
@@ -1551,6 +1572,7 @@ svn_wc__db_init(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_get_settings(int *format_p,
                         svn_boolean_t *store_pristine_p,
+                        svn_checksum_kind_t *pristine_checksum_kind_p,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool)
@@ -1569,6 +1591,8 @@ svn_wc__db_get_settings(int *format_p,
     *format_p = wcroot->format;
   if (store_pristine_p)
     *store_pristine_p = wcroot->store_pristine;
+  if (pristine_checksum_kind_p)
+    *pristine_checksum_kind_p = wcroot->pristine_checksum_kind;
 
   return SVN_NO_ERROR;
 }
@@ -13460,6 +13484,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *repos_root_url,
                          const char *repos_uuid,
                          svn_boolean_t store_pristine,
+                         svn_checksum_kind_t pristine_checksum_kind,
                          apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -13470,6 +13495,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                     SDB_FILE,
                     NULL, SVN_INVALID_REVNUM, svn_depth_unknown,
                     store_pristine,
+                    pristine_checksum_kind,
                     TRUE /* exclusive */,
                     0 /* timeout */,
                     wc_db->state_pool, scratch_pool));
@@ -13480,6 +13506,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                                        *sdb, *wc_id, FORMAT_FROM_SDB,
                                        FALSE /* auto-upgrade */,
                                        store_pristine,
+                                       pristine_checksum_kind,
                                        wc_db->state_pool, scratch_pool));
 
   /* The WCROOT is complete. Stash it into DB.  */

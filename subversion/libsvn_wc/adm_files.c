@@ -208,6 +208,7 @@ init_adm(svn_wc__db_t *db,
          svn_revnum_t initial_rev,
          svn_depth_t depth,
          svn_boolean_t store_pristine,
+         svn_checksum_kind_t pristine_checksum_kind,
          apr_pool_t *pool)
 {
   /* First, make an empty administrative area. */
@@ -229,7 +230,8 @@ init_adm(svn_wc__db_t *db,
   /* Create the SDB. */
   SVN_ERR(svn_wc__db_init(db, target_format, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
-                          initial_rev, depth, store_pristine, pool));
+                          initial_rev, depth, store_pristine,
+                          pristine_checksum_kind, pool));
 
   /* Stamp ENTRIES and FORMAT files for old clients.  */
   SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
@@ -300,10 +302,24 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
      just create one. */
   if (present_format == 0)
     {
+      svn_checksum_kind_t pristine_checksum_kind;
+
+      if (target_format >= SVN_WC__HAS_PRISTINE_CHECKSUM_SHA1_SALTED)
+        {
+          /* The format of a working copy is new enough to support checksum
+             kinds other than plain SHA-1. */
+          pristine_checksum_kind = svn_checksum_sha1_salted;
+        }
+      else
+        {
+          /* Compatibility: use plain SHA-1. */
+          pristine_checksum_kind = svn_checksum_sha1;
+        }
+
       return svn_error_trace(init_adm(db, target_format, local_abspath,
                                       repos_relpath, repos_root_url, repos_uuid,
                                       revision, depth, store_pristine,
-                                      scratch_pool));
+                                      pristine_checksum_kind, scratch_pool));
     }
   else if (present_format != target_format)
     {
@@ -314,7 +330,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
           svn_dirent_local_style(local_abspath, scratch_pool));
     }
 
-  SVN_ERR(svn_wc__db_get_settings(NULL, &wc_store_pristine, db,
+  SVN_ERR(svn_wc__db_get_settings(NULL, &wc_store_pristine, NULL, db,
                                   local_abspath, scratch_pool));
 
   if ((store_pristine && !wc_store_pristine) ||

@@ -613,6 +613,8 @@ print_info_xml(void *baton,
       svn_cl__xml_tagged_cdata(&sb, pool, "store-pristine",
                                info->wc_info->store_pristine ? "yes" : "no");
 
+      /* TODO: pristine_checksum_kind */
+
       /* "<schedule> xx </schedule>" */
       svn_cl__xml_tagged_cdata(&sb, pool, "schedule",
                                schedule_str(info->wc_info->schedule));
@@ -777,6 +779,24 @@ print_info(void *baton,
       else
         SVN_ERR(svn_cmdline_fputs(_("Working Copy Store Pristine: no\n"),
                                   stdout, pool));
+
+      switch (info->wc_info->pristine_checksum_kind)
+        {
+        case svn_checksum_sha1:
+          SVN_ERR(svn_cmdline_fputs(_("Working Copy Checksum Kind: SHA1\n"),
+                                    stdout, pool));
+          break;
+
+        case svn_checksum_sha1_salted:
+          SVN_ERR(svn_cmdline_fputs(_("Working Copy Checksum Kind: Salted SHA1\n"),
+                                    stdout, pool));
+          break;
+
+        default:
+          SVN_ERR(svn_cmdline_fputs(_("Working Copy Checksum Kind: INVALID\n"),
+                                    stdout, pool));
+          break;
+        }
     }
 
   if (info->URL)
@@ -1323,6 +1343,8 @@ print_info_item(void *baton,
         SVN_ERR(print_info_item_string(text, target_path, pool));
       }
       break;
+
+    /* TODO: pristine_checksum_kind */
 
     default:
       SVN_ERR_MALFUNCTION();

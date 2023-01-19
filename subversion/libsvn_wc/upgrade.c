@@ -1436,6 +1436,15 @@ bump_to_32(void *baton,
 }
 
 static svn_error_t *
+bump_to_33(void *baton,
+           svn_sqlite__db_t *sdb,
+           apr_pool_t *scratch_pool)
+{
+  SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_33));
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
 upgrade_apply_dav_cache(svn_sqlite__db_t *sdb,
                         const char *dir_relpath,
                         apr_int64_t wc_id,
@@ -1636,7 +1645,7 @@ svn_wc__version_string_from_format(int wc_format)
       case SVN_WC__WC_NG_VERSION: return "1.7";
       case 29: return "1.7";
       case 31: return "1.8";
-      case 32: return "1.15";
+      case 33: return "1.15";
     }
   return _("(unreleased development version)");
 }
@@ -1846,6 +1855,7 @@ svn_wc__update_schema(int *result_format,
           UPDATE_TO_FORMAT(30);
           UPDATE_TO_FORMAT(31);
           UPDATE_TO_FORMAT(32);
+          UPDATE_TO_FORMAT(33);
 
           /* ### future bumps go here.  */
 #if 0
@@ -2128,7 +2138,7 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
                                    &data.repos_id, &data.wc_id,
                                    db, target_format, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
-                                   TRUE, scratch_pool));
+                                   TRUE, svn_checksum_sha1, scratch_pool));
 
   /* Migrate the entries over to the new database.
    ### We need to think about atomicity here.

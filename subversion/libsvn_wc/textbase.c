@@ -275,8 +275,8 @@ open_textbase(svn_stream_t **contents_p,
     {
       svn_boolean_t store_pristine;
 
-      SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db, local_abspath,
-                                      scratch_pool));
+      SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
+                                      local_abspath, scratch_pool));
       if (!store_pristine)
         {
           svn_boolean_t modified;
@@ -567,7 +567,7 @@ svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
-  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, wc_ctx->db,
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, wc_ctx->db,
                                   local_abspath, scratch_pool));
   if (store_pristine)
     return SVN_NO_ERROR;

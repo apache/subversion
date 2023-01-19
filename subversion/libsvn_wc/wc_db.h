@@ -297,7 +297,8 @@ svn_wc__db_close(svn_wc__db_t *db);
    DEPTH is the initial depth of the working copy; it must be a definite
    depth, not svn_depth_unknown.
 
-   Create the working copy with the given TARGET_FORMAT.
+   Create the working copy with the given TARGET_FORMAT and settings
+   STORE_PRISTINE and PRISTINE_CHECKSUM_KIND.
 
    Use SCRATCH_POOL for temporary allocations.
 */
@@ -311,16 +312,18 @@ svn_wc__db_init(svn_wc__db_t *db,
                 svn_revnum_t initial_rev,
                 svn_depth_t depth,
                 svn_boolean_t store_pristine,
+                svn_checksum_kind_t pristine_checksum_kind,
                 apr_pool_t *scratch_pool);
 
-/* Return the working copy settings *FORMAT_P and *STORE_PRISTINE_P for
-   LOCAL_ABSPATH in DB.
+/* Return the working copy settings *FORMAT_P, *STORE_PRISTINE_P and
+   *PRISTINE_CHECKSUM_KIND_P for LOCAL_ABSPATH in DB.
 
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
 svn_wc__db_get_settings(int *format_p,
                         svn_boolean_t *store_pristine_p,
+                        svn_checksum_kind_t *pristine_checksum_kind_p,
                         svn_wc__db_t *db,
                         const char *local_abspath,
                         apr_pool_t *scratch_pool);
@@ -943,9 +946,8 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
 
 
 /* If requested set *CONTENTS to a readable stream that will yield the pristine
-   text identified by CHECKSUM (must be a SHA-1 checksum) within the WC
-   identified by WRI_ABSPATH in DB.  If the pristine is present in the store,
-   but dehydrated, set *CONTENTS to NULL.
+   text identified by CHECKSUM within the WC identified by WRI_ABSPATH in DB.
+   If the pristine is present in the store, but dehydrated, set *CONTENTS to NULL.
 
    If requested set *SIZE to the size of the pristine stream in bytes,
 
@@ -972,7 +974,7 @@ typedef struct svn_wc__db_install_data_t
    for either installing or removing the file
 
    Arrange that, on stream closure, *MD5_CHECKSUM and *CHECKSUM will be
-   set to the MD-5 and SHA-1 checksums respectively of that file.
+   set to the MD-5 and main checksum respectively of that file.
    MD5_CHECKSUM and/or CHECKSUM may be NULL if not wanted.
 
    The contents of the pristine will be saved to disk if HYDRATED is true or
@@ -992,7 +994,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
                                     apr_pool_t *scratch_pool);
 
 /* Install the file created via svn_wc__db_pristine_prepare_install() into
-   the pristine data store, to be identified by the SHA-1 checksum of its
+   the pristine data store, to be identified by the checksum of its
    contents, CHECKSUM, and whose MD-5 checksum is MD5_CHECKSUM. */
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
@@ -1008,7 +1010,7 @@ svn_wc__db_pristine_install_abort(svn_wc__db_install_data_t *install_data,
 
 
 /* Set *MD5_CHECKSUM to the MD-5 checksum of a pristine text
-   identified by its SHA-1 checksum CHECKSUM. Return an error
+   identified by its checksum CHECKSUM. Return an error
    if the pristine text does not exist or its MD5 checksum is not found.
 
    Allocate *MD5_CHECKSUM in RESULT_POOL. */
@@ -1021,9 +1023,9 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
                             apr_pool_t *scratch_pool);
 
 
-/* Set *CHECKSUM to the SHA-1 checksum of a pristine text
+/* Set *CHECKSUM to the checksum of a pristine text
    identified by its MD-5 checksum MD5_CHECKSUM. Return an error
-   if the pristine text does not exist or its SHA-1 checksum is not found.
+   if the pristine text does not exist or its checksum is not found.
 
    Note: The MD-5 checksum is not strictly guaranteed to be unique in the
    database table, although duplicates are expected to be extremely rare.
@@ -1051,7 +1053,7 @@ svn_wc__db_pristine_transfer(svn_wc__db_t *db,
                              void *cancel_baton,
                              apr_pool_t *scratch_pool);
 
-/* Remove the pristine text with SHA-1 checksum CHECKSUM from the
+/* Remove the pristine text with checksum CHECKSUM from the
  * pristine store, iff it is not referenced by any of the (other) WC DB
  * tables. */
 svn_error_t *
@@ -1069,7 +1071,7 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
 
 
 /* Set *PRESENT to true if the pristine store for WRI_ABSPATH in DB contains
-   a pristine text with SHA-1 checksum CHECKSUM, and to false otherwise.
+   a pristine text with checksum CHECKSUM, and to false otherwise.
    If the pristine is present, set *HYDRATED to true if its contents are
    currently available on disk, and to false otherwise.  If the pristine
    is not present, set *HYDRATED to false. */
@@ -1082,7 +1084,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           apr_pool_t *scratch_pool);
 
 /* If the pristine store for WRI_ABSPATH in DB contains a pristine text with
-   SHA-1 checksum CHECKSUM with its content available on disk, remove
+   checksum CHECKSUM with its content available on disk, remove
    that content and mark the pristine entry as "dehydrated". */
 svn_error_t *
 svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
@@ -2966,6 +2968,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *repos_root_url,
                          const char *repos_uuid,
                          svn_boolean_t store_pristine,
+                         svn_checksum_kind_t pristine_checksum_kind,
                          apr_pool_t *scratch_pool);
 
 /* Simply insert (or replace) one row in the EXTERNALS table. */

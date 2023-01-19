@@ -1075,7 +1075,7 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
   const svn_checksum_t *expected_md5_checksum;  /* recorded MD5 of BASE_S. */
   svn_checksum_t *verify_md5_checksum;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
-  svn_checksum_t *local_checksum;  /* calc'd SHA1 of LOCAL_STREAM */
+  svn_checksum_t *local_checksum;  /* calc'd checksum of LOCAL_STREAM */
   svn_wc__db_install_data_t *install_data = NULL;
   svn_error_t *err;
   svn_error_t *err2;

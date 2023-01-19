@@ -768,7 +768,7 @@ get_pristine_copy_path(const char **pristine_path_p,
   const svn_checksum_t *checksum;
   const char *wcroot_abspath;
 
-  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db,
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
                                   local_abspath, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
@@ -894,14 +894,13 @@ get_pristine_lazyopen_func(svn_stream_t **stream_p,
   const svn_checksum_t *checksum;
   svn_stream_t *stream;
 
-  /* svn_wc__db_pristine_read() wants a SHA1, so if we have an MD5,
-     we'll use it to lookup the SHA1. */
-  if (b->checksum->kind == svn_checksum_sha1)
-    checksum = b->checksum;
-  else
+  /* If we have an MD5, we'll use it to look up the actual checksum. */
+  if (b->checksum->kind == svn_checksum_md5)
     SVN_ERR(svn_wc__db_pristine_lookup_by_md5(&checksum, b->wc_ctx->db,
                                               b->wri_abspath, b->checksum,
                                               scratch_pool, scratch_pool));
+  else
+    checksum = b->checksum;
 
   SVN_ERR(svn_wc__db_pristine_read(&stream, NULL, b->wc_ctx->db,
                                    b->wri_abspath, checksum,
