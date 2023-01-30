@@ -1405,7 +1405,7 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none",
     fp.write("groups-db = groups\n")
   if options.enable_sasl:
     fp.write("realm = svntest\n"
-             "[sasl]\n",
+             "[sasl]\n"
              "use-sasl = true\n");
   else:
     fp.write("password-db = passwd\n")
