@@ -89,6 +89,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
 {
   int target_format;
   svn_boolean_t target_store_pristine;
+  svn_boolean_t fail_on_format_mismatch;
   svn_node_kind_t kind;
   svn_client__pathrev_t *pathrev;
   svn_opt_revision_t resolved_rev = { svn_opt_revision_number };
@@ -110,6 +111,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                             &target_store_pristine,
                                             ctx->wc_ctx, local_abspath,
                                             scratch_pool));
+      fail_on_format_mismatch = FALSE;
     }
   else
     {
@@ -125,6 +127,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       if (wc_format_version)
         {
           target_format_version = wc_format_version;
+          /* Fail if the existing WC's format is different than requested. */
+          fail_on_format_mismatch = TRUE;
         }
       else
         {
@@ -144,6 +148,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                                          required_version->patch))
                 target_format_version = required_version;
             }
+
+          fail_on_format_mismatch = FALSE;
         }
 
       SVN_ERR(svn_wc__format_from_version(&target_format,
@@ -247,8 +253,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                 _("'%s' is already a working copy for a different URL"),
                 svn_dirent_local_style(local_abspath, scratch_pool));
 
-          /* Warn if the existing WC's format is different than requested. */
-          if (present_format != target_format)
+          if (fail_on_format_mismatch && present_format != target_format)
             return svn_error_createf(
                 SVN_ERR_WC_OBSTRUCTED_UPDATE, NULL,
                 _("'%s' is already a working copy for the same URL"

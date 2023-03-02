@@ -1215,6 +1215,37 @@ def checkout_compatible_version_config(sbox):
     'info', '--show-item=wc-compatible-version', '--no-newline',
     sbox.wc_dir)
 
+def checkout_over_existing_wc_same_url(sbox):
+  "checkout over existing wc with same URL"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State('', {})
+
+  svntest.actions.run_and_verify_checkout(
+    sbox.repo_url, sbox.wc_dir, expected_output, expected_disk, [],
+    '--compatible-version=1.15', '--store-pristine=yes')
+  svntest.actions.run_and_verify_svn(
+    ['1.15'], [],
+    'info', '--show-item=wc-compatible-version', '--no-newline',
+    sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
+  svntest.actions.run_and_verify_checkout(
+    sbox.repo_url, sbox.wc_dir, expected_output, expected_disk, [],
+    '--store-pristine=yes')
+  svntest.actions.run_and_verify_svn(
+    ['1.15'], [],
+    'info', '--show-item=wc-compatible-version', '--no-newline',
+    sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(
+    ['yes'], [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    sbox.wc_dir)
+
 #----------------------------------------------------------------------
 
 # list all tests here, starting with None:
@@ -1234,7 +1265,8 @@ test_list = [ None,
               co_with_obstructing_local_adds,
               checkout_wc_from_drive,
               checkout_compatible_version_arg,
-              checkout_compatible_version_config
+              checkout_compatible_version_config,
+              checkout_over_existing_wc_same_url
             ]
 
 if __name__ == "__main__":
