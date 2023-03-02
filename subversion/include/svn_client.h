@@ -1242,7 +1242,7 @@ svn_client_args_to_target_array(apr_array_header_t **targets_p,
  *              obstructing items.
  * @param[in] wc_format_version is the version number of the oldest Subversion
  *              client with which the created working copy should be compatible;
- *              @c NULL means the library's version.
+ *              @c NULL means the default version.
  *              See svn_client_default_wc_version(),
  *              svn_client_get_wc_formats_supported().
  * @param[in] store_pristine  If #svn_tristate_true, the pristine contents of
@@ -1284,8 +1284,8 @@ svn_client_checkout4(svn_revnum_t *result_rev,
                      apr_pool_t *pool);
 
 /**
- * Similar to svn_client_checkout4() but always creates the newest
- * supported working copy format.
+ * Similar to svn_client_checkout4() but with @a wc_format_version set
+ * to @c NULL.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.10 API.
@@ -4405,7 +4405,7 @@ svn_client_cleanup(const char *dir,
  * copies from any older format to a WC metadata storage
  * format supported by Subversion @a wc_format_version.
  *
- * If @a wc_format_version is @c NULL, the library's version is used.
+ * If @a wc_format_version is @c NULL, the default version is used.
  *
  * @a wcroot_dir is the path to the WC root.
  *
@@ -4423,8 +4423,7 @@ svn_client_upgrade2(const char *wcroot_dir,
                     apr_pool_t *scratch_pool);
 
 /**
- * Like svn_client_upgrade2(), but always upgrades to the newest
- * supported format.
+ * Like svn_client_upgrade2(), but with @a wc_format_version set to @c NULL.
  *
  * @since New in 1.7.
  * @deprecated Provided for backward compatibility with the 1.14 API.
@@ -4445,13 +4444,17 @@ const svn_version_t *
 svn_client_oldest_wc_version(apr_pool_t *result_pool);
 
 /**
- * Returns the first version that supported the library's default
- * working copy metadata format.
+ * Set @a *version_p to the version of a working copy format that should
+ * be used by default for @a ctx, according to its configuration.
+ * Allocate the result in @a result_pool.
  *
  * @since New in 1.15.
  */
-const svn_version_t *
-svn_client_default_wc_version(apr_pool_t *result_pool);
+svn_error_t *
+svn_client_default_wc_version(const svn_version_t **version_p,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
 
 /**
  * Returns the first version that supported the library's latest

@@ -691,7 +691,7 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
                       ssl_cert=None, ssl_url=None, http_proxy=None,
-                      exclusive_wc_locks=None):
+                      exclusive_wc_locks=None, wc_format_version=None):
   "Create config directories and files"
 
   # config file names
@@ -711,12 +711,14 @@ password-stores =
 
 [miscellany]
 interactive-conflicts = false
+
+[working-copy]
 """
     if exclusive_wc_locks:
-      config_contents += """
-[working-copy]
-exclusive-locking = true
-"""
+      config_contents += "exclusive-locking = true\n"
+    if wc_format_version:
+      config_contents += ("compatible-version = %s\n" % wc_format_version)
+
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
@@ -812,18 +814,6 @@ def _with_store_pristine(args):
       return args + ('--store-pristine', options.store_pristine)
   return args
 
-def _with_wc_format_version(args):
-  if '--compatible-version' in args \
-      or any(str(one_arg).startswith('--compatible-version=') for one_arg in args) \
-      or options.wc_format_version is None:
-    return args
-  non_opt_args = [a for a in args if not str(a).startswith('-')]
-  if non_opt_args:
-    subcommand = non_opt_args[0]
-    if subcommand in ['co', 'checkout', 'upgrade']:
-      return args + ('--compatible-version', options.wc_format_version)
-  return args
-
 def _with_config_dir(args):
   if '--config-dir' in args:
     return args
@@ -859,8 +849,8 @@ def run_svn(error_expected, *varargs):
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
   return run_command(svn_binary, error_expected, False,
-                     *(_with_store_pristine(_with_wc_format_version(
-                       _with_auth(_with_config_dir(varargs))))))
+                     *(_with_store_pristine(
+                       _with_auth(_with_config_dir(varargs)))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -2671,7 +2661,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                         ssl_cert=options.ssl_cert,
                         ssl_url=options.test_area_url,
                         http_proxy=options.http_proxy,
-                        exclusive_wc_locks=options.exclusive_wc_locks)
+                        exclusive_wc_locks=options.exclusive_wc_locks,
+                        wc_format_version=options.wc_format_version)
 
       # Setup the pristine repositories
       svntest.actions.setup_pristine_repositories()

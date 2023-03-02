@@ -36,11 +36,13 @@
 #include "svn_pools.h"
 #include "svn_props.h"
 #include "svn_version.h"
+#include "svn_hash.h"
 
 #include "client.h"
 
 #include "svn_private_config.h"
 #include "private/svn_wc_private.h"
+#include "private/svn_subr_private.h"
 #include "../libsvn_wc/wc.h"
 
 
@@ -197,6 +199,12 @@ svn_client_upgrade2(const char *path,
 {
   int wc_format;
 
+  if (!wc_format_version)
+    {
+      SVN_ERR(svn_client_default_wc_version(&wc_format_version, ctx,
+                                            scratch_pool, scratch_pool));
+    }
+
   SVN_ERR(svn_wc__format_from_version(&wc_format,
                                       wc_format_version,
                                       scratch_pool));
@@ -251,13 +259,42 @@ svn_client_oldest_wc_version(apr_pool_t *result_pool)
   return &version;
 }
 
-const svn_version_t *
-svn_client_default_wc_version(apr_pool_t *result_pool)
+svn_error_t *
+svn_client_default_wc_version(const svn_version_t **version_p,
+                              svn_client_ctx_t *ctx,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
 {
-  /* NOTE: For consistency, always return the version of the client
-     that first introduced the format. */
-  static const svn_version_t version = { 1, 8, 0, NULL };
-  return &version;
+  svn_config_t *config;
+  const char *value;
+  svn_version_t *version;
+
+  if (ctx->config)
+    config = svn_hash_gets(ctx->config, SVN_CONFIG_CATEGORY_CONFIG);
+  else
+    config = NULL;
+
+  svn_config_get(config, &value,
+                 SVN_CONFIG_SECTION_WORKING_COPY,
+                 SVN_CONFIG_OPTION_COMPATIBLE_VERSION,
+                 NULL);
+  if (value)
+    {
+      SVN_ERR(svn_version__parse_version_string(&version, value, result_pool));
+    }
+  else
+    {
+      /* NOTE: For consistency, always return the version of the client
+         that first introduced the format. */
+      version = apr_pcalloc(result_pool, sizeof(*version));
+      version->major = 1;
+      version->minor = 8;
+      version->patch = 0;
+      version->tag = NULL;
+    }
+
+  *version_p = version;
+  return SVN_NO_ERROR;
 }
 
 const svn_version_t *

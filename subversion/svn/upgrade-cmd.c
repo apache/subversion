@@ -52,10 +52,12 @@ svn_cl__upgrade(apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_pool_t *iterpool;
   int i;
-  const svn_version_t *default_version
-    = svn_client_default_wc_version(scratch_pool);
-  const svn_version_t *latest_version
-    = svn_client_latest_wc_version(scratch_pool);
+  const svn_version_t *default_version;
+  const svn_version_t *latest_version;
+
+  SVN_ERR(svn_client_default_wc_version(&default_version, ctx,
+                                        scratch_pool, scratch_pool));
+  latest_version = svn_client_latest_wc_version(scratch_pool);
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,

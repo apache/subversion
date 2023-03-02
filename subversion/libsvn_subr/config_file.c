@@ -1553,6 +1553,10 @@ svn_config_ensure(const char *config_dir, apr_pool_t *pool)
         "### returning an error.  The default is 10000, i.e. 10 seconds."    NL
         "### Longer values may be useful when exclusive locking is enabled." NL
         "# busy-timeout = 10000"                                             NL
+        "### Set the default working copy format version.  Newly created"    NL
+        "### and upgraded working copies will by default be compatible with" NL
+        "### the specified Subversion version."                              NL
+        "# compatible-version = 1.8"                                         NL
         ;
 
       err = svn_io_file_open(&f, path,

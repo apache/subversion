@@ -130,7 +130,8 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
         {
           /* A NULL wc_format_version translates to the minimum compatible
              version. */
-          target_format_version = svn_client_default_wc_version(scratch_pool);
+          SVN_ERR(svn_client_default_wc_version(&target_format_version, ctx,
+                                                scratch_pool, scratch_pool));
 
           if (!target_store_pristine)
             {
