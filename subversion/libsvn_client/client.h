@@ -539,18 +539,20 @@ svn_client__update_internal(svn_revnum_t *result_rev,
    the repos are tolerated; if FALSE, these obstructions cause the checkout
    to fail.
 
-   A new working copy, if needed, will be created in the format corresponding
-   to the WC_FORMAT_VERSION of the client.  The format of any existing working
-   copy will remain unchanged.
+   If SETTINGS_FROM_CONTEXT is TRUE, the working copy settings such as
+   WC_FORMAT_VERSION and STORE_PRISTINE will be determined from context
+   (see svn_wc__settings_from_context) and the values of the corresponding
+   arguments are ignored.  Otherwise, their values take effect as described
+   below:
 
-   If STORE_PRISTINE is svn_tristate_true, the pristine contents of all
-   files in the working copy will be stored on disk.  If STORE_PRISTINE is
-   svn_tristate_false, the pristine contents will be fetched on-demand when
-   required by the operation.
+   - A new working copy, if needed, will be created in the format corresponding
+     to the WC_FORMAT_VERSION of the client.  The format of any existing
+     working copy will remain unchanged.
 
-   If WC_FORMAT_VERSION is NULL and STORE_PRISTINE is svn_tristate_unknown, the
-   settings will be determined from context (see svn_wc__settings_from_context).
-   Otherwise, both WC_FORMAT_VERSION and STORE_PRISTINE must be defined.
+   - If STORE_PRISTINE is svn_tristate_true, the pristine contents of all
+     files in the working copy will be stored on disk.  If STORE_PRISTINE is
+     svn_tristate_false, the pristine contents will be fetched on-demand when
+     required by the operation.
 
    If RA_SESSION is NOT NULL, it may be used to avoid creating a new
    session. The session may point to a different URL after returning.
@@ -565,6 +567,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
+                              svn_boolean_t settings_from_context,
                               const svn_version_t *wc_format_version,
                               svn_tristate_t store_pristine,
                               svn_ra_session_t *ra_session,

@@ -80,6 +80,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
                               svn_depth_t depth,
                               svn_boolean_t ignore_externals,
                               svn_boolean_t allow_unver_obstructions,
+                              svn_boolean_t settings_from_context,
                               const svn_version_t *wc_format_version,
                               svn_tristate_t store_pristine,
                               svn_ra_session_t *ra_session,
@@ -103,7 +104,7 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
       && (revision->kind != svn_opt_revision_head))
     return svn_error_create(SVN_ERR_CLIENT_BAD_REVISION, NULL, NULL);
 
-  if (wc_format_version == NULL && store_pristine == svn_tristate_unknown)
+  if (settings_from_context)
     {
       SVN_ERR(svn_wc__settings_from_context(&target_format,
                                             &target_store_pristine,
@@ -112,17 +113,41 @@ svn_client__checkout_internal(svn_revnum_t *result_rev,
     }
   else
     {
-      SVN_ERR_ASSERT(wc_format_version != NULL);
+      const svn_version_t *target_format_version;
 
-      SVN_ERR(svn_wc__format_from_version(&target_format, wc_format_version,
-                                          scratch_pool));
-
-      SVN_ERR_ASSERT(store_pristine != svn_tristate_unknown);
-
-      if (store_pristine == svn_tristate_true)
+      if (store_pristine == svn_tristate_unknown)
+        target_store_pristine = TRUE;
+      else if (store_pristine == svn_tristate_true)
         target_store_pristine = TRUE;
       else
         target_store_pristine = FALSE;
+
+      if (wc_format_version)
+        {
+          target_format_version = wc_format_version;
+        }
+      else
+        {
+          /* A NULL wc_format_version translates to the minimum compatible
+             version. */
+          target_format_version = svn_client_default_wc_version(scratch_pool);
+
+          if (!target_store_pristine)
+            {
+              const svn_version_t *required_version =
+                svn_client__compatible_wc_version_optional_pristine(scratch_pool);
+
+              if (!svn_version__at_least(target_format_version,
+                                         required_version->major,
+                                         required_version->minor,
+                                         required_version->patch))
+                target_format_version = required_version;
+            }
+        }
+
+      SVN_ERR(svn_wc__format_from_version(&target_format,
+                                          target_format_version,
+                                          scratch_pool));
     }
 
   /* Get the RA connection, if needed. */
@@ -271,32 +296,12 @@ svn_client_checkout4(svn_revnum_t *result_rev,
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, pool));
 
-  if (store_pristine == svn_tristate_unknown)
-    store_pristine = svn_tristate_true;
-
-  /* A NULL wc_format_version translates to the minimum compatible version. */
-  if (!wc_format_version)
-    {
-      wc_format_version = svn_client_default_wc_version(pool);
-
-      if (store_pristine == svn_tristate_false)
-        {
-          const svn_version_t *required_version =
-            svn_client__compatible_wc_version_optional_pristine(pool);
-
-          if (!svn_version__at_least(wc_format_version,
-                                     required_version->major,
-                                     required_version->minor,
-                                     required_version->patch))
-            wc_format_version = required_version;
-        }
-    }
-
   err = svn_client__checkout_internal(result_rev, &sleep_here,
                                       URL, local_abspath,
                                       peg_revision, revision, depth,
                                       ignore_externals,
                                       allow_unver_obstructions,
+                                      FALSE, /* settings_from_context */
                                       wc_format_version,
                                       store_pristine,
                                       NULL /* ra_session */,
