@@ -1583,7 +1583,6 @@ def upgrade_1_0_with_externals(sbox):
      })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-@SkipUnless(lambda: svntest.main.options.wc_format_version is None)
 def upgrade_latest_format(sbox):
   "upgrade latest format without arguments"
 

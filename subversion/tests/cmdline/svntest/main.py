@@ -1768,12 +1768,6 @@ def wc_format(ver=None):
     return 31
   raise Exception("Unrecognized version number '%s'" % (ver,))
 
-def wc_supports_optional_pristine():
-  if options.wc_format_version is None:
-    return True
-  else:
-    return wc_format(options.wc_format_version) >= 32
-
 ######################################################################
 
 
