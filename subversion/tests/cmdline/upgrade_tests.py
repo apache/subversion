@@ -1583,7 +1583,6 @@ def upgrade_1_0_with_externals(sbox):
      })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
 
-@XFail()
 @SkipUnless(lambda: svntest.main.options.wc_format_version is None)
 def upgrade_latest_format(sbox):
   "upgrade latest format without arguments"
@@ -1599,10 +1598,12 @@ def upgrade_latest_format(sbox):
                                           [],
                                           '--compatible-version',
                                           latest_ver)
-  # XFAIL:
+  # This used to fail with the following error:
   # svn: E155021: Working copy '...' is already at version 1.15 (format 32)
   # and cannot be downgraded to version 1.8 (format 31)
   svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
+
+  check_format(sbox, svntest.main.wc_format(latest_ver))
 
 def upgrade_compatible_version_arg(sbox):
   "upgrade with compatible-version from arg"

@@ -2290,6 +2290,9 @@ svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
  * format indicated by @a target_format.  @a local_abspath should be
  * an absolute path to the root of the working copy.
  *
+ * If @a result_format_p is non-NULL, it will be set to the resulting
+ * format of the working copy after the upgrade.
+ *
  * If @a cancel_func is non-NULL, invoke it with @a cancel_baton at
  * various points during the operation.  If it returns an error
  * (typically #SVN_ERR_CANCELLED), return that error immediately.
@@ -2306,7 +2309,8 @@ svn_wc__ensure_adm(svn_wc_context_t *wc_ctx,
  * @since New in 1.15.
  */
 svn_error_t *
-svn_wc__upgrade(svn_wc_context_t *wc_ctx,
+svn_wc__upgrade(int *result_format_p,
+                svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
                 int target_format,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,

@@ -1765,18 +1765,6 @@ svn_wc__upgrade_sdb(int *result_format,
                                                     scratch_pool),
                              start_format);
 
-  if (start_format > target_format)
-    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
-                             _("Working copy '%s' is already at version %s "
-                               "(format %d) and cannot be downgraded to "
-                               "version %s (format %d)"),
-                             svn_dirent_local_style(wcroot_abspath,
-                                                    scratch_pool),
-                             svn_wc__version_string_from_format(start_format),
-                             start_format,
-                             svn_wc__version_string_from_format(target_format),
-                             target_format);
-
   if (target_format < SVN_WC__SUPPORTED_VERSION)
     return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
                              _("Working copy version %s (format %d) "
@@ -1801,17 +1789,6 @@ svn_wc__upgrade_sdb(int *result_format,
   SVN_SQLITE__WITH_LOCK(
       svn_wc__db_install_schema_statistics(sdb, scratch_pool),
       sdb);
-
-#ifdef SVN_DEBUG
-  if (*result_format != start_format)
-    {
-      int schema_version;
-      SVN_ERR(svn_sqlite__read_schema_version(&schema_version, sdb, scratch_pool));
-
-      /* If this assertion fails the schema isn't updated correctly */
-      SVN_ERR_ASSERT(schema_version == *result_format);
-    }
-#endif
 
   /* Zap anything that might be remaining or escaped our notice.  */
   wipe_obsolete_files(wcroot_abspath, scratch_pool);
@@ -1855,7 +1832,6 @@ svn_wc__update_schema(int *result_format,
 #undef UPDATE_TO_FORMAT
     }
 
-  SVN_ERR_ASSERT(*result_format == target_format);
   return SVN_NO_ERROR;
 }
 
@@ -2023,7 +1999,8 @@ is_old_wcroot(const char *local_abspath,
 }
 
 svn_error_t *
-svn_wc__upgrade(svn_wc_context_t *wc_ctx,
+svn_wc__upgrade(int *result_format_p,
+                svn_wc_context_t *wc_ctx,
                 const char *local_abspath,
                 int target_format,
                 svn_wc_upgrade_get_repos_info_t repos_info_func,
@@ -2072,8 +2049,6 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
       /* Auto-upgrade worked! */
       SVN_ERR(svn_wc__db_close(db));
 
-      SVN_ERR_ASSERT(result_format == target_format);
-
       if (bumped_format && notify_func)
         {
           svn_wc_notify_t *notify;
@@ -2085,6 +2060,8 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
           notify_func(notify_baton, notify, scratch_pool);
         }
 
+      if (result_format_p)
+        *result_format_p = result_format;
       return SVN_NO_ERROR;
     }
 
@@ -2183,6 +2160,8 @@ svn_wc__upgrade(svn_wc_context_t *wc_ctx,
   SVN_ERR(svn_io_remove_dir2(data.root_abspath, FALSE, NULL, NULL,
                              scratch_pool));
 
+  if (result_format_p)
+    *result_format_p = target_format;
   return SVN_NO_ERROR;
 }
 

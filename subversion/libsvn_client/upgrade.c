@@ -99,8 +99,9 @@ upgrade_externals_from_properties(svn_client_ctx_t *ctx,
                                   apr_pool_t *scratch_pool);
 
 static svn_error_t *
-upgrade_internal(const char *path,
-                 int wc_format,
+upgrade_internal(int *result_format_p,
+                 const char *path,
+                 int target_format,
                  svn_client_ctx_t *ctx,
                  apr_pool_t *scratch_pool)
 {
@@ -118,7 +119,8 @@ upgrade_internal(const char *path,
                              _("'%s' is not a local path"), path);
 
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, path, scratch_pool));
-  SVN_ERR(svn_wc__upgrade(ctx->wc_ctx, local_abspath, wc_format,
+  SVN_ERR(svn_wc__upgrade(result_format_p, ctx->wc_ctx,
+                          local_abspath, target_format,
                           fetch_repos_info, &info_baton,
                           ctx->cancel_func, ctx->cancel_baton,
                           ctx->notify_func2, ctx->notify_baton2,
@@ -156,8 +158,9 @@ upgrade_internal(const char *path,
 
           if (kind == svn_node_dir)
             {
-              svn_error_t *err = upgrade_internal(ext_abspath, wc_format,
-                                                  ctx, iterpool);
+              svn_error_t *err = upgrade_internal(NULL, ext_abspath,
+                                                  target_format, ctx,
+                                                  iterpool);
 
               if (err)
                 {
@@ -181,8 +184,9 @@ upgrade_internal(const char *path,
       /* Upgrading from <= 1.6, or no svn:properties defined.
          (There is no way to detect the difference from libsvn_client :( ) */
 
-      SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath, wc_format,
-                                                &info_baton, scratch_pool));
+      SVN_ERR(upgrade_externals_from_properties(ctx, local_abspath,
+                                                target_format, &info_baton,
+                                                scratch_pool));
     }
 
   SVN_ERR(svn_client__textbase_sync(NULL, local_abspath, FALSE, TRUE, ctx,
@@ -192,23 +196,54 @@ upgrade_internal(const char *path,
 }
 
 svn_error_t *
-svn_client_upgrade2(const char *path,
-                    const svn_version_t *wc_format_version,
+svn_client_upgrade2(const svn_version_t **result_format_version_p,
+                    const char *path,
+                    const svn_version_t *target_format_version,
                     svn_client_ctx_t *ctx,
+                    apr_pool_t *result_pool,
                     apr_pool_t *scratch_pool)
 {
-  int wc_format;
+  int result_format;
+  int target_format;
+  svn_boolean_t fail_on_downgrade;
 
-  if (!wc_format_version)
+  if (target_format_version)
     {
-      SVN_ERR(svn_client_default_wc_version(&wc_format_version, ctx,
+      SVN_ERR(svn_wc__format_from_version(&target_format,
+                                          target_format_version,
+                                          scratch_pool));
+      /* Fail on downgrade attempts if format version was passed explicitly. */
+      fail_on_downgrade = TRUE;
+    }
+  else
+    {
+      const svn_version_t *default_version;
+
+      SVN_ERR(svn_client_default_wc_version(&default_version, ctx,
                                             scratch_pool, scratch_pool));
+      SVN_ERR(svn_wc__format_from_version(&target_format, default_version,
+                                          scratch_pool));
+      fail_on_downgrade = FALSE;
     }
 
-  SVN_ERR(svn_wc__format_from_version(&wc_format,
-                                      wc_format_version,
-                                      scratch_pool));
-  SVN_ERR(upgrade_internal(path, wc_format, ctx, scratch_pool));
+  SVN_ERR(upgrade_internal(&result_format, path, target_format,
+                           ctx, scratch_pool));
+
+  if (fail_on_downgrade && result_format > target_format)
+    return svn_error_createf(SVN_ERR_WC_UNSUPPORTED_FORMAT, NULL,
+                             _("Working copy '%s' is already at version %s "
+                               "(format %d) and cannot be downgraded to "
+                               "version %s (format %d)"),
+                             svn_dirent_local_style(path, scratch_pool),
+                             svn_wc__version_string_from_format(result_format),
+                             result_format,
+                             svn_wc__version_string_from_format(target_format),
+                             target_format);
+
+  if (result_format_version_p)
+    *result_format_version_p = svn_client_wc_version_from_format(
+                                 result_format, result_pool);
+
   return SVN_NO_ERROR;
 }
 
@@ -362,7 +397,8 @@ upgrade_external_item(svn_client_ctx_t *ctx,
     {
       svn_error_clear(err);
 
-      SVN_ERR(upgrade_internal(external_abspath, wc_format, ctx, scratch_pool));
+      SVN_ERR(upgrade_internal(NULL, external_abspath, wc_format, ctx,
+                               scratch_pool));
     }
   else if (err)
     return svn_error_trace(err);

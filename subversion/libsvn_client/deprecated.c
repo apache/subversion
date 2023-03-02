@@ -3287,5 +3287,6 @@ svn_client_upgrade(const char *path,
                    svn_client_ctx_t *ctx,
                    apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_client_upgrade2(path, NULL, ctx, scratch_pool));
+  return svn_error_trace(svn_client_upgrade2(NULL, path, NULL, ctx,
+                                             NULL, scratch_pool));
 }
