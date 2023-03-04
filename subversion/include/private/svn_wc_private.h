@@ -2194,6 +2194,16 @@ svn_wc__format_from_version(int *format,
                             const svn_version_t* version,
                             apr_pool_t *scratch_pool);
 
+/* Return a string indicating the released version (or versions) of
+ * Subversion that used WC format number WC_FORMAT, or some other
+ * suitable string if no released version used WC_FORMAT.
+ *
+ * ### It's not ideal to encode this sort of knowledge in this low-level
+ * library.  On the other hand, it doesn't need to be updated often and
+ * should be easily found when it does need to be updated.  */
+const char *
+svn_wc__version_string_from_format(int wc_format);
+
 /**
  * Return true iff @a format is a supported format.
  */
