@@ -1041,16 +1041,6 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
                              apr_pool_t *scratch_pool);
 
 
-/* If necessary transfers the PRISTINE files of the tree rooted at
-   SRC_LOCAL_ABSPATH to the working copy identified by DST_WRI_ABSPATH. */
-svn_error_t *
-svn_wc__db_pristine_transfer(svn_wc__db_t *db,
-                             const char *src_local_abspath,
-                             const char *dst_wri_abspath,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *scratch_pool);
-
 /* Remove the pristine text with SHA-1 checksum SHA1_CHECKSUM from the
  * pristine store, iff it is not referenced by any of the (other) WC DB
  * tables. */

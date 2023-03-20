@@ -215,6 +215,8 @@ copy_to_tmpdir(svn_skel_t **work_item,
    If IS_MOVE is true, record move information in working copy meta
    data in addition to copying the file.
 
+   WITHIN_ONE_WC is TRUE if the copy/move is within a single working copy (root)
+
    If the versioned file has a text conflict, and the .mine file exists in
    the filesystem, copy the .mine file to DST_ABSPATH.  Otherwise, copy the
    versioned file itself.
@@ -237,6 +239,7 @@ copy_versioned_file(svn_wc__db_t *db,
                     svn_boolean_t metadata_only,
                     svn_boolean_t conflicted,
                     svn_boolean_t is_move,
+                    svn_boolean_t within_one_wc,
                     const svn_io_dirent2_t *dirent,
                     svn_filesize_t recorded_size,
                     apr_time_t recorded_time,
@@ -248,8 +251,45 @@ copy_versioned_file(svn_wc__db_t *db,
 {
   svn_skel_t *work_items = NULL;
 
-  /* In case we are copying from one WC to another (e.g. an external dir),
-     ensure the destination WC has a copy of the pristine text. */
+  if (within_one_wc)
+    {
+      /* In case we are copying within one WC, it already has the pristine. */
+    }
+  else
+    {
+      /* In case we are copying from one WC to another (e.g. an external dir),
+         ensure the destination WC has a copy of the pristine text. */
+
+      svn_stream_t *contents;
+
+      SVN_ERR(svn_wc__textbase_get_contents(&contents, db, src_abspath, NULL,
+                                            TRUE, scratch_pool, scratch_pool));
+      if (contents)
+        {
+          svn_stream_t *install_stream;
+          svn_wc__db_install_data_t *install_data;
+          svn_checksum_t *install_sha1_checksum;
+          svn_checksum_t *install_md5_checksum;
+          svn_error_t *err;
+
+          SVN_ERR(svn_wc__textbase_prepare_install(&install_stream,
+                                                   &install_data,
+                                                   &install_sha1_checksum,
+                                                   &install_md5_checksum,
+                                                   db, dst_abspath, FALSE,
+                                                   scratch_pool, scratch_pool));
+
+          err = svn_stream_copy3(contents, install_stream, NULL, NULL, scratch_pool);
+          if (err)
+            return svn_error_compose_create(err,
+                     svn_wc__db_pristine_install_abort(install_data, scratch_pool));
+
+          SVN_ERR(svn_wc__db_pristine_install(install_data,
+                                              install_sha1_checksum,
+                                              install_md5_checksum,
+                                              scratch_pool));
+        }
+    }
 
   /* Prepare a temp copy of the filesystem node.  It is usually a file, but
      copy recursively if it's a dir. */
@@ -349,6 +389,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                    const char *tmpdir_abspath,
                    svn_boolean_t metadata_only,
                    svn_boolean_t is_move,
+                   svn_boolean_t within_one_wc,
                    const svn_io_dirent2_t *dirent,
                    svn_cancel_func_t cancel_func,
                    void *cancel_baton,
@@ -454,7 +495,7 @@ copy_versioned_dir(svn_wc__db_t *db,
                                             dst_op_root_abspath,
                                             tmpdir_abspath,
                                             metadata_only, info->conflicted,
-                                            is_move,
+                                            is_move, within_one_wc,
                                             disk_children
                                               ? svn_hash_gets(disk_children,
                                                               child_name)
@@ -469,7 +510,7 @@ copy_versioned_dir(svn_wc__db_t *db,
             SVN_ERR(copy_versioned_dir(db,
                                        child_src_abspath, child_dst_abspath,
                                        dst_op_root_abspath, tmpdir_abspath,
-                                       metadata_only, is_move,
+                                       metadata_only, is_move, within_one_wc,
                                        disk_children
                                               ? svn_hash_gets(disk_children,
                                                               child_name)
@@ -839,17 +880,12 @@ copy_or_move(svn_boolean_t *record_move_on_delete,
       is_move = FALSE;
     }
 
-  if (!within_one_wc)
-    SVN_ERR(svn_wc__db_pristine_transfer(db, src_abspath, dst_wcroot_abspath,
-                                         cancel_func, cancel_baton,
-                                         scratch_pool));
-
   if (src_db_kind == svn_node_file
       || src_db_kind == svn_node_symlink)
     {
       err = copy_versioned_file(db, src_abspath, dst_abspath, dst_abspath,
-                                tmpdir_abspath,
-                                metadata_only, conflicted, is_move,
+                                tmpdir_abspath, metadata_only, conflicted,
+                                is_move, within_one_wc,
                                 NULL, recorded_size, recorded_time,
                                 cancel_func, cancel_baton,
                                 notify_func, notify_baton,
@@ -888,7 +924,7 @@ copy_or_move(svn_boolean_t *record_move_on_delete,
 
       err = copy_versioned_dir(db, src_abspath, dst_abspath, dst_abspath,
                                tmpdir_abspath, metadata_only, is_move,
-                               NULL /* dirent */,
+                               within_one_wc, NULL /* dirent */,
                                cancel_func, cancel_baton,
                                notify_func, notify_baton,
                                scratch_pool);

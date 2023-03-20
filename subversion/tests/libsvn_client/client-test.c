@@ -449,6 +449,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   const char *ex_file_path;
   const char *ex_dir_path;
   const char *ex2_dir_path;
+  svn_boolean_t store_pristine;
 
   /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-wc-add-repos", opts, pool));
@@ -471,6 +472,12 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
                                opts->wc_format_version,
                                opts->store_pristine,
                                ctx, pool));
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, ctx->wc_ctx,
+                               wc_path, pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy with pristine");
 
   /* Now checkout again as wc_path/NEW */
   new_dir_path = svn_dirent_join(wc_path, "NEW", pool);
