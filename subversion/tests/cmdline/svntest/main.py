@@ -211,6 +211,9 @@ svnauthz_validate_binary = os.path.abspath(
 )
 svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 
+# Where to find the libtool script created during build
+libtool_script = os.path.abspath('../../../libtool')
+
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
@@ -507,6 +510,13 @@ def open_pipe(command, bufsize=-1, stdin=None, stdout=None, stderr=None):
   # for the test suite.
   if command[0].endswith('.py'):
     command.insert(0, sys.executable)
+
+  if options.valgrind:
+    if os.path.basename(command[0]) in options.valgrind.split(','):
+      valgrind = [libtool_script, '--mode=execute', 'valgrind', '--quiet']
+      if options.valgrind_opts is not None:
+        valgrind += options.valgrind_opts.split(' ')
+      command = valgrind + command
 
   command_string = command[0] + ' ' + ' '.join(map(_quote_arg, command[1:]))
 
@@ -1856,6 +1866,10 @@ class TestSpawningThread(threading.Thread):
       args.append('--bin=' + options.svn_bin)
     if options.store_pristine:
       args.append('--store-pristine=' + options.store_pristine)
+    if options.valgrind:
+      args.append('--valgrind=' + options.valgrind)
+    if options.valgrind_opts:
+      args.append('--valgrind-opts=' + options.valgrind_opts)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2297,6 +2311,10 @@ def _create_parser(usage=None):
                     help='Run tests that connect to remote HTTP(S) servers')
   parser.add_option('--store-pristine', action='store', type='str',
                     help='Set the WC pristine mode')
+  parser.add_option('--valgrind', action='store',
+                    help='programs to run under valgrind')
+  parser.add_option('--valgrind-opts', action='store',
+                    help='options to pass to valgrind')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
