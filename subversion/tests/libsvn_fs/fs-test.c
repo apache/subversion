@@ -4990,10 +4990,17 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   /* Commit the second one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn2, NULL, pool));
 
-  /* Then commit the first -- but expect a conflict due to the
-     propchanges made by the other txn. */
-  SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
-  SVN_ERR(svn_fs_abort_txn(txn, pool));
+  if (is_bdb)
+    {
+      /* Then commit the first -- but expect a conflict due to the
+         propchanges made by the other txn. */
+      SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
+      SVN_ERR(svn_fs_abort_txn(txn, pool));
+    }
+  else
+    {
+      SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+    }
 
   /* Now, let's try those in reverse.  Open two transactions */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
@@ -5641,16 +5648,16 @@ dir_prop_merge(const svn_test_opts_t *opts,
     {
       SVN_ERR(test_commit_txn(&head_rev, top_txn, "/A", pool));
       SVN_ERR(svn_fs_abort_txn(top_txn, pool));
+
+      SVN_ERR(test_commit_txn(&head_rev, sub_txn, "/A/D", pool));
+      SVN_ERR(svn_fs_abort_txn(sub_txn, pool));
     }
   else
     {
       SVN_ERR(test_commit_txn(&head_rev, top_txn, NULL, pool));
+      SVN_ERR(test_commit_txn(&head_rev, sub_txn, NULL, pool));
     }
 
-  /* The inverted case is not that trivial to handle.  Hence, conflict.
-     Depending on the checking order, the reported conflict path differs. */
-  SVN_ERR(test_commit_txn(&head_rev, sub_txn, is_bdb ? "/A/D" : "/A", pool));
-  SVN_ERR(svn_fs_abort_txn(sub_txn, pool));
 
   return SVN_NO_ERROR;
 }
