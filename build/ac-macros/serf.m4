@@ -107,10 +107,10 @@ AC_DEFUN(SVN_SERF_PREFIX_CONFIG,
       save_ldflags="$LDFLAGS"
       LDFLAGS="$LDFLAGS `SVN_REMOVE_STANDARD_LIB_DIRS(-L$serf_prefix/lib)`"
       AC_CHECK_LIB($serf_major, serf_context_create,[
-        AC_TRY_COMPILE([
+        AC_COMPILE_IFELSE([AC_LANG_SOURCE([[
 #include <stdlib.h>
 #include "serf.h"
-],[
+]])],[
 #if ! SERF_VERSION_AT_LEAST($serf_check_major, $serf_check_minor, $serf_check_patch)
 #error Serf version too old: need $serf_check_version
 #endif

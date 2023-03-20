@@ -29,7 +29,7 @@ AC_DEFUN(SVN_LIB_APR_MEMCACHE,
 [
   apr_memcache_found=no
 
-  AC_ARG_WITH(apr_memcache,AC_HELP_STRING([--with-apr_memcache=PREFIX],
+  AC_ARG_WITH(apr_memcache,AS_HELP_STRING([--with-apr_memcache=PREFIX],
                                   [Standalone apr_memcache client library]),
   [
     if test "$withval" = "yes" ; then

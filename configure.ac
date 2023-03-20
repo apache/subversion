@@ -379,7 +379,7 @@ fi
 dnl Check for doxygen
 doxygen=yes
 AC_ARG_WITH(doxygen,
-AC_HELP_STRING([--with-doxygen=PATH],
+AS_HELP_STRING([--with-doxygen=PATH],
                [Specify the command to run doxygen]),
 [
     doxygen="$withval"
@@ -934,9 +934,6 @@ AC_SUBST(BDB_TEST_PROGRAMS)
 
 dnl Check for header files ----------------
 
-dnl Standard C headers
-AC_HEADER_STDC
-
 dnl Check for typedefs, structures, and compiler characteristics ----------
 
 dnl if compiler doesn't understand `const', then define it empty
@@ -1249,7 +1246,7 @@ AC_SUBST(MOD_ACTIVATION)
 
 
 AC_ARG_ENABLE(gcov,
-AC_HELP_STRING([--enable-gcov],
+AS_HELP_STRING([--enable-gcov],
                [Turn on gcov coverage testing (GCC only).]),
 [
     if test "$enableval" = "yes" ; then
