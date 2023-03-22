@@ -2,7 +2,7 @@ Configurable pristine checksum kind in a working copy
 -----------------------------------------------------
 
 The implementation on the branch allows creating working copies that use a
-checksum kind other than SHA-1.
+checksum kind other than plain SHA-1.
 
 The checksum kind is persisted in the settings table.  Upgraded working copies
 of the older formats will have SHA-1 recorded as their pristine checksum kind
@@ -10,9 +10,8 @@ and will continue to use it for compatibility.  Newly created working copies
 of the latest format (with --compatible-version=1.15 or --store-pristine=no),
 as currently implemented, will use the new pristine checksum kind.
 
-Currently, as a proof-of-concept, the branch uses salted SHA-1 as the new
-pristine checksum kind.  For the production-ready state, we could support
-using multiple new checksum types such as SHA-256.  That could be useful
-for future compatibility, because if we encounter any issues with one
-checksum kind, we could then switch to a different kind without having
-to change the working copy format.
+Dynamically salted SHA-1 checksums
+----------------------------------
+
+The implementation on the branch uses a dynamically salted SHA-1 checksum kind.
+The dynamic salt is generated during the creation of a wc.db.
