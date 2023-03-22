@@ -2013,3 +2013,11 @@ svn_cstring_join(const apr_array_header_t *strings,
 {
   return svn_cstring_join2(strings, separator, TRUE, pool);
 }
+
+/*** From checksum.c ***/
+svn_checksum_ctx_t *
+svn_checksum_ctx_create(svn_checksum_kind_t kind,
+                        apr_pool_t *pool)
+{
+  return svn_checksum_ctx_create2(kind, NULL, pool);
+}

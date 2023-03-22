@@ -533,33 +533,45 @@ struct svn_checksum_ctx_t
 {
   void *apr_ctx;
   svn_checksum_kind_t kind;
+  const svn_string_t *salt;
 };
 
 svn_checksum_ctx_t *
-svn_checksum_ctx_create(svn_checksum_kind_t kind,
-                        apr_pool_t *pool)
+svn_checksum_ctx_create2(svn_checksum_kind_t kind,
+                         const svn_string_t *salt,
+                         apr_pool_t *pool)
 {
   svn_checksum_ctx_t *ctx = apr_palloc(pool, sizeof(*ctx));
 
   ctx->kind = kind;
+
+  if (salt)
+    ctx->salt = svn_string_dup(salt, pool);
+  else
+    ctx->salt = svn_string_create_empty(pool);
+
   switch (kind)
     {
       case svn_checksum_md5:
         ctx->apr_ctx = apr_palloc(pool, sizeof(apr_md5_ctx_t));
         apr_md5_init(ctx->apr_ctx);
+        apr_md5_update(ctx->apr_ctx, ctx->salt->data, ctx->salt->len);
         break;
 
       case svn_checksum_sha1:
         ctx->apr_ctx = apr_palloc(pool, sizeof(apr_sha1_ctx_t));
         apr_sha1_init(ctx->apr_ctx);
+        apr_sha1_update(ctx->apr_ctx, ctx->salt->data, (unsigned int)ctx->salt->len);
         break;
 
       case svn_checksum_fnv1a_32:
         ctx->apr_ctx = svn_fnv1a_32__context_create(pool);
+        svn_fnv1a_32__update(ctx->apr_ctx, ctx->salt->data, ctx->salt->len);
         break;
 
       case svn_checksum_fnv1a_32x4:
         ctx->apr_ctx = svn_fnv1a_32x4__context_create(pool);
+        svn_fnv1a_32x4__update(ctx->apr_ctx, ctx->salt->data, ctx->salt->len);
         break;
 
       default:
@@ -577,19 +589,23 @@ svn_checksum_ctx_reset(svn_checksum_ctx_t *ctx)
       case svn_checksum_md5:
         memset(ctx->apr_ctx, 0, sizeof(apr_md5_ctx_t));
         apr_md5_init(ctx->apr_ctx);
+        apr_md5_update(ctx->apr_ctx, ctx->salt->data, ctx->salt->len);
         break;
 
       case svn_checksum_sha1:
         memset(ctx->apr_ctx, 0, sizeof(apr_sha1_ctx_t));
         apr_sha1_init(ctx->apr_ctx);
+        apr_sha1_update(ctx->apr_ctx, ctx->salt->data, (unsigned int)ctx->salt->len);
         break;
 
       case svn_checksum_fnv1a_32:
         svn_fnv1a_32__context_reset(ctx->apr_ctx);
+        svn_fnv1a_32__update(ctx->apr_ctx, ctx->salt->data, ctx->salt->len);
         break;
 
       case svn_checksum_fnv1a_32x4:
         svn_fnv1a_32x4__context_reset(ctx->apr_ctx);
+        svn_fnv1a_32x4__update(ctx->apr_ctx, ctx->salt->data, ctx->salt->len);
         break;
 
       default:
@@ -806,7 +822,7 @@ wrap_write_stream(svn_checksum_t **checksum,
 
   stream_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
   baton->inner_stream = inner_stream;
-  baton->context = svn_checksum_ctx_create(kind, pool);
+  baton->context = svn_checksum_ctx_create2(kind, NULL, pool);
   baton->checksum = checksum;
   baton->digest = digest;
   baton->pool = pool;

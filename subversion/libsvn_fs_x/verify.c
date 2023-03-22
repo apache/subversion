@@ -153,7 +153,7 @@ verify_index_checksum(svn_fs_x__revision_file_t *file,
   apr_off_t size = index_info->end - index_info->start;
   svn_checksum_t *actual;
   svn_checksum_ctx_t *context
-    = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+    = svn_checksum_ctx_create2(svn_checksum_md5, NULL, scratch_pool);
 
   /* Calculate the index checksum. */
   SVN_ERR(svn_fs_x__rev_file_seek(file, NULL, index_info->start));
@@ -537,7 +537,7 @@ expected_streamed_checksum(svn_fs_x__revision_file_t *file,
   unsigned char buffer[STREAM_THRESHOLD];
   svn_checksum_t *checksum;
   svn_checksum_ctx_t *context
-    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, scratch_pool);
+    = svn_checksum_ctx_create2(svn_checksum_fnv1a_32x4, NULL, scratch_pool);
   apr_off_t size = entry->size;
 
   while (size > 0)

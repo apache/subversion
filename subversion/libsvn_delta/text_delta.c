@@ -439,7 +439,7 @@ svn_txdelta_run(svn_stream_t *source,
   tb.result_pool = result_pool;
 
   if (checksum != NULL)
-    tb.context = svn_checksum_ctx_create(checksum_kind, scratch_pool);
+    tb.context = svn_checksum_ctx_create2(checksum_kind, NULL, scratch_pool);
 
   do
     {
@@ -481,7 +481,7 @@ svn_txdelta2(svn_txdelta_stream_t **stream,
   b->more = TRUE;
   b->buf = apr_palloc(pool, 2 * SVN_DELTA_WINDOW_SIZE);
   b->context = calculate_checksum
-             ? svn_checksum_ctx_create(svn_checksum_md5, pool)
+             ? svn_checksum_ctx_create2(svn_checksum_md5, NULL, pool)
              : NULL;
   b->result_pool = pool;
 
@@ -829,7 +829,7 @@ svn_txdelta_apply2(svn_stream_t *source,
   ab->result_digest = result_digest;
 
   if (result_digest)
-    ab->md5_context = svn_checksum_ctx_create(svn_checksum_md5, subpool);
+    ab->md5_context = svn_checksum_ctx_create2(svn_checksum_md5, NULL, subpool);
 
   if (error_info)
     ab->error_info = apr_pstrdup(subpool, error_info);
@@ -902,7 +902,7 @@ svn_error_t *svn_txdelta_send_stream(svn_stream_t *stream,
   svn_checksum_ctx_t *md5_checksum_ctx;
 
   if (digest)
-    md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+    md5_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, pool);
 
   while (1)
     {

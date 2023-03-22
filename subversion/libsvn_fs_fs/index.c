@@ -3101,7 +3101,7 @@ calc_fnv1(svn_fs_fs__p2l_entry_t *entry,
   unsigned char buffer[4096];
   svn_checksum_t *checksum;
   svn_checksum_ctx_t *context
-    = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, scratch_pool);
+    = svn_checksum_ctx_create2(svn_checksum_fnv1a_32x4, NULL, scratch_pool);
   apr_off_t size = entry->size;
 
   /* Special rules apply to unused sections / items.  The data must be a

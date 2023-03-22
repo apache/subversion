@@ -1876,7 +1876,7 @@ fnv1a_wrap_stream(svn_checksum_ctx_t **context,
 
   fnv1a_stream_baton_t *baton = apr_pcalloc(pool, sizeof(*baton));
   baton->inner_stream = inner_stream;
-  baton->context = svn_checksum_ctx_create(svn_checksum_fnv1a_32x4, pool);
+  baton->context = svn_checksum_ctx_create2(svn_checksum_fnv1a_32x4, NULL, pool);
   *context = baton->context;
 
   outer_stream = svn_stream_create(baton, pool);
@@ -2208,8 +2208,8 @@ rep_write_get_baton(struct rep_write_baton **wb_p,
 
   b = apr_pcalloc(pool, sizeof(*b));
 
-  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->sha1_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_sha1, NULL, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, pool);
 
   b->fs = fs;
   b->result_pool = pool;
@@ -2809,9 +2809,9 @@ write_container_rep(representation_t *rep,
   else
     fnv1a_checksum_ctx = NULL;
   whb->size = 0;
-  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+  whb->md5_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, scratch_pool);
   if (item_type != SVN_FS_FS__ITEM_TYPE_DIR_REP)
-    whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
+    whb->sha1_ctx = svn_checksum_ctx_create2(svn_checksum_sha1, NULL, scratch_pool);
 
   stream = svn_stream_create(whb, scratch_pool);
   svn_stream_set_write(stream, write_container_handler);
@@ -2953,9 +2953,9 @@ write_container_delta_rep(representation_t *rep,
   whb->stream = svn_txdelta_target_push(diff_wh, diff_whb, source,
                                         scratch_pool);
   whb->size = 0;
-  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+  whb->md5_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, scratch_pool);
   if (item_type != SVN_FS_FS__ITEM_TYPE_DIR_REP)
-    whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
+    whb->sha1_ctx = svn_checksum_ctx_create2(svn_checksum_sha1, NULL, scratch_pool);
 
   /* serialize the hash */
   stream = svn_stream_create(whb, scratch_pool);

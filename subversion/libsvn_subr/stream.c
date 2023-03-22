@@ -1496,12 +1496,12 @@ svn_stream_checksummed2(svn_stream_t *stream,
 
   baton = apr_palloc(pool, sizeof(*baton));
   if (read_checksum)
-    baton->read_ctx = svn_checksum_ctx_create(checksum_kind, pool);
+    baton->read_ctx = svn_checksum_ctx_create2(checksum_kind, NULL, pool);
   else
     baton->read_ctx = NULL;
 
   if (write_checksum)
-    baton->write_ctx = svn_checksum_ctx_create(checksum_kind, pool);
+    baton->write_ctx = svn_checksum_ctx_create2(checksum_kind, NULL, pool);
   else
     baton->write_ctx = NULL;
 
@@ -1530,7 +1530,7 @@ compute_stream_checksum(svn_checksum_t **checksum,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool)
 {
-  svn_checksum_ctx_t *ctx = svn_checksum_ctx_create(kind, scratch_pool);
+  svn_checksum_ctx_t *ctx = svn_checksum_ctx_create2(kind, NULL, scratch_pool);
   char *buf = apr_palloc(scratch_pool, SVN__STREAM_CHUNK_SIZE);
 
   while (1)

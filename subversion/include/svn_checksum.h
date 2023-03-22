@@ -31,6 +31,7 @@
 #include <apr_pools.h>  /* for apr_pool_t */
 
 #include "svn_types.h"  /* for svn_boolean_t, svn_error_t */
+#include "svn_string.h" /* for svn_string_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -214,17 +215,33 @@ svn_checksum_empty_checksum(svn_checksum_kind_t kind,
 
 /**
  * Create a new @c svn_checksum_ctx_t structure, allocated from @a pool for
- * calculating checksums of type @a kind.  @see svn_checksum_final()
+ * calculating checksums of type @a kind.  If @a salt is non-NULL, its content
+ * will be prepended to the checksummed data.  @a salt doesn't need to have a
+ * specific lifetime, because it will be copied by the function internally.
+ *
+ * @see svn_checksum_final()
+ *
+ * @since New in 1.15.
+ */
+svn_checksum_ctx_t *
+svn_checksum_ctx_create2(svn_checksum_kind_t kind,
+                         const svn_string_t *salt,
+                         apr_pool_t *pool);
+
+/**
+ * Similar to svn_checksum_ctx_create2(), but with @a salt set to @c NULL.
  *
  * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.6 API.
  */
+SVN_DEPRECATED
 svn_checksum_ctx_t *
 svn_checksum_ctx_create(svn_checksum_kind_t kind,
                         apr_pool_t *pool);
 
 /**
  * Reset an existing checksum @a ctx to initial state.
- * @see svn_checksum_ctx_create()
+ * @see svn_checksum_ctx_create2()
  *
  * @since New in 1.10.
  */

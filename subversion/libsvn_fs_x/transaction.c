@@ -2257,10 +2257,10 @@ rep_write_get_baton(rep_write_baton_t **wb_p,
 
   b = apr_pcalloc(result_pool, sizeof(*b));
 
-  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1,
+  b->sha1_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_sha1, NULL,
+                                                  result_pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL,
                                                  result_pool);
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5,
-                                                result_pool);
 
   b->fs = fs;
   b->result_pool = result_pool;
@@ -2929,9 +2929,9 @@ write_container_delta_rep(svn_fs_x__representation_t *rep,
   whb->stream = svn_txdelta_target_push(diff_wh, diff_whb, source,
                                         scratch_pool);
   whb->size = 0;
-  whb->md5_ctx = svn_checksum_ctx_create(svn_checksum_md5, scratch_pool);
+  whb->md5_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, scratch_pool);
   if (item_type != SVN_FS_X__ITEM_TYPE_DIR_REP)
-    whb->sha1_ctx = svn_checksum_ctx_create(svn_checksum_sha1, scratch_pool);
+    whb->sha1_ctx = svn_checksum_ctx_create2(svn_checksum_sha1, NULL, scratch_pool);
 
   /* serialize the hash */
   stream = svn_stream_create(whb, scratch_pool);

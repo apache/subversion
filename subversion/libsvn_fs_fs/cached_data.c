@@ -1523,7 +1523,7 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   b->base_window = NULL;
   b->chunk_index = 0;
   b->buf = NULL;
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, pool);
   b->checksum_finalized = FALSE;
   memcpy(b->md5_digest, rep->md5_digest, sizeof(rep->md5_digest));
   b->len = rep->expanded_size;

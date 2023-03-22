@@ -1471,7 +1471,7 @@ static svn_error_t *get_file(svn_ra_session_t *session, const char *path,
     {
       SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
                                      expected_digest, pool));
-      checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
+      checksum_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, pool);
     }
 
   /* Read the file's contents. */

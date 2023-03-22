@@ -692,8 +692,8 @@ rep_read_get_baton(struct rep_read_baton **rb_p,
   struct rep_read_baton *b;
 
   b = apr_pcalloc(pool, sizeof(*b));
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
-  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, pool);
+  b->sha1_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_sha1, NULL, pool);
 
   if (rep_key)
     SVN_ERR(svn_fs_base__rep_contents_size(&(b->size), fs, rep_key,
@@ -1028,8 +1028,8 @@ rep_write_get_baton(svn_fs_t *fs,
   struct rep_write_baton *b;
 
   b = apr_pcalloc(pool, sizeof(*b));
-  b->md5_checksum_ctx = svn_checksum_ctx_create(svn_checksum_md5, pool);
-  b->sha1_checksum_ctx = svn_checksum_ctx_create(svn_checksum_sha1, pool);
+  b->md5_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_md5, NULL, pool);
+  b->sha1_checksum_ctx = svn_checksum_ctx_create2(svn_checksum_sha1, NULL, pool);
   b->fs = fs;
   b->trail = trail;
   b->pool = pool;
