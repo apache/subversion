@@ -232,9 +232,8 @@ extern "C" {
 /* Starting from this version, pristine checksum kind can be configured. */
 #define SVN_WC__HAS_PRISTINE_CHECKSUM_KIND 33
 
-/* Starting from this version, salted SHA-1 can be used as the pristine
-   checksum kind. */
-#define SVN_WC__HAS_PRISTINE_CHECKSUM_SHA1_SALTED 33
+/* Starting from this version, pristine checksum can be salted. */
+#define SVN_WC__HAS_PRISTINE_CHECKSUM_SALT 33
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
@@ -514,7 +513,7 @@ svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
-                                      const svn_checksum_t **new_text_base_checksum,
+                                      const svn_wc__db_checksum_t **new_text_base_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
@@ -710,8 +709,8 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            const char *wri_abspath,
-                           const svn_checksum_t *new_checksum,
-                           const svn_checksum_t *original_checksum,
+                           const svn_wc__db_checksum_t *new_checksum,
+                           const svn_wc__db_checksum_t *original_checksum,
                            apr_hash_t *old_actual_props,
                            const apr_array_header_t *ext_patterns,
                            svn_revnum_t old_revision,

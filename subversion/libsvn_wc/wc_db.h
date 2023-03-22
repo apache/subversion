@@ -220,6 +220,89 @@ typedef struct svn_wc__db_fileinfo_t {
 
 /* ### where/how to handle: text_time, locks, working_size */
 
+/* @defgroup svn_wc__db_checksum  Working copy checksums
+   @{
+*/
+
+/* Structure holding the information about a working copy checksum kind. */
+typedef struct svn_wc__db_checksum_kind_t
+{
+  svn_checksum_kind_t value;
+  const svn_string_t *salt;
+} svn_wc__db_checksum_kind_t;
+
+/* Create a new svn_wc__db_checksum_kind_t object.  SALT doesn't need to
+   have a specific lifetime, because it will be copied by the function
+   internally. */
+svn_wc__db_checksum_kind_t *
+svn_wc__db_checksum_kind_make(svn_checksum_kind_t kind,
+                              const svn_string_t *salt,
+                              apr_pool_t *result_pool);
+
+/* Duplicate an existing svn_wc__db_checksum_kind_t object.
+   If KIND is NULL then NULL is returned. */
+svn_wc__db_checksum_kind_t *
+svn_wc__db_checksum_kind_dup(const svn_wc__db_checksum_kind_t *kind,
+                             apr_pool_t *result_pool);
+
+/* Structure holding the information about a working copy checksum. */
+typedef struct svn_wc__db_checksum_t
+{
+  const svn_checksum_t *value;
+  const svn_string_t *salt;
+} svn_wc__db_checksum_t;
+
+/* Create a new svn_wc__db_checksum_t object.  VALUE and SALT don't need to
+   have a specific lifetime, because they will be copied by the function
+   internally. */
+svn_wc__db_checksum_t *
+svn_wc__db_checksum_make(const svn_checksum_t *value,
+                         const svn_string_t *salt,
+                         apr_pool_t *result_pool);
+
+/* Duplicate an existing svn_wc__db_checksum_t object.
+   If CHECKSUM is NULL then NULL is returned. */
+svn_wc__db_checksum_t *
+svn_wc__db_checksum_dup(const svn_wc__db_checksum_t *checksum,
+                        apr_pool_t *result_pool);
+
+/* Checks if two svn_wc__db_checksum_t objects match. */
+svn_boolean_t
+svn_wc__db_checksum_match(const svn_wc__db_checksum_t *checksum1,
+                          const svn_wc__db_checksum_t *checksum2);
+
+/* Return a stream that calculates WC checksums for all data read and
+   written.  The stream STREAM is used to read and write all data.
+
+   When the resulting stream is closed, *READ_CHECKSUM_P and *WRITE_CHECKSUM_P
+   are set to point to the resulting checksums, of type CHECKSUM_KIND and
+   using SALT.  Both READ_CHECKSUM_P and WRITE_CHECKSUM_P can be null, in
+   which case the respective checksum isn't calculated.
+
+   Read and write operations can be mixed without interfering. */
+svn_stream_t *
+svn_wc__db_checksum_stream(svn_wc__db_checksum_t **read_checksum_p,
+                           svn_wc__db_checksum_t **write_checksum_p,
+                           svn_stream_t *stream,
+                           svn_checksum_kind_t checksum_kind,
+                           const svn_string_t *salt,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
+/* Read the contents of the readable stream STREAM and return its
+   checksum of type CHECKSUM_KIND and using SALT, in *CHECKSUM_P.
+
+   The stream will be closed before this function returns (regardless
+   of the result, or any possible error). */
+svn_error_t *
+svn_wc__db_checksum_stream_contents(svn_wc__db_checksum_t **checksum_p,
+                                    svn_stream_t *stream,
+                                    svn_checksum_kind_t checksum_kind,
+                                    const svn_string_t *salt,
+                                    apr_pool_t *result_pool,
+                                    apr_pool_t *scratch_pool);
+
+/* @} */
 
 /*
   @defgroup svn_wc__db_admin  General administrative functions
@@ -298,7 +381,7 @@ svn_wc__db_close(svn_wc__db_t *db);
    depth, not svn_depth_unknown.
 
    Create the working copy with the given TARGET_FORMAT and settings
-   STORE_PRISTINE and PRISTINE_CHECKSUM_KIND.
+   STORE_PRISTINE, PRISTINE_CHECKSUM_KIND and PRISTINE_CHECKSUM_USE_SALT.
 
    Use SCRATCH_POOL for temporary allocations.
 */
@@ -313,6 +396,7 @@ svn_wc__db_init(svn_wc__db_t *db,
                 svn_depth_t depth,
                 svn_boolean_t store_pristine,
                 svn_checksum_kind_t pristine_checksum_kind,
+                svn_boolean_t pristine_checksum_use_salt,
                 apr_pool_t *scratch_pool);
 
 /* Return the working copy settings *FORMAT_P, *STORE_PRISTINE_P and
@@ -323,9 +407,10 @@ svn_wc__db_init(svn_wc__db_t *db,
 svn_error_t *
 svn_wc__db_get_settings(int *format_p,
                         svn_boolean_t *store_pristine_p,
-                        svn_checksum_kind_t *pristine_checksum_kind_p,
+                        const svn_wc__db_checksum_kind_t **pristine_checksum_kind_p,
                         svn_wc__db_t *db,
                         const char *local_abspath,
+                        apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
 /* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH, relative
@@ -549,7 +634,7 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_revnum_t changed_rev,
                          apr_time_t changed_date,
                          const char *changed_author,
-                         const svn_checksum_t *checksum,
+                         const svn_wc__db_checksum_t *checksum,
                          apr_hash_t *dav_cache,
                          svn_boolean_t delete_working,
                          svn_boolean_t update_actual_props,
@@ -814,7 +899,7 @@ svn_wc__db_base_get_info(svn_wc__db_status_t *status,
                          apr_time_t *changed_date,
                          const char **changed_author,
                          svn_depth_t *depth,
-                         const svn_checksum_t **checksum,
+                         const svn_wc__db_checksum_t **checksum,
                          const char **target,
                          svn_wc__db_lock_t **lock,
                          svn_boolean_t *had_props,
@@ -940,7 +1025,7 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
 svn_error_t *
 svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
                                     const char *wcroot_abspath,
-                                    const svn_checksum_t *checksum,
+                                    const svn_wc__db_checksum_t *checksum,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -960,7 +1045,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          svn_filesize_t *size,
                          svn_wc__db_t *db,
                          const char *wri_abspath,
-                         const svn_checksum_t *checksum,
+                         const svn_wc__db_checksum_t *checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool);
 
@@ -985,7 +1070,7 @@ typedef struct svn_wc__db_install_data_t
 svn_error_t *
 svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
                                     svn_wc__db_install_data_t **install_data,
-                                    svn_checksum_t **checksum,
+                                    svn_wc__db_checksum_t **checksum,
                                     svn_checksum_t **md5_checksum,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
@@ -998,7 +1083,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
    contents, CHECKSUM, and whose MD-5 checksum is MD5_CHECKSUM. */
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
-                            const svn_checksum_t *checksum,
+                            const svn_wc__db_checksum_t *checksum,
                             const svn_checksum_t *md5_checksum,
                             apr_pool_t *scratch_pool);
 
@@ -1018,7 +1103,7 @@ svn_error_t *
 svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
                             svn_wc__db_t *db,
                             const char *wri_abspath,
-                            const svn_checksum_t *checksum,
+                            const svn_wc__db_checksum_t *checksum,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
@@ -1035,7 +1120,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
 
    Allocate *CHECKSUM in RESULT_POOL. */
 svn_error_t *
-svn_wc__db_pristine_lookup_by_md5(const svn_checksum_t **checksum,
+svn_wc__db_pristine_lookup_by_md5(const svn_wc__db_checksum_t **checksum,
                                   svn_wc__db_t *db,
                                   const char *wri_abspath,
                                   const svn_checksum_t *md5_checksum,
@@ -1049,7 +1134,7 @@ svn_wc__db_pristine_lookup_by_md5(const svn_checksum_t **checksum,
 svn_error_t *
 svn_wc__db_pristine_remove(svn_wc__db_t *db,
                            const char *wri_abspath,
-                           const svn_checksum_t *checksum,
+                           const svn_wc__db_checksum_t *checksum,
                            apr_pool_t *scratch_pool);
 
 
@@ -1070,7 +1155,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_boolean_t *hydrated,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
-                          const svn_checksum_t *checksum,
+                          const svn_wc__db_checksum_t *checksum,
                           apr_pool_t *scratch_pool);
 
 /* If the pristine store for WRI_ABSPATH in DB contains a pristine text with
@@ -1079,7 +1164,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 svn_error_t *
 svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
                               const char *wri_abspath,
-                              const svn_checksum_t *checksum,
+                              const svn_wc__db_checksum_t *checksum,
                               apr_pool_t *scratch_pool);
 
 /* @defgroup svn_wc__db_external  External management
@@ -1107,7 +1192,7 @@ svn_wc__db_external_add_file(svn_wc__db_t *db,
                              apr_time_t changed_date,
                              const char *changed_author,
 
-                             const svn_checksum_t *checksum,
+                             const svn_wc__db_checksum_t *checksum,
 
                              const apr_hash_t *dav_cache,
 
@@ -1306,7 +1391,7 @@ svn_wc__db_commit_queue_add(svn_wc__db_commit_queue_t *queue,
                             svn_boolean_t is_commited,
                             svn_boolean_t remove_lock,
                             svn_boolean_t remove_changelist,
-                            const svn_checksum_t *new_checksum,
+                            const svn_wc__db_checksum_t *new_checksum,
                             apr_hash_t *new_dav_cache,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
@@ -1374,6 +1459,9 @@ svn_wc__db_externals_gather_definitions(apr_hash_t **externals,
  * a move. The delete-half of the move needs to be created separately
  * with svn_wc__db_op_delete().
  *
+ * If NEW_CHECKSUM is non-NULL, use it as the checksum of the pristine
+ * contents of the copied node.
+ *
  * Add WORK_ITEMS to the work queue. */
 svn_error_t *
 svn_wc__db_op_copy(svn_wc__db_t *db,
@@ -1381,6 +1469,7 @@ svn_wc__db_op_copy(svn_wc__db_t *db,
                    const char *dst_abspath,
                    const char *dst_op_root_abspath,
                    svn_boolean_t is_move,
+                   const svn_wc__db_checksum_t *new_checksum,
                    const svn_skel_t *work_items,
                    apr_pool_t *scratch_pool);
 
@@ -1459,7 +1548,7 @@ svn_wc__db_op_copy_file(svn_wc__db_t *db,
                         const char *original_root_url,
                         const char *original_uuid,
                         svn_revnum_t original_revision,
-                        const svn_checksum_t *checksum,
+                        const svn_wc__db_checksum_t *checksum,
                         svn_boolean_t update_actual_props,
                         const apr_hash_t *new_actual_props,
                         svn_boolean_t is_move,
@@ -1961,7 +2050,7 @@ svn_wc__db_read_info(svn_wc__db_status_t *status,  /* ### derived */
                      apr_time_t *changed_date,
                      const char **changed_author,
                      svn_depth_t *depth,  /* dirs only */
-                     const svn_checksum_t **checksum, /* files only */
+                     const svn_wc__db_checksum_t **checksum, /* files only */
                      const char **target, /* symlinks only */
 
                      /* ### the following fields if copied/moved (history) */
@@ -2119,7 +2208,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
                               apr_time_t *changed_date,
                               const char **changed_author,
                               svn_depth_t *depth,  /* dirs only */
-                              const svn_checksum_t **checksum, /* files only */
+                              const svn_wc__db_checksum_t **checksum, /* files only */
                               const char **target, /* symlinks only */
                               svn_boolean_t *had_props,
                               apr_hash_t **props,
@@ -2140,7 +2229,7 @@ svn_wc__db_read_pristine_info(svn_wc__db_status_t *status,
    */
 svn_error_t *
 svn_wc__db_read_node_install_info(const char **wcroot_abspath,
-                                  const svn_checksum_t **checksum,
+                                  const svn_wc__db_checksum_t **checksum,
                                   apr_hash_t **pristine_props,
                                   apr_time_t *changed_date,
                                   svn_wc__db_t *db,
@@ -2543,7 +2632,7 @@ svn_wc__db_global_commit(svn_wc__db_t *db,
                          svn_revnum_t changed_revision,
                          apr_time_t changed_date,
                          const char *changed_author,
-                         const svn_checksum_t *new_checksum,
+                         const svn_wc__db_checksum_t *new_checksum,
                          apr_hash_t *new_dav_cache,
                          svn_boolean_t keep_changelist,
                          svn_boolean_t no_unlock,
@@ -2589,7 +2678,7 @@ svn_wc__db_global_update(svn_wc__db_t *db,
                          apr_time_t new_changed_date,
                          const char *new_changed_author,
                          const apr_array_header_t *new_children,
-                         const svn_checksum_t *new_checksum,
+                         const svn_wc__db_checksum_t *new_checksum,
                          const char *new_target,
                          const apr_hash_t *new_dav_cache,
                          const svn_skel_t *conflict,
@@ -2959,6 +3048,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *repos_uuid,
                          svn_boolean_t store_pristine,
                          svn_checksum_kind_t pristine_checksum_kind,
+                         svn_boolean_t pristine_checksum_use_salt,
                          apr_pool_t *scratch_pool);
 
 /* Simply insert (or replace) one row in the EXTERNALS table. */
@@ -3114,7 +3204,7 @@ typedef svn_error_t * (*svn_wc__db_textbase_walk_cb_t)(
   void *baton,
   const char *local_abspath,
   int op_depth,
-  const svn_checksum_t *checksum,
+  const svn_wc__db_checksum_t *checksum,
   svn_boolean_t have_props,
   svn_boolean_t props_mod,
   svn_filesize_t recorded_size,

@@ -487,11 +487,11 @@ struct edit_baton
 
   /* What was there before the update */
   svn_revnum_t original_revision;
-  const svn_checksum_t *original_checksum;
+  const svn_wc__db_checksum_t *original_checksum;
 
   /* What we are installing now */
   svn_wc__db_install_data_t *install_data;
-  svn_checksum_t *new_checksum;
+  svn_wc__db_checksum_t *new_checksum;
   svn_checksum_t *new_md5_checksum;
 
   /* List of incoming propchanges */
@@ -614,13 +614,10 @@ apply_textdelta(void *file_baton,
           SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
                                          base_checksum_digest, pool));
 
-          if (eb->original_checksum->kind != svn_checksum_md5)
-            SVN_ERR(svn_wc__db_pristine_get_md5(&original_md5,
-                                                eb->db, eb->wri_abspath,
-                                                eb->original_checksum,
-                                                pool, pool));
-          else
-            original_md5 = eb->original_checksum;
+          SVN_ERR(svn_wc__db_pristine_get_md5(&original_md5,
+                                              eb->db, eb->wri_abspath,
+                                              eb->original_checksum,
+                                              pool, pool));
 
           if (!svn_checksum_match(expected_checksum, original_md5))
             return svn_error_trace(svn_checksum_mismatch_err(
@@ -693,18 +690,12 @@ close_file(void *file_baton,
       SVN_ERR(svn_checksum_parse_hex(&expected_md5_checksum, svn_checksum_md5,
                                      expected_md5_digest, pool));
 
-      if (actual_md5_checksum == NULL)
+      if (actual_md5_checksum == NULL && eb->original_checksum)
         {
-          actual_md5_checksum = eb->original_checksum;
-
-          if (actual_md5_checksum != NULL
-              && actual_md5_checksum->kind != svn_checksum_md5)
-            {
-              SVN_ERR(svn_wc__db_pristine_get_md5(&actual_md5_checksum,
-                                                  eb->db, eb->wri_abspath,
-                                                  actual_md5_checksum,
-                                                  pool, pool));
-            }
+          SVN_ERR(svn_wc__db_pristine_get_md5(&actual_md5_checksum,
+                                              eb->db, eb->wri_abspath,
+                                              eb->original_checksum,
+                                              pool, pool));
         }
 
       if (! svn_checksum_match(expected_md5_checksum, actual_md5_checksum))
@@ -736,8 +727,8 @@ close_file(void *file_baton,
     apr_hash_t *new_pristine_props = NULL;
     apr_hash_t *new_actual_props = NULL;
     apr_hash_t *new_dav_props = NULL;
-    const svn_checksum_t *new_checksum = NULL;
-    const svn_checksum_t *original_checksum = NULL;
+    const svn_wc__db_checksum_t *new_checksum = NULL;
+    const svn_wc__db_checksum_t *original_checksum = NULL;
 
     svn_boolean_t added = !SVN_IS_VALID_REVNUM(eb->original_revision);
 

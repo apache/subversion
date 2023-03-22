@@ -779,15 +779,28 @@ PRAGMA user_version = 32;
 /* ------------------------------------------------------------------------- */
 /* Format 33 adds support for configurable pristine checksum kinds with
    the following schema changes:
-   - Add the 'pristine_checksum_kind' column to the SETTINGS table. */
+   - Add the 'pristine_checksum_kind' column to the SETTINGS table.
+   - Add the 'pristine_checksum_use_salt' column to the SETTINGS table.
+   - Add the GLOBAL_SETTINGS table. */
 -- STMT_UPGRADE_TO_33
 ALTER TABLE SETTINGS ADD COLUMN pristine_checksum_kind INTEGER;
+ALTER TABLE SETTINGS ADD COLUMN pristine_checksum_use_salt INTEGER;
 
 UPDATE SETTINGS
-SET pristine_checksum_kind = 1 /* svn_wc__db_pristine_checksum_sha1 */
+SET pristine_checksum_kind = 1 /* svn_wc__db_pristine_checksum_sha1 */,
+    pristine_checksum_use_salt = 0
 WHERE pristine_checksum_kind IS NULL;
 
+/* This table contains settings specific to the whole database instance. */
+CREATE TABLE GLOBAL_SETTINGS (
+  id  INTEGER NOT NULL PRIMARY KEY CHECK (id = 0),
+  salt  BLOB NOT NULL
+);
+
 PRAGMA user_version = 33;
+
+--STMT_UPGRADE_33_INSERT_GLOBAL_SETTINGS
+INSERT INTO GLOBAL_SETTINGS VALUES (0, ?1);
 
 /* ------------------------------------------------------------------------- */
 /* Format 34 ....  */

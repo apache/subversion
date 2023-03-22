@@ -67,6 +67,8 @@ svn_wc_info_dup(const svn_wc_info_t *info,
     new_info->moved_from_abspath = apr_pstrdup(pool, info->moved_from_abspath);
   if (info->moved_to_abspath)
     new_info->moved_to_abspath = apr_pstrdup(pool, info->moved_to_abspath);
+  new_info->pristine_checksum_kind =
+    svn_wc_checksum_kind_dup(info->pristine_checksum_kind, pool);
 
   return new_info;
 }
@@ -97,6 +99,8 @@ build_info_for_node(svn_wc__info2_t **info,
   svn_boolean_t have_base;
   svn_boolean_t have_more_work;
   svn_wc_info_t *wc_info;
+  const svn_wc__db_checksum_kind_t *pristine_checksum_kind;
+  const svn_wc__db_checksum_t *pristine_checksum;
 
   tmpinfo = apr_pcalloc(result_pool, sizeof(*tmpinfo));
   tmpinfo->kind = kind;
@@ -108,8 +112,14 @@ build_info_for_node(svn_wc__info2_t **info,
 
   SVN_ERR(svn_wc__db_get_settings(&wc_info->wc_format,
                                   &wc_info->store_pristine,
-                                  &wc_info->pristine_checksum_kind,
-                                  db, local_abspath, scratch_pool));
+                                  &pristine_checksum_kind,
+                                  db, local_abspath,
+                                  scratch_pool, scratch_pool));
+
+  wc_info->pristine_checksum_kind =
+    svn_wc_checksum_kind_create(pristine_checksum_kind->value,
+                                pristine_checksum_kind->salt,
+                                result_pool);
 
   SVN_ERR(svn_wc__db_read_info(&status, &db_kind, &tmpinfo->rev,
                                &repos_relpath,
@@ -117,7 +127,7 @@ build_info_for_node(svn_wc__info2_t **info,
                                &tmpinfo->last_changed_rev,
                                &tmpinfo->last_changed_date,
                                &tmpinfo->last_changed_author,
-                               &wc_info->depth, &wc_info->checksum, NULL,
+                               &wc_info->depth, &pristine_checksum, NULL,
                                &original_repos_relpath,
                                &original_repos_root_url, &original_uuid,
                                &original_revision, &lock,
@@ -128,6 +138,10 @@ build_info_for_node(svn_wc__info2_t **info,
                                &have_base, &have_more_work, NULL,
                                db, local_abspath,
                                result_pool, scratch_pool));
+  if (pristine_checksum)
+    wc_info->checksum = pristine_checksum->value;
+  else
+    wc_info->checksum = NULL;
 
   if (original_repos_root_url != NULL)
     {
@@ -216,10 +230,14 @@ build_info_for_node(svn_wc__info2_t **info,
                                             &tmpinfo->last_changed_date,
                                             &tmpinfo->last_changed_author,
                                             &wc_info->depth,
-                                            &wc_info->checksum,
+                                            &pristine_checksum,
                                             NULL, NULL, NULL,
                                             db, local_abspath,
                                             result_pool, scratch_pool));
+      if (pristine_checksum)
+        wc_info->checksum = pristine_checksum->value;
+      else
+        wc_info->checksum = NULL;
 
       if (w_status == svn_wc__db_status_deleted)
         {
@@ -562,14 +580,24 @@ svn_wc__get_info(svn_wc_context_t *wc_ctx,
 svn_error_t *
 svn_wc__get_settings(int *format_p,
                      svn_boolean_t *store_pristine_p,
-                     svn_checksum_kind_t *pristine_checksum_kind_p,
+                     const svn_wc_checksum_kind_t **pristine_checksum_kind_p,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
+  const svn_wc__db_checksum_kind_t *pristine_checksum_kind;
+
   SVN_ERR(svn_wc__db_get_settings(format_p, store_pristine_p,
-                                  pristine_checksum_kind_p,
-                                  wc_ctx->db, local_abspath, scratch_pool));
+                                  &pristine_checksum_kind,
+                                  wc_ctx->db, local_abspath,
+                                  scratch_pool, scratch_pool));
+
+  if (pristine_checksum_kind_p)
+    *pristine_checksum_kind_p = svn_wc_checksum_kind_create(
+                                  pristine_checksum_kind->value,
+                                  pristine_checksum_kind->salt,
+                                  result_pool);
 
   return SVN_NO_ERROR;
 }

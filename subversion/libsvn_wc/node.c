@@ -869,12 +869,22 @@ svn_wc__node_get_md5(const svn_checksum_t **md5_checksum,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__db_pristine_get_md5(md5_checksum,
-                                                     wc_ctx->db,
-                                                     wri_abspath,
-                                                     checksum,
-                                                     result_pool,
-                                                     scratch_pool));
+  const svn_wc__db_checksum_kind_t *pristine_checksum_kind;
+  const svn_wc__db_checksum_t *pristine_checksum;
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, NULL,
+                                  &pristine_checksum_kind,
+                                  wc_ctx->db, wri_abspath,
+                                  scratch_pool, scratch_pool));
+
+  pristine_checksum = svn_wc__db_checksum_make(
+                        checksum, pristine_checksum_kind->salt, scratch_pool);
+
+  SVN_ERR(svn_wc__db_pristine_get_md5(md5_checksum, wc_ctx->db,
+                                      wri_abspath, pristine_checksum,
+                                      result_pool, scratch_pool));
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

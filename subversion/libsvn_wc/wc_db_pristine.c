@@ -52,12 +52,12 @@
 static svn_error_t *
 get_pristine_fname(const char **pristine_abspath,
                    const char *wcroot_abspath,
-                   const svn_checksum_t *checksum,
+                   const svn_wc__db_checksum_t *checksum,
                    apr_pool_t *result_pool,
                    apr_pool_t *scratch_pool)
 {
   const char *base_dir_abspath;
-  const char *hexdigest = svn_checksum_to_cstring(checksum, scratch_pool);
+  const char *hexdigest;
   const char *checksum_prefix;
   const char *subdir;
   char shard[3];
@@ -66,7 +66,9 @@ get_pristine_fname(const char **pristine_abspath,
   SVN_ERR_ASSERT(pristine_abspath != NULL);
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wcroot_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(checksum->value != NULL);
 
+  hexdigest = svn_checksum_to_cstring(checksum->value, scratch_pool);
   base_dir_abspath = svn_dirent_join_many(scratch_pool,
                                           wcroot_abspath,
                                           svn_wc_get_adm_dir(scratch_pool),
@@ -77,17 +79,33 @@ get_pristine_fname(const char **pristine_abspath,
   SVN_ERR_ASSERT(hexdigest != NULL);
 
   /* Prefix the subdir name with the checksum kind. */
-  switch (checksum->kind)
+  if (checksum->value->kind == svn_checksum_sha1 &&
+      svn_string_isempty(checksum->salt))
     {
-      case svn_checksum_sha1:
-        /* No prefix for SHA1 for historical reasons. */
-        checksum_prefix = "";
-        break;
-      case svn_checksum_sha1_salted:
-        checksum_prefix = "ssh1-";
-        break;
-      default:
-        SVN_ERR_MALFUNCTION();
+      /* Compatibility: use empty prefix for non-salted SHA1. */
+      checksum_prefix = "";
+    }
+  else
+    {
+      const char *salt_str;
+      const char *kind_str;
+
+      if (svn_string_isempty(checksum->salt))
+        salt_str = "";
+      else
+        salt_str = "s";
+
+      switch (checksum->value->kind)
+        {
+          case svn_checksum_sha1:
+            kind_str = "sha1";
+            break;
+          default:
+            SVN_ERR_MALFUNCTION();
+        }
+
+      checksum_prefix = apr_pstrcat(scratch_pool, salt_str, kind_str, "-",
+                                    SVN_VA_NULL);
     }
 
   /* Get the first two characters of the digest, for the shard name. */
@@ -113,7 +131,7 @@ get_pristine_fname(const char **pristine_abspath,
 svn_error_t *
 svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
                                     const char *wcroot_abspath,
-                                    const svn_checksum_t *checksum,
+                                    const svn_wc__db_checksum_t *checksum,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool)
 {
@@ -132,7 +150,7 @@ stmt_select_pristine(svn_boolean_t *have_row,
                      svn_filesize_t *size,
                      svn_boolean_t *hydrated,
                      svn_wc__db_wcroot_t *wcroot,
-                     const svn_checksum_t *checksum,
+                     const svn_wc__db_checksum_t *checksum,
                      apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool)
 {
@@ -145,7 +163,8 @@ stmt_select_pristine(svn_boolean_t *have_row,
               ? STMT_SELECT_PRISTINE_F32
               : STMT_SELECT_PRISTINE_F31);
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_num));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
+  SVN_ERR(svn_wc__db_util_bind_wc_checksum(wcroot, stmt, 1, checksum,
+                                           scratch_pool));
   SVN_ERR(svn_sqlite__step(have_row, stmt));
   if (!*have_row)
     {
@@ -189,7 +208,7 @@ static svn_error_t *
 pristine_read_txn(svn_stream_t **contents,
                   svn_filesize_t *size,
                   svn_wc__db_wcroot_t *wcroot,
-                  const svn_checksum_t *checksum,
+                  const svn_wc__db_checksum_t *checksum,
                   const char *pristine_abspath,
                   apr_pool_t *result_pool,
                   apr_pool_t *scratch_pool)
@@ -207,7 +226,7 @@ pristine_read_txn(svn_stream_t **contents,
       return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
                                _("Pristine text '%s' not present"),
                                svn_checksum_to_cstring_display(
-                                 checksum, scratch_pool));
+                                 checksum->value, scratch_pool));
     }
 
   if (contents)
@@ -241,7 +260,7 @@ svn_wc__db_pristine_read(svn_stream_t **contents,
                          svn_filesize_t *size,
                          svn_wc__db_t *db,
                          const char *wri_abspath,
-                         const svn_checksum_t *checksum,
+                         const svn_wc__db_checksum_t *checksum,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
@@ -349,7 +368,7 @@ pristine_install_txn(svn_wc__db_wcroot_t *wcroot,
                      /* The target path for the file (within the pristine store). */
                      const char *pristine_abspath,
                      /* The pristine text's checksum. */
-                     const svn_checksum_t *checksum,
+                     const svn_wc__db_checksum_t *checksum,
                      /* The pristine text's MD-5 checksum. */
                      const svn_checksum_t *md5_checksum,
                      apr_pool_t *scratch_pool)
@@ -395,7 +414,8 @@ pristine_install_txn(svn_wc__db_wcroot_t *wcroot,
   stmt_num = (wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE
               ? STMT_UPSERT_PRISTINE_F32 : STMT_UPSERT_PRISTINE_F31);
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb, stmt_num));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
+  SVN_ERR(svn_wc__db_util_bind_wc_checksum(wcroot, stmt, 1, checksum,
+                                           scratch_pool));
   SVN_ERR(svn_sqlite__bind_checksum(stmt, 2, md5_checksum, scratch_pool));
   SVN_ERR(svn_sqlite__bind_int64(stmt, 3, install_data->size));
   if (wcroot->format >= SVN_WC__HAS_OPTIONAL_PRISTINE)
@@ -408,7 +428,7 @@ pristine_install_txn(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_pristine_prepare_install(svn_stream_t **stream_p,
                                     svn_wc__db_install_data_t **install_data_p,
-                                    svn_checksum_t **checksum_p,
+                                    svn_wc__db_checksum_t **checksum_p,
                                     svn_checksum_t **md5_checksum_p,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
@@ -435,7 +455,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream_p,
 svn_error_t *
 svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
                                              svn_wc__db_install_data_t **install_data_p,
-                                             svn_checksum_t **checksum_p,
+                                             svn_wc__db_checksum_t **checksum_p,
                                              svn_checksum_t **md5_checksum_p,
                                              svn_wc__db_wcroot_t *wcroot,
                                              svn_boolean_t hydrated,
@@ -474,9 +494,10 @@ svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
     stream = svn_stream_checksummed2(stream, NULL, md5_checksum_p,
                                      svn_checksum_md5, FALSE, result_pool);
   if (checksum_p)
-    stream = svn_stream_checksummed2(stream, NULL, checksum_p,
-                                     wcroot->pristine_checksum_kind,
-                                     FALSE, result_pool);
+    stream = svn_wc__db_checksum_stream(NULL, checksum_p, stream,
+                                        wcroot->pristine_checksum_kind->value,
+                                        wcroot->pristine_checksum_kind->salt,
+                                        result_pool, scratch_pool);
 
   *stream_p = stream;
   *install_data_p = install_data;
@@ -486,7 +507,7 @@ svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
 
 svn_error_t *
 svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
-                            const svn_checksum_t *checksum,
+                            const svn_wc__db_checksum_t *checksum,
                             const svn_checksum_t *md5_checksum,
                             apr_pool_t *scratch_pool)
 {
@@ -494,6 +515,7 @@ svn_wc__db_pristine_install(svn_wc__db_install_data_t *install_data,
   const char *pristine_abspath;
 
   SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(checksum->value != NULL);
   SVN_ERR_ASSERT(md5_checksum != NULL);
   SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
 
@@ -530,7 +552,7 @@ svn_error_t *
 svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
                             svn_wc__db_t *db,
                             const char *wri_abspath,
-                            const svn_checksum_t *checksum,
+                            const svn_wc__db_checksum_t *checksum,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool)
 {
@@ -540,6 +562,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(checksum->value != NULL);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
@@ -552,7 +575,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
     return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
                              _("The pristine text with checksum '%s' was "
                                "not found"),
-                             svn_checksum_to_cstring_display(checksum,
+                             svn_checksum_to_cstring_display(checksum->value,
                                                              scratch_pool));
 
   SVN_ERR_ASSERT((*md5_checksum)->kind == svn_checksum_md5);
@@ -562,7 +585,7 @@ svn_wc__db_pristine_get_md5(const svn_checksum_t **md5_checksum,
 
 
 svn_error_t *
-svn_wc__db_pristine_lookup_by_md5(const svn_checksum_t **checksum,
+svn_wc__db_pristine_lookup_by_md5(const svn_wc__db_checksum_t **checksum,
                                   svn_wc__db_t *db,
                                   const char *wri_abspath,
                                   const svn_checksum_t *md5_checksum,
@@ -593,7 +616,8 @@ svn_wc__db_pristine_lookup_by_md5(const svn_checksum_t **checksum,
                              svn_checksum_to_cstring_display(md5_checksum,
                                                              scratch_pool));
 
-  SVN_ERR(svn_sqlite__column_checksum(checksum, stmt, 0, result_pool));
+  SVN_ERR(svn_wc__db_util_column_wc_checksum(checksum, wcroot, stmt, 0,
+                                             result_pool, scratch_pool));
 
   return svn_error_trace(svn_sqlite__reset(stmt));
 }
@@ -608,7 +632,7 @@ svn_wc__db_pristine_lookup_by_md5(const svn_checksum_t **checksum,
 static svn_error_t *
 pristine_remove_if_unreferenced_txn(svn_sqlite__db_t *sdb,
                                     svn_wc__db_wcroot_t *wcroot,
-                                    const svn_checksum_t *checksum,
+                                    const svn_wc__db_checksum_t *checksum,
                                     const char *pristine_abspath,
                                     apr_pool_t *scratch_pool)
 {
@@ -618,7 +642,8 @@ pristine_remove_if_unreferenced_txn(svn_sqlite__db_t *sdb,
   /* Remove the DB row, if refcount is 0. */
   SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
                                     STMT_DELETE_PRISTINE_IF_UNREFERENCED));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
+  SVN_ERR(svn_wc__db_util_bind_wc_checksum(wcroot, stmt, 1, checksum,
+                                           scratch_pool));
   SVN_ERR(svn_sqlite__update(&affected_rows, stmt));
 
   /* If we removed the DB row, then remove the file. */
@@ -635,7 +660,7 @@ pristine_remove_if_unreferenced_txn(svn_sqlite__db_t *sdb,
  * Implements 'notes/wc-ng/pristine-store' section A-3(b). */
 static svn_error_t *
 pristine_remove_if_unreferenced(svn_wc__db_wcroot_t *wcroot,
-                                const svn_checksum_t *checksum,
+                                const svn_wc__db_checksum_t *checksum,
                                 apr_pool_t *scratch_pool)
 {
   const char *pristine_abspath;
@@ -656,7 +681,7 @@ pristine_remove_if_unreferenced(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_pristine_remove(svn_wc__db_t *db,
                            const char *wri_abspath,
-                           const svn_checksum_t *checksum,
+                           const svn_wc__db_checksum_t *checksum,
                            apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -664,12 +689,7 @@ svn_wc__db_pristine_remove(svn_wc__db_t *db,
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
-  /* ### Transitional: look up the checksum by MD-5.  Return an error
-   * if the pristine text is not in the store. */
-  if (checksum->kind == svn_checksum_md5)
-    SVN_ERR(svn_wc__db_pristine_lookup_by_md5(&checksum, db, wri_abspath,
-                                              checksum,
-                                              scratch_pool, scratch_pool));
+  SVN_ERR_ASSERT(checksum->value != NULL);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
@@ -741,7 +761,7 @@ pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
   while (! err)
     {
       svn_boolean_t have_row;
-      const svn_checksum_t *checksum;
+      const svn_wc__db_checksum_t *checksum;
 
       svn_pool_clear(iterpool);
 
@@ -749,8 +769,8 @@ pristine_cleanup_wcroot(svn_wc__db_wcroot_t *wcroot,
       if (! have_row)
         break;
 
-      SVN_ERR(svn_sqlite__column_checksum(&checksum, stmt, 0,
-                                          iterpool));
+      SVN_ERR(svn_wc__db_util_column_wc_checksum(&checksum, wcroot, stmt, 0,
+                                                 iterpool, iterpool));
       err = pristine_remove_if_unreferenced(wcroot, checksum,
                                             iterpool);
     }
@@ -786,34 +806,35 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
                           svn_boolean_t *hydrated,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
-                          const svn_checksum_t *checksum,
+                          const svn_wc__db_checksum_t *checksum,
                           apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
   const char *local_relpath;
-  svn_boolean_t have_row;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(wri_abspath));
   SVN_ERR_ASSERT(checksum != NULL);
+  SVN_ERR_ASSERT(checksum->value != NULL);
 
   SVN_ERR(svn_wc__db_wcroot_parse_local_abspath(&wcroot, &local_relpath, db,
                               wri_abspath, scratch_pool, scratch_pool));
   VERIFY_USABLE_WCROOT(wcroot);
 
-  if (checksum->kind != wcroot->pristine_checksum_kind)
+  if (checksum->value->kind == wcroot->pristine_checksum_kind->value &&
+      svn_string_compare(checksum->salt, wcroot->pristine_checksum_kind->salt))
+    {
+      /* Check that there is an entry in the PRISTINE table. */
+      SVN_ERR(stmt_select_pristine(present, NULL, NULL, hydrated,
+                                   wcroot, checksum,
+                                   scratch_pool, scratch_pool));
+    }
+  else
     {
       *present = FALSE;
       if (hydrated)
         *hydrated = FALSE;
-
-      return SVN_NO_ERROR;
     }
 
-  /* Check that there is an entry in the PRISTINE table. */
-  SVN_ERR(stmt_select_pristine(&have_row, NULL, NULL, hydrated,
-                               wcroot, checksum,
-                               scratch_pool, scratch_pool));
-  *present = have_row;
   return SVN_NO_ERROR;
 }
 
@@ -821,7 +842,7 @@ svn_wc__db_pristine_check(svn_boolean_t *present,
 svn_error_t *
 svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
                               const char *wri_abspath,
-                              const svn_checksum_t *checksum,
+                              const svn_wc__db_checksum_t *checksum,
                               apr_pool_t *scratch_pool)
 {
   svn_wc__db_wcroot_t *wcroot;
@@ -842,7 +863,7 @@ svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
 
 svn_error_t *
 svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
-                                       const svn_checksum_t *checksum,
+                                       const svn_wc__db_checksum_t *checksum,
                                        apr_pool_t *scratch_pool)
 {
   const char *pristine_abspath;
@@ -854,7 +875,8 @@ svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
 
   SVN_ERR(svn_sqlite__get_statement(&stmt, wcroot->sdb,
                                     STMT_UPDATE_PRISTINE_HYDRATED));
-  SVN_ERR(svn_sqlite__bind_checksum(stmt, 1, checksum, scratch_pool));
+  SVN_ERR(svn_wc__db_util_bind_wc_checksum(wcroot, stmt, 1, checksum,
+                                           scratch_pool));
   SVN_ERR(svn_sqlite__bind_int(stmt, 2, FALSE));
   SVN_ERR(svn_sqlite__update(NULL, stmt));
 

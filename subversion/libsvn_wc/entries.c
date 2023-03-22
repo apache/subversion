@@ -214,7 +214,7 @@ static svn_error_t *
 get_info_for_deleted(svn_wc_entry_t *entry,
                      svn_node_kind_t *kind,
                      const char **repos_relpath,
-                     const svn_checksum_t **checksum,
+                     const svn_wc__db_checksum_t **checksum,
                      svn_wc__db_lock_t **lock,
                      svn_wc__db_t *db,
                      const char *entry_abspath,
@@ -403,7 +403,7 @@ read_one_entry(const svn_wc_entry_t **new_entry,
   svn_wc__db_status_t status;
   svn_wc__db_lock_t *lock;
   const char *repos_relpath;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   svn_filesize_t translated_size;
   svn_wc_entry_t *entry = alloc_entry(result_pool);
   const char *entry_relpath;
@@ -924,14 +924,13 @@ read_one_entry(const svn_wc_entry_t **new_entry,
 
   if (checksum)
     {
-      /* We got a SHA-1, get the corresponding MD-5. */
-      if (checksum->kind != svn_checksum_md5)
-        SVN_ERR(svn_wc__db_pristine_get_md5(&checksum, db,
-                                            dir_abspath, checksum,
-                                            scratch_pool, scratch_pool));
+      const svn_checksum_t *md5_checksum;
 
-      SVN_ERR_ASSERT(checksum->kind == svn_checksum_md5);
-      entry->checksum = svn_checksum_to_cstring(checksum, result_pool);
+      SVN_ERR(svn_wc__db_pristine_get_md5(&md5_checksum, db,
+                                          dir_abspath, checksum,
+                                          scratch_pool, scratch_pool));
+      SVN_ERR_ASSERT(md5_checksum->kind == svn_checksum_md5);
+      entry->checksum = svn_checksum_to_cstring(md5_checksum, result_pool);
     }
 
   if (conflicted)

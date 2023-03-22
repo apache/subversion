@@ -783,7 +783,7 @@ test_get_pristine_copy_path(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_test__sandbox_create(&b, "get_pristine_copy_path", opts, pool));
 
   SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL,
-                                  b.wc_ctx->db, b.wc_abspath, pool));
+                                  b.wc_ctx->db, b.wc_abspath, NULL, pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Test assumes a working copy with pristine");

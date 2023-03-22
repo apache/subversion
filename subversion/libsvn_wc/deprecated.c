@@ -175,7 +175,7 @@ svn_wc_crawl_revisions5(svn_wc_context_t *wc_ctx,
       svn_boolean_t store_pristine;
 
       SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                                   local_abspath, scratch_pool));
+                                   local_abspath, NULL, scratch_pool));
       if (!store_pristine)
         return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
                                 NULL, NULL);
@@ -525,7 +525,7 @@ svn_wc_transmit_text_deltas3(const svn_checksum_t **new_text_base_md5_checksum,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               local_abspath, scratch_pool));
+                               local_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -653,7 +653,7 @@ svn_wc_restore(svn_wc_context_t *wc_ctx,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               local_abspath, scratch_pool));
+                               local_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -784,7 +784,7 @@ svn_wc_get_pristine_contents2(svn_stream_t **contents,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               local_abspath, scratch_pool));
+                               local_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -850,7 +850,8 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
 {
   svn_wc_context_t *wc_ctx;
   const char *local_abspath;
-  const svn_checksum_t *sha1_checksum = NULL;
+  const svn_checksum_t *sha1_checksum;
+  const svn_wc__db_checksum_t *pristine_checksum = NULL;
 
   SVN_ERR(svn_wc__context_create_with_db(&wc_ctx, NULL,
                                          svn_wc__adm_get_db(adm_access),
@@ -860,7 +861,7 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
   if (md5_checksum != NULL)
     {
       svn_error_t *err;
-      err = svn_wc__db_pristine_lookup_by_md5(&sha1_checksum, wc_ctx->db,
+      err = svn_wc__db_pristine_lookup_by_md5(&pristine_checksum, wc_ctx->db,
                                               local_abspath, md5_checksum,
                                               svn_wc__get_committed_queue_pool(queue),
                                               scratch_pool);
@@ -869,11 +870,16 @@ svn_wc_queue_committed2(svn_wc_committed_queue_t *queue,
       if (err && err->apr_err == SVN_ERR_WC_DB_ERROR)
         {
           svn_error_clear(err);
-          sha1_checksum = NULL;
+          pristine_checksum = NULL;
         }
       else
         SVN_ERR(err);
     }
+
+  if (pristine_checksum)
+    sha1_checksum = pristine_checksum->value;
+  else
+    sha1_checksum = NULL;
 
   SVN_ERR(svn_wc_queue_committed3(queue, wc_ctx, local_abspath, recurse,
                                   wcprop_changes,
@@ -944,7 +950,8 @@ svn_wc_process_committed4(const char *path,
   svn_wc__db_t *db = svn_wc__adm_get_db(adm_access);
   const char *local_abspath;
   const svn_checksum_t *md5_checksum;
-  const svn_checksum_t *sha1_checksum = NULL;
+  const svn_checksum_t *sha1_checksum;
+  const svn_wc__db_checksum_t *pristine_checksum = NULL;
   svn_wc_context_t *wc_ctx;
   svn_wc_committed_queue_t *queue;
 
@@ -959,18 +966,23 @@ svn_wc_process_committed4(const char *path,
   if (md5_checksum != NULL)
     {
       svn_error_t *err;
-      err = svn_wc__db_pristine_lookup_by_md5(&sha1_checksum, db,
+      err = svn_wc__db_pristine_lookup_by_md5(&pristine_checksum, db,
                                               local_abspath, md5_checksum,
                                               pool, pool);
 
       if (err && err->apr_err == SVN_ERR_WC_DB_ERROR)
         {
           svn_error_clear(err);
-          sha1_checksum = NULL;
+          pristine_checksum = NULL;
         }
       else
         SVN_ERR(err);
     }
+
+  if (pristine_checksum)
+    sha1_checksum = pristine_checksum->value;
+  else
+    sha1_checksum = NULL;
 
   queue = svn_wc_committed_queue_create(pool);
   SVN_ERR(svn_wc_queue_committed3(queue, wc_ctx, local_abspath, recurse,
@@ -1244,7 +1256,7 @@ svn_wc_revert6(svn_wc_context_t *wc_ctx,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               local_abspath, scratch_pool));
+                               local_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -2260,7 +2272,7 @@ svn_wc_get_diff_editor6(const svn_delta_editor_t **editor,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               anchor_abspath, scratch_pool));
+                               anchor_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -2478,7 +2490,7 @@ svn_wc_diff6(svn_wc_context_t *wc_ctx,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               local_abspath, scratch_pool));
+                               local_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -3188,7 +3200,7 @@ svn_wc_get_status_editor5(const svn_delta_editor_t **editor,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               anchor_abspath, scratch_pool));
+                               anchor_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -3842,7 +3854,7 @@ svn_wc_get_update_editor4(const svn_delta_editor_t **editor,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               anchor_abspath, scratch_pool));
+                               anchor_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -4035,7 +4047,7 @@ svn_wc_get_switch_editor4(const svn_delta_editor_t **editor,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               anchor_abspath, scratch_pool));
+                               anchor_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 
@@ -4820,7 +4832,7 @@ svn_wc_merge5(enum svn_wc_merge_outcome_t *merge_content_outcome,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               target_abspath, scratch_pool));
+                               target_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 

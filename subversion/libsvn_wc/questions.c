@@ -101,7 +101,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                    svn_wc__db_t *db,
                    const char *versioned_file_abspath,
                    svn_filesize_t versioned_file_size,
-                   const svn_checksum_t *pristine_checksum,
+                   const svn_wc__db_checksum_t *pristine_checksum,
                    svn_boolean_t has_props,
                    svn_boolean_t props_mod,
                    svn_boolean_t exact_comparison,
@@ -113,7 +113,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   svn_boolean_t special = FALSE;
   svn_boolean_t need_translation;
   svn_stream_t *v_stream; /* versioned_file */
-  svn_checksum_t *v_checksum;
+  svn_wc__db_checksum_t *v_checksum;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
@@ -189,31 +189,34 @@ compare_and_verify(svn_boolean_t *modified_p,
 
           if (exact_comparison)
             {
-              svn_checksum_t *working_checksum;
-              svn_checksum_t *detranslated_checksum;
-              svn_checksum_t *retranslated_checksum;
+              svn_wc__db_checksum_t *working_checksum;
+              svn_wc__db_checksum_t *detranslated_checksum;
+              svn_wc__db_checksum_t *retranslated_checksum;
 
-              v_stream = svn_stream_checksummed2(v_stream,
-                                                 &working_checksum, NULL,
-                                                 pristine_checksum->kind, TRUE,
-                                                 scratch_pool);
+              v_stream = svn_wc__db_checksum_stream(
+                           &working_checksum, NULL, v_stream,
+                           pristine_checksum->value->kind,
+                           pristine_checksum->salt,
+                           scratch_pool, scratch_pool);
 
               v_stream = svn_subst_stream_translated(v_stream,
                                                      pristine_eol_str, TRUE,
                                                      keywords, FALSE,
                                                      scratch_pool);
-              v_stream = svn_stream_checksummed2(v_stream,
-                                                 &detranslated_checksum, NULL,
-                                                 pristine_checksum->kind, TRUE,
-                                                 scratch_pool);
+              v_stream = svn_wc__db_checksum_stream(
+                           &detranslated_checksum, NULL, v_stream,
+                           pristine_checksum->value->kind,
+                           pristine_checksum->salt,
+                           scratch_pool, scratch_pool);
 
               v_stream = svn_subst_stream_translated(v_stream, eol_str, FALSE,
                                                      keywords, TRUE,
                                                      scratch_pool);
-              v_stream = svn_stream_checksummed2(v_stream,
-                                                 &retranslated_checksum, NULL,
-                                                 pristine_checksum->kind, TRUE,
-                                                 scratch_pool);
+              v_stream = svn_wc__db_checksum_stream(
+                           &retranslated_checksum, NULL, v_stream,
+                           pristine_checksum->value->kind,
+                           pristine_checksum->salt,
+                           scratch_pool, scratch_pool);
 
               err = svn_stream_copy3(v_stream, svn_stream_empty(scratch_pool),
                                      NULL, NULL, scratch_pool);
@@ -223,8 +226,10 @@ compare_and_verify(svn_boolean_t *modified_p,
               else
                 SVN_ERR(err);
 
-              if (svn_checksum_match(detranslated_checksum, pristine_checksum) &&
-                  svn_checksum_match(working_checksum, retranslated_checksum))
+              if (svn_wc__db_checksum_match(detranslated_checksum,
+                                            pristine_checksum) &&
+                  svn_wc__db_checksum_match(working_checksum,
+                                            retranslated_checksum))
                 {
                   *modified_p = FALSE;
                 }
@@ -250,16 +255,18 @@ compare_and_verify(svn_boolean_t *modified_p,
     }
 
   /* Get checksum of detranslated (normalized) content. */
-  err = svn_stream_contents_checksum(&v_checksum, v_stream,
-                                     pristine_checksum->kind,
-                                     scratch_pool, scratch_pool);
+  err = svn_wc__db_checksum_stream_contents(
+          &v_checksum, v_stream,
+          pristine_checksum->value->kind,
+          pristine_checksum->salt,
+          scratch_pool, scratch_pool);
   /* Convert EACCESS on working copy path to WC specific error code. */
   if (err && APR_STATUS_IS_EACCES(err->apr_err))
     return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
   else
     SVN_ERR(err);
 
-  *modified_p = (! svn_checksum_match(v_checksum, pristine_checksum));
+  *modified_p = (! svn_wc__db_checksum_match(v_checksum, pristine_checksum));
 
   return SVN_NO_ERROR;
 }
@@ -273,7 +280,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 {
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   svn_filesize_t recorded_size;
   apr_time_t recorded_mod_time;
   svn_boolean_t has_props;

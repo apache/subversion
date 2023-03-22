@@ -481,7 +481,7 @@ svn_wc__fetch_base_func(const char **filename,
                         apr_pool_t *scratch_pool)
 {
   struct svn_wc__shim_fetch_baton_t *sfb = baton;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   svn_error_t *err;
   const char *local_abspath = svn_dirent_join(sfb->base_abspath, path,
                                               scratch_pool);

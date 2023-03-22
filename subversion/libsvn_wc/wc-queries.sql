@@ -1856,12 +1856,21 @@ SELECT pristine.checksum, pristine.hydrated, 0, NULL, NULL, NULL
 FROM pristine WHERE refcount = 0
 
 -- STMT_SELECT_SETTINGS
-SELECT store_pristine, pristine_checksum_kind FROM settings WHERE wc_id = ?1
+SELECT store_pristine,
+       pristine_checksum_kind,
+       pristine_checksum_use_salt,
+       (SELECT salt FROM global_settings WHERE id = 0)
+FROM settings WHERE wc_id = ?1
 
 -- STMT_UPSERT_SETTINGS
-INSERT INTO settings (wc_id, store_pristine, pristine_checksum_kind)
-VALUES (?1, ?2, ?3)
-ON CONFLICT(wc_id) DO UPDATE SET store_pristine=?2, pristine_checksum_kind=?3
+INSERT INTO settings (wc_id,
+                      store_pristine,
+                      pristine_checksum_kind,
+                      pristine_checksum_use_salt)
+VALUES (?1, ?2, ?3, ?4)
+ON CONFLICT(wc_id) DO UPDATE SET store_pristine=?2,
+                                 pristine_checksum_kind=?3,
+                                 pristine_checksum_use_salt=?4
 
 /* ------------------------------------------------------------------------- */
 

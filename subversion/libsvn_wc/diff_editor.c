@@ -219,7 +219,7 @@ struct file_baton_t
   svn_boolean_t has_propchange;
 
   /* The current BASE checksum and props */
-  const svn_checksum_t *base_checksum;
+  const svn_wc__db_checksum_t *base_checksum;
   apr_hash_t *base_props;
 
   /* The resulting from apply_textdelta */
@@ -396,8 +396,8 @@ svn_wc__diff_base_working_diff(svn_wc__db_t *db,
   svn_boolean_t props_mod;
   svn_boolean_t files_same = FALSE;
   svn_wc__db_status_t base_status;
-  const svn_checksum_t *working_checksum;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *working_checksum;
+  const svn_wc__db_checksum_t *checksum;
   svn_filesize_t recorded_size;
   apr_time_t recorded_time;
   const char *pristine_file;
@@ -933,7 +933,7 @@ svn_wc__diff_local_only_file(svn_wc__db_t *db,
   svn_diff_source_t *copyfrom_src = NULL;
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   const char *original_repos_relpath;
   svn_revnum_t original_revision;
   svn_boolean_t had_props;
@@ -1386,7 +1386,7 @@ svn_wc__diff_base_only_file(svn_wc__db_t *db,
 {
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   apr_hash_t *props;
   void *file_baton = NULL;
   svn_boolean_t skip = FALSE;
@@ -2180,19 +2180,20 @@ close_file(void *file_baton,
       const svn_checksum_t *result_checksum;
 
       if (fb->temp_file_path)
-        result_checksum = svn_checksum__from_digest_md5(fb->result_digest,
-                                                        scratch_pool);
+        {
+          result_checksum = svn_checksum__from_digest_md5(fb->result_digest,
+                                                          scratch_pool);
+        }
       else
-        result_checksum = fb->base_checksum;
+        {
+          SVN_ERR(svn_wc__db_pristine_get_md5(&result_checksum,
+                                              eb->db, fb->local_abspath,
+                                              fb->base_checksum,
+                                              scratch_pool, scratch_pool));
+        }
 
       SVN_ERR(svn_checksum_parse_hex(&expected_checksum, svn_checksum_md5,
                                      expected_md5_digest, scratch_pool));
-
-      if (result_checksum->kind != svn_checksum_md5)
-        SVN_ERR(svn_wc__db_pristine_get_md5(&result_checksum,
-                                            eb->db, fb->local_abspath,
-                                            result_checksum,
-                                            scratch_pool, scratch_pool));
 
       if (!svn_checksum_match(expected_checksum, result_checksum))
         return svn_checksum_mismatch_err(
@@ -2252,7 +2253,7 @@ close_file(void *file_baton,
 
       if (eb->diff_pristine)
         {
-          const svn_checksum_t *checksum;
+          const svn_wc__db_checksum_t *checksum;
           SVN_ERR(svn_wc__db_read_pristine_info(NULL, NULL, NULL, NULL, NULL,
                                                 NULL, &checksum, NULL, NULL,
                                                 &local_props,

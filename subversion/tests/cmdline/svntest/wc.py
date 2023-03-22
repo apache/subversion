@@ -1143,7 +1143,7 @@ def text_base_path(file_path):
   if wc_pristine_checksum_kind == 'SHA1':
     subdir_prefix = ''
   elif wc_pristine_checksum_kind == 'Salted SHA1':
-    subdir_prefix = 'ssh1-'
+    subdir_prefix = 'ssha1-'
   else:
     raise svntest.Failure
 

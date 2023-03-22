@@ -44,6 +44,7 @@
 #include "private/svn_wc_private.h"
 #include "private/svn_sqlite.h"
 #include "private/svn_token.h"
+#include "private/svn_string_private.h"
 
 /* WC-1.0 administrative area extensions */
 #define SVN_WC__BASE_EXT      ".svn-base" /* for text and prop bases */
@@ -1038,6 +1039,8 @@ migrate_text_bases(apr_hash_t **text_bases_info,
 
       /* Calculate its checksums and copy it to the pristine store */
       {
+        static const svn_string_t empty_salt = SVN__STATIC_STRING("");
+        svn_wc__db_checksum_t *pristine_checksum;
         const char *pristine_path;
         const char *text_base_path;
         const char *temp_path;
@@ -1080,9 +1083,12 @@ migrate_text_bases(apr_hash_t **text_bases_info,
         SVN_ERR(svn_sqlite__bind_int64(stmt, 3, finfo.size));
         SVN_ERR(svn_sqlite__insert(NULL, stmt));
 
+        pristine_checksum = svn_wc__db_checksum_make(sha1_checksum,
+                                                     &empty_salt,
+                                                     iterpool);
         SVN_ERR(svn_wc__db_pristine_get_future_path(&pristine_path,
                                                     new_wcroot_abspath,
-                                                    sha1_checksum,
+                                                    pristine_checksum,
                                                     iterpool, iterpool));
 
         /* Ensure any sharding directories exist. */
@@ -1440,7 +1446,23 @@ bump_to_33(void *baton,
            svn_sqlite__db_t *sdb,
            apr_pool_t *scratch_pool)
 {
+  svn_sqlite__stmt_t *stmt;
+  unsigned char salt[32];
+  apr_status_t status;
+
   SVN_ERR(svn_sqlite__exec_statements(sdb, STMT_UPGRADE_TO_33));
+
+  SVN_ERR(svn_sqlite__get_statement(&stmt, sdb,
+                                    STMT_UPGRADE_33_INSERT_GLOBAL_SETTINGS));
+
+  status = apr_generate_random_bytes(salt, sizeof(salt));
+  if (status)
+    return svn_error_wrap_apr(status, NULL);
+
+  SVN_ERR(svn_sqlite__bind_blob(stmt, 1, salt, sizeof(salt)));
+
+  SVN_ERR(svn_sqlite__insert(NULL, stmt));
+
   return SVN_NO_ERROR;
 }
 
@@ -2115,7 +2137,8 @@ svn_wc__upgrade(int *result_format_p,
                                    &data.repos_id, &data.wc_id,
                                    db, target_format, data.root_abspath,
                                    this_dir->repos, this_dir->uuid,
-                                   TRUE, svn_checksum_sha1, scratch_pool));
+                                   TRUE, svn_checksum_sha1, FALSE,
+                                   scratch_pool));
 
   /* Migrate the entries over to the new database.
    ### We need to think about atomicity here.

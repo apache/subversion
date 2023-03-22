@@ -112,7 +112,7 @@ typedef struct svn_wc__db_wcroot_t {
   svn_boolean_t store_pristine;
 
   /* The checksum kind used for the pristine contents. */
-  svn_checksum_kind_t pristine_checksum_kind;
+  const svn_wc__db_checksum_kind_t *pristine_checksum_kind;
 
 } svn_wc__db_wcroot_t;
 
@@ -121,8 +121,6 @@ typedef struct svn_wc__db_wcroot_t {
 typedef enum svn_wc__db_pristine_checksum_kind_t
 {
   svn_wc__db_pristine_checksum_sha1 = 1,
-  /* Available in working copy format 33 and later. */
-  svn_wc__db_pristine_checksum_sha1_salted = 2
 } svn_wc__db_pristine_checksum_kind_t;
 
 
@@ -133,8 +131,9 @@ svn_wc__db_close_many_wcroots(apr_hash_t *roots,
                               apr_pool_t *scratch_pool);
 
 
-/* Construct a new svn_wc__db_wcroot_t. The WCROOT_ABSPATH and SDB parameters
-   must have lifetime of at least RESULT_POOL.  */
+/* Construct a new svn_wc__db_wcroot_t. The WCROOT_ABSPATH, SDB and
+   PRISTINE_CHECKSUM_KIND parameters must have lifetime of at least
+   RESULT_POOL.  */
 svn_error_t *
 svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              const char *wcroot_abspath,
@@ -143,7 +142,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              int format,
                              svn_boolean_t verify_format,
                              svn_boolean_t store_pristine,
-                             svn_checksum_kind_t pristine_checksum_kind,
+                             const svn_wc__db_checksum_kind_t *pristine_checksum_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -235,6 +234,33 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
                         apr_pool_t *result_pool,
                         apr_pool_t *scratch_pool);
 
+/* Read and return the settings for WC_ID in SDB. */
+svn_error_t *
+svn_wc__db_util_read_settings(svn_boolean_t *store_pristine_p,
+                              const svn_wc__db_checksum_kind_t **pristine_checksum_kind_p,
+                              svn_sqlite__db_t *sdb,
+                              int format,
+                              apr_int64_t wc_id,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool);
+
+/* Deserialize SQLite column data as svn_wc__db_checksum_t. */
+svn_error_t *
+svn_wc__db_util_column_wc_checksum(const svn_wc__db_checksum_t **checksum_p,
+                                   svn_wc__db_wcroot_t *wcroot,
+                                   svn_sqlite__stmt_t *stmt,
+                                   int slot,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool);
+
+/* Serialize SQLite column data as svn_wc__db_checksum_t. */
+svn_error_t *
+svn_wc__db_util_bind_wc_checksum(svn_wc__db_wcroot_t *wcroot,
+                                 svn_sqlite__stmt_t *stmt,
+                                 int slot,
+                                 const svn_wc__db_checksum_t *checksum,
+                                 apr_pool_t *scratch_pool);
+
 /* Like svn_wc__db_wq_add() but taking WCROOT */
 svn_error_t *
 svn_wc__db_wq_add_internal(svn_wc__db_wcroot_t *wcroot,
@@ -254,7 +280,7 @@ svn_wc__db_read_info_internal(svn_wc__db_status_t *status,
                               apr_time_t *changed_date,
                               const char **changed_author,
                               svn_depth_t *depth,
-                              const svn_checksum_t **checksum,
+                              const svn_wc__db_checksum_t **checksum,
                               const char **target,
                               const char **original_repos_relpath,
                               apr_int64_t *original_repos_id,
@@ -287,7 +313,7 @@ svn_wc__db_base_get_info_internal(svn_wc__db_status_t *status,
                                   apr_time_t *changed_date,
                                   const char **changed_author,
                                   svn_depth_t *depth,
-                                  const svn_checksum_t **checksum,
+                                  const svn_wc__db_checksum_t **checksum,
                                   const char **target,
                                   svn_wc__db_lock_t **lock,
                                   svn_boolean_t *had_props,
@@ -322,7 +348,7 @@ svn_wc__db_depth_get_info(svn_wc__db_status_t *status,
                           apr_time_t *changed_date,
                           const char **changed_author,
                           svn_depth_t *depth,
-                          const svn_checksum_t **checksum,
+                          const svn_wc__db_checksum_t **checksum,
                           const char **target,
                           svn_boolean_t *had_props,
                           apr_hash_t **props,
@@ -584,7 +610,7 @@ svn_wc__db_verify_db_full_internal(svn_wc__db_wcroot_t *wcroot,
 svn_error_t *
 svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
                                              svn_wc__db_install_data_t **install_data_p,
-                                             svn_checksum_t **checksum_p,
+                                             svn_wc__db_checksum_t **checksum_p,
                                              svn_checksum_t **md5_checksum_p,
                                              svn_wc__db_wcroot_t *wcroot,
                                              svn_boolean_t hydrated,
@@ -595,7 +621,7 @@ svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
    of DB+WRI_ABSPATH. */
 svn_error_t *
 svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
-                                       const svn_checksum_t *checksum,
+                                       const svn_wc__db_checksum_t *checksum,
                                        apr_pool_t *scratch_pool);
 
 #endif /* WC_DB_PRIVATE_H */

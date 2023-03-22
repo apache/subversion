@@ -58,6 +58,7 @@
 #include "private/svn_dep_compat.h"
 #include "private/svn_sorts_private.h"
 #include "private/svn_subr_private.h"
+#include "private/svn_string_private.h"
 
 
 struct svn_wc_committed_queue_t
@@ -140,6 +141,7 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
 {
   const char *wcroot_abspath;
   svn_wc__db_commit_queue_t *db_queue;
+  const svn_wc__db_checksum_t *pristine_checksum;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
@@ -163,10 +165,28 @@ svn_wc_queue_committed4(svn_wc_committed_queue_t *queue,
       svn_hash_sets(queue->wc_queues, wcroot_abspath, db_queue);
     }
 
+  if (checksum)
+    {
+      const svn_wc__db_checksum_kind_t *pristine_checksum_kind;
+
+      SVN_ERR(svn_wc__db_get_settings(NULL, NULL,
+                                      &pristine_checksum_kind,
+                                      wc_ctx->db, wcroot_abspath,
+                                      scratch_pool, scratch_pool));
+
+      pristine_checksum = svn_wc__db_checksum_make(checksum,
+                                                   pristine_checksum_kind->salt,
+                                                   queue->pool);
+    }
+  else
+    {
+      pristine_checksum = NULL;
+    }
+
   return svn_error_trace(
           svn_wc__db_commit_queue_add(db_queue, local_abspath, recurse,
                                       is_committed, remove_lock,
-                                      remove_changelist, checksum,
+                                      remove_changelist, pristine_checksum,
                                       svn_wc__prop_array_to_hash(wcprop_changes,
                                                                  queue->pool),
                                       queue->pool, scratch_pool));
@@ -765,11 +785,11 @@ get_pristine_copy_path(const char **pristine_path_p,
   svn_boolean_t store_pristine;
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   const char *wcroot_abspath;
 
   SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
-                                  local_abspath, scratch_pool));
+                                  local_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
                             NULL, NULL);
@@ -825,7 +845,7 @@ get_pristine_copy_path(const char **pristine_path_p,
         return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
                                  _("The pristine text with checksum '%s' was "
                                    "not found"),
-                                 svn_checksum_to_cstring_display(checksum,
+                                 svn_checksum_to_cstring_display(checksum->value,
                                                                  scratch_pool));
 
       SVN_ERR(svn_wc__db_pristine_get_future_path(pristine_path_p,
@@ -878,7 +898,7 @@ typedef struct get_pristine_lazyopen_baton_t
 {
   svn_wc_context_t *wc_ctx;
   const char *wri_abspath;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
 
 } get_pristine_lazyopen_baton_t;
 
@@ -891,19 +911,10 @@ get_pristine_lazyopen_func(svn_stream_t **stream_p,
                            apr_pool_t *scratch_pool)
 {
   get_pristine_lazyopen_baton_t *b = baton;
-  const svn_checksum_t *checksum;
   svn_stream_t *stream;
 
-  /* If we have an MD5, we'll use it to look up the actual checksum. */
-  if (b->checksum->kind == svn_checksum_md5)
-    SVN_ERR(svn_wc__db_pristine_lookup_by_md5(&checksum, b->wc_ctx->db,
-                                              b->wri_abspath, b->checksum,
-                                              scratch_pool, scratch_pool));
-  else
-    checksum = b->checksum;
-
   SVN_ERR(svn_wc__db_pristine_read(&stream, NULL, b->wc_ctx->db,
-                                   b->wri_abspath, checksum,
+                                   b->wri_abspath, b->checksum,
                                    result_pool, scratch_pool));
   if (!stream)
     return svn_error_create(SVN_ERR_WC_PRISTINE_DEHYDRATED, NULL, NULL);
@@ -920,14 +931,20 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           apr_pool_t *result_pool,
                                           apr_pool_t *scratch_pool)
 {
+  /* For historical reasons, this function only supports retrieving
+     the pristine contents without a salt. */
+  static const svn_string_t empty_salt = SVN__STATIC_STRING("");
+  const svn_wc__db_checksum_t *pristine_checksum;
   svn_boolean_t present;
   svn_boolean_t hydrated;
 
   *contents = NULL;
 
+  pristine_checksum = svn_wc__db_checksum_make(checksum, &empty_salt,
+                                               scratch_pool);
   SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, wc_ctx->db,
-                                    wri_abspath, checksum, scratch_pool));
-
+                                    wri_abspath, pristine_checksum,
+                                    scratch_pool));
   if (present && hydrated)
     {
       get_pristine_lazyopen_baton_t *gpl_baton;
@@ -935,7 +952,7 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
       gpl_baton = apr_pcalloc(result_pool, sizeof(*gpl_baton));
       gpl_baton->wc_ctx = wc_ctx;
       gpl_baton->wri_abspath = wri_abspath;
-      gpl_baton->checksum = checksum;
+      gpl_baton->checksum = pristine_checksum;
 
       *contents = svn_stream_lazyopen_create(get_pristine_lazyopen_func,
                                              gpl_baton, FALSE, result_pool);

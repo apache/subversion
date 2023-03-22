@@ -34,7 +34,7 @@ compare_and_verify(svn_boolean_t *modified_p,
                    svn_wc__db_t *db,
                    const char *versioned_file_abspath,
                    svn_filesize_t versioned_file_size,
-                   const svn_checksum_t *pristine_checksum,
+                   const svn_wc__db_checksum_t *pristine_checksum,
                    svn_boolean_t has_props,
                    svn_boolean_t props_mod,
                    apr_pool_t *scratch_pool)
@@ -45,7 +45,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   svn_boolean_t special = FALSE;
   svn_boolean_t need_translation;
   svn_stream_t *v_stream; /* versioned_file */
-  svn_checksum_t *v_checksum;
+  svn_wc__db_checksum_t *v_checksum;
   svn_error_t *err;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
@@ -130,16 +130,19 @@ compare_and_verify(svn_boolean_t *modified_p,
     }
 
   /* Get checksum of detranslated (normalized) content. */
-  err = svn_stream_contents_checksum(&v_checksum, v_stream,
-                                     pristine_checksum->kind,
-                                     scratch_pool, scratch_pool);
+  err = svn_wc__db_checksum_stream_contents(
+          &v_checksum, v_stream,
+          pristine_checksum->value->kind,
+          pristine_checksum->salt,
+          scratch_pool, scratch_pool);
+
   /* Convert EACCESS on working copy path to WC specific error code. */
   if (err && APR_STATUS_IS_EACCES(err->apr_err))
     return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
   else
     SVN_ERR(err);
 
-  *modified_p = (! svn_checksum_match(v_checksum, pristine_checksum));
+  *modified_p = (! svn_wc__db_checksum_match(v_checksum, pristine_checksum));
 
   return SVN_NO_ERROR;
 }
@@ -150,7 +153,7 @@ check_file_modified(svn_boolean_t *modified_p,
                     const char *local_abspath,
                     svn_filesize_t recorded_size,
                     apr_time_t recorded_time,
-                    const svn_checksum_t *pristine_checksum,
+                    const svn_wc__db_checksum_t *pristine_checksum,
                     svn_boolean_t has_props,
                     svn_boolean_t props_mod,
                     apr_pool_t *scratch_pool)
@@ -199,18 +202,18 @@ static svn_error_t *
 open_textbase(svn_stream_t **contents_p,
               svn_wc__db_t *db,
               const char *local_abspath,
-              const svn_checksum_t *textbase_checksum,
+              const svn_wc__db_checksum_t *textbase_checksum,
               apr_pool_t *result_pool,
               apr_pool_t *scratch_pool)
 {
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   svn_filesize_t recorded_size;
   apr_time_t recorded_time;
   svn_boolean_t have_props;
   svn_boolean_t props_mod;
-  const svn_checksum_t *target_checksum;
+  const svn_wc__db_checksum_t *target_checksum;
   svn_stream_t *contents;
 
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -271,12 +274,12 @@ open_textbase(svn_stream_t **contents_p,
       return SVN_NO_ERROR;
     }
 
-  if (checksum && svn_checksum_match(checksum, target_checksum))
+  if (checksum && svn_wc__db_checksum_match(checksum, target_checksum))
     {
       svn_boolean_t store_pristine;
 
       SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
-                                      local_abspath, scratch_pool));
+                                      local_abspath, NULL, scratch_pool));
       if (!store_pristine)
         {
           svn_boolean_t modified;
@@ -318,7 +321,7 @@ svn_error_t *
 svn_wc__textbase_get_contents(svn_stream_t **contents_p,
                               svn_wc__db_t *db,
                               const char *local_abspath,
-                              const svn_checksum_t *checksum,
+                              const svn_wc__db_checksum_t *checksum,
                               svn_boolean_t ignore_enoent,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
@@ -349,7 +352,7 @@ svn_error_t *
 svn_wc__textbase_setaside(const char **result_abspath_p,
                           svn_wc__db_t *db,
                           const char *local_abspath,
-                          const svn_checksum_t *checksum,
+                          const svn_wc__db_checksum_t *checksum,
                           svn_cancel_func_t cancel_func,
                           void *cancel_baton,
                           apr_pool_t *result_pool,
@@ -395,7 +398,7 @@ svn_wc__textbase_setaside_wq(const char **result_abspath_p,
                              svn_skel_t **cleanup_work_item_p,
                              svn_wc__db_t *db,
                              const char *local_abspath,
-                             const svn_checksum_t *checksum,
+                             const svn_wc__db_checksum_t *checksum,
                              svn_cancel_func_t cancel_func,
                              void *cancel_baton,
                              apr_pool_t *result_pool,
@@ -446,7 +449,7 @@ svn_wc__textbase_setaside_wq(const char **result_abspath_p,
 svn_error_t *
 svn_wc__textbase_prepare_install(svn_stream_t **stream_p,
                                  svn_wc__db_install_data_t **install_data_p,
-                                 svn_checksum_t **checksum_p,
+                                 svn_wc__db_checksum_t **checksum_p,
                                  svn_checksum_t **md5_checksum_p,
                                  svn_wc__db_t *db,
                                  const char *local_abspath,
@@ -486,7 +489,7 @@ textbase_walk_cb(svn_boolean_t *referenced_p,
                  void *baton,
                  const char *local_abspath,
                  int op_depth,
-                 const svn_checksum_t *checksum,
+                 const svn_wc__db_checksum_t *checksum,
                  svn_boolean_t have_props,
                  svn_boolean_t props_mod,
                  svn_filesize_t recorded_size,
@@ -568,7 +571,7 @@ svn_wc_textbase_sync(svn_wc_context_t *wc_ctx,
   SVN_ERR_ASSERT(svn_dirent_is_absolute(local_abspath));
 
   SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, wc_ctx->db,
-                                  local_abspath, scratch_pool));
+                                  local_abspath, NULL, scratch_pool));
   if (store_pristine)
     return SVN_NO_ERROR;
 

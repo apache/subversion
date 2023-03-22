@@ -474,7 +474,7 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
                                ctx, pool));
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, ctx->wc_ctx,
-                               wc_path, pool));
+                               wc_path, NULL, pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Test assumes a working copy with pristine");

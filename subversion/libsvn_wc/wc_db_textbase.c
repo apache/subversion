@@ -91,7 +91,7 @@ svn_wc__db_textbase_walk(svn_wc__db_t *db,
       svn_boolean_t have_row;
       const char *node_relpath;
       int op_depth;
-      const svn_checksum_t *checksum;
+      const svn_wc__db_checksum_t *checksum;
       const char *node_abspath;
       svn_boolean_t have_props;
       svn_filesize_t recorded_size;
@@ -120,7 +120,8 @@ svn_wc__db_textbase_walk(svn_wc__db_t *db,
       node_abspath = svn_dirent_join(wcroot->abspath, node_relpath, iterpool);
       op_depth = svn_sqlite__column_int(stmt, 2);
 
-      err = svn_sqlite__column_checksum(&checksum, stmt, 3, iterpool);
+      err = svn_wc__db_util_column_wc_checksum(&checksum, wcroot, stmt, 3,
+                                               iterpool, iterpool);
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
@@ -165,7 +166,7 @@ textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
                  void *fetch_baton,
                  svn_cancel_func_t cancel_func,
                  void *cancel_baton,
-                 const svn_checksum_t *checksum,
+                 const svn_wc__db_checksum_t *checksum,
                  const char *repos_root_url,
                  const char *repos_relpath,
                  svn_revnum_t revision,
@@ -173,7 +174,7 @@ textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
 {
   svn_stream_t *install_stream;
   svn_wc__db_install_data_t *install_data;
-  svn_checksum_t *install_checksum;
+  svn_wc__db_checksum_t *install_checksum;
   svn_checksum_t *install_md5_checksum;
   svn_error_t *err;
 
@@ -191,10 +192,10 @@ textbase_hydrate(svn_wc__db_wcroot_t *wcroot,
     return svn_error_compose_create(err,
              svn_wc__db_pristine_install_abort(install_data, scratch_pool));
 
-  if (!svn_checksum_match(checksum, install_checksum))
+  if (!svn_wc__db_checksum_match(checksum, install_checksum))
     {
       err = svn_checksum_mismatch_err(
-              checksum, install_checksum, scratch_pool,
+              checksum->value, install_checksum->value, scratch_pool,
               _("Checksum mismatch while fetching text base"));
 
       return svn_error_compose_create(err,
@@ -244,7 +245,7 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
   while (1)
     {
       svn_boolean_t have_row;
-      const svn_checksum_t *checksum;
+      const svn_wc__db_checksum_t *checksum;
       svn_boolean_t hydrated;
       svn_boolean_t referenced;
       svn_error_t *err;
@@ -262,7 +263,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
       if (!have_row)
         break;
 
-      err = svn_sqlite__column_checksum(&checksum, stmt, 0, iterpool);
+      err = svn_wc__db_util_column_wc_checksum(&checksum, wcroot, stmt, 0,
+                                               iterpool, iterpool);
       if (err)
         return svn_error_compose_create(err, svn_sqlite__reset(stmt));
 
@@ -282,7 +284,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                   return svn_error_createf(
                            SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
                            _("Unexpected entry for '%s'"),
-                           svn_checksum_to_cstring_display(checksum, iterpool));
+                           svn_checksum_to_cstring_display(checksum->value,
+                                                           iterpool));
                 }
 
               if (!repos_root_url)
@@ -294,7 +297,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                       return svn_error_createf(
                                SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
                                _("Unexpected entry for '%s'"),
-                               svn_checksum_to_cstring_display(checksum, iterpool));
+                               svn_checksum_to_cstring_display(checksum->value,
+                                                               iterpool));
                     }
 
                   err = svn_wc__db_fetch_repos_info(&repos_root_url, NULL, wcroot,
@@ -308,7 +312,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                   return svn_error_createf(
                            SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
                            _("Unexpected entry for '%s'"),
-                           svn_checksum_to_cstring_display(checksum, iterpool));
+                           svn_checksum_to_cstring_display(checksum->value,
+                                                           iterpool));
                 }
 
               revision = svn_sqlite__column_revnum(stmt, 5);
@@ -317,7 +322,8 @@ svn_wc__db_textbase_sync(svn_wc__db_t *db,
                   return svn_error_createf(
                            SVN_ERR_WC_CORRUPT, svn_sqlite__reset(stmt),
                            _("Unexpected entry for '%s'"),
-                           svn_checksum_to_cstring_display(checksum, iterpool));
+                           svn_checksum_to_cstring_display(checksum->value,
+                                                           iterpool));
                 }
 
               err = textbase_hydrate(wcroot, fetch_callback, fetch_baton,

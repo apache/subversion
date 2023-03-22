@@ -773,6 +773,8 @@ print_info(void *baton,
 
   if (info->wc_info)
     {
+      const char *kind_str;
+
       if (info->wc_info->store_pristine)
         SVN_ERR(svn_cmdline_fputs(_("Working Copy Store Pristine: yes\n"),
                                   stdout, pool));
@@ -780,22 +782,27 @@ print_info(void *baton,
         SVN_ERR(svn_cmdline_fputs(_("Working Copy Store Pristine: no\n"),
                                   stdout, pool));
 
-      switch (info->wc_info->pristine_checksum_kind)
+      if (info->wc_info->pristine_checksum_kind)
         {
-        case svn_checksum_sha1:
-          SVN_ERR(svn_cmdline_fputs(_("Working Copy Checksum Kind: SHA1\n"),
-                                    stdout, pool));
-          break;
+          switch (info->wc_info->pristine_checksum_kind->value)
+            {
+            case svn_checksum_sha1:
+              kind_str = "SHA1";
+              break;
 
-        case svn_checksum_sha1_salted:
-          SVN_ERR(svn_cmdline_fputs(_("Working Copy Checksum Kind: Salted SHA1\n"),
-                                    stdout, pool));
-          break;
+            default:
+              kind_str = "INVALID";
+              break;
+            }
 
-        default:
-          SVN_ERR(svn_cmdline_fputs(_("Working Copy Checksum Kind: INVALID\n"),
-                                    stdout, pool));
-          break;
+          if (svn_string_isempty(info->wc_info->pristine_checksum_kind->salt))
+            SVN_ERR(svn_cmdline_printf(pool,
+                                       _("Working Copy Checksum Kind: %s\n"),
+                                       kind_str));
+          else
+            SVN_ERR(svn_cmdline_printf(pool,
+                                       _("Working Copy Checksum Kind: Salted %s\n"),
+                                       kind_str));
         }
     }
 

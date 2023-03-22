@@ -39,6 +39,7 @@
 
 #include "svn_dirent_uri.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_string_private.h"
 
 #include "wc.h"
 #include "adm_files.h"
@@ -152,3 +153,158 @@ svn_wc__db_util_open_db(svn_sqlite__db_t **sdb,
   return SVN_NO_ERROR;
 }
 
+
+svn_error_t *
+svn_wc__db_util_read_settings(svn_boolean_t *store_pristine_p,
+                              const svn_wc__db_checksum_kind_t **pristine_checksum_kind_p,
+                              svn_sqlite__db_t *sdb,
+                              int format,
+                              apr_int64_t wc_id,
+                              apr_pool_t *result_pool,
+                              apr_pool_t *scratch_pool)
+{
+  static const svn_string_t empty_salt = SVN__STATIC_STRING("");
+
+  if (format >= SVN_WC__HAS_SETTINGS)
+    {
+      svn_sqlite__stmt_t *stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_SETTINGS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "i", wc_id));
+      SVN_ERR(svn_sqlite__step_row(stmt));
+
+      if (store_pristine_p)
+        *store_pristine_p = svn_sqlite__column_boolean(stmt, 0);
+
+      if (pristine_checksum_kind_p)
+        {
+          svn_wc__db_pristine_checksum_kind_t db_checksum_kind;
+          svn_checksum_kind_t checksum_kind;
+          const svn_string_t *checksum_salt;
+
+          db_checksum_kind = svn_sqlite__column_int(stmt, 1);
+          if (db_checksum_kind == svn_wc__db_pristine_checksum_sha1)
+            {
+              checksum_kind = svn_checksum_sha1;
+            }
+          else
+            {
+              return svn_error_createf(
+                       SVN_ERR_WC_CORRUPT,
+                       svn_sqlite__reset(stmt),
+                       _("Unexpected value of the '%s' column (%d)"),
+                       "pristine_checksum_kind",
+                       db_checksum_kind);
+            }
+
+          if (svn_sqlite__column_boolean(stmt, 2))
+            {
+              const void *salt;
+              apr_size_t salt_len;
+
+              salt = svn_sqlite__column_blob(stmt, 3, &salt_len, NULL);
+              checksum_salt = svn_string_ncreate(salt, salt_len, scratch_pool);
+            }
+          else
+            {
+              checksum_salt = &empty_salt;
+            }
+
+          *pristine_checksum_kind_p =
+             svn_wc__db_checksum_kind_make(checksum_kind, checksum_salt,
+                                           result_pool);
+        }
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      if (store_pristine_p)
+        *store_pristine_p = TRUE;
+      if (pristine_checksum_kind_p)
+        *pristine_checksum_kind_p =
+           svn_wc__db_checksum_kind_make(svn_checksum_sha1, &empty_salt,
+                                         result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_util_column_wc_checksum(const svn_wc__db_checksum_t **checksum_p,
+                                   svn_wc__db_wcroot_t *wcroot,
+                                   svn_sqlite__stmt_t *stmt,
+                                   int slot,
+                                   apr_pool_t *result_pool,
+                                   apr_pool_t *scratch_pool)
+{
+  const char *data = svn_sqlite__column_text(stmt, slot, NULL);
+
+  if (data == NULL)
+    {
+      *checksum_p = NULL;
+    }
+  else
+    {
+      const svn_string_t *salt;
+      const svn_checksum_t *checksum;
+
+      if (*data == 's')
+        {
+          if (wcroot->format < SVN_WC__HAS_PRISTINE_CHECKSUM_SALT)
+            return svn_error_create(SVN_ERR_WC_CORRUPT, NULL,
+                                    _("Unexpected value of the checksum column"));
+
+          salt = wcroot->pristine_checksum_kind->salt;
+          data++;
+        }
+      else
+        {
+          static const svn_string_t empty_salt = SVN__STATIC_STRING("");
+          salt = &empty_salt;
+        }
+
+      SVN_ERR(svn_checksum_deserialize(&checksum, data, scratch_pool,
+                                       scratch_pool));
+
+      *checksum_p = svn_wc__db_checksum_make(checksum, salt, result_pool);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_wc__db_util_bind_wc_checksum(svn_wc__db_wcroot_t *wcroot,
+                                 svn_sqlite__stmt_t *stmt,
+                                 int slot,
+                                 const svn_wc__db_checksum_t *checksum,
+                                 apr_pool_t *scratch_pool)
+{
+  const char *data;
+
+  if (checksum)
+    {
+      if (svn_string_isempty(checksum->salt))
+        {
+          data = "";
+        }
+      else
+        {
+          SVN_ERR_ASSERT(wcroot->format >= SVN_WC__HAS_PRISTINE_CHECKSUM_SALT);
+          data = "s";
+        }
+
+      data = apr_pstrcat(
+               scratch_pool, data,
+               svn_checksum_serialize(checksum->value, scratch_pool, scratch_pool),
+               SVN_VA_NULL);
+    }
+  else
+    {
+      data = NULL;
+    }
+
+  SVN_ERR(svn_sqlite__bind_text(stmt, slot, data));
+
+  return SVN_NO_ERROR;
+}

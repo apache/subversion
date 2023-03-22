@@ -250,10 +250,12 @@ copy_versioned_file(svn_wc__db_t *db,
                     apr_pool_t *scratch_pool)
 {
   svn_skel_t *work_items = NULL;
+  svn_wc__db_checksum_t *new_checksum;
 
   if (within_one_wc)
     {
       /* In case we are copying within one WC, it already has the pristine. */
+      new_checksum = NULL;
     }
   else
     {
@@ -268,7 +270,7 @@ copy_versioned_file(svn_wc__db_t *db,
         {
           svn_stream_t *install_stream;
           svn_wc__db_install_data_t *install_data;
-          svn_checksum_t *install_checksum;
+          svn_wc__db_checksum_t *install_checksum;
           svn_checksum_t *install_md5_checksum;
           svn_error_t *err;
 
@@ -288,6 +290,11 @@ copy_versioned_file(svn_wc__db_t *db,
                                               install_checksum,
                                               install_md5_checksum,
                                               scratch_pool));
+          new_checksum = install_checksum;
+        }
+      else
+        {
+          new_checksum = NULL;
         }
     }
 
@@ -355,8 +362,8 @@ copy_versioned_file(svn_wc__db_t *db,
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
   SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
-                             dst_op_root_abspath, is_move, work_items,
-                             scratch_pool));
+                             dst_op_root_abspath, is_move, new_checksum,
+                             work_items, scratch_pool));
 
   if (notify_func)
     {
@@ -422,8 +429,8 @@ copy_versioned_dir(svn_wc__db_t *db,
   /* Copy the (single) node's metadata, and move the new filesystem node
      into place. */
   SVN_ERR(svn_wc__db_op_copy(db, src_abspath, dst_abspath,
-                             dst_op_root_abspath, is_move, work_items,
-                             scratch_pool));
+                             dst_op_root_abspath, is_move, NULL,
+                             work_items, scratch_pool));
 
   if (notify_func)
     {
@@ -531,7 +538,7 @@ copy_versioned_dir(svn_wc__db_t *db,
              any actual files */
           SVN_ERR(svn_wc__db_op_copy(db, child_src_abspath,
                                      child_dst_abspath, dst_op_root_abspath,
-                                     is_move, NULL, iterpool));
+                                     is_move, NULL, NULL, iterpool));
 
           /* Don't recurse on children when all we do is creating not-present
              children */

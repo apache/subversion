@@ -173,7 +173,7 @@ maybe_restore_node(svn_wc__db_t *db,
   svn_error_t *err;
   svn_wc__db_status_t wrk_status;
   svn_node_kind_t wrk_kind;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   svn_boolean_t conflicted;
 
   err = svn_wc__db_read_info(&wrk_status, &wrk_kind, NULL, NULL, NULL,
@@ -230,7 +230,7 @@ svn_wc_restore2(svn_wc_context_t *wc_ctx,
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
   svn_node_kind_t disk_kind;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
 
   SVN_ERR(svn_io_check_path(local_abspath, &disk_kind, scratch_pool));
 
@@ -999,24 +999,23 @@ read_and_checksum_pristine_text(svn_stream_t **stream,
     }
   else
     {
+      const svn_wc__db_checksum_t *checksum;
       const svn_checksum_t *expected_md5;
 
       SVN_ERR(svn_wc__db_read_info(NULL, NULL, NULL, NULL, NULL, NULL,
-                                   NULL, NULL, NULL, NULL, &expected_md5,
+                                   NULL, NULL, NULL, NULL, &checksum,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL, NULL, NULL,
                                    NULL, NULL, NULL, NULL,
                                    db, local_abspath,
                                    result_pool, scratch_pool));
-      if (expected_md5 == NULL)
+      if (checksum->value == NULL)
         return svn_error_createf(SVN_ERR_WC_CORRUPT, NULL,
                                  _("Pristine checksum for file '%s' is missing"),
                                  svn_dirent_local_style(local_abspath,
                                                         scratch_pool));
-      if (expected_md5->kind != svn_checksum_md5)
-        SVN_ERR(svn_wc__db_pristine_get_md5(&expected_md5, db, local_abspath,
-                                            expected_md5,
-                                            result_pool, scratch_pool));
+      SVN_ERR(svn_wc__db_pristine_get_md5(&expected_md5, db, local_abspath,
+                                          checksum, result_pool, scratch_pool));
       *expected_md5_checksum = expected_md5;
 
       /* Arrange to set ACTUAL_MD5_CHECKSUM to the MD5 of what is *actually*
@@ -1063,7 +1062,7 @@ open_txdelta_stream(svn_txdelta_stream_t **txdelta_stream_p,
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
-                                      const svn_checksum_t **new_text_base_checksum,
+                                      const svn_wc__db_checksum_t **new_text_base_checksum,
                                       svn_wc__db_t *db,
                                       const char *local_abspath,
                                       svn_boolean_t fulltext,
@@ -1075,7 +1074,7 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
   const svn_checksum_t *expected_md5_checksum;  /* recorded MD5 of BASE_S. */
   svn_checksum_t *verify_md5_checksum;  /* calc'd MD5 of BASE_STREAM */
   svn_checksum_t *local_md5_checksum;  /* calc'd MD5 of LOCAL_STREAM */
-  svn_checksum_t *local_checksum;  /* calc'd checksum of LOCAL_STREAM */
+  svn_wc__db_checksum_t *local_checksum;  /* calc'd checksum of LOCAL_STREAM */
   svn_wc__db_install_data_t *install_data = NULL;
   svn_error_t *err;
   svn_error_t *err2;
@@ -1236,8 +1235,8 @@ svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                           local_checksum,
                                           local_md5_checksum,
                                           scratch_pool));
-      *new_text_base_checksum = svn_checksum_dup(local_checksum,
-                                                      result_pool);
+      *new_text_base_checksum = svn_wc__db_checksum_dup(local_checksum,
+                                                        result_pool);
     }
 
   /* Close the file baton, and get outta here. */
@@ -1259,13 +1258,20 @@ svn_wc_transmit_text_deltas4(const svn_checksum_t **new_text_base_md5_checksum,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
-  return svn_wc__internal_transmit_text_deltas(NULL,
-                                               new_text_base_md5_checksum,
-                                               new_text_base_sha1_checksum,
-                                               wc_ctx->db, local_abspath,
-                                               fulltext, editor,
-                                               file_baton, result_pool,
-                                               scratch_pool);
+  const svn_wc__db_checksum_t *new_checksum = NULL;
+
+  SVN_ERR(svn_wc__internal_transmit_text_deltas(
+            NULL,
+            new_text_base_md5_checksum,
+            new_text_base_sha1_checksum ? &new_checksum : NULL,
+            wc_ctx->db, local_abspath,
+            fulltext, editor, file_baton,
+            result_pool, scratch_pool));
+
+  if (new_text_base_sha1_checksum)
+    *new_text_base_sha1_checksum = new_checksum->value;
+
+  return SVN_NO_ERROR;
 }
 
 svn_error_t *

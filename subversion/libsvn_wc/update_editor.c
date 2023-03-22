@@ -432,7 +432,7 @@ struct handler_baton
 
   /* A calculated checksum of NEW_TEXT_BASE_TMP_ABSPATH, which we'll use for
      eventually writing the pristine. */
-  svn_checksum_t * new_text_base_checksum;
+  svn_wc__db_checksum_t * new_text_base_checksum;
 };
 
 
@@ -757,10 +757,10 @@ struct file_baton
   /* If there are file content changes, these are the checksums of the
      resulting new text base, which is in the pristine store, else NULL. */
   const svn_checksum_t *new_text_base_md5_checksum;
-  const svn_checksum_t *new_text_base_checksum;
+  const svn_wc__db_checksum_t *new_text_base_checksum;
 
   /* The checksum of the file before the update */
-  const svn_checksum_t *original_checksum;
+  const svn_wc__db_checksum_t *original_checksum;
 
   /* An array of svn_prop_t structures, representing all the property
      changes to be applied to this file.  Once a file baton is
@@ -1049,7 +1049,7 @@ window_handler(svn_txdelta_window_t *window, void *baton)
       fb->new_text_base_md5_checksum =
         svn_checksum__from_digest_md5(hb->new_text_base_md5_digest, fb->pool);
       fb->new_text_base_checksum =
-        svn_checksum_dup(hb->new_text_base_checksum, fb->pool);
+        svn_wc__db_checksum_dup(hb->new_text_base_checksum, fb->pool);
 
       /* Store the new pristine text in the pristine store now.  Later, in a
          single transaction we will update the BASE_NODE to include a
@@ -3865,17 +3865,19 @@ apply_textdelta(void *file_baton,
      check our RECORDED_BASE_CHECKSUM.  (In WC-1, we could not do this test
      for replaced nodes because we didn't store the checksum of the "revert
      base".  In WC-NG, we do and we can.) */
-  recorded_base_checksum = fb->original_checksum;
 
   /* If we have a checksum that we want to compare to a MD5 checksum,
      ensure that it is a MD5 checksum */
-  if (recorded_base_checksum
-      && expected_base_checksum
-      && recorded_base_checksum->kind != svn_checksum_md5)
-    SVN_ERR(svn_wc__db_pristine_get_md5(&recorded_base_checksum,
-                                        eb->db, eb->wcroot_abspath,
-                                        recorded_base_checksum, pool, pool));
-
+  if (fb->original_checksum && expected_base_checksum)
+    {
+      SVN_ERR(svn_wc__db_pristine_get_md5(&recorded_base_checksum,
+                                          eb->db, eb->wcroot_abspath,
+                                          fb->original_checksum, pool, pool));
+    }
+  else
+    {
+      recorded_base_checksum = NULL;
+    }
 
   if (!svn_checksum_match(expected_base_checksum, recorded_base_checksum))
       return svn_error_createf(SVN_ERR_WC_CORRUPT_TEXT_BASE, NULL,
@@ -4074,8 +4076,8 @@ svn_wc__perform_file_merge(svn_skel_t **work_items,
                            svn_wc__db_t *db,
                            const char *local_abspath,
                            const char *wri_abspath,
-                           const svn_checksum_t *new_checksum,
-                           const svn_checksum_t *original_checksum,
+                           const svn_wc__db_checksum_t *new_checksum,
+                           const svn_wc__db_checksum_t *original_checksum,
                            apr_hash_t *old_actual_props,
                            const apr_array_header_t *ext_patterns,
                            svn_revnum_t old_revision,
@@ -4431,7 +4433,7 @@ close_file(void *file_baton,
   svn_skel_t *work_item;
   apr_pool_t *scratch_pool = fb->pool; /* Destroyed at function exit */
   svn_boolean_t keep_recorded_info = FALSE;
-  const svn_checksum_t *new_checksum;
+  const svn_wc__db_checksum_t *new_checksum;
   apr_array_header_t *iprops = NULL;
   svn_boolean_t install_pristine;
   const char *install_from = NULL;
@@ -5505,7 +5507,7 @@ svn_wc_add_repos_file4(svn_wc_context_t *wc_ctx,
   svn_node_kind_t kind;
   const char *tmp_text_base_abspath;
   svn_checksum_t *new_text_base_md5_checksum;
-  svn_checksum_t *new_text_base_checksum;
+  svn_wc__db_checksum_t *new_text_base_checksum;
   const char *source_abspath = NULL;
   svn_skel_t *all_work_items = NULL;
   svn_skel_t *work_item;

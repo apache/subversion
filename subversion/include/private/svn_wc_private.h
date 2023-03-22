@@ -2336,9 +2336,10 @@ svn_wc__upgrade(int *result_format_p,
 svn_error_t *
 svn_wc__get_settings(int *format_p,
                      svn_boolean_t *store_pristine_p,
-                     svn_checksum_kind_t *pristine_checksum_kind_p,
+                     const svn_wc_checksum_kind_t **pristine_checksum_kind_p,
                      svn_wc_context_t *wc_ctx,
                      const char *local_abspath,
+                     apr_pool_t *result_pool,
                      apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus

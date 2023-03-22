@@ -302,7 +302,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              int format,
                              svn_boolean_t verify_format,
                              svn_boolean_t store_pristine,
-                             svn_checksum_kind_t pristine_checksum_kind,
+                             const svn_wc__db_checksum_kind_t *pristine_checksum_kind,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
@@ -498,56 +498,6 @@ verify_stats_table(svn_sqlite__db_t *sdb,
   return SVN_NO_ERROR;
 }
 
-/* Read and return the settings for WC_ID in SDB. */
-static svn_error_t *
-read_settings(svn_boolean_t *store_pristine_p,
-              svn_checksum_kind_t *pristine_checksum_kind_p,
-              svn_sqlite__db_t *sdb,
-              int format,
-              apr_int64_t wc_id,
-              apr_pool_t *scratch_pool)
-{
-  if (format >= SVN_WC__HAS_SETTINGS)
-    {
-      svn_sqlite__stmt_t *stmt;
-      svn_wc__db_pristine_checksum_kind_t db_checksum_kind;
-
-      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_SETTINGS));
-      SVN_ERR(svn_sqlite__bindf(stmt, "i", wc_id));
-      SVN_ERR(svn_sqlite__step_row(stmt));
-
-      *store_pristine_p = svn_sqlite__column_boolean(stmt, 0);
-
-      db_checksum_kind = svn_sqlite__column_int(stmt, 1);
-      if (db_checksum_kind == svn_wc__db_pristine_checksum_sha1)
-        {
-          *pristine_checksum_kind_p = svn_checksum_sha1;
-        }
-      else if (format >= SVN_WC__HAS_PRISTINE_CHECKSUM_SHA1_SALTED &&
-               db_checksum_kind == svn_wc__db_pristine_checksum_sha1_salted)
-        {
-          *pristine_checksum_kind_p = svn_checksum_sha1_salted;
-        }
-      else
-        {
-          return svn_error_createf(SVN_ERR_WC_CORRUPT,
-                                   svn_sqlite__reset(stmt),
-                                   _("Unexpected value of the '%s' column (%d)"),
-                                   "pristine_checksum_kind",
-                                   db_checksum_kind);
-        }
-
-      SVN_ERR(svn_sqlite__step_done(stmt));
-    }
-  else
-    {
-      *store_pristine_p = TRUE;
-      *pristine_checksum_kind_p = svn_checksum_sha1;
-    }
-
-  return SVN_NO_ERROR;
-}
-
 /* Sqlite transaction helper for opening the db in
    svn_wc__db_wcroot_parse_local_abspath() to avoid multiple
    db operations that each obtain and release a lock */
@@ -555,8 +505,9 @@ static svn_error_t *
 fetch_sdb_info(apr_int64_t *wc_id,
                int *format,
                svn_boolean_t *store_pristine,
-               svn_checksum_kind_t *pristine_checksum_kind,
+               const svn_wc__db_checksum_kind_t **pristine_checksum_kind,
                svn_sqlite__db_t *sdb,
+               apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
   *wc_id = -1;
@@ -566,8 +517,10 @@ fetch_sdb_info(apr_int64_t *wc_id,
         svn_wc__db_util_fetch_wc_id(wc_id, sdb, scratch_pool),
         svn_sqlite__read_schema_version(format, sdb, scratch_pool),
         verify_stats_table(sdb, *format, scratch_pool),
-        read_settings(store_pristine, pristine_checksum_kind, sdb,
-                      *format, *wc_id, scratch_pool),
+        svn_wc__db_util_read_settings(store_pristine,
+                                      pristine_checksum_kind,
+                                      sdb, *format, *wc_id,
+                                      result_pool, scratch_pool),
         sdb);
 
   return SVN_NO_ERROR;
@@ -821,11 +774,12 @@ try_symlink_as_dir:
       apr_int64_t wc_id;
       int format;
       svn_boolean_t store_pristine;
-      svn_checksum_kind_t pristine_checksum_kind;
+      const svn_wc__db_checksum_kind_t *pristine_checksum_kind;
       svn_error_t *err;
 
       err = fetch_sdb_info(&wc_id, &format, &store_pristine,
-                           &pristine_checksum_kind, sdb, scratch_pool);
+                           &pristine_checksum_kind,
+                           sdb, scratch_pool, scratch_pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_WC_CORRUPT)
@@ -846,7 +800,9 @@ try_symlink_as_dir:
                                           : local_abspath),
                             sdb, wc_id, format,
                             db->verify_format,
-                            store_pristine, pristine_checksum_kind,
+                            store_pristine,
+                            svn_wc__db_checksum_kind_dup(pristine_checksum_kind,
+                                                         db->state_pool),
                             db->state_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
                   err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
@@ -922,7 +878,11 @@ try_symlink_as_dir:
                                           : local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
                             db->verify_format,
-                            TRUE, svn_checksum_sha1,
+                            TRUE,
+                            svn_wc__db_checksum_kind_make(
+                              svn_checksum_sha1,
+                              svn_string_create_empty(scratch_pool),
+                              db->state_pool),
                             db->state_pool, scratch_pool));
     }
 

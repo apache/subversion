@@ -84,7 +84,8 @@ pristine_write_read(const svn_test_opts_t *opts,
 
   const char data[] = "Blah";
   svn_string_t *data_string = svn_string_create(data, pool);
-  svn_checksum_t *data_checksum, *data_md5;
+  svn_wc__db_checksum_t *data_checksum;
+  svn_checksum_t *data_md5;
 
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_write_read", opts, pool));
@@ -189,7 +190,8 @@ pristine_delete_while_open(const svn_test_opts_t *opts,
   apr_size_t sz;
 
   const char data[] = "Blah";
-  svn_checksum_t *data_checksum, *data_md5;
+  svn_wc__db_checksum_t *data_checksum;
+  svn_checksum_t *data_md5;
 
   SVN_ERR(create_repos_and_wc(&wc_abspath, &db,
                               "pristine_delete_while_open", opts, pool));
@@ -256,7 +258,8 @@ reject_mismatching_text(const svn_test_opts_t *opts,
   const char *wc_abspath;
 
   const char data[] = "Blah";
-  svn_checksum_t *data_checksum, *data_md5;
+  svn_wc__db_checksum_t *data_checksum;
+  svn_checksum_t *data_md5;
 
   const char data2[] = "Baz";
 
@@ -326,7 +329,8 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
   apr_size_t sz;
 
   const char data[] = "Blah";
-  svn_checksum_t *data_checksum, *data_md5;
+  svn_wc__db_checksum_t *data_checksum;
+  svn_checksum_t *data_md5;
 
   svn_boolean_t store_pristine;
 
@@ -334,7 +338,7 @@ pristine_install_dehydrated(const svn_test_opts_t *opts,
                               "pristine_install_dehydrated", opts, pool));
 
   SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
-                                  wc_abspath, pool));
+                                  wc_abspath, NULL, pool));
   if (store_pristine)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Test assumes a working copy without pristine");
@@ -437,7 +441,8 @@ pristine_dehydrate(const svn_test_opts_t *opts,
 
   const char data[] = "Blah";
   svn_string_t *data_string = svn_string_create(data, pool);
-  svn_checksum_t *data_checksum, *data_md5;
+  svn_wc__db_checksum_t *data_checksum;
+  svn_checksum_t *data_md5;
 
   svn_boolean_t store_pristine;
 
@@ -445,7 +450,7 @@ pristine_dehydrate(const svn_test_opts_t *opts,
                               "pristine_dehydrate", opts, pool));
 
   SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, NULL, db,
-                                  wc_abspath, pool));
+                                  wc_abspath, NULL, pool));
   if (store_pristine)
     return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
                             "Test assumes a working copy without pristine");

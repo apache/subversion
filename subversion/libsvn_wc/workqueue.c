@@ -491,7 +491,7 @@ run_file_install(work_item_baton_t *wqb,
   apr_int64_t val;
   const char *wcroot_abspath;
   const char *source_abspath;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   apr_hash_t *props;
   svn_boolean_t is_special;
   svn_boolean_t is_executable;

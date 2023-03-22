@@ -355,7 +355,7 @@ test_getting_info(const svn_test_opts_t *opts,
   apr_time_t changed_date;
   const char *changed_author;
   svn_depth_t depth;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   const char *target;
   svn_boolean_t had_props;
   apr_hash_t *props;
@@ -402,7 +402,7 @@ test_getting_info(const svn_test_opts_t *opts,
             db, svn_dirent_join(local_abspath, "A", pool),
             pool, pool));
   SVN_TEST_ASSERT(kind == svn_node_file);
-  SVN_TEST_STRING_ASSERT(SHA1_1, svn_checksum_to_cstring(checksum, pool));
+  SVN_TEST_STRING_ASSERT(SHA1_1, svn_checksum_to_cstring(checksum->value, pool));
   SVN_TEST_STRING_ASSERT(repos_relpath, "A");
   SVN_TEST_STRING_ASSERT(repos_root_url, ROOT_ONE);
   SVN_TEST_STRING_ASSERT(repos_uuid, UUID_ONE);
@@ -474,7 +474,7 @@ test_getting_info(const svn_test_opts_t *opts,
             db, svn_dirent_join(local_abspath, "F", pool),
             pool, pool));
   SVN_TEST_STRING_ASSERT(SHA1_1,
-                         svn_checksum_to_cstring(checksum, pool));
+                         svn_checksum_to_cstring(checksum->value, pool));
 
   /* Test: alternate repository (switched file). */
   SVN_ERR(svn_wc__db_base_get_info(
@@ -603,7 +603,8 @@ test_inserting_nodes(const svn_test_opts_t *opts,
                      apr_pool_t *pool)
 {
   const char *local_abspath;
-  svn_checksum_t *checksum;
+  svn_wc__db_checksum_t *checksum;
+  svn_checksum_t *checksum_value;
   svn_wc__db_t *db;
   apr_hash_t *props;
   const apr_array_header_t *children;
@@ -615,7 +616,11 @@ test_inserting_nodes(const svn_test_opts_t *opts,
 
   children = svn_cstring_split("N-a N-b N-c", " ", FALSE, pool);
 
-  SVN_ERR(svn_checksum_parse_hex(&checksum, svn_checksum_sha1, SHA1_1, pool));
+  SVN_ERR(svn_checksum_parse_hex(&checksum_value, svn_checksum_sha1,
+                                 SHA1_1, pool));
+  checksum = svn_wc__db_checksum_make(checksum_value,
+                                      svn_string_create_empty(pool),
+                                      pool);
 
   /* Create a new directory and several child nodes. */
   set_prop(props, "for-file", "N", pool);
@@ -793,7 +798,7 @@ test_working_info(const svn_test_opts_t *opts,
   const char *changed_author;
   apr_time_t recorded_time;
   svn_depth_t depth;
-  const svn_checksum_t *checksum;
+  const svn_wc__db_checksum_t *checksum;
   svn_filesize_t recorded_size;
   const char *target;
   const char *changelist;
@@ -1419,7 +1424,8 @@ test_externals_store(const svn_test_opts_t *opts,
 {
   svn_wc__db_t *db;
   const char *local_abspath;
-  svn_checksum_t *orig_checksum;
+  svn_wc__db_checksum_t *orig_checksum;
+  svn_checksum_t *checksum_value;
   const char *file_external_path;
   const char *dir_external_path;
   const char *subdir;
@@ -1433,8 +1439,12 @@ test_externals_store(const svn_test_opts_t *opts,
   /* Directory I exists in the standard test db */
   subdir = svn_dirent_join(local_abspath, "I", pool);
 
-  SVN_ERR(svn_checksum_parse_hex(&orig_checksum, svn_checksum_sha1, SHA1_1,
+  SVN_ERR(svn_checksum_parse_hex(&checksum_value, svn_checksum_sha1, SHA1_1,
                                  pool));
+
+  orig_checksum = svn_wc__db_checksum_make(checksum_value,
+                                           svn_string_create_empty(pool),
+                                           pool);
 
   file_external_path = svn_dirent_join(subdir, "file-external", pool);
   dir_external_path = svn_dirent_join(subdir, "dir-external", pool);

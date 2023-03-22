@@ -209,6 +209,7 @@ init_adm(svn_wc__db_t *db,
          svn_depth_t depth,
          svn_boolean_t store_pristine,
          svn_checksum_kind_t pristine_checksum_kind,
+         svn_boolean_t pristine_checksum_use_salt,
          apr_pool_t *pool)
 {
   /* First, make an empty administrative area. */
@@ -231,7 +232,8 @@ init_adm(svn_wc__db_t *db,
   SVN_ERR(svn_wc__db_init(db, target_format, local_abspath,
                           repos_relpath, repos_root_url, repos_uuid,
                           initial_rev, depth, store_pristine,
-                          pristine_checksum_kind, pool));
+                          pristine_checksum_kind,
+                          pristine_checksum_use_salt, pool));
 
   /* Stamp ENTRIES and FORMAT files for old clients.  */
   SVN_ERR(svn_io_file_create(svn_wc__adm_child(local_abspath,
@@ -303,23 +305,28 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
   if (present_format == 0)
     {
       svn_checksum_kind_t pristine_checksum_kind;
+      svn_boolean_t pristine_checksum_use_salt;
 
-      if (target_format >= SVN_WC__HAS_PRISTINE_CHECKSUM_SHA1_SALTED)
+      pristine_checksum_kind = svn_checksum_sha1;
+
+      if (target_format >= SVN_WC__HAS_PRISTINE_CHECKSUM_SALT)
         {
-          /* The format of a working copy is new enough to support checksum
-             kinds other than plain SHA-1. */
-          pristine_checksum_kind = svn_checksum_sha1_salted;
+          /* The format of a working copy is new enough to support using salted
+             pristine checksums, so enable them. */
+          pristine_checksum_use_salt = TRUE;
         }
       else
         {
-          /* Compatibility: use plain SHA-1. */
-          pristine_checksum_kind = svn_checksum_sha1;
+          /* Compatibility: don't use the pristine checksum salt. */
+          pristine_checksum_use_salt = FALSE;
         }
 
       return svn_error_trace(init_adm(db, target_format, local_abspath,
                                       repos_relpath, repos_root_url, repos_uuid,
                                       revision, depth, store_pristine,
-                                      pristine_checksum_kind, scratch_pool));
+                                      pristine_checksum_kind,
+                                      pristine_checksum_use_salt,
+                                      scratch_pool));
     }
   else if (present_format != target_format)
     {
@@ -331,7 +338,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
     }
 
   SVN_ERR(svn_wc__db_get_settings(NULL, &wc_store_pristine, NULL, db,
-                                  local_abspath, scratch_pool));
+                                  local_abspath, NULL, scratch_pool));
 
   if ((store_pristine && !wc_store_pristine) ||
       (!store_pristine && wc_store_pristine))

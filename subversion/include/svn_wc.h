@@ -3251,6 +3251,49 @@ svn_wc_entry_dup(const svn_wc_entry_t *entry,
 
 
 /**
+ * This struct contains information about a checksum kind used by
+ * the working copy.
+ *
+ * @note Fields may be added to the end of this structure in future
+ * versions.  Therefore, users shouldn't allocate structures of this
+ * type, to preserve binary compatibility.
+ *
+ * @since New in 1.15.
+ */
+typedef struct svn_wc_checksum_kind_t
+{
+  /** The type of checksum. */
+  svn_checksum_kind_t value;
+
+  /** The additional salt used for the checksummed data. */
+  const svn_string_t *salt;
+} svn_wc_checksum_kind_t;
+
+/**
+ * Create a new #svn_wc_checksum_kind_t structure, where the structure
+ * itself all its properties will be allocated from @a result_pool.
+ * @a salt doesn't need to have a specific lifetime, because it will
+ * be copied by the function internally.
+ *
+ * @since New in 1.15.
+ */
+svn_wc_checksum_kind_t *
+svn_wc_checksum_kind_create(svn_checksum_kind_t value,
+                            const svn_string_t *salt,
+                            apr_pool_t *result_pool);
+
+/**
+ * Return a duplicate of @a kind, allocated in @a result_pool.
+ * No part of the new structure will be shared with @a kind.
+ * If @a kind is @c NULL then @c NULL is returned.
+ *
+ * @since New in 1.15.
+ */
+svn_wc_checksum_kind_t *
+svn_wc_checksum_kind_dup(const svn_wc_checksum_kind_t *kind,
+                         apr_pool_t *result_pool);
+
+/**
  * This struct contains information about a working copy node.
  *
  * @note Fields may be added to the end of this structure in future
@@ -3325,7 +3368,7 @@ typedef struct svn_wc_info_t
    * Checksum kind used for the pristine content.
    * @since New in 1.15.
    */
-  svn_checksum_kind_t pristine_checksum_kind;
+  const svn_wc_checksum_kind_t *pristine_checksum_kind;
 } svn_wc_info_t;
 
 /**

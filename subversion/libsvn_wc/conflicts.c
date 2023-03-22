@@ -3368,7 +3368,7 @@ svn_wc_resolved_conflict5(svn_wc_context_t *wc_ctx,
   svn_boolean_t store_pristine;
 
   SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, NULL, wc_ctx,
-                               local_abspath, scratch_pool));
+                               local_abspath, NULL, scratch_pool));
   if (!store_pristine)
     return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE, NULL, NULL);
 

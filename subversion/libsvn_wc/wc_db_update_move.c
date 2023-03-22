@@ -909,7 +909,7 @@ static svn_error_t *
 tc_editor_add_file(node_move_baton_t *nmb,
                    const char *relpath,
                    svn_node_kind_t old_kind,
-                   const svn_checksum_t *checksum,
+                   const svn_wc__db_checksum_t *checksum,
                    apr_hash_t *props,
                    apr_pool_t *scratch_pool)
 {
@@ -1010,7 +1010,7 @@ static svn_error_t *
 tc_editor_incoming_add_file(node_move_baton_t *nmb,
                             const char *dst_relpath,
                             svn_node_kind_t old_kind,
-                            const svn_checksum_t *checksum,
+                            const svn_wc__db_checksum_t *checksum,
                             apr_hash_t *props,
                             const char *src_relpath,
                             const char *content_abspath,
@@ -1090,7 +1090,7 @@ typedef struct working_node_version_t
 {
   svn_wc_conflict_version_t *location_and_kind;
   apr_hash_t *props;
-  const svn_checksum_t *checksum; /* for files only */
+  const svn_wc__db_checksum_t *checksum; /* for files only */
 } working_node_version_t;
 
 /* Return *WORK_ITEMS to create a conflict on LOCAL_ABSPATH. */
@@ -1320,8 +1320,8 @@ tc_editor_alter_directory(node_move_baton_t *nmb,
 static svn_error_t *
 tc_editor_alter_file(node_move_baton_t *nmb,
                      const char *dst_relpath,
-                     const svn_checksum_t *old_checksum,
-                     const svn_checksum_t *new_checksum,
+                     const svn_wc__db_checksum_t *old_checksum,
+                     const svn_wc__db_checksum_t *new_checksum,
                      apr_hash_t *old_props,
                      apr_hash_t *new_props,
                      apr_pool_t *scratch_pool)
@@ -1373,7 +1373,7 @@ tc_editor_alter_file(node_move_baton_t *nmb,
                                scratch_pool, scratch_pool));
 
   if (!obstructed
-      && !svn_checksum_match(new_version.checksum, old_version.checksum))
+      && !svn_wc__db_checksum_match(new_version.checksum, old_version.checksum))
     {
       svn_boolean_t is_locally_modified;
 
@@ -1497,8 +1497,8 @@ static svn_error_t *
 tc_editor_update_incoming_moved_file(node_move_baton_t *nmb,
                                      const char *dst_relpath,
                                      const char *src_relpath,
-                                     const svn_checksum_t *src_checksum,
-                                     const svn_checksum_t *dst_checksum,
+                                     const svn_wc__db_checksum_t *src_checksum,
+                                     const svn_wc__db_checksum_t *dst_checksum,
                                      apr_hash_t *dst_props,
                                      apr_hash_t *src_props,
                                      svn_boolean_t do_text_merge,
@@ -1952,7 +1952,7 @@ tc_incoming_editor_delete(node_move_baton_t *nmb,
    than a hash, to allow the driver to process children in a defined order. */
 static svn_error_t *
 get_info(apr_hash_t **props,
-         const svn_checksum_t **checksum,
+         const svn_wc__db_checksum_t **checksum,
          apr_array_header_t **children,
          svn_node_kind_t *kind,
          const char *local_relpath,
@@ -2059,7 +2059,7 @@ update_moved_away_node(node_move_baton_t *nmb,
 {
   update_move_baton_t *b = nmb->umb;
   svn_node_kind_t src_kind, dst_kind;
-  const svn_checksum_t *src_checksum, *dst_checksum;
+  const svn_wc__db_checksum_t *src_checksum, *dst_checksum;
   apr_hash_t *src_props, *dst_props;
   apr_array_header_t *src_children, *dst_children;
 
@@ -2105,7 +2105,7 @@ update_moved_away_node(node_move_baton_t *nmb,
 
       if (src_kind == svn_node_file || src_kind == svn_node_symlink)
         {
-          if (!props_equal || !svn_checksum_match(src_checksum, dst_checksum))
+          if (!props_equal || !svn_wc__db_checksum_match(src_checksum, dst_checksum))
             SVN_ERR(tc_editor_alter_file(nmb, dst_relpath,
                                          dst_checksum, src_checksum,
                                          dst_props, src_props, scratch_pool));
@@ -2434,7 +2434,7 @@ svn_wc__db_update_moved_away_conflict_victim(svn_wc__db_t *db,
 
 static svn_error_t *
 get_working_info(apr_hash_t **props,
-                 const svn_checksum_t **checksum,
+                 const svn_wc__db_checksum_t **checksum,
                  apr_array_header_t **children,
                  svn_node_kind_t *kind,
                  const char *local_relpath,
@@ -2523,7 +2523,7 @@ update_incoming_moved_node(node_move_baton_t *nmb,
   update_move_baton_t *b = nmb->umb;
   svn_node_kind_t orig_kind, working_kind;
   const char *victim_relpath = src_relpath;
-  const svn_checksum_t *orig_checksum, *working_checksum;
+  const svn_wc__db_checksum_t *orig_checksum, *working_checksum;
   apr_hash_t *orig_props, *working_props;
   apr_array_header_t *orig_children, *working_children;
 
@@ -3011,10 +3011,10 @@ update_local_add_notify_obstructed_or_missing(added_node_baton_t *nb,
 static svn_error_t *
 tc_editor_update_add_new_file(added_node_baton_t *nb,
                               svn_node_kind_t base_kind,
-                              const svn_checksum_t *base_checksum,
+                              const svn_wc__db_checksum_t *base_checksum,
                               apr_hash_t *base_props,
                               svn_node_kind_t working_kind,
-                              const svn_checksum_t *working_checksum,
+                              const svn_wc__db_checksum_t *working_checksum,
                               apr_hash_t *working_props,
                               apr_pool_t *scratch_pool)
 {
@@ -3146,8 +3146,8 @@ update_incoming_add_merge_props(svn_wc_notify_state_t *prop_state,
 
 static svn_error_t *
 tc_editor_update_add_merge_files(added_node_baton_t *nb,
-                                 const svn_checksum_t *working_checksum,
-                                 const svn_checksum_t *base_checksum,
+                                 const svn_wc__db_checksum_t *working_checksum,
+                                 const svn_wc__db_checksum_t *base_checksum,
                                  apr_hash_t *working_props,
                                  apr_hash_t *base_props,
                                  apr_pool_t *scratch_pool)
@@ -3388,7 +3388,7 @@ update_locally_added_node(added_node_baton_t *nb,
   svn_wc__db_wcroot_t *wcroot = b->wcroot;
   svn_wc__db_t *db = b->db;
   svn_node_kind_t base_kind, working_kind;
-  const svn_checksum_t *base_checksum;
+  const svn_wc__db_checksum_t *base_checksum;
   apr_hash_t *base_props, *working_props;
   apr_array_header_t *base_children, *working_children;
   const char *local_abspath = svn_dirent_join(wcroot->abspath,
@@ -3467,11 +3467,22 @@ update_locally_added_node(added_node_baton_t *nb,
     {
       if (working_kind == svn_node_file || working_kind == svn_node_symlink)
         {
-          svn_checksum_t *working_checksum = NULL;
+          svn_wc__db_checksum_t *working_checksum = NULL;
 
           if (base_checksum)
-            SVN_ERR(svn_io_file_checksum2(&working_checksum, local_abspath,
-                                          base_checksum->kind, scratch_pool));
+            {
+              apr_file_t *file;
+
+              SVN_ERR(svn_io_file_open(&file, local_abspath, APR_READ,
+                                       APR_OS_DEFAULT, scratch_pool));
+
+              SVN_ERR(svn_wc__db_checksum_stream_contents(
+                        &working_checksum,
+                        svn_stream_from_aprfile2(file, FALSE, scratch_pool),
+                        base_checksum->value->kind, base_checksum->salt,
+                        scratch_pool, scratch_pool));
+            }
+
           SVN_ERR(tc_editor_update_add_new_file(nb, base_kind, base_checksum,
                                                 base_props, working_kind,
                                                 working_checksum, working_props,
@@ -3491,13 +3502,20 @@ update_locally_added_node(added_node_baton_t *nb,
 
       if (working_kind == svn_node_file || working_kind == svn_node_symlink)
         {
-          svn_checksum_t *working_checksum;
+          svn_wc__db_checksum_t *working_checksum;
+          apr_file_t *file;
 
-          SVN_ERR_ASSERT(base_checksum);
-          SVN_ERR(svn_io_file_checksum2(&working_checksum, local_abspath,
-                                        base_checksum->kind, scratch_pool));
-          if (!props_equal || !svn_checksum_match(base_checksum,
-                                                  working_checksum))
+          SVN_ERR(svn_io_file_open(&file, local_abspath, APR_READ,
+                                   APR_OS_DEFAULT, scratch_pool));
+
+          SVN_ERR(svn_wc__db_checksum_stream_contents(
+                    &working_checksum,
+                    svn_stream_from_aprfile2(file, FALSE, scratch_pool),
+                    base_checksum->value->kind, base_checksum->salt,
+                    scratch_pool, scratch_pool));
+
+          if (!props_equal || !svn_wc__db_checksum_match(base_checksum,
+                                                         working_checksum))
             SVN_ERR(tc_editor_update_add_merge_files(nb, working_checksum,
                                                      base_checksum,
                                                      working_props, base_props,
