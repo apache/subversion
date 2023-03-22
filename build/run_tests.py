@@ -266,6 +266,10 @@ class TestHarness:
       cmdline.append('--parallel')
     if self.opts.store_pristine is not None:
       cmdline.append('--store-pristine=%s' % self.opts.store_pristine)
+    if self.opts.valgrind is not None:
+      cmdline.append('--valgrind=%s' % self.opts.valgrind)
+    if self.opts.valgrind_opts is not None:
+      cmdline.append('--valgrind-opts=%s' % self.opts.valgrind_opts)
 
     self.c_test_cmdline = cmdline
 
@@ -335,6 +339,10 @@ class TestHarness:
       cmdline.append('--allow-remote-http-connection')
     if self.opts.store_pristine is not None:
       cmdline.append('--store-pristine=%s' % self.opts.store_pristine)
+    if self.opts.valgrind is not None:
+      cmdline.append('--valgrind=%s' % self.opts.valgrind)
+    if self.opts.valgrind_opts is not None:
+      cmdline.append('--valgrind-opts=%s' % self.opts.valgrind_opts)
 
     self.py_test_cmdline = cmdline
 
@@ -814,6 +822,17 @@ class TestHarness:
         log.write('FAIL:  %s: Unknown test failure (%s).\n'
                   % (progbase, test_failed))
 
+  def _maybe_prepend_valgrind(self, cmdline, progbase):
+    if self.opts.valgrind:
+      if (progbase in self.opts.valgrind.split(',')
+          or 'C' in self.opts.valgrind.split(',')):
+        valgrind = [os.path.join(self.builddir, 'libtool'), '--mode=execute',
+                    'valgrind', '--quiet', '--error-exitcode=1']
+        if self.opts.valgrind_opts:
+          valgrind += self.opts.valgrind_opts.split(' ')
+        cmdline = valgrind + cmdline
+    return cmdline
+
   def _run_c_test(self, progabs, progdir, progbase, test_nums, dot_count):
     'Run a c test, escaping parameters as required.'
     if self.opts.list_tests and self.opts.milestone_filter:
@@ -849,6 +868,7 @@ class TestHarness:
       self.dots_written = dots
 
     tests_completed = 0
+    cmdline = self._maybe_prepend_valgrind(cmdline, progbase)
     with Popen(cmdline, stdout=subprocess.PIPE, stderr=self.log) as prog:
       line = prog.stdout.readline()
       while line:
@@ -1095,6 +1115,10 @@ def create_parser():
                     help='Run tests that connect to remote HTTP(S) servers')
   parser.add_option('--store-pristine', action='store', type='str',
                     help='Set the WC pristine mode')
+  parser.add_option('--valgrind', action='store',
+                    help='programs to run under valgrind')
+  parser.add_option('--valgrind-opts', action='store',
+                    help='options to pass valgrind')
 
   parser.set_defaults(set_log_level=None)
   return parser

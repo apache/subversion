@@ -261,6 +261,72 @@ Testing Over DAV
 Please see subversion/tests/cmdline/README for how to run the
 command-line client test suite against a remote repository.
 
+
+Testing with valgrind
+---------------------
+
+The test suite has support for valgrind. For this to be useful
+Subversion must be compiled with pool debugging enabled by
+adding -DAPR_POOL_DEBUG to CFLAGS. It is sufficient to compile
+just Subversion with pool debugging but compiling apr, apr-util
+and serf will cause more of the code to be checked.
+
+Valgrind can be used on the C test programs, and/or on svn,
+svnlook, svnadmin, etc. invoked during the python tests. To test
+the C programs use:
+
+   make check VALGRIND=C
+
+To test svn during the python tests use:
+
+  make check SKIP_C_TESTS=1 VALGRIND=svn
+
+To test svnlook during the python tests use:
+
+  make check VALGRIND=svnlook TESTS=subversion/tests/cmdline/svnlook_tests.py
+
+The VALGRIND settings can be combined:
+
+  make check PARALLEL=1 VALGRIND=C,svn,svnlook
+
+Any valgrind error causes diagnostic output on stderr but the program
+will continue to run. For the C tests valgrind is invoked with the
+option --error-exitcode=1 so that the although the individual
+tests within each C test program may PASS the test as a whole will
+FAIL. For the python tests the test harness parses stderr and detects
+the valgrind diagnostic, so individual tests will FAIL. In both cases
+the stderr diagnostic output from valgrind is available in tests.log.
+
+If valgind is producing unwanted diagnostics in some of the system
+libraries then create a suppression file and pass it as:
+
+  make check VALGRIND=svn VALGRIND_OPTS=--suppressions=$PWD/vg.supp
+
+Running valgrind in the testsuite will only check the client-side code.
+To check the server-side code invoke the server using valgrind and
+arrange for it to remain in the foreground so valgrind output will
+appear on stderr in the terminal. For svnserve something like:
+
+  ./libtool --mode=execute valgrind \
+       subversion/svnserve/svnserve -Tdr subversion/tests/cmdline --foreground
+  make check BASE_URL=svn://localhost   # in another terminal
+
+For apache use a threaded MPM and then something like:
+
+  valgrind httpd -X -f /path/to/cfg
+  make check BASE_URL=http://localhost:8888   # in another terminal
+
+Note that using valgrind will make the testsuite much slower; expect more
+than an order of magnitude slowdown if using valgrind on svn during the
+python tests.  Using the ASAN/MSAN/LSAN sanitizers in gcc/clang is an
+alternative; they will catch similar types of bugs and are much faster.
+The sanitizers also benefit from pool debugging.
+
+Debian's 1:3.19.0-1 version of valgrind seems to have a problem with
+the Dwarf 5 debugging info produced by Debian's compilers, so compile
+with -gdwarf-4 if using -g.
+
+
 Conclusion
 ----------
 

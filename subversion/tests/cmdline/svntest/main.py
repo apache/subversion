@@ -211,6 +211,9 @@ svnauthz_validate_binary = os.path.abspath(
 )
 svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 
+# Where to find the libtool script created during build
+libtool_script = os.path.abspath('../../../libtool')
+
 # Location to the pristine repository, will be calculated from test_area_url
 # when we know what the user specified for --url.
 pristine_greek_repos_url = None
@@ -508,6 +511,13 @@ def open_pipe(command, bufsize=-1, stdin=None, stdout=None, stderr=None):
   if command[0].endswith('.py'):
     command.insert(0, sys.executable)
 
+  if options.valgrind:
+    if os.path.basename(command[0]) in options.valgrind.split(','):
+      valgrind = [libtool_script, '--mode=execute', 'valgrind', '--quiet']
+      if options.valgrind_opts is not None:
+        valgrind += options.valgrind_opts.split(' ')
+      command = valgrind + command
+
   command_string = command[0] + ' ' + ' '.join(map(_quote_arg, command[1:]))
 
   if not stdin:
@@ -691,7 +701,7 @@ def run_command_stdin(command, error_expected, bufsize=-1, binary_mode=False,
 
 def create_config_dir(cfgdir, config_contents=None, server_contents=None,
                       ssl_cert=None, ssl_url=None, http_proxy=None,
-                      exclusive_wc_locks=None):
+                      exclusive_wc_locks=None, wc_format_version=None):
   "Create config directories and files"
 
   # config file names
@@ -711,12 +721,14 @@ password-stores =
 
 [miscellany]
 interactive-conflicts = false
+
+[working-copy]
 """
     if exclusive_wc_locks:
-      config_contents += """
-[working-copy]
-exclusive-locking = true
-"""
+      config_contents += "exclusive-locking = true\n"
+    if wc_format_version:
+      config_contents += ("compatible-version = %s\n" % wc_format_version)
+
   # define default server file contents if none provided
   if server_contents is None:
     http_library_str = ""
@@ -812,18 +824,6 @@ def _with_store_pristine(args):
       return args + ('--store-pristine', options.store_pristine)
   return args
 
-def _with_wc_format_version(args):
-  if '--compatible-version' in args \
-      or any(str(one_arg).startswith('--compatible-version=') for one_arg in args) \
-      or options.wc_format_version is None:
-    return args
-  non_opt_args = [a for a in args if not str(a).startswith('-')]
-  if non_opt_args:
-    subcommand = non_opt_args[0]
-    if subcommand in ['co', 'checkout', 'upgrade']:
-      return args + ('--compatible-version', options.wc_format_version)
-  return args
-
 def _with_config_dir(args):
   if '--config-dir' in args:
     return args
@@ -859,8 +859,8 @@ def run_svn(error_expected, *varargs):
   you're just checking that something does/doesn't come out of
   stdout/stderr, you might want to use actions.run_and_verify_svn()."""
   return run_command(svn_binary, error_expected, False,
-                     *(_with_store_pristine(_with_wc_format_version(
-                       _with_auth(_with_config_dir(varargs))))))
+                     *(_with_store_pristine(
+                       _with_auth(_with_config_dir(varargs)))))
 
 # For running svnadmin.  Ignores the output.
 def run_svnadmin(*varargs):
@@ -1405,7 +1405,7 @@ def write_restrictive_svnserve_conf(repo_dir, anon_access="none",
     fp.write("groups-db = groups\n")
   if options.enable_sasl:
     fp.write("realm = svntest\n"
-             "[sasl]\n",
+             "[sasl]\n"
              "use-sasl = true\n");
   else:
     fp.write("password-db = passwd\n")
@@ -1778,12 +1778,6 @@ def wc_format(ver=None):
     return 31
   raise Exception("Unrecognized version number '%s'" % (ver,))
 
-def wc_supports_optional_pristine():
-  if options.wc_format_version is None:
-    return True
-  else:
-    return wc_format(options.wc_format_version) >= 32
-
 ######################################################################
 
 
@@ -1872,6 +1866,10 @@ class TestSpawningThread(threading.Thread):
       args.append('--bin=' + options.svn_bin)
     if options.store_pristine:
       args.append('--store-pristine=' + options.store_pristine)
+    if options.valgrind:
+      args.append('--valgrind=' + options.valgrind)
+    if options.valgrind_opts:
+      args.append('--valgrind-opts=' + options.valgrind_opts)
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2313,6 +2311,10 @@ def _create_parser(usage=None):
                     help='Run tests that connect to remote HTTP(S) servers')
   parser.add_option('--store-pristine', action='store', type='str',
                     help='Set the WC pristine mode')
+  parser.add_option('--valgrind', action='store',
+                    help='programs to run under valgrind')
+  parser.add_option('--valgrind-opts', action='store',
+                    help='options to pass to valgrind')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2671,7 +2673,8 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                         ssl_cert=options.ssl_cert,
                         ssl_url=options.test_area_url,
                         http_proxy=options.http_proxy,
-                        exclusive_wc_locks=options.exclusive_wc_locks)
+                        exclusive_wc_locks=options.exclusive_wc_locks,
+                        wc_format_version=options.wc_format_version)
 
       # Setup the pristine repositories
       svntest.actions.setup_pristine_repositories()

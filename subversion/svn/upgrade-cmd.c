@@ -52,10 +52,9 @@ svn_cl__upgrade(apr_getopt_t *os,
   apr_array_header_t *targets;
   apr_pool_t *iterpool;
   int i;
-  const svn_version_t *default_version
-    = svn_client_default_wc_version(scratch_pool);
-  const svn_version_t *latest_version
-    = svn_client_latest_wc_version(scratch_pool);
+  const svn_version_t *latest_version;
+
+  latest_version = svn_client_latest_wc_version(scratch_pool);
 
   SVN_ERR(svn_cl__args_to_target_array_print_reserved(&targets, os,
                                                       opt_state->targets,
@@ -73,31 +72,34 @@ svn_cl__upgrade(apr_getopt_t *os,
   for (i = 0; i < targets->nelts; i++)
     {
       const char *target = APR_ARRAY_IDX(targets, i, const char *);
+      const svn_version_t *result_format_version;
 
       svn_pool_clear(iterpool);
       SVN_ERR(svn_cl__check_cancel(ctx->cancel_baton));
-      SVN_ERR(svn_client_upgrade2(target,
+      SVN_ERR(svn_client_upgrade2(&result_format_version, target,
                                   opt_state->compatible_version,
-                                  ctx, scratch_pool));
+                                  ctx, iterpool, iterpool));
+
+      /* Remind the user they can upgrade further if:
+       *   - the user did not specify compatible-version explicitly
+       *   - a higher version is available. */
+      if (! opt_state->compatible_version
+          && ! svn_version__at_least(result_format_version,
+                                     latest_version->major,
+                                     latest_version->minor, 0)
+          && ! opt_state->quiet)
+        {
+          SVN_ERR(svn_cmdline_printf(
+                    iterpool,
+                    _("svn: The target working copy '%s' is at version %d.%d; "
+                      "the highest version supported by this client can be "
+                      "specified with '--compatible-version=%d.%d'.\n"),
+                    svn_dirent_local_style(target, iterpool),
+                    result_format_version->major, result_format_version->minor,
+                    latest_version->major, latest_version->minor));
+        }
     }
   svn_pool_destroy(iterpool);
-
-  /* Remind the user they can upgrade further if:
-   *   - the user did not specify compatible-version explicitly
-   *   - a higher version is available. */
-  if (! opt_state->compatible_version
-      && ! svn_version__at_least(default_version,
-                                 latest_version->major, latest_version->minor, 0)
-      && ! opt_state->quiet)
-    {
-      const char *msg
-        = _("svn: The target working copies are already at version %d.%d; "
-            "the highest version supported by this client can be "
-            "specified with '--compatible-version=%d.%d'.\n");
-      SVN_ERR(svn_cmdline_printf(scratch_pool, msg,
-                                 default_version->major, default_version->minor,
-                                 latest_version->major, latest_version->minor));
-    }
 
   return SVN_NO_ERROR;
 }

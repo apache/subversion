@@ -124,7 +124,7 @@ find_matching_string(char *str, apr_size_t size, const char strings[][4])
   apr_size_t i;
 
   for (i = 0; i < size; i++)
-    if (strings[i] && (strcmp(str, strings[i]) == 0))
+    if (strcmp(str, strings[i]) == 0)
       return (apr_int32_t) i;
 
   return -1;

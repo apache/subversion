@@ -3431,7 +3431,6 @@ def update_deletes_file_external(sbox):
 
 
 @Issue(4519)
-@Wimp("May trigger an existing issue, see upgrade_tests.py:upgrade_latest_format()")
 def switch_relative_externals(sbox):
   "switch relative externals"
 

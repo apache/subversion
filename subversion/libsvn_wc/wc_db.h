@@ -1043,16 +1043,6 @@ svn_wc__db_pristine_lookup_by_md5(const svn_checksum_t **checksum,
                                   apr_pool_t *scratch_pool);
 
 
-/* If necessary transfers the PRISTINE files of the tree rooted at
-   SRC_LOCAL_ABSPATH to the working copy identified by DST_WRI_ABSPATH. */
-svn_error_t *
-svn_wc__db_pristine_transfer(svn_wc__db_t *db,
-                             const char *src_local_abspath,
-                             const char *dst_wri_abspath,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *scratch_pool);
-
 /* Remove the pristine text with checksum CHECKSUM from the
  * pristine store, iff it is not referenced by any of the (other) WC DB
  * tables. */

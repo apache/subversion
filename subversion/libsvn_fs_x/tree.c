@@ -890,7 +890,32 @@ merge(svn_stringbuf_t *conflict_p,
        different contents. */
     SVN_ERR(svn_fs_x__prop_rep_equal(&same, fs, src_nr, anc_nr, TRUE, pool));
     if (! same)
-      return conflict_err(conflict_p, target_path);
+      {
+        apr_hash_t *proplist;
+
+        /* There is a prop difference between source and ancestor, if
+           there is no property difference between target and ancestor
+           then this txn didn't change props and we can simply update
+           target to match source.
+
+           Commit calls merge in a loop until it manages to get the
+           write lock with source=head. Copying the properties like
+           this will only work on the first iteration as later
+           iterations will see tgt.prop!=anc.prop and won't know that
+           the txn did not change properties. This means we
+           successfully handle a race between this txn and a
+           propchange txn while building this txn, but we don't handle
+           a race that occurs after the first iteration of the merge
+           loop -- we will raise an unwanted conflict. */
+        SVN_ERR(svn_fs_x__prop_rep_equal(&same, fs, tgt_nr, anc_nr,
+                                         TRUE, pool));
+        if (! same)
+          return conflict_err(conflict_p, target_path);
+
+        SVN_ERR(svn_fs_x__dag_get_proplist(&proplist, source, pool, pool));
+        SVN_ERR(svn_fs_x__dag_set_proplist(target, proplist, pool));
+      }
+
 
     /* The directory entries got changed in the repository but the directory
        properties did not. */
