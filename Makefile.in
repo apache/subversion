@@ -288,6 +288,7 @@ libsvn_diff_LDFLAGS = @libsvn_diff_LDFLAGS@
 libsvn_fs_LDFLAGS = @libsvn_fs_LDFLAGS@
 libsvn_fs_base_LDFLAGS = @libsvn_fs_base_LDFLAGS@
 libsvn_fs_fs_LDFLAGS = @libsvn_fs_fs_LDFLAGS@
+libsvn_fs_x_LDFLAGS = @libsvn_fs_x_LDFLAGS@
 libsvn_fs_util_LDFLAGS = @libsvn_fs_util_LDFLAGS@
 libsvn_ra_LDFLAGS = @libsvn_ra_LDFLAGS@
 libsvn_ra_local_LDFLAGS = @libsvn_ra_local_LDFLAGS@
