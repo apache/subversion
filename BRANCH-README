@@ -13,5 +13,26 @@ as currently implemented, will use the new pristine checksum kind.
 Dynamically salted SHA-1 checksums
 ----------------------------------
 
-The implementation on the branch uses a dynamically salted SHA-1 checksum kind.
-The dynamic salt is generated during the creation of a wc.db.
+The working copy currently relies on an assumption that files with identical
+checksum values have identical content.  For SHA-1, there are publicly known
+checksum collisions [https://shattered.io] and the situation may become worse
+with the feasibility of chosen-prefix attacks [https://sha-mbles.github.io].
+
+To solve the potential problems and to improve the current state around checksum
+collisions, the implementation on the branch starts using a dynamically salted
+SHA-1 checksum kind.
+
+The 32-byte random salt is generated during the creation of a wc.db.  When the
+file content is checksummed, the checksum value is calculated as if the salt was
+prepended to the content.  In other words, checksum = SHA1(content) becomes
+checksum = SHA1(salt + content).
+
+With the dynamic salt:
+
+- Publicly known SHA-1 collisions no longer result in collisions when checksummed
+  by the working copy.  This is because the actually checksummed content now
+  includes the random prefix salt.
+
+- Constructing a chosen-prefix SHA-1 collision no longer results in a collision
+  when checksummed by the working copy.  This is because the constructed collision
+  cannot account for the random prefix salt, because it's unknown in advance.
