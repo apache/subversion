@@ -36,6 +36,13 @@ Candidate changes:
    Votes:
      +0: hartmannathan (haven't tested yet; intend to upgrade to +1 soon)
 
+ * r1908926
+   libsvn_client: Pass redirected URL for file externals.
+   Justification:
+     Bug fix. Issue #4911.
+   Votes:
+     +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
