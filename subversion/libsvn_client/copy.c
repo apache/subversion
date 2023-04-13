@@ -3077,7 +3077,7 @@ try_copy(svn_boolean_t *timestamp_sleep,
       APR_ARRAY_PUSH(copy_pairs, svn_client__copy_pair_t *) = pair;
     }
 
-  if (!srcs_are_urls && !dst_is_url)
+  if (is_move || (!srcs_are_urls && !dst_is_url))
     {
       apr_pool_t *iterpool = svn_pool_create(pool);
 
@@ -3092,7 +3092,9 @@ try_copy(svn_boolean_t *timestamp_sleep,
                                   pair->dst_abspath_or_url, iterpool))
             return svn_error_createf
               (SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-               _("Cannot copy path '%s' into its own child '%s'"),
+               is_move ?
+	         _("Cannot move path '%s' into its own child '%s'") :
+		 _("Cannot copy path '%s' into its own child '%s'"),
                svn_dirent_local_style(pair->src_abspath_or_url, pool),
                svn_dirent_local_style(pair->dst_abspath_or_url, pool));
         }
