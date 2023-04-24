@@ -12,7 +12,10 @@ https://svn.apache.org/repos/asf/subversion/tags/1.15.0
     * Support multiple working copy formats (1.8-onward, 1.15) (issue #????)
 
   - Other tool improvements and bugfixes:
-    * Storing passwords in plain text on disk is again enabled by default (r1909351)
+    * When building on Unix, change default configure option to enable support
+      for the simple (plaintext) credential store unless disabled at configure
+      time with --disable-plaintext-password-storage. This reverts r1845377
+      (r1909351).
 
 Version 1.14.2
 (12 Apr 2022, from /branches/1.14.x)
