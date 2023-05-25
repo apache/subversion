@@ -578,12 +578,12 @@ run_file_install(work_item_baton_t *wqb,
   /* Avoid this db work unless needed, in this hot codepath. */
   if (keywords_propval || needs_lock)
     SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
-                               &repos_root_url, NULL, &changed_rev, NULL,
-                               &changed_author, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &lock, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
+                                 &repos_root_url, NULL, &changed_rev, NULL,
+                                 &changed_author, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, &lock, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 db, local_abspath,
+                                 scratch_pool, scratch_pool));
  
   if (keywords_propval)
     {
@@ -591,10 +591,10 @@ run_file_install(work_item_baton_t *wqb,
                                            
       /* Handle special statuses (e.g. added) */
       if (!repos_relpath)
-         SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
-                                            &repos_root_url, NULL,
-                                            db, local_abspath,
-                                            scratch_pool, scratch_pool));
+        SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
+                                           &repos_root_url, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
 
       url = svn_path_url_add_component2(repos_root_url, repos_relpath,
                                         scratch_pool);
