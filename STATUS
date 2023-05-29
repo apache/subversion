@@ -43,7 +43,7 @@ Candidate changes:
    Votes:
      +1: dsahlberg
 
- * r11910098
+ * r1910098
    swig-py: Use `sysconfig` instead of `distutils.sysconfig`.
    Justification:
      Allow swig-py to build with Python 3.12.
