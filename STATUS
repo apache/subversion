@@ -48,7 +48,7 @@ Candidate changes:
    Justification:
      Allow swig-py to build with Python 3.12.
    Votes:
-     +1: jun66j5
+     +1: jun66j5, futatuki
 
 Veto-blocked changes:
 =====================
