@@ -116,7 +116,7 @@ AC_DEFUN(SVN_DETERMINE_SWIG_OPTS,
     SWIG_PY_OPTS="none"
     SWIG_PY_ERRMSG="check config.log for details"
     if test "$SWIG_PY_PYTHON" = "none"; then
-      SWIG_PY_ERRMSG="You specfied not to build Python bindings or \
+      SWIG_PY_ERRMSG="You specified not to build Python bindings or \
 suitable Python interpreter is not found."
     else
       if test "$SWIG" = "none"; then
@@ -217,7 +217,7 @@ suitable Python interpreter is not found."
 
     SWIG_PL_ERRMSG="check config.log for details"
     if test "$SWIG_PL_PERL" = "none"; then
-      SWIG_PL_ERRMSG="You specfied not to build Perl bindings or \
+      SWIG_PL_ERRMSG="You specified not to build Perl bindings or \
 suitable Perl interpreter is not found."
     else
       if test "$SWIG" = "none"; then
@@ -246,7 +246,7 @@ suitable Perl interpreter is not found."
     SWIG_RB_LINK="none"
     SWIG_RB_ERRMSG="check config.log for details"
     if test "$SWIG_RB_RUBY" = "none"; then
-      SWIG_RB_ERRMSG="You specfied not to build Ruby bindings or \
+      SWIG_RB_ERRMSG="You specified not to build Ruby bindings or \
 suitable Ruby interpreter is not found."
     else
       if test "$SWIG" = "none"; then
@@ -382,7 +382,7 @@ int main()
     SWIG_PY_OPTS="none"
     SWIG_PY_ERRMSG="check config.log for details"
     if test "$SWIG_PY_PYTHON" = "none"; then
-      SWIG_PY_ERRMSG="You specfied not to build Python bindings or \
+      SWIG_PY_ERRMSG="You specified not to build Python bindings or \
 suitable Python interpreter is not found."
     else
       AC_MSG_NOTICE([Configuring python swig binding])
@@ -439,7 +439,7 @@ suitable Python interpreter is not found."
 
     SWIG_PL_ERRMSG="check config.log for details"
     if test "$SWIG_PL_PERL" = "none"; then
-      SWIG_PL_ERRMSG="You specfied not to build Perl bindings or \
+      SWIG_PL_ERRMSG="You specified not to build Perl bindings or \
 suitable Perl interpreter is not found."
     else
       AC_MSG_CHECKING([perl version])
@@ -463,7 +463,7 @@ suitable Perl interpreter is not found."
     SWIG_RB_LINK="none"
     SWIG_RB_ERRMSG="check config.log for details"
     if test "$SWIG_RB_RUBY" = "none"; then
-      SWIG_RB_ERRMSG="You specfied not to build Ruby bindings or \
+      SWIG_RB_ERRMSG="You specified not to build Ruby bindings or \
 suitable Ruby interpreter is not found."
     else
       rbconfig="$SWIG_RB_RUBY -rrbconfig -e "
