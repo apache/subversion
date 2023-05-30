@@ -1295,7 +1295,7 @@ def wc_move_parent_into_child(sbox):
   os.chdir(wc_dir)
   
   expected_error = "svn: E200007: Cannot move path '%s' into its own " \
-                   "child '%s'" % (from_path, to_path)
+                   "child '%s'" % (re.escape(from_path), re.escape(to_path))
   svntest.actions.run_and_verify_svn(None, expected_error,
                                      'mv',
                                      '.', 'F/B')
