@@ -100,7 +100,7 @@ BRANCH_MAJOR	:= $(shell echo $(BRANCH) | sed -E 's/([0-9]+)\.([0-9]+)\..*/\1.\2/
 ifeq ($(BRANCH_MAJOR), $(filter 1.5 1.6 1.7 1.8 1.9 1.10 1.11 1.12 1.13, $(BRANCH_MAJOR)))
 PYTHON = python2
 else
-PYTHON = python
+PYTHON = python3
 endif
 SVN_REL_WC	= svn-$(WC)
 SVN_WC		= $(PWD)/$(SVN_REL_WC)
@@ -119,7 +119,7 @@ APR_UTIL_VER	= 1.6.1
 PCRE_VER	= 8.41
 HTTPD_VER	= 2.4.37
 NEON_VER	= 0.30.2
-SERF_VER	= 1.3.9
+SERF_VER	= 1.3.10
 CYRUS_SASL_VER	= 2.1.28
 SQLITE_VER	= 3390400
 LIBMAGIC_VER	= 5.30
@@ -932,9 +932,7 @@ $(SERF_OBJDIR)/.retrieved:
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 	if [ ! -d $(SERF_SRCDIR) ]; then \
 		svn co $(SERF_URL) $(SERF_SRCDIR); \
-		svn merge ^/serf/branches/1.3.x-sslbuild@1781542 $(SERF_SRCDIR); \
-		svn merge -c 1811083 ^/serf/trunk@1811083 $(SERF_SRCDIR); \
-		svn merge -c 1814604 ^/serf/trunk@1814604 $(SERF_SRCDIR); \
+		svn merge ^/serf/branches/1.3.x-sslbuild@1910116 $(SERF_SRCDIR); \
 	fi
 	touch $@
 
@@ -1807,7 +1805,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(SWIG_PL_INCLUDES_HACK)
 	$(SWIG_PL_LINK_HACK)
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib -L$(PREFIX)/serf/lib $(SERF_LDFLAG) $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib -L$(PREFIX)/serf/lib $(SERF_LDFLAG) -lcrypto -lssl $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
 			CC=$(CC) CXX=$(CXX) \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
