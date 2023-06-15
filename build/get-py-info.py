@@ -44,15 +44,24 @@ if len(sys.argv) != 2:
   usage()
 
 try:
-  from distutils import sysconfig
+  if sys.version_info[0] == 2:
+    from distutils import sysconfig
+    get_include = lambda: sysconfig.get_python_inc()
+    get_platinclude = lambda: sysconfig.get_python_inc(plat_specific=1)
+    get_purelib = lambda: sysconfig.get_python_lib()
+  else:
+    import sysconfig
+    get_include = lambda: sysconfig.get_path('include')
+    get_platinclude = lambda: sysconfig.get_path('platinclude')
+    get_purelib = lambda: sysconfig.get_path('purelib')
 except ImportError:
   # No information available
   print("none")
   sys.exit(1)
 
 if sys.argv[1] == '--includes':
-  inc = sysconfig.get_python_inc()
-  plat = sysconfig.get_python_inc(plat_specific=1)
+  inc = get_include()
+  plat = get_platinclude()
   if inc == plat:
     print("-I" + inc)
   else:
@@ -140,7 +149,7 @@ if sys.argv[1] == '--libs':
   sys.exit(0)
 
 if sys.argv[1] == '--site':
-  print(sysconfig.get_python_lib())
+  print(get_purelib())
   sys.exit(0)
 
 usage()

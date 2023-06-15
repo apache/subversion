@@ -1030,12 +1030,13 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     "Find the appropriate options for creating SWIG-based Python modules"
 
     try:
-      from distutils import sysconfig
-
-      inc_dir = sysconfig.get_python_inc()
-      lib_dir = os.path.join(sysconfig.PREFIX, "libs")
+      import sysconfig
     except ImportError:
       return
+    config_vars = sysconfig.get_config_vars()
+    inc_dir = config_vars['INCLUDEPY']
+    base_dir = config_vars.get('installed_base') or config_vars.get('base')
+    lib_dir = os.path.join(base_dir, 'libs')
 
     if sys.version_info[0] >= 3:
       if self.swig_version < (3, 0, 10):

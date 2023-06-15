@@ -48,11 +48,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1910098
-   swig-py: Use `sysconfig` instead of `distutils.sysconfig`.
-   Justification:
-     Allow swig-py to build with Python 3.12.
-   Votes:
-     +1: jun66j5, futatuki
-     +0: rhuijben
