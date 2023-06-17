@@ -58,17 +58,20 @@ def read_rep_cache(repo_dir):
   """
   db_path = os.path.join(repo_dir, 'db', 'rep-cache.db')
   db1 = svntest.sqlite3.connect(db_path)
-  schema1 = db1.execute("pragma user_version").fetchone()[0]
-  # Can't test newer rep-cache schemas with an old built-in SQLite; see the
-  # documentation of STMT_CREATE_SCHEMA_V2 in ../../libsvn_fs_fs/rep-cache-db.sql
-  if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
-    raise svntest.Failure("Can't read rep-cache schema %d using old "
-                          "Python-SQLite version %s < (3,8,2)" %
-                           (schema1,
-                            svntest.sqlite3.sqlite_version_info))
+  try:
+    schema1 = db1.execute("pragma user_version").fetchone()[0]
+    # Can't test newer rep-cache schemas with an old built-in SQLite; see the
+    # documentation of STMT_CREATE_SCHEMA_V2 in ../../libsvn_fs_fs/rep-cache-db.sql
+    if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
+      raise svntest.Failure("Can't read rep-cache schema %d using old "
+                            "Python-SQLite version %s < (3,8,2)" %
+                             (schema1,
+                              svntest.sqlite3.sqlite_version_info))
 
-  content = { row[0]: row[1:] for row in
-              db1.execute("select * from rep_cache") }
+    content = { row[0]: row[1:] for row in
+                db1.execute("select * from rep_cache") }
+  finally:
+    db1.close()
   return content
 
 def check_hotcopy_bdb(src, dst):
