@@ -444,7 +444,7 @@ svn_cl__cmd_table_main[] =
      "\n"), N_(
      "  The selection of items to add may be influenced by the 'ignores' feature.\n"
      "  Properties may be attached to the items as configured by the 'auto-props'\n"
-     "  feature.\n", N_(
+     "  feature.\n"), N_(
      "  If PATH contains an @ character, an additional @ must be specified at the\n"
      "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
@@ -520,6 +520,9 @@ svn_cl__cmd_table_main[] =
      "files.\n"
      "usage: 1. changelist CLNAME PATH[@]...\n"
      "       2. changelist --remove PATH[@]...\n"
+    ), N_(
+     "  If PATH contains an @ character, an additional @ must be specified at the\n"
+     "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
     { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
@@ -542,7 +545,7 @@ svn_cl__cmd_table_main[] =
      "  being the basename of the URL.\n"
      "\n"), N_(
      "  If PATH contains an @ character, an additional @ must be specified at the\n"
-     "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n", N_(
+     "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"), N_(
      "  If --force is used, unversioned obstructing paths in the working\n"
      "  copy destination do not automatically cause the check out to fail.\n"
      "  If the obstructing path is the same type (file or directory) as the\n"
@@ -587,7 +590,7 @@ svn_cl__cmd_table_main[] =
      "\n"), N_(
      "  3. If the --vacuum-pristines option is given, remove pristine copies of\n"
      "    files which are stored inside the .svn directory and which are no longer\n"
-     "    referenced by any file in the working copy.\n", N_(
+     "    referenced by any file in the working copy.\n"), N_(
      "  If WCPATH contains an @ character, an additional @ must be specified at the\n"
      "  end of WCPATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
@@ -607,7 +610,7 @@ svn_cl__cmd_table_main[] =
      "\n"), N_(
      "  If --include-externals is given, also commit file and directory\n"
      "  externals reached by recursion. Do not commit externals with a\n"
-     "  fixed revision.\n", N_(
+     "  fixed revision.\n"), N_(
      "  If PATH contains an @ character, an additional @ must be specified at the\n"
      "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
@@ -629,7 +632,7 @@ svn_cl__cmd_table_main[] =
      "  sources, DST must be an existing directory.\n"
      "\n"), N_(
      "  If DST contains an @ character, an additional @ must be specified at the\n"
-     "  end of DST to avoid interpreting the first @ as a peg revision indicator.\n", N_(
+     "  end of DST to avoid interpreting the first @ as a peg revision indicator.\n"), N_(
      "  WARNING: For compatibility with previous versions of Subversion,\n"
      "  copies performed using two working copy paths (WC -> WC) will not\n"
      "  contact the repository.  As such, they may not, by default, be able\n"
@@ -652,7 +655,7 @@ svn_cl__cmd_table_main[] =
      "    not be removed unless the --force or --keep-local option is given.\n"
      "\n"), N_(
      "  2. Each item specified by a URL is deleted from the repository\n"
-     "    via an immediate commit.\n", N_(
+     "    via an immediate commit.\n"), N_(
      "  If PATH or URL contains an @ character, an additional @ must be specified\n"
      "  at the end of PATH to avoid interpreting the first @ as a peg revision\n"
      "  indicator.\n"
@@ -715,13 +718,13 @@ svn_cl__cmd_table_main[] =
      "\n"), N_(
      "  2. Exports a clean directory tree from the working copy specified by\n"
      "     WCPATH, at revision REV if it is given, otherwise at WORKING, into\n"
-     "     UNVERSIONED_PATH. If UNVERSIONED_PATH is omitted, the last\n
+     "     UNVERSIONED_PATH. If UNVERSIONED_PATH is omitted, the last\n"
      "     component of the WCPATH is used for the local directory name. If\n"
      "     REV is not specified, all local changes will be preserved. Files\n"
      "     not under version control will not be copied.\n"
      "\n"), N_(
      "  If specified, PEGREV determines in which revision the target is first\n"
-     "  looked up.\n", N_(
+     "  looked up.\n"), N_(
      "  If UNVERSIONED_PATH contains an @ character, an additional @ must be\n"
      "  specified at the end of UNVERSIONED_PATH to avoid interpreting the\n"
      "  first @ as a peg revision indicator.\n"
