@@ -1261,8 +1261,6 @@ def url_move_parent_into_child(sbox):
 
   B_url = sbox.repo_url + "/A/B"
   F_url = sbox.repo_url + "/A/B/F"
-  print(B_url)
-  print(F_url)
 
   expected_error = "svn: E200007: Cannot move path '.*%s' into its own " \
                    "child '.*%s'" % (re.escape(B_url),
