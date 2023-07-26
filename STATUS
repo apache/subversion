@@ -27,7 +27,7 @@ Candidate changes:
    Justification:
      Bug fix. Code to parse forward merges did not work as intended.
    Votes:
-     +0: hartmannathan (haven't tested yet; intend to upgrade to +1 soon)
+     +1: hartmannathan
 
  * r1907124
    svntest/main.py: Remove wrong comma that broke tests with --enable-sasl
