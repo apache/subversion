@@ -881,7 +881,7 @@ typedef enum svn_cl__prop_use_e
 svn_cl__prop_use_t;
 
 /* If PROPNAME looks like but is not identical to one of the svn:
- * poperties, raise an error and suggest a better spelling. Names that
+ * properties, raise an error and suggest a better spelling. Names that
  * raise errors look like this:
  *
  *   - start with svn: but do not exactly match a known property; or,
