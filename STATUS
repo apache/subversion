@@ -49,10 +49,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1911278
-   INSTALL: Improve APR build notes, especially regarding APR 1.7.3 on Windows
-   Justification:
-     SVN is unusable with APR 1.7.3 on Windows.
-   Votes:
-     +1: hartmannathan, dsahlberg

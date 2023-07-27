@@ -242,22 +242,42 @@ I.    INTRODUCTION
           $ ./configure --with-apr=/usr/local/apache2 \
             --with-apr-util=/usr/local/apache2  ...
 
-      Be sure to use a native Windows SVN client (as opposed to
-      Cygwin's version) so that the .dsp files get carriage-returns at
-      the ends of their lines.  Otherwise Visual Studio will complain
-      that it doesn't recognize the .dsp files.
+      Notes on Windows platforms:
 
-      If you use APR libraries checked out from svn in an Unix
-      environment, you need to run the 'buildconf' script in each
-      library's directory, to regenerate the configure scripts and
-      other files required for compiling the libraries:
+      * Do not use APR version 1.7.3 as that release contains a bug that
+        makes it impossible for Subversion to use it properly. This issue
+        only affects APR builds on Windows. This issue was fixed in APR
+        version 1.7.4. See:
+        https://lists.apache.org/thread/xd5t922jvb9423ph4j84rsp5fxks1k0z
 
-      $ cd apr; ./buildconf; ./configure ...; make; make install; cd ..
+      * If you check out APR and APR-util sources from their Subversion
+        repository, be sure to use a native Windows SVN client (as opposed
+        to Cygwin's version) so that the .dsp files get carriage-returns at
+        the ends of their lines. Otherwise Visual Studio will complain that
+        it doesn't recognize the .dsp files.
 
-      $ cd apr-util; ./buildconf; ./configure ...; make; make install; cd ..
+      Notes on Unix platforms:
 
-      Configure build and install both libraries before running Subversion's
-      configure script.
+      * If you check out APR and APR-util sources from their Subversion
+        repository, you need to run the 'buildconf' script in each library's
+        directory to regenerate the configure scripts and other files
+        required for compiling the libraries. Afterwards, configure, build,
+        and install both libraries before running Subversion's configure
+        script. For example:
+
+          $ cd apr
+          $ ./buildconf
+          $ ./configure <options...>
+          $ make
+          $ make install
+          $ cd ..
+
+          $ cd apr-util
+          $ ./buildconf
+          $ ./configure <options...>
+          $ make
+          $ make install
+          $ cd ..
 
 
       2.  SQLite  (REQUIRED)
