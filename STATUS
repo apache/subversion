@@ -22,13 +22,6 @@ Candidate changes:
    votes:
      +1: rhuijben
 
- * r1906502
-   libsvn_diff: Fix missing pointer dereference in svn:mergeinfo diff parser
-   Justification:
-     Bug fix. Code to parse forward merges did not work as intended.
-   Votes:
-     +1: hartmannathan, stsp
-
  * r1907124
    svntest/main.py: Remove wrong comma that broke tests with --enable-sasl
    Justification:
@@ -49,3 +42,9 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+ * r1906502
+   libsvn_diff: Fix missing pointer dereference in svn:mergeinfo diff parser
+   Justification:
+     Bug fix. Code to parse forward merges did not work as intended.
+   Votes:
+     +1: hartmannathan, stsp, dsahlberg
