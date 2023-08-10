@@ -1877,7 +1877,7 @@ class TestSpawningThread(threading.Thread):
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
-  runing the test and test list output."""
+  running the test and test list output."""
 
   def __init__(self, func, index):
     self.pred = svntest.testcase.create_test_case(func)
