@@ -27,7 +27,7 @@ Candidate changes:
    Justification:
      Syntax error.
    Votes:
-     +1: stsp
+     +1: stsp, rhuijben
      +0: hartmannathan (haven't tested yet; intend to upgrade to +1 soon)
 
  * r1908926
