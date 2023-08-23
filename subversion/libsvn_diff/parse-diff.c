@@ -1006,7 +1006,7 @@ parse_pretty_mergeinfo_line(svn_boolean_t *found_mergeinfo,
                 }
               (*number_of_reverse_merges)--;
             }
-          else if (number_of_forward_merges > 0) /* forward merges */
+          else if (*number_of_forward_merges > 0) /* forward merges */
             {
               if (patch->reverse)
                 {
