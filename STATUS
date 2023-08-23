@@ -42,6 +42,7 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
  * r1906502
    libsvn_diff: Fix missing pointer dereference in svn:mergeinfo diff parser
    Justification:
