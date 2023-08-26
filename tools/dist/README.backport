@@ -18,9 +18,9 @@ F4. Adding new entries to STATUS.
 The scripts are:
 
 backport.pl:
-    oldest script, implements [F1], [F2], and [F3].  As of Feb 2018, used in
-    production by svn-role (running on svn-qavm) and by svn-backport-conflicts-1.9.x
-    (a buildbot job).
+    oldest script, implements [F1], [F2], and [F3].  As of Aug 2023, used in
+    production by svn-role (running on svn-qavm) and by the buildbot jobs
+    svn-backport-conflicts-* (see https://ci2.apache.org/).
 
 nominate.pl:
     Symlink to backport.pl.  Implements [F4].  (The script inspects its argv[0].)
