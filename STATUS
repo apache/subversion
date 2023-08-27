@@ -34,12 +34,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1907124
-   svntest/main.py: Remove wrong comma that broke tests with --enable-sasl
-   Justification:
-     Syntax error.
-   Votes:
-     +1: stsp, rhuijben
-     +0: hartmannathan (haven't tested yet; intend to upgrade to +1 soon)
-     +0: dsahlberg (reviewed, not tested)
