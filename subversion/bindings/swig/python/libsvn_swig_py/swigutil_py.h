@@ -275,14 +275,10 @@ svn_swig_py_unwrap_struct_ptr(PyObject *source,
 
 /* make an editor that "thunks" from C callbacks up to Python */
 void svn_swig_py_make_editor(const svn_delta_editor_t **editor,
-                             void **edit_baton,
-                             PyObject *py_editor,
                              apr_pool_t *pool);
 
 /* make a parse vtable that "thunks" from C callbacks up to Python */
 void svn_swig_py_make_parse_fns3(const svn_repos_parse_fns3_t **parse_fns3,
-                                 void **parse_baton,
-                                 PyObject *py_parse_fns3,
                                  apr_pool_t *pool);
 
 apr_file_t *svn_swig_py_make_file(PyObject *py_file,
