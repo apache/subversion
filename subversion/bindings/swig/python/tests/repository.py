@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, setup_path, os, sys
+import unittest, setup_path, os, sys, weakref
 from sys import version_info # For Python version check
 from io import BytesIO
 from svn import core, repos, fs, delta
@@ -300,6 +300,23 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       e_ptr, e_baton = delta.make_editor(ChangeReceiver(this_root, prev_root))
       repos.dir_delta(prev_root, b'', b'', this_root, b'', e_ptr, e_baton,
               _authz_callback, 1, 1, 0, 0)
+
+  def test_delta_editor_leak_with_change_collector(self):
+    pool = Pool()
+    subpool = Pool(pool)
+    root = fs.revision_root(self.fs, self.rev, subpool)
+    editor = repos.ChangeCollector(self.fs, root, subpool)
+    editor_ref = weakref.ref(editor)
+    e_ptr, e_baton = delta.make_editor(editor, subpool)
+    repos.replay(root, e_ptr, e_baton, subpool)
+
+    fs.close_root(root)
+    del root
+    self.assertNotEqual(None, editor_ref())
+
+    del e_ptr, e_baton, editor
+    del subpool
+    self.assertEqual(None, editor_ref())
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""
