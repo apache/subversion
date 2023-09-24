@@ -79,6 +79,76 @@ class DumpStreamParser(repos.ParseFns3):
     self.ops.append((b"set-fulltext", node_baton[0], node_baton[1]))
     return None
 
+class BatonCollector(repos.ChangeCollector):
+  """A ChangeCollector with collecting batons, too"""
+  def __init__(self, fs_ptr, root, pool=None, notify_cb=None):
+    repos.ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
+    self.batons = []
+    self.close_called = False
+    self.abort_called = False
+
+  def open_root(self, base_revision, dir_pool=None):
+    bt = repos.ChangeCollector.open_root(self, base_revision, dir_pool)
+    self.batons.append((b'dir baton', b'', bt, sys.getrefcount(bt)))
+    return bt
+
+  def add_directory(self, path, parent_baton,
+                    copyfrom_path, copyfrom_revision, dir_pool=None):
+    bt = repos.ChangeCollector.add_directory(self, path, parent_baton,
+                                             copyfrom_path,
+                                             copyfrom_revision,
+                                             dir_pool)
+    self.batons.append((b'dir baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def open_directory(self, path, parent_baton, base_revision,
+                     dir_pool=None):
+    bt = repos.ChangeCollector.open_directory(self, path, parent_baton,
+                                              base_revision, dir_pool)
+    self.batons.append((b'dir baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def add_file(self, path, parent_baton,
+               copyfrom_path, copyfrom_revision, file_pool=None):
+    bt = repos.ChangeCollector.add_file(self, path, parent_baton,
+                                        copyfrom_path, copyfrom_revision,
+                                        file_pool)
+    self.batons.append((b'file baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def open_file(self, path, parent_baton, base_revision, file_pool=None):
+    bt = repos.ChangeCollector.open_file(self, path, parent_baton,
+                                         base_revision, file_pool)
+    self.batons.append((b'file baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def close_edit(self, pool=None):
+    self.close_called = True
+    return
+
+  def abort_edit(self, pool=None):
+    self.abort_called = True
+    return
+
+class BatonCollectorErrorOnClose(BatonCollector):
+  """Same as BatonCollector, but raises an Exception when close the
+     file/dir specfied by error_path"""
+  def __init__(self, fs_ptr, root, pool=None, notify_cb=None, error_path=b''):
+    BatonCollector.__init__(self, fs_ptr, root, pool, notify_cb)
+    self.error_path = error_path
+
+  def close_directory(self, dir_baton):
+    if dir_baton[0] == self.error_path:
+      raise SubversionException('A Dummy Exception!', core.SVN_ERR_BASE)
+    else:
+      BatonCollector.close_directory(self, dir_baton)
+
+  def close_file(self, file_baton, text_checksum):
+    if file_baton[0] == self.error_path:
+      raise SubversionException('A Dummy Exception!', core.SVN_ERR_BASE)
+    else:
+      return BatonCollector.close_file(self, file_baton, text_checksum)
+
 
 def _authz_callback(root, path, pool):
   "A dummy authz callback which always returns success."
@@ -317,6 +387,36 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     del e_ptr, e_baton, editor
     del subpool
     self.assertEqual(None, editor_ref())
+
+  def test_replay_batons_refcounts(self):
+    """Issue SVN-4917: check ref-count of batons created and used in call backs"""
+    root = fs.revision_root(self.fs, self.rev)
+    editor = BatonCollector(self.fs, root)
+    e_ptr, e_baton = delta.make_editor(editor)
+    repos.replay(root, e_ptr, e_baton)
+    for baton in editor.batons:
+      self.assertEqual(sys.getrefcount(baton[2]), 2,
+                       "leak on baton %s after replay without errors"
+                       % repr(baton))
+    del e_baton
+    self.assertEqual(sys.getrefcount(e_ptr), 2,
+                     "leak on editor baton after replay without errors")
+
+    editor = BatonCollectorErrorOnClose(self.fs, root,
+                                        error_path=b'branches/v1x')
+    e_ptr, e_baton = delta.make_editor(editor)
+    self.assertRaises(SubversionException, repos.replay, root, e_ptr, e_baton)
+    batons= editor.batons
+    # As svn_repos_replay calls neigher close_edit callback nor abort_edit
+    # if an error has occured during processing, references of Python objects
+    # in decendant batons may live until e_baton is deleted.
+    del e_baton
+    for baton in batons:
+      self.assertEqual(sys.getrefcount(baton[2]), 2,
+                       "leak on baton %s after replay with an error"
+                       % repr(baton))
+    self.assertEqual(sys.getrefcount(e_ptr), 2,
+                     "leak on editor baton after replay with an error")
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""
