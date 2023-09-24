@@ -22,7 +22,7 @@ import unittest, setup_path, os, sys
 from sys import version_info # For Python version check
 from io import BytesIO
 from svn import core, repos, fs, delta
-from svn.core import SubversionException
+from svn.core import SubversionException, Pool
 import utils
 
 class ChangeReceiver(delta.Editor):
@@ -40,9 +40,14 @@ class ChangeReceiver(delta.Editor):
     return textdelta_handler
 
 class DumpStreamParser(repos.ParseFns3):
-  def __init__(self):
+  def __init__(self, stream=None):
     repos.ParseFns3.__init__(self)
+    self.stream = stream
     self.ops = []
+  def _close_dumpstream(self):
+    if self.stream:
+      self.stream.close()
+      self.stream = None
   def magic_header_record(self, version, pool=None):
     self.ops.append((b"magic-header", version))
   def uuid_record(self, uuid, pool=None):
@@ -175,13 +180,14 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     def is_cancelled():
       self.cancel_calls += 1
       return None
+    pool = Pool()
+    subpool = Pool(pool)
     dump_path = os.path.join(os.path.dirname(sys.argv[0]),
         "trac/versioncontrol/tests/svnrepos.dump")
     stream = open(dump_path, 'rb')
-    dsp = DumpStreamParser()
-    ptr, baton = repos.make_parse_fns3(dsp)
+    dsp = DumpStreamParser(stream)
+    ptr, baton = repos.make_parse_fns3(dsp, subpool)
     repos.parse_dumpstream3(stream, ptr, baton, False, is_cancelled)
-    stream.close()
     self.assertEqual(self.cancel_calls, 76)
     expected_list = [
         (b"magic-header", 2),
@@ -225,6 +231,11 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # Compare only the first X nodes described in the expected list - otherwise
     # the comparison list gets too long.
     self.assertEqual(dsp.ops[:len(expected_list)], expected_list)
+
+    # _close_dumpstream should be invoked after 'subpool' is destroyed
+    self.assertEqual(False, stream.closed)
+    del ptr, baton, subpool
+    self.assertEqual(True, stream.closed)
 
   def test_parse_fns3_invalid_set_fulltext(self):
     class DumpStreamParserSubclass(DumpStreamParser):
