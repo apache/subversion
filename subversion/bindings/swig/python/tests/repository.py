@@ -40,14 +40,20 @@ class ChangeReceiver(delta.Editor):
     return textdelta_handler
 
 class DumpStreamParser(repos.ParseFns3):
-  def __init__(self, stream=None):
+  def __init__(self, stream=None, pool=None):
     repos.ParseFns3.__init__(self)
     self.stream = stream
     self.ops = []
+    # for leak checking only. If the parse_fns3 object holds some proxy
+    # object allocated from 'pool' or the 'pool' itself, the 'pool' is not
+    # destroyed until the parse_fns3 object is removed.
+    self.pool = pool
   def _close_dumpstream(self):
     if self.stream:
       self.stream.close()
       self.stream = None
+    if self.pool:
+      self.pool = None
   def magic_header_record(self, version, pool=None):
     self.ops.append((b"magic-header", version))
   def uuid_record(self, uuid, pool=None):
@@ -255,7 +261,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     dump_path = os.path.join(os.path.dirname(sys.argv[0]),
         "trac/versioncontrol/tests/svnrepos.dump")
     stream = open(dump_path, 'rb')
-    dsp = DumpStreamParser(stream)
+    dsp = DumpStreamParser(stream, subpool)
+    dsp_ref = weakref.ref(dsp)
     ptr, baton = repos.make_parse_fns3(dsp, subpool)
     repos.parse_dumpstream3(stream, ptr, baton, False, is_cancelled)
     self.assertEqual(self.cancel_calls, 76)
@@ -302,10 +309,12 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # the comparison list gets too long.
     self.assertEqual(dsp.ops[:len(expected_list)], expected_list)
 
-    # _close_dumpstream should be invoked after 'subpool' is destroyed
+    # _close_dumpstream should be invoked after 'baton' is removed.
     self.assertEqual(False, stream.closed)
-    del ptr, baton, subpool
+    del ptr, baton, subpool, dsp
     self.assertEqual(True, stream.closed)
+    # Issue SVN-4918
+    self.assertEqual(None, dsp_ref())
 
   def test_parse_fns3_invalid_set_fulltext(self):
     class DumpStreamParserSubclass(DumpStreamParser):
