@@ -29,6 +29,13 @@ Candidate changes:
    Votes:
      +1: dsahlberg, stsp
 
+ * r192501, r192502, r192503, r1912500, r1912515, r1912517
+   swig-py: Use pure Python objects as edit/parse_fns3 and decendant batons. 
+   Justification:
+     Bug fix. Issue #4916, #4917, #4918
+   Votes:
+     +1: futatuki
+
 Veto-blocked changes:
 =====================
 
