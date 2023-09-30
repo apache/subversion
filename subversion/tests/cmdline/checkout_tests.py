@@ -882,8 +882,8 @@ def co_with_obstructing_local_adds(sbox):
     })
 
   # "Extra" files that we expect to result from the conflicts.
-  extra_files = ['eta\.r0', 'eta\.r2', 'eta\.mine',
-                 'kappa\.r0', 'kappa\.r2', 'kappa\.mine']
+  extra_files = [r'eta\.r0', r'eta\.r2', r'eta\.mine',
+                 r'kappa\.r0', r'kappa\.r2', r'kappa\.mine']
 
   # Perform the checkout and check the results in three ways.
   # We use --force here because run_and_verify_checkout() will delete

@@ -72,7 +72,7 @@ class Generator:
 
     if not self._swigVersion:
       swig_version = subprocess.check_output([self.swig_path, "-version"]).decode('utf8')
-      m = re.search("Version (\d+).(\d+).(\d+)", swig_version)
+      m = re.search(r"Version (\d+).(\d+).(\d+)", swig_version)
       if m:
         self._swigVersion = tuple(map(int, m.groups()))
       else:

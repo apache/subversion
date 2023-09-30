@@ -94,7 +94,7 @@ rep_lines_res = [
                   'version X.Y.Z '),
                  # The copyright end date keeps changing; fix forever.
                  (re.compile(r'Copyright \(C\) 20\d\d The Apache '
-                              'Software Foundation\.'),
+                             r'Software Foundation\.'),
                   'Copyright (C) YYYY The Apache Software Foundation'),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
@@ -120,7 +120,7 @@ switched_del_lines_res = [
 # seen switch_res_line.
 switched_rep_lines_res = [
                           # We don't care about the actual canonical host
-                          (re.compile('^\* running on.*$'), '* running on'),
+                          (re.compile(r'^\* running on.*$'), '* running on'),
                          ]
 
 def process_lines(lines):

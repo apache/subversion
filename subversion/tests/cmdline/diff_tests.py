@@ -833,7 +833,7 @@ def diff_head_of_moved_file(sbox):
     ' This is the file \'mu\'.\n',
     '+\n',
     '+Actually, it\'s a new mu.\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
 
   svntest.actions.run_and_verify_svn(expected_output, [],
@@ -1024,7 +1024,7 @@ def diff_base_to_repos(sbox):
     None, [], 'diff', '-r', 'BASE:2', wc_dir)
 
   # to do the comparison, remove all output lines starting with +++ or ---
-  re_infoline = re.compile('^(\+\+\+|---).*$')
+  re_infoline = re.compile(r'^(\+\+\+|---).*$')
   list1 = []
   list2 = []
 
@@ -4256,7 +4256,7 @@ def diff_dir_replaced_by_file(sbox):
     '+++ %s\t(working copy)\n' % sbox.path('A/B/E'),
     '@@ -0,0 +1 @@\n',
     '+text\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
 
   svntest.actions.run_and_verify_svn(expected_output, [],
@@ -4464,7 +4464,7 @@ def diff_local_missing_obstruction(sbox):
     'Added: K\n',
     '## -0,0 +1 ##\n',
     '+V\n',
-    '\ No newline at end of property\n',
+    '\\ No newline at end of property\n',
     'Index: %s\n' % (sbox.path('iota'),),
     '===================================================================\n',
     '--- %s\t(revision 1)\n' % (sbox.path('iota'),),
@@ -4475,7 +4475,7 @@ def diff_local_missing_obstruction(sbox):
     'Added: K\n',
     '## -0,0 +1 ##\n',
     '+V\n',
-    '\ No newline at end of property\n',
+    '\\ No newline at end of property\n',
   ]
   svntest.actions.run_and_verify_svn(expected_output, [], 'diff', wc_dir)
 
@@ -4639,7 +4639,7 @@ def diff_repo_repo_added_file_mime_type(sbox):
                         'Deleted: svn:mime-type\n',
                         '## -1 +0,0 ##\n',
                         '-text/plain\n',
-                        '\ No newline at end of property\n']
+                        '\\ No newline at end of property\n']
     svntest.actions.run_and_verify_svn(expected_output, [], 'diff',
                                        '-r2:1', newfile)
 
@@ -4661,7 +4661,7 @@ def diff_switched_file(sbox):
     '@@ -1 +1,2 @@\n',
     ' This is the file \'mu\'.\n',
     '+Mu????\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '-r', '1', sbox.ospath('iota'))
@@ -4676,7 +4676,7 @@ def diff_switched_file(sbox):
     '-This is the file \'iota\'.\n',
     '+This is the file \'mu\'.\n',
     '+Mu????\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', '-r', '1', sbox.ospath(''))
@@ -4709,7 +4709,7 @@ def diff_parent_dir(sbox):
       'Deleted: A\n',
       '## -1 +0,0 ##\n',
       '-B\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
     ]
 
     svntest.actions.run_and_verify_svn(expected_output, [],
@@ -4726,7 +4726,7 @@ def diff_parent_dir(sbox):
       'Deleted: A\n',
       '## -1 +0,0 ##\n',
       '-B\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
     ]
 
     svntest.actions.run_and_verify_svn(expected_output, [],
@@ -4823,7 +4823,7 @@ def diff_local_copied_dir(sbox):
       'Added: p2\n',
       '## -0,0 +1 ##\n',
       '+v2\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
     ]
 
     svntest.actions.run_and_verify_svn(expected_output_C2, [],
@@ -5036,14 +5036,14 @@ def diff_symlinks(sbox):
     '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
     '@@ -0,0 +1 @@\n',
     '+link iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '\n',
     'Property changes on: %s\n' % sbox.path('to-iota'),
     '___________________________________________________________________\n',
     'Added: svn:special\n',
     '## -0,0 +1 ##\n',
     '+*\n',
-    '\ No newline at end of property\n',
+    '\\ No newline at end of property\n',
   ], [], 'diff', wc_dir)
 
   svntest.actions.run_and_verify_svn([
@@ -5055,14 +5055,14 @@ def diff_symlinks(sbox):
     '+++ b/to-iota\t(working copy)\n',
     '@@ -0,0 +1 @@\n',
     '+iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '\n',
     'Property changes on: to-iota\n',
     '___________________________________________________________________\n',
     'Added: svn:special\n',
     '## -0,0 +1 ##\n',
     '+*\n',
-    '\ No newline at end of property\n',
+    '\\ No newline at end of property\n',
   ], [], 'diff', wc_dir, '--git')
 
   sbox.simple_commit()
@@ -5076,9 +5076,9 @@ def diff_symlinks(sbox):
     '+++ %s\t(working copy)\n' % sbox.path('to-iota'),
     '@@ -1 +1 @@\n',
     '-link iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '+link A/B/E/alpha\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ], [], 'diff', wc_dir)
 
   svntest.actions.run_and_verify_svn([
@@ -5090,9 +5090,9 @@ def diff_symlinks(sbox):
     '+++ b/to-iota\t(working copy)\n',
     '@@ -1 +1 @@\n',
     '-iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '+A/B/E/alpha\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ], [], 'diff', wc_dir, '--git')
 
 

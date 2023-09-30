@@ -705,8 +705,8 @@ def basic_conflict(sbox):
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',]
+  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
+                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine',]
 
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
@@ -2267,11 +2267,11 @@ def automatic_conflict_resolution(sbox):
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
-                 'lambda.*\.r1', 'lambda.*\.r2', 'lambda.*\.mine',
-                 'omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine',
-                 'tau.*\.r1', 'tau.*\.r2', 'tau.*\.mine',
+  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
+                 r'lambda.*\.r1', r'lambda.*\.r2', r'lambda.*\.mine',
+                 r'omega.*\.r1', r'omega.*\.r2', r'omega.*\.mine',
+                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine',
+                 r'tau.*\.r1', r'tau.*\.r2', r'tau.*\.mine',
                  ]
 
   # Do the update and check the results in three ways.
@@ -2347,7 +2347,7 @@ def automatic_conflict_resolution(sbox):
                                           ""]))
 
   # Set the expected extra files for the test
-  extra_files = ['omega.*\.r1', 'omega.*\.r2', 'omega.*\.mine',]
+  extra_files = [r'omega.*\.r1', r'omega.*\.r2', r'omega.*\.mine',]
 
   # Set the expected status for the test
   expected_status = svntest.actions.get_virginal_state(wc_backup, 2)

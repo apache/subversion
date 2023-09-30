@@ -1046,9 +1046,9 @@ def run_and_parse_info(*args):
       # normal line
       key, value = line.split(':', 1)
 
-      if re.search(' \(\d+ lines?\)$', key):
+      if re.search(r' \(\d+ lines?\)$', key):
         # numbered continuation lines
-        match = re.match('^(.*) \((\d+) lines?\)$', key)
+        match = re.match(r'^(.*) \((\d+) lines?\)$', key)
         key = match.group(1)
         lock_comment_lines = int(match.group(2))
       elif len(value) > 1:

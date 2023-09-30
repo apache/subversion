@@ -620,8 +620,8 @@ def update_to_resolve_text_conflicts(sbox):
 
   # "Extra" files that we expect to result from the conflicts.
   # These are expressed as list of regexps.  What a cool system!  :-)
-  extra_files = ['mu.*\.r1', 'mu.*\.r2', 'mu.*\.mine',
-                 'rho.*\.r1', 'rho.*\.r2', 'rho.*\.mine', 'rho.*\.prej']
+  extra_files = [r'mu.*\.r1', r'mu.*\.r2', r'mu.*\.mine',
+                 r'rho.*\.r1', r'rho.*\.r2', r'rho.*\.mine', r'rho.*\.prej']
 
   # Do the update and check the results in three ways.
   # All "extra" files are passed to detect_conflict_files().
@@ -2700,10 +2700,10 @@ def update_with_obstructing_additions(sbox):
     })
 
   # "Extra" files that we expect to result from the conflicts.
-  extra_files = ['eta\.r0', 'eta\.r2', 'eta\.mine',
-                 'kappa\.r0', 'kappa\.r2', 'kappa\.mine',
-                 'epsilon\.r0', 'epsilon\.r2', 'epsilon\.mine',
-                 'kappa.prej', 'zeta.prej', 'dir_conflicts.prej']
+  extra_files = [r'eta\.r0', r'eta\.r2', r'eta\.mine',
+                 r'kappa\.r0', r'kappa\.r2', r'kappa\.mine',
+                 r'epsilon\.r0', r'epsilon\.r2', r'epsilon\.mine',
+                 r'kappa.prej', r'zeta.prej', r'dir_conflicts.prej']
 
   # Perform forced update and check the results in three
   # ways (including props).
@@ -3826,9 +3826,9 @@ def update_accept_conflicts(sbox):
                                              'foo\n'))
 
   # Set the expected extra files for the test
-  extra_files = ['iota.*\.r2', 'iota.*\.r3', 'iota.*\.mine',
-                 'lambda.*\.r2', 'lambda.*\.r3', 'lambda.*\.mine',
-                 'rho.*\.r2', 'rho.*\.r3', 'rho.*\.mine']
+  extra_files = [r'iota.*\.r2', r'iota.*\.r3', r'iota.*\.mine',
+                 r'lambda.*\.r2', r'lambda.*\.r3', r'lambda.*\.mine',
+                 r'rho.*\.r2', r'rho.*\.r3', r'rho.*\.mine']
 
   # Set the expected status for the test
   expected_status = svntest.actions.get_virginal_state(wc_backup, 3)

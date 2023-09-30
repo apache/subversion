@@ -1856,9 +1856,9 @@ def merge_replace_causes_tree_conflict2(sbox):
   actions.run_and_verify_status(wc_dir, expected_status)
 
   # Check the tree conflict types:
-  expected_stdout = '(R.*)|(Summary of conflicts.*)|(  Tree conflicts.*)' \
-                    '|(.*local delete, incoming replace upon merge.*)' \
-                    '|(      \>.*)'
+  expected_stdout = r'(R.*)|(Summary of conflicts.*)|(  Tree conflicts.*)' \
+                    r'|(.*local delete, incoming replace upon merge.*)' \
+                    r'|(      \>.*)'
   tree_conflicted_path = [A_B_E, A_mu, A_D_G_pi, A_D_H]
   for path in tree_conflicted_path:
     actions.run_and_verify_svn2(expected_stdout, [], 0, 'st',
