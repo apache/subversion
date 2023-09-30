@@ -1034,17 +1034,19 @@ class TestHarness:
 
 
 def create_parser():
-  def set_log_level(option, opt, value, parser, level=None):
-    if level is None:
-      level = value
-    parser.values.set_log_level = getattr(logging, level, None) or int(level)
+  def set_log_level(option, opt, value, parser):
+    if value.isdigit():
+      value = int(value)
+    else:
+      value = getattr(logging, value)
+    parser.values.set_log_level = value
 
   parser = optparse.OptionParser(usage=__doc__);
 
   parser.add_option('-l', '--list', action='store_true', dest='list_tests',
                     help='Print test doc strings instead of running them')
-  parser.add_option('-v', '--verbose', action='callback',
-                    callback=set_log_level, callback_args=(logging.DEBUG, ),
+  parser.add_option('-v', '--verbose', action='store_const',
+                    dest='set_log_level', const=logging.DEBUG,
                     help='Print binary command-lines')
   parser.add_option('-c', '--cleanup', action='store_true',
                     help='Clean up after successful tests')
