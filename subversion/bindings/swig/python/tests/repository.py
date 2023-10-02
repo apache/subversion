@@ -398,7 +398,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertEqual(None, editor_ref())
 
   def test_replay_batons_refcounts(self):
-    """Issue SVN-4917: check ref-count of batons created and used in call backs"""
+    """Issue SVN-4917: check ref-count of batons created and used in callbacks"""
     root = fs.revision_root(self.fs, self.rev)
     editor = BatonCollector(self.fs, root)
     e_ptr, e_baton = delta.make_editor(editor)
@@ -415,8 +415,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                                         error_path=b'branches/v1x')
     e_ptr, e_baton = delta.make_editor(editor)
     self.assertRaises(SubversionException, repos.replay, root, e_ptr, e_baton)
-    batons= editor.batons
-    # As svn_repos_replay calls neigher close_edit callback nor abort_edit
+    batons = editor.batons
+    # As svn_repos_replay calls neither close_edit callback nor abort_edit
     # if an error has occured during processing, references of Python objects
     # in decendant batons may live until e_baton is deleted.
     del e_baton
