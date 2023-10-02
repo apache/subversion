@@ -3194,7 +3194,7 @@ void svn_swig_py_notify_func(void *baton,
   svn_swig_py_acquire_py_lock();
 
   /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
+     Python callback function raise exception to caller, we must catch it
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
@@ -3244,7 +3244,7 @@ void svn_swig_py_notify_func2(void *baton,
   svn_swig_py_acquire_py_lock();
 
   /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
+     Python callback function raise exception to caller, we must catch it
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
@@ -3287,7 +3287,7 @@ void svn_swig_py_status_func(void *baton,
   svn_swig_py_acquire_py_lock();
 
   /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
+     Python callback function raise exception to caller, we must catch it
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
@@ -3436,7 +3436,7 @@ void svn_swig_py_status_func2(void *baton,
   svn_swig_py_acquire_py_lock();
 
   /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
+     Python callback function raise exception to caller, we must catch it
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
@@ -4721,7 +4721,7 @@ ra_callbacks_progress_func(apr_off_t progress,
   svn_swig_py_acquire_py_lock();
 
   /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
+     Python callback function raise exception to caller, we must catch it
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
@@ -5632,7 +5632,7 @@ svn_swig_py_config_enumerator2(const char *name,
   svn_swig_py_acquire_py_lock();
 
   /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
+     Python callback function raise exception to caller, we must catch it
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
@@ -5690,7 +5690,7 @@ svn_swig_py_config_section_enumerator2(const char *name,
   svn_swig_py_acquire_py_lock();
 
   /* As caller can't understand Python context and we can't notify if
-     Python call back function raise exception to caller, we must catch it
+     Python callback function raise exception to caller, we must catch it
      if it is occurred, and restore error indicator */
   PyErr_Fetch(&exc_type, &exc, &exc_traceback);
 
