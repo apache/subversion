@@ -158,6 +158,18 @@ class FileDiff:
     return self.tempfile1, self.tempfile2
 
   def get_pipe(self):
+    """Perform diff and return a file object from which the output can
+    be read.
+
+    When DIFFOPTIONS is None (the default), use svn's internal diff.
+
+    With any other DIFFOPTIONS, exec the external diff found on PATH,
+    passing it DIFFOPTIONS. On Windows, exec diff.exe rather than
+    diff. If a diff utility is not installed or found on PATH, throws
+    FileNotFoundError. Caveat: On some systems, including Windows, an
+    external diff may not be available unless installed and added to
+    PATH manually.
+    """
     self.get_files()
 
     # If diffoptions were provided, then the diff command needs to be
