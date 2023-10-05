@@ -29,6 +29,13 @@ Candidate changes:
    Votes:
      +1: dsahlberg, stsp
 
+ * r1912724, r1912743
+   Python bindings error handling
+   Justification:
+     Improve documentation and error message. Issue #1778
+   Votes:
+     +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
