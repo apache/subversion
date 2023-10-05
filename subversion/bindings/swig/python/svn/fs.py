@@ -23,6 +23,7 @@
 #    under the License.
 ######################################################################
 
+import errno
 from libsvn.fs import *
 
 ######################################################################
@@ -182,8 +183,17 @@ class FileDiff:
             + [self.tempfile1, self.tempfile2]
 
       # open the pipe, and return the file object for reading from the child.
-      p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
-                            close_fds=_sys.platform != "win32")
+      try:
+        p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
+                              close_fds=_sys.platform != "win32")
+      # When removing Python 2 support: Change to FileNotFoundError and 
+      # remove check for ENOENT (FileNotFoundError "Corresponds to errno
+      # ENOENT" according to documentation)
+      except OSError as err:
+        if err.errno == errno.ENOENT:
+          err.strerror = "External diff command not found in PATH"
+        raise err
+
       return _PopenStdoutWrapper(p)
 
     else:
