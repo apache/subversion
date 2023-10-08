@@ -1296,7 +1296,7 @@ def wc_move_parent_into_child(sbox):
                    "child '%s'" % (re.escape(from_path), re.escape(to_path))
   svntest.actions.run_and_verify_svn(None, expected_error,
                                      'mv',
-                                     '.', 'F/B')
+                                     from_path, to_path)
 
   os.chdir(was_cwd)
 
