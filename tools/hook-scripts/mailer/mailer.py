@@ -521,15 +521,12 @@ class Commit(Messenger):
     subpool = svn.core.svn_pool_create(self.pool)
     ret = 0
 
-    # build a renderer, tied to our output stream
-    renderer = TextCommitRenderer(self.output)
-
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       try:
         self.output.start(group, params)
 
         # generate the content for this group and set of params
-        generate_content(renderer, self.cfg, self.repos, self.changelist,
+        generate_content(self.output, self.cfg, self.repos, self.changelist,
                          group, params, paths, subpool)
 
         self.output.finish()
@@ -763,7 +760,8 @@ class DiffURLSelections:
   def get_modify_url(self, repos_rev, change):
     return self._get_url('modify', repos_rev, change)
 
-def generate_content(renderer, cfg, repos, changelist, group, params, paths,
+
+def generate_content(output, cfg, repos, changelist, group, params, paths,
                      pool):
 
   svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE)
@@ -814,7 +812,10 @@ def generate_content(renderer, cfg, repos, changelist, group, params, paths,
                         params, diffsels, diffurls, pool),
     other_diffs=other_diffs,
     )
-  renderer.render(data)
+  ### clean this up in future rev. Just use wb
+  w = output.write
+  wb = output.write_binary
+  render_commit(w, wb, data)
 
 
 def generate_list(changekind, changelist, paths, in_paths):
@@ -1035,6 +1036,7 @@ class DiffGenerator:
         content=content,
         )
 
+
 def _classify_diff_line(line, seen_change):
   # classify the type of line.
   first = line[:1]
@@ -1096,6 +1098,7 @@ class DiffContent:
       type=ltype,
       )
 
+
 class DifflibDiffContent():
   "This is a generator-like object returning annotated lines of a diff."
 
@@ -1125,16 +1128,9 @@ class DifflibDiffContent():
       type=ltype,
       )
 
-class TextCommitRenderer:
-  "This class will render the commit mail in plain text."
 
-  def __init__(self, output):
-    self.output = output
-
-  def render(self, data):
-    "Render the commit defined by 'data'."
-
-    w = self.output.write
+def render_commit(w, wb, data):
+    "Call W and/or WB to render the commit defined by DATA."
 
     w('Author: %s\nDate: %s\nNew Revision: %s\n' % (data.author,
                                                       data.date,
@@ -1148,33 +1144,33 @@ class TextCommitRenderer:
     w('Log:\n%s\n\n' % data.log.strip())
 
     # print summary sections
-    self._render_list('Added', data.added_data)
-    self._render_list('Replaced', data.replaced_data)
-    self._render_list('Deleted', data.deleted_data)
-    self._render_list('Modified', data.modified_data)
+    _render_list(w, 'Added', data.added_data)
+    _render_list(w, 'Replaced', data.replaced_data)
+    _render_list(w, 'Deleted', data.deleted_data)
+    _render_list(w, 'Modified', data.modified_data)
 
     if data.other_added_data or data.other_replaced_data \
            or data.other_deleted_data or data.other_modified_data:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
-        self._render_list('Added', data.other_added_data)
-        self._render_list('Replaced', data.other_replaced_data)
-        self._render_list('Deleted', data.other_deleted_data)
-        self._render_list('Modified', data.other_modified_data)
+        _render_list(w, 'Added', data.other_added_data)
+        _render_list(w, 'Replaced', data.other_replaced_data)
+        _render_list(w, 'Deleted', data.other_deleted_data)
+        _render_list(w, 'Modified', data.other_modified_data)
       else:
         w('and changes in other areas\n')
 
-    self._render_diffs(data.diffs, '')
+    _render_diffs(w, wb, data.diffs, '')
     if data.other_diffs:
-      self._render_diffs(data.other_diffs,
+        _render_diffs(w, wb, data.other_diffs,
                          '\nDiffs of changes in other areas also'
                          ' in this revision:\n')
 
-  def _render_list(self, header, data_list):
+
+def _render_list(w, header, data_list):
     if not data_list:
       return
 
-    w = self.output.write
     w(header + ':\n')
     for d in data_list:
       if d.is_dir:
@@ -1199,12 +1195,13 @@ class TextCommitRenderer:
         w('      - copied%s from r%d, %s%s\n'
           % (text, d.base_rev, to_str(d.base_path), is_dir))
 
-  def _render_diffs(self, diffs, section_header):
+
+def _render_diffs(w, wb, diffs, section_header):
     """Render diffs. Write the SECTION_HEADER if there are actually
     any diffs to render."""
     if not diffs:
       return
-    w = self.output.write
+
     section_header_printed = False
 
     for diff in diffs:
@@ -1244,7 +1241,6 @@ class TextCommitRenderer:
           w('Binary file (source and/or target). No diff available.\n')
         continue
 
-      wb = self.output.write_binary
       for line in diff.content:
         wb(line.raw)
 
@@ -1582,6 +1578,7 @@ if the property was added, modified or deleted, respectively.
   ret = svn.core.run_app(main, cmd, config_fname, repos_dir,
                          sys.argv[3:3+expected_args])
   sys.exit(1 if ret else 0)
+
 
 # ------------------------------------------------------------------------
 # TODO
