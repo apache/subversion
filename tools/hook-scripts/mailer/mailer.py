@@ -153,6 +153,23 @@ def remove_leading_slashes(path):
   return path
 
 
+class Writer:
+  "Simple class for writing strings/binary, with optional encoding."
+
+  def __init__(self, write_func, encoding='utf-8'):
+    self.write_binary = write_func
+
+    if codecs.lookup(encoding) != codecs.lookup('utf-8'):
+      def _write(s):
+        "Write text string S using the given encoding."
+        return write_func(s.encode(encoding, 'backslashreplace'))
+    else:
+      def _write(s):
+        "Write text string S using the *default* encoding (utf-8)."
+        return write_func(to_bytes(s))
+    self.write = _write
+
+
 class OutputBase:
   "Abstract base class to formalize the interface of output methods"
 
@@ -197,7 +214,9 @@ class OutputBase:
     configuration file group which is causing this output to be produced.
     PARAMS is a dictionary of any named subexpressions of regular expressions
     defined in the configuration file, plus the key 'author' contains the
-    author of the action being reported."""
+    author of the action being reported.
+
+    Return a Writer instance."""
     raise NotImplementedError
 
   def finish(self):
@@ -205,15 +224,6 @@ class OutputBase:
     Flush any cached information and finish writing the output
     representation."""
     raise NotImplementedError
-
-  def write_binary(self, output):
-    """Override this method.
-    Append the binary data OUTPUT to the output representation."""
-    raise NotImplementedError
-
-  def write(self, output):
-    """Append the literal text string OUTPUT to the output representation."""
-    return self.write_binary(to_bytes(output))
 
   def run(self, cmd):
     """Override this method, if the default implementation is not sufficient.
@@ -233,8 +243,6 @@ class OutputBase:
 
 
 class MailedOutput(OutputBase):
-  def __init__(self, cfg, repos, prefix_param):
-    OutputBase.__init__(self, cfg, repos, prefix_param)
 
   def start(self, group, params):
     # whitespace (or another character) separated list of addresses
@@ -262,6 +270,9 @@ class MailedOutput(OutputBase):
     if len(self.reply_to) >= 3 and self.reply_to[0] == '[' \
                                and self.reply_to[2] == ']':
       self.reply_to = self.reply_to[3:]
+
+    ### NOTE: no Writer to return :(
+    return None
 
   def _rfc2047_encode(self, hdr):
     # Return the result of splitting HDR into tokens (on space
@@ -313,9 +324,11 @@ class SMTPOutput(MailedOutput):
     MailedOutput.start(self, group, params)
 
     self.buffer = BytesIO()
-    self.write_binary = self.buffer.write
+    writer = Writer(self.buffer.write)
 
-    self.write(self.mail_headers(group, params))
+    writer.write(self.mail_headers(group, params))
+
+    return writer
 
   def finish(self):
     """
@@ -390,22 +403,17 @@ class SMTPOutput(MailedOutput):
 class StandardOutput(OutputBase):
   "Print the commit message to stdout."
 
-  def __init__(self, cfg, repos, prefix_param):
-    OutputBase.__init__(self, cfg, repos, prefix_param)
-    self.write_binary = _stdout.write
-
   def start(self, group, params):
-    self.write("Group: " + (group or "defaults") + "\n")
-    self.write("Subject: " + self.make_subject(group, params) + "\n\n")
+    encoding = sys.stdout.encoding if PY3 else 'utf-8'
+    writer = Writer(_stdout.write, encoding)
+
+    writer.write("Group: " + (group or "defaults") + "\n")
+    writer.write("Subject: " + self.make_subject(group, params) + "\n\n")
+
+    return writer
 
   def finish(self):
     pass
-
-  if (PY3 and (codecs.lookup(sys.stdout.encoding) != codecs.lookup('utf-8'))):
-    def write(self, output):
-      """Write text as *default* encoding string"""
-      return self.write_binary(output.encode(sys.stdout.encoding,
-                                             'backslashreplace'))
 
 
 class PipeOutput(MailedOutput):
@@ -427,10 +435,12 @@ class PipeOutput(MailedOutput):
     # construct the pipe for talking to the mailer
     self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                  close_fds=sys.platform != "win32")
-    self.write_binary = self.pipe.stdin.write
+    writer = Writer(self.pipe.stdin.write)
 
     # start writing out the mail message
-    self.write(self.mail_headers(group, params))
+    writer.write(self.mail_headers(group, params))
+
+    return writer
 
   def finish(self):
     # signal that we're done sending content
@@ -523,10 +533,10 @@ class Commit(Messenger):
 
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       try:
-        self.output.start(group, params)
+        writer = self.output.start(group, params)
 
         # generate the content for this group and set of params
-        generate_content(self.output, self.cfg, self.repos, self.changelist,
+        generate_content(writer, self.cfg, self.repos, self.changelist,
                          group, params, paths, subpool)
 
         self.output.finish()
@@ -559,8 +569,8 @@ class PropChange(Messenger):
     ret = 0
     for (group, param_tuple), params in self.groups.items():
       try:
-        self.output.start(group, params)
-        self.output.write('Author: %s\n'
+        writer = self.output.start(group, params)
+        writer.write('Author: %s\n'
                           'Revision: %s\n'
                           'Property Name: %s\n'
                           'Action: %s\n'
@@ -569,11 +579,11 @@ class PropChange(Messenger):
                              actions.get(self.action, 'Unknown (\'%s\')' \
                                          % self.action)))
         if self.action == 'A' or self.action not in actions:
-          self.output.write('Property value:\n')
+          writer.write('Property value:\n')
           propvalue = self.repos.get_rev_prop(self.propname)
-          self.output.write(propvalue)
+          writer.write(propvalue)
         elif self.action == 'M':
-          self.output.write('Property diff:\n')
+          writer.write('Property diff:\n')
           tempfile1 = tempfile.NamedTemporaryFile()
           tempfile1.write(_stdin.read())
           tempfile1.flush()
@@ -673,18 +683,18 @@ class Lock(Messenger):
     ret = 0
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       try:
-        self.output.start(group, params)
+        writer = self.output.start(group, params)
 
-        self.output.write('Author: %s\n'
+        writer.write('Author: %s\n'
                           '%s paths:\n' %
                           (self.author, self.do_lock and 'Locked' or 'Unlocked'))
 
         self.dirlist.sort()
         for dir in self.dirlist:
-          self.output.write('   %s\n\n' % dir)
+          writer.write('   %s\n\n' % dir)
 
         if self.do_lock:
-          self.output.write('Comment:\n%s\n' % (self.lock.comment or ''))
+          writer.write('Comment:\n%s\n' % (self.lock.comment or ''))
 
         self.output.finish()
       except MessageSendFailure:
@@ -761,7 +771,7 @@ class DiffURLSelections:
     return self._get_url('modify', repos_rev, change)
 
 
-def generate_content(output, cfg, repos, changelist, group, params, paths,
+def generate_content(writer, cfg, repos, changelist, group, params, paths,
                      pool):
 
   svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE)
@@ -813,8 +823,8 @@ def generate_content(output, cfg, repos, changelist, group, params, paths,
     other_diffs=other_diffs,
     )
   ### clean this up in future rev. Just use wb
-  w = output.write
-  wb = output.write_binary
+  w = writer.write
+  wb = writer.write_binary
   render_commit(w, wb, data)
 
 
