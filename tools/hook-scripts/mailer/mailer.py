@@ -837,7 +837,10 @@ def generate_list(changekind, changelist, paths, in_paths):
     selection = lambda change: change.action == svn.repos.CHANGE_ACTION_DELETE
   elif changekind == 'M':
     selection = lambda change: change.action == svn.repos.CHANGE_ACTION_MODIFY
+  return _gather_paths(selection, changelist, paths, in_paths)
 
+
+def _gather_paths(selection, changelist, paths, in_paths):
   items = [ ]
   for path, change in changelist:
     if selection(change) and (path in paths) == in_paths:
