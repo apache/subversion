@@ -789,14 +789,10 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
   commit_url = cfg.get('commit_url', group, params_with_rev)
 
   # figure out the lists of changes outside the selected path-space
-  other_added_data = other_replaced_data = other_deleted_data = \
-      other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
     other_summary = generate_summary(changelist, paths, False)
-    other_added_data = other_summary.added
-    other_replaced_data = other_summary.replaced
-    other_deleted_data = other_summary.deleted
-    other_modified_data = other_summary.modified
+  else:
+    other_summary = None
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
@@ -812,15 +808,9 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
     rev=repos.rev,
     log=to_str(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or b''),
     commit_url=commit_url,
-    added_data=summary.added,
-    replaced_data=summary.replaced,
-    deleted_data=summary.deleted,
-    modified_data=summary.modified,
+    summary=summary,
     show_nonmatching_paths=show_nonmatching_paths,
-    other_added_data=other_added_data,
-    other_replaced_data=other_replaced_data,
-    other_deleted_data=other_deleted_data,
-    other_modified_data=other_modified_data,
+    other_summary=other_summary,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
                         params, diffsels, diffurls, pool),
     other_diffs=other_diffs,
@@ -1159,19 +1149,12 @@ def render_commit(w, wb, data):
     w('Log:\n%s\n\n' % data.log.strip())
 
     # print summary sections
-    _render_list(w, 'Added', data.added_data)
-    _render_list(w, 'Replaced', data.replaced_data)
-    _render_list(w, 'Deleted', data.deleted_data)
-    _render_list(w, 'Modified', data.modified_data)
+    _render_summary(w, data.summary)
 
-    if data.other_added_data or data.other_replaced_data \
-           or data.other_deleted_data or data.other_modified_data:
+    if data.other_summary:
       if data.show_nonmatching_paths:
         w('\nChanges in other areas also in this revision:\n')
-        _render_list(w, 'Added', data.other_added_data)
-        _render_list(w, 'Replaced', data.other_replaced_data)
-        _render_list(w, 'Deleted', data.other_deleted_data)
-        _render_list(w, 'Modified', data.other_modified_data)
+        _render_summary(w, data.other_summary)
       else:
         w('and changes in other areas\n')
 
@@ -1180,6 +1163,13 @@ def render_commit(w, wb, data):
         _render_diffs(w, wb, data.other_diffs,
                          '\nDiffs of changes in other areas also'
                          ' in this revision:\n')
+
+
+def _render_summary(w, summary):
+    _render_list(w, 'Added', summary.added)
+    _render_list(w, 'Replaced', summary.replaced)
+    _render_list(w, 'Deleted', summary.deleted)
+    _render_list(w, 'Modified', summary.modified)
 
 
 def _render_list(w, header, data_list):
