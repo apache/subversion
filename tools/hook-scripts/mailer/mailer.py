@@ -829,21 +829,19 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
 
 
 def generate_list(changekind, changelist, paths, in_paths):
-  if changekind == 'A':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_ADD
-  elif changekind == 'R':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_REPLACE
-  elif changekind == 'D':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_DELETE
-  elif changekind == 'M':
-    selection = lambda change: change.action == svn.repos.CHANGE_ACTION_MODIFY
-  return _gather_paths(selection, changelist, paths, in_paths)
+  action = {
+    'A': svn.repos.CHANGE_ACTION_ADD,
+    'R': svn.repos.CHANGE_ACTION_REPLACE,
+    'D': svn.repos.CHANGE_ACTION_DELETE,
+    'M': svn.repos.CHANGE_ACTION_MODIFY,
+    }.get(changekind)
+  return _gather_paths(action, changelist, paths, in_paths)
 
 
-def _gather_paths(selection, changelist, paths, in_paths):
+def _gather_paths(action, changelist, paths, in_paths):
   items = [ ]
   for path, change in changelist:
-    if selection(change) and (path in paths) == in_paths:
+    if change.action == action and (path in paths) == in_paths:
       item = _data(
         path=path,
         is_dir=change.item_kind == svn.core.svn_node_dir,
