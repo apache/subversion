@@ -792,10 +792,11 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
   other_added_data = other_replaced_data = other_deleted_data = \
       other_modified_data = [ ]
   if len(paths) != len(changelist) and show_nonmatching_paths != 'no':
-    other_added_data = generate_list('A', changelist, paths, False)
-    other_replaced_data = generate_list('R', changelist, paths, False)
-    other_deleted_data = generate_list('D', changelist, paths, False)
-    other_modified_data = generate_list('M', changelist, paths, False)
+    other_summary = generate_summary(changelist, paths, False)
+    other_added_data = other_summary.added
+    other_replaced_data = other_summary.replaced
+    other_deleted_data = other_summary.deleted
+    other_modified_data = other_summary.modified
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
@@ -803,16 +804,18 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
   else:
     other_diffs = None
 
+  summary = generate_summary(changelist, paths, True)
+
   data = _data(
     author=repos.author,
     date=date,
     rev=repos.rev,
     log=to_str(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or b''),
     commit_url=commit_url,
-    added_data=generate_list('A', changelist, paths, True),
-    replaced_data=generate_list('R', changelist, paths, True),
-    deleted_data=generate_list('D', changelist, paths, True),
-    modified_data=generate_list('M', changelist, paths, True),
+    added_data=summary.added,
+    replaced_data=summary.replaced,
+    deleted_data=summary.deleted,
+    modified_data=summary.modified,
     show_nonmatching_paths=show_nonmatching_paths,
     other_added_data=other_added_data,
     other_replaced_data=other_replaced_data,
@@ -828,14 +831,15 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
   render_commit(w, wb, data)
 
 
-def generate_list(changekind, changelist, paths, in_paths):
-  action = {
-    'A': svn.repos.CHANGE_ACTION_ADD,
-    'R': svn.repos.CHANGE_ACTION_REPLACE,
-    'D': svn.repos.CHANGE_ACTION_DELETE,
-    'M': svn.repos.CHANGE_ACTION_MODIFY,
-    }.get(changekind)
-  return _gather_paths(action, changelist, paths, in_paths)
+def generate_summary(changelist, paths, in_paths):
+  def gather_info(action):
+    return _gather_paths(action, changelist, paths, in_paths)
+  return _data(
+    added=gather_info(svn.repos.CHANGE_ACTION_ADD),
+    replaced=gather_info(svn.repos.CHANGE_ACTION_REPLACE),
+    deleted=gather_info(svn.repos.CHANGE_ACTION_DELETE),
+    modified=gather_info(svn.repos.CHANGE_ACTION_MODIFY),
+    )
 
 
 def _gather_paths(action, changelist, paths, in_paths):
