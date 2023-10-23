@@ -471,10 +471,9 @@ class Commit(Messenger):
     Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
 
     # get all the changes and sort by path
-    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, \
-                                       self.pool)
-    e_ptr, e_baton = svn.delta.make_editor(editor, self.pool)
-    svn.repos.replay2(repos.root_this, "", svn.core.SVN_INVALID_REVNUM, 1, e_ptr, e_baton, None, self.pool)
+    editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, pool)
+    e_ptr, e_baton = svn.delta.make_editor(editor, pool)
+    svn.repos.replay2(repos.root_this, "", svn.core.SVN_INVALID_REVNUM, 1, e_ptr, e_baton, None, pool)
 
     self.changelist = sorted(editor.get_changes().items())
 
@@ -677,7 +676,7 @@ class Lock(Messenger):
     # the comment for the first path in the dirlist and cache it.
     self.lock = svn.fs.svn_fs_get_lock(self.repos.fs_ptr,
                                        to_bytes(self.dirlist[0]),
-                                       self.pool)
+                                       pool)
 
   def generate(self):
     ret = 0
