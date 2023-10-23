@@ -478,7 +478,7 @@ class Commit(Messenger):
 
     self.changelist = sorted(editor.get_changes().items())
 
-    log = to_str(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or b'')
+    log = to_str(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG, pool) or b'')
 
     # collect the set of groups and the unique sets of params for the options
     self.groups = { }
@@ -580,7 +580,7 @@ class PropChange(Messenger):
                                          % self.action)))
         if self.action == 'A' or self.action not in actions:
           writer.write('Property value:\n')
-          propvalue = self.repos.get_rev_prop(self.propname)
+          propvalue = self.repos.get_rev_prop(self.propname, self.pool)
           writer.write(propvalue)
         elif self.action == 'M':
           writer.write('Property diff:\n')
@@ -588,7 +588,7 @@ class PropChange(Messenger):
           tempfile1.write(_stdin.read())
           tempfile1.flush()
           tempfile2 = tempfile.NamedTemporaryFile()
-          tempfile2.write(self.repos.get_rev_prop(self.propname))
+          tempfile2.write(self.repos.get_rev_prop(self.propname, self.pool))
           tempfile2.flush()
           self.output.run(self.cfg.get_diff_cmd(group, {
             'label_from' : 'old property value',
@@ -774,7 +774,7 @@ class DiffURLSelections:
 def generate_content(writer, cfg, repos, changelist, group, params, paths,
                      pool):
 
-  svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE)
+  svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE, pool)
   ### pick a different date format?
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
@@ -806,7 +806,7 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
     author=repos.author,
     date=date,
     rev=repos.rev,
-    log=to_str(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG) or b''),
+    log=to_str(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG, pool) or b''),
     commit_url=commit_url,
     summary=summary,
     show_nonmatching_paths=show_nonmatching_paths,
@@ -905,7 +905,7 @@ class DiffGenerator:
 
       if change.base_rev != -1:
         svndate = self.repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE,
-                                          change.base_rev)
+                                          self.pool, change.base_rev)
         ### pick a different date format?
         base_date = time.ctime(svn.core.secs_from_timestr(svndate, self.pool))
       else:
@@ -1256,7 +1256,9 @@ class Repository:
   def __init__(self, repos_dir, rev, pool):
     self.repos_dir = repos_dir
     self.rev = rev
-    self.pool = pool
+
+    # Any data that we HOLD will be allocated in this pool.
+    self.hold_pool = pool
 
     self.repos_ptr = svn.repos.open(repos_dir, pool)
     self.fs_ptr = svn.repos.fs(self.repos_ptr)
@@ -1265,21 +1267,21 @@ class Repository:
 
     self.root_this = self.get_root(rev)
 
-    self.author = self.get_rev_prop(svn.core.SVN_PROP_REVISION_AUTHOR)
+    self.author = self.get_rev_prop(svn.core.SVN_PROP_REVISION_AUTHOR, pool)
     if self.author is not None:
       self.author = to_str(self.author)
 
-  def get_rev_prop(self, propname, rev = None):
+  def get_rev_prop(self, propname, scratch_pool, rev=None):
     if not rev:
       rev = self.rev
-    return svn.fs.revision_prop(self.fs_ptr, rev, propname, self.pool)
+    return svn.fs.revision_prop(self.fs_ptr, rev, propname, scratch_pool)
 
   def get_root(self, rev):
     try:
       return self.roots[rev]
     except KeyError:
       pass
-    root = self.roots[rev] = svn.fs.revision_root(self.fs_ptr, rev, self.pool)
+    root = self.roots[rev] = svn.fs.revision_root(self.fs_ptr, rev, self.hold_pool)
     return root
 
 
