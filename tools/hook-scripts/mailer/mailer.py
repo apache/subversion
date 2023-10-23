@@ -144,7 +144,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   else:
     raise UnknownSubcommand(cmd)
 
-  return messenger.generate()
+  return messenger.generate(pool)
 
 
 def remove_leading_slashes(path):
@@ -518,7 +518,7 @@ class Commit(Messenger):
     else:
       self.output.subject = 'r%d - %s' % (repos.rev, dirlist)
 
-  def generate(self):
+  def generate(self, scratch_pool):
     "Generate email for the various groups and option-params."
 
     ### the groups need to be further compressed. if the headers and
@@ -527,7 +527,7 @@ class Commit(Messenger):
     ### so if the body doesn't change, then it can be sent N times
     ### rather than rebuilding it each time.
 
-    subpool = svn.core.svn_pool_create(self.pool)
+    iterpool = svn.core.svn_pool_create(scratch_pool)
     ret = 0
 
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
@@ -536,14 +536,14 @@ class Commit(Messenger):
 
         # generate the content for this group and set of params
         generate_content(writer, self.cfg, self.repos, self.changelist,
-                         group, params, paths, subpool)
+                         group, params, paths, iterpool)
 
         self.output.finish()
       except MessageSendFailure:
         ret = 1
-      svn.core.svn_pool_clear(subpool)
+      svn.core.svn_pool_clear(iterpool)
 
-    svn.core.svn_pool_destroy(subpool)
+    svn.core.svn_pool_destroy(iterpool)
     return ret
 
 
@@ -563,9 +563,11 @@ class PropChange(Messenger):
 
     self.output.subject = 'r%d - %s' % (repos.rev, propname)
 
-  def generate(self):
+  def generate(self, scratch_pool):
     actions = { 'A': 'added', 'M': 'modified', 'D': 'deleted' }
     ret = 0
+    ### maybe create an iterpool?
+
     for (group, param_tuple), params in self.groups.items():
       try:
         writer = self.output.start(group, params)
@@ -579,7 +581,7 @@ class PropChange(Messenger):
                                          % self.action)))
         if self.action == 'A' or self.action not in actions:
           writer.write('Property value:\n')
-          propvalue = self.repos.get_rev_prop(self.propname, self.pool)
+          propvalue = self.repos.get_rev_prop(self.propname, scratch_pool)
           writer.write(propvalue)
         elif self.action == 'M':
           writer.write('Property diff:\n')
@@ -587,7 +589,7 @@ class PropChange(Messenger):
           tempfile1.write(_stdin.read())
           tempfile1.flush()
           tempfile2 = tempfile.NamedTemporaryFile()
-          tempfile2.write(self.repos.get_rev_prop(self.propname, self.pool))
+          tempfile2.write(self.repos.get_rev_prop(self.propname, scratch_pool))
           tempfile2.flush()
           self.output.run(self.cfg.get_diff_cmd(group, {
             'label_from' : 'old property value',
@@ -678,7 +680,7 @@ class Lock(Messenger):
                                        to_bytes(self.dirlist[0]),
                                        pool)
 
-  def generate(self):
+  def generate(self, scratch_pool):
     ret = 0
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       try:
