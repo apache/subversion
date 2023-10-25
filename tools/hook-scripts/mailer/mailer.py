@@ -179,32 +179,6 @@ class OutputBase:
     self.prefix_param = prefix_param
     self._CHUNKSIZE = 128 * 1024
 
-  ### TBD: move this to Messenger.
-  def make_subject(self, basic_subject, group, params):
-    prefix = self.cfg.get(self.prefix_param, group, params)
-    if prefix:
-      subject = prefix + ' ' + basic_subject
-    else:
-      subject = basic_subject
-
-    try:
-      truncate_subject = int(
-          self.cfg.get('truncate_subject', group, params))
-    except ValueError:
-      truncate_subject = 0
-
-    # truncate subject as UTF-8 string.
-    # Note: there still exists an issue on combining characters.
-    if truncate_subject:
-      bsubject = to_bytes(subject)
-      if len(bsubject) > truncate_subject:
-        idx = truncate_subject - 2
-        while b'\x80' <= bsubject[idx-1:idx] <= b'\xbf':
-          idx -= 1
-        subject = to_str(bsubject[:idx-1]) + "..."
-
-    return subject
-
   def start(self, basic_subject, group, params):
     """Override this method.
 
@@ -469,9 +443,31 @@ class Messenger:
 
     self.output = cls(cfg, repos, prefix_param)
 
-  ### temporary shim to avoid large code movement between classes
   def make_subject(self, basic_subject, group, params):
-    return self.output.make_subject(basic_subject, group, params)
+    ### prefix_param should move to Messenger.
+    prefix = self.cfg.get(self.output.prefix_param, group, params)
+    if prefix:
+      subject = prefix + ' ' + basic_subject
+    else:
+      subject = basic_subject
+
+    try:
+      truncate_subject = int(
+          self.cfg.get('truncate_subject', group, params))
+    except ValueError:
+      truncate_subject = 0
+
+    # truncate subject as UTF-8 string.
+    # Note: there still exists an issue on combining characters.
+    if truncate_subject:
+      bsubject = to_bytes(subject)
+      if len(bsubject) > truncate_subject:
+        idx = truncate_subject - 2
+        while b'\x80' <= bsubject[idx-1:idx] <= b'\xbf':
+          idx -= 1
+        subject = to_str(bsubject[:idx-1]) + "..."
+
+    return subject
 
 
 class Commit(Messenger):
