@@ -130,7 +130,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
                  {'author': author,
                   'repos_basename': os.path.basename(repos.repos_dir)
                  })
-    messenger = PropChange(pool, cfg, repos, author, propname, action)
+    messenger = PropChange(cfg, repos, author, propname, action)
   elif cmd == 'lock' or cmd == 'unlock':
     author = cmd_args[0]
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
@@ -173,10 +173,9 @@ class Writer:
 class OutputBase:
   "Abstract base class to formalize the interface of output methods"
 
-  def __init__(self, cfg, repos, prefix_param):
+  def __init__(self, cfg, repos):
     self.cfg = cfg
     self.repos = repos
-    self.prefix_param = prefix_param
     self._CHUNKSIZE = 128 * 1024
 
   def start(self, basic_subject, group, params):
@@ -264,7 +263,7 @@ class MailedOutput(OutputBase):
 
     return ' '.join(map(_maybe_encode_header, hdr.split()))
 
-  def mail_headers(self, subject_line, group, params):
+  def mail_headers(self, subject_line, group):
     from email import utils
 
     subject  = self._rfc2047_encode(subject_line)
@@ -301,7 +300,7 @@ class SMTPOutput(MailedOutput):
     self.buffer = BytesIO()
     writer = Writer(self.buffer.write)
 
-    writer.write(self.mail_headers(subject_line, group, params))
+    writer.write(self.mail_headers(subject_line, group))
 
     return writer
 
@@ -394,8 +393,8 @@ class StandardOutput(OutputBase):
 class PipeOutput(MailedOutput):
   "Deliver a mail message to an MTA via a pipe."
 
-  def __init__(self, cfg, repos, prefix_param):
-    MailedOutput.__init__(self, cfg, repos, prefix_param)
+  def __init__(self, cfg, repos):
+    MailedOutput.__init__(self, cfg, repos)
 
     # figure out the command for delivery
     self.cmd = cfg.general.mail_command.split()
@@ -413,7 +412,7 @@ class PipeOutput(MailedOutput):
     writer = Writer(self.pipe.stdin.write)
 
     # start writing out the mail message
-    writer.write(self.mail_headers(subject_line, group, params))
+    writer.write(self.mail_headers(subject_line, group))
 
     return writer
 
@@ -426,9 +425,10 @@ class PipeOutput(MailedOutput):
 
 
 class Messenger:
-  def __init__(self, pool, cfg, repos, prefix_param):
+  def __init__(self, cfg, repos, prefix_param):
     self.cfg = cfg
     self.repos = repos
+    self.prefix_param = prefix_param
 
     # Subclasses should set this instance variable to describe the action
     # being performed. See OutputBase.start() docstring.
@@ -441,11 +441,10 @@ class Messenger:
     else:
       cls = StandardOutput
 
-    self.output = cls(cfg, repos, prefix_param)
+    self.output = cls(cfg, repos)
 
   def make_subject(self, basic_subject, group, params):
-    ### prefix_param should move to Messenger.
-    prefix = self.cfg.get(self.output.prefix_param, group, params)
+    prefix = self.cfg.get(self.prefix_param, group, params)
     if prefix:
       subject = prefix + ' ' + basic_subject
     else:
@@ -472,7 +471,7 @@ class Messenger:
 
 class Commit(Messenger):
   def __init__(self, pool, cfg, repos):
-    Messenger.__init__(self, pool, cfg, repos, 'commit_subject_prefix')
+    Messenger.__init__(self, cfg, repos, 'commit_subject_prefix')
 
     # get all the changes and sort by path
     editor = svn.repos.ChangeCollector(repos.fs_ptr, repos.root_this, pool)
@@ -553,8 +552,8 @@ class Commit(Messenger):
 
 
 class PropChange(Messenger):
-  def __init__(self, pool, cfg, repos, author, propname, action):
-    Messenger.__init__(self, pool, cfg, repos, 'propchange_subject_prefix')
+  def __init__(self, cfg, repos, author, propname, action):
+    Messenger.__init__(self, cfg, repos, 'propchange_subject_prefix')
     self.author = author
     self.propname = propname
     self.action = action
@@ -649,7 +648,7 @@ class Lock(Messenger):
     self.author = author
     self.do_lock = do_lock
 
-    Messenger.__init__(self, pool, cfg, repos,
+    Messenger.__init__(self, cfg, repos,
                        (do_lock and 'lock_subject_prefix'
                         or 'unlock_subject_prefix'))
 
