@@ -144,7 +144,19 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   else:
     raise UnknownSubcommand(cmd)
 
-  return messenger.generate(pool)
+  output = create_output(cfg, repos)
+  return messenger.generate(output, pool)
+
+
+def create_output(cfg, repos):
+    if cfg.is_set('general.mail_command'):
+      cls = PipeOutput
+    elif cfg.is_set('general.smtp_hostname'):
+      cls = SMTPOutput
+    else:
+      cls = StandardOutput
+
+    return cls(cfg, repos)
 
 
 def remove_leading_slashes(path):
@@ -434,15 +446,6 @@ class Messenger:
     # being performed. See OutputBase.start() docstring.
     self.basic_subject = ''
 
-    if cfg.is_set('general.mail_command'):
-      cls = PipeOutput
-    elif cfg.is_set('general.smtp_hostname'):
-      cls = SMTPOutput
-    else:
-      cls = StandardOutput
-
-    self.output = cls(cfg, repos)
-
   def make_subject(self, basic_subject, group, params):
     prefix = self.cfg.get(self.prefix_param, group, params)
     if prefix:
@@ -521,7 +524,7 @@ class Commit(Messenger):
     else:
       self.basic_subject = 'r%d - %s' % (repos.rev, dirlist)
 
-  def generate(self, scratch_pool):
+  def generate(self, output, scratch_pool):
     "Generate email for the various groups and option-params."
 
     ### the groups need to be further compressed. if the headers and
@@ -536,13 +539,13 @@ class Commit(Messenger):
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       subject_line = self.make_subject(self.basic_subject, group, params)
       try:
-        writer = self.output.start(subject_line, group, params)
+        writer = output.start(subject_line, group, params)
 
         # generate the content for this group and set of params
         generate_content(writer, self.cfg, self.repos, self.changelist,
                          group, params, paths, iterpool)
 
-        self.output.finish()
+        output.finish()
       except MessageSendFailure:
         ret = 1
       svn.core.svn_pool_clear(iterpool)
@@ -567,7 +570,7 @@ class PropChange(Messenger):
 
     self.basic_subject = 'r%d - %s' % (repos.rev, propname)
 
-  def generate(self, scratch_pool):
+  def generate(self, output, scratch_pool):
     actions = { 'A': 'added', 'M': 'modified', 'D': 'deleted' }
     ret = 0
     ### maybe create an iterpool?
@@ -575,7 +578,7 @@ class PropChange(Messenger):
     for (group, param_tuple), params in self.groups.items():
       subject_line = self.make_subject(self.basic_subject, group, params)
       try:
-        writer = self.output.start(subject_line, group, params)
+        writer = output.start(subject_line, group, params)
         writer.write('Author: %s\n'
                           'Revision: %s\n'
                           'Property Name: %s\n'
@@ -596,13 +599,13 @@ class PropChange(Messenger):
           tempfile2 = tempfile.NamedTemporaryFile()
           tempfile2.write(self.repos.get_rev_prop(self.propname, scratch_pool))
           tempfile2.flush()
-          self.output.run(self.cfg.get_diff_cmd(group, {
+          output.run(self.cfg.get_diff_cmd(group, {
             'label_from' : 'old property value',
             'label_to' : 'new property value',
             'from' : tempfile1.name,
             'to' : tempfile2.name,
             }))
-        self.output.finish()
+        output.finish()
       except MessageSendFailure:
         ret = 1
     return ret
@@ -684,12 +687,12 @@ class Lock(Messenger):
                                        to_bytes(self.dirlist[0]),
                                        pool)
 
-  def generate(self, scratch_pool):
+  def generate(self, output, scratch_pool):
     ret = 0
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       subject_line = self.make_subject(self.basic_subject, group, params)
       try:
-        writer = self.output.start(subject_line, group, params)
+        writer = output.start(subject_line, group, params)
 
         writer.write('Author: %s\n'
                           '%s paths:\n' %
@@ -702,7 +705,7 @@ class Lock(Messenger):
         if self.do_lock:
           writer.write('Comment:\n%s\n' % (self.lock.comment or ''))
 
-        self.output.finish()
+        output.finish()
       except MessageSendFailure:
         ret = 1
     return ret
