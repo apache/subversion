@@ -517,12 +517,11 @@ class Commit(Messenger):
     commondir, dirlist = get_commondir(dirlist)
 
     # compose the basic subject line. later, we can prefix it.
-    dirlist.sort()
-    dirlist = ' '.join(dirlist)
+    dirlist_s = ' '.join(sorted(dirlist))
     if commondir:
-      self.basic_subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
+      self.basic_subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist_s)
     else:
-      self.basic_subject = 'r%d - %s' % (repos.rev, dirlist)
+      self.basic_subject = 'r%d - %s' % (repos.rev, dirlist_s)
 
   def generate(self, output, scratch_pool):
     "Generate email for the various groups and option-params."
