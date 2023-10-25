@@ -179,6 +179,7 @@ class OutputBase:
     self.prefix_param = prefix_param
     self._CHUNKSIZE = 128 * 1024
 
+  ### TBD: move this to Messenger.
   def make_subject(self, basic_subject, group, params):
     prefix = self.cfg.get(self.prefix_param, group, params)
     if prefix:
@@ -244,7 +245,7 @@ class OutputBase:
 
 class MailedOutput(OutputBase):
 
-  def start(self, basic_subject, group, params):
+  def start(self, subject_line, group, params):
     # whitespace (or another character) separated list of addresses
     # which must be split into a clean list
     to_addr_in = self.cfg.get('to_addr', group, params)
@@ -289,11 +290,10 @@ class MailedOutput(OutputBase):
 
     return ' '.join(map(_maybe_encode_header, hdr.split()))
 
-  def mail_headers(self, basic_subject, group, params):
+  def mail_headers(self, subject_line, group, params):
     from email import utils
 
-    subject  = self._rfc2047_encode(
-      self.make_subject(basic_subject, group, params))
+    subject  = self._rfc2047_encode(subject_line)
     from_hdr = self._rfc2047_encode(self.from_addr)
     to_hdr   = self._rfc2047_encode(', '.join(self.to_addrs))
 
@@ -321,13 +321,13 @@ class MailedOutput(OutputBase):
 class SMTPOutput(MailedOutput):
   "Deliver a mail message to an MTA using SMTP."
 
-  def start(self, basic_subject, group, params):
-    MailedOutput.start(self, basic_subject, group, params)
+  def start(self, subject_line, group, params):
+    MailedOutput.start(self, subject_line, group, params)
 
     self.buffer = BytesIO()
     writer = Writer(self.buffer.write)
 
-    writer.write(self.mail_headers(basic_subject, group, params))
+    writer.write(self.mail_headers(subject_line, group, params))
 
     return writer
 
@@ -404,14 +404,12 @@ class SMTPOutput(MailedOutput):
 class StandardOutput(OutputBase):
   "Print the commit message to stdout."
 
-  def start(self, basic_subject, group, params):
+  def start(self, subject_line, group, params):
     encoding = sys.stdout.encoding if PY3 else 'utf-8'
     writer = Writer(_stdout.write, encoding)
 
     writer.write("Group: " + (group or "defaults") + "\n")
-    writer.write("Subject: "
-                 + self.make_subject(basic_subject, group, params)
-                 + "\n\n")
+    writer.write("Subject: %s\n\n" % (subject_line,))
 
     return writer
 
@@ -428,8 +426,8 @@ class PipeOutput(MailedOutput):
     # figure out the command for delivery
     self.cmd = cfg.general.mail_command.split()
 
-  def start(self, basic_subject, group, params):
-    MailedOutput.start(self, basic_subject, group, params)
+  def start(self, subject_line, group, params):
+    MailedOutput.start(self, subject_line, group, params)
 
     ### gotta fix this. this is pretty specific to sendmail and qmail's
     ### mailwrapper program. should be able to use option param substitution
@@ -441,7 +439,7 @@ class PipeOutput(MailedOutput):
     writer = Writer(self.pipe.stdin.write)
 
     # start writing out the mail message
-    writer.write(self.mail_headers(basic_subject, group, params))
+    writer.write(self.mail_headers(subject_line, group, params))
 
     return writer
 
@@ -470,6 +468,10 @@ class Messenger:
       cls = StandardOutput
 
     self.output = cls(cfg, repos, prefix_param)
+
+  ### temporary shim to avoid large code movement between classes
+  def make_subject(self, basic_subject, group, params):
+    return self.output.make_subject(basic_subject, group, params)
 
 
 class Commit(Messenger):
@@ -537,8 +539,9 @@ class Commit(Messenger):
     ret = 0
 
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
+      subject_line = self.make_subject(self.basic_subject, group, params)
       try:
-        writer = self.output.start(self.basic_subject, group, params)
+        writer = self.output.start(subject_line, group, params)
 
         # generate the content for this group and set of params
         generate_content(writer, self.cfg, self.repos, self.changelist,
@@ -575,8 +578,9 @@ class PropChange(Messenger):
     ### maybe create an iterpool?
 
     for (group, param_tuple), params in self.groups.items():
+      subject_line = self.make_subject(self.basic_subject, group, params)
       try:
-        writer = self.output.start(self.basic_subject, group, params)
+        writer = self.output.start(subject_line, group, params)
         writer.write('Author: %s\n'
                           'Revision: %s\n'
                           'Property Name: %s\n'
@@ -688,8 +692,9 @@ class Lock(Messenger):
   def generate(self, scratch_pool):
     ret = 0
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
+      subject_line = self.make_subject(self.basic_subject, group, params)
       try:
-        writer = self.output.start(self.basic_subject, group, params)
+        writer = self.output.start(subject_line, group, params)
 
         writer.write('Author: %s\n'
                           '%s paths:\n' %
