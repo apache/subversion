@@ -179,16 +179,12 @@ class OutputBase:
     self.prefix_param = prefix_param
     self._CHUNKSIZE = 128 * 1024
 
-    # This is a public member variable. This must be assigned a suitable
-    # piece of descriptive text before make_subject() is called.
-    self.subject = ""
-
-  def make_subject(self, group, params):
+  def make_subject(self, basic_subject, group, params):
     prefix = self.cfg.get(self.prefix_param, group, params)
     if prefix:
-      subject = prefix + ' ' + self.subject
+      subject = prefix + ' ' + basic_subject
     else:
-      subject = self.subject
+      subject = basic_subject
 
     try:
       truncate_subject = int(
@@ -208,15 +204,19 @@ class OutputBase:
 
     return subject
 
-  def start(self, group, params):
+  def start(self, basic_subject, group, params):
     """Override this method.
-    Begin writing an output representation. GROUP is the name of the
-    configuration file group which is causing this output to be produced.
-    PARAMS is a dictionary of any named subexpressions of regular expressions
-    defined in the configuration file, plus the key 'author' contains the
-    author of the action being reported.
 
-    Return a Writer instance."""
+    Begin writing an output representation. BASIC_SUBJECT is a subject line
+    describing the action (commit, properties, lock), which may be tweaked
+    given other conditions. GROUP is the name of the configuration file
+    group which is causing this output to be produced. PARAMS is a
+    dictionary of any named subexpressions of regular expressions defined
+    in the configuration file, plus the key 'author' contains the author
+    of the action being reported.
+
+    Return a Writer instance.
+    """
     raise NotImplementedError
 
   def finish(self):
@@ -244,7 +244,7 @@ class OutputBase:
 
 class MailedOutput(OutputBase):
 
-  def start(self, group, params):
+  def start(self, basic_subject, group, params):
     # whitespace (or another character) separated list of addresses
     # which must be split into a clean list
     to_addr_in = self.cfg.get('to_addr', group, params)
@@ -289,10 +289,11 @@ class MailedOutput(OutputBase):
 
     return ' '.join(map(_maybe_encode_header, hdr.split()))
 
-  def mail_headers(self, group, params):
+  def mail_headers(self, basic_subject, group, params):
     from email import utils
 
-    subject  = self._rfc2047_encode(self.make_subject(group, params))
+    subject  = self._rfc2047_encode(
+      self.make_subject(basic_subject, group, params))
     from_hdr = self._rfc2047_encode(self.from_addr)
     to_hdr   = self._rfc2047_encode(', '.join(self.to_addrs))
 
@@ -320,13 +321,13 @@ class MailedOutput(OutputBase):
 class SMTPOutput(MailedOutput):
   "Deliver a mail message to an MTA using SMTP."
 
-  def start(self, group, params):
-    MailedOutput.start(self, group, params)
+  def start(self, basic_subject, group, params):
+    MailedOutput.start(self, basic_subject, group, params)
 
     self.buffer = BytesIO()
     writer = Writer(self.buffer.write)
 
-    writer.write(self.mail_headers(group, params))
+    writer.write(self.mail_headers(basic_subject, group, params))
 
     return writer
 
@@ -403,12 +404,14 @@ class SMTPOutput(MailedOutput):
 class StandardOutput(OutputBase):
   "Print the commit message to stdout."
 
-  def start(self, group, params):
+  def start(self, basic_subject, group, params):
     encoding = sys.stdout.encoding if PY3 else 'utf-8'
     writer = Writer(_stdout.write, encoding)
 
     writer.write("Group: " + (group or "defaults") + "\n")
-    writer.write("Subject: " + self.make_subject(group, params) + "\n\n")
+    writer.write("Subject: "
+                 + self.make_subject(basic_subject, group, params)
+                 + "\n\n")
 
     return writer
 
@@ -425,8 +428,8 @@ class PipeOutput(MailedOutput):
     # figure out the command for delivery
     self.cmd = cfg.general.mail_command.split()
 
-  def start(self, group, params):
-    MailedOutput.start(self, group, params)
+  def start(self, basic_subject, group, params):
+    MailedOutput.start(self, basic_subject, group, params)
 
     ### gotta fix this. this is pretty specific to sendmail and qmail's
     ### mailwrapper program. should be able to use option param substitution
@@ -438,7 +441,7 @@ class PipeOutput(MailedOutput):
     writer = Writer(self.pipe.stdin.write)
 
     # start writing out the mail message
-    writer.write(self.mail_headers(group, params))
+    writer.write(self.mail_headers(basic_subject, group, params))
 
     return writer
 
@@ -452,9 +455,12 @@ class PipeOutput(MailedOutput):
 
 class Messenger:
   def __init__(self, pool, cfg, repos, prefix_param):
-    self.pool = pool
     self.cfg = cfg
     self.repos = repos
+
+    # Subclasses should set this instance variable to describe the action
+    # being performed. See OutputBase.start() docstring.
+    self.basic_subject = ''
 
     if cfg.is_set('general.mail_command'):
       cls = PipeOutput
@@ -514,9 +520,9 @@ class Commit(Messenger):
     dirlist.sort()
     dirlist = ' '.join(dirlist)
     if commondir:
-      self.output.subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
+      self.basic_subject = 'r%d - in %s: %s' % (repos.rev, commondir, dirlist)
     else:
-      self.output.subject = 'r%d - %s' % (repos.rev, dirlist)
+      self.basic_subject = 'r%d - %s' % (repos.rev, dirlist)
 
   def generate(self, scratch_pool):
     "Generate email for the various groups and option-params."
@@ -532,7 +538,7 @@ class Commit(Messenger):
 
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       try:
-        writer = self.output.start(group, params)
+        writer = self.output.start(self.basic_subject, group, params)
 
         # generate the content for this group and set of params
         generate_content(writer, self.cfg, self.repos, self.changelist,
@@ -561,7 +567,7 @@ class PropChange(Messenger):
       param_list = sorted(params.items())
       self.groups[group, tuple(param_list)] = params
 
-    self.output.subject = 'r%d - %s' % (repos.rev, propname)
+    self.basic_subject = 'r%d - %s' % (repos.rev, propname)
 
   def generate(self, scratch_pool):
     actions = { 'A': 'added', 'M': 'modified', 'D': 'deleted' }
@@ -570,7 +576,7 @@ class PropChange(Messenger):
 
     for (group, param_tuple), params in self.groups.items():
       try:
-        writer = self.output.start(group, params)
+        writer = self.output.start(self.basic_subject, group, params)
         writer.write('Author: %s\n'
                           'Revision: %s\n'
                           'Property Name: %s\n'
@@ -667,12 +673,11 @@ class Lock(Messenger):
     commondir, dirlist = get_commondir(self.dirlist)
 
     # compose the basic subject line. later, we can prefix it.
-    dirlist.sort()
-    dirlist = ' '.join(dirlist)
+    dirlist_s = ' '.join(sorted(dirlist))
     if commondir:
-      self.output.subject = '%s: %s' % (commondir, dirlist)
+      self.basic_subject = '%s: %s' % (commondir, dirlist_s)
     else:
-      self.output.subject = '%s' % (dirlist)
+      self.basic_subject = dirlist_s
 
     # The lock comment is the same for all paths, so we can just pull
     # the comment for the first path in the dirlist and cache it.
@@ -684,7 +689,7 @@ class Lock(Messenger):
     ret = 0
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       try:
-        writer = self.output.start(group, params)
+        writer = self.output.start(self.basic_subject, group, params)
 
         writer.write('Author: %s\n'
                           '%s paths:\n' %
