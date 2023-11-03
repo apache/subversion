@@ -29,13 +29,6 @@ Candidate changes:
    Votes:
      +1: dsahlberg, stsp
 
- * r1912724, r1912743
-   Python bindings error handling
-   Justification:
-     Improve documentation and error message. Issue #1778
-   Votes:
-     +1: dsahlberg
-
  * r1903245
    * autogen.sh: export environment variable "PYTHON", for autoheader and
    autoconf
@@ -49,3 +42,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1912724, r1912743
+   Python bindings error handling
+   Justification:
+     Improve documentation and error message. Issue #1778
+   Votes:
+     +1: dsahlberg, jamessan
+
