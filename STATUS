@@ -35,10 +35,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1908926
-   libsvn_client: Pass redirected URL for file externals.
-   Justification:
-     Bug fix. Issue #4911.
-   Votes:
-     +1: dsahlberg, stsp, hartmannathan

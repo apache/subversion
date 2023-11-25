@@ -917,7 +917,7 @@ handle_external_item_change(svn_client_ctx_t *ctx,
 
         SVN_ERR(switch_file_external(local_abspath,
                                      new_loc,
-                                     new_url,
+                                     new_loc->url,
                                      &new_item->peg_revision,
                                      &new_item->revision,
                                      parent_dir_abspath,
