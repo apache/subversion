@@ -27,11 +27,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1903245
-   * autogen.sh: export environment variable "PYTHON", for autoheader and
-   autoconf
-   Justification:
-     Build properly when Python executable is not named "python"
-   Votes:
-     +1: jamessan, futatuki, hartmannathan
