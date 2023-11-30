@@ -29,6 +29,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1914222
+   Improve help message for svnmucc PUT.
+   Justification:
+     Users asked.
+   Votes:
+     +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
