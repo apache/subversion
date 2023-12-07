@@ -19,5 +19,5 @@ The above creates a test repository named `mailer-init.12345` (whatever PID).
 You can now run the test using:
 
 ```
-$ ./mailer-t1.sh mailer-init-12345/repos/ ../mailer.py
+$ ./mailer-t1.sh mailer-init.12345/repos/ ../mailer.py
 ```
