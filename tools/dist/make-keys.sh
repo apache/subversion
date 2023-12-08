@@ -34,7 +34,7 @@ while getopts ":c:o:h" ARG; do
 done
 
 if [ ! -f $COMMITTERS ]; then
-	echo "COMMITTERS file not found."
+	echo "COMMITTERS file not found at ${COMMITTERS}"
 	exit 1
 fi
 

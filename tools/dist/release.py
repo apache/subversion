@@ -983,7 +983,7 @@ def roll_tarballs(args):
         # complete wc, not a shallow wc as indicated in HACKING as one option.
         # We /could/ download COMMITTERS from /trunk if it doesn't exist...
         subprocess.check_call([os.path.dirname(__file__) + '/make-keys.sh',
-                               '-c', os.path.dirname(__file__) + '/../..',
+                               '-c', os.path.dirname(__file__) + '/../../COMMITTERS',
                                '-o', filepath])
         shutil.move(filepath, get_target(args))
 
