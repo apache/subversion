@@ -41,9 +41,6 @@ Version 1.14.2
     * Fix -r option documentation for some svnadmin subcommands (r1896877)
     * Fix error message encoding when system() call fails (r1887641, r1890013)
     * Fix assertion failure in conflict resolver (r1892470, -471, -541)
- User-visible changes:
-  - Client-side improvements and bugfixes:
-    * Support multiple working copy formats (1.8-onward, 1.15) (issue #????)
 
   - Server-side bugfixes:
     * Fix CVE-2021-28544: authz protected copyfrom paths regression (r1899227)
