@@ -20,15 +20,6 @@
 # WARNING: This may or may not work on your system. This Makefile is
 # an example, rather than a ready-made universal solution.
 
-#   ****************************************************************
-#   **       IMPORTANT NOTE FOR SVN COMMITTERS:  READ THIS.       **
-#   **                                                            **
-#   ****************************************************************
-#   | This Makefile is used by the bb-openbsd buildbot             |
-#   | (http://ci.apache.org/builders/bb-openbsd). Please check     |
-#   | the bot's health after making changes to this file.          |
-#   |______________________________________________________________|
-
 PERL ?= yes
 ENABLE_PERL_BINDINGS = $(PERL)
 THREADING ?= yes
