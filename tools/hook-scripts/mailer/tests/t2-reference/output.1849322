@@ -1,0 +1,599 @@
+Group: defaults
+Subject: r28 - in subversion/trunk/subversion/bindings: cxx cxx/include cxx/include/svncxxhl cxx/include/svnxx cxx/src cxx/src/aprwrap cxx/src/private cxx/tests cxxhl
+
+Author: brane
+Date: Wed Dec 19 11:03:16 2018
+New Revision: 28
+
+Log:
+Rename the C++HL library to SVN++, renaming files, namespaces and directories.
+
+* Makefile.in
+  (SVNXX_INCLUDES): Renamed and changed from CXXHL_INCLUDES.
+  (COMPILE_SVNXX_CXX): Renamed and changed from COMPILE_CXXHL_CXX.
+* build.conf
+  (options.private-includes): Update C++ bindings' header paths.
+  (libsvnxx): Rename and update target from libsvncxxhl.
+* build/generator/gen_make.py
+  (Generator.write): Use 'svnxx-' instead of 'cxxhl-' for extra-install check.
+* build/generator/gen_win.py
+  (WinGeneratorBase.get_win_includes): Check for 'svnxx', not 'cxxhl'.
+
+* subversion/bindings/cxx/: Renamed from .../bindings/cxxhl/.
+* subversion/bindings/cxx/include/svnxx/: Renamed from .../include/svncxxhl/.
+* subversion/bindings/cxx/include/svnxx.hpp: Renamed from .../include/svncxxhl.hpp.
+* subversion/bindings/cxx/**: Rename namespaces, include paths and guards.
+
+Added:
+   subversion/trunk/subversion/bindings/cxx/
+      - copied from r27, subversion/trunk/subversion/bindings/cxxhl/
+   subversion/trunk/subversion/bindings/cxx/include/svnxx/
+      - copied from r1, subversion/trunk/subversion/bindings/cxxhl/include/svncxxhl/
+   subversion/trunk/subversion/bindings/cxx/include/svnxx.hpp
+      - copied, changed from r1, subversion/trunk/subversion/bindings/cxxhl/include/svncxxhl.hpp
+Deleted:
+   subversion/trunk/subversion/bindings/cxx/include/svncxxhl/
+   subversion/trunk/subversion/bindings/cxx/include/svncxxhl.hpp
+   subversion/trunk/subversion/bindings/cxxhl/
+Modified:
+   subversion/trunk/subversion/bindings/cxx/include/svnxx/_compat.hpp
+   subversion/trunk/subversion/bindings/cxx/include/svnxx/exception.hpp
+   subversion/trunk/subversion/bindings/cxx/include/svnxx/tristate.hpp
+   subversion/trunk/subversion/bindings/cxx/src/aprwrap.hpp
+   subversion/trunk/subversion/bindings/cxx/src/aprwrap/array.hpp
+   subversion/trunk/subversion/bindings/cxx/src/aprwrap/hash.hpp
+   subversion/trunk/subversion/bindings/cxx/src/aprwrap/impl.cpp
+   subversion/trunk/subversion/bindings/cxx/src/aprwrap/pool.hpp
+   subversion/trunk/subversion/bindings/cxx/src/exception.cpp
+   subversion/trunk/subversion/bindings/cxx/src/private.hpp
+   subversion/trunk/subversion/bindings/cxx/src/private/exception-private.hpp
+   subversion/trunk/subversion/bindings/cxx/src/tristate.cpp
+   subversion/trunk/subversion/bindings/cxx/tests/test_exception.cpp
+
+Copied and modified: subversion/trunk/subversion/bindings/cxx/include/svnxx.hpp (from r1, subversion/trunk/subversion/bindings/cxxhl/include/svncxxhl.hpp)
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/include/svncxxhl.hpp	Wed Dec 19 06:53:59 2018	(r1, copy source)
++++ subversion/trunk/subversion/bindings/cxx/include/svnxx.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -25,13 +25,13 @@
+ #error "This is a C++ header file."
+ #endif
+ 
+-#ifndef SVN_CXXHL_HPP
+-#define SVN_CXXHL_HPP
++#ifndef SVNXX_HPP
++#define SVNXX_HPP
+ 
+ // Expose the whole API and alias the default version namespace
+-#include "svncxxhl/exception.hpp"
+-#include "svncxxhl/tristate.hpp"
++#include "svnxx/exception.hpp"
++#include "svnxx/tristate.hpp"
+ 
+-namespace SVN = ::apache::subversion::cxxhl;
++namespace SVN = ::apache::subversion::svnxx;
+ 
+-#endif  // SVN_CXXHL_HPP
++#endif  // SVNXX_HPP
+
+Modified: subversion/trunk/subversion/bindings/cxx/include/svnxx/_compat.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/include/svncxxhl/_compat.hpp	Wed Dec 19 06:53:59 2018	(r1)
++++ subversion/trunk/subversion/bindings/cxx/include/svnxx/_compat.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -25,58 +25,58 @@
+ #error "This is a C++ header file."
+ #endif
+ 
+-#ifndef SVN_CXXHL_COMPAT_HPP
+-#define SVN_CXXHL_COMPAT_HPP
++#ifndef SVNXX_COMPAT_HPP
++#define SVNXX_COMPAT_HPP
+ 
+ // Configuration test: std::shared_ptr<> and friends
+ // Currently detects: clang++, g++, msvc-2010+
+-#ifndef SVN_CXXHL_HAVE_STD_SMART_PTRS
++#ifndef SVNXX_HAVE_STD_SMART_PTRS
+ #  if   (defined(__clang__) && __cplusplus >= 201103L) \
+      || (defined(__GNUC__) && defined(__GXX_EXPERIMENTAL_CXX0X__)) \
+      || (defined(_MSC_VER) && _MSC_VER >= 1600)
+-#    define SVN_CXXHL_HAVE_STD_SMART_PTRS
++#    define SVNXX_HAVE_STD_SMART_PTRS
+ #  endif  // config test: std::shared_ptr<>
+-#endif  // SVN_CXXHL_HAVE_STD_SMART_PTRS
++#endif  // SVNXX_HAVE_STD_SMART_PTRS
+ 
+ // Configuration test: std::tr1::shared_ptr<> and friends
+ // Currently detects: clang++, g++
+-#ifndef SVN_CXXHL_HAVE_STD_SMART_PTRS
+-#  ifndef SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS
++#ifndef SVNXX_HAVE_STD_SMART_PTRS
++#  ifndef SVNXX_HAVE_STD_TR1_SMART_PTRS
+ #    if   defined(__GNUC__) \
+        && (__GNUC__ > 4 || __GNUC__ == 4 && __GNUC_MINOR__ >= 1)
+-#      define SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS
++#      define SVNXX_HAVE_STD_TR1_SMART_PTRS
+ #    endif  // config test: std::tr1::shared_ptr<>
+-#  endif  // SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS
+-#endif  // SVN_CXXHL_HAVE_STD_SMART_PTRS
++#  endif  // SVNXX_HAVE_STD_TR1_SMART_PTRS
++#endif  // SVNXX_HAVE_STD_SMART_PTRS
+ 
+ 
+-#if defined(SVN_CXXHL_HAVE_STD_SMART_PTRS)
++#if defined(SVNXX_HAVE_STD_SMART_PTRS)
+ 
+ #include <memory>
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace compat {
+ using std::weak_ptr;
+ using std::shared_ptr;
+ using std::enable_shared_from_this;
+ } // namespace compat
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#elif defined(SVN_CXXHL_HAVE_STD_TR1_SMART_PTRS)
++#elif defined(SVNXX_HAVE_STD_TR1_SMART_PTRS)
+ 
+ #include <tr1/memory>
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace compat {
+ using std::tr1::weak_ptr;
+ using std::tr1::shared_ptr;
+ using std::tr1::enable_shared_from_this;
+ } // namespace compat
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+@@ -85,41 +85,41 @@
+ // ::std given known compiler characteristics, then try Boost as a
+ // last resort.
+ 
+-#define SVN_CXXHL_USING_BOOST
++#define SVNXX_USING_BOOST
+ #include <boost/shared_ptr.hpp>
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace compat {
+ using boost::weak_ptr;
+ using boost::shared_ptr;
+ using boost::enable_shared_from_this;
+ } // namespace compat
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif  // SVN_CXXHL_HAVE_STD_SMART_PTRS
++#endif  // SVNXX_HAVE_STD_SMART_PTRS
+ 
+ // Configuration test: noncopyable mixin.
+-#ifdef SVN_CXXHL_USING_BOOST
++#ifdef SVNXX_USING_BOOST
+ 
+ #include <boost/noncopyable.hpp>
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace compat {
+ using boost::noncopyable;
+ } // namespace compat
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#else  // !SVN_CXXHL_USING_BOOST
++#else  // !SVNXX_USING_BOOST
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace compat {
+ namespace noncopyable_
+ {
+@@ -135,10 +135,10 @@
+ } // namespace noncopyable_
+ typedef noncopyable_::noncopyable noncopyable;
+ } // namespace compat
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif // SVN_CXXHL_USING_BOOST
++#endif // SVNXX_USING_BOOST
+ 
+-#endif  // SVN_CXXHL_COMPAT_HPP
++#endif  // SVNXX_COMPAT_HPP
+
+Modified: subversion/trunk/subversion/bindings/cxx/include/svnxx/exception.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/include/svncxxhl/exception.hpp	Wed Dec 19 06:53:59 2018	(r1)
++++ subversion/trunk/subversion/bindings/cxx/include/svnxx/exception.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -25,19 +25,19 @@
+ #error "This is a C++ header file."
+ #endif
+ 
+-#ifndef SVN_CXXHL_EXCEPTION_HPP
+-#define SVN_CXXHL_EXCEPTION_HPP
++#ifndef SVNXX_EXCEPTION_HPP
++#define SVNXX_EXCEPTION_HPP
+ 
+ #include <exception>
+ #include <string>
+ #include <utility>
+ #include <vector>
+ 
+-#include "svncxxhl/_compat.hpp"
++#include "svnxx/_compat.hpp"
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ 
+ namespace compat {} // Announce the compat namespace for shared_ptr lookup
+ 
+@@ -181,8 +181,8 @@
+     {}
+ };
+ 
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif  // SVN_CXXHL_EXCEPTION_HPP
++#endif  // SVNXX_EXCEPTION_HPP
+
+Modified: subversion/trunk/subversion/bindings/cxx/include/svnxx/tristate.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/include/svncxxhl/tristate.hpp	Wed Dec 19 06:53:59 2018	(r1)
++++ subversion/trunk/subversion/bindings/cxx/include/svnxx/tristate.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -25,12 +25,12 @@
+ #error "This is a C++ header file."
+ #endif
+ 
+-#ifndef SVN_CXXHL_TRISTATE_HPP
+-#define SVN_CXXHL_TRISTATE_HPP
++#ifndef SVNXX_TRISTATE_HPP
++#define SVNXX_TRISTATE_HPP
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ 
+ class Tristate
+ {
+@@ -57,8 +57,8 @@
+   short int m_value;
+ };
+ 
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif  // SVN_CXXHL_TRISTATE_HPP
++#endif  // SVNXX_TRISTATE_HPP
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/aprwrap.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/aprwrap.hpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/aprwrap.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -21,14 +21,14 @@
+  * @endcopyright
+  */
+ 
+-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_H
+-#define SVN_CXXHL_PRIVATE_APRWRAP_H
++#ifndef SVNXX_PRIVATE_APRWRAP_H
++#define SVNXX_PRIVATE_APRWRAP_H
+ 
+ // Expose the whole APR wrapper API and alias the namespace
+ #include "aprwrap/pool.hpp"
+ #include "aprwrap/hash.hpp"
+ #include "aprwrap/array.hpp"
+ 
+-namespace APR = ::apache::subversion::cxxhl::apr;
++namespace APR = ::apache::subversion::svnxx::apr;
+ 
+-#endif // SVN_CXXHL_PRIVATE_APRWRAP_H
++#endif // SVNXX_PRIVATE_APRWRAP_H
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/aprwrap/array.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/aprwrap/array.hpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/aprwrap/array.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -21,8 +21,8 @@
+  * @endcopyright
+  */
+ 
+-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_ARRAY_H
+-#define SVN_CXXHL_PRIVATE_APRWRAP_ARRAY_H
++#ifndef SVNXX_PRIVATE_APRWRAP_ARRAY_H
++#define SVNXX_PRIVATE_APRWRAP_ARRAY_H
+ 
+ #include <stdexcept>
+ 
+@@ -33,7 +33,7 @@
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace apr {
+ 
+ /**
+@@ -273,8 +273,8 @@
+ };
+ 
+ } // namespace apr
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif // SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
++#endif // SVNXX_PRIVATE_APRWRAP_HASH_H
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/aprwrap/hash.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/aprwrap/hash.hpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/aprwrap/hash.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -21,15 +21,15 @@
+  * @endcopyright
+  */
+ 
+-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
+-#define SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
++#ifndef SVNXX_PRIVATE_APRWRAP_HASH_H
++#define SVNXX_PRIVATE_APRWRAP_HASH_H
+ 
+ #include <apr_hash.h>
+ #include "pool.hpp"
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace apr {
+ 
+ // Template forward declaration
+@@ -364,8 +364,8 @@
+ 
+ 
+ } // namespace apr
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif // SVN_CXXHL_PRIVATE_APRWRAP_HASH_H
++#endif // SVNXX_PRIVATE_APRWRAP_HASH_H
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/aprwrap/impl.cpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/aprwrap/impl.cpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/aprwrap/impl.cpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -33,7 +33,7 @@
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace apr {
+ 
+ //
+@@ -67,7 +67,7 @@
+           state = svn_atomic_cas(&init_state, NONE, NONE);
+         }
+       if (state == START)
+-        throw cxxhl::InternalError(
++        throw svnxx::InternalError(
+             _("APR pool initialization failed: Timed out"));
+       return root_pool;
+ 
+@@ -79,7 +79,7 @@
+       return root_pool;
+ 
+     default:
+-      throw cxxhl::InternalError(
++      throw svnxx::InternalError(
+           _("APR pool initialization failed: Invalid state"));
+     }
+ }
+@@ -105,6 +105,6 @@
+ }
+ 
+ } // namespace apr
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/aprwrap/pool.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/aprwrap/pool.hpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/aprwrap/pool.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -21,13 +21,13 @@
+  * @endcopyright
+  */
+ 
+-#ifndef SVN_CXXHL_PRIVATE_APRWRAP_POOL_H
+-#define SVN_CXXHL_PRIVATE_APRWRAP_POOL_H
++#ifndef SVNXX_PRIVATE_APRWRAP_POOL_H
++#define SVNXX_PRIVATE_APRWRAP_POOL_H
+ 
+ #include <cstdlib>
+ 
+-#include "svncxxhl/exception.hpp"
+-#include "svncxxhl/_compat.hpp"
++#include "svnxx/exception.hpp"
++#include "svnxx/_compat.hpp"
+ 
+ #include "svn_pools.h"
+ #undef TRUE
+@@ -35,7 +35,7 @@
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace apr {
+ 
+ // Forward declaration
+@@ -191,8 +191,8 @@
+ }
+ 
+ } // namespace apr
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif // SVN_CXXHL_PRIVATE_APRWRAP_POOL_H
++#endif // SVNXX_PRIVATE_APRWRAP_POOL_H
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/exception.cpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/exception.cpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/exception.cpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -27,7 +27,7 @@
+ #include <new>
+ #include <sstream>
+ 
+-#include "svncxxhl/exception.hpp"
++#include "svnxx/exception.hpp"
+ #include "private.hpp"
+ #include "aprwrap.hpp"
+ 
+@@ -41,7 +41,7 @@
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ 
+ namespace detail {
+ 
+@@ -326,6 +326,6 @@
+ }
+ } // namespace detail
+ 
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/private.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/private.hpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/private.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -21,9 +21,9 @@
+  * @endcopyright
+  */
+ 
+-#ifndef SVN_CXXHL_PRIVATE_PRIVATE_H
+-#define SVN_CXXHL_PRIVATE_PRIVATE_H
++#ifndef SVNXX_PRIVATE_PRIVATE_H
++#define SVNXX_PRIVATE_PRIVATE_H
+ 
+ #include "private/exception-private.hpp"
+ 
+-#endif // SVN_CXXHL_PRIVATE_PRIVATE_H
++#endif // SVNXX_PRIVATE_PRIVATE_H
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/private/exception-private.hpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/private/exception-private.hpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/private/exception-private.hpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -25,14 +25,14 @@
+ #error "This is a C++ header file."
+ #endif
+ 
+-#ifndef SVN_CXXHL_PRIVATE_EXCEPTION_HPP
+-#define SVN_CXXHL_PRIVATE_EXCEPTION_HPP
++#ifndef SVNXX_PRIVATE_EXCEPTION_HPP
++#define SVNXX_PRIVATE_EXCEPTION_HPP
+ 
+ #include "svn_error.h"
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ namespace detail {
+ 
+ /**
+@@ -42,8 +42,8 @@
+ void checked_call(svn_error_t* err);
+ 
+ } // namespace detail
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+ 
+-#endif // SVN_CXXHL_PRIVATE_EXCEPTION_HPP
++#endif // SVNXX_PRIVATE_EXCEPTION_HPP
+
+Modified: subversion/trunk/subversion/bindings/cxx/src/tristate.cpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/src/tristate.cpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/src/tristate.cpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -21,7 +21,7 @@
+  * @endcopyright
+  */
+ 
+-#include "svncxxhl/tristate.hpp"
++#include "svnxx/tristate.hpp"
+ 
+ #include "svn_types.h"
+ #undef TRUE
+@@ -29,7 +29,7 @@
+ 
+ namespace apache {
+ namespace subversion {
+-namespace cxxhl {
++namespace svnxx {
+ 
+ Tristate::Tristate(short value) throw()
+     : m_value(value)
+@@ -39,6 +39,6 @@
+ const Tristate Tristate::FALSE = Tristate(svn_tristate_false);
+ const Tristate Tristate::UNKNOWN = Tristate(svn_tristate_unknown);
+ 
+-} // namespace cxxhl
++} // namespace svnxx
+ } // namespace subversion
+ } // namespace apache
+
+Modified: subversion/trunk/subversion/bindings/cxx/tests/test_exception.cpp
+==============================================================================
+--- subversion/trunk/subversion/bindings/cxxhl/tests/test_exception.cpp	Wed Dec 19 10:49:47 2018	(r27)
++++ subversion/trunk/subversion/bindings/cxx/tests/test_exception.cpp	Wed Dec 19 11:03:16 2018	(r28)
+@@ -25,7 +25,7 @@
+ #include <ios>
+ #include <iostream>
+ 
+-#include "svncxxhl.hpp"
++#include "svnxx.hpp"
+ #include "../src/private.hpp"
+ 
+ #include <apr.h>
