@@ -786,9 +786,6 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
   ### pick a different date format?
   date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
 
-  diffsels = DiffSelections(cfg, group, params)
-  diffurls = DiffURLSelections(cfg, group, params)
-
   show_nonmatching_paths = cfg.get('show_nonmatching_paths', group, params) \
       or 'yes'
 
@@ -804,7 +801,7 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
     other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
-                                group, params, diffsels, diffurls, pool)
+                                group, params, pool)
   else:
     other_diffs = None
 
@@ -820,7 +817,7 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
     show_nonmatching_paths=show_nonmatching_paths,
     other_summary=other_summary,
     diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
-                        params, diffsels, diffurls, pool),
+                        params, pool),
     other_diffs=other_diffs,
     )
   ### clean this up in future rev. Just use wb
@@ -864,7 +861,7 @@ class DiffGenerator:
   "This is a generator-like object returning DiffContent objects."
 
   def __init__(self, changelist, paths, in_paths, cfg, repos, date, group,
-               params, diffsels, diffurls, pool):
+               params, pool):
     self.changelist = changelist
     self.paths = paths
     self.in_paths = in_paths
@@ -873,13 +870,12 @@ class DiffGenerator:
     self.date = date
     self.group = group
     self.params = params
-    self.diffsels = diffsels
-    self.diffurls = diffurls
     self.pool = pool
 
-    self.diff = self.diff_url = None
-
     self.idx = 0
+
+    self.diffsels = DiffSelections(cfg, group, params)
+    self.diffurls = DiffURLSelections(cfg, group, params)
 
   def __nonzero__(self):
     # we always have some items
