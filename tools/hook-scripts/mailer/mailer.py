@@ -1017,7 +1017,7 @@ class DiffGenerator:
           content = src_fname = dst_fname = None
         else:
             src_fname, dst_fname = diff.get_files()
-            content = DiffContent(self.cfg.get_diff_cmd(self.group, {
+            content = generate_diff(self.cfg.get_diff_cmd(self.group, {
               'label_from' : label1,
               'label_to' : label2,
               'from' : src_fname,
@@ -1070,38 +1070,28 @@ def _classify_diff_line(line, seen_change):
   return line, ltype, seen_change
 
 
-class DiffContent:
-  "This is a generator-like object returning annotated lines of a diff."
-
-  def __init__(self, cmd):
-    self.seen_change = False
+def generate_diff(cmd):
+    seen_change = False
 
     # By default we choose to incorporate child stderr into the output
-    self.pipe = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                                 stderr=subprocess.STDOUT,
-                                 close_fds=sys.platform != "win32")
+    pipe = subprocess.Popen(cmd,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT,
+                            close_fds=sys.platform != "win32")
 
-  def __nonzero__(self):
-    # we always have some items
-    return True
+    while True:
+        line = pipe.stdout.readline()
+        if not line:
+            # wait on the child so we don't end up with a billion zombies
+            pipe.wait()
+            return  # will raise StopIteration
 
-  def __getitem__(self, idx):
-    if self.pipe is None:
-      raise IndexError
-
-    line = self.pipe.stdout.readline()
-    if not line:
-      # wait on the child so we don't end up with a billion zombies
-      self.pipe.wait()
-      self.pipe = None
-      raise IndexError
-
-    line, ltype, self.seen_change = _classify_diff_line(line, self.seen_change)
-    return _data(
-      raw=line,
-      text=line[1:-1],  # remove indicator and newline
-      type=ltype,
-      )
+        line, ltype, seen_change = _classify_diff_line(line, seen_change)
+        yield _data(
+            raw=line,
+            text=line[1:-1],  # remove indicator and newline
+            type=ltype,
+        )
 
 
 def render_commit(w, wb, data):
