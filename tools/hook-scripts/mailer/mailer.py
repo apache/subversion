@@ -862,30 +862,10 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
                               date, group, params, pool):
     "This is a generator returning diffs for each change."
 
-    ### for now, pretend we're still an object, like the former
-    ### incarnation, in order to minimize textual changes.
-    self = _data()
-    self.changelist = changelist
-    self.paths = paths
-    self.in_paths = in_paths
-    self.cfg = cfg
-    self.repos = repos
-    self.date = date
-    self.group = group
-    self.params = params
-    self.pool = pool
+    diffsels = DiffSelections(cfg, group, params)
+    diffurls = DiffURLSelections(cfg, group, params)
 
-    self.idx = 0
-
-    self.diffsels = DiffSelections(cfg, group, params)
-    self.diffurls = DiffURLSelections(cfg, group, params)
-
-    while True:
-      if self.idx == len(self.changelist):
-          return  # will raise StopIteration
-
-      path, change = self.changelist[self.idx]
-      self.idx = self.idx + 1
+    for path, change in changelist:
 
       diff = diff_url = None
       kind = None
@@ -902,14 +882,14 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
         continue
 
       # is this change in (or out of) the set of matched paths?
-      if (path in self.paths) != self.in_paths:
+      if (path in paths) != in_paths:
         continue
 
       if change.base_rev != -1:
-        svndate = self.repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE,
-                                          self.pool, change.base_rev)
+        svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE,
+                                     pool, change.base_rev)
         ### pick a different date format?
-        base_date = time.ctime(svn.core.secs_from_timestr(svndate, self.pool))
+        base_date = time.ctime(svn.core.secs_from_timestr(svndate, pool))
       else:
         base_date = ''
 
@@ -923,14 +903,14 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
         kind = 'D'
 
         # get the diff url, if any is specified
-        diff_url = self.diffurls.get_delete_url(self.repos.rev, change)
+        diff_url = diffurls.get_delete_url(repos.rev, change)
 
         # show the diff?
-        if self.diffsels.delete:
-          diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
-                                 base_path_bytes, None, None, self.pool)
+        if diffsels.delete:
+          diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
+                                 base_path_bytes, None, None, pool)
 
-          label1 = '%s\t%s\t(r%s)' % (base_path, self.date, change.base_rev)
+          label1 = '%s\t%s\t(r%s)' % (base_path, date, change.base_rev)
           label2 = '/dev/null\t00:00:00 1970\t(deleted)'
           singular = True
 
@@ -944,30 +924,30 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
             kind = 'W'
 
             # get the diff url, if any is specified
-            diff_url = self.diffurls.get_copy_url(self.repos.rev, change)
+            diff_url = diffurls.get_copy_url(repos.rev, change)
 
             # show the diff?
-            if self.diffsels.modify:
-              diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+            if diffsels.modify:
+              diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
                                      base_path_bytes,
-                                     self.repos.root_this, change.path,
-                                     self.pool)
+                                     repos.root_this, change.path,
+                                     pool)
               label1 = ('%s\t%s\t(r%s, copy source)'
                         % (base_path, base_date, change.base_rev))
               label2 = ('%s\t%s\t(r%s)'
-                        % (to_str(change.path), self.date, self.repos.rev))
+                        % (to_str(change.path), date, repos.rev))
               singular = False
           else:
             # this file was copied.
             kind = 'C'
-            if self.diffsels.copy:
-              diff = svn.fs.FileDiff(None, None, self.repos.root_this,
-                                     change.path, self.pool)
+            if diffsels.copy:
+              diff = svn.fs.FileDiff(None, None, repos.root_this,
+                                     change.path, pool)
               label1 = ('/dev/null\t00:00:00 1970\t'
                         '(empty, because file is newly added)')
               label2 = ('%s\t%s\t(r%s, copy of r%s, %s)'
                         % (to_str(change.path),
-                           self.date, self.repos.rev, change.base_rev,
+                           date, repos.rev, change.base_rev,
                            base_path))
               singular = False
         else:
@@ -975,16 +955,16 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
           kind = 'A'
 
           # get the diff url, if any is specified
-          diff_url = self.diffurls.get_add_url(self.repos.rev, change)
+          diff_url = diffurls.get_add_url(repos.rev, change)
 
           # show the diff?
-          if self.diffsels.add:
-            diff = svn.fs.FileDiff(None, None, self.repos.root_this,
-                                   change.path, self.pool)
+          if diffsels.add:
+            diff = svn.fs.FileDiff(None, None, repos.root_this,
+                                   change.path, pool)
             label1 = '/dev/null\t00:00:00 1970\t' \
                      '(empty, because file is newly added)'
             label2 = '%s\t%s\t(r%s)' \
-                     % (to_str(change.path), self.date, self.repos.rev)
+                     % (to_str(change.path), date, repos.rev)
             singular = True
 
       elif not change.text_changed:
@@ -995,18 +975,18 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
         kind = 'M'
 
         # get the diff url, if any is specified
-        diff_url = self.diffurls.get_modify_url(self.repos.rev, change)
+        diff_url = diffurls.get_modify_url(repos.rev, change)
 
         # show the diff?
-        if self.diffsels.modify:
-          diff = svn.fs.FileDiff(self.repos.get_root(change.base_rev),
+        if diffsels.modify:
+          diff = svn.fs.FileDiff(repos.get_root(change.base_rev),
                                  base_path,
-                                 self.repos.root_this, change.path,
-                                 self.pool)
+                                 repos.root_this, change.path,
+                                 pool)
           label1 = '%s\t%s\t(r%s)' \
                    % (base_path, base_date, change.base_rev)
           label2 = '%s\t%s\t(r%s)' \
-                   % (to_str(change.path), self.date, self.repos.rev)
+                   % (to_str(change.path), date, repos.rev)
           singular = False
 
       if diff:
@@ -1015,7 +995,7 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
           content = src_fname = dst_fname = None
         else:
             src_fname, dst_fname = diff.get_files()
-            content = generate_diff(self.cfg.get_diff_cmd(self.group, {
+            content = generate_diff(cfg.get_diff_cmd(group, {
               'label_from' : label1,
               'label_to' : label2,
               'from' : src_fname,
