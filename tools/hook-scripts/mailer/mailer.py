@@ -800,8 +800,9 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
     other_summary = None
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
-    other_diffs = DiffGenerator(changelist, paths, False, cfg, repos, date,
-                                group, params, pool)
+    other_diffs = generate_changelist_diffs(changelist, paths, False, cfg,
+                                            repos, date, group, params,
+                                            pool)
   else:
     other_diffs = None
 
@@ -816,8 +817,8 @@ def generate_content(writer, cfg, repos, changelist, group, params, paths,
     summary=summary,
     show_nonmatching_paths=show_nonmatching_paths,
     other_summary=other_summary,
-    diffs=DiffGenerator(changelist, paths, True, cfg, repos, date, group,
-                        params, pool),
+    diffs=generate_changelist_diffs(changelist, paths, True, cfg, repos,
+                                    date, group, params, pool),
     other_diffs=other_diffs,
     )
   ### clean this up in future rev. Just use wb
@@ -857,11 +858,13 @@ def _gather_paths(action, changelist, paths, in_paths):
   return items
 
 
-class DiffGenerator:
-  "This is a generator-like object returning DiffContent objects."
+def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
+                              date, group, params, pool):
+    "This is a generator returning diffs for each change."
 
-  def __init__(self, changelist, paths, in_paths, cfg, repos, date, group,
-               params, pool):
+    ### for now, pretend we're still an object, like the former
+    ### incarnation, in order to minimize textual changes.
+    self = _data()
     self.changelist = changelist
     self.paths = paths
     self.in_paths = in_paths
@@ -877,14 +880,9 @@ class DiffGenerator:
     self.diffsels = DiffSelections(cfg, group, params)
     self.diffurls = DiffURLSelections(cfg, group, params)
 
-  def __nonzero__(self):
-    # we always have some items
-    return True
-
-  def __getitem__(self, idx):
     while True:
       if self.idx == len(self.changelist):
-        raise IndexError
+          return  # will raise StopIteration
 
       path, change = self.changelist[self.idx]
       self.idx = self.idx + 1
@@ -1025,7 +1023,7 @@ class DiffGenerator:
               }))
 
       # return a data item for this diff
-      return _data(
+      yield _data(
         path=change.path,
         base_path=base_path_bytes,
         base_rev=change.base_rev,
