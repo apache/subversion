@@ -1016,17 +1016,13 @@ class DiffGenerator:
         if binary:
           content = src_fname = dst_fname = None
         else:
-          src_fname, dst_fname = diff.get_files()
-          try:
+            src_fname, dst_fname = diff.get_files()
             content = DiffContent(self.cfg.get_diff_cmd(self.group, {
               'label_from' : label1,
               'label_to' : label2,
               'from' : src_fname,
               'to' : dst_fname,
               }))
-          except OSError:
-            # diff command does not exist, try difflib.unified_diff()
-            content = DifflibDiffContent(label1, label2, src_fname, dst_fname)
 
       # return a data item for this diff
       return _data(
@@ -1098,36 +1094,6 @@ class DiffContent:
       # wait on the child so we don't end up with a billion zombies
       self.pipe.wait()
       self.pipe = None
-      raise IndexError
-
-    line, ltype, self.seen_change = _classify_diff_line(line, self.seen_change)
-    return _data(
-      raw=line,
-      text=line[1:-1],  # remove indicator and newline
-      type=ltype,
-      )
-
-
-class DifflibDiffContent():
-  "This is a generator-like object returning annotated lines of a diff."
-
-  def __init__(self, label_from, label_to, from_file, to_file):
-    import difflib
-    self.seen_change = False
-    fromlines = open(from_file, 'U').readlines()
-    tolines = open(to_file, 'U').readlines()
-    self.diff = difflib.unified_diff(fromlines, tolines,
-                                     label_from, label_to)
-
-  def __nonzero__(self):
-    # we always have some items
-    return True
-
-  def __getitem__(self, idx):
-
-    try:
-      line = self.diff.next()
-    except StopIteration:
       raise IndexError
 
     line, ltype, self.seen_change = _classify_diff_line(line, self.seen_change)
