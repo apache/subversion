@@ -211,22 +211,6 @@ class OutputBase:
     representation."""
     raise NotImplementedError
 
-  def run(self, cmd):
-    """Override this method, if the default implementation is not sufficient.
-    Execute CMD, writing the stdout produced to the output representation."""
-    # By default we choose to incorporate child stderr into the output
-    pipe_ob = subprocess.Popen(cmd, stdout=subprocess.PIPE,
-                               stderr=subprocess.STDOUT,
-                               close_fds=sys.platform != "win32")
-
-    buf = pipe_ob.stdout.read(self._CHUNKSIZE)
-    while buf:
-      self.write_binary(buf)
-      buf = pipe_ob.stdout.read(self._CHUNKSIZE)
-
-    # wait on the child so we don't end up with a billion zombies
-    pipe_ob.wait()
-
 
 class MailedOutput(OutputBase):
 
@@ -598,12 +582,13 @@ class PropChange(Messenger):
           tempfile2 = tempfile.NamedTemporaryFile()
           tempfile2.write(self.repos.get_rev_prop(self.propname, scratch_pool))
           tempfile2.flush()
-          output.run(self.cfg.get_diff_cmd(group, {
-            'label_from' : 'old property value',
-            'label_to' : 'new property value',
-            'from' : tempfile1.name,
-            'to' : tempfile2.name,
-            }))
+          for diffs in generate_diff(self.cfg.get_diff_cmd(group, {
+              'label_from' : 'old property value',
+              'label_to' : 'new property value',
+              'from' : tempfile1.name,
+              'to' : tempfile2.name,
+              })):
+              writer.write(to_str(diffs.raw))
         output.finish()
       except MessageSendFailure:
         ret = 1
