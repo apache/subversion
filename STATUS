@@ -34,7 +34,7 @@ Candidate changes:
    Justification:
      Bug fix.
    Votes:
-     +1: futatuki
+     +1: futatuki, dsahlberg
 
  * r1912632
    Fix `invalid escape sequence` in Python scripts to prevent many
