@@ -545,7 +545,7 @@ class Commit(Messenger):
       svn.core.svn_pool_clear(iterpool)
 
     svn.core.svn_pool_destroy(iterpool)
-    return int(failed)
+    return failed
 
 
 class PropChange(Messenger):
@@ -602,7 +602,7 @@ class PropChange(Messenger):
               writer.write(to_str(diffs.raw))
       failed |= output.send(subject_line, group, params, long_propchange, None)
 
-    return int(failed)
+    return failed
 
 
 def get_commondir(dirlist):
@@ -701,7 +701,7 @@ class Lock(Messenger):
 
       failed |= output.send(subject_line, group, params, long_lock, None)
 
-    return int(failed)
+    return failed
 
 
 class DiffSelections:
@@ -1516,9 +1516,9 @@ if the property was added, modified or deleted, respectively.
   if not os.path.exists(config_fname):
     raise MissingConfig(config_fname)
 
-  ret = svn.core.run_app(main, cmd, config_fname, repos_dir,
-                         sys.argv[3:3+expected_args])
-  sys.exit(1 if ret else 0)
+  failed = svn.core.run_app(main, cmd, config_fname, repos_dir,
+                            sys.argv[3:3+expected_args])
+  sys.exit(1 if failed else 0)
 
 
 # ------------------------------------------------------------------------
