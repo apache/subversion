@@ -190,6 +190,21 @@ class OutputBase:
     self.repos = repos
     self._CHUNKSIZE = 128 * 1024
 
+  def send(self, basic_subject, group, params, long_func, short_func):
+      writer = self.start(basic_subject, group, params)
+
+      try:
+          try:
+              long_func(writer)
+          except MessageTooLarge:
+              short_func(writer)
+
+          self.finish()
+      except MessageSendFailure:
+        return True  # failed
+
+      return False  # succeeded
+
   def start(self, basic_subject, group, params):
     """Override this method.
 
@@ -517,24 +532,20 @@ class Commit(Messenger):
     ### rather than rebuilding it each time.
 
     iterpool = svn.core.svn_pool_create(scratch_pool)
-    ret = 0
+    failed = False
 
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       subject_line = self.make_subject(self.basic_subject, group, params)
-      try:
-        writer = output.start(subject_line, group, params)
 
+      def long_commit(writer):
         # generate the content for this group and set of params
         generate_content(writer, self.cfg, self.repos, self.changelist,
                          group, params, paths, iterpool)
-
-        output.finish()
-      except MessageSendFailure:
-        ret = 1
+      failed |= output.send(subject_line, group, params, long_commit, None)
       svn.core.svn_pool_clear(iterpool)
 
     svn.core.svn_pool_destroy(iterpool)
-    return ret
+    return int(failed)
 
 
 class PropChange(Messenger):
@@ -555,13 +566,13 @@ class PropChange(Messenger):
 
   def generate(self, output, scratch_pool):
     actions = { 'A': 'added', 'M': 'modified', 'D': 'deleted' }
-    ret = 0
+    failed = False
     ### maybe create an iterpool?
 
     for (group, param_tuple), params in self.groups.items():
       subject_line = self.make_subject(self.basic_subject, group, params)
-      try:
-        writer = output.start(subject_line, group, params)
+
+      def long_propchange(writer):
         writer.write('Author: %s\n'
                           'Revision: %s\n'
                           'Property Name: %s\n'
@@ -589,10 +600,9 @@ class PropChange(Messenger):
               'to' : tempfile2.name,
               })):
               writer.write(to_str(diffs.raw))
-        output.finish()
-      except MessageSendFailure:
-        ret = 1
-    return ret
+      failed |= output.send(subject_line, group, params, long_propchange, None)
+
+    return int(failed)
 
 
 def get_commondir(dirlist):
@@ -672,12 +682,12 @@ class Lock(Messenger):
                                        pool)
 
   def generate(self, output, scratch_pool):
-    ret = 0
+    failed = False
+
     for (group, param_tuple), (params, paths) in sorted(self.groups.items()):
       subject_line = self.make_subject(self.basic_subject, group, params)
-      try:
-        writer = output.start(subject_line, group, params)
 
+      def long_lock(writer):
         writer.write('Author: %s\n'
                           '%s paths:\n' %
                           (self.author, self.do_lock and 'Locked' or 'Unlocked'))
@@ -689,10 +699,9 @@ class Lock(Messenger):
         if self.do_lock:
           writer.write('Comment:\n%s\n' % (self.lock.comment or ''))
 
-        output.finish()
-      except MessageSendFailure:
-        ret = 1
-    return ret
+      failed |= output.send(subject_line, group, params, long_lock, None)
+
+    return int(failed)
 
 
 class DiffSelections:
@@ -1443,6 +1452,8 @@ class UnknownMappingSpec(Exception):
 class UnknownSubcommand(Exception):
   pass
 class MessageSendFailure(Exception):
+  pass
+class MessageTooLarge(Exception):
   pass
 
 
