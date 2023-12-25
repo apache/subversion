@@ -394,7 +394,7 @@ class StandardOutput(OutputBase):
       _stdout.write((
                         ("Group: " + (group or "defaults") + "\n")
                       + ("Subject: %s\n\n" % (subject_line,))
-                    ).encode()
+                    ).encode()  ### whoops. use the encoding
                     + body)
 
 
