@@ -192,7 +192,7 @@ class OutputBase:
     self.repos = repos
     self._CHUNKSIZE = 128 * 1024
 
-  def send(self, basic_subject, group, params, long_func, short_func):
+  def send(self, subject_line, group, params, long_func, short_func):
       writer = Writer(self.get_encoding())
 
       try:
@@ -204,9 +204,7 @@ class OutputBase:
       except MessageSendFailure:
         return True  # failed
 
-      ### use modified start/finish mechanism for minimal textual change.
-      prefix = self.start(basic_subject, group, params)
-      self.finish(prefix + writer.buffer.getvalue())
+      self.deliver(subject_line, group, params, writer.buffer.getvalue())
 
       return False  # succeeded
 
@@ -218,10 +216,12 @@ class OutputBase:
     """
     return 'utf-8'
 
-  def start(self, basic_subject, group, params):
+  def deliver(self, subject_line, group, params, body):
     """Override this method.
 
-    Begin writing an output representation. BASIC_SUBJECT is a subject line
+    ### FIX THIS DOCSTRING
+
+    Begin writing an output representation. SUBJECT_LINE is a subject line
     describing the action (commit, properties, lock), which may be tweaked
     given other conditions. GROUP is the name of the configuration file
     group which is causing this output to be produced. PARAMS is a
@@ -233,16 +233,10 @@ class OutputBase:
     """
     raise NotImplementedError
 
-  def finish(self, contents):
-    """Override this method.
-    Flush any cached information and finish writing the output
-    representation."""
-    raise NotImplementedError
-
 
 class MailedOutput(OutputBase):
 
-  def start(self, subject_line, group, params):
+  def get_prefix(self, subject_line, group, params):
     # whitespace (or another character) separated list of addresses
     # which must be split into a clean list
     to_addr_in = self.cfg.get('to_addr', group, params)
@@ -318,7 +312,7 @@ class MailedOutput(OutputBase):
 class SMTPOutput(MailedOutput):
   "Deliver a mail message to an MTA using SMTP."
 
-  def finish(self, contents):
+  def deliver(self, subject_line, group, params, body):
     """
     Send email via SMTP or SMTP_SSL, logging in if username is
     specified.
@@ -332,6 +326,8 @@ class SMTPOutput(MailedOutput):
     reported to stderr and re-raised. These should be considered fatal
     (to minimize the chances of said lockout).
     """
+
+    prefix = self.get_prefix(subject_line, group, params)
 
     if self.cfg.is_set('general.smtp_port'):
        smtp_port = self.cfg.general.smtp_port
@@ -358,7 +354,7 @@ class SMTPOutput(MailedOutput):
           # Any error at login is fatal
           raise
 
-      server.sendmail(self.from_addr, self.to_addrs, contents)
+      server.sendmail(self.from_addr, self.to_addrs, prefix + body)
 
     ### TODO: 'raise .. from' is Python 3+. When we convert this
     ###       script to Python 3, uncomment 'from detail' below
@@ -394,15 +390,12 @@ class StandardOutput(OutputBase):
   def get_encoding(self):
     return sys.stdout.encoding if PY3 else 'utf-8'
 
-  def start(self, subject_line, group, params):
-    return (
-        ("Group: " + (group or "defaults") + "\n")
-      + ("Subject: %s\n\n" % (subject_line,))
-      ).encode()
-
-  def finish(self, contents):
-    _stdout.write(contents)
-
+  def deliver(self, subject_line, group, params, body):
+      _stdout.write((
+                        ("Group: " + (group or "defaults") + "\n")
+                      + ("Subject: %s\n\n" % (subject_line,))
+                    ).encode()
+                    + body)
 
 
 class PipeOutput(MailedOutput):
@@ -414,7 +407,9 @@ class PipeOutput(MailedOutput):
     # figure out the command for delivery
     self.cmd = cfg.general.mail_command.split()
 
-  def finish(self, contents):
+  def deliver(self, subject_line, group, params, body):
+    prefix = self.get_prefix(subject_line, group, params)
+
     ### gotta fix this. this is pretty specific to sendmail and qmail's
     ### mailwrapper program. should be able to use option param substitution
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
@@ -422,7 +417,7 @@ class PipeOutput(MailedOutput):
     # construct the pipe for talking to the mailer
     self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                  close_fds=sys.platform != "win32")
-    self.pipe.write(contents)
+    self.pipe.write(prefix + body)
 
     # signal that we're done sending content
     self.pipe.stdin.close()
