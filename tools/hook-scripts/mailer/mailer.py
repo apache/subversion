@@ -168,17 +168,20 @@ def remove_leading_slashes(path):
 class Writer:
   "Simple class for writing strings/binary, with optional encoding."
 
-  def __init__(self, write_func, encoding='utf-8'):
-    self.write_binary = write_func
+  def __init__(self, encoding):
+    self.buffer = BytesIO()
+
+    # Attach a couple functions to SELF, rather than methods.
+    self.write_binary = self.buffer.write
 
     if codecs.lookup(encoding) != codecs.lookup('utf-8'):
       def _write(s):
         "Write text string S using the given encoding."
-        return write_func(s.encode(encoding, 'backslashreplace'))
+        return self.buffer.write(s.encode(encoding, 'backslashreplace'))
     else:
       def _write(s):
         "Write text string S using the *default* encoding (utf-8)."
-        return write_func(to_bytes(s))
+        return self.buffer.write(to_bytes(s))
     self.write = _write
 
 
@@ -191,19 +194,30 @@ class OutputBase:
     self._CHUNKSIZE = 128 * 1024
 
   def send(self, basic_subject, group, params, long_func, short_func):
-      writer = self.start(basic_subject, group, params)
+      writer = Writer(self.get_encoding())
 
       try:
           try:
               long_func(writer)
           except MessageTooLarge:
+              writer.buffer.truncate(0)
               short_func(writer)
-
-          self.finish()
       except MessageSendFailure:
         return True  # failed
 
+      ### use modified start/finish mechanism for minimal textual change.
+      prefix = self.start(basic_subject, group, params)
+      self.finish(prefix + writer.buffer.getvalue())
+
       return False  # succeeded
+
+  def get_encoding(self):
+    """Get the encoding for text-to-bytes in the output.
+
+    This will default to UTF-8. If the output mechanism needs a different
+    encoding, then override this method to provide the custom encoding.
+    """
+    return 'utf-8'
 
   def start(self, basic_subject, group, params):
     """Override this method.
@@ -216,11 +230,11 @@ class OutputBase:
     in the configuration file, plus the key 'author' contains the author
     of the action being reported.
 
-    Return a Writer instance.
+    Return bytes() for the prefix of the content to deliver.
     """
     raise NotImplementedError
 
-  def finish(self):
+  def finish(self, contents):
     """Override this method.
     Flush any cached information and finish writing the output
     representation."""
@@ -256,8 +270,8 @@ class MailedOutput(OutputBase):
                                and self.reply_to[2] == ']':
       self.reply_to = self.reply_to[3:]
 
-    ### NOTE: no Writer to return :(
-    return None
+    # Return the prefix for the mail message.
+    return self.mail_headers(subject_line, group)
 
   def _rfc2047_encode(self, hdr):
     # Return the result of splitting HDR into tokens (on space
@@ -299,23 +313,13 @@ class MailedOutput(OutputBase):
               os.path.basename(self.repos.repos_dir))
     if self.reply_to:
       hdrs = '%sReply-To: %s\n' % (hdrs, self.reply_to)
-    return hdrs + '\n'
+    return (hdrs + '\n').encode()
 
 
 class SMTPOutput(MailedOutput):
   "Deliver a mail message to an MTA using SMTP."
 
-  def start(self, subject_line, group, params):
-    MailedOutput.start(self, subject_line, group, params)
-
-    self.buffer = BytesIO()
-    writer = Writer(self.buffer.write)
-
-    writer.write(self.mail_headers(subject_line, group))
-
-    return writer
-
-  def finish(self):
+  def finish(self, contents):
     """
     Send email via SMTP or SMTP_SSL, logging in if username is
     specified.
@@ -355,7 +359,7 @@ class SMTPOutput(MailedOutput):
           # Any error at login is fatal
           raise
 
-      server.sendmail(self.from_addr, self.to_addrs, self.buffer.getvalue())
+      server.sendmail(self.from_addr, self.to_addrs, contents)
 
     ### TODO: 'raise .. from' is Python 3+. When we convert this
     ###       script to Python 3, uncomment 'from detail' below
@@ -388,17 +392,18 @@ class SMTPOutput(MailedOutput):
 class StandardOutput(OutputBase):
   "Print the commit message to stdout."
 
+  def get_encoding(self):
+    return sys.stdout.encoding if PY3 else 'utf-8'
+
   def start(self, subject_line, group, params):
-    encoding = sys.stdout.encoding if PY3 else 'utf-8'
-    writer = Writer(_stdout.write, encoding)
+    return (
+        ("Group: " + (group or "defaults") + "\n")
+      + ("Subject: %s\n\n" % (subject_line,))
+      ).encode()
 
-    writer.write("Group: " + (group or "defaults") + "\n")
-    writer.write("Subject: %s\n\n" % (subject_line,))
+  def finish(self, contents):
+    _stdout.write(contents)
 
-    return writer
-
-  def finish(self):
-    pass
 
 
 class PipeOutput(MailedOutput):
@@ -410,9 +415,7 @@ class PipeOutput(MailedOutput):
     # figure out the command for delivery
     self.cmd = cfg.general.mail_command.split()
 
-  def start(self, subject_line, group, params):
-    MailedOutput.start(self, subject_line, group, params)
-
+  def finish(self, contents):
     ### gotta fix this. this is pretty specific to sendmail and qmail's
     ### mailwrapper program. should be able to use option param substitution
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
@@ -420,14 +423,8 @@ class PipeOutput(MailedOutput):
     # construct the pipe for talking to the mailer
     self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
                                  close_fds=sys.platform != "win32")
-    writer = Writer(self.pipe.stdin.write)
+    self.pipe.write(contents)
 
-    # start writing out the mail message
-    writer.write(self.mail_headers(subject_line, group))
-
-    return writer
-
-  def finish(self):
     # signal that we're done sending content
     self.pipe.stdin.close()
 
