@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 # -*- coding: utf-8 -*-
 #
-#
 # Licensed to the Apache Software Foundation (ASF) under one
 # or more contributor license agreements.  See the NOTICE file
 # distributed with this work for additional information
@@ -1535,3 +1534,13 @@ if the property was added, modified or deleted, respectively.
 #     o look up authors (username -> email; for the From: header) in a
 #       file(s) or DBM
 # * get rid of global functions that should properly be class methods
+
+#
+# For Emacs, we want to move towards the standard 4-space indent. It
+# inspects the current formatting of this file, and sets 2-space.
+# Override that with a 4-space indent.
+#
+# Local Variables:
+# python-indent-offset: 4
+# End:
+#
