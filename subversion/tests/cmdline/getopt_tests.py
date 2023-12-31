@@ -81,7 +81,7 @@ del_lines_res = [
                  re.compile(r"\* Plaintext cache.*"),
                  re.compile(r"\* Gnome Keyring"),
                  re.compile(r"\* GPG-Agent"),
-                 re.compile(r"\* Mac OS X Keychain"),
+                 re.compile(r"\* macOS Keychain"),
                  re.compile(r"\* KWallet \(KDE\)"),
                 ]
 
