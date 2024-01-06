@@ -25,7 +25,7 @@
 ######################################################################
 
 # General modules
-import os, logging, base64, functools
+import os, logging, base64, functools, time
 
 # Our testing module
 import svntest
@@ -351,6 +351,9 @@ def simple_diff_with_pristine(sbox):
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')
 
+  # Sleep to ensure timestamps change
+  time.sleep(1.1)
+
   sbox.simple_append('file', 'bar\n', truncate=True)
 
   diff_output = svntest.verify.make_diff_header(
@@ -382,6 +385,9 @@ def simple_diff_without_pristine(sbox):
   sbox.simple_append('file', 'foo\n')
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')
+
+  # Sleep to ensure timestamps change
+  time.sleep(1.1)
 
   sbox.simple_append('file', 'bar\n', truncate=True)
 
@@ -415,6 +421,9 @@ def simple_revert_with_pristine(sbox):
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')
 
+  # Sleep to ensure timestamps change
+  time.sleep(1.1)
+
   sbox.simple_append('file', 'bar\n', truncate=True)
 
   svntest.actions.run_and_verify_revert([sbox.ospath('file')])
@@ -446,6 +455,9 @@ def simple_revert_without_pristine(sbox):
   sbox.simple_append('file', 'foo\n')
   sbox.simple_add('file')
   sbox.simple_commit(message='r1')
+
+  # Sleep to ensure timestamps change
+  time.sleep(1.1)
 
   sbox.simple_append('file', 'bar\n', truncate=True)
 
