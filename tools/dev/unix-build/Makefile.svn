@@ -169,6 +169,9 @@ if [ -x /bin/sha256 ]; then \
 elif [ -x /usr/bin/sha256sum ]; then \
 	(cd $(DISTDIR) && \
 		echo "${SHA256_${1}} ${1}" | /usr/bin/sha256sum --quiet --check); \
+elif [ -x /sbin/sha256sum ]; then \
+	(cd $(DISTDIR) && \
+		echo "${SHA256_${1}} ${1}" | /sbin/sha256sum --quiet --check /dev/stdin); \
 elif [ -x /usr/bin/shasum ]; then \
         echo "${SHA256_${1}}  ${1}"; \
         (cd $(DISTDIR) && \
