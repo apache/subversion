@@ -263,6 +263,7 @@ revert_restore_handle_copied_dirs(svn_boolean_t *removed_self,
 static svn_error_t *
 revert_wc_data(svn_boolean_t *run_wq,
                svn_boolean_t *notify_required,
+               svn_boolean_t *notify_noaccess,
                svn_wc__db_t *db,
                const char *local_abspath,
                svn_wc__db_status_t status,
@@ -309,6 +310,7 @@ revert_restore(svn_boolean_t *run_wq,
   svn_wc__db_status_t status;
   svn_node_kind_t kind;
   svn_boolean_t notify_required;
+  svn_boolean_t notify_noaccess;
   const apr_array_header_t *conflict_files;
   svn_filesize_t recorded_size;
   apr_time_t recorded_time;
@@ -398,7 +400,7 @@ revert_restore(svn_boolean_t *run_wq,
   if (!metadata_only)
     {
       SVN_ERR(revert_wc_data(run_wq,
-                             &notify_required,
+                             &notify_required, &notify_noaccess,
                              db, local_abspath, status, kind,
                              reverted_kind, recorded_size, recorded_time,
                              copied_here, use_commit_times,
@@ -419,12 +421,19 @@ revert_restore(svn_boolean_t *run_wq,
         }
     }
 
-  if (notify_func && notify_required)
-    notify_func(notify_baton,
-                svn_wc_create_notify(local_abspath, svn_wc_notify_revert,
-                                     scratch_pool),
-                scratch_pool);
-
+  if (notify_func)
+    {
+      if (notify_required)
+        notify_func(notify_baton,
+                    svn_wc_create_notify(local_abspath, svn_wc_notify_revert,
+                                         scratch_pool),
+                    scratch_pool);
+      else if (notify_noaccess)
+        notify_func(notify_baton,
+                    svn_wc_create_notify(local_abspath, svn_wc_notify_revert_noaccess,
+                                         scratch_pool),
+                    scratch_pool);
+    }
   if (depth == svn_depth_infinity && kind == svn_node_dir)
     {
       apr_pool_t *iterpool = svn_pool_create(scratch_pool);
@@ -482,6 +491,7 @@ revert_restore(svn_boolean_t *run_wq,
 static svn_error_t *
 revert_wc_data(svn_boolean_t *run_wq,
                svn_boolean_t *notify_required,
+               svn_boolean_t *notify_noaccess,
                svn_wc__db_t *db,
                const char *local_abspath,
                svn_wc__db_status_t status,
@@ -661,11 +671,23 @@ revert_wc_data(svn_boolean_t *run_wq,
                         }
                       else if (!needs_lock_prop && read_only)
                         {
-                          SVN_ERR(svn_io_set_file_read_write(local_abspath,
-                                                             FALSE,
-                                                             scratch_pool));
-                          *notify_required = TRUE;
-                        }
+                          /* If there is already W on the file, it is owned by
+			   * some other user. Then svn_io_set_file_read_write
+			   * will return without making any changes and the 
+			   * user will get a spurious "Reverted" message.
+			   * Only checking for user's W since that is the only
+			   * one set by svn_io_set_file_read_write()
+			   * Issue #4622 */
+                          if (finfo.protection |  APR_UWRITE)
+                            *notify_noaccess = TRUE;
+                          else
+                            {
+                              SVN_ERR(svn_io_set_file_read_write(local_abspath,
+                                                                 FALSE,
+                                                                 scratch_pool));
+                              *notify_required = TRUE;
+                            }
+			}
                     }
 
 #if !defined(WIN32) && !defined(__OS2__)

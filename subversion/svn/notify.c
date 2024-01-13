@@ -450,6 +450,11 @@ notify_body(struct notify_baton *nb,
                                  path_local));
       break;
 
+    case svn_wc_notify_revert_noaccess:
+      SVN_ERR(svn_cmdline_printf(pool, _("User doesn't have WRITE permissions to file '%s' and the file isn't svn:needslock. But the file is already writeable. Probably owned by another user."),
+			      path_local));
+      break;
+
     case svn_wc_notify_failed_revert:
       SVN_ERR(svn_cmdline_printf(pool, _("Failed to revert '%s' -- "
                                          "try updating instead.\n"),
