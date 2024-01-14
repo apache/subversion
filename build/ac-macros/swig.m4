@@ -252,6 +252,10 @@ suitable Ruby interpreter is not found."
       if test "$SWIG" = "none"; then
         AC_MSG_WARN([You specified to build SWIG Ruby bindings, but SWIG is not found.])
         SWIG_RB_ERRMSG="SWIG is need to build SWIG Ruby bindings, but it is not found."
+      elif test x"$SWIG_VERSION" = x"4""02""000"; then
+        ruby_swig_issue_2751='https://github.com/swig/swig/issues/2751'
+        AC_MSG_WARN([Ruby bindings cannot be built with swig 4.2.0; see $ruby_swig_issue_2751])
+        SWIG_RB_ERRMSG="SWIG 4.2.0 was found but it cannot be used for building SWIG Ruby bindings."
       else
         if test x"$SWIG_VERSION" = x"3""00""008"; then
           # Use a local variable to escape the '#' sign.

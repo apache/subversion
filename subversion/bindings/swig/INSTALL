@@ -92,6 +92,9 @@ Step 1: [Optional] Install a suitable version of SWIG
         (See https://sourceforge.net/p/swig/news/2016/06/swig-3010-released/)
       - For Perl 5.16 and later, SWIG 2.0.8 or later is required.
       - For Ruby bindings, SWIG 3.0.8 is not supported.
+        (See https://github.com/swig/swig/issues/602)
+      - For Ruby bindings, SWIG 4.2.0 is broken. 
+        (See https://github.com/swig/swig/issues/2751)
 
     * Perhaps your distribution packages a suitable version of SWIG.
       If so, install it and skip to the last bullet point of this
