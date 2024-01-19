@@ -29,13 +29,6 @@ Candidate changes:
    Votes:
      +1: dsahlberg, hartmannathan
 
- * r1914518
-   Fix inconsistency in path argment on Config.which_group()
-   Justification:
-     Bug fix.
-   Votes:
-     +1: futatuki, dsahlberg
-
  * r1912632
    Fix `invalid escape sequence` in Python scripts to prevent many
    `SyntaxWarning`s since Python 3.12.
@@ -58,3 +51,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1914518
+   Fix inconsistency in path argment on Config.which_group()
+   Justification:
+     Bug fix.
+   Votes:
+     +1: futatuki, dsahlberg
