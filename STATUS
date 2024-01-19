@@ -45,6 +45,14 @@ Candidate changes:
    Votes:
      +1: dsahlberg
 
+ * r1915316
+   swig-py: Fix `none_dealloc` error caused by reference count issue in
+   `apply_textdelta` invoked from `svn.repos.replay()`.
+   Justification:
+     Fix Python interpreter crash which often occurs with large repositories.
+   Votes:
+     +1: jun66j5
+
 Veto-blocked changes:
 =====================
 
