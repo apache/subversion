@@ -331,6 +331,33 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     finally:
       stream.close()
 
+  def test_parse_fns3_apply_textdelta_handler_refcount(self):
+    handler = lambda node_baton: None
+    handler_ref = weakref.ref(handler)
+
+    class ParseFns3(repos.ParseFns3):
+      def __init__(self, handler):
+        self.called = set()
+        self.handler = handler
+      def apply_textdelta(self, node_baton):
+        self.called.add('apply_textdelta')
+        return self.handler
+
+    dumpfile = os.path.join(os.path.dirname(__file__), 'data',
+                            'repository-deltas.dump')
+    pool = Pool()
+    subpool = Pool(pool)
+    parser = ParseFns3(handler)
+    ptr, baton = repos.make_parse_fns3(parser, subpool)
+    with open(dumpfile, "rb") as stream:
+      repos.parse_dumpstream3(stream, ptr, baton, False, None)
+    del ptr, baton, stream
+
+    self.assertIn('apply_textdelta', parser.called)
+    self.assertNotEqual(None, handler_ref())
+    del parser, handler, subpool, ParseFns3
+    self.assertEqual(None, handler_ref())
+
   def test_get_logs(self):
     """Test scope of get_logs callbacks"""
     logs = []
@@ -426,6 +453,32 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                        % repr(baton))
     self.assertEqual(sys.getrefcount(e_ptr), 2,
                      "leak on editor baton after replay with an error")
+
+  def test_delta_editor_apply_textdelta_handler_refcount(self):
+    handler = lambda textdelta: None
+    handler_ref = weakref.ref(handler)
+
+    class Editor(delta.Editor):
+      def __init__(self, handler):
+        self.called = set()
+        self.handler = handler
+      def apply_textdelta(self, file_baton, base_checksum, pool=None):
+        self.called.add('apply_textdelta')
+        return self.handler
+
+    pool = Pool()
+    subpool = Pool(pool)
+    root = fs.revision_root(self.fs, 3)  # change of trunk/README.txt
+    editor = Editor(handler)
+    e_ptr, e_baton = delta.make_editor(editor, subpool)
+    repos.replay(root, e_ptr, e_baton, subpool)
+    del e_ptr, e_baton
+
+    self.assertIn('apply_textdelta', editor.called)
+    self.assertNotEqual(None, handler_ref())
+    del root, editor, handler, Editor
+    del subpool
+    self.assertEqual(None, handler_ref())
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""
