@@ -44,13 +44,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1914518
-   Fix inconsistency in path argment on Config.which_group()
-   Justification:
-     Bug fix.
-   Votes:
-     +1: futatuki, dsahlberg
-
  * r1915316
    swig-py: Fix `none_dealloc` error caused by reference count issue in
    `apply_textdelta` invoked from `svn.repos.replay()`.
