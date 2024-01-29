@@ -512,6 +512,8 @@ revert_wc_data(svn_boolean_t *run_wq,
   svn_boolean_t special;
 #endif
 
+  *notify_noaccess = FALSE; /* notify_required is reset elsewhere */
+  
   /* Would be nice to use svn_io_dirent2_t here, but the performance
      improvement that provides doesn't work, because we need the read
      only and executable bits later on, in the most likely code path */
@@ -678,7 +680,7 @@ revert_wc_data(svn_boolean_t *run_wq,
 			   * Only checking for user's W since that is the only
 			   * one set by svn_io_set_file_read_write()
 			   * Issue #4622 */
-                          if (finfo.protection |  APR_UWRITE)
+                          if (finfo.protection & APR_UWRITE)
                             *notify_noaccess = TRUE;
                           else
                             {
