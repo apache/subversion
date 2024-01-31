@@ -574,9 +574,14 @@ accept_connection(connection_t **connection,
     || APR_STATUS_IS_ECONNABORTED(status)
     || APR_STATUS_IS_ECONNRESET(status));
 
-  return status
-       ? svn_error_wrap_apr(status, _("Can't accept client connection"))
-       : SVN_NO_ERROR;
+  if (!status)
+    return SVN_NO_ERROR;
+#if APR_HAVE_SIGACTION
+  else if (sigtermint_seen)
+    return SVN_NO_ERROR;
+#endif
+  else
+    return svn_error_wrap_apr(status, _("Can't accept client connection"));
 }
 
 /* Add a reference to CONNECTION, i.e. keep it and it's pool valid unless
