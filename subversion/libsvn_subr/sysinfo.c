@@ -1404,13 +1404,10 @@ release_name_from_version(int major, int minor, const char* product_name)
             }
           break;
 
-        case 11:
-          return "Big Sur";
-          break;
-
-        case 12:
-          return "Monterey";
-          break;
+        case 11: return "Big Sur";
+        case 12: return "Monterey";
+        case 13: return "Ventura";
+        case 14: return "Sonoma";
         }
     }
   return NULL;

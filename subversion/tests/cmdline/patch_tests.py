@@ -3433,7 +3433,7 @@ def patch_one_property(sbox, trailing_eol):
     value = "v\n"
   else:
     value = "v"
-    unidiff_patch += ['\ No newline at end of property\n']
+    unidiff_patch += ['\\ No newline at end of property\n']
 
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')
 
@@ -5807,7 +5807,7 @@ def patch_binary_file(sbox):
     'Added: svn:mime-type\n',
     '## -0,0 +1 ##\n',
     '+application/binary\n',
-    '\ No newline at end of property\n',
+    '\\ No newline at end of property\n',
   ]
 
   _, diff_output, _ = svntest.actions.run_and_verify_svn(expected_output, [],
@@ -6005,7 +6005,7 @@ def patch_final_eol(sbox):
    '@@ -1 +1 @@\n',
    '-This is the file \'mu\'.\n',
    '+This is the file \'mu\'.\n',
-   '\ No newline at end of file\n',
+   '\\ No newline at end of file\n',
    'Index: iota\n',
    '===================================================================\n',
    '--- iota\t(revision 1)\n',
@@ -6013,7 +6013,7 @@ def patch_final_eol(sbox):
    '@@ -1 +1 @@\n',
    '-This is the file \'iota\'.\n',
    '+This is the file \'iota\'.\n',
-   '\ No newline at end of file' # Missing EOL
+   '\\ No newline at end of file' # Missing EOL
   ]
 
   patch = sbox.get_tempname('patch')
@@ -6073,7 +6073,7 @@ def patch_final_eol(sbox):
     '+++ A/mu\t(working copy)\n',
     '@@ -1 +1 @@\n',
     '-This is the file \'mu\'.\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '+This is the file \'mu\'.\n',
     'Index: iota\n',
     '===================================================================\n',
@@ -6081,7 +6081,7 @@ def patch_final_eol(sbox):
     '+++ iota\t(working copy)\n',
     '@@ -1 +1 @@\n',
     '-This is the file \'iota\'.\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '+This is the file \'iota\'.' # Missing eol
   ]
 
@@ -6746,9 +6746,9 @@ def patch_add_remove_executable(sbox):
   sbox.build()
   wc_dir = sbox.wc_dir
 
-  eicar_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
+  eicar_data = 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$' \
                'EICAR-STANDARD-ANTIVIRUS-TEST-FILE!$H+H*\0'
-  other_data = 'X5O!P%@AP[4\PZX54(P^)7CC)7}$' \
+  other_data = 'X5O!P%@AP[4\\PZX54(P^)7CC)7}$' \
                'SOME-LESS-INTERESTING-OTHER-TEXT!!!$H+H*\0' \
                '\0\0\0\0\0\0\0\0'
 
@@ -6912,7 +6912,7 @@ def patch_git_symlink(sbox):
     '+++ b/link-to-iota\n',
     '@@ -0,0 +1 @@\n',
     '+iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
 
   patch_edit = [
@@ -6922,9 +6922,9 @@ def patch_git_symlink(sbox):
     '+++ b/link-to-iota\n',
     '@@ -1 +1 @@\n',
     '-iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '+A/mu\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
 
   patch_to_file = [
@@ -6935,7 +6935,7 @@ def patch_git_symlink(sbox):
     '+++ /dev/null\n',
     '@@ -1 +0,0 @@\n',
     '-A/mu\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     'diff --git a/link-to-iota b/link-to-iota\n',
     'new file mode 100644\n',
     'index 0000000..1b130bf\n',
@@ -7039,7 +7039,7 @@ def patch_like_git_symlink(sbox):
     '+++ b/link-to-iota\n',
     '@@ -0,0 +1 @@\n',
     '+iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
 
   patch_edit = [
@@ -7049,9 +7049,9 @@ def patch_like_git_symlink(sbox):
     '+++ b/link-to-iota\n',
     '@@ -1 +1 @@\n',
     '-iota\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     '+A/mu\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
   ]
 
   patch_to_file = [
@@ -7062,7 +7062,7 @@ def patch_like_git_symlink(sbox):
     '+++ /dev/null\n',
     '@@ -1 +0,0 @@\n',
     '-A/mu\n',
-    '\ No newline at end of file\n',
+    '\\ No newline at end of file\n',
     'diff --git a/link-to-iota b/link-to-iota\n',
     'new file mode 100644\n',
     'index 0000000..1b130bf\n',
@@ -7709,7 +7709,7 @@ def patch_merge(sbox):
       ' J\n'
       ' K\n'
       ' L\n'
-      '\ No newline at end of file', mode='wb')
+      '\\ No newline at end of file', mode='wb')
 
   expected_skip = wc.State('', { })
   expected_output = wc.State(wc_dir, {
@@ -7735,7 +7735,7 @@ def patch_merge(sbox):
       ' J\n'
       ' K\n'
       ' L\n'
-      '\ No newline at end of file', mode='wb')
+      '\\ No newline at end of file', mode='wb')
 
   svntest.actions.run_and_verify_patch(wc_dir, local_patch,
                                        expected_output, None,
@@ -7871,7 +7871,7 @@ def patch_empty_prop(sbox):
     value = "v\n"
   else:
     value = "v"
-    unidiff_patch += ['\ No newline at end of property\n']
+    unidiff_patch += ['\\ No newline at end of property\n']
 
   patch_file_path = sbox.get_tempname('my.patch')
   svntest.main.file_write(patch_file_path, ''.join(unidiff_patch), 'wb')

@@ -726,7 +726,10 @@ class NodeRev(object):
         self.text = TextRep(rev, offset, length, size, digest,
                             contentType, currentRev, self, sha1, uniquifier)
       elif field == 'props':
-        (rev, offset, length, size, digest) = value.split(' ')
+        if len(value.split(' ')) == 5:
+          (rev, offset, length, size, digest) = value.split(' ')
+        else:
+          (rev, offset, length, size, digest, sha1, uniquifier) = value.split(' ')
         rev = int(rev)
         offset = int(offset)
         length = int(length)

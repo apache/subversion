@@ -91,8 +91,8 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
+  err_re = r"(svn\: E195022\: File '.*iota' is locked in another)|" + \
+           r"(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -112,8 +112,8 @@ def lock_file(sbox):
   # change the locked file's properties
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
-  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039\: User '?jconstant'? does not own lock on path)"
+  err_re = r"(svn\: E195022\: File '.*iota' is locked in another)|" + \
+           r"(svn\: E160039\: User '?jconstant'? does not own lock on path)"
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
@@ -1275,8 +1275,8 @@ def ls_url_encoded(sbox):
                                      [], "lock", fname)
 
   # Make sure ls shows it being locked.
-  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f|" \
-                    " +2 " + re.escape(svntest.main.wc_author) + "    .+\./"
+  expected_output = r" +2 %(author)s +O .+f| +2 %(author)s    .+\./" % \
+                    {'author': re.escape(svntest.main.wc_author)}
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      "list", "-v", dirname)
 

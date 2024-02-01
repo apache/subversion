@@ -39,7 +39,7 @@ jar file with --with-junit when running configure; JUnit version 4.11
 has been tested.  JUnit can be downloaded from https://junit.org/ .)
 
 
-MacOS X:
+MacOS:
 
 After building libsvnjavahl.dylib, you must rename it to
 libsvnjavahl.jnilib. Make install-javahl creates a symbolic

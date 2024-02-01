@@ -471,8 +471,7 @@ def parse_log_output(log_lines, with_diffs=False):
 
   # Regular expression to match the header line of a log message, with
   # these groups: (revision number), (author), (date), (num lines).
-  header_re = re.compile('^r([0-9]+) \| ' \
-                         + '([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
+  header_re = re.compile(r'^r([0-9]+) \| ([^|]*) \| ([^|]*) \| ([0-9]+) lines?')
 
   # The log chain to return.
   chain = []
@@ -984,10 +983,10 @@ PROPS-END
 
   # Verify the output contains either the expected fuzzy escape
   # sequence, or the literal control char.
-  match_unescaped_ctrl_re = "This msg contains a Ctrl-T \(.\) " \
-                            "and a Ctrl-I \(\t\)\."
-  match_escaped_ctrl_re = "^This msg contains a Ctrl-T \(\?\\\\020\) " \
-                          "and a Ctrl-I \(\t\)\."
+  match_unescaped_ctrl_re = r"This msg contains a Ctrl-T \(.\) " \
+                            r"and a Ctrl-I \(\t\)\."
+  match_escaped_ctrl_re = r"^This msg contains a Ctrl-T \(\?\\020\) " \
+                          r"and a Ctrl-I \(\t\)\."
   matched = None
   for line in output:
     if re.match(match_unescaped_ctrl_re, line) \
@@ -1490,8 +1489,8 @@ def retrieve_revprops(sbox):
 
   # Can't set revprops with log.
   svntest.actions.run_and_verify_log_xml(
-    expected_stderr=(".*cannot assign with 'with-revprop' option"
-                     " \(drop the '='\)"),
+    expected_stderr=(r".*cannot assign with 'with-revprop' option"
+                     r" \(drop the '='\)"),
     args=['--with-revprop=foo=bar'])
 
   # basic test without revprop options
@@ -2670,8 +2669,8 @@ def log_revision_move_copy(sbox):
                                      '-r2')
 
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r3\ .*\n',
+    r'-+\n',
+    r'r3 .*\n',
     re.escape('Changed paths:\n'),
     re.escape('   D /A/B/E\n'),
     re.escape('   A /E (from /A/B/E:2)\n'), # Patched - Direct move
@@ -2680,7 +2679,7 @@ def log_revision_move_copy(sbox):
     re.escape('   D /iota\n'),
     re.escape('   A /iotb (from /iota:2)\n'), # Patched - Direct move
     re.escape('   A /mutb (from /A/mu:1)\n'), # Copy (always r1)
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox.wc_dir,

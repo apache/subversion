@@ -241,6 +241,12 @@ notify(void *baton, const svn_wc_notify_t *n, apr_pool_t *pool)
         goto print_error;
       break;
 
+    case svn_wc_notify_revert_noaccess:
+      if ((err = svn_cmdline_printf(pool, _("User doesn't have WRITE permissions to file '%s' and the file isn't svn:needslock. But the file is already writeable. Probably owned by another user."),
+                                    path_local)))
+        goto print_error;
+      break;
+
     case svn_wc_notify_failed_revert:
       if (( err = svn_cmdline_printf(pool, _("Failed to revert '%s' -- "
                                              "try updating instead.\n"),

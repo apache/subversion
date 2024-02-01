@@ -566,20 +566,6 @@ run_file_install(work_item_baton_t *wqb,
                                          db, wcroot_abspath,
                                          scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
-                               &repos_root_url, NULL, &changed_rev, NULL,
-                               &changed_author, NULL, NULL, NULL, NULL,
-                               NULL, NULL, NULL, &lock, NULL, NULL,
-                               NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
-                               db, local_abspath,
-                               scratch_pool, scratch_pool));
-  /* Handle special statuses (e.g. added) */
-  if (!repos_relpath)
-     SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
-                                        &repos_root_url, NULL,
-                                        db, local_abspath,
-                                        scratch_pool, scratch_pool));
-
   is_special = svn_prop_get_value(props, SVN_PROP_SPECIAL) != NULL;
   is_executable = svn_prop_get_value(props, SVN_PROP_EXECUTABLE) != NULL;
   needs_lock = svn_prop_get_value(props, SVN_PROP_NEEDS_LOCK) != NULL;
@@ -588,10 +574,30 @@ run_file_install(work_item_baton_t *wqb,
   svn_subst_eol_style_from_value(&eol_style, &eol, eol_propval);
 
   keywords_propval = svn_prop_get_value(props, SVN_PROP_KEYWORDS);
+
+  /* Avoid this db work unless needed, in this hot codepath. */
+  if (keywords_propval || needs_lock)
+    SVN_ERR(svn_wc__db_read_info(&status, NULL, NULL, &repos_relpath,
+                                 &repos_root_url, NULL, &changed_rev, NULL,
+                                 &changed_author, NULL, NULL, NULL, NULL,
+                                 NULL, NULL, NULL, &lock, NULL, NULL,
+                                 NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL,
+                                 db, local_abspath,
+                                 scratch_pool, scratch_pool));
+ 
   if (keywords_propval)
     {
-      const char *url =
-        svn_path_url_add_component2(repos_root_url, repos_relpath, scratch_pool);
+      const char *url;
+                                           
+      /* Handle special statuses (e.g. added) */
+      if (!repos_relpath)
+        SVN_ERR(svn_wc__db_read_repos_info(NULL, &repos_relpath,
+                                           &repos_root_url, NULL,
+                                           db, local_abspath,
+                                           scratch_pool, scratch_pool));
+
+      url = svn_path_url_add_component2(repos_root_url, repos_relpath,
+                                        scratch_pool);
 
       SVN_ERR(svn_subst_build_keywords3(&keywords, keywords_propval,
                                         apr_psprintf(scratch_pool, "%ld",

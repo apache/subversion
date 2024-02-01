@@ -20,15 +20,6 @@
 # WARNING: This may or may not work on your system. This Makefile is
 # an example, rather than a ready-made universal solution.
 
-#   ****************************************************************
-#   **       IMPORTANT NOTE FOR SVN COMMITTERS:  READ THIS.       **
-#   **                                                            **
-#   ****************************************************************
-#   | This Makefile is used by the bb-openbsd buildbot             |
-#   | (http://ci.apache.org/builders/bb-openbsd). Please check     |
-#   | the bot's health after making changes to this file.          |
-#   |______________________________________________________________|
-
 PERL ?= yes
 ENABLE_PERL_BINDINGS = $(PERL)
 THREADING ?= yes
@@ -100,7 +91,7 @@ BRANCH_MAJOR	:= $(shell echo $(BRANCH) | sed -E 's/([0-9]+)\.([0-9]+)\..*/\1.\2/
 ifeq ($(BRANCH_MAJOR), $(filter 1.5 1.6 1.7 1.8 1.9 1.10 1.11 1.12 1.13, $(BRANCH_MAJOR)))
 PYTHON = python2
 else
-PYTHON = python
+PYTHON = python3
 endif
 SVN_REL_WC	= svn-$(WC)
 SVN_WC		= $(PWD)/$(SVN_REL_WC)
@@ -118,8 +109,8 @@ GNU_ICONV_VER	= 1.15
 APR_UTIL_VER	= 1.6.1
 PCRE_VER	= 8.41
 HTTPD_VER	= 2.4.37
-NEON_VER	= 0.30.2
-SERF_VER	= 1.3.9
+NEON_VER	= 0.32.5
+SERF_VER	= 1.3.10
 CYRUS_SASL_VER	= 2.1.28
 SQLITE_VER	= 3390400
 LIBMAGIC_VER	= 5.30
@@ -157,7 +148,7 @@ SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4
 SHA256_${GNU_ICONV_DIST} = ccf536620a45458d26ba83887a983b96827001e92a13847b45e4925cc8913178
 SHA256_${PCRE_DIST} = 244838e1f1d14f7e2fa7681b857b3a8566b74215f28133f14a8f5e59241b682c
 SHA256_${HTTPD_DIST} = aa97a834a32d51974be8d8a013b561e28d327387cb1da2c3c2762acd0146aabd
-SHA256_${NEON_DIST} = db0bd8cdec329b48f53a6f00199c92d5ba40b0f015b153718d1b15d3d967fbca
+SHA256_${NEON_DIST} = 4872e12f802572dedd4b02f870065814b2d5141f7dbdaf708eedab826b51a58a
 SHA256_${CYRUS_SASL_DIST} = 7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c
 SHA256_${SQLITE_DIST} = f31d445b48e67e284cf206717cc170ab63cbe4fd7f79a82793b772285e78fdbb
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
@@ -178,6 +169,13 @@ if [ -x /bin/sha256 ]; then \
 elif [ -x /usr/bin/sha256sum ]; then \
 	(cd $(DISTDIR) && \
 		echo "${SHA256_${1}} ${1}" | /usr/bin/sha256sum --quiet --check); \
+elif [ -x /sbin/sha256sum ]; then \
+	(cd $(DISTDIR) && \
+		echo "${SHA256_${1}} ${1}" | /sbin/sha256sum --quiet --check /dev/stdin); \
+elif [ -x /usr/bin/shasum ]; then \
+        echo "${SHA256_${1}}  ${1}"; \
+        (cd $(DISTDIR) && \
+                echo "${SHA256_${1}}  ${1}" | /usr/bin/shasum -a 256 -c /dev/stdin ); \
 else \
 	echo "Error: No tool found to verify checksum"; \
 	false; \
@@ -210,10 +208,9 @@ APR_URL		= https://svn.apache.org/repos/asf/apr/apr
 APR_ICONV_URL	= https://archive.apache.org/dist/apr/$(APR_ICONV_DIST)
 GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
 APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
-PCRE_URL	= https://ftp.pcre.org/pub/pcre/$(PCRE_DIST)
+PCRE_URL	= https://downloads.sourceforge.net/project/pcre/pcre/$(PCRE_VER)/$(PCRE_DIST)
 HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
-#NEON_URL	= http://webdav.org/neon/$(NEON_DIST)
-NEON_URL	= http://ftp.openbsd.org/pub/OpenBSD/distfiles/$(NEON_DIST)
+NEON_URL	= https://notroj.github.io/neon/$(NEON_DIST)
 SERF_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_VER)
 SQLITE_URL	= https://www.sqlite.org/2022/$(SQLITE_DIST)
 CYRUS_SASL_URL	= https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-${CYRUS_SASL_VER}/$(CYRUS_SASL_DIST)
@@ -893,6 +890,7 @@ $(NEON_OBJDIR)/.configured: $(NEON_OBJDIR)/.retrieved
 # compile neon
 $(NEON_OBJDIR)/.compiled: $(NEON_OBJDIR)/.configured
 	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
+	(cd $(NEON_OBJDIR) && env MAKEFLAGS= make docs)
 	touch $@
 
 # install neon
@@ -932,9 +930,7 @@ $(SERF_OBJDIR)/.retrieved:
 	[ -d $(SERF_OBJDIR) ] || mkdir -p $(SERF_OBJDIR)
 	if [ ! -d $(SERF_SRCDIR) ]; then \
 		svn co $(SERF_URL) $(SERF_SRCDIR); \
-		svn merge ^/serf/branches/1.3.x-sslbuild@1781542 $(SERF_SRCDIR); \
-		svn merge -c 1811083 ^/serf/trunk@1811083 $(SERF_SRCDIR); \
-		svn merge -c 1814604 ^/serf/trunk@1814604 $(SERF_SRCDIR); \
+		svn merge ^/serf/branches/1.3.x-sslbuild@1910116 $(SERF_SRCDIR); \
 	fi
 	touch $@
 
@@ -1807,7 +1803,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 	$(SWIG_PL_INCLUDES_HACK)
 	$(SWIG_PL_LINK_HACK)
 	cd $(svn_builddir) && \
-		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib -L$(PREFIX)/serf/lib $(SERF_LDFLAG) $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
+		env LDFLAGS="-L$(PREFIX)/neon/lib -L$(PREFIX)/apr/lib -L$(PREFIX)/serf/lib $(SERF_LDFLAG) -lcrypto -lssl $(LZ4_LDFLAG) -L$(PREFIX)/gettext/lib -L$(PREFIX)/iconv/lib" \
 			CC=$(CC) CXX=$(CXX) \
 			CFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \
 			CXXFLAGS="-I$(PREFIX)/gettext/include -DAPR_POOL_DEBUG" \

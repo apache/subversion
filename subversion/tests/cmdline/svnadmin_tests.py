@@ -58,17 +58,20 @@ def read_rep_cache(repo_dir):
   """
   db_path = os.path.join(repo_dir, 'db', 'rep-cache.db')
   db1 = svntest.sqlite3.connect(db_path)
-  schema1 = db1.execute("pragma user_version").fetchone()[0]
-  # Can't test newer rep-cache schemas with an old built-in SQLite; see the
-  # documentation of STMT_CREATE_SCHEMA_V2 in ../../libsvn_fs_fs/rep-cache-db.sql
-  if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
-    raise svntest.Failure("Can't read rep-cache schema %d using old "
-                          "Python-SQLite version %s < (3,8,2)" %
-                           (schema1,
-                            svntest.sqlite3.sqlite_version_info))
+  try:
+    schema1 = db1.execute("pragma user_version").fetchone()[0]
+    # Can't test newer rep-cache schemas with an old built-in SQLite; see the
+    # documentation of STMT_CREATE_SCHEMA_V2 in ../../libsvn_fs_fs/rep-cache-db.sql
+    if schema1 >= 2 and svntest.sqlite3.sqlite_version_info < (3, 8, 2):
+      raise svntest.Failure("Can't read rep-cache schema %d using old "
+                            "Python-SQLite version %s < (3,8,2)" %
+                             (schema1,
+                              svntest.sqlite3.sqlite_version_info))
 
-  content = { row[0]: row[1:] for row in
-              db1.execute("select * from rep_cache") }
+    content = { row[0]: row[1:] for row in
+                db1.execute("select * from rep_cache") }
+  finally:
+    db1.close()
   return content
 
 def check_hotcopy_bdb(src, dst):
@@ -1787,7 +1790,7 @@ def test_lslocks_and_rmlocks(sbox):
       "Owner: jrandom",
       "Created:.*",
       "Expires:.*",
-      "Comment \(1 line\):",
+      r"Comment \(1 line\):",
       "Locking files",
       "\n", # empty line
       ]
@@ -3511,8 +3514,8 @@ def dump_exclude(sbox):
 
   # Check log.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r1\ .*\n',
+    r'-+\n',
+    r'r1 .*\n',
     # '/A/D/H' and '/A/B/E' is not added.
     re.escape('Changed paths:\n'),
     re.escape('   A /A\n'),
@@ -3528,7 +3531,7 @@ def dump_exclude(sbox):
     re.escape('   A /A/D/gamma\n'),
     re.escape('   A /A/mu\n'),
     re.escape('   A /iota\n'),
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)
@@ -3564,18 +3567,18 @@ def dump_exclude_copysource(sbox):
 
   # Check log.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r2\ .*\n',
+    r'-+\n',
+    r'r2 .*\n',
     re.escape('Changed paths:\n'),
     # Simple add, not copy.
     re.escape('   A /branches/branch1\n'),
-    '-+\\n',
-    'r1\ .*\n',
+    r'-+\n',
+    r'r1 .*\n',
     # '/trunk' is not added.
     re.escape('Changed paths:\n'),
     re.escape('   A /branches\n'),
     re.escape('   A /tags\n'),
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)
@@ -3609,13 +3612,13 @@ def dump_include(sbox):
 
   # Check log.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r1\ .*\n',
+    r'-+\n',
+    r'r1 .*\n',
     # '/B' is not added.
     re.escape('Changed paths:\n'),
     re.escape('   A /A\n'),
     re.escape('   A /C\n'),
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)
@@ -3651,17 +3654,17 @@ def dump_not_include_copysource(sbox):
 
   # Check log.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r2\ .*\n',
+    r'-+\n',
+    r'r2 .*\n',
     re.escape('Changed paths:\n'),
     # Simple add, not copy.
     re.escape('   A /branches/branch1\n'),
-    '-+\\n',
-    'r1\ .*\n',
+    r'-+\n',
+    r'r1 .*\n',
     # Only '/branches' is added in r1.
     re.escape('Changed paths:\n'),
     re.escape('   A /branches\n'),
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)
@@ -3693,12 +3696,12 @@ def dump_exclude_by_pattern(sbox):
 
   # Check log.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r1\ .*\n',
+    r'-+\n',
+    r'r1 .*\n',
     re.escape('Changed paths:\n'),
     # Only '/bbc' is added in r1.
     re.escape('   A /bbc\n'),
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)
@@ -3730,14 +3733,14 @@ def dump_include_by_pattern(sbox):
 
   # Check log.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r1\ .*\n',
+    r'-+\n',
+    r'r1 .*\n',
     # '/bbc' is not added.
     re.escape('Changed paths:\n'),
     re.escape('   A /aaa\n'),
     re.escape('   A /aab\n'),
     re.escape('   A /aac\n'),
-    '-+\\n'
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)
@@ -3782,27 +3785,27 @@ def dump_exclude_all_rev_changes(sbox):
 
   # Check log. Revision properties ('svn:log' etc.) should be empty for r2.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r3 | jrandom | .* | 1 line\\n',
+    r'-+\n',
+    r'r3 \| jrandom \| .* \| 1 line\n',
     re.escape('Changed paths:'),
     re.escape('   A /r3a'),
     re.escape('   A /r3b'),
     re.escape('   A /r3c'),
     '',
     re.escape('Revision 3.'),
-    '-+\\n',
+    r'-+\n',
     re.escape('r2 | (no author) | (no date) | 1 line'),
     '',
     '',
-    '-+\\n',
-    'r1 | jrandom | .* | 1 line\\n',
+    r'-+\n',
+    r'r1 | jrandom | .* | 1 line\n',
     re.escape('Changed paths:'),
     re.escape('   A /r1a'),
     re.escape('   A /r1b'),
     re.escape('   A /r1c'),
     '',
     re.escape('Revision 1.'),
-    '-+\\n',
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v',  sbox2.repo_url)
@@ -3944,8 +3947,8 @@ def dump_include_copied_directory(sbox):
 
   # Check log.
   expected_output = svntest.verify.RegexListOutput([
-    '-+\\n',
-    'r2\ .*\n',
+    r'-+\n',
+    r'r2 .*\n',
     # Only '/COPY' is added
     re.escape('Changed paths:\n'),
     re.escape('   A /COPY'),
@@ -3958,9 +3961,9 @@ def dump_include_copied_directory(sbox):
     re.escape('   A /COPY/H/omega'),
     re.escape('   A /COPY/H/psi'),
     re.escape('   A /COPY/gamma'),
-    '-+\\n',
-    'r1\ .*\n',
-    '-+\\n'
+    r'-+\n',
+    r'r1 .*\n',
+    r'-+\n',
   ])
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'log', '-v', '-q', sbox2.repo_url)

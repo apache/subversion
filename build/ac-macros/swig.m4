@@ -116,7 +116,7 @@ AC_DEFUN(SVN_DETERMINE_SWIG_OPTS,
     SWIG_PY_OPTS="none"
     SWIG_PY_ERRMSG="check config.log for details"
     if test "$SWIG_PY_PYTHON" = "none"; then
-      SWIG_PY_ERRMSG="You specfied not to build Python bindings or \
+      SWIG_PY_ERRMSG="You specified not to build Python bindings or \
 suitable Python interpreter is not found."
     else
       if test "$SWIG" = "none"; then
@@ -217,7 +217,7 @@ suitable Python interpreter is not found."
 
     SWIG_PL_ERRMSG="check config.log for details"
     if test "$SWIG_PL_PERL" = "none"; then
-      SWIG_PL_ERRMSG="You specfied not to build Perl bindings or \
+      SWIG_PL_ERRMSG="You specified not to build Perl bindings or \
 suitable Perl interpreter is not found."
     else
       if test "$SWIG" = "none"; then
@@ -246,12 +246,16 @@ suitable Perl interpreter is not found."
     SWIG_RB_LINK="none"
     SWIG_RB_ERRMSG="check config.log for details"
     if test "$SWIG_RB_RUBY" = "none"; then
-      SWIG_RB_ERRMSG="You specfied not to build Ruby bindings or \
+      SWIG_RB_ERRMSG="You specified not to build Ruby bindings or \
 suitable Ruby interpreter is not found."
     else
       if test "$SWIG" = "none"; then
         AC_MSG_WARN([You specified to build SWIG Ruby bindings, but SWIG is not found.])
         SWIG_RB_ERRMSG="SWIG is need to build SWIG Ruby bindings, but it is not found."
+      elif test x"$SWIG_VERSION" = x"4""02""000"; then
+        ruby_swig_issue_2751='https://github.com/swig/swig/issues/2751'
+        AC_MSG_WARN([Ruby bindings cannot be built with swig 4.2.0; see $ruby_swig_issue_2751])
+        SWIG_RB_ERRMSG="SWIG 4.2.0 was found but it cannot be used for building SWIG Ruby bindings."
       else
         if test x"$SWIG_VERSION" = x"3""00""008"; then
           # Use a local variable to escape the '#' sign.
@@ -382,7 +386,7 @@ int main()
     SWIG_PY_OPTS="none"
     SWIG_PY_ERRMSG="check config.log for details"
     if test "$SWIG_PY_PYTHON" = "none"; then
-      SWIG_PY_ERRMSG="You specfied not to build Python bindings or \
+      SWIG_PY_ERRMSG="You specified not to build Python bindings or \
 suitable Python interpreter is not found."
     else
       AC_MSG_NOTICE([Configuring python swig binding])
@@ -439,7 +443,7 @@ suitable Python interpreter is not found."
 
     SWIG_PL_ERRMSG="check config.log for details"
     if test "$SWIG_PL_PERL" = "none"; then
-      SWIG_PL_ERRMSG="You specfied not to build Perl bindings or \
+      SWIG_PL_ERRMSG="You specified not to build Perl bindings or \
 suitable Perl interpreter is not found."
     else
       AC_MSG_CHECKING([perl version])
@@ -463,7 +467,7 @@ suitable Perl interpreter is not found."
     SWIG_RB_LINK="none"
     SWIG_RB_ERRMSG="check config.log for details"
     if test "$SWIG_RB_RUBY" = "none"; then
-      SWIG_RB_ERRMSG="You specfied not to build Ruby bindings or \
+      SWIG_RB_ERRMSG="You specified not to build Ruby bindings or \
 suitable Ruby interpreter is not found."
     else
       rbconfig="$SWIG_RB_RUBY -rrbconfig -e "

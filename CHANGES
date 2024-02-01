@@ -11,6 +11,42 @@ https://svn.apache.org/repos/asf/subversion/tags/1.15.0
   - Client-side improvements and bugfixes:
     * Support multiple working copy formats (1.8-onward, 1.15) (issue #????)
 
+  - Other tool improvements and bugfixes:
+    * When building on Unix, change default configure option to enable support
+      for the simple (plaintext) credential store unless disabled at configure
+      time with --disable-plaintext-password-storage. This reverts r1845377
+      (r1909351).
+
+Version 1.14.3
+(20 Dec 2023, from /branches/1.14.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.14.3
+ User-visible changes:
+  - Client-side bugfixes:
+    * Fix svn:mergeinfo diff parser bug when parsing forward merges (r1906502)
+    * Fix redirected URL handling with file externals (r1908926, issue #4911)
+
+  - Server-side bugfixes:
+    (none)
+
+ Developer-visible changes:
+    * swig-rb: Fix uses of 'File.exist?', deprecated since Ruby 2.1 (r1904472)
+    * Build: Fix uses of deprecated Python APIs (r1900882, issue #4899)
+    * Build: Retain ability to build SWIG Python 2 bindings (r1900890)
+    * Fix reading WC lock status with svn_wc_status2_t (r1904193, issue #4908)
+    * JavaHL: Add @Deprecated to silence compiler warnings (r1904936)
+    * JavaHL: Fix crash in case of null message in getMessage (r1904938)
+    * Fix build breakage of release tarballs by installed swig (r1878379 et al)
+    * Add regression test for issue #4711 "invalid xml file" (r1877310)
+    * swig-py: Fix building with SWIG 4.1.0 (r1904167)
+    * Makefile.in: Fix cleaning of __pycache__ dirs and *.pyc (r1903267)
+    * swig-py: Avoid deprecated options to SWIG >= 4.1.0 (r1904198, r1904287)
+    * swig-py: Use sysconfig to allow building with Python 3.12 (r1910098)
+    * INSTALL: Document not to use SVN with APR 1.7.3 on Windows (r1911278)
+    * Fix test suite broken by syntax error when --enable-sasl (r1907124)
+    * swig-py: Fix issues #4916, #4917, #4918 (r1912500 et al)
+    * swig-py: Improve error when no external diff (r1912724, -743, issue #1778)
+    * autogen.sh: Fix building when Python is not named "python" (r1903245)
+
 Version 1.14.2
 (12 Apr 2022, from /branches/1.14.x)
  User-visible changes:

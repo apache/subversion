@@ -77,5 +77,6 @@ class Editor:
     pass
 
 
-def make_editor(editor, pool=None):
-  return svn_swig_py_make_editor(editor, pool)
+def make_editor(editor, pool=None, baton=None):
+  from libsvn.delta import _AncBaton
+  return svn_swig_py_make_editor(pool), _AncBaton(editor, pool, baton)

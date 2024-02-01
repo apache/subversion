@@ -896,6 +896,12 @@ def roll_tarballs(args):
                 if dname.startswith('autom4te') and dname.endswith('.cache'):
                     shutil.rmtree(os.path.join(root, dname))
 
+    def clean_pycache():
+        for root, dirs, files in os.walk(exportdir):
+            for dname in dirs:
+                if dname == '__pycache__':
+                    shutil.rmtree(os.path.join(root, dname))
+
     logging.info('Building Windows tarballs')
     export(windows=True)
     os.chdir(exportdir)
@@ -904,6 +910,7 @@ def roll_tarballs(args):
     # line endings and won't run, so use the one in the working copy.
     run_script(args.verbose,
                '%s/tools/po/po-update.sh pot' % get_workdir(args.base_dir))
+    clean_pycache()  # as with clean_autom4te, is this pointless on Windows?
     os.chdir(cwd)
     clean_autom4te() # dist.sh does it but pointless on Windows?
     os.chdir(get_tempdir(args.base_dir))
@@ -919,6 +926,7 @@ def roll_tarballs(args):
                '''tools/po/po-update.sh pot
                   ./autogen.sh --release''',
                hide_stderr=True) # SWIG is noisy
+    clean_pycache()  # without this, tarballs contain empty __pycache__ dirs
     os.chdir(cwd)
     clean_autom4te() # dist.sh does it but probably pointless
 
@@ -983,7 +991,7 @@ def roll_tarballs(args):
         # complete wc, not a shallow wc as indicated in HACKING as one option.
         # We /could/ download COMMITTERS from /trunk if it doesn't exist...
         subprocess.check_call([os.path.dirname(__file__) + '/make-keys.sh',
-                               '-c', os.path.dirname(__file__) + '/../..',
+                               '-c', os.path.dirname(__file__) + '/../../COMMITTERS',
                                '-o', filepath])
         shutil.move(filepath, get_target(args))
 
@@ -1567,7 +1575,7 @@ def write_changelog(args):
     mergeinfo = mergeinfo.splitlines()
 
     separator_pattern = re.compile('^-{72}$')
-    revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
+    revline_pattern = re.compile(r'^r(\d+) \| [^|]+ \| [^|]+ \| \d+ lines?$')
     changes_prefix_pattern = re.compile(r'^\[(U|D)?:?([^\]]+)?\](.+)$')
     changes_suffix_pattern = re.compile(r'^(.+)\[(U|D)?:?([^\]]+)?\]$')
     # TODO: push this into backport.status as a library function

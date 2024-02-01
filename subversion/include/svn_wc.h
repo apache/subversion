@@ -993,6 +993,7 @@ typedef enum svn_wc_notify_action_t
   svn_wc_notify_restore,
 
   /** Reverting a modified path. */
+  /* See also svn_wc_notify_revert_noaccess */
   svn_wc_notify_revert,
 
   /** A revert operation has failed. */
@@ -1324,6 +1325,12 @@ typedef enum svn_wc_notify_action_t
   /** A warning, specified in #svn_wc_notify_t.err.
    * @since New in 1.15. */
   svn_wc_notify_warning,
+
+  /** A file is readonly for the user but isn't svn:needs-lock.
+   * So we want to restore RW, but fail since the file has W bits,
+   * just not for the current user. 
+   * @since New in 1.15. */
+  svn_wc_notify_revert_noaccess,
 
 } svn_wc_notify_action_t;
 

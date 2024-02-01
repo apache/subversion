@@ -1252,6 +1252,55 @@ def wc_copy_parent_into_child(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+@Issue(4913)
+def url_move_parent_into_child(sbox):
+  "move URL URL/subdir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  B_url = sbox.repo_url + "/A/B"
+  F_url = sbox.repo_url + "/A/B/F"
+
+  expected_error = "svn: E200007: Cannot move path '.*%s' into its own " \
+                   "child '.*%s'" % (re.escape(B_url),
+                                     re.escape(F_url))
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'mv',
+                                     '-m', 'a can of worms',
+                                     B_url, F_url)
+
+#----------------------------------------------------------------------
+@Issue(4913)
+def wc_move_parent_into_child(sbox):
+  "move WC WC/subdir"
+
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  B_url = sbox.repo_url + "/A/B"
+  F_B_url = sbox.repo_url + "/A/B/F/B"
+
+  # Want a smaller WC
+  svntest.main.safe_rmtree(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'checkout',
+                                     B_url, wc_dir)
+
+  was_cwd = os.getcwd()
+  from_path = os.path.abspath(sbox.ospath(''))
+  to_path = os.path.abspath(sbox.ospath('F/B'))
+  os.chdir(wc_dir)
+  
+  expected_error = "svn: E200007: Cannot move path '%s' into its own " \
+                   "child '%s'" % (re.escape(from_path), re.escape(to_path))
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'mv',
+                                     from_path, to_path)
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
 # Issue 1419: at one point ra_neon->get_uuid() was failing on a
 # non-existent public URL, which prevented us from resurrecting files
 # (svn cp -rOLD URL wc).
@@ -1370,7 +1419,7 @@ def repos_to_wc_copy_eol_keywords(sbox):
   if re.match(b'[^\\r]\\n', raw_contents):
     raise svntest.Failure
 
-  if not re.match(b'.*\$LastChangedRevision:\s*\d+\s*\$', line_contents[3]):
+  if not re.match(b'.*\\$LastChangedRevision:\\s*\\d+\\s*\\$', line_contents[3]):
     raise svntest.Failure
 
 #-------------------------------------------------------------
@@ -5991,6 +6040,8 @@ test_list = [ None,
               copy_to_root,
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
+              url_move_parent_into_child,
+              wc_move_parent_into_child,
               resurrect_deleted_file,
               diff_repos_to_wc_copy,
               repos_to_wc_copy_eol_keywords,

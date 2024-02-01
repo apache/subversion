@@ -1294,10 +1294,16 @@ print_info_item(void *baton,
       break;
 
     case info_item_wc_root:
-      SVN_ERR(print_info_item_string(
-                  (info->wc_info && info->wc_info->wcroot_abspath
-                   ? info->wc_info->wcroot_abspath : NULL),
-                  target_path, pool));
+      {
+        const char *wc_root;
+
+        if (info->wc_info && info->wc_info->wcroot_abspath)
+          wc_root = svn_dirent_local_style(info->wc_info->wcroot_abspath, pool);
+        else
+          wc_root = NULL;
+
+        SVN_ERR(print_info_item_string(wc_root, target_path, pool));
+      }
       break;
 
     case info_item_schedule:

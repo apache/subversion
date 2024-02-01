@@ -559,7 +559,7 @@ def status_uninvited_parent_directory(sbox):
 
   for line in out:
     # The "/?" is just to allow for an optional trailing slash.
-    if re.match("\\s+\\*.*\.other/?$", line):
+    if re.match(r"\s+\*.*\.other/?$", line):
       raise svntest.Failure
 
 @Issue(1289)

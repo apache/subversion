@@ -18,11 +18,11 @@
 # under the License.
 #
 #
-import unittest, setup_path, os, sys
+import unittest, setup_path, os, sys, weakref
 from sys import version_info # For Python version check
 from io import BytesIO
 from svn import core, repos, fs, delta
-from svn.core import SubversionException
+from svn.core import SubversionException, Pool
 import utils
 
 class ChangeReceiver(delta.Editor):
@@ -40,9 +40,20 @@ class ChangeReceiver(delta.Editor):
     return textdelta_handler
 
 class DumpStreamParser(repos.ParseFns3):
-  def __init__(self):
+  def __init__(self, stream=None, pool=None):
     repos.ParseFns3.__init__(self)
+    self.stream = stream
     self.ops = []
+    # for leak checking only. If the parse_fns3 object holds some proxy
+    # object allocated from 'pool' or the 'pool' itself, the 'pool' is not
+    # destroyed until the parse_fns3 object is removed.
+    self.pool = pool
+  def _close_dumpstream(self):
+    if self.stream:
+      self.stream.close()
+      self.stream = None
+    if self.pool:
+      self.pool = None
   def magic_header_record(self, version, pool=None):
     self.ops.append((b"magic-header", version))
   def uuid_record(self, uuid, pool=None):
@@ -73,6 +84,76 @@ class DumpStreamParser(repos.ParseFns3):
   def set_fulltext(self, node_baton):
     self.ops.append((b"set-fulltext", node_baton[0], node_baton[1]))
     return None
+
+class BatonCollector(repos.ChangeCollector):
+  """A ChangeCollector with collecting batons, too"""
+  def __init__(self, fs_ptr, root, pool=None, notify_cb=None):
+    repos.ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
+    self.batons = []
+    self.close_called = False
+    self.abort_called = False
+
+  def open_root(self, base_revision, dir_pool=None):
+    bt = repos.ChangeCollector.open_root(self, base_revision, dir_pool)
+    self.batons.append((b'dir baton', b'', bt, sys.getrefcount(bt)))
+    return bt
+
+  def add_directory(self, path, parent_baton,
+                    copyfrom_path, copyfrom_revision, dir_pool=None):
+    bt = repos.ChangeCollector.add_directory(self, path, parent_baton,
+                                             copyfrom_path,
+                                             copyfrom_revision,
+                                             dir_pool)
+    self.batons.append((b'dir baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def open_directory(self, path, parent_baton, base_revision,
+                     dir_pool=None):
+    bt = repos.ChangeCollector.open_directory(self, path, parent_baton,
+                                              base_revision, dir_pool)
+    self.batons.append((b'dir baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def add_file(self, path, parent_baton,
+               copyfrom_path, copyfrom_revision, file_pool=None):
+    bt = repos.ChangeCollector.add_file(self, path, parent_baton,
+                                        copyfrom_path, copyfrom_revision,
+                                        file_pool)
+    self.batons.append((b'file baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def open_file(self, path, parent_baton, base_revision, file_pool=None):
+    bt = repos.ChangeCollector.open_file(self, path, parent_baton,
+                                         base_revision, file_pool)
+    self.batons.append((b'file baton', path, bt, sys.getrefcount(bt)))
+    return bt
+
+  def close_edit(self, pool=None):
+    self.close_called = True
+    return
+
+  def abort_edit(self, pool=None):
+    self.abort_called = True
+    return
+
+class BatonCollectorErrorOnClose(BatonCollector):
+  """Same as BatonCollector, but raises an Exception when close the
+     file/dir specfied by error_path"""
+  def __init__(self, fs_ptr, root, pool=None, notify_cb=None, error_path=b''):
+    BatonCollector.__init__(self, fs_ptr, root, pool, notify_cb)
+    self.error_path = error_path
+
+  def close_directory(self, dir_baton):
+    if dir_baton[0] == self.error_path:
+      raise SubversionException('A Dummy Exception!', core.SVN_ERR_BASE)
+    else:
+      BatonCollector.close_directory(self, dir_baton)
+
+  def close_file(self, file_baton, text_checksum):
+    if file_baton[0] == self.error_path:
+      raise SubversionException('A Dummy Exception!', core.SVN_ERR_BASE)
+    else:
+      return BatonCollector.close_file(self, file_baton, text_checksum)
 
 
 def _authz_callback(root, path, pool):
@@ -175,13 +256,15 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     def is_cancelled():
       self.cancel_calls += 1
       return None
+    pool = Pool()
+    subpool = Pool(pool)
     dump_path = os.path.join(os.path.dirname(sys.argv[0]),
         "trac/versioncontrol/tests/svnrepos.dump")
     stream = open(dump_path, 'rb')
-    dsp = DumpStreamParser()
-    ptr, baton = repos.make_parse_fns3(dsp)
+    dsp = DumpStreamParser(stream, subpool)
+    dsp_ref = weakref.ref(dsp)
+    ptr, baton = repos.make_parse_fns3(dsp, subpool)
     repos.parse_dumpstream3(stream, ptr, baton, False, is_cancelled)
-    stream.close()
     self.assertEqual(self.cancel_calls, 76)
     expected_list = [
         (b"magic-header", 2),
@@ -226,6 +309,13 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     # the comparison list gets too long.
     self.assertEqual(dsp.ops[:len(expected_list)], expected_list)
 
+    # _close_dumpstream should be invoked after 'baton' is removed.
+    self.assertEqual(False, stream.closed)
+    del ptr, baton, subpool, dsp
+    self.assertEqual(True, stream.closed)
+    # Issue SVN-4918
+    self.assertEqual(None, dsp_ref())
+
   def test_parse_fns3_invalid_set_fulltext(self):
     class DumpStreamParserSubclass(DumpStreamParser):
       def set_fulltext(self, node_baton):
@@ -240,6 +330,33 @@ class SubversionRepositoryTestCase(unittest.TestCase):
                         stream, ptr, baton, False, None)
     finally:
       stream.close()
+
+  def test_parse_fns3_apply_textdelta_handler_refcount(self):
+    handler = lambda node_baton: None
+    handler_ref = weakref.ref(handler)
+
+    class ParseFns3(repos.ParseFns3):
+      def __init__(self, handler):
+        self.called = set()
+        self.handler = handler
+      def apply_textdelta(self, node_baton):
+        self.called.add('apply_textdelta')
+        return self.handler
+
+    dumpfile = os.path.join(os.path.dirname(__file__), 'data',
+                            'repository-deltas.dump')
+    pool = Pool()
+    subpool = Pool(pool)
+    parser = ParseFns3(handler)
+    ptr, baton = repos.make_parse_fns3(parser, subpool)
+    with open(dumpfile, "rb") as stream:
+      repos.parse_dumpstream3(stream, ptr, baton, False, None)
+    del ptr, baton, stream
+
+    self.assertIn('apply_textdelta', parser.called)
+    self.assertNotEqual(None, handler_ref())
+    del parser, handler, subpool, ParseFns3
+    self.assertEqual(None, handler_ref())
 
   def test_get_logs(self):
     """Test scope of get_logs callbacks"""
@@ -289,6 +406,79 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       e_ptr, e_baton = delta.make_editor(ChangeReceiver(this_root, prev_root))
       repos.dir_delta(prev_root, b'', b'', this_root, b'', e_ptr, e_baton,
               _authz_callback, 1, 1, 0, 0)
+
+  def test_delta_editor_leak_with_change_collector(self):
+    pool = Pool()
+    subpool = Pool(pool)
+    root = fs.revision_root(self.fs, self.rev, subpool)
+    editor = repos.ChangeCollector(self.fs, root, subpool)
+    editor_ref = weakref.ref(editor)
+    e_ptr, e_baton = delta.make_editor(editor, subpool)
+    repos.replay(root, e_ptr, e_baton, subpool)
+
+    fs.close_root(root)
+    del root
+    self.assertNotEqual(None, editor_ref())
+
+    del e_ptr, e_baton, editor
+    del subpool
+    self.assertEqual(None, editor_ref())
+
+  def test_replay_batons_refcounts(self):
+    """Issue SVN-4917: check ref-count of batons created and used in callbacks"""
+    root = fs.revision_root(self.fs, self.rev)
+    editor = BatonCollector(self.fs, root)
+    e_ptr, e_baton = delta.make_editor(editor)
+    repos.replay(root, e_ptr, e_baton)
+    for baton in editor.batons:
+      self.assertEqual(sys.getrefcount(baton[2]), 2,
+                       "leak on baton %s after replay without errors"
+                       % repr(baton))
+    del e_baton
+    self.assertEqual(sys.getrefcount(e_ptr), 2,
+                     "leak on editor baton after replay without errors")
+
+    editor = BatonCollectorErrorOnClose(self.fs, root,
+                                        error_path=b'branches/v1x')
+    e_ptr, e_baton = delta.make_editor(editor)
+    self.assertRaises(SubversionException, repos.replay, root, e_ptr, e_baton)
+    batons = editor.batons
+    # As svn_repos_replay calls neither close_edit callback nor abort_edit
+    # if an error has occured during processing, references of Python objects
+    # in decendant batons may live until e_baton is deleted.
+    del e_baton
+    for baton in batons:
+      self.assertEqual(sys.getrefcount(baton[2]), 2,
+                       "leak on baton %s after replay with an error"
+                       % repr(baton))
+    self.assertEqual(sys.getrefcount(e_ptr), 2,
+                     "leak on editor baton after replay with an error")
+
+  def test_delta_editor_apply_textdelta_handler_refcount(self):
+    handler = lambda textdelta: None
+    handler_ref = weakref.ref(handler)
+
+    class Editor(delta.Editor):
+      def __init__(self, handler):
+        self.called = set()
+        self.handler = handler
+      def apply_textdelta(self, file_baton, base_checksum, pool=None):
+        self.called.add('apply_textdelta')
+        return self.handler
+
+    pool = Pool()
+    subpool = Pool(pool)
+    root = fs.revision_root(self.fs, 3)  # change of trunk/README.txt
+    editor = Editor(handler)
+    e_ptr, e_baton = delta.make_editor(editor, subpool)
+    repos.replay(root, e_ptr, e_baton, subpool)
+    del e_ptr, e_baton
+
+    self.assertIn('apply_textdelta', editor.called)
+    self.assertNotEqual(None, handler_ref())
+    del root, editor, handler, Editor
+    del subpool
+    self.assertEqual(None, handler_ref())
 
   def test_retrieve_and_change_rev_prop(self):
     """Test playing with revprops"""

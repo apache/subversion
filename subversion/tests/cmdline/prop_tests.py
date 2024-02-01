@@ -349,7 +349,7 @@ def update_conflict_props(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', 'A', status=' C')
 
-  extra_files = ['mu.*\.prej', 'dir_conflicts.*\.prej']
+  extra_files = [r'mu.*\.prej', r'dir_conflicts.*\.prej']
   # Do the update and check the results in three ways... INCLUDING PROPS
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,

@@ -1511,7 +1511,7 @@ def merge_notify_line(revstart=None, revend=None, same_URL=True,
   merge operation on revisions REVSTART through REVEND.  Omit both
   REVSTART and REVEND for the case where the left and right sides of
   the merge are from different URLs."""
-  from_foreign_phrase = foreign and "\(from foreign repository\) " or ""
+  from_foreign_phrase = foreign and r"\(from foreign repository\) " or ""
   if target:
     target_re = re.escape(target)
   else:
@@ -1877,7 +1877,7 @@ class TestSpawningThread(threading.Thread):
 
 class TestRunner:
   """Encapsulate a single test case (predicate), including logic for
-  runing the test and test list output."""
+  running the test and test list output."""
 
   def __init__(self, func, index):
     self.pred = svntest.testcase.create_test_case(func)
@@ -2188,13 +2188,12 @@ def _create_parser(usage=None):
   if logger.getEffectiveLevel() == logging.NOTSET:
     logger.setLevel(logging.WARN)
 
-  def set_log_level(option, opt, value, parser, level=None):
-    if level:
-      # called from --verbose
-      logger.setLevel(level)
+  def set_log_level(option, opt, value, parser):
+    if value.isdigit():
+      level = int(value)
     else:
-      # called from --set-log-level
-      logger.setLevel(getattr(logging, value, None) or int(value))
+      level = getattr(logging, value)
+    logger.setLevel(level)
 
   # Set up the parser.
   # If you add new options, consider adding them in
@@ -2213,10 +2212,10 @@ def _create_parser(usage=None):
                     help='Print test doc strings instead of running them')
   parser.add_option('--milestone-filter', action='store', dest='milestone_filter',
                     help='Limit --list to those with target milestone specified')
-  parser.add_option('-v', '--verbose', action='callback',
-                    callback=set_log_level, callback_args=(logging.DEBUG, ),
+  parser.add_option('-v', '--verbose', action='store_const',
+                    dest='set_log_level', const=logging.DEBUG,
                     help='Print binary command-lines (same as ' +
-                         '"--set-log-level logging.DEBUG")')
+                         '"--set-log-level DEBUG")')
   parser.add_option('-q', '--quiet', action='store_true',
                     help='Print only unexpected results (not with --verbose)')
   parser.add_option('-p', '--parallel', action='store_const',

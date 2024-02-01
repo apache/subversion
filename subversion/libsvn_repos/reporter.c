@@ -138,7 +138,8 @@ typedef struct report_baton_t
   svn_fs_root_t *s_roots[NUM_CACHED_SOURCE_ROOTS];
 
   /* Cache for revision properties. This is used to eliminate redundant
-     revprop fetching. */
+     revprop fetching. svn_revnum_t keys so use svn_hash__make to get a
+     suitable hash function. */
   apr_hash_t *revision_infos;
 
   /* This will not change. So, fetch it once and reuse it. */
@@ -1628,7 +1629,7 @@ svn_repos_begin_report3(void **report_baton,
   b->edit_baton = edit_baton;
   b->authz_read_func = authz_read_func;
   b->authz_read_baton = authz_read_baton;
-  b->revision_infos = apr_hash_make(pool);
+  b->revision_infos = svn_hash__make(pool);
   b->pool = pool;
   b->reader = svn_spillbuf__reader_create(1000 /* blocksize */,
                                           1000000 /* maxsize */,
