@@ -51,7 +51,7 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
-wc_is_too_old_regex = (".*is too old \(format \d+.*\).*")
+wc_is_too_old_regex = (r".*is too old \(format \d+.*\).*")
 
 
 def get_current_format():

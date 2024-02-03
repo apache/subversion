@@ -247,9 +247,9 @@ def textual_merges_galore(sbox):
 
   expected_skip = wc.State('', { })
 
-  tau_conflict_support_files = ["tau\.working",
-                                "tau\.merge-right\.r3",
-                                "tau\.merge-left\.r1"]
+  tau_conflict_support_files = [r"tau\.working",
+                                r"tau\.merge-right\.r3",
+                                r"tau\.merge-left\.r1"]
 
   svntest.actions.run_and_verify_merge(other_wc, '1', '3',
                                        sbox.repo_url, None,
@@ -2629,7 +2629,7 @@ def safe_property_merge(sbox):
   expected_skip = wc.State('', { })
 
   # should have 3 'prej' files left behind, describing prop conflicts:
-  extra_files = ['alpha.*\.prej', 'beta.*\.prej', 'dir_conflicts.*\.prej']
+  extra_files = [r'alpha.*\.prej', r'beta.*\.prej', r'dir_conflicts.*\.prej']
 
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url, None,
                                        expected_output,
@@ -2752,7 +2752,7 @@ def property_merge_from_branch(sbox):
   expected_skip = wc.State('', { })
 
   # should have 2 'prej' files left behind, describing prop conflicts:
-  extra_files = ['alpha.*\.prej', 'dir_conflicts.*\.prej']
+  extra_files = [r'alpha.*\.prej', r'dir_conflicts.*\.prej']
 
   svntest.actions.run_and_verify_merge(B2_path, '3', '4', B_url, None,
                                        expected_output,
@@ -2952,9 +2952,9 @@ def cherry_pick_text_conflict(sbox):
                                        expected_skip,
                                        expected_error,
                                        extra_files=
-                                       ["mu\.working",
-                                        "mu\.merge-right\.r4",
-                                        "mu\.merge-left\.r3"])
+                                       [r"mu\.working",
+                                        r"mu\.merge-right\.r4",
+                                        r"mu\.merge-left\.r3"])
 
 #----------------------------------------------------------------------
 # Test for issue 2135
@@ -14518,9 +14518,9 @@ def merge_automatic_conflict_resolution(sbox):
                       "=======\n"
                       "New content>>>>>>> .merge-right.r3\n")
   expected_status.tweak('D/H/psi', status='C ')
-  psi_conflict_support_files = ["psi\.working",
-                                "psi\.merge-right\.r3",
-                                "psi\.merge-left\.r2"]
+  psi_conflict_support_files = [r"psi\.working",
+                                r"psi\.merge-right\.r3",
+                                r"psi\.merge-left\.r2"]
   svntest.actions.run_and_verify_merge(A_COPY_path, '2', '3',
                                        sbox.repo_url + '/A', None,
                                        expected_output,
@@ -17302,7 +17302,7 @@ def merge_target_selection(sbox):
 
   # r4
   svntest.main.file_write(sbox.ospath('dir/binary-file'),
-                          '\9\8\7\6\5\4\3\2\1')
+                          '\x09\x08\7\6\5\4\3\2\1')
   sbox.simple_commit()
 
   sbox.simple_update()

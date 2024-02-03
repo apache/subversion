@@ -96,7 +96,7 @@ def match_xml_element(str, exprs):
   atttribute_re = re.compile(
                  r"\s+(?P<key>[\w-]+)\s*=\s*(['\"])(?P<val>[^'\"]*)\2", re.M)
   self_closing_re = re.compile(r"\s*/>", re.M)
-  content_re_str = "\\s*>(?P<content>.*?)</%s\s*>"
+  content_re_str = r"\s*>(?P<content>.*?)</%s\s*>"
 
   m = start_tag_re.match(str)
   if not m:
@@ -402,7 +402,7 @@ def info_repos_root_url(sbox):
         'Path'              : re.escape(os.path.basename(sbox.repo_dir)),
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url),
-        'Relative URL'      : '\^/', # escape ^ -- this isn't a regexp
+        'Relative URL'      : r'\^/', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'directory',
         'Last Changed Rev'  : '1',
@@ -412,7 +412,7 @@ def info_repos_root_url(sbox):
         'Name'              : 'iota',
         'Repository Root'   : re.escape(sbox.repo_url),
         'URL'               : re.escape(sbox.repo_url + '/iota'),
-        'Relative URL'      : '\^/iota', # escape ^ -- this isn't a regexp
+        'Relative URL'      : r'\^/iota', # escape ^ -- this isn't a regexp
         'Revision'          : '1',
         'Node Kind'         : 'file',
         'Last Changed Rev'  : '1',

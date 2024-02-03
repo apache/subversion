@@ -1558,7 +1558,7 @@ def write_changelog(args):
     mergeinfo = mergeinfo.splitlines()
 
     separator_pattern = re.compile('^-{72}$')
-    revline_pattern = re.compile('^r(\d+) \| [^\|]+ \| [^\|]+ \| \d+ lines?$')
+    revline_pattern = re.compile(r'^r(\d+) \| [^|]+ \| [^|]+ \| \d+ lines?$')
     changes_prefix_pattern = re.compile(r'^\[(U|D)?:?([^\]]+)?\](.+)$')
     changes_suffix_pattern = re.compile(r'^(.+)\[(U|D)?:?([^\]]+)?\]$')
     # TODO: push this into backport.status as a library function

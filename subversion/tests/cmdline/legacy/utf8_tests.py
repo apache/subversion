@@ -143,7 +143,7 @@ else:
 # Also check that the environment contains the expected locale settings
 # either by default, or because we set them above.
 if localematch:
-  localeregex = re.compile('^en_US\.ISO-?8859-1$', re.I)
+  localeregex = re.compile(r'^en_US\.ISO-?8859-1$', re.I)
   for env in [ 'LC_ALL', 'LC_CTYPE', 'LANG' ]:
     env_value = os.getenv(env)
     if env_value:

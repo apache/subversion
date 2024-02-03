@@ -130,9 +130,9 @@ def clname_from_lastchar_cb(full_path):
 
 
 # Regular expressions for 'svn changelist' output.
-_re_cl_rem_pattern = "^D \[(.*)\] (.*)"
-_re_cl_skip = re.compile("Skipped '(.*)'")
-_re_cl_add  = re.compile("^A \[(.*)\] (.*)")
+_re_cl_rem_pattern = r"^D \[(.*)\] (.*)"
+_re_cl_skip = re.compile(r"Skipped '(.*)'")
+_re_cl_add  = re.compile(r"^A \[(.*)\] (.*)")
 _re_cl_rem  = re.compile(_re_cl_rem_pattern)
 
 def verify_changelist_output(output, expected_adds=None,

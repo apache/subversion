@@ -1370,7 +1370,7 @@ def repos_to_wc_copy_eol_keywords(sbox):
   if re.match(b'[^\\r]\\n', raw_contents):
     raise svntest.Failure
 
-  if not re.match(b'.*\$LastChangedRevision:\s*\d+\s*\$', line_contents[3]):
+  if not re.match(b'.*\\$LastChangedRevision:\\s*\\d+\\s*\\$', line_contents[3]):
     raise svntest.Failure
 
 #-------------------------------------------------------------

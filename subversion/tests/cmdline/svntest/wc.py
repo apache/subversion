@@ -93,30 +93,30 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '([KOBT ])'
                               '([C ]) '
                               '([* ]) +'
-                              '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
+                              r'((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
 _re_parse_status_ex = re.compile('^      ('
-               '(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
-              '|(  \> swapped places with (?P<swapped_with>.+).*)'
-              '|(\>   (?P<tc>.+))'
+               r'(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
+              r'|(  \> swapped places with (?P<swapped_with>.+).*)'
+              r'|(\>   (?P<tc>.+))'
   ')$')
 
 _re_parse_skipped = re.compile("^(Skipped[^']*) '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
-_re_parse_checkout = re.compile('^([RMAGCUDE_ B][MAGCUDE_ ])'
-                                '([B ])'
-                                '([CAUD ])\s+'
-                                '(.+)')
-_re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
-                                  '\s+\'(.+)\'(( --|: ).*)?')
-_re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
+_re_parse_checkout = re.compile(r'^([RMAGCUDE_ B][MAGCUDE_ ])'
+                                r'([B ])'
+                                r'([CAUD ])\s+'
+                                r'(.+)')
+_re_parse_co_skipped = re.compile(r'^(Restored|Skipped|Removed external)'
+                                  r'\s+\'(.+)\'(( --|: ).*)?')
+_re_parse_co_restored = re.compile(r'^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
-_re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
-_re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
+_re_parse_commit_ext = re.compile("^(([A-Za-z]+( [a-z]+)*)) '(.+)'( --.*)?")
+_re_parse_commit = re.compile(r'^(\w+(  \(bin\))?)\s+(.+)')
 
 #rN: eids 0 15 branches 4
 _re_parse_eid_header = re.compile('^r(-1|[0-9]+): eids ([0-9]+) ([0-9]+) '

@@ -304,7 +304,7 @@ def keywords_from_birth(sbox):
   fp = open(url_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
                         lines[0]))):
     logger.warn("URL expansion failed for %s", url_unexp_path)
     raise svntest.Failure
@@ -314,7 +314,7 @@ def keywords_from_birth(sbox):
   fp = open(url_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
                         lines[0]))):
     logger.warn("URL expansion failed for %s", url_exp_path)
     raise svntest.Failure
@@ -324,7 +324,7 @@ def keywords_from_birth(sbox):
   fp = open(id_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: id_unexp", lines[0]))):
+          and (re.match(r"\$Id: id_unexp", lines[0]))):
     logger.warn("Id expansion failed for %s", id_exp_path)
     raise svntest.Failure
   fp.close()
@@ -333,7 +333,7 @@ def keywords_from_birth(sbox):
   fp = open(id_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: id_exp", lines[0]))):
+          and (re.match(r"\$Id: id_exp", lines[0]))):
     logger.warn("Id expansion failed for %s", id_exp_path)
     raise svntest.Failure
   fp.close()
@@ -342,7 +342,7 @@ def keywords_from_birth(sbox):
   fp = open(header_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match(r"\$Header: (https?|file|svn|svn\+ssh)://.* jrandom",
                         lines[0]))):
     logger.warn("Header expansion failed for %s", header_unexp_path)
     raise svntest.Failure
@@ -352,7 +352,7 @@ def keywords_from_birth(sbox):
   fp = open(header_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match(r"\$Header: (https?|file|svn|svn\+ssh)://.* jrandom",
                         lines[0]))):
     logger.warn("Header expansion failed for %s", header_exp_path)
     raise svntest.Failure
@@ -402,7 +402,7 @@ def keywords_from_birth(sbox):
   fp = open(id_with_space_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: .*id with space", lines[0]))):
+          and (re.match(r"\$Id: .*id with space", lines[0]))):
     logger.warn("Id expansion failed for %s", id_with_space_path)
     raise svntest.Failure
   fp.close()
@@ -411,7 +411,7 @@ def keywords_from_birth(sbox):
   fp = open(id_exp_with_dollar_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
+          and (re.match(r"\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
                         lines[0]))):
     logger.warn("Id expansion failed for %s", id_exp_with_dollar_path)
 
@@ -637,7 +637,7 @@ def keyword_expanded_on_checkout(sbox):
   fp = open(other_url_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
                         lines[0]))):
     logger.warn("URL expansion failed for %s", other_url_path)
     raise svntest.Failure
