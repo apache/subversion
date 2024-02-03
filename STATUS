@@ -29,6 +29,12 @@ Candidate changes:
    Votes:
      +1: dsahlberg, hartmannathan
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1912632
    Fix `invalid escape sequence` in Python scripts to prevent many
    `SyntaxWarning`s since Python 3.12.
@@ -36,10 +42,4 @@ Candidate changes:
      Bare \ in regexps are SyntaxWarning as of Python 3.12, will be
      SyntaxError in a future release.
    Votes:
-     +1: dsahlberg, futatuki
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
+     +1: dsahlberg, futatuki, jun66j5
