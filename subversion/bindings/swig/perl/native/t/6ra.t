@@ -278,7 +278,9 @@ sub apply_textdelta {
         or die "error opening in-memory file to store Subversion update: $!";
     open my $in_fh, '<', \''
         or die "error opening in-memory file for delta source: $!";
-    return [ SVN::TxDelta::apply($in_fh, $out_fh, undef, "$baton", $pool) ];
+    my $result = [SVN::TxDelta::apply($in_fh, $out_fh, undef, "$baton", $pool)];
+    close $out_fh;
+    return $result;
 }
 
 sub close_edit {
