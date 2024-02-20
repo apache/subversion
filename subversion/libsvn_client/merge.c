@@ -12016,21 +12016,6 @@ merge_peg_locked(svn_client__conflict_report_t **conflict_report,
 
   /* Do the real merge!  (We say with confidence that our merge
      sources are both ancestral and related.) */
-  if (getenv("SVN_ELEMENT_MERGE")
-      && same_repos
-      && (depth == svn_depth_infinity || depth == svn_depth_unknown)
-      && ignore_mergeinfo
-      && !record_only)
-    {
-      err = svn_client__merge_elements(&use_sleep,
-                                       merge_sources, target, ra_session,
-                                       diff_ignore_ancestry, force_delete,
-                                       dry_run, merge_options,
-                                       ctx, result_pool, scratch_pool);
-      /* ### Currently this merge just errors out on any conflicts */
-      *conflict_report = NULL;
-    }
-  else
   err = do_merge(NULL, NULL, conflict_report, &use_sleep,
                  merge_sources, target, ra_session,
                  TRUE /*sources_related*/, same_repos, ignore_mergeinfo,

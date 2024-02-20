@@ -209,7 +209,6 @@ svnauthz_binary = os.path.abspath('../../../tools/server-side/svnauthz' + _exe)
 svnauthz_validate_binary = os.path.abspath(
     '../../../tools/server-side/svnauthz-validate' + _exe
 )
-svnmover_binary = os.path.abspath('../../../tools/dev/svnmover/svnmover' + _exe)
 
 # Where to find the libtool script created during build
 libtool_script = os.path.abspath('../../../libtool')
@@ -904,12 +903,6 @@ def run_svnversion(*varargs):
   """Run svnversion with VARARGS, returns exit code as int; stdout, stderr
   as list of lines (including line terminators)."""
   return run_command(svnversion_binary, 1, False, *varargs)
-
-def run_svnmover(*varargs):
-  """Run svnmover with VARARGS, returns exit code as int; stdout, stderr as
-  list of lines (including line terminators)."""
-  return run_command(svnmover_binary, 1, False,
-                     *(_with_auth(_with_config_dir(varargs))))
 
 def run_svnmucc(*varargs):
   """Run svnmucc with VARARGS, returns exit code as int; stdout, stderr as
@@ -2500,7 +2493,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svnsync_binary
   global svndumpfilter_binary
   global svnversion_binary
-  global svnmover_binary
   global svnmucc_binary
   global svnauthz_binary
   global svnauthz_validate_binary
@@ -2610,7 +2602,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
     svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
     svnauthz_validate_binary = os.path.join(options.tools_bin,
                                             'svnauthz-validate' + _exe)
-    svnmover_binary = os.path.join(options.tools_bin, 'svnmover' + _exe)
 
   ######################################################################
 

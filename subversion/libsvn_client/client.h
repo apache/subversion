@@ -1198,22 +1198,6 @@ typedef struct merge_target_t
 
 } merge_target_t;
 
-/*
- * Similar API to svn_client_merge_peg5().
- */
-svn_error_t *
-svn_client__merge_elements(svn_boolean_t *use_sleep,
-                           apr_array_header_t *merge_sources,
-                           merge_target_t *target,
-                           svn_ra_session_t *ra_session,
-                           svn_boolean_t diff_ignore_ancestry,
-                           svn_boolean_t force_delete,
-                           svn_boolean_t dry_run,
-                           const apr_array_header_t *merge_options,
-                           svn_client_ctx_t *ctx,
-                           apr_pool_t *result_pool,
-                           apr_pool_t *scratch_pool);
-
 /* Data for reporting when a merge aborted because of raising conflicts.
  *
  * ### TODO: More info, including the ranges (or other parameters) the user
