@@ -1,0 +1,20 @@
+A branch on which to prototype a model of move-tracking and branching.
+
+This experimental functionality is exposed through one stand-alone dev
+tool 'tools/dev/svnmover' and through one undocumented environment
+variable 'SVN_ELEMENT_MERGE' which hooks the code in to the 'svn merge'
+command.
+
+Status:
+
+  This approach to move tracking is not currently being pursued. It is
+  retained for historical reference.
+
+Merge policy:
+
+  Development branch -- periodic catch-up merges from trunk.
+
+  The work on this branch may or may not eventually be wanted on trunk. It
+  is not intended to be kept in a state where it could be merged to trunk.
+
+See notes/move-tracking/README for further details of this work.
