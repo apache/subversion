@@ -167,7 +167,8 @@ def remove_leading_slashes(path):
 class Writer:
   "Simple class for writing strings/binary, with optional encoding."
 
-  def __init__(self, encoding):
+  def __init__(self, maxbytes, encoding):
+    self.maxbytes = maxbytes
     self.buffer = BytesIO()
 
     # Attach a couple functions to SELF, rather than methods.
@@ -181,7 +182,15 @@ class Writer:
       def _write(s):
         "Write text string S using the *default* encoding (utf-8)."
         return self.buffer.write(to_bytes(s))
-    self.write = _write
+
+    def write_limited(s):
+        # If it looks like this write() will surpass the maximum length,
+        # then bail out.
+        if len(self.buffer.getbuffer()) + len(s) > self.maxbytes:
+            raise MessageTooLarge
+        return _write(s)
+
+    self.write = write_limited
 
 
 class OutputBase:
@@ -193,14 +202,22 @@ class OutputBase:
     self._CHUNKSIZE = 128 * 1024
 
   def send(self, subject_line, group, params, long_func, short_func):
-      writer = Writer(self.get_encoding())
+      ### get the MAXBYTEs from the configuration
+      writer = Writer(90000, self.get_encoding())
 
       try:
           try:
               long_func(writer)
           except MessageTooLarge:
               writer.buffer.truncate(0)
-              short_func(writer)
+              writer.buffer.seek(0)
+              try:
+                  short_func(writer)
+              except MessageTooLarge:
+                  # NOTE: don't use the Writer() API, or it will check the
+                  # length again. Reach inside.
+                  writer.buffer.write(b'\n\n\n... message too long. Truncated.\n')
+                  # FALLTHRU
       except MessageSendFailure:
         return True  # failed
 
@@ -817,6 +834,11 @@ def generate_commit(writer, cfg, repos, changelist, group, params, paths,
   w = writer.write
   wb = writer.write_binary
   render_commit(w, wb, data)
+
+
+def generate_urls(writer, cfg, repos, changelist, group, params, paths,
+                  pool):
+    writer.write('COMMIT MESSAGE USING URLS\n')
 
 
 def generate_summary(changelist, paths, in_paths):
