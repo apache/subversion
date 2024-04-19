@@ -529,10 +529,17 @@ class Commit(Messenger):
       subject_line = self.make_subject(self.basic_subject, group, params)
 
       def long_commit(writer):
-        # generate the content for this group and set of params
-        generate_content(writer, self.cfg, self.repos, self.changelist,
-                         group, params, paths, iterpool)
-      failed |= output.send(subject_line, group, params, long_commit, None)
+        # generate commit message (with diffs) for this group and params
+        generate_commit(writer, self.cfg, self.repos, self.changelist,
+                        group, params, paths, iterpool)
+
+      def short_commit(writer):
+        # generate a shorter message, using URLs instead of diffs
+        generate_urls(writer, self.cfg, self.repos, self.changelist,
+                      group, params, paths, iterpool)
+
+      failed |= output.send(subject_line, group, params,
+                            long_commit, short_commit)
       svn.core.svn_pool_clear(iterpool)
 
     svn.core.svn_pool_destroy(iterpool)
@@ -764,8 +771,8 @@ class DiffURLSelections:
     return self._get_url('modify', repos_rev, change)
 
 
-def generate_content(writer, cfg, repos, changelist, group, params, paths,
-                     pool):
+def generate_commit(writer, cfg, repos, changelist, group, params, paths,
+                    pool):
 
   svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE, pool)
   ### pick a different date format?
