@@ -547,13 +547,13 @@ class Commit(Messenger):
 
       def long_commit(writer):
         # generate commit message (with diffs) for this group and params
-        generate_commit(writer, self.cfg, self.repos, self.changelist,
+        generate_commit(writer, self.cfg, self.repos, self.changelist, False,
                         group, params, paths, iterpool)
 
       def short_commit(writer):
         # generate a shorter message, using URLs instead of diffs
-        generate_urls(writer, self.cfg, self.repos, self.changelist,
-                      group, params, paths, iterpool)
+        generate_commit(writer, self.cfg, self.repos, self.changelist, True,
+                        group, params, paths, iterpool)
 
       failed |= output.send(subject_line, group, params,
                             long_commit, short_commit)
@@ -788,8 +788,8 @@ class DiffURLSelections:
     return self._get_url('modify', repos_rev, change)
 
 
-def generate_commit(writer, cfg, repos, changelist, group, params, paths,
-                    pool):
+def generate_commit(writer, cfg, repos, changelist, no_diff_content,
+                    group, params, paths, pool):
 
   svndate = repos.get_rev_prop(svn.core.SVN_PROP_REVISION_DATE, pool)
   ### pick a different date format?
@@ -809,9 +809,10 @@ def generate_commit(writer, cfg, repos, changelist, group, params, paths,
     other_summary = None
 
   if len(paths) != len(changelist) and show_nonmatching_paths == 'yes':
-    other_diffs = generate_changelist_diffs(changelist, paths, False, cfg,
-                                            repos, date, group, params,
-                                            pool)
+    other_diffs = generate_changelist_diffs(cfg, repos, changelist,
+                                            no_diff_content, False,
+                                            group, params, paths,
+                                            date, pool)
   else:
     other_diffs = None
 
@@ -824,21 +825,18 @@ def generate_commit(writer, cfg, repos, changelist, group, params, paths,
     log=to_str(repos.get_rev_prop(svn.core.SVN_PROP_REVISION_LOG, pool) or b''),
     commit_url=commit_url,
     summary=summary,
+    no_diff_content=no_diff_content,
     show_nonmatching_paths=show_nonmatching_paths,
     other_summary=other_summary,
-    diffs=generate_changelist_diffs(changelist, paths, True, cfg, repos,
-                                    date, group, params, pool),
+    diffs=generate_changelist_diffs(cfg, repos, changelist,
+                                    no_diff_content, True,
+                                    group, params, paths, date, pool),
     other_diffs=other_diffs,
     )
   ### clean this up in future rev. Just use wb
   w = writer.write
   wb = writer.write_binary
   render_commit(w, wb, data)
-
-
-def generate_urls(writer, cfg, repos, changelist, group, params, paths,
-                  pool):
-    writer.write('COMMIT MESSAGE USING URLS\n')
 
 
 def generate_summary(changelist, paths, in_paths):
@@ -872,8 +870,9 @@ def _gather_paths(action, changelist, paths, in_paths):
   return items
 
 
-def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
-                              date, group, params, pool):
+def generate_changelist_diffs(cfg, repos, changelist,
+                              no_diff_content, in_paths,
+                              group, params, paths, date, pool):
     "This is a generator returning diffs for each change."
 
     diffsels = DiffSelections(cfg, group, params)
@@ -1005,7 +1004,7 @@ def generate_changelist_diffs(changelist, paths, in_paths, cfg, repos,
 
       if diff:
         binary = diff.either_binary()
-        if binary:
+        if binary or no_diff_content:
           content = src_fname = dst_fname = None
         else:
             src_fname, dst_fname = diff.get_files()
@@ -1110,6 +1109,12 @@ def render_commit(w, wb, data):
       else:
         w('and changes in other areas\n')
 
+    if data.no_diff_content:
+        w('\nNOTE: this message was too long when including "diff" contents.'
+          '\n      The contents have been replaced with URLs to display the'
+          '\n      diff contents on a web page.'
+          '\n\n')
+
     _render_diffs(w, wb, data.diffs, '')
     if data.other_diffs:
         _render_diffs(w, wb, data.other_diffs,
@@ -1189,15 +1194,18 @@ def _render_diffs(w, wb, diffs, section_header):
       if not diff.diff:
         continue
 
-      w(SEPARATOR + '\n')
-
       if diff.binary:
+        w(SEPARATOR + '\n')
         if diff.singular:
           w('Binary file. No diff available.\n')
         else:
           w('Binary file (source and/or target). No diff available.\n')
         continue
 
+      if diff.content is None:
+          continue
+
+      w(SEPARATOR + '\n')
       for line in diff.content:
         wb(line.raw)
 
