@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+# coding=utf-8
 
 # To do:
 # 1) Switch to using the Subversion Python bindings.
