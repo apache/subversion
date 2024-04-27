@@ -28,11 +28,15 @@
 import getopt
 import fnmatch
 import os
+import platform
 import re
+import subprocess
 import sys
 
 # The default path to the Subversion configuration file.
-SVN_CONFIG_FILENAME = os.path.expandvars('$HOME/.subversion/config')
+SVN_CONFIG_FILENAME = os.path.expandvars(
+  r'%APPDATA%\Subversion\config' if platform.system() == 'Windows'
+  else '$HOME/.subversion/config')
 
 # The name of Subversion's private directory in working copies.
 SVN_WC_ADM_DIR_NAME = '.svn'
@@ -112,7 +116,7 @@ def process_autoprop_lines(lines):
         prop_value = prop_value.strip()
       except ValueError:
         prop_name = prop
-        prop_value = '*'
+        prop_value = 'ON'
       if len(prop_name):
         props_list += [(prop_name, prop_value)]
 
@@ -145,7 +149,7 @@ def filter_walk(autoprop_lines, dirname, filenames):
       for f in matching_filenames:
         command += ["%s/%s" % (dirname, f)]
 
-      status = os.spawnvp(os.P_WAIT, 'svn', command)
+      status = subprocess.call(command)
       if status:
         print('Command %s failed with exit status %s' \
               % (command, status))
