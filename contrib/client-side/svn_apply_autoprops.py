@@ -147,8 +147,8 @@ def filter_walk(autoprop_lines, dirname, filenames):
     for prop in prop_list:
       command = ['svn', 'propset', prop[0], prop[1]]
       for f in matching_filenames:
-	if '@' in f:
-	  f += '@'
+        if '@' in f:
+          f += '@'
         command += ["%s/%s" % (dirname, f)]
 
       status = subprocess.call(command)
