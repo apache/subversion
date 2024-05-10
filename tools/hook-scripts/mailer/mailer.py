@@ -1249,7 +1249,7 @@ class Config:
 
   # The predefined configuration sections. These are omitted from the
   # set of groups.
-  _predefined = ('general', 'defaults', 'maps')
+  PREDEFINED = ('general', 'defaults', 'maps')
 
   def __init__(self, fname, repos_dir, default_params):
     cp = configparser.ConfigParser()
@@ -1262,7 +1262,7 @@ class Config:
       if not hasattr(self, section):
         section_ob = _sub_section()
         setattr(self, section, section_ob)
-        if section not in self._predefined:
+        if section not in self.PREDEFINED:
           self._groups.append(section)
       else:
         section_ob = getattr(self, section)
