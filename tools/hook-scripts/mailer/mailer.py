@@ -109,7 +109,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
   if cmd == 'commit':
     revision = int(cmd_args[0])
     repos = Repository(repos_dir, revision, pool)
-    cfg = Config(config_fname, repos,
+    cfg = Config(config_fname, repos_dir,
                  {'author': repos.author,
                   'repos_basename': os.path.basename(repos.repos_dir)
                  })
@@ -125,7 +125,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     repos = Repository(repos_dir, revision, pool)
     # Override the repos revision author with the author of the propchange
     repos.author = author
-    cfg = Config(config_fname, repos,
+    cfg = Config(config_fname, repos_dir,
                  {'author': author,
                   'repos_basename': os.path.basename(repos.repos_dir)
                  })
@@ -135,7 +135,7 @@ def main(pool, cmd, config_fname, repos_dir, cmd_args):
     repos = Repository(repos_dir, 0, pool) ### any old revision will do
     # Override the repos revision author with the author of the lock/unlock
     repos.author = author
-    cfg = Config(config_fname, repos,
+    cfg = Config(config_fname, repos_dir,
                  {'author': author,
                   'repos_basename': os.path.basename(repos.repos_dir)
                  })
@@ -1251,7 +1251,7 @@ class Config:
   # set of groups.
   _predefined = ('general', 'defaults', 'maps')
 
-  def __init__(self, fname, repos, global_params):
+  def __init__(self, fname, repos_dir, default_params):
     cp = configparser.ConfigParser()
     cp.read(fname)
 
@@ -1277,14 +1277,11 @@ class Config:
     if not hasattr(self, 'maps'):
       self.maps = _sub_section()
 
-    # these params are always available, although they may be overridden
-    self._global_params = global_params.copy()
-
     # prepare maps. this may remove sections from consideration as a group.
     self._prep_maps()
 
     # process all the group sections.
-    self._prep_groups(repos)
+    self._prep_groups(repos_dir, default_params)
 
   def is_set(self, option):
     """Return None if the option is not set; otherwise, its value is returned.
@@ -1371,46 +1368,59 @@ class Config:
     for sectname in mapsections:
       self._groups.remove(sectname)
 
-
-  def _prep_groups(self, repos):
+  def _prep_groups(self, repos_dir, default_params):
     self._group_re = [ ]
 
-    repos_dir = os.path.abspath(repos.repos_dir)
+    ### does it arrive as an abspath?
+    repos_dir = os.path.abspath(repos_dir)
+
+    def repos_params(section_name, defaults):
+        "Build key/value params for this section, based on current repos."
+
+        section = getattr(self, section_name)  # should exist
+        if hasattr(section, 'for_repos'):
+            match = re.match(section.for_repos, repos_dir)
+            if not match:
+                # The FOR_REPOS selector does not apply to this repository.
+                return None  # no params at all
+
+            # Extract key/value pairs from the regex match of this
+            # repository, and merge them into the default params.
+            # Make sure to copy() to avoid mutation of the argument.
+            return defaults.copy().update(match.groupdict())
+
+        # There are no repository-specific key/value params, to add.
+        return defaults
 
     # compute the default repository-based parameters. start with some
     # basic parameters, then bring in the regex-based params.
-    self._default_params = self._global_params
-
-    try:
-      match = re.match(self.defaults.for_repos, repos_dir)
-      if match:
-        self._default_params = self._default_params.copy()
-        self._default_params.update(match.groupdict())
-    except AttributeError:
-      # there is no self.defaults.for_repos
-      pass
+    # Note: use the defaults, even if selected-against by FOR_REPOS
+    self._default_params = (repos_params('defaults', default_params)
+                            or default_params)
 
     # select the groups that apply to this repository
     for group in self._groups:
-      sub = getattr(self, group)
-      params = self._default_params
-      if hasattr(sub, 'for_repos'):
-        match = re.match(sub.for_repos, repos_dir)
-        if not match:
+      params = repos_params(group, self._default_params)
+      if params is None:
+          # There was a FOR_REPOS, but this repos does not match.
+          # Thus, ignore this param group.
           continue
-        params = params.copy()
-        params.update(match.groupdict())
+
+      sub = getattr(self, group)
 
       # if a matching rule hasn't been given, then use the empty string
       # as it will match all paths
       for_paths = getattr(sub, 'for_paths', '')
+
+      # Build an optional regex to exclude some change paths.
       exclude_paths = getattr(sub, 'exclude_paths', None)
       if exclude_paths:
         exclude_paths_re = re.compile(exclude_paths)
       else:
         exclude_paths_re = None
 
-      # check search_logmsg re
+      # Build an optional regex to extract key/value pairs from the
+      # log message to augment the params.
       search_logmsg = getattr(sub, 'search_logmsg', None)
       if search_logmsg is not None:
         search_logmsg_re = re.compile(search_logmsg)
