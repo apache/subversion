@@ -23,13 +23,14 @@
 import sys
 import os
 import pprint
+import pathlib
 
 # SCRIPT_DIR should be mailer/tests/
-SCRIPT_DIR = os.path.dirname(os.path.realpath(__file__))
-T3_DIR = os.path.join(SCRIPT_DIR, 't3')
+SCRIPT_DIR = pathlib.Path(__file__).parent.resolve()
+T3_DIR = SCRIPT_DIR / 't3'
 
 # We should find mailer.py in SCRIPT_DIR's parent
-sys.path.insert(0, os.path.dirname(SCRIPT_DIR))
+sys.path.insert(0, str(SCRIPT_DIR.parent))
 import mailer
 
 # Static input files.
@@ -42,19 +43,19 @@ PARSED_OUTPUT = 'parsed.new'
 
 def test_config_parsing(repos_dir):
 
-    cfg = mailer.Config(os.path.join(T3_DIR, DEFAULT_CONFIG),
+    cfg = mailer.Config(T3_DIR / DEFAULT_CONFIG,
                         repos_dir,
                         { 'author': 'johndoe',
-                          'repos_basename': os.path.basename(repos_dir),
+                          'repos_basename': repos_dir.name,
                           })
     fp = open(os.path.join(T3_DIR, PARSED_OUTPUT), 'w')
     pprint.pprint(cfg._default_params, stream=fp)
     pprint.pprint(cfg._groups, stream=fp)
     pprint.pprint(cfg.__dict__.keys(), stream=fp)
-    pprint.pprint(cfg.maps, stream=fp)
+    pprint.pprint([d for d in dir(cfg.maps) if not d.startswith('_')], stream=fp)
     pprint.pprint(cfg._group_re, stream=fp)
 
 
 if __name__ == '__main__':
-    repos_dir = sys.argv[1]
+    repos_dir = pathlib.Path(sys.argv[1])
     test_config_parsing(repos_dir)
