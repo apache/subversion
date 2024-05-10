@@ -1278,10 +1278,12 @@ class Config:
       self.maps = _sub_section()
 
     # prepare maps. this may remove sections from consideration as a group.
-    self._prep_maps()
+    mapsections = self._prep_maps()
+    for sectname in mapsections:
+        self._groups.remove(sectname)
 
     # process all the group sections.
-    self._prep_groups(repos_dir, default_params)
+    self._prep_groups(self._groups, repos_dir, default_params)
 
   def is_set(self, option):
     """Return None if the option is not set; otherwise, its value is returned.
@@ -1333,9 +1335,13 @@ class Config:
     return cmd
 
   def _prep_maps(self):
-    "Rewrite the [maps] options into callables that look up values."
+    """Rewrite the [maps] options into callables that look up values.
 
-    mapsections = []
+    Returns a set of section names that are used for mappings, which
+    should not be considered as path-match groups.
+    """
+
+    mapsections = set()
 
     for optname, mapvalue in vars(self.maps).items():
       if mapvalue[:1] == '[':
@@ -1352,8 +1358,7 @@ class Config:
                                                              value.lower(),
                                                              value))
         # mark for removal when all optnames are done
-        if sectname not in mapsections:
-          mapsections.append(sectname)
+        mapsections.add(sectname)
 
       # elif test for other mapper types. possible examples:
       #   dbm:filename.db
@@ -1365,10 +1370,9 @@ class Config:
         raise UnknownMappingSpec(mapvalue)
 
     # remove each mapping section from consideration as a group
-    for sectname in mapsections:
-      self._groups.remove(sectname)
+    return mapsections
 
-  def _prep_groups(self, repos_dir, default_params):
+  def _prep_groups(self, groups, repos_dir, default_params):
     self._group_re = [ ]
 
     ### does it arrive as an abspath?
@@ -1399,7 +1403,7 @@ class Config:
                             or default_params)
 
     # select the groups that apply to this repository
-    for group in self._groups:
+    for group in groups:
       params = repos_params(group, self._default_params)
       if params is None:
           # There was a FOR_REPOS, but this repos does not match.
