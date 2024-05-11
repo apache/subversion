@@ -1,12 +1,5 @@
 # Setup
 
-The `dos2unix` program is needed:
-
-```
-$ sudo apt install dos2unix
-```
-
-
 Prepare a repository for use with testing:
 
 ```
@@ -21,3 +14,13 @@ You can now run the test using:
 ```
 $ ./mailer-t1.sh mailer-init.12345/repos/ ../mailer.py
 ```
+
+----
+
+TBD: discuss mailer-t2.sh
+
+----
+
+TBD: discuss mailer-t3.py
+
+----

@@ -54,7 +54,5 @@ done
 
 echo "current mailer.py output in: $glom"
 
-dos2unix $glom
-
 echo diff -q $orig $glom
 diff -q $orig $glom && echo "SUCCESS: no differences detected"
