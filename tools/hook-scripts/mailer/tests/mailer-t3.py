@@ -55,6 +55,12 @@ def test_config_parsing(repos_dir):
     pprint.pprint(sorted(d for d in dir(cfg.maps) if not d.startswith('_')), stream=fp)
     pprint.pprint(cfg._group_re, stream=fp)
 
+    # Try some particular lookups.
+    groups = cfg.which_groups('/some/path', None)
+    pprint.pprint(groups, stream=fp)
+    pprint.pprint(cfg.get('to_addr', 't3-repos-1', groups[0][1]), stream=fp)
+    pprint.pprint(cfg.get('from_addr', 't3-repos-1', groups[0][1]), stream=fp)
+
 
 if __name__ == '__main__':
     repos_dir = pathlib.Path(sys.argv[1])
