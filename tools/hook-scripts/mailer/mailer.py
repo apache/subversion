@@ -1256,14 +1256,14 @@ class Config:
     cp.read(fname)
 
     # record the (non-default) groups that we find
-    self._groups = [ ]
+    ordered_groups = [ ]
 
     for section in cp.sections():
       if not hasattr(self, section):
         section_ob = _sub_section()
         setattr(self, section, section_ob)
         if section not in self.PREDEFINED:
-          self._groups.append(section)
+            ordered_groups.append(section)
       else:
         section_ob = getattr(self, section)
       for option in cp.options(section):
@@ -1280,10 +1280,15 @@ class Config:
     # prepare maps. this may remove sections from consideration as a group.
     mapsections = self._prep_maps()
     for sectname in mapsections:
-        self._groups.remove(sectname)
+        ordered_groups.remove(sectname)
 
     # process all the group sections.
-    self._prep_groups(self._groups, repos_dir, default_params)
+    # NOTE: path-group testing and precedence is in file-order. Use a list
+    #   instead of a set to maintain the match ordering.
+    self._prep_groups(ordered_groups, repos_dir, default_params)
+
+    ### for t3, provide this instance var
+    self._groups = ordered_groups
 
   def is_set(self, option):
     """Return None if the option is not set; otherwise, its value is returned.
