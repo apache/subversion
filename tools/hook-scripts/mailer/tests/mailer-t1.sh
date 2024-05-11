@@ -48,7 +48,7 @@ rm -f $glom
 export TZ=GST
 
 youngest="`svnlook youngest $1`"
-for rev in `python -c "print(\" \".join(map(str, range(1,$youngest+1))))"`; do
+for rev in `seq $youngest`; do
   $2 commit $1 $rev $conf >> $glom
 done
 
