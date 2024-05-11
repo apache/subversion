@@ -1258,18 +1258,27 @@ class Config:
     # record the (non-default) groups that we find
     ordered_groups = [ ]
 
+    def build_section_ob(section_name):
+        ob = _sub_section()
+        # Get the raw values. We use the same format for *our* interpolation.
+        vars(ob).update(cp.items(section_name, raw=True))
+        return ob
+
+    # The config file MUST contain [general] and [defaults]; maybe [maps]
+    self.general = build_section_ob('general')
+    self.defaults = build_section_ob('defaults')
+    if cp.has_section('maps'):
+        self.maps = build_section_ob('maps')
+
+    # Process all other sections as groups.
     for section in cp.sections():
-      if not hasattr(self, section):
-        section_ob = _sub_section()
-        setattr(self, section, section_ob)
-        if section not in self.PREDEFINED:
-            ordered_groups.append(section)
-      else:
-        section_ob = getattr(self, section)
-      for option in cp.options(section):
-        # get the raw value -- we use the same format for *our* interpolation
-        value = cp.get(section, option, raw=1)
-        setattr(section_ob, option, value)
+        if section in self.PREDEFINED:
+            continue
+        assert not hasattr(self, section)
+
+        ordered_groups.append(section)
+
+        setattr(self, section, build_section_ob(section))
 
     # be compatible with old format config files
     if hasattr(self.general, 'diff') and not hasattr(self.defaults, 'diff'):
