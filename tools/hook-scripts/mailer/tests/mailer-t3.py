@@ -51,8 +51,8 @@ def test_config_parsing(repos_dir):
     fp = open(os.path.join(T3_DIR, PARSED_OUTPUT), 'w')
     pprint.pprint(cfg._default_params, stream=fp)
     pprint.pprint(cfg._groups, stream=fp)
-    pprint.pprint(cfg.__dict__.keys(), stream=fp)
-    pprint.pprint([d for d in dir(cfg.maps) if not d.startswith('_')], stream=fp)
+    pprint.pprint(sorted(cfg.__dict__.keys()), stream=fp)
+    pprint.pprint(sorted(d for d in dir(cfg.maps) if not d.startswith('_')), stream=fp)
     pprint.pprint(cfg._group_re, stream=fp)
 
 
