@@ -432,15 +432,11 @@ class PipeOutput(MailedOutput):
     cmd = self.cmd + [ '-f', self.from_addr ] + self.to_addrs
 
     # construct the pipe for talking to the mailer
-    self.pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
-                                 close_fds=sys.platform != "win32")
-    self.pipe.write(prefix + body)
+    pipe = subprocess.Popen(cmd, stdin=subprocess.PIPE,
+                            close_fds=sys.platform != "win32")
 
-    # signal that we're done sending content
-    self.pipe.stdin.close()
-
-    # wait to avoid zombies
-    self.pipe.wait()
+    # Send the content to the mailer, and wait for completion.
+    pipe.communicate(prefix + body)
 
 
 class Messenger:
