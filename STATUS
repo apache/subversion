@@ -29,6 +29,13 @@ Candidate changes:
    Votes:
      +1: dsahlberg, hartmannathan
 
+ * r1917864
+   Fix cmdline parsing bug with double minus in --change argument
+   Justification:
+     Syntax error in cmdline arg should not cause assertion failure
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
