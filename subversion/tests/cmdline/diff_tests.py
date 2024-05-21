@@ -5329,6 +5329,36 @@ def diff_nonexistent_in_wc(sbox):
   svntest.actions.run_and_verify_svn(expected_output_head_base, [],
                                      'diff', '-r', '1')
 
+def diff_invalid_change_arg(sbox):
+  "invalid change argument"
+
+  sbox.build()
+
+  svntest.actions.run_and_verify_svn(
+    None,
+    (r'.*svn: E205000: Non-numeric change argument \(--1\) given to -c'),
+    'diff', sbox.wc_dir, '-c', '--1')
+
+  svntest.actions.run_and_verify_svn(
+    None,
+    (r'.*svn: E205000: Non-numeric change argument \(-r-1\) given to -c'),
+    'diff', sbox.wc_dir, '-c', '-r-1')
+
+  svntest.actions.run_and_verify_svn(
+    None,
+    (r'.*svn: E205000: Negative number in range \(1--3\) not supported with -c'),
+    'diff', sbox.wc_dir, '-c', '1--3')
+
+  # 'r' is not a number
+  svntest.actions.run_and_verify_svn(
+    None,
+    (r'.*svn: E205000: Non-numeric change argument \(r1--r3\) given to -c'),
+    'diff', sbox.wc_dir, '-c', 'r1--r3')
+
+  svntest.actions.run_and_verify_svn(
+    None,
+    (r'.*svn: E205000: Negative number in range \(r1-r-3\) not supported with -c'),
+    'diff', sbox.wc_dir, '-c', 'r1-r-3')
 
 ########################################################################
 #Run the tests
@@ -5431,6 +5461,7 @@ test_list = [ None,
               diff_file_replaced_by_symlink,
               diff_git_format_copy,
               diff_nonexistent_in_wc,
+              diff_invalid_change_arg,
               ]
 
 if __name__ == '__main__':
