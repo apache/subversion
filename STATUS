@@ -43,6 +43,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1917946
+   Convert path to local style in error message from diff API
+   Justification:
+     Use correct dirent style in error message
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
