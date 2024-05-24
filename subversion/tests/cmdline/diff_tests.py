@@ -5360,6 +5360,11 @@ def diff_invalid_change_arg(sbox):
     (r'.*svn: E205000: Negative number in range \(r1-r-3\) not supported with -c'),
     'diff', sbox.wc_dir, '-c', 'r1-r-3')
 
+  svntest.actions.run_and_verify_svn(
+    None,
+    (r'.*svn: E205000: There is no change 0'),
+    'diff', sbox.wc_dir, '-c', '1-0')
+
 ########################################################################
 #Run the tests
 

@@ -2394,7 +2394,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                              "given to -c"), change_str);
                 }
 
-              if (changeno == 0)
+              if (changeno == 0 || changeno_end == 0)
                 {
                   return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                           _("There is no change 0"));
