@@ -36,6 +36,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1917944
+   Fix cmdline parsing bug with zero in --change end of range argument
+   Justification:
+     Syntax error in cmdline arg should not cause assertion failure
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
