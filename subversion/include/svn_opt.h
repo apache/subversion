@@ -534,6 +534,30 @@ svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
                                 apr_pool_t *pool);
 
 /**
+ * Parse @a arg, where @a arg is "N", "-N", "N-M" into a
+ * @c svn_opt_revision_range_t and push that onto @a opt_ranges.
+ *
+ *    - If @a arg is "N", set the @c start field of the
+ *      @c svn_opt_revision_range_t to N-1 and @c end field to N.
+ *
+ *    - If @a arg is "-N", set the @c start field of the
+ *      @c svn_opt_revision_range_t to N and @c end field to N-1.
+ *
+ *    - If @a arg is "N-M", set the @c start field of the
+ *      @c svn_opt_revision_range_t to N-1 and @c end field to M.
+ *
+ * If @a arg is invalid, return -1; else return 0.
+ *
+ * Use @a result_pool to allocate @c svn_opt_revision_range_t pushed to the
+ * array.
+ *
+ * @since New in 1.15.
+ */
+int svn_opt_parse_change_to_range(apr_array_header_t *opt_ranges,
+                                  const char *arg,
+                                  apr_pool_t *result_pool);
+
+/**
  * Resolve peg revisions and operational revisions in the following way:
  *
  *    - If @a is_url is set and @a peg_rev->kind is

@@ -5336,33 +5336,33 @@ def diff_invalid_change_arg(sbox):
 
   svntest.actions.run_and_verify_svn(
     None,
-    (r'.*svn: E205000: Non-numeric change argument \(--1\) given to -c'),
+    (r'.*svn: E205000: Syntax error in change argument \'--1\''),
     'diff', sbox.wc_dir, '-c', '--1')
 
   svntest.actions.run_and_verify_svn(
     None,
-    (r'.*svn: E205000: Non-numeric change argument \(-r-1\) given to -c'),
+    (r'.*svn: E205000: Syntax error in change argument \'-r-1\''),
     'diff', sbox.wc_dir, '-c', '-r-1')
 
   svntest.actions.run_and_verify_svn(
     None,
-    (r'.*svn: E205000: Negative number in range \(1--3\) not supported with -c'),
+    (r'.*svn: E205000: Syntax error in change argument \'1--3\''),
     'diff', sbox.wc_dir, '-c', '1--3')
 
   # 'r' is not a number
   svntest.actions.run_and_verify_svn(
     None,
-    (r'.*svn: E205000: Non-numeric change argument \(r1--r3\) given to -c'),
+    (r'.*svn: E205000: Syntax error in change argument \'r1--r3\''),
     'diff', sbox.wc_dir, '-c', 'r1--r3')
 
   svntest.actions.run_and_verify_svn(
     None,
-    (r'.*svn: E205000: Negative number in range \(r1-r-3\) not supported with -c'),
+    (r'.*svn: E205000: Syntax error in change argument \'r1-r-3\''),
     'diff', sbox.wc_dir, '-c', 'r1-r-3')
 
   svntest.actions.run_and_verify_svn(
     None,
-    (r'.*svn: E205000: There is no change 0'),
+    (r'.*svn: E205000: Syntax error in change argument \'1-0\''),
     'diff', sbox.wc_dir, '-c', '1-0')
 
 ########################################################################

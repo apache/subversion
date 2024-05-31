@@ -55,7 +55,6 @@
 #include "shelf2-cmd.h"
 #include "shelf-cmd.h"
 
-#include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_utf_private.h"
@@ -2344,98 +2343,18 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           for (i = 0; i < change_revs->nelts; i++)
             {
-              char *end;
-              svn_revnum_t changeno, changeno_end;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
-              const char *s = change_str;
-              svn_boolean_t is_negative;
 
-              /* Check for a leading minus to allow "-c -r42".
-               * The is_negative flag is used to handle "-c -42" and "-c -r42".
-               * The "-c r-42" case is handled by strtol() returning a
-               * negative number. */
-              is_negative = (*s == '-');
-              if (is_negative)
-                s++;
-
-              /* Allow any number of 'r's to prefix a revision number. */
-              while (*s == 'r')
-                s++;
-              changeno = changeno_end = strtol(s, &end, 10);
-              if (end != s && *end == '-')
-                {
-                  if (changeno < 0 || is_negative)
-                    {
-                      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                               NULL,
-                                               _("Negative number in range (%s)"
-                                                 " not supported with -c"),
-                                               change_str);
-                    }
-                  s = end + 1;
-                  while (*s == 'r')
-                    s++;
-                  changeno_end = strtol(s, &end, 10);
-
-                  if (changeno_end < 0)
-                    {
-                      return svn_error_createf(
-                        SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                        _("Negative number in range (%s)"
-                          " not supported with -c"),
-                        change_str);
-                    }
-                }
-              if (end == change_str || *end != '\0')
+              if (svn_opt_parse_change_to_range(opt_state.revision_ranges,
+                                                change_str, pool) != 0)
                 {
                   return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                           _("Non-numeric change argument (%s) "
-                                             "given to -c"), change_str);
-                }
-
-              if (changeno == 0 || changeno_end == 0)
-                {
-                  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                          _("There is no change 0"));
-                }
-
-              /* The revision number cannot contain a double minus */
-              if (changeno < 0 && is_negative)
-                {
-                  return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                           _("Non-numeric change argument "
-                                             "(%s) given to -c"), change_str);
-                }
-
-              if (is_negative)
-                changeno = -changeno;
-
-              /* Figure out the range:
-                    -c N  -> -r N-1:N
-                    -c -N -> -r N:N-1
-                    -c M-N -> -r M-1:N for M < N
-                    -c M-N -> -r M:N-1 for M > N
-                    -c -M-N -> error (too confusing/no valid use case)
-              */
-              if (changeno > 0)
-                {
-                  if (changeno <= changeno_end)
-                    changeno--;
-                  else
-                    changeno_end--;
-                }
-              else
-                {
-                  changeno = -changeno;
-                  changeno_end = changeno - 1;
+                                           _("Syntax error in change argument "
+                                             "'%s'"), change_str);
                 }
 
               opt_state.used_change_arg = TRUE;
-              APR_ARRAY_PUSH(opt_state.revision_ranges,
-                             svn_opt_revision_range_t *)
-                = svn_opt__revision_range_from_revnums(changeno, changeno_end,
-                                                       pool);
             }
         }
         break;

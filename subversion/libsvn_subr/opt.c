@@ -629,6 +629,86 @@ svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
   return 0;
 }
 
+int svn_opt_parse_change_to_range(apr_array_header_t *opt_ranges,
+                                  const char *arg,
+                                  apr_pool_t *result_pool)
+{
+  char *end;
+  svn_revnum_t changeno, changeno_end;
+  const char *s = arg;
+  svn_boolean_t is_negative;
+
+  /* Check for a leading minus to allow "-c -r42".
+   * The is_negative flag is used to handle "-c -42" and "-c -r42".
+   * The "-c r-42" case is handled by strtol() returning a
+   * negative number. */
+  is_negative = (*s == '-');
+  if (is_negative)
+    s++;
+
+  /* Allow any number of 'r's to prefix a revision number. */
+  while (*s == 'r')
+    s++;
+  changeno = changeno_end = strtol(s, &end, 10);
+  if (end != s && *end == '-')
+    {
+      /* Negative number in range not supported with -c */
+      if (changeno < 0 || is_negative)
+        return -1;
+
+      s = end + 1;
+      while (*s == 'r')
+        s++;
+      changeno_end = strtol(s, &end, 10);
+
+      /* Negative number in range not supported with -c */
+      if (changeno_end < 0)
+          return -1;
+    }
+
+  /* Non-numeric change argument given to -c? */
+  if (end == arg || *end != '\0')
+    return -1;
+
+  /* There is no change 0 */
+  if (changeno == 0 || changeno_end == 0)
+    return -1;
+
+  /* The revision number cannot contain a double minus */
+  if (changeno < 0 && is_negative)
+    return -1;
+
+  if (is_negative)
+    changeno = -changeno;
+
+  /* Figure out the range:
+        -c N  -> -r N-1:N
+        -c -N -> -r N:N-1
+        -c M-N -> -r M-1:N for M < N
+        -c M-N -> -r M:N-1 for M > N
+        -c -M-N -> error (too confusing/no valid use case)
+  */
+  if (changeno > 0)
+    {
+      if (changeno <= changeno_end)
+        changeno--;
+      else
+        changeno_end--;
+    }
+  else
+    {
+      changeno = -changeno;
+      changeno_end = changeno - 1;
+    }
+
+  APR_ARRAY_PUSH(opt_ranges,
+                  svn_opt_revision_range_t *)
+    = svn_opt__revision_range_from_revnums(changeno, changeno_end,
+                                           result_pool);
+
+  return 0;
+}
+
 svn_error_t *
 svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
                           svn_opt_revision_t *op_rev,
