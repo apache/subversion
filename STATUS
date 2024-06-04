@@ -34,7 +34,7 @@ Candidate changes:
    Justification:
      Syntax error in cmdline arg should not cause assertion failure
    Votes:
-     +1: hartmannathan
+     +1: hartmannathan, astieger
 
  * r1917946
    Convert path to local style in error message from diff API
