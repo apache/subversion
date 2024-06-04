@@ -41,7 +41,7 @@ Candidate changes:
    Justification:
      Use correct dirent style in error message
    Votes:
-     +1: hartmannathan
+     +1: hartmannathan, astieger
 
  * r1918138, r1918139
    Fix unbounded memory usage in propget and proplist --xml commands
