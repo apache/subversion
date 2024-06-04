@@ -50,6 +50,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+  * r1915236, r1915239
+    Support building swig-rb with clang 16 / GCC14 
+    Justification:
+      Distros moving to newer compilers that treat these as errors
+    Votes:
+     +1: astieger
+
 Veto-blocked changes:
 =====================
 
