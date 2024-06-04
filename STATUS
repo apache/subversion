@@ -43,6 +43,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1918138, r1918139
+   Fix unbounded memory usage in propget and proplist --xml commands
+   Justification:
+     Follow SVN's iterpool conventions
+   Votes:
+     +1: hartmannathan
+
 Veto-blocked changes:
 =====================
 
