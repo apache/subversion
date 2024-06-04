@@ -22,13 +22,6 @@ Candidate changes:
    votes:
      +1: rhuijben
 
- * r1914222
-   Improve help message for svnmucc PUT.
-   Justification:
-     Users asked.
-   Votes:
-     +1: dsahlberg, hartmannathan, astieger
-
  * r1917864, r1917944
    Fix cmdline parsing bugs in --change (-c) argument
    Justification:
@@ -62,3 +55,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1914222
+   Improve help message for svnmucc PUT.
+   Justification:
+     Users asked.
+   Votes:
+     +1: dsahlberg, hartmannathan, astieger
