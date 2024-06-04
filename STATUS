@@ -48,7 +48,7 @@ Candidate changes:
     Justification:
       Distros moving to newer compilers that treat these as errors
     Votes:
-     +1: astieger
+     +1: astieger, dsahlberg
 
 Veto-blocked changes:
 =====================
