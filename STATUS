@@ -27,7 +27,7 @@ Candidate changes:
    Justification:
      Users asked.
    Votes:
-     +1: dsahlberg, hartmannathan
+     +1: dsahlberg, hartmannathan, astieger
 
  * r1917864, r1917944
    Fix cmdline parsing bugs in --change (-c) argument
