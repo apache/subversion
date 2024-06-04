@@ -75,6 +75,8 @@ proplist_receiver_xml(void *baton,
           svn_prop_inherited_item_t *iprop =
             APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
 
+          svn_pool_clear(iterpool);
+
           sb = NULL;
 
           if (svn_path_is_url(iprop->path_or_url))
