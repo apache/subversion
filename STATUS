@@ -55,10 +55,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1914222
-   Improve help message for svnmucc PUT.
-   Justification:
-     Users asked.
-   Votes:
-     +1: dsahlberg, hartmannathan, astieger
