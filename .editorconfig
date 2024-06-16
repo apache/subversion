@@ -8,6 +8,14 @@ indent_size = 2
 insert_final_newline = true
 trim_trailing_whitespace = false
 
+# Forces hard line wrapping after the amount of characters specified.
+max_line_length = 79
+
+# Adds guidelines to the editor. This option is unofficial, but it is
+# supported by Visual Studio with EditorConfig Guidelines or Editor
+# Guidelines extensions.
+guidelines = 79 dashed
+
 [**/Makefile*]
 indent_style = tab
 indent_size = 8
