@@ -47,6 +47,7 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
 gen_modules = {
+  'cmake' : ('gen_cmake', 'CMake build system'),
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
