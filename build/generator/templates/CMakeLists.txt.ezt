@@ -1,10 +1,16 @@
 cmake_minimum_required(VERSION 3.12)
 
 project("Subversion")
+
+set(SVN_INCLUDE_DIRECTORIES
+  "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
+  "${CMAKE_CURRENT_BINARY_DIR}"
+)
 [for targets][is targets.type "lib"]
 add_library([targets.name][for targets.sources]
   [targets.sources][end]
 )
+target_include_directories([targets.name] PUBLIC ${SVN_INCLUDE_DIRECTORIES})
 [end][is targets.type "exe"]
 add_executable([targets.name][for targets.sources]
   [targets.sources][end]
