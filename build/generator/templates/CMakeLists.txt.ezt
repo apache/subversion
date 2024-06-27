@@ -1,5 +1,12 @@
 cmake_minimum_required(VERSION 3.12)
 
 project("Subversion")
-
-# TODO: [targets]
+[for targets][is targets.type "lib"]
+add_library([targets.name][for targets.sources]
+  [targets.sources]
+[end])
+[end][is targets.type "exe"]
+add_executable([targets.name][for targets.sources]
+  [targets.sources]
+[end])
+[end][end]
