@@ -139,6 +139,9 @@ class Generator(gen_base.GeneratorBase):
       "libsvnxx",
       "svnxx-tests",
 
+      "libsvn_fs_base",
+      "libsvn_ra_serf",
+
       "mod_authz_svn",
       "mod_dav_svn",
       "mod_dontdothat",
