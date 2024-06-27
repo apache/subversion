@@ -77,8 +77,24 @@ class Generator(gen_base.GeneratorBase):
       for dep in self.get_dependecies(target.name):
         if isinstance(dep, gen_base.TargetLinked):
           if dep.external_lib:
-            # TODO: implement external dependecies
-            pass
+            if dep.name == "ra-libs":
+              # TODO
+              pass
+            elif dep.name == "fs-libs":
+              # TODO
+              pass
+            elif dep.name in ["apriconv",
+                              "apr_memcache",
+                              "magic",
+                              "intl",
+                              "macos-plist",
+                              "macos-keychain",
+                              "sasl"]:
+              # These dependencies are currently ignored
+              # TODO:
+              pass
+            else:
+              libs.append("external-" + dep.name)
           else:
             libs.append(dep.name)
         elif isinstance(dep, gen_base.ObjectFile):

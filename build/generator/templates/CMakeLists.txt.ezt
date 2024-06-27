@@ -2,6 +2,8 @@ cmake_minimum_required(VERSION 3.12)
 
 project("Subversion")
 
+include("build/cmake/dependencies.cmake")
+
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/subversion/svn_private_config.hw"
   "${CMAKE_CURRENT_BINARY_DIR}/svn_private_config.h"
