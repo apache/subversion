@@ -8,10 +8,11 @@ class _eztdata(object):
     vars(self).update(kw)
 
 class cmake_target():
-  def __init__(self, name: str, type: str, sources):
+  def __init__(self, name: str, type: str, sources, libs):
     self.name = name
     self.type = type
     self.sources = sources
+    self.libs = libs
 
 def get_target_type(target: gen_base.Target):
   if isinstance(target, gen_base.TargetExe):
@@ -71,11 +72,15 @@ class Generator(gen_base.GeneratorBase):
         pass
 
       sources = []
+      libs = []
 
       for dep in self.get_dependecies(target.name):
         if isinstance(dep, gen_base.TargetLinked):
-          # TODO:
-          pass
+          if dep.external_lib:
+            # TODO: implement external dependecies
+            pass
+          else:
+            libs.append(dep.name)
         elif isinstance(dep, gen_base.ObjectFile):
           deps = self.graph.get_sources(gen_base.DT_OBJECT,
                                         dep,
@@ -83,13 +88,17 @@ class Generator(gen_base.GeneratorBase):
           for dep in deps:
             sources.append(dep.filename)
 
+      target_type = get_target_type(target)
+
       target = cmake_target(
         name = target.name,
-        type = get_target_type(target),
-        sources = sources
+        type = target_type,
+        sources = sources,
+        libs = libs
       )
 
-      targets.append(target)
+      if target_type in ["exe", "lib"]:
+        targets.append(target)
 
     data = _eztdata(
       targets = targets,

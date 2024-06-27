@@ -9,4 +9,7 @@ add_library([targets.name][for targets.sources]
 add_executable([targets.name][for targets.sources]
   [targets.sources][end]
 )
-[end][end]
+[end]target_link_libraries([targets.name][for targets.libs]
+  [targets.libs][end]
+)
+[end]
