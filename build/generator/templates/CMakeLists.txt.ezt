@@ -13,6 +13,13 @@ set(SVN_INCLUDE_DIRECTORIES
   "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
   "${CMAKE_CURRENT_BINARY_DIR}"
 )
+
+if (WIN32)
+  add_compile_definitions(
+    "alloca=_alloca"
+    "WIN32"
+  )
+endif()
 [for targets][is targets.type "lib"]
 add_library([targets.name][for targets.sources]
   [targets.sources][end]
