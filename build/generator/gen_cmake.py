@@ -29,7 +29,9 @@ class _eztdata(object):
     vars(self).update(kw)
 
 class cmake_target():
-  def __init__(self, name: str, type: str, sources, libs, msvc_libs, msvc_objects):
+  def __init__(self, name: str, type: str, sources,
+               libs, msvc_libs, msvc_objects,
+               group: str):
     self.name = name
     self.type = type
     self.sources = sources
@@ -37,6 +39,8 @@ class cmake_target():
 
     self.msvc_libs = msvc_libs
     self.msvc_objects = msvc_objects
+
+    self.group = group
 
     self.has_msvc_libs = ezt.boolean(len(msvc_libs) > 0)
     self.has_msvc_objects = ezt.boolean(len(msvc_objects) > 0)
@@ -85,6 +89,7 @@ class Generator(gen_base.GeneratorBase):
 
     for target in self.get_install_sources():
       target: gen_base.Target
+      group = None
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -97,9 +102,9 @@ class Generator(gen_base.GeneratorBase):
         else:
           pass
       elif isinstance(target, gen_base.TargetRaModule):
-        pass
+        group = "SVN_RA_MODULES"
       elif isinstance(target, gen_base.TargetFsModule):
-        pass
+        group = "SVN_FS_MODULES"
       elif isinstance(target, gen_base.TargetApacheMod):
         pass
       elif isinstance(target, gen_base.TargetLib):
@@ -112,11 +117,9 @@ class Generator(gen_base.GeneratorBase):
         if isinstance(dep, gen_base.TargetLinked):
           if dep.external_lib:
             if dep.name == "ra-libs":
-              # TODO
-              pass
+              libs.append("${SVN_RA_MODULES}")
             elif dep.name == "fs-libs":
-              # TODO
-              pass
+              libs.append("${SVN_FS_MODULES}")
             elif dep.name in ["apriconv",
                               "apr_memcache",
                               "magic",
@@ -157,6 +160,7 @@ class Generator(gen_base.GeneratorBase):
           libs = libs,
           msvc_libs = msvc_libs,
           msvc_objects = msvc_objects,
+          group = group
         )
 
         if isinstance(target, gen_base.TargetExe):

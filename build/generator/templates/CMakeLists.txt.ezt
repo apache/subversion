@@ -46,7 +46,8 @@ endif()
 add_library([targets.name][for targets.sources]
   [targets.sources][end]
 )
-target_include_directories([targets.name] PUBLIC ${SVN_INCLUDE_DIRECTORIES})
+target_include_directories([targets.name] PUBLIC ${SVN_INCLUDE_DIRECTORIES})[if-any targets.group]
+list(APPEND [targets.group] [targets.name])[end]
 [end][is targets.type "exe"]
 add_executable([targets.name][for targets.sources]
   [targets.sources][end]
