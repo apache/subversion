@@ -122,7 +122,7 @@ class Generator(gen_base.GeneratorBase):
           else:
             msvc_libs.append(lib)
 
-        target = cmake_target(
+        new_target = cmake_target(
           name = target.name,
           type = target_type,
           sources = sources,
@@ -131,7 +131,7 @@ class Generator(gen_base.GeneratorBase):
           msvc_objects = msvc_objects,
         )
 
-        targets.append(target)
+        targets.append(new_target)
 
     data = _eztdata(
       targets = targets,
