@@ -53,7 +53,14 @@ class Generator(gen_base.GeneratorBase):
     gen_base.GeneratorBase.__init__(self, fname, verfname, options)
 
   def write(self):
-    targets = []
+    # FS and RA modules. They have to be declared before other libraries
+    mod_targets = []
+    # libsvn_* targets
+    lib_targets = []
+    # Program targets
+    exe_targets = []
+    # TODO: Test suite
+    # test_targets = []
 
     for target in self.get_install_sources():
       target: gen_base.Target
@@ -131,7 +138,16 @@ class Generator(gen_base.GeneratorBase):
           msvc_objects = msvc_objects,
         )
 
-        targets.append(new_target)
+        if isinstance(target, gen_base.TargetExe):
+          exe_targets.append(new_target)
+        elif isinstance(target, gen_base.TargetRaModule) or \
+             isinstance(target, gen_base.TargetFsModule):
+          mod_targets.append(new_target)
+        elif isinstance(target, gen_base.TargetLib):
+          lib_targets.append(new_target)
+
+    # Sort targets for better readability
+    targets = mod_targets + lib_targets + exe_targets
 
     data = _eztdata(
       targets = targets,
