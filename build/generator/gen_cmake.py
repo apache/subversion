@@ -8,11 +8,17 @@ class _eztdata(object):
     vars(self).update(kw)
 
 class cmake_target():
-  def __init__(self, name: str, type: str, sources, libs):
+  def __init__(self, name: str, type: str, sources, libs, msvc_libs, msvc_objects):
     self.name = name
     self.type = type
     self.sources = sources
     self.libs = libs
+
+    self.msvc_libs = msvc_libs
+    self.msvc_objects = msvc_objects
+
+    self.has_msvc_libs = ezt.boolean(len(msvc_libs) > 0)
+    self.has_msvc_objects = ezt.boolean(len(msvc_objects) > 0)
 
 def get_target_type(target: gen_base.Target):
   if isinstance(target, gen_base.TargetExe):
@@ -106,14 +112,25 @@ class Generator(gen_base.GeneratorBase):
 
       target_type = get_target_type(target)
 
-      target = cmake_target(
-        name = target.name,
-        type = target_type,
-        sources = sources,
-        libs = libs
-      )
-
       if target_type in ["exe", "lib"]:
+        msvc_libs = []
+        msvc_objects = []
+
+        for lib in target.msvc_libs:
+          if lib.endswith(".obj"):
+            msvc_objects.append(lib)
+          else:
+            msvc_libs.append(lib)
+
+        target = cmake_target(
+          name = target.name,
+          type = target_type,
+          sources = sources,
+          libs = libs,
+          msvc_libs = msvc_libs,
+          msvc_objects = msvc_objects,
+        )
+
         targets.append(target)
 
     data = _eztdata(
