@@ -39,23 +39,25 @@ if (WIN32)
     "WIN32"
   )
 endif()
-[for targets][is targets.type "lib"]
-add_library([targets.name][for targets.sources]
-  [targets.sources][end]
-)
-target_include_directories([targets.name] PUBLIC ${SVN_INCLUDE_DIRECTORIES})[if-any targets.group]
-list(APPEND [targets.group] [targets.name])[end]
-[end][is targets.type "exe"]
-add_executable([targets.name][for targets.sources]
-  [targets.sources][end]
-)
-[end]target_link_libraries([targets.name] PRIVATE[for targets.libs]
-  [targets.libs][end]
-)[if-any targets.msvc_libs]
-if (WIN32)
-  target_link_libraries([targets.name] PRIVATE[for targets.msvc_libs] [targets.msvc_libs][end])
-endif()[end][if-any targets.msvc_objects]
-if (MSVC)
-  set_target_properties([targets.name] PROPERTIES LINK_FLAGS[for targets.msvc_objects] [targets.msvc_objects][end])
-endif()[end]
+[for targets]
+if ([targets.enable_condition])[is targets.type "lib"]
+  add_library([targets.name][for targets.sources]
+    [targets.sources][end]
+  )
+  target_include_directories([targets.name] PUBLIC ${SVN_INCLUDE_DIRECTORIES})[if-any targets.group]
+  list(APPEND [targets.group] [targets.name])[end]
+  [end][is targets.type "exe"]
+  add_executable([targets.name][for targets.sources]
+    [targets.sources][end]
+  )
+  [end]target_link_libraries([targets.name] PRIVATE[for targets.libs]
+    [targets.libs][end]
+  )[if-any targets.msvc_libs]
+  if (WIN32)
+    target_link_libraries([targets.name] PRIVATE[for targets.msvc_libs] [targets.msvc_libs][end])
+  endif()[end][if-any targets.msvc_objects]
+  if (MSVC)
+    set_target_properties([targets.name] PROPERTIES LINK_FLAGS[for targets.msvc_objects] [targets.msvc_objects][end])
+  endif()[end]
+endif()
 [end]

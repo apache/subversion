@@ -31,7 +31,7 @@ class _eztdata(object):
 class cmake_target():
   def __init__(self, name: str, type: str, sources,
                libs, msvc_libs, msvc_objects,
-               group: str):
+               enable_condition: str, group: str):
     self.name = name
     self.type = type
     self.sources = sources
@@ -40,6 +40,7 @@ class cmake_target():
     self.msvc_libs = msvc_libs
     self.msvc_objects = msvc_objects
 
+    self.enable_condition = enable_condition
     self.group = group
 
 def get_target_type(target: gen_base.Target):
@@ -87,6 +88,7 @@ class Generator(gen_base.GeneratorBase):
     for target in self.get_install_sources():
       target: gen_base.Target
       group = None
+      enable_condition = "TRUE"
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -157,6 +159,7 @@ class Generator(gen_base.GeneratorBase):
           libs = libs,
           msvc_libs = msvc_libs,
           msvc_objects = msvc_objects,
+          enable_condition = enable_condition,
           group = group
         )
 
