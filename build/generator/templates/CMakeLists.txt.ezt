@@ -51,10 +51,10 @@ add_executable([targets.name][for targets.sources]
 )
 [end]target_link_libraries([targets.name] PRIVATE[for targets.libs]
   [targets.libs][end]
-)[if-any targets.has_msvc_libs]
+)[if-any targets.msvc_libs]
 if (WIN32)
   target_link_libraries([targets.name] PRIVATE[for targets.msvc_libs] [targets.msvc_libs][end])
-endif()[end][if-any targets.has_msvc_objects]
+endif()[end][if-any targets.msvc_objects]
 if (MSVC)
   set_target_properties([targets.name] PROPERTIES LINK_FLAGS[for targets.msvc_objects] [targets.msvc_objects][end])
 endif()[end]

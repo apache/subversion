@@ -42,9 +42,6 @@ class cmake_target():
 
     self.group = group
 
-    self.has_msvc_libs = ezt.boolean(len(msvc_libs) > 0)
-    self.has_msvc_objects = ezt.boolean(len(msvc_objects) > 0)
-
 def get_target_type(target: gen_base.Target):
   if isinstance(target, gen_base.TargetExe):
     if target.install == "test" and target.testing != "skip":
