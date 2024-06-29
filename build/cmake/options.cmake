@@ -23,3 +23,29 @@ configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/subversion/svn_private_config.hc"
   "${CMAKE_CURRENT_BINARY_DIR}/svn_private_config.h"
 )
+
+option(SVN_BUILD_RA_LOCAL "Build Subversion Local Repository Access Library" ON)
+if (SVN_BUILD_RA_LOCAL)
+  add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_LOCAL")
+endif()
+
+# TODO:
+# option(SVN_BUILD_RA_SERF "Build Subversion HTTP/WebDAV Protocol Repository Access Library" OFF)
+# if (SVN_BUILD_RA_SERF)
+#   add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_SERF")
+# endif()
+
+option(SVN_BUILD_RA_SVN "Build Subversion SVN Protocol Repository Access Library" ON)
+if (SVN_BUILD_RA_SVN)
+  add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_SVN")
+endif()
+
+option(SVN_BUILD_FS_FS "Build Subversion FSFS Repository Filesystem Library" ON)
+if (SVN_BUILD_FS_FS)
+  add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_FS")
+endif()
+
+option(SVN_BUILD_FS_X "Build Subversion FSX Repository Filesystem Library" ON)
+if (SVN_BUILD_FS_X)
+  add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_X")
+endif()

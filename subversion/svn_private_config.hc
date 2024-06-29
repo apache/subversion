@@ -58,18 +58,6 @@
 /* Name of system's null device */
 #define SVN_NULL_DEVICE_NAME "nul"
 
-/* Link fs fs library into the fs library */
-#define SVN_LIBSVN_FS_LINKS_FS_FS
-
-/* Link fs fs library into the fs library */
-#define SVN_LIBSVN_FS_LINKS_FS_X
-
-/* Link local repos access library to client */
-#define SVN_LIBSVN_RA_LINKS_RA_LOCAL
-
-/* Link pipe repos access library to client */
-#define SVN_LIBSVN_RA_LINKS_RA_SVN
-
 /* Defined to be the path to the installed binaries */
 #define SVN_BINDIR "/usr/local/bin"
 

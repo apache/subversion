@@ -60,6 +60,16 @@ def get_target_type(target: gen_base.Target):
   else:
     return str(type(target))
 
+def get_module_name(name: str):
+  """
+  Returns the name of the library as a module name. Module name
+  is a library name without `libsvn_` prefix and in upper case.
+  For example, for `libsvn_fs_fs`, the function would return
+  just `FS_FS`.
+  """
+
+  return name[7:].upper()
+
 class Generator(gen_base.GeneratorBase):
   _extension_map = {
     ('exe', 'target'): '.exe',
@@ -101,8 +111,10 @@ class Generator(gen_base.GeneratorBase):
         else:
           pass
       elif isinstance(target, gen_base.TargetRaModule):
+        enable_condition = "SVN_BUILD_" + get_module_name(target.name);
         group = "SVN_RA_MODULES"
       elif isinstance(target, gen_base.TargetFsModule):
+        enable_condition = "SVN_BUILD_" + get_module_name(target.name);
         group = "SVN_FS_MODULES"
       elif isinstance(target, gen_base.TargetApacheMod):
         pass
