@@ -92,8 +92,8 @@ class Generator(gen_base.GeneratorBase):
     lib_targets = []
     # Program targets
     exe_targets = []
-    # TODO: Test suite
-    # test_targets = []
+    # The test suite
+    test_targets = []
 
     for target in self.get_install_sources():
       target: gen_base.Target
@@ -154,7 +154,7 @@ class Generator(gen_base.GeneratorBase):
 
       target_type = get_target_type(target)
 
-      if target_type in ["exe", "lib"]:
+      if target_type in ["exe", "lib", "test"]:
         msvc_libs = []
         msvc_objects = []
 
@@ -176,7 +176,10 @@ class Generator(gen_base.GeneratorBase):
         )
 
         if isinstance(target, gen_base.TargetExe):
-          exe_targets.append(new_target)
+          if target_type == "test":
+            test_targets.append(new_target)
+          else:
+            exe_targets.append(new_target)
         elif isinstance(target, gen_base.TargetRaModule) or \
              isinstance(target, gen_base.TargetFsModule):
           mod_targets.append(new_target)
@@ -184,7 +187,7 @@ class Generator(gen_base.GeneratorBase):
           lib_targets.append(new_target)
 
     # Sort targets for better readability
-    targets = mod_targets + lib_targets + exe_targets
+    targets = mod_targets + lib_targets + exe_targets + test_targets
 
     data = _eztdata(
       targets = targets,

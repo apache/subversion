@@ -50,6 +50,10 @@ if ([targets.enable_condition])[is targets.type "lib"]
   add_executable([targets.name][for targets.sources]
     [targets.sources][end]
   )
+  [end][is targets.type "test"]
+  add_executable([targets.name][for targets.sources]
+    [targets.sources][end]
+  )
   [end]target_link_libraries([targets.name] PRIVATE[for targets.libs]
     [targets.libs][end]
   )[if-any targets.msvc_libs]
