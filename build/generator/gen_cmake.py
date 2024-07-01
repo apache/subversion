@@ -105,11 +105,11 @@ class Generator(gen_base.GeneratorBase):
         continue
       elif isinstance(target, gen_base.TargetExe):
         if target.install == "test" or target.install == "sub-test":
-          pass
+          enable_condition = "SVN_BUILD_TEST";
         elif target.install == "tools":
-          pass
+          enable_condition = "SVN_BUILD_TOOLS";
         else:
-          pass
+          enable_condition = "SVN_BUILD_PROGRAMS";
       elif isinstance(target, gen_base.TargetRaModule):
         enable_condition = "SVN_BUILD_" + get_module_name(target.name);
         group = "SVN_RA_MODULES"

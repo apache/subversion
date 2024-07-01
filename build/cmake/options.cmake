@@ -49,3 +49,7 @@ option(SVN_BUILD_FS_X "Build Subversion FSX Repository Filesystem Library" ON)
 if (SVN_BUILD_FS_X)
   add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_X")
 endif()
+
+option(SVN_BUILD_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
+option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
+option(SVN_BUILD_TEST "Build Subversion test-suite" OFF)
