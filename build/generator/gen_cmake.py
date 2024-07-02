@@ -30,7 +30,7 @@ class _eztdata(object):
 
 class cmake_target():
   def __init__(self, name: str, type: str, sources,
-               libs, msvc_libs, msvc_objects,
+               libs, msvc_libs, msvc_objects, msvc_export,
                enable_condition: str, group: str):
     self.name = name
     self.type = type
@@ -39,6 +39,7 @@ class cmake_target():
 
     self.msvc_libs = msvc_libs
     self.msvc_objects = msvc_objects
+    self.msvc_export = msvc_export
 
     self.enable_condition = enable_condition
     self.group = group
@@ -99,6 +100,7 @@ class Generator(gen_base.GeneratorBase):
       target: gen_base.Target
       group = None
       enable_condition = "TRUE"
+      msvc_export = []
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -119,7 +121,9 @@ class Generator(gen_base.GeneratorBase):
       elif isinstance(target, gen_base.TargetApacheMod):
         pass
       elif isinstance(target, gen_base.TargetLib):
-        pass
+        for export in target.msvc_export:
+          path = "subversion/include/" + export.replace("\\", "/")
+          msvc_export.append(path)
 
       sources = []
       libs = []
@@ -171,6 +175,7 @@ class Generator(gen_base.GeneratorBase):
           libs = libs,
           msvc_libs = msvc_libs,
           msvc_objects = msvc_objects,
+          msvc_export = msvc_export,
           enable_condition = enable_condition,
           group = group
         )
