@@ -43,7 +43,7 @@ if (WIN32)
 endif()
 [for targets]
 if ([targets.enable_condition])[is targets.type "lib"]
-  add_library([targets.name][for targets.sources]
+  add_library([targets.name][targets.build_type][for targets.sources]
     [targets.sources][end]
   )[if-any targets.msvc_export]
   target_exports([targets.name][for targets.msvc_export]

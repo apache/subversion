@@ -31,7 +31,7 @@ class _eztdata(object):
 class cmake_target():
   def __init__(self, name: str, type: str, sources,
                libs, msvc_libs, msvc_objects, msvc_export,
-               enable_condition: str, group: str):
+               enable_condition: str, group: str, build_type: str):
     self.name = name
     self.type = type
     self.sources = sources
@@ -43,6 +43,7 @@ class cmake_target():
 
     self.enable_condition = enable_condition
     self.group = group
+    self.build_type = build_type
 
 def get_target_type(target: gen_base.Target):
   if isinstance(target, gen_base.TargetExe):
@@ -100,6 +101,7 @@ class Generator(gen_base.GeneratorBase):
       target: gen_base.Target
       group = None
       enable_condition = "TRUE"
+      build_type = ""
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -125,6 +127,9 @@ class Generator(gen_base.GeneratorBase):
         for export in target.msvc_export:
           path = "subversion/include/" + export.replace("\\", "/")
           msvc_export.append(path)
+
+        if target.msvc_static:
+          build_type = " STATIC"
 
       sources = []
       libs = []
@@ -178,7 +183,8 @@ class Generator(gen_base.GeneratorBase):
           msvc_objects = msvc_objects,
           msvc_export = msvc_export,
           enable_condition = enable_condition,
-          group = group
+          group = group,
+          build_type = build_type,
         )
 
         if isinstance(target, gen_base.TargetExe):
