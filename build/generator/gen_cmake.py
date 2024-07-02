@@ -100,7 +100,6 @@ class Generator(gen_base.GeneratorBase):
       target: gen_base.Target
       group = None
       enable_condition = "TRUE"
-      msvc_export = []
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -120,7 +119,9 @@ class Generator(gen_base.GeneratorBase):
         group = "SVN_FS_MODULES"
       elif isinstance(target, gen_base.TargetApacheMod):
         pass
-      elif isinstance(target, gen_base.TargetLib):
+
+      msvc_export = []
+      if isinstance(target, gen_base.TargetLib):
         for export in target.msvc_export:
           path = "subversion/include/" + export.replace("\\", "/")
           msvc_export.append(path)
