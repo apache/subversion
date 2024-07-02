@@ -1,6 +1,6 @@
 find_package(Python COMPONENTS Interpreter REQUIRED)
 
-function(target_exports target_name msvc_export)
+function(target_exports target_name)
   if (WIN32)
     set(def_file_path "${CMAKE_BINARY_DIR}/${target_name}.def")
 
@@ -11,13 +11,13 @@ function(target_exports target_name msvc_export)
         "${Python_EXECUTABLE}"
       ARGS
         "build/generator/extractor.py"
-        ${msvc_exports}
+        ${ARGN}
         ">${def_file_path}"
       OUTPUT
         "${def_file_path}"
       DEPENDS
         "build/generator/extractor.py"
-        ${msvc_exports}
+        ${ARGN}
     )
 
     target_sources("${target_name}" PRIVATE "${def_file_path}")
