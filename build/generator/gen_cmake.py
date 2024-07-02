@@ -113,6 +113,10 @@ class Generator(gen_base.GeneratorBase):
           enable_condition = "SVN_BUILD_TOOLS";
         else:
           enable_condition = "SVN_BUILD_PROGRAMS";
+
+        if target.msvc_force_static:
+          # TODO: write warning
+          enable_condition += " AND NOT BUILD_SHARED_LIBS"
       elif isinstance(target, gen_base.TargetRaModule):
         enable_condition = "SVN_BUILD_" + get_module_name(target.name);
         group = "SVN_RA_MODULES"
