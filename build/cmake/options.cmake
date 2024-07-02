@@ -53,3 +53,5 @@ endif()
 option(SVN_BUILD_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
 option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
 option(SVN_BUILD_TEST "Build Subversion test-suite" OFF)
+
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
