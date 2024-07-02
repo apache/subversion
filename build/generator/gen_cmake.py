@@ -120,20 +120,22 @@ class Generator(gen_base.GeneratorBase):
       elif isinstance(target, gen_base.TargetRaModule):
         enable_condition = "SVN_BUILD_" + get_module_name(target.name);
         group = "SVN_RA_MODULES"
+        build_type = " ${SVN_RA_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetFsModule):
         enable_condition = "SVN_BUILD_" + get_module_name(target.name);
         group = "SVN_FS_MODULES"
+        build_type = " ${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
         pass
+      elif isinstance(target, gen_base.TargetLib):
+        if target.msvc_static:
+          build_type = " STATIC"
 
       msvc_export = []
       if isinstance(target, gen_base.TargetLib):
         for export in target.msvc_export:
           path = "subversion/include/" + export.replace("\\", "/")
           msvc_export.append(path)
-
-        if target.msvc_static:
-          build_type = " STATIC"
 
       sources = []
       libs = []

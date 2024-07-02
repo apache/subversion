@@ -55,3 +55,21 @@ option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
 option(SVN_BUILD_TEST "Build Subversion test-suite" OFF)
 
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+
+option(SVN_BUILD_SHARED_FS "Build shared FS modules" ${BUILD_SHARED_LIBS})
+if(SVN_BUILD_SHARED_FS)
+  set(SVN_FS_BUILD_TYPE SHARED)
+else()
+  set(SVN_FS_BUILD_TYPE STATIC)
+endif()
+
+option(SVN_BUILD_SHARED_RA "Build shared RA modules" OFF)
+if(SVN_BUILD_SHARED_RA)
+  set(SVN_RA_BUILD_TYPE SHARED)
+else()
+  set(SVN_RA_BUILD_TYPE STATIC)
+endif()
+
+if(SVN_BUILD_SHARED_RA)
+  message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported")
+endif()
