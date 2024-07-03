@@ -16,31 +16,9 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# CMakeLists.txt.ezt -- template for CMakeLists.txt file
-# CMakeLists.txt -- configuration file for CMake build system
+# CMakeLists.txt.ezt -- template for targets.cmake file
+# CMakeLists.txt -- list of CMake targets
 #
-
-cmake_minimum_required(VERSION 3.12)
-
-project("Subversion")
-
-include("build/cmake/dependencies.cmake")
-
-include("build/cmake/options.cmake")
-
-include("build/cmake/extractor.cmake")
-
-set(SVN_INCLUDE_DIRECTORIES
-  "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
-  "${CMAKE_CURRENT_BINARY_DIR}"
-)
-
-if (WIN32)
-  add_compile_definitions(
-    "alloca=_alloca"
-    "WIN32"
-  )
-endif()
 [for targets]
 if ([targets.enable_condition])[is targets.type "lib"]
   add_library([targets.name][targets.build_type][for targets.sources]

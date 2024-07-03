@@ -212,9 +212,9 @@ class Generator(gen_base.GeneratorBase):
     )
 
     template = ezt.Template(os.path.join('build', 'generator', 'templates',
-                                         'CMakeLists.txt.ezt'),
+                                         'targets.cmake.ezt'),
                             compress_whitespace=False)
-    template.generate(open('CMakeLists.txt', 'w'), data)
+    template.generate(open(os.path.join('build', 'cmake', 'targets.cmake'), 'w'), data)
 
   def get_install_sources(self):
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)
