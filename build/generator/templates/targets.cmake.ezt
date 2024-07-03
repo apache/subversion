@@ -20,6 +20,7 @@
 # targets.cmake -- list of CMake targets
 #
 [for targets]
+# [if-any targets.description][targets.description][else][targets.name][end]
 if ([targets.enable_condition])[is targets.type "lib"]
   add_library([targets.name][targets.build_type][for targets.sources]
     [targets.sources][end]
@@ -46,5 +47,12 @@ if ([targets.enable_condition])[is targets.type "lib"]
   if (MSVC)
     set_target_properties([targets.name] PROPERTIES LINK_FLAGS[for targets.msvc_objects] [targets.msvc_objects][end])
   endif()[end]
+  target_compile_definitions([targets.name] PRIVATE
+    "SVN_FILE_DESCRIPTION=[targets.description]"
+    "SVN_FILE_NAME=$<TARGET_FILE_NAME:[targets.name]>"
+  )
+  if (WIN32)
+    target_sources([targets.name] PRIVATE build/win32/svn.rc)
+  endif()
 endif()
 [end]

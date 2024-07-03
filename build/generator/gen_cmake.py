@@ -31,7 +31,8 @@ class _eztdata(object):
 class cmake_target():
   def __init__(self, name: str, type: str, sources,
                libs, msvc_libs, msvc_objects, msvc_export,
-               enable_condition: str, group: str, build_type: str):
+               enable_condition: str, group: str, build_type: str,
+               description: str):
     self.name = name
     self.type = type
     self.sources = sources
@@ -44,6 +45,7 @@ class cmake_target():
     self.enable_condition = enable_condition
     self.group = group
     self.build_type = build_type
+    self.description = description
 
 def get_target_type(target: gen_base.Target):
   if isinstance(target, gen_base.TargetExe):
@@ -191,6 +193,7 @@ class Generator(gen_base.GeneratorBase):
           enable_condition = enable_condition,
           group = group,
           build_type = build_type,
+          description = target.desc,
         )
 
         if isinstance(target, gen_base.TargetExe):
