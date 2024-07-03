@@ -16,8 +16,8 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# CMakeLists.txt.ezt -- template for targets.cmake file
-# CMakeLists.txt -- list of CMake targets
+# targets.cmake.ezt -- template for targets.cmake file
+# targets.cmake -- list of CMake targets
 #
 [for targets]
 if ([targets.enable_condition])[is targets.type "lib"]
