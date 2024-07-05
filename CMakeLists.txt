@@ -180,6 +180,11 @@ endfunction()
 
 include_directories(PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
+install(
+  DIRECTORY "subversion/include/"
+  DESTINATION "include/subversion-1"
+)
+
 if (WIN32)
   add_compile_definitions(
     "alloca=_alloca"
