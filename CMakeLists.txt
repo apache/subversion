@@ -21,6 +21,11 @@
 
 cmake_minimum_required(VERSION 3.12)
 
+# CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
+if(POLICY CMP0092)
+  cmake_policy(SET CMP0092 NEW)
+endif()
+
 project("Subversion")
 
 configure_file(
@@ -183,6 +188,41 @@ if (WIN32)
     "alloca=_alloca"
     "WIN32"
   )
+endif()
+
+if (MSVC)
+  # Setup warning level
+  add_compile_options(/W4)
+
+  # Disable warning
+  add_compile_options(/wd4100)
+  add_compile_options(/wd4127)
+  add_compile_options(/wd4206)
+  add_compile_options(/wd4512)
+  add_compile_options(/wd4701)
+  add_compile_options(/wd4706)
+  add_compile_options(/wd4800)
+
+  # Treat some criticial warnings as error
+  add_compile_options(/we4002)
+  add_compile_options(/we4003)
+  add_compile_options(/we4013)
+  add_compile_options(/we4020)
+  add_compile_options(/we4022)
+  add_compile_options(/we4024)
+  add_compile_options(/we4028)
+  add_compile_options(/we4029)
+  add_compile_options(/we4030)
+  add_compile_options(/we4031)
+  add_compile_options(/we4033)
+  add_compile_options(/we4047)
+  add_compile_options(/we4089)
+  add_compile_options(/we4113)
+  add_compile_options(/we4133)
+  add_compile_options(/we4204)
+  add_compile_options(/we4700)
+  add_compile_options(/we4715)
+  add_compile_options(/we4789)
 endif()
 
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/build/cmake/targets.cmake")
