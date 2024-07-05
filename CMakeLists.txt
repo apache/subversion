@@ -104,8 +104,8 @@ add_library(external-zlib ALIAS ZLIB::ZLIB)
 
 ### EXPAT
 
-find_package(EXPAT MODULE REQUIRED)
-add_library(external-xml ALIAS EXPAT::EXPAT)
+find_package(expat CONFIG REQUIRED)
+add_library(external-xml ALIAS expat::expat)
 
 ### LZ4
 
