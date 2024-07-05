@@ -22,13 +22,6 @@ Candidate changes:
    votes:
      +1: rhuijben
 
- * r1918138, r1918139
-   Fix unbounded memory usage in propget and proplist --xml commands
-   Justification:
-     Follow SVN's iterpool conventions
-   Votes:
-     +1: hartmannathan, jamessan
-
 Veto-blocked changes:
 =====================
 
@@ -40,14 +33,14 @@ Approved changes:
    Justification:
      Syntax error in cmdline arg should not cause assertion failure
    Votes:
-     +1: hartmannathan, astieger, jamessan
+     +1: hartmannathan, astieger, jamessan, rinrab
 
  * r1917946
    Convert path to local style in error message from diff API
    Justification:
      Use correct dirent style in error message
    Votes:
-     +1: hartmannathan, astieger, jamessan
+     +1: hartmannathan, astieger, jamessan, rinrab
 
   * r1915236, r1915239
     Support building swig-rb with clang 16 / GCC14 
@@ -55,4 +48,11 @@ Approved changes:
       Distros moving to newer compilers that treat these as errors
     Votes:
      +1: astieger, dsahlberg, jamessan
+
+ * r1918138, r1918139
+   Fix unbounded memory usage in propget and proplist --xml commands
+   Justification:
+     Follow SVN's iterpool conventions
+   Votes:
+     +1: hartmannathan, jamessan, rinrab
 
