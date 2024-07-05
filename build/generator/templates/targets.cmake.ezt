@@ -28,7 +28,9 @@ if ([targets.enable_condition])[is targets.type "lib"]
   target_exports([targets.name][for targets.msvc_export]
     [targets.msvc_export][end]
   )[end]
-  target_include_directories([targets.name] PUBLIC ${SVN_INCLUDE_DIRECTORIES})[if-any targets.group]
+  target_include_directories([targets.name] PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
+  )[if-any targets.group]
   list(APPEND [targets.group] [targets.name])[end]
   [end][is targets.type "exe"]
   add_executable([targets.name][for targets.sources]

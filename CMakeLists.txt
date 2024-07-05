@@ -178,10 +178,7 @@ function(target_exports target_name)
   endif()
 endfunction()
 
-set(SVN_INCLUDE_DIRECTORIES
-  "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
-  "${CMAKE_CURRENT_BINARY_DIR}"
-)
+include_directories(PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
 
 if (WIN32)
   add_compile_definitions(
