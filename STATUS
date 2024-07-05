@@ -22,36 +22,37 @@ Candidate changes:
    votes:
      +1: rhuijben
 
- * r1917864, r1917944
-   Fix cmdline parsing bugs in --change (-c) argument
-   Justification:
-     Syntax error in cmdline arg should not cause assertion failure
-   Votes:
-     +1: hartmannathan, astieger
-
- * r1917946
-   Convert path to local style in error message from diff API
-   Justification:
-     Use correct dirent style in error message
-   Votes:
-     +1: hartmannathan, astieger
-
  * r1918138, r1918139
    Fix unbounded memory usage in propget and proplist --xml commands
    Justification:
      Follow SVN's iterpool conventions
    Votes:
-     +1: hartmannathan
-
-  * r1915236, r1915239
-    Support building swig-rb with clang 16 / GCC14 
-    Justification:
-      Distros moving to newer compilers that treat these as errors
-    Votes:
-     +1: astieger, dsahlberg
+     +1: hartmannathan, jamessan
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1917864, r1917944
+   Fix cmdline parsing bugs in --change (-c) argument
+   Justification:
+     Syntax error in cmdline arg should not cause assertion failure
+   Votes:
+     +1: hartmannathan, astieger, jamessan
+
+ * r1917946
+   Convert path to local style in error message from diff API
+   Justification:
+     Use correct dirent style in error message
+   Votes:
+     +1: hartmannathan, astieger, jamessan
+
+  * r1915236, r1915239
+    Support building swig-rb with clang 16 / GCC14 
+    Justification:
+      Distros moving to newer compilers that treat these as errors
+    Votes:
+     +1: astieger, dsahlberg, jamessan
+
