@@ -2194,6 +2194,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                   while (*s == 'r')
                     s++;
                   changeno_end = strtol(s, &end, 10);
+
+                  if (changeno_end < 0)
+                    {
+                      return svn_error_createf(
+                        SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                        _("Negative number in range (%s)"
+                          " not supported with -c"),
+                        change_str);
+                    }
                 }
               if (end == change_str || *end != '\0')
                 {
@@ -2202,10 +2211,18 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
                                              "given to -c"), change_str);
                 }
 
-              if (changeno == 0)
+              if (changeno == 0 || changeno_end == 0)
                 {
                   return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                           _("There is no change 0"));
+                }
+
+              /* The revision number cannot contain a double minus */
+              if (changeno < 0 && is_negative)
+                {
+                  return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                           _("Non-numeric change argument "
+                                             "(%s) given to -c"), change_str);
                 }
 
               if (is_negative)

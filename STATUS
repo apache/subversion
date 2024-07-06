@@ -28,13 +28,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1917864, r1917944
-   Fix cmdline parsing bugs in --change (-c) argument
-   Justification:
-     Syntax error in cmdline arg should not cause assertion failure
-   Votes:
-     +1: hartmannathan, astieger, jamessan, rinrab
-
  * r1917946
    Convert path to local style in error message from diff API
    Justification:
@@ -55,4 +48,3 @@ Approved changes:
      Follow SVN's iterpool conventions
    Votes:
      +1: hartmannathan, jamessan, rinrab
-
