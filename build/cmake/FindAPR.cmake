@@ -72,16 +72,16 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(
 if(APR_FOUND AND NOT TARGET apr::apr)
   if (APR_LIBRARY_SHARED)
     add_library(apr::apr SHARED IMPORTED)
-    target_compile_definitions(apr::apr INTERFACE "APR_DECLARE_IMPORT")
     set_target_properties(apr::apr PROPERTIES
       IMPORTED_LOCATION ${APR_DLL}
       IMPORTED_IMPLIB ${APR_LIBRARY}
+      INTERFACE_COMPILE_DEFINITIONS "APR_DECLARE_IMPORT"
     )
   else()
     add_library(apr::apr STATIC IMPORTED)
-    target_compile_definitions(apr::apr INTERFACE "APR_DECLARE_STATIC")
     set_target_properties(apr::apr PROPERTIES
       IMPORTED_LOCATION ${APR_LIBRARY}
+      INTERFACE_COMPILE_DEFINITIONS "APR_DECLARE_STATIC"
     )
   endif()
 

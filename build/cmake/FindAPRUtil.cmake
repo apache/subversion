@@ -72,16 +72,16 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(
 if(APRUtil_FOUND AND NOT TARGET apr::aprutil)
   if (APRUTIL_LIBRARY_SHARED)
     add_library(apr::aprutil SHARED IMPORTED)
-    target_compile_definitions(apr::aprutil INTERFACE "APU_DECLARE_IMPORT")
     set_target_properties(apr::aprutil PROPERTIES
       IMPORTED_LOCATION ${APRUTIL_DLL}
       IMPORTED_IMPLIB ${APRUTIL_LIBRARY}
+      INTERFACE_COMPILE_DEFINITIONS "APU_DECLARE_IMPORT"
     )
   else()
     add_library(apr::aprutil STATIC IMPORTED)
-    target_compile_definitions(apr::aprutil INTERFACE "APU_DECLARE_STATIC")
     set_target_properties(apr::aprutil PROPERTIES
       IMPORTED_LOCATION ${APRUTIL_LIBRARY}
+      INTERFACE_COMPILE_DEFINITIONS "APU_DECLARE_STATIC"
     )
   endif()
 
