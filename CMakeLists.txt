@@ -127,6 +127,17 @@ option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
 if(SVN_USE_INTERNAL_LZ4)
   add_library(external-lz4 STATIC "build/win32/empty.c")
   target_compile_definitions(external-lz4 PUBLIC "SVN_INTERNAL_LZ4")
+
+  file(STRINGS "subversion/libsvn_subr/lz4/lz4internal.h" _lz4_version_lines
+    REGEX "#define[ \t]+LZ4_VERSION_(MAJOR|MINOR|RELEASE)")
+  string(REGEX REPLACE ".*LZ4_VERSION_MAJOR *\([0-9]*\).*" "\\1" _lz4_version_major "${_lz4_version_lines}")
+  string(REGEX REPLACE ".*LZ4_VERSION_MINOR *\([0-9]*\).*" "\\1" _lz4_version_minor "${_lz4_version_lines}")
+  string(REGEX REPLACE ".*LZ4_VERSION_RELEASE *\([0-9]*\).*" "\\1" _lz4_version_release "${_lz4_version_lines}")
+  set(LZ4_VERSION "${_lz4_version_major}.${_lz4_version_minor}.${_lz4_version_release}")
+  unset(_lz4_version_major)
+  unset(_lz4_version_minor)
+  unset(_lz4_version_release)
+  unset(_lz4_version_lines)
 else()
   find_package(lz4 CONFIG REQUIRED)
   add_library(external-lz4 ALIAS lz4::lz4)
@@ -139,6 +150,17 @@ option(SVN_USE_INTERNAL_UTF8PROC "Use internal version of utf8proc" ON)
 if(SVN_USE_INTERNAL_UTF8PROC)
   add_library(external-utf8proc STATIC "build/win32/empty.c")
   target_compile_definitions(external-utf8proc PUBLIC "SVN_INTERNAL_UTF8PROC")
+
+  file(
+    STRINGS "subversion/libsvn_subr/utf8proc/utf8proc_internal.h" VERSION_STRINGS
+    REGEX "#define (UTF8PROC_VERSION_MAJOR|UTF8PROC_VERSION_MINOR|UTF8PROC_VERSION_PATCH)"
+  )
+
+  string(REGEX REPLACE ".*UTF8PROC_VERSION_MAJOR +([0-9]+).*" "\\1" UTF8PROC_VERSION_MAJOR ${VERSION_STRINGS})
+  string(REGEX REPLACE ".*UTF8PROC_VERSION_MINOR +([0-9]+).*" "\\1" UTF8PROC_VERSION_MINOR ${VERSION_STRINGS})
+  string(REGEX REPLACE ".*UTF8PROC_VERSION_PATCH +([0-9]+).*" "\\1" UTF8PROC_VERSION_PATCH ${VERSION_STRINGS})
+
+  set(UTF8PROC_VERSION "${UTF8PROC_VERSION_MAJOR}.${UTF8PROC_VERSION_MINOR}.${UTF8PROC_VERSION_PATCH}")
 else()
   message(FATAL_ERROR "TODO:")
   # find_package(utf8proc CONFIG REQUIRED)
@@ -160,6 +182,13 @@ if(SVN_SQLITE_USE_AMALGAMATION)
   )
   target_include_directories(external-sqlite PUBLIC ${SVN_SQLITE_AMALGAMATION_DIR})
   target_compile_definitions(external-sqlite PUBLIC SVN_SQLITE_INLINE)
+
+  file(STRINGS ${SVN_SQLITE_AMALGAMATION_DIR}/sqlite3.c _ver_line
+       REGEX "^#define SQLITE_VERSION  *\"[0-9]+\\.[0-9]+\\.[0-9]+\""
+       LIMIT_COUNT 1)
+  string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+"
+          SQLite3_VERSION "${_ver_line}")
+  unset(_ver_line)
 else()
   find_package(SQLite3 REQUIRED)
   add_library(external-sqlite ALIAS SQLite::SQLite3)
@@ -271,9 +300,9 @@ message(STATUS "    APR ........................... : v${APR_VERSION}")
 message(STATUS "    APR-Util ...................... : v${APRUTIL_VERSION}")
 message(STATUS "    EXPAT ......................... : v${expat_VERSION}")
 message(STATUS "    ZLIB .......................... : v${ZLIB_VERSION}")
-message(STATUS "    LZ4 ........................... : TODO: message")
-message(STATUS "    UTF8PROC ...................... : TODO: message")
-message(STATUS "    SQLITE3 ....................... : TODO: message")
+message(STATUS "    LZ4 ........................... : v${LZ4_VERSION}")
+message(STATUS "    UTF8PROC ...................... : v${UTF8PROC_VERSION}")
+message(STATUS "    SQLITE3 ....................... : v${SQLite3_VERSION}")
 message(STATUS "    SERF .......................... : NOT IMPLEMENTED")
 message(STATUS "    HTTPD ......................... : NOT IMPLEMENTED")
 message(STATUS "    TODO: ......................... : Other dependecies")
