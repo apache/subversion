@@ -96,8 +96,6 @@ if(SVN_BUILD_SHARED_RA)
   message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported")
 endif()
 
-option(SVN_BUILD_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
-
 # Setup modules path
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/cmake")
