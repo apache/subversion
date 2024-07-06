@@ -28,13 +28,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-  * r1915236, r1915239
-    Support building swig-rb with clang 16 / GCC14 
-    Justification:
-      Distros moving to newer compilers that treat these as errors
-    Votes:
-     +1: astieger, dsahlberg, jamessan
-
  * r1918138, r1918139
    Fix unbounded memory usage in propget and proplist --xml commands
    Justification:
