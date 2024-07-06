@@ -26,7 +26,20 @@ if(POLICY CMP0092)
   cmake_policy(SET CMP0092 NEW)
 endif()
 
-project("Subversion")
+file(
+  STRINGS "${CMAKE_SOURCE_DIR}/subversion/include/svn_version.h" VERSION_STRINGS
+  REGEX "#define (SVN_VER_MAJOR|SVN_VER_MINOR|SVN_VER_PATCH)"
+)
+
+string(REGEX REPLACE ".*SVN_VER_MAJOR +([0-9]+).*" "\\1" SVN_VER_MAJOR ${VERSION_STRINGS})
+string(REGEX REPLACE ".*SVN_VER_MINOR +([0-9]+).*" "\\1" SVN_VER_MINOR ${VERSION_STRINGS})
+string(REGEX REPLACE ".*SVN_VER_PATCH +([0-9]+).*" "\\1" SVN_VER_PATCH ${VERSION_STRINGS})
+
+set(SVN_VERSION "${SVN_VER_MAJOR}.${SVN_VER_MINOR}.${SVN_VER_PATCH}")
+
+project("Subversion"
+  VERSION ${SVN_VERSION}
+)
 
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/subversion/svn_private_config.hc"
@@ -82,6 +95,8 @@ endif()
 if(SVN_BUILD_SHARED_RA)
   message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported")
 endif()
+
+option(SVN_BUILD_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
 
 # Setup modules path
 
