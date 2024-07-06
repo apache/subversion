@@ -74,7 +74,6 @@ if(APRUtil_FOUND AND NOT TARGET apr::aprutil)
     add_library(apr::aprutil SHARED IMPORTED)
     target_compile_definitions(apr::aprutil INTERFACE "APU_DECLARE_IMPORT")
     set_target_properties(apr::aprutil PROPERTIES
-      INTERFACE_INCLUDE_DIRECTORIES ${APRUTIL_INCLUDE_DIR}
       IMPORTED_LOCATION ${APRUTIL_DLL}
       IMPORTED_IMPLIB ${APRUTIL_LIBRARY}
     )
@@ -82,8 +81,9 @@ if(APRUtil_FOUND AND NOT TARGET apr::aprutil)
     add_library(apr::aprutil STATIC IMPORTED)
     target_compile_definitions(apr::aprutil INTERFACE "APU_DECLARE_STATIC")
     set_target_properties(apr::aprutil PROPERTIES
-      INTERFACE_INCLUDE_DIRECTORIES ${APRUTIL_INCLUDE_DIR}
       IMPORTED_LOCATION ${APRUTIL_LIBRARY}
     )
   endif()
+
+  target_include_directories(apr::aprutil INTERFACE ${APRUTIL_INCLUDE_DIR})
 endif()
