@@ -28,13 +28,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1917946
-   Convert path to local style in error message from diff API
-   Justification:
-     Use correct dirent style in error message
-   Votes:
-     +1: hartmannathan, astieger, jamessan, rinrab
-
   * r1915236, r1915239
     Support building swig-rb with clang 16 / GCC14 
     Justification:

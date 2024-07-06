@@ -205,7 +205,9 @@ adjust_paths_for_diff_labels(const char **index_path,
       else if (! strcmp(relative_to_dir, new_path))
         new_path = ".";
       else
-        return MAKE_ERR_BAD_RELATIVE_PATH(new_path, relative_to_dir);
+        return MAKE_ERR_BAD_RELATIVE_PATH(
+                 svn_dirent_local_style(new_path, scratch_pool),
+                 svn_dirent_local_style(relative_to_dir, scratch_pool));
     }
 
   {
