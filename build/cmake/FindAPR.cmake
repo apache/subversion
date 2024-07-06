@@ -69,27 +69,25 @@ FIND_PACKAGE_HANDLE_STANDARD_ARGS(
     APR_VERSION
 )
 
-if(APR_FOUND)
-  if (NOT TARGET apr::apr)
-    if (APR_LIBRARY_SHARED)
-      add_library(apr::apr SHARED IMPORTED)
-      target_compile_definitions(apr::apr INTERFACE "APR_DECLARE_IMPORT")
-      set_target_properties(apr::apr PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES ${APR_INCLUDE_DIR}
-        IMPORTED_LOCATION ${APR_DLL}
-        IMPORTED_IMPLIB ${APR_LIBRARY}
-      )
-    else()
-      add_library(apr::apr STATIC IMPORTED)
-      target_compile_definitions(apr::apr INTERFACE "APR_DECLARE_STATIC")
-      set_target_properties(apr::apr PROPERTIES
-        INTERFACE_INCLUDE_DIRECTORIES ${APR_INCLUDE_DIR}
-        IMPORTED_LOCATION ${APR_LIBRARY}
-      )
-    endif()
+if(APR_FOUND AND NOT TARGET apr::apr)
+  if (APR_LIBRARY_SHARED)
+    add_library(apr::apr SHARED IMPORTED)
+    target_compile_definitions(apr::apr INTERFACE "APR_DECLARE_IMPORT")
+    set_target_properties(apr::apr PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES ${APR_INCLUDE_DIR}
+      IMPORTED_LOCATION ${APR_DLL}
+      IMPORTED_IMPLIB ${APR_LIBRARY}
+    )
+  else()
+    add_library(apr::apr STATIC IMPORTED)
+    target_compile_definitions(apr::apr INTERFACE "APR_DECLARE_STATIC")
+    set_target_properties(apr::apr PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES ${APR_INCLUDE_DIR}
+      IMPORTED_LOCATION ${APR_LIBRARY}
+    )
+  endif()
 
-    if (WIN32)
-      target_link_libraries(apr::apr INTERFACE ws2_32 rpcrt4)
-    endif()
+  if (WIN32)
+    target_link_libraries(apr::apr INTERFACE ws2_32 rpcrt4)
   endif()
 endif()
