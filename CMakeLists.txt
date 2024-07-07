@@ -274,6 +274,19 @@ endif()
 
 include("build/cmake/targets.cmake")
 
+option(SVN_BUILD_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
+
+if (SVN_BUILD_SVNXX)
+  target_include_directories(libsvnxx PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/cxx/include"
+  )
+
+  install(
+    DIRECTORY "subversion/bindings/cxx/include/"
+    DESTINATION "include/subversion-1"
+  )
+endif()
+
 message(STATUS "Configuration summary:")
 message(STATUS "  Version ......................... : ${SVN_VERSION}")
 message(STATUS "  Build type ...................... : ${CMAKE_BUILD_TYPE}")

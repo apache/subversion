@@ -135,7 +135,9 @@ class Generator(gen_base.GeneratorBase):
         pass
       elif isinstance(target, gen_base.TargetLib):
         if target.msvc_static:
-          build_type = "STATIC"
+          build_type = " STATIC"
+        if target.name == "libsvnxx":
+          enable_condition.append("SVN_BUILD_SVNXX")
 
       msvc_export = []
       if isinstance(target, gen_base.TargetLib):
@@ -250,7 +252,6 @@ class Generator(gen_base.GeneratorBase):
       "libsvn_auth_gnome_keyring",
       "libsvn_auth_kwallet",
 
-      "libsvnxx",
       "svnxx-tests",
 
       "libsvn_fs_base",
