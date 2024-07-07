@@ -119,7 +119,7 @@ add_library(external-aprutil ALIAS apr::aprutil)
 
 ### ZLIB
 
-find_package(ZLIB)
+find_package(ZLIB REQUIRED)
 add_library(external-zlib ALIAS ZLIB::ZLIB)
 
 ### EXPAT
