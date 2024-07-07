@@ -215,7 +215,7 @@ function(target_exports target_name)
   endif()
 endfunction()
 
-include_directories(PRIVATE "${CMAKE_CURRENT_BINARY_DIR}")
+include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 install(
   DIRECTORY "subversion/include/"
