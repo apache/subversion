@@ -31,7 +31,7 @@ class _eztdata(object):
 class cmake_target():
   def __init__(self, name: str, type: str, sources,
                libs, msvc_libs, msvc_objects, msvc_export,
-               enable_condition: str, group: str, build_type: str,
+               enable_condition, group: str, build_type: str,
                description: str):
     self.name = name
     self.type = type
@@ -42,7 +42,11 @@ class cmake_target():
     self.msvc_objects = msvc_objects
     self.msvc_export = msvc_export
 
-    self.enable_condition = enable_condition
+    if len(enable_condition) > 0:
+      self.enable_condition = " AND ".join(enable_condition)
+    else:
+      self.enable_condition = "TRUE"
+
     self.group = group
     self.build_type = build_type
     self.description = description
@@ -102,7 +106,7 @@ class Generator(gen_base.GeneratorBase):
     for target in self.get_install_sources():
       target: gen_base.Target
       group = None
-      enable_condition = "TRUE"
+      enable_condition = []
       build_type = ""
 
       if isinstance(target, gen_base.TargetScript):
@@ -110,21 +114,21 @@ class Generator(gen_base.GeneratorBase):
         continue
       elif isinstance(target, gen_base.TargetExe):
         if target.install == "test" or target.install == "sub-test":
-          enable_condition = "SVN_BUILD_TEST";
+          enable_condition.append("SVN_BUILD_TEST");
         elif target.install == "tools":
-          enable_condition = "SVN_BUILD_TOOLS";
+          enable_condition.append("SVN_BUILD_TOOLS");
         else:
-          enable_condition = "SVN_BUILD_PROGRAMS";
+          enable_condition.append("SVN_BUILD_PROGRAMS");
 
         if target.msvc_force_static:
           # TODO: write warning
-          enable_condition += " AND NOT BUILD_SHARED_LIBS"
+          enable_condition.append("NOT BUILD_SHARED_LIBS")
       elif isinstance(target, gen_base.TargetRaModule):
-        enable_condition = "SVN_BUILD_" + get_module_name(target.name);
+        enable_condition.append("SVN_BUILD_" + get_module_name(target.name));
         group = "SVN_RA_MODULES"
         build_type = " ${SVN_RA_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetFsModule):
-        enable_condition = "SVN_BUILD_" + get_module_name(target.name);
+        enable_condition.append("SVN_BUILD_" + get_module_name(target.name));
         group = "SVN_FS_MODULES"
         build_type = " ${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
