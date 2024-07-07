@@ -19,6 +19,19 @@
 # CMakeLists.txt -- configuration file for CMake build system
 #
 
+function(read_version path var major minor patch)
+  file(
+    STRINGS ${path} VERSION_STRINGS
+    REGEX "#define (${major}|${minor}|${patch})"
+  )
+
+  string(REGEX REPLACE ".*${major} +([0-9]+).*" "\\1" VER_MAJOR ${VERSION_STRINGS})
+  string(REGEX REPLACE ".*${minor} +([0-9]+).*" "\\1" VER_MINOR ${VERSION_STRINGS})
+  string(REGEX REPLACE ".*${patch} +([0-9]+).*" "\\1" VER_PATCH ${VERSION_STRINGS})
+
+  set(${var} "${VER_MAJOR}.${VER_MINOR}.${VER_PATCH}" PARENT_SCOPE)
+endfunction()
+
 cmake_minimum_required(VERSION 3.12)
 
 # CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
@@ -26,19 +39,13 @@ if(POLICY CMP0092)
   cmake_policy(SET CMP0092 NEW)
 endif()
 
-file(
-  STRINGS "${CMAKE_SOURCE_DIR}/subversion/include/svn_version.h" VERSION_STRINGS
-  REGEX "#define (SVN_VER_MAJOR|SVN_VER_MINOR|SVN_VER_PATCH)"
+read_version(
+  "subversion/include/svn_version.h" SVN_VERSION
+  SVN_VER_MAJOR SVN_VER_MINOR SVN_VER_PATCH
 )
 
-string(REGEX REPLACE ".*SVN_VER_MAJOR +([0-9]+).*" "\\1" SVN_VER_MAJOR ${VERSION_STRINGS})
-string(REGEX REPLACE ".*SVN_VER_MINOR +([0-9]+).*" "\\1" SVN_VER_MINOR ${VERSION_STRINGS})
-string(REGEX REPLACE ".*SVN_VER_PATCH +([0-9]+).*" "\\1" SVN_VER_PATCH ${VERSION_STRINGS})
-
-set(SVN_VERSION "${SVN_VER_MAJOR}.${SVN_VER_MINOR}.${SVN_VER_PATCH}")
-
 project("Subversion"
-  VERSION ${SVN_VERSION}
+  VERSION "${SVN_VERSION}"
 )
 
 configure_file(
@@ -128,16 +135,10 @@ if(SVN_USE_INTERNAL_LZ4)
   add_library(external-lz4 STATIC "build/win32/empty.c")
   target_compile_definitions(external-lz4 PUBLIC "SVN_INTERNAL_LZ4")
 
-  file(STRINGS "subversion/libsvn_subr/lz4/lz4internal.h" _lz4_version_lines
-    REGEX "#define[ \t]+LZ4_VERSION_(MAJOR|MINOR|RELEASE)")
-  string(REGEX REPLACE ".*LZ4_VERSION_MAJOR *\([0-9]*\).*" "\\1" _lz4_version_major "${_lz4_version_lines}")
-  string(REGEX REPLACE ".*LZ4_VERSION_MINOR *\([0-9]*\).*" "\\1" _lz4_version_minor "${_lz4_version_lines}")
-  string(REGEX REPLACE ".*LZ4_VERSION_RELEASE *\([0-9]*\).*" "\\1" _lz4_version_release "${_lz4_version_lines}")
-  set(LZ4_VERSION "${_lz4_version_major}.${_lz4_version_minor}.${_lz4_version_release}")
-  unset(_lz4_version_major)
-  unset(_lz4_version_minor)
-  unset(_lz4_version_release)
-  unset(_lz4_version_lines)
+  read_version(
+    "subversion/libsvn_subr/lz4/lz4internal.h" lz4_VERSION
+    LZ4_VERSION_MAJOR LZ4_VERSION_MINOR LZ4_VERSION_RELEASE
+  )
 else()
   find_package(lz4 CONFIG REQUIRED)
   add_library(external-lz4 ALIAS lz4::lz4)
@@ -151,16 +152,10 @@ if(SVN_USE_INTERNAL_UTF8PROC)
   add_library(external-utf8proc STATIC "build/win32/empty.c")
   target_compile_definitions(external-utf8proc PUBLIC "SVN_INTERNAL_UTF8PROC")
 
-  file(
-    STRINGS "subversion/libsvn_subr/utf8proc/utf8proc_internal.h" VERSION_STRINGS
-    REGEX "#define (UTF8PROC_VERSION_MAJOR|UTF8PROC_VERSION_MINOR|UTF8PROC_VERSION_PATCH)"
+  read_version(
+    "subversion/libsvn_subr/utf8proc/utf8proc_internal.h" UTF8PROC_VERSION
+    UTF8PROC_VERSION_MAJOR UTF8PROC_VERSION_MINOR UTF8PROC_VERSION_PATCH
   )
-
-  string(REGEX REPLACE ".*UTF8PROC_VERSION_MAJOR +([0-9]+).*" "\\1" UTF8PROC_VERSION_MAJOR ${VERSION_STRINGS})
-  string(REGEX REPLACE ".*UTF8PROC_VERSION_MINOR +([0-9]+).*" "\\1" UTF8PROC_VERSION_MINOR ${VERSION_STRINGS})
-  string(REGEX REPLACE ".*UTF8PROC_VERSION_PATCH +([0-9]+).*" "\\1" UTF8PROC_VERSION_PATCH ${VERSION_STRINGS})
-
-  set(UTF8PROC_VERSION "${UTF8PROC_VERSION_MAJOR}.${UTF8PROC_VERSION_MINOR}.${UTF8PROC_VERSION_PATCH}")
 else()
   message(FATAL_ERROR "TODO:")
   # find_package(utf8proc CONFIG REQUIRED)
