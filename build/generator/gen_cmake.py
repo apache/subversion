@@ -32,7 +32,7 @@ class cmake_target():
   def __init__(self, name: str, type: str, sources,
                libs, msvc_libs, msvc_objects, msvc_export,
                enable_condition, group: str, build_type: str,
-               description: str):
+               description: str, srcdir: str):
     self.name = name
     self.type = type
     self.sources = sources
@@ -50,6 +50,7 @@ class cmake_target():
     self.group = group
     self.build_type = build_type
     self.description = description
+    self.srcdir = srcdir
 
 def get_target_type(target: gen_base.Target):
   if isinstance(target, gen_base.TargetExe):
@@ -204,6 +205,7 @@ class Generator(gen_base.GeneratorBase):
           group = group,
           build_type = build_type,
           description = target.desc,
+          srcdir = target.path,
         )
 
         if isinstance(target, gen_base.TargetExe):
