@@ -79,6 +79,11 @@ if (SVN_BUILD_FS_X)
   add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_X")
 endif()
 
+option(SVN_DEBUG "Enables specific features for developer builds" OFF)
+if (SVN_DEBUG)
+  add_compile_definitions("SVN_DEBUG")
+endif()
+
 option(SVN_BUILD_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
 option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
 option(SVN_BUILD_TEST "Build Subversion test-suite" OFF)
