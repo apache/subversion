@@ -135,7 +135,7 @@ class Generator(gen_base.GeneratorBase):
         pass
       elif isinstance(target, gen_base.TargetLib):
         if target.msvc_static:
-          build_type = " STATIC"
+          build_type = "STATIC"
         if target.name == "libsvnxx":
           enable_condition.append("SVN_BUILD_SVNXX")
 
