@@ -20,6 +20,7 @@
 #
 
 import os
+import sys
 from build.generator.gen_make import UnknownDependency
 import ezt
 import gen_base
@@ -279,3 +280,8 @@ class Generator(gen_base.GeneratorBase):
       if isinstance(target, gen_base.TargetExe):
         if target.install == "bdb-test":
           return True
+
+  if sys.platform == 'win32':
+    def errno_filter(self, codes):
+      """From errno_filter() in gen_win.py"""
+      return [code for code in codes if not (10000 <= code <= 10100)]
