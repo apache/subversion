@@ -175,6 +175,9 @@ if(SVN_SQLITE_USE_AMALGAMATION)
     NAMES sqlite3.c
     PATHS ${SVN_SQLITE_AMALGAMATION_ROOT}
   )
+
+  mark_as_advanced(SVN_SQLITE_AMALGAMATION_DIR)
+
   target_include_directories(external-sqlite PUBLIC ${SVN_SQLITE_AMALGAMATION_DIR})
   target_compile_definitions(external-sqlite PUBLIC SVN_SQLITE_INLINE)
 
