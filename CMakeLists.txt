@@ -20,6 +20,8 @@
 #
 
 function(read_version path var major minor patch)
+  get_filename_component(path ${path} ABSOLUTE)
+
   if (EXISTS ${path})
     file(
       STRINGS ${path} VERSION_STRINGS
