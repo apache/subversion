@@ -24,6 +24,7 @@ find_path(APR_INCLUDE_DIR
   PATH_SUFFIXES
     include
     include/apr-1
+    include/apr-1.0
 )
 
 find_library(APR_LIBRARY_SHARED

@@ -24,6 +24,7 @@ find_path(APRUTIL_INCLUDE_DIR
   PATH_SUFFIXES
     include
     include/apr-1 # Not yet in apr
+    include/apr-1.0
 )
 
 find_library(APRUTIL_LIBRARY_SHARED
