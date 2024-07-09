@@ -144,8 +144,7 @@ class Generator(gen_base.GeneratorBase):
       msvc_export = []
       if isinstance(target, gen_base.TargetLib):
         for export in target.msvc_export:
-          path = "subversion/include/" + export.replace("\\", "/")
-          msvc_export.append(path)
+          msvc_export.append("subversion/include/" + export)
 
       sources = []
       libs = []
