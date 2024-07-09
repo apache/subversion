@@ -20,16 +20,18 @@
 #
 
 function(read_version path var major minor patch)
-  file(
-    STRINGS ${path} VERSION_STRINGS
-    REGEX "#define (${major}|${minor}|${patch})"
-  )
+  if (EXISTS ${path})
+    file(
+      STRINGS ${path} VERSION_STRINGS
+      REGEX "#define (${major}|${minor}|${patch})"
+    )
 
-  string(REGEX REPLACE ".*${major} +([0-9]+).*" "\\1" VER_MAJOR ${VERSION_STRINGS})
-  string(REGEX REPLACE ".*${minor} +([0-9]+).*" "\\1" VER_MINOR ${VERSION_STRINGS})
-  string(REGEX REPLACE ".*${patch} +([0-9]+).*" "\\1" VER_PATCH ${VERSION_STRINGS})
+    string(REGEX REPLACE ".*${major} +([0-9]+).*" "\\1" VER_MAJOR ${VERSION_STRINGS})
+    string(REGEX REPLACE ".*${minor} +([0-9]+).*" "\\1" VER_MINOR ${VERSION_STRINGS})
+    string(REGEX REPLACE ".*${patch} +([0-9]+).*" "\\1" VER_PATCH ${VERSION_STRINGS})
 
-  set(${var} "${VER_MAJOR}.${VER_MINOR}.${VER_PATCH}" PARENT_SCOPE)
+    set(${var} "${VER_MAJOR}.${VER_MINOR}.${VER_PATCH}" PARENT_SCOPE)
+  endif()
 endfunction()
 
 cmake_minimum_required(VERSION 3.12)
@@ -190,12 +192,14 @@ if(SVN_SQLITE_USE_AMALGAMATION)
   target_include_directories(external-sqlite PUBLIC ${SVN_SQLITE_AMALGAMATION_DIR})
   target_compile_definitions(external-sqlite PUBLIC SVN_SQLITE_INLINE)
 
-  file(STRINGS ${SVN_SQLITE_AMALGAMATION_DIR}/sqlite3.c _ver_line
-       REGEX "^#define SQLITE_VERSION  *\"[0-9]+\\.[0-9]+\\.[0-9]+\""
-       LIMIT_COUNT 1)
-  string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+"
-          SQLite3_VERSION "${_ver_line}")
-  unset(_ver_line)
+  if (SVN_SQLITE_AMALGAMATION_DIR)
+    file(STRINGS ${SVN_SQLITE_AMALGAMATION_DIR}/sqlite3.c _ver_line
+         REGEX "^#define SQLITE_VERSION  *\"[0-9]+\\.[0-9]+\\.[0-9]+\""
+         LIMIT_COUNT 1)
+    string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+"
+            SQLite3_VERSION "${_ver_line}")
+    unset(_ver_line)
+  endif()
 else()
   find_package(SQLite3 REQUIRED)
   add_library(external-sqlite ALIAS SQLite::SQLite3)
