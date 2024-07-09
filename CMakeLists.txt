@@ -50,6 +50,9 @@ project("Subversion"
   VERSION "${SVN_VERSION}"
 )
 
+string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}-${CMAKE_HOST_SYSTEM_NAME}" SVN_BUILD_HOST)
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}" SVN_BUILD_TARGET)
+
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/subversion/svn_private_config.hc"
   "${CMAKE_CURRENT_BINARY_DIR}/svn_private_config.h"

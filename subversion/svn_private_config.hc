@@ -30,22 +30,8 @@
 #define SVN_PRIVATE_CONFIG_HW
 
 
-/* Define to a Windows-specific equivalent of config.guess output */
-#define SVN_BUILD_HOST "x86-microsoft-windows"
-
-#if defined(_M_X64)
-#define SVN_BUILD_TARGET "x64-microsoft-windows"
-#elif defined(_M_IA64)
-#define SVN_BUILD_TARGET "ia64-microsoft-windows"
-#elif defined( _M_IX86)
-#define SVN_BUILD_TARGET "x86-microsoft-windows"
-#elif defined(_M_ARM64)
-#define SVN_BUILD_TARGET "arm64-microsoft-windows"
-#elif defined(_M_ARM)
-#define SVN_BUILD_TARGET "arm-microsoft-windows"
-#else
-#error Unsupported build target.
-#endif
+#define SVN_BUILD_HOST "@SVN_BUILD_HOST@"
+#define SVN_BUILD_TARGET "@SVN_BUILD_TARGET@"
 
 /* The minimal version of Berkeley DB we want */
 #define SVN_FS_WANT_DB_MAJOR    4
