@@ -148,8 +148,8 @@ add_library(external-xml ALIAS expat::expat)
 option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
 
 if(SVN_USE_INTERNAL_LZ4)
-  add_library(external-lz4 STATIC "build/win32/empty.c")
-  target_compile_definitions(external-lz4 PUBLIC "SVN_INTERNAL_LZ4")
+  add_library(external-lz4 INTERFACE)
+  target_compile_definitions(external-lz4 INTERFACE "SVN_INTERNAL_LZ4")
 
   read_version(
     "subversion/libsvn_subr/lz4/lz4internal.h" lz4_VERSION
@@ -165,8 +165,8 @@ endif()
 option(SVN_USE_INTERNAL_UTF8PROC "Use internal version of utf8proc" ON)
 
 if(SVN_USE_INTERNAL_UTF8PROC)
-  add_library(external-utf8proc STATIC "build/win32/empty.c")
-  target_compile_definitions(external-utf8proc PUBLIC "SVN_INTERNAL_UTF8PROC")
+  add_library(external-utf8proc INTERFACE)
+  target_compile_definitions(external-utf8proc INTERFACE "SVN_INTERNAL_UTF8PROC")
 
   read_version(
     "subversion/libsvn_subr/utf8proc/utf8proc_internal.h" UTF8PROC_VERSION
@@ -186,7 +186,7 @@ set(SVN_SQLITE_AMALGAMATION_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation"
 )
 
 if(SVN_SQLITE_USE_AMALGAMATION)
-  add_library(external-sqlite STATIC "build/win32/empty.c")
+  add_library(external-sqlite INTERFACE)
   find_path(SVN_SQLITE_AMALGAMATION_DIR
     NAMES sqlite3.c
     PATHS ${SVN_SQLITE_AMALGAMATION_ROOT}
@@ -194,8 +194,8 @@ if(SVN_SQLITE_USE_AMALGAMATION)
 
   mark_as_advanced(SVN_SQLITE_AMALGAMATION_DIR)
 
-  target_include_directories(external-sqlite PUBLIC ${SVN_SQLITE_AMALGAMATION_DIR})
-  target_compile_definitions(external-sqlite PUBLIC SVN_SQLITE_INLINE)
+  target_include_directories(external-sqlite INTERFACE ${SVN_SQLITE_AMALGAMATION_DIR})
+  target_compile_definitions(external-sqlite INTERFACE SVN_SQLITE_INLINE)
 
   if (SVN_SQLITE_AMALGAMATION_DIR)
     file(STRINGS ${SVN_SQLITE_AMALGAMATION_DIR}/sqlite3.c _ver_line
