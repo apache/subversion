@@ -48,8 +48,22 @@ read_version(
   SVN_VER_MAJOR SVN_VER_MINOR SVN_VER_PATCH
 )
 
+option(SVN_BUILD_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
+
+# Only plain C compiler is needed by default
+set(languages C)
+
+# Require C++ compiler
+if (SVN_BUILD_SVNXX)
+  # TODO: Also add SVN_BUILD_AUTH_KWALLET and SVN_BUILD_JAVAHL to the
+  # conditions when they done.
+
+  list(APPEND languages CXX)
+endif()
+
 project("Subversion"
   VERSION "${SVN_VERSION}"
+  LANGUAGES ${languages}
 )
 
 string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}-${CMAKE_HOST_SYSTEM_NAME}" SVN_BUILD_HOST)
@@ -294,8 +308,6 @@ if (NOT EXISTS "${CMAKE_SOURCE_DIR}/build/cmake/targets.cmake")
 endif()
 
 include("build/cmake/targets.cmake")
-
-option(SVN_BUILD_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
 
 if (SVN_BUILD_SVNXX)
   target_include_directories(libsvnxx PUBLIC
