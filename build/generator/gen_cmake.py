@@ -33,7 +33,7 @@ class cmake_target():
   def __init__(self, name: str, type: str, sources,
                libs, msvc_libs, msvc_objects, msvc_export,
                enable_condition, group: str, build_type: str,
-               description: str, srcdir: str):
+               description: str, srcdir: str, install_target: bool):
     self.name = name
     self.type = type
     self.sources = sources
@@ -52,6 +52,7 @@ class cmake_target():
     self.build_type = build_type
     self.description = description
     self.srcdir = srcdir
+    self.install_target = ezt.boolean(install_target)
 
 def get_target_type(target: gen_base.Target):
   if isinstance(target, gen_base.TargetExe):
@@ -186,6 +187,11 @@ class Generator(gen_base.GeneratorBase):
           else:
             msvc_libs.append(lib)
 
+        if isinstance(target, gen_base.TargetLib) or target.install == "bin":
+          install_target = True
+        else:
+          install_target = False
+
         new_target = cmake_target(
           name = target.name,
           type = target_type,
@@ -199,6 +205,7 @@ class Generator(gen_base.GeneratorBase):
           build_type = build_type,
           description = target.desc,
           srcdir = target.path,
+          install_target = install_target,
         )
 
         targets.append(new_target)

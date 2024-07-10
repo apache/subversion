@@ -32,7 +32,6 @@ if ([targets.enable_condition])[is targets.type "lib"]
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
   )[if-any targets.group]
   target_link_libraries([targets.group] INTERFACE [targets.name])[end]
-  install(TARGETS [targets.name])
   [end][is targets.type "exe"]
   add_executable([targets.name][for targets.sources]
     [targets.sources][end]
@@ -57,6 +56,7 @@ if ([targets.enable_condition])[is targets.type "lib"]
   )
   if (WIN32)
     target_sources([targets.name] PRIVATE build/win32/svn.rc)
-  endif()
+  endif()[if-any targets.install_target]
+  install(TARGETS [targets.name])[end]
 endif()
 [end]
