@@ -304,6 +304,9 @@ if (NOT EXISTS "${CMAKE_SOURCE_DIR}/build/cmake/targets.cmake")
   )
 endif()
 
+add_library(ra-libs INTERFACE)
+add_library(fs-libs INTERFACE)
+
 include("build/cmake/targets.cmake")
 
 if (SVN_BUILD_SVNXX)

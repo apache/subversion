@@ -127,11 +127,11 @@ class Generator(gen_base.GeneratorBase):
           enable_condition.append("NOT BUILD_SHARED_LIBS")
       elif isinstance(target, gen_base.TargetRaModule):
         enable_condition.append("SVN_BUILD_" + get_module_name(target.name));
-        group = "SVN_RA_MODULES"
+        group = "ra-libs"
         build_type = "${SVN_RA_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetFsModule):
         enable_condition.append("SVN_BUILD_" + get_module_name(target.name));
-        group = "SVN_FS_MODULES"
+        group = "fs-libs"
         build_type = "${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
         pass
@@ -153,9 +153,9 @@ class Generator(gen_base.GeneratorBase):
         if isinstance(dep, gen_base.TargetLinked):
           if dep.external_lib:
             if dep.name == "ra-libs":
-              libs.append("${SVN_RA_MODULES}")
+              libs.append("ra-libs")
             elif dep.name == "fs-libs":
-              libs.append("${SVN_FS_MODULES}")
+              libs.append("fs-libs")
             elif dep.name in ["apriconv",
                               "apr_memcache",
                               "magic",
