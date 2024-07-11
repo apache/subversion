@@ -248,7 +248,6 @@ class Generator(gen_base.GeneratorBase):
       "svnxx-tests",
 
       "libsvn_fs_base",
-      "libsvn_ra_serf",
 
       "mod_authz_svn",
       "mod_dav_svn",
