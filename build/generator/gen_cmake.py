@@ -153,7 +153,6 @@ class Generator(gen_base.GeneratorBase):
             elif dep.name in ["apriconv",
                               "apr_memcache",
                               "magic",
-                              "intl",
                               "macos-plist",
                               "macos-keychain",
                               "sasl"]:

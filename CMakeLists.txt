@@ -130,6 +130,8 @@ if(SVN_BUILD_SHARED_RA)
   message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported")
 endif()
 
+option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
+
 # Setup modules path
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/build/cmake")
@@ -306,6 +308,68 @@ endif()
 
 add_library(ra-libs INTERFACE)
 add_library(fs-libs INTERFACE)
+
+if(SVN_ENABLE_NLS)
+  # Note: when installing these dependecies with vcpkg, you will need to
+  # install 'gettext' package with 'tools' feature. Use the following command
+  # for this: `./vcpkg install gettext[tools]`. This package contains both,
+  # Gettext and Intl dependecies.
+  find_package(Gettext REQUIRED)
+  find_package(Intl REQUIRED)
+
+  # If using CMake of version < 3.20, FindIntl would not define IMPORTED target.
+  # https://cmake.org/cmake/help/latest/module/FindIntl.html
+  if(NOT TARGET Intl::Intl)
+    add_library(Intl::Intl INTERFACE IMPORTED)
+    set_target_properties(Intl::Intl PROPERTIES
+      INTERFACE_INCLUDE_DIRECTORIES "${Intl_INCLUDE_DIRS}"
+      INTERFACE_LINK_LIBRARIES "${Intl_LIBRARIES}"
+    )
+  endif()
+
+  add_library(external-intl ALIAS Intl::Intl)
+
+  add_compile_definitions(ENABLE_NLS)
+
+  add_custom_target(locale ALL)
+
+  file(GLOB SVN_PO_FILES "subversion/po/*.po")
+
+  foreach(po_file ${SVN_PO_FILES})
+    get_filename_component(lang ${po_file} NAME_WLE)
+    set(mo_file "${CMAKE_BINARY_DIR}/${lang}.mo")
+
+    add_custom_command(
+      DEPENDS
+        "${po_file}"
+      OUTPUT
+        "${mo_file}"
+      COMMAND
+        "${GETTEXT_MSGFMT_EXECUTABLE}" -c -o ${mo_file} ${po_file}
+    )
+
+    target_sources(locale PRIVATE ${mo_file})
+
+    install(
+      FILES "${mo_file}"
+      DESTINATION "share/locale/${lang}/LC_MESSAGES"
+      RENAME "subversion.mo"
+    )
+  endforeach()
+else()
+  # Declare empty target for Intl if we don't use it.
+  add_library(external-intl INTERFACE)
+endif()
+
+# Link all targets with Intl library. The 'external-intl' target is always,
+# even if we don't use NLS functionality.
+#
+# Following the CMake documentation [1], the link_libraries affects only on
+# the targets declared later, so it should be here.
+#
+# [1] https://cmake.org/cmake/help/latest/command/link_libraries.html
+#     -- "Link libraries to all targets added later."
+link_libraries(external-intl)
 
 include("build/cmake/targets.cmake")
 
