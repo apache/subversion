@@ -193,30 +193,13 @@ endif()
 ### SQLite3
 
 option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" ON)
-set(SVN_SQLITE_AMALGAMATION_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation"
+set(SQLiteAmalgamation_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation"
   CACHE STRING "Directory with sqlite amalgamation"
 )
 
 if(SVN_SQLITE_USE_AMALGAMATION)
-  add_library(external-sqlite INTERFACE)
-  find_path(SVN_SQLITE_AMALGAMATION_DIR
-    NAMES sqlite3.c
-    PATHS ${SVN_SQLITE_AMALGAMATION_ROOT}
-  )
-
-  mark_as_advanced(SVN_SQLITE_AMALGAMATION_DIR)
-
-  target_include_directories(external-sqlite INTERFACE ${SVN_SQLITE_AMALGAMATION_DIR})
-  target_compile_definitions(external-sqlite INTERFACE SVN_SQLITE_INLINE)
-
-  if (SVN_SQLITE_AMALGAMATION_DIR)
-    file(STRINGS ${SVN_SQLITE_AMALGAMATION_DIR}/sqlite3.c _ver_line
-         REGEX "^#define SQLITE_VERSION  *\"[0-9]+\\.[0-9]+\\.[0-9]+\""
-         LIMIT_COUNT 1)
-    string(REGEX MATCH "[0-9]+\\.[0-9]+\\.[0-9]+"
-            SQLite3_VERSION "${_ver_line}")
-    unset(_ver_line)
-  endif()
+  find_package(SQLiteAmalgamation REQUIRED)
+  add_library(external-sqlite ALIAS SQLite::SQLite3Amalgamation)
 else()
   find_package(SQLite3 REQUIRED)
   add_library(external-sqlite ALIAS SQLite::SQLite3)
