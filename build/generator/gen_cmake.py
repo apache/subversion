@@ -21,7 +21,6 @@
 
 import os
 import sys
-from build.generator.gen_make import UnknownDependency
 import ezt
 import gen_base
 
