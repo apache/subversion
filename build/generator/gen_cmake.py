@@ -108,21 +108,21 @@ class Generator(gen_base.GeneratorBase):
         continue
       elif isinstance(target, gen_base.TargetExe):
         if target.install == "test" or target.install == "sub-test":
-          enable_condition.append("SVN_BUILD_TEST");
+          enable_condition.append("SVN_BUILD_TEST")
         elif target.install == "tools":
-          enable_condition.append("SVN_BUILD_TOOLS");
+          enable_condition.append("SVN_BUILD_TOOLS")
         else:
-          enable_condition.append("SVN_BUILD_PROGRAMS");
+          enable_condition.append("SVN_BUILD_PROGRAMS")
 
         if target.msvc_force_static:
           # TODO: write warning
           enable_condition.append("NOT BUILD_SHARED_LIBS")
       elif isinstance(target, gen_base.TargetRaModule):
-        enable_condition.append("SVN_BUILD_" + get_module_name(target.name));
+        enable_condition.append("SVN_BUILD_" + get_module_name(target.name))
         group = "ra-libs"
         build_type = "${SVN_RA_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetFsModule):
-        enable_condition.append("SVN_BUILD_" + get_module_name(target.name));
+        enable_condition.append("SVN_BUILD_" + get_module_name(target.name))
         group = "fs-libs"
         build_type = "${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
