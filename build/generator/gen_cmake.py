@@ -29,10 +29,10 @@ class _eztdata(object):
     vars(self).update(kw)
 
 class cmake_target():
-  def __init__(self, name: str, type: str, sources,
+  def __init__(self, name, type, sources,
                libs, msvc_libs, msvc_objects, msvc_export,
-               enable_condition, group: str, build_type: str,
-               description: str, srcdir: str, install_target: bool):
+               enable_condition, group, build_type,
+               description, srcdir, install_target):
     self.name = name
     self.type = type
     self.sources = sources
@@ -53,7 +53,7 @@ class cmake_target():
     self.srcdir = srcdir
     self.install_target = ezt.boolean(install_target)
 
-def get_target_type(target: gen_base.Target):
+def get_target_type(target):
   if isinstance(target, gen_base.TargetExe):
     if target.install == "test" and target.testing != "skip":
       return "test"
@@ -70,7 +70,7 @@ def get_target_type(target: gen_base.Target):
   else:
     return str(type(target))
 
-def get_module_name(name: str):
+def get_module_name(name):
   """
   Returns the name of the library as a module name. Module name
   is a library name without `libsvn_` prefix and in upper case.
@@ -99,7 +99,6 @@ class Generator(gen_base.GeneratorBase):
     targets = []
 
     for target in self.get_install_sources():
-      target: gen_base.Target
       group = None
       enable_condition = []
       build_type = None
@@ -222,8 +221,6 @@ class Generator(gen_base.GeneratorBase):
     result = []
 
     for target in install_sources:
-      target: gen_base.Target
-
       if not self.check_ignore_target(target):
         result.append(target)
 
@@ -239,7 +236,7 @@ class Generator(gen_base.GeneratorBase):
 
     return deps
 
-  def check_ignore_target(self, target: gen_base.Target):
+  def check_ignore_target(self, target):
     ignore_names = [
       "libsvn_auth_gnome_keyring",
       "libsvn_auth_kwallet",
