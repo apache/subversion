@@ -197,12 +197,6 @@ set(SVN_SQLITE_AMALGAMATION_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation"
   CACHE STRING "Directory with sqlite amalgamation"
 )
 
-### Serf
-if (SVN_BUILD_RA_SERF)
-  find_package(Serf REQUIRED)
-  add_library(external-serf ALIAS Serf::Serf)
-endif()
-
 if(SVN_SQLITE_USE_AMALGAMATION)
   add_library(external-sqlite INTERFACE)
   find_path(SVN_SQLITE_AMALGAMATION_DIR
@@ -226,6 +220,12 @@ if(SVN_SQLITE_USE_AMALGAMATION)
 else()
   find_package(SQLite3 REQUIRED)
   add_library(external-sqlite ALIAS SQLite::SQLite3)
+endif()
+
+### Serf
+if (SVN_BUILD_RA_SERF)
+  find_package(Serf REQUIRED)
+  add_library(external-serf ALIAS Serf::Serf)
 endif()
 
 find_package(Python COMPONENTS Interpreter REQUIRED)
