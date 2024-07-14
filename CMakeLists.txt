@@ -53,7 +53,33 @@ project("Subversion"
   LANGUAGES C
 )
 
+### Options
+
+# Build components
 option(SVN_BUILD_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
+option(SVN_BUILD_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
+option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
+option(SVN_BUILD_TESTS "Build Subversion test-suite" OFF)
+
+# Enable modules and features
+option(SVN_ENABLE_RA_LOCAL "Enable Subversion Local Repository Access Library" ON)
+option(SVN_ENABLE_RA_SERF "Enable Subversion HTTP/WebDAV Protocol Repository Access Library" OFF)
+option(SVN_ENABLE_RA_SVN "Enable Subversion SVN Protocol Repository Access Library" ON)
+option(SVN_ENABLE_FS_FS "Enable Subversion FSFS Repository Filesystem Library" ON)
+option(SVN_ENABLE_FS_X "Enable Subversion FSX Repository Filesystem Library" ON)
+option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
+
+# Configuration
+option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
+option(SVN_BUILD_SHARED_FS "Build shared FS modules" ${BUILD_SHARED_LIBS})
+option(SVN_BUILD_SHARED_RA "Build shared RA modules" OFF)
+option(SVN_DEBUG "Enables specific features for developer builds" OFF)
+
+# Dependecies
+option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
+option(SVN_USE_INTERNAL_UTF8PROC "Use internal version of utf8proc" ON)
+option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" ON)
+set(SQLiteAmalgamation_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation" CACHE STRING "Directory with sqlite amalgamation")
 
 # Require C++ compiler
 if (SVN_BUILD_SVNXX)
@@ -71,54 +97,40 @@ configure_file(
   "${CMAKE_CURRENT_BINARY_DIR}/svn_private_config.h"
 )
 
-option(SVN_ENABLE_RA_LOCAL "Enable Subversion Local Repository Access Library" ON)
 if (SVN_ENABLE_RA_LOCAL)
   add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_LOCAL")
 endif()
 
-option(SVN_ENABLE_RA_SERF "Enable Subversion HTTP/WebDAV Protocol Repository Access Library" OFF)
 if (SVN_ENABLE_RA_SERF)
   add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_SERF")
 endif()
 
-option(SVN_ENABLE_RA_SVN "Enable Subversion SVN Protocol Repository Access Library" ON)
 if (SVN_ENABLE_RA_SVN)
   add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_SVN")
 endif()
 
-option(SVN_ENABLE_FS_FS "Enable Subversion FSFS Repository Filesystem Library" ON)
 if (SVN_ENABLE_FS_FS)
   add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_FS")
 endif()
 
-option(SVN_ENABLE_FS_X "Enable Subversion FSX Repository Filesystem Library" ON)
 if (SVN_ENABLE_FS_X)
   add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_X")
 endif()
 
-option(SVN_DEBUG "Enables specific features for developer builds" OFF)
 if (SVN_DEBUG)
   add_compile_definitions("SVN_DEBUG")
 endif()
-
-option(SVN_BUILD_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
-option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
-option(SVN_BUILD_TESTS "Build Subversion test-suite" OFF)
 
 if (SVN_BUILD_TESTS)
   enable_testing()
 endif()
 
-option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
-
-option(SVN_BUILD_SHARED_FS "Build shared FS modules" ${BUILD_SHARED_LIBS})
 if(SVN_BUILD_SHARED_FS)
   set(SVN_FS_BUILD_TYPE SHARED)
 else()
   set(SVN_FS_BUILD_TYPE STATIC)
 endif()
 
-option(SVN_BUILD_SHARED_RA "Build shared RA modules" OFF)
 if(SVN_BUILD_SHARED_RA)
   set(SVN_RA_BUILD_TYPE SHARED)
 else()
@@ -128,8 +140,6 @@ endif()
 if(SVN_BUILD_SHARED_RA)
   message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported")
 endif()
-
-option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
 
 # Setup modules path
 
@@ -157,8 +167,6 @@ add_library(external-xml ALIAS expat::expat)
 
 ### LZ4
 
-option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
-
 if(SVN_USE_INTERNAL_LZ4)
   add_library(external-lz4 INTERFACE)
   target_compile_definitions(external-lz4 INTERFACE "SVN_INTERNAL_LZ4")
@@ -173,8 +181,6 @@ else()
 endif()
 
 ### UTF8PROC
-
-option(SVN_USE_INTERNAL_UTF8PROC "Use internal version of utf8proc" ON)
 
 if(SVN_USE_INTERNAL_UTF8PROC)
   add_library(external-utf8proc INTERFACE)
@@ -191,11 +197,6 @@ else()
 endif()
 
 ### SQLite3
-
-option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" ON)
-set(SQLiteAmalgamation_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation"
-  CACHE STRING "Directory with sqlite amalgamation"
-)
 
 if(SVN_SQLITE_USE_AMALGAMATION)
   find_package(SQLiteAmalgamation REQUIRED)
