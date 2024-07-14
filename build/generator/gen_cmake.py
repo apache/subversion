@@ -93,11 +93,11 @@ class Generator(gen_base.GeneratorBase):
           # TODO: write warning
           enable_condition.append("NOT BUILD_SHARED_LIBS")
       elif isinstance(target, gen_base.TargetRaModule):
-        enable_condition.append("SVN_BUILD_" + get_module_name(target.name))
+        enable_condition.append("SVN_ENABLE_" + get_module_name(target.name))
         group = "ra-libs"
         build_type = "${SVN_RA_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetFsModule):
-        enable_condition.append("SVN_BUILD_" + get_module_name(target.name))
+        enable_condition.append("SVN_ENABLE_" + get_module_name(target.name))
         group = "fs-libs"
         build_type = "${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
