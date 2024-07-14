@@ -83,7 +83,7 @@ class Generator(gen_base.GeneratorBase):
         continue
       elif isinstance(target, gen_base.TargetExe):
         if target.install == "test" or target.install == "sub-test":
-          enable_condition.append("SVN_BUILD_TEST")
+          enable_condition.append("SVN_BUILD_TESTS")
         elif target.install == "tools":
           enable_condition.append("SVN_BUILD_TOOLS")
         else:
