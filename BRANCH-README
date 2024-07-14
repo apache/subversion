@@ -29,16 +29,22 @@ $ cmake --build out
 --------------------------------
 
 - [x] Create empty CMakeLists.txt
-- [ ] Commit the initial patch from the thread [1]
+- [x] Commit the initial patch from the thread [1]
 - [ ] Tests
-  - [ ] C tests
+  - [x] C tests
   - [ ] Python tests on command-line
   - [ ] Different options and configuration
 - [ ] Cross platform support
-  - [ ] Support compilation for Linux
+  - [~] Support compilation for Linux
 - [ ] Support optional libraries
-  - [ ] Serf
+  - [x] Serf
   - [ ] HTTPD
+- [ ] Bindings
+  - [ ] Swig
+  - [ ] JavaHL
+- [ ] Documentation
+  - [ ] INSTALL
+  - [ ] Website page (?)
 
                       References
 --------------------------------
