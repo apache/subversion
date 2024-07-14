@@ -28,31 +28,6 @@ class _eztdata(object):
   def __init__(self, **kw):
     vars(self).update(kw)
 
-class cmake_target():
-  def __init__(self, name, type, sources,
-               libs, msvc_libs, msvc_objects, msvc_export,
-               enable_condition, group, build_type,
-               description, srcdir, install_target):
-    self.name = name
-    self.type = type
-    self.sources = sources
-    self.libs = libs
-
-    self.msvc_libs = msvc_libs
-    self.msvc_objects = msvc_objects
-    self.msvc_export = msvc_export
-
-    if len(enable_condition) > 0:
-      self.enable_condition = " AND ".join(enable_condition)
-    else:
-      self.enable_condition = "TRUE"
-
-    self.group = group
-    self.build_type = build_type
-    self.description = description
-    self.srcdir = srcdir
-    self.install_target = ezt.boolean(install_target)
-
 def get_target_type(target):
   if isinstance(target, gen_base.TargetExe):
     if target.install == "test" and target.testing != "skip":
@@ -189,7 +164,12 @@ class Generator(gen_base.GeneratorBase):
         else:
           install_target = False
 
-        new_target = cmake_target(
+        if len(enable_condition) > 0:
+          enable_condition_str = " AND ".join(enable_condition)
+        else:
+          enable_condition_str = "TRUE"
+
+        new_target = _eztdata(
           name = target.name,
           type = target_type,
           sources = sources,
@@ -197,12 +177,12 @@ class Generator(gen_base.GeneratorBase):
           msvc_libs = msvc_libs,
           msvc_objects = msvc_objects,
           msvc_export = msvc_export,
-          enable_condition = enable_condition,
+          enable_condition = enable_condition_str,
           group = group,
           build_type = build_type,
           description = target.desc,
           srcdir = target.path,
-          install_target = install_target,
+          install_target = ezt.boolean(install_target),
         )
 
         targets.append(new_target)
