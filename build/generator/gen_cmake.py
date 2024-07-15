@@ -137,7 +137,7 @@ class Generator(gen_base.GeneratorBase):
           else:
             if dep.name in ["libsvn_ra_local", "libsvn_ra_serf", "libsvn_ra_svn",
                             "libsvn_fs_base", "libsvn_fs_fs", "libsvn_fs_x"]:
-              enable_condition.append("SVN_BUILD_" + get_module_name(dep.name))
+              enable_condition.append("SVN_ENABLE_" + get_module_name(dep.name))
 
             libs.append(dep.name)
         elif isinstance(dep, gen_base.ObjectFile):
