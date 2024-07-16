@@ -20,6 +20,7 @@ Contents:
        C. Building under Unix in Different Directories
        D. Installing from a Zip or Installer File under Windows
        E. Building the Latest Source under Windows
+       F. Building using CMake
 
    III. BUILDING A SUBVERSION SERVER
        A. Setting Up Apache Httpd
@@ -676,6 +677,19 @@ I.    INTRODUCTION
 II.   INSTALLATION
       ============
 
+      Subversion support three different build systems:
+      - Autoconf/make, for Unix builds
+      - Visual Studio vcproj, for Windows builds
+      - CMake, for both Unix and Windows
+
+      The first two have been in use since 2001. Sections A-E below descibe
+      the classic build system.
+
+      The CMake build system was created in 2024 and is still under
+      development. It will be included in Subversion 1.15 and is expected to
+      be the default build system starting with Subversion 1.16. Section Fi
+      below describe the CMake build system.
+
   A.  Building from a Tarball
       ------------------------------
 
@@ -1188,6 +1202,31 @@ II.   INSTALLATION
 
       C:>python win-tests.py -c -r -v -u http://localhost
       C:>cd ..
+
+
+  E.  Building using CMake
+      --------------------
+
+      Get the sources, either a release tarball or by checking out the
+      official repository. The CMake build system currently only exists in
+      /trunk and it will be included in the 1.15 release.
+
+      The process for building on Unix and Windows is the same.
+
+          $ python gen-make.py -t cmake 
+          $ cmake -B out [build options]
+          $ cmake --build out
+
+      "out" in the commands above is the build directory used by CMake.
+
+      Build options can be added, for example:
+
+          $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_RA_SERF=ON
+ 
+      Build options can be listed using:
+
+          $ cmake -LH
+
 
 III.  BUILDING A SUBVERSION SERVER
       ============================
