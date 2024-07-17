@@ -25,10 +25,10 @@ if ([targets.enable_condition])[is targets.type "lib"]
   add_library([targets.name][if-any targets.build_type] [targets.build_type][end][for targets.sources]
     [targets.sources][end]
   )[if-any targets.msvc_export]
-  set_target_properties([targets.name] PROPERTIES OUTPUT_NAME "[targets.name]-1")
   target_exports([targets.name][for targets.msvc_export]
     [targets.msvc_export][end]
   )[end]
+  set_target_properties([targets.name] PROPERTIES OUTPUT_NAME "[targets.name]-1")
   target_include_directories([targets.name] PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
   )[if-any targets.group]
