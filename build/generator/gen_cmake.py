@@ -55,6 +55,12 @@ def get_module_name(name):
 
   return name[7:].upper()
 
+def get_output_name(name):
+  if name.startswith("lib"):
+    return name[3:] + "-1"
+  else:
+    return name
+
 class Generator(gen_base.GeneratorBase):
   _extension_map = {
     ('exe', 'target'): '.exe',
@@ -171,6 +177,7 @@ class Generator(gen_base.GeneratorBase):
 
         new_target = _eztdata(
           name = target.name,
+          output_name = get_output_name(target.name),
           type = target_type,
           sources = sources,
           libs = libs,

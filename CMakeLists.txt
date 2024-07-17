@@ -360,6 +360,15 @@ endif()
 #     -- "Link libraries to all targets added later."
 link_libraries(external-intl)
 
+# Build shared libraries and theirs implibs with 'lib' prefix, for example
+# libsvn_subr-1.[lib|a] and libsvn_subr-1.[dll|so]
+set(CMAKE_SHARED_LIBRARY_PREFIX "lib")
+set(CMAKE_IMPORT_LIBRARY_PREFIX "lib")
+
+# This tells CMake to build static libraries without any prefix
+# (just svn_subr-1.[lib|a])
+set(CMAKE_STATIC_LIBRARY_PREFIX "")
+
 include("build/cmake/targets.cmake")
 
 if (SVN_BUILD_SVNXX)
