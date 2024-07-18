@@ -238,8 +238,6 @@ class Generator(gen_base.GeneratorBase):
 
       "svnxx-tests",
 
-      "libsvn_fs_base",
-
       "mod_authz_svn",
       "mod_dav_svn",
       "mod_dontdothat",
@@ -252,10 +250,6 @@ class Generator(gen_base.GeneratorBase):
     for name in ignore_names:
       if target.name == name:
         return True
-
-      if isinstance(target, gen_base.TargetExe):
-        if target.install == "bdb-test":
-          return True
 
   if sys.platform == 'win32':
     def errno_filter(self, codes):

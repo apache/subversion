@@ -67,6 +67,7 @@ option(SVN_ENABLE_RA_SERF "Enable Subversion HTTP/WebDAV Protocol Repository Acc
 option(SVN_ENABLE_RA_SVN "Enable Subversion SVN Protocol Repository Access Library" ON)
 option(SVN_ENABLE_FS_FS "Enable Subversion FSFS Repository Filesystem Library" ON)
 option(SVN_ENABLE_FS_X "Enable Subversion FSX Repository Filesystem Library" ON)
+option(SVN_ENABLE_FS_BASE "Enable Subversion Filesystem Base Library (NOT IMPLEMENTED and DEPRECATED)" OFF)
 option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
 
 # Configuration
@@ -139,6 +140,10 @@ endif()
 
 if(SVN_BUILD_SHARED_RA)
   message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported")
+endif()
+
+if(SVN_ENABLE_FS_BASE)
+  message(FATAL_ERROR "SVN_ENABLE_FS_BASE is NOT implemented and deprecated.")
 endif()
 
 if(BUILD_SHARED_LIBS OR SVN_BUILD_SHARED_FS OR SVN_BUILD_SHARED_RA)
