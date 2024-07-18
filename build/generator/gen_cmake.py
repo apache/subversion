@@ -61,6 +61,29 @@ def get_output_name(name):
   else:
     return name
 
+def get_target_conditions(target):
+  enable_condition = []
+
+  if isinstance(target, gen_base.TargetRaModule) or \
+     isinstance(target, gen_base.TargetFsModule):
+    enable_condition.append("SVN_ENABLE_" + get_module_name(target.name))
+
+  if isinstance(target, gen_base.TargetLib) and target.name == "libsvnxx":
+    enable_condition.append("SVN_BUILD_SVNXX")
+
+  if isinstance(target, gen_base.TargetExe):
+    if target.install == "test" or target.install == "sub-test":
+      enable_condition.append("SVN_BUILD_TESTS")
+    elif target.install == "tools":
+      enable_condition.append("SVN_BUILD_TOOLS")
+    else:
+      enable_condition.append("SVN_BUILD_PROGRAMS")
+
+    if target.msvc_force_static:
+      enable_condition.append("NOT BUILD_SHARED_LIBS")
+
+  return enable_condition
+
 class Generator(gen_base.GeneratorBase):
   _extension_map = {
     ('exe', 'target'): '.exe',
@@ -82,28 +105,16 @@ class Generator(gen_base.GeneratorBase):
     for target in self.get_install_sources():
       group = None
       enable_condition = []
+      enable_condition += get_target_conditions(target)
       build_type = None
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
         continue
-      elif isinstance(target, gen_base.TargetExe):
-        if target.install == "test" or target.install == "sub-test":
-          enable_condition.append("SVN_BUILD_TESTS")
-        elif target.install == "tools":
-          enable_condition.append("SVN_BUILD_TOOLS")
-        else:
-          enable_condition.append("SVN_BUILD_PROGRAMS")
-
-        if target.msvc_force_static:
-          # TODO: write warning
-          enable_condition.append("NOT BUILD_SHARED_LIBS")
       elif isinstance(target, gen_base.TargetRaModule):
-        enable_condition.append("SVN_ENABLE_" + get_module_name(target.name))
         group = "ra-libs"
         build_type = "${SVN_RA_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetFsModule):
-        enable_condition.append("SVN_ENABLE_" + get_module_name(target.name))
         group = "fs-libs"
         build_type = "${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
@@ -111,8 +122,6 @@ class Generator(gen_base.GeneratorBase):
       elif isinstance(target, gen_base.TargetLib):
         if target.msvc_static:
           build_type = "STATIC"
-        if target.name == "libsvnxx":
-          enable_condition.append("SVN_BUILD_SVNXX")
 
       msvc_export = []
       if isinstance(target, gen_base.TargetLib):
@@ -123,6 +132,8 @@ class Generator(gen_base.GeneratorBase):
       libs = []
 
       for dep in self.get_dependecies(target.name):
+        enable_condition += get_target_conditions(dep)
+
         if isinstance(dep, gen_base.TargetLinked):
           if dep.external_lib:
             if dep.name == "ra-libs":
@@ -141,10 +152,6 @@ class Generator(gen_base.GeneratorBase):
             else:
               libs.append("external-" + dep.name)
           else:
-            if dep.name in ["libsvn_ra_local", "libsvn_ra_serf", "libsvn_ra_svn",
-                            "libsvn_fs_base", "libsvn_fs_fs", "libsvn_fs_x"]:
-              enable_condition.append("SVN_ENABLE_" + get_module_name(dep.name))
-
             libs.append(dep.name)
         elif isinstance(dep, gen_base.ObjectFile):
           deps = self.graph.get_sources(gen_base.DT_OBJECT,
