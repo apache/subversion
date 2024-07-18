@@ -70,6 +70,8 @@ option(SVN_ENABLE_FS_X "Enable Subversion FSX Repository Filesystem Library" ON)
 option(SVN_ENABLE_FS_BASE "Enable Subversion Filesystem Base Library (NOT IMPLEMENTED and DEPRECATED)" OFF)
 option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
 
+option(SVN_INSTALL_PRIVATE_H "Instal private header files." OFF)
+
 # Configuration
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 option(SVN_BUILD_SHARED_FS "Build shared FS modules" ${BUILD_SHARED_LIBS})
@@ -249,10 +251,20 @@ endfunction()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
-install(
-  DIRECTORY "subversion/include/"
-  DESTINATION "include/subversion-1"
-)
+file(GLOB public_headers "subversion/include/*.h")
+install(FILES ${public_headers} DESTINATION "include/subversion-1")
+
+if(SVN_INSTALL_PRIVATE_H)
+  file(GLOB private_headers "subversion/include/private/*.h")
+  install(FILES ${private_headers} DESTINATION "include/subversion-1/private")
+endif()
+
+if(SVN_BUILD_SVNXX)
+  install(
+    DIRECTORY "subversion/bindings/cxx/include/"
+    DESTINATION "include/subversion-1"
+  )
+endif()
 
 if (WIN32)
   add_compile_definitions(
@@ -384,11 +396,6 @@ if (SVN_BUILD_SVNXX)
   target_include_directories(libsvnxx PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/cxx/include"
   )
-
-  install(
-    DIRECTORY "subversion/bindings/cxx/include/"
-    DESTINATION "include/subversion-1"
-  )
 endif()
 
 message(STATUS "Configuration summary:")
@@ -407,6 +414,9 @@ message(STATUS "    Build Apache Modules .......... : NOT IMPLEMENTED, HTTPD v2.
 message(STATUS "    Build programs ................ : ${SVN_BUILD_PROGRAMS}")
 message(STATUS "    Build tools ................... : ${SVN_BUILD_TOOLS}")
 message(STATUS "    Build test suite .............. : ${SVN_BUILD_TESTS}")
+message(STATUS "  Install:")
+message(STATUS "    Install prefix: ............... : ${CMAKE_INSTALL_PREFIX}")
+message(STATUS "    Install private headers: ...... : ${SVN_INSTALL_PRIVATE_H}")
 message(STATUS "  Dependecies:")
 message(STATUS "    APR ........................... : ${APR_VERSION}")
 message(STATUS "    APR-Util ...................... : ${APRUTIL_VERSION}")
