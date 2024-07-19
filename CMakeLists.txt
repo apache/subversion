@@ -77,6 +77,7 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 option(SVN_BUILD_SHARED_FS "Build shared FS modules" ${BUILD_SHARED_LIBS})
 option(SVN_BUILD_SHARED_RA "Build shared RA modules" OFF)
 option(SVN_DEBUG "Enables specific features for developer builds" OFF)
+option(SVN_USE_DSO "Defined if svn should try to load DSOs" OFF)
 
 # Dependecies
 option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
@@ -122,6 +123,12 @@ endif()
 
 if (SVN_DEBUG)
   add_compile_definitions("SVN_DEBUG")
+endif()
+
+if(SVN_USE_DSO)
+  add_compile_definitions("SVN_USE_DSO")
+  add_compile_definitions("SVN_DSO_SUFFIX_FMT=\"%%d${CMAKE_SHARED_LIBRARY_SUFFIX}\"")
+  add_compile_definitions("SVN_SOVERSION=1")
 endif()
 
 if (SVN_BUILD_TESTS)
