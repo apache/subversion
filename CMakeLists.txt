@@ -256,6 +256,76 @@ function(target_exports target_name)
   endif()
 endfunction()
 
+### Checks
+
+# TODO: maybe record HAVE_* definitions into svn_private_config.h instead of
+# using add_compile_definitions() ?
+
+include(CheckIncludeFiles)
+include(CheckSymbolExists)
+
+check_include_files("elf.h" HAVE_ELF_H)
+if (HAVE_ELF_H)
+  add_compile_definitions(HAVE_ELF_H)
+endif()
+
+check_include_files("inttypes.h" HAVE_INTTYPES_H)
+if(HAVE_INTTYPES_H)
+  add_compile_definitions(HAVE_INTTYPES_H)
+endif()
+
+check_include_files("sys/utsname.h" HAVE_SYS_UTSNAME_H)
+if (HAVE_SYS_UTSNAME_H)
+  add_compile_definitions(HAVE_SYS_UTSNAME_H)
+
+  check_symbol_exists("uname" "sys/utsname.h" HAVE_UNAME)
+  if (HAVE_UNAME)
+    add_compile_definitions(HAVE_UNAME)
+  endif()
+endif()
+
+check_include_files("sys/types.h" HAVE_SYS_TYPES_H)
+if (HAVE_SYS_TYPES_H)
+  add_compile_definitions(HAVE_SYS_TYPES_H)
+endif()
+
+check_include_files("termios.h" HAVE_TERMIOS_H)
+if(HAVE_TERMIOS_H)
+  check_symbol_exists("tcgetattr" "termios.h" HAVE_TCGETATTR)
+  if(HAVE_TCGETATTR)
+    add_compile_definitions(HAVE_TCGETATTR)
+  endif()
+
+  check_symbol_exists("tcsetattr" "termios.h" HAVE_TCSETATTR)
+  if(HAVE_TCSETATTR)
+    add_compile_definitions(HAVE_TCSETATTR)
+  endif()
+
+  if (HAVE_TCGETATTR AND HAVE_TCSETATTR)
+    add_compile_definitions(HAVE_TERMIOS_H)
+  endif()
+endif()
+
+check_include_files("unistd.h" HAVE_UNISTD_H)
+if (HAVE_UNISTD_H)
+  add_compile_definitions(HAVE_UNISTD_H)
+
+  check_symbol_exists("symlink" "unistd.h" HAVE_SYMLINK)
+  if (HAVE_SYMLINK)
+    add_compile_definitions(HAVE_SYMLINK)
+  endif()
+
+  check_symbol_exists("readlink" "unistd.h" HAVE_READLINK)
+  if (HAVE_READLINK)
+    add_compile_definitions(HAVE_READLINK)
+  endif()
+
+  check_symbol_exists("getpid" "unistd.h" HAVE_GETPID)
+  if (HAVE_GETPID)
+    add_compile_definitions(HAVE_GETPID)
+  endif()
+endif()
+
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 file(GLOB public_headers "subversion/include/*.h")
