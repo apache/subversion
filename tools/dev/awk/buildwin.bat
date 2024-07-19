@@ -5,6 +5,7 @@ rem
 rem If you delete the call to setlocal it will probably work under Win95/Win98 as well.
 
 setlocal 
+cd %~dp0
 set cl=/DHAS_ISBLANK -w -Ox -nologo -link -nologo setargv.obj
 
 cl maketab.c /link /out:maketab.exe
