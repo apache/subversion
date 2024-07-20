@@ -46,7 +46,11 @@
 #endif
 
 /* Name of system's null device */
+#ifdef WIN32
 #define SVN_NULL_DEVICE_NAME "nul"
+#else
+#define SVN_NULL_DEVICE_NAME "/dev/null"
+#endif
 
 /* Defined to be the path to the installed binaries */
 #define SVN_BINDIR "/usr/local/bin"
