@@ -39,7 +39,11 @@
 #define SVN_FS_WANT_DB_PATCH    14
 
 /* Path separator for local filesystem */
+#ifdef WIN32
 #define SVN_PATH_LOCAL_SEPARATOR '\\'
+#else
+#define SVN_PATH_LOCAL_SEPARATOR '/'
+#endif
 
 /* Name of system's null device */
 #define SVN_NULL_DEVICE_NAME "nul"
