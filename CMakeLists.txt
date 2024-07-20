@@ -274,6 +274,16 @@ if(HAVE_INTTYPES_H)
   add_compile_definitions(HAVE_INTTYPES_H)
 endif()
 
+check_include_files("stdbool.h" HAVE_STDBOOL_H)
+if(HAVE_STDBOOL_H)
+  add_compile_definitions(HAVE_STDBOOL_H)
+endif()
+
+check_include_files("stdint.h" HAVE_STDINT_H)
+if(HAVE_STDINT_H)
+  add_compile_definitions(HAVE_STDINT_H)
+endif()
+
 check_include_files("sys/utsname.h" HAVE_SYS_UTSNAME_H)
 if (HAVE_SYS_UTSNAME_H)
   add_compile_definitions(HAVE_SYS_UTSNAME_H)

@@ -112,14 +112,6 @@
    Suppresses compiler warnings about the variable being unused.  */
 #define SVN_UNUSED(v) ( (void)(v) )
 
-#if defined(_MSC_VER) && _MSC_VER >= 1600
-#define HAVE_STDINT_H
-#endif
-
-#if defined(_MSC_VER) && _MSC_VER >= 1800
-#define HAVE_STDBOOL_H
-#endif
-
 #endif /* SVN_PRIVATE_CONFIG_HW */
 
 /* Inclusion of Berkeley DB header */
