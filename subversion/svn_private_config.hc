@@ -85,20 +85,28 @@
 #define dgettext(domain, x) (x)
 #endif
 
-/* compiler hints as supported by MS VC */
+/* compiler hints */
+#if defined(__GNUC__) && (__GNUC__ >= 3)
+# define SVN__PREDICT_FALSE(x) (__builtin_expect(x, 0))
+# define SVN__PREDICT_TRUE(x) (__builtin_expect(!!(x), 1))
+#else
+# define SVN__PREDICT_FALSE(x) (x)
+# define SVN__PREDICT_TRUE(x) (x)
+#endif
+
 #if defined(SVN_DEBUG)
 # define SVN__FORCE_INLINE
 # define SVN__PREVENT_INLINE
 #elif defined(_MSC_VER)
 # define SVN__FORCE_INLINE __forceinline
 # define SVN__PREVENT_INLINE __declspec(noinline)
+#elif defined(__GNUC__) && (__GNUC__ >= 3)
+# define SVN__FORCE_INLINE APR_INLINE __attribute__ ((always_inline))
+# define SVN__PREVENT_INLINE __attribute__ ((noinline))
 #else
 # define SVN__FORCE_INLINE APR_INLINE
 # define SVN__PREVENT_INLINE
 #endif
-
-#define SVN__PREDICT_TRUE(x)  (x)
-#define SVN__PREDICT_FALSE(x)  (x)
 
 /* Macro used to specify that a variable is intentionally left unused.
    Suppresses compiler warnings about the variable being unused.  */
