@@ -40,16 +40,16 @@
 
 /* Path separator for local filesystem */
 #ifdef WIN32
-#define SVN_PATH_LOCAL_SEPARATOR '\\'
+# define SVN_PATH_LOCAL_SEPARATOR '\\'
 #else
-#define SVN_PATH_LOCAL_SEPARATOR '/'
+# define SVN_PATH_LOCAL_SEPARATOR '/'
 #endif
 
 /* Name of system's null device */
 #ifdef WIN32
-#define SVN_NULL_DEVICE_NAME "nul"
+# define SVN_NULL_DEVICE_NAME "nul"
 #else
-#define SVN_NULL_DEVICE_NAME "/dev/null"
+# define SVN_NULL_DEVICE_NAME "/dev/null"
 #endif
 
 /* Defined to be the path to the installed binaries */
@@ -65,9 +65,9 @@
 
 /* Define to the Python/C API format character suitable for apr_int64_t */
 #if defined(_WIN64)
-#define SVN_APR_INT64_T_PYCFMT "l"
+# define SVN_APR_INT64_T_PYCFMT "l"
 #elif defined(_WIN32)
-#define SVN_APR_INT64_T_PYCFMT "L"
+# define SVN_APR_INT64_T_PYCFMT "L"
 #endif
 
 /* Setup gettext macros */
@@ -76,17 +76,17 @@
 #define PACKAGE_NAME "subversion"
 
 #ifdef ENABLE_NLS
-#define SVN_LOCALE_RELATIVE_PATH "../share/locale"
-#include <locale.h>
-#include <libintl.h>
-#define _(x) dgettext(PACKAGE_NAME, x)
-#define Q_(x1, x2, n) dngettext(PACKAGE_NAME, x1, x2, n)
-#define HAVE_BIND_TEXTDOMAIN_CODESET
+# define SVN_LOCALE_RELATIVE_PATH "../share/locale"
+# include <locale.h>
+# include <libintl.h>
+# define _(x) dgettext(PACKAGE_NAME, x)
+# define Q_(x1, x2, n) dngettext(PACKAGE_NAME, x1, x2, n)
+# define HAVE_BIND_TEXTDOMAIN_CODESET
 #else
-#define _(x) (x)
-#define Q_(x1, x2, n) (((n) == 1) ? x1 : x2)
-#define gettext(x) (x)
-#define dgettext(domain, x) (x)
+# define _(x) (x)
+# define Q_(x1, x2, n) (((n) == 1) ? x1 : x2)
+# define gettext(x) (x)
+# define dgettext(domain, x) (x)
 #endif
 
 /* compiler hints */
@@ -120,6 +120,6 @@
 
 /* Inclusion of Berkeley DB header */
 #ifdef SVN_WANT_BDB
-#define APU_WANT_DB
-#include <apu_want.h>
+# define APU_WANT_DB
+# include <apu_want.h>
 #endif
