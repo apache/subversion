@@ -258,82 +258,46 @@ endfunction()
 
 ### Checks
 
-# TODO: maybe record HAVE_* definitions into svn_private_config.h instead of
-# using add_compile_definitions() ?
-
 include(CheckIncludeFiles)
 include(CheckSymbolExists)
 
-check_include_files("elf.h" HAVE_ELF_H)
-if (HAVE_ELF_H)
-  add_compile_definitions(HAVE_ELF_H)
-endif()
+macro(autocheck_include_files INCLUDE VARIABLE)
+  check_include_files(${INCLUDE} ${VARIABLE})
+  if(${VARIABLE})
+    add_compile_definitions(${VARIABLE})
+  endif()
+endmacro()
 
-check_include_files("inttypes.h" HAVE_INTTYPES_H)
-if(HAVE_INTTYPES_H)
-  add_compile_definitions(HAVE_INTTYPES_H)
-endif()
+macro(autocheck_symbol_exists SYMBOL FILE VARIABLE)
+  check_symbol_exists(${SYMBOL} ${FILE} ${VARIABLE})
+  if(${VARIABLE})
+    add_compile_definitions(${VARIABLE})
+  endif()
+endmacro()
 
-check_include_files("stdbool.h" HAVE_STDBOOL_H)
-if(HAVE_STDBOOL_H)
-  add_compile_definitions(HAVE_STDBOOL_H)
-endif()
+autocheck_include_files("elf.h" HAVE_ELF_H)
+autocheck_include_files("inttypes.h" HAVE_INTTYPES_H)
+autocheck_include_files("stdbool.h" HAVE_STDBOOL_H)
+autocheck_include_files("stdint.h" HAVE_STDINT_H)
 
-check_include_files("stdint.h" HAVE_STDINT_H)
-if(HAVE_STDINT_H)
-  add_compile_definitions(HAVE_STDINT_H)
-endif()
-
-check_include_files("sys/utsname.h" HAVE_SYS_UTSNAME_H)
+autocheck_include_files("sys/utsname.h" HAVE_SYS_UTSNAME_H)
 if (HAVE_SYS_UTSNAME_H)
-  add_compile_definitions(HAVE_SYS_UTSNAME_H)
-
-  check_symbol_exists("uname" "sys/utsname.h" HAVE_UNAME)
-  if (HAVE_UNAME)
-    add_compile_definitions(HAVE_UNAME)
-  endif()
+  autocheck_symbol_exists("uname" "sys/utsname.h" HAVE_UNAME)
 endif()
 
-check_include_files("sys/types.h" HAVE_SYS_TYPES_H)
-if (HAVE_SYS_TYPES_H)
-  add_compile_definitions(HAVE_SYS_TYPES_H)
-endif()
+autocheck_include_files("sys/types.h" HAVE_SYS_TYPES_H)
 
-check_include_files("termios.h" HAVE_TERMIOS_H)
+autocheck_include_files("termios.h" HAVE_TERMIOS_H)
 if(HAVE_TERMIOS_H)
-  check_symbol_exists("tcgetattr" "termios.h" HAVE_TCGETATTR)
-  if(HAVE_TCGETATTR)
-    add_compile_definitions(HAVE_TCGETATTR)
-  endif()
-
-  check_symbol_exists("tcsetattr" "termios.h" HAVE_TCSETATTR)
-  if(HAVE_TCSETATTR)
-    add_compile_definitions(HAVE_TCSETATTR)
-  endif()
-
-  if (HAVE_TCGETATTR AND HAVE_TCSETATTR)
-    add_compile_definitions(HAVE_TERMIOS_H)
-  endif()
+  autocheck_symbol_exists("tcgetattr" "termios.h" HAVE_TCGETATTR)
+  autocheck_symbol_exists("tcsetattr" "termios.h" HAVE_TCSETATTR)
 endif()
 
-check_include_files("unistd.h" HAVE_UNISTD_H)
+autocheck_include_files("unistd.h" HAVE_UNISTD_H)
 if (HAVE_UNISTD_H)
-  add_compile_definitions(HAVE_UNISTD_H)
-
-  check_symbol_exists("symlink" "unistd.h" HAVE_SYMLINK)
-  if (HAVE_SYMLINK)
-    add_compile_definitions(HAVE_SYMLINK)
-  endif()
-
-  check_symbol_exists("readlink" "unistd.h" HAVE_READLINK)
-  if (HAVE_READLINK)
-    add_compile_definitions(HAVE_READLINK)
-  endif()
-
-  check_symbol_exists("getpid" "unistd.h" HAVE_GETPID)
-  if (HAVE_GETPID)
-    add_compile_definitions(HAVE_GETPID)
-  endif()
+  autocheck_symbol_exists("symlink" "unistd.h" HAVE_SYMLINK)
+  autocheck_symbol_exists("readlink" "unistd.h" HAVE_READLINK)
+  autocheck_symbol_exists("getpid" "unistd.h" HAVE_GETPID)
 endif()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
