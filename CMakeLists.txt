@@ -93,8 +93,7 @@ if (SVN_BUILD_SVNXX)
   enable_language(CXX)
 endif()
 
-string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}-${CMAKE_HOST_SYSTEM_NAME}" SVN_BUILD_HOST)
-string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}" SVN_BUILD_TARGET)
+set(PRIVATE_CONFIG_DEFINITIONS "")
 
 configure_file(
   "${CMAKE_CURRENT_SOURCE_DIR}/subversion/svn_private_config.hc"
@@ -263,15 +262,23 @@ include(CheckSymbolExists)
 
 macro(autocheck_include_files INCLUDE VARIABLE)
   check_include_files(${INCLUDE} ${VARIABLE})
+
   if(${VARIABLE})
-    add_compile_definitions("${VARIABLE}=1")
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS "\n")
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS
+      "/* Define to 1 if you have the <${INCLUDE}> header file. */\n")
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS "#define ${VARIABLE} 1\n")
   endif()
 endmacro()
 
 macro(autocheck_symbol_exists SYMBOL FILE VARIABLE)
   check_symbol_exists(${SYMBOL} ${FILE} ${VARIABLE})
+
   if(${VARIABLE})
-    add_compile_definitions("${VARIABLE}=1")
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS "\n")
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS
+      "/* Define to 1 if you have the `${SYMBOL}' function. */\n")
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS "#define ${VARIABLE} 1\n")
   endif()
 endmacro()
 
@@ -448,6 +455,14 @@ if (SVN_BUILD_SVNXX)
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/cxx/include"
   )
 endif()
+
+string(TOLOWER "${CMAKE_HOST_SYSTEM_PROCESSOR}-${CMAKE_HOST_SYSTEM_NAME}" SVN_BUILD_HOST)
+string(TOLOWER "${CMAKE_SYSTEM_PROCESSOR}-${CMAKE_SYSTEM_NAME}" SVN_BUILD_TARGET)
+
+configure_file(
+  "${CMAKE_CURRENT_SOURCE_DIR}/subversion/svn_private_config.hc"
+  "${CMAKE_CURRENT_BINARY_DIR}/svn_private_config.h"
+)
 
 message(STATUS "Configuration summary:")
 message(STATUS "  Version ......................... : ${SVN_VERSION}")

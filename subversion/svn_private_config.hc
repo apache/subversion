@@ -51,7 +51,7 @@
 #else
 # define SVN_NULL_DEVICE_NAME "/dev/null"
 #endif
-
+@PRIVATE_CONFIG_DEFINITIONS@
 /* Defined to be the path to the installed binaries */
 #define SVN_BINDIR "/usr/local/bin"
 
