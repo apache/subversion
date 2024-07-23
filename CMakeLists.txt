@@ -95,11 +95,6 @@ endif()
 
 set(PRIVATE_CONFIG_DEFINITIONS "")
 
-configure_file(
-  "${CMAKE_CURRENT_SOURCE_DIR}/subversion/svn_private_config.hc"
-  "${CMAKE_CURRENT_BINARY_DIR}/svn_private_config.h"
-)
-
 if (SVN_ENABLE_RA_LOCAL)
   add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_LOCAL")
 endif()
