@@ -2496,6 +2496,12 @@ def execute_tests(test_list, serial_only = False, test_name = None,
   global svnmucc_binary
   global svnauthz_binary
   global svnauthz_validate_binary
+  global svnfsfs_binary
+  global entriesdump_binary
+  global lock_helper_binary
+  global atomic_ra_revprop_change_binary
+  global wc_lock_tester_binary
+  global wc_incomplete_tester_binary
   global options
 
   if test_name:
@@ -2597,11 +2603,20 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                           'svndumpfilter' + _exe)
       svnversion_binary = os.path.join(options.svn_bin, 'svnversion' + _exe)
       svnmucc_binary = os.path.join(options.svn_bin, 'svnmucc' + _exe)
+      svnfsfs_binary = os.path.join(options.svn_bin, 'svnfsfs' + _exe)
 
   if options.tools_bin:
     svnauthz_binary = os.path.join(options.tools_bin, 'svnauthz' + _exe)
     svnauthz_validate_binary = os.path.join(options.tools_bin,
                                             'svnauthz-validate' + _exe)
+    entriesdump_binary = os.path.join(options.tools_bin, 'entries-dump' + _exe)
+    lock_helper_binary = os.path.join(options.tools_bin, 'lock-helper' + _exe)
+    atomic_ra_revprop_change_binary = os.path.join(options.tools_bin,
+                                                   'atomic-ra-revprop-change' + _exe)
+    wc_lock_tester_binary = os.path.join(options.tools_bin,
+                                         'wc-lock-tester' + _exe)
+    wc_incomplete_tester_binary = os.path.join(options.tools_bin,
+                                               'wc-incomplete-tester' + _exe)
 
   ######################################################################
 
