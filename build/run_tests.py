@@ -24,8 +24,8 @@
 #
 
 '''usage: python run_tests.py
-            [--verbose] [--log-to-stdout] [--cleanup] [--bin=<path>]
-            [--parallel | --parallel=<n>] [--global-scheduler]
+            [--verbose] [--log-to-stdout] [--cleanup] [--tools-bin=<path>]
+            [--bin=<path>] [--parallel | --parallel=<n>] [--global-scheduler]
             [--url=<base-url>] [--http-library=<http-library>] [--enable-sasl]
             [--fs-type=<fs-type>] [--fsfs-packing] [--fsfs-sharding=<n>]
             [--list] [--milestone-filter=<regex>] [--mode-filter=<type>]
@@ -285,6 +285,8 @@ class TestHarness:
         cmdline.append('--parallel')
       else:
         cmdline.append('--parallel-instances=%d' % self.opts.parallel)
+    if self.opts.tools_bin is not None:
+      cmdline.append('--tools-bin=%s' % self.opts.tools_bin)
     if self.opts.svn_bin is not None:
       cmdline.append('--bin=%s' % self.opts.svn_bin)
     if self.opts.url is not None:
@@ -1062,6 +1064,8 @@ def create_parser():
                     help="Make svn use this DAV library (neon or serf)")
   parser.add_option('--bin', action='store', dest='svn_bin',
                     help='Use the svn binaries installed in this path')
+  parser.add_option('--tools-bin', action='store', dest='tools_bin',
+                    help='Use the svn tools installed in this path')
   parser.add_option('--fsfs-sharding', action='store', type='int',
                     help='Default shard size (for fsfs)')
   parser.add_option('--fsfs-packing', action='store_true',
