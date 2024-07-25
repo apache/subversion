@@ -208,6 +208,50 @@ check_tunnel(void *tunnel_baton, const char *tunnel_name)
 static void
 close_tunnel(void *tunnel_context, void *tunnel_baton);
 
+#ifdef WIN32
+#define EXE_EXTENSION ".exe"
+#else
+#define EXE_EXTENSION ""
+#endif
+
+static svn_error_t *
+find_svnserve(const char **svnserve, apr_pool_t *pool)
+{
+  const char *abspath_build_layout;
+  const char *abspath_install_layout;
+  svn_node_kind_t kind;
+
+  /* try build layout first */
+  SVN_ERR(svn_dirent_get_absolute(&abspath_build_layout,
+                                  "../../svnserve/svnserve" EXE_EXTENSION,
+                                  pool));
+
+  SVN_ERR(svn_io_check_path(abspath_build_layout, &kind, pool));
+  if (kind == svn_node_file)
+    {
+      *svnserve = abspath_build_layout;
+      return SVN_NO_ERROR;
+    }
+
+  /* otherwise, try install layout */
+  SVN_ERR(svn_dirent_get_absolute(&abspath_install_layout,
+                                  "svnserve" EXE_EXTENSION, pool));
+
+  SVN_ERR(svn_io_check_path(abspath_install_layout, &kind, pool));
+  if (kind == svn_node_file)
+    {
+      *svnserve = abspath_install_layout;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                           "Could not find svnserve. Checked paths:\n"
+                           "  %s\n"
+                           "  %s",
+                           svn_dirent_local_style(abspath_build_layout, pool),
+                           svn_dirent_local_style(abspath_install_layout, pool));
+}
+
 static svn_error_t *
 open_tunnel(svn_stream_t **request, svn_stream_t **response,
             svn_ra_close_tunnel_func_t *close_func, void **close_baton,
@@ -217,7 +261,6 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
             svn_cancel_func_t cancel_func, void *cancel_baton,
             apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   apr_proc_t *proc;
   apr_procattr_t *attr;
   apr_status_t status;
@@ -228,15 +271,7 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
 
   SVN_TEST_ASSERT(b->magic == TUNNEL_MAGIC);
 
-  SVN_ERR(svn_dirent_get_absolute(&svnserve, "../../svnserve/svnserve", pool));
-#ifdef WIN32
-  svnserve = apr_pstrcat(pool, svnserve, ".exe", SVN_VA_NULL);
-#endif
-  SVN_ERR(svn_io_check_path(svnserve, &kind, pool));
-  if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Could not find svnserve at %s",
-                             svn_dirent_local_style(svnserve, pool));
+  SVN_ERR(find_svnserve(&svnserve, pool));
 
   status = apr_procattr_create(&attr, pool);
   if (status == APR_SUCCESS)
