@@ -191,7 +191,7 @@ void winservice_notify_stop(void)
   if (winservice_svnserve_accept_socket != INVALID_SOCKET)
     closesocket(winservice_svnserve_accept_socket);
 }
-#endif /* _WIN32 */
+#endif /* WIN32 */
 
 
 /* Option codes and descriptions for svnserve.
