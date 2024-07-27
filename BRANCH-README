@@ -36,6 +36,11 @@ $ cmake --build out
   - [ ] Different options and configuration
 - [ ] Cross platform support
   - [~] Support compilation for Linux
+  - [~] Support compilation for MacOS
+  - [~] Support compilation for FreeBSD
+  - [ ] Support compilation for NetBSD
+  - [ ] Support compilation for OpenBSD
+  - [ ] Support compilation for other Unix (?)
 - [ ] Support optional libraries
   - [x] Serf
   - [ ] HTTPD
@@ -43,7 +48,7 @@ $ cmake --build out
   - [ ] Swig
   - [ ] JavaHL
 - [ ] Documentation
-  - [ ] INSTALL
+  - [x] INSTALL
   - [ ] Website page (?)
 
                       References
