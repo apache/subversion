@@ -77,6 +77,7 @@ option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
 option(SVN_BUILD_SHARED_FS "Build shared FS modules" ${BUILD_SHARED_LIBS})
 option(SVN_BUILD_SHARED_RA "Build shared RA modules" OFF)
 option(SVN_DEBUG "Enables specific features for developer builds" OFF)
+option(SVN_USE_WIN32_CRASHHANDLER "Enables WIN32 crash handler." ${WIN32})
 option(SVN_USE_DSO "Defined if svn should try to load DSOs" OFF)
 
 # Dependecies
@@ -448,6 +449,13 @@ include("build/cmake/targets.cmake")
 if (SVN_BUILD_SVNXX)
   target_include_directories(libsvnxx PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/cxx/include"
+  )
+endif()
+
+if(SVN_USE_WIN32_CRASHHANDLER)
+  target_compile_definitions(libsvn_subr PRIVATE
+    "SVN_USE_WIN32_CRASHHANDLER"
+    "SVN_WIN32_CRASHREPORT_EMAIL=\"users@subversion.apache.org\""
   )
 endif()
 
