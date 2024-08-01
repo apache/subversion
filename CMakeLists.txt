@@ -446,6 +446,34 @@ set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
 include("build/cmake/targets.cmake")
 
+if(SVN_BUILD_TESTS)
+  find_package(Python3 COMPONENTS Interpreter REQUIRED)
+
+  file(GLOB PYTHON_TESTS
+     "subversion/tests/cmdline/*.py"
+  )
+
+  foreach(py_test_path ${PYTHON_TESTS})
+    # Keep `.py'.
+    get_filename_component(py_test_name ${py_test_path} NAME)
+
+    add_test(
+      NAME
+        ${py_test_name}
+      COMMAND
+        "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/build/run_tests.py"
+        --bin ${CMAKE_CURRENT_BINARY_DIR}
+        --tools-bin ${CMAKE_CURRENT_BINARY_DIR}
+        --verbose
+        --log-to-stdout
+        --set-log-level=WARNING
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${CMAKE_CURRENT_BINARY_DIR}
+        ${py_test_path}
+    )
+  endforeach()
+endif()
+
 if (SVN_BUILD_SVNXX)
   target_include_directories(libsvnxx PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/cxx/include"
