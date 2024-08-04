@@ -646,7 +646,11 @@ debian_release(apr_pool_t *pool)
 static const char *
 linux_release_name(apr_pool_t *pool)
 {
-  const char *uname_release = release_name_from_uname(pool);
+  const char *uname_release = NULL;
+
+#if HAVE_UNAME
+  uname_release = release_name_from_uname(pool);
+#endif
 
   /* Try anything that has /usr/bin/lsb_release.
      Covers, for example, Debian, Ubuntu and SuSE.  */
