@@ -175,8 +175,8 @@ add_library(external-zlib ALIAS ZLIB::ZLIB)
 
 ### EXPAT
 
-find_package(expat CONFIG REQUIRED)
-add_library(external-xml ALIAS expat::expat)
+find_package(EXPAT REQUIRED)
+add_library(external-xml ALIAS EXPAT::EXPAT)
 
 ### LZ4
 
@@ -517,7 +517,7 @@ message(STATUS "    Install private headers: ...... : ${SVN_INSTALL_PRIVATE_H}")
 message(STATUS "  Dependecies:")
 message(STATUS "    APR ........................... : ${APR_VERSION}")
 message(STATUS "    APR-Util ...................... : ${APRUTIL_VERSION}")
-message(STATUS "    EXPAT ......................... : ${expat_VERSION}")
+message(STATUS "    EXPAT ......................... : ${EXPAT_VERSION_STRING}")
 message(STATUS "    ZLIB .......................... : ${ZLIB_VERSION}")
 message(STATUS "    LZ4 ........................... : ${lz4_VERSION}")
 message(STATUS "    UTF8PROC ...................... : ${UTF8PROC_VERSION}")
