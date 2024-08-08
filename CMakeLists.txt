@@ -242,7 +242,18 @@ if (SVN_ENABLE_RA_SERF)
   add_library(external-serf ALIAS Serf::Serf)
 endif()
 
-find_package(Python COMPONENTS Interpreter REQUIRED)
+### Python
+
+if(SVN_ENABLE_SWIG_PYTHON)
+  find_package(Python REQUIRED COMPONENTS
+      Interpreter
+      Development.Embed
+  )
+else()
+  find_package(Python REQUIRED COMPONENTS
+      Interpreter
+  )
+endif()
 
 if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
   find_package(SWIG REQUIRED)
@@ -257,6 +268,20 @@ if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
   )
 
   add_library(external-swig INTERFACE)
+endif()
+
+if(SVN_ENABLE_SWIG_PYTHON)
+  find_package(py3c REQUIRED)
+
+  add_library(external-python INTERFACE)
+  target_link_libraries(external-python INTERFACE
+    Python::Python
+    Python::py3c
+  )
+  target_include_directories(external-python INTERFACE
+    ${SWIG_INCLUDE_DIRECTORIES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/libsvn_swig_py
+  )
 endif()
 
 function(target_exports target_name)

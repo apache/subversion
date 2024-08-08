@@ -29,7 +29,10 @@ if ([targets.enable_condition])[is targets.type "swig"]
   set_target_properties([targets.name] PROPERTIES
     SWIG_INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
     INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
-  )
+  )[is targets.swig_lang "python"]
+  set_target_properties([targets.name] PROPERTIES
+    SWIG_COMPILE_OPTIONS "-nofastunpack"
+  )[end]
   target_link_libraries([targets.name] PRIVATE[for targets.libs]
     [targets.libs][end]
     external-[targets.swig_lang]
