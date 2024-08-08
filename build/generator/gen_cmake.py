@@ -38,8 +38,6 @@ def get_target_type(target):
     return "swig"
   if isinstance(target, gen_base.TargetSWIGProject):
     return "swig-project"
-  if isinstance(target, gen_base.TargetSWIGLib):
-    return "swig-lib"
   if isinstance(target, gen_base.TargetLib):
     return "lib"
   else:
@@ -82,6 +80,10 @@ def get_target_conditions(target):
     if target.msvc_force_static:
       enable_condition.append("NOT BUILD_SHARED_LIBS")
 
+  if isinstance(target, gen_base.TargetSWIG) or \
+     isinstance(target, gen_base.TargetSWIG):
+    enable_condition.append("SVN_ENABLE_SWIG_" + target.lang.upper())
+
   return enable_condition
 
 class Generator(gen_base.GeneratorBase):
@@ -107,6 +109,7 @@ class Generator(gen_base.GeneratorBase):
       enable_condition = []
       enable_condition += get_target_conditions(target)
       build_type = None
+      swig_lang = None
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -119,6 +122,8 @@ class Generator(gen_base.GeneratorBase):
         build_type = "${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
         pass
+      elif isinstance(target, gen_base.TargetSWIG):
+        swig_lang = target.lang
       elif isinstance(target, gen_base.TargetLib):
         if target.msvc_static:
           build_type = "STATIC"
@@ -134,7 +139,10 @@ class Generator(gen_base.GeneratorBase):
       for dep in self.get_dependecies(target.name):
         enable_condition += get_target_conditions(dep)
 
-        if isinstance(dep, gen_base.TargetLinked):
+        if isinstance(dep, gen_base.TargetSWIG):
+          # Just ignore them
+          pass
+        elif isinstance(dep, gen_base.TargetLinked):
           if dep.external_lib:
             if dep.name == "ra-libs":
               libs.append("ra-libs")
@@ -154,15 +162,19 @@ class Generator(gen_base.GeneratorBase):
           else:
             libs.append(dep.name)
         elif isinstance(dep, gen_base.ObjectFile):
-          deps = self.graph.get_sources(gen_base.DT_OBJECT,
-                                        dep,
-                                        gen_base.SourceFile)
-          for dep in deps:
-            sources.append(dep.filename)
+          for source in self.graph.get_sources(gen_base.DT_OBJECT, dep,
+                                               gen_base.SourceFile):
+            sources.append(source.filename)
+
+          for obj in self.graph.get_sources(gen_base.DT_OBJECT, dep,
+                                            gen_base.ObjectFile):
+            for source in self.graph.get_sources(gen_base.DT_SWIG_C, obj,
+                                                 gen_base.SWIGSource):
+              sources.append(source.filename)
 
       target_type = get_target_type(target)
 
-      if target_type in ["exe", "lib", "test"]:
+      if target_type in ["exe", "lib", "test", "swig"]:
         msvc_libs = []
         msvc_objects = []
 
@@ -198,6 +210,7 @@ class Generator(gen_base.GeneratorBase):
           description = target.desc,
           srcdir = target.path,
           install_target = ezt.boolean(install_target),
+          swig_lang = swig_lang,
         )
 
         targets.append(new_target)

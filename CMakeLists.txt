@@ -61,6 +61,10 @@ option(SVN_BUILD_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
 option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
 option(SVN_BUILD_TESTS "Build Subversion test-suite" OFF)
 
+option(SVN_ENABLE_SWIG_PERL "Enable Subversion SWIG bindings for Perl" OFF)
+option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion SWIG bindings into Python" OFF)
+option(SVN_ENABLE_SWIG_RUBY "Enable Subversion SWIG bindings into Ruby" OFF)
+
 # Enable modules and features
 option(SVN_ENABLE_RA_LOCAL "Enable Subversion Local Repository Access Library" ON)
 option(SVN_ENABLE_RA_SERF "Enable Subversion HTTP/WebDAV Protocol Repository Access Library" OFF)
@@ -226,6 +230,11 @@ if (SVN_ENABLE_RA_SERF)
 endif()
 
 find_package(Python COMPONENTS Interpreter REQUIRED)
+
+if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
+  find_package(SWIG REQUIRED)
+  include(${SWIG_USE_FILE})
+endif()
 
 function(target_exports target_name)
   if (WIN32)

@@ -21,7 +21,11 @@
 #
 [for targets]
 # [if-any targets.description][targets.description][else][targets.name][end]
-if ([targets.enable_condition])[is targets.type "lib"]
+if ([targets.enable_condition])[is targets.type "swig"]
+  swig_add_library([targets.name]
+    LANGUAGE [targets.swig_lang]
+    SOURCES[for targets.sources] [targets.sources][end]
+  )[else][is targets.type "lib"]
   add_library([targets.name][if-any targets.build_type] [targets.build_type][end][for targets.sources]
     [targets.sources][end]
   )[if-any targets.msvc_export]
@@ -58,6 +62,6 @@ if ([targets.enable_condition])[is targets.type "lib"]
   if (WIN32)
     target_sources([targets.name] PRIVATE build/win32/svn.rc)
   endif()[if-any targets.install_target]
-  install(TARGETS [targets.name])[end]
+  install(TARGETS [targets.name])[end][end]
 endif()
 [end]
