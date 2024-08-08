@@ -43,6 +43,19 @@ if(POLICY CMP0092)
   cmake_policy(SET CMP0092 NEW)
 endif()
 
+# CMP0078: UseSWIG generates standard target names.
+if(POLICY CMP0078)
+  cmake_policy(SET CMP0078 NEW)
+else()
+  # Otherwise, setup this behavior manually.
+  set(UseSWIG_TARGET_NAME_PREFERENCE STANDARD)
+endif()
+
+# CMP0086: UseSWIG honors SWIG_MODULE_NAME via -module flag.
+if(POLICY CMP0086)
+  cmake_policy(SET CMP0086 NEW)
+endif()
+
 read_version(
   "subversion/include/svn_version.h" SVN_VERSION
   SVN_VER_MAJOR SVN_VER_MINOR SVN_VER_PATCH
