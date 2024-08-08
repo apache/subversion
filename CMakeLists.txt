@@ -255,6 +255,8 @@ if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/include
     ${CMAKE_CURRENT_BINARY_DIR}
   )
+
+  add_library(external-swig INTERFACE)
 endif()
 
 function(target_exports target_name)
