@@ -29,6 +29,10 @@ if ([targets.enable_condition])[is targets.type "swig"]
   set_target_properties([targets.name] PROPERTIES
     SWIG_INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
     INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
+  )
+  target_link_libraries([targets.name] PRIVATE[for targets.libs]
+    [targets.libs][end]
+    external-[targets.swig_lang]
   )[else][is targets.type "lib"]
   add_library([targets.name][if-any targets.build_type] [targets.build_type][end][for targets.sources]
     [targets.sources][end]
