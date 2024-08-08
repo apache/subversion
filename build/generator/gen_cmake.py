@@ -177,6 +177,7 @@ class Generator(gen_base.GeneratorBase):
         else:
           install_target = False
 
+        enable_condition = list(set(enable_condition))
         if len(enable_condition) > 0:
           enable_condition_str = " AND ".join(enable_condition)
         else:
