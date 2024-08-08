@@ -81,7 +81,7 @@ def get_target_conditions(target):
       enable_condition.append("NOT BUILD_SHARED_LIBS")
 
   if isinstance(target, gen_base.TargetSWIG) or \
-     isinstance(target, gen_base.TargetSWIG):
+     isinstance(target, gen_base.TargetSWIGLib):
     enable_condition.append("SVN_ENABLE_SWIG_" + target.lang.upper())
 
   return enable_condition
