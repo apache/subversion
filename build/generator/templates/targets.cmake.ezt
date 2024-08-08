@@ -25,6 +25,10 @@ if ([targets.enable_condition])[is targets.type "swig"]
   swig_add_library([targets.name]
     LANGUAGE [targets.swig_lang]
     SOURCES[for targets.sources] [targets.sources][end]
+  )
+  set_target_properties([targets.name] PROPERTIES
+    SWIG_INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
+    INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
   )[else][is targets.type "lib"]
   add_library([targets.name][if-any targets.build_type] [targets.build_type][end][for targets.sources]
     [targets.sources][end]
