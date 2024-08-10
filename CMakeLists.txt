@@ -284,6 +284,21 @@ if(SVN_ENABLE_SWIG_PYTHON)
   )
 endif()
 
+if(SVN_ENABLE_SWIG_PERL)
+  find_package(Perl REQUIRED)
+  find_package(PerlLibs REQUIRED)
+
+  add_library(external-perl IMPORTED INTERFACE)
+  target_include_directories(external-perl INTERFACE
+    ${PERL_INCLUDE_PATH}
+    ${SWIG_INCLUDE_DIRECTORIES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/libsvn_swig_perl
+  )
+  target_compile_definitions(external-perl INTERFACE "__inline__=__inline")
+  target_compile_options(external-perl INTERFACE ${PERL_EXTRA_C_FLAGS})
+  target_link_libraries(external-perl INTERFACE ${PERL_LIBRARY})
+endif()
+
 function(target_exports target_name)
   if (WIN32)
     set(def_file_path "${CMAKE_BINARY_DIR}/${target_name}.def")
