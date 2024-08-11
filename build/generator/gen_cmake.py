@@ -136,7 +136,7 @@ class Generator(gen_base.GeneratorBase):
       sources = []
       libs = []
 
-      for dep in self.get_dependecies(target.name):
+      for dep in self.get_dependencies(target.name):
         enable_condition += get_target_conditions(dep)
 
         if isinstance(dep, gen_base.TargetSWIG):
@@ -237,7 +237,7 @@ class Generator(gen_base.GeneratorBase):
 
     return result
 
-  def get_dependecies(self, target_name):
+  def get_dependencies(self, target_name):
     deps = []
 
     deps += self.graph.get_sources(gen_base.DT_LINK, target_name)
