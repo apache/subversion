@@ -288,6 +288,8 @@ if(SVN_ENABLE_SWIG_PERL)
   find_package(Perl REQUIRED)
   find_package(PerlLibs REQUIRED)
 
+  separate_arguments(PERL_EXTRA_C_FLAGS)
+
   add_library(external-perl IMPORTED INTERFACE)
   target_include_directories(external-perl INTERFACE
     ${PERL_INCLUDE_PATH}
