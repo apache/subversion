@@ -597,6 +597,14 @@ message(STATUS "    LZ4 ........................... : ${lz4_VERSION}")
 message(STATUS "    UTF8PROC ...................... : ${UTF8PROC_VERSION}")
 message(STATUS "    SQLITE3 ....................... : ${SQLite3_VERSION}")
 message(STATUS "    SERF .......................... : ${Serf_VERSION}")
+message(STATUS "    GETTEXT ....................... : ${GETTEXT_VERSION_STRING}")
+# Some libintl implementations don't embed the version number in their header files.
+# In this case the variables Intl_VERSION* will be empty.
+# https://cmake.org/cmake/help/latest/module/FindIntl.html
+message(STATUS "    INTL .......................... : ${Intl_VERSION}")
+message(STATUS "    SWIG .......................... : ${SWIG_VERSION}")
+message(STATUS "    PYTHON ........................ : ${Python_VERSION}")
+message(STATUS "    PERL .......................... : ${PERL_VERSION_STRING}")
 message(STATUS "    HTTPD ......................... : NOT IMPLEMENTED")
 message(STATUS "    TODO: ......................... : Other dependecies")
 message(STATUS "  Bindings:")
