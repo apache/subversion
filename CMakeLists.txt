@@ -221,9 +221,8 @@ if(SVN_USE_INTERNAL_UTF8PROC)
     UTF8PROC_VERSION_MAJOR UTF8PROC_VERSION_MINOR UTF8PROC_VERSION_PATCH
   )
 else()
-  message(FATAL_ERROR "TODO:")
-  # find_package(utf8proc CONFIG REQUIRED)
-  # add_library(external-utf8proc ALIAS utf8proc)
+  find_package(utf8proc REQUIRED)
+  add_library(external-utf8proc ALIAS UTF8PROC::UTF8PROC)
 endif()
 
 ### SQLite3
