@@ -53,11 +53,17 @@ def get_module_name(name):
 
   return name[7:].upper()
 
-def get_output_name(name):
-  if name.startswith("lib"):
-    return name[3:] + "-1"
+def get_output_name(target):
+  if target.name.startswith("lib"):
+    return target.name[3:] + "-1"
+  elif isinstance(target, gen_base.TargetSWIG):
+    module_name = target.name[len(target.lang + "_"):]
+    if target.lang == "python":
+      return module_name
+    else:
+      return target.name
   else:
-    return name
+    return target.name
 
 def get_target_conditions(target):
   enable_condition = []
@@ -197,7 +203,7 @@ class Generator(gen_base.GeneratorBase):
 
         new_target = _eztdata(
           name = target.name,
-          output_name = get_output_name(target.name),
+          output_name = get_output_name(target),
           type = target_type,
           sources = sources,
           libs = libs,
