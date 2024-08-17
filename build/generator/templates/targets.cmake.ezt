@@ -22,9 +22,13 @@
 [for targets]
 # [if-any targets.description][targets.description][else][targets.name][end]
 if ([targets.enable_condition])[is targets.type "swig"]
+  # TODO: Use generator expressions instead of CMAKE_CURRENT_BINARY_DIR?
   swig_add_library([targets.name]
     LANGUAGE [targets.swig_lang]
-    SOURCES[for targets.sources] [targets.sources][end]
+    SOURCES[for targets.sources] [targets.sources][end][is targets.swig_lang "python"]
+    OUTPUT_DIR "{CMAKE_CURRENT_BINARY_DIR}/PythonPackages/libsvn"[end][is targets.swig_lang "perl"]
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/PerlLibs/TODO"[end][is targets.swig_lang "ruby"]
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/site_ruby/TODO"[end]
   )
   set_target_properties([targets.name] PROPERTIES
     SWIG_INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
