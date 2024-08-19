@@ -682,13 +682,13 @@ II.   INSTALLATION
       - Visual Studio vcproj, for Windows builds
       - CMake, for both Unix and Windows
 
-      The first two have been in use since 2001. Sections A-E below descibe
+      The first two have been in use since 2001. Sections A-E below describe
       the classic build system.
 
       The CMake build system was created in 2024 and is still under
       development. It will be included in Subversion 1.15 and is expected to
-      be the default build system starting with Subversion 1.16. Section Fi
-      below describe the CMake build system.
+      be the default build system starting with Subversion 1.16. Section F
+      below describes the CMake build system.
 
   A.  Building from a Tarball
       ------------------------------
@@ -1204,7 +1204,7 @@ II.   INSTALLATION
       C:>cd ..
 
 
-  E.  Building using CMake
+  F.  Building using CMake
       --------------------
 
       Get the sources, either a release tarball or by checking out the
