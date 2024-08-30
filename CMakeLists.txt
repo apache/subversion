@@ -100,7 +100,7 @@ option(SVN_USE_DSO "Defined if svn should try to load DSOs" OFF)
 # Dependecies
 option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
 option(SVN_USE_INTERNAL_UTF8PROC "Use internal version of utf8proc" ON)
-option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" ON)
+option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" OFF)
 set(SQLiteAmalgamation_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation" CACHE STRING "Directory with sqlite amalgamation")
 
 # Require C++ compiler
@@ -231,8 +231,22 @@ if(SVN_SQLITE_USE_AMALGAMATION)
   find_package(SQLiteAmalgamation REQUIRED)
   add_library(external-sqlite ALIAS SQLite::SQLite3Amalgamation)
 else()
-  find_package(SQLite3 REQUIRED)
-  add_library(external-sqlite ALIAS SQLite::SQLite3)
+  # It should be not required.
+  find_package(SQLite3)
+
+  if(SQLite3_FOUND)
+    add_library(external-sqlite ALIAS SQLite::SQLite3)
+  else()
+    find_package(SQLiteAmalgamation REQUIRED)
+    add_library(external-sqlite ALIAS SQLite::SQLite3Amalgamation)
+
+    # Is implicitness an actual problem? This warning could be removed
+    # if it isn't.
+    message(WARNING
+      "Implicitly using SQLite amalgamation; enable"
+      "SVN_SQLITE_USE_AMALGAMATION option to force it."
+    )
+  endif()
 endif()
 
 ### Serf
