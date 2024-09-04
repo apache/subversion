@@ -36,16 +36,6 @@ function(read_version path var major minor patch)
   endif()
 endfunction()
 
-# We use the latest, packaged into all package distributions, version of
-# CMake. Bellow will be a table of different package distributions with
-# the distro names and web links. The table can be used to ensure all
-# distros supports the new version to update to.
-#
-# Windows         https://cmake.org/download/
-# Visual Studio   https://cmake.org/download/
-# Debian          https://packages.debian.org/buster/cmake
-# Arch Linux      https://archlinux.org/packages/extra/x86_64/cmake/
-#
 cmake_minimum_required(VERSION 3.12)
 
 # CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
