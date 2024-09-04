@@ -68,10 +68,12 @@ project("Subversion"
 
 ### Options
 
+include(CMakeDependentOption)
+
 # Build components
 option(SVN_ENABLE_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
 option(SVN_ENABLE_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
-option(SVN_ENABLE_TOOLS "Build Subversion tools" OFF)
+cmake_dependent_option(SVN_ENABLE_TOOLS "Build Subversion tools" ON "SVN_ENABLE_TESTS" OFF)
 option(SVN_ENABLE_TESTS "Build Subversion test-suite" OFF)
 
 option(SVN_ENABLE_SWIG_PERL "Enable Subversion SWIG bindings for Perl" OFF)
@@ -91,10 +93,10 @@ option(SVN_INSTALL_PRIVATE_H "Instal private header files." OFF)
 
 # Configuration
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
-option(SVN_BUILD_SHARED_FS "Build shared FS modules" ${BUILD_SHARED_LIBS})
-option(SVN_BUILD_SHARED_RA "Build shared RA modules" OFF)
+cmake_dependent_option(SVN_BUILD_SHARED_FS "Build shared FS modules" ON "BUILD_SHARED_LIBS" OFF)
+cmake_dependent_option(SVN_BUILD_SHARED_RA "Build shared RA modules" ON "BUILD_SHARED_LIBS;LINUX" OFF)
 option(SVN_DEBUG "Enables specific features for developer builds" OFF)
-option(SVN_USE_WIN32_CRASHHANDLER "Enables WIN32 crash handler." ${WIN32})
+cmake_dependent_option(SVN_USE_WIN32_CRASHHANDLER "Enables WIN32 crash handler." ON "WIN32" OFF)
 option(SVN_USE_DSO "Defined if svn should try to load DSOs" OFF)
 
 # Dependecies
