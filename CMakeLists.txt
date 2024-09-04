@@ -584,7 +584,7 @@ if(SVN_ENABLE_SWIG_PYTHON)
   add_custom_command(TARGET libsvn_swig_py POST_BUILD
     COMMAND ${CMAKE_COMMAND} -E copy
       "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/__init__.py"
-      "$<TARGET_FILE_DIR:libsvn_swig_py>/PythonPackages/libsvn"
+      "$<TARGET_FILE_DIR:libsvn_swig_py>/PythonPackages/libsvn/__init__.py"
   )
 endif()
 
