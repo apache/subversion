@@ -262,7 +262,7 @@ if(SVN_ENABLE_SWIG_PYTHON)
       Interpreter
       Development.Embed
   )
-else()
+elseif(SVN_ENABLE_TESTS)
   find_package(Python REQUIRED COMPONENTS
       Interpreter
   )
@@ -316,23 +316,67 @@ endif()
 
 function(target_exports target_name)
   if (WIN32)
-    set(def_file_path "${CMAKE_BINARY_DIR}/${target_name}.def")
-
-    add_custom_command(
-      WORKING_DIRECTORY
-        "${CMAKE_SOURCE_DIR}"
-      COMMAND
-        "${Python_EXECUTABLE}"
-      ARGS
-        "build/generator/extractor.py"
-        ${ARGN}
-        ">${def_file_path}"
-      OUTPUT
-        "${def_file_path}"
-      DEPENDS
-        "build/generator/extractor.py"
-        ${ARGN}
+    set(filter_names
+      # svn_config_enumerator_t looks like (to our regex) a
+      # function declaration for svn_boolean_t
+      "svn_boolean_t"
+      # Not available on Windows
+      "svn_auth_get_keychain_simple_provider"
+      "svn_auth_get_keychain_ssl_client_cert_pw_provider"
+      "svn_auth_get_gnome_keyring_simple_provider"
+      "svn_auth_get_gnome_keyring_ssl_client_cert_pw_provider"
+      "svn_auth_get_kwallet_simple_provider"
+      "svn_auth_get_kwallet_ssl_client_cert_pw_provider"
+      "svn_auth_gnome_keyring_version"
+      "svn_auth_kwallet_version"
+      "svn_auth_get_gpg_agent_simple_provider"
+      "svn_auth_gpg_agent_version"
     )
+
+    set(def_file_path ${CMAKE_BINARY_DIR}/${target_name}.def)
+
+    # see build/generator/extractor.py
+    set(func_regex "^([A-Za-z0-9_][A-Za-z0-9_* ]+[ *])?(svn[A-Za-z0-9_]+)\\(")
+
+    set(defs)
+    foreach(file ${ARGN})
+      file(STRINGS ${file} funcs REGEX "${func_regex}")
+
+      foreach(func_string ${funcs})
+        string(REGEX REPLACE "${func_regex}.*$" "\\2" func_name ${func_string})
+
+        list(APPEND defs "${func_name}")
+      endforeach()
+
+      get_filename_component(filename ${file} NAME)
+      if(${filename} STREQUAL "svn_ctype.h")
+        list(APPEND defs "svn_ctype_table = svn_ctype_table_internal CONSTANT")
+      elseif(${filename} STREQUAL "svn_wc_private.h")
+        # svn_wc__internal_walk_children() is now internal to libsvn_wc
+        # but entries-dump.c still calls it
+        list(APPEND defs "svn_wc__internal_walk_children")
+      endif()
+    endforeach()
+
+    list(SORT defs)
+    list(REMOVE_DUPLICATES defs)
+
+    set(def_file_content "EXPORTS\n")
+    foreach(def ${defs})
+      list(FIND filter_names "${def}" skip)
+      if(skip LESS 0)
+        string(APPEND def_file_content "${def}\n")
+      endif()
+    endforeach()
+
+    if(EXISTS "${def_file_path}")
+      file(READ "${def_file_path}" old_file_content)
+    else()
+      set(old_file_content "NOT_EXISTS")
+    endif()
+    if(NOT ${old_file_content} STREQUAL ${def_file_content})
+      file(WRITE "${def_file_path}" ${def_file_content})
+    endif()
 
     target_sources("${target_name}" PRIVATE "${def_file_path}")
   endif()
