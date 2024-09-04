@@ -73,15 +73,15 @@ def get_target_conditions(target):
     enable_condition.append("SVN_ENABLE_" + get_module_name(target.name))
 
   if isinstance(target, gen_base.TargetLib) and target.name == "libsvnxx":
-    enable_condition.append("SVN_BUILD_SVNXX")
+    enable_condition.append("SVN_ENABLE_SVNXX")
 
   if isinstance(target, gen_base.TargetExe):
     if target.install == "test" or target.install == "sub-test":
-      enable_condition.append("SVN_BUILD_TESTS")
+      enable_condition.append("SVN_ENABLE_TESTS")
     elif target.install == "tools":
-      enable_condition.append("SVN_BUILD_TOOLS")
+      enable_condition.append("SVN_ENABLE_TOOLS")
     else:
-      enable_condition.append("SVN_BUILD_PROGRAMS")
+      enable_condition.append("SVN_ENABLE_PROGRAMS")
 
     if target.msvc_force_static:
       enable_condition.append("NOT BUILD_SHARED_LIBS")

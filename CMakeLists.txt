@@ -36,6 +36,16 @@ function(read_version path var major minor patch)
   endif()
 endfunction()
 
+# We use the latest, packaged into all package distributions, version of
+# CMake. Bellow will be a table of different package distributions with
+# the distro names and web links. The table can be used to ensure all
+# distros supports the new version to update to.
+#
+# Windows         https://cmake.org/download/
+# Visual Studio   https://cmake.org/download/
+# Debian          https://packages.debian.org/buster/cmake
+# Arch Linux      https://archlinux.org/packages/extra/x86_64/cmake/
+#
 cmake_minimum_required(VERSION 3.12)
 
 # CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
@@ -69,10 +79,10 @@ project("Subversion"
 ### Options
 
 # Build components
-option(SVN_BUILD_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
-option(SVN_BUILD_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
-option(SVN_BUILD_TOOLS "Build Subversion tools" OFF)
-option(SVN_BUILD_TESTS "Build Subversion test-suite" OFF)
+option(SVN_ENABLE_SVNXX "Enable compilation of the C++ bindings (requires C++)" OFF)
+option(SVN_ENABLE_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
+option(SVN_ENABLE_TOOLS "Build Subversion tools" OFF)
+option(SVN_ENABLE_TESTS "Build Subversion test-suite" OFF)
 
 option(SVN_ENABLE_SWIG_PERL "Enable Subversion SWIG bindings for Perl" OFF)
 option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion SWIG bindings into Python" OFF)
@@ -104,8 +114,8 @@ option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" OFF)
 set(SQLiteAmalgamation_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation" CACHE STRING "Directory with sqlite amalgamation")
 
 # Require C++ compiler
-if (SVN_BUILD_SVNXX)
-  # TODO: Also add SVN_BUILD_AUTH_KWALLET and SVN_BUILD_JAVAHL to the
+if (SVN_ENABLE_SVNXX)
+  # TODO: Also add SVN_ENABLE_AUTH_KWALLET and SVN_ENABLE_JAVAHL to the
   # conditions when they done.
 
   enable_language(CXX)
@@ -143,7 +153,7 @@ if(SVN_USE_DSO)
   add_compile_definitions("SVN_SOVERSION=1")
 endif()
 
-if (SVN_BUILD_TESTS)
+if (SVN_ENABLE_TESTS)
   enable_testing()
 endif()
 
@@ -400,7 +410,7 @@ if(SVN_INSTALL_PRIVATE_H)
   install(FILES ${private_headers} DESTINATION "include/subversion-1/private")
 endif()
 
-if(SVN_BUILD_SVNXX)
+if(SVN_ENABLE_SVNXX)
   install(
     DIRECTORY "subversion/bindings/cxx/include/"
     DESTINATION "include/subversion-1"
@@ -533,7 +543,7 @@ set(CMAKE_STATIC_LIBRARY_PREFIX "")
 
 include("build/cmake/targets.cmake")
 
-if(SVN_BUILD_TESTS)
+if(SVN_ENABLE_TESTS)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
   file(GLOB PYTHON_TESTS
@@ -561,7 +571,7 @@ if(SVN_BUILD_TESTS)
   endforeach()
 endif()
 
-if (SVN_BUILD_SVNXX)
+if (SVN_ENABLE_SVNXX)
   target_include_directories(libsvnxx PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/cxx/include"
   )
@@ -609,9 +619,9 @@ message(STATUS "    Enable RA LOCAL ............... : ${SVN_ENABLE_RA_LOCAL}")
 message(STATUS "    Enable RA SVN ................. : ${SVN_ENABLE_RA_SVN}")
 message(STATUS "    Enable RA SERF ................ : ${SVN_ENABLE_RA_SERF}")
 message(STATUS "    Build Apache Modules .......... : NOT IMPLEMENTED, HTTPD v2.4.68 (TODO:)")
-message(STATUS "    Build programs ................ : ${SVN_BUILD_PROGRAMS}")
-message(STATUS "    Build tools ................... : ${SVN_BUILD_TOOLS}")
-message(STATUS "    Build test suite .............. : ${SVN_BUILD_TESTS}")
+message(STATUS "    Build programs ................ : ${SVN_ENABLE_PROGRAMS}")
+message(STATUS "    Build tools ................... : ${SVN_ENABLE_TOOLS}")
+message(STATUS "    Build test suite .............. : ${SVN_ENABLE_TESTS}")
 message(STATUS "  Install:")
 message(STATUS "    Install prefix: ............... : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "    Install private headers: ...... : ${SVN_INSTALL_PRIVATE_H}")
@@ -635,7 +645,7 @@ message(STATUS "    PERL .......................... : ${PERL_VERSION_STRING}")
 message(STATUS "    HTTPD ......................... : NOT IMPLEMENTED")
 message(STATUS "    TODO: ......................... : Other dependecies")
 message(STATUS "  Bindings:")
-message(STATUS "    Build SVNXX ................... : ${SVN_BUILD_SVNXX}")
+message(STATUS "    Build SVNXX ................... : ${SVN_ENABLE_SVNXX}")
 message(STATUS "    Build SWIG_PERL ............... : ${SVN_ENABLE_SWIG_PERL}")
 message(STATUS "    Build SWIG_PYTHON ............. : ${SVN_ENABLE_SWIG_PYTHON}")
 message(STATUS "    Build SWIG_RUBY ............... : ${SVN_ENABLE_SWIG_RUBY}")
