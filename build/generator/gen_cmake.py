@@ -84,7 +84,7 @@ def get_target_conditions(target):
       enable_condition.append("SVN_ENABLE_PROGRAMS")
 
     if target.msvc_force_static:
-      enable_condition.append("NOT BUILD_SHARED_LIBS")
+      enable_condition.append("NOT (BUILD_SHARED_LIBS AND WIN32)")
 
   if isinstance(target, gen_base.TargetSWIG) or \
      isinstance(target, gen_base.TargetSWIGLib):
