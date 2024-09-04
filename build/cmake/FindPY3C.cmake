@@ -16,7 +16,7 @@
 # specific language governing permissions and limitations
 # under the License.
 #
-# Findpy3c.cmake -- CMake module for py3c library
+# FindPY3C.cmake -- CMake module for py3c library
 #
 
 find_path(PY3C_INCLUDE_DIR
@@ -32,13 +32,13 @@ mark_as_advanced(
 include(FindPackageHandleStandardArgs)
 
 FIND_PACKAGE_HANDLE_STANDARD_ARGS(
-  py3c
+  PY3C
   REQUIRED_VARS
     PY3C_INCLUDE_DIR
 )
 
 # TODO: Is it okay to put py3c into 'Python' namespace?
-if(py3c_FOUND AND NOT TARGET Python::py3c)
+if(PY3C_FOUND AND NOT TARGET Python::py3c)
   add_library(Python::py3c IMPORTED INTERFACE)
   set_target_properties(Python::py3c PROPERTIES
     INTERFACE_INCLUDE_DIRECTORIES ${PY3C_INCLUDE_DIR}

@@ -284,7 +284,7 @@ if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
 endif()
 
 if(SVN_ENABLE_SWIG_PYTHON)
-  find_package(py3c REQUIRED)
+  find_package(PY3C REQUIRED)
 
   add_library(external-python INTERFACE)
   target_link_libraries(external-python INTERFACE
