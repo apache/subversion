@@ -159,8 +159,8 @@ else()
   set(SVN_RA_BUILD_TYPE STATIC)
 endif()
 
-if(SVN_BUILD_SHARED_RA)
-  message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported")
+if(SVN_BUILD_SHARED_RA AND WIN32)
+  message(FATAL_ERROR "SVN_BUILD_SHARED_RA not yet supported on Windows")
 endif()
 
 if(SVN_ENABLE_FS_BASE)
