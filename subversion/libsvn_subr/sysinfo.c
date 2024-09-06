@@ -647,6 +647,7 @@ static const char *
 linux_release_name(apr_pool_t *pool)
 {
   const char *uname_release = NULL;
+  const char *release_name;
 
 #if HAVE_UNAME
   uname_release = release_name_from_uname(pool);
@@ -654,7 +655,7 @@ linux_release_name(apr_pool_t *pool)
 
   /* Try anything that has /usr/bin/lsb_release.
      Covers, for example, Debian, Ubuntu and SuSE.  */
-  const char *release_name = lsb_release(pool);
+  release_name = lsb_release(pool);
 
   /* Try the systemd way (covers Arch). */
   if (!release_name)
