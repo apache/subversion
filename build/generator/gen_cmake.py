@@ -90,6 +90,9 @@ def get_target_conditions(target):
      isinstance(target, gen_base.TargetSWIGLib):
     enable_condition.append("SVN_ENABLE_SWIG_" + target.lang.upper())
 
+  if isinstance(target, gen_base.TargetApacheMod):
+    enable_condition.append("SVN_ENABLE_APACHE_MODULES")
+
   return enable_condition
 
 class Generator(gen_base.GeneratorBase):
@@ -116,6 +119,7 @@ class Generator(gen_base.GeneratorBase):
       enable_condition += get_target_conditions(target)
       build_type = None
       swig_lang = None
+      is_apache_mod = None
 
       if isinstance(target, gen_base.TargetScript):
         # there is nothing to build
@@ -127,7 +131,7 @@ class Generator(gen_base.GeneratorBase):
         group = "fs-libs"
         build_type = "${SVN_FS_BUILD_TYPE}"
       elif isinstance(target, gen_base.TargetApacheMod):
-        pass
+        is_apache_mod = True
       elif isinstance(target, gen_base.TargetSWIG):
         swig_lang = target.lang
       elif isinstance(target, gen_base.TargetLib):
@@ -217,6 +221,7 @@ class Generator(gen_base.GeneratorBase):
           srcdir = target.path,
           install_target = ezt.boolean(install_target),
           swig_lang = swig_lang,
+          is_apache_mod = is_apache_mod,
         )
 
         targets.append(new_target)
@@ -257,10 +262,6 @@ class Generator(gen_base.GeneratorBase):
       "libsvn_auth_kwallet",
 
       "svnxx-tests",
-
-      "mod_authz_svn",
-      "mod_dav_svn",
-      "mod_dontdothat",
 
       "libsvnjavahl",
       "__JAVAHL__",

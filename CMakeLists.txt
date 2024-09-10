@@ -75,6 +75,7 @@ option(SVN_ENABLE_SVNXX "Enable compilation of the C++ bindings (requires C++)" 
 option(SVN_ENABLE_PROGRAMS "Build Subversion programs (such as svn.exe)" ON)
 cmake_dependent_option(SVN_ENABLE_TOOLS "Build Subversion tools" ON "SVN_ENABLE_TESTS" OFF)
 option(SVN_ENABLE_TESTS "Build Subversion test-suite" OFF)
+option(SVN_ENABLE_APACHE_MODULES "Build modules for Apache HTTPD" OFF)
 
 option(SVN_ENABLE_SWIG_PERL "Enable Subversion SWIG bindings for Perl" OFF)
 option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion SWIG bindings into Python" OFF)
@@ -268,6 +269,14 @@ elseif(SVN_ENABLE_TESTS)
   find_package(Python REQUIRED COMPONENTS
       Interpreter
   )
+endif()
+
+### Httpd
+
+if(SVN_ENABLE_APACHE_MODULES)
+  find_package(Httpd REQUIRED)
+  add_library(external-libhttpd ALIAS httpd::httpd)
+  add_library(external-mod_dav ALIAS httpd::mod_dav)
 endif()
 
 if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
@@ -654,7 +663,7 @@ message(STATUS "    Enable FS X ................... : ${SVN_ENABLE_FS_X}")
 message(STATUS "    Enable RA LOCAL ............... : ${SVN_ENABLE_RA_LOCAL}")
 message(STATUS "    Enable RA SVN ................. : ${SVN_ENABLE_RA_SVN}")
 message(STATUS "    Enable RA SERF ................ : ${SVN_ENABLE_RA_SERF}")
-message(STATUS "    Build Apache Modules .......... : NOT IMPLEMENTED, HTTPD v2.4.68 (TODO:)")
+message(STATUS "    Build Apache Modules .......... : ${SVN_ENABLE_APACHE_MODULES}")
 message(STATUS "    Build programs ................ : ${SVN_ENABLE_PROGRAMS}")
 message(STATUS "    Build tools ................... : ${SVN_ENABLE_TOOLS}")
 message(STATUS "    Build test suite .............. : ${SVN_ENABLE_TESTS}")
@@ -678,7 +687,7 @@ message(STATUS "    INTL .......................... : ${Intl_VERSION}")
 message(STATUS "    SWIG .......................... : ${SWIG_VERSION}")
 message(STATUS "    PYTHON ........................ : ${Python_VERSION}")
 message(STATUS "    PERL .......................... : ${PERL_VERSION_STRING}")
-message(STATUS "    HTTPD ......................... : NOT IMPLEMENTED")
+message(STATUS "    HTTPD ......................... : ${HTTPD_VERSION}")
 message(STATUS "    TODO: ......................... : Other dependecies")
 message(STATUS "  Bindings:")
 message(STATUS "    Build SVNXX ................... : ${SVN_ENABLE_SVNXX}")
