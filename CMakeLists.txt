@@ -283,6 +283,8 @@ if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
   find_package(SWIG REQUIRED)
   include(${SWIG_USE_FILE})
 
+  file(MAKE_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy")
+
   set(SWIG_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/include
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig
@@ -309,8 +311,6 @@ if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
       WORKING_DIRECTORY
         "${CMAKE_CURRENT_BINARY_DIR}"
       COMMAND
-        "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy"
-      COMMAND
         "${Python3_EXECUTABLE}"
         "${CMAKE_CURRENT_SOURCE_DIR}/build/generator/swig/header_wrappers.py"
         "${CMAKE_CURRENT_SOURCE_DIR}/build.conf"
@@ -329,8 +329,6 @@ function(swig_target_external_runtime target lang)
   add_custom_command(
     OUTPUT ${swig_runtime_path}
     WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMAND
-      ${CMAKE_COMMAND} -E make_directory "subversion/bindings/swig/proxy"
     COMMAND
       "${Python3_EXECUTABLE}"
       "${CMAKE_CURRENT_SOURCE_DIR}/build/generator/swig/external_runtime.py"
