@@ -375,6 +375,21 @@ if(SVN_ENABLE_SWIG_PERL)
   swig_target_external_runtime(external-perl perl)
 endif()
 
+if(SVN_ENABLE_SWIG_RUBY)
+  find_package(Ruby REQUIRED)
+
+  add_library(external-ruby IMPORTED INTERFACE)
+  target_include_directories(external-ruby INTERFACE
+    ${Ruby_INCLUDE_DIRS}
+    ${SWIG_INCLUDE_DIRECTORIES}
+    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby/libsvn_swig_ruby
+  )
+  target_compile_definitions(external-ruby INTERFACE HAVE_RB_ERRINFO)
+  target_link_libraries(external-ruby INTERFACE ${Ruby_LIBRARY})
+
+  swig_target_external_runtime(external-ruby ruby)
+endif()
+
 function(target_exports target_name)
   if (WIN32)
     set(filter_names
