@@ -285,14 +285,62 @@ if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
 
   set(SWIG_INCLUDE_DIRECTORIES
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/include
-    ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/proxy
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/include
+
+    ${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy
     ${CMAKE_CURRENT_BINARY_DIR}
   )
 
   add_library(external-swig INTERFACE)
+
+  file(GLOB swig_headers_input "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include/*.h")
+  set(swig_headers_output)
+  foreach(swig_header ${swig_headers_input})
+    get_filename_component(filename ${swig_header} NAME_WLE)
+    set(output "${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy/${filename}_h.swg")
+    list(APPEND swig_headers_output ${output})
+
+    add_custom_command(
+      DEPENDS
+        "${swig_header}"
+      OUTPUT
+        "${output}"
+      WORKING_DIRECTORY
+        "${CMAKE_CURRENT_BINARY_DIR}"
+      COMMAND
+        "${CMAKE_COMMAND}" -E make_directory "${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy"
+      COMMAND
+        "${Python3_EXECUTABLE}"
+        "${CMAKE_CURRENT_SOURCE_DIR}/build/generator/swig/header_wrappers.py"
+        "${CMAKE_CURRENT_SOURCE_DIR}/build.conf"
+        "${SWIG_EXECUTABLE}"
+        "${swig_header}"
+      COMMAND_EXPAND_LISTS
+    )
+  endforeach()
+
+  add_custom_target(swig_headers DEPENDS ${swig_headers_output})
+  add_dependencies(external-swig swig_headers)
 endif()
+
+function(swig_target_external_runtime target lang)
+  set(swig_runtime_path "${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy/swig_${lang}_external_runtime.swg")
+  add_custom_command(
+    OUTPUT ${swig_runtime_path}
+    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
+    COMMAND
+      ${CMAKE_COMMAND} -E make_directory "subversion/bindings/swig/proxy"
+    COMMAND
+      "${Python3_EXECUTABLE}"
+      "${CMAKE_CURRENT_SOURCE_DIR}/build/generator/swig/external_runtime.py"
+      "${CMAKE_CURRENT_SOURCE_DIR}/build.conf"
+      "${SWIG_EXECUTABLE}"
+      "${lang}"
+    COMMAND_EXPAND_LISTS
+  )
+  target_sources(${target} INTERFACE ${swig_runtime_path})
+endfunction()
 
 if(SVN_ENABLE_SWIG_PYTHON)
   find_package(PY3C REQUIRED)
@@ -306,6 +354,8 @@ if(SVN_ENABLE_SWIG_PYTHON)
     ${SWIG_INCLUDE_DIRECTORIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/libsvn_swig_py
   )
+
+  swig_target_external_runtime(external-python python)
 endif()
 
 if(SVN_ENABLE_SWIG_PERL)
@@ -323,6 +373,8 @@ if(SVN_ENABLE_SWIG_PERL)
   target_compile_definitions(external-perl INTERFACE "__inline__=__inline")
   target_compile_options(external-perl INTERFACE ${PERL_EXTRA_C_FLAGS})
   target_link_libraries(external-perl INTERFACE ${PERL_LIBRARY})
+
+  swig_target_external_runtime(external-perl perl)
 endif()
 
 function(target_exports target_name)
