@@ -222,6 +222,7 @@ class Generator(gen_base.GeneratorBase):
           install_target = ezt.boolean(install_target),
           swig_lang = swig_lang,
           is_apache_mod = is_apache_mod,
+          namespace = os.path.basename(target.path),
         )
 
         targets.append(new_target)
