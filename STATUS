@@ -22,6 +22,14 @@ Candidate changes:
    votes:
      +1: rhuijben
 
+ * r1910464
+   Fix svnadmin_tests.py (build_repcache) failing with Python 3.11+ on
+   Windows.
+   Justification:
+     Make unit tests to pass with the latest version of Python on Windows.
+   votes:
+     +1: jun66j5
+
 Veto-blocked changes:
 =====================
 
