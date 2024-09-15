@@ -67,6 +67,8 @@ if __name__ == '__main__':
     for func in extract_funcs(fname):
       print(func)
     if os.path.basename(fname) == 'svn_ctype.h':
+      # See libsvn_subr/ctype.c for an explanation why we use CONSTANT and not
+      # DATA, even though it causes an LNK4087 warning!
       print('svn_ctype_table = svn_ctype_table_internal CONSTANT')
     elif os.path.basename(fname) == 'svn_wc_private.h':
       # svn_wc__internal_walk_children() is now internal to libsvn_wc
