@@ -2584,7 +2584,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           {
             const char *utf8_opt_arg;
             SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-            svn_error_t *err = svn_cstring_atoi(&opt_state.limit, utf8_opt_arg);
+            err = svn_cstring_atoi(&opt_state.limit, utf8_opt_arg);
             if (err)
               {
                 return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, err ,
