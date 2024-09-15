@@ -426,6 +426,8 @@ function(target_exports target_name)
 
       get_filename_component(filename ${file} NAME)
       if(${filename} STREQUAL "svn_ctype.h")
+        # See libsvn_subr/ctype.c for an explanation why we use CONSTANT and not
+        # DATA, even though it causes an LNK4087 warning!
         list(APPEND defs "svn_ctype_table = svn_ctype_table_internal CONSTANT")
       elseif(${filename} STREQUAL "svn_wc_private.h")
         # svn_wc__internal_walk_children() is now internal to libsvn_wc
