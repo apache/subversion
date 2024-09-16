@@ -911,7 +911,7 @@ def roll_tarballs(args):
     run_script(args.verbose,
                '%s/tools/po/po-update.sh pot' % get_workdir(args.base_dir))
     run_script(args.verbose,
-               'python gen-make.py -t cmake')
+               'python gen-make.py -t cmake --release')
     clean_pycache()  # as with clean_autom4te, is this pointless on Windows?
     os.chdir(cwd)
     clean_autom4te() # dist.sh does it but pointless on Windows?
@@ -929,7 +929,7 @@ def roll_tarballs(args):
                   ./autogen.sh --release''',
                hide_stderr=True) # SWIG is noisy
     run_script(args.verbose,
-               'python gen-make.py -t cmake')
+               'python gen-make.py -t cmake --release')
     clean_pycache()  # without this, tarballs contain empty __pycache__ dirs
     os.chdir(cwd)
     clean_autom4te() # dist.sh does it but probably pointless
