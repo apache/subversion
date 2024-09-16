@@ -1,0 +1,84 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# targets.cmake.ezt -- template for targets.cmake file
+# targets.cmake -- list of CMake targets
+#
+[for targets]
+# [if-any targets.description][targets.description][else][targets.name][end]
+if ([targets.enable_condition])[is targets.type "swig"]
+  # TODO: Use generator expressions instead of CMAKE_CURRENT_BINARY_DIR?
+  swig_add_library([targets.name]
+    LANGUAGE [targets.swig_lang]
+    SOURCES[for targets.sources] [targets.sources][end][is targets.swig_lang "python"]
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/PythonPackages/libsvn"[end][is targets.swig_lang "perl"]
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/PerlLibs/TODO"[end][is targets.swig_lang "ruby"]
+    OUTPUT_DIR "${CMAKE_CURRENT_BINARY_DIR}/site_ruby/TODO"[end]
+  )
+  set_target_properties([targets.name] PROPERTIES
+    SWIG_INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
+    INCLUDE_DIRECTORIES "${SWIG_INCLUDE_DIRECTORIES}"
+    OUTPUT_NAME [targets.output_name]
+  )[is targets.swig_lang "python"]
+  set_target_properties([targets.name] PROPERTIES
+    SWIG_COMPILE_OPTIONS "-nofastunpack"
+  )[end]
+  target_link_libraries([targets.name] PRIVATE[for targets.libs]
+    [targets.libs][end]
+    external-[targets.swig_lang]
+  )[else][is targets.type "lib"]
+  add_library([targets.name][if-any targets.build_type] [targets.build_type][end][for targets.sources]
+    [targets.sources][end]
+  )[if-any targets.msvc_export]
+  target_exports([targets.name][for targets.msvc_export]
+    [targets.msvc_export][end]
+  )[end]
+  set_target_properties([targets.name] PROPERTIES OUTPUT_NAME "[targets.output_name]")[if-any targets.is_apache_mod]
+  set_target_properties([targets.name] PROPERTIES PREFIX "" SUFFIX ".so")[end]
+  target_include_directories([targets.name] PUBLIC
+    "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
+  )[if-any targets.group]
+  target_link_libraries([targets.group] INTERFACE [targets.name])[end]
+  [end][is targets.type "exe"]
+  add_executable([targets.name][for targets.sources]
+    [targets.sources][end]
+  )
+  [end][is targets.type "test"]
+  add_executable([targets.name][for targets.sources]
+    [targets.sources][end]
+  )
+  add_test([targets.namespace].[targets.name] [targets.name] --srcdir ${CMAKE_SOURCE_DIR}/[targets.srcdir])
+  [end]target_link_libraries([targets.name] PRIVATE[for targets.libs]
+    [targets.libs][end]
+  )[if-any targets.msvc_libs]
+  if (WIN32)
+    target_link_libraries([targets.name] PRIVATE[for targets.msvc_libs] [targets.msvc_libs][end])
+  endif()[end][if-any targets.msvc_objects]
+  if (MSVC)
+    set_target_properties([targets.name] PROPERTIES LINK_FLAGS[for targets.msvc_objects] [targets.msvc_objects][end])
+  endif()[end]
+  target_compile_definitions([targets.name] PRIVATE
+    "SVN_FILE_DESCRIPTION=[targets.description]"
+    "SVN_FILE_NAME=$<TARGET_FILE_NAME:[targets.name]>"
+  )
+  if (WIN32)
+    target_sources([targets.name] PRIVATE build/win32/svn.rc)
+  endif()[if-any targets.install_target]
+  install(TARGETS [targets.name])[end][end]
+endif()
+[end]
