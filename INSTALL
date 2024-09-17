@@ -1212,7 +1212,7 @@ II.   INSTALLATION
 
       The process for building on Unix and Windows is the same.
 
-          $ python gen-make.py -t cmake 
+          $ python gen-make.py -t cmake
           $ cmake -B out [build options]
           $ cmake --build out
 
@@ -1221,7 +1221,7 @@ II.   INSTALLATION
       Build options can be added, for example:
 
           $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_RA_SERF=ON
- 
+
       Build options can be listed using:
 
           $ cmake -LH
