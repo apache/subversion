@@ -1226,6 +1226,41 @@ II.   INSTALLATION
 
           $ cmake -LH
 
+      Windows tricks:
+
+      - Modern versions of Microsoft Visual Studio provide support for
+        CMake projects out-of-box, including intellisense, integrated
+        options editor, test explorer, and more.
+
+        In order to use it for Subversion, open the source directory with
+        Visual Studio, and the configuration should start automatically.
+        For editing the cache (options), do right-click to the CMakeLists.txt
+        file and clicking `CMake Settings for Subversion` will open the
+        editor. After the required settings are configured, hit `F7` in
+        order to build. For more info, check the article bellow:
+
+            https://learn.microsoft.com/en-us/cpp/build/cmake-projects-in-visual-studio
+
+      - There is a useful tool for bootstrapping the dependencies,
+        vcpkg. It provides ports for the most of the Subversion's
+        dependencies, which then could be installed via a single
+        command.
+
+        To start using it, download the registry from GitHub, bootstrap
+        vcpkg, and install the dependencies:
+
+            $ git clone https://github.com/microsoft/vcpkg
+            $ cd vcpkg && .\bootstrap-vcpkg.bat -disableMetrics
+            $ .\vcpkg install apr apr-util expat zlib sqlite3 [any other dependency]
+
+        After this is done, vcpkg can be integrated into CMake by passing
+        the vcpkg toolchain to CMAKE_TOOLCHAIN_FILE option. In order to do
+        it with Visual Studio, open the CMake cache editor as explained in
+        the previous step, and put the following into `CMake toolchain
+        file` field, where VCPKG_ROOT is the path to vcpkg registry:
+
+            <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
+
 
 III.  BUILDING A SUBVERSION SERVER
       ============================
