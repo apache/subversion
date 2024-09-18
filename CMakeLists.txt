@@ -412,15 +412,16 @@ function(target_exports target_name)
     set(def_file_path ${CMAKE_BINARY_DIR}/${target_name}.def)
 
     # see build/generator/extractor.py
-    set(func_regex "^([A-Za-z0-9_][A-Za-z0-9_* ]+[ *])?(svn[A-Za-z0-9_]+)\\(")
+    set(func_regex "(^|\n)((([A-Za-z0-9_]+|[*]) )+[*]?)?((svn|apr)_[a-z_0-9]+)[ \t\r\n]*\\(")
 
     set(defs)
     foreach(file ${ARGN})
-      file(STRINGS ${file} funcs REGEX "${func_regex}")
+      file(READ ${file} contents)
+      string(REGEX MATCHALL "${func_regex}" funcs ${contents})
 
       foreach(func_string ${funcs})
-        string(REGEX REPLACE "${func_regex}.*$" "\\2" func_name ${func_string})
-
+        string(REGEX MATCH "[A-Za-z0-9_]+[ \t\r\n]*\\($" func_name ${func_string})
+        string(REGEX REPLACE "[ \t\r\n]*\\($" "" func_name ${func_name})
         list(APPEND defs "${func_name}")
       endforeach()
 
