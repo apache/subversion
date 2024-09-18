@@ -1,0 +1,119 @@
+name: Build and Test Subversion with CMake
+
+on:
+  push:
+    branches: ["*"]
+
+concurrency:
+  group: ${{ github.ref }}
+  cancel-in-progress: false
+
+defaults:
+  run:
+    shell: pwsh
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Windows, shared, x64
+            os: windows-latest
+            build_shared: ON
+            vcpkg_triplet: x64-windows
+            arch: x64
+          - name: Windows, shared, x86
+            os: windows-latest
+            build_shared: ON
+            vcpkg_triplet: x86-windows
+            arch: x86
+          - name: Windows, static, x64, with tests
+            os: windows-latest
+            build_shared: OFF
+            vcpkg_triplet: x64-windows-static
+            arch: x64
+            run_tests: true
+          - name: Linux, shared, with tests
+            os: ubuntu-latest
+            build_shared: ON
+            run_tests: true
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+
+    env:
+      VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+
+    steps:
+      - name: Prepare Enviroment (Windows)
+        if: runner.os == 'Windows'
+        run: |
+          $root = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
+          Import-Module "$root\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+          Enter-VsDevShell -VsInstallPath $root -DevCmdArguments "-arch=${{ matrix.arch }}"
+
+          ls env: | foreach { "$($_.Name)=$($_.Value)" >> $env:GITHUB_ENV }
+
+      - name: Prepare Enviroment (Linux)
+        if: runner.os == 'Windows'
+        run: |
+          # nothing yet
+
+      - name: Export GitHub Actions cache environment variables
+        if: runner.os == 'Windows'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            core.exportVariable('ACTIONS_CACHE_URL', process.env.ACTIONS_CACHE_URL || '');
+            core.exportVariable('ACTIONS_RUNTIME_TOKEN', process.env.ACTIONS_RUNTIME_TOKEN || '');
+
+      - name: Install dependecies (Windows, vcpkg)
+        if: runner.os == 'Windows'
+        run: |
+          C:\vcpkg\vcpkg.exe install --triplet ${{ matrix.vcpkg_triplet }} `
+            apr apr-util expat zlib sqlite3
+
+          "CMAKE_PREFIX_PATH=C:\vcpkg\installed\${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+
+      - name: Install dependecies (Linux, apt-get)
+        if: runner.os == 'Linux'
+        run: >
+          sudo apt-get install
+          libtool
+          libtool-bin
+          libapr1-dev
+          libaprutil1-dev
+          libexpat1-dev
+          zlib1g-dev
+          libsqlite3-dev
+          ninja-build
+
+      - uses: actions/checkout@v4
+
+      - name: gen-make
+        run: python ./gen-make.py -t cmake
+
+      - name: Configure CMake
+        run: >
+          cmake -B out -G Ninja
+          -DBUILD_SHARED_LIBS=${{ matrix.build_shared }}
+          -DSVN_ENABLE_TESTS=ON
+          -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
+
+      - name: Build CMake
+        run: cmake --build out
+
+      - name: Install
+        run: cmake --install out
+
+      - name: Run all tests
+        id: run_all_tests
+        if: matrix.run_tests
+        working-directory: out
+        run: ctest --output-on-failure --verbose
+
+      - name: Rerun failed tests
+        if: ${{ matrix.run_tests && failure() && steps.run_all_tests.conclusion == 'failure' }}
+        working-directory: out
+        run: ctest --output-on-failure --verbose --rerun-failed
