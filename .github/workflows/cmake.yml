@@ -89,6 +89,11 @@ jobs:
           libsqlite3-dev
           ninja-build
 
+      - name: Use LF for Git checkout
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
       - uses: actions/checkout@v4
 
       - name: gen-make
