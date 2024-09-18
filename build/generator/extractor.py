@@ -57,6 +57,9 @@ _filter_names = [
   'svn_auth_kwallet_version',
   'svn_auth_get_gpg_agent_simple_provider',
   'svn_auth_gpg_agent_version',
+
+  # Unavailable in release mode
+  'svn_fs_base__trail_debug',
   ]
 
 if __name__ == '__main__':

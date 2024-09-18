@@ -407,6 +407,8 @@ function(target_exports target_name)
       "svn_auth_kwallet_version"
       "svn_auth_get_gpg_agent_simple_provider"
       "svn_auth_gpg_agent_version"
+      # Unavailable in release mode
+      "svn_fs_base__trail_debug"
     )
 
     set(def_file_path ${CMAKE_BINARY_DIR}/${target_name}.def)
