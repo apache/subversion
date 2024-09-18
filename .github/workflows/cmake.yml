@@ -18,11 +18,12 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - name: Windows, shared, x64
+          - name: Windows, shared, x64, with tests
             os: windows-latest
             build_shared: ON
             vcpkg_triplet: x64-windows
             arch: x64
+            run_tests: true
           - name: Windows, shared, x86
             os: windows-latest
             build_shared: ON
