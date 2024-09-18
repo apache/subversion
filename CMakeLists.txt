@@ -667,20 +667,22 @@ if(SVN_ENABLE_TESTS)
     # Keep `.py'.
     get_filename_component(py_test_name ${py_test_path} NAME_WLE)
 
-    add_test(
-      NAME
-        "cmdline.${py_test_name}"
-      COMMAND
-        "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/build/run_tests.py"
-        --bin ${CMAKE_CURRENT_BINARY_DIR}
-        --tools-bin ${CMAKE_CURRENT_BINARY_DIR}
-        --verbose
-        --log-to-stdout
-        --set-log-level=WARNING
-        ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_BINARY_DIR}
-        ${py_test_path}
-    )
+    if(NOT ${py_test_name} STREQUAL "svneditor")
+      add_test(
+        NAME
+          "cmdline.${py_test_name}"
+        COMMAND
+          "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/build/run_tests.py"
+          --bin ${CMAKE_CURRENT_BINARY_DIR}
+          --tools-bin ${CMAKE_CURRENT_BINARY_DIR}
+          --verbose
+          --log-to-stdout
+          --set-log-level=WARNING
+          ${CMAKE_CURRENT_SOURCE_DIR}
+          ${CMAKE_CURRENT_BINARY_DIR}
+          ${py_test_path}
+      )
+    endif()
   endforeach()
 endif()
 
