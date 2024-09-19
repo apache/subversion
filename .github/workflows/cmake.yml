@@ -75,7 +75,7 @@ jobs:
           C:\vcpkg\vcpkg.exe install --triplet ${{ matrix.vcpkg_triplet }} `
             apr apr-util expat zlib sqlite3
 
-          "CMAKE_PREFIX_PATH=C:\vcpkg\installed\${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
+          "CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $env:GITHUB_ENV
 
       - name: Install dependecies (Linux, apt-get)
         if: runner.os == 'Linux'
