@@ -410,7 +410,7 @@ function(target_exports target_name)
     set(def_file_path ${CMAKE_BINARY_DIR}/${target_name}.def)
 
     # see build/generator/extractor.py
-    set(func_regex "(^|\n)((([A-Za-z0-9_]+|[*]) )+[*]?)?((svn|apr)_[a-z_0-9]+)[ \t\r\n]*\\(")
+    set(func_regex "(^|\n)((([A-Za-z0-9_]+|[*]) )+[*]?)?((svn|apr)_[A-Za-z0-9_]+)[ \t\r\n]*\\(")
 
     set(defs)
     foreach(file ${ARGN})

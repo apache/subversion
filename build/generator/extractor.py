@@ -33,7 +33,7 @@ import re
 # or
 #    void svn_foo_bar (args)
 #
-_funcs = re.compile(r'^(?:(?:(?:\w+|\*) )+\*?)?((?:svn|apr)_[a-z_0-9]+)\s*\(', re.M)
+_funcs = re.compile(r'^(?:(?:(?:\w+|\*) )+\*?)?((?:svn|apr)_[A-Za-z0-9_]+)\s*\(', re.M)
 
 def extract_funcs(fname):
   funcs = [ ]
