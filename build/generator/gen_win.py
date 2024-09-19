@@ -241,21 +241,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
 
-    # Fix up targets that can't be linked to libraries
-    if not self.disable_shared:
-      for target in install_targets:
-        if isinstance(target, gen_base.TargetExe) and target.msvc_force_static:
-
-          # Make direct dependencies of all the indirect dependencies
-          linked_deps = {}
-          self.get_linked_win_depends(target, linked_deps)
-
-          for lk in linked_deps.keys():
-            if not isinstance(lk, gen_base.TargetLib) or not lk.msvc_export:
-              self.graph.add(gen_base.DT_LINK, target.name, lk)
-            else:
-              self.graph.remove(gen_base.DT_LINK, target.name, lk)
-
     for target in install_targets:
       target.project_guid = self.makeguid(target.name)
 

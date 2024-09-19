@@ -658,8 +658,6 @@ class TargetExe(TargetLinked):
     self.manpages = options.get('manpages', '')
     self.testing = options.get('testing')
 
-    self.msvc_force_static = options.get('msvc-force-static') == 'yes'
-
   def add_dependencies(self):
     TargetLinked.add_dependencies(self)
 
