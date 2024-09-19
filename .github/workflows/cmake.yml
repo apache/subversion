@@ -76,7 +76,6 @@ jobs:
             apr apr-util expat zlib sqlite3
 
           "CMAKE_TOOLCHAIN_FILE=C:/vcpkg/scripts/buildsystems/vcpkg.cmake" >> $env:GITHUB_ENV
-          "VCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}" >> $env:GITHUB_ENV
 
       - name: Install dependecies (Linux, apt-get)
         if: runner.os == 'Linux'
@@ -107,6 +106,7 @@ jobs:
           -DBUILD_SHARED_LIBS=${{ matrix.build_shared }}
           -DSVN_ENABLE_TESTS=ON
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
+          -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
 
       - name: Build CMake
         run: cmake --build out
