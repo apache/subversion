@@ -21,9 +21,10 @@
  * ====================================================================
  */
 
-#ifndef LIBSVN_RA_RA_LOADER_H
-#error Please include libsvn_ra/ra_loader.h instead of this file
-#else
+#ifndef SVN_LIBSVN_RA_LOCAL_INIT
+#define SVN_LIBSVN_RA_LOCAL_INIT
+
+#include "../libsvn_ra/ra_loader.h"
 
 svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable,
