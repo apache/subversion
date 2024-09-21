@@ -36,6 +36,7 @@
 #include "svn_delta.h"
 #include "svn_version.h"
 #include "fs.h"
+#include "fs_init.h"
 #include "err.h"
 #include "dag.h"
 #include "revs-txns.h"
