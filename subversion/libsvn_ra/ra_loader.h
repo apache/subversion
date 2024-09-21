@@ -419,11 +419,6 @@ typedef svn_error_t *
                        const svn_ra__vtable_t **vtable,
                        apr_pool_t *pool);
 
-/* Declarations of the init functions for the available RA libraries. */
-#include "../libsvn_ra_local/ra_init.h"
-#include "../libsvn_ra_svn/ra_init.h"
-#include "../libsvn_ra_serf/ra_init.h"
-
 
 
 /*** Compat Functions ***/
