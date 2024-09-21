@@ -22,6 +22,7 @@
  */
 
 #include "ra_local.h"
+#include "ra_init.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_fs.h"

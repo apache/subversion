@@ -56,6 +56,7 @@
 
 #include "../libsvn_ra/ra_loader.h"
 
+#include "ra_init.h"
 #include "ra_svn.h"
 
 #ifdef SVN_HAVE_SASL

@@ -49,6 +49,7 @@
 #include "private/svn_subr_private.h"
 #include "svn_private_config.h"
 
+#include "ra_init.h"
 #include "ra_serf.h"
 
 
