@@ -21,6 +21,7 @@ https://svn.apache.org/repos/asf/subversion/tags/1.14.4
     * Convert path to local style in error message from diff API (r1917946)
     * Fix `invalid escape sequence` in .py scripts for Python 3.12 (r1912632)
     * swig-py: Fix `none_dealloc` error caused by refcount issue (r1915316)
+    * Fix a msgid in svnadmin.c which was not a valid C string (r1887710)
 
 Version 1.14.3
 (20 Dec 2023, from /branches/1.14.x)
