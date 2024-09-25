@@ -17,6 +17,25 @@ https://svn.apache.org/repos/asf/subversion/tags/1.15.0
       time with --disable-plaintext-password-storage. This reverts r1845377
       (r1909351).
 
+Version 1.14.4
+(8 Oct 2024, from /branches/1.14.x)
+https://svn.apache.org/repos/asf/subversion/tags/1.14.4
+ User-visible changes:
+  - Client-side improvements and bugfixes:
+    * Fix unbounded memory usage in propget and proplist --xml (r1918138, -39)
+    * Fix cmdline parsing bugs in --change (-c) argument (r1917864, -944)
+    * Improve help message for svnmucc PUT (r1914222)
+  - Server-side bugfixes:
+    * mailer.py: Fix inconsistency in Config.which_group() arguments (r1914518)
+
+ Developer-visible changes:
+    * Fix svnadmin_tests.py failing with Python 3.11+ on Windows (r1910464)
+    * Support building swig-rb with clang 16 / GCC14 (r1915236, -39)
+    * Convert path to local style in error message from diff API (r1917946)
+    * Fix `invalid escape sequence` in .py scripts for Python 3.12 (r1912632)
+    * swig-py: Fix `none_dealloc` error caused by refcount issue (r1915316)
+    * Fix a msgid in svnadmin.c which was not a valid C string (r1887710)
+
 Version 1.14.3
 (20 Dec 2023, from /branches/1.14.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.14.3

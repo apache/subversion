@@ -21,12 +21,13 @@
  * ====================================================================
  */
 
-#ifndef LIBSVN_FS_LOADER_H
-#error Please include libsvn_fs/fs_loader.h instead of this file
-#else
+#ifndef SVN_LIBSVN_FS_FS_INIT
+#define SVN_LIBSVN_FS_FS_INIT
+
+#include "../libsvn_fs/fs-loader.h"
 
 svn_error_t *svn_fs_fs__init(const svn_version_t *loader_version,
-  fs_library_vtable_t **vtable,
-  apr_pool_t* common_pool);
+                             fs_library_vtable_t **vtable,
+                             apr_pool_t *common_pool);
 
 #endif

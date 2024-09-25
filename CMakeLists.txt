@@ -658,29 +658,28 @@ if(SVN_ENABLE_TESTS)
   find_package(Python3 COMPONENTS Interpreter REQUIRED)
 
   file(GLOB PYTHON_TESTS
-     "subversion/tests/cmdline/*.py"
+     "subversion/tests/cmdline/*_tests.py"
   )
 
   foreach(py_test_path ${PYTHON_TESTS})
     # Keep `.py'.
     get_filename_component(py_test_name ${py_test_path} NAME_WLE)
+    set(binary_dir $<TARGET_FILE_DIR:svn>)
 
-    if(NOT ${py_test_name} STREQUAL "svneditor")
-      add_test(
-        NAME
-          "cmdline.${py_test_name}"
-        COMMAND
-          "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/build/run_tests.py"
-          --bin ${CMAKE_CURRENT_BINARY_DIR}
-          --tools-bin ${CMAKE_CURRENT_BINARY_DIR}
-          --verbose
-          --log-to-stdout
-          --set-log-level=WARNING
-          ${CMAKE_CURRENT_SOURCE_DIR}
-          ${CMAKE_CURRENT_BINARY_DIR}
-          ${py_test_path}
-      )
-    endif()
+    add_test(
+      NAME
+        "cmdline.${py_test_name}"
+      COMMAND
+        "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/build/run_tests.py"
+        --bin ${binary_dir}
+        --tools-bin ${binary_dir}
+        --verbose
+        --log-to-stdout
+        --set-log-level=WARNING
+        ${CMAKE_CURRENT_SOURCE_DIR}
+        ${binary_dir}
+        ${py_test_path}
+    )
   endforeach()
 endif()
 

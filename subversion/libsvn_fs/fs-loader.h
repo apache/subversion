@@ -183,18 +183,6 @@ typedef svn_error_t *(*fs_init_func_t)(const svn_version_t *loader_version,
                                        fs_library_vtable_t **vtable,
                                        apr_pool_t* common_pool);
 
-/* Here are the declarations for the FS module init functions.  If we
-   are using DSO loading, they won't actually be linked into
-   libsvn_fs.  Note that these private functions have a common_pool
-   parameter that may be used for fs module scoped variables such as
-   the bdb cache.  This will be the same common_pool that is passed
-   to the create and open functions and these init functions (as well
-   as the open and create functions) are globally serialized so that
-   they have exclusive access to the common_pool. */
-#include "../libsvn_fs_base/fs_init.h"
-#include "../libsvn_fs_fs/fs_init.h"
-#include "../libsvn_fs_x/fs_init.h"
-
 
 
 /*** vtable types for the abstract FS objects ***/

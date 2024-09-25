@@ -62,7 +62,11 @@ if ([targets.enable_condition])[is targets.type "swig"]
   add_executable([targets.name][for targets.sources]
     [targets.sources][end]
   )
-  add_test([targets.namespace].[targets.name] [targets.name] --srcdir ${CMAKE_SOURCE_DIR}/[targets.srcdir])
+  add_test(
+    NAME [targets.namespace].[targets.name]
+    COMMAND [targets.name] --srcdir ${CMAKE_SOURCE_DIR}/[targets.srcdir]
+    WORKING_DIRECTORY $<TARGET_FILE_DIR:[targets.name]>
+  )
   [end]target_link_libraries([targets.name] PRIVATE[for targets.libs]
     [targets.libs][end]
   )[if-any targets.msvc_libs]
