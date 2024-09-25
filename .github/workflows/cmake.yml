@@ -21,22 +21,33 @@ jobs:
           - name: Windows, shared, x64, with tests
             os: windows-latest
             build_shared: ON
+            cmake_generator: Ninja
+            vcpkg_triplet: x64-windows
+            arch: x64
+            run_tests: true
+          - name: Windows, shared, x64, vs2022, with tests
+            os: windows-latest
+            build_shared: ON
+            cmake_generator: 'Visual Studio 17 2022'
             vcpkg_triplet: x64-windows
             arch: x64
             run_tests: true
           - name: Windows, shared, x86
             os: windows-latest
             build_shared: ON
+            cmake_generator: Ninja
             vcpkg_triplet: x86-windows
             arch: x86
           - name: Windows, static, x64, with tests
             os: windows-latest
             build_shared: OFF
+            cmake_generator: Ninja
             vcpkg_triplet: x64-windows-static
             arch: x64
             run_tests: true
           - name: Linux, shared, with tests
             os: ubuntu-latest
+            cmake_generator: Ninja
             build_shared: ON
             run_tests: true
 
@@ -45,6 +56,7 @@ jobs:
 
     env:
       VCPKG_BINARY_SOURCES: "clear;x-gha,readwrite"
+      CMAKE_GENERATOR: ${{ matrix.cmake_generator }}
 
     steps:
       - name: Prepare Enviroment (Windows)
@@ -102,25 +114,25 @@ jobs:
 
       - name: Configure CMake
         run: >
-          cmake -B out -G Ninja
+          cmake -B out
           -DBUILD_SHARED_LIBS=${{ matrix.build_shared }}
           -DSVN_ENABLE_TESTS=ON
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
 
       - name: Build CMake
-        run: cmake --build out
+        run: cmake --build out --config Release
 
       - name: Install
-        run: cmake --install out
+        run: cmake --install out --config Release
 
       - name: Run all tests
         id: run_all_tests
         if: matrix.run_tests
         working-directory: out
-        run: ctest --output-on-failure --verbose
+        run: ctest --output-on-failure --verbose -C Release
 
       - name: Rerun failed tests
         if: ${{ matrix.run_tests && failure() && steps.run_all_tests.conclusion == 'failure' }}
         working-directory: out
-        run: ctest --output-on-failure --verbose --rerun-failed
+        run: ctest --output-on-failure --verbose -C Release --rerun-failed
