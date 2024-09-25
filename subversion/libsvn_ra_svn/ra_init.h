@@ -30,4 +30,9 @@ svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
                               const svn_ra__vtable_t **vtable,
                               apr_pool_t *pool);
 
+/* Non-deprecated wrapper around svn_ra_svn_init. */
+svn_error_t *svn_ra_svn__deprecated_init(int abi_version,
+                                         apr_pool_t *pool,
+                                         apr_hash_t *hash);
+
 #endif

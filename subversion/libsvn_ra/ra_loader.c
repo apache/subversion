@@ -50,7 +50,6 @@
 
 #include "svn_config.h"
 #include "ra_loader.h"
-#include "deprecated.h"
 
 #include "private/svn_auth_private.h"
 #include "private/svn_ra_private.h"
@@ -1586,32 +1585,41 @@ svn_ra_dav_init(int abi_version,
 }
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_NEON */
 
-#ifndef SVN_LIBSVN_RA_LINKS_RA_SVN
 svn_error_t *
 svn_ra_svn_init(int abi_version,
                 apr_pool_t *pool,
                 apr_hash_t *hash)
 {
+#ifdef SVN_LIBSVN_RA_LINKS_RA_SVN
+  return svn_error_trace(
+    svn_ra_svn__deprecated_init(abi_version, pool, hash));
+#else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_SVN */
+}
 
-#ifndef SVN_LIBSVN_RA_LINKS_RA_LOCAL
 svn_error_t *
 svn_ra_local_init(int abi_version,
                   apr_pool_t *pool,
                   apr_hash_t *hash)
 {
+#ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
+  return svn_error_trace(
+    svn_ra_local__deprecated_init(abi_version, pool, hash));
+#else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_LOCAL */
+}
 
-#ifndef SVN_LIBSVN_RA_LINKS_RA_SERF
 svn_error_t *
 svn_ra_serf_init(int abi_version,
                  apr_pool_t *pool,
                  apr_hash_t *hash)
 {
+#ifdef SVN_LIBSVN_RA_LINKS_RA_SERF
+  return svn_error_trace(
+    svn_ra_serf__deprecated_init(abi_version, pool, hash));
+#else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
-}
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_SERF */
+}

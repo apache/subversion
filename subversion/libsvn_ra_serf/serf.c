@@ -1128,5 +1128,5 @@ svn_ra_serf__init(const svn_version_t *loader_version,
 #define DESCRIPTION RA_SERF_DESCRIPTION
 #define VTBL serf_vtable
 #define INITFUNC svn_ra_serf__init
-#define COMPAT_INITFUNC svn_ra_serf_init
+#define COMPAT_INITFUNC svn_ra_serf__deprecated_init
 #include "../libsvn_ra/wrapper_template.h"

@@ -30,4 +30,11 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable,
                                 apr_pool_t *pool);
 
+/** Initialize libsvn_ra_local.
+ *
+ * @deprecated Provided for backward compatibility with the 1.1 API. */
+svn_error_t *svn_ra_local__deprecated_init(int abi_version,
+                                           apr_pool_t *pool,
+                                           apr_hash_t *hash);
+
 #endif

@@ -3373,5 +3373,5 @@ svn_ra_svn__init(const svn_version_t *loader_version,
 #define DESCRIPTION RA_SVN_DESCRIPTION
 #define VTBL ra_svn_vtable
 #define INITFUNC svn_ra_svn__init
-#define COMPAT_INITFUNC svn_ra_svn_init
+#define COMPAT_INITFUNC svn_ra_svn__deprecated_init
 #include "../libsvn_ra/wrapper_template.h"
