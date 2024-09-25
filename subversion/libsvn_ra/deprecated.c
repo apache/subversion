@@ -521,8 +521,7 @@ svn_ra_svn_init(int abi_version,
                 apr_hash_t *hash)
 {
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SVN
-  return svn_error_trace(
-    svn_ra_svn__compat_init(abi_version, pool, hash));
+  return svn_error_trace(svn_ra_svn__compat_init(abi_version, pool, hash));
 #else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_SVN */
@@ -534,8 +533,7 @@ svn_ra_local_init(int abi_version,
                   apr_hash_t *hash)
 {
 #ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
-  return svn_error_trace(
-    svn_ra_local__compat_init(abi_version, pool, hash));
+  return svn_error_trace(svn_ra_local__compat_init(abi_version, pool, hash));
 #else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_LOCAL */
@@ -547,8 +545,7 @@ svn_ra_serf_init(int abi_version,
                  apr_hash_t *hash)
 {
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SERF
-  return svn_error_trace(
-    svn_ra_serf__compat_init(abi_version, pool, hash));
+  return svn_error_trace(svn_ra_serf__compat_init(abi_version, pool, hash));
 #else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_SERF */
