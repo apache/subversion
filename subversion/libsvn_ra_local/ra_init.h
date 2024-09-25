@@ -26,13 +26,25 @@
 
 #include "../libsvn_ra/ra_loader.h"
 
+/**
+ * Initialize libsvn_ra_local library.
+ *
+ * Use @a pool for temporary allocations.
+ *
+ * @return RA module version-@a loader_version.
+ * @return RA vtable-@a vtable.
+ */
 svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
                                 const svn_ra__vtable_t **vtable,
                                 apr_pool_t *pool);
 
-/** Initialize libsvn_ra_local.
+/**
+ * Compatibility wrapper around svn_ra_local__init.
  *
- * @deprecated Provided for backward compatibility with the 1.1 API. */
+ * Use @a pool for temporary allocations.
+ *
+ * @return @a hash with the scheme as the key and the vtable as the value.
+ */
 svn_error_t *svn_ra_local__deprecated_init(int abi_version,
                                            apr_pool_t *pool,
                                            apr_hash_t *hash);
