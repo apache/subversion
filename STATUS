@@ -22,18 +22,19 @@ Candidate changes:
    votes:
      +1: rhuijben
 
- * r1887710
-   Follow up to r1857624: Unbreak a msgid.
-   Justification:
-     Fixes this warning seen during 'release.py roll': 
-     ../svnadmin/svnadmin.c:2935: warning: Although being used in a format \
-     string position, the msgid is not a valid C format string. Reason: The \
-     string ends in the middle of a directive.
-   Votes:
-     +1: stsp, futatuki
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1887710
+   Follow up to r1857624: Unbreak a msgid.
+   Justification:
+     Fixes this warning seen during 'release.py roll':
+     ../svnadmin/svnadmin.c:2935: warning: Although being used in a format \
+     string position, the msgid is not a valid C format string. Reason: The \
+     string ends in the middle of a directive.
+   Votes:
+     +1: stsp, futatuki, dsahlberg
+
