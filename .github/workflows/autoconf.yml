@@ -1,0 +1,79 @@
+#
+# Licensed to the Apache Software Foundation (ASF) under one
+# or more contributor license agreements.  See the NOTICE file
+# distributed with this work for additional information
+# regarding copyright ownership.  The ASF licenses this file
+# to you under the Apache License, Version 2.0 (the
+# "License"); you may not use this file except in compliance
+# with the License.  You may obtain a copy of the License at
+#
+#   http://www.apache.org/licenses/LICENSE-2.0
+#
+# Unless required by applicable law or agreed to in writing,
+# software distributed under the License is distributed on an
+# "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY
+# KIND, either express or implied.  See the License for the
+# specific language governing permissions and limitations
+# under the License.
+#
+# autoconf.yml -- Configuration for autoconf GitHub Action workflow.
+#
+
+name: Build and Test Subversion using autoconf build system
+
+on:
+  push:
+    branches: ["*"]
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build:
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: Default
+            os: ubuntu-latest
+
+    runs-on: ${{ matrix.os }}
+    name: ${{ matrix.name }}
+
+    steps:
+      - name: Install dependecies (Linux, apt-get)
+        if: runner.os == 'Linux'
+        run: >
+          sudo apt-get install
+          libtool
+          libtool-bin
+          libapr1-dev
+          libaprutil1-dev
+          libexpat1-dev
+          zlib1g-dev
+          libsqlite3-dev
+          liblz4-dev
+          libutf8proc-dev
+
+      - name: Use LF for Git checkout
+        run: |
+          git config --global core.autocrlf false
+          git config --global core.eol lf
+
+      - uses: actions/checkout@v4
+
+      - name: autogen
+        run: ./autogen.sh
+
+      - name: Configure
+        run: ./configure --enable-maintainer-mode
+
+      - name: Build (make)
+        run: make -j
+
+      - name: Run tests (make check)
+        run: make check
+
+      - name: Install (make install)
+        run: sudo make install
