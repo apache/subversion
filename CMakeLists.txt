@@ -668,19 +668,20 @@ if(SVN_ENABLE_TESTS)
   foreach(py_test_path ${PYTHON_TESTS})
     # Keep `.py'.
     get_filename_component(py_test_name ${py_test_path} NAME_WLE)
+    set(binary_dir $<TARGET_FILE_DIR:svn>)
 
     add_test(
       NAME
         "cmdline.${py_test_name}"
       COMMAND
         "${Python3_EXECUTABLE}" "${CMAKE_CURRENT_SOURCE_DIR}/build/run_tests.py"
-        --bin ${CMAKE_CURRENT_BINARY_DIR}
-        --tools-bin ${CMAKE_CURRENT_BINARY_DIR}
+        --bin ${binary_dir}
+        --tools-bin ${binary_dir}
         --verbose
         --log-to-stdout
         --set-log-level=WARNING
         ${CMAKE_CURRENT_SOURCE_DIR}
-        ${CMAKE_CURRENT_BINARY_DIR}
+        ${binary_dir}
         ${py_test_path}
     )
   endforeach()
