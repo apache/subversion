@@ -501,9 +501,9 @@ svn_error_t *svn_ra_get_dir(svn_ra_session_t *session,
                                   path, revision, SVN_DIRENT_ALL, pool);
 }
 
-/* For each libsvn_ra_foo library that is not linked in, provide a default
-   implementation for svn_ra_foo_init which returns a "not implemented"
-   error. */
+/* For each libsvn_ra_foo library, provide an implementation of deprecated
+   svn_ra_foo_init function that wraps svn_ra_foo__compat_init, or returns
+   a "not implemented" error if it was not linked. */
 
 #ifndef SVN_LIBSVN_RA_LINKS_RA_NEON
 svn_error_t *
