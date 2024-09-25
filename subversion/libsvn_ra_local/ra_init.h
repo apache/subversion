@@ -45,8 +45,8 @@ svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
  *
  * @return @a hash with the scheme as the key and the vtable as the value.
  */
-svn_error_t *svn_ra_local__deprecated_init(int abi_version,
-                                           apr_pool_t *pool,
-                                           apr_hash_t *hash);
+svn_error_t *svn_ra_local__compat_init(int abi_version,
+                                       apr_pool_t *pool,
+                                       apr_hash_t *hash);
 
 #endif

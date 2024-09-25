@@ -85,7 +85,7 @@ static const struct ra_lib_defn {
     svn_schemes,
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SVN
     svn_ra_svn__init,
-    svn_ra_svn__deprecated_init
+    svn_ra_svn__compat_init
 #endif
   },
 
@@ -94,7 +94,7 @@ static const struct ra_lib_defn {
     local_schemes,
 #ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
     svn_ra_local__init,
-    svn_ra_local__deprecated_init
+    svn_ra_local__compat_init
 #endif
   },
 
@@ -103,7 +103,7 @@ static const struct ra_lib_defn {
     dav_schemes,
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SERF
     svn_ra_serf__init,
-    svn_ra_serf__deprecated_init
+    svn_ra_serf__compat_init
 #endif
   },
 
@@ -1592,7 +1592,7 @@ svn_ra_svn_init(int abi_version,
 {
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SVN
   return svn_error_trace(
-    svn_ra_svn__deprecated_init(abi_version, pool, hash));
+    svn_ra_svn__compat_init(abi_version, pool, hash));
 #else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_SVN */
@@ -1605,7 +1605,7 @@ svn_ra_local_init(int abi_version,
 {
 #ifdef SVN_LIBSVN_RA_LINKS_RA_LOCAL
   return svn_error_trace(
-    svn_ra_local__deprecated_init(abi_version, pool, hash));
+    svn_ra_local__compat_init(abi_version, pool, hash));
 #else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_LOCAL */
@@ -1618,7 +1618,7 @@ svn_ra_serf_init(int abi_version,
 {
 #ifdef SVN_LIBSVN_RA_LINKS_RA_SERF
   return svn_error_trace(
-    svn_ra_serf__deprecated_init(abi_version, pool, hash));
+    svn_ra_serf__compat_init(abi_version, pool, hash));
 #else
   return svn_error_create(SVN_ERR_RA_NOT_IMPLEMENTED, NULL, NULL);
 #endif /* ! SVN_LIBSVN_RA_LINKS_RA_SERF */

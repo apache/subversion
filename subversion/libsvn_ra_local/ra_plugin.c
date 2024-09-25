@@ -1998,5 +1998,5 @@ svn_ra_local__init(const svn_version_t *loader_version,
 #define DESCRIPTION RA_LOCAL_DESCRIPTION
 #define VTBL ra_local_vtable
 #define INITFUNC svn_ra_local__init
-#define COMPAT_INITFUNC svn_ra_local__deprecated_init
+#define COMPAT_INITFUNC svn_ra_local__compat_init
 #include "../libsvn_ra/wrapper_template.h"
