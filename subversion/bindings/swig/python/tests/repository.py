@@ -138,7 +138,7 @@ class BatonCollector(repos.ChangeCollector):
 
 class BatonCollectorErrorOnClose(BatonCollector):
   """Same as BatonCollector, but raises an Exception when close the
-     file/dir specfied by error_path"""
+     file/dir specified by error_path"""
   def __init__(self, fs_ptr, root, pool=None, notify_cb=None, error_path=b''):
     BatonCollector.__init__(self, fs_ptr, root, pool, notify_cb)
     self.error_path = error_path
@@ -444,8 +444,8 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     self.assertRaises(SubversionException, repos.replay, root, e_ptr, e_baton)
     batons = editor.batons
     # As svn_repos_replay calls neither close_edit callback nor abort_edit
-    # if an error has occured during processing, references of Python objects
-    # in decendant batons may live until e_baton is deleted.
+    # if an error has occurred during processing, references of Python objects
+    # in descendant batons may live until e_baton is deleted.
     del e_baton
     for baton in batons:
       self.assertEqual(sys.getrefcount(baton[2]), 2,
