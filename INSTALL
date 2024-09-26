@@ -447,14 +447,6 @@ I.    INTRODUCTION
       the detection to succeed, the dynamic linker must be able to find
       the libraries at configure time.
 
-      If you are on the Windows platform and want to build Subversion,
-      a precompiled version of the Berkeley DB library is available for
-      download at the Subversion web site "Documents & files" area:
-
-          http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=688
-
-      Look in the "Releases > Windows > Windows BDB" section.
-
 
       10. Cyrus SASL library (OPTIONAL)
 
