@@ -1764,7 +1764,6 @@ done
 
 SVN_CONFIG_SCRIPT(tools/backup/hot-backup.py)
 SVN_CONFIG_SCRIPT(tools/hook-scripts/commit-access-control.pl)
-SVN_CONFIG_SCRIPT(subversion/tests/cmdline/svneditor.sh)
 SVN_CONFIG_SCRIPT(subversion/bindings/swig/perl/native/Makefile.PL)
 if test -e packages/solaris/pkginfo.in; then
   SVN_CONFIG_SCRIPT(packages/solaris/pkginfo)

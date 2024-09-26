@@ -447,14 +447,6 @@ I.    INTRODUCTION
       the detection to succeed, the dynamic linker must be able to find
       the libraries at configure time.
 
-      If you are on the Windows platform and want to build Subversion,
-      a precompiled version of the Berkeley DB library is available for
-      download at the Subversion web site "Documents & files" area:
-
-          http://subversion.tigris.org/servlets/ProjectDocumentList?folderID=688
-
-      Look in the "Releases > Windows > Windows BDB" section.
-
 
       10. Cyrus SASL library (OPTIONAL)
 
@@ -892,7 +884,7 @@ II.   INSTALLATION
         are available from
         http://www.oracle.com/technetwork/database/database-technologies/berkeleydb/downloads/index-082944.html
         (Version 4.4.20 or in specific cases some higher version recommended)
-        For more information see Section I.C.7.
+        For more information see Section I.C.9.
       * [Optional] Openssl can be obtained from https://www.openssl.org/source/
       * [Optional] NASM can be obtained from http://www.nasm.us/
       * [Optional] A modified version of GNU libintl, called
@@ -910,7 +902,7 @@ II.   INSTALLATION
       The Apache Serf library supports secure connections with OpenSSL
       and on-the-wire compression with zlib. If you want to use the
       secure connections feature, you should pass the option
-      "--with-openssl" to the gen-make.py script. See Section I.C.6 for
+      "--with-openssl" to the gen-make.py script. See Section I.C.7 for
       more details.
 
   E.3 Preparation
@@ -1313,7 +1305,7 @@ III.  BUILDING A SUBVERSION SERVER
       line.  Make sure this is the same db as the one Subversion uses.
       This note assumes you have installed Berkeley DB 4.2.52
       at its default locations.  For more info about the db requirement,
-      see section I.C.7.
+      see section I.C.9.
 
       You may also want to include other modules in your build. Add
       --enable-ssl to turn on SSL support, and --enable-deflate to turn on

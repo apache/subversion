@@ -103,7 +103,7 @@ OBJDIR		= $(PWD)/objdir
 
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.7.0
+APR_VER		= 1.7.5
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.15
 APR_UTIL_VER	= 1.6.1
@@ -116,7 +116,7 @@ SQLITE_VER	= 3390400
 LIBMAGIC_VER	= 5.30
 RUBY_VER	= 2.7.4
 BZ2_VER	= 1.0.6
-PYTHON_VER	= 3.10.8
+PYTHON_VER	= 3.11.10
 PYTHON2_VER	= 2.7.13
 PY3C_VER	= 1.1
 JUNIT_VER	= 4.10
@@ -154,7 +154,7 @@ SHA256_${SQLITE_DIST} = f31d445b48e67e284cf206717cc170ab63cbe4fd7f79a82793b77228
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
 SHA256_${RUBY_DIST} = 3043099089608859fc8cce7f9fdccaa1f53a462457e3838ec3b25a7d609fbc5b
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
-SHA256_${PYTHON_DIST} = f400c3fb394b8bef1292f6dc1292c5fadc3533039a5bc0c3e885f3e16738029a
+SHA256_${PYTHON_DIST} = 92f2faf242681bfa406d53a51e17d42c5373affe23a130cd9697e132ef574706
 SHA256_${PYTHON2_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
 SHA256_${PY3C_DIST} = c7ffc22bc92dded0ca859db53ef3a0b466f89a9f8aad29359c9fe4ff18ebdd20
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
@@ -1331,9 +1331,25 @@ $(PYTHON_OBJDIR)/openbsd-march.diff:
 	echo >>$@.tmp '   [MULTIARCH=$$($$CC --print-multiarch 2>/dev/null)]'
 	mv -f $@.tmp $@
 
+$(PYTHON_OBJDIR)/openbsd-make.diff:
+	mkdir -p $(dir $@)
+	echo >$@.tmp 'Index: Makefile.pre.in'
+	echo >>$@.tmp '--- Makefile.pre.in.orig'
+	echo >>$@.tmp '+++ Makefile.pre.in'
+	echo >>$@.tmp '@@ -534,8 +534,6 @@ LIBMPDEC_OBJS= \'
+	echo >>$@.tmp ' 		Modules/_decimal/libmpdec/numbertheory.o \'
+	echo >>$@.tmp ' 		Modules/_decimal/libmpdec/sixstep.o \'
+	echo >>$@.tmp ' 		Modules/_decimal/libmpdec/transpose.o'
+	echo >>$@.tmp '-		# _decimal does not use signaling API'
+	echo >>$@.tmp '-		# Modules/_decimal/libmpdec/mpsignal.o'
+	echo >>$@.tmp ' '
+	echo >>$@.tmp ' LIBMPDEC_HEADERS= \'
+	echo >>$@.tmp ' 		$(srcdir)/Modules/_decimal/libmpdec/basearith.h \'
+	mv -f $@.tmp $@
+
 # retrieve python
 #
-$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(PYTHON_OBJDIR)/openbsd-march.diff
+$(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(PYTHON_OBJDIR)/openbsd-march.diff $(PYTHON_OBJDIR)/openbsd-make.diff
 	$(call do_check_sha256,$(PYTHON_DIST))
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
@@ -1348,6 +1364,7 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(PYTHON_OBJDIR)/openbsd-
 	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
 	chmod +x $(PYTHON_SRCDIR)/setup.py
 	cd $(PYTHON_SRCDIR) && patch -p0 < $(PYTHON_OBJDIR)/openbsd-march.diff
+	cd $(PYTHON_SRCDIR) && patch -p0 < $(PYTHON_OBJDIR)/openbsd-make.diff
 	touch $@
 
 # configure python
@@ -1715,6 +1732,7 @@ LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
 SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
+PYTHON_BIN_PATH=$(PREFIX)/python2/bin
 else ifeq ($(BRANCH_MAJOR),1.6)
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 SERF_LDFLAG=-Wl,-rpath,$(PREFIX)/serf/lib -Wl,-rpath,$(PREFIX)/bdb/lib
@@ -1725,6 +1743,7 @@ W_NO_SYSTEM_HEADERS=-Wno-system-headers
 NEON_FLAG=--with-neon="$(PREFIX)/neon"
 JAVAHL_CHECK_TARGET=check-javahl
 SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
+PYTHON_BIN_PATH=$(PREFIX)/python2/bin
 else ifeq ($(BRANCH_MAJOR), $(filter 1.8 1.9, $(BRANCH_MAJOR)))
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1736,6 +1755,7 @@ MOD_DONTDOTHAT=modules/svn-$(WC)/mod_dontdothat.so
 LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
 SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
+PYTHON_BIN_PATH=$(PREFIX)/python2/bin
 else ifeq ($(BRANCH_MAJOR), $(filter 1.10 1.11, 1.12, 1.13 $(BRANCH_MAJOR)))
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1750,6 +1770,7 @@ JAVAHL_CHECK_TARGET=check-all-javahl
 LZ4_FLAG=--with-lz4=$(PREFIX)/lz4
 UTF8PROC_FLAG=--with-utf8proc=internal
 SWIG_OLD_FLAG=--with-swig=$(PREFIX)/swig-old/bin/swig
+PYTHON_BIN_PATH=$(PREFIX)/python2/bin
 else # 1.14, trunk
 BDB_FLAG=db.h:$(PREFIX)/bdb/include:$(PREFIX)/bdb/lib:db-$(BDB_MAJOR_VER)
 # serf >= 1.3.0 is built with scons and no longer sets up rpath linker flags,
@@ -1763,6 +1784,7 @@ LIBMAGIC_FLAG=--with-libmagic=$(PREFIX)/libmagic
 JAVAHL_CHECK_TARGET=check-all-javahl
 LZ4_FLAG=--with-lz4=$(PREFIX)/lz4
 UTF8PROC_FLAG=--with-utf8proc=internal
+PYTHON_BIN_PATH=$(PREFIX)/python/bin
 endif
 
 ifeq ($(ENABLE_JAVA_BINDINGS),yes)
@@ -1834,6 +1856,7 @@ $(SVN_OBJDIR)/.configured: $(SVN_OBJDIR)/.retrieved $(DISTDIR)/$(JUNIT_DIST) \
 			$(LZ4_FLAG) \
 			$(UTF8PROC_FLAG) \
 			$(SWIG_OLD_FLAG) \
+			--with-swig-python=$(PYTHON_BIN_PATH)/python \
 			$(SVN_STATIC_FLAG) \
 			$(DISABLE_NEON_VERSION_CHECK)
 	touch $@
@@ -2411,7 +2434,8 @@ svn-check-swig-pl:
 svn-check-swig-py:
 	-(cd $(svn_builddir) && \
 		env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) \
-		env MAKEFLAGS= make check-swig-py 2>&1) | \
+		PATH=$(PYTHON_BIN_PATH):$$PATH \
+		MAKEFLAGS= make check-swig-py 2>&1) | \
 			tee $(svn_builddir)/tests.log.bindings.py
 
 # We add the svn prefix to PATH here because the ruby tests
