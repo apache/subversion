@@ -29,11 +29,7 @@ Contents:
        D. Running and Testing
        E. Alternative:  'svnserve' and ra_svn
 
-    IV. PLATFORM-SPECIFIC ISSUES
-       A. Windows XP
-       B. Mac OS X
-
-     V. PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
+    IV. PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
 
 
 
@@ -1518,38 +1514,7 @@ III.  BUILDING A SUBVERSION SERVER
 
 
 
-IV.   PLATFORM-SPECIFIC ISSUES
-      ========================
-
-  A.  Windows XP
-      ----------
-
-      There is an error in the Windows XP TCP/IP stack which causes
-      corruption in certain cases.  This problem is exposed only
-      through ra_dav.
-
-      The root of the matter is caused by duplicating file handles
-      between parent and child processes.  The httpd Apache group
-      explains this a lot better:
-
-          https://www.apache.org/dist/httpd/binaries/win32/#xpbug
-
-      And there's an item about this in the Subversion FAQ:
-
-          https://subversion.apache.org/faq.html#windows-xp-server
-
-      The only known workaround for now is to update to Windows XP
-      SP1 (or higher).
-
-
-  B.  Mac OS X
-      --------
-
-      [TBD: Describe BDB 4.0.x problem]
-
-
-
-V.    PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
+IV.   PROGRAMMING LANGUAGE BINDINGS (PYTHON, PERL, RUBY, JAVA)
       ========================================================
 
       For Python, Perl and Ruby bindings, see the file
