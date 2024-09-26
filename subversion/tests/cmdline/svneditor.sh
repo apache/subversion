@@ -1,7 +1,7 @@
 #!/bin/sh
 #
-#  svneditor.sh.in: a launcher of svneditor.py, used as $SVN_EDITOR
-#                   for the Subversion test suite
+#  svneditor.sh: a launcher of svneditor.py, used as $SVN_EDITOR
+#                for the Subversion test suite
 #
 #  Subversion is a tool for revision control.
 #  See https://subversion.apache.org for more information.
@@ -25,4 +25,5 @@
 #    under the License.
 ######################################################################
 
-exec @PYTHON@ "@abs_srcdir@"/svneditor.py "$@"
+# SVN_TEST_PYTHON set by svntest/main.py
+exec $SVN_TEST_PYTHON "$(dirname $0)/svneditor.py" "$@"
