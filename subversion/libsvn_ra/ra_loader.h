@@ -419,17 +419,6 @@ typedef svn_error_t *
                        const svn_ra__vtable_t **vtable,
                        apr_pool_t *pool);
 
-/* Declarations of the init functions for the available RA libraries. */
-svn_error_t *svn_ra_local__init(const svn_version_t *loader_version,
-                                const svn_ra__vtable_t **vtable,
-                                apr_pool_t *pool);
-svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
-                              const svn_ra__vtable_t **vtable,
-                              apr_pool_t *pool);
-svn_error_t *svn_ra_serf__init(const svn_version_t *loader_version,
-                               const svn_ra__vtable_t **vtable,
-                               apr_pool_t *pool);
-
 
 
 /*** Compat Functions ***/

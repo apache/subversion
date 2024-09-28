@@ -1,5 +1,6 @@
-/**
- * @copyright
+/*
+ * libsvn_ra_svn/ra_init.h:  Exported function of libsvn_ra_svn
+ *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,43 +19,34 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
-
+#ifndef SVN_LIBSVN_RA_SVN_INIT
+#define SVN_LIBSVN_RA_SVN_INIT
 
-#ifndef DEPRECATED_H
-#define DEPRECATED_H
+#include "../libsvn_ra/ra_loader.h"
 
-#include <apr_hash.h>
+/**
+ * Initialize libsvn_ra_svn library.
+ *
+ * Use @a pool for temporary allocations.
+ *
+ * @return RA module version-@a loader_version.
+ * @return RA vtable-@a vtable.
+ */
+svn_error_t *svn_ra_svn__init(const svn_version_t *loader_version,
+                              const svn_ra__vtable_t **vtable,
+                              apr_pool_t *pool);
 
-#include "private/svn_editor.h"
+/**
+ * Compatibility wrapper around svn_ra_svn__init.
+ *
+ * Use @a pool for temporary allocations.
+ *
+ * @return @a hash with the scheme as the key and the vtable as the value.
+ */
+svn_error_t *svn_ra_svn__compat_init(int abi_version,
+                                     apr_pool_t *pool,
+                                     apr_hash_t *hash);
 
-
-#ifdef __cplusplus
-extern "C" {
 #endif
-
-/* Non-deprecated wrapper around svn_ra_local_init. */
-svn_error_t *
-svn_ra_local__deprecated_init(int abi_version,
-                              apr_pool_t *pool,
-                              apr_hash_t *hash);
-
-/* Non-deprecated wrapper around svn_ra_svn_init. */
-svn_error_t *
-svn_ra_svn__deprecated_init(int abi_version,
-                            apr_pool_t *pool,
-                            apr_hash_t *hash);
-
-/* Non-deprecated wrapper around svn_ra_serf_init. */
-svn_error_t *
-svn_ra_serf__deprecated_init(int abi_version,
-                             apr_pool_t *pool,
-                             apr_hash_t *hash);
-
-#ifdef __cplusplus
-}
-#endif
-
-#endif /* DEPRECATED_H */

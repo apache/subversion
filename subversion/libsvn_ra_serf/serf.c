@@ -49,6 +49,7 @@
 #include "private/svn_subr_private.h"
 #include "svn_private_config.h"
 
+#include "ra_init.h"
 #include "ra_serf.h"
 
 
@@ -1127,5 +1128,5 @@ svn_ra_serf__init(const svn_version_t *loader_version,
 #define DESCRIPTION RA_SERF_DESCRIPTION
 #define VTBL serf_vtable
 #define INITFUNC svn_ra_serf__init
-#define COMPAT_INITFUNC svn_ra_serf_init
+#define COMPAT_INITFUNC svn_ra_serf__compat_init
 #include "../libsvn_ra/wrapper_template.h"

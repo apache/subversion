@@ -22,6 +22,7 @@
  */
 
 #include "ra_local.h"
+#include "ra_init.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_fs.h"
@@ -1997,5 +1998,5 @@ svn_ra_local__init(const svn_version_t *loader_version,
 #define DESCRIPTION RA_LOCAL_DESCRIPTION
 #define VTBL ra_local_vtable
 #define INITFUNC svn_ra_local__init
-#define COMPAT_INITFUNC svn_ra_local_init
+#define COMPAT_INITFUNC svn_ra_local__compat_init
 #include "../libsvn_ra/wrapper_template.h"
