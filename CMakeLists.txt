@@ -89,6 +89,7 @@ option(SVN_ENABLE_FS_FS "Enable Subversion FSFS Repository Filesystem Library" O
 option(SVN_ENABLE_FS_X "Enable Subversion FSX Repository Filesystem Library" ON)
 option(SVN_ENABLE_FS_BASE "Enable Subversion Filesystem Base Library (NOT IMPLEMENTED and DEPRECATED)" OFF)
 option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
+option(SVN_ENABLE_AUTH_KWALLET "Enable KWallet authentification library" OFF)
 
 option(SVN_INSTALL_PRIVATE_H "Instal private header files." OFF)
 
@@ -273,6 +274,13 @@ if(SVN_ENABLE_APACHE_MODULES)
   find_package(Httpd REQUIRED)
   add_library(external-libhttpd ALIAS httpd::httpd)
   add_library(external-mod_dav ALIAS httpd::mod_dav)
+endif()
+
+### KWallet
+
+if(SVN_ENABLE_AUTH_KWALLET)
+  find_package(KF5Wallet CONFIG REQUIRED)
+  add_library(external-kwallet ALIAS KF5::Wallet)
 endif()
 
 if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
