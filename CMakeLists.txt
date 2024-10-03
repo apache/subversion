@@ -568,6 +568,12 @@ if (MSVC)
   add_compile_options(/we4700)
   add_compile_options(/we4715)
   add_compile_options(/we4789)
+
+  add_compile_definitions(
+    "_CRT_SECURE_NO_DEPRECATE"
+    "_CRT_NONSTDC_NO_DEPRECATE"
+    "_CRT_SECURE_NO_WARNINGS"
+  )
 endif()
 
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/build/cmake/targets.cmake")
