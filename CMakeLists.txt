@@ -748,6 +748,7 @@ message(STATUS "    Build Apache Modules .......... : ${SVN_ENABLE_APACHE_MODULE
 message(STATUS "    Build programs ................ : ${SVN_ENABLE_PROGRAMS}")
 message(STATUS "    Build tools ................... : ${SVN_ENABLE_TOOLS}")
 message(STATUS "    Build test suite .............. : ${SVN_ENABLE_TESTS}")
+message(STATUS "    Enable KWallet integration .... : ${SVN_ENABLE_AUTH_KWALLET}")
 message(STATUS "  Install:")
 message(STATUS "    Install prefix: ............... : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "    Install private headers: ...... : ${SVN_INSTALL_PRIVATE_H}")
