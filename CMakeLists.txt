@@ -91,7 +91,7 @@ option(SVN_ENABLE_FS_BASE "Enable Subversion Filesystem Base Library (NOT IMPLEM
 option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
 option(SVN_ENABLE_AUTH_KWALLET "Enable KWallet authentification library" OFF)
 
-option(SVN_INSTALL_PRIVATE_H "Instal private header files." OFF)
+option(SVN_INSTALL_PRIVATE_H "Install private header files." OFF)
 
 # Configuration
 option(BUILD_SHARED_LIBS "Build using shared libraries" ON)
