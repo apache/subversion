@@ -279,8 +279,21 @@ endif()
 ### KWallet
 
 if(SVN_ENABLE_AUTH_KWALLET)
-  find_package(KF5Wallet CONFIG REQUIRED)
-  add_library(external-kwallet ALIAS KF5::Wallet)
+  find_package(KF5Wallet REQUIRED)
+  find_package(KF5CoreAddons REQUIRED)
+  find_package(KF5I18n REQUIRED)
+  find_package(DBus1 REQUIRED)
+  find_package(Qt5 COMPONENTS Core REQUIRED)
+
+  add_library(external-kwallet INTERFACE)
+  target_link_libraries(external-kwallet INTERFACE
+    KF5::Wallet
+    KF5::CoreAddons
+    KF5::I18n
+    Qt5::Core
+    dbus-1
+  )
+  target_compile_definitions(external-kwallet INTERFACE SVN_HAVE_KF5)
 endif()
 
 if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
