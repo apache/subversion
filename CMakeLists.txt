@@ -137,6 +137,10 @@ if (SVN_ENABLE_FS_X)
 endif()
 
 if(SVN_ENABLE_AUTH_KWALLET)
+  if(NOT BUILD_SHARED_LIBS)
+    message(SEND_ERROR "SVN_ENABLE_AUTH_KWALLET is not supported in static build.")
+  endif()
+
   add_compile_definitions("SVN_HAVE_KWALLET")
 endif()
 
