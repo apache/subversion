@@ -136,6 +136,10 @@ if (SVN_ENABLE_FS_X)
   add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_X")
 endif()
 
+if(SVN_ENABLE_AUTH_KWALLET)
+  add_compile_definitions("SVN_HAVE_KWALLET")
+endif()
+
 if (SVN_DEBUG)
   add_compile_definitions("SVN_DEBUG")
 endif()
