@@ -108,9 +108,8 @@ option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" OFF)
 set(SQLiteAmalgamation_ROOT "${CMAKE_SOURCE_DIR}/sqlite-amalgamation" CACHE STRING "Directory with sqlite amalgamation")
 
 # Require C++ compiler
-if (SVN_ENABLE_SVNXX)
-  # TODO: Also add SVN_ENABLE_AUTH_KWALLET and SVN_ENABLE_JAVAHL to the
-  # conditions when they done.
+if (SVN_ENABLE_SVNXX OR SVN_ENABLE_AUTH_KWALLET)
+  # TODO: Also add SVN_ENABLE_JAVAHL to the conditions when they done.
 
   enable_language(CXX)
 endif()
