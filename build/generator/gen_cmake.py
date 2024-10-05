@@ -77,6 +77,8 @@ def get_target_conditions(target):
       enable_condition.append("SVN_ENABLE_SVNXX")
     elif target.name == "libsvn_auth_kwallet":
       enable_condition.append("SVN_ENABLE_AUTH_KWALLET")
+    elif target.name == "libsvn_auth_gnome_keyring":
+      enable_condition.append("SVN_ENABLE_AUTH_GNOME_KEYRING")
 
   if isinstance(target, gen_base.TargetExe):
     if target.install == "test" or target.install == "sub-test":
@@ -259,8 +261,6 @@ class Generator(gen_base.GeneratorBase):
 
   def check_ignore_target(self, target):
     ignore_names = [
-      "libsvn_auth_gnome_keyring",
-
       "svnxx-tests",
 
       "libsvnjavahl",

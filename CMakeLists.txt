@@ -90,6 +90,7 @@ option(SVN_ENABLE_FS_X "Enable Subversion FSX Repository Filesystem Library" ON)
 option(SVN_ENABLE_FS_BASE "Enable Subversion Filesystem Base Library (NOT IMPLEMENTED and DEPRECATED)" OFF)
 option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
 option(SVN_ENABLE_AUTH_KWALLET "Enable KWallet authentification library" OFF)
+option(SVN_ENABLE_AUTH_GNOME_KEYRING "Enable GNOME Keyring for auth credentials" OFF)
 
 option(SVN_INSTALL_PRIVATE_H "Install private header files." OFF)
 
@@ -302,6 +303,18 @@ if(SVN_ENABLE_AUTH_KWALLET)
     dbus-1
   )
   target_compile_definitions(external-kwallet INTERFACE SVN_HAVE_KF5)
+endif()
+
+### GNOME Keyring
+
+if(SVN_ENABLE_AUTH_GNOME_KEYRING)
+  add_library(external-gnome-keyring INTERFACE)
+
+  find_package(PkgConfig REQUIRED)
+  pkg_check_modules(libsecret-1 REQUIRED IMPORTED_TARGET libsecret-1)
+  target_link_libraries(external-gnome-keyring INTERFACE PkgConfig::libsecret-1)
+
+  add_compile_definitions(SVN_HAVE_LIBSECRET)
 endif()
 
 if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
@@ -770,6 +783,7 @@ message(STATUS "    Build programs ................ : ${SVN_ENABLE_PROGRAMS}")
 message(STATUS "    Build tools ................... : ${SVN_ENABLE_TOOLS}")
 message(STATUS "    Build test suite .............. : ${SVN_ENABLE_TESTS}")
 message(STATUS "    Enable KWallet integration .... : ${SVN_ENABLE_AUTH_KWALLET}")
+message(STATUS "    Enable Gnome Keyring .......... : ${SVN_ENABLE_AUTH_GNOME_KEYRING}")
 message(STATUS "  Install:")
 message(STATUS "    Install prefix: ............... : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "    Install private headers: ...... : ${SVN_INSTALL_PRIVATE_H}")
