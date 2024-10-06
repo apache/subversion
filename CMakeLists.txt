@@ -151,13 +151,13 @@ endif()
 
 if(SVN_USE_DSO)
   add_compile_definitions("SVN_USE_DSO")
-  string(APPEND PRIVATE_CONFIG_DEFINITIONS
-    "\n"
-    "/* Shared library file name suffix format */\n"
-    "#define SVN_DSO_SUFFIX_FMT \"%d${CMAKE_SHARED_LIBRARY_SUFFIX}\"\n"
-  )
 endif()
 
+string(APPEND PRIVATE_CONFIG_DEFINITIONS
+  "\n"
+  "/* Shared library file name suffix format */\n"
+  "#define SVN_DSO_SUFFIX_FMT \"%d${CMAKE_SHARED_LIBRARY_SUFFIX}\"\n"
+)
 add_compile_definitions("SVN_SOVERSION=1")
 
 if (SVN_ENABLE_TESTS)
