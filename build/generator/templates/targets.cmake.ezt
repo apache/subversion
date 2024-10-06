@@ -68,6 +68,7 @@ if ([targets.enable_condition])[is targets.type "swig"]
     COMMAND [targets.name] --srcdir ${CMAKE_SOURCE_DIR}/[targets.srcdir]
     WORKING_DIRECTORY $<TARGET_FILE_DIR:[targets.name]>
   )
+  set_tests_properties([targets.namespace].[targets.name] PROPERTIES ENVIRONMENT LD_LIBRARY_PATH=$<TARGET_FILE_DIR:[targets.name]>)
   [end]target_link_libraries([targets.name] PRIVATE[for targets.libs]
     [targets.libs][end]
   )[if-any targets.msvc_libs]
