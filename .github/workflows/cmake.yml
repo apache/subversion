@@ -71,6 +71,16 @@ jobs:
             cmake_generator: Ninja
             build_shared: ON
             run_tests: true
+            extra_config_opts: >
+              -DSVN_ENABLE_AUTH_KWALLET=ON
+              -DSVN_ENABLE_AUTH_GNOME_KEYRING=ON
+            extra_packages: >
+              libkf5wallet-dev
+              libkf5coreaddons-dev
+              libkf5i18n-dev
+              libdbus-1-dev
+              qtbase5-dev
+              libsecret-1-dev
 
     runs-on: ${{ matrix.os }}
     name: ${{ matrix.name }}
@@ -123,6 +133,7 @@ jobs:
           zlib1g-dev
           libsqlite3-dev
           ninja-build
+          ${{ matrix.extra_packages }}
 
       - name: Use LF for Git checkout
         run: |
@@ -141,6 +152,7 @@ jobs:
           -DSVN_ENABLE_TESTS=ON
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
+          ${{ matrix.extra_config_opts }}
 
       - name: Build CMake
         run: cmake --build out --config Release
