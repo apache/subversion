@@ -101,6 +101,8 @@ cmake_dependent_option(SVN_BUILD_SHARED_RA "Build shared RA modules" ON "BUILD_S
 option(SVN_DEBUG "Enables specific features for developer builds" OFF)
 cmake_dependent_option(SVN_USE_WIN32_CRASHHANDLER "Enables WIN32 crash handler." ON "WIN32" OFF)
 option(SVN_USE_DSO "Defined if svn should try to load DSOs" OFF)
+set(SVN_SOVERSION "1" CACHE STRING "Subversion library ABI version")
+mark_as_advanced(SVN_SOVERSION)
 
 # Dependecies
 option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
@@ -158,7 +160,7 @@ string(APPEND PRIVATE_CONFIG_DEFINITIONS
   "/* Shared library file name suffix format */\n"
   "#define SVN_DSO_SUFFIX_FMT \"%d${CMAKE_SHARED_LIBRARY_SUFFIX}\"\n"
 )
-add_compile_definitions("SVN_SOVERSION=1")
+add_compile_definitions("SVN_SOVERSION=${SVN_SOVERSION}")
 
 if (SVN_ENABLE_TESTS)
   enable_testing()

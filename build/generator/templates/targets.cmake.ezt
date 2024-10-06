@@ -49,7 +49,8 @@ if ([targets.enable_condition])[is targets.type "swig"]
     [targets.msvc_export][end]
   )[end]
   set_target_properties([targets.name] PROPERTIES OUTPUT_NAME "[targets.output_name]")[if-any targets.is_apache_mod]
-  set_target_properties([targets.name] PROPERTIES PREFIX "" SUFFIX ".so")[end]
+  set_target_properties([targets.name] PROPERTIES PREFIX "" SUFFIX ".so")[else]
+  set_target_properties([targets.name] PROPERTIES SOVERSION "${SVN_SOVERSION}" VERSION "${SVN_SOVERSION}.0.0")[end]
   target_include_directories([targets.name] PUBLIC
     "${CMAKE_CURRENT_SOURCE_DIR}/subversion/include"
   )[if-any targets.group]
