@@ -721,7 +721,10 @@ check_lib_versions(void)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   enum run_mode run_mode = run_mode_unspecified;
   svn_boolean_t foreground = FALSE;
@@ -760,12 +763,16 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_node_kind_t kind;
   apr_size_t min_thread_count = THREADPOOL_MIN_SIZE;
   apr_size_t max_thread_count = THREADPOOL_MAX_SIZE;
+  const char **argv;
+
 #ifdef SVN_HAVE_SASL
   SVN_ERR(cyrus_init(pool));
 #endif
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -1422,7 +1429,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

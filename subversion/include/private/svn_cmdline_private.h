@@ -278,6 +278,34 @@ svn_cmdline__stdin_readline(const char **result,
                             apr_pool_t *result_pool,
                             apr_pool_t *scratch_pool);
 
+#if defined(WIN32)
+/* Normalizes Windows-specific command line arguments, such as those passed
+   to wmain(), to the environment-specific code page. */
+svn_error_t *
+svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
+                                    int argc,
+                                    const wchar_t *argv[],
+                                    apr_pool_t *result_pool);
+#endif
+
+/* Default platform-agnostic handler that normalizes command line arguments
+   to the environment-specific code page. */
+svn_error_t *
+svn_cmdline__default_get_cstring_argv(const char **cstring_argv_p[],
+                                      int argc,
+                                      const char *argv[],
+                                      apr_pool_t *result_pool);
+
+#if defined(WIN32) && defined(_MSC_VER)
+typedef wchar_t svn_cmdline__argv_char_t;
+#define SVN_CMDLINE__MAIN wmain
+#define svn_cmdline__get_cstring_argv svn_cmdline__win32_get_cstring_argv
+#else
+typedef char svn_cmdline__argv_char_t;
+#define SVN_CMDLINE__MAIN main
+#define svn_cmdline__get_cstring_argv svn_cmdline__default_get_cstring_argv
+#endif
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */
