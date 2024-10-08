@@ -22,6 +22,7 @@ Version 1.14.4
 https://svn.apache.org/repos/asf/subversion/tags/1.14.4
  User-visible changes:
   - Client-side improvements and bugfixes:
+    * Fix CVE-2024-45720: command line argument injection on Windows
     * Fix unbounded memory usage in propget and proplist --xml (r1918138, -39)
     * Fix cmdline parsing bugs in --change (-c) argument (r1917864, -944)
     * Improve help message for svnmucc PUT (r1914222)
