@@ -1963,7 +1963,10 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc3_t *subcommand = NULL;
   apr_array_header_t *received_opts;
@@ -1978,9 +1981,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *config_options = NULL;
   const char *source_prop_encoding = NULL;
   svn_boolean_t force_interactive = FALSE;
+  const char **argv;
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
   SVN_ERR(svn_ra_initialize(pool));
 
@@ -2402,7 +2408,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

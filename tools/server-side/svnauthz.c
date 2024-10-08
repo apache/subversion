@@ -490,7 +490,10 @@ canonicalize_access_file(const char **canonicalized_access_file,
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   svn_error_t *err;
 
@@ -499,6 +502,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_getopt_t *os;
   apr_array_header_t *received_opts;
   int i;
+  const char **argv;
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -752,14 +758,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;
   svn_error_t *err;
 
   /* Initialize the app.  Send all error messages to 'stderr'.  */
-  if (svn_cmdline_init(argv[0], stderr) != EXIT_SUCCESS)
+  if (svn_cmdline_init("svnauthz", stderr) != EXIT_SUCCESS)
     return EXIT_FAILURE;
 
   pool = svn_pool_create(NULL);
