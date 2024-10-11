@@ -91,6 +91,7 @@ option(SVN_ENABLE_FS_BASE "Enable Subversion Filesystem Base Library (NOT IMPLEM
 option(SVN_ENABLE_NLS "Enable gettext functionality" OFF)
 option(SVN_ENABLE_AUTH_KWALLET "Enable KWallet auth library" OFF)
 option(SVN_ENABLE_AUTH_GNOME_KEYRING "Enable GNOME Keyring for auth credentials" OFF)
+cmake_dependent_option(SVN_ENABLE_AUTH_GPG_AGENT "Enable GPG Agent support" OFF "WIN32" ON)
 
 option(SVN_INSTALL_PRIVATE_H "Install private header files." OFF)
 
@@ -145,6 +146,10 @@ if(SVN_ENABLE_AUTH_KWALLET)
   endif()
 
   add_compile_definitions("SVN_HAVE_KWALLET")
+endif()
+
+if(SVN_ENABLE_AUTH_GPG_AGENT)
+  add_compile_definitions("SVN_HAVE_GPG_AGENT")
 endif()
 
 if (SVN_DEBUG)
@@ -790,6 +795,7 @@ message(STATUS "    Build tools ................... : ${SVN_ENABLE_TOOLS}")
 message(STATUS "    Build test suite .............. : ${SVN_ENABLE_TESTS}")
 message(STATUS "    Enable KWallet integration .... : ${SVN_ENABLE_AUTH_KWALLET}")
 message(STATUS "    Enable Gnome Keyring .......... : ${SVN_ENABLE_AUTH_GNOME_KEYRING}")
+message(STATUS "    Enable GPG Agent support ...... : ${SVN_ENABLE_AUTH_GPG_AGENT}")
 message(STATUS "  Install:")
 message(STATUS "    Install prefix: ............... : ${CMAKE_INSTALL_PREFIX}")
 message(STATUS "    Install private headers: ...... : ${SVN_INSTALL_PRIVATE_H}")
