@@ -1262,7 +1262,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
   if (NIL_P($input)) {
     $1 = NULL;
   } else if (RSTRING_LEN($input) != APR_MD5_DIGESTSIZE) {
-    rb_raise(rb_eArgError, "digest size (%d) must be %d",
+    rb_raise(rb_eArgError, "digest size (%" PRIuSIZE ") must be %d",
              RSTRING_LEN($input), APR_MD5_DIGESTSIZE);
   } else {
     $1 = ($1_ltype)StringValuePtr($input);
