@@ -769,11 +769,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
     vermatch = re.search(
-                r'^\s*#define\s+ZLIB_VERSION\s+"(\d+)\.(\d+)\.(\d+)(?:\.\d)?"',
+                r'^\s*#define\s+ZLIB_VERSION\s+"(\d+(?:\.\d+){1,3})(?:-\w+)?"',
                  txt, re.M)
 
-    version = tuple(map(int, vermatch.groups()))
-    self.zlib_version = '%d.%d.%d' % version
+    version = tuple(map(int, vermatch.group(1).split('.')))
+    self.zlib_version = '.'.join(map(str, version))
 
     if version < minimal_zlib_version:
       sys.stderr.write("ERROR: ZLib %s or higher is required "
