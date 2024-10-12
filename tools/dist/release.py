@@ -97,7 +97,7 @@ dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
 buildbot_repos = os.getenv('SVN_RELEASE_BUILDBOT_REPOS',
-                           'https://svn.apache.org/repos/infra/infrastructure/buildbot/aegis/buildmaster')
+                           'https://svn.apache.org/repos/infra/infrastructure/buildbot2')
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
@@ -630,7 +630,8 @@ def create_status_file_on_branch(args):
     ver = args.version
     branch_wc = get_workdir(args.base_dir)
     branch_url = get_branch_url(ver)
-    run_svn(['checkout', branch_url, branch_wc, '--depth=immediates'])
+    run_svn(['checkout', branch_url, branch_wc, '--depth=immediates'],
+            dry_run=args.dry_run)
 
     status_local_path = os.path.join(branch_wc, 'STATUS')
     template_filename = 'STATUS.ezt'
@@ -641,9 +642,14 @@ def create_status_file_on_branch(args):
     template = ezt.Template(compress_whitespace=False)
     template.parse(get_tmplfile(template_filename).read())
 
-    with open(status_local_path, 'wx') as g:
+    if args.dry_run:
+      print('\nNew STATUS file:')
+      print(template.generate(sys.stdout, data))
+    else:
+      with open(status_local_path, 'wx') as g:
         template.generate(g, data)
-    run_svn(['add', status_local_path])
+    run_svn(['add', status_local_path],
+            dry_run=args.dry_run)
     run_svn(['commit', status_local_path,
              '-m', '* branches/' + ver.branch + '.x/STATUS: New file.'],
             dry_run=args.dry_run)
@@ -675,9 +681,9 @@ def update_buildbot_config(args):
     prev_ver = Version('1.%d.0' % (ver.minor - 1,))
     next_ver = Version('1.%d.0' % (ver.minor + 1,))
 
-    relpath = 'master1/projects/subversion.conf'
+    relpath = 'projects/subversion.py'
     edit_file(get_buildbot_wc_path(args.base_dir, relpath),
-              r'(MINOR_LINES=\[.*%s)(\])' % (prev_ver.minor,),
+              r'(MINOR_LINES = \[.*%s)(\])' % (prev_ver.minor,),
               r'\1, %s\2' % (ver.minor,))
 
     log_msg = '''\
