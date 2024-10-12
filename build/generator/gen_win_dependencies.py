@@ -935,6 +935,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
   def _find_perl(self, show_warnings):
     "Find the right perl library name to link swig bindings with"
 
+    try:
+      subprocess.run(['perl', '-v'], capture_output=True)
+    except OSError:
+      return  # not found, permission error, ...
+
     fp = os.popen('perl -MConfig -e ' + escape_shell_arg(
                   'print "$Config{libperl}\\n"; '
                   'print "$Config{PERL_REVISION}.$Config{PERL_VERSION}.'
@@ -973,6 +978,11 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
   def _find_ruby(self, show_warnings):
     "Find the right Ruby library name to link swig bindings with"
+
+    try:
+      subprocess.run(['ruby', '--version'], capture_output=True)
+    except OSError:
+      return  # not found, permission error, ...
 
     lib_dir = None
     inc_dirs = []
