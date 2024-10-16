@@ -1899,7 +1899,7 @@ svn_io__utf8_to_unicode_longpath(const WCHAR **result,
         }
     }
 
-    SVN_ERR(svn_utf__win32_utf8_to_utf16(&(const WCHAR*)buffer, source,
+    SVN_ERR(svn_utf__win32_utf8_to_utf16(&buffer, source,
                                          prefix, result_pool));
 
     /* Convert slashes to backslashes because the \\?\ path format
