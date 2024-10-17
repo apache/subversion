@@ -138,23 +138,38 @@ macro(add_private_config_definition comment name value)
 endmacro()
 
 if (SVN_ENABLE_RA_LOCAL)
-  add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_LOCAL")
+  add_private_config_definition(
+    "Defined if libsvn_ra should link against libsvn_ra_local"
+    "SVN_LIBSVN_RA_LINKS_RA_LOCAL" ""
+  )
 endif()
 
 if (SVN_ENABLE_RA_SERF)
-  add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_SERF")
+  add_private_config_definition(
+    "Defined if libsvn_ra should link against libsvn_ra_serf"
+    "SVN_LIBSVN_RA_LINKS_RA_SERF" ""
+  )
 endif()
 
 if (SVN_ENABLE_RA_SVN)
-  add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_SVN")
+  add_private_config_definition(
+    "Defined if libsvn_ra should link against libsvn_ra_svn"
+    "SVN_LIBSVN_RA_LINKS_RA_SVN" ""
+  )
 endif()
 
 if (SVN_ENABLE_FS_FS)
-  add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_FS")
+  add_private_config_definition(
+    "Defined if libsvn_fs should link against libsvn_fs_fs"
+    "SVN_LIBSVN_FS_LINKS_FS_FS" ""
+  )
 endif()
 
 if (SVN_ENABLE_FS_X)
-  add_compile_definitions("SVN_LIBSVN_FS_LINKS_FS_X")
+  add_private_config_definition(
+    "Defined if libsvn_fs should link against libsvn_fs_x"
+    "SVN_LIBSVN_FS_LINKS_FS_X" ""
+  )
 endif()
 
 if(SVN_ENABLE_AUTH_KWALLET)
@@ -162,11 +177,17 @@ if(SVN_ENABLE_AUTH_KWALLET)
     message(SEND_ERROR "SVN_ENABLE_AUTH_KWALLET is not supported in static build.")
   endif()
 
-  add_compile_definitions("SVN_HAVE_KWALLET")
+  add_private_config_definition(
+    "Defined if KWallet support is enabled"
+    "SVN_HAVE_KWALLET" ""
+  )
 endif()
 
 if(SVN_ENABLE_AUTH_GPG_AGENT)
-  add_compile_definitions("SVN_HAVE_GPG_AGENT")
+  add_private_config_definition(
+    "Is GPG Agent support enabled?"
+    "SVN_HAVE_GPG_AGENT" ""
+  )
 endif()
 
 if (SVN_DEBUG)
@@ -174,14 +195,20 @@ if (SVN_DEBUG)
 endif()
 
 if(SVN_USE_DSO)
-  add_compile_definitions("SVN_USE_DSO")
+  add_private_config_definition(
+    "Defined if svn should try to load DSOs"
+    "SVN_USE_DSO" ""
+  )
 endif()
 
 add_private_config_definition(
   "Shared library file name suffix format"
   "SVN_DSO_SUFFIX_FMT" "\"%d${CMAKE_SHARED_LIBRARY_SUFFIX}\""
 )
-add_compile_definitions("SVN_SOVERSION=${SVN_SOVERSION}")
+add_private_config_definition(
+  "Subversion library major version"
+  "SVN_SOVERSION" "${SVN_SOVERSION}"
+)
 
 if (SVN_ENABLE_TESTS)
   enable_testing()
@@ -341,7 +368,10 @@ if(SVN_ENABLE_AUTH_GNOME_KEYRING)
   pkg_check_modules(libsecret-1 REQUIRED IMPORTED_TARGET libsecret-1)
   target_link_libraries(external-gnome-keyring INTERFACE PkgConfig::libsecret-1)
 
-  add_compile_definitions(SVN_HAVE_LIBSECRET)
+  add_private_config_definition(
+    "Is libsecret support enabled?"
+    "SVN_HAVE_LIBSECRET" ""
+  )
 endif()
 
 if(SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
@@ -676,7 +706,10 @@ if(SVN_ENABLE_NLS)
 
   add_library(external-intl ALIAS Intl::Intl)
 
-  add_compile_definitions(ENABLE_NLS)
+  add_private_config_definition(
+    "Define to 1 if translation of program messages to the user's native language is requested."
+    "ENABLE_NLS" ""
+  )
 
   add_custom_target(locale ALL)
 
