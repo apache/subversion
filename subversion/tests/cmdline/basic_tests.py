@@ -3293,6 +3293,60 @@ def keep_local_reverted_properly(sbox):
   svntest.actions.run_and_verify_status(wc_dir, expected_output)
 
 
+@SkipUnless(svntest.main.is_os_windows)
+def argv_with_best_fit_chars(sbox):
+  """argv with best fit chars"""
+
+  import ctypes
+  from ctypes import windll, wintypes
+
+  CP_ACP = 0
+  kernel32 = windll.kernel32
+  WideCharToMultiByte = kernel32.WideCharToMultiByte
+  WideCharToMultiByte.argtypes = [
+    wintypes.UINT, wintypes.DWORD, wintypes.LPCWSTR, ctypes.c_int,
+    wintypes.LPSTR, ctypes.c_int, wintypes.LPCSTR, wintypes.LPBOOL,
+  ]
+  WideCharToMultiByte.restype = ctypes.c_int
+  codepage = kernel32.GetACP()
+
+  def regexlines(*patterns):
+    return svntest.verify.RegexListOutput(list(patterns), match_all=True)
+
+  def iter_bestfit_chars():
+    chars = {b'"': 0, b'\\': 0, b' ': 0}
+    for c in range(0x80, 0x10000):
+      wcs = ctypes.create_unicode_buffer(chr(c))
+      mbcs = ctypes.create_string_buffer(8)
+      rc = WideCharToMultiByte(CP_ACP, 0, wcs, len(wcs), mbcs, len(mbcs), None,
+                               None)
+      if rc == 0:
+        continue
+      mbcs = mbcs.value
+      if chars.get(mbcs) != 0:
+        continue
+      chars[mbcs] = c
+      yield chr(c), mbcs
+
+  count = 0
+  expected_stderr = svntest.verify.RegexListOutput(
+    [r'^"foo.+bar": unknown command\.\n$', '\n'], match_all=True)
+  for wc, mbcs in iter_bestfit_chars():
+    count += 1
+    logger.info('Code page %r - U+%04x -> 0x%s', codepage, ord(wc), mbcs.hex())
+    if mbcs == b'"':
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+                                          'foo{0} {0}bar'.format(wc))
+    elif mbcs == b'\\':
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+                                          'foo{0}" {0}"bar'.format(wc))
+    elif mbcs == b' ':
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+                                          'foo{0}bar'.format(wc))
+  if count == 0:
+    raise svntest.Skip('No best fit characters in code page %r' % codepage)
+
+
 ########################################################################
 # Run the tests
 
@@ -3369,6 +3423,7 @@ test_list = [ None,
               null_prop_update_last_changed_revision,
               filtered_ls_top_level_path,
               keep_local_reverted_properly,
+              argv_with_best_fit_chars,
              ]
 
 if __name__ == '__main__':
