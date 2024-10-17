@@ -120,6 +120,23 @@ endif()
 
 set(PRIVATE_CONFIG_DEFINITIONS "")
 
+macro(add_private_config_definition comment name value)
+  string(APPEND PRIVATE_CONFIG_DEFINITIONS
+    "\n"
+    "/* ${comment} */\n"
+  )
+
+  if("${value}" STREQUAL "")
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS
+      "#define ${name}\n"
+    )
+  else()
+    string(APPEND PRIVATE_CONFIG_DEFINITIONS
+      "#define ${name} ${value}\n"
+    )
+  endif()
+endmacro()
+
 if (SVN_ENABLE_RA_LOCAL)
   add_compile_definitions("SVN_LIBSVN_RA_LINKS_RA_LOCAL")
 endif()
@@ -160,10 +177,9 @@ if(SVN_USE_DSO)
   add_compile_definitions("SVN_USE_DSO")
 endif()
 
-string(APPEND PRIVATE_CONFIG_DEFINITIONS
-  "\n"
-  "/* Shared library file name suffix format */\n"
-  "#define SVN_DSO_SUFFIX_FMT \"%d${CMAKE_SHARED_LIBRARY_SUFFIX}\"\n"
+add_private_config_definition(
+  "Shared library file name suffix format"
+  "SVN_DSO_SUFFIX_FMT" "\"%d${CMAKE_SHARED_LIBRARY_SUFFIX}\""
 )
 add_compile_definitions("SVN_SOVERSION=${SVN_SOVERSION}")
 
@@ -521,10 +537,10 @@ macro(autocheck_include_files INCLUDE VARIABLE)
   check_include_files(${INCLUDE} ${VARIABLE})
 
   if(${VARIABLE})
-    string(APPEND PRIVATE_CONFIG_DEFINITIONS "\n")
-    string(APPEND PRIVATE_CONFIG_DEFINITIONS
-      "/* Define to 1 if you have the <${INCLUDE}> header file. */\n")
-    string(APPEND PRIVATE_CONFIG_DEFINITIONS "#define ${VARIABLE} 1\n")
+    add_private_config_definition(
+      "Define to 1 if you have the <${INCLUDE}> header file."
+      "${VARIABLE}" "1"
+    )
   endif()
 endmacro()
 
@@ -532,10 +548,10 @@ macro(autocheck_symbol_exists SYMBOL FILE VARIABLE)
   check_symbol_exists(${SYMBOL} ${FILE} ${VARIABLE})
 
   if(${VARIABLE})
-    string(APPEND PRIVATE_CONFIG_DEFINITIONS "\n")
-    string(APPEND PRIVATE_CONFIG_DEFINITIONS
-      "/* Define to 1 if you have the `${SYMBOL}' function. */\n")
-    string(APPEND PRIVATE_CONFIG_DEFINITIONS "#define ${VARIABLE} 1\n")
+    add_private_config_definition(
+      "Define to 1 if you have the `${SYMBOL}' function."
+      "${VARIABLE}" "1"
+    )
   endif()
 endmacro()
 
