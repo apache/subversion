@@ -634,6 +634,10 @@ if (WIN32)
   )
 endif()
 
+if(APPLE)
+  add_compile_definitions("DARWIN")
+endif()
+
 if (MSVC)
   # Setup warning level
   add_compile_options(/W4)
