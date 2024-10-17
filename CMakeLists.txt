@@ -140,35 +140,35 @@ endmacro()
 if (SVN_ENABLE_RA_LOCAL)
   add_private_config_definition(
     "Defined if libsvn_ra should link against libsvn_ra_local"
-    "SVN_LIBSVN_RA_LINKS_RA_LOCAL" ""
+    "SVN_LIBSVN_RA_LINKS_RA_LOCAL" "1"
   )
 endif()
 
 if (SVN_ENABLE_RA_SERF)
   add_private_config_definition(
     "Defined if libsvn_ra should link against libsvn_ra_serf"
-    "SVN_LIBSVN_RA_LINKS_RA_SERF" ""
+    "SVN_LIBSVN_RA_LINKS_RA_SERF" "1"
   )
 endif()
 
 if (SVN_ENABLE_RA_SVN)
   add_private_config_definition(
     "Defined if libsvn_ra should link against libsvn_ra_svn"
-    "SVN_LIBSVN_RA_LINKS_RA_SVN" ""
+    "SVN_LIBSVN_RA_LINKS_RA_SVN" "1"
   )
 endif()
 
 if (SVN_ENABLE_FS_FS)
   add_private_config_definition(
     "Defined if libsvn_fs should link against libsvn_fs_fs"
-    "SVN_LIBSVN_FS_LINKS_FS_FS" ""
+    "SVN_LIBSVN_FS_LINKS_FS_FS" "1"
   )
 endif()
 
 if (SVN_ENABLE_FS_X)
   add_private_config_definition(
     "Defined if libsvn_fs should link against libsvn_fs_x"
-    "SVN_LIBSVN_FS_LINKS_FS_X" ""
+    "SVN_LIBSVN_FS_LINKS_FS_X" "1"
   )
 endif()
 
@@ -179,14 +179,14 @@ if(SVN_ENABLE_AUTH_KWALLET)
 
   add_private_config_definition(
     "Defined if KWallet support is enabled"
-    "SVN_HAVE_KWALLET" ""
+    "SVN_HAVE_KWALLET" "1"
   )
 endif()
 
 if(SVN_ENABLE_AUTH_GPG_AGENT)
   add_private_config_definition(
     "Is GPG Agent support enabled?"
-    "SVN_HAVE_GPG_AGENT" ""
+    "SVN_HAVE_GPG_AGENT" "1"
   )
 endif()
 
@@ -197,7 +197,7 @@ endif()
 if(SVN_USE_DSO)
   add_private_config_definition(
     "Defined if svn should try to load DSOs"
-    "SVN_USE_DSO" ""
+    "SVN_USE_DSO" "1"
   )
 endif()
 
@@ -370,7 +370,7 @@ if(SVN_ENABLE_AUTH_GNOME_KEYRING)
 
   add_private_config_definition(
     "Is libsecret support enabled?"
-    "SVN_HAVE_LIBSECRET" ""
+    "SVN_HAVE_LIBSECRET" "1"
   )
 endif()
 
@@ -708,7 +708,7 @@ if(SVN_ENABLE_NLS)
 
   add_private_config_definition(
     "Define to 1 if translation of program messages to the user's native language is requested."
-    "ENABLE_NLS" ""
+    "ENABLE_NLS" "1"
   )
 
   add_custom_target(locale ALL)
