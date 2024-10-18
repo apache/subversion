@@ -102,7 +102,7 @@ cmake_dependent_option(SVN_BUILD_SHARED_RA "Build shared RA modules" ON "BUILD_S
 option(SVN_DEBUG "Enables specific features for developer builds" OFF)
 cmake_dependent_option(SVN_USE_WIN32_CRASHHANDLER "Enables WIN32 crash handler." ON "WIN32" OFF)
 option(SVN_USE_DSO "Defined if svn should try to load DSOs" OFF)
-set(SVN_SOVERSION "1" CACHE STRING "Subversion library ABI version")
+set(SVN_SOVERSION "0" CACHE STRING "Subversion library ABI version")
 mark_as_advanced(SVN_SOVERSION)
 
 # Dependecies
