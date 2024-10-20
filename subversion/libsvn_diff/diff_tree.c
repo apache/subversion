@@ -27,11 +27,7 @@
 
 #include <assert.h>
 
-#include "svn_dirent_uri.h"
 #include "svn_error.h"
-#include "svn_io.h"
-#include "svn_pools.h"
-#include "svn_props.h"
 #include "svn_types.h"
 
 #include "private/svn_diff_tree.h"
