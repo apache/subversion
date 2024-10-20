@@ -395,11 +395,11 @@ session_url_is(svn_ra_session_t *ra_session,
 
 /* Return a new merge_source_t structure, allocated in RESULT_POOL,
  * initialized with deep copies of LOC1 and LOC2 and ANCESTRAL. */
-static merge_source_t *
-merge_source_create(const svn_client__pathrev_t *loc1,
-                    const svn_client__pathrev_t *loc2,
-                    svn_boolean_t ancestral,
-                    apr_pool_t *result_pool)
+merge_source_t *
+svn_client__merge_source_create(const svn_client__pathrev_t *loc1,
+                                const svn_client__pathrev_t *loc2,
+                                svn_boolean_t ancestral,
+                                apr_pool_t *result_pool)
 {
   merge_source_t *s
     = apr_palloc(result_pool, sizeof(*s));
@@ -411,9 +411,9 @@ merge_source_create(const svn_client__pathrev_t *loc1,
 }
 
 /* Return a deep copy of SOURCE, allocated in RESULT_POOL. */
-static merge_source_t *
-merge_source_dup(const merge_source_t *source,
-                 apr_pool_t *result_pool)
+merge_source_t *
+svn_client__merge_source_dup(const merge_source_t *source,
+                             apr_pool_t *result_pool)
 {
   merge_source_t *s = apr_palloc(result_pool, sizeof(*s));
 
@@ -1448,9 +1448,9 @@ record_tree_conflict(merge_cmd_baton_t *merge_b,
                                          scratch_pool);
           loc1->rev = range.start;
           loc2->rev = range.end;
-          source = merge_source_create(loc1, loc2,
-                                       merge_b->merge_source.ancestral,
-                                       scratch_pool);
+          source = svn_client__merge_source_create(loc1, loc2,
+                                                   merge_b->merge_source.ancestral,
+                                                   scratch_pool);
           SVN_ERR(make_conflict_versions(&left, &right, local_abspath,
                                          merge_left_node_kind,
                                          merge_right_node_kind,
@@ -5613,9 +5613,11 @@ single_range_conflict_report_create(const merge_source_t *conflicted_range,
 
   assert(conflicted_range != NULL);
 
-  report->conflicted_range = merge_source_dup(conflicted_range, result_pool);
+  report->conflicted_range =
+    svn_client__merge_source_dup(conflicted_range, result_pool);
   report->remaining_source
-    = remaining_source ? merge_source_dup(remaining_source, result_pool)
+    = remaining_source ? svn_client__merge_source_dup(remaining_source,
+                                                      result_pool)
                        : NULL;
   return report;
 }
@@ -5632,7 +5634,8 @@ conflict_report_create(const char *target_abspath,
                                                      sizeof(*report));
 
   report->target_abspath = apr_pstrdup(result_pool, target_abspath);
-  report->conflicted_range = merge_source_dup(conflicted_range, result_pool);
+  report->conflicted_range =
+    svn_client__merge_source_dup(conflicted_range, result_pool);
   report->was_last_range = was_last_range;
   return report;
 }
@@ -5646,8 +5649,8 @@ conflict_report_dup(const svn_client__conflict_report_t *report,
                                                    sizeof(*new));
 
   new->target_abspath = apr_pstrdup(result_pool, report->target_abspath);
-  new->conflicted_range = merge_source_dup(report->conflicted_range,
-                                           result_pool);
+  new->conflicted_range =
+    svn_client__merge_source_dup(report->conflicted_range, result_pool);
   return new;
 }
 
@@ -7199,11 +7202,13 @@ combine_range_with_segments(apr_array_header_t **merge_source_ts_p,
                MIN(segment->range_end, maxrev), segment->path, pool);
       /* If this is subtractive, reverse the whole calculation. */
       if (subtractive)
-        merge_source = merge_source_create(loc2, loc1, TRUE /* ancestral */,
-                                           pool);
+        merge_source = svn_client__merge_source_create(loc2, loc1,
+                                                       TRUE /* ancestral */,
+                                                       pool);
       else
-        merge_source = merge_source_create(loc1, loc2, TRUE /* ancestral */,
-                                           pool);
+        merge_source = svn_client__merge_source_create(loc1, loc2,
+                                                       TRUE /* ancestral */,
+                                                       pool);
 
       APR_ARRAY_PUSH(merge_source_ts, merge_source_t *) = merge_source;
     }
@@ -7557,7 +7562,7 @@ subrange_source(const merge_source_t *source,
           loc1.url = source->loc2->url;
         }
     }
-  return merge_source_create(&loc1, &loc2, source->ancestral, pool);
+  return svn_client__merge_source_create(&loc1, &loc2, source->ancestral, pool);
 }
 
 /* The single-file, simplified version of do_directory_merge(), which see for
@@ -10717,7 +10722,8 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
       /* Build a single-item merge_source_t array. */
       merge_sources = apr_array_make(scratch_pool, 1, sizeof(merge_source_t *));
       APR_ARRAY_PUSH(merge_sources, merge_source_t *)
-        = merge_source_create(source1_loc, source2_loc, FALSE, scratch_pool);
+        = svn_client__merge_source_create(source1_loc, source2_loc,
+                                          FALSE, scratch_pool);
     }
 
   err = do_merge(NULL, NULL, conflict_report, &use_sleep,
@@ -11766,7 +11772,7 @@ find_reintegrate_merge(merge_source_t **source_p,
   /* Left side: trunk@youngest-trunk-rev-merged-to-branch-at-specified-peg-rev
    * Right side: branch@specified-peg-revision */
   if (source_p)
-    *source_p = merge_source_dup(&source, result_pool);
+    *source_p = svn_client__merge_source_dup(&source, result_pool);
 
   if (yc_ancestor_p)
     *yc_ancestor_p = svn_client__pathrev_dup(yc_ancestor, result_pool);

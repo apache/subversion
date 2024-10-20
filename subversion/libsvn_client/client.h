@@ -1185,6 +1185,19 @@ typedef struct merge_source_t
   svn_boolean_t ancestral;
 } merge_source_t;
 
+/* Return a new merge_source_t structure, allocated in RESULT_POOL,
+ * initialized with deep copies of LOC1 and LOC2 and ANCESTRAL. */
+merge_source_t *
+svn_client__merge_source_create(const svn_client__pathrev_t *loc1,
+                                const svn_client__pathrev_t *loc2,
+                                svn_boolean_t ancestral,
+                                apr_pool_t *result_pool);
+
+/* Return a deep copy of SOURCE, allocated in RESULT_POOL. */
+merge_source_t *
+svn_client__merge_source_dup(const merge_source_t *source,
+                             apr_pool_t *result_pool);
+
 /* Description of the merge target root node (a WC working node) */
 typedef struct merge_target_t
 {
