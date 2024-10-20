@@ -1,5 +1,5 @@
 /*
- * diff_tree.c :  default diff tree processor
+ * diff_tree_tee.c :  tee diff tree processor
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
