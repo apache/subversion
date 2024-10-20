@@ -1,5 +1,6 @@
 /*
- * diff_tree.c :  default diff tree processor
+ * diff_tree_copy_as_changed.c :  diff tree processor, for converting
+ *                                copies to changes, removing copyfrom
  *
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
