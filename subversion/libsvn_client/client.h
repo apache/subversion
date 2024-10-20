@@ -1173,7 +1173,7 @@ svn_client__remote_propget(apr_hash_t *props,
                            apr_pool_t *scratch_pool);
 
 /* */
-typedef struct merge_source_t
+typedef struct svn_client__merge_source_t
 {
   /* "left" side URL and revision (inclusive iff youngest) */
   const svn_client__pathrev_t *loc1;
@@ -1183,19 +1183,19 @@ typedef struct merge_source_t
 
   /* True iff LOC1 is an ancestor of LOC2 or vice-versa (history-wise). */
   svn_boolean_t ancestral;
-} merge_source_t;
+} svn_client__merge_source_t;
 
 /* Return a new merge_source_t structure, allocated in RESULT_POOL,
  * initialized with deep copies of LOC1 and LOC2 and ANCESTRAL. */
-merge_source_t *
+svn_client__merge_source_t *
 svn_client__merge_source_create(const svn_client__pathrev_t *loc1,
                                 const svn_client__pathrev_t *loc2,
                                 svn_boolean_t ancestral,
                                 apr_pool_t *result_pool);
 
 /* Return a deep copy of SOURCE, allocated in RESULT_POOL. */
-merge_source_t *
-svn_client__merge_source_dup(const merge_source_t *source,
+svn_client__merge_source_t *
+svn_client__merge_source_dup(const svn_client__merge_source_t *source,
                              apr_pool_t *result_pool);
 
 /* Description of the merge target root node (a WC working node) */
@@ -1220,7 +1220,7 @@ typedef struct svn_client__conflict_report_t
 {
   const char *target_abspath;
   /* The revision range during which conflicts were raised */
-  const merge_source_t *conflicted_range;
+  const svn_client__merge_source_t *conflicted_range;
   /* Was the conflicted range the last range in the whole requested merge? */
   svn_boolean_t was_last_range;
 } svn_client__conflict_report_t;
