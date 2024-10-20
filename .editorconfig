@@ -16,6 +16,16 @@ max_line_length = 79
 # Guidelines extensions.
 guidelines = 79 dashed
 
+[*.{c,h,cpp,hpp}]
+trim_trailing_whitespace = true
+cpp_indent_within_parentheses = align_to_parenthesis
+cpp_indent_preserve_within_parentheses = true
+cpp_space_pointer_reference_alignment = right
+cpp_wrap_preserve_blocks = all_one_line_scopes
+cpp_new_line_before_open_brace_function = new_line
+cpp_new_line_before_open_brace_block = new_line
+cpp_space_preserve_in_initializer_list = true
+
 [**/Makefile*]
 indent_style = tab
 indent_size = 8
