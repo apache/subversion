@@ -1199,7 +1199,7 @@ svn_client__merge_source_dup(const svn_client__merge_source_t *source,
                              apr_pool_t *result_pool);
 
 /* Description of the merge target root node (a WC working node) */
-typedef struct merge_target_t
+typedef struct svn_client__merge_target_t
 {
   /* Absolute path to the WC node */
   const char *abspath;
@@ -1209,7 +1209,7 @@ typedef struct merge_target_t
    * REPOS_ROOT_URL and REPOS_UUID are always valid. */
   svn_client__pathrev_t loc;
 
-} merge_target_t;
+} svn_client__merge_target_t;
 
 /* Data for reporting when a merge aborted because of raising conflicts.
  *

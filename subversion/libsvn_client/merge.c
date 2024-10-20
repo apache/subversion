@@ -250,7 +250,9 @@ typedef struct merge_cmd_baton_t {
                                          MERGE_SOURCE->ancestral is FALSE. */
   svn_boolean_t reintegrate_merge;    /* Whether this is a --reintegrate
                                          merge or not. */
-  const merge_target_t *target;       /* Description of merge target node */
+
+  /* Description of merge target node */
+  const svn_client__merge_target_t *target;
 
   /* The left and right URLs and revs.  The value of this field changes to
      reflect the merge_source_t *currently* being merged by do_merge(). */
@@ -457,7 +459,7 @@ notify_pre_1_16_warning(svn_error_t *warning,
 /* Return SVN_ERR_UNSUPPORTED_FEATURE if URL is not inside the repository
    of LOCAL_ABSPATH.  Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
-check_repos_match(const merge_target_t *target,
+check_repos_match(const svn_client__merge_target_t *target,
                   const char *local_abspath,
                   const char *url,
                   apr_pool_t *scratch_pool)
@@ -638,7 +640,7 @@ make_conflict_versions(const svn_wc_conflict_version_t **left,
                        svn_node_kind_t merge_left_node_kind,
                        svn_node_kind_t merge_right_node_kind,
                        const svn_client__merge_source_t *merge_source,
-                       const merge_target_t *target,
+                       const svn_client__merge_target_t *target,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
@@ -4201,7 +4203,7 @@ adjust_deleted_subtree_ranges(svn_client__merge_path_t *child,
 */
 static svn_error_t *
 fix_deleted_subtree_ranges(const svn_client__merge_source_t *source,
-                           const merge_target_t *target,
+                           const svn_client__merge_target_t *target,
                            svn_ra_session_t *ra_session,
                            apr_array_header_t *children_with_mergeinfo,
                            svn_client_ctx_t *ctx,
@@ -6265,7 +6267,7 @@ insert_child_to_merge(apr_array_header_t *children_with_mergeinfo,
 static svn_error_t *
 insert_parent_and_sibs_of_sw_absent_del_subtree(
                                    apr_array_header_t *children_with_mergeinfo,
-                                   const merge_target_t *target,
+                                   const svn_client__merge_target_t *target,
                                    int *curr_index,
                                    svn_client__merge_path_t *child,
                                    svn_depth_t depth,
@@ -6547,7 +6549,7 @@ get_wc_explicit_mergeinfo_catalog(apr_hash_t **subtrees_with_mergeinfo,
 */
 static svn_error_t *
 get_mergeinfo_paths(apr_array_header_t *children_with_mergeinfo,
-                    const merge_target_t *target,
+                    const svn_client__merge_target_t *target,
                     svn_depth_t depth,
                     svn_boolean_t dry_run,
                     svn_boolean_t same_repos,
@@ -9021,7 +9023,7 @@ typedef struct log_noop_baton_t
   const char *source_fspath;
 
   /* The merge target. */
-  const merge_target_t *target;
+  const svn_client__merge_target_t *target;
 
   /* Initially empty rangelists allocated in POOL. The rangelists are
    * populated across multiple invocations of log_noop_revs(). */
@@ -9215,7 +9217,7 @@ log_noop_revs(void *baton,
 */
 static svn_error_t *
 remove_noop_subtree_ranges(const svn_client__merge_source_t *source,
-                           const merge_target_t *target,
+                           const svn_client__merge_target_t *target,
                            svn_ra_session_t *ra_session,
                            apr_array_header_t *children_with_mergeinfo,
                            apr_pool_t *result_pool,
@@ -9906,7 +9908,7 @@ do_merge(apr_hash_t **modified_subtrees,
          svn_client__conflict_report_t **conflict_report,
          svn_boolean_t *use_sleep,
          const apr_array_header_t *merge_sources,
-         const merge_target_t *target,
+         const svn_client__merge_target_t *target,
          svn_ra_session_t *src_session,
          svn_boolean_t sources_related,
          svn_boolean_t same_repos,
@@ -10215,7 +10217,7 @@ static svn_error_t *
 merge_cousins_and_supplement_mergeinfo(
   svn_client__conflict_report_t **conflict_report,
   svn_boolean_t *use_sleep,
-  const merge_target_t *target,
+  const svn_client__merge_target_t *target,
   svn_ra_session_t *URL1_ra_session,
   svn_ra_session_t *URL2_ra_session,
   const svn_client__merge_source_t *source,
@@ -10479,7 +10481,7 @@ ensure_wc_path_has_repo_revision(const char *path_or_url,
  * kinds of merge can use such a target; others can't.
  */
 static svn_error_t *
-open_target_wc(merge_target_t **target_p,
+open_target_wc(svn_client__merge_target_t **target_p,
                const char *wc_abspath,
                svn_boolean_t allow_mixed_rev,
                svn_boolean_t allow_local_mods,
@@ -10488,7 +10490,7 @@ open_target_wc(merge_target_t **target_p,
                apr_pool_t *result_pool,
                apr_pool_t *scratch_pool)
 {
-  merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
+  svn_client__merge_target_t *target = apr_palloc(result_pool, sizeof(*target));
   svn_client__pathrev_t *origin;
 
   target->abspath = apr_pstrdup(result_pool, wc_abspath);
@@ -10572,7 +10574,7 @@ svn_client__merge_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *result_pool,
                          apr_pool_t *scratch_pool)
 {
-  merge_target_t *target;
+  svn_client__merge_target_t *target;
   svn_client__pathrev_t *source1_loc, *source2_loc;
   svn_boolean_t sources_related = FALSE;
   svn_ra_session_t *ra_session1, *ra_session2;
@@ -11268,7 +11270,7 @@ find_unmerged_mergeinfo(svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
                         svn_mergeinfo_catalog_t source_catalog,
                         apr_hash_t *target_history_hash,
                         const svn_client__pathrev_t *source_loc,
-                        const merge_target_t *target,
+                        const svn_client__merge_target_t *target,
                         svn_ra_session_t *source_ra_session,
                         svn_ra_session_t *target_ra_session,
                         svn_client_ctx_t *ctx,
@@ -11495,7 +11497,7 @@ static svn_error_t *
 calculate_left_hand_side(svn_client__pathrev_t **left_p,
                          svn_mergeinfo_catalog_t *merged_to_source_catalog,
                          svn_mergeinfo_catalog_t *unmerged_to_source_catalog,
-                         const merge_target_t *target,
+                         const svn_client__merge_target_t *target,
                          apr_hash_t *subtrees_with_mergeinfo,
                          const svn_client__pathrev_t *source_loc,
                          svn_ra_session_t *source_ra_session,
@@ -11653,7 +11655,7 @@ find_reintegrate_merge(svn_client__merge_source_t **source_p,
                        svn_ra_session_t *source_ra_session,
                        const svn_client__pathrev_t *source_loc,
                        svn_ra_session_t *target_ra_session,
-                       const merge_target_t *target,
+                       const svn_client__merge_target_t *target,
                        svn_client_ctx_t *ctx,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
@@ -11803,7 +11805,7 @@ static svn_error_t *
 open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
                                    svn_client__pathrev_t **source_loc_p,
                                    svn_ra_session_t **target_ra_session_p,
-                                   merge_target_t **target_p,
+                                   svn_client__merge_target_t **target_p,
                                    const char *source_path_or_url,
                                    const svn_opt_revision_t *source_peg_revision,
                                    const char *target_abspath,
@@ -11812,7 +11814,7 @@ open_reintegrate_source_and_target(svn_ra_session_t **source_ra_session_p,
                                    apr_pool_t *scratch_pool)
 {
   svn_client__pathrev_t *source_loc;
-  merge_target_t *target;
+  svn_client__merge_target_t *target;
 
   /* Open the target WC.  A reintegrate merge requires the merge target to
    * reflect a subtree of the repository as found at a single revision. */
@@ -11864,7 +11866,7 @@ merge_reintegrate_locked(svn_client__conflict_report_t **conflict_report,
                          apr_pool_t *scratch_pool)
 {
   svn_ra_session_t *target_ra_session, *source_ra_session;
-  merge_target_t *target;
+  svn_client__merge_target_t *target;
   svn_client__pathrev_t *source_loc;
   svn_client__merge_source_t *source;
   svn_client__pathrev_t *yc_ancestor;
@@ -11974,7 +11976,7 @@ merge_peg_locked(svn_client__conflict_report_t **conflict_report,
                  apr_pool_t *result_pool,
                  apr_pool_t *scratch_pool)
 {
-  merge_target_t *target;
+  svn_client__merge_target_t *target;
   svn_client__pathrev_t *source_loc;
   apr_array_header_t *merge_sources;
   svn_ra_session_t *ra_session;
@@ -12223,7 +12225,7 @@ typedef struct source_and_target_t
   svn_ra_session_t *source_ra_session;
   branch_history_t source_branch;
 
-  merge_target_t *target;
+  svn_client__merge_target_t *target;
   svn_ra_session_t *target_ra_session;
   branch_history_t target_branch;
 
@@ -12860,7 +12862,7 @@ do_automatic_merge_locked(svn_client__conflict_report_t **conflict_report,
                           apr_pool_t *result_pool,
                           apr_pool_t *scratch_pool)
 {
-  merge_target_t *target;
+  svn_client__merge_target_t *target;
   svn_boolean_t reintegrate_like = merge->is_reintegrate_like;
   svn_boolean_t use_sleep = FALSE;
   svn_error_t *err;
