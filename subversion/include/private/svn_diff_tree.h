@@ -29,7 +29,7 @@
 #define SVN_DIFF_TREE_H
 
 #include "svn_types.h"
-#include "svn_io.h" // for svn_stream_t
+#include "svn_io.h" /* for svn_stream_t */
 
 #ifdef __cplusplus
 extern "C" {
