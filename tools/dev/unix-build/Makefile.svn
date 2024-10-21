@@ -114,7 +114,8 @@ SERF_VER	= 1.3.10
 CYRUS_SASL_VER	= 2.1.28
 SQLITE_VER	= 3390400
 LIBMAGIC_VER	= 5.30
-RUBY_VER	= 2.7.4
+RUBY_MAJOR_VER	= 2.7
+RUBY_VER	= $(RUBY_MAJOR_VER).4
 BZ2_VER	= 1.0.6
 PYTHON_VER	= 3.11.10
 PYTHON2_VER	= 2.7.13
@@ -123,6 +124,9 @@ JUNIT_VER	= 4.10
 GETTEXT_VER	= 0.19.8.1
 LZ4_VER		= 1.7.5
 SWIG_OLD_VER	= 3.0.12
+
+# Get local dependency versions
+include Makefile.local
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
@@ -152,7 +156,11 @@ SHA256_${NEON_DIST} = 4872e12f802572dedd4b02f870065814b2d5141f7dbdaf708eedab826b
 SHA256_${CYRUS_SASL_DIST} = 7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c
 SHA256_${SQLITE_DIST} = f31d445b48e67e284cf206717cc170ab63cbe4fd7f79a82793b772285e78fdbb
 SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
-SHA256_${RUBY_DIST} = 3043099089608859fc8cce7f9fdccaa1f53a462457e3838ec3b25a7d609fbc5b
+SHA256_ruby-2.7.4.tar.gz = 3043099089608859fc8cce7f9fdccaa1f53a462457e3838ec3b25a7d609fbc5b
+SHA256_ruby-2.7.7.tar.gz = e10127db691d7ff36402cfe88f418c8d025a3f1eea92044b162dd72f0b8c7b90
+SHA256_ruby-2.7.8.tar.gz = c2dab63cbc8f2a05526108ad419efa63a67ed4074dbbcf9fc2b1ca664cb45ba0
+SHA256_ruby-3.0.7.tar.gz = 2a3411977f2850431136b0fab8ad53af09fb74df2ee2f4fb7f11b378fe034388
+SHA256_ruby-3.1.6.tar.gz = 0d0dafb859e76763432571a3109d1537d976266be3083445651dc68deed25c22
 SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
 SHA256_${PYTHON_DIST} = 92f2faf242681bfa406d53a51e17d42c5373affe23a130cd9697e132ef574706
 SHA256_${PYTHON2_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
@@ -160,7 +168,8 @@ SHA256_${PY3C_DIST} = c7ffc22bc92dded0ca859db53ef3a0b466f89a9f8aad29359c9fe4ff18
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
 SHA256_${GETTEXT_DIST} = ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43
 SHA256_${LZ4_DIST} = 0190cacd63022ccb86f44fa5041dc6c3804407ad61550ca21c382827319e7e7e
-SHA256_${SWIG_OLD_DIST} = 7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d
+SHA256_swig-3.0.12.tar.gz = 7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d
+SHA256_swig-4.2.1.tar.gz = fa045354e2d048b2cddc69579e4256245d4676894858fcf0bab2290ecf59b7d8
 
 define do_check_sha256
 if [ -x /bin/sha256 ]; then \
@@ -215,7 +224,7 @@ SERF_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_VER)
 SQLITE_URL	= https://www.sqlite.org/2022/$(SQLITE_DIST)
 CYRUS_SASL_URL	= https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-${CYRUS_SASL_VER}/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
-RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/2.7/$(RUBY_DIST)
+RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/$(RUBY_MAJOR_VER)/$(RUBY_DIST)
 BZ2_URL		= https://stsp.name/distfiles/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 PYTHON2_URL	= https://python.org/ftp/python/$(PYTHON2_VER)/$(PYTHON2_DIST)
