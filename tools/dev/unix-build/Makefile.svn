@@ -1168,6 +1168,7 @@ $(DISTDIR)/$(RUBY_DIST):
 
 $(RUBY_OBJDIR)/openssl_missing.patch:
 	mkdir -p $(dir $@)
+ifeq ($(shell test $(RUBY_MAJOR_VER) \< 3.0 && echo 1), 1)
 	echo > $@.tmp 'Index: ext/openssl/openssl_missing.h'
 	echo >> $@.tmp '--- ext/openssl/openssl_missing.h.orig'
 	echo >> $@.tmp '+++ ext/openssl/openssl_missing.h'
@@ -1198,9 +1199,13 @@ $(RUBY_OBJDIR)/openssl_missing.patch:
 	echo >> $@.tmp ' '
 	echo >> $@.tmp ' #if defined(HAVE_AUTHENTICATED_ENCRYPTION) && !defined(EVP_CTRL_AEAD_GET_TAG)'
 	mv -f $@.tmp $@
+else
+	touch $@
+endif
 
 $(RUBY_OBJDIR)/sparc64_buserror.patch:
 	mkdir -p $(dir $@)
+ifeq ($(shell test $(RUBY_MAJOR_VER) \< 3.0 && echo 1), 1)
 	echo > $@.tmp '--- compile.c.orig	Thu Mar 12 12:58:26 2020'
 	echo >> $@.tmp '+++ compile.c	Thu Mar 12 16:36:55 2020'
 	echo >> $@.tmp '@@ -751,6 +751,16 @@'
@@ -1221,6 +1226,9 @@ $(RUBY_OBJDIR)/sparc64_buserror.patch:
 	echo >> $@.tmp '   #if defined(HAVE_TRUE_LONG_LONG) && SIZEOF_LONG_LONG > SIZEOF_VALUE'
 	echo >> $@.tmp '     #define ALIGNMENT_SIZE SIZEOF_LONG_LONG'
 	mv -f $@.tmp $@
+else
+	touch $@
+endif
 
 ifeq ($(UNAME),OpenBSD)
 RUBY_SSL_EX_NEW_DATA_PATCH = sed -i -e '/^have_func("X509_STORE_set_ex_data")$$/ { p; s/^.*$$/\have_func("X509_STORE_get_ex_new_index")/; }'
@@ -1236,8 +1244,10 @@ $(RUBY_OBJDIR)/.retrieved: $(DISTDIR)/$(RUBY_DIST) $(RUBY_OBJDIR)/openssl_missin
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(RUBY_DIST)
 	-which ghead && sed -i -e "s/head -c/ghead -c/" $(RUBY_SRCDIR)/configure
 	$(RUBY_SSL_EX_NEW_DATA_PATCH) $(RUBY_SRCDIR)/ext/openssl/extconf.rb
+ifeq ($(shell test $(RUBY_MAJOR_VER) \< 3.0 && echo 1), 1)
 	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/openssl_missing.patch
 	cd $(RUBY_SRCDIR) && patch -p0 < $(RUBY_OBJDIR)/sparc64_buserror.patch
+endif
 	sed -i 's/X509_num(bs->certs)/X509_num(OCSP_resp_get0_certs(bs))/' \
 		$(RUBY_SRCDIR)/ext/openssl/ossl_ocsp.c
 	touch $@
