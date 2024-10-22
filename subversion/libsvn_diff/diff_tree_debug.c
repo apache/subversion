@@ -345,14 +345,15 @@ const svn_diff_tree_processor_t *
 svn_diff__tree_processor_debug_create(svn_stream_t *out_stream,
                                       apr_pool_t *result_pool)
 {
-  debug_diff_tree_baton_t *b = apr_pcalloc(result_pool, sizeof(*b));
+  debug_diff_tree_baton_t *b;
+  svn_diff_tree_processor_t *debug;
 
+  b = apr_pcalloc(result_pool, sizeof(*b));
   b->indent_level = 0;
   b->out = out_stream;
   b->prefix = "DBG: ";
 
-  svn_diff_tree_processor_t *debug =
-    svn_diff__tree_processor_create(b, result_pool);
+  debug = svn_diff__tree_processor_create(b, result_pool);
 
   debug->dir_opened   = debug_dir_opened;
   debug->dir_added    = debug_dir_added;
