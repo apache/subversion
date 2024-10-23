@@ -310,7 +310,7 @@
 
 %typemap(out) apr_hash_t *PROPHASH
 {
-  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string($1));
+  $result = svn_swig_rb_apr_hash_to_hash_svn_string($1);
 }
 #endif
 
@@ -326,10 +326,8 @@
 #ifdef SWIGRUBY
 %typemap(out) apr_hash_t *CHANGED_PATH_HASH
 {
-  VALUE rb_changed_path_hash;
-  rb_changed_path_hash =
+  $result =
     svn_swig_rb_apr_hash_to_hash_swig_type($1, "svn_log_changed_path_t *");
-  %append_output(rb_changed_path_hash);
 }
 
 %apply apr_hash_t *CHANGED_PATH_HASH {
@@ -760,7 +758,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST
 {
-  %append_output(svn_swig_rb_prop_apr_array_to_hash_prop($1));
+  $result = svn_swig_rb_prop_apr_array_to_hash_prop($1);
 }
 
 %typemap(in) apr_array_header_t *PROP_LIST_MAY_BE_NULL
@@ -778,7 +776,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST_MAY_BE_NULL
 {
-  %append_output($1 ? svn_swig_rb_prop_apr_array_to_hash_prop($1) : Qnil);
+  $result = $1 ? svn_swig_rb_prop_apr_array_to_hash_prop($1) : Qnil;
 }
 
 %apply apr_array_header_t *PROP_LIST {

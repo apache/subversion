@@ -812,7 +812,7 @@ module Svn
       def diff(to, consider_inheritance=false)
         result = Core.rangelist_diff(self, to, consider_inheritance)
         deleted = result.pop
-        added = result
+        added = result.pop
         [added, deleted].collect do |result|
           self.class.new(*result)
         end

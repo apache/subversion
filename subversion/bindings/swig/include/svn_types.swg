@@ -532,14 +532,29 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 #endif
 
 #ifdef SWIGRUBY
-%typemap(out) svn_error_t *
+%typemap(out) svn_error_t * (VALUE *svn_presult = NULL)
 {
   if ($1) {
     svn_swig_rb_destroy_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_pop_pool(_global_svn_swig_rb_pool);
     svn_swig_rb_handle_svn_error($1);
   }
-  $result = Qnil;
+  $result = rb_ary_new();
+  svn_presult = &$result;
+}
+
+%typemap(ret) svn_error_t *
+{
+  if (TYPE(*svn_presult) == T_ARRAY) {
+    switch (rb_array_len(*svn_presult)) {
+      case 0:
+        *svn_presult = Qnil;
+        break;
+      case 1:
+        *svn_presult = rb_ary_entry(*svn_presult, 0);
+        break;
+    }
+  }
 }
 #endif
 

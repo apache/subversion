@@ -242,6 +242,8 @@
 {
   $result = $1 ? svn_swig_rb_svn_error_to_rb_error($1) : Qnil;
 }
+
+%typemap(ret) svn_error_t *err "";
 #endif
 
 
