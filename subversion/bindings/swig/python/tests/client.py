@@ -172,7 +172,9 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = self.temper.alloc_empty_dir('-checkout')
 
-    self.assertRaises(ValueError, client.checkout2,
+    # TypeError is raised since SWIG 4.3.0
+    self.assertRaises((ValueError, TypeError), r'Received a NULL pointer',
+                      client.checkout2,
                       self.repos_uri, path, None, None, True, True,
                       self.client_ctx)
 
@@ -526,7 +528,9 @@ class SubversionClientTestCase(unittest.TestCase):
 
     path = self.temper.alloc_empty_dir('-update')
 
-    self.assertRaises(ValueError, client.checkout2,
+    # TypeError is raised since SWIG 4.3.0
+    self.assertRaises((ValueError, TypeError), r'Received a NULL pointer',
+                      client.checkout2,
                       self.repos_uri, path, None, None, True, True,
                       self.client_ctx)
 

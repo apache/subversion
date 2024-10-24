@@ -435,8 +435,31 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
             svn_error_clear($1);
         SWIG_fail;
     }
-    Py_INCREF(Py_None);
-    $result = Py_None;
+    Py_XDECREF($result);
+    $result = PyList_New(0);
+}
+
+%typemap(ret) svn_error_t * {
+    if ($result == NULL) {
+      $result = Py_None;
+      Py_INCREF($result);
+    }
+    else {
+      switch (PyList_Size($result)) {
+        case 0:
+          $result = Py_None;
+          Py_INCREF($result);
+          break;
+        case 1:
+          {
+            PyObject *tmp = $result;
+            $result = PyList_GetItem(tmp, 0);
+            Py_INCREF($result);
+            Py_DECREF(tmp);
+          }
+          break;
+      }
+    }
 }
 #endif
 

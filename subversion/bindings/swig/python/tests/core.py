@@ -333,6 +333,34 @@ class SubversionCoreTestCase(unittest.TestCase):
                      [b'', 1])
     svn.core.svn_stream_close(stream)
 
+  def test_svn_rangelist_diff(self):
+    """
+    SWIG incorrectly handles return values when the first %append_output() is
+    invoked with a list instance. svn.core.svn_rangelist_diff() is in the case.
+    We test whether the workaround for it is working.
+    """
+
+    def from_args(start, end, inheritable):
+      instance = svn.core.svn_merge_range_t()
+      instance.start = start
+      instance.end = end
+      instance.inheritable = inheritable
+      return instance
+
+    def to_args(instance):
+      return [instance.start, instance.end, instance.inheritable]
+
+    def map_list(f, iterator):
+      return list(map(f, iterator))
+
+    from_ = [from_args(4, 5, True), from_args(9, 13, True)]
+    to = [from_args(7, 11, True)]
+    rv = svn.core.svn_rangelist_diff(from_, to, True)
+    self.assertIsInstance(rv, (list, tuple))
+    deleted, added = rv
+    self.assertEqual([[7, 9, True]], map_list(to_args, added))
+    self.assertEqual([[4, 5, True], [11, 13, True]],map_list(to_args, deleted))
+
 
 def suite():
     return unittest.defaultTestLoader.loadTestsFromTestCase(
