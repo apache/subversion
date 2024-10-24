@@ -58,6 +58,13 @@ Candidate changes:
    votes:
      +1: jun66j5
 
+ * r1921505
+   Make swig-py compatible with SWIG 4.3.0.
+   Justification:
+     Ditto.
+   votes:
+     +1: jun66j5
+
 Veto-blocked changes:
 =====================
 
