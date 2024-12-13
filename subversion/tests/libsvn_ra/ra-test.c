@@ -277,7 +277,7 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
   if (status == APR_SUCCESS)
     status = apr_procattr_io_set(attr, 1, 1, 0);
   if (status == APR_SUCCESS)
-    status = apr_procattr_cmdtype_set(attr, APR_PROGRAM);
+    status = apr_procattr_cmdtype_set(attr, APR_PROGRAM_ENV);
   proc = apr_palloc(pool, sizeof(*proc));
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc,
