@@ -174,9 +174,9 @@ summarize_regular(const svn_client_diff_summarize_t *summary,
   if (b->ignore_properties)
     prop_change = ' ';
 
-  SVN_ERR(svn_cmdline_printf(pool, "%c%c      %s\n",
+  SVN_ERR(svn_cmdline_printf(pool, "%c%c      %s '%s'\n",
                              kind_to_char(summary->summarize_kind),
-                             prop_change, path));
+                             prop_change, path, summary->path));
 
   return svn_cmdline_fflush(stdout);
 }
