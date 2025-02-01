@@ -36,12 +36,11 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        include:
-          - name: Default
-            os: ubuntu-latest
+        check-target: [check, davautocheck]
+        os: [ubuntu-latest, ubuntu-22.04-arm]
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.name }}
+    name: ${{ matrix.os }}, target ${{ matrix.check-target }}
 
     steps:
       - name: Install dependencies (Linux, apt-get)
@@ -59,6 +58,8 @@ jobs:
           libsqlite3-dev
           liblz4-dev
           libutf8proc-dev
+          apache2-dev
+          libsecret-1-dev
 
       - name: Use LF for Git checkout
         run: |
@@ -76,8 +77,8 @@ jobs:
       - name: Build (make)
         run: make -j
 
-      - name: Run tests (make check)
-        run: make check PARALLEL=16
+      - name: Run tests
+        run: make ${{matrix.check-target}} PARALLEL=16 APACHE_MPM=event
 
       - name: Install (make install)
         run: sudo make install
