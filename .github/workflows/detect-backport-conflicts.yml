@@ -43,13 +43,9 @@ jobs:
           sudo apt-get install
           subversion
           
-      - name: Use LF for Git checkout
-        run: |
-          git config --global core.autocrlf false
-          git config --global core.eol lf
-
-      - uses: actions/checkout@v4
+      - name: Checkout backport branch
+        run: svn co https://svn.apache.org/repos/asf/subversion/branches/1.14.x
 
       - name: Detect conflicting backports
-        run: ./tools/dist/detect-conflicting-backports.py
+        run: cd 1.14.x && ./tools/dist/detect-conflicting-backports.py
 
