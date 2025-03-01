@@ -26,7 +26,7 @@ Candidate changes:
    Deprecate and disable the SVN_UNALIGNED_ACCESS_IS_OK macro.
    Justification:
      Prevent future problems on newer compilers on higher optimization
-     settings
+     settings.
    Votes:
      +1: dsahlberg
 
