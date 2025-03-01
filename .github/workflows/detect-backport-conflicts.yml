@@ -37,6 +37,12 @@ jobs:
     name: Detect conflicts
 
     steps:
+      - name: Install dependencies (Linux, apt-get)
+        run: >
+          sudo apt-get update &&
+          sudo apt-get install
+          subversion
+          
       - name: Use LF for Git checkout
         run: |
           git config --global core.autocrlf false
