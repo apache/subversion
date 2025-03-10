@@ -28,7 +28,7 @@ Candidate changes:
      Prevent future problems on newer compilers on higher optimization
      settings.
    Votes:
-     +1: dsahlberg
+     +1: dsahlberg, brane
 
 * r1924143
   Remove optimized unaligned-access code paths.
@@ -36,7 +36,7 @@ Candidate changes:
     Prevent future problems on newer compilers on higher optimization
     settings. (Follow-up to r1924100)
   Votes:
-    +1: dsahlberg
+    +1: dsahlberg, brane
 
 Veto-blocked changes:
 =====================
