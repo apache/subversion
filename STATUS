@@ -30,8 +30,17 @@ Candidate changes:
    Votes:
      +1: dsahlberg
 
+* r1924143
+  Remove optimized unaligned-access code paths.
+  Justification:
+    Prevent future problems on newer compilers on higher optimization
+    settings. (Follow-up to r1924100)
+  Votes:
+    +1: dsahlberg
+
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
