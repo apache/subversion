@@ -38,6 +38,14 @@ Candidate changes:
   Votes:
     +1: dsahlberg, brane
 
+* r1886358
+  Python 3 compatibility: Update a raise statement probably missed in
+  revision 873411 changes.
+  Justification:
+    Fix Python 3 compatibility
+  Votes:
+    +1: jamessan
+
 Veto-blocked changes:
 =====================
 
