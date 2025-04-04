@@ -46,6 +46,13 @@ Candidate changes:
   Votes:
     +1: jamessan
 
+* r1924773
+  swig-rb: Support ruby x64-mswin64 and building with GCC 15.
+  Justification:
+    Allow swig-rb with x64-mswin64 and gcc 15
+  Votes:
+    +1: jun66j5
+
 Veto-blocked changes:
 =====================
 
