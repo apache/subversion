@@ -312,11 +312,6 @@ cache_lookup(svn_fs_x__dag_cache_t *cache,
   apr_size_t path_len = path->len;
   apr_uint32_t hash_value = (apr_uint32_t)(apr_uint64_t)change_set;
 
-#if SVN_UNALIGNED_ACCESS_IS_OK
-  /* "randomizing" / distributing factor used in our hash function */
-  const apr_uint32_t factor = 0xd1f3da69;
-#endif
-
   /* optimistic lookup: hit the same bucket again? */
   cache_entry_t *result = &cache->buckets[cache->last_hit];
   if (   (result->change_set == change_set)
@@ -332,20 +327,7 @@ cache_lookup(svn_fs_x__dag_cache_t *cache,
 
   /* need to do a full lookup.  Calculate the hash value
      (HASH_VALUE has been initialized to REVISION). */
-  i = 0;
-#if SVN_UNALIGNED_ACCESS_IS_OK
-  /* We relax the dependency chain between iterations by processing
-     two chunks from the input per hash_value self-multiplication.
-     The HASH_VALUE update latency is now 1 MUL latency + 1 ADD latency
-     per 2 chunks instead of 1 chunk.
-   */
-  for (; i + 8 <= path_len; i += 8)
-    hash_value = hash_value * factor * factor
-               + (  *(const apr_uint32_t*)(path->data + i) * factor
-                  + *(const apr_uint32_t*)(path->data + i + 4));
-#endif
-
-  for (; i < path_len; ++i)
+  for (i = 0; i < path_len; ++i)
     /* Help GCC to minimize the HASH_VALUE update latency by splitting the
        MUL 33 of the naive implementation: h = h * 33 + path[i].  This
        shortens the dependency chain from 1 shift + 2 ADDs to 1 shift + 1 ADD.

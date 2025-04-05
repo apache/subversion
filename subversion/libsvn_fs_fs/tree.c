@@ -220,11 +220,6 @@ hash_func(svn_revnum_t revision,
   apr_size_t i;
   apr_uint32_t hash_value = (apr_uint32_t)revision;
 
-#if SVN_UNALIGNED_ACCESS_IS_OK
-  /* "randomizing" / distributing factor used in our hash function */
-  const apr_uint32_t factor = 0xd1f3da69;
-#endif
-
   /* Calculate the hash value
      (HASH_VALUE has been initialized to REVISION).
 
@@ -233,35 +228,8 @@ hash_func(svn_revnum_t revision,
      make as much of *PATH influence the result as possible to get an "even"
      spread across the hash buckets (maximizes our cache retention rate and
      thus the hit rates).
-
-     When chunked access is possible (independent of the PATH pointer's
-     value!), we read 4 bytes at once and multiply the hash value with a
-     FACTOR that mirror / pattern / shift all 4 input bytes to various bits
-     of the result.  The final result will be taken from the MSBs.
-
-     When chunked access is not possible (not supported by CPU or odd bytes
-     at the end of *PATH), we use the simple traditional "* 33" hash
-     function that works very well with texts / paths and that e.g. APR uses.
-
-     Please note that the bytewise and the chunked calculation are *NOT*
-     interchangeable as they will yield different results for the same input.
-     For any given machine and *PATH, we must use a fixed combination of the
-     two functions.
    */
-  i = 0;
-#if SVN_UNALIGNED_ACCESS_IS_OK
-  /* We relax the dependency chain between iterations by processing
-     two chunks from the input per hash_value self-multiplication.
-     The HASH_VALUE update latency is now 1 MUL latency + 1 ADD latency
-     per 2 chunks instead of 1 chunk.
-   */
-  for (; i + 8 <= path_len; i += 8)
-    hash_value = hash_value * factor * factor
-               + (  *(const apr_uint32_t*)(path + i) * factor
-                  + *(const apr_uint32_t*)(path + i + 4));
-#endif
-
-  for (; i < path_len; ++i)
+  for (i = 0; i < path_len; ++i)
     /* Help GCC to minimize the HASH_VALUE update latency by splitting the
        MUL 33 of the naive implementation: h = h * 33 + path[i].  This
        shortens the dependency chain from 1 shift + 2 ADDs to 1 shift + 1 ADD.

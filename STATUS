@@ -36,14 +36,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r1924143
-  Remove optimized unaligned-access code paths.
-  Justification:
-    Prevent future problems on newer compilers on higher optimization
-    settings. (Follow-up to r1924100)
-  Votes:
-    +1: dsahlberg, brane, jamessan
-
 * r1924773
   swig-rb: Support ruby x64-mswin64 and building with GCC 15.
   Justification:

@@ -355,23 +355,6 @@ is_one_at_eof(struct file_info file[], apr_size_t file_len)
   return FALSE;
 }
 
-/* Quickly determine whether there is a eol char in CHUNK.
- * (mainly copy-n-paste from eol.c#svn_eol__find_eol_start).
- */
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
-static svn_boolean_t contains_eol(apr_uintptr_t chunk)
-{
-  apr_uintptr_t r_test = chunk ^ SVN__R_MASK;
-  apr_uintptr_t n_test = chunk ^ SVN__N_MASK;
-
-  r_test |= (r_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
-  n_test |= (n_test & SVN__LOWER_7BITS_SET) + SVN__LOWER_7BITS_SET;
-
-  return (r_test & n_test & SVN__BIT_7_SET) != SVN__BIT_7_SET;
-}
-#endif
-
 /* Find the prefix which is identical between all elements of the FILE array.
  * Return the number of prefix lines in PREFIX_LINES.  REACHED_ONE_EOF will be
  * set to TRUE if one of the FILEs reached its end while scanning prefix,
@@ -396,10 +379,6 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
     is_match = is_match && *file[0].curp == *file[i].curp;
   while (is_match)
     {
-#if SVN_UNALIGNED_ACCESS_IS_OK
-      apr_ssize_t max_delta, delta;
-#endif /* SVN_UNALIGNED_ACCESS_IS_OK */
-
       /* ### TODO: see if we can take advantage of
          diff options like ignore_eol_style or ignore_space. */
       /* check for eol, and count */
@@ -418,53 +397,6 @@ find_identical_prefix(svn_boolean_t *reached_one_eof, apr_off_t *prefix_lines,
         }
 
       INCREMENT_POINTERS(file, file_len, pool);
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
-      /* Try to advance as far as possible with machine-word granularity.
-       * Determine how far we may advance with chunky ops without reaching
-       * endp for any of the files.
-       * Signedness is important here if curp gets close to endp.
-       */
-      max_delta = file[0].endp - file[0].curp - sizeof(apr_uintptr_t);
-      for (i = 1; i < file_len; i++)
-        {
-          delta = file[i].endp - file[i].curp - sizeof(apr_uintptr_t);
-          if (delta < max_delta)
-            max_delta = delta;
-        }
-
-      is_match = TRUE;
-      for (delta = 0; delta < max_delta; delta += sizeof(apr_uintptr_t))
-        {
-          apr_uintptr_t chunk = *(const apr_uintptr_t *)(file[0].curp + delta);
-          if (contains_eol(chunk))
-            break;
-
-          for (i = 1; i < file_len; i++)
-            if (chunk != *(const apr_uintptr_t *)(file[i].curp + delta))
-              {
-                is_match = FALSE;
-                break;
-              }
-
-          if (! is_match)
-            break;
-        }
-
-      if (delta /* > 0*/)
-        {
-          /* We either found a mismatch or an EOL at or shortly behind curp+delta
-           * or we cannot proceed with chunky ops without exceeding endp.
-           * In any way, everything up to curp + delta is equal and not an EOL.
-           */
-          for (i = 0; i < file_len; i++)
-            file[i].curp += delta;
-
-          /* Skipped data without EOL markers, so last char was not a CR. */
-          had_cr = FALSE;
-        }
-#endif
 
       *reached_one_eof = is_one_at_eof(file, file_len);
       if (*reached_one_eof)
@@ -611,11 +543,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
   while (is_match)
     {
       svn_boolean_t reached_prefix;
-#if SVN_UNALIGNED_ACCESS_IS_OK
-      /* Initialize the minimum pointer positions. */
-      const char *min_curp[4];
-      svn_boolean_t can_read_word;
-#endif /* SVN_UNALIGNED_ACCESS_IS_OK */
 
       /* ### TODO: see if we can take advantage of
          diff options like ignore_eol_style or ignore_space. */
@@ -635,60 +562,6 @@ find_identical_suffix(apr_off_t *suffix_lines, struct file_info file[],
         }
 
       DECREMENT_POINTERS(file_for_suffix, file_len, pool);
-
-#if SVN_UNALIGNED_ACCESS_IS_OK
-      for (i = 0; i < file_len; i++)
-        min_curp[i] = file_for_suffix[i].buffer;
-
-      /* If we are in the same chunk that contains the last part of the common
-         prefix, use the min_curp[0] pointer to make sure we don't get a
-         suffix that overlaps the already determined common prefix. */
-      if (file_for_suffix[0].chunk == suffix_min_chunk0)
-        min_curp[0] += suffix_min_offset0;
-
-      /* Scan quickly by reading with machine-word granularity. */
-      for (i = 0, can_read_word = TRUE; can_read_word && i < file_len; i++)
-        can_read_word = ((file_for_suffix[i].curp + 1 - sizeof(apr_uintptr_t))
-                         > min_curp[i]);
-
-      while (can_read_word)
-        {
-          apr_uintptr_t chunk;
-
-          /* For each file curp is positioned at the current byte, but we
-             want to examine the current byte and the ones before the current
-             location as one machine word. */
-
-          chunk = *(const apr_uintptr_t *)(file_for_suffix[0].curp + 1
-                                             - sizeof(apr_uintptr_t));
-          if (contains_eol(chunk))
-            break;
-
-          for (i = 1, is_match = TRUE; is_match && i < file_len; i++)
-            is_match = (chunk
-                           == *(const apr_uintptr_t *)
-                                    (file_for_suffix[i].curp + 1
-                                       - sizeof(apr_uintptr_t)));
-
-          if (! is_match)
-            break;
-
-          for (i = 0; i < file_len; i++)
-            {
-              file_for_suffix[i].curp -= sizeof(apr_uintptr_t);
-              can_read_word = can_read_word
-                              && (  (file_for_suffix[i].curp + 1
-                                       - sizeof(apr_uintptr_t))
-                                  > min_curp[i]);
-            }
-
-          /* We skipped some bytes, so there are no closing EOLs */
-          had_nl = FALSE;
-        }
-
-      /* The > min_curp[i] check leaves at least one final byte for checking
-         in the non block optimized case below. */
-#endif
 
       reached_prefix = file_for_suffix[0].chunk == suffix_min_chunk0
                        && (file_for_suffix[0].curp - file_for_suffix[0].buffer)
