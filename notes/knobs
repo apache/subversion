@@ -38,7 +38,7 @@ SUFFIX_LINES_TO_KEEP
 SVN_FS_FS_DEFAULT_MAX_FILES_PER_DIR
 SVN_FS_FS_MAX_LINEAR_DELTIFICATION
 SVN_FS_FS_MAX_DELTIFICATION_WALK
-SVN_UNALIGNED_ACCESS_IS_OK
+SVN_UNALIGNED_ACCESS_IS_OK (deprecated)
 
 2.2 Features
 
@@ -164,12 +164,14 @@ SVN_I_LIKE_LATENCY_SO_IGNORE_HTTPV2
 
 3.8 SVN_UNALIGNED_ACCESS_IS_OK
 
+  DEPRECATED, unused. The rest of this entry is historical.
+
   Scope:     (global)
   Purpose:   enable data accesss optimizations.
              If your target CPU supports unaligned memory access without
              significant performance penalties, you should enable this
              optimization as it allows for processing 4 or 8 bytes at
-             once instead of just one byte at a time. 
+             once instead of just one byte at a time.
   Range:     0 1
   Default:   platform dependant (see svn_types.h)
   Suggested: 0
