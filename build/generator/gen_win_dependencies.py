@@ -1014,7 +1014,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     else:
       defines = []
 
-    ver = ruby_version.split('.')
+    ver = ruby_version.split('+')[0].split('.')
     ver = tuple(map(int, ver))
     if ver >= (1, 8, 0):
       defines.extend(["HAVE_RB_ERRINFO"])

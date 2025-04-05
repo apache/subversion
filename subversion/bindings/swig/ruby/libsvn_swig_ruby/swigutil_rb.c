@@ -696,6 +696,12 @@ rb_set_pool(VALUE self, VALUE pool)
 }
 
 static VALUE
+rb_set_pool_callback(RB_BLOCK_CALL_FUNC_ARGLIST(self, pool))
+{
+  return rb_set_pool(self, pool);
+}
+
+static VALUE
 rb_pool_new(VALUE parent)
 {
   return rb_funcall(rb_svn_core_pool(), id_new, 1, parent);
@@ -760,9 +766,10 @@ struct rb_set_pool_for_hash_arg {
 };
 
 static int
-rb_set_pool_for_hash_callback(VALUE key, VALUE value,
-                              struct rb_set_pool_for_hash_arg *arg)
+rb_set_pool_for_hash_callback(VALUE key, VALUE value, VALUE hash_arg)
 {
+  struct rb_set_pool_for_hash_arg *arg;
+  arg = (struct rb_set_pool_for_hash_arg *) hash_arg;
   if (svn_swig_rb_set_pool(value, arg->pool))
     arg->set = TRUE;
   return ST_CONTINUE;
@@ -788,7 +795,7 @@ svn_swig_rb_set_pool(VALUE target, VALUE pool)
     struct rb_set_pool_for_hash_arg arg;
     arg.set = FALSE;
     arg.pool = pool;
-    rb_hash_foreach(target, (int(*)(ANYARGS))rb_set_pool_for_hash_callback, (VALUE)&arg);
+    rb_hash_foreach(target, rb_set_pool_for_hash_callback, (VALUE)&arg);
     return arg.set;
   } else {
     return rb_set_pool_if_swig_type_object(target, pool);
@@ -806,7 +813,7 @@ svn_swig_rb_set_pool_for_no_swig_type(VALUE target, VALUE pool)
     target = rb_ary_new3(1, target);
   }
 
-  rb_iterate((VALUE(*)())rb_each, target, (VALUE(*)())rb_set_pool, pool);
+  rb_iterate(rb_each, target, rb_set_pool_callback, pool);
 }
 
 void
@@ -1028,9 +1035,10 @@ typedef struct prop_hash_each_arg_t {
 } prop_hash_each_arg_t;
 
 static int
-svn_swig_rb_to_apr_array_row_prop_callback(VALUE key, VALUE value,
-                                           prop_hash_each_arg_t *arg)
+svn_swig_rb_to_apr_array_row_prop_callback(VALUE key, VALUE value, VALUE
+                                           prop_arg)
 {
+  prop_hash_each_arg_t *arg = (prop_hash_each_arg_t *) prop_arg;
   svn_prop_t *prop;
 
   prop = apr_array_push(arg->array);
@@ -1071,7 +1079,7 @@ svn_swig_rb_to_apr_array_row_prop(VALUE array_or_hash, apr_pool_t *pool)
     arg.array = result;
     arg.pool = pool;
     rb_hash_foreach(array_or_hash,
-                    (int(*)(ANYARGS))svn_swig_rb_to_apr_array_row_prop_callback,
+                    svn_swig_rb_to_apr_array_row_prop_callback,
                     (VALUE)&arg);
     return result;
   } else {
@@ -1082,9 +1090,9 @@ svn_swig_rb_to_apr_array_row_prop(VALUE array_or_hash, apr_pool_t *pool)
 }
 
 static int
-svn_swig_rb_to_apr_array_prop_callback(VALUE key, VALUE value,
-                                       prop_hash_each_arg_t *arg)
+svn_swig_rb_to_apr_array_prop_callback(VALUE key, VALUE value, VALUE prop_arg)
 {
+  prop_hash_each_arg_t *arg = (prop_hash_each_arg_t *) prop_arg;
   svn_prop_t *prop;
 
   prop = apr_palloc(arg->pool, sizeof(svn_prop_t));
@@ -1127,7 +1135,7 @@ svn_swig_rb_to_apr_array_prop(VALUE array_or_hash, apr_pool_t *pool)
     arg.array = result;
     arg.pool = pool;
     rb_hash_foreach(array_or_hash,
-                    (int(*)(ANYARGS))svn_swig_rb_to_apr_array_prop_callback,
+                    svn_swig_rb_to_apr_array_prop_callback,
                     (VALUE)&arg);
     return result;
   } else {
@@ -1525,8 +1533,9 @@ svn_swig_rb_apr_revnum_key_hash_to_hash_string(apr_hash_t *hash)
 
 /* Ruby Hash -> apr_hash_t */
 static int
-r2c_hash_i(VALUE key, VALUE value, hash_to_apr_hash_data_t *data)
+r2c_hash_i(VALUE key, VALUE value, VALUE data_arg)
 {
+  hash_to_apr_hash_data_t *data = (hash_to_apr_hash_data_t *) data_arg;
   if (key != Qundef) {
     void *val = data->func(value, data->ctx, data->pool);
     svn_hash_sets(data->apr_hash, apr_pstrdup(data->pool, StringValuePtr(key)),
@@ -1550,7 +1559,7 @@ r2c_hash(VALUE hash, r2c_func func, void *ctx, apr_pool_t *pool)
     data.func = func;
     data.pool = pool;
 
-    rb_hash_foreach(hash, (int(*)(ANYARGS))r2c_hash_i, (VALUE)&data);
+    rb_hash_foreach(hash, r2c_hash_i, (VALUE)&data);
 
     return apr_hash;
   }
@@ -1609,7 +1618,7 @@ typedef struct callback_handle_error_baton_t {
 } callback_handle_error_baton_t;
 
 static VALUE
-callback(VALUE baton, ...)
+callback(VALUE baton)
 {
   callback_baton_t *cbb = (callback_baton_t *)baton;
   VALUE result;
@@ -1621,7 +1630,7 @@ callback(VALUE baton, ...)
 }
 
 static VALUE
-callback_rescue(VALUE baton, ...)
+callback_rescue(VALUE baton, VALUE unused)
 {
   callback_rescue_baton_t *rescue_baton = (callback_rescue_baton_t*)baton;
 
@@ -1638,7 +1647,7 @@ callback_rescue(VALUE baton, ...)
 }
 
 static VALUE
-callback_ensure(VALUE pool, ...)
+callback_ensure(VALUE pool)
 {
   svn_swig_rb_pop_pool(pool);
 
@@ -1655,19 +1664,18 @@ invoke_callback(VALUE baton, VALUE pool)
   argv[0] = pool;
   svn_swig_rb_get_pool(1, argv, Qnil, &subpool, NULL);
   cbb->pool = subpool;
-  return rb_ensure((VALUE(*)(ANYARGS))callback, baton,
-                   (VALUE(*)(ANYARGS))callback_ensure, subpool);
+  return rb_ensure(callback, baton, callback_ensure, subpool);
 }
 
 static VALUE
-callback_handle_error(VALUE baton, ...)
+callback_handle_error(VALUE baton)
 {
   callback_handle_error_baton_t *handle_error_baton;
   handle_error_baton = (callback_handle_error_baton_t *)baton;
 
-  return rb_rescue2((VALUE(*)(ANYARGS))callback,
+  return rb_rescue2(callback,
                     (VALUE)(handle_error_baton->callback_baton),
-                    (VALUE(*)(ANYARGS))callback_rescue,
+                    callback_rescue,
                     (VALUE)(handle_error_baton->rescue_baton),
                     rb_svn_error(),
                     (VALUE)0);
@@ -1686,9 +1694,8 @@ invoke_callback_handle_error(VALUE baton, VALUE pool, svn_error_t **err)
   handle_error_baton.callback_baton = cbb;
   handle_error_baton.rescue_baton = &rescue_baton;
 
-  return rb_ensure((VALUE(*)(ANYARGS))callback_handle_error,
-                   (VALUE)&handle_error_baton,
-                   (VALUE(*)(ANYARGS))callback_ensure, pool);
+  return rb_ensure(callback_handle_error, (VALUE)&handle_error_baton,
+                   callback_ensure, pool);
 }
 
 
@@ -1721,7 +1728,7 @@ make_baton(apr_pool_t *pool, VALUE editor, VALUE baton)
 }
 
 static VALUE
-add_baton_if_delta_editor(VALUE target, VALUE baton)
+add_baton_if_delta_editor(RB_BLOCK_CALL_FUNC_ARGLIST(target, baton))
 {
   if (RTEST(rb_obj_is_kind_of(target, svn_swig_rb_svn_delta_editor()))) {
     add_baton(target, baton);
@@ -1741,8 +1748,7 @@ svn_swig_rb_set_baton(VALUE target, VALUE baton)
     target = rb_ary_new3(1, target);
   }
 
-  rb_iterate((VALUE(*)())rb_each, target,
-             (VALUE(*)())add_baton_if_delta_editor, baton);
+  rb_iterate(rb_each, target, add_baton_if_delta_editor, baton);
 }
 
 

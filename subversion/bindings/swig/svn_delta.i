@@ -273,7 +273,7 @@ svn_swig_rb_delta_editor_get_target_revision(VALUE editor)
   if (NIL_P(rb_target_address))
     return Qnil;
 
-  target_address = (svn_revnum_t *)(NUM2LONG(rb_target_address));
+  target_address = (svn_revnum_t *)(NUM2SWIG(rb_target_address));
   if (!target_address)
     return Qnil;
 

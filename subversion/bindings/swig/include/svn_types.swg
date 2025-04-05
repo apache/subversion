@@ -394,7 +394,7 @@ svn_ ## TYPE ## _swig_rb_closed(VALUE self)
 
   if (NIL_P($input)) {
   } else if (TYPE($input) == T_FIXNUM) {
-    $1 = (char *)NUM2INT($input);
+    $1 = (char *)NUM2SWIG($input);
     if (!($1 == APR_LOCALE_CHARSET || $1 == APR_DEFAULT_CHARSET)) {
       $1 = NULL;
     }

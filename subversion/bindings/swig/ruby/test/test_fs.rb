@@ -219,18 +219,14 @@ class SvnFsTest < Test::Unit::TestCase
     end
 
     start_time = Time.now
+    sleep 0.032r if Svn::Util::windows?
     txn1 = @fs.transaction
     assert_equal([Svn::Core::PROP_REVISION_DATE], txn1.proplist.keys)
     assert_instance_of(Time, txn1.proplist[Svn::Core::PROP_REVISION_DATE])
     date = txn1.prop(Svn::Core::PROP_REVISION_DATE)
 
-    # Subversion's clock is more precise than Ruby's on
-    # Windows.  So this test can fail intermittently because
-    # the begin and end of the range are the same (to 3
-    # decimal places), but the time from Subversion has 6
-    # decimal places so it looks like it's not in the range.
-    # So we just add a smidgen to the end of the Range.
-    assert_operator(start_time..(Time.now + 0.001), :include?, date)
+    sleep 0.032r if Svn::Util::windows?
+    assert_operator(start_time..Time.now, :include?, date)
     txn1.set_prop(Svn::Core::PROP_REVISION_DATE, nil)
     assert_equal([], txn1.proplist.keys)
     assert_equal(youngest_rev, txn1.base_revision)
@@ -420,10 +416,12 @@ class SvnFsTest < Test::Unit::TestCase
       ctx.mkdir(["#{@wc_path}/new_dir"])
 
       start_time = Time.now
+      sleep 0.032r if Svn::Util::windows?
       info = ctx.commit([@wc_path])
 
       assert_equal(@author, info.author)
       assert_equal(@fs.youngest_rev, info.revision)
+      sleep 0.032r if Svn::Util::windows?
       assert_operator(start_time..(Time.now), :include?, info.date)
 
       assert_equal(@author, @fs.prop(Svn::Core::PROP_REVISION_AUTHOR))

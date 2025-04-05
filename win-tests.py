@@ -1333,7 +1333,7 @@ elif test_swig == 'ruby':
     ruby_args = [
         '-I', os.path.join(abs_srcdir, ruby_subdir),
         os.path.join(abs_srcdir, ruby_subdir, 'test', 'run-test.rb'),
-        '--verbose'
+        '--collector=dir', '--verbose',
       ]
 
     print('-- Running Swig Ruby tests --')

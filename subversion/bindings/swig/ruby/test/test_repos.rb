@@ -279,6 +279,7 @@ class SvnReposTest < Test::Unit::TestCase
       assert_equal(prev_rev, @repos.youngest_rev)
       assert_equal(prev_rev, @repos.dated_revision(past_date))
 
+      sleep 0.032r if Svn::Util::windows?
       prev_rev = @repos.youngest_rev
       @repos.transaction_for_commit(@author, log) do |txn|
       end
