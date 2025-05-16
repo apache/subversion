@@ -1,0 +1,6 @@
+Use streams instead of APR files to read patch files.
+=====================================================
+
+2025-05-16: The patch parser currently uses apr_file_t to read
+and parse patch files. Convert to usint svn_stream_t instead,
+as it's more flexible and doesn't strictly rely on on-disk files.
