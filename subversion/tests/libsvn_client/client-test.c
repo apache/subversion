@@ -342,6 +342,7 @@ test_patch(const svn_test_opts_t *opts,
   svn_opt_revision_t peg_rev;
   svn_client_ctx_t *ctx;
   apr_file_t *patch_file;
+  svn_stream_t *patch_stream;
   struct patch_collection_baton pcb;
   const char *patch_file_path;
   const char *patched_tempfile_path;
@@ -436,7 +437,9 @@ test_patch(const svn_test_opts_t *opts,
   apr_hash_clear(pcb.patched_tempfiles);
   apr_hash_clear(pcb.reject_tempfiles);
 
-  SVN_ERR(svn_client_patch_stream(patch_file, wc_path, FALSE, 0, FALSE,
+  patch_stream = svn_stream_from_aprfile2(patch_file, FALSE, pool);
+  SVN_ERR(svn_stream_reset(patch_stream));
+  SVN_ERR(svn_client_patch_stream(patch_stream, wc_path, FALSE, 0, FALSE,
                                   FALSE, FALSE, patch_collection_func, &pcb,
                                   ctx, pool));
 
@@ -451,7 +454,7 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(check_patch_result(reject_tempfile_path, expected_gamma_reject,
                              APR_EOL_STR, EXPECTED_GAMMA_REJECT_LINES, pool));
 
-  SVN_ERR(svn_io_file_close(patch_file, pool));
+  SVN_ERR(svn_stream_close(patch_stream));
 
   return SVN_NO_ERROR;
 }

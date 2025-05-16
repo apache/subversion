@@ -33,7 +33,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_diff.h"
 #include "svn_hash.h"
-#include "svn_io.h"
 #include "svn_path.h"
 #include "svn_pools.h"
 #include "svn_props.h"
@@ -3735,18 +3734,10 @@ svn_client_patch(const char *patch_abspath,
                  apr_pool_t *scratch_pool)
 {
   svn_node_kind_t kind;
-  apr_file_t *patch_file;
-  svn_diff_patch_parser_t *patch_parser;
+  svn_stream_t *patch_stream;
 
-  if (strip_count < 0)
-    return svn_error_create(SVN_ERR_INCORRECT_PARAMS, NULL,
-                            _("strip count must be positive"));
-
-  if (svn_path_is_url(wc_dir_abspath))
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a local path"),
-                             svn_dirent_local_style(wc_dir_abspath,
-                                                    scratch_pool));
+  /* NOTE: There are some parameter checks we could do here before opening
+           the file, but they're duplicated in svn_client_patch_stream. */
 
   SVN_ERR(svn_io_check_path(patch_abspath, &kind, scratch_pool));
   if (kind == svn_node_none)
@@ -3760,35 +3751,21 @@ svn_client_patch(const char *patch_abspath,
                              svn_dirent_local_style(patch_abspath,
                                                     scratch_pool));
 
-  SVN_ERR(svn_io_check_path(wc_dir_abspath, &kind, scratch_pool));
-  if (kind == svn_node_none)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' does not exist"),
-                             svn_dirent_local_style(wc_dir_abspath,
-                                                    scratch_pool));
-  if (kind != svn_node_dir)
-    return svn_error_createf(SVN_ERR_ILLEGAL_TARGET, NULL,
-                             _("'%s' is not a directory"),
-                             svn_dirent_local_style(wc_dir_abspath,
-                                                    scratch_pool));
+  SVN_ERR(svn_stream_open_readonly(&patch_stream, patch_abspath,
+                                   scratch_pool, scratch_pool));
+  SVN_ERR(svn_client_patch_stream(patch_stream, wc_dir_abspath,
+                                  dry_run, strip_count, reverse,
+                                  ignore_whitespace, remove_tempfiles,
+                                  patch_func, patch_baton, ctx,
+                                  scratch_pool));
 
-  SVN_ERR(svn_io_file_open(&patch_file, patch_abspath, APR_READ | APR_BUFFERED,
-                           APR_OS_DEFAULT, scratch_pool));
-  patch_parser = svn_diff_patch_parser_create(patch_file, scratch_pool);
-
-  SVN_WC__CALL_WITH_WRITE_LOCK(
-    apply_patches(patch_parser, wc_dir_abspath, dry_run, strip_count,
-                  reverse, ignore_whitespace, remove_tempfiles,
-                  patch_func, patch_baton, ctx, scratch_pool),
-    ctx->wc_ctx, wc_dir_abspath, FALSE /* lock_anchor */, scratch_pool);
-
-  SVN_ERR(svn_io_file_close(patch_file, scratch_pool));
+  SVN_ERR(svn_stream_close(patch_stream));
 
   return SVN_NO_ERROR;
 }
 
 svn_error_t *
-svn_client_patch_stream(apr_file_t *patch_file,
+svn_client_patch_stream(svn_stream_t *patch_stream,
                         const char *wc_dir_abspath,
                         svn_boolean_t dry_run,
                         int strip_count,
@@ -3825,7 +3802,7 @@ svn_client_patch_stream(apr_file_t *patch_file,
                              svn_dirent_local_style(wc_dir_abspath,
                                                     scratch_pool));
 
-  patch_parser = svn_diff_patch_parser_create(patch_file, scratch_pool);
+  patch_parser = svn_diff_patch_parser_create(patch_stream, scratch_pool);
 
   SVN_WC__CALL_WITH_WRITE_LOCK(
     apply_patches(patch_parser, wc_dir_abspath, dry_run, strip_count,

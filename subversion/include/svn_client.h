@@ -39,6 +39,7 @@
 #include <apr_file_io.h>
 #include <apr_time.h>
 
+#include "svn_io.h"
 #include "svn_types.h"
 #include "svn_string.h"
 #include "svn_wc.h"
@@ -7773,7 +7774,7 @@ svn_client_patch(const char *patch_abspath,
 
 /**
  * Similar to svn_client_patch(), but the patch is read from a file handle,
- * described in @a patch_file.
+ * described in @a patch_stream.
  *
  * In future versions, this function may be used to apply a patch directly
  * from an svn_stream_t.
@@ -7781,7 +7782,7 @@ svn_client_patch(const char *patch_abspath,
  * @since New in 1.15.
  */
 svn_error_t *
-svn_client_patch_stream(apr_file_t *patch_file,
+svn_client_patch_stream(svn_stream_t *patch_stream,
                         const char *wc_dir_abspath,
                         svn_boolean_t dry_run,
                         int strip_count,

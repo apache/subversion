@@ -43,6 +43,8 @@
 #include "private/svn_diff_private.h"
 #include "private/svn_sorts_private.h"
 
+#include "private/svn_io_private.h" /* FIXME: svn_stream__aprfile */
+
 #include "diff.h"
 
 #include "svn_private_config.h"
@@ -2179,13 +2181,19 @@ struct svn_diff_patch_parser_t
 };
 
 svn_diff_patch_parser_t *
-svn_diff_patch_parser_create(apr_file_t *patch_file,
+svn_diff_patch_parser_create(svn_stream_t *patch_stream,
                              apr_pool_t *result_pool)
 {
   svn_diff_patch_parser_t *result;
 
+  /* FIXME: Temporary hack on the patch-from-stream branch: Assume that
+            patch_stream was created by svn_stream_open_readonly and it
+            therefore has an underlying apr_file_t, which we'll unwrap.
+            here This is just to make it easier to convert the actual patch
+            parsing code in smaller chunks. */
+
   result = apr_palloc(result_pool, sizeof(*result));
-  result->apr_file = patch_file;
+  result->apr_file = svn_stream__aprfile(patch_stream); /* FIXME: <-remove */
   result->next_patch_offset = 0;
 
   return result;
@@ -2375,26 +2383,26 @@ svn_diff_patch_parser_next(svn_patch_t **patch_p,
 struct svn_patch_file_t
 {
   /* The APR file handle to the patch file. */
-  apr_file_t *apr_file;
+  svn_stream_t *stream;
 
   /* Inner parser for svn_diff_patch_parser_next() */
   svn_diff_patch_parser_t *parser;
 };
 
+/* TODO: Revise this function to also take a scratch_pool. */
 svn_error_t *
 svn_diff_open_patch_file(svn_patch_file_t **patch_file,
                          const char *local_abspath,
                          apr_pool_t *result_pool)
 {
-  svn_patch_file_t *p;
+  svn_patch_file_t *p = apr_palloc(result_pool, sizeof(*p));
+  apr_pool_t *scratch_pool = svn_pool_create(result_pool);
 
-  p = apr_palloc(result_pool, sizeof(*p));
-  SVN_ERR(svn_io_file_open(&p->apr_file, local_abspath,
-                           APR_READ | APR_BUFFERED, APR_OS_DEFAULT,
-                           result_pool));
+  SVN_ERR(svn_stream_open_readonly(&p->stream, local_abspath,
+                                   result_pool, scratch_pool));
+  p->parser = svn_diff_patch_parser_create(p->stream, result_pool);
 
-  p->parser = svn_diff_patch_parser_create(p->apr_file, result_pool);
-
+  svn_pool_destroy(scratch_pool);
   *patch_file = p;
 
   return SVN_NO_ERROR;
@@ -2417,6 +2425,6 @@ svn_error_t *
 svn_diff_close_patch_file(svn_patch_file_t *patch_file,
                           apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_io_file_close(patch_file->apr_file,
-                                           scratch_pool));
+  SVN_UNUSED(scratch_pool);
+  return svn_error_trace(svn_stream_close(patch_file->stream));
 }

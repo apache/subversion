@@ -1385,7 +1385,7 @@ typedef struct svn_diff_patch_parser_t svn_diff_patch_parser_t;
  * @since New in 1.15
  */
 svn_diff_patch_parser_t *
-svn_diff_patch_parser_create(apr_file_t *patch_file,
+svn_diff_patch_parser_create(svn_stream_t *patch_file,
                              apr_pool_t *result_pool);
 
 /**
