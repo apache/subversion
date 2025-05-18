@@ -1475,7 +1475,7 @@ svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
  * @since New in 1.15
  */
 svn_error_t *
-svn_stream_span(apr_off_t *offset, svn_stream_t *stream,
+svn_stream_span(svn_stream_t *stream, apr_off_t *offset,
                 const svn_stream_mark_t *first_mark,
                 const svn_stream_mark_t *second_mark);
 

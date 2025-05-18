@@ -300,7 +300,7 @@ test_stream_seek_file(apr_pool_t *pool)
   SVN_TEST_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
   /* Check how far we read before seeking. */
   SVN_ERR(svn_stream_mark(stream, &mark2, pool));
-  SVN_ERR(svn_stream_span(&offset, stream, mark, mark2));
+  SVN_ERR(svn_stream_span(stream, &offset, mark, mark2));
   SVN_TEST_ASSERT(offset == strlen(line->data) + strlen(NL));
   /* Ok, carry on... */
   SVN_ERR(svn_stream_seek(stream, mark));
@@ -359,7 +359,7 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   SVN_ERR(svn_stream_skip(stream, 2));
   /* Check that we actually skipped that far. */
   SVN_ERR(svn_stream_mark(stream, &mark2, pool));
-  SVN_ERR(svn_stream_span(&offset, stream, mark, mark2));
+  SVN_ERR(svn_stream_span(stream, &offset, mark, mark2));
   SVN_TEST_ASSERT(offset == 2);
   /* The remaining line should be empty */
   len = 3;
@@ -401,7 +401,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(buf, "One$MyKeyword: my keyword");
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   SVN_ERR(svn_stream_reset(translated_stream));
-  SVN_ERR(svn_stream_span(&offset, translated_stream, mark, mark2));
+  SVN_ERR(svn_stream_span(translated_stream, &offset, mark, mark2));
   /* This is the distance in the untranslated stream, so the length of
      that "One$MyKeyword$Two" that was read from there. */
   SVN_TEST_ASSERT(offset == -17);

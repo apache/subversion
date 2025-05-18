@@ -281,8 +281,8 @@ svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark)
 }
 
 svn_error_t *
-svn_stream_span(apr_off_t *offset,
-                svn_stream_t *stream,
+svn_stream_span(svn_stream_t *stream,
+                apr_off_t *offset,
                 const svn_stream_mark_t *first_mark,
                 const svn_stream_mark_t *second_mark)
 {
@@ -683,7 +683,7 @@ span_handler_disown(void *baton, apr_off_t *offset,
                     const svn_stream_mark_t *first_mark,
                     const svn_stream_mark_t *second_mark)
 {
-  return svn_error_trace(svn_stream_span(offset, baton,
+  return svn_error_trace(svn_stream_span(baton, offset,
                                          first_mark, second_mark));
 }
 
@@ -2227,7 +2227,7 @@ span_handler_lazyopen(void *baton, apr_off_t *offset,
   lazyopen_baton_t *b = baton;
 
   SVN_ERR(lazyopen_if_unopened(b));
-  SVN_ERR(svn_stream_span(offset, b->real_stream,
+  SVN_ERR(svn_stream_span(b->real_stream, offset,
                           first_mark, second_mark));
 
   return SVN_NO_ERROR;

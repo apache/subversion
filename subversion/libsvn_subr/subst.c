@@ -1444,7 +1444,7 @@ translated_stream_span(void *baton, apr_off_t *offset,
   const mark_translated_t *mt1 = (const mark_translated_t *)first_mark;
   const mark_translated_t *mt2 = (const mark_translated_t *)second_mark;
   return svn_error_trace(
-      svn_stream_span(offset, b->stream,
+      svn_stream_span(b->stream, offset,
                       mt1 != NULL ? mt1->mark : NULL,
                       mt2 != NULL ? mt2->mark : NULL));
 }
