@@ -1385,6 +1385,14 @@ svn_stream_reset(svn_stream_t *stream);
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream);
 
+/** Returns @c TRUE if the generic @a stream supports svn_stream_seek().
+ *
+ * @see svn_stream_seek()
+ * @since New in 1.15.
+ */
+svn_boolean_t
+svn_stream_supports_seek(svn_stream_t *stream);
+
 /** Returns @c TRUE if the generic @a stream supports svn_stream_reset().
  *
  * @see svn_stream_reset()

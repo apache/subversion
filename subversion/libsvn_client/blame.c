@@ -499,8 +499,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     SVN_ERR(svn_stream_open_readonly(&delta_baton->source_stream, frb->last_filename,
                                      frb->currpool, pool));
   else
-    /* Means empty stream below. */
-    delta_baton->source_stream = NULL;
+    delta_baton->source_stream = svn_stream_empty(pool);
   last_stream = svn_stream_disown(delta_baton->source_stream, pool);
 
   if (frb->include_merged_revisions && !merged_revision)
