@@ -481,6 +481,17 @@ svn_cl__diff(apr_getopt_t *os,
                                 summarize_func, summarize_baton,
                                 ctx, iterpool));
             }
+          else if (opt_state->diff.xpatch)
+            SVN_ERR(svn_client_diff_xpatch(
+                     target1,
+                     &(opt_state->start_revision),
+                     target2,
+                     &(opt_state->end_revision),
+                     opt_state->depth,
+                     ! opt_state->diff.notice_ancestry,
+                     opt_state->changelists,
+                     outstream,
+                     ctx, iterpool));
           else
             SVN_ERR(svn_client_diff7(
                      options,
@@ -539,6 +550,16 @@ svn_cl__diff(apr_getopt_t *os,
                                 summarize_func, summarize_baton,
                                 ctx, iterpool));
             }
+          else if (opt_state->diff.xpatch)
+            SVN_ERR(svn_client_diff_xpatch_peg(
+                                truepath,
+                                &peg_revision,
+                                &opt_state->start_revision,
+                                &opt_state->end_revision,
+                                opt_state->depth,
+                                ! opt_state->diff.notice_ancestry,
+                                outstream,
+                                ctx, iterpool));
           else
             SVN_ERR(svn_client_diff_peg7(
                      options,

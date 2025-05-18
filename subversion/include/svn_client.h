@@ -3715,6 +3715,59 @@ svn_client_diff_summarize_peg(const char *path,
                               svn_client_ctx_t *ctx,
                               apr_pool_t *pool);
 
+/**
+ * Produce a diff in xpatch format, which saves the entire working copy
+ * state, including copies, and can be applied trough a full merge of
+ * the file produced, making Subversion's conflict handling working.
+ *
+ * Writes the output to @a outstream, which should be writable. This stream
+ * can be opened using a svn_stream_open_writable() function, or any other
+ * function, producing writable stream as well.
+ *
+ * See svn_client_diff7() for a description of the other parameters.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_client_diff_xpatch(const char *path_or_url1,
+                       const svn_opt_revision_t *revision1,
+                       const char *path_or_url2,
+                       const svn_opt_revision_t *revision2,
+                       svn_depth_t depth,
+                       svn_boolean_t ignore_ancestry,
+                       const apr_array_header_t *changelists,
+                       svn_stream_t *outstream,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool);
+
+/**
+ * Produce a diff in xpatch format, which saves the entire working copy
+ * state, including copies, and can be applied trough a full merge of
+ * the file produced, making Subversion's conflict handling working.
+ * The differences will be produced between the filesystem object
+ * @a path_or_url in peg revision @a peg_revision, as it changed between
+ * @a start_revision and @a end_revision. @a path_or_url can be either a
+ * working-copy path or URL.
+ *
+ * Writes the output to @a outstream, which should be writable. This stream
+ * can be opened using a svn_stream_open_writable() function, or any other
+ * function, producing writable stream as well.
+ *
+ * See svn_client_diff_peg7() for a description of the other parameters.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_client_diff_xpatch_peg(const char *path_or_url,
+                           const svn_opt_revision_t *peg_revision,
+                           const svn_opt_revision_t *start_revision,
+                           const svn_opt_revision_t *end_revision,
+                           svn_depth_t depth,
+                           svn_boolean_t ignore_ancestry,
+                           svn_stream_t *outstream,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool);
+
 /** @} */
 
 /**

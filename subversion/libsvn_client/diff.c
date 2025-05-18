@@ -1422,3 +1422,40 @@ svn_client_diff_summarize_peg2(const char *path_or_url,
                                  diff_processor, ctx, pool, pool));
 }
 
+#define TEST_XPATCH "<?xml version=\"1.0\" encoding=\"UTF-8\" ?>" APR_EOL_STR \
+                    "<xpatch>"                                    APR_EOL_STR \
+                    "  this is an xpatch"                         APR_EOL_STR \
+                    "</xpatch>"                                   APR_EOL_STR
+
+svn_error_t *
+svn_client_diff_xpatch(const char *path_or_url1,
+                       const svn_opt_revision_t *revision1,
+                       const char *path_or_url2,
+                       const svn_opt_revision_t *revision2,
+                       svn_depth_t depth,
+                       svn_boolean_t ignore_ancestry,
+                       const apr_array_header_t *changelists,
+                       svn_stream_t *outstream,
+                       svn_client_ctx_t *ctx,
+                       apr_pool_t *pool)
+{
+  apr_size_t len = sizeof(TEST_XPATCH);
+  SVN_ERR(svn_stream_write(outstream, TEST_XPATCH, &len));
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_client_diff_xpatch_peg(const char *path_or_url,
+                           const svn_opt_revision_t *peg_revision,
+                           const svn_opt_revision_t *start_revision,
+                           const svn_opt_revision_t *end_revision,
+                           svn_depth_t depth,
+                           svn_boolean_t ignore_ancestry,
+                           svn_stream_t *outstream,
+                           svn_client_ctx_t *ctx,
+                           apr_pool_t *pool)
+{
+  apr_size_t len = sizeof(TEST_XPATCH);
+  SVN_ERR(svn_stream_write(outstream, TEST_XPATCH, &len));
+  return SVN_NO_ERROR;
+}
