@@ -308,6 +308,7 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "--show-copies-as-adds --ignore-properties"
                        )},
+  {"xpatch",           opt_xpatch, 0, N_("Produce diff in xpatch format.")},
   /* end of diff options */
   {"allow-mixed-revisions", opt_allow_mixed_revisions, 0,
                        N_("Allow operation on mixed-revision working copy.\n"
@@ -702,7 +703,8 @@ svn_cl__cmd_table_main[] =
      opt_internal_diff, 'x', opt_no_diff_added, opt_no_diff_deleted,
      opt_ignore_properties, opt_properties_only,
      opt_show_copies_as_adds, opt_notice_ancestry, opt_summarize, opt_changelist,
-     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible},
+     opt_force, opt_xml, opt_use_git_diff_format, opt_patch_compatible,
+     opt_xpatch},
     {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "export", svn_cl__export, {0}, {N_(
@@ -2717,6 +2719,9 @@ sub_main(int *exit_code,
         break;
       case opt_properties_only:
         opt_state.diff.properties_only = TRUE;
+        break;
+      case opt_xpatch:
+        opt_state.diff.xpatch = TRUE;
         break;
       case opt_search:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));

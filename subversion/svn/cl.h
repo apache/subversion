@@ -209,6 +209,7 @@ typedef struct svn_cl__opt_state_t
   svn_boolean_t ignore_properties;   /* ignore properties */
   svn_boolean_t properties_only;     /* Show properties only */
   svn_boolean_t patch_compatible;    /* Output compatible with GNU patch */
+  svn_boolean_t xpatch;              /* Output in xpatch format */
     } diff;
   svn_boolean_t ignore_ancestry; /* ignore ancestry for merge-y operations */
   svn_boolean_t ignore_externals;/* ignore externals definitions */
@@ -313,6 +314,7 @@ typedef enum svn_cl__longopt_t {
   opt_ignore_properties,
   opt_properties_only,
   opt_patch_compatible,
+  opt_xpatch,
   /* end of diff options */
   opt_dry_run,
   opt_editor_cmd,
