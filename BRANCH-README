@@ -1,0 +1,16 @@
+This is a branch to experiment with xpatch and CLI/make a prototype.
+
+- [ ] Draft a command line interface (CLI) for xpatch
+- [ ] Declare all needed client API functions
+- [ ] Design xpatch format
+- [ ] Implement xpatch parser/writer based on the format
+- [ ] Finish-out the apply-processor, for later usage inside of this branch
+- [ ] Connect all together; The patch-file routins, working copy diff
+      processors and the cmdline interface.
+- [ ] Profit!
+
+Also please check out the 'apply-processor' branch, which is related to
+xpatch, and contains the core related changes of the feature.
+
+It's not meant for the branch to be merged into the trunk, but changes will be
+reproduced in the trunk from blank instead.
