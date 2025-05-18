@@ -1,0 +1,20 @@
+This is a branch for implementing an XML writer.
+
+XML writer is a set of functions for creating xml tags and writing them
+directly to a general svn stream without temporary buffers.
+
+This is my old work, but it's not ready for 1.15 trunk, so I decided to
+commit it to a branch instead. I'll be very happy to receive any feedback.
+
+Most probably, I'll keep this work in the branch until 1.15 is released, and
+then include it in the 1.16 with the xpatch feature.
+
+There is no need to release it in 1.15 without any real usages.
+
+It was mostly made to implement xpatch feature, since it would require a lot
+of xml writes, but can be also used for anything in subversion, including
+cmdline with `--xml` option, and maybe even ra-serf library.
+
+This api will not only simplify xml writing, but also will allow several
+improvements to happen. For example, it might be possible to indent xml
+tags, so we will get pretty looking output out-of-box.
