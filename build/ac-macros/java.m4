@@ -180,6 +180,7 @@ AC_DEFUN(SVN_FIND_JDK,
     for dir in $list; do
       JNI_INCLUDES="$JNI_INCLUDES -I$dir"
     done
+    SVN_DOT_CLANGD([$JNI_INCLUDES])
   fi
 
   dnl We use JDK in the Makefile

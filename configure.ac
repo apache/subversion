@@ -46,6 +46,84 @@ AC_SUBST([SWIG_LDFLAGS])
 # Generate config.nice early (before the arguments are munged)
 SVN_CONFIG_NICE(config.nice)
 
+# ==== Construcet .clangd ====================================================
+
+svn_dot_clangd_file="$abs_srcdir/.clangd"
+AC_ARG_ENABLE([dot-clangd],
+AC_HELP_STRING([--enable-dot-clangd],
+               [Generate a .clangd file at the root of the source tree]),
+[
+  AC_MSG_NOTICE([Creating $svn_dot_clangd_file])
+  svn_dot_clangdcc_contents='---
+# C
+If:
+  PathMatch: [.*\.[ch]]
+  PathExclude: [subversion/bindings/javahl/native/.*]
+
+CompileFlags:
+  Add:'
+
+  svn_dot_clangdxx_contents='---
+# C++
+If:
+  PathMatch: [.*\.[ch]pp|.*/bindings/javahl/native/.*\.h]
+
+CompileFlags:
+  Add:'
+],
+[])
+
+AC_DEFUN([SVN_DOT_CLANGD_CC],
+[
+  if test "x$svn_dot_clangdcc_contents" != "x"; then
+    indent="    -"
+    dnl Split multiple flags to one per line.
+    set fake [$1]
+    while test "${#}" -gt 1; do
+      line="${2}"; shift
+      svn_dot_clangdcc_contents=`cat <<EOF
+$svn_dot_clangdcc_contents
+$indent $line
+EOF
+      `
+    done
+  fi
+])
+
+AC_DEFUN([SVN_DOT_CLANGD_CXX],
+[
+  if test "x$svn_dot_clangdxx_contents" != "x"; then
+    indent="    -"
+    dnl Split multiple flags to one per line.
+    set fake [$1]
+    while test "${#}" -gt 1; do
+      line="${2}"; shift
+svn_dot_clangdxx_contents=`cat <<EOF
+$svn_dot_clangdxx_contents
+$indent $line
+EOF
+      `
+    done
+  fi
+])
+
+AC_DEFUN([SVN_DOT_CLANGD],[
+  SVN_DOT_CLANGD_CC([$1])
+  SVN_DOT_CLANGD_CXX([$1])
+])
+
+
+dnl Add well-known source and build paths to .clangd
+SVN_DOT_CLANGD([-I$abs_builddir/subversion])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/include])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/tests])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/perl/libsvn_swig_perl])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/python/libsvn_swig_py])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/ruby/libsvn_swig_ruby])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/cxx/include])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/cxx/tests])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/javahl/native])
+
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
@@ -1078,6 +1156,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         dnl Add flags that all versions of GCC (should) support
         CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
+        SVN_DOT_CLANGD_CC([$CMAINTAINERFLAGS])
       fi
       if test "$GXX" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
@@ -1096,6 +1175,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         dnl Add flags that all versions of G++ (should) support
         CXXMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wunused -Wunreachable-code $CXXMAINTAINERFLAGS"
+        SVN_DOT_CLANGD_CXX([$CXXMAINTAINERFLAGS])
       fi
     fi
 ])
@@ -1131,6 +1211,7 @@ if test "$enable_debugging" = "yes" ; then
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
+  SVN_DOT_CLANGD([-DSVN_DEBUG -DAP_DEBUG])
 elif test "$enable_debugging" = "no" ; then
   AC_MSG_NOTICE([Disabling debugging])
   CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
@@ -1138,6 +1219,7 @@ elif test "$enable_debugging" = "no" ; then
   dnl Compile with NDEBUG to get rid of assertions
   CFLAGS="$CFLAGS -DNDEBUG"
   CXXFLAGS="$CXXFLAGS -DNDEBUG"
+  SVN_DOT_CLANGD([-DNDEBUG])
 # elif test "$enable_debugging" = "maybe" ; then
 #   # do nothing
 fi
@@ -1782,6 +1864,18 @@ AC_DEFINE_UNQUOTED([SVN_BUILD_TARGET], "${target}",
                    [Defined to the config.guess name of the build target])
 
 AC_OUTPUT
+
+# ==== Generate the .clangd file =============================================
+if test "x$svn_dot_clangdcc_contents$svn_dot_clangdxx_contents" = "x" ; then
+   if test -f "$svn_dot_clangd_file"; then
+      AC_MSG_NOTICE([Removing $svn_dot_clangd_file])
+      rm -f "$svn_dot_clangd_file"
+   fi
+else
+  AC_MSG_NOTICE([Writing $svn_dot_clangd_file])
+  echo "$svn_dot_clangdcc_contents" > "$svn_dot_clangd_file"
+  echo "$svn_dot_clangdxx_contents" >> "$svn_dot_clangd_file"
+fi
 
 # ==== Print final messages to user ==========================================
 

@@ -73,10 +73,11 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
 
   CMODEFLAGS="$CFLAGS"
   CFLAGS=""
+  SVN_DOT_CLANGD_CC([$CMODEFLAGS])
 
   if test "$GCC" = "yes"; then
     dnl Find flags to silence all warnings
-    SVN_CFLAGS_ADD_IFELSE([-w])
+    SVN_CFLAGS_ADD_IFELSE([-w],[SVN_DOT_CLANGD_CC([-w])])
   fi
 
   CNOWARNFLAGS="$CFLAGS"
@@ -89,7 +90,9 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
 
   if test "$GCC" = "yes"; then
     dnl Tell clang to not accept unknown warning flags
-    SVN_CFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
+    SVN_CFLAGS_ADD_IFELSE([-Werror=unknown-warning-option],[
+      SVN_DOT_CLANGD_CC([-Werror=unknown-warning-option])
+    ])
   fi
 ])
 
@@ -103,9 +106,11 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
     dnl Find flags to force C++ mode
                   dnl g++ and clang++
     if test "$cxx_language_level" = "any"; then
-      SVN_CXXFLAGS_ADD_IFELSE([-std=c++20],[],[
-        SVN_CXXFLAGS_ADD_IFELSE([-std=c++17],[],[
-          SVN_CXXFLAGS_ADD_IFELSE([-std=c++11])
+      SVN_CXXFLAGS_ADD_IFELSE([-std=c++23],[],[
+        SVN_CXXFLAGS_ADD_IFELSE([-std=c++20],[],[
+          SVN_CXXFLAGS_ADD_IFELSE([-std=c++17],[],[
+            SVN_CXXFLAGS_ADD_IFELSE([-std=c++11])
+          ])
         ])
       ])
     else
@@ -131,10 +136,11 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
 
   CXXMODEFLAGS="$CXXFLAGS"
   CXXFLAGS=""
+  SVN_DOT_CLANGD_CXX([$CXXMODEFLAGS])
 
   if test "$GXX" = "yes"; then
     dnl Find flags to silence all warnings
-    SVN_CXXFLAGS_ADD_IFELSE([-w])
+    SVN_CXXFLAGS_ADD_IFELSE([-w],[SVN_DOT_CLANGD_CXX([-w])])
   fi
 
   CXXNOWARNFLAGS="$CXXFLAGS"
@@ -147,6 +153,8 @@ AC_DEFUN([SVN_CXX_MODE_SETUP],
 
   if test "$GXX" = "yes"; then
     dnl Tell clang++ to not accept unknown warning flags
-    SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option])
+    SVN_CXXFLAGS_ADD_IFELSE([-Werror=unknown-warning-option],[
+      SVN_DOT_CLANGD_CXX([-Werror=unknown-warning-option])
+    ])
   fi
 ])
