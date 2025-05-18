@@ -1427,13 +1427,21 @@ svn_cl__cmd_table_main[] =
      "Apply a patch to a working copy.\n"
      "usage: patch PATCHFILE [WCPATH[@]]\n"
      "\n"), N_(
-     "  Apply a unidiff patch in PATCHFILE to the working copy WCPATH.\n"
+     "  Apply a patch in PATCHFILE to the working copy WCPATH.\n"
      "  If WCPATH is omitted, '.' is assumed.\n"
+     "\n"), N_(
+     "  The patch may be a unidiff, git extended unidiff, or xpatch file. Its\n"
+     "  type is detected automatically.\n"
      "\n"), N_(
      "  A unidiff patch suitable for application to a working copy can be\n"
      "  produced with the 'svn diff' command or third-party diffing tools.\n"
      "  Any non-unidiff content of PATCHFILE is ignored, except for Subversion\n"
      "  property diffs as produced by 'svn diff'.\n"
+     "\n"), N_(
+     "  An xpatch file can be produced with the 'svn diff --xpatch' command.\n"
+     "  This patch format is specific to Subversion and can represent all\n"
+     "  types of working copy changes. It is applied with three-way merging\n"
+     "  and conflict resolution.\n"
      "\n"), N_(
      "  Changes listed in the patch will either be applied or rejected.\n"
      "  If a change does not match at its exact line offset, it may be applied\n"
