@@ -910,6 +910,16 @@ typedef svn_error_t *(*svn_stream_mark_fn_t)(void *baton,
 typedef svn_error_t *(*svn_stream_seek_fn_t)(void *baton,
                                              const svn_stream_mark_t *mark);
 
+/** Span handler function for a generic stream. @see svn_stream_t and
+ * svn_stream_span().
+ *
+ * @since New in 1.15.
+ */
+typedef svn_error_t *(*svn_stream_span_fn_t)(
+    void *baton, apr_off_t *offset,
+    const svn_stream_mark_t *first_mark,
+    const svn_stream_mark_t *second_mark);
+
 /** Poll handler for generic streams that support incomplete reads, @see
  * svn_stream_t and svn_stream_data_available().
  *
@@ -994,6 +1004,14 @@ svn_stream_set_mark(svn_stream_t *stream,
 void
 svn_stream_set_seek(svn_stream_t *stream,
                     svn_stream_seek_fn_t seek_fn);
+
+/** Set @a stream's span function to @a span_fn
+ *
+ * @since New in 1.15.
+ */
+void
+svn_stream_set_span(svn_stream_t *stream,
+                    svn_stream_span_fn_t span_fn);
 
 /** Set @a stream's data available function to @a data_available_fn
  *
@@ -1393,6 +1411,14 @@ svn_stream_supports_mark(svn_stream_t *stream);
 svn_boolean_t
 svn_stream_supports_seek(svn_stream_t *stream);
 
+/** Returns @c TRUE if the generic @a stream supports svn_stream_span().
+ *
+ * @see svn_stream_span()
+ * @since New in 1.15.
+ */
+svn_boolean_t
+svn_stream_supports_span(svn_stream_t *stream);
+
 /** Returns @c TRUE if the generic @a stream supports svn_stream_reset().
  *
  * @see svn_stream_reset()
@@ -1426,6 +1452,32 @@ svn_stream_mark(svn_stream_t *stream,
  */
 svn_error_t *
 svn_stream_seek(svn_stream_t *stream, const svn_stream_mark_t *mark);
+
+/** Calculate the offset between two positions in a generic @a stream.
+ *
+ * The @a stream must support svn_stream_mark(), but that does not guarantee
+ * that the offset between two positions in the stream is well defined. The
+ * function returns the #SVN_ERR_STREAM_SPAN_NOT_SUPPORTED in this case.
+ *
+ * It's possible for a stream to support svn_stream_mark() and
+ * svn_stream_span() but not svn_stream_seek() or svn_stream_reset().
+ * This is the case, for example, for compressed stream wrappers, where
+ * a seek would have to roll back some magic internal compression state,
+ * but for calculating an offset we only have to keep track of the number
+ * of bytes read from or written to the stream.
+ *
+ * If the offset can be calculated but is too large to represent with an
+ * apr_off_t, this function returns #SVN_ERR_STREAM_OFFSET_TOO_LARGE.
+ *
+ * The returned @a offset can be negative.
+ *
+ * @see svn_stream_mark()
+ * @since New in 1.15
+ */
+svn_error_t *
+svn_stream_span(apr_off_t *offset, svn_stream_t *stream,
+                const svn_stream_mark_t *first_mark,
+                const svn_stream_mark_t *second_mark);
 
 /** When a stream supports polling for available data, obtain a boolean
  * indicating whether data is waiting to be read. If the stream doesn't

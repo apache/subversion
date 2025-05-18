@@ -110,6 +110,18 @@ seek_handler_rep(void *baton, const svn_stream_mark_t *mark)
 }
 
 static svn_error_t *
+span_handler_rep(void *baton, apr_off_t *offset,
+                 const svn_stream_mark_t *first_mark,
+                 const svn_stream_mark_t *second_mark)
+{
+  presentation_stream_baton_t *b = baton;
+  SVN_ERR(auto_open_inner_stream(b));
+
+  return svn_error_trace(svn_stream_span(offset, b->inner,
+                                         first_mark, second_mark));
+}
+
+static svn_error_t *
 skip_handler_rep(void *baton, apr_size_t len)
 {
   presentation_stream_baton_t *b = baton;
@@ -160,6 +172,7 @@ representation_stream(svn_fs_root_t *root,
   svn_stream_set_mark(stream, mark_handler_rep);
   svn_stream_set_seek(stream, seek_handler_rep);
   svn_stream_set_skip(stream, skip_handler_rep);
+  svn_stream_set_span(stream, span_handler_rep);
   svn_stream_set_data_available(stream, data_available_handler_rep);
   svn_stream_set_readline(stream, readline_handler_rep);
   return stream;

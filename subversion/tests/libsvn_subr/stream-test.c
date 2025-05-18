@@ -262,7 +262,8 @@ test_stream_seek_file(apr_pool_t *pool)
   int j;
   apr_status_t status;
   static const char *NL = APR_EOL_STR;
-  svn_stream_mark_t *mark;
+  svn_stream_mark_t *mark, *mark2;
+  apr_off_t offset;
 
   status = apr_file_open(&f, fname, (APR_READ | APR_WRITE | APR_CREATE |
                          APR_TRUNCATE | APR_DELONCLOSE), APR_OS_DEFAULT, pool);
@@ -297,6 +298,11 @@ test_stream_seek_file(apr_pool_t *pool)
   /* Read the second line and then seek back to the mark. */
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
   SVN_TEST_ASSERT(! eof && strcmp(line->data, file_data[1]) == 0);
+  /* Check how far we read before seeking. */
+  SVN_ERR(svn_stream_mark(stream, &mark2, pool));
+  SVN_ERR(svn_stream_span(&offset, stream, mark, mark2));
+  SVN_TEST_ASSERT(offset == strlen(line->data) + strlen(NL));
+  /* Ok, carry on... */
   SVN_ERR(svn_stream_seek(stream, mark));
   /* The next read should return the second line again. */
   SVN_ERR(svn_stream_readline(stream, &line, NL, &eof, pool));
@@ -328,7 +334,8 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   svn_stringbuf_t *stringbuf;
   char buf[4];
   apr_size_t len;
-  svn_stream_mark_t *mark;
+  svn_stream_mark_t *mark, *mark2;
+  apr_off_t offset;
 
   stringbuf = svn_stringbuf_create("OneTwo", pool);
   stream = svn_stream_from_stringbuf(stringbuf, pool);
@@ -350,6 +357,10 @@ test_stream_seek_stringbuf(apr_pool_t *pool)
   /* Go back to the begin of last word and try to skip some of it */
   SVN_ERR(svn_stream_seek(stream, mark));
   SVN_ERR(svn_stream_skip(stream, 2));
+  /* Check that we actually skipped that far. */
+  SVN_ERR(svn_stream_mark(stream, &mark2, pool));
+  SVN_ERR(svn_stream_span(&offset, stream, mark, mark2));
+  SVN_TEST_ASSERT(offset == 2);
   /* The remaining line should be empty */
   len = 3;
   SVN_ERR(svn_stream_read_full(stream, buf, &len));
@@ -369,7 +380,8 @@ test_stream_seek_translated(apr_pool_t *pool)
   svn_stringbuf_t *stringbuf;
   char buf[44]; /* strlen("One$MyKeyword: my keyword was expanded $Two") + \0 */
   apr_size_t len;
-  svn_stream_mark_t *mark;
+  svn_stream_mark_t *mark, *mark2;
+  apr_off_t offset;
   apr_hash_t *keywords;
   svn_string_t *keyword_val;
 
@@ -381,6 +393,7 @@ test_stream_seek_translated(apr_pool_t *pool)
   translated_stream = svn_subst_stream_translated(stream, APR_EOL_STR,
                                                   FALSE, keywords, TRUE, pool);
   /* Seek from outside of keyword to inside of keyword. */
+  SVN_ERR(svn_stream_mark(translated_stream, &mark2, pool));
   len = 25;
   SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
   SVN_TEST_ASSERT(len == 25);
@@ -388,6 +401,10 @@ test_stream_seek_translated(apr_pool_t *pool)
   SVN_TEST_STRING_ASSERT(buf, "One$MyKeyword: my keyword");
   SVN_ERR(svn_stream_mark(translated_stream, &mark, pool));
   SVN_ERR(svn_stream_reset(translated_stream));
+  SVN_ERR(svn_stream_span(&offset, translated_stream, mark, mark2));
+  /* This is the distance in the untranslated stream, so the length of
+     that "One$MyKeyword$Two" that was read from there. */
+  SVN_TEST_ASSERT(offset == -17);
   SVN_ERR(svn_stream_seek(translated_stream, mark));
   len = 4;
   SVN_ERR(svn_stream_read_full(translated_stream, buf, &len));
@@ -524,6 +541,7 @@ test_stream_compressed_empty_file(apr_pool_t *pool)
                                  svn_io_file_del_on_pool_cleanup,
                                  pool, pool));
   stream = svn_stream_compressed(empty_file_stream, pool);
+  SVN_TEST_ASSERT(!svn_stream_supports_span(stream));
   len = sizeof(buf);
   SVN_ERR(svn_stream_read_full(stream, buf, &len));
   if (len > 0)

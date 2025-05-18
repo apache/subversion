@@ -1,6 +1,21 @@
 Use streams instead of APR files to read patch files.
 =====================================================
 
-2025-05-16: The patch parser currently uses apr_file_t to read
-and parse patch files. Convert to usint svn_stream_t instead,
+2025-05-16: The patch parser currently uses APR files to read
+and parse patch files. Convert it to use SVN streams instead,
 as it's more flexible and doesn't strictly rely on on-disk files.
+
+
+ISSUES:
+  - Reading patches currently relies heavily on seeking in the file.
+    This is really supported only in file-based and string-based streams,
+    and not even all of those (e.g., (de)compressed and tee'd streams
+    don't support seek even if there's an underlying file). That makes
+    reading patches from streams less flexible than it could be.
+
+    Still, by converting to reading from streams, we're not reducing
+    existing features; all current use cases for reading patches remain
+    supported, because file-based streams always support mark and seek.
+
+    And now, they also support span, i.e., finding the distance between
+    two stream marks, just like for two file positions.

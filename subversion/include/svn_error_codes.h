@@ -334,6 +334,16 @@ SVN_ERROR_START
              SVN_ERR_STREAM_CATEGORY_START + 4,
              "Stream doesn't support this capability")
 
+  /** @since New in 1.15. */
+  SVN_ERRDEF(SVN_ERR_STREAM_SPAN_NOT_SUPPORTED,
+             SVN_ERR_STREAM_CATEGORY_START + 5,
+             "Stream doesn't support calculating offsets")
+
+  /** @since New in 1.15. */
+  SVN_ERRDEF(SVN_ERR_STREAM_OFFSET_TOO_LARGE,
+             SVN_ERR_STREAM_CATEGORY_START + 6,
+             "The offset between two stream positions is too large")
+
   /* node errors */
 
   SVN_ERRDEF(SVN_ERR_NODE_UNKNOWN_KIND,
