@@ -5,7 +5,7 @@ This is a branch to experiment with xpatch and CLI/make a prototype.
 - [ ] Design xpatch format
 - [ ] Implement xpatch parser/writer based on the format
 - [ ] Finish-out the apply-processor, for later usage inside of this branch
-- [ ] Connect all together; The patch-file routins, working copy diff
+- [ ] Connect all together; The patch-file routines, working copy diff
       processors and the cmdline interface.
 - [ ] Profit!
 
