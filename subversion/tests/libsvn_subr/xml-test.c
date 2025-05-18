@@ -396,6 +396,85 @@ test_xml_simple_attr_escape(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_xml_writer(apr_pool_t *pool)
+{
+  svn_stringbuf_t *str = svn_stringbuf_create_empty(pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(str, pool);
+  svn_xml_writer_t *xml_writer;
+
+  SVN_ERR(svn_xml_writer_create(&xml_writer, stream, pool));
+
+  SVN_ERR(svn_xml_write_open_tag(xml_writer, pool, svn_xml_normal, "root",
+                                 SVN_VA_NULL));
+
+  SVN_ERR(svn_xml_write_open_tag(xml_writer, pool, svn_xml_normal, "tag1",
+                                 SVN_VA_NULL));
+  SVN_ERR(svn_xml_write_cdata_cstring(xml_writer, "value"));
+  SVN_ERR(svn_xml_write_close_tag(xml_writer, pool, "tag1"));
+
+  SVN_ERR(svn_xml_write_open_tag(xml_writer, pool, svn_xml_normal, "tag2",
+                                 "a", "v", SVN_VA_NULL));
+  SVN_ERR(svn_xml_write_close_tag(xml_writer, pool, "tag2"));
+
+  SVN_ERR(svn_xml_write_close_tag(xml_writer, pool, "root"));
+
+  SVN_ERR(svn_xml_writer_close(xml_writer));
+
+  SVN_TEST_STRING_ASSERT(str->data, "<root>\n"
+                                    "<tag1>\n"
+                                    "value</tag1>\n"
+                                    "<tag2\n"
+                                    "   a=\"v\">\n"
+                                    "</tag2>\n"
+                                    "</root>\n");
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_xml_writer_always_flush(apr_pool_t *pool)
+{
+  svn_stringbuf_t *str = svn_stringbuf_create_empty(pool);
+  svn_stream_t *stream = svn_stream_from_stringbuf(str, pool);
+  svn_xml_writer_t *xml_writer;
+
+  SVN_ERR(svn_xml_writer_create(&xml_writer, stream, pool));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+
+  SVN_ERR(svn_xml_write_open_tag(xml_writer, pool, svn_xml_normal, "root",
+                                 SVN_VA_NULL));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+
+  SVN_ERR(svn_xml_write_open_tag(xml_writer, pool, svn_xml_normal, "tag1",
+                                 SVN_VA_NULL));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+  SVN_ERR(svn_xml_write_cdata_cstring(xml_writer, "value"));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+  SVN_ERR(svn_xml_write_close_tag(xml_writer, pool, "tag1"));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+
+  SVN_ERR(svn_xml_write_open_tag(xml_writer, pool, svn_xml_normal, "tag2",
+                                 "a", "v", SVN_VA_NULL));
+  SVN_ERR(svn_xml_writer_flush(xml_writer));
+  SVN_ERR(svn_xml_write_close_tag(xml_writer, pool, "tag2"));
+  SVN_ERR(svn_xml_write_close_tag(xml_writer, pool, "root"));
+
+  SVN_ERR(svn_xml_writer_close(xml_writer));
+  
+  SVN_TEST_STRING_ASSERT(str->data, "<root>\n"
+                                    "<tag1>\n"
+                                    "value</tag1>\n"
+                                    "<tag2\n"
+                                    "   a=\"v\">\n"
+                                    "</tag2>\n"
+                                    "</root>\n");
+
+  return SVN_NO_ERROR;
+}
+
 /* The test table.  */
 static int max_threads = 1;
 
@@ -426,6 +505,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "simple XML cdata escaping test"),
     SVN_TEST_PASS2(test_xml_simple_attr_escape,
                    "simple XML attribute escaping test"),
+    SVN_TEST_PASS2(test_xml_writer,
+                   "test svn_xml_writer_t"),
+    SVN_TEST_PASS2(test_xml_writer_always_flush,
+                   "test flush xml-writer after each action"),
     SVN_TEST_NULL
   };
 

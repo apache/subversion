@@ -399,6 +399,189 @@ svn_xml_make_close_tag(svn_stringbuf_t **str,
                        apr_pool_t *pool,
                        const char *tagname);
 
+/*---------------------------------------------------------------*/
+
+/** XML writer, writing XML tags to a generic stream.
+ *
+ * Summary
+ * ---
+ *
+ * The XML writer APIs provides functionality to write the XML tags to
+ * any writable stream, without having a need to manage a stringbuf,
+ * periodically write it to the output, and empty it then -- the XML
+ * writer implements this functionality.
+ *
+ * Usage
+ * ---
+ *
+ * 1. Create the writer using svn_xml_writer_create() before performing any
+ *    writes.
+ *
+ * 2. During the lifetime of the XML writer, all the svn_xml_write_* functions
+ *    can be safely invoked. Please note that they won't immediately write the
+ *    data to the stream (more below), but you may force it using the
+ *    svn_xml_writer_flush() function.
+ *
+ * 3. After the operation, the callers MUST close the writer using the
+ *    svn_xml_writer_close() function. It will flush the remaining data in
+ *    the buffer and close the ostream.
+ *
+ * Buffering
+ * ---
+ *
+ * The XML writer implements a temporary buffer, which will be filled with
+ * the content before it would have been flushed into the stream. This is
+ * used for optimization purposes, so we won't invoke the entire sequence
+ * of stream's write callbacks on each tag we want to write. The callers
+ * may use the svn_xml_writer_flush() function if they want to explicitly
+ * flush it to the stream. Otherwise, the writer will automatically flush
+ * the buffer as soon as it is about to exceed the limit.
+ *
+ * The buffering allows the callers to not care about how much tags do
+ * they want to write. If you are using it in a simple loop, no flushes are
+ * required. You may confidently rely to the automatic flush. However, if
+ * the code following after the write will wait for a long operation, for
+ * example, when the tag has been opened, but we need to do a request to a
+ * server, it's recommended to flush the buffer, so we won't have an opened
+ * tag partially written before the freeze.
+ *
+ * @since New in 1.15.
+ */
+
+typedef struct svn_xml_writer_t svn_xml_writer_t;
+
+/** Create an XML writer for writing to @a ostream. Sets @a writer with
+ * the result, allocated in @a result_pool.
+ *
+ * @a ostream will be closed with the writer, in the svn_xml_writer_close()
+ * function.
+ *
+ * The callers MUST close the writer via svn_xml_writer_close().
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_writer_create(svn_xml_writer_t **writer,
+                      svn_stream_t *ostream,
+                      apr_pool_t *result_pool);
+
+/** Close @a xml_writer. This will also close the stream.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_writer_close(svn_xml_writer_t *xml_writer);
+
+/** Flush the buffer of @a xml_writer to the stream.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_writer_flush(svn_xml_writer_t *xml_writer);
+
+/** Write a new xml tag @a tagname to @a xml_writer.
+ *
+ * Take the tag's attributes from varargs, a SVN_VA_NULL-terminated list of
+ * alternating <tt>char *</tt> key and <tt>char *</tt> val.  Do xml-escaping
+ * on each val.
+ *
+ * @a style is one of the enumerated styles in @c svn_xml_open_tag_style.
+ *
+ * Use @a scratch_pool for temporary allocations.
+ *
+ * This function is similar to svn_xml_make_open_tag(), but writes the
+ * result to an XML writer.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_write_open_tag(svn_xml_writer_t *xml_writer,
+                       apr_pool_t *scratch_pool,
+                       enum svn_xml_open_tag_style style,
+                       const char *tagname, ...) SVN_NEEDS_SENTINEL_NULL;
+
+/** Like svn_xml_write_open_tag(), but takes a @c va_list instead of being
+ * variadic.
+ *
+ * This function is similar to svn_xml_make_open_tag_v(), but writes the
+ * result to an XML writer.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_write_open_tag_v(svn_xml_writer_t *xml_writer,
+                         apr_pool_t *scratch_pool,
+                         enum svn_xml_open_tag_style style,
+                         const char *tagname, va_list ap);
+
+/** Like svn_xml_write_open_tag(), but takes a hash table of attributes
+ * (<tt>char *</tt> keys mapping to <tt>char *</tt> values).
+ *
+ * You might ask, why not just provide svn_xml_make_tag_atts()?
+ *
+ * The reason is that a hash table is the most natural interface to an
+ * attribute list; the fact that Expat uses <tt>char **</tt> atts instead is
+ * certainly a defensible implementation decision, but since we'd have
+ * to have special code to support such lists throughout Subversion
+ * anyway, we might as well write that code for the natural interface
+ * (hashes) and then convert in the few cases where conversion is
+ * needed.  Someday it might even be nice to change expat-lite to work
+ * with apr hashes.
+ *
+ * See conversion functions svn_xml_make_att_hash() and
+ * svn_xml_make_att_hash_overlaying().  Callers should use those to
+ * convert Expat attr lists into hashes when necessary.
+ *
+ * This function is similar to svn_xml_make_open_tag_hash(), but writes the
+ * result to an XML writer.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_write_open_tag_hash(svn_xml_writer_t *xml_writer,
+                            apr_pool_t *scratch_pool,
+                            enum svn_xml_open_tag_style style,
+                            const char *tagname, apr_hash_t *attributes);
+
+/** Writes and escapes cdata from a NULL-terminated string @a str
+ * to @a xml_writer.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_write_cdata_cstring(svn_xml_writer_t *xml_writer,
+                            const char *str);
+
+/** Writes and escapes @a len cdata chars from @a data to @a xml_writer.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_write_cdata(svn_xml_writer_t *xml_writer,
+                    const char *data, apr_size_t len);
+
+/** Write @a tagname close tag to @a xml_writer.
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_write_close_tag(svn_xml_writer_t *xml_writer,
+                        apr_pool_t *scratch_pool,
+                        const char *tagname);
+
+/** Write an XML header to @a xml_writer.
+ *
+ * Fully-formed XML documents should start out with a header,
+ * something like <pre>
+ *         \<?xml version="1.0" encoding="UTF-8"?\>
+ * </pre>
+ *
+ * @since New in 1.15.
+ */
+svn_error_t *
+svn_xml_write_header(svn_xml_writer_t *xml_writer,
+                     const char *encoding,
+                     apr_pool_t *scratch_pool);
 
 #ifdef __cplusplus
 }
