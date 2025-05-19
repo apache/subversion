@@ -60,10 +60,10 @@ struct svn_stream_t {
   svn_close_fn_t close_fn;
   svn_stream_mark_fn_t mark_fn;
   svn_stream_seek_fn_t seek_fn;
+  svn_stream_span_fn_t span_fn;
   svn_stream_data_available_fn_t data_available_fn;
   svn_stream_readline_fn_t readline_fn;
   apr_file_t *file; /* Maybe NULL */
-  svn_stream_span_fn_t span_fn;
 };
 
 
