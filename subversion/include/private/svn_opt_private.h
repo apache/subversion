@@ -145,6 +145,105 @@ svn_opt__revision_range_from_revnums(svn_revnum_t start_revnum,
                                      svn_revnum_t end_revnum,
                                      apr_pool_t *result_pool);
 
+/**
+ *
+ */
+typedef enum svn_opt__target_type_e
+{
+  svn_opt__target_type_local_abspath,
+  svn_opt__target_type_absolute_url,
+  svn_opt__target_type_relative_url
+
+} svn_opt__target_type_e;
+
+/**
+ * Stores info about a parsed target.
+ *
+ * FIXME: peg_revision wouldn yet be an empty string instead of NULL if
+ * one wasn't found.
+ *
+ * TODO: potentially also parse peg_revision to svn_opt_revision_t so we
+ * won't need to do it later in the cmdline.
+ *
+ * TODO: add an option to reject all peg revisions which might be useful,
+ * for example, in svnadmin, which doesn't support it by design.
+ *
+ * TODO: pass this directly into the cmdline so we won't need to parse
+ * targets twice and could operate with pretty parsed ones.
+ */
+typedef struct svn_opt__target_t
+{
+  /* Type of the target */
+  svn_opt__target_type_e type;
+
+  /* Path component of the target */
+  const char *true_target;
+
+  /* Peg revision of the target or @c NULL if it wasn't found */
+  const char *peg_revision;
+
+} svn_opt__target_t;
+
+/**
+ * Parses a target described in @a str into @a target_p, allocated in @a pool.
+ *
+ * If the target represents a relative URL and @a rel_url_found_p is not
+ * @c NULL, sets it to @c TRUE.
+ */
+svn_error_t *
+svn_opt__target_parse(svn_opt__target_t **target_p,
+                      svn_boolean_t *rel_url_found_p,
+                      const char *str,
+                      apr_pool_t *pool);
+
+/**
+ * Converts @a target back into its canonical string representation,
+ * including svn_opt__target_t::peg_revision, and sets @a path_p with
+ * the result.
+ */
+svn_error_t *
+svn_opt__target_to_string(const char **path_p,
+                          svn_opt__target_t *target,
+                          apr_pool_t *pool);
+
+/**
+ * Resolves @a target of type @c svn_opt__target_type_relative_url, by
+ * adding @a root path before and changing type to @c
+ * svn_opt__target_type_absolute_url.
+ */
+svn_error_t *
+svn_opt__target_resolve(svn_opt__target_t *target,
+                        const char *root,
+                        apr_pool_t *pool);
+
+/**
+ * Parses targets described in @a paths (an array of const char *)
+ * into @a targets_p (an array of svn_opt__target_t *).
+ *
+ * If any of the targets represents a relative URL and @a rel_url_found_p
+ * is not @c NULL, sets it to @c TRUE.
+ *
+ * @see svn_opt__target_parse()
+ */
+svn_error_t *
+svn_opt__target_array_parse(apr_array_header_t **targets_p,
+                            svn_boolean_t *rel_url_found_p,
+                            apr_array_header_t *paths,
+                            apr_pool_t *pool);
+
+/**
+ * Converts all targets in @a targets (an array of svn_opt__target_t *)
+ * back into its canonical string representation, including
+ * svn_opt__target_t::peg_revision, and sets @a path_p (an array of
+ * const char *) with the result.
+ *
+ * @see svn_opt__target_to_string()
+ */
+svn_error_t *
+svn_opt__target_array_to_string(apr_array_header_t **paths_p,
+                                apr_array_header_t *targets,
+                                apr_pool_t *pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

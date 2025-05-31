@@ -478,3 +478,120 @@ svn_opt__arg_canonicalize_path(const char **path_out, const char *path_in,
 
   return SVN_NO_ERROR;
 }
+
+svn_error_t *
+svn_opt__target_parse(svn_opt__target_t **target_p,
+                      svn_boolean_t *rel_url_found_p,
+                      const char *path,
+                      apr_pool_t *pool)
+{
+  svn_opt__target_t *new_target = apr_pcalloc(pool,
+                                              sizeof(*new_target));
+
+  SVN_ERR(svn_opt__split_arg_at_peg_revision(&new_target->true_target,
+                                             &new_target->peg_revision,
+                                             path, pool));
+
+  if (svn_path_is_repos_relative_url(path))
+    {
+      new_target->type = svn_opt__target_type_relative_url;
+
+      if (rel_url_found_p != NULL)
+        *rel_url_found_p = TRUE;
+    }
+  if (svn_path_is_url(path))
+    new_target->type = svn_opt__target_type_absolute_url;
+  else
+    new_target->type = svn_opt__target_type_local_abspath;
+
+  *target_p = new_target;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__target_to_string(const char **path_p,
+                          svn_opt__target_t *target,
+                          apr_pool_t *pool)
+{
+  const char *canonical_target;
+
+  if (target->type == svn_opt__target_type_absolute_url
+      || target->type == svn_opt__target_type_relative_url)
+    {
+      SVN_ERR(svn_opt__arg_canonicalize_url(&canonical_target,
+                                            target->true_target, pool));
+    }
+  else
+    {
+      canonical_target = target->true_target;
+    }
+
+  *path_p = apr_pstrcat(pool, canonical_target,
+                        target->peg_revision, SVN_VA_NULL);
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__target_resolve(svn_opt__target_t *target,
+                        const char *root,
+                        apr_pool_t *pool)
+{
+  const char *abs_target;
+
+  assert(target->type == svn_opt__target_type_relative_url);
+
+  SVN_ERR(svn_path_resolve_repos_relative_url(&abs_target, target->true_target,
+                                              root, pool));
+
+  target->true_target = abs_target;
+  target->type = svn_opt__target_type_absolute_url;
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__target_array_parse(apr_array_header_t **targets_p,
+                            svn_boolean_t *rel_url_found_p,
+                            apr_array_header_t *paths,
+                            apr_pool_t *pool)
+{
+  int i;
+
+  if (*targets_p != NULL)
+    *targets_p = apr_array_make(pool, DEFAULT_ARRAY_SIZE,
+                                sizeof(svn_opt__target_t *));
+
+  for (i = 0; i < paths->nelts; i++)
+    {
+      const char *path = APR_ARRAY_IDX(paths, i, const char *);
+      svn_opt__target_t *target;
+
+      SVN_ERR(svn_opt__target_parse(&target, rel_url_found_p, path, pool));
+      APR_ARRAY_PUSH(*targets_p, svn_opt__target_t *) = target;
+    }
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_opt__target_array_to_string(apr_array_header_t **paths_p,
+                                apr_array_header_t *targets,
+                                apr_pool_t *pool)
+{
+  int i;
+
+  if (*paths_p != NULL)
+    *paths_p = apr_array_make(pool, DEFAULT_ARRAY_SIZE, sizeof(const char *));
+
+  for (i = 0; i < targets->nelts; i++)
+    {
+      const char *path;
+      svn_opt__target_t *target = APR_ARRAY_IDX(targets, i,
+                                                svn_opt__target_t *);
+
+      SVN_ERR(svn_opt__target_to_string(&path, target, pool));
+      APR_ARRAY_PUSH(*paths_p, const char *) = path;
+    }
+
+  return SVN_NO_ERROR;
+}
