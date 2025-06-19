@@ -429,13 +429,14 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     root = fs.revision_root(self.fs, self.rev)
     editor = BatonCollector(self.fs, root)
     e_ptr, e_baton = delta.make_editor(editor)
+    expected = 1 if sys.version_info >= (3, 14) else 2
     repos.replay(root, e_ptr, e_baton)
     for baton in editor.batons:
       self.assertEqual(sys.getrefcount(baton[2]), 2,
                        "leak on baton %s after replay without errors"
                        % repr(baton))
     del e_baton
-    self.assertEqual(sys.getrefcount(e_ptr), 2,
+    self.assertEqual(sys.getrefcount(e_ptr), expected,
                      "leak on editor baton after replay without errors")
 
     editor = BatonCollectorErrorOnClose(self.fs, root,
@@ -451,7 +452,7 @@ class SubversionRepositoryTestCase(unittest.TestCase):
       self.assertEqual(sys.getrefcount(baton[2]), 2,
                        "leak on baton %s after replay with an error"
                        % repr(baton))
-    self.assertEqual(sys.getrefcount(e_ptr), 2,
+    self.assertEqual(sys.getrefcount(e_ptr), expected,
                      "leak on editor baton after replay with an error")
 
   def test_delta_editor_apply_textdelta_handler_refcount(self):

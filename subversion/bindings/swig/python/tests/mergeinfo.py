@@ -138,8 +138,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
         # ....and now 3 (incref during iteration of each range object)
 
         refcount = sys.getrefcount(r)
-        # ....and finally, 4 (getrefcount() also increfs)
-        expected = 4
+        # ....and finally, 4 (getrefcount() also increfs, but not as of 3.14)
+        expected = 3 if sys.version_info >= (3, 14) else 4
 
         # Note: if path and index are not '/trunk' and 0 respectively, then
         # only some of the range objects are leaking, which is, as far as
