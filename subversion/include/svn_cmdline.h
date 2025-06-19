@@ -288,6 +288,26 @@ svn_cmdline_auth_ssl_client_cert_pw_prompt(
   svn_boolean_t may_save,
   apr_pool_t *pool);
 
+
+/** An implementation of @c svn_auth_ssl_client_cert_uri_prompt_func_t that
+ * prompts the user for the URI of their SSL client certificate via
+ * the command line.
+ *
+ * Records URI of the SSL client certificate store.
+ *
+ * @since New in 1.15.
+ *
+ * Expects a @c svn_cmdline_prompt_baton_t to be passed as @a baton.
+ */
+svn_error_t *
+svn_cmdline_auth_ssl_client_cert_uri_prompt(
+  svn_auth_cred_ssl_client_cert_uri_t **cred_p,
+  void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
+
 /** An implementation of @c svn_auth_plaintext_prompt_func_t that
  * prompts the user whether storing unencrypted passwords to disk is OK.
  *

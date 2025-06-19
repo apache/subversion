@@ -45,6 +45,7 @@ public interface ISVNConfig
     public static final String KWALLET_WALLET            = "kwallet-wallet";
     public static final String KWALLET_SVN_APPLICATION_NAME_WITH_PID = "kwallet-svn-application-name-with-pid";
     public static final String SSL_CLIENT_CERT_FILE_PROMPT = "ssl-client-cert-file-prompt";
+    public static final String SSL_CLIENT_CERT_URI_PROMPT = "ssl-client-cert-uri-prompt";
 
     public static final String SECTION_HELPERS       = "helpers";
     public static final String EDITOR_CMD                = "editor-cmd";
@@ -101,6 +102,7 @@ public interface ISVNConfig
     public static final String SSL_TRUST_DEFAULT_CA      = "ssl-trust-default-ca";
     public static final String SSL_CLIENT_CERT_FILE      = "ssl-client-cert-file";
     public static final String SSL_CLIENT_CERT_PASSWORD  = "ssl-client-cert-password";
+    public static final String SSL_CLIENT_CERT_URI       = "ssl-client-cert-uri";
     public static final String SSL_PKCS11_PROVIDER       = "ssl-pkcs11-provider";
     public static final String HTTP_LIBRARY              = "http-library";
     public static final String STORE_PASSWORDS           = "store-passwords";

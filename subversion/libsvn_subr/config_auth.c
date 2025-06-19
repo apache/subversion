@@ -169,6 +169,7 @@ svn_config_walk_auth_data(const char *config_dir,
       SVN_AUTH_CRED_SIMPLE,
       SVN_AUTH_CRED_USERNAME,
       SVN_AUTH_CRED_SSL_CLIENT_CERT,
+      SVN_AUTH_CRED_SSL_CLIENT_CERT_URI,
       SVN_AUTH_CRED_SSL_CLIENT_CERT_PW,
       SVN_AUTH_CRED_SSL_SERVER_TRUST,
       NULL

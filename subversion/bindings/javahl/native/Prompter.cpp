@@ -126,6 +126,20 @@ get_provider_client_ssl(SVN::Pool &in_pool)
   return provider;
 }
 
+svn_auth_provider_object_t *Prompter::
+get_provider_client_ssl_uri(SVN::Pool &in_pool)
+{
+  apr_pool_t *pool = in_pool.getPool();
+  svn_auth_provider_object_t *provider;
+  svn_auth_get_ssl_client_cert_uri_prompt_provider(&provider,
+                                                   ssl_client_cert_uri_prompt,
+                                                   this,
+                                                   2 /* retry limit */,
+                                                   pool);
+
+  return provider;
+}
+
 svn_auth_provider_object_t *
 Prompter::get_provider_client_ssl_password(SVN::Pool &in_pool)
 {
@@ -201,6 +215,22 @@ svn_error_t *Prompter::ssl_client_cert_prompt(
   SVN_JAVAHL_CATCH(
       env, SVN_ERR_RA_NOT_AUTHORIZED,
       err = static_cast<Prompter*>(baton)->dispatch_ssl_client_cert_prompt(
+          env, cred_p, realm, may_save, pool));
+  return err;
+}
+
+svn_error_t *Prompter::ssl_client_cert_uri_prompt(
+    svn_auth_cred_ssl_client_cert_uri_t **cred_p,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_ssl_client_cert_uri_prompt(
           env, cred_p, realm, may_save, pool));
   return err;
 }

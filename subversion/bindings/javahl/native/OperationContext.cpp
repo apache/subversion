@@ -181,6 +181,8 @@ OperationContext::getAuthBaton(SVN::Pool &in_pool)
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+      svn_auth_get_ssl_client_cert_uri_provider(&provider, pool);
+      APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
       svn_auth_get_ssl_client_cert_pw_file_provider2(
           &provider,
           plaintext_passphrase_prompt_func, plaintext_passphrase_prompt_baton,

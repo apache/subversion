@@ -539,6 +539,9 @@ conn_setup(apr_socket_t *sock,
           serf_ssl_client_cert_provider_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert,
                                             conn, conn->session->pool);
+          serf_ssl_cert_uri_set(conn->ssl_context,
+                                svn_ra_serf__handle_client_cert_uri,
+                                conn, conn->session->pool);
           serf_ssl_client_cert_password_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert_pw,
                                             conn, conn->session->pool);
@@ -721,6 +724,60 @@ apr_status_t svn_ra_serf__handle_client_cert(void *data,
   svn_error_t *err;
 
   err = svn_error_trace(handle_client_cert(data, cert_path, session->pool));
+
+  return save_error(session, err);
+}
+
+/* Implementation of svn_ra_serf__handle_client_cert_uri */
+static svn_error_t *
+handle_client_cert_uri(void *data,
+                       const char **cert_uri,
+                       apr_pool_t *pool)
+{
+    svn_ra_serf__connection_t *conn = data;
+    svn_ra_serf__session_t *session = conn->session;
+    const char *realm;
+    void *creds;
+
+    *cert_uri = NULL;
+
+    realm = construct_realm(session, session->pool);
+
+    if (!conn->ssl_client_auth_state)
+      {
+        SVN_ERR(svn_auth_first_credentials(&creds,
+                                           &conn->ssl_client_auth_state,
+                                           SVN_AUTH_CRED_SSL_CLIENT_CERT_URI,
+                                           realm,
+                                           session->auth_baton,
+                                           pool));
+      }
+    else
+      {
+        SVN_ERR(svn_auth_next_credentials(&creds,
+                                          conn->ssl_client_auth_state,
+                                          session->pool));
+      }
+
+    if (creds)
+      {
+        svn_auth_cred_ssl_client_cert_uri_t *client_creds;
+        client_creds = creds;
+        *cert_uri = client_creds->cert_uri;
+      }
+
+    return SVN_NO_ERROR;
+}
+
+/* Implements serf_ssl_need_cert_uri_t for handle_client_cert_uri */
+apr_status_t svn_ra_serf__handle_client_cert_uri(void *data,
+                                                 const char **cert_uri)
+{
+  svn_ra_serf__connection_t *conn = data;
+  svn_ra_serf__session_t *session = conn->session;
+  svn_error_t *err;
+
+  err = svn_error_trace(handle_client_cert_uri(data, cert_uri, session->pool));
 
   return save_error(session, err);
 }
