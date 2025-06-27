@@ -389,7 +389,6 @@ if (SVN_ENABLE_RA_SERF)
     find_package(Serf REQUIRED)
     add_library(external-serf ALIAS Serf::Serf)
   endif()
-  autocheck_symbol_exists("serf_ssl_cert_uri_set" "serf_bucket_types.h" HAVE_SERF_SSL_CERT_URI_SET)
 endif()
 
 ### Python
@@ -655,6 +654,10 @@ if (HAVE_UNISTD_H)
   autocheck_symbol_exists("symlink" "unistd.h" HAVE_SYMLINK)
   autocheck_symbol_exists("readlink" "unistd.h" HAVE_READLINK)
   autocheck_symbol_exists("getpid" "unistd.h" HAVE_GETPID)
+endif()
+
+if (SVN_ENABLE_RA_SERF)
+  autocheck_symbol_exists("serf_ssl_cert_uri_set" "serf_bucket_types.h" HAVE_SERF_SSL_CERT_URI_SET)
 endif()
 
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
