@@ -89,6 +89,13 @@ AC_DEFUN(SVN_LIB_SERF,
 
   svn_lib_serf=$serf_found
 
+  if test "$svn_lib_serf" = "yes"; then
+    save_ldflags="$LDFLAGS"
+    LDFLAGS="$LDFLAGS $SVN_SERF_LIBS"
+    AC_CHECK_FUNCS(serf_ssl_cert_uri_set)
+    LDFLAGS="$save_ldflags"
+  fi
+
   SVN_DOT_CLANGD([$SVN_SERF_INCLUDES])
   AC_SUBST(SVN_SERF_INCLUDES)
   AC_SUBST(SVN_SERF_LIBS)
@@ -140,7 +147,7 @@ AC_DEFUN(SVN_SERF_PKG_CONFIG,
 [
   AC_MSG_NOTICE([serf library configuration via pkg-config])
   if test -n "$PKG_CONFIG"; then
-    for serf_major in serf-2 serf-1; do
+    for serf_major in serf-2 serf-1 serf; do
       AC_MSG_CHECKING([for $serf_major library])
       if test -n "$serf_prefix" ; then
         dnl User provided a prefix so we try to find the pc file under

@@ -389,6 +389,7 @@ if (SVN_ENABLE_RA_SERF)
     find_package(Serf REQUIRED)
     add_library(external-serf ALIAS Serf::Serf)
   endif()
+  autocheck_symbol_exists("serf_ssl_cert_uri_set" "serf_bucket_types.h" HAVE_SERF_SSL_CERT_URI_SET)
 endif()
 
 ### Python

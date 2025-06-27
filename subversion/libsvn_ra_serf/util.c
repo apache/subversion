@@ -539,10 +539,12 @@ conn_setup(apr_socket_t *sock,
           serf_ssl_client_cert_provider_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert,
                                             conn, conn->session->pool);
-          serf_ssl_cert_uri_set(conn->ssl_context,
+#ifdef HAVE_SERF_SSL_CERT_URI_SET
+	  serf_ssl_cert_uri_set(conn->ssl_context,
                                 svn_ra_serf__handle_client_cert_uri,
                                 conn, conn->session->pool);
-          serf_ssl_client_cert_password_set(conn->ssl_context,
+#endif
+	  serf_ssl_client_cert_password_set(conn->ssl_context,
                                             svn_ra_serf__handle_client_cert_pw,
                                             conn, conn->session->pool);
           serf_ssl_server_cert_callback_set(conn->ssl_context,
