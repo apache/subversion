@@ -209,6 +209,14 @@ svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt
    svn_boolean_t may_save,
    apr_pool_t *pool);
 
+/* thunked ssl_client_cert_uri callback function */
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_uri_prompt
+  (svn_auth_cred_ssl_client_cert_uri_t **cred,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool);
+
 /* Thunked version of svn_wc_notify_func_t callback type */
 void svn_swig_pl_notify_func(void * baton,
                              const char *path,

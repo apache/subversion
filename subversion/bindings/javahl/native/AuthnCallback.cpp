@@ -67,6 +67,11 @@ AuthnCallback::ClassImpl::ClassImpl(::Java::Env env, jclass cls)
                         "(Ljava/lang/String;Z)"
                         JAVAHL_ARG("/callback/AuthnCallback")
                         "$SSLClientCertResult;")),
+    m_mid_ssl_client_cert_uri_prompt(
+        env.GetMethodID(cls, "sslClientCertUriPrompt",
+                        "(Ljava/lang/String;Z)"
+                        JAVAHL_ARG("/callback/AuthnCallback")
+                        "$SSLClientCertUriResult;")),
     m_mid_ssl_client_cert_passphrase_prompt(
         env.GetMethodID(cls, "sslClientCertPassphrasePrompt",
                         "(Ljava/lang/String;Z)"
@@ -114,6 +119,15 @@ jobject AuthnCallback::ssl_client_cert_prompt(const ::Java::String&
                                               realm, bool may_save)
 {
   return m_env.CallObjectMethod(m_jthis, impl().m_mid_ssl_client_cert_prompt,
+                                realm.get(), jboolean(may_save));
+}
+
+jobject AuthnCallback::ssl_client_cert_uri_prompt(
+    const ::Java::String& realm,
+    bool may_save)
+{
+  return m_env.CallObjectMethod(m_jthis,
+                                impl().m_mid_ssl_client_cert_uri_prompt,
                                 realm.get(), jboolean(may_save));
 }
 

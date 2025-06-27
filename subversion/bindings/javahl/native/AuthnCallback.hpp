@@ -217,6 +217,12 @@ public:
   jobject ssl_client_cert_prompt(const ::Java::String& realm, bool may_save);
 
   /**
+   * Invokes the Java method AuthnCallback.sslClientCertUriPrompt().
+   */
+  jobject ssl_client_cert_uri_prompt(const ::Java::String& realm,
+                                     bool may_save);
+
+  /**
    * Invokes the Java method AuthnCallback.sslClientCertPassphrasePrompt().
    */
   jobject ssl_client_cert_passphrase_prompt(const ::Java::String& realm,
@@ -250,6 +256,7 @@ private:
     const ::Java::MethodID m_mid_user_password_prompt;
     const ::Java::MethodID m_mid_ssl_server_trust_prompt;
     const ::Java::MethodID m_mid_ssl_client_cert_prompt;
+    const ::Java::MethodID m_mid_ssl_client_cert_uri_prompt;
     const ::Java::MethodID m_mid_ssl_client_cert_passphrase_prompt;
     const ::Java::MethodID m_mid_allow_store_plaintext_password;
     const ::Java::MethodID m_mid_allow_store_plaintext_passphrase;

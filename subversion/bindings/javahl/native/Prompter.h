@@ -61,6 +61,7 @@ public:
   svn_auth_provider_object_t *get_provider_simple(SVN::Pool &in_pool);
   svn_auth_provider_object_t *get_provider_server_ssl_trust(SVN::Pool &in_pool);
   svn_auth_provider_object_t *get_provider_client_ssl(SVN::Pool &in_pool);
+  svn_auth_provider_object_t *get_provider_client_ssl_uri(SVN::Pool &in_pool);
   svn_auth_provider_object_t *get_provider_client_ssl_password(SVN::Pool &in_pool);
 
 protected:
@@ -142,6 +143,20 @@ protected:
 
   static svn_error_t *ssl_client_cert_pw_prompt(
       svn_auth_cred_ssl_client_cert_pw_t **cred_p,
+      void *baton,
+      const char *realm,
+      svn_boolean_t may_save,
+      apr_pool_t *pool);
+
+  virtual svn_error_t *dispatch_ssl_client_cert_uri_prompt(
+      ::Java::Env env,
+      svn_auth_cred_ssl_client_cert_uri_t **cred_p,
+      const char *realm,
+      svn_boolean_t may_save,
+      apr_pool_t *pool);
+
+  static svn_error_t *ssl_client_cert_uri_prompt(
+      svn_auth_cred_ssl_client_cert_uri_t **cred_p,
       void *baton,
       const char *realm,
       svn_boolean_t may_save,

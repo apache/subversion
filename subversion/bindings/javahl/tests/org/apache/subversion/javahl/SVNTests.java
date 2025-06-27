@@ -374,6 +374,12 @@ class SVNTests extends TestCase
                 return null;
             }
 
+            public SSLClientCertUriResult
+                sslClientCertUriPrompt(String realm, boolean maySave)
+            {
+                return null;
+            }
+
             public SSLClientCertPassphraseResult
                 sslClientCertPassphrasePrompt(String realm, boolean maySave)
             {

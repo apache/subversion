@@ -475,6 +475,20 @@ svn_error_t *svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
     svn_boolean_t may_save,
     apr_pool_t *pool);
 
+svn_error_t *svn_swig_py_auth_ssl_client_cert_uri_prompt_func(
+    svn_auth_cred_ssl_client_cert_uri_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
+svn_error_t *svn_swig_py_auth_ssl_client_cert_uri_prompt_func(
+    svn_auth_cred_ssl_client_cert_uri_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
 /* auth cleanup callback */
 svn_error_t *svn_swig_py_config_auth_walk_func(svn_boolean_t *delete_cred,
                                                void *walk_baton,
