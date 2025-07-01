@@ -89,6 +89,13 @@ AC_DEFUN(SVN_LIB_SERF,
 
   svn_lib_serf=$serf_found
 
+  if test "$svn_lib_serf" = "yes"; then
+    save_ldflags="$LDFLAGS"
+    LDFLAGS="$LDFLAGS $SVN_SERF_LIBS"
+    AC_CHECK_FUNCS(serf_ssl_error_cb_set)
+    LDFLAGS="$save_ldflags"
+  fi
+
   SVN_DOT_CLANGD([$SVN_SERF_INCLUDES])
   AC_SUBST(SVN_SERF_INCLUDES)
   AC_SUBST(SVN_SERF_LIBS)
