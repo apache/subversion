@@ -453,13 +453,16 @@ ssl_server_cert_cb(void *baton, int failures,
 
 #if defined(HAVE_SERF_SSL_ERROR_CB_SET)
 static apr_status_t
-ssl_error_cb(void *baton,
+ssl_error_cb(void *baton, apr_status_t status,
              const char *message)
 {
   svn_ra_serf__connection_t *conn = baton;
   svn_ra_serf__session_t *session = conn->session;
 
-  session->ssl_error = apr_pstrdup(session->pool, message);
+  session->ssl_error = svn_error_createf(status,
+                                         session->ssl_error,
+                                         _("TLS: %s"),
+                                         message);
 
   return APR_SUCCESS;
 }
@@ -981,10 +984,7 @@ svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
 
       if (sess->ssl_error)
         {
-          return svn_error_createf(status,
-                                   svn_ra_serf__wrap_err(status, _("Error running context")),
-                                   _("TLS: %s"),
-                                   sess->ssl_error);
+          return sess->ssl_error;
         }
       else
         {

@@ -114,7 +114,7 @@ struct svn_ra_serf__session_t {
   svn_boolean_t using_ssl;
 
   /* What was the underlying detail of the last SSL failure, if any */
-  const char *ssl_error;
+  svn_error_t *ssl_error;
 
   /* Tristate flag that indicates if we should use compression for
      network transmissions.  If svn_tristate_true or svn_tristate_false,
