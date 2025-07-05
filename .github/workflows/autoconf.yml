@@ -38,9 +38,16 @@ jobs:
       matrix:
         check-target: [check, davautocheck]
         os: [ubuntu-latest, ubuntu-22.04-arm]
+        httpd: [system, trunk, 2.4.x]
+        # Only run davautocheck for httpd trunk/2.4.x
+        exclude:
+          - check-target: check
+            httpd: trunk
+          - check-target: check
+            httpd: 2.4.x
 
     runs-on: ${{ matrix.os }}
-    name: ${{ matrix.os }}, target ${{ matrix.check-target }}
+    name: ${{ matrix.os }}, target ${{ matrix.check-target }}, ${{ matrix.httpd }} httpd
 
     steps:
       - name: Install dependencies (Linux, apt-get)
@@ -58,7 +65,7 @@ jobs:
           libsqlite3-dev
           liblz4-dev
           libutf8proc-dev
-          apache2-dev
+          ${{ matrix.httpd == 'system' && 'apache2-dev' || '' }}
           libsecret-1-dev
 
       - name: Use LF for Git checkout
@@ -66,13 +73,24 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
+      - name: Install Apache httpd
+        run: |
+          test "${{ matrix.httpd }}" != 'system' || exit 0
+          git clone -q --depth=1 -b ${{ matrix.httpd }} https://github.com/apache/httpd
+          cd httpd
+          ./buildconf --with-apr=/usr/bin/apr-1-config
+          ./configure --prefix=$HOME/root/httpd --enable-mpms-shared=event --enable-mods-shared=most --enable-dav
+          make -j
+          make install
       - uses: actions/checkout@v4
 
       - name: autogen
         run: ./autogen.sh
 
       - name: Configure
-        run: ./configure --enable-maintainer-mode
+        run: |
+          ./configure --enable-maintainer-mode \
+              --with-apxs=${{ matrix.httpd == 'system' && '/usr/bin/apxs' || '${HOME}/root/httpd/bin/apxs' }}
 
       - name: Build (make)
         run: make -j
@@ -80,12 +98,14 @@ jobs:
       - name: Run tests
         run: make ${{matrix.check-target}} PARALLEL=16 APACHE_MPM=event
 
-      - name: Archive test log
+      - name: Archive test logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: tests-${{matrix.os}}-${{matrix.check-target}}.log
-          path: tests.log
+          name: tests-${{matrix.os}}-${{matrix.check-target}}-${{matrix.httpd}}
+          path: |
+            tests.log
+            subversion/tests/cmdline/httpd**/*_log
 
       - name: Install (make install)
         run: sudo make install

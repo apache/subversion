@@ -300,6 +300,9 @@ LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
 say "Monolithic Auth module not found. Assuming we run against Apache 2.1+"
 LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
     || fail "Auth_Basic module not found."
+# FIXME: Uncomment to test digest authentication:
+# LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_digest)" \
+#     || fail "Auth_Digest module not found."
 LOAD_MOD_ACCESS_COMPAT="$(get_loadmodule_config mod_access_compat)" \
     && {
 say "Found modules for Apache 2.3.0+"
@@ -428,6 +431,22 @@ $HTPASSWD -b  $HTTPD_USERS __dumpster__ __loadster__
 $HTPASSWD -b  $HTTPD_USERS JRANDOM   rayjandom
 $HTPASSWD -b  $HTTPD_USERS JCONSTANT rayjandom
 
+# FIXME: Uncomment to test digest authentication:
+# rm -f $HTTPD_USERS
+# gen_digest_authn() {
+#   # This is what `htdigest` does when we're not looking.
+#   r="Subversion Repository"
+#   p="$1:$r:"
+#   s="$1:$r:$2"
+#   $PYTHON -c "from hashlib import md5; print('$p' + md5(b'$s').hexdigest())" \
+#           >> $HTTPD_USERS
+# }
+# gen_digest_authn jrandom   rayjandom
+# gen_digest_authn jconstant rayjandom
+# gen_digest_authn __dumpster__ __loadster__
+# gen_digest_authn JRANDOM   rayjandom
+# gen_digest_authn JCONSTANT rayjandom
+
 say "Adding groups for mod_authz_svn tests"
 cat > "$HTTPD_GROUPS" <<__EOF__
 random: jrandom
@@ -548,6 +567,9 @@ Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
 <Location /svn-test-work/repositories>
 __EOF__
 location_common_without_authz() {
+# FIXME: To test digest authentication, replace 'AuthType Basic' with:
+#    AuthType          Digest
+#    AuthDigestProvider file
 cat >> "$HTTPD_CFG" <<__EOF__
   DAV               svn
   AuthType          Basic
