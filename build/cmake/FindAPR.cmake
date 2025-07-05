@@ -23,10 +23,10 @@ find_path(APR_INCLUDE_DIR
   NAMES apr.h
   PATH_SUFFIXES
     include
-    include/apr-1
-    include/apr-1.0
     include/apr-2
     include/apr-2.0
+    include/apr-1
+    include/apr-1.0
 )
 
 if (APR_INCLUDE_DIR AND EXISTS ${APR_INCLUDE_DIR}/apr_version.h)
