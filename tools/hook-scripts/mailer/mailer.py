@@ -1401,7 +1401,9 @@ class Config:
             # Extract key/value pairs from the regex match of this
             # repository, and merge them into the default params.
             # Make sure to copy() to avoid mutation of the argument.
-            return defaults.copy().update(match.groupdict())
+            merged_defaults = defaults.copy()
+            merged_defaults.update(match.groupdict())
+            return merged_defaults
 
         # There are no repository-specific key/value params, to add.
         return defaults
