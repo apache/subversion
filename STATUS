@@ -30,6 +30,12 @@ Candidate changes:
   Votes:
     +1: jamessan
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
 * r1892118
   Fix a NULL pointer dereference in the conflict resolver.
   Justification:
@@ -37,8 +43,3 @@ Candidate changes:
   Votes:
    +1: stsp, rinrab
 
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
