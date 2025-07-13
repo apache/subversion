@@ -2847,12 +2847,26 @@ conflict_tree_get_details_local_missing(svn_client_conflict_t *conflict,
   /* Make sure we're going to search the related node in a revision where
    * it exists. The younger incoming node might have been deleted in HEAD. */
   if (related_repos_relpath != NULL && related_peg_rev != SVN_INVALID_REVNUM)
-    SVN_ERR(find_related_node(
-              &related_repos_relpath, &related_peg_rev,
-              related_repos_relpath, related_peg_rev,
-              (old_rev < new_rev ? old_repos_relpath : new_repos_relpath),
-              (old_rev < new_rev ? old_rev : new_rev),
-              conflict, ctx, scratch_pool, scratch_pool));
+    {
+      const char *older_related_repos_relpath;
+      svn_revnum_t older_related_peg_rev;
+      SVN_ERR(find_related_node(
+                &older_related_repos_relpath, &older_related_peg_rev,
+                related_repos_relpath, related_peg_rev,
+                (old_rev < new_rev ? old_repos_relpath : new_repos_relpath),
+                (old_rev < new_rev ? old_rev : new_rev),
+                conflict, ctx, scratch_pool, scratch_pool));
+      if (older_related_repos_relpath != NULL &&
+          older_related_peg_rev != SVN_INVALID_REVNUM)
+        {
+          related_repos_relpath = older_related_repos_relpath;
+          related_peg_rev = older_related_peg_rev;
+        }
+    }
+
+  /* Bail if we are unable to find the related node. */
+  if (related_repos_relpath == NULL || related_peg_rev == SVN_INVALID_REVNUM)
+    return SVN_NO_ERROR;
 
   /* Set END_REV to our best guess of the nearest YCA revision. */
   url = svn_path_url_add_component2(repos_root_url, related_repos_relpath,

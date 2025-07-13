@@ -35,11 +35,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-* r1892118
-  Fix a NULL pointer dereference in the conflict resolver.
-  Justification:
-    1.14.5 users are running into this crash.
-  Votes:
-   +1: stsp, rinrab
-
