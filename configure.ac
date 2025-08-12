@@ -218,7 +218,28 @@ else
   SVN_APR_MAJOR_VERSION=1
 fi
 AC_SUBST(SVN_APR_MAJOR_VERSION)
-SVN_LT_SOVERSION="-version-info $svn_lib_ver"
+
+# For libtool library versioning, follow the interface rules at:
+# https://www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html
+# for SVN <major>.<minor>.<patch>:
+#
+# 1. the oldest version supported is always 0 (or 2 for the above APR2
+# variant), corresponding to the ABI at <major>.0.0; changes to
+# <major> are reflected in the library names like "libsvn_subr-1.la"
+#
+# 2. the current version and age of the ABI both equal <minor>, since
+# SVN minor versions always maintain backwards-compatibility to
+# <major>.0; in the APR2 variant, the current version is 2+<minor>.
+#
+# 3. the revision is equal to the <patch> number.
+
+m4_define([svn_ver_major], m4_bpatsubst(AC_PACKAGE_VERSION, [\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)], [\1]))
+m4_define([svn_ver_minor], m4_bpatsubst(AC_PACKAGE_VERSION, [\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)], [\2]))
+m4_define([svn_ver_patch], m4_bpatsubst(AC_PACKAGE_VERSION, [\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)], [\3]))
+svn_ver_current="`expr $svn_lib_ver + svn_ver_minor`"
+
+SVN_LT_SOVERSION="-version-info $svn_ver_current:svn_ver_patch:svn_ver_minor"
+
 AC_SUBST(SVN_LT_SOVERSION)
 AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
                    [Subversion library major version])
