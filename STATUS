@@ -40,7 +40,7 @@ Candidate changes:
      to UTF-8 and work with UTF-8 directly, but until then failing fast
      should be better than changing the user input.
    Votes:
-     +1: kotkov
+     +1: kotkov, rinrab
 
 Veto-blocked changes:
 =====================
