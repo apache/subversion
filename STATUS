@@ -15,12 +15,28 @@ Status of 1.14.6:
 Candidate changes:
 ==================
 
+ * r1883715
+   Let users select the C++ language standard.
+   Justification:
+     Required for backport of the the upcoming patch to support KWallet 6
+     (if we decide to accept some version of the patch). See:
+     https://lists.apache.org/thread/hycj045wp5jjgzop96w7bc6dc3bv42kf
+   Votes:
+     +1: brane
+
  * r1890223, r1890668, r1890673
    Support building on Win64/ARM64.
    Justification:
      At user request (via SharpSvn)
    Votes:
      +1: rhuijben
+
+ * r1926541, r1926564, r1926565
+   Use the SecItem* API for macOS Keychain support.
+   Justification:
+     The SecKeychain* API has been deprecated for more than a decade.
+   Votes:
+     +1: brane
 
  * r1926575, r1927715
    Fix SWIG test cases for Python 3.14.
