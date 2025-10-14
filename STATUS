@@ -22,7 +22,7 @@ Candidate changes:
      (if we decide to accept some version of the patch). See:
      https://lists.apache.org/thread/hycj045wp5jjgzop96w7bc6dc3bv42kf
    Votes:
-     +1: brane
+     +1: brane, jamessan
 
  * r1890223, r1890668, r1890673
    Support building on Win64/ARM64.
@@ -37,13 +37,6 @@ Candidate changes:
      The SecKeychain* API has been deprecated for more than a decade.
    Votes:
      +1: brane
-
- * r1926575, r1927715
-   Fix SWIG test cases for Python 3.14.
-   Justification:
-     Preparing Python 3.14 release
-   Votes:
-     +1: futatuki
 
  * r1927953
    On Windows, use the WC_NO_BEST_FIT_CHARS flag when converting individual
@@ -65,9 +58,18 @@ Candidate changes:
      version of SWIG for swig-py
    Votes:
      +1: futatuki
+     -0: jamessan (needs a merge branch)
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1926575, r1927715
+   Fix SWIG test cases for Python 3.14.
+   Justification:
+     Preparing Python 3.14 release
+   Votes:
+     +1: futatuki, jamessan
+
