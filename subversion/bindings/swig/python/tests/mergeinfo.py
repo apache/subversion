@@ -18,7 +18,7 @@
 # under the License.
 #
 #
-import unittest, os, sys, gc
+import unittest, os, sys, weakref, gc
 from svn import core, repos, fs
 import utils
 
@@ -125,6 +125,9 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
       }
     self.compare_mergeinfo_catalogs(mergeinfo, expected_mergeinfo)
 
+  @unittest.skipIf(utils.HAS_DEFERRED_REFCOUNT,
+                   "Reference counting tests skipped because of deferred "
+                   "reference counting")
   def test_mergeinfo_leakage__incorrect_range_t_refcounts(self):
     """Ensure that the ref counts on svn_merge_range_t objects returned by
        svn_mergeinfo_parse() are correct."""
@@ -138,7 +141,8 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
         # ....and now 3 (incref during iteration of each range object)
 
         refcount = sys.getrefcount(r)
-        # ....and finally, 4 (getrefcount() also increfs)
+        # ....and finally, 4 (getrefcount() also increfs, unless deferred 
+        #                     reference counting)
         expected = 4
 
         # Note: if path and index are not '/trunk' and 0 respectively, then
@@ -150,8 +154,49 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
           "cause: incorrect Py_INCREF/Py_DECREF usage in libsvn_swig_py/"
           "swigutil_py.c." % (expected, refcount, path, i)))
 
+  def test_mergeinfo_leakage__incorrect_range_t_weakrefs(self):
+    """Ensure that the ref counts on svn_merge_range_t objects returned by
+       svn_mergeinfo_parse() are correct."""
+    # When reference counting is working properly, each svn_merge_range_t in
+    # the returned mergeinfo will have a ref count of 1...
+    mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
+    merge_range_refdict = weakref.WeakValueDictionary()
+    merge_range_indexes = []
+    n_merge_range = 0 
+    for (path, rangelist) in core._as_list(mergeinfo.items()):
+      # ....and now 2 (incref during iteration of rangelist)
+
+      for (i, r) in enumerate(rangelist):
+        # ....and now 3 (incref during iteration of each range object)
+
+        idx = (path, i)
+        merge_range_refdict[idx] = r
+        merge_range_indexes.append(idx) 
+        n_merge_range += 1
+
+        # Note: if path and index are not '/trunk' and 0 respectively, then
+        # only some of the range objects are leaking, which is, as far as
+        # leaks go, even more impressive.
+
+    del rangelist, r
+    gc.collect()
+    # Now (strong) reference count of all svn_merge_range_t should be 1
+    # again and those objects should not be removed yet.
+    for idx in merge_range_indexes:
+      self.assertIn(idx, merge_range_refdict, (
+          "Refarence count error on svn_merge_info_t object for "
+          "(path: %s, index: %d). It should still exists because "
+          "mergeinfo holds its reference, but after GC, it already "
+          "removed." % idx))
     del mergeinfo
     gc.collect()
+    if merge_range_refdict:
+      # certainly memory leak, but we want to listing up leaked objects
+      # before raise an assertion error.  
+      self.assertFalse(merge_range_refdict,
+         "Memory leak! All svn_merge_range_t object holded "
+         "by mergeinfo object should be removed, but at least "
+         "one object still alive.")
 
   def test_mergeinfo_leakage__lingering_range_t_objects_after_del(self):
     """Ensure that there are no svn_merge_range_t objects being tracked by
@@ -162,6 +207,9 @@ class SubversionMergeinfoTestCase(unittest.TestCase):
        objects will be garbage collected and thus, not appear in the list of
        objects returned by gc.get_objects()."""
     mergeinfo = core.svn_mergeinfo_parse(self.TEXT_MERGEINFO1)
+    lingering = get_svn_merge_range_t_objects()
+    self.assertNotEqual(lingering, list())
+    del lingering
     del mergeinfo
     gc.collect()
     lingering = get_svn_merge_range_t_objects()

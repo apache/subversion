@@ -65,11 +65,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1926575, r1927715
-   Fix SWIG test cases for Python 3.14.
-   Justification:
-     Preparing Python 3.14 release
-   Votes:
-     +1: futatuki, jamessan
-
