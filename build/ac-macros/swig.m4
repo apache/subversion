@@ -89,7 +89,7 @@ AC_DEFUN(SVN_FIND_SWIG,
     # The major is passed straight through,
     # the minor is zero padded to two places,
     # and the patch level is zero padded to three places.
-    # e.g. 1.3.24 becomes 103024
+    # e.g. 1.3.40 becomes 103040
     SWIG_VERSION="`echo \"$SWIG_VERSION_RAW\" | \
                   $SED -e 's/[[^0-9\.]].*$//' \
                       -e 's/\.\([[0-9]]\)$/.0\1/' \
@@ -98,9 +98,9 @@ AC_DEFUN(SVN_FIND_SWIG,
     AC_MSG_RESULT([$SWIG_VERSION_RAW])
     # If you change the required swig version number, don't forget to update:
     #   subversion/bindings/swig/INSTALL
-    if test ! -n "$SWIG_VERSION" || test "$SWIG_VERSION" -lt "103024"; then
+    if test ! -n "$SWIG_VERSION" || test "$SWIG_VERSION" -lt "103040"; then
       AC_MSG_WARN([Detected SWIG version $SWIG_VERSION_RAW])
-      AC_MSG_WARN([Subversion requires SWIG >= 1.3.24])
+      AC_MSG_WARN([Subversion requires SWIG >= 1.3.40])
     fi
   fi
 ])
@@ -206,7 +206,7 @@ suitable Python interpreter is not found."
                 else
                   SWIG_PY_OPTS="-no-such-option" # fool proof
                   SWIG_PY_ERRMSG="SWIG version is not suitable"
-                  AC_MSG_WARN([Subversion Python bindings for Python 2 require 1.3.24 <= SWIG < 4.0.0])
+                  AC_MSG_WARN([Subversion Python bindings for Python 2 require 1.3.40 <= SWIG < 4.0.0])
                 fi
               fi
             fi
