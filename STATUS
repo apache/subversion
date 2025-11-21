@@ -61,17 +61,6 @@ Candidate changes:
      -0: jamessan (needs a merge branch)
      -1: hartmannathan (please review the merge branch instead, see below)
 
- * r1928521, r1928524
-   swig-py: follow up to r1912500: Fix NameError on using old SWIG
-   Justification:
-     Fix a regression for old SWIG versions and make clear minimal supported
-     version of SWIG for swig-py
-   Branch:
-     1.14.x-r1928521
-   Votes:
-     +0: hartmannathan (review from swig-py experts requested!)
-     +1: jun66j5
-
  * r1929560
    Adapt swig-py to SWIG 4.4.0.
    Justification:
@@ -84,4 +73,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1928521, r1928524
+   swig-py: follow up to r1912500: Fix NameError on using old SWIG
+   Justification:
+     Fix a regression for old SWIG versions and make clear minimal supported
+     version of SWIG for swig-py
+   Branch:
+     1.14.x-r1928521
+   Votes:
+     +0: hartmannathan (review from swig-py experts requested!)
+     +1: jun66j5
 
