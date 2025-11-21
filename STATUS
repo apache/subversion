@@ -66,13 +66,22 @@ Candidate changes:
    Justification:
      Fix a regression for old SWIG versions and make clear minimal supported
      version of SWIG for swig-py
-   Branch: 1.14.x-r1928521
+   Branch:
+     1.14.x-r1928521
    Votes:
      +0: hartmannathan (review from swig-py experts requested!)
      +1: jun66j5
+
+ * r1929560
+   Adapt swig-py to SWIG 4.4.0.
+   Justification:
+     Fix build with SWIG 4.4
+   Votes:
+     +1: jamessan
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
