@@ -208,6 +208,7 @@ void _ops_get(int *num_ops, const svn_txdelta_op_t **ops)
 # Baton container class for editor/parse_fns3 batons and their decendants.
 class _ItemBaton:
   def __init__(self, editor, pool, baton=None):
+    import libsvn.core
     self.pool = pool if pool else libsvn.core.svn_pool_create()
     self.baton = baton
     self.editor = editor
