@@ -51,15 +51,15 @@ Candidate changes:
    Votes:
      +1: kotkov, rinrab
 
- * r1929560
-   Adapt swig-py to SWIG 4.4.0.
-   Justification:
-     Fix build with SWIG 4.4
-   Votes:
-     +1: jamessan
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1929560
+   Adapt swig-py to SWIG 4.4.0.
+   Justification:
+     Fix build with SWIG 4.4
+   Votes:
+     +1: jamessan, jun66j5
