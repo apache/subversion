@@ -440,6 +440,53 @@ public interface AuthnCallback
 
 
     /**
+     * The result type used by {@see #sslClientCertUriPrompt}.
+     */
+    public static final class SSLClientCertUriResult
+        extends AuthnResult
+        implements java.io.Serializable
+    {
+        // Update the serialVersionUID when there is an incompatible change made to
+        // this class.  See the Java documentation (following link or its counter-
+        // part in your specific Java release) for when a change is incompatible.
+        // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
+        private static final long serialVersionUID = 1L;
+
+        /**
+         * Set the uri of the cerfiticate store in the result.
+         * Assumes the result may not be stored permanently.
+         * @param path The uri of the certificate store.
+         */
+        public SSLClientCertUriResult(String uri)
+        {
+            identity = uri;
+        }
+
+        /**
+         * Set the uri of the cerfiticate store in the result.
+         * @param uri The uri of the certificate store.
+         * @param maySave Set if the result may be stored permanently.
+         */
+        public SSLClientCertUriResult(String uri, boolean maySave)
+        {
+            save = maySave;
+            identity = uri;
+        }
+    }
+
+    /**
+     * Ask for the URI of a client SSL certificate.
+     * @param realm    The realm from which the question originates.
+     * @param maySave  Indicates whether saving credentials is allowed;
+     *                 if <code>false</code>, the <code>maySave</code> flag
+     *                 in the return value will be ignored.
+     * @return The result, or <code>null</code> if cancelled.
+     */
+    public SSLClientCertUriResult
+        sslClientCertUriPrompt(String realm, boolean maySave);
+
+
+    /**
      * The result type used by {@see #sslClientCertPassphrasePrompt}.
      */
     public static final class SSLClientCertPassphraseResult

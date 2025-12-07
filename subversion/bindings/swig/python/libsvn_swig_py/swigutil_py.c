@@ -4415,6 +4415,110 @@ svn_swig_py_auth_ssl_client_cert_pw_prompt_func(
 }
 
 svn_error_t *
+svn_swig_py_auth_ssl_client_cert_uri_prompt_func(
+    svn_auth_cred_ssl_client_cert_uri_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_auth_cred_ssl_client_cert_uri_t *creds = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)SVN_SWIG_BYTES_FMT "lO&",
+                                      realm, may_save,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        {
+          svn_auth_cred_ssl_client_cert_uri_t *tmp_creds = NULL;
+          if (svn_swig_ConvertPtrString
+              (result, (void **)&tmp_creds,
+               "svn_auth_cred_ssl_client_cert_uri_t *"))
+            {
+              err = type_conversion_error
+                ("svn_auth_cred_ssl_client_cert_uri_t *");
+            }
+          else
+            {
+              creds = apr_pcalloc(pool, sizeof(*creds));
+              creds->cert_uri = tmp_creds->cert_uri ?
+                apr_pstrdup(pool, tmp_creds->cert_uri) : NULL;
+              creds->may_save = tmp_creds->may_save;
+            }
+        }
+      Py_DECREF(result);
+    }
+  svn_swig_py_release_py_lock();
+  *cred = creds;
+  return err;
+}
+
+svn_error_t *
+svn_swig_py_auth_ssl_client_cert_uri_prompt_func(
+    svn_auth_cred_ssl_client_cert_uri_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  PyObject *function = baton;
+  PyObject *result;
+  svn_auth_cred_ssl_client_cert_uri_t *creds = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+
+  if ((function == NULL) || (function == Py_None))
+    return SVN_NO_ERROR;
+
+  svn_swig_py_acquire_py_lock();
+
+  if ((result = PyObject_CallFunction(function,
+                                      (char *)SVN_SWIG_BYTES_FMT "lO&",
+                                      realm, may_save,
+                                      make_ob_pool, pool)) == NULL)
+    {
+      err = callback_exception_error();
+    }
+  else
+    {
+      if (result != Py_None)
+        {
+          svn_auth_cred_ssl_client_cert_uri_t *tmp_creds = NULL;
+          if (svn_swig_ConvertPtrString
+              (result, (void **)&tmp_creds,
+               "svn_auth_cred_ssl_client_cert_uri_t *"))
+            {
+              err = type_conversion_error
+                ("svn_auth_cred_ssl_client_cert_uri_t *");
+            }
+          else
+            {
+              creds = apr_pcalloc(pool, sizeof(*creds));
+              creds->cert_uri = tmp_creds->cert_uri ?
+                apr_pstrdup(pool, tmp_creds->cert_uri) : NULL;
+              creds->may_save = tmp_creds->may_save;
+            }
+        }
+      Py_DECREF(result);
+    }
+  svn_swig_py_release_py_lock();
+  *cred = creds;
+  return err;
+}
+
+svn_error_t *
 svn_swig_py_config_auth_walk_func(svn_boolean_t *delete_cred,
                                   void *walk_baton,
                                   const char *cred_kind,

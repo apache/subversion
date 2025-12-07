@@ -248,6 +248,32 @@ typedef struct svn_auth_cred_ssl_client_cert_t
 } svn_auth_cred_ssl_client_cert_t;
 
 
+/** SSL client certificate url credential type.
+ *
+ * The following auth parameters are available to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_CONFIG_CATEGORY_SERVERS (@c svn_config_t*)
+ * - @c SVN_AUTH_PARAM_SERVER_GROUP (@c char*)
+ *
+ * The following optional auth parameters are relevant to the providers:
+ *
+ * - @c SVN_AUTH_PARAM_NO_AUTH_CACHE (@c void*)
+ */
+#define SVN_AUTH_CRED_SSL_CLIENT_CERT_URI "svn.ssl.client-uri"
+
+/** @c SVN_AUTH_CRED_SSL_CLIENT_CERT_URI credentials. */
+typedef struct svn_auth_cred_ssl_client_cert_uri_t
+{
+  /** URI to the certificate store */
+  const char *cert_uri;
+  /** Indicates if the credentials may be saved (to disk). For example, a
+   * GUI prompt implementation with a remember certificate checkbox shall
+   * set @a may_save to TRUE if the checkbox is checked.
+   */
+  svn_boolean_t may_save;
+} svn_auth_cred_ssl_client_cert_uri_t;
+
+
 /** A function returning an SSL client certificate passphrase provider. */
 typedef void (*svn_auth_ssl_client_cert_pw_provider_func_t)(
   svn_auth_provider_object_t **provider,
@@ -458,6 +484,24 @@ typedef svn_error_t *(*svn_auth_ssl_server_trust_prompt_func_t)(
  */
 typedef svn_error_t *(*svn_auth_ssl_client_cert_prompt_func_t)(
   svn_auth_cred_ssl_client_cert_t **cred,
+  void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
+  apr_pool_t *pool);
+
+
+/** Set @a *cred by prompting the user, allocating @a *cred in @a pool.
+ * @a baton is an implementation-specific closure.  @a realm is a string
+ * that can be used in the prompt string.
+ *
+ * If @a may_save is FALSE, the auth system does not allow the credentials
+ * to be saved (to disk). A prompt function shall not ask the user if the
+ * credentials shall be saved if @a may_save is FALSE. For example, a GUI
+ * client with a remember certificate checkbox would grey out the checkbox
+ * if @a may_save is FALSE.
+ */
+typedef svn_error_t *(*svn_auth_ssl_client_cert_uri_prompt_func_t)(
+  svn_auth_cred_ssl_client_cert_uri_t **cred,
   void *baton,
   const char *realm,
   svn_boolean_t may_save,
@@ -1220,6 +1264,21 @@ svn_auth_get_ssl_client_cert_file_provider(
 
 
 /** Set @a *provider to an authentication provider of type @c
+ * svn_auth_cred_ssl_client_cert_uri_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials from the configuration
+ * mechanism.  The returned credential is used to load the appropriate
+ * client certificate for authentication when requested by a server.
+ *
+ * @since New in 1.15.
+ */
+void
+svn_auth_get_ssl_client_cert_uri_provider(
+  svn_auth_provider_object_t **provider,
+  apr_pool_t *pool);
+
+
+/** Set @a *provider to an authentication provider of type @c
  * svn_auth_cred_ssl_client_cert_pw_t that gets/sets information from the user's
  * ~/.subversion configuration directory.
  *
@@ -1295,6 +1354,26 @@ void
 svn_auth_get_ssl_client_cert_prompt_provider(
   svn_auth_provider_object_t **provider,
   svn_auth_ssl_client_cert_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool);
+
+
+/** Set @a *provider to an authentication provider of type @c
+ * svn_auth_cred_ssl_client_cert_uri_t, allocated in @a pool.
+ *
+ * @a *provider retrieves its credentials by using the @a prompt_func
+ * and @a prompt_baton.  The returned credential is used to load the
+ * appropriate client certificate for authentication when requested by
+ * a server.  The prompt will be retried @a retry_limit times. For
+ * infinite retries, set @a retry_limit to value less than 0.
+ *
+ * @since New in 1.15.
+ */
+void
+svn_auth_get_ssl_client_cert_uri_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_uri_prompt_func_t prompt_func,
   void *prompt_baton,
   int retry_limit,
   apr_pool_t *pool);

@@ -256,6 +256,7 @@
 %ignore svn_cmdline_auth_plaintext_prompt;
 %ignore svn_cmdline_auth_simple_prompt;
 %ignore svn_cmdline_auth_ssl_client_cert_prompt;
+%ignore svn_cmdline_auth_ssl_client_cert_uri_prompt;
 %ignore svn_cmdline_auth_ssl_client_cert_pw_prompt;
 %ignore svn_cmdline_auth_ssl_server_trust_prompt;
 %ignore svn_cmdline_auth_username_prompt;
@@ -752,6 +753,7 @@ core_set_current_pool (apr_pool_t *pool)
 %authprompt_callback_typemap(username)
 %authprompt_callback_typemap(ssl_server_trust)
 %authprompt_callback_typemap(ssl_client_cert)
+%authprompt_callback_typemap(ssl_client_cert_uri)
 %authprompt_callback_typemap(ssl_client_cert_pw)
 %authprompt_callback_typemap(gnome_keyring_unlock)
 
@@ -1145,6 +1147,20 @@ svn_swig_rb_auth_get_ssl_client_cert_prompt_provider(
   svn_auth_get_ssl_client_cert_prompt_provider(provider, prompt_func,
                                                prompt_baton, retry_limit,
                                                pool);
+  return rb_ary_new3(1, (VALUE)prompt_baton);
+}
+
+static VALUE
+svn_swig_rb_auth_get_ssl_client_cert_uri_prompt_provider(
+  svn_auth_provider_object_t **provider,
+  svn_auth_ssl_client_cert_uri_prompt_func_t prompt_func,
+  void *prompt_baton,
+  int retry_limit,
+  apr_pool_t *pool)
+{
+  svn_auth_get_ssl_client_cert_uri_prompt_provider(provider, prompt_func,
+                                                   prompt_baton, retry_limit,
+                                                   pool);
   return rb_ary_new3(1, (VALUE)prompt_baton);
 }
 

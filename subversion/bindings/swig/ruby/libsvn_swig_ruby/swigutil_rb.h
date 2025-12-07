@@ -345,6 +345,13 @@ svn_error_t *svn_swig_rb_auth_ssl_client_cert_pw_prompt_func(
     svn_boolean_t may_save,
     apr_pool_t *pool);
 
+svn_error_t *svn_swig_rb_auth_ssl_client_cert_uri_prompt_func(
+    svn_auth_cred_ssl_client_cert_uri_t **cred,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool);
+
 apr_file_t *svn_swig_rb_make_file(VALUE file, apr_pool_t *pool);
 svn_stream_t *svn_swig_rb_make_stream(VALUE io);
 

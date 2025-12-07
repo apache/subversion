@@ -90,6 +90,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_SSL_TRUST_DEFAULT_CA      "ssl-trust-default-ca"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE      "ssl-client-cert-file"
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_PASSWORD  "ssl-client-cert-password"
+/** @since New in 1.15. */
+#define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_URI       "ssl-client-cert-uri"
 /** @deprecated Not used since 1.8.
  * @since New in 1.5. */
 #define SVN_CONFIG_OPTION_SSL_PKCS11_PROVIDER       "ssl-pkcs11-provider"
@@ -129,6 +131,8 @@ typedef struct svn_config_t svn_config_t;
 #define SVN_CONFIG_OPTION_KWALLET_SVN_APPLICATION_NAME_WITH_PID "kwallet-svn-application-name-with-pid"
 /** @since New in 1.8. */
 #define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_FILE_PROMPT "ssl-client-cert-file-prompt"
+/** @since New in 1.15. */
+#define SVN_CONFIG_OPTION_SSL_CLIENT_CERT_URI_PROMPT  "ssl-client-cert-uri-prompt"
 /* The majority of options of the "auth" section
  * has been moved to SVN_CONFIG_CATEGORY_SERVERS. */
 #define SVN_CONFIG_SECTION_HELPERS              "helpers"

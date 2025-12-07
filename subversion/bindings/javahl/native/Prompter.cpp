@@ -126,6 +126,20 @@ get_provider_client_ssl(SVN::Pool &in_pool)
   return provider;
 }
 
+svn_auth_provider_object_t *Prompter::
+get_provider_client_ssl_uri(SVN::Pool &in_pool)
+{
+  apr_pool_t *pool = in_pool.getPool();
+  svn_auth_provider_object_t *provider;
+  svn_auth_get_ssl_client_cert_uri_prompt_provider(&provider,
+                                                   ssl_client_cert_uri_prompt,
+                                                   this,
+                                                   2 /* retry limit */,
+                                                   pool);
+
+  return provider;
+}
+
 svn_auth_provider_object_t *
 Prompter::get_provider_client_ssl_password(SVN::Pool &in_pool)
 {
@@ -201,6 +215,22 @@ svn_error_t *Prompter::ssl_client_cert_prompt(
   SVN_JAVAHL_CATCH(
       env, SVN_ERR_RA_NOT_AUTHORIZED,
       err = static_cast<Prompter*>(baton)->dispatch_ssl_client_cert_prompt(
+          env, cred_p, realm, may_save, pool));
+  return err;
+}
+
+svn_error_t *Prompter::ssl_client_cert_uri_prompt(
+    svn_auth_cred_ssl_client_cert_uri_t **cred_p,
+    void *baton,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  const ::Java::Env env;
+  svn_error_t *err;
+  SVN_JAVAHL_CATCH(
+      env, SVN_ERR_RA_NOT_AUTHORIZED,
+      err = static_cast<Prompter*>(baton)->dispatch_ssl_client_cert_uri_prompt(
           env, cred_p, realm, may_save, pool));
   return err;
 }
@@ -368,6 +398,32 @@ svn_error_t *Prompter::dispatch_ssl_client_cert_prompt(
   svn_auth_cred_ssl_client_cert_t *cred =
     static_cast<svn_auth_cred_ssl_client_cert_t*>(apr_pcalloc(pool, sizeof(*cred)));
   cred->cert_file = path.strdup(pool);
+  cred->may_save = result.save();
+  *cred_p = cred;
+
+  return SVN_NO_ERROR;
+}
+svn_error_t *Prompter::dispatch_ssl_client_cert_uri_prompt(
+    ::Java::Env env,
+    svn_auth_cred_ssl_client_cert_uri_t **cred_p,
+    const char *realm,
+    svn_boolean_t may_save,
+    apr_pool_t *pool)
+{
+  ::JavaHL::AuthnCallback authn(env, m_prompter.get());
+
+  ::JavaHL::AuthnCallback::AuthnResult result(
+      env,
+      authn.ssl_client_cert_uri_prompt(
+          ::Java::String(env, realm), may_save));
+  if (!result.get())
+    return svn_error_create(SVN_ERR_RA_NOT_AUTHORIZED, NULL,
+                            _("User canceled dialog"));
+
+  ::Java::String uri(env, result.identity());
+  svn_auth_cred_ssl_client_cert_uri_t *cred =
+    static_cast<svn_auth_cred_ssl_client_cert_uri_t*>(apr_pcalloc(pool, sizeof(*cred)));
+  cred->cert_uri = uri.strdup(pool);
   cred->may_save = result.save();
   *cred_p = cred;
 

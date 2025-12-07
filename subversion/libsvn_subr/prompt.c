@@ -775,6 +775,32 @@ svn_cmdline_auth_ssl_client_cert_prompt
 }
 
 
+/* This implements 'svn_auth_ssl_client_cert_uri_prompt_func_t'. */
+svn_error_t *
+svn_cmdline_auth_ssl_client_cert_uri_prompt
+  (svn_auth_cred_ssl_client_cert_uri_t **cred_p,
+   void *baton,
+   const char *realm,
+   svn_boolean_t may_save,
+   apr_pool_t *pool)
+{
+  svn_auth_cred_ssl_client_cert_uri_t *cred = NULL;
+  const char *cert_uri = NULL;
+  svn_cmdline_prompt_baton2_t *pb = baton;
+
+  SVN_ERR(maybe_print_realm(realm, pool));
+  SVN_ERR(prompt(&cert_uri, _("Client certificate URI: "),
+                 FALSE, pb, pool));
+
+  cred = apr_palloc(pool, sizeof(*cred));
+  cred->cert_uri = cert_uri;
+  cred->may_save = may_save;
+  *cred_p = cred;
+
+  return SVN_NO_ERROR;
+}
+
+
 /* This implements 'svn_auth_ssl_client_cert_pw_prompt_func_t'. */
 svn_error_t *
 svn_cmdline_auth_ssl_client_cert_pw_prompt

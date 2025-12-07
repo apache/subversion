@@ -648,6 +648,9 @@ svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
   svn_auth_get_ssl_client_cert_file_provider(&provider, pool);
   APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
 
+  svn_auth_get_ssl_client_cert_uri_provider(&provider, pool);
+  APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
   if (!non_interactive)
     {
       /* This provider doesn't prompt the user in order to get creds;
@@ -665,7 +668,13 @@ svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
 
   if (!non_interactive)
     {
+      svn_boolean_t ssl_client_cert_uri_prompt;
       svn_boolean_t ssl_client_cert_file_prompt;
+
+      SVN_ERR(svn_config_get_bool(cfg, &ssl_client_cert_uri_prompt,
+                                  SVN_CONFIG_SECTION_AUTH,
+                                  SVN_CONFIG_OPTION_SSL_CLIENT_CERT_URI_PROMPT,
+                                  FALSE));
 
       SVN_ERR(svn_config_get_bool(cfg, &ssl_client_cert_file_prompt,
                                   SVN_CONFIG_SECTION_AUTH,
@@ -693,6 +702,15 @@ svn_cmdline_create_auth_baton2(svn_auth_baton_t **ab,
       svn_auth_get_ssl_client_cert_pw_prompt_provider
         (&provider, svn_cmdline_auth_ssl_client_cert_pw_prompt, pb, 2, pool);
       APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+
+      /* If configuration allows, add a provider for client-cert uri
+         prompting, too. */
+      if (ssl_client_cert_uri_prompt)
+        {
+          svn_auth_get_ssl_client_cert_uri_prompt_provider
+            (&provider, svn_cmdline_auth_ssl_client_cert_uri_prompt, pb, 2, pool);
+          APR_ARRAY_PUSH(providers, svn_auth_provider_object_t *) = provider;
+        }
 
       /* If configuration allows, add a provider for client-cert path
          prompting, too. */

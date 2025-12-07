@@ -3189,6 +3189,48 @@ svn_swig_rb_auth_ssl_client_cert_pw_prompt_func(
   return err;
 }
 
+svn_error_t *
+svn_swig_rb_auth_ssl_client_cert_uri_prompt_func(
+  svn_auth_cred_ssl_client_cert_uri_t **cred,
+  void *baton,
+  const char *realm,
+  svn_boolean_t may_save,
+  apr_pool_t *pool)
+{
+  svn_auth_cred_ssl_client_cert_uri_t *new_cred = NULL;
+  svn_error_t *err = SVN_NO_ERROR;
+  VALUE proc, rb_pool;
+
+  svn_swig_rb_from_baton((VALUE)baton, &proc, &rb_pool);
+
+  if (!NIL_P(proc)) {
+    callback_baton_t cbb;
+    VALUE result;
+
+    cbb.receiver = proc;
+    cbb.message = id_call;
+    cbb.args = rb_ary_new3(2,
+                           c2r_string2(realm),
+                           RTEST(may_save) ? Qtrue : Qfalse);
+    result = invoke_callback_handle_error((VALUE)(&cbb), rb_pool, &err);
+
+    if (!NIL_P(result)) {
+      void *result_cred = NULL;
+      svn_auth_cred_ssl_client_cert_uri_t *tmp_cred = NULL;
+
+      r2c_swig_type2(result, "svn_auth_cred_ssl_client_cert_uri_t *",
+                     &result_cred);
+      tmp_cred = (svn_auth_cred_ssl_client_cert_uri_t *)result_cred;
+      new_cred = apr_pcalloc(pool, sizeof(*new_cred));
+      new_cred->cert_uri = tmp_cred->cert_uri ?
+        apr_pstrdup(pool, tmp_cred->cert_uri) : NULL;
+      new_cred->may_save = tmp_cred->may_save;
+    }
+  }
+
+  *cred = new_cred;
+  return err;
+}
 
 apr_file_t *
 svn_swig_rb_make_file(VALUE file, apr_pool_t *pool)

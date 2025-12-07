@@ -1385,6 +1385,28 @@ svn_error_t *svn_swig_pl_thunk_ssl_client_cert_pw_prompt(
     return SVN_NO_ERROR;
 }
 
+/* NOTE: calls back into Perl (by calling svn_swig_pl_callback_thunk) */
+svn_error_t *svn_swig_pl_thunk_ssl_client_cert_uri_prompt(
+                                     svn_auth_cred_ssl_client_cert_uri_t **cred,
+                                     void *baton,
+                                     const char *realm,
+                                     svn_boolean_t may_save,
+                                     apr_pool_t *pool)
+{
+    /* Be nice and allocate the memory for the cred structure before passing it
+     * off to the perl space */
+  *cred = apr_pcalloc(pool, sizeof(**cred));
+    if (!*cred) {
+      croak("Could not allocate memory for cred structure");
+    }
+    svn_swig_pl_callback_thunk(CALL_SV,
+                               baton, NULL,
+                               "SsbS", *cred, _SWIG_TYPE("svn_auth_cred_ssl_client_cert_uri_t *"),
+                               realm, may_save, pool, POOLINFO);
+
+    return SVN_NO_ERROR;
+}
+
 /* Thunked version of svn_wc_notify_func_t callback type */
 /* NOTE: calls back into Perl (by calling svn_swig_pl_callback_thunk) */
 void svn_swig_pl_notify_func(void * baton,

@@ -648,6 +648,10 @@ if (HAVE_UNISTD_H)
   autocheck_symbol_exists("getpid" "unistd.h" HAVE_GETPID)
 endif()
 
+if (SVN_ENABLE_RA_SERF)
+  autocheck_symbol_exists("serf_ssl_cert_uri_set" "serf_bucket_types.h" HAVE_SERF_SSL_CERT_URI_SET)
+endif()
+
 include_directories("${CMAKE_CURRENT_BINARY_DIR}")
 
 file(GLOB public_headers "subversion/include/*.h")

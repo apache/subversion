@@ -80,6 +80,18 @@ class SubversionAuthTestCase(unittest.TestCase):
                 core.SVN_AUTH_CRED_SSL_CLIENT_CERT, b"somerealm", baton)
     self.assertTrue(creds is not None)
 
+  def test_credentials_get_ssl_client_cert_uri(self):
+    def myfunc(realm, may_save, pool):
+      self.assertEqual(b"somerealm", realm)
+      ssl_cred = core.svn_auth_cred_ssl_client_cert_uri_t()
+      ssl_cred.cert_uri = b"my-certs-uri"
+      ssl_cred.may_save = False
+      return ssl_cred
+    baton = core.svn_auth_open([core.svn_auth_get_ssl_client_cert_uri_prompt_provider(myfunc, 1)])
+    creds = core.svn_auth_first_credentials(
+                core.SVN_AUTH_CRED_SSL_CLIENT_CERT_URI, b"somerealm", baton)
+    self.assertTrue(creds is not None)
+
   def test_credentials_get_ssl_client_cert_pw(self):
     def myfunc(realm, may_save, pool):
       self.assertEqual(b"somerealm", realm)
