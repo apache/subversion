@@ -56,7 +56,7 @@ Candidate changes:
    Justification:
      Cosmetic issue which can confuse users in case of syntax errors.
    Votes:
-     +1: stsp
+     +1: stsp, brane
 
 Veto-blocked changes:
 =====================
