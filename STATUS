@@ -51,6 +51,13 @@ Candidate changes:
    Votes:
      +1: kotkov, rinrab
 
+ * r1930381
+   Fix wrong line numbers displayed in syntax errors from config file parser.
+   Justification:
+     Cosmetic issue which can confuse users in case of syntax errors.
+   Votes:
+     +1: stsp
+
 Veto-blocked changes:
 =====================
 
