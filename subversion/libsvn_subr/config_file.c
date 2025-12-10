@@ -807,6 +807,7 @@ svn_config__parse_stream(svn_stream_t *stream,
           SVN_ERR(open_section(ctx, &stop));
           if (stop)
             return SVN_NO_ERROR;
+          ++(ctx->line);
           break;
 
         case '#':               /* Comment */
