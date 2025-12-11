@@ -451,6 +451,23 @@ ssl_server_cert_cb(void *baton, int failures,
   return save_error(session, err);
 }
 
+#if defined(HAVE_SERF_SSL_ERROR_CB_SET)
+static apr_status_t
+ssl_error_cb(void *baton, apr_status_t status,
+             const char *message)
+{
+  svn_ra_serf__connection_t *conn = baton;
+  svn_ra_serf__session_t *session = conn->session;
+
+  session->ssl_error = svn_error_createf(status,
+                                         session->ssl_error,
+                                         _("TLS: %s"),
+                                         message);
+
+  return APR_SUCCESS;
+}
+#endif
+
 static svn_error_t *
 load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
                  apr_pool_t *pool)
@@ -567,7 +584,14 @@ conn_setup(apr_socket_t *sock,
                             SERF_CONNECTION_FRAMING_TYPE_NONE);
             }
 #endif
-        }
+
+#if defined(HAVE_SERF_SSL_ERROR_CB_SET)
+          serf_ssl_error_cb_set(conn->ssl_context,
+                                ssl_error_cb,
+                                conn);
+#endif
+
+	}
 
       if (write_bkt)
         {
@@ -958,7 +982,14 @@ svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
                     _("Error running context"));
         }
 
-      return svn_ra_serf__wrap_err(status, _("Error running context"));
+      if (sess->ssl_error)
+        {
+          return sess->ssl_error;
+        }
+      else
+        {
+          return svn_ra_serf__wrap_err(status, _("Error running context"));
+        }
     }
 
   return SVN_NO_ERROR;
