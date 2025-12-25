@@ -51,15 +51,15 @@ Candidate changes:
    Votes:
      +1: kotkov, rinrab
 
- * r1929564
-   Adapt gen_win_dependencies.py to expat 2.7.2+.
-   Justification:
-     Fix build on Windows with expat 2.7.2+.
-   Votes:
-     +1: jun66j5
-
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1929564
+   Adapt gen_win_dependencies.py to expat 2.7.2+.
+   Justification:
+     Fix build on Windows with expat 2.7.2+.
+   Votes:
+     +1: jun66j5, dsahlberg
