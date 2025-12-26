@@ -366,13 +366,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_path, 'apr_version.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+APR_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APR_MAJOR_VERSION\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APR_MINOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APR_MINOR_VERSION\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APR_PATCH_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APR_PATCH_VERSION\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -469,13 +472,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_path, 'apu_version.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+APU_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APU_MAJOR_VERSION\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APU_MINOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APU_MINOR_VERSION\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+APU_PATCH_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+APU_PATCH_VERSION\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -580,13 +586,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+XML_MAJOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+XML_MAJOR_VERSION\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+XML_MINOR_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+XML_MINOR_VERSION\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+XML_MICRO_VERSION\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+XML_MICRO_VERSION\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     # apr-Util 0.9-1.4 compiled expat to 'xml.lib', but apr-util 1.5 switched
@@ -635,16 +644,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_path, 'ap_release.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MAJORVERSION_NUMBER\s+(\d+)',
-                         txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+AP_SERVER_MAJORVERSION_NUMBER'
+                         r'\s+(\d+)', txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+AP_SERVER_MINORVERSION_NUMBER\s+(\d+)',
-                         txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+AP_SERVER_MINORVERSION_NUMBER'
+                         r'\s+(\d+)', txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+AP_SERVER_PATCHLEVEL_NUMBER\s+(\d+)',
-                         txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+AP_SERVER_PATCHLEVEL_NUMBER'
+                         r'\s+(\d+)', txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -754,8 +763,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
     vermatch = re.search(
-                r'^\s*#define\s+ZLIB_VERSION\s+"(\d+(?:\.\d+){1,3})(?:-\w+)?"',
-                 txt, re.M)
+        r'^\s*#\s*define\s+ZLIB_VERSION\s+"(\d+(?:\.\d+){1,3})(?:-\w+)?"',
+        txt, re.M)
 
     version = tuple(map(int, vermatch.group(1).split('.')))
     self.zlib_version = '.'.join(map(str, version))
@@ -1378,13 +1387,16 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MAJOR\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+SASL_VERSION_MAJOR\s+(\d+)',
+                         txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_MINOR\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+SASL_VERSION_MINOR\s+(\d+)',
+                         txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+SASL_VERSION_STEP\s+(\d+)', txt, re.M)
+    vermatch = re.search(r'^\s*#\s*define\s+SASL_VERSION_STEP\s+(\d+)',
+                         txt, re.M)
     patch = int(vermatch.group(1))
 
     version = (major, minor, patch)
@@ -1452,8 +1464,8 @@ class GenDependenciesBase(gen_base.GeneratorBase):
     version_file_path = os.path.join(inc_dir, 'libintl.h')
     txt = open(version_file_path).read()
 
-    match = re.search(r'^\s*#define\s+LIBINTL_VERSION\s+((0x)?[0-9A-Fa-f]+)',
-                      txt, re.M)
+    match = re.search(r'^\s*#\s*define\s+LIBINTL_VERSION\s+'
+                      r'((0x)?[0-9A-Fa-f]+)', txt, re.M)
 
     ver = int(match.group(1), 0)
     version = (ver >> 16, (ver >> 8) & 0xFF, ver & 0xFF)
@@ -1525,7 +1537,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
 
     txt = open(version_file_path).read()
 
-    match = re.search(r'^\s*#define\s+SQLITE_VERSION\s+'
+    match = re.search(r'^\s*#\s*define\s+SQLITE_VERSION\s+'
                       r'"(\d+)\.(\d+)\.(\d+)(?:\.(\d))?"', txt, re.M)
 
     version = match.groups()
@@ -1559,15 +1571,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                      'lz4', 'lz4internal.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MAJOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+LZ4_VERSION_MAJOR\s+(\d+)',
                          txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_MINOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+LZ4_VERSION_MINOR\s+(\d+)',
                          txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+LZ4_VERSION_RELEASE\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+LZ4_VERSION_RELEASE\s+(\d+)',
                          txt, re.M)
     rel = vermatch.group(1)
 
@@ -1584,15 +1596,15 @@ class GenDependenciesBase(gen_base.GeneratorBase):
                                      'utf8proc', 'utf8proc_internal.h')
     txt = open(version_file_path).read()
 
-    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MAJOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+UTF8PROC_VERSION_MAJOR\s+(\d+)',
                          txt, re.M)
     major = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_MINOR\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+UTF8PROC_VERSION_MINOR\s+(\d+)',
                          txt, re.M)
     minor = int(vermatch.group(1))
 
-    vermatch = re.search(r'^\s*#define\s+UTF8PROC_VERSION_PATCH\s+(\d+)',
+    vermatch = re.search(r'^\s*#\s*define\s+UTF8PROC_VERSION_PATCH\s+(\d+)',
                          txt, re.M)
     patch = int(vermatch.group(1))
 
