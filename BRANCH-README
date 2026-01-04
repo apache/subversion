@@ -1,0 +1,5 @@
+This branch is for testing out the new error reporting in (what will be)
+Serf 1.5.
+
+Based on https://github.com/apache/subversion/pull/32/
+
