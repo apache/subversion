@@ -48,11 +48,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Enforce the minimum version of serf. */
-#if !SERF_VERSION_AT_LEAST(1, 2, 1)
-#error Please update your version of serf to at least 1.2.1.
-#endif
-
 /** Wait duration (in microseconds) used in calls to serf_context_run() */
 #define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
 
