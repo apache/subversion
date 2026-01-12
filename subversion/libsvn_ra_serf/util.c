@@ -31,6 +31,9 @@
 
 #include <serf.h>
 #include <serf_bucket_types.h>
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
+#include <serf_bucket_util.h>
+#endif
 
 #include "svn_hash.h"
 #include "svn_dirent_uri.h"
@@ -549,6 +552,11 @@ conn_setup(apr_socket_t *sock,
                                             ssl_server_cert_cb,
                                             conn);
 
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
+          serf_ssl_use_context_error_callback(conn->ssl_context,
+                                              conn->session->context);
+#endif
+
           /* See if the user wants us to trust "default" openssl CAs. */
           if (conn->session->trust_default_ca)
             {
@@ -954,16 +962,20 @@ svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
   SVN_ERR(err);
   if (status)
     {
+      svn_error_t *const collected_errors = sess->serf_error;
+      sess->serf_error = NULL;
+
       /* ### This omits SVN_WARNING, and possibly relies on the fact that
          ### MAX(SERF_ERROR_*) < SVN_ERR_BAD_CATEGORY_START? */
       if (status >= SVN_ERR_BAD_CATEGORY_START && status < SVN_ERR_LAST)
         {
           /* apr can't translate subversion errors to text */
-          SVN_ERR_W(svn_error_create(status, NULL, NULL),
+          SVN_ERR_W(svn_error_create(status, collected_errors, NULL),
                     _("Error running context"));
         }
 
-      return svn_ra_serf__wrap_err(status, _("Error running context"));
+      return svn_ra_serf__wrap_err_stack(status, collected_errors,
+                                         _("Error running context"));
     }
 
   return SVN_NO_ERROR;
@@ -2159,6 +2171,7 @@ svn_ra_serf__get_dirent_props(apr_uint32_t dirent_fields,
   return props;
 }
 
+#if !defined(SVN__SERF_EXPERIMENTAL) || !SERF_VERSION_AT_LEAST(1, 5, 0)
 static apr_status_t
 bucket_limited_readline(serf_bucket_t *bucket, int acceptable,
                         apr_size_t requested, int *found,
@@ -2271,6 +2284,7 @@ bucket_limited_readline(serf_bucket_t *bucket, int acceptable,
 
   return status;
 }
+#endif
 
 apr_status_t
 svn_ra_serf__default_readline(serf_bucket_t *bucket, int acceptable,

@@ -172,6 +172,10 @@ struct svn_ra_serf__session_t {
   /* Error that we've received but not yet returned upstream. */
   svn_error_t *pending_error;
 
+  /* Errors gathered from Serf error callbacks.
+     FIXME: Can we just use pending_error? */
+  svn_error_t *serf_error;
+
   /* List of authn types supported by the client.*/
   int authn_types;
 
@@ -1570,13 +1574,22 @@ svn_ra_serf__create_sb_bucket(svn_spillbuf_t *spillbuf,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool);
 
-/** Wrap STATUS from an serf function. If STATUS is not serf error code,
-  * this is equivalent to svn_error_wrap_apr().
+/* Wrap STATUS from an serf function. If STATUS is not serf error code,
+ * this is equivalent to svn_error_wrap_apr().
  */
 svn_error_t *
 svn_ra_serf__wrap_err(apr_status_t status,
                       const char *fmt,
                       ...);
+
+/* Like svn_ra_serf__wrap_err but also accept a child error to maintain
+ * an error stack.
+ */
+svn_error_t *
+svn_ra_serf__wrap_err_stack(apr_status_t status,
+                            svn_error_t *child,
+                            const char *fmt,
+                            ...);
 
 /* Create a bucket that just returns DATA (with length LEN) and then returns
    the APR_EAGAIN status */
@@ -1675,7 +1688,8 @@ svn_ra_serf__default_readline(serf_bucket_t *bucket, int acceptable,
 /* Wrapper macros to collect file and line information */
 #define svn_ra_serf__wrap_err \
   (svn_error__locate(__FILE__,__LINE__), (svn_ra_serf__wrap_err))
-
+#define svn_ra_serf__wrap_err_stack \
+  (svn_error__locate(__FILE__,__LINE__), (svn_ra_serf__wrap_err_stack))
 #endif
 
 #ifdef __cplusplus

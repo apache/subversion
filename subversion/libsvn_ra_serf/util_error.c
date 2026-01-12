@@ -20,6 +20,9 @@
  *    under the License.
  * ====================================================================
  */
+
+#include <stdarg.h>
+
 #include <serf.h>
 
 #include "svn_utf.h"
@@ -41,18 +44,16 @@
 #undef svn_error_quick_wrap
 #undef svn_error_wrap_apr
 #undef svn_ra_serf__wrap_err
+#undef svn_ra_serf__wrap_err_stack
 
-svn_error_t *
-svn_ra_serf__wrap_err(apr_status_t status,
-                      const char *fmt,
-                      ...)
+
+static void
+format_error_message(svn_error_t *err,
+                     apr_status_t status,
+                     const char *serf_err_msg,
+                     const char *fmt,
+                     va_list args)
 {
-  const char *serf_err_msg = serf_error_string(status);
-  svn_error_t *err;
-  va_list ap;
-
-  err = svn_error_create(status, NULL, NULL);
-
   if (serf_err_msg || fmt)
     {
       const char *msg;
@@ -78,9 +79,7 @@ svn_ra_serf__wrap_err(apr_status_t status,
       /* Append it to the formatted message. */
       if (fmt)
         {
-          va_start(ap, fmt);
-          msg = apr_pvsprintf(err->pool, fmt, ap);
-          va_end(ap);
+          msg = apr_pvsprintf(err->pool, fmt, args);
         }
       else
         {
@@ -96,6 +95,37 @@ svn_ra_serf__wrap_err(apr_status_t status,
           err->message = msg;
         }
     }
+}
 
+
+svn_error_t *
+svn_ra_serf__wrap_err(apr_status_t status,
+                      const char *fmt,
+                      ...)
+{
+  svn_error_t *err;
+  va_list args;
+
+  err = svn_error_create(status, NULL, NULL);
+  va_start(args, fmt);
+  format_error_message(err, status, serf_error_string(status), fmt, args);
+  va_end(args);
+  return err;
+}
+
+
+svn_error_t *
+svn_ra_serf__wrap_err_stack(apr_status_t status,
+                            svn_error_t *child,
+                            const char *fmt,
+                            ...)
+{
+  svn_error_t *err;
+  va_list args;
+
+  err = svn_error_create(status, child, NULL);
+  va_start(args, fmt);
+  format_error_message(err, status, serf_error_string(status), fmt, args);
+  va_end(args);
   return err;
 }

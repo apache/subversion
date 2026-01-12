@@ -481,6 +481,22 @@ get_user_agent_string(apr_pool_t *pool)
                       major, minor, patch);
 }
 
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
+static apr_status_t
+sess_error_callback(void *baton,
+                    unsigned source,
+                    apr_status_t status,
+                    const char *message)
+{
+  const char* prefix = (source & SERF_ERROR_CB_SSL_CONTEXT) ? "TLS" : "NET";
+  svn_ra_serf__session_t *const session = baton;
+
+  session->serf_error = svn_ra_serf__wrap_err_stack(
+      status, session->serf_error, _("%s: %s"), prefix, message);
+  return SVN_NO_ERROR;
+}
+#endif
+
 /* Implements svn_ra__vtable_t.open_session(). */
 static svn_error_t *
 svn_ra_serf__open(svn_ra_session_t *session,
@@ -520,7 +536,17 @@ svn_ra_serf__open(svn_ra_session_t *session,
   serf_sess->cancel_baton = callback_baton;
 
   /* todo: reuse serf context across sessions */
+
+  /* odot: For now, it's better to keep context-per-session, otherwise
+           dealing with Serf's error callbacks will be a real pain.
+           It would be different if we could guarantee a single Serf
+           context per svn_client_ctx_t. */
   serf_sess->context = serf_context_create(serf_sess->pool);
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
+  serf_context_error_callback_set(serf_sess->context,
+                                  sess_error_callback,
+                                  serf_sess);
+#endif
 
   SVN_ERR(svn_ra_serf__blncache_create(&serf_sess->blncache,
                                        serf_sess->pool));
@@ -775,6 +801,11 @@ ra_serf_dup_session(svn_ra_session_t *new_session,
   /* conn_latency */
 
   new_sess->context = serf_context_create(result_pool);
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
+  serf_context_error_callback_set(new_sess->context,
+                                  sess_error_callback,
+                                  new_sess);
+#endif
 
   SVN_ERR(load_config(new_sess, old_sess->config,
                       result_pool, scratch_pool));
