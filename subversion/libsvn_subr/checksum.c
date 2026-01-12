@@ -475,8 +475,6 @@ svn_checksum(svn_checksum_t **checksum,
              apr_size_t len,
              apr_pool_t *pool)
 {
-  apr_sha1_ctx_t sha1_ctx;
-
   SVN_ERR(validate_kind(kind));
   *checksum = svn_checksum_create(kind, pool);
 

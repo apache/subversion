@@ -21,6 +21,8 @@
  * ====================================================================
  */
 
+#include <limits.h>
+
 #include "svn_private_config.h"
 #ifdef SVN_CHECKSUM_BACKEND_APR
 
@@ -89,6 +91,10 @@ svn_checksum__sha1(unsigned char *digest,
                    apr_size_t len)
 {
   apr_sha1_ctx_t sha1_ctx;
+
+  /* Do not blindly truncate the data length. */
+  SVN_ERR_ASSERT(len < UINT_MAX);
+
   apr_sha1_init(&sha1_ctx);
   apr_sha1_update(&sha1_ctx, data, (unsigned int)len);
   apr_sha1_final(digest, &sha1_ctx);
@@ -121,7 +127,9 @@ svn_checksum__sha1_ctx_update(svn_checksum__sha1_ctx_t *ctx,
                               const void *data,
                               apr_size_t len)
 {
-  apr_sha1_update(&ctx->apr_ctx, data, len);
+  /* Do not blindly truncate the data length. */
+  SVN_ERR_ASSERT(len < UINT_MAX);
+  apr_sha1_update(&ctx->apr_ctx, data, (unsigned int)len);
   return SVN_NO_ERROR;
 }
 
@@ -129,10 +137,8 @@ svn_error_t *
 svn_checksum__sha1_ctx_final(unsigned char *digest,
                              svn_checksum__sha1_ctx_t *ctx)
 {
-
   apr_sha1_final(digest, &ctx->apr_ctx);
   return SVN_NO_ERROR;
 }
 
 #endif /* SVN_CHECKSUM_BACKEND_APR */
-
