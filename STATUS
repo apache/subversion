@@ -30,6 +30,15 @@ Candidate changes:
    Votes:
      +1: hartmannathan
 
+ * r1931176
+   Update checks for SERF 1.4.0 to check for SERF 1.5.0. There will never be a
+   SERF 1.4.0 release and these APIs are officially available from 1.5.0 so it
+   should not be a functional change but make things consistent.
+   Justification:
+     Checking for nonexistent Serf releases could cause confusion
+   Votes:
+     +0: hartmannathan
+
 Veto-blocked changes:
 =====================
 
