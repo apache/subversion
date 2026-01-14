@@ -39,6 +39,13 @@ Candidate changes:
    Votes:
      +0: hartmannathan
 
+ * r1931265
+   Newest OpenSSL/httpd does not like server certificates with tiny keys.
+   Justification:
+     Allow testing with latest OpenSSL/httpd
+   Votes:
+     +0: hartmannathan
+
 Veto-blocked changes:
 =====================
 
