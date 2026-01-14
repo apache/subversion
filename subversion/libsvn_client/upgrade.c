@@ -254,10 +254,11 @@ svn_client_wc_version_from_format(int wc_format,
   const svn_wc__version_info_t *const version_info =
     svn_wc__version_info_from_format(wc_format);
 
-  if (version_info->text != NULL)
-    return &version_info->version;
+  /* NOTE: This can be the "null" version "0.0.0" and that's an
+           unrecoverable programming error. */
+  SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
 
-  return NULL;
+  return &version_info->version;
 }
 
 const int *
@@ -279,8 +280,7 @@ svn_client_oldest_wc_version(apr_pool_t *result_pool)
   const svn_wc__version_info_t *const version_info =
     svn_wc__version_info_from_format(SVN_WC__SUPPORTED_VERSION);
 
-  /* NOTE: This can be the "null" version "0.0.0" and that's an
-           unrecoverable programming error. */
+  /* See note in svn_client_wc_version_from_format(), above. */
   SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
 
   return &version_info->version;
@@ -316,7 +316,7 @@ svn_client_default_wc_version(const svn_version_t **version_p,
       const svn_wc__version_info_t *const version_info =
         svn_wc__version_info_from_format(SVN_WC__SUPPORTED_VERSION);
 
-      /* See note in svn_client_oldest_wc_version(), above. */
+      /* See note in svn_client_wc_version_from_format(), above. */
       SVN_ERR_ASSERT(version_info->text != NULL);
 
       version = &version_info->version;
@@ -332,7 +332,7 @@ svn_client_latest_wc_version(apr_pool_t *result_pool)
   const svn_wc__version_info_t *const version_info =
     svn_wc__version_info_from_format(SVN_WC__VERSION);
 
-  /* See note in svn_client_oldest_wc_version(), above. */
+  /* See note in svn_client_wc_version_from_format(), above. */
   SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
 
   return &version_info->version;
@@ -344,7 +344,7 @@ svn_client__compatible_wc_version_optional_pristine(apr_pool_t *result_pool)
   const svn_wc__version_info_t *const version_info =
     svn_wc__version_info_from_format(SVN_WC__HAS_OPTIONAL_PRISTINE);
 
-  /* See note in svn_client_oldest_wc_version(), above. */
+  /* See note in svn_client_wc_version_from_format(), above. */
   SVN_ERR_ASSERT_NO_RETURN(version_info->text != NULL);
 
   return &version_info->version;
