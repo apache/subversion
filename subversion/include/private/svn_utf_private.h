@@ -116,7 +116,7 @@ svn_utf__win32_utf16_to_utf8(const char **result,
 
 
 /* A constant used for many length parameters in the utf8proc wrappers
- * to indicate that the length of a string is unknonw. */
+ * to indicate that the length of a string is unknown. */
 #define SVN_UTF__UNKNOWN_LENGTH ((apr_size_t) -1)
 
 
@@ -151,14 +151,14 @@ svn_utf__normalize(const char **result,
                    svn_membuf_t *buf);
 
 /* Transform the UTF-8 string to a shape suitable for comparison with
- * strcmp(). The tranformation is defined by CASE_INSENSITIVE and
+ * strcmp(). The transformation is defined by CASE_INSENSITIVE and
  * ACCENT_INSENSITIVE arguments. If CASE_INSENSITIVE is non-zero,
  * remove case distinctions from the string. If ACCENT_INSENSITIVE
  * is non-zero, remove diacritical marks from the string.
  *
  * Use BUF as a temporary storage. If LEN is SVN_UTF__UNKNOWN_LENGTH,
  * assume STR is null-terminated; otherwise, consider the string only
- * up to the given length. Place the tranformed string in *RESULT, which
+ * up to the given length. Place the transformed string in *RESULT, which
  * shares storage with BUF and is valid only until the next time BUF is
  * modified.
  *

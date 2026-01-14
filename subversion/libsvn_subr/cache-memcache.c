@@ -234,7 +234,7 @@ memcache_has_key(svn_boolean_t *found,
   return SVN_NO_ERROR;
 }
 
-/* Core functionality of our setter functions: store LENGH bytes of DATA
+/* Core functionality of our setter functions: store LENGTH bytes of DATA
  * to be identified by KEY in the memcached given by CACHE_VOID. Use POOL
  * for temporary allocations.
  */

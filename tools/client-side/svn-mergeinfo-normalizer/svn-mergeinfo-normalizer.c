@@ -408,7 +408,10 @@ svn_min__check_cancel(void *baton)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   svn_error_t *err;
   int opt_id;
@@ -425,11 +428,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_boolean_t force_interactive = FALSE;
   apr_hash_t *cfg_hash;
   svn_boolean_t read_pass_from_stdin = FALSE;
+  const char **argv;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -506,11 +512,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         }
         break;
       case opt_depth:
-        err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
-        if (err)
-          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                                   _("Error converting depth "
-                                     "from locale to UTF-8"));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
         if (opt_state.depth == svn_depth_unknown
             || opt_state.depth == svn_depth_exclude)
@@ -566,7 +568,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_config_dir:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
+        SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
+                                               utf8_opt_arg, pool, pool));
         break;
       case opt_config_options:
         if (!opt_state.config_options)
@@ -604,18 +607,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       }
     }
 
-  /* The --non-interactive and --force-interactive options are mutually
-   * exclusive. */
-  if (opt_state.non_interactive && force_interactive)
-    {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--non-interactive and --force-interactive "
-                                "are mutually exclusive"));
-    }
-  else
-    opt_state.non_interactive = !svn_cmdline__be_interactive(
-                                  opt_state.non_interactive,
-                                  force_interactive);
+  SVN_ERR(svn_cmdline__be_interactive(&opt_state.non_interactive,
+                                      force_interactive));
 
   /* --password-from-stdin can only be used with --non-interactive */
   if (read_pass_from_stdin && !opt_state.non_interactive)
@@ -945,7 +938,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

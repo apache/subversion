@@ -1,5 +1,11 @@
 ;;; dsvn.el --- Subversion interface
 
+;; This file is known to be out of date but has been kept to not break scripts
+;; that might rely on it.
+;;
+;; The latest version is hosted on GitHub:
+;; https://github.com/rosbo018/dsvn
+
 ;; Copyright 2006-2010 Virtutech AB
 ;; Copyright 2010 Intel
 

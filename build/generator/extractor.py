@@ -33,7 +33,7 @@ import re
 # or
 #    void svn_foo_bar (args)
 #
-_funcs = re.compile(r'^(?:(?:(?:\w+|\*) )+\*?)?((?:svn|apr)_[a-z_0-9]+)\s*\(', re.M)
+_funcs = re.compile(r'^(?:(?:(?:\w+|\*) )+\*?)?((?:svn|apr)_[A-Za-z0-9_]+)\s*\(', re.M)
 
 def extract_funcs(fname):
   funcs = [ ]
@@ -57,6 +57,9 @@ _filter_names = [
   'svn_auth_kwallet_version',
   'svn_auth_get_gpg_agent_simple_provider',
   'svn_auth_gpg_agent_version',
+
+  # Unavailable in release mode
+  'svn_fs_base__trail_debug',
   ]
 
 if __name__ == '__main__':
@@ -67,6 +70,8 @@ if __name__ == '__main__':
     for func in extract_funcs(fname):
       print(func)
     if os.path.basename(fname) == 'svn_ctype.h':
+      # See libsvn_subr/ctype.c for an explanation why we use CONSTANT and not
+      # DATA, even though it causes an LNK4087 warning!
       print('svn_ctype_table = svn_ctype_table_internal CONSTANT')
     elif os.path.basename(fname) == 'svn_wc_private.h':
       # svn_wc__internal_walk_children() is now internal to libsvn_wc

@@ -216,7 +216,7 @@ svn_ra__get_operational_lock(const svn_string_t **lock_string_p,
       /* Did we get a value from the repository?  We'll check to see
          if it matches our token.  If so, we call it success.  If not
          and we're told to steal locks, we remember the existing lock
-         token and fall through to the locking code; othewise, we
+         token and fall through to the locking code; otherwise, we
          sleep and retry. */
       if (reposlocktoken)
         {

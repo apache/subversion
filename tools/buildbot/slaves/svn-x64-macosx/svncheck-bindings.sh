@@ -37,6 +37,7 @@ scripts=$(cd $(dirname "$0") && pwd)
 . ${scripts}/setenv.sh
 
 # Parse arguments to find out which tests we should run
+use_python3=false
 check_swig_py=false
 check_swig_pl=false
 check_swig_rb=false
@@ -44,14 +45,20 @@ check_javahl=false
 
 while [ ! -z "$1" ]; do
     case "$1" in
+        python3) use_python3=true;;
         swig-py) check_swig_py=true;;
         swig-pl) check_swig_pl=true;;
         swig-rb) check_swig_rb=true;;
         javahl)  check_javahl=true;;
-        *)     exit 1;;
+        *)       exit 1;;
     esac
     shift
 done
+
+${use_python3} \
+    && test -n "${SVNBB_PYTHON3ENV}" \
+    && . ${SVNBB_PYTHON3ENV}/bin/activate \
+    && export PYTHON="$(which python)"
 
 ${check_swig_py} && run_tests swig-py
 ${check_swig_pl} && run_tests swig-pl

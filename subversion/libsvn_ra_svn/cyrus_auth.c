@@ -277,7 +277,7 @@ void svn_ra_svn__default_secprops(sasl_security_properties_t *secprops)
   secprops->max_ssf = 256;
 
   /* Set maxbufsize to the maximum amount of data we can read at any one time.
-     This value needs to be commmunicated to the peer if a security layer
+     This value needs to be communicated to the peer if a security layer
      is negotiated. */
   secprops->maxbufsize = SVN_RA_SVN__READBUF_SIZE;
 

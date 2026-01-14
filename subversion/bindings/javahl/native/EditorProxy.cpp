@@ -132,7 +132,7 @@ get_editor_method(jmethodID& mid, const char* name, const char* sig)
 
 jobject wrap_input_stream(svn_stream_t* stream)
 {
-  std::auto_ptr<JavaHL::NativeInputStream>
+  JavaHL::cxx::owned_ptr<JavaHL::NativeInputStream>
     wrapped(new JavaHL::NativeInputStream());
   apr_pool_t* const wrapped_pool = wrapped->get_pool().getPool();
   wrapped->set_stream(svn_stream_disown(stream, wrapped_pool));

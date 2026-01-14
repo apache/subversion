@@ -3,7 +3,7 @@
 #  svnmucc_tests.py: tests of svnmucc
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -49,7 +49,7 @@ def reject_bogus_mergeinfo(sbox):
                                          sbox.repo_url + '/A')
 
 _svnmucc_re = re.compile(b'^(r[0-9]+) committed by jrandom at (.*)$')
-_log_re = re.compile('^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
+_log_re = re.compile(r'^   ([ADRM] /[^\(]+($| \(from .*:[0-9]+\)$))')
 _err_re = re.compile('^svnmucc: (.*)$')
 
 def test_svnmucc(repo_url, expected_path_changes, *varargs):
@@ -313,7 +313,7 @@ def basic_svnmucc(sbox):
 
   # Expected missing revision error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E200004: 'a' is not a revision"
+                ["svnmucc: E200022: Invalid revision number found parsing 'a'"
                  ], #---------
                 '-m', 'log msg',
                 'cp', 'a', 'b')
@@ -534,7 +534,8 @@ def svnmucc_type_errors(sbox):
                 'put', sbox.ospath('file'), 'A')
 
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E160020: Path 'Z' already exists"],
+                ["svnmucc: E160020: Path 'Z' already exists, or was created "
+                 "by an earlier operation"],
                 '-m', '',
                 'mkdir', 'A/Z',
                 'put', sbox.ospath('file'), 'A/Z')
@@ -576,7 +577,8 @@ def svnmucc_propset_and_put(sbox):
 
   # Put same file twice (non existing)
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E160020: Path 't3' already exists"],
+                ["svnmucc: E160020: Path 't3' already exists, or was created "
+                 "by an earlier operation"],
                 '-m', '',
                 'put', sbox.ospath('file'), 't3',
                 'put', sbox.ospath('file'), 't3')

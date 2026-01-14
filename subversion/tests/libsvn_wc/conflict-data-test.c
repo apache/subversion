@@ -911,7 +911,7 @@ test_prop_conflict_resolving(const svn_test_opts_t *opts,
   SVN_TEST_STRING_ASSERT(value, "r1");
   value = svn_prop_get_value(props, "prop-3");
   SVN_TEST_STRING_ASSERT(value, "mod");
-  
+
   return SVN_NO_ERROR;
 }
 

@@ -22,6 +22,7 @@
  */
 
 #include "ra_local.h"
+#include "ra_init.h"
 #include "svn_hash.h"
 #include "svn_ra.h"
 #include "svn_fs.h"
@@ -554,6 +555,7 @@ ignore_warnings(void *baton,
 static svn_error_t *
 svn_ra_local__open(svn_ra_session_t *session,
                    const char **corrected_url,
+                   const char **redirect_url,
                    const char *repos_URL,
                    const svn_ra_callbacks2_t *callbacks,
                    void *callback_baton,
@@ -576,6 +578,8 @@ svn_ra_local__open(svn_ra_session_t *session,
   /* We don't support redirections in ra-local. */
   if (corrected_url)
     *corrected_url = NULL;
+  if (redirect_url)
+    *redirect_url = NULL;
 
   /* Allocate and stash the session_sess args we have already. */
   sess = apr_pcalloc(pool, sizeof(*sess));
@@ -1252,13 +1256,13 @@ get_node_props(apr_hash_t **props,
 
 /* Getting just one file. */
 static svn_error_t *
-svn_ra_local__get_file(svn_ra_session_t *session,
-                       const char *path,
-                       svn_revnum_t revision,
-                       svn_stream_t *stream,
-                       svn_revnum_t *fetched_rev,
-                       apr_hash_t **props,
-                       apr_pool_t *pool)
+get_file(svn_ra_session_t *session,
+         const char *path,
+         svn_revnum_t revision,
+         svn_stream_t *stream,
+         svn_revnum_t *fetched_rev,
+         apr_hash_t **props,
+         apr_pool_t *pool)
 {
   svn_fs_root_t *root;
   svn_stream_t *contents;
@@ -1303,11 +1307,8 @@ svn_ra_local__get_file(svn_ra_session_t *session,
          stored checksum, and all we're doing here is writing bytes in
          a loop.  Truly, Nothing Can Go Wrong :-).  But RA layers that
          go over a network should confirm the checksum.
-
-         Note: we are not supposed to close the passed-in stream, so
-         disown the thing.
       */
-      SVN_ERR(svn_stream_copy3(contents, svn_stream_disown(stream, pool),
+      SVN_ERR(svn_stream_copy3(contents, stream,
                                sess->callbacks
                                  ? sess->callbacks->cancel_func : NULL,
                                sess->callback_baton,
@@ -1751,7 +1752,7 @@ static svn_error_t *
 svn_ra_local__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks)
 {
-  /* This is currenly a no-op, since we don't provide our own editor, just
+  /* This is currently a no-op, since we don't provide our own editor, just
      use the one the libsvn_repos hands back to us. */
   return SVN_NO_ERROR;
 }
@@ -1863,6 +1864,38 @@ svn_ra_local__list(svn_ra_session_t *session,
                                         sess->callback_baton, pool));
 }
 
+static svn_error_t *
+svn_ra_local__get_file(svn_ra_session_t *session,
+                       const char *path,
+                       svn_revnum_t revision,
+                       svn_stream_t *stream,
+                       svn_revnum_t *fetched_rev,
+                       apr_hash_t **props,
+                       apr_pool_t *pool)
+{
+  /* We are not supposed to close the passed-in stream, so disown it. */
+  if (stream)
+    stream = svn_stream_disown(stream, pool);
+
+  SVN_ERR(get_file(session, path, revision, stream, fetched_rev,
+                   props, pool));
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+svn_ra_local__fetch_file_contents(svn_ra_session_t *session,
+                                  const char *path,
+                                  svn_revnum_t revision,
+                                  svn_stream_t *stream,
+                                  apr_pool_t *scratch_pool)
+{
+  SVN_ERR(get_file(session, path, revision, stream, NULL,
+                   NULL, scratch_pool));
+
+  return SVN_NO_ERROR;
+}
+
 /*----------------------------------------------------------------*/
 
 static const svn_version_t *
@@ -1914,6 +1947,7 @@ static const svn_ra__vtable_t ra_local_vtable =
   svn_ra_local__get_inherited_props,
   NULL /* set_svn_ra_open */,
   svn_ra_local__list ,
+  svn_ra_local__fetch_file_contents,
   svn_ra_local__register_editor_shim_callbacks,
   svn_ra_local__get_commit_ev2,
   NULL /* replay_range_ev2 */
@@ -1964,5 +1998,5 @@ svn_ra_local__init(const svn_version_t *loader_version,
 #define DESCRIPTION RA_LOCAL_DESCRIPTION
 #define VTBL ra_local_vtable
 #define INITFUNC svn_ra_local__init
-#define COMPAT_INITFUNC svn_ra_local_init
+#define COMPAT_INITFUNC svn_ra_local__compat_init
 #include "../libsvn_ra/wrapper_template.h"

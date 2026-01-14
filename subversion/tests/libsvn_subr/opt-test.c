@@ -27,6 +27,7 @@
 #include "../svn_test.h"
 
 #include "svn_opt.h"
+#include "private/svn_opt_private.h"
 
 
 static svn_error_t *
@@ -190,6 +191,78 @@ test_svn_opt_args_to_target_array2(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static const char *
+revision_ranges_to_string(apr_array_header_t *ranges,
+                          apr_pool_t *result_pool,
+                          apr_pool_t *scratch_pool)
+{
+  svn_stringbuf_t *result = svn_stringbuf_create_empty(result_pool);
+  int i;
+
+  for (i = 0; i < ranges->nelts; i++)
+    {
+      svn_opt_revision_range_t *range =
+        APR_ARRAY_IDX(ranges, i, svn_opt_revision_range_t *);
+
+      if (i > 0)
+        {
+          svn_stringbuf_appendcstr(result, ",");
+        }
+
+      svn_stringbuf_appendcstr(result,
+                               svn_opt__revision_to_string(&range->start,
+                                                           scratch_pool));
+      svn_stringbuf_appendcstr(result, ":");
+
+      svn_stringbuf_appendcstr(result,
+                               svn_opt__revision_to_string(&range->end,
+                                                           scratch_pool));
+    }
+
+  return result->data;
+}
+
+static svn_error_t*
+test_svn_opt_parse_change_to_range(apr_pool_t *pool)
+{
+  int i;
+  static struct {
+    const char *input;
+    const int expected_rv;
+    const char *expected_range;
+  } const tests[] = {
+    { "123", 0, "122:123"},
+    { "r123", 0, "122:123"},
+    { "-123", 0, "123:122"},
+    { "-r123", 0, "123:122"},
+    { "r-123", 0, "123:122"},
+    { "--123", -1, ""},
+    { "-r-123", -1, ""},
+    { "123-456", 0, "122:456"},
+    { "r123-r456", 0, "122:456"},
+    { "--r123", -1, ""},
+    { "123--456", -1, ""},
+    { "1-0", -1, ""},
+    { "0-1", -1, ""},
+  };
+
+  for (i = 0; i < sizeof(tests) / sizeof(tests[0]); i++)
+    {
+      apr_array_header_t *ranges =
+        apr_array_make(pool, 0, sizeof(svn_opt_revision_range_t *));
+
+      SVN_TEST_INT_ASSERT(
+        svn_opt_parse_change_to_range(ranges, tests[i].input, pool),
+        tests[i].expected_rv);
+
+      SVN_TEST_STRING_ASSERT(
+        revision_ranges_to_string(ranges, pool, pool),
+        tests[i].expected_range);
+  }
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -202,6 +275,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_opt_parse_path"),
     SVN_TEST_PASS2(test_svn_opt_args_to_target_array2,
                    "test svn_opt_args_to_target_array2"),
+    SVN_TEST_PASS2(test_svn_opt_parse_change_to_range,
+                   "test svn_opt_parse_change_to_range"),
     SVN_TEST_NULL
   };
 

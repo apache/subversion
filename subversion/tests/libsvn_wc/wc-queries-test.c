@@ -25,6 +25,8 @@
 #include "svn_hash.h"
 #include "svn_ctype.h"
 #include "private/svn_dep_compat.h"
+#include "private/svn_wc_private.h"
+#include "../../libsvn_wc/wc.h"
 
 #include "svn_private_config.h"
 
@@ -70,6 +72,8 @@ static const int schema_statements[] =
 {
   /* Usual tables */
   STMT_CREATE_SCHEMA,
+  /* (executing STMT_UPGRADE_TO_xx is conditional on desired WC format) */
+  STMT_UPGRADE_TO_32,
   STMT_INSTALL_SCHEMA_STATISTICS,
   /* Memory tables */
   STMT_CREATE_TARGETS_LIST,
@@ -100,14 +104,25 @@ static const int slow_statements[] =
   STMT_SELECT_UPDATE_MOVE_LIST,
   STMT_FIND_REPOS_PATH_IN_WC,
   STMT_SELECT_PRESENT_HIGHEST_WORKING_NODES_BY_BASENAME_AND_KIND,
-
-  /* Designed as slow to avoid penalty on other queries */
-  STMT_SELECT_UNREFERENCED_PRISTINES,
+  STMT_SELECT_COPIES_OF_REPOS_RELPATH,
 
   /* Slow, but just if foreign keys are enabled:
    * STMT_DELETE_PRISTINE_IF_UNREFERENCED,
    */
   STMT_HAVE_STAT1_TABLE, /* Queries sqlite_master which has no index */
+
+  /* Currently uses a temporary B-tree for GROUP BY */
+  STMT_TEXTBASE_SYNC,
+
+  -1 /* final marker */
+};
+
+/* These statements are slow in WC format 31, but not in latest format. */
+static const int slow_statements_f31[] =
+{
+  /* Format 31: "designed as slow to avoid penalty on other queries"
+   * Format 32: now indexed. */
+  STMT_SELECT_UNREFERENCED_PRISTINES,
 
   -1 /* final marker */
 };
@@ -140,7 +155,9 @@ in_list(const int list[], int stmt_idx)
 }
 
 /* Helpers to determine if a statement is in a common list */
-#define is_slow_statement(stmt_idx) in_list(slow_statements, stmt_idx)
+#define is_slow_statement(stmt_idx, wc_format) \
+    (in_list(slow_statements, stmt_idx) \
+     || (wc_format == 31 && in_list(slow_statements_f31, stmt_idx)))
 #define is_schema_statement(stmt_idx) \
     ((stmt_idx >= STMT_SCHEMA_FIRST) || in_list(schema_statements, stmt_idx))
 
@@ -148,10 +165,15 @@ in_list(const int list[], int stmt_idx)
 /* Create an in-memory db for evaluating queries */
 static svn_error_t *
 create_memory_db(sqlite3 **db,
+                 const svn_test_opts_t *opts,
                  apr_pool_t *pool)
 {
   sqlite3 *sdb;
   int i;
+  int target_format;
+
+  SVN_ERR(svn_wc__format_from_version(&target_format, opts->wc_format_version,
+                                      pool));
 
   /* Create an in-memory raw database */
   SVN_TEST_ASSERT(sqlite3_initialize() == SQLITE_OK);
@@ -162,6 +184,8 @@ create_memory_db(sqlite3 **db,
   /* Create schema */
   for (i = 0; schema_statements[i] != -1; i++)
     {
+      if (target_format < 32 && schema_statements[i] == STMT_UPGRADE_TO_32)
+        continue;
       SQLITE_ERR(sqlite3_exec(sdb, wc_queries[schema_statements[i]], NULL, NULL, NULL));
     }
 
@@ -204,14 +228,46 @@ test_sqlite_version(apr_pool_t *scratch_pool)
 #endif
 }
 
+/* Return TRUE iff statement STMT_NUM is valid in the schema for
+ * WC format FORMAT. */
+static svn_boolean_t
+stmt_matches_wc_format(int stmt_num,
+                       const svn_test_opts_t *opts,
+                       apr_pool_t *pool)
+{
+  int wc_format = -1;
+
+  svn_error_clear(svn_wc__format_from_version(
+                    &wc_format, opts->wc_format_version, pool));
+  switch (stmt_num)
+    {
+    case STMT_INSERT_OR_IGNORE_PRISTINE_F31:
+    case STMT_UPSERT_PRISTINE_F31:
+    case STMT_SELECT_PRISTINE_F31:
+    case STMT_INSERT_OR_IGNORE_PRISTINE_F32:
+    case STMT_UPSERT_PRISTINE_F32:
+    case STMT_SELECT_PRISTINE_F32:
+    case STMT_UPDATE_PRISTINE_HYDRATED:
+    case STMT_TEXTBASE_ADD_REF:
+    case STMT_TEXTBASE_REMOVE_REF:
+    case STMT_TEXTBASE_WALK:
+    case STMT_TEXTBASE_SYNC:
+    case STMT_SELECT_SETTINGS:
+    case STMT_UPSERT_SETTINGS:
+      return (wc_format >= 32);
+    }
+  return TRUE;
+}
+
 /* Parse all normal queries */
 static svn_error_t *
-test_parsable(apr_pool_t *scratch_pool)
+test_parsable(const svn_test_opts_t *opts,
+              apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   for (i=0; i < STMT_SCHEMA_FIRST; i++)
     {
@@ -219,6 +275,9 @@ test_parsable(apr_pool_t *scratch_pool)
       const char *text = wc_queries[i];
 
       if (is_schema_statement(i))
+        continue;
+
+      if (!stmt_matches_wc_format(i, opts, scratch_pool))
         continue;
 
       /* Some of our statement texts contain multiple queries. We prepare
@@ -266,6 +325,14 @@ struct explanation_item
   const char *compound_right;
   svn_boolean_t create_btree;
 
+  svn_boolean_t create_union;
+  svn_boolean_t union_all;
+
+  svn_boolean_t merge;
+
+  svn_boolean_t multi_index;
+  svn_boolean_t multi_index_or;
+
   int expression_vars;
   int expected_rows;
 };
@@ -311,6 +378,18 @@ parse_explanation_item(struct explanation_item **parsed_item,
         {
           item->table = apr_psprintf(result_pool, "SUBQUERY-%s",
                                      apr_strtok(NULL, " ", &last));
+        }
+      else if (MATCH_TOKEN(token, "CONSTANT"))
+        {
+          item->table = "sqlite_master"; /* not worth checking.
+                                            Just a lookup */
+          token = apr_strtok(NULL, " ", &last);
+          if (!MATCH_TOKEN(token, "ROW"))
+            {
+              printf("DBG: Expected 'ROW', got '%s' in '%s'\n",
+                     token, text);
+              return SVN_NO_ERROR;
+            }
         }
       else
         {
@@ -433,39 +512,44 @@ parse_explanation_item(struct explanation_item **parsed_item,
       /* Handling temporary table (E.g. UNION) */
 
       token = apr_strtok(NULL, " ", &last);
-      if (!MATCH_TOKEN(token, "SUBQUERIES"))
+      if (MATCH_TOKEN(token, "SUBQUERIES"))
+        {
+          item->compound_left = apr_strtok(NULL, " ", &last);
+          token = apr_strtok(NULL, " ", &last);
+
+          if (!MATCH_TOKEN(token, "AND"))
+            {
+              printf("DBG: Expected 'AND', got '%s' in '%s'\n", token, text);
+              return SVN_NO_ERROR;
+            }
+
+          item->compound_right = apr_strtok(NULL, " ", &last);
+
+          token = apr_strtok(NULL, " ", &last);
+          if (MATCH_TOKEN(token, "USING"))
+            {
+              token = apr_strtok(NULL, " ", &last);
+              if (!MATCH_TOKEN(token, "TEMP"))
+                {
+                  printf("DBG: Expected 'TEMP', got '%s' in '%s'\n", token, text);
+                }
+              token = apr_strtok(NULL, " ", &last);
+              if (!MATCH_TOKEN(token, "B-TREE"))
+                {
+                  printf("DBG: Expected 'B-TREE', got '%s' in '%s'\n", token,
+                         text);
+                }
+              item->create_btree = TRUE;
+            }
+        }
+      else if (MATCH_TOKEN(token, "QUERY"))
+        {
+        }
+      else
         {
           printf("DBG: Expected 'SUBQUERIES', got '%s' in '%s'\n", token,
                  text);
           return SVN_NO_ERROR;
-        }
-
-      item->compound_left = apr_strtok(NULL, " ", &last);
-      token = apr_strtok(NULL, " ", &last);
-
-      if (!MATCH_TOKEN(token, "AND"))
-        {
-          printf("DBG: Expected 'AND', got '%s' in '%s'\n", token, text);
-          return SVN_NO_ERROR;
-        }
-
-      item->compound_right = apr_strtok(NULL, " ", &last);
-
-      token = apr_strtok(NULL, " ", &last);
-      if (MATCH_TOKEN(token, "USING"))
-        {
-          token = apr_strtok(NULL, " ", &last);
-          if (!MATCH_TOKEN(token, "TEMP"))
-            {
-              printf("DBG: Expected 'TEMP', got '%s' in '%s'\n", token, text);
-            }
-          token = apr_strtok(NULL, " ", &last);
-          if (!MATCH_TOKEN(token, "B-TREE"))
-            {
-              printf("DBG: Expected 'B-TREE', got '%s' in '%s'\n", token,
-                     text);
-            }
-          item->create_btree = TRUE;
         }
     }
   else if (MATCH_TOKEN(item->operation, "USE"))
@@ -473,6 +557,48 @@ parse_explanation_item(struct explanation_item **parsed_item,
       /* Using a temporary table for ordering results */
       /* ### Need parsing */
       item->create_btree = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "UNION"))
+    {
+      item->create_union = TRUE;
+
+      token = apr_strtok(NULL, " ", &last);
+      if (MATCH_TOKEN(token, "ALL"))
+        item->union_all = TRUE;
+      else
+        item->union_all = FALSE;
+    }
+  else if (MATCH_TOKEN(item->operation, "INDEX"))
+    {
+
+    }
+  else if (MATCH_TOKEN(item->operation, "MULTI-INDEX"))
+    {
+      item->multi_index = TRUE;
+      token = apr_strtok(NULL, " ", &last);
+      if (MATCH_TOKEN(token, "OR"))
+        item->multi_index_or = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "MERGE"))
+    {
+      item->merge = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "LEFT")
+           || MATCH_TOKEN(item->operation, "RIGHT"))
+    {
+    }
+  else if (MATCH_TOKEN(item->operation, "CORRELATED"))
+    {
+      item->merge = TRUE;
+    }
+  else if (MATCH_TOKEN(item->operation, "CO-ROUTINE"))
+    {
+    }
+  else if (MATCH_TOKEN(item->operation, "SCALAR"))
+    {
+    }
+  else if (MATCH_TOKEN(item->operation, "LEFT-MOST"))
+    {
     }
   else
     {
@@ -563,15 +689,20 @@ is_result_table(const char *table_name)
 }
 
 static svn_error_t *
-test_query_expectations(apr_pool_t *scratch_pool)
+test_query_expectations(const svn_test_opts_t *opts,
+                        apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
   apr_pool_t *iterpool = svn_pool_create(scratch_pool);
   svn_error_t *warnings = NULL;
   svn_boolean_t supports_query_info;
+  int wc_format;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(svn_wc__format_from_version(&wc_format, opts->wc_format_version,
+                                      scratch_pool));
+
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SVN_ERR(supported_explain_query_plan(&supports_query_info, sdb,
                                        scratch_pool));
@@ -591,6 +722,9 @@ test_query_expectations(apr_pool_t *scratch_pool)
       apr_array_header_t *rows = NULL;
 
       if (is_schema_statement(i))
+        continue;
+
+      if (!stmt_matches_wc_format(i, opts, scratch_pool))
         continue;
 
       /* Prepare statement to find if it is a single statement. */
@@ -653,7 +787,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
               && item->automatic_index)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 {
                   warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
@@ -670,13 +804,26 @@ test_query_expectations(apr_pool_t *scratch_pool)
                        || (item->expression_vars < 1))
                    && !is_result_table(item->table))
             {
-              if (in_list(primary_key_statements, i))
+              if (MATCH_TOKEN(item->table, "sqlite_master"))
+                {
+                  /* The sqlite_master table does not have an index.
+                     Query explanations that say 'SCAN TABLE sqlite_master'
+                     will appear if SQLite was compiled with the option
+                     SQLITE_ENABLE_STMT_SCANSTATUS, for queries such
+                     as 'DROP TABLE foo', but the performance of such
+                     statements is not our concern here. */
+
+                  /* "Slow" statements do expect to see a warning, however. */
+                  if (is_slow_statement(i, wc_format))
+                    warned = TRUE;
+                }
+              else if (in_list(primary_key_statements, i))
                 {
                   /* Reported as primary key index usage in Sqlite 3.7,
                      as table scan in 3.8+, while the execution plan is
                      identical: read first record from table */
                 }
-              else if (!is_slow_statement(i))
+              else if (!is_slow_statement(i, wc_format))
                 {
                   warned = TRUE;
                   warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
@@ -692,7 +839,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
           else if (item->search && !item->index)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "%s: "
                                 "Query on %s doesn't use an index:\n%s",
@@ -701,7 +848,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
           else if (item->scan && !is_result_table(item->table))
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "Query %s: "
                                 "Performs scan on %s:\n%s",
@@ -710,7 +857,7 @@ test_query_expectations(apr_pool_t *scratch_pool)
           else if (item->create_btree)
             {
               warned = TRUE;
-              if (!is_slow_statement(i))
+              if (!is_slow_statement(i, wc_format))
                 warnings = svn_error_createf(SVN_ERR_TEST_FAILED, warnings,
                                 "Query %s: Creates a temporary B-TREE:\n%s",
                                 wc_query_info[i][0], wc_queries[i]);
@@ -719,13 +866,13 @@ test_query_expectations(apr_pool_t *scratch_pool)
       SQLITE_ERR(sqlite3_reset(stmt));
       SQLITE_ERR(sqlite3_finalize(stmt));
 
-      if (!warned && is_slow_statement(i))
+      if (!warned && is_slow_statement(i, wc_format))
         {
           printf("DBG: Expected %s to be reported as slow, but it wasn't\n",
                  wc_query_info[i][0]);
         }
 
-      if (rows && warned != is_slow_statement(i))
+      if (rows && warned != is_slow_statement(i, wc_format))
         {
           int w;
           svn_error_t *info = NULL;
@@ -748,7 +895,8 @@ test_query_expectations(apr_pool_t *scratch_pool)
 }
 
 static svn_error_t *
-test_query_duplicates(apr_pool_t *scratch_pool)
+test_query_duplicates(const svn_test_opts_t *opts,
+                      apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
@@ -757,7 +905,7 @@ test_query_duplicates(apr_pool_t *scratch_pool)
   svn_boolean_t supports_query_info;
   apr_hash_t *sha_to_query = apr_hash_make(scratch_pool);
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SVN_ERR(supported_explain_query_plan(&supports_query_info, sdb,
       scratch_pool));
@@ -883,12 +1031,13 @@ parse_stat_data(const char *stat)
 }
 
 static svn_error_t *
-test_schema_statistics(apr_pool_t *scratch_pool)
+test_schema_statistics(const svn_test_opts_t *opts,
+                       apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   sqlite3_stmt *stmt;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SQLITE_ERR(
       sqlite3_exec(sdb,
@@ -1004,12 +1153,13 @@ static void relpath_depth_sqlite(sqlite3_context* context,
 
 /* Parse all verify/check queries */
 static svn_error_t *
-test_verify_parsable(apr_pool_t *scratch_pool)
+test_verify_parsable(const svn_test_opts_t *opts,
+                     apr_pool_t *scratch_pool)
 {
   sqlite3 *sdb;
   int i;
 
-  SVN_ERR(create_memory_db(&sdb, scratch_pool));
+  SVN_ERR(create_memory_db(&sdb, opts, scratch_pool));
 
   SQLITE_ERR(sqlite3_create_function(sdb, "relpath_depth", 1, SQLITE_ANY, NULL,
                                      relpath_depth_sqlite, NULL, NULL));
@@ -1053,16 +1203,16 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_NULL,
     SVN_TEST_PASS2(test_sqlite_version,
                    "sqlite up-to-date"),
-    SVN_TEST_PASS2(test_parsable,
-                   "queries are parsable"),
-    SVN_TEST_PASS2(test_query_expectations,
-                   "test query expectations"),
-    SVN_TEST_PASS2(test_query_duplicates,
-                   "test query duplicates"),
-    SVN_TEST_PASS2(test_schema_statistics,
-                   "test schema statistics"),
-    SVN_TEST_PASS2(test_verify_parsable,
-                   "verify queries are parsable"),
+    SVN_TEST_OPTS_PASS(test_parsable,
+                       "queries are parsable"),
+    SVN_TEST_OPTS_PASS(test_query_expectations,
+                       "test query expectations"),
+    SVN_TEST_OPTS_PASS(test_query_duplicates,
+                       "test query duplicates"),
+    SVN_TEST_OPTS_PASS(test_schema_statistics,
+                       "test schema statistics"),
+    SVN_TEST_OPTS_PASS(test_verify_parsable,
+                       "verify queries are parsable"),
     SVN_TEST_NULL
   };
 

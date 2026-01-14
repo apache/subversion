@@ -953,7 +953,7 @@ svn_fs_x__l2p_index_append(svn_checksum_t **checksum,
                                               &eof, local_pool));
 
       /* handle new revision */
-      if ((entry > 0 && proto_entry.offset == 0) || eof)
+      if (eof || (entry > 0 && proto_entry.offset == 0))
         {
           /* dump entries, grouped into pages */
 
@@ -2219,7 +2219,7 @@ svn_fs_x__p2l_index_append(svn_checksum_t **checksum,
       SVN_ERR(read_p2l_entry_from_proto_index(proto_index, &entry,
                                               &eof, iterpool));
 
-      if (entry.item_count && !eof)
+      if (!eof && entry.item_count)
         {
           entry.items = apr_palloc(iterpool,
                                    entry.item_count * sizeof(*entry.items));
@@ -2742,8 +2742,8 @@ get_p2l_page(apr_array_header_t **entries,
  * Set *END to TRUE if the caller should stop refeching.
  *
  * *BATON will be updated with the selected page's info and SCRATCH_POOL
- * will be used for temporary allocations.  If the data is alread in the
- * cache, descrease *LEAKING_BUCKET and increase it otherwise.  With that
+ * will be used for temporary allocations.  If the data is already in the
+ * cache, decrease *LEAKING_BUCKET and increase it otherwise.  With that
  * pattern we will still read all pages from the block even if some of
  * them survived in the cached.
  */
@@ -2919,7 +2919,7 @@ append_p2l_entries(apr_array_header_t *entries,
     }
 }
 
-/* Auxilliary struct passed to p2l_entries_func selecting the relevant
+/* Auxiliary struct passed to p2l_entries_func selecting the relevant
  * data range. */
 typedef struct p2l_entries_baton_t
 {

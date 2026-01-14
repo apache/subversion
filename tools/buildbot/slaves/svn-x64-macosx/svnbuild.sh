@@ -40,6 +40,27 @@ if [ ! -z "${aprdir}" -a  -d "${aprdir}" ]; then
     serfconfig=" --without-serf --without-apxs"
 fi
 
+# An optional parameter tells us if this is a warnings-only build.
+# We run the warnings build with a number of additional options.
+if [ "$2" = "warnings" ]; then
+    parallel=1
+    maintainer_mode=' -q --enable-maintainer-mode'
+    config_cflags="-Wno-deprecated-declarations"
+    config_cflags="${config_cflags} -DPACK_AFTER_EVERY_COMMIT"
+    config_cflags="${config_cflags} -DSVN_UNALIGNED_ACCESS_IS_OK=0"
+    config_cflags="${config_cflags} -DSUFFIX_LINES_TO_KEEP=0"
+    config_cflags="${config_cflags} -DSVN_DEPRECATED="
+else
+    parallel=${SVNBB_PARALLEL}
+fi
+
+# An optional parameter tells us if this build should use Python 3.
+if [ "$3" = "python3" ]; then
+    test -n "${SVNBB_PYTHON3ENV}" \
+        && . ${SVNBB_PYTHON3ENV}/bin/activate \
+        && export PYTHON="$(which python)"
+fi
+
 #
 # Step 0: Create a directory for the test log files
 #
@@ -84,8 +105,10 @@ fi
 
 echo "============ configure"
 cd ${absbld}
-env CC=clang CXX=clang++ \
-${abssrc}/configure \
+env CC=clang CFLAGS="${config_cflags}" \
+    CXX=clang++ CXXFLAGS="${config_cxxflags}" \
+    LDFLAGS='-Wl,-w' \
+${abssrc}/configure${maintainer_mode} \
     --prefix="${absbld}/.install-prefix" \
     --enable-debug${optimizeconfig} \
     --disable-nls \
@@ -106,14 +129,6 @@ test -f config.log && mv config.log "${abssrc}/.test-logs/config.log"
 # Step 4: build
 #
 
-# An optional parameter tells build scripts how to parallelize the build
-if [ "$2" = "serial" ]; then
-    parallel=1
-else
-    parallel=${SVNBB_PARALLEL}
-fi
-
 echo "============ make"
 cd ${absbld}
-make -j${parallel} 2>&1 \
-    | grep -v '^ld: [w]arning:.*Falling back to library file for linking. *$'
+make -j${parallel}

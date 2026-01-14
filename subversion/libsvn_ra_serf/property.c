@@ -205,7 +205,7 @@ propfind_closed(svn_ra_serf__xml_estate_t *xes,
 
   if (leaving_state == MULTISTATUS)
     {
-      /* We've gathered all the data from the reponse. Add this item
+      /* We've gathered all the data from the response. Add this item
          onto the "done list". External callers will then know this
          request has been completed (tho stray response bytes may still
          arrive).  */

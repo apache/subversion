@@ -473,21 +473,6 @@ svn_fs_x__string_table_create(const string_table_builder_t *builder,
   return result;
 }
 
-/* Masks used by table_copy_string.  copy_mask[I] is used if the target
-   content to be preserved starts at byte I within the current chunk.
-   This is used to work around alignment issues.
- */
-#if SVN_UNALIGNED_ACCESS_IS_OK
-static const char *copy_masks[8] = { "\xff\xff\xff\xff\xff\xff\xff\xff",
-                                     "\x00\xff\xff\xff\xff\xff\xff\xff",
-                                     "\x00\x00\xff\xff\xff\xff\xff\xff",
-                                     "\x00\x00\x00\xff\xff\xff\xff\xff",
-                                     "\x00\x00\x00\x00\xff\xff\xff\xff",
-                                     "\x00\x00\x00\x00\x00\xff\xff\xff",
-                                     "\x00\x00\x00\x00\x00\x00\xff\xff",
-                                     "\x00\x00\x00\x00\x00\x00\x00\xff" };
-#endif
-
 static void
 table_copy_string(char *buffer,
                   apr_size_t len,
@@ -499,40 +484,10 @@ table_copy_string(char *buffer,
     {
       assert(header->head_length <= len);
         {
-#if SVN_UNALIGNED_ACCESS_IS_OK
-          /* the sections that we copy tend to be short but we can copy
-             *all* of it chunky because we made sure that source and target
-             buffer have some extra padding to prevent segfaults. */
-          apr_uint64_t mask;
-          apr_size_t to_copy = len - header->head_length;
-          apr_size_t copied = 0;
-
-          const char *source = table->data + header->tail_start;
-          char *target = buffer + header->head_length;
-          len = header->head_length;
-
-          /* copy whole chunks */
-          while (to_copy >= copied + sizeof(apr_uint64_t))
-            {
-              *(apr_uint64_t *)(target + copied)
-                = *(const apr_uint64_t *)(source + copied);
-              copied += sizeof(apr_uint64_t);
-            }
-
-          /* copy the remainder assuming that we have up to 8 extra bytes
-             of addressable buffer on the source and target sides.
-             Now, we simply copy 8 bytes and use a mask to filter & merge
-             old with new data. */
-          mask = *(const apr_uint64_t *)copy_masks[to_copy - copied];
-          *(apr_uint64_t *)(target + copied)
-            = (*(apr_uint64_t *)(target + copied) & mask)
-            | (*(const apr_uint64_t *)(source + copied) & ~mask);
-#else
           memcpy(buffer + header->head_length,
                  table->data + header->tail_start,
                  len - header->head_length);
           len = header->head_length;
-#endif
         }
 
       header = &table->short_strings[header->head_string];

@@ -1627,7 +1627,7 @@ base_dir_optimal_order(apr_array_header_t **ordered_p,
                        apr_pool_t *result_pool,
                        apr_pool_t *scratch_pool)
 {
-  /* 1:1 copy of entries with no differnce in ordering */
+  /* 1:1 copy of entries with no difference in ordering */
   apr_hash_index_t *hi;
   apr_array_header_t *result
     = apr_array_make(result_pool, apr_hash_count(entries),
@@ -3845,13 +3845,14 @@ txn_body_apply_textdelta(void *baton, trail_t *trail)
   svn_stream_set_write(tb->string_stream, write_to_string);
 
   /* Now, create a custom window handler that uses our two streams. */
-  svn_txdelta_apply(tb->source_stream,
-                    tb->string_stream,
-                    NULL,
-                    tb->path,
-                    tb->pool,
-                    &(tb->interpreter),
-                    &(tb->interpreter_baton));
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(tb->source_stream, tb->pool),
+                     tb->string_stream,
+                     NULL,
+                     tb->path,
+                     tb->pool,
+                     &(tb->interpreter),
+                     &(tb->interpreter_baton));
 
   return SVN_NO_ERROR;
 }
@@ -3936,7 +3937,7 @@ txn_body_fulltext_finalize_edits(void *baton, trail_t *trail)
                     trail->pool);
 }
 
-/* Write function for the publically returned stream. */
+/* Write function for the publicly returned stream. */
 static svn_error_t *
 text_stream_writer(void *baton,
                    const char *data,
@@ -3948,7 +3949,7 @@ text_stream_writer(void *baton,
   return svn_stream_write(tb->file_stream, data, len);
 }
 
-/* Close function for the publically returned stream. */
+/* Close function for the publicly returned stream. */
 static svn_error_t *
 text_stream_closer(void *baton)
 {

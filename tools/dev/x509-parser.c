@@ -118,7 +118,7 @@ get_der_cert_from_stream(const svn_string_t **der_cert, svn_stream_t *in,
           return SVN_NO_ERROR;
         }
 
-      /* Try decoding as a PEM with begining and ending headers. */
+      /* Try decoding as a PEM with beginning and ending headers. */
       start = strstr(raw->data, PEM_BEGIN_CERT);
       end = strstr(raw->data, PEM_END_CERT);
       if (start && end && end > start)

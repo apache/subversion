@@ -36,9 +36,8 @@ typedef struct svn_string_t svn_string_t;
     if (*$1 == NULL) {
         Py_INCREF(Py_None);
         s = Py_None;
-    }
-    else {
-        s = PyString_FromStringAndSize((*$1)->data, (*$1)->len);
+    } else {
+        s = PyBytes_FromStringAndSize((*$1)->data, (*$1)->len);
         if (s == NULL)
             SWIG_fail;
     }
@@ -75,14 +74,33 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPYTHON
 %typemap(in) svn_stringbuf_t * {
-    if (!PyString_Check($input)) {
-        PyErr_SetString(PyExc_TypeError, "not a string");
-        SWIG_fail;
+    if ($input == Py_None) {
+        $1 = NULL;
     }
-    $1 = svn_stringbuf_ncreate(PyString_AS_STRING($input),
-                               PyString_GET_SIZE($input),
-                               /* ### gah... what pool to use? */
-                               _global_pool);
+    else {
+        Py_ssize_t strBufLen;
+        char *strBufChar;
+        if (PyBytes_Check($input)) {
+            if (-1 == PyBytes_AsStringAndSize($input, &strBufChar,
+                                              &strBufLen)) {
+                SWIG_fail;
+            }
+        }
+        else if (PyUnicode_Check($input)) {
+            strBufChar = (char *)PyStr_AsUTF8AndSize($input, &strBufLen);
+            if (PyErr_Occurred()) {
+                SWIG_fail;
+            }
+        }
+        else {
+            PyErr_SetString(PyExc_TypeError,
+                            "not a bytes, str or None object");
+            SWIG_fail;
+        }
+        $1 = svn_stringbuf_ncreate((const char *)strBufChar, strBufLen,
+                                   /* ### gah... what pool to use? */
+                                   _global_pool);
+    }
 }
 #endif
 
@@ -139,7 +157,7 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPYTHON
 %typemap(out) svn_stringbuf_t * {
-    $result = PyString_FromStringAndSize($1->data, $1->len);
+    $result = PyBytes_FromStringAndSize($1->data, (Py_ssize_t)($1->len));
 }
 #endif
 
@@ -171,15 +189,29 @@ typedef struct svn_string_t svn_string_t;
 /* const svn_string_t * is always an input parameter */
 #ifdef SWIGPYTHON
 %typemap(in) const svn_string_t * (svn_string_t value) {
-    if ($input == Py_None)
+    if ($input == Py_None) {
         $1 = NULL;
+    }
     else {
-        if (!PyString_Check($input)) {
-            PyErr_SetString(PyExc_TypeError, "not a string");
+        Py_ssize_t pyStrLen;
+        if (PyBytes_Check($input)) {
+            if (PyBytes_AsStringAndSize($input, (char **)&(value.data),
+                                        &pyStrLen) == -1) {
+                SWIG_fail;
+            }
+        }
+        else if (PyUnicode_Check($input)) {
+            value.data = PyStr_AsUTF8AndSize($input, &pyStrLen);
+            if ((value.data == NULL) || PyErr_Occurred()) {
+                SWIG_fail;
+            }
+        }
+        else {
+            PyErr_SetString(PyExc_TypeError,
+                            "not a bytes, str, or None object");
             SWIG_fail;
         }
-        value.data = PyString_AS_STRING($input);
-        value.len = PyString_GET_SIZE($input);
+        value.len = pyStrLen;
         $1 = &value;
     }
 }
@@ -223,7 +255,7 @@ typedef struct svn_string_t svn_string_t;
 
 #ifdef SWIGPYTHON
 %typemap(out) svn_string_t * {
-    $result = PyString_FromStringAndSize($1->data, $1->len);
+    $result = PyBytes_FromStringAndSize($1->data, $1->len);
 }
 #endif
 #ifdef SWIGPERL
@@ -242,6 +274,26 @@ typedef struct svn_string_t svn_string_t;
 }
 #endif
 
+ /* -----------------------------------------------------------------------
+   Type: char * (input)
+*/
+#ifdef SWIGPYTHON
+%typemap (in) IN_STRING
+{
+    $1 = svn_swig_py_string_to_cstring($input, FALSE, "$symname", "$1_name");
+    if (PyErr_Occurred()) SWIG_fail;
+}
+
+%typemap (freearg) IN_STRING "";
+
+%apply IN_STRING {
+    const char *,
+    char *,
+    char const *,
+    char * const,
+    char const * const
+};
+#endif
 /* -----------------------------------------------------------------------
    define a way to return a 'const char *'
 */
@@ -253,7 +305,7 @@ typedef struct svn_string_t svn_string_t;
         s = Py_None;
     }
     else {
-        s = PyString_FromString(*$1);
+        s = PyBytes_FromString(*$1);
         if (s == NULL)
             SWIG_fail;
     }
@@ -283,4 +335,8 @@ typedef struct svn_string_t svn_string_t;
 #endif
 
 /* svn_wc_get_ancestry() lacks a 'const' */
-%apply const char **OUTPUT { const char **, char **url };
+%apply const char **OUTPUT {
+  const char **,
+  char **url,
+  char **log_message
+};

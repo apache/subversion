@@ -377,38 +377,48 @@ class SvnBackup:
             return self.exec_cmd_unix(cmd, output, printerr)
 
     def exec_cmd_unix(self, cmd, output=None, printerr=False):
+        if printerr:
+            if sys.hexversion >= 0x3000000:
+                sys.stdout.flush()
+                errout = sys.stdout.buffer
+            else:
+                errout = sys.stdout
+        else:
+            errout = PIPE
         try:
-            proc = Popen(cmd, stdout=PIPE, stderr=PIPE, shell=False)
+            proc = Popen(cmd, stdout=PIPE, stderr=errout, shell=False)
         except:
             return (256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
                     str(sys.exc_info()[1])))
-        stdout = proc.stdout
-        stderr = proc.stderr
-        self.set_nonblock(stdout)
-        self.set_nonblock(stderr)
-        readfds = [ stdout, stderr ]
-        selres = select.select(readfds, [], [])
-        bufout = ""
-        buferr = ""
-        while len(selres[0]) > 0:
-            for fd in selres[0]:
-                buf = fd.read(16384)
-                if len(buf) == 0:
-                    readfds.remove(fd)
-                elif fd == stdout:
-                    if output:
+        if output is None:
+            bufout, buferr = proc.communicate()
+            rc = proc.returncode
+            if buferr is None:
+                buferr = b""
+        else:
+            stdout = proc.stdout
+            self.set_nonblock(stdout)
+            readfds = [ stdout ]
+            if not printerr:
+                stderr = proc.stderr
+                self.set_nonblock(stderr)
+                readfds.append(stderr)
+            selres = select.select(readfds, [], [])
+            bufout = b""
+            buferr = b""
+            while len(selres[0]) > 0:
+                for fd in selres[0]:
+                    buf = fd.read(16384)
+                    if len(buf) == 0:
+                        readfds.remove(fd)
+                    elif fd == stdout:
                         output.write(buf)
                     else:
-                        bufout += buf
-                else:
-                    if printerr:
-                        sys.stdout.write("%s " % buf)
-                    else:
                         buferr += buf
-            if len(readfds) == 0:
-                break
-            selres = select.select(readfds, [], [])
-        rc = proc.wait()
+                if len(readfds) == 0:
+                    break
+                selres = select.select(readfds, [], [])
+            rc = proc.wait()
         if printerr:
             print("")
         return (rc, bufout, buferr)
@@ -420,8 +430,8 @@ class SvnBackup:
             return (256, "", "Popen failed (%s ...):\n  %s" % (cmd[0],
                     str(sys.exc_info()[1])))
         stdout = proc.stdout
-        bufout = ""
-        buferr = ""
+        bufout = b""
+        buferr = b""
         buf = stdout.read(16384)
         while len(buf) > 0:
             if output:

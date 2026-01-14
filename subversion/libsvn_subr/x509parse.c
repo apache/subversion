@@ -262,7 +262,7 @@ x509_get_alg(const unsigned char **p, const unsigned char *end, x509_buf * alg)
 
   if (*p == end)
     return SVN_NO_ERROR;
-  
+
   /* The OID encoding of 1.2.840.113549.1.1.10 (id-RSASSA-PSS) */
 #define OID_RSASSA_PSS "\x2a\x86\x48\x86\xf7\x0d\x01\x01\x0a"
 
@@ -882,7 +882,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
 
       /* Both BMP and UNIVERSAL should always be in Big Endian (aka
        * network byte order).  But rumor has it that there are certs
-       * out there with other endianess and even Byte Order Marks.
+       * out there with other endianness and even Byte Order Marks.
        * If we actually run into these, we might need to do something
        * about it. */
 
@@ -916,7 +916,7 @@ x509name_to_utf8_string(const x509_name *name, apr_pool_t *result_pool)
 
       /* This leaves two types out there in the wild.  PrintableString,
        * which is just a subset of ASCII and IA5 which is ASCII (though
-       * 0x24 '$' and 0x23 '#' may be defined with differnet symbols
+       * 0x24 '$' and 0x23 '#' may be defined with different symbols
        * depending on the location, in practice it seems everyone just
        * treats it as ASCII).  Since these are just ASCII run through
        * the fuzzy_escape code to deal with anything that isn't actually
@@ -979,7 +979,7 @@ is_hostname(const char *str)
           if (i + 1 != len)
             {
               if (str[i + 1] == '.')
-                return FALSE; /* '-' preceeds a '.' */
+                return FALSE; /* '-' precedes a '.' */
             }
           else
             return FALSE; /* '-' is at end of string */

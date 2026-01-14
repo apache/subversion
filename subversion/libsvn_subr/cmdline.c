@@ -39,8 +39,15 @@
 
 #include <apr.h>                /* for STDIN_FILENO */
 #include <apr_errno.h>          /* for apr_strerror */
+#include <apr_version.h>
+#if APR_VERSION_AT_LEAST(1,5,0)
+#include <apr_escape.h>
+#else
+#include "private/svn_dep_compat.h"
+#endif
 #include <apr_general.h>        /* for apr_initialize/apr_terminate */
 #include <apr_strings.h>        /* for apr_snprintf */
+#include <apr_env.h>            /* for apr_env_get */
 #include <apr_pools.h>
 #include <apr_signal.h>
 
@@ -73,7 +80,7 @@
 
 #if defined(WIN32) && defined(_MSC_VER) && (_MSC_VER < 1400)
 /* Before Visual Studio 2005, the C runtime didn't handle encodings for the
-   for the stdio output handling. */
+   stdio output handling. */
 #define CMDLINE_USE_CUSTOM_ENCODING
 
 /* The stdin encoding. If null, it's the same as the native encoding. */
@@ -1215,361 +1222,31 @@ svn_cmdline__stderr_is_a_terminal(void)
 #endif
 }
 
-svn_boolean_t
-svn_cmdline__be_interactive(svn_boolean_t non_interactive,
+svn_error_t *
+svn_cmdline__be_interactive(svn_boolean_t *non_interactive,
                             svn_boolean_t force_interactive)
 {
+  /* The --non-interactive and --force-interactive options are mutually
+   * exclusive. */
+  if (*non_interactive && force_interactive)
+    {
+      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                              _("--non-interactive and --force-interactive "
+                                "are mutually exclusive"));
+    }
+
   /* If neither --non-interactive nor --force-interactive was passed,
    * be interactive if stdin is a terminal.
    * If --force-interactive was passed, always be interactive. */
-  if (!force_interactive && !non_interactive)
-    {
-      return svn_cmdline__stdin_is_a_terminal();
-    }
-  else if (force_interactive)
-    return TRUE;
+  if (!force_interactive && !*non_interactive)
+    *non_interactive = !svn_cmdline__stdin_is_a_terminal();
 
-  return !non_interactive;
-}
-
-
-/* Helper for the next two functions.  Set *EDITOR to some path to an
-   editor binary.  Sources to search include: the EDITOR_CMD argument
-   (if not NULL), $SVN_EDITOR, the runtime CONFIG variable (if CONFIG
-   is not NULL), $VISUAL, $EDITOR.  Return
-   SVN_ERR_CL_NO_EXTERNAL_EDITOR if no binary can be found. */
-static svn_error_t *
-find_editor_binary(const char **editor,
-                   const char *editor_cmd,
-                   apr_hash_t *config)
-{
-  const char *e;
-  struct svn_config_t *cfg;
-
-  /* Use the editor specified on the command line via --editor-cmd, if any. */
-  e = editor_cmd;
-
-  /* Otherwise look for the Subversion-specific environment variable. */
-  if (! e)
-    e = getenv("SVN_EDITOR");
-
-  /* If not found then fall back on the config file. */
-  if (! e)
-    {
-      cfg = config ? svn_hash_gets(config, SVN_CONFIG_CATEGORY_CONFIG) : NULL;
-      svn_config_get(cfg, &e, SVN_CONFIG_SECTION_HELPERS,
-                     SVN_CONFIG_OPTION_EDITOR_CMD, NULL);
-    }
-
-  /* If not found yet then try general purpose environment variables. */
-  if (! e)
-    e = getenv("VISUAL");
-  if (! e)
-    e = getenv("EDITOR");
-
-#ifdef SVN_CLIENT_EDITOR
-  /* If still not found then fall back on the hard-coded default. */
-  if (! e)
-    e = SVN_CLIENT_EDITOR;
-#endif
-
-  /* Error if there is no editor specified */
-  if (e)
-    {
-      const char *c;
-
-      for (c = e; *c; c++)
-        if (!svn_ctype_isspace(*c))
-          break;
-
-      if (! *c)
-        return svn_error_create
-          (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-           _("The EDITOR, SVN_EDITOR or VISUAL environment variable or "
-             "'editor-cmd' run-time configuration option is empty or "
-             "consists solely of whitespace. Expected a shell command."));
-    }
-  else
-    return svn_error_create
-      (SVN_ERR_CL_NO_EXTERNAL_EDITOR, NULL,
-       _("None of the environment variables SVN_EDITOR, VISUAL or EDITOR are "
-         "set, and no 'editor-cmd' run-time configuration option was found"));
-
-  *editor = e;
-  return SVN_NO_ERROR;
-}
-
-
-svn_error_t *
-svn_cmdline__edit_file_externally(const char *path,
-                                  const char *editor_cmd,
-                                  apr_hash_t *config,
-                                  apr_pool_t *pool)
-{
-  const char *editor, *cmd, *base_dir, *file_name, *base_dir_apr;
-  char *old_cwd;
-  int sys_err;
-  apr_status_t apr_err;
-
-  svn_dirent_split(&base_dir, &file_name, path, pool);
-
-  SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
-
-  apr_err = apr_filepath_get(&old_cwd, APR_FILEPATH_NATIVE, pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't get working directory"));
-
-  /* APR doesn't like "" directories */
-  if (base_dir[0] == '\0')
-    base_dir_apr = ".";
-  else
-    SVN_ERR(svn_path_cstring_from_utf8(&base_dir_apr, base_dir, pool));
-
-  apr_err = apr_filepath_set(base_dir_apr, pool);
-  if (apr_err)
-    return svn_error_wrap_apr
-      (apr_err, _("Can't change working directory to '%s'"), base_dir);
-
-  cmd = apr_psprintf(pool, "%s %s", editor, file_name);
-  sys_err = system(cmd);
-
-  apr_err = apr_filepath_set(old_cwd, pool);
-  if (apr_err)
-    svn_handle_error2(svn_error_wrap_apr
-                      (apr_err, _("Can't restore working directory")),
-                      stderr, TRUE /* fatal */, "svn: ");
-
-  if (sys_err)
-    /* Extracting any meaning from sys_err is platform specific, so just
-       use the raw value. */
-    return svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                             _("system('%s') returned %d"), cmd, sys_err);
+  if (force_interactive)
+    *non_interactive = FALSE;
 
   return SVN_NO_ERROR;
 }
 
-
-svn_error_t *
-svn_cmdline__edit_string_externally(svn_string_t **edited_contents /* UTF-8! */,
-                                    const char **tmpfile_left /* UTF-8! */,
-                                    const char *editor_cmd,
-                                    const char *base_dir /* UTF-8! */,
-                                    const svn_string_t *contents /* UTF-8! */,
-                                    const char *filename,
-                                    apr_hash_t *config,
-                                    svn_boolean_t as_text,
-                                    const char *encoding,
-                                    apr_pool_t *pool)
-{
-  const char *editor;
-  const char *cmd;
-  apr_file_t *tmp_file;
-  const char *tmpfile_name;
-  const char *tmpfile_native;
-  const char *base_dir_apr;
-  svn_string_t *translated_contents;
-  apr_status_t apr_err;
-  apr_size_t written;
-  apr_finfo_t finfo_before, finfo_after;
-  svn_error_t *err = SVN_NO_ERROR;
-  char *old_cwd;
-  int sys_err;
-  svn_boolean_t remove_file = TRUE;
-
-  SVN_ERR(find_editor_binary(&editor, editor_cmd, config));
-
-  /* Convert file contents from UTF-8/LF if desired. */
-  if (as_text)
-    {
-      const char *translated;
-      SVN_ERR(svn_subst_translate_cstring2(contents->data, &translated,
-                                           APR_EOL_STR, FALSE,
-                                           NULL, FALSE, pool));
-      translated_contents = svn_string_create_empty(pool);
-      if (encoding)
-        SVN_ERR(svn_utf_cstring_from_utf8_ex2(&translated_contents->data,
-                                              translated, encoding, pool));
-      else
-        SVN_ERR(svn_utf_cstring_from_utf8(&translated_contents->data,
-                                          translated, pool));
-      translated_contents->len = strlen(translated_contents->data);
-    }
-  else
-    translated_contents = svn_string_dup(contents, pool);
-
-  /* Move to BASE_DIR to avoid getting characters that need quoting
-     into tmpfile_name */
-  apr_err = apr_filepath_get(&old_cwd, APR_FILEPATH_NATIVE, pool);
-  if (apr_err)
-    return svn_error_wrap_apr(apr_err, _("Can't get working directory"));
-
-  /* APR doesn't like "" directories */
-  if (base_dir[0] == '\0')
-    base_dir_apr = ".";
-  else
-    SVN_ERR(svn_path_cstring_from_utf8(&base_dir_apr, base_dir, pool));
-  apr_err = apr_filepath_set(base_dir_apr, pool);
-  if (apr_err)
-    {
-      return svn_error_wrap_apr
-        (apr_err, _("Can't change working directory to '%s'"), base_dir);
-    }
-
-  /*** From here on, any problems that occur require us to cd back!! ***/
-
-  /* Ask the working copy for a temporary file named FILENAME-something. */
-  err = svn_io_open_uniquely_named(&tmp_file, &tmpfile_name,
-                                   "" /* dirpath */,
-                                   filename,
-                                   ".tmp",
-                                   svn_io_file_del_none, pool, pool);
-
-  if (err && (APR_STATUS_IS_EACCES(err->apr_err) || err->apr_err == EROFS))
-    {
-      const char *temp_dir_apr;
-
-      svn_error_clear(err);
-
-      SVN_ERR(svn_io_temp_dir(&base_dir, pool));
-
-      SVN_ERR(svn_path_cstring_from_utf8(&temp_dir_apr, base_dir, pool));
-      apr_err = apr_filepath_set(temp_dir_apr, pool);
-      if (apr_err)
-        {
-          return svn_error_wrap_apr
-            (apr_err, _("Can't change working directory to '%s'"), base_dir);
-        }
-
-      err = svn_io_open_uniquely_named(&tmp_file, &tmpfile_name,
-                                       "" /* dirpath */,
-                                       filename,
-                                       ".tmp",
-                                       svn_io_file_del_none, pool, pool);
-    }
-
-  if (err)
-    goto cleanup2;
-
-  /*** From here on, any problems that occur require us to cleanup
-       the file we just created!! ***/
-
-  /* Dump initial CONTENTS to TMP_FILE. */
-  err = svn_io_file_write_full(tmp_file, translated_contents->data,
-                               translated_contents->len, &written,
-                               pool);
-
-  err = svn_error_compose_create(err, svn_io_file_close(tmp_file, pool));
-
-  /* Make sure the whole CONTENTS were written, else return an error. */
-  if (err)
-    goto cleanup;
-
-  /* Get information about the temporary file before the user has
-     been allowed to edit its contents. */
-  err = svn_io_stat(&finfo_before, tmpfile_name, APR_FINFO_MTIME, pool);
-  if (err)
-    goto cleanup;
-
-  /* Backdate the file a little bit in case the editor is very fast
-     and doesn't change the size.  (Use two seconds, since some
-     filesystems have coarse granularity.)  It's OK if this call
-     fails, so we don't check its return value.*/
-  err = svn_io_set_file_affected_time(finfo_before.mtime
-                                              - apr_time_from_sec(2),
-                                      tmpfile_name, pool);
-  svn_error_clear(err);
-
-  /* Stat it again to get the mtime we actually set. */
-  err = svn_io_stat(&finfo_before, tmpfile_name,
-                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (err)
-    goto cleanup;
-
-  /* Prepare the editor command line.  */
-  err = svn_utf_cstring_from_utf8(&tmpfile_native, tmpfile_name, pool);
-  if (err)
-    goto cleanup;
-  cmd = apr_psprintf(pool, "%s %s", editor, tmpfile_native);
-
-  /* If the caller wants us to leave the file around, return the path
-     of the file we'll use, and make a note not to destroy it.  */
-  if (tmpfile_left)
-    {
-      *tmpfile_left = svn_dirent_join(base_dir, tmpfile_name, pool);
-      remove_file = FALSE;
-    }
-
-  /* Now, run the editor command line.  */
-  sys_err = system(cmd);
-  if (sys_err != 0)
-    {
-      /* Extracting any meaning from sys_err is platform specific, so just
-         use the raw value. */
-      err =  svn_error_createf(SVN_ERR_EXTERNAL_PROGRAM, NULL,
-                               _("system('%s') returned %d"), cmd, sys_err);
-      goto cleanup;
-    }
-
-  /* Get information about the temporary file after the assumed editing. */
-  err = svn_io_stat(&finfo_after, tmpfile_name,
-                    APR_FINFO_MTIME | APR_FINFO_SIZE, pool);
-  if (err)
-    goto cleanup;
-
-  /* If the file looks changed... */
-  if ((finfo_before.mtime != finfo_after.mtime) ||
-      (finfo_before.size != finfo_after.size))
-    {
-      svn_stringbuf_t *edited_contents_s;
-      err = svn_stringbuf_from_file2(&edited_contents_s, tmpfile_name, pool);
-      if (err)
-        goto cleanup;
-
-      *edited_contents = svn_stringbuf__morph_into_string(edited_contents_s);
-
-      /* Translate back to UTF8/LF if desired. */
-      if (as_text)
-        {
-          err = svn_subst_translate_string2(edited_contents, NULL, NULL,
-                                            *edited_contents, encoding, FALSE,
-                                            pool, pool);
-          if (err)
-            {
-              err = svn_error_quick_wrap
-                (err,
-                 _("Error normalizing edited contents to internal format"));
-              goto cleanup;
-            }
-        }
-    }
-  else
-    {
-      /* No edits seem to have been made */
-      *edited_contents = NULL;
-    }
-
- cleanup:
-  if (remove_file)
-    {
-      /* Remove the file from disk.  */
-      err = svn_error_compose_create(
-              err,
-              svn_io_remove_file2(tmpfile_name, FALSE, pool));
-    }
-
- cleanup2:
-  /* If we against all probability can't cd back, all further relative
-     file references would be screwed up, so we have to abort. */
-  apr_err = apr_filepath_set(old_cwd, pool);
-  if (apr_err)
-    {
-      svn_handle_error2(svn_error_wrap_apr
-                        (apr_err, _("Can't restore working directory")),
-                        stderr, TRUE /* fatal */, "svn: ");
-    }
-
-  return svn_error_trace(err);
-}
 
 svn_error_t *
 svn_cmdline__parse_trust_options(
@@ -1712,4 +1389,74 @@ svn_cmdline__cancellation_exit(void)
       kill(getpid(), signum);
 #endif
     }
+}
+
+#if defined(WIN32)
+
+svn_error_t *
+svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
+                                    int argc,
+                                    const wchar_t *argv[],
+                                    apr_pool_t *result_pool)
+{
+  apr_array_header_t *cstring_argv;
+  int i;
+
+  cstring_argv = apr_array_make(result_pool, argc + 1, sizeof(const char *));
+
+  for (i = 0; i < argc; i++)
+    {
+      const wchar_t *arg = argv[i];
+      char *cstring_arg;
+      int rv;
+      BOOL used_default_char;
+
+      /* Passing -1 for the string length guarantees that the returned length
+         will account for a terminating null character. */
+      rv = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, arg, -1,
+                               NULL, 0, NULL, &used_default_char);
+      if (rv <= 0)
+        {
+          return svn_error_wrap_apr(apr_get_os_error(),
+                                    _("Conversion from UTF-16 failed"));
+        }
+      else if (used_default_char)
+        {
+          return svn_error_wrap_apr(APR_FROM_OS_ERROR(ERROR_NO_UNICODE_TRANSLATION),
+                                    _("Conversion from UTF-16 failed"));
+        }
+
+      cstring_arg = apr_palloc(result_pool, rv);
+      rv = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, arg, -1,
+                               cstring_arg, rv, NULL, &used_default_char);
+      if (rv <= 0)
+        {
+          return svn_error_wrap_apr(apr_get_os_error(),
+                                    _("Conversion from UTF-16 failed"));
+        }
+      else if (used_default_char)
+        {
+          return svn_error_wrap_apr(APR_FROM_OS_ERROR(ERROR_NO_UNICODE_TRANSLATION),
+                                    _("Conversion from UTF-16 failed"));
+        }
+
+      APR_ARRAY_PUSH(cstring_argv, const char *) = cstring_arg;
+    }
+
+  APR_ARRAY_PUSH(cstring_argv, const char *) = NULL;
+
+  *cstring_argv_p = (const char **)cstring_argv->elts;
+  return SVN_NO_ERROR;
+}
+
+#endif
+
+svn_error_t *
+svn_cmdline__default_get_cstring_argv(const char **cstring_argv_p[],
+                                      int argc,
+                                      const char *argv[],
+                                      apr_pool_t *result_pool)
+{
+  *cstring_argv_p = argv;
+  return SVN_NO_ERROR;
 }

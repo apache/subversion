@@ -114,6 +114,8 @@ def _usage_exit():
   print("  --fsfs-sharding        : Specify shard size (for fsfs)")
   print("  --fsfs-packing         : Run 'svnadmin pack' automatically")
   print("  --fsfs-compression=VAL : Set compression type to VAL (for fsfs)")
+  print("  --wc-format-version=VAL: Set the WC format version")
+  print("  --store-pristine=VAL   : Set the WC pristine mode")
   print("  -q, --quiet            : Deprecated; this is the default.")
   print("                           Use --set-log-level instead.")
 
@@ -145,7 +147,8 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'log-to-stdout', 'mode-filter=', 'milestone-filter=',
                         'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
                         'skip-c-tests', 'dump-load-cross-check', 'memcached-dir=',
-                        'fsfs-compression=',
+                        'fsfs-compression=', 'wc-format-version=',
+                        'store-pristine='
                         ])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
@@ -193,6 +196,8 @@ skip_c_tests = None
 dump_load_cross_check = None
 fsfs_compression = None
 fsfs_dir_deltification = None
+wc_format_version = None
+store_pristine = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -291,6 +296,10 @@ for opt, val in opts:
     fsfs_compression = val
   elif opt == '--fsfs-dir-deltification':
     fsfs_dir_deltification = val
+  elif opt == '--wc-format-version':
+    wc_format_version = val
+  elif opt == '--store-pristine':
+    store_pristine = val
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -772,6 +781,9 @@ class Httpd:
     local_tmp = os.path.join(self.abs_builddir,
                              CMDLINE_TEST_SCRIPT_NATIVE_PATH,
                              'svn-test-work', 'local_tmp')
+    repositories = os.path.join(self.abs_builddir,
+                                CMDLINE_TEST_SCRIPT_NATIVE_PATH,
+                                'svn-test-work', 'repositories')
     return \
       '<Location /authz-test-work/anon>' + '\n' \
       '  DAV               svn' + '\n' \
@@ -785,6 +797,17 @@ class Httpd:
       '  <IfModule !mod_authz_core.c>' + '\n' \
       '    Allow from all' + '\n' \
       '  </IfModule>' + '\n' \
+      '  SVNPathAuthz ' + self.path_authz_option + '\n' \
+      '</Location>' + '\n' \
+      '<Location /authz-test-work/in-repos-authz>' + '\n' \
+      '  DAV               svn' + '\n' \
+      '  SVNParentPath     ' + repositories + '\n' \
+      '  AuthzSVNReposRelativeAccessFile "^/authz"\n' \
+      '  SVNAdvertiseV2Protocol ' + self.httpv2_option + '\n' \
+      '  AuthType          Basic' + '\n' \
+      '  AuthName          "Subversion Repository"' + '\n' \
+      '  AuthUserFile    ' + self._quote(self.httpd_users) + '\n' \
+      '  Require           valid-user' + '\n' \
       '  SVNPathAuthz ' + self.path_authz_option + '\n' \
       '</Location>' + '\n' \
       '<Location /authz-test-work/mixed>' + '\n' \
@@ -1118,6 +1141,8 @@ if not test_javahl and not test_swig:
   opts.dump_load_cross_check = dump_load_cross_check
   opts.fsfs_compression = fsfs_compression
   opts.fsfs_dir_deltification = fsfs_dir_deltification
+  opts.wc_format_version = wc_format_version
+  opts.store_pristine = store_pristine
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
@@ -1263,7 +1288,11 @@ elif test_swig == 'python':
         or isinstance(i, gen_base.TargetSWIGLib)) and i.lang == 'python':
 
       src = os.path.join(abs_objdir, i.filename)
-      copy_changed_file(src, to_dir=swig_py_libsvn)
+      basename = os.path.basename(src)
+      if sys.version_info[:2] >= (3, 5) \
+          and basename.endswith('.pyd') and objdir == 'Debug':
+        basename = basename[:-4] + '_d.pyd'
+      copy_changed_file(src, os.path.join(swig_py_libsvn, basename))
 
   py_src = os.path.join(abs_srcdir, 'subversion', 'bindings', 'swig', 'python')
 
@@ -1285,7 +1314,8 @@ elif test_swig == 'python':
   if 'PYTHONPATH' in os.environ:
     pythonpath += os.pathsep + os.environ['PYTHONPATH']
 
-  python_exe = 'python.exe'
+  python_exe = sys.executable if objdir != 'Debug' else \
+               os.path.join(os.path.dirname(sys.executable), 'python_d.exe')
   old_cwd = os.getcwd()
   try:
     os.environ['PYTHONPATH'] = pythonpath
@@ -1314,7 +1344,7 @@ elif test_swig == 'ruby':
     ruby_args = [
         '-I', os.path.join(abs_srcdir, ruby_subdir),
         os.path.join(abs_srcdir, ruby_subdir, 'test', 'run-test.rb'),
-        '--verbose'
+        '--collector=dir', '--verbose',
       ]
 
     print('-- Running Swig Ruby tests --')

@@ -3,7 +3,7 @@
 #  special_tests.py:  testing special and reserved file handling
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -71,7 +71,7 @@ def general_symlink(sbox):
   exit_code, stdout_lines, stderr_lines = svntest.main.run_svn(1, 'diff',
                                                                wc_dir)
 
-  regex = '^\+link linktarget'
+  regex = r'^\+link linktarget'
   for line in stdout_lines:
     if re.match(regex, line):
       break

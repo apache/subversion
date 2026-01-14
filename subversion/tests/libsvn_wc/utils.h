@@ -227,6 +227,7 @@ svn_test__create_fake_wc(const char *wc_abspath,
                          const char *extra_statements,
                          const svn_test__nodes_data_t nodes[],
                          const svn_test__actual_data_t actuals[],
+                         const svn_version_t *wc_format_version,
                          apr_pool_t *scratch_pool);
 
 

@@ -99,8 +99,8 @@ change_rev_prop(const char *url,
   SVN_ERR(construct_auth_baton(&callbacks->auth_baton, config_dir, pool));
   SVN_ERR(construct_config(&config, config_dir, pool));
 
-  SVN_ERR(svn_ra_open4(&sess, NULL, url, NULL, callbacks, NULL /* baton */,
-                       config, pool));
+  SVN_ERR(svn_ra_open5(&sess, NULL, NULL, url, NULL,
+                       callbacks, NULL /* baton */, config, pool));
 
   SVN_ERR(svn_ra_has_capability(sess, &capable,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,

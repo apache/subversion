@@ -396,7 +396,7 @@ struct decode_baton
 };
 
 
-/* Wrapper aroung svn__deencode_uint taking a file size as *VAL. */
+/* Wrapper around svn__deencode_uint taking a file size as *VAL. */
 static const unsigned char *
 decode_file_offset(svn_filesize_t *val,
                    const unsigned char *p,

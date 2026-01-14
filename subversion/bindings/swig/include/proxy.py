@@ -12,22 +12,56 @@
     if "_is_valid" in self.__dict__:
       assert self.__dict__["_is_valid"](), "Variable has already been deleted"
 
-  def __getattr__(self, name):
-    """Get an attribute from this object"""
-    self.assert_valid()
-
-    value = _swig_getattr(self, self.__class__, name)
-
-    # If we got back a different object than we have, we need to copy all our
-    # metadata into it, so that it looks identical
-    members = self.__dict__.get("_members")
-    if members is not None:
-      _copy_metadata_deep(value, members.get(name))
+  def _retrieve_swig_value(self, name, value):
+    # If we got back a different object than we have cached, we need to copy
+    # all our metadata into it, so that it looks identical to the one
+    # originally set.
+    members = self.__dict__.get('_members')
+    if members is not None and name in members:
+      _copy_metadata_deep(value, members[name])
 
     # Verify that the new object is good
     _assert_valid_deep(value)
 
     return value
+
+  # Attribute access must be intercepted to ensure that objects coming from
+  # read attribute access match those that are set with write attribute access.
+  # Specifically the metadata, such as the associated apr_pool object, should
+  # match the originally assigned object.
+  #
+  # For classic classes it is enough to use __getattr__ to intercept swig
+  # derived attributes. However, with new style classes SWIG makes use of
+  # descriptors which mean that __getattr__ is never called. Therefore,
+  # __getattribute__ must be used for the interception.
+
+  if _newclass:
+    def __getattribute__(self, name):
+      """Manage access to all attributes of this object."""
+
+      # Start by mimicking __getattr__ behavior: immediately return __dict__ or
+      # items directly present in __dict__
+      mydict = object.__getattribute__(self, '__dict__')
+
+      if name == "__dict__":
+        return mydict
+
+      if name in mydict:
+        return mydict[name]
+
+      object.__getattribute__(self, 'assert_valid')()
+
+      value = _get_instance_attr(self, name)
+      fn = object.__getattribute__(self, '_retrieve_swig_value')
+      return fn(name, value)
+  else:
+    def __getattr__(self, name):
+      """Get an attribute from this object"""
+      self.assert_valid()
+
+      value = _swig_getattr(self, self.__class__, name)
+
+      return self._retrieve_swig_value(name, value)
 
   def __setattr__(self, name, value):
     """Set an attribute on this object"""
@@ -38,4 +72,4 @@
     # SWIG-land
     self.__dict__.setdefault("_members",{})[name] = value
 
-    return _swig_setattr(self, self.__class__, name, value)
+    return _set_instance_attr(self, name, value)

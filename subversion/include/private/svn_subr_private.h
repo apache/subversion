@@ -600,7 +600,7 @@ svn__decompress_lz4(const void *data, apr_size_t len,
 
 /* Opaque thread-safe container for unused / recylcleable root pools.
  *
- * Recyling root pools (actually, their allocators) circumvents a
+ * Recycling root pools (actually, their allocators) circumvents a
  * scalability bottleneck in the OS memory management when multi-threaded
  * applications frequently create and destroy allocators.
  */

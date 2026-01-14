@@ -76,26 +76,12 @@ fi
 echo "buildcheck: autoheader version $ah_version (ok)"
 
 #--------------------------------------------------------------------------
-# libtool 1.4 or newer
+# libtool 2.0 or newer
 #
-LIBTOOL_WANTED_MAJOR=1
-LIBTOOL_WANTED_MINOR=4
+LIBTOOL_WANTED_MAJOR=2
+LIBTOOL_WANTED_MINOR=0
 LIBTOOL_WANTED_PATCH=
-LIBTOOL_WANTED_VERSION=1.4
-
-# The minimum version for source releases is 1.4.3,
-# because it's required by (at least) Solaris.
-if test "$VERSION_CHECK" = "--release"; then
-  LIBTOOL_WANTED_PATCH=3
-  LIBTOOL_WANTED_VERSION=1.4.3
-else
-  case `uname -sr` in
-    SunOS\ 5.*)
-      LIBTOOL_WANTED_PATCH=3
-      LIBTOOL_WANTED_VERSION=1.4.3
-      ;;
-  esac
-fi
+LIBTOOL_WANTED_VERSION=2.0
 
 # Much like APR except we do not prefer libtool 1 over libtool 2.
 libtoolize=${LIBTOOLIZE:-`./build/PrintPath glibtoolize libtoolize glibtoolize1 libtoolize15 libtoolize14`}

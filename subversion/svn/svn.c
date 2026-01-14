@@ -52,8 +52,9 @@
 #include "svn_hash.h"
 #include "svn_version.h"
 #include "cl.h"
+#include "shelf2-cmd.h"
+#include "shelf-cmd.h"
 
-#include "private/svn_opt_private.h"
 #include "private/svn_cmdline_private.h"
 #include "private/svn_subr_private.h"
 #include "private/svn_utf_private.h"
@@ -62,95 +63,6 @@
 
 
 /*** Option Processing ***/
-
-/* Add an identifier here for long options that don't have a short
-   option. Options that have both long and short options should just
-   use the short option letter as identifier.  */
-typedef enum svn_cl__longopt_t {
-  opt_auth_password = SVN_OPT_FIRST_LONGOPT_ID,
-  opt_auth_password_from_stdin,
-  opt_auth_username,
-  opt_autoprops,
-  opt_changelist,
-  opt_config_dir,
-  opt_config_options,
-  /* diff options */
-  opt_diff_cmd,
-  opt_internal_diff,
-  opt_no_diff_added,
-  opt_no_diff_deleted,
-  opt_show_copies_as_adds,
-  opt_notice_ancestry,
-  opt_summarize,
-  opt_use_git_diff_format,
-  opt_ignore_properties,
-  opt_properties_only,
-  opt_patch_compatible,
-  /* end of diff options */
-  opt_dry_run,
-  opt_editor_cmd,
-  opt_encoding,
-  opt_force_log,
-  opt_force,
-  opt_keep_changelists,
-  opt_ignore_ancestry,
-  opt_ignore_externals,
-  opt_incremental,
-  opt_merge_cmd,
-  opt_native_eol,
-  opt_new_cmd,
-  opt_no_auth_cache,
-  opt_no_autoprops,
-  opt_no_ignore,
-  opt_no_unlock,
-  opt_non_interactive,
-  opt_force_interactive,
-  opt_old_cmd,
-  opt_record_only,
-  opt_relocate,
-  opt_remove,
-  opt_revprop,
-  opt_stop_on_copy,
-  opt_strict,                   /* ### DEPRECATED */
-  opt_targets,
-  opt_depth,
-  opt_set_depth,
-  opt_version,
-  opt_xml,
-  opt_keep_local,
-  opt_with_revprop,
-  opt_with_all_revprops,
-  opt_with_no_revprops,
-  opt_parents,
-  opt_accept,
-  opt_show_revs,
-  opt_reintegrate,
-  opt_trust_server_cert,
-  opt_trust_server_cert_failures,
-  opt_strip,
-  opt_ignore_keywords,
-  opt_reverse_diff,
-  opt_ignore_whitespace,
-  opt_diff,
-  opt_allow_mixed_revisions,
-  opt_include_externals,
-  opt_show_inherited_props,
-  opt_search,
-  opt_search_and,
-  opt_mergeinfo_log,
-  opt_remove_unversioned,
-  opt_remove_ignored,
-  opt_no_newline,
-  opt_show_passwords,
-  opt_pin_externals,
-  opt_show_item,
-  opt_adds_as_modification,
-  opt_vacuum_pristines,
-  opt_drop,
-  opt_viewspec,
-  opt_compatible_version
-} svn_cl__longopt_t;
-
 
 /* Option codes and descriptions for the command line client.
  *
@@ -167,6 +79,7 @@ const apr_getopt_option_t svn_cl__options[] =
   {"quiet",         'q', 0, N_("print nothing, or only summary information")},
   {"recursive",     'R', 0, N_("descend recursively, same as --depth=infinity")},
   {"non-recursive", 'N', 0, N_("obsolete")},
+  {"human-readable",'H', 0, N_("show human-readable output")},
   {"change",        'c', 1,
                     N_("the change made by revision ARG (like -r ARG-1:ARG)\n"
                        "                             "
@@ -421,6 +334,8 @@ const apr_getopt_option_t svn_cl__options[] =
   {"remove-unversioned", opt_remove_unversioned, 0,
                        N_("remove unversioned items")},
   {"remove-ignored", opt_remove_ignored, 0, N_("remove ignored items")},
+  {"remove-added", opt_remove_added, 0,
+                       N_("reverting an added item will remove it from disk")},
   {"no-newline", opt_no_newline, 0, N_("do not output the trailing newline")},
   {"show-passwords", opt_show_passwords, 0, N_("show cached passwords")},
   {"pin-externals", opt_pin_externals, 0,
@@ -428,49 +343,7 @@ const apr_getopt_option_t svn_cl__options[] =
                           "                             "
                           "current revision (recommended when tagging)")},
   {"show-item", opt_show_item, 1,
-                       N_("print only the item identified by ARG:\n"
-                          "                             "
-                          "   'kind'       node kind of TARGET\n"
-                          "                             "
-                          "   'url'        URL of TARGET in the repository\n"
-                          "                             "
-                          "   'relative-url'\n"
-                          "                             "
-                          "                repository-relative URL of TARGET\n"
-                          "                             "
-                          "   'repos-root-url'\n"
-                          "                             "
-                          "                root URL of repository\n"
-                          "                             "
-                          "   'repos-uuid' UUID of repository\n"
-                          "                             "
-                          "   'revision'   specified or implied revision\n"
-                          "                             "
-                          "   'last-changed-revision'\n"
-                          "                             "
-                          "                last change of TARGET at or before\n"
-                          "                             "
-                          "                'revision'\n"
-                          "                             "
-                          "   'last-changed-date'\n"
-                          "                             "
-                          "                date of 'last-changed-revision'\n"
-                          "                             "
-                          "   'last-changed-author'\n"
-                          "                             "
-                          "                author of 'last-changed-revision'\n"
-                          "                             "
-                          "   'wc-root'    root of TARGET's working copy\n"
-                          "                             "
-                          "   'schedule'   'normal','add','delete','replace'\n"
-                          "                             "
-                          "   'depth'      checkout depth of TARGET in WC\n"
-                          "                             "
-                          "   'wc-format'  TARGET's working copy format\n"
-                          "                             "
-                          "   'wc-format-min'   oldest supported WC format\n"
-                          "                             "
-                          "   'wc-format-min'   newest supported WC format\n")},
+                       N_("print only the item identified by ARG")},
 
   {"adds-as-modification", opt_adds_as_modification, 0,
                        N_("Local additions are merged with incoming additions\n"
@@ -497,9 +370,20 @@ const apr_getopt_option_t svn_cl__options[] =
                        "                             "
                        "version ARG (\"1.8\", \"1.9.5\", etc.)")},
 
+  {"store-pristine", opt_store_pristine, 1,
+                       N_("Configure the working copy to either store local\n"
+                       "                             "
+                       "copies of pristine contents ('yes') or to fetch\n"
+                       "                             "
+                       "them on demand ('no'). Fetching on demand saves\n"
+                       "                             "
+                       "disk space, but may require network access for\n"
+                       "                             "
+                       "commands such as diff or revert. Default: 'yes'.")},
+
   /* Long-opt Aliases
    *
-   * These have NULL desriptions, but an option code that matches some
+   * These have NULL descriptions, but an option code that matches some
    * other option (whose description should probably mention its aliases).
   */
 
@@ -534,19 +418,12 @@ const int svn_cl__global_options[] =
   opt_config_dir, opt_config_options, 0
 };
 
-/* Options for giving a log message.  (Some of these also have other uses.)
- */
-#define SVN_CL__LOG_MSG_OPTIONS 'm', 'F', \
-                                opt_force_log, \
-                                opt_editor_cmd, \
-                                opt_encoding, \
-                                opt_with_revprop
-
-const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
+static const svn_opt_subcommand_desc3_t
+svn_cl__cmd_table_main[] =
 {
   { "add", svn_cl__add, {0}, {N_(
      "Put new files and directories under version control.\n"
-     "usage: add PATH...\n"
+     "usage: add PATH[@]...\n"
      "\n"), N_(
      "  Schedule unversioned PATHs for addition, so they will become versioned and\n"
      "  be added to the repository in the next commit. Recurse into directories by\n"
@@ -566,7 +443,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  The selection of items to add may be influenced by the 'ignores' feature.\n"
      "  Properties may be attached to the items as configured by the 'auto-props'\n"
-     "  feature.\n"
+     "  feature.\n"), N_(
+     "  If PATH contains an @ character, an additional @ must be specified at the\n"
+     "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
     {opt_targets, 'N', opt_depth, 'q', opt_force, opt_no_ignore, opt_autoprops,
      opt_no_autoprops, opt_parents },
@@ -636,15 +515,25 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
     {'r', opt_ignore_keywords} },
 
   { "changelist", svn_cl__changelist, {"cl"}, {N_(
-     "Associate (or dissociate) changelist CLNAME with the named files.\n"
-     "usage: 1. changelist CLNAME PATH...\n"
-     "       2. changelist --remove PATH...\n"
+     "Associate (or dissociate) changelist CLNAME with the named\n"
+     "files.\n"
+     "usage: 1. changelist CLNAME PATH[@]...\n"
+     "       2. changelist --remove PATH[@]...\n"
+    ), N_(
+     "  If PATH contains an @ character, an additional @ must be specified at the\n"
+     "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
     { 'q', 'R', opt_depth, opt_remove, opt_targets, opt_changelist} },
 
   { "checkout", svn_cl__checkout, {"co"}, {N_(
      "Check out a working copy from a repository.\n"
      "usage: checkout URL[@REV]... [PATH]\n"
+     "\n"), N_(
+     "  The new working copy (WC) will be compatible with Subversion 1.8 and\n"
+     "  newer (this default may change in the future). To create a different\n"
+     "  WC format, use an option such as '--compatible-version=1.15'.\n"
+     "  The versions available are the same as in the 'upgrade' command.\n"
+     "  Use 'svn --version' to see the compatible versions supported.\n"
      "\n"), N_(
      "  If specified, REV determines in which revision the URL is first\n"
      "  looked up.\n"
@@ -654,6 +543,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  out into a sub-directory of PATH, with the name of the sub-directory\n"
      "  being the basename of the URL.\n"
      "\n"), N_(
+     "  If PATH contains an @ character, an additional @ must be specified at the\n"
+     "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"), N_(
      "  If --force is used, unversioned obstructing paths in the working\n"
      "  copy destination do not automatically cause the check out to fail.\n"
      "  If the obstructing path is the same type (file or directory) as the\n"
@@ -669,16 +560,16 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  reporting the action taken.\n"
     )},
     {'r', 'q', 'N', opt_depth, opt_force, opt_ignore_externals,
-     opt_compatible_version},
+     opt_compatible_version, opt_store_pristine},
     {{'N', N_("obsolete; same as --depth=files")}} },
 
   { "cleanup", svn_cl__cleanup, {0}, {N_(
-     "Either recover from an interrupted operation that left the working copy locked,\n"
-     "or remove unwanted files.\n"
-     "usage: 1. cleanup [WCPATH...]\n"
-     "       2. cleanup --remove-unversioned [WCPATH...]\n"
-     "          cleanup --remove-ignored [WCPATH...]\n"
-     "       3. cleanup --vacuum-pristines [WCPATH...]\n"
+     "Either recover from an interrupted operation that left the working\n"
+     "copy locked, or remove unwanted files.\n"
+     "usage: 1. cleanup [WCPATH[@]...]\n"
+     "       2. cleanup --remove-unversioned [WCPATH[@]...]\n"
+     "          cleanup --remove-ignored [WCPATH[@]...]\n"
+     "       3. cleanup --vacuum-pristines [WCPATH[@]...]\n"
      "\n"), N_(
      "  1. When none of the options --remove-unversioned, --remove-ignored, and\n"
      "    --vacuum-pristines is specified, remove all write locks (shown as 'L' by\n"
@@ -698,15 +589,17 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  3. If the --vacuum-pristines option is given, remove pristine copies of\n"
      "    files which are stored inside the .svn directory and which are no longer\n"
-     "    referenced by any file in the working copy.\n"
+     "    referenced by any file in the working copy.\n"), N_(
+     "  If WCPATH contains an @ character, an additional @ must be specified at the\n"
+     "  end of WCPATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
     { opt_remove_unversioned, opt_remove_ignored, opt_vacuum_pristines,
-      opt_include_externals, 'q', opt_merge_cmd }, 
+      opt_include_externals, 'q', opt_merge_cmd },
     { { opt_merge_cmd, N_("deprecated and ignored") } } },
-      
+
   { "commit", svn_cl__commit, {"ci"}, {N_(
      "Send changes from your working copy to the repository.\n"
-     "usage: commit [PATH...]\n"
+     "usage: commit [PATH[@]...]\n"
      "\n"), N_(
      "  A log message must be provided, but it can be empty.  If it is not\n"
      "  given by a --message or --file option, an editor will be started.\n"
@@ -716,7 +609,9 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  If --include-externals is given, also commit file and directory\n"
      "  externals reached by recursion. Do not commit externals with a\n"
-     "  fixed revision.\n"
+     "  fixed revision.\n"), N_(
+     "  If PATH contains an @ character, an additional @ must be specified at the\n"
+     "  end of PATH to avoid interpreting the first @ as a peg revision indicator.\n"
     )},
     {'q', 'N', opt_depth, opt_targets, opt_no_unlock, SVN_CL__LOG_MSG_OPTIONS,
      opt_changelist, opt_keep_changelists, opt_include_externals},
@@ -724,7 +619,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "copy", svn_cl__copy, {"cp"}, {N_(
      "Copy files and directories in a working copy or repository.\n"
-     "usage: copy SRC[@REV]... DST\n"
+     "usage: copy SRC[@REV]... DST[@]\n"
      "\n"), N_(
      "  SRC and DST can each be either a working copy (WC) path or URL:\n"
      "    WC  -> WC:   copy and schedule for addition (with history)\n"
@@ -735,6 +630,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  the sources will be added as children of DST. When copying multiple\n"
      "  sources, DST must be an existing directory.\n"
      "\n"), N_(
+     "  If DST contains an @ character, an additional @ must be specified at the\n"
+     "  end of DST to avoid interpreting the first @ as a peg revision indicator.\n"), N_(
      "  WARNING: For compatibility with previous versions of Subversion,\n"
      "  copies performed using two working copy paths (WC -> WC) will not\n"
      "  contact the repository.  As such, they may not, by default, be able\n"
@@ -746,8 +643,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "delete", svn_cl__delete, {"del", "remove", "rm"}, {N_(
      "Remove files and directories from version control.\n"
-     "usage: 1. delete PATH...\n"
-     "       2. delete URL...\n"
+     "usage: 1. delete PATH[@]...\n"
+     "       2. delete URL[@]...\n"
      "\n"), N_(
      "  1. Each item specified by a PATH is scheduled for deletion upon\n"
      "    the next commit.  Files, and directories that have not been\n"
@@ -757,7 +654,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "    not be removed unless the --force or --keep-local option is given.\n"
      "\n"), N_(
      "  2. Each item specified by a URL is deleted from the repository\n"
-     "    via an immediate commit.\n"
+     "    via an immediate commit.\n"), N_(
+     "  If PATH or URL contains an @ character, an additional @ must be specified\n"
+     "  at the end of PATH to avoid interpreting the first @ as a peg revision\n"
+     "  indicator.\n"
     )},
     {opt_force, 'q', opt_targets, SVN_CL__LOG_MSG_OPTIONS, opt_keep_local} },
 
@@ -807,23 +707,26 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "export", svn_cl__export, {0}, {N_(
      "Create an unversioned copy of a tree.\n"
-     "usage: 1. export [-r REV] URL[@PEGREV] [PATH]\n"
-     "       2. export [-r REV] PATH1[@PEGREV] [PATH2]\n"
+     "usage: 1. export [-r REV] URL[@PEGREV] [UNVERSIONED_PATH[@]]\n"
+     "       2. export [-r REV] WCPATH[@PEGREV] [UNVERSIONED_PATH[@]]\n"
      "\n"), N_(
      "  1. Exports a clean directory tree from the repository specified by\n"
      "     URL, at revision REV if it is given, otherwise at HEAD, into\n"
-     "     PATH. If PATH is omitted, the last component of the URL is used\n"
-     "     for the local directory name.\n"
+     "     UNVERSIONED_PATH. If UNVERSIONED_PATH is omitted, the last\n"
+     "     component of the URL is used for the local directory name.\n"
      "\n"), N_(
      "  2. Exports a clean directory tree from the working copy specified by\n"
-     "     PATH1, at revision REV if it is given, otherwise at WORKING, into\n"
-     "     PATH2.  If PATH2 is omitted, the last component of the PATH1 is used\n"
-     "     for the local directory name. If REV is not specified, all local\n"
-     "     changes will be preserved.  Files not under version control will\n"
-     "     not be copied.\n"
+     "     WCPATH, at revision REV if it is given, otherwise at WORKING, into\n"
+     "     UNVERSIONED_PATH. If UNVERSIONED_PATH is omitted, the last\n"
+     "     component of the WCPATH is used for the local directory name. If\n"
+     "     REV is not specified, all local changes will be preserved. Files\n"
+     "     not under version control will not be copied.\n"
      "\n"), N_(
      "  If specified, PEGREV determines in which revision the target is first\n"
-     "  looked up.\n"
+     "  looked up.\n"), N_(
+     "  If UNVERSIONED_PATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of UNVERSIONED_PATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'r', 'q', 'N', opt_depth, opt_force, opt_native_eol, opt_ignore_externals,
      opt_ignore_keywords},
@@ -833,7 +736,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "Describe the usage of this program or its subcommands.\n"
      "usage: help [SUBCOMMAND...]\n"
     )},
-    {0} },
+    {'v'},
+    {{'v', N_("also show experimental subcommands and options")}} },
   /* This command is also invoked if we see option "--help", "-h" or "-?". */
 
   { "import", svn_cl__import, {0}, {N_(
@@ -867,13 +771,72 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  EXPERIMENTAL:\n"
      "  With --x-viewspec, print the working copy layout.\n"
     )},
-    {'r', 'R', opt_depth, opt_targets, opt_incremental, opt_xml,
+    {'r', 'R', 'H', opt_depth, opt_targets, opt_incremental, opt_xml,
      opt_changelist, opt_include_externals, opt_show_item, opt_no_newline,
-     opt_viewspec}
+     opt_viewspec},
+    {{'H', N_("show file sizes with base-2 unit suffixes\n"
+              "                             "
+              "(Byte, Kilobyte, Megabyte, Gigabyte, Terabyte\n"
+              "                             "
+              "and Petabyte), limiting the number of digits\n"
+              "                             "
+              "to three or less")},
+     {opt_show_item, N_("print only the item identified by ARG:\n"
+                        "                             "
+                        "   'kind'       node kind of TARGET\n"
+                        "                             "
+                        "   'url'        URL of TARGET in the repository\n"
+                        "                             "
+                        "   'relative-url'\n"
+                        "                             "
+                        "                repository-relative URL of TARGET\n"
+                        "                             "
+                        "   'repos-root-url'\n"
+                        "                             "
+                        "                root URL of repository\n"
+                        "                             "
+                        "   'repos-uuid' UUID of repository\n"
+                        "                             "
+                        "   'repos-size' for files, the size of TARGET\n"
+                        "                             "
+                        "                in the repository\n"
+                        "                             "
+                        "   'revision'   specified or implied revision\n"
+                        "                             "
+                        "   'last-changed-revision'\n"
+                        "                             "
+                        "                last change of TARGET at or before\n"
+                        "                             "
+                        "                'revision'\n"
+                        "                             "
+                        "   'last-changed-date'\n"
+                        "                             "
+                        "                date of 'last-changed-revision'\n"
+                        "                             "
+                        "   'last-changed-author'\n"
+                        "                             "
+                        "                author of 'last-changed-revision'\n"
+                        "                             "
+                        "   'wc-root'    root of TARGET's working copy\n"
+                        "                             "
+                        "   'schedule'   'normal','add','delete','replace'\n"
+                        "                             "
+                        "   'depth'      checkout depth of TARGET in WC\n"
+                        "                             "
+                        "   'wc-format'  TARGET's working copy format\n"
+                        "                             "
+                        "   'wc-compatible-version'\n"
+                        "                             "
+                        "                first version supporting TARGET WC\n"
+                        "                             "
+                        "   'changelist' changelist of TARGET in WC\n"
+                        "                             "
+                        "   'store-pristine'\n"
+                        "                             "
+                        "                TARGET's working copy pristine mode")}},
   },
 
   { "list", svn_cl__list, {"ls"},
-#if defined(WIN32)
     {N_(
      "List directory entries in the repository.\n"
      "usage: list [TARGET[@REV]...]\n"
@@ -885,37 +848,22 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  The default TARGET is '.', meaning the repository URL of the current\n"
      "  working directory.\n"
-     "\n"), N_(
+     "\n"),
+#if defined(WIN32)
+     N_(
      "  Multiple --search patterns may be specified and the output will be\n"
      "  reduced to those paths whose last segment - i.e. the file or directory\n"
      "  name - contains a sub-string matching at least one of these patterns\n"
      "  (Windows only).\n"
-     "\n"), N_(
-     "  With --verbose, the following fields will be shown for each item:\n"
-     "\n"), N_(
-     "    Revision number of the last commit\n"
-     "    Author of the last commit\n"
-     "    If locked, the letter 'O'.  (Use 'svn info URL' to see details)\n"
-     "    Size (in bytes)\n"
-     "    Date and time of the last commit\n"
-    )},
+     "\n"),
 #else
-    {N_(
-     "List directory entries in the repository.\n"
-     "usage: list [TARGET[@REV]...]\n"
-     "\n"), N_(
-     "  List each TARGET file and the contents of each TARGET directory as\n"
-     "  they exist in the repository.  If TARGET is a working copy path, the\n"
-     "  corresponding repository URL will be used. If specified, REV determines\n"
-     "  in which revision the target is first looked up.\n"
-     "\n"), N_(
-     "  The default TARGET is '.', meaning the repository URL of the current\n"
-     "  working directory.\n"
-     "\n"), N_(
+     N_(
      "  Multiple --search patterns may be specified and the output will be\n"
      "  reduced to those paths whose last segment - i.e. the file or directory\n"
      "  name - matches at least one of these patterns.\n"
-     "\n"), N_(
+     "\n"),
+#endif
+     N_(
      "  With --verbose, the following fields will be shown for each item:\n"
      "\n"), N_(
      "    Revision number of the last commit\n"
@@ -924,9 +872,15 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "    Size (in bytes)\n"
      "    Date and time of the last commit\n"
     )},
-#endif
-    {'r', 'v', 'R', opt_depth, opt_incremental, opt_xml,
-     opt_include_externals, opt_search}, },
+    {'r', 'v', 'R', 'H', opt_depth, opt_incremental, opt_xml,
+     opt_include_externals, opt_search},
+    {{'H', N_("with --verbose, show file sizes with base-2\n"
+              "                             "
+              "unit suffixes (Byte, Kilobyte, Megabyte,\n"
+              "                             "
+              "Gigabyte, Terabyte and Petabyte), limiting\n"
+              "                             "
+              "the number of digits to three or less")}} },
 
   { "lock", svn_cl__lock, {0}, {N_(
      "Lock working copy paths or URLs in the repository, so that\n"
@@ -1420,8 +1374,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "mkdir", svn_cl__mkdir, {0}, {N_(
      "Create a new directory under version control.\n"
-     "usage: 1. mkdir PATH...\n"
-     "       2. mkdir URL...\n"
+     "usage: 1. mkdir PATH[@]...\n"
+     "       2. mkdir URL[@]...\n"
      "\n"), N_(
      "  Create version controlled directories.\n"
      "\n"), N_(
@@ -1433,12 +1387,16 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  In both cases, all the intermediate directories must already exist,\n"
      "  unless the --parents option is given.\n"
+    ), N_(
+     "  If PATH or URL contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH/URL to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'q', opt_parents, SVN_CL__LOG_MSG_OPTIONS} },
 
   { "move", svn_cl__move, {"mv", "rename", "ren"}, {N_(
      "Move (rename) an item in a working copy or repository.\n"
-     "usage: move SRC... DST\n"
+     "usage: move SRC[@]... DST\n"
      "\n"), N_(
      "  SRC and DST can both be working copy (WC) paths or URLs:\n"
      "    WC  -> WC:  move an item in a working copy, as a local change to\n"
@@ -1454,6 +1412,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  To avoid unnecessary conflicts, it is recommended to run 'svn update'\n"
      "  to update the subtree to a single revision before moving it.\n"
      "  The --allow-mixed-revisions option is provided for backward compatibility.\n"
+    ), N_(
+     "  If any SRC contains an @ character, an additional @ must be\n"
+     "  specified at the end of that SRC to avoid interpreting the\n"
+     "  first @ as a peg revision indicator. This does not apply to DST.\n"
     )},
     {'q', opt_force, opt_parents, opt_allow_mixed_revisions,
      SVN_CL__LOG_MSG_OPTIONS, 'r'},
@@ -1461,7 +1423,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "patch", svn_cl__patch, {0}, {N_(
      "Apply a patch to a working copy.\n"
-     "usage: patch PATCHFILE [WCPATH]\n"
+     "usage: patch PATCHFILE [WCPATH[@]]\n"
      "\n"), N_(
      "  Apply a unidiff patch in PATCHFILE to the working copy WCPATH.\n"
      "  If WCPATH is omitted, '.' is assumed.\n"
@@ -1503,40 +1465,52 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "        To avoid rejects, first update to the revision N using\n"
      "        'svn update -r N', apply the patch, and then update back to the\n"
      "        HEAD revision. This way, conflicts can be resolved interactively.\n"
+    ), N_(
+     "  If WCPATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of WCPATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'q', opt_dry_run, opt_strip, opt_reverse_diff,
      opt_ignore_whitespace} },
 
   { "propdel", svn_cl__propdel, {"pdel", "pd"}, {N_(
      "Remove a property from files, dirs, or revisions.\n"
-     "usage: 1. propdel PROPNAME [PATH...]\n"
-     "       2. propdel PROPNAME --revprop -r REV [TARGET]\n"
+     "usage: 1. propdel PROPNAME [PATH[@]...]\n"
+     "       2. propdel PROPNAME --revprop -r REV [TARGET[@]]\n"
      "\n"), N_(
      "  1. Removes versioned props in working copy.\n"
      "  2. Removes unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"
      "\n"), N_(
      "  See 'svn help propset' for descriptions of the svn:* special properties.\n"
+    ), N_(
+     "  If PATH or TARGET contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH or TARGET to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'q', 'R', opt_depth, 'r', opt_revprop, opt_changelist} },
 
   { "propedit", svn_cl__propedit, {"pedit", "pe"}, {N_(
      "Edit a property with an external editor.\n"
-     "usage: 1. propedit PROPNAME TARGET...\n"
-     "       2. propedit PROPNAME --revprop -r REV [TARGET]\n"
+     "usage: 1. propedit PROPNAME TARGET[@]...\n"
+     "       2. propedit PROPNAME --revprop -r REV [TARGET[@]]\n"
      "\n"), N_(
      "  1. Edits versioned prop in working copy or repository.\n"
      "  2. Edits unversioned remote prop on repos revision.\n"
      "     TARGET only determines which repository to access.\n"
      "\n"), N_(
      "  See 'svn help propset' for descriptions of the svn:* special properties.\n"
+    ), N_(
+     "  If TARGET contains an @ character, an additional @ must be\n"
+     "  specified at the end of TARGET to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'r', opt_revprop, SVN_CL__LOG_MSG_OPTIONS, opt_force} },
 
   { "propget", svn_cl__propget, {"pget", "pg"}, {N_(
      "Print the value of a property on files, dirs, or revisions.\n"
      "usage: 1. propget PROPNAME [TARGET[@REV]...]\n"
-     "       2. propget PROPNAME --revprop -r REV [TARGET]\n"
+     "       2. propget PROPNAME --revprop -r REV [TARGET[@]]\n"
      "\n"), N_(
      "  1. Prints versioned props. If specified, REV determines in which\n"
      "     revision the target is first looked up.\n"
@@ -1554,6 +1528,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  (useful when redirecting a binary property value to a file, for example).\n"
      "\n"), N_(
      "  See 'svn help propset' for descriptions of the svn:* special properties.\n"
+    ), N_(
+     "  If TARGET contains an @ character, an additional @ must be\n"
+     "  specified at the end of TARGET to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'v', 'R', opt_depth, 'r', opt_revprop, opt_strict, opt_no_newline, opt_xml,
      opt_changelist, opt_show_inherited_props },
@@ -1563,7 +1541,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
   { "proplist", svn_cl__proplist, {"plist", "pl"}, {N_(
      "List all properties on files, dirs, or revisions.\n"
      "usage: 1. proplist [TARGET[@REV]...]\n"
-     "       2. proplist --revprop -r REV [TARGET]\n"
+     "       2. proplist --revprop -r REV [TARGET[@]]\n"
      "\n"), N_(
      "  1. Lists versioned props. If specified, REV determines in which\n"
      "     revision the target is first looked up.\n"
@@ -1574,6 +1552,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  --verbose'.  With --quiet, the paths are not printed.\n"
      "\n"), N_(
      "  See 'svn help propset' for descriptions of the svn:* special properties.\n"
+    ), N_(
+     "  If TARGET contains an @ character, an additional @ must be\n"
+     "  specified at the end of TARGET to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'v', 'R', opt_depth, 'r', 'q', opt_revprop, opt_xml, opt_changelist,
      opt_show_inherited_props },
@@ -1582,8 +1564,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "propset", svn_cl__propset, {"pset", "ps"}, {N_(
      "Set the value of a property on files, dirs, or revisions.\n"
-     "usage: 1. propset PROPNAME PROPVAL PATH...\n"
-     "       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET]\n"
+     "usage: 1. propset PROPNAME PROPVAL PATH[@]...\n"
+     "       2. propset PROPNAME --revprop -r REV PROPVAL [TARGET[@]]\n"
      "\n"), N_(
      "  1. Changes a versioned file or directory property in a working copy.\n"
      "  2. Changes an unversioned property on a repository revision.\n"
@@ -1666,6 +1648,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "      The ambiguous format 'relative_path relative_path' is taken as\n"
      "      'relative_url relative_path' with peg revision support.\n"
      "      Lines starting with a '#' character are ignored.\n"
+    ), N_(
+     "  If PATH or TARGET contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH or TARGET to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'F', opt_encoding, 'q', 'r', opt_targets, 'R', opt_depth, opt_revprop,
      opt_force, opt_changelist },
@@ -1697,7 +1683,7 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "resolve", svn_cl__resolve, {0}, {N_(
      "Resolve conflicts on working copy files or directories.\n"
-     "usage: resolve [PATH...]\n"
+     "usage: resolve [PATH[@]...]\n"
      "\n"), N_(
      "  By default, perform interactive conflict resolution on PATH.\n"
      "  In this mode, the command is recursive by default (depth 'infinity').\n"
@@ -1746,6 +1732,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  files manually or with 'svn merge'. It may be necessary to discard some\n"
      "  local changes with 'svn revert'. Files or directories might have to be\n"
      "  copied, deleted, or moved.\n"
+    ), N_(
+     "  If PATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {opt_targets, 'R', opt_depth, 'q', opt_accept},
     {{opt_accept, N_("specify automatic conflict resolution source\n"
@@ -1756,18 +1746,22 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "resolved", svn_cl__resolved, {0}, {N_(
      "Remove 'conflicted' state on working copy files or directories.\n"
-     "usage: resolved PATH...\n"
+     "usage: resolved PATH[@]...\n"
      "\n"), N_(
      "  Note:  this subcommand does not semantically resolve conflicts or\n"
      "  remove conflict markers; it merely removes the conflict-related\n"
      "  artifact files and allows PATH to be committed again.  It has been\n"
      "  deprecated in favor of running 'svn resolve --accept working'.\n"
+    ), N_(
+     "  If PATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {opt_targets, 'R', opt_depth, 'q'} },
 
   { "revert", svn_cl__revert, {0}, {N_(
      "Restore pristine working copy state (undo local changes).\n"
-     "usage: revert PATH...\n"
+     "usage: revert PATH[@]...\n"
      "\n"), N_(
      "  Revert changes in the working copy at or within PATH, and remove\n"
      "  conflict markers as well, if any.\n"
@@ -1775,12 +1769,17 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "  This subcommand does not revert already committed changes.\n"
      "  For information about undoing already committed changes, search\n"
      "  the output of 'svn help merge' for 'undo'.\n"
+    ), N_(
+     "  If PATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
-    {opt_targets, 'R', opt_depth, 'q', opt_changelist} },
+    {opt_targets, 'R', opt_depth, 'q', opt_changelist,
+     opt_remove_added} },
 
   { "status", svn_cl__status, {"stat", "st"}, {N_(
      "Print the status of working copy files and directories.\n"
-     "usage: status [PATH...]\n"
+     "usage: status [PATH[@]...]\n"
      "\n"), N_(
      "  With no args, print only locally modified items (no network access).\n"
      "  With -q, print only summary information about locally modified items.\n"
@@ -1870,6 +1869,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "    !     C wc/qaz.c\n"
      "          >   local missing, incoming edit upon update\n"
      "    D       wc/qax.c\n"
+    ), N_(
+     "  If PATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     { 'u', 'v', 'N', opt_depth, 'r', 'q', opt_no_ignore, opt_incremental,
       opt_xml, opt_ignore_externals, opt_changelist},
@@ -1877,7 +1880,8 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      {'N', N_("obsolete; same as --depth=immediates")}} },
 
   { "switch", svn_cl__switch, {"sw"}, {N_(
-     "Update the working copy to a different URL within the same repository.\n"
+     "Update the working copy to a different URL within the same\n"
+     "repository.\n"
      "usage: 1. switch URL[@PEGREV] [PATH]\n"
      "       2. switch --relocate FROM-PREFIX TO-PREFIX [PATH...]\n"
      "\n"), N_(
@@ -1913,9 +1917,6 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  Examples:\n"
      "    svn switch ^/branches/1.x-release\n"
-     "    svn switch --relocate http:// svn://\n"
-     "    svn switch --relocate http://www.example.com/repo/project \\\n"
-     "                          svn://svn.example.com/repo/project\n"
     )},
     { 'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd,
       opt_ignore_externals, opt_ignore_ancestry, opt_force, opt_accept,
@@ -1930,16 +1931,20 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "unlock", svn_cl__unlock, {0}, {N_(
      "Unlock working copy paths or URLs.\n"
-     "usage: unlock TARGET...\n"
+     "usage: unlock TARGET[@]...\n"
      "\n"), N_(
      "  Use --force to break a lock held by another user or working copy.\n"
+    ), N_(
+     "  If TARGET contains an @ character, an additional @ must be\n"
+     "  specified at the end of TARGET to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     { opt_targets, opt_force, 'q' },
     {{opt_force, N_("break locks")}} },
 
   { "update", svn_cl__update, {"up"},  {N_(
      "Bring changes from the repository into the working copy.\n"
-     "usage: update [PATH...]\n"
+     "usage: update [PATH[@]...]\n"
      "\n"), N_(
      "  If no revision is given, bring working copy up-to-date with HEAD rev.\n"
      "  Else synchronize working copy to revision given by -r.\n"
@@ -1983,6 +1988,10 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
      "\n"), N_(
      "  Use the --set-depth option to set a new working copy depth on the\n"
      "  targets of this operation.\n"
+    ), N_(
+     "  If PATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of PATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     {'r', 'N', opt_depth, opt_set_depth, 'q', opt_merge_cmd, opt_force,
      opt_ignore_externals, opt_changelist, opt_editor_cmd, opt_accept,
@@ -1993,160 +2002,28 @@ const svn_opt_subcommand_desc3_t svn_cl__cmd_table[] =
 
   { "upgrade", svn_cl__upgrade, {0}, {N_(
      "Upgrade the metadata storage format for a working copy.\n"
-     "usage: upgrade [WCPATH...]\n"
+     "usage: upgrade [WCPATH[@]...]\n"
+     "\n"), N_(
+     "  The upgraded working copy will be compatible with Subversion 1.8 and\n"
+     "  newer (this default may change in the future). To upgrade to a different\n"
+     "  version, use an option such as '--compatible-version=1.15'.\n"
+     "  The versions available are the same as in the 'checkout' command.\n"
+     "  Use 'svn --version' to see the compatible versions supported.\n"
+     "\n"), N_(
+     "  Only upgrades are supported, not downgrades.\n"
      "\n"), N_(
      "  Local modifications are preserved.\n"
+    ), N_(
+     "  If WCPATH contains an @ character, an additional @ must be\n"
+     "  specified at the end of WCPATH to avoid interpreting the\n"
+     "  first @ as a peg revision indicator.\n"
     )},
     { 'q', opt_compatible_version } },
 
-  { "x-shelf-diff", svn_cl__shelf_diff, {0}, {N_(
-     "Show shelved changes as a diff.\n"
-     "usage: x-shelf-diff SHELF [VERSION]\n"
-     "\n"), N_(
-     "  Show the changes in SHELF:VERSION (default: latest) as a diff.\n"
-     "\n"), N_(
-     "  See also: 'svn diff --cl=svn:shelf:SHELF' which supports most options of\n"
-     "  'svn diff'.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {opt_summarize},
-  },
-
-  { "x-shelf-drop", svn_cl__shelf_drop, {0}, {N_(
-     "Delete a shelf.\n"
-     "usage: x-shelf-drop SHELF [PATH ...]\n"
-     "\n"), N_(
-     "  Delete the shelves named SHELF from the working copies containing PATH\n"
-     "  (default PATH is '.')\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
-  { "x-shelf-list", svn_cl__shelf_list, {"x-shelves"}, {N_(
-     "List shelves.\n"
-     "usage: x-shelf-list [PATH ...]\n"
-     "\n"), N_(
-     "  List shelves for each working copy containing PATH (default is '.')\n"
-     "  Include the first line of any log message and some details about the\n"
-     "  contents of the shelf, unless '-q' is given.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', 'v'}
-  },
-
-  { "x-shelf-list-by-paths", svn_cl__shelf_list_by_paths, {0}, {N_(
-     "List which shelf affects each path.\n"
-     "usage: x-shelf-list-by-paths [PATH...]\n"
-     "\n"), N_(
-     "  List which shelf most recently affects each path below the given PATHs.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-  },
-
-  { "x-shelf-log", svn_cl__shelf_log, {0}, {N_(
-     "Show the versions of a shelf.\n"
-     "usage: x-shelf-log SHELF [PATH...]\n"
-     "\n"), N_(
-     "  Show all versions of SHELF for each working copy containing PATH (the\n"
-     "  default PATH is '.').\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', 'v'}
-  },
-
-  { "x-shelf-save", svn_cl__shelf_save, {0}, {N_(
-     "Copy local changes onto a new version of a shelf.\n"
-     "usage: x-shelf-save SHELF [PATH...]\n"
-     "\n"), N_(
-     "  Save local changes in the given PATHs as a new version of SHELF.\n"
-     "  The shelf's log message can be set with -m, -F, etc.\n"
-     "\n"), N_(
-     "  The same as 'svn shelve --keep-local'.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', opt_dry_run,
-     opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS,
-    }
-  },
-
-  { "x-shelve", svn_cl__shelf_shelve, {0}, {N_(
-     "Move local changes onto a shelf.\n"
-     "usage: x-shelve [--keep-local] SHELF [PATH...]\n"
-     "\n"), N_(
-     "  Save the local changes in the given PATHs to a new or existing SHELF.\n"
-     "  Revert those changes from the WC unless '--keep-local' is given.\n"
-     "  The shelf's log message can be set with -m, -F, etc.\n"
-     "\n"), N_(
-     "  'svn shelve --keep-local' is the same as 'svn shelf-save'.\n"
-     "\n"), N_(
-     "  The kinds of change you can shelve are committable changes to files and\n"
-     "  properties, except the following kinds which are not yet supported:\n"
-     "     * copies and moves\n"
-     "     * mkdir and rmdir\n"
-     "  Uncommittable states such as conflicts, unversioned and missing cannot\n"
-     "  be shelved.\n"
-     "\n"), N_(
-     "  To bring back shelved changes, use 'svn unshelve SHELF'.\n"
-     "\n"), N_(
-     "  Shelves are currently stored under <WC>/.svn/experimental/shelves/ .\n"
-     "  (In Subversion 1.10, shelves were stored under <WC>/.svn/shelves/ as\n"
-     "  patch files. To recover a shelf created by 1.10, either use a 1.10\n"
-     "  client to find and unshelve it, or find the patch file and use any\n"
-     "  1.10 or later 'svn patch' to apply it.)\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {'q', opt_dry_run, opt_keep_local,
-     opt_depth, opt_targets, opt_changelist,
-     SVN_CL__LOG_MSG_OPTIONS,
-    } },
-
-  { "x-unshelve", svn_cl__shelf_unshelve, {0}, {N_(
-     "Copy shelved changes back into the WC.\n"
-     "usage: x-unshelve [--drop] [SHELF [VERSION]]\n"
-     "\n"), N_(
-     "  Apply the changes stored in SHELF to the working copy.\n"
-     "  SHELF defaults to the newest shelf.\n"
-     "\n"), N_(
-     "  Apply the newest version of the shelf, by default. If VERSION is\n"
-     "  specified, apply that version and discard all versions newer than that.\n"
-     "  In any case, retain the unshelved version and versions older than that\n"
-     "  (unless --drop is specified).\n"
-     "\n"), N_(
-     "  With --drop, delete the entire shelf (like 'svn shelf-drop') after\n"
-     "  successfully unshelving with no conflicts.\n"
-     "\n"), N_(
-     "  The working files involved should be in a clean, unmodified state\n"
-     "  before using this command. To roll back to an older version of the\n"
-     "  shelf, first ensure any current working changes are removed, such as\n"
-     "  by shelving or reverting them, and then unshelve the desired version.\n"
-     "\n"), N_(
-     "  Unshelve normally refuses to apply any changes if any path involved is\n"
-     "  already modified (or has any other abnormal status) in the WC. With\n"
-     "  --force, it does not check and may error out and/or produce partial or\n"
-     "  unexpected results.\n"
-     "\n"), N_(
-     "  The shelving feature is EXPERIMENTAL. This command is likely to change\n"
-     "  in the next release, and there is no promise of backward compatibility.\n"
-    )},
-    {opt_drop, 'q', opt_dry_run, opt_force} },
-
   { NULL, NULL, {0}, {NULL}, {0} }
 };
+
+const svn_opt_subcommand_desc3_t *svn_cl__cmd_table = svn_cl__cmd_table_main;
 
 
 /* Version compatibility check */
@@ -2168,7 +2045,7 @@ check_lib_versions(void)
   return svn_ver_check_list2(&my_version, checklist, svn_ver_equal);
 }
 
-/* The cancelation handler setup by the cmdline library. */
+/* The cancellation handler setup by the cmdline library. */
 svn_cancel_func_t svn_cl__check_cancel = NULL;
 
 /* Add a --search argument to OPT_STATE.
@@ -2226,6 +2103,41 @@ viewspec_from_word(enum svn_cl__viewspec_t *viewspec,
   return SVN_NO_ERROR;
 }
 
+/* Re-initialize the command table SVN_CL__CMD_TABLE,
+ * adding additional commands from CMDS_ADD.
+ * (TODO: and the options table) */
+static void
+add_commands(const svn_opt_subcommand_desc3_t *cmds_add,
+             apr_pool_t *pool)
+{
+  int elt_size = sizeof(svn_opt_subcommand_desc3_t);
+  const svn_opt_subcommand_desc3_t *cmds_old = svn_cl__cmd_table;
+  const svn_opt_subcommand_desc3_t *cmd;
+  int n_cmds_old, n_cmds_add, n_cmds_new;
+  svn_opt_subcommand_desc3_t *cmds_new;
+
+  for (cmd = cmds_old; cmd->name; cmd++) ;
+  n_cmds_old = (int)(cmd - cmds_old);
+  for (cmd = cmds_add; cmd->name; cmd++) ;
+  n_cmds_add = (int)(cmd - cmds_add);
+  n_cmds_new = n_cmds_old + n_cmds_add;
+
+  /* copy CMDS_OLD and CMDS_ADD, plus an all-zeros terminator entry */
+  cmds_new = apr_pcalloc(pool, (n_cmds_new + 1) * elt_size);
+  memcpy(cmds_new, cmds_old, n_cmds_old * elt_size);
+  memcpy(&cmds_new[n_cmds_old], cmds_add, n_cmds_add * elt_size);
+
+  svn_cl__cmd_table = cmds_new;
+}
+
+/* Parse OPT_ARG as a version number, into OPT_STATE->compatible_version.
+ *
+ * Ensure it is between the oldest and newest supported WC formats.
+ *
+ * WC formats are always defined by a X.Y.0 release. Quietly ignore any
+ * 'patch' and 'tag' fields in the requested version number, and set them to
+ * zero/null in the output.
+ */
 static svn_error_t *
 parse_compatible_version(svn_cl__opt_state_t* opt_state,
                          const char *opt_arg,
@@ -2234,70 +2146,45 @@ parse_compatible_version(svn_cl__opt_state_t* opt_state,
   const char *utf8_opt_arg;
   svn_version_t *target;
 
-  /* Get the the latest and oldest supported version from the current
-     libsvn_client versions. WC formats are always defined by a X.Y.0
-     release, and svn_client_supported_wc_version() should return such
-     a value. */
-  const svn_version_t *supported = svn_client_supported_wc_version();
-  const svn_version_t *current = svn_client_version();
-  const svn_version_t latest = {current->major, current->minor, 0, NULL};
+  const svn_version_t *oldest = svn_client_oldest_wc_version(result_pool);
+  const svn_version_t *latest = svn_client_latest_wc_version(result_pool);
 
-  /* Double check that the oldest supported version is sane. */
-  SVN_ERR_ASSERT(supported->patch == 0);
-  SVN_ERR_ASSERT(svn_version__at_least(&latest,
-                                       supported->major,
-                                       supported->minor,
-                                       supported->patch));
+  /* Double check that the oldest and latest versions are sane. */
+  SVN_ERR_ASSERT(oldest->patch == 0);
+  SVN_ERR_ASSERT(latest->patch == 0);
+  SVN_ERR_ASSERT(svn_version__at_least(latest,
+                                       oldest->major, oldest->minor, 0));
 
   /* Parse the requested version. */
   SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, result_pool));
   SVN_ERR(svn_version__parse_version_string(&target, utf8_opt_arg,
                                             result_pool));
+  /* Quietly ignore 'patch' and 'tag' fields. */
+  target->patch = 0;
+  target->tag = NULL;
 
-  /* Check the earliest supported version. */
+  /* Check the oldest supported version. */
   if (!svn_version__at_least(target,
-                             supported->major,
-                             supported->minor,
-                             supported->patch))
+                             oldest->major, oldest->minor, 0))
     {
       return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                               _("Cannot create working copies older "
-                                 "than version %d.%d.%d"),
-                               supported->major,
-                               supported->minor,
-                               supported->patch);
+                               _("Cannot make working copies compatible "
+                                 "with the requested version %d.%d; "
+                                 "the oldest supported version is %d.%d"),
+                               target->major, target->minor,
+                               oldest->major, oldest->minor);
     }
 
   /* Check the latest supported version. */
-  /* FIXME: ### Should we return an error here instead? It seems
-            ### more friendly to issue a warning and continue with
-            ### the latest supported format. */
-  if (svn_version__at_least(target,
-                            latest.major,
-                            latest.minor,
-                            latest.patch)
-      && (target->major != latest.major
-          || target->minor != latest.minor
-          || target->patch != latest.patch))
+  if (!svn_version__at_least(latest,
+                             target->major, target->minor, 0))
     {
-      svn_error_t *w1 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                          _("Cannot create working copies "
-                                            "for version %s"),
-                                          opt_arg);
-      svn_error_t *w2 = svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
-                                          _("Creating working copy version "
-                                            "%d.%d instead"),
-                                          latest.major,
-                                          latest.minor);
-
-      svn_handle_warning2(stderr, w1, "svn: ");
-      svn_handle_warning2(stderr, w2, "svn: ");
-      svn_error_clear(w1);
-      svn_error_clear(w2);
-
-      target->major = latest.major;
-      target->minor = latest.minor;
-      target->patch = latest.patch;
+      return svn_error_createf(SVN_ERR_UNSUPPORTED_FEATURE, NULL,
+                               _("Cannot guarantee working copy compatibility "
+                                 "with the requested version %d.%d; "
+                                 "the latest supported version is %d.%d"),
+                               target->major, target->minor,
+                               latest->major, latest->minor);
     }
 
   opt_state->compatible_version = target;
@@ -2313,7 +2200,10 @@ parse_compatible_version(svn_cl__opt_state_t* opt_state,
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   svn_error_t *err;
   int opt_id;
@@ -2321,6 +2211,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_cl__opt_state_t opt_state = { 0, { 0 } };
   svn_client_ctx_t *ctx;
   apr_array_header_t *received_opts;
+  const char *exp_cmds;
   int i;
   const svn_opt_subcommand_desc3_t *subcommand = NULL;
   const char *dash_F_arg = NULL;
@@ -2338,11 +2229,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_hash_t *cfg_hash;
   svn_membuf_t buf;
   svn_boolean_t read_pass_from_stdin = FALSE;
+  const char **argv;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -2361,6 +2255,18 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   /* Init the temporary buffer. */
   svn_membuf__create(&buf, 0, pool);
 
+  /* Add experimental commands, if requested. Use the most recent version
+   * that we know about and that is mentioned in the env. var. */
+  exp_cmds = getenv("SVN_EXPERIMENTAL_COMMANDS");
+  if (exp_cmds && strstr(exp_cmds, "shelf3"))
+    {
+      add_commands(svn_cl__cmd_table_shelf3, pool);
+    }
+  else if (exp_cmds && strstr(exp_cmds, "shelf2"))
+    {
+      add_commands(svn_cl__cmd_table_shelf2, pool);
+    }
+
   /* Begin processing arguments. */
   opt_state.start_revision.kind = svn_opt_revision_unspecified;
   opt_state.end_revision.kind = svn_opt_revision_unspecified;
@@ -2370,6 +2276,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   opt_state.set_depth = svn_depth_unknown;
   opt_state.accept_which = svn_cl__accept_unspecified;
   opt_state.show_revs = svn_cl__show_revs_invalid;
+  opt_state.file_size_unit = SVN_CL__SIZE_UNIT_NONE;
+  opt_state.store_pristine = svn_tristate_unknown;
 
   /* No args?  Show usage. */
   if (argc <= 1)
@@ -2441,81 +2349,18 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 
           for (i = 0; i < change_revs->nelts; i++)
             {
-              char *end;
-              svn_revnum_t changeno, changeno_end;
               const char *change_str =
                 APR_ARRAY_IDX(change_revs, i, const char *);
-              const char *s = change_str;
-              svn_boolean_t is_negative;
 
-              /* Check for a leading minus to allow "-c -r42".
-               * The is_negative flag is used to handle "-c -42" and "-c -r42".
-               * The "-c r-42" case is handled by strtol() returning a
-               * negative number. */
-              is_negative = (*s == '-');
-              if (is_negative)
-                s++;
-
-              /* Allow any number of 'r's to prefix a revision number. */
-              while (*s == 'r')
-                s++;
-              changeno = changeno_end = strtol(s, &end, 10);
-              if (end != s && *end == '-')
-                {
-                  if (changeno < 0 || is_negative)
-                    {
-                      return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR,
-                                               NULL,
-                                               _("Negative number in range (%s)"
-                                                 " not supported with -c"),
-                                               change_str);
-                    }
-                  s = end + 1;
-                  while (*s == 'r')
-                    s++;
-                  changeno_end = strtol(s, &end, 10);
-                }
-              if (end == change_str || *end != '\0')
+              if (svn_opt_parse_change_to_range(opt_state.revision_ranges,
+                                                change_str, pool) != 0)
                 {
                   return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                           _("Non-numeric change argument (%s) "
-                                             "given to -c"), change_str);
-                }
-
-              if (changeno == 0)
-                {
-                  return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                                          _("There is no change 0"));
-                }
-
-              if (is_negative)
-                changeno = -changeno;
-
-              /* Figure out the range:
-                    -c N  -> -r N-1:N
-                    -c -N -> -r N:N-1
-                    -c M-N -> -r M-1:N for M < N
-                    -c M-N -> -r M:N-1 for M > N
-                    -c -M-N -> error (too confusing/no valid use case)
-              */
-              if (changeno > 0)
-                {
-                  if (changeno <= changeno_end)
-                    changeno--;
-                  else
-                    changeno_end--;
-                }
-              else
-                {
-                  changeno = -changeno;
-                  changeno_end = changeno - 1;
+                                           _("Syntax error in change argument "
+                                             "'%s'"), change_str);
                 }
 
               opt_state.used_change_arg = TRUE;
-              APR_ARRAY_PUSH(opt_state.revision_ranges,
-                             svn_opt_revision_range_t *)
-                = svn_opt__revision_range_from_revnums(changeno, changeno_end,
-                                                       pool);
             }
         }
         break;
@@ -2585,12 +2430,11 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case 'N':
         descend = FALSE;
         break;
+      case 'H':
+        opt_state.file_size_unit = SVN_CL__SIZE_UNIT_BASE_2;
+        break;
       case opt_depth:
-        err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
-        if (err)
-          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                                   _("Error converting depth "
-                                     "from locale to UTF-8"));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
         if (opt_state.depth == svn_depth_unknown
             || opt_state.depth == svn_depth_exclude)
@@ -2603,11 +2447,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
           }
         break;
       case opt_set_depth:
-        err = svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool);
-        if (err)
-          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, err,
-                                   _("Error converting depth "
-                                     "from locale to UTF-8"));
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.set_depth = svn_depth_from_word(utf8_opt_arg);
         /* svn_depth_exclude is okay for --set-depth. */
         if (opt_state.set_depth == svn_depth_unknown)
@@ -2722,7 +2562,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_config_dir:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
+        SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
+                                               utf8_opt_arg, pool, pool));
         break;
       case opt_config_options:
         if (!opt_state.config_options)
@@ -2891,6 +2732,9 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_remove_ignored:
         opt_state.remove_ignored = TRUE;
         break;
+      case opt_remove_added:
+        opt_state.remove_added = TRUE;
+        break;
       case opt_no_newline:
       case opt_strict:          /* ### DEPRECATED */
         opt_state.no_newline = TRUE;
@@ -2919,6 +2763,15 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       case opt_compatible_version:
         SVN_ERR(parse_compatible_version(&opt_state, opt_arg, pool));
         break;
+      case opt_store_pristine:
+        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+        opt_state.store_pristine = svn_tristate__from_word(utf8_opt_arg);
+        if (opt_state.store_pristine == svn_tristate_unknown)
+          return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
+                                   _("Unknown value '%s' for %s.\n"
+                                     "Supported values: %s"),
+                                   utf8_opt_arg, "--store-pristine", "yes, no");
+        break;
       default:
         /* Hmmm. Perhaps this would be a good place to squirrel away
            opts that commands like svn diff might need. Hmmm indeed. */
@@ -2926,18 +2779,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
       }
     }
 
-  /* The --non-interactive and --force-interactive options are mutually
-   * exclusive. */
-  if (opt_state.non_interactive && force_interactive)
-    {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--non-interactive and --force-interactive "
-                                "are mutually exclusive"));
-    }
-  else
-    opt_state.non_interactive = !svn_cmdline__be_interactive(
-                                  opt_state.non_interactive,
-                                  force_interactive);
+  SVN_ERR(svn_cmdline__be_interactive(&opt_state.non_interactive,
+                                      force_interactive));
 
   /* Turn our hash of changelists into an array of unique ones. */
   SVN_ERR(svn_hash_keys(&(opt_state.changelists), changelists, pool));
@@ -3290,17 +3133,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
      sense (unless we've also been instructed not to care).  This may
      access the working copy so do it after setting the locking mode. */
   if ((! opt_state.force_log)
-      && (subcommand->cmd_func == svn_cl__commit
-          || subcommand->cmd_func == svn_cl__copy
-          || subcommand->cmd_func == svn_cl__delete
-          || subcommand->cmd_func == svn_cl__import
-          || subcommand->cmd_func == svn_cl__mkdir
-          || subcommand->cmd_func == svn_cl__move
-          || subcommand->cmd_func == svn_cl__lock
-          || subcommand->cmd_func == svn_cl__propedit
-          || subcommand->cmd_func == svn_cl__shelf_save
-          || subcommand->cmd_func == svn_cl__shelf_shelve
-         ))
+      && subcommand->cmd_func != svn_cl__propset)
     {
       /* If the -F argument is a file that's under revision control,
          that's probably not what the user intended. */
@@ -3308,7 +3141,10 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         {
           svn_node_kind_t kind;
           const char *local_abspath;
-          const char *fname = svn_dirent_internal_style(dash_F_arg, pool);
+          const char *fname;
+
+          SVN_ERR(svn_dirent_internal_style_safe(&fname, NULL, dash_F_arg,
+                                                 pool, pool));
 
           err = svn_dirent_get_absolute(&local_abspath, fname, pool);
 
@@ -3436,6 +3272,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
     {
       SVN_ERR(svn_cl__get_notifier(&ctx->notify_func2, &ctx->notify_baton2,
                                    conflict_stats, pool));
+
+      /* Data-outputting commands should not print progress notifications
+       * (such as hydrating text bases) on stdout. */
+      if (subcommand->cmd_func == svn_cl__cat
+          || subcommand->cmd_func == svn_cl__diff)
+        SVN_ERR(svn_cl__notifier_suppress_progress_output(ctx->notify_baton2));
     }
 
   /* Get password from stdin if necessary */
@@ -3590,7 +3432,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

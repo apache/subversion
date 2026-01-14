@@ -590,7 +590,7 @@ svn_path_is_ancestor(const char *path1, const char *path2)
 {
   apr_size_t path1_len = strlen(path1);
 
-  /* If path1 is empty and path2 is not absoulte, then path1 is an ancestor. */
+  /* If path1 is empty and path2 is not absolute, then path1 is an ancestor. */
   if (SVN_PATH_IS_EMPTY(path1))
     return *path2 != '/';
 

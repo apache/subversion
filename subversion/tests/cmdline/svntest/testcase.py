@@ -222,8 +222,8 @@ class _Wimp(_XFail):
     RESULT_SKIP: (2, TextColors.success('SKIP: '), True),
     }
 
-  def __init__(self, wip, test_case, cond_func=lambda: True):
-    _XFail.__init__(self, test_case, cond_func, wip)
+  def __init__(self, wip, test_case, cond_func=lambda: True, issues=None):
+    _XFail.__init__(self, test_case, cond_func, wip, issues)
 
 
 class _Skip(TestCase):

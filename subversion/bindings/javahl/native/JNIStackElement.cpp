@@ -66,7 +66,7 @@ JNIStackElement::JNIStackElement(JNIEnv *env, const char *clazz,
       else
         {
           // This will call java.lang.Object.toString, even when it is
-          // overriden.
+          // overridden.
           jobject oStr = env->CallNonvirtualObjectMethod(jthis, jlo, mid);
           if (JNIUtil::isJavaExceptionThrown())
             return;

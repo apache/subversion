@@ -1211,7 +1211,7 @@ post_response_handler(serf_request_t *request,
   /* Then see which ones we can discover. */
   serf_bucket_headers_do(hdrs, post_headers_iterator_callback, prc);
 
-  /* Execute the 'real' response handler to XML-parse the repsonse body. */
+  /* Execute the 'real' response handler to XML-parse the response body. */
   return svn_ra_serf__expect_empty_body(request, response,
                                         prc->handler, scratch_pool);
 }

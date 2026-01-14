@@ -128,7 +128,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # VC 2002 and VC 2003 only allow a single platform per project file
     if subdir == 'vcnet-vcproj':
       if self.vcproj_version != '7.00' and self.vcproj_version != '7.10':
-        self.platforms = ['Win32','x64']
+        self.platforms = ['Win32', 'x64', 'ARM64']
 
     #Here we can add additional modes to compile for
     self.configs = ['Debug','Release']
@@ -157,6 +157,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     ### but we need to fix it. we can wrap the apr UUID functions, or
     ### implement this from scratch using the algorithms described in
     ### http://www.webdav.org/specs/draft-leach-uuids-guids-01.txt
+
+    # Ensure data is in byte representation.  If it doesn't have an encode
+    # attribute, assume it is already in the correct form.
+    try:
+      data = data.encode('utf8')
+    except AttributeError:
+      pass
 
     myhash = hashlib_md5(data).hexdigest()
 
@@ -233,21 +240,6 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
           else:
             dll_targets.append(self.create_dll_target(target))
     install_targets.extend(dll_targets)
-
-    # Fix up targets that can't be linked to libraries
-    if not self.disable_shared:
-      for target in install_targets:
-        if isinstance(target, gen_base.TargetExe) and target.msvc_force_static:
-
-          # Make direct dependencies of all the indirect dependencies
-          linked_deps = {}
-          self.get_linked_win_depends(target, linked_deps)
-
-          for lk in linked_deps.keys():
-            if not isinstance(lk, gen_base.TargetLib) or not lk.msvc_export:
-              self.graph.add(gen_base.DT_LINK, target.name, lk)
-            else:
-              self.graph.remove(gen_base.DT_LINK, target.name, lk)
 
     for target in install_targets:
       target.project_guid = self.makeguid(target.name)
@@ -567,7 +559,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
     # This section parses those dependencies and adds them to the dependency list
     # for this target.
     if name.startswith('javahl') or name == 'libsvnjavahl':
-      for dep in re.findall('\$\(([^\)]*)_DEPS\)', target.add_deps):
+      for dep in re.findall(r'\$\(([^\)]*)_DEPS\)', target.add_deps):
         dep = dep.replace('_', '-')
         depends.extend(self.sections[dep].get_targets())
 
@@ -721,7 +713,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
         if external_lib in self._libraries:
@@ -736,8 +728,13 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     if target.name.endswith('svn_subr'):
       fakedefines.append("SVN_USE_WIN32_CRASHHANDLER")
+      fakedefines.append(self.quote_define('SVN_WIN32_CRASHREPORT_EMAIL="users@subversion.apache.org"'))
 
     return fakedefines
+
+  def quote_define(self, value):
+    "Properly quote special characters in a define (if needed)"
+    return value
 
   def get_win_includes(self, target, cfg='Release'):
     "Return the list of include directories for target"
@@ -746,7 +743,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
         if external_lib in self._libraries:
@@ -773,13 +770,17 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       else:
         lang_subdir = target.lang
 
+      if target.lang == "python":
+        lib = self._libraries['py3c']
+        fakeincludes.extend(lib.include_dirs)
+
       # After the language specific includes include the generic libdir,
       # to allow overriding a generic with a per language include
       fakeincludes.append(os.path.join(self.swig_libdir, lang_subdir))
       fakeincludes.append(self.swig_libdir)
 
-    if 'cxxhl' in target.name:
-      fakeincludes.append("subversion/bindings/cxxhl/include")
+    if 'svnxx' in target.name:
+      fakeincludes.append("subversion/bindings/cxx/include")
 
     return gen_base.unique(map(self.apath, fakeincludes))
 
@@ -817,7 +818,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     for dep in self.get_win_depends(target, FILTER_LIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
           if external_lib not in self._libraries:
@@ -871,7 +872,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
       nondeplibs.extend(dep.msvc_libs)
 
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
 
           external_lib = elib.lower()
 
@@ -922,7 +923,7 @@ class WinGeneratorBase(gen_win_dependencies.GenDependenciesBase):
 
     for dep in self.get_win_depends(target, FILTER_EXTERNALLIBS):
       if dep.external_lib:
-        for elib in re.findall('\$\(SVN_([^\)]*)_LIBS\)', dep.external_lib):
+        for elib in re.findall(r'\$\(SVN_([^)]*)_LIBS\)', dep.external_lib):
           external_lib = elib.lower()
 
         if external_lib in self._libraries:

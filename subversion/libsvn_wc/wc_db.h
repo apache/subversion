@@ -202,6 +202,15 @@ typedef struct svn_wc__db_lock_t {
   apr_time_t date;
 } svn_wc__db_lock_t;
 
+/* Structure holding the size and timestamp values for a file.  */
+typedef struct svn_wc__db_fileinfo_t {
+  /* The time the file was last modified. */
+  apr_time_t mtime;
+
+  /* The size of this file. */
+  svn_filesize_t size;
+} svn_wc__db_fileinfo_t;
+
 
 /* ### NOTE: I have not provided docstrings for most of this file at this
    ### point in time. The shape and extent of this API is still in massive
@@ -301,17 +310,20 @@ svn_wc__db_init(svn_wc__db_t *db,
                 const char *repos_uuid,
                 svn_revnum_t initial_rev,
                 svn_depth_t depth,
+                svn_boolean_t store_pristine,
                 apr_pool_t *scratch_pool);
 
-/* Return the working copy format for LOCAL_ABSPATH in DB in *FORMAT.
+/* Return the working copy settings *FORMAT_P and *STORE_PRISTINE_P for
+   LOCAL_ABSPATH in DB.
 
    Use SCRATCH_POOL for temporary allocations.
 */
 svn_error_t *
-svn_wc__db_get_format(int *format,
-                      svn_wc__db_t *db,
-                      const char *local_abspath,
-                      apr_pool_t *scratch_pool);
+svn_wc__db_get_settings(int *format_p,
+                        svn_boolean_t *store_pristine_p,
+                        svn_wc__db_t *db,
+                        const char *local_abspath,
+                        apr_pool_t *scratch_pool);
 
 /* Compute the LOCAL_RELPATH for the given LOCAL_ABSPATH, relative
    from wri_abspath.
@@ -516,6 +528,10 @@ svn_wc__db_base_add_incomplete_directory(svn_wc__db_t *db,
    Unless KEEP_RECORDED_INFO is set to TRUE, recorded size and timestamp values
    will be cleared.
 
+   If FILE_WRITER is not NULL, atomically complete installation of the file to
+   LOCAL_ABSPATH together with updating the DB.  If RECORD_FILEINFO is non-zero,
+   also record the size and timestamp values of the installed file.
+
    All temporary allocations will be made in SCRATCH_POOL.
 */
 svn_error_t *
@@ -539,6 +555,8 @@ svn_wc__db_base_add_file(svn_wc__db_t *db,
                          svn_boolean_t keep_recorded_info,
                          svn_boolean_t insert_base_deleted,
                          const svn_skel_t *conflict,
+                         svn_wc__working_file_writer_t *file_writer,
+                         svn_boolean_t record_fileinfo,
                          const svn_skel_t *work_items,
                          apr_pool_t *scratch_pool);
 
@@ -912,21 +930,6 @@ svn_wc__db_base_get_lock_tokens_recursive(apr_hash_t **lock_tokens,
    @{
 */
 
-/* Set *PRISTINE_ABSPATH to the path to the pristine text file
-   identified by SHA1_CHECKSUM.  Error if it does not exist.
-
-   ### This is temporary - callers should not be looking at the file
-   directly.
-
-   Allocate the path in RESULT_POOL. */
-svn_error_t *
-svn_wc__db_pristine_get_path(const char **pristine_abspath,
-                             svn_wc__db_t *db,
-                             const char *wri_abspath,
-                             const svn_checksum_t *checksum,
-                             apr_pool_t *result_pool,
-                             apr_pool_t *scratch_pool);
-
 /* Set *PRISTINE_ABSPATH to the path under WCROOT_ABSPATH that will be
    used by the pristine text identified by SHA1_CHECKSUM.  The file
    need not exist.
@@ -941,7 +944,8 @@ svn_wc__db_pristine_get_future_path(const char **pristine_abspath,
 
 /* If requested set *CONTENTS to a readable stream that will yield the pristine
    text identified by SHA1_CHECKSUM (must be a SHA-1 checksum) within the WC
-   identified by WRI_ABSPATH in DB.
+   identified by WRI_ABSPATH in DB.  If the pristine is present in the store,
+   but dehydrated, set *CONTENTS to NULL.
 
    If requested set *SIZE to the size of the pristine stream in bytes,
 
@@ -965,11 +969,14 @@ typedef struct svn_wc__db_install_data_t
 /* Open a writable stream to a temporary text base, ready for installing
    into the pristine store.  Set *STREAM to the opened stream.  The temporary
    file will have an arbitrary unique name. Return as *INSTALL_DATA a baton
-   for eiter installing or removing the file
+   for either installing or removing the file
 
    Arrange that, on stream closure, *MD5_CHECKSUM and *SHA1_CHECKSUM will be
    set to the MD-5 and SHA-1 checksums respectively of that file.
    MD5_CHECKSUM and/or SHA1_CHECKSUM may be NULL if not wanted.
+
+   The contents of the pristine will be saved to disk if HYDRATED is true or
+   if the WC version or configuration doesn't allow dehydrated pristines.
 
    Allocate the new stream, path and checksums in RESULT_POOL.
  */
@@ -980,6 +987,7 @@ svn_wc__db_pristine_prepare_install(svn_stream_t **stream,
                                     svn_checksum_t **md5_checksum,
                                     svn_wc__db_t *db,
                                     const char *wri_abspath,
+                                    svn_boolean_t hydrated,
                                     apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
 
@@ -1033,16 +1041,6 @@ svn_wc__db_pristine_get_sha1(const svn_checksum_t **sha1_checksum,
                              apr_pool_t *scratch_pool);
 
 
-/* If necessary transfers the PRISTINE files of the tree rooted at
-   SRC_LOCAL_ABSPATH to the working copy identified by DST_WRI_ABSPATH. */
-svn_error_t *
-svn_wc__db_pristine_transfer(svn_wc__db_t *db,
-                             const char *src_local_abspath,
-                             const char *dst_wri_abspath,
-                             svn_cancel_func_t cancel_func,
-                             void *cancel_baton,
-                             apr_pool_t *scratch_pool);
-
 /* Remove the pristine text with SHA-1 checksum SHA1_CHECKSUM from the
  * pristine store, iff it is not referenced by any of the (other) WC DB
  * tables. */
@@ -1062,13 +1060,25 @@ svn_wc__db_pristine_cleanup(svn_wc__db_t *db,
 
 /* Set *PRESENT to true if the pristine store for WRI_ABSPATH in DB contains
    a pristine text with SHA-1 checksum SHA1_CHECKSUM, and to false otherwise.
-*/
+   If the pristine is present, set *HYDRATED to true if its contents are
+   currently available on disk, and to false otherwise.  If the pristine
+   is not present, set *HYDRATED to false. */
 svn_error_t *
 svn_wc__db_pristine_check(svn_boolean_t *present,
+                          svn_boolean_t *hydrated,
                           svn_wc__db_t *db,
                           const char *wri_abspath,
                           const svn_checksum_t *sha1_checksum,
                           apr_pool_t *scratch_pool);
+
+/* If the pristine store for WRI_ABSPATH in DB contains a pristine text with
+   SHA-1 checksum SHA1_CHECKSUM with its content available on disk, remove
+   that content and mark the pristine entry as "dehydrated". */
+svn_error_t *
+svn_wc__db_pristine_dehydrate(svn_wc__db_t *db,
+                              const char *wri_abspath,
+                              const svn_checksum_t *sha1_checksum,
+                              apr_pool_t *scratch_pool);
 
 /* @defgroup svn_wc__db_external  External management
    @{ */
@@ -2255,25 +2265,6 @@ svn_wc__db_read_inherited_props(apr_array_header_t **iprops,
                                 apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
 
-/* Read a BASE node's inherited property information.
-
-   Set *IPROPS to to a depth-first ordered array of
-   svn_prop_inherited_item_t * structures representing the cached
-   inherited properties for the BASE node at LOCAL_ABSPATH.
-
-   If no cached properties are found, then set *IPROPS to NULL.
-   If LOCAL_ABSPATH represents the root of the repository, then set
-   *IPROPS to an empty array.
-
-   Allocate *IPROPS in RESULT_POOL, use SCRATCH_POOL for temporary
-   allocations. */
-svn_error_t *
-svn_wc__db_read_cached_iprops(apr_array_header_t **iprops,
-                              svn_wc__db_t *db,
-                              const char *local_abspath,
-                              apr_pool_t *result_pool,
-                              apr_pool_t *scratch_pool);
-
 /* Find BASE nodes with cached inherited properties.
 
    Set *IPROPS_PATHS to a hash mapping const char * absolute working copy
@@ -2709,6 +2700,18 @@ svn_wc__db_lock_remove(svn_wc__db_t *db,
                        apr_pool_t *scratch_pool);
 
 
+/* Fetch the information about the lock which corresponds to REPOS_RELPATH
+   within the working copy indicated by WRI_ABSPATH. Set *LOCK_P to NULL
+   if there is no such lock.  */
+svn_error_t *
+svn_wc__db_lock_get(svn_wc__db_lock_t **lock_p,
+                    svn_wc__db_t *db,
+                    const char *wri_abspath,
+                    const char *repos_relpath,
+                    apr_pool_t *result_pool,
+                    apr_pool_t *scratch_pool);
+
+
 /* @} */
 
 
@@ -2952,6 +2955,7 @@ svn_wc__db_upgrade_begin(svn_sqlite__db_t **sdb,
                          const char *local_dir_abspath,
                          const char *repos_root_url,
                          const char *repos_uuid,
+                         svn_boolean_t store_pristine,
                          apr_pool_t *scratch_pool);
 
 /* Simply insert (or replace) one row in the EXTERNALS table. */
@@ -3094,6 +3098,77 @@ svn_wc__db_wclock_owns_lock(svn_boolean_t *own_lock,
                             svn_boolean_t exact,
                             apr_pool_t *scratch_pool);
 
+/* @} */
+
+
+/* @defgroup svn_wc__db_textbase  Working with text-bases
+   @{
+*/
+
+/* The callback invoked by svn_wc__db_textbase_walk(). */
+typedef svn_error_t * (*svn_wc__db_textbase_walk_cb_t)(
+  svn_boolean_t *referenced_p,
+  void *baton,
+  const char *local_abspath,
+  int op_depth,
+  const svn_checksum_t *checksum,
+  svn_boolean_t have_props,
+  svn_boolean_t props_mod,
+  svn_filesize_t recorded_size,
+  apr_time_t recorded_time,
+  int max_op_depth,
+  apr_pool_t *scratch_pool);
+
+/* Walk the text-bases referenced by the nodes in the LOCAL_ABSPATH
+   tree, invoking the CALLBACK with information about each text-base
+   for a node.
+
+   If the callback sets *REFERENCED_P to true, ensure that a text-base
+   reference exists for the node.  If the callback sets *REFERENCED_P to
+   false, ensure that a text-base reference does not exist for the node.
+
+   See the description of the `TEXTBASE_REFS` table in the schema.
+ */
+svn_error_t *
+svn_wc__db_textbase_walk(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         svn_wc__db_textbase_walk_cb_t callback,
+                         void *callback_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool);
+
+/* The callback invoked by svn_wc__db_textbase_sync(). */
+typedef svn_error_t * (*svn_wc__db_textbase_fetch_cb_t)(
+  void *baton,
+  const char *repos_root_url,
+  const char *repos_relpath,
+  svn_revnum_t revision,
+  svn_stream_t *contents,
+  svn_cancel_func_t cancel_func,
+  void *cancel_baton,
+  apr_pool_t *scratch_pool);
+
+/* Synchronize the state of the text-bases in DB.
+
+   If ALLOW_HYDRATE is true, fetch the referenced but missing text-base
+   contents using the provided FETCH_CALLBACK and FETCH_BATON.
+   If ALLOW_DEHYDRATE is true, remove the on disk text-base contents
+   that is no longer referenced.
+ */
+svn_error_t *
+svn_wc__db_textbase_sync(svn_wc__db_t *db,
+                         const char *local_abspath,
+                         svn_boolean_t allow_hydrate,
+                         svn_boolean_t allow_dehydrate,
+                         svn_wc__db_textbase_fetch_cb_t fetch_callback,
+                         void *fetch_baton,
+                         svn_cancel_func_t cancel_func,
+                         void *cancel_baton,
+                         apr_pool_t *scratch_pool);
+
+
+/* @} */
 
 
 /* @defgroup svn_wc__db_temp Various temporary functions during transition
@@ -3535,6 +3610,24 @@ svn_wc__db_find_working_nodes_with_basename(apr_array_header_t **local_abspaths,
                                             svn_node_kind_t kind,
                                             apr_pool_t *result_pool,
                                             apr_pool_t *scratch_pool);
+
+/* Return an array of const char * elements, which represent local absolute
+ * paths for nodes, within the working copy indicated by WRI_ABSPATH, which
+ * are copies of REPOS_RELPATH and have node kind KIND.
+ * If no such nodes exist, return an empty array.
+ *
+ * This function returns only paths to nodes which are present in the highest
+ * layer of the WC. In other words, paths to deleted and/or excluded nodes are
+ * never returned.
+ */
+svn_error_t *
+svn_wc__db_find_copies_of_repos_path(apr_array_header_t **local_abspaths,
+                                     svn_wc__db_t *db,
+                                     const char *wri_abspath,
+                                     const char *repos_relpath,
+                                     svn_node_kind_t kind,
+                                     apr_pool_t *result_pool,
+                                     apr_pool_t *scratch_pool);
 /* @} */
 
 typedef svn_error_t * (*svn_wc__db_verify_cb_t)(void *baton,

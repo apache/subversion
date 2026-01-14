@@ -24,10 +24,13 @@
 #    under the License.
 ######################################################################
 
-import re, sys
+import os, re
 from difflib import unified_diff, ndiff
 import pprint
 import logging
+import itertools
+from io import BytesIO
+from typing import Iterable
 
 import svntest
 
@@ -76,6 +79,9 @@ class SVNDumpParseError(svntest.Failure):
   """Exception raised if parsing a dump file fails"""
   pass
 
+class SVNXMLSchemaValidationError(SVNUnexpectedOutput):
+  """Exception raised if XML output failed validation against its schema"""
+  pass
 
 ######################################################################
 # Comparison of expected vs. actual output
@@ -295,9 +301,9 @@ class RegexListOutput(ExpectedOutput):
       if len(self.expected) != len(actual):
         logger.warn('# Expected %d lines; actual %d lines' %
                     (len(self.expected), len(actual)))
-      for e, a in map(None, self.expected_res, actual):
+      for e, a in itertools.zip_longest(self.expected_res, actual):
         if e is not None and a is not None and regex_fullmatch(e, a):
-          logger.warn("|  " + a.rstrip())
+          logger.warn("|  " + repr(a))
         else:
           if e is not None:
             logger.warn("| -" + repr(e.pattern))
@@ -851,7 +857,8 @@ def compare_dump_files(label_expected, label_actual,
     print('DIFF of raw dumpfiles (including expected differences)')
     print('--- ' + (label_expected or 'expected'))
     print('+++ ' + (label_actual or 'actual'))
-    print(''.join(ndiff(expected, actual)))
+    print(''.join(ndiff([repr(line) for line in expected],
+                        [repr(line) for line in actual])))
     raise svntest.Failure('DIFF of parsed dumpfiles (ignoring expected differences)\n'
                           + '\n'.join(ndiff(
           pprint.pformat(parsed_expected).splitlines(),
@@ -1023,7 +1030,7 @@ def make_diff_prop_added(pname, pval):
   ] + make_diff_prop_val("+", pval)
 
 def make_diff_prop_modified(pname, pval1, pval2):
-  """Return a property diff for modification of property PNAME, old value
+  r"""Return a property diff for modification of property PNAME, old value
      PVAL1, new value PVAL2.
 
      PVAL is a single string with no embedded newlines.  A newline at the
@@ -1037,3 +1044,32 @@ def make_diff_prop_modified(pname, pval1, pval2):
     "## -1 +1 ##\n",
   ] + make_diff_prop_val("-", pval1) + make_diff_prop_val("+", pval2)
 
+
+__schema_dir = os.path.join(
+  os.path.dirname(
+    os.path.dirname(
+      os.path.dirname(
+        os.path.dirname(
+          os.path.abspath(__file__))))),
+  "svn", "schema")
+def validate_xml_schema(name: str, lines: Iterable[str]) -> None:
+  schema_name = name + ".rnc"
+  try:
+    # Imported in this scope because sys.path may not have been updated yet.
+    from lxml import etree #type:ignore
+    schema_file = os.path.join(__schema_dir, schema_name)
+    schema = etree.RelaxNG(file=schema_file)
+    source = ''.join(lines)
+    document = etree.parse(BytesIO(source.encode("utf-8")))
+    if not schema.validate(document):
+      raise SVNXMLSchemaValidationError(schema.error_log)
+  except ImportError:
+    logger.error("XML: Module lxml.etree not found")
+    return
+  except Exception as ex:
+    logger.error("XML: " + str(ex))
+    logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+    if svntest.main.is_bad_xml_fatal():
+      raise
+    else:
+      logger.warning("XML:", exc_info=True)

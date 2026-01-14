@@ -272,14 +272,18 @@ print_properties(svn_stream_t *out,
 
   if (inherited_props)
     {
-      svn_pool_clear(iterpool);
-
       for (i = 0; i < inherited_props->nelts; i++)
         {
-          svn_prop_inherited_item_t *iprop =
-            APR_ARRAY_IDX(inherited_props, i, svn_prop_inherited_item_t *);
-          svn_string_t *propval = apr_hash_this_val(apr_hash_first(pool,
-                                                          iprop->prop_hash));
+          svn_prop_inherited_item_t *iprop;
+          svn_string_t *propval;
+
+          svn_pool_clear(iterpool);
+
+          iprop = APR_ARRAY_IDX(inherited_props, i,
+                                svn_prop_inherited_item_t *);
+          propval = apr_hash_this_val(apr_hash_first(iterpool,
+                                                     iprop->prop_hash));
+
           SVN_ERR(print_single_prop(propval, target_abspath_or_url,
                                     iprop->path_or_url,
                                     path_prefix, out, pname,

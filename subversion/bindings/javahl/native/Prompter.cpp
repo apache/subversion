@@ -45,7 +45,7 @@
 Prompter::UniquePtr Prompter::create(jobject jprompter)
 {
   if (!jprompter)
-    return UniquePtr(NULL);
+    return UniquePtr();
 
   // Make sure no C++ exceptions are propagated from here.
   const ::Java::Env jenv;
@@ -53,12 +53,12 @@ Prompter::UniquePtr Prompter::create(jobject jprompter)
     {
       const jclass cls = ::Java::ClassCache::get_authn_cb(jenv)->get_class();
       if (!jenv.IsInstanceOf(jprompter, cls))
-        return UniquePtr(NULL);
+        return UniquePtr();
 
       return UniquePtr(new Prompter(jenv, jprompter));
     }
   SVN_JAVAHL_JNI_CATCH;
-  return UniquePtr(NULL);
+  return UniquePtr();
 }
 
 Prompter::UniquePtr Prompter::clone() const
@@ -431,7 +431,7 @@ svn_error_t *Prompter::dispatch_plaintext_passphrase_prompt(
 Prompter::UniquePtr CompatPrompter::create(jobject jprompter)
 {
   if (!jprompter)
-    return UniquePtr(NULL);
+    return UniquePtr();
 
   // Make sure no C++ exceptions are propagated from here.
   const ::Java::Env jenv;
@@ -440,12 +440,12 @@ Prompter::UniquePtr CompatPrompter::create(jobject jprompter)
       const jclass cls =
         ::Java::ClassCache::get_user_passwd_cb(jenv)->get_class();
       if (!jenv.IsInstanceOf(jprompter, cls))
-        return UniquePtr(NULL);
+        return UniquePtr();
 
       return UniquePtr(new CompatPrompter(jenv, jprompter));
     }
   SVN_JAVAHL_JNI_CATCH;
-  return UniquePtr(NULL);
+  return UniquePtr();
 }
 
 Prompter::UniquePtr CompatPrompter::clone() const

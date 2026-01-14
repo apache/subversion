@@ -3,7 +3,7 @@
 #  redirect_tests.py:  Test ra_dav handling of server-side redirects
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one

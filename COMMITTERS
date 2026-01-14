@@ -18,7 +18,7 @@ Blanket commit access:
        ghudson   Greg Hudson <ghudson@mit.edu>
           fitz   Brian W. Fitzpatrick <fitz@red-bean.com>
         daniel   Daniel Stenberg <daniel@haxx.se>
-      cmpilato   C. Michael Pilato <cmpilato@collab.net>
+      cmpilato   C. Michael Pilato <cmpilato@apache.org>
         philip   Philip Martin <philip@apache.org>
    jerenkrantz   Justin Erenkrantz <justin@erenkrantz.com>
         rooneg   Garrett Rooney <rooneg@electricjellyfish.net>
@@ -41,7 +41,7 @@ Blanket commit access:
        hwright   Hyrum Wright <hyrum@hyrumwright.org>
     vgeorgescu   Vlad Georgescu <vgeorgescu@gmail.com>
        kameshj   Kamesh Jayachandran <kamesh.jayachandran@gmail.com>
-      markphip   Mark Phippard <mphippard@collab.net>
+      markphip   Mark Phippard <markphip@gmail.com>
       arfrever   Arfrever Frehtes Taifersar Arahesis <arfrever.fta@gmail.com>
           stsp   Stefan Sperling <stsp@elego.de>
            kou   Kouhei Sutou <kou@cozmixng.org>
@@ -57,10 +57,17 @@ Blanket commit access:
        stefan2   Stefan Fuhrmann <stefan2@apache.org>
        jcorvel   Johan Corveleyn <jcorvel@gmail.com>
          trent   Trent Nelson <trent@snakebite.org>
-        kotkov   Evgeny Kotkov <evgeny.kotkov@visualsvn.com>
+        kotkov   Evgeny Kotkov <evgeny.kotkov@axiorema.com>
       astieger   Andreas Stieger <andreas.stieger@gmx.de>
       jamessan   James McCoy <jamessan@jamessan.com>
-      luke1410   Stefan Hett <luke1410@posteo.de>
+  troycurtisjr   Troy Curtis, Jr <troycurtisjr@gmail.com>
+ hartmannathan   Nathan Hartman <hartman.nathan@gmail.com>
+      futatuki   Yasuhito Futatsuki <futatuki@yf.bsdclub.org>
+       jun66j5   Jun Omae <jun66j5@gmail.com>
+     dsahlberg   Daniel Sahlberg <daniel.l.sahlberg@gmail.com>
+        vinc17   Vincent Lefevre <vincent@vinc17.net>
+        rinrab   Timofei Zhakov <tima@chemodax.net>
+       minfrin   Graham Leggett <minfrin@sharp.fm>
 
 [[END ACTIVE FULL COMMITTERS.  LEAVE THIS LINE HERE; SCRIPTS LOOK FOR IT.]]
 
@@ -79,6 +86,7 @@ Full committers who have asked to be listed as dormant:
          naked   Nuutti Kotivuori <naked@iki.fi>
      ringstrom   Tobias Ringström <tobias@ringstrom.mine.nu>
           ivan   Ivan Zhakov <chemodax@gmail.com>
+      luke1410   Stefan Hett <luke1410@posteo.de>
 
 
 Partial committers who have asked to be listed as dormant:
@@ -104,7 +112,7 @@ Commit access for specific areas:
        rschupp   Roderich Schupp <roderich.schupp@gmail.com> (Swig bindings)
         stilor   Alexey Neyman <stilor@att.net>              (Python bindings,
                                                              svn-vendor.py)
-  troycurtisjr   Troy Curtis, Jr <troycurtisjr@gmail.com>    (Swig bindings)
+ amiloslavskiy   Alexandr Miloslavskiy <amiloslavskiy@apache.org> (JavaHL bindings)
 
   Packages:
 
@@ -214,6 +222,7 @@ giorgio_valoti   Giorgio Valoti <giorgio_v@mac.com>          (po: it)
         holden   Holden Karau <holden@pigscanfly.ca>         (scheme-bindings br.)
          moklo   Morten Kloster <morklo@gmail.com>           (diff-improvements br.)
           vmpn   Vladimir Berezniker <vmpn@hitechman.com>    (javahl-ra br.)
+       peterba   Peter Balogh <peterba@apache.org>           (mfa)
 
   Subprojects that are complete, abandoned or have moved elsewhere:
 

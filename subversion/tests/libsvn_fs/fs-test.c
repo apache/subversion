@@ -4990,10 +4990,17 @@ unordered_txn_dirprops(const svn_test_opts_t *opts,
   /* Commit the second one first. */
   SVN_ERR(test_commit_txn(&new_rev, txn2, NULL, pool));
 
-  /* Then commit the first -- but expect a conflict due to the
-     propchanges made by the other txn. */
-  SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
-  SVN_ERR(svn_fs_abort_txn(txn, pool));
+  if (is_bdb)
+    {
+      /* Then commit the first -- but expect a conflict due to the
+         propchanges made by the other txn. */
+      SVN_ERR(test_commit_txn(&not_rev, txn, "/A/B", pool));
+      SVN_ERR(svn_fs_abort_txn(txn, pool));
+    }
+  else
+    {
+      SVN_ERR(test_commit_txn(&new_rev, txn, NULL, pool));
+    }
 
   /* Now, let's try those in reverse.  Open two transactions */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, new_rev, pool));
@@ -5479,7 +5486,7 @@ commit_timestamp(const svn_test_opts_t *opts,
                           APR_HASH_KEY_STRING);
   SVN_TEST_ASSERT(!svn_date);
 
-  /* Commit that overwites a missing svn:date. */
+  /* Commit that overwrites a missing svn:date. */
   SVN_ERR(svn_fs_begin_txn(&txn, fs, rev, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/zig", pool));
@@ -5641,16 +5648,16 @@ dir_prop_merge(const svn_test_opts_t *opts,
     {
       SVN_ERR(test_commit_txn(&head_rev, top_txn, "/A", pool));
       SVN_ERR(svn_fs_abort_txn(top_txn, pool));
+
+      SVN_ERR(test_commit_txn(&head_rev, sub_txn, "/A/D", pool));
+      SVN_ERR(svn_fs_abort_txn(sub_txn, pool));
     }
   else
     {
       SVN_ERR(test_commit_txn(&head_rev, top_txn, NULL, pool));
+      SVN_ERR(test_commit_txn(&head_rev, sub_txn, NULL, pool));
     }
 
-  /* The inverted case is not that trivial to handle.  Hence, conflict.
-     Depending on the checking order, the reported conflict path differs. */
-  SVN_ERR(test_commit_txn(&head_rev, sub_txn, is_bdb ? "/A/D" : "/A", pool));
-  SVN_ERR(svn_fs_abort_txn(sub_txn, pool));
 
   return SVN_NO_ERROR;
 }
@@ -6596,9 +6603,9 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   svn_stringbuf_setempty(source);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
-                    svn_stream_from_stringbuf(dest, subpool),
-                    NULL, NULL, subpool, &delta_handler, &delta_baton);
+  svn_txdelta_apply2(svn_stream_from_stringbuf(source, subpool),
+                     svn_stream_from_stringbuf(dest, subpool),
+                     NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
@@ -6613,9 +6620,9 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   svn_stringbuf_set(source, old_content);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
-                    svn_stream_from_stringbuf(dest, subpool),
-                    NULL, NULL, subpool, &delta_handler, &delta_baton);
+  svn_txdelta_apply2(svn_stream_from_stringbuf(source, subpool),
+                     svn_stream_from_stringbuf(dest, subpool),
+                     NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
@@ -6630,9 +6637,9 @@ test_delta_file_stream(const svn_test_opts_t *opts,
   svn_stringbuf_set(source, new_content);
   svn_stringbuf_setempty(dest);
 
-  svn_txdelta_apply(svn_stream_from_stringbuf(source, subpool),
-                    svn_stream_from_stringbuf(dest, subpool),
-                    NULL, NULL, subpool, &delta_handler, &delta_baton);
+  svn_txdelta_apply2(svn_stream_from_stringbuf(source, subpool),
+                     svn_stream_from_stringbuf(dest, subpool),
+                     NULL, NULL, subpool, &delta_handler, &delta_baton);
   SVN_ERR(svn_txdelta_send_txstream(delta_stream,
                                     delta_handler,
                                     delta_baton,
@@ -7219,7 +7226,7 @@ test_cache_clear_during_stream(const svn_test_opts_t *opts,
    * Just to be sure, make it not too uniform to keep self-txdelta at bay. */
   SVN_ERR(svn_fs_apply_textdelta(&consumer_func, &consumer_baton,
                                  txn_root, "/foo", NULL, NULL, subpool));
-  stream = svn_txdelta_target_push(consumer_func, consumer_baton, 
+  stream = svn_txdelta_target_push(consumer_func, consumer_baton,
                                    svn_stream_empty(subpool), subpool);
   for (i = 0; i < 10000; ++ i)
     {
@@ -7369,6 +7376,106 @@ closest_copy_test_svn_4677(const svn_test_opts_t *opts,
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_closest_copy_file_replaced_with_dir(const svn_test_opts_t *opts,
+                                         apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_fs_txn_t *txn;
+  svn_fs_root_t *txn_root;
+  svn_fs_root_t *rev_root;
+  svn_revnum_t youngest_rev;
+  svn_fs_root_t *copy_root;
+  const char *copy_path;
+
+  /* Prepare a filesystem. */
+  SVN_ERR(svn_test__create_fs(&fs, "test-closest-copy-file-replaced-with-dir",
+                              opts, pool));
+
+  youngest_rev = 0;
+
+  /* Modeled after the case described in the thread:
+       "[PATCH] A test for "Can't get entries" error"
+       https://lists.apache.org/thread.html/693a95b0da834387e78a7f08df2392b634397d32f37428c81c02f8c5@%3Cdev.subversion.apache.org%3E
+  */
+  /* r1: Add a directory with a file. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, youngest_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/A", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/A/mu", pool));
+  SVN_ERR(test_commit_txn(&youngest_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(youngest_rev, 1);
+
+  /* r2: Copy the directory. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, youngest_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 1, pool));
+  SVN_ERR(svn_fs_copy(rev_root, "/A", txn_root, "/B", pool));
+  SVN_ERR(test_commit_txn(&youngest_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(youngest_rev, 2);
+
+  /* r3: Delete the file. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, youngest_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_delete(txn_root, "/B/mu", pool));
+  SVN_ERR(test_commit_txn(&youngest_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(youngest_rev, 3);
+
+  /* r4: Replace the file with a new directory containing a file. */
+  SVN_ERR(svn_fs_begin_txn2(&txn, fs, youngest_rev, 0, pool));
+  SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
+  SVN_ERR(svn_fs_make_dir(txn_root, "/B/mu", pool));
+  SVN_ERR(svn_fs_make_file(txn_root, "/B/mu/iota", pool));
+  SVN_ERR(test_commit_txn(&youngest_rev, txn, NULL, pool));
+  SVN_TEST_INT_ASSERT(youngest_rev, 4);
+
+  /* Test a couple of svn_fs_closest_copy() calls; the second call used
+     to fail with an unexpected SVN_ERR_FS_NOT_DIRECTORY error. */
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 2, pool));
+  SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, rev_root, "/B/mu", pool));
+
+  SVN_TEST_ASSERT(copy_root != NULL);
+  SVN_TEST_INT_ASSERT(svn_fs_revision_root_revision(copy_root), 2);
+  SVN_TEST_STRING_ASSERT(copy_path, "/B");
+
+  SVN_ERR(svn_fs_revision_root(&rev_root, fs, 4, pool));
+  SVN_ERR(svn_fs_closest_copy(&copy_root, &copy_path, rev_root, "/B/mu/iota", pool));
+
+  SVN_TEST_ASSERT(copy_root == NULL);
+  SVN_TEST_ASSERT(copy_path == NULL);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_unrecognized_ioctl(const svn_test_opts_t *opts,
+                        apr_pool_t *pool)
+{
+  svn_fs_t *fs;
+  svn_error_t *err;
+  svn_fs_ioctl_code_t code = {0};
+
+  SVN_ERR(svn_test__create_fs(&fs, "test-unrecognized-ioctl", opts, pool));
+
+  code.fs_type = "NON-EXISTING";
+  code.code = 98765;
+  err = svn_fs_ioctl(fs, code, NULL, NULL, NULL, NULL, pool, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE);
+
+  code.fs_type = "NON-EXISTING";
+  code.code = 98765;
+  err = svn_fs_ioctl(NULL, code, NULL, NULL, NULL, NULL, pool, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_UNKNOWN_FS_TYPE);
+
+  code.fs_type = opts->fs_type;
+  code.code = 98765;
+  err = svn_fs_ioctl(NULL, code, NULL, NULL, NULL, NULL, pool, pool);
+  SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE);
+
+  return SVN_NO_ERROR;
+}
+
 /* ------------------------------------------------------------------------ */
 
 /* The test table.  */
@@ -7513,6 +7620,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test rep-sharing on content rather than SHA1"),
     SVN_TEST_OPTS_PASS(closest_copy_test_svn_4677,
                        "test issue SVN-4677 regression"),
+    SVN_TEST_OPTS_PASS(test_closest_copy_file_replaced_with_dir,
+                       "svn_fs_closest_copy after replacing file with dir"),
+    SVN_TEST_OPTS_PASS(test_unrecognized_ioctl,
+                       "test svn_fs_ioctl with unrecognized code"),
     SVN_TEST_NULL
   };
 

@@ -299,7 +299,7 @@
   $1 = svn_swig_rb_hash_to_apr_hash_svn_string($input, _global_pool);
   _global_pool = NULL;
   if (!NIL_P(rb_pool)) {
-    if (NIL_P($1)) {
+    if ($1 == NULL) {
       svn_swig_rb_destroy_pool(rb_pool);
     } else {
       svn_swig_rb_set_pool_for_no_swig_type($input, rb_pool);
@@ -310,7 +310,7 @@
 
 %typemap(out) apr_hash_t *PROPHASH
 {
-  %append_output(svn_swig_rb_apr_hash_to_hash_svn_string($1));
+  $result = svn_swig_rb_apr_hash_to_hash_svn_string($1);
 }
 #endif
 
@@ -326,10 +326,8 @@
 #ifdef SWIGRUBY
 %typemap(out) apr_hash_t *CHANGED_PATH_HASH
 {
-  VALUE rb_changed_path_hash;
-  rb_changed_path_hash =
+  $result =
     svn_swig_rb_apr_hash_to_hash_swig_type($1, "svn_log_changed_path_t *");
-  %append_output(rb_changed_path_hash);
 }
 
 %apply apr_hash_t *CHANGED_PATH_HASH {
@@ -373,7 +371,7 @@
     svn_swig_rb_hash_to_apr_hash_string($input, _global_pool);
   _global_pool = NULL;
   if (!NIL_P(rb_pool)) {
-    if (NIL_P($1)) {
+    if ($1 == NULL) {
       svn_swig_rb_destroy_pool(rb_pool);
     } else {
       svn_swig_rb_set_pool_for_no_swig_type($input, rb_pool);
@@ -527,7 +525,10 @@
   apr_array_header_t **logfiles,
   apr_array_header_t **names_p,
   apr_array_header_t **targets_p,
-  apr_array_header_t **args_p
+  apr_array_header_t **args_p,
+  apr_array_header_t **props_conflicted,
+  apr_array_header_t **possible_moved_to_repos_relpaths,
+  apr_array_header_t **possible_moved_to_abspaths
 };
 
 /* -----------------------------------------------------------------------
@@ -574,6 +575,40 @@
 #ifdef SWIGRUBY
 %typemap(argout) apr_array_header_t **result_revs {
   %append_output(svn_swig_rb_apr_array_to_array_svn_rev(*$1));
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **options
+   For svn_client_conflict_option_t
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **options {
+  %append_output
+    (svn_swig_py_pointerlist_to_list(*$1,
+                                     $descriptor(svn_client_conflict_option_t *),
+                                     _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
+}
+#endif
+
+/* -----------------------------------------------------------------------
+   apr_array_header_t **versions_p
+   For svn_client__shelf_get_all_versions
+*/
+
+#ifdef SWIGPYTHON
+%typemap(argout) apr_array_header_t **versions_p {
+  %append_output
+    (svn_swig_py_pointerlist_to_list(*$1,
+                                     $descriptor(svn_client__shelf_version_t *),
+                                     _global_py_pool));
+  if (PyErr_Occurred()) {
+    SWIG_fail;
+  }
 }
 #endif
 
@@ -723,7 +758,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST
 {
-  %append_output(svn_swig_rb_prop_apr_array_to_hash_prop($1));
+  $result = svn_swig_rb_prop_apr_array_to_hash_prop($1);
 }
 
 %typemap(in) apr_array_header_t *PROP_LIST_MAY_BE_NULL
@@ -741,7 +776,7 @@
 
 %typemap(out) apr_array_header_t *PROP_LIST_MAY_BE_NULL
 {
-  %append_output($1 ? svn_swig_rb_prop_apr_array_to_hash_prop($1) : Qnil);
+  $result = $1 ? svn_swig_rb_prop_apr_array_to_hash_prop($1) : Qnil;
 }
 
 %apply apr_array_header_t *PROP_LIST {

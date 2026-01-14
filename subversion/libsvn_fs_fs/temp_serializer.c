@@ -38,7 +38,7 @@
 #include "cached_data.h"
 
 /* Utility to encode a signed NUMBER into a variable-length sequence of
- * 8-bit chars in KEY_BUFFER and return the last writen position.
+ * 8-bit chars in KEY_BUFFER and return the last written position.
  *
  * Numbers will be stored in 7 bits / byte and using byte values above
  * 32 (' ') to make them combinable with other string by simply separating
@@ -1013,13 +1013,13 @@ slowly_replace_dir_entry(void **data,
         APR_ARRAY_IDX(entries, idx, svn_fs_dirent_t *)
           = replace_baton->new_entry;
       else
-        svn_sort__array_insert(entries, &replace_baton->new_entry, idx);
+        SVN_ERR(svn_sort__array_insert2(entries, &replace_baton->new_entry, idx));
     }
   else
     {
       /* Remove the old ENTRY. */
       if (entry)
-        svn_sort__array_delete(entries, idx, 1);
+        SVN_ERR(svn_sort__array_delete2(entries, idx, 1));
     }
 
   return svn_fs_fs__serialize_dir_entries(data, data_len, dir, pool);

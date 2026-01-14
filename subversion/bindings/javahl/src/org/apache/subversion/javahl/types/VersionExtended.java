@@ -71,7 +71,7 @@ public class VersionExtended
      * @return The canonical host triplet (arch-vendor-osname) of the
      * system where libsvn_subr was compiled.
      * <p>
-     * <b>Note:</b> On Unix-like systems (includng Mac OS X), this string
+     * <b>Note:</b> On Unix-like systems (including Mac OS X), this string
      * is the same as the output of the config.guess script for the
      * underlying Subversion libraries.
      */
@@ -258,7 +258,7 @@ public class VersionExtended
     };
 
     /**
-     * Slot for the adress of the native peer.
+     * Slot for the address of the native peer.
      * The JNI code is the only user of this member.
      */
     private long cppAddr = 0;

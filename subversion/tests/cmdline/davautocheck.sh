@@ -88,7 +88,7 @@ PYTHON=${PYTHON:-python}
 
 SCRIPTDIR=$(dirname $0)
 SCRIPT=$(basename $0)
-STOPSCRIPT=$SCRIPTDIR/.$SCRIPT.stop
+STOPSCRIPT=$(pwd)/.$SCRIPT.stop
 
 trap stop_httpd_and_die HUP TERM INT
 
@@ -300,6 +300,9 @@ LOAD_MOD_AUTH=$(get_loadmodule_config mod_auth) \
 say "Monolithic Auth module not found. Assuming we run against Apache 2.1+"
 LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_basic)" \
     || fail "Auth_Basic module not found."
+# FIXME: Uncomment to test digest authentication:
+# LOAD_MOD_AUTH="$(get_loadmodule_config mod_auth_digest)" \
+#     || fail "Auth_Digest module not found."
 LOAD_MOD_ACCESS_COMPAT="$(get_loadmodule_config mod_access_compat)" \
     && {
 say "Found modules for Apache 2.3.0+"
@@ -375,47 +378,62 @@ if [ ${USE_SSL:+set} ]; then
   BASE_URL="https://localhost:$HTTPD_PORT"
 # A self-signed certifcate for localhost that expires after 2039-12-30
 # generated via:
-#   openssl req -new -x509 -nodes -days 10000 -out cert.pem -keyout cert-key.pem
+#   openssl req -x509 -newkey rsa:2048 -nodes -days 10000 \
+#     -out cert.pem -keyout cert-key.pem -subj "/C=XX/CN=localhost"
 # This is embedded, rather than generated on-the-fly, to avoid consuming
 # system entropy.
   SSL_CERTIFICATE_FILE="$HTTPD_ROOT/cert.pem"
 cat > "$SSL_CERTIFICATE_FILE" <<__EOF__
 -----BEGIN CERTIFICATE-----
-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
+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
 -----END CERTIFICATE-----
 __EOF__
   SSL_CERTIFICATE_KEY_FILE="$HTTPD_ROOT/cert-key.pem"
 cat > "$SSL_CERTIFICATE_KEY_FILE" <<__EOF__
------BEGIN RSA PRIVATE KEY-----
-MIICXQIBAAKBgQD2QHHq2tRZCcU0Otb51TXn3MRtJYa2zdJwhMgxMsTgRyUyHnRI
-/YGckOd62Q07wmE9c6bgpmJd0m6BYCTQ2alrCECTfFXEeHk3zDDI+TcgzHv5i76y
-Byx3QOP1grV8hrOBNSn8OyRUYm+q76SA1jE+/NaL86wEtb9k2n6ylPOgBwIDAQAB
-AoGBAJBzhV+rNl10qcXVrj2noJN+oYsVNE0Pt55hhb22dl7J3TvlOXmHm/xn1CHw
-KR8hC0GtEfs+Hv3CbyhdabtJs2L7QxO5VjgLO+onBmAOw1iPF9DjbMcAlFJnoOWI
-HYwANOWGp2jRxL5cHUfrBVCgUISen3VUZEnQkr4n/Zty/QEBAkEA/XIZ3oh5MiFA
-o4IaFaFQpBc6K/e6fnM0217scaPvfZiYS1k9Fx/UQTAGsxJOnhnsi04WgHPMS5wB
-RP4/PiIGIQJBAPi7yIKKS4E8hWBZL+79TI8Zm2uehGCB8V6m9k7e3I82To9Tgcow
-qZHsAPtN50fg85I94L3REg2FSQlDlzbMkScCQQC2pweLv/EQNrS94eJomkRirban
-vzYxMVfzjRp737iWXGXNT7feNXsjq7f4UAZGnMpDrvg6hLnD999WWKE9ZwnhAkBl
-c9p9/EB9zxyrxtT5StGuUIiHJdnirz2vGLTASMB3nXP/m9UFjkGr5jIkTos2Uzel
-/50qbxtI7oNyxuHnlRrjAkASfQ51kaBcABYRiacesQi94W/kE3MkgHWkCXNb6//u
-gxk/ezALZ8neJzJudzRkX3auGwH1ne9vCM1ED5dkM54H
------END RSA PRIVATE KEY-----
+-----BEGIN PRIVATE KEY-----
+MIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCT40UroK2AX0xX
+3X9KT0SNaScMdbDhoU7ztXGtG435uPALPJo0nc71WPWJZr7w5jamX+IPDGG7rPHU
+WpwOhlsRAfW4nc0fbitP8+6SWBcyC3my/tK7ZBktOCavn5WmEpSOYN3yq8zmlLAL
+FNzy4X2Oj3HPXQdQzfkHXEr759sf+abuZ3CHB/Vc6xmZv05dhM5kciRIC1LcWC3j
+OhfgCgv7b0FBkQtHyWIcz/m1RfC5Hnrgq+CH/0VmxhYX4HrNmsmei1g6ToJ30XO5
++BcA+wvLeyVvs9mZvTXBIv91zeuPz1k0FC56FZUBXDLAn/KcFOidi0+joUL4lGbn
+a3pWHye1AgMBAAECggEAG6yj/Q4MacFrn+WrNFSxF2VeEU7U0uREygZiR2qontqk
+0PV+RepiGDeVeyjnAl2STIAU5YwDngM3He321iD+WahsOygMgp0zLbsQIgKqFIth
+MsXM2ZRZwcSIOMU8U9+WPS6TWh4cMeoRJ4G39xuLS2o8efmGrPBecaorvggdUVY1
+mYx5zhM6KzUK7pdPNbTwK8Zhrb3ud60K8TNwzZqsJRod21vlIEph0lDAyjf1fNry
+lLV/qwinB/zUru6rX0ydtlbmyS7spIJjcvxI3wlJjqBZueJndU3aQKXA5qFtQZFv
+42niOzqE9Bb/VT53I9QpaysLp0OAtkkJIJb7+60UAQKBgQDOzGuIGzxhAzsrtjG+
+lmp3jCU7+ZB5EDv48kJWPheilufgGt8Z32qSmhCDQa3kIj3ch6ZvIHtu6+DxB3y1
+hjRPP4uf2L3k9gIcpaJ5PWRW9ZO2DtfkADfDPDPb9k3zQKLqjEh53xsERl12DN3l
+IWBjLp7MgGtLyWLPHy/Dl1BclQKBgQC3Er6NMJMhffDtpWKF/Mm521YlLEEmfzhf
+umUYR7LAO9GhKX9VhBn3KC8dt2CdGsrr1u6j/fgFjwVG4pBPQePI9og2oDwpitkG
+z4n4tK5oMApUR2PdDs5utbInahOCrw4CV8TobvXiwMHhWiD65S17Qr6dI+V5vEQk
+MG84G/e2oQKBgFAl+icuJyCSWASBAJaVRX4/2s570vqYyCWb/wnd1ts1EXlR8NXe
+OTfIbk3wzqx0ePVXvbGkLTK4SN4hwLu539w3DK5PGon6rqbbqzTCDnmFhFIzPokn
+bHVGh/LgayW0D3BIHm7dgWMOwnpWUknTvb+y+ejYfL1Kt/j+ZUyxAHxhAoGAGncJ
+ONvmyRatt40K+xeaCdYdU+5b1LbbbWtCpgnnW0bKfSPElpYsMsCKXx9dRhjTcNh3
+UxmpuxP7zU1/UxXRWgHZmxv61n6N9SAXb+6er80SETDozNIRIYv+nxgEjgXEXq5V
+dsxjm04GOQ+QaPSsaH8zkv/Xcou2xgyCZ3gTjUECgYBRuZqP6BaLmW5pX8bjhmP7
+6L9iIAX6pdSi85VG3oioklatrH653/4x8vZAg2ucZ4uRneT+dEC86FKeZ5q5K9VT
+nX797MoUmqwXunURyu7Uxp2e3PxFQeH1MQzH7LqwUymcNApbUmTwYNXEV3zrSieO
+2RdWoaRi0LRz496Z7fpi1g==
+-----END PRIVATE KEY-----
 __EOF__
   SSL_MAKE_VAR="SSL_CERT=$SSL_CERTIFICATE_FILE"
   SSL_TEST_ARG="--ssl-cert $SSL_CERTIFICATE_FILE"
@@ -427,6 +445,22 @@ $HTPASSWD -b  $HTTPD_USERS jconstant rayjandom
 $HTPASSWD -b  $HTTPD_USERS __dumpster__ __loadster__
 $HTPASSWD -b  $HTTPD_USERS JRANDOM   rayjandom
 $HTPASSWD -b  $HTTPD_USERS JCONSTANT rayjandom
+
+# FIXME: Uncomment to test digest authentication:
+# rm -f $HTTPD_USERS
+# gen_digest_authn() {
+#   # This is what `htdigest` does when we're not looking.
+#   r="Subversion Repository"
+#   p="$1:$r:"
+#   s="$1:$r:$2"
+#   $PYTHON -c "from hashlib import md5; print('$p' + md5(b'$s').hexdigest())" \
+#           >> $HTTPD_USERS
+# }
+# gen_digest_authn jrandom   rayjandom
+# gen_digest_authn jconstant rayjandom
+# gen_digest_authn __dumpster__ __loadster__
+# gen_digest_authn JRANDOM   rayjandom
+# gen_digest_authn JCONSTANT rayjandom
 
 say "Adding groups for mod_authz_svn tests"
 cat > "$HTTPD_GROUPS" <<__EOF__
@@ -547,10 +581,12 @@ Alias /fsdavroot $ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/fsdavroot
 
 <Location /svn-test-work/repositories>
 __EOF__
-location_common() {
+location_common_without_authz() {
+# FIXME: To test digest authentication, replace 'AuthType Basic' with:
+#    AuthType          Digest
+#    AuthDigestProvider file
 cat >> "$HTTPD_CFG" <<__EOF__
   DAV               svn
-  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
   AuthType          Basic
   AuthName          "Subversion Repository"
   AuthUserFile      $HTTPD_USERS
@@ -558,6 +594,12 @@ cat >> "$HTTPD_CFG" <<__EOF__
   SVNCacheRevProps  ${CACHE_REVPROPS_SETTING}
   SVNListParentPath On
   SVNBlockRead      ${BLOCK_READ_SETTING}
+__EOF__
+}
+location_common() {
+location_common_without_authz
+cat >> "$HTTPD_CFG" <<__EOF__
+  AuthzSVNAccessFile "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/authz"
 __EOF__
 }
 location_common
@@ -583,6 +625,14 @@ cat >> "$HTTPD_CFG" <<__EOF__
   Require           valid-user
   ${SVN_PATH_AUTHZ_LINE}
 </Location>
+<Location /svn-test-work/local_tmp/trojan>
+__EOF__
+location_common
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNPath           "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp/trojan"
+  Require           valid-user
+  ${SVN_PATH_AUTHZ_LINE}
+</Location>
 <Location /authz-test-work/anon>
   DAV               svn
   SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/local_tmp"
@@ -601,6 +651,15 @@ cat >> "$HTTPD_CFG" <<__EOF__
     Allow from all
   </IfModule>
   ${SVN_PATH_AUTHZ_LINE}
+</Location>
+<Location /authz-test-work/in-repos-authz>
+__EOF__
+location_common_without_authz
+cat >> "$HTTPD_CFG" <<__EOF__
+  SVNParentPath     "$ABS_BUILDDIR/subversion/tests/cmdline/svn-test-work/repositories"
+  Require           valid-user
+  Satisfy Any
+  AuthzSVNReposRelativeAccessFile "^/authz"
 </Location>
 <Location /authz-test-work/mixed>
 __EOF__

@@ -337,42 +337,36 @@ detect_changed(svn_repos_revision_access_level_t *access_level,
       if (   (change->change_kind == svn_fs_path_change_add)
           || (change->change_kind == svn_fs_path_change_replace))
         {
-          const char *copyfrom_path = change->copyfrom_path;
-          svn_revnum_t copyfrom_rev = change->copyfrom_rev;
-
           /* the following is a potentially expensive operation since on FSFS
              we will follow the DAG from ROOT to PATH and that requires
              actually reading the directories along the way. */
           if (!change->copyfrom_known)
             {
-              SVN_ERR(svn_fs_copied_from(&copyfrom_rev, &copyfrom_path,
+              SVN_ERR(svn_fs_copied_from(&change->copyfrom_rev, &change->copyfrom_path,
                                         root, path, iterpool));
               change->copyfrom_known = TRUE;
             }
 
-          if (copyfrom_path && SVN_IS_VALID_REVNUM(copyfrom_rev))
+          if (change->copyfrom_path && SVN_IS_VALID_REVNUM(change->copyfrom_rev))
             {
-              svn_boolean_t readable = TRUE;
-
               if (callbacks->authz_read_func)
                 {
                   svn_fs_root_t *copyfrom_root;
+                  svn_boolean_t readable;
 
                   SVN_ERR(svn_fs_revision_root(&copyfrom_root, fs,
-                                               copyfrom_rev, iterpool));
+                                               change->copyfrom_rev, iterpool));
                   SVN_ERR(callbacks->authz_read_func(&readable,
                                                      copyfrom_root,
-                                                     copyfrom_path,
+                                                     change->copyfrom_path,
                                                      callbacks->authz_read_baton,
                                                      iterpool));
                   if (! readable)
-                    found_unreadable = TRUE;
-                }
-
-              if (readable)
-                {
-                  change->copyfrom_path = copyfrom_path;
-                  change->copyfrom_rev = copyfrom_rev;
+                    {
+                      found_unreadable = TRUE;
+                      change->copyfrom_path = NULL;
+                      change->copyfrom_rev = SVN_INVALID_REVNUM;
+                    }
                 }
             }
         }
@@ -655,7 +649,7 @@ fs_mergeinfo_changed(svn_mergeinfo_catalog_t *deleted_mergeinfo_catalog,
      because that greatly influences the costs for log processing.
      So, it is faster to iterate over the changes twice - in the worst
      case b/c most times there is no m/i at all and we exit out early
-     without any overhead. 
+     without any overhead.
    */
   while (change && (!any_mergeinfo || !any_copy))
     {
@@ -999,7 +993,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
       /* Issue #4022 'svn log -g interprets change in inherited mergeinfo due
          to move as a merge': A copy where the source and destination inherit
          mergeinfo from the same parent means the inherited mergeinfo of the
-         source and destination will differ, but this diffrence is not
+         source and destination will differ, but this difference is not
          indicative of a merge unless the mergeinfo on the inherited parent
          has actually changed.
 
@@ -1053,7 +1047,7 @@ get_combined_mergeinfo_changes(svn_mergeinfo_t *added_mergeinfo,
             continue;
         }
 
-      /* Compare, constrast, and combine the results. */
+      /* Compare, contrast, and combine the results. */
       SVN_ERR(svn_mergeinfo_diff2(&deleted, &added, prev_mergeinfo,
                                   mergeinfo, FALSE, result_pool, iterpool));
       SVN_ERR(svn_mergeinfo_merge2(*deleted_mergeinfo, deleted,
@@ -1227,7 +1221,7 @@ typedef struct interesting_merge_baton_t
   void *inner_baton;
 } interesting_merge_baton_t;
 
-/* Implements svn_repos_path_change_receiver_t. 
+/* Implements svn_repos_path_change_receiver_t.
  * *BATON is a interesting_merge_baton_t.
  *
  * If BATON->REV a merged revision that is not already part of
@@ -1725,8 +1719,8 @@ do_logs(svn_fs_t *fs,
         int limit,
         svn_boolean_t strict_node_history,
         svn_boolean_t include_merged_revisions,
-        svn_boolean_t handling_merged_revisions,
         svn_boolean_t subtractive_merge,
+        svn_boolean_t handling_merged_revisions,
         svn_boolean_t ignore_missing_locations,
         const apr_array_header_t *revprops,
         svn_boolean_t descending_order,
@@ -1909,7 +1903,7 @@ store_search(svn_mergeinfo_t processed,
              apr_pool_t *scratch_pool)
 {
   /* We add 1 to end so that we can use the mergeinfo API to handle
-     singe revisions where HIST_START is equal to HIST_END. */
+     single revisions where HIST_START is equal to HIST_END. */
   svn_revnum_t start = hist_start <= hist_end ? hist_start : hist_end;
   svn_revnum_t end = hist_start <= hist_end ? hist_end + 1 : hist_start + 1;
   svn_mergeinfo_t mergeinfo = svn_hash__make(scratch_pool);

@@ -261,7 +261,7 @@ svn_fs_bdb__locks_get(svn_fs_t *fs,
   lookup_len = strlen(lookup_path);
 
   /* As long as the prefix of the returned KEY matches LOOKUP_PATH we
-     know it is either LOOKUP_PATH or a decendant thereof.  */
+     know it is either LOOKUP_PATH or a descendant thereof.  */
   while ((! db_err)
          && lookup_len < key.size
          && strncmp(lookup_path, key.data, lookup_len) == 0)

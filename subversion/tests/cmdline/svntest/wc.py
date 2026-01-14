@@ -28,6 +28,7 @@ import sys
 import re
 import logging
 import pprint
+import io
 
 if sys.version_info[0] >= 3:
   # Python >=3.0
@@ -92,30 +93,30 @@ _re_parse_status = re.compile('^([?!MACDRUGXI_~ ][MACDRUG_ ])'
                               '([KOBT ])'
                               '([C ]) '
                               '([* ]) +'
-                              '((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
+                              r'((?P<wc_rev>\d+|-|\?) +(\d|-|\?)+ +(\S+) +)?'
                               '(?P<path>.+)$')
 
 _re_parse_status_ex = re.compile('^      ('
-               '(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
-              '|(  \> swapped places with (?P<swapped_with>.+).*)'
-              '|(\>   (?P<tc>.+))'
+               r'(  \> moved (from (?P<moved_from>.+)|to (?P<moved_to>.*)))'
+              r'|(  \> swapped places with (?P<swapped_with>.+).*)'
+              r'|(\>   (?P<tc>.+))'
   ')$')
 
 _re_parse_skipped = re.compile("^(Skipped[^']*) '(.+)'( --.*)?\n")
 
 _re_parse_summarize = re.compile("^([MAD ][M ])      (.+)\n")
 
-_re_parse_checkout = re.compile('^([RMAGCUDE_ B][MAGCUDE_ ])'
-                                '([B ])'
-                                '([CAUD ])\s+'
-                                '(.+)')
-_re_parse_co_skipped = re.compile('^(Restored|Skipped|Removed external)'
-                                  '\s+\'(.+)\'(( --|: ).*)?')
-_re_parse_co_restored = re.compile('^(Restored)\s+\'(.+)\'')
+_re_parse_checkout = re.compile(r'^([RMAGCUDE_ B][MAGCUDE_ ])'
+                                r'([B ])'
+                                r'([CAUD ])\s+'
+                                r'(.+)')
+_re_parse_co_skipped = re.compile(r'^(Restored|Skipped|Removed external)'
+                                  r'\s+\'(.+)\'(( --|: ).*)?')
+_re_parse_co_restored = re.compile(r'^(Restored)\s+\'(.+)\'')
 
 # Lines typically have a verb followed by whitespace then a path.
-_re_parse_commit_ext = re.compile('^(([A-Za-z]+( [a-z]+)*)) \'(.+)\'( --.*)?')
-_re_parse_commit = re.compile('^(\w+(  \(bin\))?)\s+(.+)')
+_re_parse_commit_ext = re.compile("^(([A-Za-z]+( [a-z]+)*)) '(.+)'( --.*)?")
+_re_parse_commit = re.compile(r'^(\w+(  \(bin\))?)\s+(.+)')
 
 #rN: eids 0 15 branches 4
 _re_parse_eid_header = re.compile('^r(-1|[0-9]+): eids ([0-9]+) ([0-9]+) '
@@ -589,7 +590,7 @@ class State:
 
     desc = { }
     for line in lines:
-      if line.startswith('DBG:'):
+      if line.startswith('DBG:') or re.match('^Fetching text bases [.]+done$', line):
         continue
 
       match = _re_parse_checkout.search(line)
@@ -686,11 +687,20 @@ class State:
         if os.path.isfile(node):
           try:
             if keep_eol_style:
-              contents = open(node, 'r', newline='').read()
+              with io.open(node, 'r', newline='', encoding='utf-8') as fp:
+                contents = fp.read()
             else:
-              contents = open(node, 'r').read()
+              with io.open(node, 'r', encoding='utf-8') as fp:
+                contents = fp.read()
+            if not isinstance(contents, str):
+              # Python 2: contents is read as an unicode object,
+              # but we expect it is a str.
+              contents = contents.encode()
           except:
-            contents = open(node, 'rb').read()
+            # If the file contains non UTF-8 character, we treat its
+            # content as binary represented as a bytes object.
+            with open(node, 'rb') as fp:
+              contents = fp.read()
         else:
           contents = None
         desc[repos_join(parent, name)] = StateItem(contents=contents)
@@ -829,7 +839,7 @@ class State:
       match = _re_parse_eid_ele.search(line)
       if match and match.group(2) != 'none':
         eid = match.group(1)
-        parent_eid = match.group(3) 
+        parent_eid = match.group(3)
         path = match.group(4)
         if path == '.':
           path = ''
@@ -851,7 +861,7 @@ class State:
     add_to_desc(eids, desc, branch_id)
 
     return cls('', desc)
-  
+
 
 class StateItem:
   """Describes an individual item within a working copy.

@@ -25,6 +25,7 @@
 
 #include <zlib.h>
 
+#include "svn_checksum.h"
 #include "svn_error.h"
 #include "svn_io.h"
 
@@ -364,6 +365,94 @@ test_checksummed_stream_reset(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+do_bench_test(apr_size_t blocksize, svn_checksum_kind_t kind, apr_pool_t *pool)
+{
+  svn_checksum_ctx_t *ctx = svn_checksum_ctx_create(kind, pool);
+  svn_checksum_t *checksum;
+  char *buf = apr_palloc(pool, blocksize);
+  apr_time_t start;
+  apr_size_t count = 0;
+  apr_uint32_t seed = 67;
+  apr_size_t i;
+
+  for (i = 0; i < blocksize; i++)
+    buf[i] = (char)svn_test_rand(&seed);
+
+  start = apr_time_now();
+
+  while (apr_time_now() < start + apr_time_from_sec(1))
+    {
+      SVN_ERR(svn_checksum_update(ctx, buf, blocksize));
+      count++;
+    }
+
+  SVN_ERR(svn_checksum_final(&checksum, ctx, pool));
+
+  {
+    apr_size_t bytes_in_gb = 1024 * 1024 * 1024;
+    apr_size_t bytes = count * blocksize;
+
+    /* Calling svn_checksum_serialize() is the simplest way to stringify
+     * checksum kind yet, although it also includes extra information such as
+     * the digest itself. */
+    const char *checksum_str = svn_checksum_serialize(checksum, pool, pool);
+
+    fprintf(stderr,
+            "%s: processed %ld blocks of %ld bytes (%.2f GB) in 1 second\n",
+            checksum_str, count, blocksize, (double)bytes / bytes_in_gb);
+  }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_checksum_ctx_no_updates(apr_pool_t *pool)
+{
+  svn_checksum_kind_t kind;
+
+  for (kind = svn_checksum_md5; kind <= svn_checksum_fnv1a_32x4; ++kind)
+    {
+      svn_checksum_ctx_t *ctx;
+      svn_checksum_t *checksum1, *checksum2;
+
+      ctx = svn_checksum_ctx_create(kind, pool);
+      SVN_ERR(svn_checksum_final(&checksum1, ctx, pool));
+
+      ctx = svn_checksum_ctx_create(kind, pool);
+      SVN_ERR(svn_checksum_update(ctx, "", 0));
+      SVN_ERR(svn_checksum_final(&checksum2, ctx, pool));
+
+      SVN_TEST_INT_ASSERT(svn_checksum_match(checksum1, checksum2), TRUE);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_checksum_performance(apr_pool_t *pool)
+{
+  SVN_ERR(do_bench_test(/* 16 KB */ 16 * (1 << 10),
+                        svn_checksum_sha1, pool));
+  SVN_ERR(do_bench_test(/* 1 MB  */  1 * (1 << 20),
+                        svn_checksum_sha1, pool));
+  SVN_ERR(do_bench_test(/* 64 MB */ 64 * (1 << 20),
+                        svn_checksum_sha1, pool));
+  SVN_ERR(do_bench_test(/* 16 B  */ 16,
+                        svn_checksum_sha1, pool));
+
+  SVN_ERR(do_bench_test(/* 16 KB */ 16 * (1 << 10),
+                        svn_checksum_md5, pool));
+  SVN_ERR(do_bench_test(/* 1 MB  */  1 * (1 << 20),
+                        svn_checksum_md5, pool));
+  SVN_ERR(do_bench_test(/* 64 MB */ 64 * (1 << 20),
+                        svn_checksum_md5, pool));
+  SVN_ERR(do_bench_test(/* 16 B  */ 16,
+                        svn_checksum_md5, pool));
+
+  return SVN_NO_ERROR;
+}
+
 /* An array of all test functions */
 
 static int max_threads = 1;
@@ -389,6 +478,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "read from checksummed stream"),
     SVN_TEST_PASS2(test_checksummed_stream_reset,
                    "reset checksummed stream"),
+    SVN_TEST_PASS2(test_checksum_performance,
+                   "test checksum performance"),
+    SVN_TEST_PASS2(test_checksum_ctx_no_updates,
+                   "test checksum context without updates"),
     SVN_TEST_NULL
   };
 

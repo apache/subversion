@@ -616,7 +616,7 @@ get_best_connection(report_context_t *ctx)
     }
   else
     {
-#if SERF_VERSION_AT_LEAST(1, 4, 0)
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
       /* Often one connection is slower than others, e.g. because the server
          process/thread has to do more work for the particular set of requests.
          In the worst case, when REQUEST_COUNT_TO_RESUME requests are queued
@@ -2223,7 +2223,7 @@ process_buffer(update_delay_baton_t *udb,
 }
 
 
-/* Delaying wrapping reponse handler, to avoid creating too many
+/* Delaying wrapping response handler, to avoid creating too many
    requests to deliver efficiently */
 static svn_error_t *
 update_delay_handler(serf_request_t *request,

@@ -159,6 +159,13 @@ typedef struct fs_library_vtable_t
   /* For svn_fs_info_fsfs_dup(). */
   void *(*info_fsap_dup)(const void *fsap_info,
                          apr_pool_t *result_pool);
+
+  svn_error_t *(*ioctl)(svn_fs_ioctl_code_t ctlcode,
+                        void *input, void **output_p,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 } fs_library_vtable_t;
 
 /* This is the type of symbol an FS module defines to fetch the
@@ -176,18 +183,6 @@ typedef svn_error_t *(*fs_init_func_t)(const svn_version_t *loader_version,
                                        fs_library_vtable_t **vtable,
                                        apr_pool_t* common_pool);
 
-/* Here are the declarations for the FS module init functions.  If we
-   are using DSO loading, they won't actually be linked into
-   libsvn_fs.  Note that these private functions have a common_pool
-   parameter that may be used for fs module scoped variables such as
-   the bdb cache.  This will be the same common_pool that is passed
-   to the create and open functions and these init functions (as well
-   as the open and create functions) are globally serialized so that
-   they have exclusive access to the common_pool. */
-#include "../libsvn_fs_base/fs_init.h"
-#include "../libsvn_fs_fs/fs_init.h"
-#include "../libsvn_fs_x/fs_init.h"
-
 
 
 /*** vtable types for the abstract FS objects ***/
@@ -200,12 +195,12 @@ typedef struct fs_vtable_t
   svn_error_t *(*revision_prop)(svn_string_t **value_p, svn_fs_t *fs,
                                 svn_revnum_t rev, const char *propname,
                                 svn_boolean_t refresh,
-                                apr_pool_t *result_pool, 
+                                apr_pool_t *result_pool,
                                 apr_pool_t *scratch_pool);
   svn_error_t *(*revision_proplist)(apr_hash_t **table_p, svn_fs_t *fs,
                                     svn_revnum_t rev,
                                     svn_boolean_t refresh,
-                                    apr_pool_t *result_pool, 
+                                    apr_pool_t *result_pool,
                                     apr_pool_t *scratch_pool);
   svn_error_t *(*change_rev_prop)(svn_fs_t *fs, svn_revnum_t rev,
                                   const char *name,
@@ -266,6 +261,12 @@ typedef struct fs_vtable_t
   svn_error_t *(*bdb_set_errcall)(svn_fs_t *fs,
                                   void (*handler)(const char *errpfx,
                                                   char *msg));
+  svn_error_t *(*ioctl)(svn_fs_t *fs, svn_fs_ioctl_code_t ctlcode,
+                        void *input, void **output_p,
+                        svn_cancel_func_t cancel_func,
+                        void *cancel_baton,
+                        apr_pool_t *result_pool,
+                        apr_pool_t *scratch_pool);
 } fs_vtable_t;
 
 

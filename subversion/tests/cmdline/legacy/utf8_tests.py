@@ -4,7 +4,7 @@
 #  utf8_tests.py:  testing the svn client's utf8 (i18n) handling
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -143,7 +143,7 @@ else:
 # Also check that the environment contains the expected locale settings
 # either by default, or because we set them above.
 if localematch:
-  localeregex = re.compile('^en_US\.ISO-?8859-1$', re.I)
+  localeregex = re.compile(r'^en_US\.ISO-?8859-1$', re.I)
   for env in [ 'LC_ALL', 'LC_CTYPE', 'LANG' ]:
     env_value = os.getenv(env)
     if env_value:

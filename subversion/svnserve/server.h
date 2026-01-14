@@ -71,7 +71,7 @@ typedef struct repository_t {
 #endif
 
   enum access_type auth_access; /* access granted to authenticated users */
-  enum access_type anon_access; /* access granted to annonymous users */
+  enum access_type anon_access; /* access granted to anonymous users */
 
 } repository_t;
 

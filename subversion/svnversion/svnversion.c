@@ -124,7 +124,10 @@ check_lib_versions(void)
  * program.  Obviously we don't want to have to run svn when building svn.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   const char *wc_path, *trail_url;
   const char *local_abspath;
@@ -146,9 +149,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
        N_("no progress (only errors) to stderr")},
       {0,             0,  0,  0}
     };
+  const char **argv;
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -289,7 +295,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

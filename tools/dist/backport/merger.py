@@ -151,13 +151,13 @@ def log_message_file(logmsg):
     logmsg_file.write(logmsg)
     logmsg_file.flush()
     yield logmsg_file.name
-  
+
 def merge(entry, expected_stderr=None, *, commit=False):
   """Merges ENTRY into the working copy at cwd.
 
   Do not commit the result, unless COMMIT is true.  When committing,
   remove ENTRY from its STATUS file prior to committing.
-  
+
   EXPECTED_STDERR will be passed to run_svn() for the actual 'merge' command."""
 
   assert isinstance(entry, backport.status.StatusEntry)
@@ -225,7 +225,7 @@ def merge(entry, expected_stderr=None, *, commit=False):
 
   if entry.branch:
     revnum = last_changed_revision('./STATUS')
-    
+
     if commit:
       # Sleep to avoid out-of-order commit notifications
       if not os.getenv("SVN_BACKPORT_DONT_SLEEP"): # enabled by the test suite

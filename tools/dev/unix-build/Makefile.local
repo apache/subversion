@@ -1,0 +1,28 @@
+# Uncomment and change version numbers below if you want to use
+# another version.
+# You may also have to edit Makefile.svn to add the SHA256 checksums
+# for the archives.
+#BDB_MAJOR_VER   = 4.7
+#BDB_VER         = $(BDB_MAJOR_VER).25
+#APR_VER         = 1.7.5
+#APR_ICONV_VER   = 1.2.1
+#GNU_ICONV_VER   = 1.15
+#APR_UTIL_VER    = 1.6.1
+#PCRE_VER        = 8.41
+#HTTPD_VER       = 2.4.37
+#NEON_VER        = 0.32.5
+#SERF_VER        = 1.3.10
+#CYRUS_SASL_VER  = 2.1.28
+#SQLITE_VER      = 3390400
+#LIBMAGIC_VER    = 5.30
+#RUBY_MAJOR_VER  = 2.7
+#RUBY_VER        = $(RUBY_MAJOR_VER).4
+#BZ2_VER = 1.0.6
+#PYTHON_VER      = 3.11.10
+#PYTHON2_VER     = 2.7.13
+#PY3C_VER        = 1.1
+#JUNIT_VER       = 4.10
+#GETTEXT_VER     = 0.19.8.1
+#LZ4_VER         = 1.7.5
+#SWIG_VER        = 3.0.12
+

@@ -110,7 +110,7 @@ check_root_url_of_target(const char **root_url,
    return SVN_NO_ERROR;
 }
 
-/* Note: This is substantially copied from svn_opt__args_to_target_array() in
+/* Note: This is substantially copied from svn_opt__process_target_array() in
  * order to move to libsvn_client while maintaining backward compatibility. */
 svn_error_t *
 svn_client_args_to_target_array2(apr_array_header_t **targets_p,

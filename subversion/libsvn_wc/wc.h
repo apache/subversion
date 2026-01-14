@@ -162,20 +162,35 @@ extern "C" {
  * == 1.10.x shipped with format 31
  * == 1.11.x shipped with format 31
  *
+ * The bump to 32 adds support for optional pristine contents; see the docstring
+ * of STMT_UPGRADE_TO_32 for details.
+ *
+ * == 1.15.x shipped with format 32 and multi-wc-format support
+ *
+ * == 1.zz.x shipped with format 33
+ *
  * Please document any further format changes here.
  */
 
-/* The default WC version created by the client. */
-#ifdef SVN_TEST_MULTI_WC_FORMAT
-#  define SVN_WC__VERSION 32
-#else
-#  define SVN_WC__VERSION 31
-#endif
+/* The newest WC format this client supports.
+ *
+ * @see svn_wc__max_supported_format()
+ */
+#define SVN_WC__VERSION 33
 
 /* The minimum WC version supported by the client.
-   IMPORTANT: Update the implementation of svn_client_supported_wc_version()
+ *
+ * @see svn_wc__min_supported_format()
+ */
+/* IMPORTANT: Update the implementation of svn_client_default_wc_version()
+              and svn_client_get_wc_formats_supported()
+              and svntest.main.wc_format()
               whenever you change this value! */
 #define SVN_WC__SUPPORTED_VERSION 31
+
+/* The default WC version that the Subversion library should create
+ * (or upgrade to) when not otherwise specified. */
+#define SVN_WC__DEFAULT_VERSION SVN_WC__SUPPORTED_VERSION
 
 /* Formats <= this have no concept of "revert text-base/props".  */
 #define SVN_WC__NO_REVERT_FILES 4
@@ -206,15 +221,12 @@ extern "C" {
    sqlite_stat1 table on opening */
 #define SVN_WC__ENSURE_STAT1_TABLE 31
 
-/* Return a string indicating the released version (or versions) of
- * Subversion that used WC format number WC_FORMAT, or some other
- * suitable string if no released version used WC_FORMAT.
- *
- * ### It's not ideal to encode this sort of knowledge in this low-level
- * library.  On the other hand, it doesn't need to be updated often and
- * should be easily found when it does need to be updated.  */
-const char *
-svn_wc__version_string_from_format(int wc_format);
+/* Starting from this version, pristine content is optional and can be
+ * fetched on demand.  */
+#define SVN_WC__HAS_OPTIONAL_PRISTINE 32
+
+/* Starting from this version, the DB stores per-WC settings. */
+#define SVN_WC__HAS_SETTINGS 32
 
 /* Return true iff error E indicates an "is not a working copy" type
    of error, either because something wasn't a working copy at all, or
@@ -404,7 +416,7 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
 
    Property changes sent by the update are provided in PROP_DIFF.
 
-   For a complete description, see svn_wc_merge5() for which this is
+   For a complete description, see svn_wc_merge6() for which this is
    the (loggy) implementation.
 
    *WORK_ITEMS will be allocated in RESULT_POOL. All temporary allocations
@@ -490,7 +502,7 @@ svn_wc__conflicted_for_update_p(svn_boolean_t *conflicted_p,
                                 apr_pool_t *scratch_pool);
 
 
-/* Internal version of svn_wc_transmit_text_deltas3(). */
+/* Internal version of svn_wc_transmit_text_deltas4(). */
 svn_error_t *
 svn_wc__internal_transmit_text_deltas(svn_stream_t *tempstream,
                                       const svn_checksum_t **new_text_base_md5_checksum,
@@ -521,6 +533,7 @@ svn_wc__internal_ensure_adm(svn_wc__db_t *db,
                             const char *repos_uuid,
                             svn_revnum_t revision,
                             svn_depth_t depth,
+                            svn_boolean_t store_pristine,
                             apr_pool_t *scratch_pool);
 
 

@@ -23,8 +23,8 @@ AC_PREREQ(2.59)
 dnl Get the version of Subversion, using m4's esyscmd() command to do this
 dnl at m4-time, since AC_INIT() requires it then.
 AC_INIT([subversion],
-     [esyscmd(python build/getversion.py SVN subversion/include/svn_version.h)],
-     [http://subversion.apache.org/])
+     [esyscmd($PYTHON build/getversion.py SVN subversion/include/svn_version.h)],
+     [https://subversion.apache.org/])
 
 AC_CONFIG_SRCDIR(subversion/include/svn_types.h)
 AC_CONFIG_AUX_DIR([build])
@@ -46,6 +46,86 @@ AC_SUBST([SWIG_LDFLAGS])
 # Generate config.nice early (before the arguments are munged)
 SVN_CONFIG_NICE(config.nice)
 
+# ==== Construcet .clangd ====================================================
+
+svn_dot_clangd_file="$abs_srcdir/.clangd"
+AC_ARG_ENABLE([dot-clangd],
+AC_HELP_STRING([--enable-dot-clangd],
+               [Generate a .clangd file at the root of the source tree]),
+[
+  AC_MSG_NOTICE([Creating $svn_dot_clangd_file])
+  svn_dot_clangdcc_contents='---
+# C
+If:
+  PathMatch: [.*\.[ch]]
+  PathExclude: [subversion/bindings/javahl/native/.*]
+
+CompileFlags:
+  Add:
+    - --language=c'
+
+  svn_dot_clangdxx_contents='---
+# C++
+If:
+  PathMatch: [.*\.[ch]pp|.*/bindings/javahl/native/.*\.h]
+
+CompileFlags:
+  Add:
+    - --language=c++'
+],
+[])
+
+AC_DEFUN([SVN_DOT_CLANGD_CC],
+[
+  if test "x$svn_dot_clangdcc_contents" != "x"; then
+    indent="    -"
+    dnl Split multiple flags to one per line.
+    set fake [$1]
+    while test "${#}" -gt 1; do
+      line="${2}"; shift
+      svn_dot_clangdcc_contents=`cat <<EOF
+$svn_dot_clangdcc_contents
+$indent $line
+EOF
+      `
+    done
+  fi
+])
+
+AC_DEFUN([SVN_DOT_CLANGD_CXX],
+[
+  if test "x$svn_dot_clangdxx_contents" != "x"; then
+    indent="    -"
+    dnl Split multiple flags to one per line.
+    set fake [$1]
+    while test "${#}" -gt 1; do
+      line="${2}"; shift
+svn_dot_clangdxx_contents=`cat <<EOF
+$svn_dot_clangdxx_contents
+$indent $line
+EOF
+      `
+    done
+  fi
+])
+
+AC_DEFUN([SVN_DOT_CLANGD],[
+  SVN_DOT_CLANGD_CC([$1])
+  SVN_DOT_CLANGD_CXX([$1])
+])
+
+
+dnl Add well-known source and build paths to .clangd
+SVN_DOT_CLANGD([-I$abs_builddir/subversion])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/include])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/tests])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/perl/libsvn_swig_perl])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/python/libsvn_swig_py])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/ruby/libsvn_swig_ruby])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/cxx/include])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/cxx/tests])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/javahl/native])
+
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
@@ -56,6 +136,32 @@ SVN_CC_MODE_SETUP
 # Look for a C++ compiler (before anything can set CXXFLAGS)
 CXXUSERFLAGS="$CXXFLAGS"
 AC_PROG_CXX
+dnl Select C++ language level for GNU-like compilers
+dnl This is an advanced option for maintainers
+AC_ARG_ENABLE([c++],
+AS_HELP_STRING([--enable-c++=VER],
+               [Select C++ language standard for g++-like compilers]),
+[
+    if test "$enableval" = "yes"; then
+      cxx_language_level=any
+    elif test  "$enableval" = "no"; then
+      cxx_language_level=any
+      AC_MSG_WARN([--disable-c++ has no effect])
+    else
+      case "$enableval" in
+        [c++[0-9]*])   cxx_language_level="$enableval";;
+        [gnu++[0-9]*]) cxx_language_level="$enableval";;
+        [[0-9]*])      cxx_language_level="c++$enableval";;
+        [*])           cxx_language_level=undefined;;
+      esac
+      if test "$cxx_language_level" = undefined; then
+        AC_MSG_ERROR([--enable-c++ does not accept $enableval])
+      fi
+    fi
+],
+[
+    cxx_language_level=any
+])
 SVN_CXX_MODE_SETUP
 
 # Look for a C pre-processor
@@ -91,7 +197,7 @@ AC_SUBST([MKDIR])
 dnl verify apr version and set apr flags
 dnl These regular expressions should not contain "\(" and "\)".
 
-APR_VER_REGEXES=["1\.[3-9]\. 2\."]
+APR_VER_REGEXES=["1\.[4-9]\. 2\."]
 
 SVN_LIB_APR($APR_VER_REGEXES)
 
@@ -115,7 +221,7 @@ AC_SUBST(SVN_APR_MAJOR_VERSION)
 SVN_LT_SOVERSION="-version-info $svn_lib_ver"
 AC_SUBST(SVN_LT_SOVERSION)
 AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
-                   [Subversion library major verson])
+                   [Subversion library major version])
 
 dnl Search for pkg-config
 AC_PATH_PROG(PKG_CONFIG, pkg-config)
@@ -127,6 +233,10 @@ if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
             [Defined if support for Serf is enabled])
 fi
+
+dnl Checksum backend
+AC_DEFINE([SVN_CHECKSUM_BACKEND_APR], 1,
+          [Defined if svn should use APR to compute checksums])
 
 dnl Search for apr_memcache (only affects fs_fs)
 SVN_LIB_APR_MEMCACHE
@@ -152,10 +262,10 @@ SVN_FIND_APACHE(20051115, $apache_whitelist_ver)
 dnl Search for SQLite.  If you change SQLITE_URL from a .zip to
 dnl something else also update build/ac-macros/sqlite.m4 to reflect
 dnl the correct command to unpack the downloaded file.
-SQLITE_MINIMUM_VER="3.8.2"
-SQLITE_RECOMMENDED_VER="3.8.11.1"
+SQLITE_MINIMUM_VER="3.24.0"
+SQLITE_RECOMMENDED_VER="3.39.4"
 dnl Used to construct the SQLite download URL.
-SQLITE_RECOMMENDED_VER_REL_YEAR="2015"
+SQLITE_RECOMMENDED_VER_REL_YEAR="2022"
 SQLITE_URL="https://www.sqlite.org/$SQLITE_RECOMMENDED_VER_REL_YEAR/sqlite-amalgamation-$(printf %d%02d%02d%02d $(echo ${SQLITE_RECOMMENDED_VER} | sed -e 's/\./ /g')).zip"
 
 SVN_LIB_SQLITE(${SQLITE_MINIMUM_VER}, ${SQLITE_RECOMMENDED_VER},
@@ -222,6 +332,8 @@ SVN_EXPAND_VAR(svn_localedir, "${exp_localedir}")
 AC_DEFINE_UNQUOTED(SVN_LOCALE_DIR, "${svn_localedir}",
                    [Defined to be the path to the installed locale dirs])
 
+dnl Libtool has been broken for decades, incorrectly passing 'cru' to 'ar'
+AR_FLAGS=${AR_FLAGS:-cr}
 dnl Check for libtool -- we'll definitely need it for all our shared libs!
 AC_MSG_NOTICE([configuring libtool now])
 ifdef([LT_INIT], [LT_INIT], [AC_PROG_LIBTOOL])
@@ -351,7 +463,7 @@ fi
 dnl Check for doxygen
 doxygen=yes
 AC_ARG_WITH(doxygen,
-AC_HELP_STRING([--with-doxygen=PATH],
+AS_HELP_STRING([--with-doxygen=PATH],
                [Specify the command to run doxygen]),
 [
     doxygen="$withval"
@@ -593,7 +705,7 @@ if test "$with_old_gnome_keyring" != "no"; then
                         [Is GNOME Keyring support enabled?])
               CPPFLAGS="$old_CPPFLAGS"
               SVN_GNOME_KEYRING_LIBS="`$PKG_CONFIG --libs glib-2.0 gnome-keyring-1`"
-              SVN_GNOME_KEYRING_PCLIBS="glib-2.0 gnome-keyring-1"
+              SVN_GNOME_KEYRING_PCLIBS="glib-2.0, gnome-keyring-1"
             else
               AC_MSG_RESULT([no])
               if test "$with_old_gnome_keyring" = "yes"; then
@@ -639,29 +751,6 @@ AC_SUBST(SVN_GNOME_KEYRING_LIBS)
 
 dnl LibSecret -------------------
 SVN_LIB_SECRET
-
-dnl Googlemock -----------------
-AC_ARG_ENABLE([googlemock],
-  AS_HELP_STRING([--disable-googlemock],
-                 [Do not use the Googlemock testing framework]),
-  [],
-  [enable_googlemock=yes])
-
-AC_SUBST([GOOGLEMOCK_SRCDIR], [$abs_srcdir/googlemock])
-AC_MSG_CHECKING([whether use Googlemock])
-if test "$enable_googlemock" != "no"; then
-  if test -d "$GOOGLEMOCK_SRCDIR"; then
-    AC_MSG_RESULT([yes])
-    SVN_USE_GOOGLEMOCK=true
-  else
-    AC_MSG_RESULT([no])
-    SVN_USE_GOOGLEMOCK=false
-  fi
-else
-  AC_MSG_RESULT([no])
-  SVN_USE_GOOGLEMOCK=false
-fi
-AC_SUBST([SVN_USE_GOOGLEMOCK])
 
 dnl Ev2 experimental features ----------------------
 dnl Note: The Ev2 implementations will be built unconditionally, but by
@@ -782,7 +871,7 @@ AH_BOTTOM([
 #endif
 
 /* Macro used to specify that a variable is intentionally left unused.
-   Supresses compiler warnings about the variable being unused.  */
+   Suppresses compiler warnings about the variable being unused.  */
 #define SVN_UNUSED(v) ( (void)(v) )
 ])
 
@@ -867,21 +956,18 @@ fi
 
 dnl plaintext passwords -------------------
 AC_ARG_ENABLE(plaintext-password-storage,
-AS_HELP_STRING([--enable-plaintext-password-storage],
-               [Enable on-disk caching of plaintext passwords and passphrases.
-                (Enabling this functionality will not force Subversion
+AS_HELP_STRING([--disable-plaintext-password-storage],
+               [Disable on-disk caching of plaintext passwords and passphrases.
+                (Leaving this functionality enabled will not force Subversion
                 to store passwords in plaintext, but does permit users to
                 explicitly allow that behavior via runtime configuration.)]),
-[plaintext_passwordd_storage="$enableval"],
-[plaintext_passwordd_storage="no"])
-
-if test "$plaintext_passwordd_storage" = "yes"; then
-  AC_MSG_WARN([Enabling plaintext password/passphrase storage])
-else
-  AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
-  AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
-            [Defined if plaintext password/passphrase storage is disabled])
-fi
+[
+   if test "$enableval" = "no"; then
+      AC_MSG_NOTICE([Disabling plaintext password/passphrase storage])
+      AC_DEFINE(SVN_DISABLE_PLAINTEXT_PASSWORD_STORAGE, 1,
+                [Defined if plaintext password/passphrase storage is disabled])
+   fi
+])
 
 dnl Build and install rules -------------------
 
@@ -928,9 +1014,6 @@ AC_SUBST(BDB_TEST_DEPS)
 AC_SUBST(BDB_TEST_PROGRAMS)
 
 dnl Check for header files ----------------
-
-dnl Standard C headers
-AC_HEADER_STDC
 
 dnl Check for typedefs, structures, and compiler characteristics ----------
 
@@ -1026,6 +1109,7 @@ AC_SUBST([libsvn_diff_LDFLAGS])
 AC_SUBST([libsvn_fs_LDFLAGS])
 AC_SUBST([libsvn_fs_base_LDFLAGS])
 AC_SUBST([libsvn_fs_fs_LDFLAGS])
+AC_SUBST([libsvn_fs_x_LDFLAGS])
 AC_SUBST([libsvn_fs_util_LDFLAGS])
 AC_SUBST([libsvn_ra_LDFLAGS])
 AC_SUBST([libsvn_ra_local_LDFLAGS])
@@ -1078,6 +1162,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         dnl Add flags that all versions of GCC (should) support
         CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
+        SVN_DOT_CLANGD_CC([$CMAINTAINERFLAGS])
       fi
       if test "$GXX" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
@@ -1096,6 +1181,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         dnl Add flags that all versions of G++ (should) support
         CXXMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wunused -Wunreachable-code $CXXMAINTAINERFLAGS"
+        SVN_DOT_CLANGD_CXX([$CXXMAINTAINERFLAGS])
       fi
     fi
 ])
@@ -1131,6 +1217,7 @@ if test "$enable_debugging" = "yes" ; then
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
+  SVN_DOT_CLANGD([-DSVN_DEBUG -DAP_DEBUG])
 elif test "$enable_debugging" = "no" ; then
   AC_MSG_NOTICE([Disabling debugging])
   CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
@@ -1138,6 +1225,7 @@ elif test "$enable_debugging" = "no" ; then
   dnl Compile with NDEBUG to get rid of assertions
   CFLAGS="$CFLAGS -DNDEBUG"
   CXXFLAGS="$CXXFLAGS -DNDEBUG"
+  SVN_DOT_CLANGD([-DNDEBUG])
 # elif test "$enable_debugging" = "maybe" ; then
 #   # do nothing
 fi
@@ -1157,7 +1245,6 @@ if test "$enable_optimization" = "yes"; then
           SVN_CFLAGS_ADD_IFELSE([-O1],[],[
             SVN_CFLAGS_ADD_IFELSE([-O])])])])
       SVN_CFLAGS_ADD_IFELSE([-Wno-clobbered])
-      SVN_CFLAGS_ADD_IFELSE([-flto])
     fi
   fi
   if test -z ["`echo $CXXUSERFLAGS' ' | $EGREP -- '-O[^ ]* '`"]; then
@@ -1173,7 +1260,6 @@ if test "$enable_optimization" = "yes"; then
           SVN_CXXFLAGS_ADD_IFELSE([-O1],[],[
             SVN_CXXFLAGS_ADD_IFELSE([-O])])])])
       SVN_CXXFLAGS_ADD_IFELSE([-Wno-clobbered])
-      SVN_CXXFLAGS_ADD_IFELSE([-flto])
     fi
   fi
 elif test "$enable_optimization" = "no"; then
@@ -1187,9 +1273,11 @@ fi
 
 dnl Dump the current compiler options
 AC_MSG_NOTICE([C compiler flags: $CFLAGS])
+AC_MSG_NOTICE([  language-level: $CMODEFLAGS])
 AC_MSG_NOTICE([    user-defined: $CUSERFLAGS])
 AC_MSG_NOTICE([ maintainer-mode: $CMAINTAINERFLAGS])
 AC_MSG_NOTICE([C++ compiler flags: $CXXFLAGS])
+AC_MSG_NOTICE([    language-level: $CXXMODEFLAGS])
 AC_MSG_NOTICE([      user-defined: $CXXUSERFLAGS])
 AC_MSG_NOTICE([   maintainer-mode: $CXXMAINTAINERFLAGS])
 
@@ -1244,7 +1332,7 @@ AC_SUBST(MOD_ACTIVATION)
 
 
 AC_ARG_ENABLE(gcov,
-AC_HELP_STRING([--enable-gcov],
+AS_HELP_STRING([--enable-gcov],
                [Turn on gcov coverage testing (GCC only).]),
 [
     if test "$enableval" = "yes" ; then
@@ -1295,35 +1383,142 @@ AS_HELP_STRING([--enable-gprof],
 
 # Scripting and Bindings languages
 
-# Python: Used for testsuite, and bindings
-
+# Python: Used for testsuite
+AC_ARG_VAR([PYTHON], [Python interpreter command])
 
 PYTHON="`$abs_srcdir/build/find_python.sh`"
 if test -z "$PYTHON"; then
-  AC_MSG_WARN([Python 2.7 or later is required to run the testsuite])
-  AC_MSG_WARN([or to use the Subversion Python bindings])
+  AC_MSG_WARN([Python 2.7 or later is required to run the testsuite.])
   AC_MSG_WARN([])
   AC_MSG_WARN([If you have a suitable Python installed, but not on the])
   AC_MSG_WARN([PATH, set the environment variable PYTHON to the full path])
   AC_MSG_WARN([to the Python executable, and re-run configure])
+  PYTHON=none
 fi
-AC_PATH_PROGS(PYTHON, "$PYTHON", none)
+AC_SUBST(PYTHON)
 
 # The minimum version for the JVM runtime for our Java bytecode.
 JAVA_OLDEST_WORKING_VER='1.8'
 # SVN_CHECK_JDK sets $JAVA_CLASSPATH
 SVN_CHECK_JDK($JAVA_OLDEST_WORKING_VER)
 
-AC_PATH_PROG(PERL, perl, none)
-
-if test -n "$RUBY"; then
-  AC_PATH_PROG(RUBY, "$RUBY", none)
+AC_ARG_WITH(swig_perl,
+[AS_HELP_STRING([[--with-swig-perl[=PATH|auto|no]|--without-swig-perl]],
+                [Specify path to SWIG bindings target Perl interpreter
+                 [default=auto]. If the option value is 'auto' or it is not
+                  specfied, search for the Perl program.]
+                m4_ifndef([SVN_RELEASE_MODE],
+                  [[Implies --with-swig=yes if PATH is specfied or Perl 
+                    is found on 'auto' detection.]]))
+],
+[],
+[
+if test -n "$PERL"; then
+  if test "$PERL" = "no" -o "$PERL" = "none"; then
+    with_swig_perl=no
+    AC_MSG_WARN([Disabling the SWIG Perl bindings' build by setting the PERL])
+    AC_MSG_WARN([environment variable to "none" is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --without-swig-perl instead.])
+  else
+    with_swig_perl=auto
+    AC_MSG_WARN([Specfying the Perl path for SWIG Perl bindings' build])
+    AC_MSG_WARN([by setting the PERL environment variable is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --with-swig-perl=PATH instead.])
+  fi
 else
-  AC_PATH_PROGS(RUBY, ruby ruby1 ruby1.8 ruby18 ruby1.9 ruby19 ruby1.9.3 ruby193 ruby2 ruby2.0 ruby20 ruby2.1 ruby21 ruby2.2 ruby22 ruby2.3 ruby23 ruby2.4 ruby24, none)
+  with_swig_perl=auto
 fi
-if test "$RUBY" != "none"; then
+])
+case $with_swig_perl in
+  yes|auto|"")
+    # honor PERL variable only if it is set and is full path. 
+    AC_PATH_PROG(PERL, perl, none)
+    SWIG_PL_PERL="$PERL"
+    ;;
+  no|none)
+    SWIG_PL_PERL=none
+    ;;
+  *)
+    SWIG_PL_PERL="$with_swig_perl"
+    ;;
+esac
+AC_SUBST(SWIG_PL_PERL)
+
+# Python: as a target of SWIG Python bindings
+AC_ARG_WITH(swig_python,
+[AS_HELP_STRING([[--with-swig-python[=PATH|auto|no]|--without-swig-python]],
+                [Specify path to SWIG bindings target Python interpreter
+                 [default=auto]. If the option value is 'auto' or it is not
+                 specfied, search for the Python program.]
+                m4_ifndef([SVN_RELEASE_MODE],
+                  [[Implies --with-swig=yes if PATH is specfied or Python
+                    is found on 'auto' detection.]]))
+],
+[],
+[
+  with_swig_python=auto
+])
+case $with_swig_python in
+  yes|auto|"")
+    SWIG_PY_PYTHON="$PYTHON"
+    ;;
+  no|none)
+    SWIG_PY_PYTHON=none
+    ;;
+  *)
+    SWIG_PY_PYTHON="$with_swig_python"
+    ;;
+esac
+AC_SUBST(SWIG_PY_PYTHON)
+
+AC_ARG_WITH(swig_ruby,
+[AS_HELP_STRING([[--with-swig-ruby[=PATH|auto|no]|--without-swig-ruby]],
+                [specify path to SWIG bindings target Ruby interpreter
+                 [default=auto]. If the option value is 'auto' or it is not
+                  specfied, search for the Ruby program.] 
+                m4_ifndef([SVN_RELEASE_MODE],
+                  [[Implies --with-swig=yes if PATH is specfied or Ruby
+                    is found on 'auto' detection.]]))
+],
+[],
+[
+if test -n "$RUBY"; then
+  if test "$RUBY" = "no" -o "$RUBY" = "none"; then
+    with_swig_ruby=no
+    AC_MSG_WARN([Disabling the SWIG Ruby bindings' build by setting the RUBY])
+    AC_MSG_WARN([environment variable to "none" is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --without-swig-ruby instead.])
+  else
+    with_swig_ruby="$RUBY"
+    AC_MSG_WARN([Specfying the Ruby path for SWIG Ruby bindings' build])
+    AC_MSG_WARN([by setting the RUBY environment variable is deprecated.])
+    AC_MSG_WARN([])
+    AC_MSG_WARN([Please use --with-swig-ruby=PATH instead.])
+  fi
+else
+  with_swig_ruby=auto
+fi
+])
+case $with_swig_ruby in
+  yes|auto|"")
+    # honor RUBY variable only if it is set and is full path. 
+    AC_PATH_PROGS(RUBY, ruby ruby1 ruby1.8 ruby18 ruby1.9 ruby19 ruby1.9.3 ruby193 ruby2 ruby2.0 ruby20 ruby2.1 ruby21 ruby2.2 ruby22 ruby2.3 ruby23 ruby2.4 ruby24, none)
+    SWIG_RB_RUBY="$RUBY"
+    ;;
+  no|none)
+    SWIG_RB_RUBY=none
+    ;;
+  *)
+    SWIG_RB_RUBY="$with_swig_ruby"
+    ;;
+esac
+AC_SUBST(SWIG_RB_RUBY)
+if test "$SWIG_RB_RUBY" != "none"; then
   AC_MSG_CHECKING([rb_hash_foreach])
-  if "$RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
+  if "$SWIG_RB_RUBY" -r mkmf -e 'exit(have_func("rb_hash_foreach") ? 0 : 1)' >/dev/null; then
     AC_MSG_RESULT([yes])
     if test -n "$RDOC"; then
       AC_PATH_PROG(RDOC, "$RDOC", none)
@@ -1331,17 +1526,17 @@ if test "$RUBY" != "none"; then
       AC_PATH_PROGS(RDOC, rdoc rdoc1 rdoc1.8 rdoc18 rdoc1.9 rdoc19 rdoc1.9.3 rdoc193 rdoc2 rdoc2.0 rdoc20 rdoc2.1 rdoc21 rdoc2.2 rdoc22 rdoc2.3 rdoc23 rdoc2.4 rdoc24, none)
     fi
     AC_CACHE_CHECK([for Ruby major version], [svn_cv_ruby_major],[
-    svn_cv_ruby_major="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
+    svn_cv_ruby_major="`$SWIG_RB_RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MAJOR))'`"
     ])
     RUBY_MAJOR="$svn_cv_ruby_major"
 
     AC_CACHE_CHECK([for Ruby minor version], [svn_cv_ruby_minor],[
-    svn_cv_ruby_minor="`$RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MINOR))'`"
+    svn_cv_ruby_minor="`$SWIG_RB_RUBY -rrbconfig -e 'print RbConfig::CONFIG.fetch(%q(MINOR))'`"
     ])
     RUBY_MINOR="$svn_cv_ruby_minor"
 
     AC_CACHE_CHECK([for Ruby teeny version], [svn_cv_ruby_teeny],[
-    svn_cv_ruby_teeny="`$RUBY -rrbconfig -e 'major, minor, teeny = RUBY_VERSION.split("."); print teeny;'`"
+    svn_cv_ruby_teeny="`$SWIG_RB_RUBY -rrbconfig -e 'major, minor, teeny = RUBY_VERSION.split("."); print teeny;'`"
     ])
     RUBY_TEENY="$svn_cv_ruby_teeny"
     
@@ -1350,13 +1545,13 @@ if test "$RUBY" != "none"; then
     AC_SUBST(RUBY_TEENY)
     if test \( "$RUBY_MAJOR" -eq "1" -a "$RUBY_MINOR" -gt "8" -a "$RUBY_TEENY" -lt "3" \); then
       # Disallow Ruby between 1.8.7 and 1.9.3
-      RUBY="none"
+      SWIG_RB_RUBY="none"
       AC_MSG_WARN([The detected Ruby is between 1.9 and 1.9.3])
       AC_MSG_WARN([Only 1.8.x and 1.9.3 or later are supported at this time])
     fi
   else
     AC_MSG_RESULT([no])
-    RUBY="none"
+    SWIG_RB_RUBY="none"
     AC_MSG_WARN([The detected Ruby is too old for Subversion to use])
     AC_MSG_WARN([A Ruby which has rb_hash_foreach is required to use the])
     AC_MSG_WARN([Subversion Ruby bindings])
@@ -1385,21 +1580,21 @@ AS_HELP_STRING([--enable-runtime-module-search],
       fi
       AC_DEFINE(SVN_USE_DSO, 1,
                 [Defined if svn should try to load DSOs])
-
-      dnl Mac OS X uses libname.MAJOR.SOVERSION.dylib
-      dnl Most other unixes use libname.MAJOR.so.SOVERSION
-      case "$host" in
-        *-*-darwin*)
-          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.%d.dylib"],
-                    [Shared library file name suffix format])
-          ;;
-        *)
-          AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.so.%d"],
-                    [Shared library file name suffix format])
-          ;;
-      esac
     fi
 ])
+
+dnl Mac OS X uses libname.MAJOR.SOVERSION.dylib
+dnl Most other unixes use libname.MAJOR.so.SOVERSION
+case "$host" in
+  *-*-darwin*)
+    AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.%d.dylib"],
+              [Shared library file name suffix format])
+    ;;
+  *)
+    AC_DEFINE(SVN_DSO_SUFFIX_FMT, ["%d.so.%d"],
+              [Shared library file name suffix format])
+    ;;
+esac
 
 if test "$svn_enable_shared" = "no" || test "$use_dso" != "yes"; then
   AC_DEFINE(SVN_LIBSVN_RA_LINKS_RA_LOCAL, 1,
@@ -1457,6 +1652,69 @@ AC_SUBST(SVN_RA_LIB_LINK)
 AC_SUBST(SVN_FS_LIB_DEPS)
 AC_SUBST(SVN_FS_LIB_INSTALL_DEPS)
 AC_SUBST(SVN_FS_LIB_LINK)
+
+# ==== SVN++ =================================================================
+
+dnl Possibly compile SVN++
+do_svnxx_build=no
+AC_ARG_ENABLE(svnxx,
+  AS_HELP_STRING([--enable-svnxx],
+      [Enable compilation of the C++ bindings (requires C++)]),
+  [ if test "$enableval" = "yes" ; then
+        AC_MSG_NOTICE([Enabling the C++ bindings])
+        do_svnxx_build=yes
+    fi
+  ])
+
+dnl Possibly compile SVN++ tests
+do_svnxx_test_build=no
+AC_ARG_ENABLE(svnxx-tests,
+  AS_HELP_STRING([--enable-svnxx-tests],
+      [Enable compilation of tests for the C++ bindings
+      (implies --enable-svnxx, requires Boost and Boost.Test)]),
+  [ if test "$enableval" = "yes" ; then
+        AC_MSG_NOTICE([Enabling tests for the C++ bindings])
+        do_svnxx_test_build=yes
+    fi
+  ])
+
+AX_BOOST_BASE([1.58],
+  [
+    if test "$do_svnxx_test_build" = "yes"; then
+        AX_BOOST_UNIT_TEST_FRAMEWORK
+    fi
+  ],
+  [
+    if test "$do_svnxx_test_build" = "yes"; then
+        AC_MSG_WARN([Tests for the C++ bindings require Boost and Boost.Test])
+        do_svnxx_test_build=no
+    fi
+  ])
+
+if test "$do_svnxx_test_build" = "yes"; then
+    if test "$want_boost" != "yes"; then
+        AC_MSG_WARN([Tests for the C++ bindings require Boost and Boost.Test])
+        do_svnxx_test_build=no
+        SVN_BUILD_SVNXX_TESTS=false
+    else
+        if test "$do_svnxx_build" != "yes"; then
+            AC_MSG_WARN([Enabling the C++ bindings because their tests are enabled])
+            do_svnxx_build=yes
+        fi
+        SVN_BUILD_SVNXX_TESTS=true
+    fi
+else
+    SVN_BUILD_SVNXX_TESTS=false
+fi
+
+if test "$do_svnxx_build" = "yes"; then
+    SVN_BUILD_SVNXX=true
+else
+    SVN_BUILD_SVNXX=false
+fi
+
+AC_SUBST(SVN_BUILD_SVNXX)
+AC_SUBST(SVN_BUILD_SVNXX_TESTS)
 
 # ==== JavaHL ================================================================
 
@@ -1601,7 +1859,7 @@ fi
 AC_SUBST(SVN_CONFIG_SCRIPT_FILES)
 
 # Ensure that SWIG is checked after reconfiguration.
-rm -f .swig_checked
+rm -f .swig_checked .swig_pl_checked .swig_py_checked .swig_rb_checked
 
 dnl Provide ${host} for use in compiled code (for svn --version)
 AC_DEFINE_UNQUOTED([SVN_BUILD_HOST], "${host}",
@@ -1612,6 +1870,13 @@ AC_DEFINE_UNQUOTED([SVN_BUILD_TARGET], "${target}",
                    [Defined to the config.guess name of the build target])
 
 AC_OUTPUT
+
+# ==== Generate the .clangd file =============================================
+if test "x$svn_dot_clangdcc_contents$svn_dot_clangdxx_contents" != "x" ; then
+  AC_MSG_NOTICE([Writing $svn_dot_clangd_file])
+  echo "$svn_dot_clangdcc_contents" > "$svn_dot_clangd_file"
+  echo "$svn_dot_clangdxx_contents" >> "$svn_dot_clangd_file"
+fi
 
 # ==== Print final messages to user ==========================================
 
@@ -1638,7 +1903,7 @@ https://www.gnu.org/licenses/agpl-3.0.html
 http://opensource.org/licenses/AGPL-3.0
 
 The Berkeley DB backend to Subversion is deprecated; see
-http://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
+https://subversion.apache.org/docs/release-notes/1.8#bdb-deprecated
 
 The Subversion developers have not tested Subversion with Berkeley DB 6 for
 technical problems or bugs.

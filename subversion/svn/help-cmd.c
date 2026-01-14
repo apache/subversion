@@ -41,6 +41,30 @@
 
 /*** Code. ***/
 
+/* Append a textual list of the supported WC formats to OUTPUT. */
+static svn_error_t *
+print_supported_wc_formats(svn_stringbuf_t *output,
+                           const char *prefix,
+                           apr_pool_t *pool)
+{
+  const int *wc_formats = svn_client_get_wc_formats_supported(pool);
+  int i;
+
+  for (i = 0; wc_formats[i]; i++)
+    {
+      const svn_version_t *ver
+        = svn_client_wc_version_from_format(wc_formats[i], pool);
+      const char *s
+        = apr_psprintf(
+            pool,
+            _("%sWC format %d, compatible with Subversion v%d.%d and newer\n"),
+            prefix, wc_formats[i], ver->major, ver->minor);
+
+      svn_stringbuf_appendcstr(output, s);
+    }
+  return SVN_NO_ERROR;
+}
+
 /* This implements the `svn_opt_subcommand_t' interface. */
 svn_error_t *
 svn_cl__help(apr_getopt_t *os,
@@ -50,9 +74,6 @@ svn_cl__help(apr_getopt_t *os,
   svn_cl__opt_state_t *opt_state = NULL;
   svn_stringbuf_t *version_footer = svn_stringbuf_create_empty(pool);
   const char *config_path;
-  const svn_version_t* min_wc_version;
-  const svn_version_t* max_wc_version;
-  const char *wc_version_footer;
 
   char help_header[] =
   N_("usage: svn <subcommand> [options] [args]\n"
@@ -70,7 +91,7 @@ svn_cl__help(apr_getopt_t *os,
 
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
-     "For additional information, see http://subversion.apache.org/\n");
+     "For additional information, see https://subversion.apache.org/\n");
 
   if (baton)
     {
@@ -133,27 +154,17 @@ svn_cl__help(apr_getopt_t *os,
       opt_state = cmd_baton->opt_state;
     }
 
-  min_wc_version = svn_client_supported_wc_version();
-  max_wc_version = svn_client_version();
-  if (min_wc_version->major == max_wc_version->major
-      && min_wc_version->minor == max_wc_version->minor)
-    {
-      wc_version_footer =
-        apr_psprintf(pool,
-                     _("Supported working copy (WC) version: %d.%d\n\n"),
-                     min_wc_version->major, min_wc_version->minor);
-    }
-  else
-    {
-      wc_version_footer =
-        apr_psprintf(
-            pool,
-            _("Supported working copy (WC) versions: from %d.%d to %d.%d\n\n"),
-            min_wc_version->major, min_wc_version->minor,
-            max_wc_version->major, max_wc_version->minor);
-    }
-  svn_stringbuf_appendcstr(version_footer, wc_version_footer);
+  /*
+   * Show supported working copy versions.
+   */
+  svn_stringbuf_appendcstr(version_footer,
+                           _("Supported working copy (WC) formats:\n\n"));
+  SVN_ERR(print_supported_wc_formats(version_footer, "* ", pool));
+  svn_stringbuf_appendcstr(version_footer, "\n");
 
+  /*
+   * Show available repository access modules.
+   */
   svn_stringbuf_appendcstr(
       version_footer,
       _("The following repository access (RA) modules are available:\n\n"));
@@ -197,7 +208,7 @@ svn_cl__help(apr_getopt_t *os,
   svn_stringbuf_appendcstr(version_footer, "* GPG-Agent\n");
 #endif
 #ifdef SVN_HAVE_KEYCHAIN_SERVICES
-  svn_stringbuf_appendcstr(version_footer, "* Mac OS X Keychain\n");
+  svn_stringbuf_appendcstr(version_footer, "* macOS Keychain\n");
 #endif
 #ifdef SVN_HAVE_KWALLET
   svn_stringbuf_appendcstr(version_footer, "* KWallet (KDE)\n");

@@ -107,6 +107,10 @@ typedef struct svn_wc__db_wcroot_t {
      const char *local_abspath -> svn_wc_adm_access_t *adm_access */
   apr_hash_t *access_cache;
 
+  /* Whether to store the pristine contents of all files on disk or
+     to fetch the contents on demand. */
+  svn_boolean_t store_pristine;
+
 } svn_wc__db_wcroot_t;
 
 
@@ -126,6 +130,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
+                             svn_boolean_t store_pristine,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool);
 
@@ -383,6 +388,27 @@ svn_wc__db_mark_conflict_internal(svn_wc__db_wcroot_t *wcroot,
 #define SVN_WC__DB_WITH_TXN(expr, wcroot) \
   SVN_SQLITE__WITH_LOCK(expr, (wcroot)->sdb)
 
+/* Evaluate the expressions EXPR1..EXPR2 within a transaction, returning the
+ * first error if an error occurs.
+ *
+ * Begin a transaction in WCROOT's DB; evaluate the expressions, which would
+ * typically be function calls that do some work in DB; finally commit
+ * the transaction if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * the transaction.
+ */
+#define SVN_WC__DB_WITH_TXN2(expr1, expr2, wcroot) \
+  SVN_SQLITE__WITH_LOCK2(expr1, expr2, (wcroot)->sdb)
+
+/* Evaluate the expressions EXPR1..EXPR3 within a transaction, returning the
+ * first error if an error occurs.
+ *
+ * Begin a transaction in WCROOT's DB; evaluate the expressions, which would
+ * typically be function calls that do some work in DB; finally commit
+ * the transaction if EXPR evaluated to SVN_NO_ERROR, otherwise roll back
+ * the transaction.
+ */
+#define SVN_WC__DB_WITH_TXN3(expr1, expr2, expr3, wcroot) \
+  SVN_SQLITE__WITH_LOCK3(expr1, expr2, expr3, (wcroot)->sdb)
 
 /* Evaluate the expressions EXPR1..EXPR4 within a transaction, returning the
  * first error if an error occurs.
@@ -435,7 +461,7 @@ svn_wc__db_op_make_copy_internal(svn_wc__db_wcroot_t *wcroot,
      MOVE_DST_RELPATH is X
      DELETE_RELPATH is A
 
-     X/C can be calculated if necessesary, like with the other
+     X/C can be calculated if necessary, like with the other
      scan functions.
 
    This function returns SVN_ERR_WC_PATH_NOT_FOUND if LOCAL_RELPATH didn't
@@ -539,5 +565,24 @@ svn_wc__db_verify_db_full_internal(svn_wc__db_wcroot_t *wcroot,
                                    svn_wc__db_verify_cb_t callback,
                                    void *baton,
                                    apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_pristine_prepare_install() but taking WCROOT instead
+   of DB+WRI_ABSPATH. */
+svn_error_t *
+svn_wc__db_pristine_prepare_install_internal(svn_stream_t **stream_p,
+                                             svn_wc__db_install_data_t **install_data_p,
+                                             svn_checksum_t **sha1_checksum_p,
+                                             svn_checksum_t **md5_checksum_p,
+                                             svn_wc__db_wcroot_t *wcroot,
+                                             svn_boolean_t hydrated,
+                                             apr_pool_t *result_pool,
+                                             apr_pool_t *scratch_pool);
+
+/* Like svn_wc__db_pristine_dehydrate() but taking WCROOT instead
+   of DB+WRI_ABSPATH. */
+svn_error_t *
+svn_wc__db_pristine_dehydrate_internal(svn_wc__db_wcroot_t *wcroot,
+                                       const svn_checksum_t *sha1_checksum,
+                                       apr_pool_t *scratch_pool);
 
 #endif /* WC_DB_PRIVATE_H */

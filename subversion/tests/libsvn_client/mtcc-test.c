@@ -563,11 +563,11 @@ handle_rev(void *baton,
 
       svn_stringbuf_setempty(hrb->cur);
 
-      svn_txdelta_apply(svn_stream_from_stringbuf(hrb->prev, pool),
-                        svn_stream_from_stringbuf(hrb->cur, pool),
-                        NULL, NULL, pool,
-                        &hrb->inner_handler,
-                        &hrb->inner_baton);
+      svn_txdelta_apply2(svn_stream_from_stringbuf(hrb->prev, pool),
+                         svn_stream_from_stringbuf(hrb->cur, pool),
+                         NULL, NULL, pool,
+                         &hrb->inner_handler,
+                         &hrb->inner_baton);
     }
 
   hrb->last = rev;
@@ -693,7 +693,7 @@ test_file_revs_both_ways(const svn_test_opts_t *opts,
                                 subpool));
   SVN_TEST_ASSERT(hrb.last == 6);
 
-  /* Ressurect mu */
+  /* Resurrect mu */
   svn_pool_clear(subpool);
   SVN_ERR(svn_client__mtcc_create(&mtcc, repos_url, 7, ctx, subpool, subpool));
   SVN_ERR(svn_client__mtcc_add_copy("mu", 6, "mu", mtcc, subpool));

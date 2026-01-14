@@ -45,9 +45,6 @@ typedef int win32_crashrpt__dummy;
 /*** Global variables ***/
 static HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 
-/* Email address where the crash reports should be sent too. */
-#define CRASHREPORT_EMAIL "users@subversion.apache.org"
-
 #define DBGHELP_DLL "dbghelp.dll"
 
 #define LOGFILE_PREFIX "svn-crash-log"
@@ -55,6 +52,8 @@ static HANDLE dbghelp_dll = INVALID_HANDLE_VALUE;
 #if defined(_M_IX86)
 #define FORMAT_PTR "0x%08Ix"
 #elif defined(_M_X64)
+#define FORMAT_PTR "0x%016Ix"
+#elif defined(_M_ARM64)
 #define FORMAT_PTR "0x%016Ix"
 #endif
 
@@ -256,6 +255,35 @@ write_process_info(EXCEPTION_RECORD *exception, CONTEXT *context,
                 "cs=%04x  ss=%04x  ds=%04x  es=%04x  fs=%04x  gs=%04x\n",
                 context->SegCs, context->SegSs, context->SegDs,
                 context->SegEs, context->SegFs, context->SegGs);
+#elif defined(_M_ARM64)
+  fprintf(log_file,
+          "X0 = %016I64x  X1 = %016I64x  X2 = %016I64x  X3 = %016I64x\n",
+          context->X0, context->X1, context->X2, context->X3);
+  fprintf(log_file,
+          "X4 = %016I64x  X5 = %016I64x  X6 = %016I64x  X7 = %016I64x\n",
+          context->X4, context->X5, context->X6, context->X7);
+  fprintf(log_file,
+          "X8 = %016I64x  X9 = %016I64x  X10= %016I64x  X11= %016I64x\n",
+          context->X8, context->X9, context->X10, context->X11);
+  fprintf(log_file,
+          "X12= %016I64x  X13= %016I64x  X14= %016I64x  X15= %016I64x\n",
+          context->X12, context->X13, context->X14, context->X15);
+  fprintf(log_file,
+          "X16= %016I64x  X17= %016I64x  X18= %016I64x  X19= %016I64x\n",
+          context->X16, context->X17, context->X18, context->X19);
+  fprintf(log_file,
+          "X20= %016I64x  X21= %016I64x  X22= %016I64x  X23= %016I64x\n",
+          context->X20, context->X21, context->X22, context->X23);
+  fprintf(log_file,
+          "X24= %016I64x  X25= %016I64x  X26= %016I64x  X27= %016I64x\n",
+          context->X24, context->X25, context->X26, context->X27);
+  fprintf(log_file,
+          "X28= %016I64x\n",
+          context->X28);
+  fprintf(log_file,
+          "Fp = %016I64x  Lr = %016I64x  Sp = %016I64x  Pc = %016I64x\n",
+          context->Fp, context->Lr, context->Sp, context->Pc);
+  /* Ignoring debug and floating point registers here */
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
@@ -518,7 +546,7 @@ write_function_detail(STACKFRAME64 stack_frame, int nr_of_frame, FILE *log_file)
 static void
 write_stacktrace(CONTEXT *context, FILE *log_file)
 {
-#if defined (_M_IX86) || defined(_M_X64) || defined(_M_IA64)
+#if defined (_M_IX86) || defined(_M_X64) || defined(_M_IA64) || defined(_M_ARM64)
   HANDLE proc = GetCurrentProcess();
   STACKFRAME64 stack_frame;
   DWORD machine;
@@ -565,6 +593,11 @@ write_stacktrace(CONTEXT *context, FILE *log_file)
   stack_frame.AddrStack.Offset  = context->SP;
   stack_frame.AddrBStore.Mode   = AddrModeFlat;
   stack_frame.AddrBStore.Offset = context->RsBSP;
+#elif defined(_M_ARM64)
+  machine = IMAGE_FILE_MACHINE_ARM64;
+  stack_frame.AddrPC.Offset = context->Pc;
+  stack_frame.AddrStack.Offset = context->Sp;
+  stack_frame.AddrFrame.Offset = context->Fp;
 #else
 #error Unknown processortype, please disable SVN_USE_WIN32_CRASHHANDLER
 #endif
@@ -774,7 +807,7 @@ svn__unhandled_exception_filter(PEXCEPTION_POINTERS ptrs)
                   "usernames and passwords etc.)\n",
                   log_filename,
                   dmp_filename,
-                  CRASHREPORT_EMAIL);
+                  SVN_WIN32_CRASHREPORT_EMAIL);
 
   if (getenv("SVN_DBG_STACKTRACES_TO_STDERR") != NULL)
     {

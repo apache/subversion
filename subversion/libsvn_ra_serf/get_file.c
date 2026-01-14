@@ -137,7 +137,7 @@ cancel_fetch(serf_request_t *request,
  * using SESSION->wc_callbacks->get_wc_contents() if sha1 property is
  * present in PROPS.
  *
- * Sets *FOUND_P to TRUE if file contents was successfuly fetched.
+ * Sets *FOUND_P to TRUE if file contents was successfully fetched.
  *
  * Performs all temporary allocations in POOL.
  */
@@ -425,6 +425,62 @@ svn_ra_serf__get_file(svn_ra_session_t *ra_session,
     }
 
   svn_pool_destroy(scratch_pool);
+
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_ra_serf__fetch_file_contents(svn_ra_session_t *ra_session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 svn_stream_t *stream,
+                                 apr_pool_t *scratch_pool)
+{
+  svn_ra_serf__session_t *session = ra_session->priv;
+  const char *fetch_url;
+  stream_ctx_t *stream_ctx;
+  svn_ra_serf__handler_t *handler;
+  svn_error_t *err;
+
+  fetch_url = svn_path_url_add_component2(session->session_url.path, path,
+                                          scratch_pool);
+
+  SVN_ERR(svn_ra_serf__get_stable_url(&fetch_url, NULL, session,
+                                      fetch_url, revision,
+                                      scratch_pool, scratch_pool));
+
+  /* Create the fetch context. */
+  stream_ctx = apr_pcalloc(scratch_pool, sizeof(*stream_ctx));
+  stream_ctx->result_stream = stream;
+  stream_ctx->session = session;
+
+  handler = svn_ra_serf__create_handler(session, scratch_pool);
+
+  handler->method = "GET";
+  handler->path = fetch_url;
+
+  handler->custom_accept_encoding = TRUE;
+  handler->no_dav_headers = TRUE;
+
+  handler->header_delegate = headers_fetch;
+  handler->header_delegate_baton = stream_ctx;
+
+  handler->response_handler = handle_stream;
+  handler->response_baton = stream_ctx;
+
+  handler->response_error = cancel_fetch;
+  handler->response_error_baton = stream_ctx;
+
+  stream_ctx->handler = handler;
+
+  err = svn_ra_serf__context_run_one(handler, scratch_pool);
+
+  err = svn_error_compose_create(err, svn_stream_close(stream));
+
+  if (err)
+    return svn_error_trace(err);
+  else if (handler->sline.code != 200)
+    return svn_error_trace(svn_ra_serf__unexpected_status(handler));
 
   return SVN_NO_ERROR;
 }

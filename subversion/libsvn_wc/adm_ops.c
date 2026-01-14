@@ -53,6 +53,7 @@
 #include "adm_files.h"
 #include "conflicts.h"
 #include "workqueue.h"
+#include "textbase.h"
 
 #include "private/svn_dep_compat.h"
 #include "private/svn_sorts_private.h"
@@ -753,13 +754,86 @@ svn_wc_add_from_disk3(svn_wc_context_t *wc_ctx,
   return SVN_NO_ERROR;
 }
 
-/* Return a path where nothing exists on disk, within the admin directory
-   belonging to the WCROOT_ABSPATH directory.  */
-static const char *
-nonexistent_path(const char *wcroot_abspath, apr_pool_t *scratch_pool)
+
+static svn_error_t *
+get_pristine_copy_path(const char **pristine_path_p,
+                       const char *local_abspath,
+                       svn_wc__db_t *db,
+                       apr_pool_t *result_pool,
+                       apr_pool_t *scratch_pool)
 {
-  return svn_wc__adm_child(wcroot_abspath, SVN_WC__ADM_NONEXISTENT_PATH,
-                           scratch_pool);
+  svn_boolean_t store_pristine;
+  svn_wc__db_status_t status;
+  svn_node_kind_t kind;
+  const svn_checksum_t *checksum;
+  const char *wcroot_abspath;
+
+  SVN_ERR(svn_wc__db_get_settings(NULL, &store_pristine, db,
+                                  local_abspath, scratch_pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
+                            NULL, NULL);
+
+  SVN_ERR(svn_wc__db_read_pristine_info(&status, &kind, NULL, NULL, NULL, NULL,
+                                        &checksum, NULL, NULL, NULL,
+                                        db, local_abspath,
+                                        scratch_pool, scratch_pool));
+
+  /* Sanity */
+  if (kind != svn_node_file)
+    return svn_error_createf(SVN_ERR_NODE_UNEXPECTED_KIND, NULL,
+                             _("Can only get the pristine contents of files; "
+                               "'%s' is not a file"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  if (status == svn_wc__db_status_not_present)
+    /* We know that the delete of this node has been committed.
+       This should be the same as if called on an unknown path. */
+    return svn_error_createf(SVN_ERR_WC_PATH_NOT_FOUND, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because its delete is already committed"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+  else if (status == svn_wc__db_status_server_excluded
+      || status == svn_wc__db_status_excluded
+      || status == svn_wc__db_status_incomplete)
+    return svn_error_createf(SVN_ERR_WC_PATH_UNEXPECTED_STATUS, NULL,
+                             _("Cannot get the pristine contents of '%s' "
+                               "because it has an unexpected status"),
+                             svn_dirent_local_style(local_abspath,
+                                                    scratch_pool));
+
+  SVN_ERR(svn_wc__db_get_wcroot(&wcroot_abspath, db, local_abspath,
+                                scratch_pool, scratch_pool));
+
+  if (checksum == NULL)
+    {
+      /* Return a path where nothing exists on disk, within the admin directory
+         belonging to the WCROOT_ABSPATH directory.  */
+      *pristine_path_p = svn_wc__adm_child(wcroot_abspath,
+                                           SVN_WC__ADM_NONEXISTENT_PATH,
+                                           result_pool);
+    }
+  else
+    {
+      svn_boolean_t present;
+
+      SVN_ERR(svn_wc__db_pristine_check(&present, NULL, db, local_abspath,
+                                        checksum, scratch_pool));
+      if (!present)
+        return svn_error_createf(SVN_ERR_WC_DB_ERROR, NULL,
+                                 _("The pristine text with checksum '%s' was "
+                                   "not found"),
+                                 svn_checksum_to_cstring_display(checksum,
+                                                                 scratch_pool));
+
+      SVN_ERR(svn_wc__db_pristine_get_future_path(pristine_path_p,
+                                                  wcroot_abspath, checksum,
+                                                  result_pool, scratch_pool));
+    }
+
+  return SVN_NO_ERROR;
 }
 
 
@@ -778,37 +852,23 @@ svn_wc_get_pristine_copy_path(const char *path,
   /* DB is now open. This is seemingly a "light" function that a caller
      may use repeatedly despite error return values. The rest of this
      function should aggressively close DB, even in the error case.  */
+  err = get_pristine_copy_path(pristine_path, local_abspath, db, pool, pool);
 
-  err = svn_wc__text_base_path_to_read(pristine_path, db, local_abspath,
-                                       pool, pool);
-  if (err && err->apr_err == SVN_ERR_WC_PATH_UNEXPECTED_STATUS)
-    {
-      /* The node doesn't exist, so return a non-existent path located
-         in WCROOT/.svn/  */
-      const char *wcroot_abspath;
-
-      svn_error_clear(err);
-
-      err = svn_wc__db_get_wcroot(&wcroot_abspath, db, local_abspath,
-                                  pool, pool);
-      if (err == NULL)
-        *pristine_path = nonexistent_path(wcroot_abspath, pool);
-    }
-
-   return svn_error_compose_create(err, svn_wc__db_close(db));
+  return svn_error_compose_create(err, svn_wc__db_close(db));
 }
 
 
 svn_error_t *
-svn_wc_get_pristine_contents2(svn_stream_t **contents,
+svn_wc_get_pristine_contents3(svn_stream_t **contents,
                               svn_wc_context_t *wc_ctx,
                               const char *local_abspath,
                               apr_pool_t *result_pool,
                               apr_pool_t *scratch_pool)
 {
-  return svn_error_trace(svn_wc__get_pristine_contents(contents, NULL,
+  return svn_error_trace(svn_wc__textbase_get_contents(contents,
                                                        wc_ctx->db,
                                                        local_abspath,
+                                                       NULL, TRUE,
                                                        result_pool,
                                                        scratch_pool));
 }
@@ -825,13 +885,14 @@ typedef struct get_pristine_lazyopen_baton_t
 
 /* Implements svn_stream_lazyopen_func_t */
 static svn_error_t *
-get_pristine_lazyopen_func(svn_stream_t **stream,
+get_pristine_lazyopen_func(svn_stream_t **stream_p,
                            void *baton,
                            apr_pool_t *result_pool,
                            apr_pool_t *scratch_pool)
 {
   get_pristine_lazyopen_baton_t *b = baton;
   const svn_checksum_t *sha1_checksum;
+  svn_stream_t *stream;
 
   /* svn_wc__db_pristine_read() wants a SHA1, so if we have an MD5,
      we'll use it to lookup the SHA1. */
@@ -842,9 +903,13 @@ get_pristine_lazyopen_func(svn_stream_t **stream,
                                          b->wri_abspath, b->checksum,
                                          scratch_pool, scratch_pool));
 
-  SVN_ERR(svn_wc__db_pristine_read(stream, NULL, b->wc_ctx->db,
+  SVN_ERR(svn_wc__db_pristine_read(&stream, NULL, b->wc_ctx->db,
                                    b->wri_abspath, sha1_checksum,
                                    result_pool, scratch_pool));
+  if (!stream)
+    return svn_error_create(SVN_ERR_WC_PRISTINE_DEHYDRATED, NULL, NULL);
+
+  *stream_p = stream;
   return SVN_NO_ERROR;
 }
 
@@ -857,13 +922,14 @@ svn_wc__get_pristine_contents_by_checksum(svn_stream_t **contents,
                                           apr_pool_t *scratch_pool)
 {
   svn_boolean_t present;
+  svn_boolean_t hydrated;
 
   *contents = NULL;
 
-  SVN_ERR(svn_wc__db_pristine_check(&present, wc_ctx->db, wri_abspath,
-                                    checksum, scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_check(&present, &hydrated, wc_ctx->db,
+                                    wri_abspath, checksum, scratch_pool));
 
-  if (present)
+  if (present && hydrated)
     {
       get_pristine_lazyopen_baton_t *gpl_baton;
 

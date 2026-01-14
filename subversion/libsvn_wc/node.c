@@ -1140,3 +1140,17 @@ svn_wc__find_working_nodes_with_basename(apr_array_header_t **abspaths,
                            abspaths, wc_ctx->db, wri_abspath, basename, kind,
                            result_pool, scratch_pool));
 }
+
+svn_error_t *
+svn_wc__find_copies_of_repos_path(apr_array_header_t **abspaths,
+                                  const char *wri_abspath,
+                                  const char *repos_relpath,
+                                  svn_node_kind_t kind,
+                                  svn_wc_context_t *wc_ctx,
+                                  apr_pool_t *result_pool,
+                                  apr_pool_t *scratch_pool)
+{
+  return svn_error_trace(svn_wc__db_find_copies_of_repos_path(
+                           abspaths, wc_ctx->db, wri_abspath, repos_relpath,
+                           kind, result_pool, scratch_pool));
+}

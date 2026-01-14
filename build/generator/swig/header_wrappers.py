@@ -265,7 +265,13 @@ class Generator(generator.swig.Generator):
       self.proxy_filename(base_fname))
 
     # Open a temporary output file
-    self.ofile = tempfile.TemporaryFile(dir=self.proxy_dir)
+    if sys.version_info[0] >= 3:
+      self.ofile = tempfile.TemporaryFile(dir=self.proxy_dir,
+                                          mode="w+",
+                                          encoding="utf8")
+    else:
+      self.ofile = tempfile.TemporaryFile(dir=self.proxy_dir)
+
     self.ofile.write('/* Proxy classes for %s\n' % base_fname)
     self.ofile.write(' * DO NOT EDIT -- AUTOMATICALLY GENERATED\n')
     self.ofile.write(' * BY build/generator/swig/header_wrappers.py */\n')

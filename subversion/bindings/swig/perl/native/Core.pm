@@ -784,7 +784,7 @@ $SVN::Depth::infinity.
 
 Exclude (i.e., don't descend into) directory D.
 
-Note: In Subversion 1.5, $SVN::Depth::exclude is B<not> supported anyhwere in
+Note: In Subversion 1.5, $SVN::Depth::exclude is B<not> supported anywhere in
 the client-side (Wc/Client/etc) code; it is only supported as an argument to
 set_path functions in the Ra and Repos reporters.  (This will enable future
 versions of Subversion to run updates, etc, against 1.5 servers with proper

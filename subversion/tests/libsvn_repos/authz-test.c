@@ -212,7 +212,7 @@ test_authz_parse(const svn_test_opts_t *opts,
                            APR_READ, APR_OS_DEFAULT,
                            pool));
   groups = svn_stream_from_aprfile2(groups_file, FALSE, pool);
-  SVN_ERR(svn_authz__parse(&authz, rules, groups, pool, pool));
+  SVN_ERR(svn_authz__parse(&authz, rules, groups, NULL, NULL, pool, pool));
 
   printf("Access check for ('%s', '%s')\n", check_user, check_repo);
 
@@ -304,7 +304,7 @@ run_global_rights_tests(const char *contents,
 
   svn_stringbuf_t *buffer = svn_stringbuf_create(contents, pool);
   svn_stream_t *stream = svn_stream_from_stringbuf(buffer, pool);
-  SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+  SVN_ERR(svn_repos_authz_parse2(&authz, stream, NULL, NULL, NULL, pool, pool));
 
   for (; test_cases->repos; ++test_cases)
     {
@@ -463,7 +463,7 @@ issue_4741_groups(apr_pool_t *pool)
    svn_authz_t *authz;
    svn_boolean_t access_granted;
 
-   SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+   SVN_ERR(svn_repos_authz_parse2(&authz, stream, NULL, NULL, NULL, pool, pool));
 
    SVN_ERR(svn_repos_authz_check_access(authz, "repo", "/", "userA",
                                         svn_authz_write, &access_granted,
@@ -481,7 +481,7 @@ issue_4741_groups(apr_pool_t *pool)
 static svn_error_t *
 reposful_reposless_stanzas_inherit(apr_pool_t *pool)
 {
-  const char rules[] = 
+  const char rules[] =
     "[groups]"                               NL
     "company = user1, user2, user3"          NL
     "customer = customer1, customer2"        NL
@@ -500,7 +500,7 @@ reposful_reposless_stanzas_inherit(apr_pool_t *pool)
    svn_authz_t *authz;
    svn_boolean_t access_granted;
 
-   SVN_ERR(svn_repos_authz_parse(&authz, stream, NULL, pool));
+   SVN_ERR(svn_repos_authz_parse2(&authz, stream, NULL, NULL, NULL, pool, pool));
 
    SVN_ERR(svn_repos_authz_check_access(authz, "project1", "/foo", "user1",
                                         svn_authz_write | svn_authz_recursive,
@@ -522,7 +522,7 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_authz__get_global_rights"),
     SVN_TEST_PASS2(issue_4741_groups,
                    "issue 4741 groups"),
-    SVN_TEST_XFAIL2(reposful_reposless_stanzas_inherit,
+    SVN_TEST_PASS2(reposful_reposless_stanzas_inherit,
                     "[foo:/] inherits [/]"),
     SVN_TEST_NULL
   };

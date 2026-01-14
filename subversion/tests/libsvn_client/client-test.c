@@ -31,6 +31,7 @@
 #include "../../libsvn_client/client.h"
 #include "svn_pools.h"
 #include "svn_client.h"
+#include "private/svn_client_private.h"
 #include "private/svn_client_mtcc.h"
 #include "svn_repos.h"
 #include "svn_subst.h"
@@ -60,7 +61,7 @@ create_greek_repos(const char **repos_url,
   svn_fs_txn_t *txn;
   svn_fs_root_t *txn_root;
 
-  /* Create a filesytem and repository. */
+  /* Create a filesystem and repository. */
   SVN_ERR(svn_test__create_repos(
               &repos, svn_test_data_path(name, pool), opts, pool));
 
@@ -371,7 +372,7 @@ test_patch(const svn_test_opts_t *opts,
     "+It is really the file 'gamma'."
   };
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-patch-repos", opts, pool));
 
   /* Check out the HEAD revision */
@@ -388,9 +389,12 @@ test_patch(const svn_test_opts_t *opts,
   rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client_create_context(&ctx, pool));
-  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path,
+  SVN_ERR(svn_client_checkout4(NULL, repos_url, wc_path,
                                &peg_rev, &rev, svn_depth_infinity,
-                               TRUE, FALSE, ctx, pool));
+                               TRUE, FALSE,
+                               opts->wc_format_version,
+                               opts->store_pristine,
+                               ctx, pool));
 
   /* Create the patch file. */
   patch_file_path = svn_dirent_join_many(
@@ -414,7 +418,6 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
                            FALSE, FALSE, patch_collection_func, &pcb,
                            ctx, pool));
-  SVN_ERR(svn_io_file_close(patch_file, pool));
 
   SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
   key = "A/D/gamma";
@@ -428,6 +431,27 @@ test_patch(const svn_test_opts_t *opts,
                                      APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(reject_tempfile_path, expected_gamma_reject,
                              APR_EOL_STR, EXPECTED_GAMMA_REJECT_LINES, pool));
+
+  /* svn_client_patch_stream() test */
+  apr_hash_clear(pcb.patched_tempfiles);
+  apr_hash_clear(pcb.reject_tempfiles);
+
+  SVN_ERR(svn_client_patch_stream(patch_file, wc_path, FALSE, 0, FALSE,
+                                  FALSE, FALSE, patch_collection_func, &pcb,
+                                  ctx, pool));
+
+  SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
+  patched_tempfile_path = apr_hash_get(pcb.patched_tempfiles, key,
+                                       APR_HASH_KEY_STRING);
+  SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
+                             EXPECTED_GAMMA_LINES, pool));
+  SVN_TEST_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
+  reject_tempfile_path = apr_hash_get(pcb.reject_tempfiles, key,
+                                     APR_HASH_KEY_STRING);
+  SVN_ERR(check_patch_result(reject_tempfile_path, expected_gamma_reject,
+                             APR_EOL_STR, EXPECTED_GAMMA_REJECT_LINES, pool));
+
+  SVN_ERR(svn_io_file_close(patch_file, pool));
 
   return SVN_NO_ERROR;
 }
@@ -445,8 +469,9 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   const char *ex_file_path;
   const char *ex_dir_path;
   const char *ex2_dir_path;
+  svn_boolean_t store_pristine;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-wc-add-repos", opts, pool));
   committed_rev = 1;
 
@@ -462,13 +487,24 @@ test_wc_add_scenarios(const svn_test_opts_t *opts,
   peg_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client_create_context(&ctx, pool));
   /* Checkout greek tree as wc_path */
-  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path, &peg_rev, &rev,
-                               svn_depth_infinity, FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_client_checkout4(NULL, repos_url, wc_path, &peg_rev, &rev,
+                               svn_depth_infinity, FALSE, FALSE,
+                               opts->wc_format_version,
+                               opts->store_pristine,
+                               ctx, pool));
+
+  SVN_ERR(svn_wc__get_settings(NULL, &store_pristine, ctx->wc_ctx,
+                               wc_path, pool));
+  if (!store_pristine)
+    return svn_error_create(SVN_ERR_TEST_SKIPPED, NULL,
+                            "Test assumes a working copy with pristine");
 
   /* Now checkout again as wc_path/NEW */
   new_dir_path = svn_dirent_join(wc_path, "NEW", pool);
-  SVN_ERR(svn_client_checkout3(NULL, repos_url, new_dir_path, &peg_rev, &rev,
+  SVN_ERR(svn_client_checkout4(NULL, repos_url, new_dir_path, &peg_rev, &rev,
                                svn_depth_infinity, FALSE, FALSE,
+                               opts->wc_format_version,
+                               opts->store_pristine,
                                ctx, pool));
 
   ex_dir_path = svn_dirent_join(wc_path, "NEW_add", pool);
@@ -575,7 +611,7 @@ test_copy_crash(const svn_test_opts_t *opts,
   const char *dest;
   const char *repos_url;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-copy-crash", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -609,7 +645,7 @@ test_16k_add(const svn_test_opts_t *opts,
   apr_pool_t *iterpool = svn_pool_create(pool);
   int i;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-16k-repos", opts, pool));
 
   /* Check out the HEAD revision */
@@ -626,9 +662,12 @@ test_16k_add(const svn_test_opts_t *opts,
   rev.kind = svn_opt_revision_head;
   peg_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client_create_context(&ctx, pool));
-  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path,
+  SVN_ERR(svn_client_checkout4(NULL, repos_url, wc_path,
                                &peg_rev, &rev, svn_depth_infinity,
-                               TRUE, FALSE, ctx, pool));
+                               TRUE, FALSE,
+                               opts->wc_format_version,
+                               opts->store_pristine,
+                               ctx, pool));
 
   for (i = 0; i < 16384; i++)
     {
@@ -670,7 +709,7 @@ test_youngest_common_ancestor(const svn_test_opts_t *opts,
   const char *dest;
   svn_client__pathrev_t *yc_ancestor;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-youngest-common-ancestor", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -735,7 +774,10 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   const char *repos2_url;
   const char *wc_path;
   svn_client_ctx_t *ctx;
-/* Create a filesytem and repository containing the Greek tree. */
+  svn_ra_session_t *ra_session;
+  svn_client__pathrev_t *loc;
+
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "foreign-copy1", opts, pool));
   SVN_ERR(create_greek_repos(&repos2_url, "foreign-copy2", opts, pool));
 
@@ -753,22 +795,33 @@ test_foreign_repos_copy(const svn_test_opts_t *opts,
   peg_rev.kind = svn_opt_revision_unspecified;
   SVN_ERR(svn_client_create_context(&ctx, pool));
   /* Checkout greek tree as wc_path */
-  SVN_ERR(svn_client_checkout3(NULL, repos_url, wc_path, &peg_rev, &rev,
-                               svn_depth_infinity, FALSE, FALSE, ctx, pool));
+  SVN_ERR(svn_client_checkout4(NULL, repos_url, wc_path, &peg_rev, &rev,
+                               svn_depth_infinity,
+                               FALSE, FALSE,
+                               opts->wc_format_version,
+                               opts->store_pristine,
+                               ctx, pool));
 
-  SVN_ERR(svn_client__copy_foreign(svn_path_url_add_component2(repos2_url, "A",
-                                                               pool),
-                                   svn_dirent_join(wc_path, "A-copied", pool),
-                                   &peg_rev, &rev, svn_depth_infinity, FALSE, FALSE,
-                                   ctx, pool));
+  SVN_ERR(svn_client__ra_session_from_path2(&ra_session, &loc,
+                                            repos2_url, NULL, &peg_rev, &rev,
+                                            ctx, pool));
 
+  loc->url = svn_path_url_add_component2(repos2_url, "A", pool);
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    svn_client__repos_to_wc_copy_by_editor(NULL /*sleep*/, svn_node_dir,
+                             loc->url, loc->rev,
+                             svn_dirent_join(wc_path, "A-copied", pool),
+                             ra_session, ctx, pool),
+    ctx->wc_ctx, wc_path, FALSE, pool);
 
-  SVN_ERR(svn_client__copy_foreign(svn_path_url_add_component2(repos2_url,
-                                                               "iota",
-                                                               pool),
-                                   svn_dirent_join(wc_path, "iota-copied", pool),
-                                   &peg_rev, &rev, svn_depth_infinity, FALSE, FALSE,
-                                   ctx, pool));
+  SVN_ERR(svn_ra_reparent(ra_session, repos2_url, pool));
+  loc->url = svn_path_url_add_component2(repos2_url, "iota", pool);
+  SVN_WC__CALL_WITH_WRITE_LOCK(
+    svn_client__repos_to_wc_copy_by_editor(NULL /*sleep*/, svn_node_file,
+                             loc->url, loc->rev,
+                             svn_dirent_join(wc_path, "iota-copied", pool),
+                             ra_session, ctx, pool),
+    ctx->wc_ctx, wc_path, FALSE, pool);
 
   return SVN_NO_ERROR;
 }
@@ -787,7 +840,7 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
 
   peg_rev.kind = svn_opt_revision_unspecified;
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "mergesources", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -811,12 +864,14 @@ test_suggest_mergesources(const svn_test_opts_t *opts,
   SVN_ERR(svn_io_remove_dir2(wc_path, TRUE, NULL, NULL, pool));
 
   head_rev.kind = svn_opt_revision_head;
-  SVN_ERR(svn_client_checkout3(NULL,
+  SVN_ERR(svn_client_checkout4(NULL,
                                svn_path_url_add_component2(repos_url, "AA", pool),
                                wc_path,
                                &head_rev, &head_rev, svn_depth_empty,
-                               FALSE, FALSE, ctx, pool));
-
+                               FALSE, FALSE,
+                               opts->wc_format_version,
+                               opts->store_pristine,
+                               ctx, pool));
 
   SVN_ERR(svn_client_suggest_merge_sources(&results,
                                            wc_path,
@@ -928,7 +983,7 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   SVN_ERR(svn_stream_mark(contentstream, &start, pool));
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "test-remote-only-status", opts, pool));
 
   SVN_ERR(svn_client_create_context(&ctx, pool));
@@ -959,10 +1014,13 @@ test_remote_only_status(const svn_test_opts_t *opts, apr_pool_t *pool)
 
   rev.kind = svn_opt_revision_number;
   rev.value.number = 1;
-  SVN_ERR(svn_client_checkout3(NULL,
+  SVN_ERR(svn_client_checkout4(NULL,
                                apr_pstrcat(pool, repos_url, "/A", SVN_VA_NULL),
                                wc_path, &rev, &rev, svn_depth_immediates,
-                               FALSE, FALSE, ctx, pool));
+                               FALSE, FALSE,
+                               opts->wc_format_version,
+                               opts->store_pristine,
+                               ctx, pool));
 
   /* Add a local file; this is a double-check to make sure that
      remote-only status ignores local changes. */
@@ -1096,7 +1154,7 @@ test_copy_pin_externals(const svn_test_opts_t *opts,
     { NULL },
   };
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "pin-externals", opts, pool));
 
   wc_path = svn_test_data_path("pin-externals-working-copy", pool);
@@ -1323,7 +1381,7 @@ test_copy_pin_externals_select_subtree(const svn_test_opts_t *opts, apr_pool_t *
     { NULL },
   };
 
-  /* Create a filesytem and repository containing the Greek tree. */
+  /* Create a filesystem and repository containing the Greek tree. */
   SVN_ERR(create_greek_repos(&repos_url, "pin-externals-select-subtree",
                              opts, pool));
 

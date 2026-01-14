@@ -3,7 +3,7 @@
 #  blame_tests.py:  testing line-by-line annotation.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -216,7 +216,7 @@ def blame_in_xml(sbox):
                                         None)
 
   # Retrieve last changed date from svn info
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
+  exit_code, output, error = svntest.actions.run_and_verify_svn_xml(
     None, [],
     'log', file_path, '--xml', '-r1:2')
 
@@ -256,7 +256,7 @@ def blame_in_xml(sbox):
               '</target>\n',
               '</blame>\n']
 
-  exit_code, output, error = svntest.actions.run_and_verify_svn(
+  exit_code, output, error = svntest.actions.run_and_verify_svn_xml(
     None, [],
     'blame', file_path, '--xml')
 
@@ -958,8 +958,7 @@ def blame_youngest_to_oldest(sbox):
   sbox.simple_commit() #r3
 
   # Delete a line.
-  with open(iota_moved, 'w') as f:
-    f.write(line)
+  svntest.main.file_write(iota_moved, line)
   sbox.simple_commit() #r4
 
   expected_output = [

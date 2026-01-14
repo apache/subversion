@@ -327,7 +327,7 @@ if [ -z "$ZIP" ]; then
   # Use the gzip -n flag - this prevents it from storing the original name of
   # the .tar file, and far more importantly, the mtime of the .tar file, in the
   # produced .tar.gz file. This is important, because it makes the gzip
-  # encoding reproducable by anyone else who has an similar version of gzip,
+  # encoding reproducible by anyone else who has an similar version of gzip,
   # and also uses "gzip -9n". This means that committers who want to GPG-sign
   # both the .tar.gz and the .tar.bz2 can download the .tar.bz2 (which is
   # smaller), and locally generate an exact duplicate of the official .tar.gz

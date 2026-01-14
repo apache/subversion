@@ -21,7 +21,7 @@
 """
 Send GPG-signed security advisory e-mails from an @apache.org address
 to a known list of recipients, or write the advisory text in a form
-suitable for publishing on http://subversion.apache.org/.
+suitable for publishing on https://subversion.apache.org/.
 
 Usage: cd to the root directory of the advisory descriptions, then:
 
@@ -68,7 +68,7 @@ def parse_args(argv):
         description="""\
 Send GPG-signed security advisory e-mails from an @apache.org address
 to a known list of recipients, or write the advisory text in a form
-suitable for publishing on http://subversion.apache.org/.
+suitable for publishing on https://subversion.apache.org/.
 """)
     parser.add_argument(
         'command', action='store',

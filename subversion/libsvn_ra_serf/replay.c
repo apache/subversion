@@ -666,7 +666,7 @@ svn_ra_serf__replay_range(svn_ra_session_t *ra_session,
   apr_pool_t *subpool = svn_pool_create(scratch_pool);
 
   if (session->http20) {
-      /* ### Auch... this doesn't work yet... 
+      /* ### Auch... this doesn't work yet...
 
          This code relies on responses coming in in an exact order, while
          http2 does everything to deliver responses as fast as possible.

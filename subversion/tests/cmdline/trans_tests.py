@@ -3,7 +3,7 @@
 #  trans_tests.py:  testing eol conversion and keyword substitution
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -304,7 +304,7 @@ def keywords_from_birth(sbox):
   fp = open(url_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
                         lines[0]))):
     logger.warn("URL expansion failed for %s", url_unexp_path)
     raise svntest.Failure
@@ -314,7 +314,7 @@ def keywords_from_birth(sbox):
   fp = open(url_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
                         lines[0]))):
     logger.warn("URL expansion failed for %s", url_exp_path)
     raise svntest.Failure
@@ -324,7 +324,7 @@ def keywords_from_birth(sbox):
   fp = open(id_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: id_unexp", lines[0]))):
+          and (re.match(r"\$Id: id_unexp", lines[0]))):
     logger.warn("Id expansion failed for %s", id_exp_path)
     raise svntest.Failure
   fp.close()
@@ -333,7 +333,7 @@ def keywords_from_birth(sbox):
   fp = open(id_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: id_exp", lines[0]))):
+          and (re.match(r"\$Id: id_exp", lines[0]))):
     logger.warn("Id expansion failed for %s", id_exp_path)
     raise svntest.Failure
   fp.close()
@@ -342,7 +342,7 @@ def keywords_from_birth(sbox):
   fp = open(header_unexp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match(r"\$Header: (https?|file|svn|svn\+ssh)://.* jrandom",
                         lines[0]))):
     logger.warn("Header expansion failed for %s", header_unexp_path)
     raise svntest.Failure
@@ -352,7 +352,7 @@ def keywords_from_birth(sbox):
   fp = open(header_exp_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Header: (https?|file|svn|svn\\+ssh)://.* jrandom",
+          and (re.match(r"\$Header: (https?|file|svn|svn\+ssh)://.* jrandom",
                         lines[0]))):
     logger.warn("Header expansion failed for %s", header_exp_path)
     raise svntest.Failure
@@ -393,16 +393,23 @@ def keywords_from_birth(sbox):
     '$URL::x%sx$\n' % (' ' * len(url_expand_test_data))
     ]
 
-  fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
-  actual_textbase_kw = fp.readlines()
-  fp.close()
+  # Read the text base, either from a locally stored file or from the repo.
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    fp = open(svntest.wc.text_base_path(fixed_length_keywords_path), 'r')
+    actual_textbase_kw = fp.readlines()
+    fp.close()
+  else:
+    _, actual_textbase_kw, _ = svntest.main.run_svn(False,
+                                 'cat', '-rHEAD', '--ignore-keywords',
+                                 fixed_length_keywords_path)
+
   check_keywords(actual_textbase_kw, kw_textbase, "text base")
 
   # Check the Id keyword for filename with spaces.
   fp = open(id_with_space_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: .*id with space", lines[0]))):
+          and (re.match(r"\$Id: .*id with space", lines[0]))):
     logger.warn("Id expansion failed for %s", id_with_space_path)
     raise svntest.Failure
   fp.close()
@@ -411,7 +418,7 @@ def keywords_from_birth(sbox):
   fp = open(id_exp_with_dollar_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
+          and (re.match(r"\$Id: .*id_exp with_\$_sign [^$]* jrandom \$",
                         lines[0]))):
     logger.warn("Id expansion failed for %s", id_exp_with_dollar_path)
 
@@ -597,10 +604,11 @@ def eol_change_is_text_mod(sbox):
     if contents != b"1\r\n2\r\n3\r\n4\r\n5\r\n6\r\n7\r\n8\r\n9\r\n":
       raise svntest.Failure
 
-  foo_base_path = svntest.wc.text_base_path(foo_path)
-  base_contents = open(foo_base_path, 'rb').read()
-  if contents != base_contents:
-    raise svntest.Failure
+  if svntest.actions.get_wc_store_pristine(wc_dir):
+    foo_base_path = svntest.wc.text_base_path(foo_path)
+    base_contents = open(foo_base_path, 'rb').read()
+    if contents != base_contents:
+      raise svntest.Failure
 
 #----------------------------------------------------------------------
 # Regression test for issue #1151.  A single file in a directory
@@ -637,7 +645,7 @@ def keyword_expanded_on_checkout(sbox):
   fp = open(other_url_path, 'r')
   lines = fp.readlines()
   if not ((len(lines) == 1)
-          and (re.match("\$URL: (http|https|file|svn|svn\\+ssh)://",
+          and (re.match(r"\$URL: (http|https|file|svn|svn\+ssh)://",
                         lines[0]))):
     logger.warn("URL expansion failed for %s", other_url_path)
     raise svntest.Failure

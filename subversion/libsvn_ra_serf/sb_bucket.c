@@ -117,19 +117,6 @@ sb_bucket_read(serf_bucket_t *bucket, apr_size_t requested,
   return *data == NULL ? APR_EOF : APR_SUCCESS;
 }
 
-#if !SERF_VERSION_AT_LEAST(1, 4, 0)
-static apr_status_t
-sb_bucket_readline(serf_bucket_t *bucket, int acceptable,
-                   int *found,
-                   const char **data, apr_size_t *len)
-{
-  /* ### for now, we know callers won't use this function.  */
-  svn_error_clear(svn_error__malfunction(TRUE, __FILE__, __LINE__,
-                                         "Not implemented."));
-  return APR_ENOTIMPL;
-}
-#endif
-
 
 static apr_status_t
 sb_bucket_peek(serf_bucket_t *bucket,
@@ -160,11 +147,7 @@ sb_bucket_peek(serf_bucket_t *bucket,
 static const serf_bucket_type_t sb_bucket_vtable = {
     "SPILLBUF",
     sb_bucket_read,
-#if SERF_VERSION_AT_LEAST(1, 4, 0)
-    serf_default_readline,
-#else
-    sb_bucket_readline,
-#endif
+    svn_ra_serf__default_readline,
     serf_default_read_iovec,
     serf_default_read_for_sendfile,
     serf_default_read_bucket,

@@ -262,7 +262,7 @@ terminal_puts(const char *string, terminal_handle_t *terminal,
 
 /* These codes can be returned from terminal_getc instead of a character. */
 #define TERMINAL_NONE  0x80000               /* no character read, retry */
-#define TERMINAL_DEL   (TERMINAL_NONE + 1)   /* the input was a deleteion */
+#define TERMINAL_DEL   (TERMINAL_NONE + 1)   /* the input was a deletion */
 #define TERMINAL_EOL   (TERMINAL_NONE + 2)   /* end of input/end of line */
 #define TERMINAL_EOF   (TERMINAL_NONE + 3)   /* end of file during input */
 

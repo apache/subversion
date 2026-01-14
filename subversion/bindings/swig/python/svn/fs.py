@@ -2,7 +2,7 @@
 # fs.py: public Python interface for fs components
 #
 # Subversion is a tool for revision control.
-# See http://subversion.apache.org for more information.
+# See https://subversion.apache.org for more information.
 #
 ######################################################################
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -23,11 +23,12 @@
 #    under the License.
 ######################################################################
 
+import errno
 from libsvn.fs import *
-from svn.core import _unprefix_names, Pool
+from svn.core import _unprefix_names, Pool, _as_list
 _unprefix_names(locals(), 'svn_fs_')
 _unprefix_names(locals(), 'SVN_FS_')
-__all__ = filter(lambda x: x.lower().startswith('svn_'), locals().keys())
+__all__ = [x for x in _as_list(locals()) if x.lower().startswith('svn_')]
 del _unprefix_names
 
 
@@ -48,10 +49,30 @@ import svn.diff as _svndiff
 def entries(root, path, pool=None):
   "Call dir_entries returning a dictionary mappings names to IDs."
   e = dir_entries(root, path, pool)
-  for name, entry in e.items():
+  for name, entry in _as_list(e.items()):
     e[name] = dirent_t_id_get(entry)
   return e
 
+class _PopenStdoutWrapper(object):
+  "Private wrapper object of _subprocess.Popen.stdout to clean up sub process"
+  def __init__(self, pobject):
+    self._pobject = pobject
+  def __getattr__(self, name):
+    return getattr(self._pobject.stdout, name)
+  def close(self):
+    self._pobject.stdout.close()
+    if self._pobject.poll() is None:
+        self._pobject.terminate()
+  def __del__(self):
+    if not self.closed:
+      self.close()
+    if self._pobject.poll() is None:
+        self._pobject.terminate()
+        if _sys.hexversion >= 0x030300F0:
+          try:
+            self._pobject.wait(10)
+          except _subprocess.TimeoutExpired:
+            self._pobject.kill()
 
 class FileDiff:
   def __init__(self, root1, path1, root2, path2, pool=None, diffoptions=[]):
@@ -110,6 +131,18 @@ class FileDiff:
     return self.tempfile1, self.tempfile2
 
   def get_pipe(self):
+    """Perform diff and return a file object from which the output can
+    be read.
+
+    When DIFFOPTIONS is None (the default), use svn's internal diff.
+
+    With any other DIFFOPTIONS, exec the external diff found on PATH,
+    passing it DIFFOPTIONS. On Windows, exec diff.exe rather than
+    diff. If a diff utility is not installed or found on PATH, throws
+    FileNotFoundError. Caveat: On some systems, including Windows, an
+    external diff may not be available unless installed and added to
+    PATH manually.
+    """
     self.get_files()
 
     # If diffoptions were provided, then the diff command needs to be
@@ -122,9 +155,18 @@ class FileDiff:
             + [self.tempfile1, self.tempfile2]
 
       # open the pipe, and return the file object for reading from the child.
-      p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
-                            close_fds=_sys.platform != "win32")
-      return p.stdout
+      try:
+        p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
+                              close_fds=_sys.platform != "win32")
+      # When removing Python 2 support: Change to FileNotFoundError and
+      # remove check for ENOENT (FileNotFoundError "Corresponds to errno
+      # ENOENT" according to documentation)
+      except OSError as err:
+        if err.errno == errno.ENOENT:
+          err.strerror = "External diff command not found in PATH"
+        raise err
+
+      return _PopenStdoutWrapper(p)
 
     else:
       if self.difftemp is None:
@@ -132,16 +174,16 @@ class FileDiff:
 
         with builtins.open(self.difftemp, "wb") as fp:
           diffopt = _svndiff.file_options_create()
-          diffobj = _svndiff.file_diff_2(self.tempfile1,
-                                         self.tempfile2,
+          diffobj = _svndiff.file_diff_2(self.tempfile1.encode('UTF-8'),
+                                         self.tempfile2.encode('UTF-8'),
                                          diffopt)
 
           _svndiff.file_output_unified4(fp,
                                         diffobj,
-                                        self.tempfile1,
-                                        self.tempfile2,
+                                        self.tempfile1.encode('UTF-8'),
+                                        self.tempfile2.encode('UTF-8'),
                                         None, None,
-                                        "utf8",
+                                        b"utf8",
                                         None,
                                         diffopt.show_c_function,
                                         diffopt.context_size,

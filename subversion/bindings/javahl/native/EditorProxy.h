@@ -33,6 +33,8 @@
 #include "private/svn_editor.h"
 #include "private/svn_delta_private.h"
 
+#include "CxxCompat.hpp"
+
 /**
  * These callbacks are needed by the delta-to-Ev2 shims.
  */
@@ -53,7 +55,7 @@ struct EditorProxyCallbacks
 class EditorProxy
 {
 public:
-  typedef std::auto_ptr<EditorProxy> UniquePtr;
+  typedef ::JavaHL::cxx::owned_ptr<EditorProxy> UniquePtr;
 
   EditorProxy(jobject jeditor, apr_pool_t* edit_pool,
               const char* repos_root_url, const char* base_relpath,

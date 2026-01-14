@@ -9,9 +9,13 @@
    users of Subversion to upgrade as soon as reasonable.
 [else]   This is the most complete release of the [major-minor].x line to date,
    and we encourage all users to upgrade as soon as reasonable.
-[end]   Please see the
+[end]   Please see the[if-any announcement_url][else]
+<!-- Initially the release announcement link is commented out
+until the release announcement has landed in the archives.
+Add the URL below and remove this comment start section...|[end]
    <a href="[announcement_url]"
-   >release announcement</a> and the
+   >release announcement</a> and the[if-any announcement_url][else]
+|... and this end comment -->[end]
    <a href="/docs/release-notes/[major-minor]"
    >release notes</a> for more information about this release.</p> 
  

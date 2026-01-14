@@ -55,7 +55,7 @@ def get_changed_paths(*args):
 
   # First four chars of each svnlook output line show the kind of change.
   # The rest of the line is the complete repository path. See:
-  # http://svnbook.red-bean.com/nightly/en/svn.ref.svnlook.c.changed.html
+  # https://svnbook.red-bean.com/nightly/en/svn.ref.svnlook.c.changed.html
   changed_paths = [ line[4:] for line in changes.split('\n') if len(line) > 4 ]
 
   #print '%s:\n '%(' '.join(args)), '\n  '.join(changed_paths)

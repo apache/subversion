@@ -456,7 +456,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
               SVN_ERR_CLIENT_IS_BINARY_FILE, NULL,
               _("Cannot calculate blame information for binary file '%s'"),
                (svn_path_is_url(frb->target)
-                      ? frb->target 
+                      ? frb->target
                       : svn_dirent_local_style(frb->target, pool)));
         }
     }
@@ -499,8 +499,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     SVN_ERR(svn_stream_open_readonly(&delta_baton->source_stream, frb->last_filename,
                                      frb->currpool, pool));
   else
-    /* Means empty stream below. */
-    delta_baton->source_stream = NULL;
+    delta_baton->source_stream = svn_stream_empty(pool);
   last_stream = svn_stream_disown(delta_baton->source_stream, pool);
 
   if (frb->include_merged_revisions && !merged_revision)
@@ -553,7 +552,7 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
                      || frb->include_merged_revisions);
 
       /* The file existed before start_rev; generate no blame info for
-         lines from this revision (or before). 
+         lines from this revision (or before).
 
          This revision specifies the state as it was at the start revision */
 
@@ -572,10 +571,12 @@ file_rev_handler(void *baton, const char *path, svn_revnum_t revnum,
     {
       /* Proper delta - get window handler for applying delta.
          svn_ra_get_file_revs2 will drive the delta editor. */
-      svn_txdelta_apply(last_stream, cur_stream, NULL, NULL,
-                        frb->currpool,
-                        &delta_baton->wrapped_handler,
-                        &delta_baton->wrapped_baton);
+      /* Keep historical behavior by disowning the stream; adjust if needed. */
+      svn_txdelta_apply2(svn_stream_disown(last_stream, frb->currpool),
+                         cur_stream, NULL, NULL,
+                         frb->currpool,
+                         &delta_baton->wrapped_handler,
+                         &delta_baton->wrapped_baton);
       *content_delta_handler = window_handler;
       *content_delta_baton = delta_baton;
     }
@@ -656,14 +657,16 @@ normalize_blames(struct blame_chain *chain,
 }
 
 svn_error_t *
-svn_client_blame5(const char *target,
+svn_client_blame6(svn_revnum_t *start_revnum_p,
+                  svn_revnum_t *end_revnum_p,
+                  const char *target,
                   const svn_opt_revision_t *peg_revision,
                   const svn_opt_revision_t *start,
                   const svn_opt_revision_t *end,
                   const svn_diff_file_options_t *diff_options,
                   svn_boolean_t ignore_mime_type,
                   svn_boolean_t include_merged_revisions,
-                  svn_client_blame_receiver3_t receiver,
+                  svn_client_blame_receiver4_t receiver,
                   void *receiver_baton,
                   svn_client_ctx_t *ctx,
                   apr_pool_t *pool)
@@ -696,10 +699,13 @@ svn_client_blame5(const char *target,
   SVN_ERR(svn_client__get_revision_number(&start_revnum, NULL, ctx->wc_ctx,
                                           target_abspath_or_url, ra_session,
                                           start, pool));
-
+  if (start_revnum_p)
+    *start_revnum_p = start_revnum;
   SVN_ERR(svn_client__get_revision_number(&end_revnum, NULL, ctx->wc_ctx,
                                           target_abspath_or_url, ra_session,
                                           end, pool));
+  if (end_revnum_p)
+    *end_revnum_p = end_revnum;
 
   {
     svn_client__pathrev_t *loc;
@@ -734,7 +740,7 @@ svn_client_blame5(const char *target,
 
           mime_type = svn_prop_get_value(props, SVN_PROP_MIME_TYPE);
         }
-      else 
+      else
         {
           const svn_string_t *value;
 
@@ -897,9 +903,9 @@ svn_client_blame5(const char *target,
       /* If we never created any blame for the original chain, create it now,
          with the most recent changed revision.  This could occur if a file
          was created on a branch and them merged to another branch.  This is
-         semanticly a copy, and we want to use the revision on the branch as
+         semantically a copy, and we want to use the revision on the branch as
          the most recently changed revision.  ### Is this really what we want
-         to do here?  Do the sematics of copy change? */
+         to do here?  Do the semantics of copy change? */
       if (!frb.chain->blame)
         frb.chain->blame = blame_create(frb.chain, frb.last_rev, 0);
 
@@ -941,18 +947,21 @@ svn_client_blame5(const char *target,
             SVN_ERR(ctx->cancel_func(ctx->cancel_baton));
           if (!eof || sb->len)
             {
+              svn_string_t line;
+              line.data = sb->data;
+              line.len = sb->len;
               if (walk->rev)
-                SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
+                SVN_ERR(receiver(receiver_baton,
                                  line_no, walk->rev->revision,
                                  walk->rev->rev_props, merged_rev,
                                  merged_rev_props, merged_path,
-                                 sb->data, FALSE, iterpool));
+                                 &line, FALSE, iterpool));
               else
-                SVN_ERR(receiver(receiver_baton, start_revnum, end_revnum,
+                SVN_ERR(receiver(receiver_baton,
                                  line_no, SVN_INVALID_REVNUM,
                                  NULL, SVN_INVALID_REVNUM,
                                  NULL, NULL,
-                                 sb->data, TRUE, iterpool));
+                                 &line, TRUE, iterpool));
             }
           if (eof) break;
         }

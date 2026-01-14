@@ -294,7 +294,7 @@ static const apr_getopt_option_t svnsync_options[] =
 
 typedef struct opt_baton_t {
   svn_boolean_t non_interactive;
-  struct { 
+  struct {
     svn_boolean_t trust_server_cert_unknown_ca;
     svn_boolean_t trust_server_cert_cn_mismatch;
     svn_boolean_t trust_server_cert_expired;
@@ -821,7 +821,7 @@ do_initialize(svn_ra_session_t *to_session,
 
   /* Now fill in our bookkeeping info in the dest repository. */
 
-  SVN_ERR(svn_ra_open4(&from_session, NULL, baton->from_url, NULL,
+  SVN_ERR(svn_ra_open5(&from_session, NULL, NULL, baton->from_url, NULL,
                        &(baton->source_callbacks), baton,
                        baton->config, pool));
   SVN_ERR(svn_ra_get_repos_root2(from_session, &root_url, pool));
@@ -902,7 +902,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
 
-  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -998,7 +998,7 @@ open_source_session(svn_ra_session_t **from_session,
                                           pool));
 
   /* Open the session to copy the revision data. */
-  SVN_ERR(svn_ra_open4(from_session, NULL, from_url, from_uuid_str->data,
+  SVN_ERR(svn_ra_open5(from_session, NULL, NULL, from_url, from_uuid_str->data,
                        callbacks, baton, config, pool));
 
   return SVN_NO_ERROR;
@@ -1013,7 +1013,7 @@ open_target_session(svn_ra_session_t **target_session_p,
                     apr_pool_t *pool)
 {
   svn_ra_session_t *target_session;
-  SVN_ERR(svn_ra_open4(&target_session, NULL, baton->to_url, NULL,
+  SVN_ERR(svn_ra_open5(&target_session, NULL, NULL, baton->to_url, NULL,
                        &(baton->sync_callbacks), baton, baton->config, pool));
   SVN_ERR(check_if_session_is_at_repos_root(target_session, baton->to_url, pool));
 
@@ -1580,7 +1580,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   subcommand_baton_t *baton;
   const char *to_url, *from_url;
 
-  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1785,7 +1785,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
           /* This is the old "... TO_URL REV[:REV2]" syntax.
              Revisions come only from this argument.  (We effectively
              pop that last argument from the end of the argument list
-             so svn_opt__args_to_target_array() can do its thang.) */
+             so svn_opt_args_to_target_array() can do its thang.) */
           os->argc--;
 
           if ((opt_baton->start_rev.kind != svn_opt_revision_unspecified)
@@ -1806,7 +1806,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
           SVN_ERR(resolve_revnums(&start_rev, &end_rev,
                                   start_revision, end_revision));
 
-          SVN_ERR(svn_opt__args_to_target_array(
+          SVN_ERR(svn_opt_args_to_target_array3(
                       &targets, os,
                       apr_array_make(pool, 1, sizeof(const char *)), pool));
           if (targets->nelts != 1)
@@ -1823,7 +1823,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
       SVN_ERR(resolve_revnums(&start_rev, &end_rev,
                               opt_baton->start_rev, opt_baton->end_rev));
 
-      SVN_ERR(svn_opt__args_to_target_array(
+      SVN_ERR(svn_opt_args_to_target_array3(
                   &targets, os,
                   apr_array_make(pool, 2, sizeof(const char *)), pool));
       if (targets->nelts < 1)
@@ -1873,7 +1873,7 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
   apr_hash_t *props;
   svn_string_t *from_url, *from_uuid, *last_merged_rev;
 
-  SVN_ERR(svn_opt__args_to_target_array(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1963,7 +1963,10 @@ help_cmd(apr_getopt_t *os, void *baton, apr_pool_t *pool)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   const svn_opt_subcommand_desc3_t *subcommand = NULL;
   apr_array_header_t *received_opts;
@@ -1978,9 +1981,12 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   apr_array_header_t *config_options = NULL;
   const char *source_prop_encoding = NULL;
   svn_boolean_t force_interactive = FALSE;
+  const char **argv;
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
   SVN_ERR(svn_ra_initialize(pool));
 
@@ -2161,19 +2167,24 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
             break;
 
           case 'M':
-            if (!config_options)
-              config_options =
-                    apr_array_make(pool, 1,
-                                   sizeof(svn_cmdline__config_argument_t*));
+            {
+              svn_cmdline__config_argument_t *new_option =
+                  apr_pcalloc(pool, sizeof(*new_option));
 
-            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
-            SVN_ERR(svn_cmdline__parse_config_option(
-                      config_options,
-                      apr_psprintf(pool,
-                                   "config:miscellany:memory-cache-size=%s",
-                                   opt_arg),
-                      NULL /* won't be used */,
-                      pool));
+              if (!config_options)
+                config_options =
+                      apr_array_make(pool, 1,
+                                     sizeof(svn_cmdline__config_argument_t*));
+
+              new_option->file = SVN_CONFIG_CATEGORY_CONFIG;
+              new_option->section = SVN_CONFIG_SECTION_MISCELLANY;
+              new_option->option = SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE;
+              SVN_ERR(svn_utf_cstring_to_utf8(&new_option->value,
+                                              opt_arg, pool));
+
+              APR_ARRAY_PUSH(config_options,
+                             svn_cmdline__config_argument_t *) = new_option;
+            }
             break;
 
           case '?':
@@ -2196,18 +2207,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   if (opt_baton.help)
     subcommand = svn_opt_get_canonical_subcommand3(svnsync_cmd_table, "help");
 
-  /* The --non-interactive and --force-interactive options are mutually
-   * exclusive. */
-  if (opt_baton.non_interactive && force_interactive)
-    {
-      return svn_error_create(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
-                              _("--non-interactive and --force-interactive "
-                                "are mutually exclusive"));
-    }
-  else
-    opt_baton.non_interactive = !svn_cmdline__be_interactive(
-                                  opt_baton.non_interactive,
-                                  force_interactive);
+  SVN_ERR(svn_cmdline__be_interactive(&opt_baton.non_interactive,
+                                      force_interactive));
 
   /* Disallow the mixing --username/password with their --source- and
      --sync- variants.  Treat "--username FOO" as "--source-username
@@ -2402,7 +2403,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

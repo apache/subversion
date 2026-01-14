@@ -71,7 +71,7 @@ svn_cl__revert(apr_getopt_t *os,
                            opt_state->changelists,
                            FALSE /* clear_changelists */,
                            FALSE /* metadata_only */,
-                           TRUE /*added_keep_local*/,
+                           !opt_state->remove_added /*added_keep_local*/,
                            ctx, scratch_pool);
   if (err
       && (err->apr_err == SVN_ERR_WC_INVALID_OPERATION_DEPTH)

@@ -287,7 +287,7 @@ svnconflict_help(apr_getopt_t *os, void *baton, apr_pool_t *pool)
      "\nAvailable subcommands:\n");
   char help_footer[] =
   N_("Subversion is a tool for version control.\n"
-     "For additional information, see http://subversion.apache.org/\n");
+     "For additional information, see https://subversion.apache.org/\n");
   const char *ra_desc_start
     = _("The following repository access (RA) modules are available:\n\n");
   svn_stringbuf_t *version_footer = svn_stringbuf_create_empty(pool);
@@ -373,7 +373,7 @@ svnconflict_list(apr_getopt_t *os, void *baton, apr_pool_t *pool)
 
   for (i = 0; i < props_conflicted->nelts; i++)
     {
-      const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *); 
+      const char *propname = APR_ARRAY_IDX(props_conflicted, i, const char *);
       SVN_ERR(svn_cmdline_printf(pool, "prop-conflict: %s\n", propname));
     }
 
@@ -632,7 +632,10 @@ svnconflict_resolve_tree(apr_getopt_t *os, void *baton, apr_pool_t *pool)
  * return SVN_NO_ERROR.
  */
 static svn_error_t *
-sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
+sub_main(int *exit_code,
+         int argc,
+         const svn_cmdline__argv_char_t *cmdline_argv[],
+         apr_pool_t *pool)
 {
   svn_error_t *err;
   int opt_id;
@@ -647,11 +650,14 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
   svn_config_t *cfg_config;
   apr_hash_t *cfg_hash;
   svn_boolean_t read_pass_from_stdin = FALSE;
+  const char **argv;
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
   /* Check library versions */
   SVN_ERR(check_lib_versions());
+
+  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -717,7 +723,8 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
         break;
       case opt_config_dir:
         SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-        opt_state.config_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
+        SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
+                                               utf8_opt_arg, pool, pool));
         break;
       case opt_config_options:
         if (!opt_state.config_options)
@@ -948,7 +955,7 @@ sub_main(int *exit_code, int argc, const char *argv[], apr_pool_t *pool)
 }
 
 int
-main(int argc, const char *argv[])
+SVN_CMDLINE__MAIN(int argc, const svn_cmdline__argv_char_t *argv[])
 {
   apr_pool_t *pool;
   int exit_code = EXIT_SUCCESS;

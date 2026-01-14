@@ -143,7 +143,7 @@ svn_temp_serializer__init(const void *source_struct,
  * been serialized to BUFFER but contains references to new objects yet to
  * serialize. The current size of the serialized data is given in
  * CURRENTLY_USED. If the allocated data buffer is actually larger, you may
- * specifiy that in CURRENTLY_ALLOCATED to prevent unnecessary allocations.
+ * specify that in CURRENTLY_ALLOCATED to prevent unnecessary allocations.
  * Otherwise, set it to 0. All allocations will be made from POOl.
  */
 svn_temp_serializer__context_t *
@@ -261,7 +261,7 @@ svn_temp_serializer__push(svn_temp_serializer__context_t *context,
     svn_stringbuf_appendbytes(context->buffer, source, struct_size);
 }
 
-/* Remove the lastest structure from the stack.
+/* Remove the latest structure from the stack.
  */
 void
 svn_temp_serializer__pop(svn_temp_serializer__context_t *context)

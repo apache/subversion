@@ -4,7 +4,7 @@
 #  lock_tests.py:  testing versioned properties
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -91,8 +91,8 @@ def lock_file(sbox):
                                      '-m', '', file_path)
 
   # --- Meanwhile, in our other working copy... ---
-  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
+  err_re = r"(svn\: E195022\: File '.*iota' is locked in another)|" + \
+           r"(svn\: E160039: User '?jconstant'? does not own lock on path.*iota')"
 
   svntest.main.run_svn(None, 'update', wc_b)
   # -- Try to change a file --
@@ -112,8 +112,8 @@ def lock_file(sbox):
   # change the locked file's properties
   svntest.main.run_svn(None, 'propset', 'sneakyuser', 'Sally', file_path_b)
 
-  err_re = "(svn\: E195022\: File '.*iota' is locked in another)|" + \
-           "(svn\: E160039\: User '?jconstant'? does not own lock on path)"
+  err_re = r"(svn\: E195022\: File '.*iota' is locked in another)|" + \
+           r"(svn\: E160039\: User '?jconstant'? does not own lock on path)"
 
   # attempt (and fail) to commit as user Sally
   svntest.actions.run_and_verify_commit(wc_b, None, None, err_re,
@@ -1001,7 +1001,7 @@ def lock_and_exebit1(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    logger.warn("Commiting a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("Committing a file with 'svn:needs-lock, svn:executable'")
     logger.warn("after unlocking modified file's permissions")
     raise svntest.Failure
 
@@ -1065,7 +1065,7 @@ def lock_and_exebit2(sbox):
   if (not gamma_stat & mode_r
       or gamma_stat & mode_w
       or not gamma_stat & mode_x):
-    logger.warn("Commiting a file with 'svn:needs-lock, svn:executable'")
+    logger.warn("Committing a file with 'svn:needs-lock, svn:executable'")
     logger.warn("did not set the file to read-only, executable")
     raise svntest.Failure
 
@@ -1275,8 +1275,8 @@ def ls_url_encoded(sbox):
                                      [], "lock", fname)
 
   # Make sure ls shows it being locked.
-  expected_output = " +2 " + re.escape(svntest.main.wc_author) + " +O .+f|" \
-                    " +2 " + re.escape(svntest.main.wc_author) + "    .+\./"
+  expected_output = r" +2 %(author)s +O .+f| +2 %(author)s    .+\./" % \
+                    {'author': re.escape(svntest.main.wc_author)}
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      "list", "-v", dirname)
 
@@ -1454,7 +1454,7 @@ def lock_path_not_in_head(sbox):
   svntest.actions.run_and_verify_svn(None, [], 'up', '-r1', wc_dir)
   expected_lock_fail_err_re = "svn: warning: W160042: " \
   "(Path .* doesn't exist in HEAD revision)"
-  # Issue #3524 These lock attemtps were triggering an assert over ra_serf:
+  # Issue #3524 These lock attempts were triggering an assert over ra_serf:
   #
   # working_copies\lock_tests-37>svn lock A\D
   # ..\..\..\subversion\libsvn_client\ra.c:275: (apr_err=235000)
@@ -1835,7 +1835,7 @@ def commit_stolen_lock(sbox):
 # When removing directories, the locks of contained files were not
 # correctly removed from the working copy database, thus they later
 # magically reappeared when new files or directories with the same
-# pathes were added.
+# paths were added.
 @Issue(4364)
 def drop_locks_on_parent_deletion(sbox):
   "drop locks when the parent is deleted"
@@ -1856,7 +1856,7 @@ def drop_locks_on_parent_deletion(sbox):
                                         [],
                                         expected_status)
 
-  # now re-add entities to the deleted pathes.
+  # now re-add entities to the deleted paths.
   sbox.simple_mkdir('A/B')
   sbox.simple_add_text('new file replacing old file', 'A/B/lambda')
   sbox.simple_add_text('file replacing former dir', 'A/B/F')
@@ -2479,6 +2479,94 @@ def replace_dir_with_lots_of_locked_files(sbox):
   # This problem was introduced on the 1.8.x branch in r1606976.
   sbox.simple_commit()
 
+def update_add_file_needs_lock(sbox):
+  "update adding a file with svn:needs-lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_update(revision=0)
+  sbox.simple_update(revision=1)
+  is_readonly(sbox.ospath('dir/file'))
+
+def update_edit_file_needs_lock(sbox):
+  "update editing a file with svn:needs-lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_append('dir/file', 'edited\n', truncate=True)
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_update(revision=1)
+  is_writable(sbox.ospath('dir/file'))
+  sbox.simple_update(revision=2)
+  is_readonly(sbox.ospath('dir/file'))
+
+def update_add_file_has_lock(sbox):
+  "update adding svn:needs-lock file with lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  # Acquire the lock for a file.
+  svntest.actions.run_and_verify_svn(".*locked by user", [], 'lock',
+                                     '-m', '', sbox.ospath('dir/file'))
+
+  sbox.simple_update(revision=0)
+  sbox.simple_update(revision=1)
+  # We have a lock for that file, so it should be writable.
+  is_writable(sbox.ospath('dir/file'))
+
+def update_edit_file_has_lock(sbox):
+  "update editing svn:needs-lock file with lock"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_append('dir/file', 'edited\n', truncate=True)
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  # Acquire the lock for a file.
+  svntest.actions.run_and_verify_svn(".*locked by user", [], 'lock',
+                                     '-m', '', sbox.ospath('dir/file'))
+
+  sbox.simple_update(revision=1)
+  # No svn:needs-lock on the file, so it should be writable.
+  is_writable(sbox.ospath('dir/file'))
+  sbox.simple_update(revision=2)
+  # We have a lock for that file, so it should be writable.
+  is_writable(sbox.ospath('dir/file'))
+
+def update_remove_needs_lock(sbox):
+  "update removing svn:needs-lock on a file"
+
+  sbox.build(empty=True)
+  sbox.simple_mkdir('dir')
+  sbox.simple_add_text('test\n', 'dir/file')
+  sbox.simple_propset('svn:needs-lock', 'yes', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_propdel('svn:needs-lock', 'dir/file')
+  sbox.simple_commit()
+
+  sbox.simple_update(revision=1)
+  is_readonly(sbox.ospath('dir/file'))
+  sbox.simple_update(revision=2)
+  is_writable(sbox.ospath('dir/file'))
+
 ########################################################################
 # Run the tests
 
@@ -2547,6 +2635,11 @@ test_list = [ None,
               delete_dir_with_lots_of_locked_files,
               delete_locks_on_depth_commit,
               replace_dir_with_lots_of_locked_files,
+              update_add_file_needs_lock,
+              update_edit_file_needs_lock,
+              update_add_file_has_lock,
+              update_edit_file_has_lock,
+              update_remove_needs_lock,
             ]
 
 if __name__ == '__main__':

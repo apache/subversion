@@ -453,7 +453,8 @@ mtcc_verify_create(svn_client__mtcc_t *mtcc,
 
       if (op)
         return svn_error_createf(SVN_ERR_FS_ALREADY_EXISTS, NULL,
-                                 _("Path '%s' already exists"),
+                                 _("Path '%s' already exists, or was created "
+                                   "by an earlier operation"),
                                  new_relpath);
 
       SVN_ERR(mtcc_op_find(&op, NULL, new_relpath, mtcc->root_op, TRUE, TRUE,
@@ -604,7 +605,7 @@ mtcc_op_contains_non_delete(const mtcc_op_t *op)
 static svn_error_t *
 mtcc_add_delete(const char *relpath,
                 svn_boolean_t for_move,
-                svn_client__mtcc_t *mtcc,                
+                svn_client__mtcc_t *mtcc,
                 apr_pool_t *scratch_pool)
 {
   mtcc_op_t *op;
@@ -636,7 +637,7 @@ mtcc_add_delete(const char *relpath,
         {
           /* Allow deleting directories, that are unmodified except for
               one or more deleted descendants */
-          
+
           SVN_ERR(mtcc_op_find(&op, &created, relpath, mtcc->root_op, TRUE,
                   FALSE, FALSE, mtcc->pool, scratch_pool));
 

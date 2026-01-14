@@ -42,6 +42,7 @@
 #include "wc.h"
 #include "adm_files.h"
 #include "workqueue.h"
+#include "textbase.h"
 
 #include "svn_private_config.h"
 #include "private/svn_io_private.h"
@@ -61,6 +62,18 @@
       reverting the addition of a directory necessarily means reverting
       the addition of all the directory's children.  Again,
       svn_wc_remove_from_revision_control() should do the trick.
+
+    - For a copy, we remove the item from disk as well. The thinking here
+      is that Subversion is responsible for the existence of the item: it
+      must have been created by something like 'svn copy' or 'svn merge'.
+
+    - For a plain add, removing the file or directory from disk is optional.
+      The user's idea of Subversion's involvement could be either that
+      Subversion was just responsible for adding an existing item to version
+      control, as with 'svn add', and so should not be responsible for
+      deleting it from disk; or that Subversion is responsible for the
+      existence of the item, e.g. if created by 'svn patch' or svn mkdir'.
+      It depends on the use case.
 
     Deletes
 
@@ -702,10 +715,21 @@ revert_wc_data(svn_boolean_t *run_wq,
       if (kind == svn_node_file)
         {
           svn_skel_t *work_item;
+          const char *install_from;
+          svn_skel_t *cleanup_work_item;
 
+          SVN_ERR(svn_wc__textbase_setaside_wq(&install_from,
+                                               &cleanup_work_item,
+                                               db, local_abspath, NULL,
+                                               cancel_func, cancel_baton,
+                                               scratch_pool, scratch_pool));
           SVN_ERR(svn_wc__wq_build_file_install(&work_item, db, local_abspath,
-                                                NULL, use_commit_times, TRUE,
+                                                install_from,
+                                                use_commit_times, TRUE,
                                                 scratch_pool, scratch_pool));
+          work_item = svn_wc__wq_merge(work_item, cleanup_work_item,
+                                       scratch_pool);
+
           SVN_ERR(svn_wc__db_wq_add(db, local_abspath, work_item,
                                     scratch_pool));
           *run_wq = TRUE;
@@ -957,7 +981,7 @@ revert_partial(svn_wc__db_t *db,
 
 
 svn_error_t *
-svn_wc_revert6(svn_wc_context_t *wc_ctx,
+svn_wc_revert7(svn_wc_context_t *wc_ctx,
                const char *local_abspath,
                svn_depth_t depth,
                svn_boolean_t use_commit_times,

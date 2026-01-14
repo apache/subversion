@@ -63,7 +63,7 @@ branches/1.4.x. If the buildslave is not online, then the build will be
 stored in the queue and started when the buildslave connects.
 
 Normally each build only includes the changes of one commit. However, when 
-multiple changes arive during a previous build, those will be combined in 
+multiple changes arrive during a previous build, those will be combined in 
 a next build.
 
 The buildmaster looks at each commit and decides if they are important enough

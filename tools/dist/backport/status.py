@@ -85,10 +85,11 @@ class Paragraph:
 
   def __init__(self, kind, text, entry, containing_section):
     """Constructor.
-    
+
     KIND is one of the Kind.* enumerators.
 
-    TEXT is the physical text in the file, used by unparsing.
+    TEXT is the physical text in the file, used by unparsing unless kind is
+    Kind.nomination.
 
     ENTRY is the StatusEntry object, if Kind.nomination, else None.
 
@@ -109,7 +110,7 @@ class Paragraph:
   @classmethod
   def is_header(cls, para_text):
     """PARA_TEXT is a single physical paragraph, as a bare multiline string.
-    
+
     If PARA_TEXT is a section header, return the header text; else, return
     False."""
     lines = para_text.split('\n', 2)
@@ -135,18 +136,23 @@ class Paragraph:
 
   def approved(self):
     "TRUE if this paragraph is in the approved section, false otherwise."
-    assert self.kind 
+    assert self.kind
     # ### backport.pl used to check just .startswith() here.
     return self.section() == "Approved changes"
 
   def unparse(self, stream):
     "Write this paragraph to STREAM, an open file-like object."
+    stream.write(self.__str__())
+
+  def __str__(self):
+    s = ""
     if self.kind in (Kind.preamble, Kind.section_header, Kind.unknown):
-      stream.write(self.text + "\n")
+      s += self.text + "\n"
     elif self.kind is Kind.nomination:
-      self.entry().unparse(stream)
+      s += self.entry().__str__() + '\n'
     else:
       assert False, "Unknown paragraph kind"
+    return s
 
   def __repr__(self):
     return "<Paragraph({!r}, {!r}, {!r}, {!r})>".format(
@@ -230,6 +236,34 @@ class StatusFile:
         for para in entry_paras:
           para.kind = Kind.unknown
 
+  def insert(self, entry, containing_section):
+    p = Paragraph(Kind.nomination,
+                  "",
+                  entry,
+                  containing_section)
+
+    # Find an existing section header to insert the new entry
+    i = 0
+    correct_header = False
+    while i < len(self.paragraphs):
+      if self.paragraphs[i].kind is Kind.section_header:
+        if self.paragraphs[i]._containing_section == containing_section:
+          correct_header = True
+        elif correct_header:
+          self.paragraphs.insert(i, p)
+          return
+      i += 1
+
+    if not correct_header:
+      # None found so we need to append a new header followed by the new entry
+      self.paragraphs.append(Paragraph(Kind.section_header,
+                                       containing_section + ":\n" \
+                                       + '=' * (len(containing_section)+1) + "\n",
+                                       None,
+                                       containing_section)
+                             )
+    self.paragraphs.append(p)
+
   def remove(self, entry):
     "Remove ENTRY from SELF."
     for para in self.entries_paras():
@@ -241,9 +275,13 @@ class StatusFile:
 
   def unparse(self, stream):
     "Write the STATUS file to STREAM, an open file-like object."
-    for para in self.paragraphs:
-      para.unparse(stream)
+    stream.write(self.__str__())
 
+  def __str__(self):
+    s = ""
+    for para in self.paragraphs:
+      s += para.__str__()
+    return s
 
 class Test_StatusFile(unittest.TestCase):
   def test__paragraph_is_header(self):
@@ -327,26 +365,37 @@ class StatusEntry:
   branch - the backport branch's basename, or None.
   revisions - the revisions to nominated, as iterable of int.
   logsummary - the text before the justification, as an array of lines.
+  justification_str - the justification, as an array of lines. An unparsed string.
   depends - true if a "Depends:" entry was found, False otherwise.
+  depends_str - everything after the "Depends:" subheader. An unparsed string.
   accept - the value to pass to 'svn merge --accept=%s', or None.
+  notes_str - everything after the "Notes:" subheader. An unparsed string.
   votes_str - everything after the "Votes:" subheader.  An unparsed string.
   """
 
   def __init__(self, para_text, status_file=None):
     """Parse an entry from PARA_TEXT, and add it to SELF.  PARA_TEXT must
     contain exactly one entry, as a single multiline string.
-    
+
     STATUS_FILE is the StatusFile object containing this entry, if any.
     """
     self.branch = None
+    self.branch_on_first_line = False
     self.revisions = []
     self.logsummary = []
+    self.justification_str = None
     self.depends = False
+    self.depends_str = None
     self.accept = None
+    self.notes_str = None
     self.votes_str = None
     self.status_file = status_file
+    self.indentation = 0
 
     self.raw = para_text
+
+    if para_text is None:
+      return
 
     _re_entry_indentation = re.compile(r'^( *\* )')
     _re_revisions_line = re.compile(r'^(?:r?\d+[,; ]*)+$')
@@ -357,8 +406,8 @@ class StatusEntry:
     match = _re_entry_indentation.match(lines[0])
     if not match:
       raise ParseException("Entry found with no ' * ' line")
-    indentation = len(match.group(1))
-    lines = (line[indentation:] for line in lines)
+    self.indentation = len(match.group(1))
+    lines = (line[self.indentation:] for line in lines)
     lines = (line.rstrip() for line in lines)
 
     # Consume the generator.
@@ -369,6 +418,7 @@ class StatusEntry:
     if match:
       # Parse whichever group matched.
       self.branch = self.parse_branch(match.group(1) or match.group(2))
+      self.branch_on_first_line = True
     else:
       while _re_revisions_line.match(lines[0]):
         self.revisions.extend(map(int, re.compile(r'(\d+)').findall(lines[0])))
@@ -380,10 +430,10 @@ class StatusEntry:
 
     # Parse the logsummary.
     while True:
-      self.logsummary.append(lines[0])
-      lines = lines[1:]
       if (not lines) or self._is_subheader(lines[0]):
         break
+      self.logsummary.append(lines[0])
+      lines = lines[1:]
 
     # Parse votes.
     if "Votes:" in lines:
@@ -394,12 +444,24 @@ class StatusEntry:
     else:
       self.votes_str = None
 
-    # depends, branch, notes
+    # depends, justification, branch, notes
     while lines:
 
       if lines[0].strip().startswith('Depends:'):
         self.depends = True
+        self.depends_str = lines[0].strip()[8:].strip()
         lines = lines[1:]
+        continue
+
+      if lines[0].strip().startswith('Justification:'):
+        self.justification_str = lines[0].strip().split(':', 1)[1] + "\n"
+        lines = lines[1:]
+
+        # Consume the indented body of the "Justification" field.
+        while lines and not lines[0][0].isalnum():
+          self.justification_str += lines[0] + "\n"
+          lines  = lines[1:]
+
         continue
 
       if lines[0].strip().startswith('Branch:'):
@@ -418,16 +480,16 @@ class StatusEntry:
           continue
 
       if lines[0].strip().startswith('Notes:'):
-        notes = lines[0].strip().split(':', 1)[1] + "\n"
+        self.notes_str = lines[0].strip().split(':', 1)[1] + "\n"
         lines = lines[1:]
 
         # Consume the indented body of the "Notes" field.
         while lines and not lines[0][0].isalnum():
-          notes += lines[0] + "\n"
+          self.notes_str += lines[0] + "\n"
           lines = lines[1:]
 
         # Look for possible --accept directives.
-        matches = re.compile(r'--accept[ =]([a-z-]+)').findall(notes)
+        matches = re.compile(r'--accept[ =]([a-z-]+)').findall(self.notes_str)
         if len(matches) > 1:
           raise ParseException("Too many --accept values at %s" % (self,))
         elif len(matches) == 1:
@@ -499,7 +561,7 @@ class StatusEntry:
     assert self.valid()
     suffix = "" if len(self.logsummary) == 1 else " [...]"
     return self.logsummary[0] + suffix
-             
+
   # Private for is_vetoed()
   _re_vetoed = re.compile(r'^\s*(-1:|-1\s*[()])', re.MULTILINE)
   def is_vetoed(self):
@@ -510,24 +572,50 @@ class StatusEntry:
   def _is_subheader(string):
     """Given a single line from an entry, is that line a subheader (such as
     "Justification:" or "Notes:")?"""
-    # TODO: maybe change the 'subheader' heuristic?  Perhaps "line starts with
-    # an uppercase letter and ends with a colon".
-    #
-    # This is currently only used for finding the end of logsummary, and all
-    # explicitly special-cased headers (e.g., "Depends:") match this, though.
-    return re.compile(r'^\s*[A-Z]\w*:').match(string)
+    subheaders = "Justification: Notes: Depends: Branch: Votes:".split()
+    for subheader in subheaders:
+      if string.strip().startswith(subheader):
+        return True
+    return False
 
   def unparse(self, stream):
     "Write this entry to STREAM, an open file-like object."
-    # For now, this is simple.. until we add interactive editing.
-    stream.write(self.raw + "\n")
+    stream.write(self.__str__())
+
+  def __str__(self):
+    indent = ''.ljust(self.indentation-2)
+    s = indent + '* '
+    if (len(self.revisions) > 0):
+      s += 'r' + ', r'.join(map(str, self.revisions)) + \
+        ('\n' + indent + '  ').join([""] + self.logsummary) + '\n'
+    else:
+      s += ('\n' + indent + '  ').join(self.logsummary) + '\n'
+    if self.justification_str is not None:
+      s += indent + '  Justification:' + \
+        ('\n' + indent + '  ').join(self.justification_str.split("\n")[:-1]) + \
+        '\n'
+    if self.branch is not None and not self.branch_on_first_line:
+      s += indent + '  Branch:' + \
+        '\n' + indent + '    ' + self.branch + \
+        '\n'
+    if self.depends:
+      s += indent + '  Depends: ' + self.depends_str + '\n'
+    if self.notes_str is not None:
+      s += indent + '  Notes:' + \
+        ('\n' + indent + '  ').join(self.notes_str.split("\n")[:-1]) + \
+        '\n'
+    if self.votes_str is not None:
+      s += indent + '  Votes:' + \
+        ('\n' + indent + '  ').join([""] + self.votes_str.split("\n")[:-1]) + "\n"
+    return s
 
 class Test_StatusEntry(unittest.TestCase):
   def test___init__(self):
     "Test the entry parser"
 
-    # All these entries actually have a "four spaces" line as their last line,
-    # but the parser doesn't care.
+    # An entry may have spaces on its last line, the parser doesn't care.
+    # However unparse() will not replicate this, causing a failure on
+    # assertEqual(entry.unparse())
 
     s = """\
       * r42, r43,
@@ -538,7 +626,17 @@ class Test_StatusEntry(unittest.TestCase):
         Votes:
           +1: jrandom
     """
+    # Revision list will be normalized to one line
+    sExpected = """\
+      * r42, r43, r44
+        This is the logsummary.
+        Branch:
+          1.8.x-rfourty-two
+        Votes:
+          +1: jrandom
+"""
     entry = StatusEntry(s)
+    self.assertEqual(entry.__str__(), sExpected)
     self.assertEqual(entry.branch, "1.8.x-rfourty-two")
     self.assertEqual(entry.revisions, [42, 43, 44])
     self.assertEqual(entry.logsummary, ["This is the logsummary."])
@@ -561,8 +659,9 @@ class Test_StatusEntry(unittest.TestCase):
         Votes:
           +1: jrandom
           -1: jconstant
-    """
+"""
     entry = StatusEntry(s)
+    self.assertEqual(entry.__str__(), s)
     self.assertIsNone(entry.branch)
     self.assertEqual(entry.revisions, [42])
     self.assertEqual(entry.logsummary,
@@ -583,8 +682,9 @@ class Test_StatusEntry(unittest.TestCase):
         Votes:
           +1: jrandom
           -1 (see <message-id>): jconstant
-    """
+"""
     entry = StatusEntry(s)
+    self.assertEqual(entry.__str__(), s)
     self.assertEqual(entry.branch, "1.8.x-fixes")
     self.assertEqual(entry.revisions, [])
     self.assertTrue(entry.is_vetoed())
@@ -596,7 +696,17 @@ class Test_StatusEntry(unittest.TestCase):
         Votes:
           +1: jrandom
     """
+    # Normalizes branch (without path) to separate line
+    sExpected = """\
+      * r42
+        This is the logsummary.
+        Branch:
+          on-the-same-line
+        Votes:
+          +1: jrandom
+"""
     entry = StatusEntry(s)
+    self.assertEqual(entry.__str__(), sExpected)
     self.assertEqual(entry.branch, "on-the-same-line")
     self.assertEqual(entry.revisions, [42])
 
@@ -608,8 +718,9 @@ class Test_StatusEntry(unittest.TestCase):
         This is the logsummary.
         Votes:
           +1: jrandom
-    """
+"""
     entry = StatusEntry(s)
+    self.assertEqual(entry.__str__(), s)
     self.assertEqual(entry.branch, "1.8.x-fixes")
 
     s = """\
@@ -650,8 +761,9 @@ class Test_StatusEntry(unittest.TestCase):
           Fixes output that scripts depend on.
         Votes:
           +1: jrandom
-    """
+"""
     entry = StatusEntry(s)
+    self.assertEqual(entry.__str__(), s)
     self.assertEqual(entry.revisions, [42])
     self.assertEqual(entry.logsummary, ["svnversion: Fix typo in output."])
 
@@ -691,6 +803,9 @@ class Test_StatusEntry(unittest.TestCase):
     for subheader in subheaders:
       self.assertTrue(StatusEntry._is_subheader(subheader))
       self.assertTrue(StatusEntry._is_subheader(subheader + " with value"))
+    self.assertFalse(StatusEntry._is_subheader("UnknownSubheader: with value"))
+    self.assertFalse(StatusEntry._is_subheader("UnknownSubheader:"))
+    self.assertFalse(StatusEntry._is_subheader("regular text"))
 
 
 def setUpModule():

@@ -19,7 +19,7 @@
 # under the License.
 #
 #
-# Check MD5 and SHA-1 and SHA-2 signatures of files, using 
+# Check MD5 and SHA-1 and SHA-2 signatures of files, using
 # md5sums, sha1sums, and/or sha512sums as manifests
 # Replaces the 'md5sum', 'sha1sum', and 'sha512sums' commands
 # on systems that do not have them, such as Mac OS X or Windows.

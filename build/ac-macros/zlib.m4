@@ -78,6 +78,7 @@ AC_DEFUN(SVN_LIB_Z,
     AC_MSG_ERROR([subversion requires zlib])
   fi
 
+  SVN_DOT_CLANGD([$SVN_ZLIB_INCLUDES])
   AC_SUBST(SVN_ZLIB_INCLUDES)
   AC_SUBST(SVN_ZLIB_LIBS)
 ])

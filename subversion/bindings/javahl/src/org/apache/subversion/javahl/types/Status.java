@@ -35,9 +35,10 @@ import org.apache.subversion.javahl.ConflictDescriptor;
  */
 public class Status implements java.io.Serializable
 {
-    // Update the serialVersionUID when there is a incompatible change made to
-    // this class.  See the java documentation for when a change is incompatible.
-    // http://java.sun.com/javase/7/docs/platform/serialization/spec/version.html#6678
+    // Update the serialVersionUID when there is an incompatible change made to
+    // this class.  See the Java documentation (following link or its counter-
+    // part in your specific Java release) for when a change is incompatible.
+    // https://docs.oracle.com/en/java/javase/11/docs/specs/serialization/version.html#type-changes-affecting-serialization
     private static final long serialVersionUID = 3L;
 
     /**
@@ -51,7 +52,7 @@ public class Status implements java.io.Serializable
     private String path;
 
     /**
-     * kind of the item (file, directory or unknonw)
+     * kind of the item (file, directory or unknown)
      */
     private NodeKind nodeKind;
 
@@ -417,7 +418,7 @@ public class Status implements java.io.Serializable
 
     /**
      * Returns the adjusted status of the item's contents, as
-     * compatible with JavaHL 1.8 and older verions.
+     * compatible with JavaHL 1.8 and older versions.
      * @return file status property enum of the "textual" component.
      */
     public Kind getTextStatus()
@@ -474,7 +475,7 @@ public class Status implements java.io.Serializable
 
     /**
      * Returns the adjusted status of the item's contents in the
-     * repository, as compatible with JavaHL 1.8 and older verions.
+     * repository, as compatible with JavaHL 1.8 and older versions.
      * @return file status property enum of the "textual" component in the
      * repository.
      */
@@ -777,7 +778,7 @@ public class Status implements java.io.Serializable
         /** exists, but uninteresting */
         normal      ("normal"),
 
-        /** is scheduled for additon */
+        /** is scheduled for addition */
         added       ("added"),
 
         /** under v.c., but is missing */

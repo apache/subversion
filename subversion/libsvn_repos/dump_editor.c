@@ -61,8 +61,8 @@ normalize_props(apr_hash_t **normal_props,
       svn_pool_clear(iterpool);
 
       SVN_ERR(svn_repos__normalize_prop(&value, NULL, key, value,
-                                        result_pool, iterpool));
-      svn_hash_sets(*normal_props, key, value);
+                                        iterpool, iterpool));
+      svn_hash_sets(*normal_props, key, svn_string_dup(value, result_pool));
     }
   svn_pool_destroy(iterpool);
 
@@ -178,8 +178,9 @@ struct dump_edit_baton {
  * this is the top-level directory of the edit.
  *
  * Perform all allocations in POOL.  */
-static struct dir_baton *
-make_dir_baton(const char *path,
+static struct svn_error_t *
+make_dir_baton(struct dir_baton **dbp,
+               const char *path,
                const char *copyfrom_path,
                svn_revnum_t copyfrom_rev,
                void *edit_baton,
@@ -192,7 +193,8 @@ make_dir_baton(const char *path,
 
   /* Construct the full path of this node. */
   if (pb)
-    repos_relpath = svn_relpath_canonicalize(path, pool);
+    SVN_ERR(svn_relpath_canonicalize_safe(&repos_relpath, NULL, path,
+                                          pool, pool));
   else
     repos_relpath = "";
 
@@ -213,7 +215,8 @@ make_dir_baton(const char *path,
   new_db->deleted_props = apr_hash_make(pool);
   new_db->deleted_entries = apr_hash_make(pool);
 
-  return new_db;
+  *dbp = new_db;
+  return SVN_NO_ERROR;
 }
 
 /* Make a file baton to represent the directory at PATH (relative to
@@ -577,8 +580,8 @@ open_root(void *edit_baton,
             {
               /* ... but for the source directory itself, we'll defer
                  to letting the typical plumbing handle this task. */
-              new_db = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
-                                      edit_baton, NULL, pool);
+              SVN_ERR(make_dir_baton(&new_db, NULL, NULL, SVN_INVALID_REVNUM,
+                                     edit_baton, NULL, pool));
               SVN_ERR(dump_node(&new_db->headers,
                                 eb, new_db->repos_relpath, new_db,
                                 NULL, svn_node_action_add, FALSE,
@@ -594,8 +597,8 @@ open_root(void *edit_baton,
 
   if (! new_db)
     {
-      new_db = make_dir_baton(NULL, NULL, SVN_INVALID_REVNUM,
-                              edit_baton, NULL, pool);
+      SVN_ERR(make_dir_baton(&new_db, NULL, NULL, SVN_INVALID_REVNUM,
+                             edit_baton, NULL, pool));
     }
 
   *root_baton = new_db;
@@ -636,8 +639,8 @@ add_directory(const char *path,
 
   SVN_ERR(dump_pending_dir(pb->eb, pool));
 
-  new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb,
-                          pb, pb->pool);
+  SVN_ERR(make_dir_baton(&new_db, path, copyfrom_path, copyfrom_rev, pb->eb,
+                         pb, pb->pool));
 
   /* This might be a replacement -- is the path already deleted? */
   was_deleted = svn_hash_gets(pb->deleted_entries, path);
@@ -690,8 +693,8 @@ open_directory(const char *path,
       copyfrom_rev = pb->copyfrom_rev;
     }
 
-  new_db = make_dir_baton(path, copyfrom_path, copyfrom_rev, pb->eb, pb,
-                          pb->pool);
+  SVN_ERR(make_dir_baton(&new_db, path, copyfrom_path, copyfrom_rev,
+                         pb->eb, pb, pb->pool));
 
   *child_baton = new_db;
   return SVN_NO_ERROR;

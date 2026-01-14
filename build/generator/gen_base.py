@@ -35,6 +35,7 @@ try:
 except ImportError:
   # Python <3.0
   import ConfigParser as configparser
+  configparser.ConfigParser.read_file = configparser.ConfigParser.readfp
 import generator.swig
 
 import getversion
@@ -76,7 +77,7 @@ class GeneratorBase:
 
     # Now read and parse build.conf
     parser = configparser.ConfigParser()
-    parser.readfp(open(fname))
+    parser.read_file(open(fname))
 
     self.conf = build_path(os.path.abspath(fname))
 
@@ -656,8 +657,6 @@ class TargetExe(TargetLinked):
 
     self.manpages = options.get('manpages', '')
     self.testing = options.get('testing')
-
-    self.msvc_force_static = options.get('msvc-force-static') == 'yes'
 
   def add_dependencies(self):
     TargetLinked.add_dependencies(self)
@@ -1273,7 +1272,8 @@ class IncludeDependencyInfo:
     Return a dictionary with included full file names as keys and None as
     values."""
     hdrs = { }
-    for line in fileinput.input(fname):
+
+    for line in fileinput.FileInput(fname, openhook=fileinput.hook_encoded("utf-8")):
       match = self._re_include.match(line)
       if not match:
         continue

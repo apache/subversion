@@ -51,6 +51,8 @@
 #include "private/svn_atomic.h"
 #include "private/svn_mutex.h"
 #include "private/svn_sqlite.h"
+#include "private/svn_wc_private.h"
+#include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
 
@@ -99,6 +101,7 @@ enum test_options_e {
   quiet_opt,
   config_opt,
   server_minor_version_opt,
+  wc_format_version_opt,
   allow_segfault_opt,
   srcdir_opt,
   reposdir_opt,
@@ -108,7 +111,8 @@ enum test_options_e {
   mode_filter_opt,
   sqlite_log_opt,
   parallel_opt,
-  fsfs_version_opt
+  fsfs_version_opt,
+  store_pristine_opt
 };
 
 static const apr_getopt_option_t cl_options[] =
@@ -133,6 +137,9 @@ static const apr_getopt_option_t cl_options[] =
   {"server-minor-version", server_minor_version_opt, 1,
                     N_("set the minor version for the server ('3', '4', "
                        "'5', or '6')")},
+  {"wc-format-version", wc_format_version_opt, 1,
+                    N_("set the WC format version to use for all tests "
+                       "(1.8 to 1.15)")},
   {"quiet",         quiet_opt, 0,
                     N_("print only unexpected results")},
   {"allow-segfaults", allow_segfault_opt, 0,
@@ -151,6 +158,8 @@ static const apr_getopt_option_t cl_options[] =
                     N_("enable SQLite logging")},
   {"parallel",      parallel_opt, 0,
                     N_("allow concurrent execution of tests")},
+  {"store-pristine", store_pristine_opt, 1,
+                    N_("set the WC pristine mode")},
   {0,               0, 0, 0}
 };
 
@@ -802,6 +811,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
   svn_test_opts_t opts = { NULL };
 
   opts.fs_type = DEFAULT_FS_TYPE;
+  opts.store_pristine = svn_tristate_unknown;
 
   /* Initialize APR (Apache pools) */
   if (apr_initialize() != APR_SUCCESS)
@@ -880,7 +890,7 @@ svn_test_main(int argc, const char *argv[], int max_threads,
       _set_error_mode(_OUT_TO_STDERR);
 
       /* In _DEBUG mode: Redirect all debug output (E.g. assert() to stderr.
-         (Ignored in releas builds) */
+         (Ignored in release builds) */
       _CrtSetReportFile( _CRT_ASSERT, _CRTDBG_FILE_STDERR);
       _CrtSetReportMode(_CRT_WARN, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
       _CrtSetReportMode(_CRT_ERROR, _CRTDBG_MODE_FILE | _CRTDBG_MODE_DEBUG);
@@ -994,6 +1004,22 @@ svn_test_main(int argc, const char *argv[], int max_threads,
               }
             break;
           }
+        case wc_format_version_opt:
+          {
+            svn_version_t *ver;
+            SVN_INT_ERR(svn_version__parse_version_string(&ver, opt_arg, pool));
+            if (!svn_wc__is_supported_format_version(ver))
+              {
+                fprintf(stderr, "FAIL: Unsupported WC format version given (%s); "
+                                "supported format versions are 1.%d to 1.%d\n",
+                                opt_arg,
+                                svn_wc__min_supported_format_version()->minor,
+                                svn_wc__max_supported_format_version()->minor);
+                exit(1);
+              }
+            opts.wc_format_version = ver;
+            break;
+          }
         case sqlite_log_opt:
           svn_sqlite__dbg_enable_errorlog();
           break;
@@ -1002,6 +1028,18 @@ svn_test_main(int argc, const char *argv[], int max_threads,
           parallel = TRUE;
           break;
 #endif
+        case store_pristine_opt:
+          {
+            const char *utf8_opt_arg;
+            SVN_INT_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
+            opts.store_pristine = svn_tristate__from_word(utf8_opt_arg);
+            if (opts.store_pristine == svn_tristate_unknown)
+              {
+                fprintf(stderr, "FAIL: Invalid --store-pristine option.\n");
+                exit(1);
+              }
+            break;
+          }
       }
     }
   opts.verbose = verbose_mode;
@@ -1089,9 +1127,9 @@ svn_test_main(int argc, const char *argv[], int max_threads,
               svn_pool_clear(cleanup_pool);
             }
         }
-#if APR_HAS_THREADS
       else
         {
+#if APR_HAS_THREADS
           got_error = do_tests_concurrently(opts.prog_name, test_funcs,
                                             array_size, max_threads,
                                             &opts, test_pool);
@@ -1099,8 +1137,11 @@ svn_test_main(int argc, const char *argv[], int max_threads,
           /* Execute all cleanups */
           svn_pool_clear(test_pool);
           svn_pool_clear(cleanup_pool);
-        }
+#else
+          /* Can't happen */
+          SVN_ERR_MALFUNCTION();
 #endif
+        }
     }
 
   /* Clean up APR */

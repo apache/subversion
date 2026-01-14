@@ -668,7 +668,7 @@ svn_repos__hooks_pre_revprop_change(svn_repos_t *repos,
     {
       /* If the pre- hook doesn't exist at all, then default to
          MASSIVE PARANOIA.  Changing revision properties is a lossy
-         operation; so unless the repository admininstrator has
+         operation; so unless the repository administrator has
          *deliberately* created the pre-hook, disallow all changes. */
       return
         svn_error_create

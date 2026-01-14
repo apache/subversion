@@ -157,13 +157,13 @@ Java_org_apache_subversion_javahl_remote_RemoteSession_getRevisionByTimestamp(
 JNIEXPORT void JNICALL
 Java_org_apache_subversion_javahl_remote_RemoteSession_nativeChangeRevisionProperty(
     JNIEnv *env, jobject jthis, jlong jrevision, jstring jname,
-    jbyteArray jold_value, jbyteArray jvalue)
+    jbyteArray jold_propval, jbyteArray jpropval)
 {
   JNIEntry(RemoteSession, nativeChangeRevisionProperty);
   RemoteSession *ras = RemoteSession::getCppObject(jthis);
   CPPADDR_NULL_PTR(ras, );
 
-  return ras->changeRevisionProperty(jrevision, jname, jold_value, jvalue);
+  return ras->changeRevisionProperty(jrevision, jname, jold_propval, jpropval);
 }
 
 JNIEXPORT jobject JNICALL

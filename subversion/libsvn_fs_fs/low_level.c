@@ -248,16 +248,16 @@ svn_fs_fs__parse_footer(apr_off_t *l2p_offset,
                             rev));
   *p2l_offset = (apr_off_t)val;
 
-  /* The P2L indes follows the L2P index */
+  /* The P2L index follows the L2P index */
   if (*p2l_offset <= *l2p_offset)
     return svn_error_createf(SVN_ERR_FS_CORRUPT, NULL,
                              "P2L offset %s must be larger than L2P offset %s"
                              " in r%ld footer",
                              apr_psprintf(result_pool,
-                                          "%" APR_UINT64_T_HEX_FMT,
+                                          "0x%" APR_UINT64_T_HEX_FMT,
                                           (apr_uint64_t)*p2l_offset),
                              apr_psprintf(result_pool,
-                                          "%" APR_UINT64_T_HEX_FMT,
+                                          "0x%" APR_UINT64_T_HEX_FMT,
                                           (apr_uint64_t)*l2p_offset),
                              rev);
 
@@ -506,7 +506,7 @@ svn_fs_fs__read_changes(apr_array_header_t **changes,
       SVN_ERR(read_change(&change, stream, result_pool, iterpool));
       if (!change)
         break;
- 
+
       APR_ARRAY_PUSH(*changes, change_t*) = change;
     }
   svn_pool_destroy(iterpool);

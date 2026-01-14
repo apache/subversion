@@ -3,7 +3,7 @@
 #  merge_authz_tests.py:  merge tests that need to write an authz file
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -97,7 +97,7 @@ def mergeinfo_and_skipped_paths(sbox):
   wc_disk, wc_status = set_up_branch(sbox, False, 3)
 
   # Create a restrictive authz where part of the merge source and part
-  # of the target are inaccesible.
+  # of the target are inaccessible.
   write_restrictive_svnserve_conf(sbox.repo_dir)
   write_authz_file(sbox, {"/"               : svntest.main.wc_author +"=rw",
                           # Make a directory in the merge source inaccessible.
@@ -342,7 +342,7 @@ def mergeinfo_and_skipped_paths(sbox):
   # this.
   #
   # Merge -c5 -c8 to the restricted WC's A_COPY_2/D/H.  r5 gets merged first
-  # but is a no-op, r8 get's merged next and is operative so the mergeinfo
+  # but is a no-op, r8 gets merged next and is operative so the mergeinfo
   # should be updated on the merge target to reflect both merges.
   expected_output = wc.State(A_COPY_2_H_path, {
     'omega' : Item(status='U '),
@@ -773,7 +773,7 @@ def diff_unauth_parent(sbox):
     'Added: k\n',
     '## -0,0 +1 ##\n',
     '+v\n',
-    '\ No newline at end of property\n'
+    '\\ No newline at end of property\n'
   ]
   svntest.actions.run_and_verify_svn(expected_output, [],
                                      'diff', sbox.repo_url + '/A', '-c', '2')
@@ -830,9 +830,9 @@ def diff_unauth_parent(sbox):
       'Modified: this-is\n',
       '## -1 +1 ##\n',
       '-E\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
       '+G\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
     ]
   else:
     # ### We should also see a property deletion here!
@@ -847,7 +847,7 @@ def diff_unauth_parent(sbox):
     'Deleted: this-is\n',
     '## -1 +0,0 ##\n',
     '-E\n',
-    '\ No newline at end of property\n',
+    '\\ No newline at end of property\n',
     'Index: .\n',
     '===================================================================\n',
     '--- .\t(nonexistent)\n',
@@ -858,7 +858,7 @@ def diff_unauth_parent(sbox):
       'Added: this-is\n',
       '## -0,0 +1 ##\n',
       '+G\n',
-      '\ No newline at end of property\n',
+      '\\ No newline at end of property\n',
     ]
 
   # Use two url diff, because 'svn diff url -c' uses copyfrom to diff against

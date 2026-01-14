@@ -37,7 +37,7 @@ enum rule_action {
                if the next template character matches the current
                value character, continue processing as normal.
                Otherwise, attempt to complete matching starting
-               immediately after the first subsequent occurrance of
+               immediately after the first subsequent occurrence of
                ']' in the template. */
   SKIP,     /* Ignore this template character */
   ACCEPT    /* Accept the value */

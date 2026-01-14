@@ -3,7 +3,7 @@
 #  merge_reintegrate_tests.py:  testing merge --reintegrate
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -1508,7 +1508,7 @@ def reintegrate_with_subtree_mergeinfo(sbox):
     # is all quite ugly as the intersection or multiple known issues
     # is likely to be.  However, given that none of this mergeinfo is
     # particularly harmful and that this test is *not* about issues #3669
-    # or #4309, we are tolerting it.
+    # or #4309, we are tolerating it.
     'D/gamma_moved' : Item(
       "Even newer content", props={SVN_PROP_MERGEINFO :
                                    '/A/D/gamma_moved:2-7,9-12\n'

@@ -51,8 +51,8 @@ public interface PromptUserPassword2 extends PromptUserPassword
     public static final int AcceptPermanently = 2;
 
     /**
-     * If there are problems with the certifcate of the SSL-server, this
-     * callback will be used to deside if the connection will be used.
+     * If there are problems with the certificate of the SSL-server, this
+     * callback will be used to decide if the connection will be used.
      * @param info              the probblems with the certificate.
      * @param allowPermanently  if AcceptPermantly is a legal answer
      * @return                  one of Reject/AcceptTemporary/AcceptPermanently

@@ -83,10 +83,6 @@ AC_DEFUN(SVN_LIB_KWALLET,
                   fi
                 fi
                 if test -n "$KDE_CONFIG"; then
-                  if test $kde_config_name = "kf5-config"; then
-                    dnl KF5 does not compile with -std=c++98
-                    SVN_CXX_MODE_SETUP11
-                  fi
                   old_CXXFLAGS="$CXXFLAGS"
                   old_LDFLAGS="$LDFLAGS"
                   old_LIBS="$LIBS"
@@ -150,6 +146,7 @@ int main()
   else
     AC_MSG_RESULT([no])
   fi
+  SVN_DOT_CLANGD([$SVN_KWALLET_INCLUDES])
   AC_SUBST(SVN_KWALLET_INCLUDES)
   AC_SUBST(SVN_KWALLET_LIBS)
 ])

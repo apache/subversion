@@ -384,7 +384,7 @@ get_file_from_ra(struct file_baton *fb,
      See https://issues.apache.org/jira/browse/SVN-3657#desc9 and
      http://svn.haxx.se/dev/archive-2010-08/0351.shtml for more details.
  */
-static void
+static svn_error_t *
 remove_non_prop_changes(apr_hash_t *pristine_props,
                         apr_array_header_t *changes)
 {
@@ -392,7 +392,7 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
 
   /* For added nodes, there is nothing to filter. */
   if (apr_hash_count(pristine_props) == 0)
-    return;
+    return SVN_NO_ERROR;
 
   for (i = 0; i < changes->nelts; i++)
     {
@@ -406,11 +406,12 @@ remove_non_prop_changes(apr_hash_t *pristine_props,
           if (old_val && svn_string_compare(old_val, change->value))
             {
               /* Remove the matching change and re-check the current index */
-              svn_sort__array_delete(changes, i, 1);
+              SVN_ERR(svn_sort__array_delete2(changes, i, 1));
               i--;
             }
         }
     }
+  return SVN_NO_ERROR;
 }
 
 /* Get the empty file associated with the edit baton. This is cached so
@@ -940,11 +941,12 @@ apply_textdelta(void *file_baton,
   result_stream = svn_stream_lazyopen_create(lazy_open_result, fb, TRUE,
                                              scratch_pool);
 
-  svn_txdelta_apply(src_stream,
-                    result_stream,
-                    fb->result_digest,
-                    fb->path, fb->pool,
-                    &(fb->apply_handler), &(fb->apply_baton));
+  /* Keep historical behavior by disowning the stream; adjust if needed. */
+  svn_txdelta_apply2(svn_stream_disown(src_stream, fb->pool),
+                     result_stream,
+                     fb->result_digest,
+                     fb->path, fb->pool,
+                     &(fb->apply_handler), &(fb->apply_baton));
 
   *handler = window_handler;
   *handler_baton = file_baton;
@@ -1010,7 +1012,7 @@ close_file(void *file_baton,
         }
 
       if (fb->pristine_props)
-        remove_non_prop_changes(fb->pristine_props, fb->propchanges);
+        SVN_ERR(remove_non_prop_changes(fb->pristine_props, fb->propchanges));
 
       right_props = svn_prop__patch(fb->pristine_props, fb->propchanges,
                                     fb->pool);
@@ -1083,7 +1085,7 @@ close_directory(void *dir_baton,
 
       if (db->propchanges->nelts > 0)
         {
-          remove_non_prop_changes(pristine_props, db->propchanges);
+          SVN_ERR(remove_non_prop_changes(pristine_props, db->propchanges));
         }
 
       if (db->propchanges->nelts > 0 || db->added)

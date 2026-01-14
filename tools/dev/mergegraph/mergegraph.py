@@ -177,7 +177,7 @@ class MergeGraph(pydot.Graph):
 
     def get_subgraph(graph, name):
       """Equivalent to pydot.Graph.get_subgraph() when there is no more than
-         one subgraph of the given name, but working aroung a bug in
+         one subgraph of the given name, but working around a bug in
          pydot.Graph.get_subgraph().
       """
       for subg in graph.get_subgraph_list():

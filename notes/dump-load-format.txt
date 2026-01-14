@@ -1,6 +1,6 @@
 = How to interpret Subversion dumpfiles =
 
-Version 1.1, 2013-02-02
+Version 1.3, 2020-12-21
 
 == Introduction ==
 
@@ -21,6 +21,9 @@ has a property section.  How are they to be combined?
 
 2. The section on the semantics of kinds of operations documents a
 minor bug at r39883 in the behavior of "add".  Has this been fixed?
+
+3. The diff format and compression (if any) used in Version 3
+format are not described.
 
 Portions of text relevant to these questions are tagged with FIXME.
 
@@ -95,7 +98,12 @@ Revision record.  These two numbers will be *identical* for a Revision
 record; the Content-length header is added for the benefit of software
 that can parse RFC-822 messages.
 
-A revision record is followed by one or more Node records (see below).
+A revision record is followed by zero or more Node records (see below).
+
+Revisions are always dumped in monotonically increasing
+revision-number order. The date property of a revision may be
+explicitly set to any value, or even unset, but normally a sequence of
+commits will have monotonically increasing timestamps.
 
 ==== Node records ====
 
@@ -151,6 +159,7 @@ Text-content-length will be present only when there is a text section.
 Zero is a legal value for this length, indicating an empty file.
 
 Prop-content-length will be present only when there is a properties section.
+A properties section has non-zero length even if it has no entries.
 
 Content-length will be present if there is either a text or a
 properties section.  This is not always the case.  In particular, 
@@ -357,20 +366,47 @@ The revision properties do not persist to later revisions.  Each revision
 has exactly the revision properties specified in its revision record, or
 no revision properties if there is no property section.
 
-The key thing to know about Node properties is that they are 
-persistent, once set, until modified by a future property 
-section on the same path.
+Node properties, like node text, are persistent: once set, they are
+carried forward until modified by a future property section, both on the
+same path and on the target of a copyfrom operation.
 
-Normally, a dumpfile re-lists the entire property set for a directory
-or file in every Node record that changes any part of it. (But see
-the material on delta dumps for an exception.)
-
-This implies that to delete a given property from a path, a dumpfile
+In non-delta format, to delete a given property from a path, a dumpfile
 generator will issue a Node record with all other properties listed in it;
 to delete all properties from a path, the dumpfile generator will
-simply issue a node with an empty properties section. Note that this
-is different from an *absent* properties section, which will change
-no properties and will be associated with a change to content!
+issue a node with an empty properties section. (This is different from
+an *absent* properties section, which will change no properties.)
+
+=== Special properties === 
+
+svn:author::
+    Identification of the commit author, normally a Unix username on
+    the repository server.
+
+svn:date::
+    An RFC3339 UTC timestamp to millisecond precision.  Here is an example:
+    "2011-11-30T16:41:55.154754Z". The length and precision of this
+    field is fixed: 27 characters with the trailing Zulu timezone
+    required.
+
+svn:log::
+    The change comment associated with this revision.
+
+The following per-node properties are interpreted by Subversion itself:
+
+svn:executable::
+    When this is set on a node, the executable bits in the metadata of
+    checkout copies corresponding file are set. On Unix systems which
+    of the x bits are set is filtered by the current umask.
+
+svn:ignore, svn:global-ignores::
+    Set ignore patterns for Subversion clients. Read the Subversion
+    manual for semantic details.
+
+svn:mergeinfo, svn:mime-type, svn:keywords, svn:eol-style, svn:externals::
+    Read the Subversion manual for semantic details.
+
+All other property settings are ignored by Subversion, but preserved
+in repositories and dump streams.
 
 === Representation of symbolic links ===
 
@@ -384,15 +420,24 @@ be defined.  None such yet exist as of revision 1441992 (February 2013).
 
 === Implementation pragmatics ===
 
+Dumpfile generation in general is not canonical, nor minimalist. In
+particular, interpreters should be prepared to see many empty property
+sections (nominally deleting all properties) when there are no
+previous properties set to be deleted.
+
 Because directory operations with copyfroms don't specify all the file
 paths they modify, an interpreter for this format must build a map of
 the paths in the file store it is manipulating, and update that map as
 it processes each Node record.
 
 On a repository with thousands of commits, the per-revision list of
-maps can become quite large. For space economy, the file map for each 
-revision can be discarded after it is processed *unless it is a source
-revision for a copyfrom*. 
+maps can become quite large. It is tempting to think that the file map
+for each revision can be discarded after it is processed unless it is
+a source revision for a copyfrom, but there are cases in which doing
+this will leave you unable to trace ancestry chains through copies.
+
+Instead, it is advisable to build your filemaps using a copy-on-write
+store.
 
 == An example ==
 

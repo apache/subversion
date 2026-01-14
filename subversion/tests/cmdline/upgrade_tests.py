@@ -3,7 +3,7 @@
 #  upgrade_tests.py:  test the working copy upgrade process
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -51,14 +51,18 @@ Issues = svntest.testcase.Issues_deco
 Issue = svntest.testcase.Issue_deco
 Wimp = svntest.testcase.Wimp_deco
 
-wc_is_too_old_regex = (".*is too old \(format \d+.*\).*")
+wc_is_too_old_regex = (r".*is too old \(format \d+.*\).*")
 
 
 def get_current_format():
-  # Get current format from subversion/libsvn_wc/wc.h
-  format_file = open(os.path.join(os.path.dirname(__file__), "..", "..", "libsvn_wc", "wc.h")).read()
-  return int(re.search("\n#define SVN_WC__VERSION (\d+)\n", format_file).group(1))
+  """Get the expected WC format."""
+  return svntest.main.wc_format()
 
+def target_ver():
+  """Get the default value of --compatible-version to use.
+
+  Compare svntest.main.wc_format()."""
+  return (svntest.main.options.wc_format_version or svntest.main.DEFAULT_COMPATIBLE_VERSION)
 
 def replace_sbox_with_tarfile(sbox, tar_filename,
                               dir=None):
@@ -98,30 +102,28 @@ def replace_sbox_repo_with_tarfile(sbox, tar_filename, dir=None):
   shutil.move(os.path.join(extract_dir, dir), sbox.repo_dir)
 
 def check_format(sbox, expected_format):
-  dot_svn = svntest.main.get_admin_name()
-  for root, dirs, files in os.walk(sbox.wc_dir):
-    db = svntest.sqlite3.connect(os.path.join(root, dot_svn, 'wc.db'))
-    c = db.cursor()
-    c.execute('pragma user_version;')
-    found_format = c.fetchone()[0]
-    db.close()
+  assert isinstance(expected_format, int)
+  formats = sbox.read_wc_formats()
+  if formats[''] != expected_format:
+    raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
+                          (formats[''], expected_format, sbox.wc_dir))
 
-    if found_format != expected_format:
-      raise svntest.Failure("found format '%d'; expected '%d'; in wc '%s'" %
-                            (found_format, expected_format, root))
-
-    dirs[:] = []
-
-    if dot_svn in dirs:
-      dirs.remove(dot_svn)
+def check_formats(sbox, expected_formats):
+  assert isinstance(expected_formats, dict)
+  formats = sbox.read_wc_formats()
+  ### If we ever need better error messages here, reuse run_and_verify_info().
+  if formats != expected_formats:
+    raise svntest.Failure("found format '%s'; expected '%s'; in wc '%s'" %
+                          (formats, expected_formats, sbox.wc_dir))
 
 def check_pristine(sbox, files):
   for file in files:
     file_path = sbox.ospath(file)
-    file_text = open(file_path, 'r').read()
-    file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
-    if (file_text != file_pristine):
-      raise svntest.Failure("pristine mismatch for '%s'" % (file))
+    if svntest.actions.get_wc_store_pristine(file_path):
+      file_text = open(file_path, 'r').read()
+      file_pristine = open(svntest.wc.text_base_path(file_path), 'r').read()
+      if (file_text != file_pristine):
+        raise svntest.Failure("pristine mismatch for '%s'" % (file))
 
 def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   dot_svn = svntest.main.get_admin_name()
@@ -138,9 +140,8 @@ def check_dav_cache(dir_path, wc_id, expected_dav_caches):
   minor = sqlite_ver[1]
   patch = sqlite_ver[2]
 
-  if major < 3 or (major == 3 and minor < 6) \
-     or (major == 3 and minor == 6 and patch < 18):
-       return # We need a newer SQLite
+  if major < 3 or (major == 3 and minor < 9):
+    return # We need a newer SQLite
 
   for local_relpath, expected_dav_cache in expected_dav_caches.items():
     # NODES conversion is complete enough that we can use it if it exists
@@ -283,6 +284,14 @@ def basic_upgrade(sbox):
   svntest.actions.run_and_verify_svn(None, not_wc % 'A',
                                      'upgrade', sbox.ospath('A'))
 
+  # Upgrading to a future version gives an error
+  expected_stderr = 'svn: E200007: Cannot guarantee working copy compatibility' \
+                    ' with the requested version.*3[.]0'
+  svntest.actions.run_and_verify_svn(None, expected_stderr,
+                                     sbox.wc_dir, 'upgrade',
+                                     '--compatible-version',
+                                     '3.0')
+
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
@@ -291,7 +300,30 @@ def basic_upgrade(sbox):
   check_format(sbox, get_current_format())
 
   # Now check the contents of the working copy
+  # This verification is repeated below.
   expected_status = svntest.actions.get_virginal_state(sbox.wc_dir, 1)
+  run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+  check_pristine(sbox, ['iota', 'A/mu'])
+
+  # Upgrade again to the latest format.
+  #
+  # This may or may not be a no-op, depending on whether the test suite was
+  # launched with --wc-format-version / WC_FORMAT_VERSION set a version that
+  # uses the same format as SVN_VER_MAJOR.SVN_VER_MINOR.
+  to_version = svntest.main.svn_wc__max_supported_format_version()
+  if svntest.main.wc_format() == svntest.main.wc_format(to_version):
+    # Upgrade is a no-op
+    expected_stdout = []
+  else:
+    # Upgrade is not a no-op
+    expected_stdout = "Upgraded '.*'"
+  svntest.actions.run_and_verify_svn(expected_stdout, [],
+                                     'upgrade',
+                                     '--compatible-version',
+                                     to_version, sbox.wc_dir)
+  check_format(sbox, svntest.main.wc_format(to_version))
+
+  # Repeat the same verification as above
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
   check_pristine(sbox, ['iota', 'A/mu'])
 
@@ -311,7 +343,18 @@ def upgrade_with_externals(sbox):
                                      'upgrade', sbox.wc_dir)
 
   # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  check_formats(sbox,
+      {relpath: get_current_format()
+       for relpath in (
+         '',
+         'A/D/exdir_A',
+         'A/D/exdir_A/G',
+         'A/D/exdir_A/H',
+         'A/D/x',
+         'A/C/exdir_G',
+         'A/C/exdir_H',
+       )})
+
   check_pristine(sbox, ['iota', 'A/mu',
                         'A/D/x/lambda', 'A/D/x/E/alpha'])
 
@@ -446,13 +489,30 @@ def basic_upgrade_1_0(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
-  # And the separate working copy below COPIED or check_format() fails
+
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy (implicitly)
+  current_format = get_current_format()
+  check_formats(sbox, {'': current_format})
+
+  # And the separate working copy below COPIED
+  #
+  # ### This was originally added in r919021, during 1.7 development, because
+  # ### check_format() recursed into the separate working copy.
+  # ###
+  # ### The remainder of the test passes if this call is removed.
+  # ###
+  # ### So, for now, this call serves only as a smoke test, to confirm that the
+  # ### upgrade returns 0.  However:
+  # ###
+  # ### TODO: Verify the results of this upgrade
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
 
-  # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  # Actually check the format number of the upgraded working copy and of
+  # the separate working copy
+  check_formats(sbox, {k: current_format for k in ('', 'COPIED/G')})
 
   # Now check the contents of the working copy
   # #### This working copy is not just a basic tree,
@@ -754,8 +814,12 @@ def dirs_only_upgrade(sbox):
   expected_output = ["Upgraded '%s'\n" % (sbox.ospath('').rstrip(os.path.sep)),
                      "Upgraded '%s'\n" % (sbox.ospath('A'))]
 
+  # Pass --compatible-version explicitly to silence the "You upgraded to
+  # a version other than the latest" message.
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'upgrade', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir,
+                                     '--compatible-version',
+                                     target_ver())
 
   expected_status = svntest.wc.State(sbox.wc_dir, {
       ''                  : Item(status='  ', wc_rev='1'),
@@ -1020,8 +1084,12 @@ def upgrade_with_missing_subdir(sbox):
     "Upgraded '%s'\n" % sbox.ospath('A/D/G'),
     "Upgraded '%s'\n" % sbox.ospath('A/D/H'),
   ])
+  # Pass --compatible-version explicitly to silence the "You upgraded to
+  # a version other than the latest" message.
   svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'upgrade', sbox.wc_dir)
+                                     'upgrade', sbox.wc_dir,
+                                     '--compatible-version',
+                                     target_ver())
 
   # And now perform an update. (This used to fail with an assertion)
   expected_output = svntest.wc.State(wc_dir, {
@@ -1444,13 +1512,31 @@ def upgrade_1_0_with_externals(sbox):
   # Now upgrade the working copy
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade', sbox.wc_dir)
-  # And the separate working copy below COPIED or check_format() fails
+
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy (implicitly)
+  current_format = get_current_format()
+  check_formats(sbox, {'': current_format, 'exdir_G': current_format})
+
+  # And the separate working copy below COPIED
+  #
+  # ### This was originally added in r1702474, during 1.10 development, because
+  # ### check_format() recursed into the separate working copy.  It was copied
+  # ### from basic_upgrade_1_0() above.
+  # ###
+  # ### The remainder of the test passes if this call is removed.
+  # ###
+  # ### So, for now, this call serves only as a smoke test, to confirm that the
+  # ### upgrade returns 0.  However:
+  # ###
+  # ### TODO: Verify the results of this upgrade
   svntest.actions.run_and_verify_svn(None, [],
                                      'upgrade',
                                      os.path.join(sbox.wc_dir, 'COPIED', 'G'))
 
-  # Actually check the format number of the upgraded working copy
-  check_format(sbox, get_current_format())
+  # Actually check the format number of the upgraded working copy, including
+  # the external, and of the separate working copy
+  check_formats(sbox, {k: current_format for k in ('', 'exdir_G', 'COPIED/G')})
 
   # Now check the contents of the working copy
   # #### This working copy is not just a basic tree,
@@ -1496,6 +1582,73 @@ def upgrade_1_0_with_externals(sbox):
       'exdir_G'           : Item(status='X '),
      })
   run_and_verify_status_no_server(sbox.wc_dir, expected_status)
+
+def upgrade_latest_format(sbox):
+  "upgrade latest format without arguments"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State('', {})
+  latest_ver = svntest.main.svn_wc__max_supported_format_version()
+  svntest.actions.run_and_verify_checkout(sbox.repo_url,
+                                          sbox.wc_dir,
+                                          expected_output,
+                                          expected_disk,
+                                          [],
+                                          '--compatible-version',
+                                          latest_ver)
+  # This used to fail with the following error:
+  # svn: E155021: Working copy '...' is already at version 1.15 (format 32)
+  # and cannot be downgraded to version 1.8 (format 31)
+  svntest.actions.run_and_verify_svn(None, [], 'upgrade', sbox.wc_dir)
+
+  check_format(sbox, svntest.main.wc_format(latest_ver))
+
+def upgrade_compatible_version_arg(sbox):
+  "upgrade with compatible-version from arg"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(
+    sbox.repo_url, sbox.wc_dir, expected_output, expected_disk, [],
+    '--compatible-version', '1.8', '--store-pristine=yes')
+  svntest.actions.run_and_verify_svn(
+    ['1.8'], [],
+    'info', '--show-item=wc-compatible-version', '--no-newline',
+    sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn(
+    None, [], 'upgrade',
+    '--compatible-version', '1.15',
+    sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(
+    ['1.15'], [],
+    'info', '--show-item=wc-compatible-version', '--no-newline',
+    sbox.wc_dir)
+
+def upgrade_compatible_version_config(sbox):
+  "upgrade with compatible-version from config"
+
+  sbox.build(empty=True, create_wc=False)
+  expected_output = svntest.wc.State(sbox.wc_dir, {})
+  expected_disk = svntest.wc.State('', {})
+  svntest.actions.run_and_verify_checkout(
+    sbox.repo_url, sbox.wc_dir, expected_output, expected_disk, [],
+    '--compatible-version', '1.8', '--store-pristine=yes')
+  svntest.actions.run_and_verify_svn(
+    ['1.8'], [],
+    'info', '--show-item=wc-compatible-version', '--no-newline',
+    sbox.wc_dir)
+
+  svntest.actions.run_and_verify_svn(
+    None, [], 'upgrade',
+    '--config-option', 'config:working-copy:compatible-version=1.15',
+    sbox.wc_dir)
+  svntest.actions.run_and_verify_svn(
+    ['1.15'], [],
+    'info', '--show-item=wc-compatible-version', '--no-newline',
+    sbox.wc_dir)
 
 ########################################################################
 # Run the tests
@@ -1553,6 +1706,9 @@ test_list = [ None,
               upgrade_1_7_dir_external,
               auto_analyze,
               upgrade_1_0_with_externals,
+              upgrade_latest_format,
+              upgrade_compatible_version_arg,
+              upgrade_compatible_version_config,
              ]
 
 

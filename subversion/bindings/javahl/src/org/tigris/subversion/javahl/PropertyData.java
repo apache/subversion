@@ -80,7 +80,7 @@ public class PropertyData
     public static final String KEYWORDS = "svn:keywords";
 
     /**
-     * flag if the file should be made excutable during retrieval
+     * flag if the file should be made executable during retrieval
      */
     public static final String EXECUTABLE = "svn:executable";
 

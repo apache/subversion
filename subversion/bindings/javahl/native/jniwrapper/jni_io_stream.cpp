@@ -27,6 +27,8 @@
 
 #include "svn_private_config.h"
 
+#include "../CxxCompat.hpp"
+
 // Stream-wrapper-specific mark object type
 struct svn_stream_mark_t
 {
@@ -197,7 +199,7 @@ InputStream::get_global_stream(Env env, jobject jstream,
 
   const bool has_mark = InputStream(env, jstream).mark_supported();
 
-  std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
+  JavaHL::cxx::owned_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
 
   svn_stream_t* const stream = svn_stream_create(baton.get(), pool.getPool());
   svn_stream_set_read2(stream, global_stream_read,
@@ -268,7 +270,7 @@ OutputStream::get_global_stream(Env env, jobject jstream,
   if (!jstream)
     return NULL;
 
-  std::auto_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
+  JavaHL::cxx::owned_ptr<GlobalObject> baton(new GlobalObject(env, jstream));
 
   svn_stream_t* const stream = svn_stream_create(baton.get(), pool.getPool());
   svn_stream_set_write(stream, global_stream_write);

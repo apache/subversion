@@ -5,7 +5,7 @@
 #                   depth-immediates, depth-infinity).
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -2781,23 +2781,21 @@ def revert_depth_files(sbox):
 
   sbox.build(read_only = True)
 
-  expected_output = "Reverted '" + re.escape(sbox.ospath('A/mu')) + "'"
-
   # Apply an unrelated delete one level to deep
   sbox.simple_rm('A/D/gamma')
 
   sbox.simple_rm('A/mu')
   # Expect reversion of just 'mu'
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'revert', '--depth=immediates', sbox.ospath('A'))
+  svntest.actions.run_and_verify_revert([sbox.ospath('A/mu')],
+                                        '--depth=immediates', sbox.ospath('A'))
 
   # Apply an unrelated directory delete
   sbox.simple_rm('A/D')
 
   sbox.simple_rm('A/mu')
   # Expect reversion of just 'mu'
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'revert', '--depth=files', sbox.ospath('A'))
+  svntest.actions.run_and_verify_revert([sbox.ospath('A/mu')],
+                                        '--depth=files', sbox.ospath('A'))
 
 @Issue(4257)
 def spurious_nodes_row(sbox):
@@ -2846,7 +2844,7 @@ def commit_excluded(sbox):
   expected_output = svntest.wc.State(wc_dir, {
     'D' : Item(verb='Adding'),
   })
-  
+
   expected_status.add({
     'D'          : Item(status='  ', wc_rev='2'),
     'D/H'        : Item(status='  ', wc_rev='2'),
@@ -2971,10 +2969,10 @@ def fold_tree_with_unversioned_items(sbox):
 
   # Set A to be excluded.
   svntest.main.run_svn(None, 'update', '--set-depth=exclude', A_path)
-  
+
   # try a simple update afterwards
   sbox.simple_update()
-  
+
 #----------------------------------------------------------------------
 # list all tests here, starting with None:
 test_list = [ None,

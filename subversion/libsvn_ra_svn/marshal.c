@@ -1888,7 +1888,7 @@ svn_ra_svn__has_command(svn_boolean_t *has_command,
 {
   svn_error_t *err;
 
-  /* Don't make whitespace between commands trigger I/O limitiations. */
+  /* Don't make whitespace between commands trigger I/O limitations. */
   svn_ra_svn__reset_command_io_counters(conn);
 
   err = svn_ra_svn__has_item(has_command, conn, pool);
@@ -2786,9 +2786,6 @@ svn_error_t *svn_ra_svn__write_cmd_failure(svn_ra_svn_conn_t *conn,
   return writebuf_write_literal(conn, pool, ") ) ");
 }
 
-/* Initializer for static svn_string_t . */
-#define STATIC_SVN_STRING(x) { x, sizeof(x) - 1 }
-
 /* Return a pre-cooked serialized representation for the changed path
    flags NODE_KIND, TEXT_MODIFIED and PROPS_MODIFIED.  If we don't
    have a suitable pre-cooked string, return an empty string. */
@@ -2798,18 +2795,18 @@ changed_path_flags(svn_node_kind_t node_kind,
                    svn_boolean_t props_modified)
 {
   static const svn_string_t file_flags[4]
-    = { STATIC_SVN_STRING(" ) ( 4:file false false ) ) "),
-        STATIC_SVN_STRING(" ) ( 4:file false true ) ) "),
-        STATIC_SVN_STRING(" ) ( 4:file true false ) ) "),
-        STATIC_SVN_STRING(" ) ( 4:file true true ) ) ") };
+    = { SVN__STATIC_STRING(" ) ( 4:file false false ) ) "),
+        SVN__STATIC_STRING(" ) ( 4:file false true ) ) "),
+        SVN__STATIC_STRING(" ) ( 4:file true false ) ) "),
+        SVN__STATIC_STRING(" ) ( 4:file true true ) ) ") };
 
   static const svn_string_t dir_flags[4]
-    = { STATIC_SVN_STRING(" ) ( 3:dir false false ) ) "),
-        STATIC_SVN_STRING(" ) ( 3:dir false true ) ) "),
-        STATIC_SVN_STRING(" ) ( 3:dir true false ) ) "),
-        STATIC_SVN_STRING(" ) ( 3:dir true true ) ) ") };
+    = { SVN__STATIC_STRING(" ) ( 3:dir false false ) ) "),
+        SVN__STATIC_STRING(" ) ( 3:dir false true ) ) "),
+        SVN__STATIC_STRING(" ) ( 3:dir true false ) ) "),
+        SVN__STATIC_STRING(" ) ( 3:dir true true ) ) ") };
 
-  static const svn_string_t no_flags = STATIC_SVN_STRING("");
+  static const svn_string_t no_flags = SVN__STATIC_STRING("");
 
   /* Select the array based on the NODE_KIND. */
   const svn_string_t *flags;

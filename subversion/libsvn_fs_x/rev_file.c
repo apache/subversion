@@ -66,7 +66,7 @@ struct svn_fs_x__revision_file_t
   svn_fs_x__index_info_t p2l_info;
 
   /* Pool used for all sub-structure allocations (file, streams etc.).
-     A sub-pool of OWNER. NULL until the lazily initilized. */
+     A sub-pool of OWNER. NULL until the lazily initialized. */
   apr_pool_t *pool;
 
   /* Pool that this structure got allocated in. */

@@ -47,6 +47,7 @@ sys.path.insert(0, os.path.join('build', 'generator'))
 sys.path.insert(1, 'build')
 
 gen_modules = {
+  'cmake' : ('gen_cmake', 'CMake build system'),
   'make' : ('gen_make', 'Makefiles for POSIX systems'),
   'vcproj' : ('gen_vcnet_vcproj', 'VC.Net project files'),
   }
@@ -70,7 +71,7 @@ def main(fname, gentype, verfname=None,
 
   if ('--debug', '') in other_options:
     for dep_type, target_dict in generator.graph.deps.items():
-      sorted_targets = list(target_dict.keys()); sorted_targets.sort()
+      sorted_targets = sorted(target_dict.keys(), key=str)
       for target in sorted_targets:
         print(dep_type + ": " + _objinfo(target))
         for source in target_dict[target]:
@@ -175,6 +176,8 @@ def _usage_exit(err=None):
   print("")
   print("  --with-swig=DIR")
   print("           look for the swig program in DIR")
+  print("  --with-py3c=DIR")
+  print("           look for the py3c library in DIR")
   print("")
   print("  --with-sqlite=DIR")
   print("           look for sqlite in DIR")
@@ -204,6 +207,9 @@ def _usage_exit(err=None):
   print("  --with-static-openssl")
   print("           Use static openssl")
   print("")
+  print("  --with-shared-serf")
+  print("           Use shared library version of serf")
+  print("")
   print("  --vsnet-version=VER")
   print("           generate for VS.NET version VER (2005-2017 or 9.0-15.0)")
   print("           [implies '-t vcproj']")
@@ -214,8 +220,6 @@ def _usage_exit(err=None):
   print("")
   print("  --with-apr_memcache=DIR")
   print("           the apr_memcache sources are in DIR")
-  print("  --disable-gmock")
-  print("           do not use Googlemock")
   sys.exit(1)
 
 
@@ -251,11 +255,13 @@ if __name__ == '__main__':
                             'with-jdk=',
                             'with-junit=',
                             'with-swig=',
+                            'with-py3c=',
                             'with-sqlite=',
                             'with-sasl=',
                             'with-apr_memcache=',
                             'with-static-apr',
                             'with-static-openssl',
+                            'with-shared-serf',
                             'enable-pool-debug',
                             'enable-purify',
                             'enable-quantify',
@@ -263,7 +269,6 @@ if __name__ == '__main__':
                             'disable-shared',
                             'installed-libs=',
                             'vsnet-version=',
-                            'disable-gmock',
                             ])
     if len(args) > 1:
       _usage_exit("Too many arguments")

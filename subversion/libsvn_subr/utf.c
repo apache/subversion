@@ -72,7 +72,7 @@ typedef apr_xlate_t xlate_handle_t;
  * If there is no handle for a particular key when needed, a new is
  * handle is created and put in the cache after use.
  * This means that there will be at most N handles open for a key, where N
- * is the number of simultanous handles in use for that key. */
+ * is the number of simultaneous handles in use for that key. */
 
 typedef struct xlate_handle_node_t {
   xlate_handle_t *handle;
@@ -199,6 +199,17 @@ atomic_swap(void * volatile * mem, void *new_value)
 #endif
 }
 
+static const char *
+get_apr_xlate_charset(const char *charset)
+{
+  if (charset == SVN_APR_DEFAULT_CHARSET)
+    return APR_DEFAULT_CHARSET;
+  else if (charset == SVN_APR_LOCALE_CHARSET)
+    return APR_LOCALE_CHARSET;
+  else
+    return charset;
+}
+
 /* Set *RET to a newly created handle node for converting from FROMPAGE
    to TOPAGE, If apr_xlate_open() returns APR_EINVAL or APR_ENOTIMPL, set
    (*RET)->handle to NULL.  If fail for any other reason, return the error.
@@ -225,7 +236,10 @@ xlate_alloc_handle(xlate_handle_node_t **ret,
                                        frompage, pool);
   name = "win32-xlate: ";
 #else
-  apr_err = apr_xlate_open(&handle, topage, frompage, pool);
+  apr_err = apr_xlate_open(&handle,
+                           get_apr_xlate_charset(topage),
+                           get_apr_xlate_charset(frompage),
+                           pool);
   name = "APR: ";
 #endif
 

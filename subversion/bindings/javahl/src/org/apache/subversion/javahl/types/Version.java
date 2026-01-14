@@ -28,7 +28,7 @@ import org.apache.subversion.javahl.NativeResources;
 /**
  * Encapsulates version information about the underlying native
  * libraries.  Basically a wrapper for <a
- * href="http://svn.apache.org/repos/asf/subversion/trunk/subversion/include/svn_version.h"><code>svn_version.h</code></a>.
+ * href="https://svn.apache.org/repos/asf/subversion/trunk/subversion/include/svn_version.h"><code>svn_version.h</code></a>.
  */
 public class Version
 {

@@ -5,7 +5,7 @@ There two primary functions:
 
 F1. Auto-merge bot; the nightly svn-role commits.
 
-F2. Conflicts detector bot; the svn-backport-conflicts-1.9.x buildbot task.
+F2. Conflicts detector bot; the backportbot GitHub Action.
 
 And two interactive functions¹:
 
@@ -18,9 +18,8 @@ F4. Adding new entries to STATUS.
 The scripts are:
 
 backport.pl:
-    oldest script, implements [F1], [F2], and [F3].  As of Feb 2018, used in
-    production by svn-role (running on svn-qavm3) and by svn-backport-conflicts-1.9.x
-    (a buildbot job).
+    oldest script, implements [F1], [F2], and [F3].  Deprecated, not used
+    in production.
 
 nominate.pl:
     Symlink to backport.pl.  Implements [F4].  (The script inspects its argv[0].)
@@ -30,10 +29,10 @@ backport_tests_pl.py:
 
 
 backport/*.py:
-    New Python-based library implementation of STATUS parsing (status.py) and
-    of merging nominated revisions (merger.py).  Colloquially referred to as
-    'backport.py', even though there is no script by that name.  Written in
-    Python 3.
+    New Python-based library implementation of STATUS parsing (status.py),
+    of merging nominated revisions (merger.py) and some WC helper functions
+    (wc.py).  Colloquially referred to as 'backport.py', even though there is
+    no script by that name.  Written in Python 3.
 
     The modules include their unit tests, see 'python3 -munittest
     backport.status' and 'python3 -munittest backport.merger'.  However,
@@ -41,12 +40,19 @@ backport/*.py:
     backport_tests_py.py blackbox/regression tests.
 
 detect-conflicting-backports.py:
-    Implementation of [F2] using backport.py.
-    Not currently used in production.
+    Implementation of [F2] using backport.py.  Used by GitHub Actions, see
+    ../../.github/workflows/detect-backport-conflicts.yml
 
 merge-approved-backports.py:
-    Implementation of [F1] using backport.py.
-    Not currently used in production.
+    Implementation of [F1] using backport.py.  Used on svn-qavm to
+    automatically merge approved backports, see documentation in PMC private
+    repo.
+
+manage-backports.py:
+    Implementation of [F3] using backport.py.
+
+nominate-backport.py:
+    Implementation of [F4] using backport.py.
 
 backport_tests_py.py:
     Regression tests for detect-conflicting-backports.py and merge-approved-backports.py
@@ -71,11 +77,9 @@ All scripts can be run with '--help' to display their usage messages.
 
 backport.pl is considered deprecated since backport.py is better architected
 and is written in a language that many more active developers are comfortable
-with.  The unattended jobs [F1] and [F2] should be converted to using
-backport.py whenever someone gets around to do the legwork.  The interactive
-versions [F3] and [F4] are still in active use, however, so the physical
-backport.pl script should be kept around until Python versions of these are
-available.
+with.  The unattended jobs [F1] and [F2] have been converted to using
+backport.py.  Since interactive versions of [F3] and [F4] are now available
+based on backport.py, backport.pl will be removed in Subversion 1.16.
 
 
 TODO: document that "Notes: ... --accept=foo ..." is parsed, see backport_tests.py #3.

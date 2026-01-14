@@ -609,7 +609,7 @@ import_dir(const svn_delta_editor_t *editor,
  * EDIT_BATON.  LOCAL_ABSPATH can be a file or directory.
  *
  * Sets *UPDATED_REPOSITORY to TRUE when the repository was modified by
- * a successfull commit, otherwise to FALSE.
+ * a successful commit, otherwise to FALSE.
  *
  * DEPTH is the depth at which to import LOCAL_ABSPATH; it behaves as for
  * svn_client_import5().

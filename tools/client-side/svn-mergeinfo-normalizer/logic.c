@@ -436,7 +436,7 @@ find_surviving_copy(svn_min__log_t *log,
           survivor = apr_pstrdup(result_pool, copy_target);
         }
     }
- 
+
   svn_pool_destroy(iterpool);
 
   return survivor;
@@ -488,7 +488,7 @@ find_surviving_copies(apr_array_header_t *survivors,
                                                                 copy_target);
         }
     }
- 
+
   svn_pool_destroy(iterpool);
 }
 
@@ -1351,7 +1351,7 @@ progress_string(const progress_t *progress,
 
 /* Depending on the options in OPT_STATE, print the header to be shown
  * before processing the m/i at REL_PATH relative to the parent mergeinfo
- * at PARENT_PATH.  If there is no parent m/i, RELPATH is empty. 
+ * at PARENT_PATH.  If there is no parent m/i, RELPATH is empty.
  * Use SCRATCH_POOL temporary allocations.*/
 static svn_error_t *
 show_elision_header(const char *parent_path,
@@ -1651,7 +1651,7 @@ eliminate_subpaths(apr_array_header_t *paths)
 }
 
 /* If enabled by OPT_STATE, show the list of missing paths encountered by
- * LOOKUP and use LOG to determine their fate.  LOG may be NULL. 
+ * LOOKUP and use LOG to determine their fate.  LOG may be NULL.
  * Use SCRATCH_POOL for temporary allocations. */
 static svn_error_t *
 show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
@@ -1702,7 +1702,7 @@ show_obsoletes_summary(svn_min__branch_lookup_t *lookup,
                                                 SVN_INVALID_REVNUM,
                                                 creation_rev, iterpool);
           find_surviving_copies(surviving_copies, log, path,
-                                SVN_IS_VALID_REVNUM(deletion_rev) 
+                                SVN_IS_VALID_REVNUM(deletion_rev)
                                   ? deletion_rev - 1
                                   : deletion_rev,
                                 creation_rev,

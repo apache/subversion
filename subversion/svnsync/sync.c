@@ -640,7 +640,7 @@ close_edit(void *edit_baton,
 {
   edit_baton_t *eb = edit_baton;
 
-  /* If we haven't opened the root yet, that means we're transfering
+  /* If we haven't opened the root yet, that means we're transferring
      an empty revision, probably because we aren't allowed to see the
      contents for some reason.  In any event, we need to open the root
      and close it again, before we can close out the edit, or the

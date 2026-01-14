@@ -3,7 +3,7 @@
 #  prop_tests.py:  testing versioned properties
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -349,7 +349,7 @@ def update_conflict_props(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 2)
   expected_status.tweak('A/mu', 'A', status=' C')
 
-  extra_files = ['mu.*\.prej', 'dir_conflicts.*\.prej']
+  extra_files = [r'mu.*\.prej', r'dir_conflicts.*\.prej']
   # Do the update and check the results in three ways... INCLUDING PROPS
   svntest.actions.run_and_verify_update(wc_dir,
                                         expected_output,
@@ -2640,6 +2640,9 @@ def xml_unsafe_author(sbox):
                                      wc_dir)
 
 @Issue(4415)
+@Issue(4919)
+@XFail(lambda: (svntest.main.is_bad_xml_fatal()
+                and not svntest.main.is_ra_type_dav()))
 def xml_unsafe_author2(sbox):
   "svn:author with XML unsafe chars 2"
 
@@ -2666,6 +2669,13 @@ def xml_unsafe_author2(sbox):
     expected_author = 'foo\bbar'
 
   # Use svn ls in --xml mode to test locale independent output.
+  # FIXME: Theat literal \b in the author field is invalid XML.
+  #        Should be encoded as a character entity and enclosed
+  #        in a CDATA section, like this:
+  #
+  #            <[CDATA[foo@#08;bar]]>
+  #        or
+  #            foo<[CDATA[@#08;]]>bar
   expected_output = [
     '<?xml version="1.0" encoding="UTF-8"?>\n',
     '<lists>\n',
@@ -2694,8 +2704,8 @@ def xml_unsafe_author2(sbox):
     '</lists>\n'
     ]
 
-  svntest.actions.run_and_verify_svn(expected_output, [],
-                                     'ls', '--xml', repo_url)
+  svntest.actions.run_and_verify_svn_xml(expected_output, [],
+                                         'list', '--xml', repo_url)
 
   expected_info = [{
       'Repository Root' : sbox.repo_url,
@@ -2829,6 +2839,38 @@ def prop_conflict_root(sbox):
                                         expected_status,
                                         extra_files=extra_files)
 
+
+# Test that editing a regular property creates a temporary file named
+# "svn-prop.tmp" whereas editing a revprop results in a temporary file
+# named "svn-revprop-rN.tmp" (where "N" is the number of the revision
+# whose revprop would be edited).
+def tmpfile_name_matches_prop_type(sbox):
+  "propedit tmpfile name matches property type"
+
+  sbox.build(read_only=True)
+
+  # We want the editor invocation to fail -- all we care about is the
+  # name of the tmpfile left over after that failure.  I'm guessing
+  # you don't have a editor named this on your system:
+  non_editor = 'af968da2ce9'
+
+  svntest.actions.run_and_verify_svn(
+    None,
+    '.*' + re.escape(non_editor) + r'.*svn-revprop-r1\.tmp.*',
+    'propedit', '--revprop',
+    '--editor-cmd', non_editor,
+    '-r1', 'svn:log',
+    sbox.repo_url)
+
+  svntest.actions.run_and_verify_svn(
+    None,
+    '.*' + re.escape(non_editor) + r'.*svn-prop\.tmp.*',
+    'propedit',
+    '--editor-cmd', non_editor,
+    'ignored-propname',
+    sbox.ospath('A/mu'))
+
+
 ########################################################################
 # Run the tests
 
@@ -2880,6 +2922,7 @@ test_list = [ None,
               iprops_list_abspath,
               wc_propop_on_url,
               prop_conflict_root,
+              tmpfile_name_matches_prop_type,
              ]
 
 if __name__ == '__main__':

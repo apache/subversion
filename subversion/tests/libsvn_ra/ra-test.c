@@ -62,7 +62,8 @@ make_and_open_repos(svn_ra_session_t **session,
                                   pool, pool));
   SVN_ERR(svn_ra_initialize(pool));
 
-  SVN_ERR(svn_ra_open4(session, NULL, url, NULL, cbtable, NULL, NULL, pool));
+  SVN_ERR(svn_ra_open5(session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
+                       pool));
 
   return SVN_NO_ERROR;
 }
@@ -91,6 +92,41 @@ commit_changes(svn_ra_session_t *session,
   SVN_ERR(editor->close_directory(dir_baton, pool));
   SVN_ERR(editor->close_directory(root_baton, pool));
   SVN_ERR(editor->close_edit(edit_baton, pool));
+  return SVN_NO_ERROR;
+}
+
+/* Commit two revisions: add 'B', then delete 'A' */
+static svn_error_t *
+commit_two_changes(svn_ra_session_t *session,
+                   apr_pool_t *pool)
+{
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  void *root_baton, *dir_baton;
+
+  /* mkdir B */
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    revprop_table,
+                                    NULL, NULL, NULL, TRUE, pool));
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->add_directory("B", root_baton, NULL, SVN_INVALID_REVNUM,
+                               pool, &dir_baton));
+  SVN_ERR(editor->close_directory(dir_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  /* delete A */
+  SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
+                                    revprop_table,
+                                    NULL, NULL, NULL, TRUE, pool));
+  SVN_ERR(editor->open_root(edit_baton, SVN_INVALID_REVNUM,
+                            pool, &root_baton));
+  SVN_ERR(editor->delete_entry("A", SVN_INVALID_REVNUM, root_baton, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
   return SVN_NO_ERROR;
 }
 
@@ -172,6 +208,50 @@ check_tunnel(void *tunnel_baton, const char *tunnel_name)
 static void
 close_tunnel(void *tunnel_context, void *tunnel_baton);
 
+#ifdef WIN32
+#define EXE_EXTENSION ".exe"
+#else
+#define EXE_EXTENSION ""
+#endif
+
+static svn_error_t *
+find_svnserve(const char **svnserve, apr_pool_t *pool)
+{
+  const char *abspath_build_layout;
+  const char *abspath_install_layout;
+  svn_node_kind_t kind;
+
+  /* try build layout first */
+  SVN_ERR(svn_dirent_get_absolute(&abspath_build_layout,
+                                  "../../svnserve/svnserve" EXE_EXTENSION,
+                                  pool));
+
+  SVN_ERR(svn_io_check_path(abspath_build_layout, &kind, pool));
+  if (kind == svn_node_file)
+    {
+      *svnserve = abspath_build_layout;
+      return SVN_NO_ERROR;
+    }
+
+  /* otherwise, try install layout */
+  SVN_ERR(svn_dirent_get_absolute(&abspath_install_layout,
+                                  "svnserve" EXE_EXTENSION, pool));
+
+  SVN_ERR(svn_io_check_path(abspath_install_layout, &kind, pool));
+  if (kind == svn_node_file)
+    {
+      *svnserve = abspath_install_layout;
+      return SVN_NO_ERROR;
+    }
+
+  return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
+                           "Could not find svnserve. Checked paths:\n"
+                           "  %s\n"
+                           "  %s",
+                           svn_dirent_local_style(abspath_build_layout, pool),
+                           svn_dirent_local_style(abspath_install_layout, pool));
+}
+
 static svn_error_t *
 open_tunnel(svn_stream_t **request, svn_stream_t **response,
             svn_ra_close_tunnel_func_t *close_func, void **close_baton,
@@ -181,7 +261,6 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
             svn_cancel_func_t cancel_func, void *cancel_baton,
             apr_pool_t *pool)
 {
-  svn_node_kind_t kind;
   apr_proc_t *proc;
   apr_procattr_t *attr;
   apr_status_t status;
@@ -192,21 +271,13 @@ open_tunnel(svn_stream_t **request, svn_stream_t **response,
 
   SVN_TEST_ASSERT(b->magic == TUNNEL_MAGIC);
 
-  SVN_ERR(svn_dirent_get_absolute(&svnserve, "../../svnserve/svnserve", pool));
-#ifdef WIN32
-  svnserve = apr_pstrcat(pool, svnserve, ".exe", SVN_VA_NULL);
-#endif
-  SVN_ERR(svn_io_check_path(svnserve, &kind, pool));
-  if (kind != svn_node_file)
-    return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
-                             "Could not find svnserve at %s",
-                             svn_dirent_local_style(svnserve, pool));
+  SVN_ERR(find_svnserve(&svnserve, pool));
 
   status = apr_procattr_create(&attr, pool);
   if (status == APR_SUCCESS)
     status = apr_procattr_io_set(attr, 1, 1, 0);
   if (status == APR_SUCCESS)
-    status = apr_procattr_cmdtype_set(attr, APR_PROGRAM);
+    status = apr_procattr_cmdtype_set(attr, APR_PROGRAM_ENV);
   proc = apr_palloc(pool, sizeof(*proc));
   if (status == APR_SUCCESS)
     status = apr_proc_create(proc,
@@ -352,7 +423,7 @@ check_tunnel_callback_test(const svn_test_opts_t *opts,
                                          NULL, NULL, NULL, pool));
 
   b->last_check = TRUE;
-  SVN_TEST_ASSERT_ERROR(svn_ra_open4(&session, NULL,
+  SVN_TEST_ASSERT_ERROR(svn_ra_open5(&session, NULL, NULL,
                                      "svn+foo://localhost/no-repo",
                                      NULL, cbtable, NULL, NULL, pool),
                         SVN_ERR_RA_CANNOT_CREATE_SESSION);
@@ -395,7 +466,7 @@ tunnel_callback_test(const svn_test_opts_t *opts,
                                          NULL, NULL, NULL, pool));
 
   b->last_check = FALSE;
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
                         scratch_pool));
   SVN_TEST_ASSERT(b->last_check);
   SVN_TEST_ASSERT(b->open_count > 0);
@@ -1556,7 +1627,7 @@ tunnel_run_checkout(const svn_test_opts_t *opts,
 
   b->last_check = FALSE;
 
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable, NULL, NULL,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable, NULL, NULL,
                        scratch_pool));
 
   SVN_ERR(commit_changes(session, pool));
@@ -1626,16 +1697,16 @@ commit_empty_last_change(const svn_test_opts_t *opts,
       SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
                                         revprop_table,
                                         NULL, NULL, NULL, TRUE, tmp_pool));
-      
+
       SVN_ERR(editor->open_root(edit_baton, 1, tmp_pool, &root_baton));
       SVN_ERR(editor->close_directory(root_baton, tmp_pool));
       SVN_ERR(editor->close_edit(edit_baton, tmp_pool));
-      
+
       SVN_ERR(svn_ra_stat(session, "", 2+i, &dirent, tmp_pool));
-      
+
       SVN_TEST_ASSERT(dirent != NULL);
       SVN_TEST_STRING_ASSERT(dirent->last_author, "jrandom");
-      
+
       /* BDB used to only updates last_changed on the repos_root when there
          was an actual change. Now all filesystems behave in the same way */
       SVN_TEST_INT_ASSERT(dirent->created_rev, 2+i);
@@ -1698,7 +1769,7 @@ commit_locked_file(const svn_test_opts_t *opts, apr_pool_t *pool)
   SVN_ERR(svn_ra_create_callbacks(&cbtable, pool));
   SVN_ERR(svn_test__init_auth_baton(&cbtable->auth_baton, pool));
 
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable,
                        NULL, NULL, pool));
   SVN_ERR(svn_ra_get_commit_editor3(session, &editor, &edit_baton,
                                     apr_hash_make(pool),
@@ -1731,7 +1802,7 @@ commit_locked_file(const svn_test_opts_t *opts, apr_pool_t *pool)
   }
 
   /* Open a new session using the file parent's URL. */
-  SVN_ERR(svn_ra_open4(&session, NULL, url, NULL, cbtable,
+  SVN_ERR(svn_ra_open5(&session, NULL, NULL, url, NULL, cbtable,
                        NULL, NULL, pool));
 
   /* Create a new commit editor supplying our lock token. */
@@ -1784,6 +1855,63 @@ commit_locked_file(const svn_test_opts_t *opts, apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+/* Cases of 'get-deleted-rev' that should return SVN_INVALID_REVNUM. */
+static svn_error_t *
+test_get_deleted_rev_no_delete(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_revnum_t revision_deleted;
+
+  SVN_ERR(make_and_open_repos(&ra_session,
+                              "test-repo-get-deleted-rev-no-delete", opts,
+                              pool));
+  SVN_ERR(commit_changes(ra_session, pool));
+  SVN_ERR(commit_two_changes(ra_session, pool));
+
+  /* expect 'no deletion' in the range up to r2, when it is deleted in r3 */
+  /* This was failing over RA-SVN where the 'get-deleted-rev' wire command's
+     prototype cannot directly represent that result. A new enough client and
+     server collaborate on a work-around implemented using an error code. */
+  SVN_ERR(svn_ra_get_deleted_rev(ra_session, "A", 1, 2,
+                                 &revision_deleted, pool));
+  SVN_TEST_INT_ASSERT(revision_deleted, SVN_INVALID_REVNUM);
+
+  /* this connection should still be open: a simple case should still work */
+  SVN_ERR(svn_ra_get_deleted_rev(ra_session, "A", 1, 3,
+                                 &revision_deleted, pool));
+  SVN_TEST_INT_ASSERT(revision_deleted, 3);
+
+  return SVN_NO_ERROR;
+}
+
+/* Cases of 'get-deleted-rev' that should return an error. */
+static svn_error_t *
+test_get_deleted_rev_errors(const svn_test_opts_t *opts,
+                               apr_pool_t *pool)
+{
+  svn_ra_session_t *ra_session;
+  svn_revnum_t revision_deleted;
+  svn_error_t *err;
+
+  SVN_ERR(make_and_open_repos(&ra_session,
+                              "test-repo-get-deleted-rev-errors", opts, pool));
+  SVN_ERR(commit_changes(ra_session, pool));
+
+  /* expect an error when searching up to r3, when repository head is r1 */
+  err = svn_ra_get_deleted_rev(ra_session, "A", 1, 3, &revision_deleted, pool);
+
+  /* mod_dav_svn returns a generic error code for "500 Internal Server Error";
+   * the other RA layers return the specific error code for "no such revision".
+   * We should make these consistent, but for now that's how it is. */
+  if (opts->repos_url && strncmp(opts->repos_url, "http", 4) == 0)
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_RA_DAV_REQUEST_FAILED);
+  else
+    SVN_TEST_ASSERT_ERROR(err, SVN_ERR_FS_NO_SUCH_REVISION);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -1820,6 +1948,10 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "check how last change applies to empty commit"),
     SVN_TEST_OPTS_PASS(commit_locked_file,
                        "check commit editor for a locked file"),
+    SVN_TEST_OPTS_PASS(test_get_deleted_rev_no_delete,
+                       "test get-deleted-rev no delete"),
+    SVN_TEST_OPTS_PASS(test_get_deleted_rev_errors,
+                       "test get-deleted-rev errors"),
     SVN_TEST_NULL
   };
 

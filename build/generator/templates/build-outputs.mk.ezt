@@ -70,8 +70,18 @@ RELEASE_MODE = 1
 # Section 3: SWIG autogen rules
 ########################################
 [for swig_langs]
-autogen-swig-[swig_langs.short]:[for swig_langs.deps] [swig_langs.deps][end]
+.swig_[swig_langs.short]_checked:
+	@if [ -n "$(SWIG_[swig_langs.short_upper]_ERRMSG)" ]; then \
+	  echo "SWIG [swig_langs.name] disabled at configure time: $(SWIG_[swig_langs.short_upper]_ERRMSG)" >&2; \
+	  exit 1; \
+	fi
+	@touch $@
+
+autogen-swig-[swig_langs.short]: .swig_[swig_langs.short]_checked [for swig_langs.deps] [swig_langs.deps][end]
 autogen-swig: autogen-swig-[swig_langs.short]
+
+# Ensure the swig build targets depend on the configuration check
+swig-[swig_langs.short]: .swig_[swig_langs.short]_checked
 [end]
 
 

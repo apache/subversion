@@ -3,7 +3,7 @@
 #  getopt_tests.py:  testing the svn command line processing
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -38,10 +38,6 @@ import svntest
 
 #----------------------------------------------------------------------
 
-# This directory contains all the expected output from svn.
-getopt_output_dir = os.path.join(os.path.dirname(sys.argv[0]),
-                                 'getopt_tests_data')
-
 # Naming convention for golden files: take the svn command line as a
 # single string and apply the following sed transformations:
 #   echo svn option1 option2 ... | sed -e 's/ /_/g' -e 's/_--/--/g'
@@ -50,6 +46,10 @@ getopt_output_dir = os.path.join(os.path.dirname(sys.argv[0]),
 
 def load_expected_output(basename):
   "load the expected standard output and standard error"
+
+  # This directory contains all the expected output from svn.
+  getopt_output_dir = os.path.join(os.path.dirname(sys.argv[0]),
+                                   'getopt_tests_data')
 
   stdout_filename = os.path.join(getopt_output_dir, basename + '_stdout')
   stderr_filename = os.path.join(getopt_output_dir, basename + '_stderr')
@@ -81,7 +81,7 @@ del_lines_res = [
                  re.compile(r"\* Plaintext cache.*"),
                  re.compile(r"\* Gnome Keyring"),
                  re.compile(r"\* GPG-Agent"),
-                 re.compile(r"\* Mac OS X Keychain"),
+                 re.compile(r"\* macOS Keychain"),
                  re.compile(r"\* KWallet \(KDE\)"),
                 ]
 
@@ -94,15 +94,11 @@ rep_lines_res = [
                   'version X.Y.Z '),
                  # The copyright end date keeps changing; fix forever.
                  (re.compile(r'Copyright \(C\) 20\d\d The Apache '
-                              'Software Foundation\.'),
+                             r'Software Foundation\.'),
                   'Copyright (C) YYYY The Apache Software Foundation'),
                  # In 'svn --version --quiet', we print only the version
                  # number in a single line.
                  (re.compile(r'^\d+\.\d+\.\d+(-[a-zA-Z0-9]+)?$'), 'X.Y.Z\n'),
-
-                 # In svn --version, the supported WC versions vary.
-                 (re.compile(r'^Supported working copy (WC) version.*$'),
-                  'Supported working copy (WC) versions: from X.Y to X.Y')
                 ]
 
 # This is a trigger pattern that selects the secondary set of
@@ -124,7 +120,7 @@ switched_del_lines_res = [
 # seen switch_res_line.
 switched_rep_lines_res = [
                           # We don't care about the actual canonical host
-                          (re.compile('^\* running on.*$'), '* running on'),
+                          (re.compile(r'^\* running on.*$'), '* running on'),
                          ]
 
 def process_lines(lines):
@@ -233,7 +229,7 @@ def getopt_config_option(sbox):
   expected_stderr = '.*W205000.*did you mean.*'
   expected_stdout = svntest.verify.AnyOutput
   svntest.actions.run_and_verify_svn2(expected_stdout, expected_stderr, 0,
-                                      'info', 
+                                      'info',
                                       '--config-option',
                                       'config:miscellanous:diff-extensions=' +
                                         '-u -p',

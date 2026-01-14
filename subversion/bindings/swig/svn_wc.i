@@ -21,15 +21,16 @@
  * svn_wc.i: SWIG interface file for svn_wc.h
  */
 
+%include svn_global.swg
+
 #if defined(SWIGPYTHON)
-%module(package="libsvn") wc
+%module(package="libsvn", moduleimport=SVN_PYTHON_MODULEIMPORT) wc
 #elif defined(SWIGPERL)
 %module "SVN::_Wc"
 #elif defined(SWIGRUBY)
 %module "svn::ext::wc"
 #endif
 
-%include svn_global.swg
 %import core.i
 %import svn_delta.i
 %import svn_ra.i
@@ -231,7 +232,7 @@
 
 %typemap(argout) svn_revnum_t *target_revision
 {
-  %append_output(LONG2NUM((long)$1));
+  %append_output(SWIG2NUM($1));
 }
 #endif
 
@@ -241,6 +242,8 @@
 {
   $result = $1 ? svn_swig_rb_svn_error_to_rb_error($1) : Qnil;
 }
+
+%typemap(ret) svn_error_t *err "";
 #endif
 
 

@@ -71,8 +71,8 @@ class RemoteSession : public SVNBase
     jlong getLatestRevision();
     jlong getRevisionByTimestamp(jlong jtimestamp);
     void changeRevisionProperty(jlong jrevision, jstring jname,
-                                jbyteArray jold_value,
-                                jbyteArray jvalue);
+                                jbyteArray jold_propval,
+                                jbyteArray jpropval);
     jobject getRevisionProperties(jlong jrevision);
     jbyteArray getRevisionProperty(jlong jrevision, jstring jname);
     jlong getFile(jlong jrevision, jstring jpath,

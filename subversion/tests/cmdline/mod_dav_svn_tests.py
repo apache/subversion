@@ -3,7 +3,7 @@
 #  mod_dav_svn_tests.py:  testing mod_dav_svn
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -102,7 +102,7 @@ def compare_xml_elem(a, b):
   # iteration.
   def sortcmp(x, y):
     return compare_xml_elem(x, y)[0]
- 
+
   a_children = sorted(list(a), key=functools.cmp_to_key(sortcmp))
   b_children = sorted(list(b), key=functools.cmp_to_key(sortcmp))
 
@@ -640,6 +640,114 @@ def propfind_propname(sbox):
   actual_response = r.read()
   verify_xml_response(expected_response, actual_response)
 
+@SkipUnless(svntest.main.is_ra_type_dav)
+def last_modified_header(sbox):
+  "verify 'Last-Modified' header on 'external' GETs"
+
+  sbox.build(create_wc=False, read_only=True)
+
+  headers = {
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
+  }
+
+  h = svntest.main.create_http_connection(sbox.repo_url)
+
+  # GET /repos/iota
+  # Expect to see a Last-Modified header.
+  h.request('GET', sbox.repo_url + '/iota', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Request failed: %d %s' % (r.status, r.reason))
+  svntest.verify.compare_and_display_lines(None, 'Last-Modified',
+                                           svntest.verify.RegexOutput('.+'),
+                                           r.getheader('Last-Modified'))
+  r.read()
+
+  # HEAD /repos/iota
+  # Expect to see a Last-Modified header.
+  h.request('HEAD', sbox.repo_url + '/iota', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Request failed: %d %s' % (r.status, r.reason))
+  svntest.verify.compare_and_display_lines(None, 'Last-Modified',
+                                           svntest.verify.RegexOutput('.+'),
+                                           r.getheader('Last-Modified'))
+  r.read()
+
+  # GET /repos/!svn/rvr/1/iota
+  # There should not be a Last-Modified header (it's costly and not useful,
+  # see r1724790)
+  h.request('GET', sbox.repo_url + '/!svn/rvr/1/iota', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.OK:
+    raise svntest.Failure('Request failed: %d %s' % (r.status, r.reason))
+  last_modified = r.getheader('Last-Modified')
+  if last_modified:
+    raise svntest.Failure('Unexpected Last-Modified header: %s' % last_modified)
+  r.read()
+
+@SkipUnless(svntest.main.is_ra_type_dav)
+def create_name_with_control_chars(sbox):
+  "test creating items with control chars in names"
+
+  sbox.build(create_wc=False)
+
+  h = svntest.main.create_http_connection(sbox.repo_url)
+
+  # POST /repos/!svn/me
+  # Create a new transaction.
+  req_body = (
+    '(create-txn-with-props '
+    '(svn:txn-client-compat-version 6 1.14.4 '
+    'svn:txn-user-agent 45 SVN/1.14.4 (x86-microsoft-windows) serf/1.3.9 '
+    'svn:log 0 ))'
+    )
+  headers = {
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
+    'Content-Type': 'application/vnd.svn-skel',
+  }
+  h.request('POST', sbox.repo_url + '/!svn/me', req_body, headers)
+  r = h.getresponse()
+  if r.status != httplib.CREATED:
+    raise svntest.Failure('Unexpected status: %d %s' % (r.status, r.reason))
+  txn_name = r.getheader('SVN-Txn-Name')
+  r.read()
+
+  # MKCOL /repos/!svn/txn/TXN_NAME/tab%09name
+  # Must fail with a 400 Bad Request.
+  headers = {
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
+  }
+  h.request('MKCOL', sbox.repo_url + '/!svn/txr/' + txn_name + '/tab%09name', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.BAD_REQUEST:
+    raise svntest.Failure('Unexpected status: %d %s' % (r.status, r.reason))
+  r.read()
+
+  # PUT /repos/!svn/txn/TXN_NAME/tab%09name
+  # Must fail with a 400 Bad Request.
+  headers = {
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
+  }
+  h.request('PUT', sbox.repo_url + '/!svn/txr/' + txn_name + '/tab%09name', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.BAD_REQUEST:
+    raise svntest.Failure('Unexpected status: %d %s' % (r.status, r.reason))
+  r.read()
+
+  # COPY /repos/!svn/rvr/1/iota -> /repos/!svn/txn/TXN_NAME/tab%09name
+  # Must fail with a 400 Bad Request.
+  headers = {
+    'Authorization': 'Basic ' + base64.b64encode(b'jconstant:rayjandom').decode(),
+    'Destination': sbox.repo_url + '/!svn/txr/' + txn_name + '/tab%09name'
+  }
+  h.request('COPY', sbox.repo_url + '/!svn/rvr/1/iota', None, headers)
+  r = h.getresponse()
+  if r.status != httplib.BAD_REQUEST:
+    raise svntest.Failure('Unexpected status: %d %s' % (r.status, r.reason))
+  r.read()
+
+
 ########################################################################
 # Run the tests
 
@@ -652,6 +760,8 @@ test_list = [ None,
               propfind_404,
               propfind_allprop,
               propfind_propname,
+              last_modified_header,
+              create_name_with_control_chars,
              ]
 serial_only = True
 

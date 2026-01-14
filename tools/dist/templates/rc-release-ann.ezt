@@ -1,5 +1,6 @@
 From: ...@apache.org
-To: announce@subversion.apache.org, users@subversion.apache.org, dev@subversion.apache.org, announce@apache.org
+To: announce@subversion.apache.org, users@subversion.apache.org, dev@subversion.apache.org
+Reply-To: users@subversion.apache.org
 Subject: [[]ANNOUNCE] Apache Subversion [version] released
 
 I'm happy to announce the release of Apache Subversion [version].
@@ -22,6 +23,10 @@ PGP Signatures are available at:
 For this release, the following people have provided PGP signatures:
 
 [siginfo]
+These public keys are available at:
+
+    https://www.apache.org/dist/subversion/subversion-[version].KEYS
+
 This is a pre-release for what will eventually become version [major-minor-patch] of the
 Apache Subversion open source version control system.  It may contain known
 issues, a complete list of [major-minor-patch]-blocking issues can be found

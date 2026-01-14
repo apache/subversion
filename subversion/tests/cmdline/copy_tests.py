@@ -3,7 +3,7 @@
 #  copy_tests.py:  testing the many uses of 'svn cp' and 'svn mv'
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -1021,6 +1021,76 @@ def repos_to_wc(sbox):
                                      os.path.join(D_dir, 'B'))
 
 #----------------------------------------------------------------------
+def foreign_repos_to_wc(sbox):
+  "foreign repository to WC copy"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  def move_url(repo_url, source, dest):
+    svntest.main.run_svn(False, 'move', '-m', svntest.main.make_log_msg(),
+                         repo_url + '/' + source,
+                         repo_url + '/' + dest)
+
+  # Scenarios:
+  # (parent-path-under-'A/', base-name, child-paths, mergeinfo-inheritance)
+  scenarios = [
+    ('B',   'E',   ['alpha','beta'], 'explicit'),
+    ('B',   'F',   [],               'inherited'),
+    ('D/G', 'pi',  [],               'explicit'),
+    ('D/G', 'rho', [],               'inherited'),
+  ]
+
+  # Add some mergeinfo, which should be discarded by a foreign repo copy.
+  # On each path of interest, add either explicit or inherited mergeinfo:
+  # the implementation handles these cases differently.
+  # (We commit these initially in the original repo just for convenience: as
+  # we already have a WC. Really they only need to be in the 'other' repo.)
+  for parent, name, children, mi_inheritance in scenarios:
+    if mi_inheritance == 'explicit':
+      sbox.simple_propset(SVN_PROP_MERGEINFO,
+                          '/branch/' + name + ':1', 'A/' + parent + '/' + name)
+    else:
+      sbox.simple_propset(SVN_PROP_MERGEINFO,
+                          '/branch/' + name + ':1', 'A/' + parent)
+  sbox.simple_commit()
+
+  # We have a standard repository and working copy.  Now we create a
+  # second repository with the same greek tree, but different UUID.
+  repo_dir       = sbox.repo_dir
+  other_repo_dir, other_repo_url = sbox.add_repo_path('other')
+  svntest.main.copy_repos(repo_dir, other_repo_dir, 2, 1)
+  move_url(other_repo_url, 'A', 'A2')
+  move_url(other_repo_url, 'A2', 'A3')
+
+  # URL->wc copy:
+  # copy a file and a directory from a foreign repository.
+  # we should get some scheduled additions *without history*.
+  peg_rev = '3'
+  op_rev = '2'
+
+  for parent, name, children, mi_inheritance in scenarios:
+    src_url = other_repo_url + '/A2/' + parent + '/' + name
+    src_url_resolved = src_url.replace('/A2/', '/A/')
+
+    expected_output = svntest.verify.UnorderedOutput([
+      '--- Copying from foreign repository URL \'%s\':\n' % src_url_resolved,
+      'A         %s\n' % sbox.ospath(name),
+    ] + [
+      'A         %s\n' % sbox.ospath(name + '/' + child)
+      for child in children
+    ])
+    svntest.actions.run_and_verify_svn(expected_output, [],
+                                       'copy', '-r' + op_rev,
+                                       src_url + '@' + peg_rev,
+                                       wc_dir)
+
+    # Validate the mergeinfo of the copy destination (we expect none)
+    svntest.actions.run_and_verify_svn([], '.*W200017: Property.*not found',
+                                       'propget', SVN_PROP_MERGEINFO,
+                                       sbox.ospath(name))
+
+#----------------------------------------------------------------------
 # Issue 1084: ra_svn move/copy bug
 @Issue(1084)
 def copy_to_root(sbox):
@@ -1182,6 +1252,55 @@ def wc_copy_parent_into_child(sbox):
                                         expected_status)
 
 #----------------------------------------------------------------------
+@Issue(4913)
+def url_move_parent_into_child(sbox):
+  "move URL URL/subdir"
+
+  sbox.build()
+  wc_dir = sbox.wc_dir
+
+  B_url = sbox.repo_url + "/A/B"
+  F_url = sbox.repo_url + "/A/B/F"
+
+  expected_error = "svn: E200007: Cannot move path '.*%s' into its own " \
+                   "child '.*%s'" % (re.escape(B_url),
+                                     re.escape(F_url))
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'mv',
+                                     '-m', 'a can of worms',
+                                     B_url, F_url)
+
+#----------------------------------------------------------------------
+@Issue(4913)
+def wc_move_parent_into_child(sbox):
+  "move WC WC/subdir"
+
+  sbox.build(create_wc = False)
+  wc_dir = sbox.wc_dir
+
+  B_url = sbox.repo_url + "/A/B"
+  F_B_url = sbox.repo_url + "/A/B/F/B"
+
+  # Want a smaller WC
+  svntest.main.safe_rmtree(wc_dir)
+  svntest.actions.run_and_verify_svn(None, [],
+                                     'checkout',
+                                     B_url, wc_dir)
+
+  was_cwd = os.getcwd()
+  from_path = os.path.abspath(sbox.ospath(''))
+  to_path = os.path.abspath(sbox.ospath('F/B'))
+  os.chdir(wc_dir)
+
+  expected_error = "svn: E200007: Cannot move path '%s' into its own " \
+                   "child '%s'" % (re.escape(from_path), re.escape(to_path))
+  svntest.actions.run_and_verify_svn(None, expected_error,
+                                     'mv',
+                                     from_path, to_path)
+
+  os.chdir(was_cwd)
+
+#----------------------------------------------------------------------
 # Issue 1419: at one point ra_neon->get_uuid() was failing on a
 # non-existent public URL, which prevented us from resurrecting files
 # (svn cp -rOLD URL wc).
@@ -1300,7 +1419,7 @@ def repos_to_wc_copy_eol_keywords(sbox):
   if re.match(b'[^\\r]\\n', raw_contents):
     raise svntest.Failure
 
-  if not re.match(b'.*\$LastChangedRevision:\s*\d+\s*\$', line_contents[3]):
+  if not re.match(b'.*\\$LastChangedRevision:\\s*\\d+\\s*\\$', line_contents[3]):
     raise svntest.Failure
 
 #-------------------------------------------------------------
@@ -3738,70 +3857,49 @@ def URI_encoded_repos_to_wc(sbox):
   expected_status = svntest.actions.get_virginal_state(wc_dir, 1)
   expected_disk = svntest.main.greek_state.copy()
 
+  def path_join(head, tail):
+    if not head: return tail
+    if not tail: return head
+    return head + '/' + tail
+
+  def greek_file_item(path):
+    if path[-1:].islower():
+      basename = re.sub('.*/', '', path)
+      return Item("This is the file '" + basename + "'.\n")
+    return Item()
+
+  A_paths = [
+    "",
+    "B",
+    "B/lambda",
+    "B/E",
+    "B/E/alpha",
+    "B/E/beta",
+    "B/F",
+    "mu",
+    "C",
+    "D",
+    "D/gamma",
+    "D/G",
+    "D/G/pi",
+    "D/G/rho",
+    "D/G/tau",
+    "D/H",
+    "D/H/chi",
+    "D/H/omega",
+    "D/H/psi",
+    ]
+
   def copy_URL_to_WC(URL_rel_path, dest_name, rev):
-    lines = [
-       "A    " + os.path.join(wc_dir, dest_name, "B") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "lambda") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "alpha") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "E", "beta") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "B", "F") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "mu") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "C") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "gamma") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "pi") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "rho") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "G", "tau") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "chi") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "omega") + "\n",
-       "A    " + os.path.join(wc_dir, dest_name, "D", "H", "psi") + "\n",
-       "Checked out revision " + str(rev - 1) + ".\n",
-       "A         " + os.path.join(wc_dir, dest_name) + "\n"]
-    expected = svntest.verify.UnorderedOutput(lines)
-    expected_status.add({
-      dest_name + "/B"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/lambda"  : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E/alpha" : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/E/beta"  : Item(status='  ', wc_rev=rev),
-      dest_name + "/B/F"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/mu"        : Item(status='  ', wc_rev=rev),
-      dest_name + "/C"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/D"         : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/gamma"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/pi"    : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/rho"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/G/tau"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H"       : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/chi"   : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/omega" : Item(status='  ', wc_rev=rev),
-      dest_name + "/D/H/psi"   : Item(status='  ', wc_rev=rev),
-      dest_name                : Item(status='  ', wc_rev=rev)})
-    expected_disk.add({
-      dest_name                : Item(props={}),
-      dest_name + '/B'         : Item(),
-      dest_name + '/B/lambda'  : Item("This is the file 'lambda'.\n"),
-      dest_name + '/B/E'       : Item(),
-      dest_name + '/B/E/alpha' : Item("This is the file 'alpha'.\n"),
-      dest_name + '/B/E/beta'  : Item("This is the file 'beta'.\n"),
-      dest_name + '/B/F'       : Item(),
-      dest_name + '/mu'        : Item("This is the file 'mu'.\n"),
-      dest_name + '/C'         : Item(),
-      dest_name + '/D'         : Item(),
-      dest_name + '/D/gamma'   : Item("This is the file 'gamma'.\n"),
-      dest_name + '/D/G'       : Item(),
-      dest_name + '/D/G/pi'    : Item("This is the file 'pi'.\n"),
-      dest_name + '/D/G/rho'   : Item("This is the file 'rho'.\n"),
-      dest_name + '/D/G/tau'   : Item("This is the file 'tau'.\n"),
-      dest_name + '/D/H'       : Item(),
-      dest_name + '/D/H/chi'   : Item("This is the file 'chi'.\n"),
-      dest_name + '/D/H/omega' : Item("This is the file 'omega'.\n"),
-      dest_name + '/D/H/psi'   : Item("This is the file 'psi'.\n"),
-      })
+    expected = svntest.verify.UnorderedOutput(
+      [ "A         " + sbox.ospath(path_join(dest_name, p)) + "\n"
+        for p in A_paths ])
+    expected_status.add(
+      { path_join(dest_name, p) : Item(status='  ', wc_rev=rev)
+        for p in A_paths })
+    expected_disk.add(
+      { path_join(dest_name, p) : greek_file_item(p)
+        for p in A_paths })
 
     # Make a copy
     svntest.actions.run_and_verify_svn(expected, [],
@@ -5942,6 +6040,8 @@ test_list = [ None,
               copy_to_root,
               url_copy_parent_into_child,
               wc_copy_parent_into_child,
+              url_move_parent_into_child,
+              wc_move_parent_into_child,
               resurrect_deleted_file,
               diff_repos_to_wc_copy,
               repos_to_wc_copy_eol_keywords,
@@ -6044,6 +6144,7 @@ test_list = [ None,
               ext_wc_copy_deleted,
               copy_subtree_deleted,
               resurrect_at_root,
+              foreign_repos_to_wc,
              ]
 
 if __name__ == '__main__':

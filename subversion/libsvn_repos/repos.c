@@ -817,7 +817,7 @@ create_conf(svn_repos_t *repos, apr_pool_t *pool)
 "### access through http: and/or file: URLs, then this file is"              NL
 "### irrelevant.)"                                                           NL
 ""                                                                           NL
-"### Visit http://subversion.apache.org/ for more information."              NL
+"### Visit https://subversion.apache.org/ for more information."             NL
 ""                                                                           NL
 "[general]"                                                                  NL
 "### The anon-access and auth-access options control access to the"          NL
@@ -1077,7 +1077,7 @@ create_repos_structure(svn_repos_t *repos,
       "requirements of your site."                                           NL
       ""                                                                     NL;
     const char * const readme_footer =
-      "Visit http://subversion.apache.org/ for more information."            NL;
+      "Visit https://subversion.apache.org/ for more information."           NL;
     apr_file_t *f;
     apr_size_t written;
 
@@ -1183,7 +1183,7 @@ svn_repos_create(svn_repos_t **repos_p,
   if ((err = svn_fs_create2(&repos->fs, repos->db_path, fs_config,
                             result_pool, scratch_pool)))
     {
-      /* If there was an error making the filesytem, e.g. unknown/supported
+      /* If there was an error making the filesystem, e.g. unknown/supported
        * filesystem type.  Clean up after ourselves.  Yes this is safe because
        * create_repos_structure will fail if the path existed before we started
        * so we can't accidentally remove a directory that previously existed.
@@ -1452,7 +1452,7 @@ svn_repos_upgrade2(const char *path,
   if (notify_func)
     {
       /* We notify *twice* here, because there are two different logistical
-         actions occuring. */
+         actions occurring. */
       svn_repos_notify_t *notify = svn_repos_notify_create(
                                     svn_repos_notify_mutex_acquired, subpool);
       notify_func(notify_baton, notify, subpool);
@@ -1702,7 +1702,7 @@ svn_repos_recover4(const char *path,
   if (notify_func)
     {
       /* We notify *twice* here, because there are two different logistical
-         actions occuring. */
+         actions occurring. */
       svn_repos_notify_t *notify = svn_repos_notify_create(
                                     svn_repos_notify_mutex_acquired, subpool);
       notify_func(notify_baton, notify, subpool);
@@ -2091,4 +2091,14 @@ svn_repos__fs_type(const char **fs_type,
   return svn_fs_type(fs_type,
                      svn_dirent_join(repos_path, SVN_REPOS__DB_DIR, pool),
                      pool);
+}
+
+svn_error_t *
+svn_repos__validate_new_path(const char *path,
+                             apr_pool_t *scratch_pool)
+{
+  /* Reject paths which contain control characters (related to issue #4340). */
+  SVN_ERR(svn_path_check_valid(path, scratch_pool));
+
+  return SVN_NO_ERROR;
 }

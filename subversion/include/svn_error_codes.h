@@ -576,6 +576,22 @@ SVN_ERROR_START
              SVN_ERR_WC_CATEGORY_START + 41,
              "Duplicate targets in svn:externals property")
 
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_INCOMPATIBLE_SETTINGS,
+             SVN_ERR_WC_CATEGORY_START + 42,
+             "Incompatible working copy settings")
+
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_DEPRECATED_API_STORE_PRISTINE,
+             SVN_ERR_WC_CATEGORY_START + 43,
+             "This client uses a deprecated API that does not support "
+             "working copies without local pristines")
+
+  /** @since New in 1.15 */
+  SVN_ERRDEF(SVN_ERR_WC_PRISTINE_DEHYDRATED,
+             SVN_ERR_WC_CATEGORY_START + 44,
+             "No local pristine contents for a file")
+
   /* fs errors */
 
   SVN_ERRDEF(SVN_ERR_FS_GENERAL,
@@ -887,6 +903,21 @@ SVN_ERROR_START
   SVN_ERRDEF(SVN_ERR_FS_AMBIGUOUS_CHECKSUM_REP,
              SVN_ERR_FS_CATEGORY_START + 67,
              "Content checksums supposedly match but content does not.")
+
+  /** @since New in 1.13. */
+  SVN_ERRDEF(SVN_ERR_FS_UNRECOGNIZED_IOCTL_CODE,
+             SVN_ERR_FS_CATEGORY_START + 68,
+             "Unrecognized filesystem I/O control code")
+
+  /** @since New in 1.14. */
+  SVN_ERRDEF(SVN_ERR_FS_REP_SHARING_NOT_ALLOWED,
+             SVN_ERR_FS_CATEGORY_START + 69,
+             "Rep-sharing is not allowed.")
+
+  /** @since New in 1.14. */
+  SVN_ERRDEF(SVN_ERR_FS_REP_SHARING_NOT_SUPPORTED,
+             SVN_ERR_FS_CATEGORY_START + 70,
+             "Rep-sharing is not supported.")
 
   /* repos errors */
 
@@ -1482,6 +1513,16 @@ SVN_ERROR_START
              SVN_ERR_MISC_CATEGORY_START + 46,
              "LZ4 decompression failed")
 
+  /** @since New in 1.12.  */
+  SVN_ERRDEF(SVN_ERR_CANONICALIZATION_FAILED,
+             SVN_ERR_MISC_CATEGORY_START + 47,
+             "Could not canonicalize path or URI")
+
+  /** @since New in 1.16.  */
+  SVN_ERRDEF(SVN_ERR_BCRYPT,
+             SVN_ERR_MISC_CATEGORY_START + 48,
+             "BCrypt method failed.")
+
   /* command-line client errors */
 
   SVN_ERRDEF(SVN_ERR_CL_ARG_PARSING_ERROR,
@@ -1769,7 +1810,7 @@ SVN_ERROR_START
 
   SVN_ERRDEF(SVN_ERR_X509_CERT_VERIFY_FAILED,
              SVN_ERR_X509_CATEGORY_START + 19,
-             "Certficate verification failed")
+             "Certificate verification failed")
 
 SVN_ERROR_END
 

@@ -7,12 +7,16 @@
 <p>We are pleased to announce the release of Apache Subversion [version].  This
    release is not intended for production use, but is provided as a milestone
    to encourage wider testing and feedback from intrepid users and maintainers.
-   Please see the
+   Please see the[if-any announcement_url][else]
+<!-- Initially the release announcement link is commented out
+until the release announcement has landed in the archives.
+Add the URL below and remove this comment start section...|[end]
    <a href="[announcement_url]">release
-   announcement</a> for more information about this release, and the
+   announcement</a> for more information about this release, and the[if-any announcement_url][else]
+|... and this end comment--->[end]
    <a href="/docs/release-notes/[major-minor].html">release notes</a> and 
-   <a href="https://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES"> 
-   change log</a> for information about what will eventually be
+   <a href="https://svn.apache.org/repos/asf/subversion/tags/[version]/CHANGES"
+   >change log</a> for information about what will eventually be
    in the [version_base] release.</p> 
  
 <p>To get this release from the nearest mirror, please visit our

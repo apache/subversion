@@ -576,7 +576,8 @@ set_revision_property(void *baton,
     {
       if (! svn_hash_gets(rb->pb->skip_revprops, name))
         svn_hash_sets(rb->revprop_table,
-                      apr_pstrdup(rb->pool, name), value);
+                      apr_pstrdup(rb->pool, name),
+                      svn_string_dup(value, rb->pool));
     }
   else if (rb->head_rev_before_commit == 0
            && ! svn_hash_gets(rb->pb->skip_revprops, name))
@@ -591,9 +592,9 @@ set_revision_property(void *baton,
   /* Remember any datestamp/ author that passes through (see comment
      in close_revision). */
   if (!strcmp(name, SVN_PROP_REVISION_DATE))
-    rb->datestamp = value;
+    rb->datestamp = svn_string_dup(value, rb->pool);
   if (!strcmp(name, SVN_PROP_REVISION_AUTHOR))
-    rb->author = value;
+    rb->author = svn_string_dup(value, rb->pool);
 
   return SVN_NO_ERROR;
 }
@@ -636,7 +637,7 @@ set_node_property(void *baton,
 
   prop = apr_palloc(nb->rb->pool, sizeof (*prop));
   prop->name = apr_pstrdup(pool, name);
-  prop->value = value;
+  prop->value = svn_string_dup(value, pool);
   svn_hash_sets(nb->prop_changes, prop->name, prop);
 
   return SVN_NO_ERROR;
@@ -861,16 +862,12 @@ close_revision(void *baton)
     {
       if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_DATE))
         {
-          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_DATE,
-                                           rb->datestamp, rb->pool));
           SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
                                           SVN_PROP_REVISION_DATE,
                                           NULL, rb->datestamp, rb->pool));
         }
       if (!svn_hash_gets(rb->pb->skip_revprops, SVN_PROP_REVISION_AUTHOR))
         {
-          SVN_ERR(svn_repos__validate_prop(SVN_PROP_REVISION_AUTHOR,
-                                           rb->author, rb->pool));
           SVN_ERR(svn_ra_change_rev_prop2(rb->pb->session, committed_rev,
                                           SVN_PROP_REVISION_AUTHOR,
                                           NULL, rb->author, rb->pool));

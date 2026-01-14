@@ -64,27 +64,15 @@ def no_relocate_validation():
 def do_relocate_validation():
   os.environ['SVN_I_LOVE_CORRUPTED_WORKING_COPIES_SO_DISABLE_RELOCATE_VALIDATION'] = 'no'
 
-def setup_pristine_greek_repository():
-  """Create the pristine repository and 'svn import' the greek tree"""
-
-  # these directories don't exist out of the box, so we may have to create them
-  if not os.path.exists(main.general_wc_dir):
-    os.makedirs(main.general_wc_dir)
-
-  if not os.path.exists(main.general_repo_dir):
-    os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
-
-  if not os.path.exists(main.other_dav_root_dir):
-    os.makedirs(main.other_dav_root_dir)
-  if not os.path.exists(main.non_dav_root_dir):
-    os.makedirs(main.non_dav_root_dir)
-
+def _setup_pristine_repo(tree_state,
+                         repos_dir, dump_dir, repos_url,
+                         use_precooked=True):
   # If there's no pristine repos, create one.
-  if not os.path.exists(main.pristine_greek_repos_dir):
-    if main.options.fsfs_version is not None:
-      main.unpack_greek_repos(main.pristine_greek_repos_dir)
+  if not os.path.exists(repos_dir):
+    if use_precooked and main.options.fsfs_version is not None:
+      main.unpack_greek_repos(repos_dir)
     else:
-      main.create_repos(main.pristine_greek_repos_dir)
+      main.create_repos(repos_dir)
 
       # if this is dav, gives us access rights to import the greek tree.
       if main.is_ra_type_dav():
@@ -92,15 +80,14 @@ def setup_pristine_greek_repository():
         main.file_write(authz_file, "[/]\n* = rw\n")
 
       # dump the greek tree to disk.
-      main.greek_state.write_to_disk(main.greek_dump_dir)
+      tree_state.write_to_disk(dump_dir)
 
       # import the greek tree, using l:foo/p:bar
       ### todo: svn should not be prompting for auth info when using
       ### repositories with no auth/auth requirements
       _, output, _ = main.run_svn(None, 'import', '-m',
                                   'Log message for revision 1.',
-                                  main.greek_dump_dir,
-                                  main.pristine_greek_repos_url)
+                                  dump_dir, repos_url)
 
       # verify the printed output of 'svn import'.
       lastline = output.pop().strip()
@@ -112,7 +99,7 @@ def setup_pristine_greek_repository():
         sys.exit(1)
       output_tree = wc.State.from_commit(output)
 
-      expected_output_tree = main.greek_state.copy(main.greek_dump_dir)
+      expected_output_tree = tree_state.copy(dump_dir)
       expected_output_tree.tweak(verb='Adding',
                                  contents=None)
 
@@ -127,9 +114,36 @@ def setup_pristine_greek_repository():
 
     # Finally, disallow any changes to the "pristine" repos.
     error_msg = "Don't modify the pristine repository"
-    create_failing_hook(main.pristine_greek_repos_dir, 'start-commit', error_msg)
-    create_failing_hook(main.pristine_greek_repos_dir, 'pre-lock', error_msg)
-    create_failing_hook(main.pristine_greek_repos_dir, 'pre-revprop-change', error_msg)
+    create_failing_hook(repos_dir, 'start-commit', error_msg)
+    create_failing_hook(repos_dir, 'pre-lock', error_msg)
+    create_failing_hook(repos_dir, 'pre-revprop-change', error_msg)
+
+def setup_pristine_repositories():
+  """Create the pristine repository and 'svn import' the greek tree"""
+
+  # these directories don't exist out of the box, so we may have to create them
+  if not os.path.exists(main.general_wc_dir):
+    os.makedirs(main.general_wc_dir)
+
+  if not os.path.exists(main.general_repo_dir):
+    os.makedirs(main.general_repo_dir) # this also creates all the intermediate dirs
+
+  if not os.path.exists(main.other_dav_root_dir):
+    os.makedirs(main.other_dav_root_dir)
+  if not os.path.exists(main.non_dav_root_dir):
+    os.makedirs(main.non_dav_root_dir)
+
+  _setup_pristine_repo(main.greek_state,
+                       main.pristine_greek_repos_dir,
+                       main.greek_dump_dir,
+                       main.pristine_greek_repos_url)
+
+  # NOTE: We don't use precooked trojan repositories.
+  _setup_pristine_repo(main.trojan_state,
+                       main.pristine_trojan_repos_dir,
+                       main.trojan_dump_dir,
+                       main.pristine_trojan_repos_url,
+                       use_precooked=False)
 
 
 ######################################################################
@@ -149,23 +163,19 @@ def guarantee_empty_repository(path, minor_version):
 # Used by every test, so that they can run independently of  one
 # another. Every time this routine is called, it recursively copies
 # the `pristine repos' to a new location.
-# Note: make sure setup_pristine_greek_repository was called once before
-# using this function.
-def guarantee_greek_repository(path, minor_version):
-  """Guarantee that a local svn repository exists at PATH, containing
-  nothing but the greek-tree at revision 1."""
-
-  if path == main.pristine_greek_repos_dir:
+# Note: make sure setup_pristine_repositories was called once before
+# using these functions.
+def _guarantee_repos(path, repos_dir, minor_version, use_precooked=True):
+  if path == repos_dir:
     logger.error("attempt to overwrite the pristine repos!  Aborting.")
     sys.exit(1)
 
   # copy the pristine repository to PATH.
   main.safe_rmtree(path)
-  if (main.options.fsfs_version is not None):
+  if (use_precooked and main.options.fsfs_version is not None):
     failed = main.unpack_greek_repos(path)
   else:
-    failed = main.copy_repos(main.pristine_greek_repos_dir,
-                             path, 1, 1, minor_version)
+    failed = main.copy_repos(repos_dir, path, 1, 1, minor_version)
   if failed:
     logger.error("copying repository failed.")
     sys.exit(1)
@@ -175,6 +185,18 @@ def guarantee_greek_repository(path, minor_version):
 
   # give the repository a unique UUID
   run_and_verify_svnadmin([], [], 'setuuid', path)
+
+def guarantee_greek_repository(path, minor_version):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing but the greek-tree at revision 1."""
+
+  _guarantee_repos(path, main.pristine_greek_repos_dir, minor_version)
+
+def guarantee_trojan_repository(path, minor_version):
+  """Guarantee that a local svn repository exists at PATH, containing
+  nothing but the trojan-tree at revision 1."""
+
+  _guarantee_repos(path, main.pristine_trojan_repos_dir, minor_version, False)
 
 def run_and_verify_atomic_ra_revprop_change(expected_stdout,
                                             expected_stderr,
@@ -303,6 +325,16 @@ def run_and_verify_svnversion2(wc_dir, trail_url,
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
+def run_and_verify_svn_xml(expected_stdout, expected_stderr,
+                            command, *varargs):
+  """Like run_and_verify_svn but expects the output to be XML
+  and validates it against the schema for the given command"""
+  exit_code, out, err = run_and_verify_svn(expected_stdout, expected_stderr,
+                                           command, *varargs)
+  if exit_code == 0:
+    verify.validate_xml_schema(command, out)
+  return exit_code, out, err
+
 def run_and_verify_svn(expected_stdout, expected_stderr, *varargs):
   """like run_and_verify_svn2, but the expected exit code is assumed to
   be 0 if no output is expected on stderr, and 1 otherwise."""
@@ -316,6 +348,16 @@ def run_and_verify_svn(expected_stdout, expected_stderr, *varargs):
       expected_exit = 1
   return run_and_verify_svn2(expected_stdout, expected_stderr,
                              expected_exit, *varargs)
+
+def run_and_verify_svn_xml2(expected_stdout, expected_stderr,
+                            expected_exit, command, *varargs):
+  """Like run_and_verify_svn2 but expects the output to be XML
+  and validates it against the schema for the given command"""
+  exit_code, out, err = run_and_verify_svn2(expected_stdout, expected_stderr,
+                                            expected_exit, command, *varargs)
+  if exit_code == 0:
+    verify.validate_xml_schema(command, out)
+  return exit_code, out, err
 
 def run_and_verify_svn2(expected_stdout, expected_stderr,
                         expected_exit, *varargs):
@@ -396,7 +438,7 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
   # Since main.run_svnrdump() uses binary mode, normalize the stderr
   # line endings on Windows ourselves.
   if sys.platform == 'win32':
-    err = map(lambda x : x.replace('\r\n', '\n'), err)
+    err = [x.replace('\r\n', '\n') for x in err]
 
   # Ignore "consider upgrade" warnings to allow regression tests to pass
   # when run against a 1.6 mod_dav_svn.
@@ -408,27 +450,6 @@ def run_and_verify_svnrdump(dumpfile_content, expected_stdout,
                         expected_stdout, expected_stderr)
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return output
-
-
-def run_and_verify_svnmover(expected_stdout, expected_stderr,
-                            *varargs):
-  """Run svnmover command and check its output"""
-
-  expected_exit = 0
-  if expected_stderr is not None and expected_stderr != []:
-    expected_exit = 1
-  return run_and_verify_svnmover2(expected_stdout, expected_stderr,
-                                  expected_exit, *varargs)
-
-def run_and_verify_svnmover2(expected_stdout, expected_stderr,
-                             expected_exit, *varargs):
-  """Run svnmover command and check its output and exit code."""
-
-  exit_code, out, err = main.run_svnmover(*varargs)
-  verify.verify_outputs("Unexpected output", out, err,
-                        expected_stdout, expected_stderr)
-  verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
-  return exit_code, out, err
 
 
 def run_and_verify_svnmucc(expected_stdout, expected_stderr,
@@ -464,7 +485,7 @@ def run_and_verify_svnsync(expected_stdout, expected_stderr,
 
 def run_and_verify_svnsync2(expected_stdout, expected_stderr,
                             expected_exit, *varargs):
-  """Run svnmucc command and check its output and exit code."""
+  """Run svnsync command and check its output and exit code."""
 
   exit_code, out, err = main.run_svnsync(*varargs)
 
@@ -485,7 +506,8 @@ def load_repo(sbox, dumpfile_path = None, dump_str = None,
               normalize_props = False):
   "Loads the dumpfile into sbox"
   if not dump_str:
-    dump_str = open(dumpfile_path, "rb").read()
+    with open(dumpfile_path, "rb") as fp:
+      dump_str = fp.read()
 
   # Create a virgin repos and working copy
   main.safe_rmtree(sbox.repo_dir, 1)
@@ -504,7 +526,7 @@ def expected_noop_update_output(rev):
   """Return an ExpectedOutput object describing what we'd expect to
   see from an update to revision REV that was effectively a no-op (no
   server changes transmitted)."""
-  return verify.createExpectedOutput("Updating '.*':|At revision %d."
+  return verify.createExpectedOutput("Updating '.*':|Fetching text bases [.]+done|At revision %d."
                                      % (rev),
                                      "no-op update")
 
@@ -775,11 +797,11 @@ def run_and_verify_log_xml(expected_log_attrs=None,
   # We'll parse the output unless the caller specifies expected_stderr or
   # expected_stdout for run_and_verify_svn.
   parse = True
-  if expected_stderr == None:
+  if expected_stderr is None:
     expected_stderr = []
   else:
     parse = False
-  if expected_stdout != None:
+  if expected_stdout is not None:
     parse = False
 
   log_args = list(args)
@@ -791,6 +813,7 @@ def run_and_verify_log_xml(expected_log_attrs=None,
     'log', '--xml', *log_args)
   if not parse:
     return
+  verify.validate_xml_schema('log', stdout)
 
   entries = LogParser().parse(stdout)
   for index in range(len(entries)):
@@ -1023,9 +1046,9 @@ def run_and_parse_info(*args):
       # normal line
       key, value = line.split(':', 1)
 
-      if re.search(' \(\d+ lines?\)$', key):
+      if re.search(r' \(\d+ lines?\)$', key):
         # numbered continuation lines
-        match = re.match('^(.*) \((\d+) lines?\)$', key)
+        match = re.match(r'^(.*) \((\d+) lines?\)$', key)
         key = match.group(1)
         lock_comment_lines = int(match.group(2))
       elif len(value) > 1:
@@ -1510,6 +1533,15 @@ def process_output_for_commit(output, error_re_string):
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           expected_stderr=[],
                           *args):
+  """Like run_and_verify_commit2(), but a log message will always
+  be appended to the command-line arguments."""
+  return run_and_verify_commit2(wc_dir_name, output_tree, status_tree,
+                                False, True, expected_stderr, *args)
+
+def run_and_verify_commit2(wc_dir_name, output_tree, status_tree,
+                           prepend_wc_dir_name=False, append_log_message=True,
+                           expected_stderr=[],
+                           *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
 
@@ -1517,6 +1549,13 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   optional STATUS_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
+
+  Set PREPEND_WC_DIR_NAME to True to always prepend the working copy
+  directory to the argument list, otherwise it will only be used when
+  ARGS are empty.
+
+  Set APPEND_LOG_MESSAGE to False to prevent adding a log message argument
+  if ARGS doesn't contain one.
 
   EXPECTED_STDERR is handled as in run_and_verify_svn()
 
@@ -1526,10 +1565,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     output_tree = output_tree.old_tree()
 
   # Commit.
-  if len(args) == 0:
-    args = (wc_dir_name,)
-  if '-m' not in args and '-F' not in args:
-    args = list(args) + ['-m', 'log msg']
+  args = list(args)
+  if len(args) == 0 or prepend_wc_dir_name:
+    args.insert(0, wc_dir_name)
+  if append_log_message and '-m' not in args and '-F' not in args:
+    args.extend(['-m', 'log msg'])
   exit_code, output, errput = run_and_verify_svn(None, expected_stderr,
                                                  'ci', *args)
 
@@ -1625,9 +1665,9 @@ def run_and_verify_status_xml(expected_entries = [],
 
   exit_code, output, errput = run_and_verify_svn(None, [],
                                                  'status', '--xml', *args)
-
   if len(errput) > 0:
     raise Failure
+  verify.validate_xml_schema('status', output)
 
   doc = parseString(''.join(output))
   entries = doc.getElementsByTagName('entry')
@@ -1704,6 +1744,7 @@ def run_and_verify_inherited_prop_xml(path_or_url,
 
   if len(errput) > 0:
     raise Failure
+  ## FIXME: Need XML schema: verify.validate_xml_schema('props', output)
 
   # Props inherited from within the WC are keyed on absolute paths.
   expected_iprops = {}
@@ -1776,10 +1817,10 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
                                                  'diff', '--summarize',
                                                  '--xml', *args)
 
-
   # Return if errors are present since they were expected
   if len(errput) > 0:
     return
+  verify.validate_xml_schema('diff', output)
 
   doc = parseString(''.join(output))
   paths = doc.getElementsByTagName("path")
@@ -1901,15 +1942,19 @@ def _run_and_verify_resolve(cmd, expected_paths, *args):
         "Merge conflicts in '" + path + "' marked as resolved.\n" for path in
         expected_paths]),
       verify.UnorderedRegexListOutput([
-        "Conflict in property.*at '" + path + "' marked as resolved.\n" \
+        "Conflict in property.*at '" + re.escape(path) + "' marked as resolved.\n" \
         for path in expected_paths]),
       verify.UnorderedOutput([
         "Tree conflict at '" + path + "' marked as resolved.\n" for path in
         expected_paths]),
     ],
     match_all=False)
-  run_and_verify_svn(expected_output, [],
-                     cmd, *args)
+  exit_code, out, err = main.run_svn(None, cmd, *args)
+  out = [line for line in out
+         if not re.match(r'Fetching text bases [.]+done\n', line)]
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_output, [])
+  verify.verify_exit_code("Unexpected return code", exit_code, 0)
 
 def run_and_verify_resolve(expected_paths, *args):
   """Run "svn resolve" with arguments ARGS, and verify that it resolves the
@@ -1932,8 +1977,18 @@ def run_and_verify_revert(expected_paths, *args):
   expected_output = verify.UnorderedOutput([
     "Reverted '" + path + "'\n" for path in
     expected_paths])
-  run_and_verify_svn(expected_output, [],
-                     "revert", *args)
+  run_and_verify_revert_output(expected_output, *args)
+
+def run_and_verify_revert_output(expected_output, *args):
+  """Run "svn revert" with arguments ARGS, and verify that it outputs
+     the text in EXPECTED_OUTPUT (and no stderr or exit code).
+  """
+  exit_code, out, err = main.run_svn(None, "revert", *args)
+  out = [line for line in out
+         if not re.match(r'Fetching text bases [.]+done\n', line)]
+  verify.verify_outputs("Unexpected output", out, err,
+                        expected_output, [])
+  verify.verify_exit_code("Unexpected return code", exit_code, 0)
 
 
 ######################################################################
@@ -1942,7 +1997,7 @@ def run_and_verify_revert(expected_paths, *args):
 
 # This allows a test to *quickly* bootstrap itself.
 def make_repo_and_wc(sbox, create_wc=True, read_only=False, empty=False,
-                     minor_version=None):
+                     minor_version=None, tree=None):
   """Create a fresh repository and check out a WC from it.  If EMPTY is
   True, the repository and WC will be empty and at revision 0,
   otherwise they will contain the 'Greek Tree' at revision 1.
@@ -1967,9 +2022,17 @@ def make_repo_and_wc(sbox, create_wc=True, read_only=False, empty=False,
     guarantee_empty_repository(sbox.repo_dir, minor_version)
     expected_state = svntest.wc.State('', {})
   else:
-    if not read_only:
-      guarantee_greek_repository(sbox.repo_dir, minor_version)
-    expected_state = main.greek_state
+    if tree == 'greek':
+      if not read_only:
+        guarantee_greek_repository(sbox.repo_dir, minor_version)
+      expected_state = main.greek_state
+    elif tree == 'trojan':
+      if not read_only:
+        guarantee_trojan_repository(sbox.repo_dir, minor_version)
+      expected_state = main.trojan_state
+    else:
+      raise ValueError("'tree' must be 'greek' or 'trojan'"
+                       " but was '%s'" % str(tree))
 
   if create_wc:
     # Generate the expected output tree.
@@ -2003,14 +2066,21 @@ def duplicate_dir(wc_name, wc_copy_name):
 
 
 
-def get_virginal_state(wc_dir, rev):
+def get_virginal_state(wc_dir, rev, tree='greek'):
   "Return a virginal greek tree state for a WC and repos at revision REV."
 
   rev = str(rev) ### maybe switch rev to an integer?
 
   # copy the greek tree, shift it to the new wc_dir, insert a root elem,
   # then tweak all values
-  state = main.greek_state.copy()
+  if tree == 'greek':
+    state = main.greek_state.copy()
+  elif tree == 'trojan':
+    state = main.trojan_state.copy()
+  else:
+    raise ValueError("'tree' must be 'greek' or 'trojan'"
+                     " but was '%s'" % str(tree))
+
   state.wc_dir = wc_dir
   state.desc[''] = wc.StateItem()
   state.tweak(contents=None, status='  ', wc_rev=rev)
@@ -2037,9 +2107,25 @@ def get_wc_base_rev(wc_dir):
   "Return the BASE revision of the working copy at WC_DIR."
   return run_and_parse_info(wc_dir)[0]['Revision']
 
+def get_wc_store_pristine(wc_dir):
+  "Return whether the working copy at WC_DIR stores pristine contents."
+  _, output, _ = run_and_verify_svn(
+    None, [],
+    'info', '--show-item=store-pristine', '--no-newline',
+    wc_dir)
+
+  if output == ['yes']:
+    return True
+  elif output == ['no']:
+    return False
+  else:
+    raise verify.SVNUnexpectedStdout(output)
+
 def load_dumpfile(filename):
   "Return the contents of the FILENAME assuming that it is a dump file"
-  return open(filename, "rb").readlines()
+  with open(filename, "rb") as fp:
+    dump_str = fp.readlines()
+  return dump_str
 
 def hook_failure_message(hook_name):
   """Return the error message that the client prints for failure of the
@@ -2094,11 +2180,8 @@ def disable_revprop_changes(repo_dir):
   main.create_python_hook_script(hook_path,
                                  'import sys\n'
                                  'sys.stderr.write("pre-revprop-change %s" %'
-                                                  ' " ".join(sys.argv[1:]))\n'
-                                 'sys.exit(1)\n',
-                                 cmd_alternative=
-                                       '@echo pre-revprop-change %* 1>&2\n'
-                                       '@exit 1\n')
+                                                  ' " ".join(sys.argv[2:]))\n'
+                                 'sys.exit(1)\n')
 
 def create_failing_post_commit_hook(repo_dir):
   """Create a post-commit hook script in the repository at REPO_DIR that always
@@ -2144,7 +2227,7 @@ def set_prop(name, value, path, expected_re_string=None, force=None):
       file = None
   else:
     raise TypeError(value)
- 
+
   if file is None:
     propset += (name, value, path)
   else:

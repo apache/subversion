@@ -48,11 +48,6 @@ extern "C" {
 #endif /* __cplusplus */
 
 
-/* Enforce the minimum version of serf. */
-#if !SERF_VERSION_AT_LEAST(1, 2, 1)
-#error Please update your version of serf to at least 1.2.1.
-#endif
-
 /** Wait duration (in microseconds) used in calls to serf_context_run() */
 #define SVN_RA_SERF__CONTEXT_RUN_DURATION 500000
 
@@ -379,7 +374,7 @@ svn_ra_serf__context_run_wait(svn_boolean_t *done,
                               apr_pool_t *scratch_pool);
 
 /* Run the context once. Manage waittime_left to handle timing out when
-   nothing happens over the session->timout.
+   nothing happens over the session->timeout.
  */
 svn_error_t *
 svn_ra_serf__context_run(svn_ra_serf__session_t *sess,
@@ -716,7 +711,7 @@ svn_ra_serf__create_expat_handler(svn_ra_serf__session_t *session,
                                   apr_pool_t *result_pool);
 
 
-/* Allocated within XES->STATE_POOL. Changes are not allowd (callers
+/* Allocated within XES->STATE_POOL. Changes are not allowed (callers
    should make a deep copy if they need to make changes).
 
    The resulting hash maps char* names to char* values.  */
@@ -1472,6 +1467,7 @@ svn_ra_serf__get_mergeinfo(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_ra_serf__exchange_capabilities(svn_ra_serf__session_t *serf_sess,
                                    const char **corrected_url,
+                                   const char **redirect_url,
                                    apr_pool_t *result_pool,
                                    apr_pool_t *scratch_pool);
 
@@ -1509,6 +1505,14 @@ svn_ra_serf__get_repos_root(svn_ra_session_t *ra_session,
 svn_error_t *
 svn_ra_serf__register_editor_shim_callbacks(svn_ra_session_t *session,
                                     svn_delta_shim_callbacks_t *callbacks);
+
+/* Implements svn_ra__vtable_t.fetch_file_contents(). */
+svn_error_t *
+svn_ra_serf__fetch_file_contents(svn_ra_session_t *session,
+                                 const char *path,
+                                 svn_revnum_t revision,
+                                 svn_stream_t *stream,
+                                 apr_pool_t *scratch_pool);
 
 /*** Authentication handler declarations ***/
 
@@ -1657,6 +1661,15 @@ svn_ra_serf__create_stream_bucket(svn_stream_t *stream,
                                   serf_bucket_alloc_t *allocator,
                                   svn_ra_serf__stream_bucket_errfunc_t errfunc,
                                   void *errfunc_baton);
+
+/* Default implementation of the bucket readline function, see
+   serf_bucket_type_t.readline.  This function will use the bucket
+   read function, when possible optimized by the bucket peek function
+   to return the requested result. */
+apr_status_t
+svn_ra_serf__default_readline(serf_bucket_t *bucket, int acceptable,
+                              int *found,
+                              const char **data, apr_size_t *len);
 
 #if defined(SVN_DEBUG)
 /* Wrapper macros to collect file and line information */

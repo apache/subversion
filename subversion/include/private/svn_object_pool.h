@@ -67,7 +67,7 @@ typedef struct svn_object_pool__t svn_object_pool__t;
 
 /* Create a new object pool in POOL and return it in *OBJECT_POOL.
  * Objects are reference-counted and stored as opaque pointers.  Each
- * must be allocated in a separate pool ceated by
+ * must be allocated in a separate pool created by
  * svn_object_pool__new_item_pool.  Unused objects get destroyed at
  * the object pool's discretion.
  *

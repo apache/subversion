@@ -128,7 +128,7 @@ struct svn_repos_t
   /* The format number of this repository. */
   int format;
 
-  /* The path to the repository's hooks enviroment file. If NULL, hooks run
+  /* The path to the repository's hooks environment file. If NULL, hooks run
    * in an empty environment. */
   const char *hooks_env_path;
 

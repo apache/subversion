@@ -866,7 +866,7 @@ svn_min__get_copies(svn_min__log_t *log,
       if (copies[idx]->copyfrom_revision <= start_rev)
         APR_ARRAY_PUSH(result, const svn_min__copy_t *) = copies[idx];
     }
- 
+
   /* Find all parent copies. */
   while (!svn_fspath__is_root(to_find->copyfrom_path,
                               strlen(to_find->copyfrom_path)))

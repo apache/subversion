@@ -35,10 +35,13 @@
 
 #include "jniwrapper/jni_globalref.hpp"
 
+#include "CxxCompat.hpp"
+
+
 class Prompter
 {
 public:
-  typedef ::std::auto_ptr<Prompter> UniquePtr;
+  typedef ::JavaHL::cxx::owned_ptr<Prompter> UniquePtr;
 
   /**
    * Factory method; @a prompter is a local reference to the Java

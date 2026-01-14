@@ -38,7 +38,7 @@ StateReporter::StateReporter()
   : m_valid(false),
     m_raw_reporter(NULL),
     m_report_baton(NULL),
-    m_editor(NULL),
+    m_editor(),
     m_target_revision(SVN_INVALID_REVNUM)
 {}
 
@@ -182,7 +182,7 @@ StateReporter::set_reporter_data(const svn_ra_reporter3_t* raw_reporter,
 {
   //DEBUG:fprintf(stderr, "  (n) StateReporter::set_reporter_data()\n");
 
-  m_editor = editor;
+  m_editor = JavaHL::cxx::move(editor);
   m_raw_reporter = raw_reporter;
   m_report_baton = report_baton;
   m_valid = true;

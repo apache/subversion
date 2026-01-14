@@ -31,8 +31,6 @@
 #include "svn_pools.h"
 #include "svn_version.h"
 
-#include "private/svn_sorts_private.h"
-
 #include "wc.h"
 #include "adm_files.h"
 #include "wc_db_private.h"
@@ -303,6 +301,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
                              apr_int64_t wc_id,
                              int format,
                              svn_boolean_t verify_format,
+                             svn_boolean_t store_pristine,
                              apr_pool_t *result_pool,
                              apr_pool_t *scratch_pool)
 {
@@ -330,7 +329,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
         _("This client is too old to work with the working copy at\n"
           "'%s' (format %d).\n"
           "You need to get a newer Subversion client. For more details, see\n"
-          "  http://subversion.apache.org/faq.html#working-copy-format-change\n"
+          "  https://subversion.apache.org/faq.html#working-copy-format-change\n"
           ),
         svn_dirent_local_style(wcroot_abspath, scratch_pool),
         format);
@@ -390,6 +389,7 @@ svn_wc__db_pdh_create_wcroot(svn_wc__db_wcroot_t **wcroot,
   (*wcroot)->owned_locks = apr_array_make(result_pool, 8,
                                           sizeof(svn_wc__db_wclock_t));
   (*wcroot)->access_cache = apr_hash_make(result_pool);
+  (*wcroot)->store_pristine = store_pristine;
 
   /* SDB will be NULL for pre-NG working copies. We only need to run a
      cleanup when the SDB is present.  */
@@ -496,12 +496,41 @@ verify_stats_table(svn_sqlite__db_t *sdb,
   return SVN_NO_ERROR;
 }
 
+/* Read and return the settings for WC_ID in SDB. */
+static svn_error_t *
+read_settings(svn_boolean_t *store_pristine_p,
+              svn_sqlite__db_t *sdb,
+              int format,
+              apr_int64_t wc_id,
+              apr_pool_t *scratch_pool)
+{
+  if (format >= SVN_WC__HAS_SETTINGS)
+    {
+      svn_sqlite__stmt_t *stmt;
+
+      SVN_ERR(svn_sqlite__get_statement(&stmt, sdb, STMT_SELECT_SETTINGS));
+      SVN_ERR(svn_sqlite__bindf(stmt, "i", wc_id));
+      SVN_ERR(svn_sqlite__step_row(stmt));
+
+      *store_pristine_p = svn_sqlite__column_boolean(stmt, 0);
+
+      SVN_ERR(svn_sqlite__step_done(stmt));
+    }
+  else
+    {
+      *store_pristine_p = TRUE;
+    }
+
+  return SVN_NO_ERROR;
+}
+
 /* Sqlite transaction helper for opening the db in
    svn_wc__db_wcroot_parse_local_abspath() to avoid multiple
    db operations that each obtain and release a lock */
 static svn_error_t *
 fetch_sdb_info(apr_int64_t *wc_id,
                int *format,
+               svn_boolean_t *store_pristine,
                svn_sqlite__db_t *sdb,
                apr_pool_t *scratch_pool)
 {
@@ -512,7 +541,7 @@ fetch_sdb_info(apr_int64_t *wc_id,
         svn_wc__db_util_fetch_wc_id(wc_id, sdb, scratch_pool),
         svn_sqlite__read_schema_version(format, sdb, scratch_pool),
         verify_stats_table(sdb, *format, scratch_pool),
-        SVN_NO_ERROR,
+        read_settings(store_pristine, sdb, *format, *wc_id, scratch_pool),
         sdb);
 
   return SVN_NO_ERROR;
@@ -765,9 +794,10 @@ try_symlink_as_dir:
 
       apr_int64_t wc_id;
       int format;
+      svn_boolean_t store_pristine;
       svn_error_t *err;
 
-      err = fetch_sdb_info(&wc_id, &format, sdb, scratch_pool);
+      err = fetch_sdb_info(&wc_id, &format, &store_pristine, sdb, scratch_pool);
       if (err)
         {
           if (err->apr_err == SVN_ERR_WC_CORRUPT)
@@ -788,6 +818,7 @@ try_symlink_as_dir:
                                           : local_abspath),
                             sdb, wc_id, format,
                             db->verify_format,
+                            store_pristine,
                             db->state_pool, scratch_pool);
       if (err && (err->apr_err == SVN_ERR_WC_UNSUPPORTED_FORMAT ||
                   err->apr_err == SVN_ERR_WC_UPGRADE_REQUIRED) &&
@@ -863,6 +894,7 @@ try_symlink_as_dir:
                                           : local_abspath),
                             NULL, UNKNOWN_WC_ID, wc_format,
                             db->verify_format,
+                            TRUE,
                             db->state_pool, scratch_pool));
     }
 
@@ -1032,83 +1064,32 @@ svn_wc__db_drop_root(svn_wc__db_t *db,
 }
 
 
-/*
- * ### FIXME:
- *
- * There must surely be a better way to find the nearest enclosing wcroot of a
- * path than by copying the hash keys to an array and sorting the array.
- *
- * TODO: Convert the svn_wc__db_t::dir_data hash to a sorted dictionary?.
- */
 svn_error_t *
-svn_wc__format_from_context(int *format,
-                            svn_wc_context_t *wc_ctx,
-                            const char *local_abspath,
-                            apr_pool_t *scratch_pool)
+svn_wc__settings_from_context(int *format_p,
+                              svn_boolean_t *store_pristine_p,
+                              svn_wc_context_t *wc_ctx,
+                              const char *local_abspath,
+                              apr_pool_t *scratch_pool)
 {
-  apr_hash_t *const dir_data = wc_ctx->db->dir_data;
-  apr_array_header_t *keys;
-  int index;
+  const char *current_path = local_abspath;
 
-  /* Thsi is what we return if we don't find a concrete format version. */
-  SVN_ERR(svn_hash_keys(&keys, dir_data, scratch_pool));
-  if (0 == keys->nelts)
+  do
     {
-      *format = SVN_WC__VERSION;
-      return SVN_NO_ERROR;
+      svn_wc__db_wcroot_t *wcroot;
+
+      wcroot = svn_hash_gets(wc_ctx->db->dir_data, current_path);
+      if (wcroot)
+        {
+          *format_p = wcroot->format;
+          *store_pristine_p = wcroot->store_pristine;
+          return SVN_NO_ERROR;
+        }
+
+      current_path = svn_dirent_dirname(current_path, scratch_pool);
     }
+  while (!svn_dirent_is_root(current_path, strlen(current_path)));
 
-  svn_sort__array(keys, svn_sort_compare_paths);
-  index = svn_sort__bsearch_lower_bound(keys, &local_abspath,
-                                        svn_sort_compare_paths);
-
-  /* If the previous key is a parent of the local_abspath, use its format. */
-  {
-    const char *const here = (index >= keys->nelts ? NULL
-                              : APR_ARRAY_IDX(keys, index, const char*));
-    const char *const prev = (index == 0 ? NULL
-                              : APR_ARRAY_IDX(keys, index - 1, const char*));
-
-    if (here)
-      {
-        const char *const child = svn_dirent_skip_ancestor(here, local_abspath);
-        if (child && !*child)
-          {
-            /* Found an exact match in the WC context. */
-            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, here);
-            *format = wcroot->format;
-            return SVN_NO_ERROR;
-          }
-      }
-
-    if (prev)
-      {
-        const char *const child = svn_dirent_skip_ancestor(prev, local_abspath);
-        if (child)
-          {
-            /* Found the parent path in the WC context. */
-            svn_wc__db_wcroot_t *wcroot = svn_hash_gets(dir_data, prev);
-            *format = wcroot->format;
-            return SVN_NO_ERROR;
-          }
-      }
-  }
-
-  /* Find the oldest format recorded in the WC context. */
-  {
-    int oldest_format = SVN_WC__VERSION;
-    apr_hash_index_t *hi;
-
-    for (hi = apr_hash_first(scratch_pool, dir_data);
-         hi;
-         hi = apr_hash_next(hi))
-      {
-        svn_wc__db_wcroot_t *wcroot = apr_hash_this_val(hi);
-        if (wcroot->format < oldest_format)
-          oldest_format = wcroot->format;
-      }
-
-    *format = oldest_format;
-    return SVN_NO_ERROR;
-  }
+  *format_p = SVN_WC__DEFAULT_VERSION;
+  *store_pristine_p = TRUE;
+  return SVN_NO_ERROR;
 }

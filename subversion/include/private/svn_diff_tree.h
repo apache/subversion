@@ -29,6 +29,7 @@
 #define SVN_DIFF_TREE_H
 
 #include "svn_types.h"
+#include "svn_io.h" /* for svn_stream_t */
 
 #ifdef __cplusplus
 extern "C" {
@@ -74,14 +75,14 @@ extern "C" {
  * To cleanup the implementation and make it easier on diff processors to
  * handle the results I also added the following constraints.
  *
- *   * Diffs should be fully reversable: anything that is deleted should be
+ *   * Diffs should be fully reversible: anything that is deleted should be
  *     available, just like something that is added.
  *     (Proven via svn_diff__tree_processor_reverse_create)
  *     ### Still in doubt if *_deleted() needs a copy_to argument, for the
  *     ### 99% -> 100%.
  *
  *   * Diff processors should have an easy way to communicate that they are
- *     not interrested in certain expensive to obtain results.
+ *     not interested in certain expensive to obtain results.
  *
  *   * Directories should have clear open and close events to allow adding them
  *     before their children, but still allowing property changes to have
@@ -360,6 +361,17 @@ svn_diff__tree_processor_tee_create(const svn_diff_tree_processor_t *processor1,
                                     const svn_diff_tree_processor_t *processor2,
                                     apr_pool_t *result_pool);
 
+/* Return a debug processor that writes the actions to @a out_stream.
+ *
+ * The debug diff tree processor simply prints an indication of what callbacks
+ * are being called and the arguments given to @a out_stream, and is only
+ * intended for use in debugging Subversion diff processors.
+ *
+ * Note: Our test suite generally ignores stdout lines starting with "DBG:".
+ */
+const svn_diff_tree_processor_t *
+svn_diff__tree_processor_debug_create(svn_stream_t *out_stream,
+                                      apr_pool_t *result_pool);
 
 svn_diff_source_t *
 svn_diff__source_create(svn_revnum_t revision,

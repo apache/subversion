@@ -3,7 +3,7 @@
 #  dav_tests.py:  testing connections to HTTP and DAV servers.
 #
 #  Subversion is a tool for revision control.
-#  See http://subversion.apache.org for more information.
+#  See https://subversion.apache.org for more information.
 #
 # ====================================================================
 #    Licensed to the Apache Software Foundation (ASF) under one
@@ -63,6 +63,7 @@ def connect_other_dav_server(sbox):
   "connect to a DAV server which is not an SVN server"
   svntest.actions.run_and_verify_svn([], svntest.verify.AnyOutput,
                                      'info', svntest.main.other_dav_root_url)
+
 
 ########################################################################
 # Run the tests

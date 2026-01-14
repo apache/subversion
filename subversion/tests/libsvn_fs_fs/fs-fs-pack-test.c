@@ -59,7 +59,8 @@ static const char *
 get_rev_contents(svn_revnum_t rev, apr_pool_t *pool)
 {
   /* Toss in a bunch of magic numbers for spice. */
-  apr_int64_t num = ((rev * 1234353 + 4358) * 4583 + ((rev % 4) << 1)) / 42;
+  apr_int64_t rev64 = rev;
+  apr_int64_t num = ((rev64 * 1234353 + 4358) * 4583 + ((rev64 % 4) << 1)) / 42;
   return apr_psprintf(pool, "%" APR_INT64_T_FMT "\n", num);
 }
 
@@ -1693,7 +1694,7 @@ compare_0_length_rep(const svn_test_opts_t *opts,
 
   enum { COUNT = 5 };
   const char *file_names[COUNT] = { no_rep_file,
-                                    empty_plain_file, 
+                                    empty_plain_file,
                                     plain_file,
                                     empty_delta_file,
                                     delta_file };

@@ -174,7 +174,7 @@ add_object_ref(object_ref_t *object_ref,
 
   /* Make sure the reference gets released automatically.
      Since POOL might be a parent pool of OBJECT_REF->OBJECT_POOL,
-     to the reference counting update before destroing any of the
+     to the reference counting update before destroying any of the
      pool hierarchy. */
   apr_pool_pre_cleanup_register(pool, object_ref, object_ref_cleanup);
 }
@@ -321,7 +321,7 @@ svn_object_pool__insert(void **object,
 {
   *object = NULL;
   SVN_MUTEX__WITH_LOCK(object_pool->mutex,
-                       insert(object, object_pool, key, item, 
+                       insert(object, object_pool, key, item,
                               item_pool, result_pool));
   return SVN_NO_ERROR;
 }
