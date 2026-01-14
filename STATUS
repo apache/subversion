@@ -61,7 +61,7 @@ Candidate changes:
      Pristines On Demand is the 1.15 headliner feature; document the API
      difference more clearly for users of the old API
    Votes:
-     +1: hartmannathan
+     +1: hartmannathan, brane
 
 Veto-blocked changes:
 =====================
