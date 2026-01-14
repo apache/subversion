@@ -28,7 +28,7 @@ Candidate changes:
    Justification:
      1.15.x will be released in 2026; use correct copyright date
    Votes:
-     +1: hartmannathan
+     +1: hartmannathan, brane
 
  * r1931176
    Update checks for SERF 1.4.0 to check for SERF 1.5.0. There will never be a
@@ -38,6 +38,7 @@ Candidate changes:
      Checking for nonexistent Serf releases could cause confusion
    Votes:
      +0: hartmannathan
+     +1: brane
 
  * r1931265
    Newest OpenSSL/httpd does not like server certificates with tiny keys.
@@ -45,6 +46,7 @@ Candidate changes:
      Allow testing with latest OpenSSL/httpd
    Votes:
      +0: hartmannathan
+     +1: brane
 
  * r1931266
    In Python 3, hashlib input data must be byte strings, not Unicode.
