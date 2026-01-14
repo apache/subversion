@@ -15,6 +15,13 @@ Status of 1.15.0:
 Candidate changes:
 ==================
 
+ * r1930973
+   Fix test failures of JavaHL with Java 25 on Windows due to that deleting a
+   file with readonly flag on Windows fails since Java 25.
+   Justification:
+     Allow JavaHL test to succeed on Windows since Java 25
+   Votes:
+     +0: hartmannathan (cannot test; Windows testers needed please)
 
 Veto-blocked changes:
 =====================
