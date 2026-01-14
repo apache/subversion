@@ -1774,10 +1774,13 @@ def wc_format(ver=None):
   if not ver:
     ver = (options.wc_format_version or DEFAULT_COMPATIBLE_VERSION)
   minor = int(ver.split('.')[1])
-  if minor >= 15 and minor <= SVN_VER_MINOR:
-    return 32
-  if minor >= 8 and minor <= 14:
+
+  if 8 <= minor and minor <= 14:
     return 31
+  if minor == 15:
+    return 32
+  if minor <= SVN_VER_MINOR:
+    return 33
   raise Exception("Unrecognized version number '%s'" % (ver,))
 
 ######################################################################

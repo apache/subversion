@@ -176,17 +176,24 @@ extern "C" {
  *
  * @see svn_wc__max_supported_format()
  */
+/* IMPORTANT: Update SVN_WC__VERSIONS_ALSO_RAN (below)
+              and svntest.main.wc_format()
+              whenever you change this value! */
 #define SVN_WC__VERSION 33
 
 /* The minimum WC version supported by the client.
  *
  * @see svn_wc__min_supported_format()
  */
-/* IMPORTANT: Update the implementation of svn_client_default_wc_version()
-              and svn_client_get_wc_formats_supported()
-              and svntest.main.wc_format()
-              whenever you change this value! */
+/* IMPORTANT: See IMPORTANT at SVN_WC__VERSION (above). */
 #define SVN_WC__SUPPORTED_VERSION 31
+
+/* All the WC formats between SVN_WC__SUPPORTED_VERSION and SVN_WC__VERSION
+ * that we also support, rendered as a list that can be used as a constant
+ * array initializer. Must not include the lower and upper bounds. Sort the
+ * format numbers ascending by value.
+ */
+#define SVN_WC__VERSIONS_ALSO_RAN 32  /* 33, 34, 35 [no trailing comma] */
 
 /* The default WC version that the Subversion library should create
  * (or upgrade to) when not otherwise specified. */
