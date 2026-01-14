@@ -46,6 +46,13 @@ Candidate changes:
    Votes:
      +0: hartmannathan
 
+ * r1931266
+   In Python 3, hashlib input data must be byte strings, not Unicode.
+   Justification:
+     Allow testing with davautocheck with SSL
+   Votes:
+     +0: hartmannathan
+
 Veto-blocked changes:
 =====================
 
