@@ -51,7 +51,7 @@ Candidate changes:
    Votes:
      +1: kotkov, rinrab
 
- * r1931334, r1931359
+ * r1931334, r1931359, r1931369
    Remove a potentially data-truncating typecast in our adler32 implementation.
    Justification:
      Do not silently compute the wrong checksum.
