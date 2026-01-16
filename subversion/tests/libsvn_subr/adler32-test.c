@@ -40,7 +40,7 @@ static const char *make_random_data(apr_uint32_t *initial_seed,
 {
   const apr_off_t count = (len /  sizeof(apr_uint32_t)
                            + (len %  sizeof(apr_uint32_t) ? 1 : 0));
-  apr_uint32_t *data = apr_palloc(pool, len * sizeof(*data));
+  apr_uint32_t *data = apr_palloc(pool, count * sizeof(*data));
   apr_uint32_t seed = *initial_seed = (apr_uint32_t)apr_time_now();
   apr_off_t i;
 
@@ -115,7 +115,6 @@ do_random_test(apr_uint32_t *seed,
                const apr_size_t array_size,
                apr_pool_t *pool)
 {
-
   const char *data = make_random_data(seed, lengths[array_size - 1], pool);
   int i;
 
