@@ -86,9 +86,9 @@ CREATE UNIQUE INDEX I_LOCAL_ABSPATH ON WCROOT (local_abspath);
 
 /* The PRISTINE table keeps track of pristine texts. Each row describes a
    single pristine text. The text itself is stored in the database as a
-   (usually compressed) BLOB or in a file whose name is derived from the
-   'checksum' column. Each pristine text is referenced by any number of rows
-   in the NODES and ACTUAL_NODE tables.
+   usually compressed BLOB (since format 33) or in a file whose name is
+   derived from the 'checksum' and other columns. Each pristine text is
+   referenced by any number of rows in the NODES and ACTUAL_NODE tables.
  */
 CREATE TABLE PRISTINE (
   /* The SHA-1 checksum of the pristine text. This is a unique key. The
@@ -780,11 +780,17 @@ INSERT OR IGNORE INTO SETTINGS SELECT id, 1 FROM WCROOT;
 PRAGMA user_version = 32;
 
 /* ------------------------------------------------------------------------- */
-/* Format 33 adds the 'contents' BLOB to the PRISTINES table. When its value
-   is NULL, the pristine text is stored in a file on disk. Otherwise, the
-   contents of the BLOB are the (possibly compressed) pristine text. */
-
+/* Format 33 adds the 'contents BLOB' and 'contents_check INTEGER'
+   columns to the PRISTINES table. When 'contents' is NULL, the pristine
+   text is stored in a file on disk. Otherwise, the contents of the BLOB
+   are the possibly compressed pristine text. 'contents_check' is the
+   Adler-32 checksum of the actual data stored in the pristine contents,
+   not of the source data, unlike 'checksum' and 'md5_checksum'. This
+   difference is important when the pristine contents are compressed.
+ */
 -- STMT_UPGRADE_TO_33
+ALTER TABLE PRISTINE ADD COLUMN contents_check INTEGER NOT NULL
+  CHECK (contents_check >= 0 AND contents_check < 4294967296));  /* 2^32 */
 ALTER TABLE PRISTINE ADD COLUMN contents BLOB;
 
 PRAGMA user_version = 33;
@@ -812,12 +818,12 @@ PRAGMA user_version = 34; */
  *
  *   * subversion/tests/libsvn_wc/wc-queries-test.c
  *     (schema_statements, create_memory_db)
- *   * The implementation of svn_client_latest_wc_version()
+ *   * The implementation of svn_wc__version_info_from_format()
  *   * The implementation of svn_wc__format_from_version()
- *   * The implementation of svn_client_get_wc_formats_supported()
  *   * subversion/tests/cmdline/svntest/main.py:wc_format()
  *   * The comment above the comment above SVN_WC__VERSION
  *   * The value of SVN_WC__VERSION, if needed
+ *   * The value of SVN_WC__VERSIONS_ALSO_RAN, also if needed
  */
 
 
