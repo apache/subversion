@@ -98,7 +98,10 @@ test_spillbuf_basic_spill_all(apr_pool_t *pool)
 {
   apr_size_t len = strlen(basic_data);  /* Don't include basic_data's NUL  */
   svn_spillbuf_t *buf =
-    svn_spillbuf__create_extended(len, 10 * len, TRUE, TRUE, NULL, pool);
+    svn_spillbuf__create_extended(len, 10 * len,
+                                  SVN_SPILLBUF__DELETE_ON_CLOSE
+                                  | SVN_SPILLBUF__SPILL_ALL_CONTENTS,
+                                  NULL, pool);
   return test_spillbuf__basic(pool, len, buf);
 }
 
@@ -159,8 +162,8 @@ test_spillbuf_callback_spill_all(apr_pool_t *pool)
   svn_spillbuf_t *buf = svn_spillbuf__create_extended(
                           sizeof(basic_data) /* blocksize */,
                           10 * sizeof(basic_data) /* maxsize */,
-                          TRUE /* delte on close */,
-                          TRUE /* spill all data */,
+                          SVN_SPILLBUF__DELETE_ON_CLOSE
+                          | SVN_SPILLBUF__SPILL_ALL_CONTENTS,
                           NULL, pool);
   return test_spillbuf__callback(pool, buf);
 }
@@ -247,8 +250,8 @@ test_spillbuf_file_spill_all(apr_pool_t *pool)
   svn_spillbuf_t *buf = svn_spillbuf__create_extended(
                           altsize /* blocksize */,
                           2 * sizeof(basic_data)  /* maxsize */,
-                          TRUE /* delte on close */,
-                          TRUE /* spill all data */,
+                          SVN_SPILLBUF__DELETE_ON_CLOSE
+                          | SVN_SPILLBUF__SPILL_ALL_CONTENTS,
                           NULL, pool);
   return test_spillbuf__file(pool, altsize, buf);
 }
@@ -298,8 +301,8 @@ test_spillbuf_interleaving_spill_all(apr_pool_t *pool)
   svn_spillbuf_t *buf = svn_spillbuf__create_extended(
                           8 /* blocksize */,
                           15 /* maxsize */,
-                          TRUE /* delte on close */,
-                          TRUE /* spill all data */,
+                          SVN_SPILLBUF__DELETE_ON_CLOSE
+                          | SVN_SPILLBUF__SPILL_ALL_CONTENTS,
                           NULL, pool);
   return test_spillbuf__interleaving(pool, buf);
 }
@@ -433,8 +436,8 @@ test_spillbuf_rwfile_spill_all(apr_pool_t *pool)
   svn_spillbuf_t *buf = svn_spillbuf__create_extended(
                           4 /* blocksize */,
                           10 /* maxsize */,
-                          TRUE /* delte on close */,
-                          TRUE /* spill all data */,
+                          SVN_SPILLBUF__DELETE_ON_CLOSE
+                          | SVN_SPILLBUF__SPILL_ALL_CONTENTS,
                           NULL, pool);
   return test_spillbuf__rwfile(pool, buf);
 }
@@ -504,8 +507,8 @@ test_spillbuf_eof_spill_all(apr_pool_t *pool)
   svn_spillbuf_t *buf = svn_spillbuf__create_extended(
                           4 /* blocksize */,
                           10 /* maxsize */,
-                          TRUE /* delte on close */,
-                          TRUE /* spill all data */,
+                          SVN_SPILLBUF__DELETE_ON_CLOSE
+                          | SVN_SPILLBUF__SPILL_ALL_CONTENTS,
                           NULL, pool);
   return test_spillbuf__eof(pool, buf);
 }
@@ -552,8 +555,8 @@ test_spillbuf_file_attrs_spill_all(apr_pool_t *pool)
   svn_spillbuf_t *buf = svn_spillbuf__create_extended(
                           4 /* blocksize */,
                           10 /* maxsize */,
-                          TRUE /* delte on close */,
-                          TRUE /* spill all data */,
+                          SVN_SPILLBUF__DELETE_ON_CLOSE
+                          | SVN_SPILLBUF__SPILL_ALL_CONTENTS,
                           NULL, pool);
   return test_spillbuf__file_attrs(pool, TRUE, buf);
 }

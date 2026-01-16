@@ -89,20 +89,34 @@ extern "C" {
 typedef struct svn_spillbuf_t svn_spillbuf_t;
 
 
-/* Create a spill buffer.  */
+/* Delete all files created by spillbuf operations when the spillbuf
+   is destroyed. This is the behaviour of svn_spilbuff__create(). */
+#define SVN_SPILLBUF__DELETE_ON_CLOSE     0x01
+
+/* When maxsize is reached, spill all contents buffered in memory to the
+   spill file, not just the overflow. This ensures that the spill file,
+   if one is created, will contain all the data written to the spillbuf. */
+#define SVN_SPILLBUF__SPILL_ALL_CONTENTS  0x02
+
+/* Create a spill buffer. FLAGS is a bitwise-or combination of the
+   constants defined above. See svn_io_open_unique_file3() in svn_io.h
+   for a description of the semantics of the DIRPATH parameter. */
+svn_spillbuf_t *
+svn_spillbuf__create_extended(apr_size_t blocksize,
+                              apr_size_t maxsize,
+                              unsigned flags,
+                              const char* dirpath,
+                              apr_pool_t *result_pool);
+
+/* Create a spill buffer with:
+      FLAGS = SVN_SPILLBUF__DELETE_ON_CLOSE
+      DIRPATH = NULL
+   The created spillbuf's behaviour is what we need when it's used as
+   a temporary buffer for connecting push-like and pull-like streams. */
 svn_spillbuf_t *
 svn_spillbuf__create(apr_size_t blocksize,
                      apr_size_t maxsize,
                      apr_pool_t *result_pool);
-
-/* Create a spill buffer, with extra parameters.  */
-svn_spillbuf_t *
-svn_spillbuf__create_extended(apr_size_t blocksize,
-                              apr_size_t maxsize,
-                              svn_boolean_t delete_on_close,
-                              svn_boolean_t spill_all_contents,
-                              const char* dirpath,
-                              apr_pool_t *result_pool);
 
 /* Determine how much content is stored in the spill buffer.  */
 svn_filesize_t

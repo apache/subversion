@@ -74,6 +74,12 @@ struct svn_spillbuf_t {
   /* How much content remains in SPILL.  */
   svn_filesize_t spill_size;
 
+  /* The directory in which the spill file is created. */
+  const char *dirpath;
+
+  /* The name of the temporary spill file. */
+  const char *filename;
+
   /* When false, do not delete the spill file when it is closed. */
   svn_boolean_t delete_on_close;
 
@@ -81,12 +87,6 @@ struct svn_spillbuf_t {
      larger than MAXSIZE, all spillbuf contents will be written to the
      spill file. */
   svn_boolean_t spill_all_contents;
-
-  /* The directory in which the spill file is created. */
-  const char *dirpath;
-
-  /* The name of the temporary spill file. */
-  const char *filename;
 };
 
 
@@ -112,36 +112,21 @@ struct svn_spillbuf_reader_t {
   apr_size_t save_pos;
 };
 
-
-/* Extended spillbuf initialization. */
-static void
-init_spillbuf_extended(svn_spillbuf_t *buf,
-                       apr_size_t blocksize,
-                       apr_size_t maxsize,
-                       svn_boolean_t delete_on_close,
-                       svn_boolean_t spill_all_contents,
-                       const char *dirpath,
-                       apr_pool_t *result_pool)
+svn_spillbuf_t *
+svn_spillbuf__create_extended(apr_size_t blocksize,
+                              apr_size_t maxsize,
+                              unsigned flags,
+                              const char *dirpath,
+                              apr_pool_t *result_pool)
 {
+  svn_spillbuf_t *buf = apr_pcalloc(result_pool, sizeof(*buf));
   buf->pool = result_pool;
   buf->blocksize = blocksize;
   buf->maxsize = maxsize;
-  buf->delete_on_close = delete_on_close;
-  buf->spill_all_contents = spill_all_contents;
+  buf->delete_on_close = 0 != (flags & SVN_SPILLBUF__DELETE_ON_CLOSE);
+  buf->spill_all_contents = 0 != (flags & SVN_SPILLBUF__SPILL_ALL_CONTENTS);
   buf->dirpath = dirpath;
-}
-
-/* Common constructor for initializing spillbufs.
-   Used by svn_spillbuf__create, svn_spilbuff__reader_create. */
-static void
-init_spillbuf(svn_spillbuf_t *buf,
-              apr_size_t blocksize,
-              apr_size_t maxsize,
-              apr_pool_t *result_pool)
-{
-  init_spillbuf_extended(buf, blocksize, maxsize,
-                         TRUE, FALSE, NULL,
-                         result_pool);
+  return buf;
 }
 
 svn_spillbuf_t *
@@ -149,25 +134,11 @@ svn_spillbuf__create(apr_size_t blocksize,
                      apr_size_t maxsize,
                      apr_pool_t *result_pool)
 {
-  svn_spillbuf_t *buf = apr_pcalloc(result_pool, sizeof(*buf));
-  init_spillbuf(buf, blocksize, maxsize, result_pool);
-  return buf;
-}
-
-
-svn_spillbuf_t *
-svn_spillbuf__create_extended(apr_size_t blocksize,
-                              apr_size_t maxsize,
-                              svn_boolean_t delete_on_close,
-                              svn_boolean_t spill_all_contents,
-                              const char *dirpath,
-                              apr_pool_t *result_pool)
-{
-  svn_spillbuf_t *buf = apr_pcalloc(result_pool, sizeof(*buf));
-  init_spillbuf_extended(buf, blocksize, maxsize,
-                         delete_on_close, spill_all_contents, dirpath,
-                         result_pool);
-  return buf;
+  return svn_spillbuf__create_extended(
+      blocksize, maxsize,
+      SVN_SPILLBUF__DELETE_ON_CLOSE, /* flags */
+      NULL,                          /* dirpath */
+      result_pool);
 }
 
 svn_filesize_t
