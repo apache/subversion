@@ -64,15 +64,13 @@ Candidate changes:
    Votes:
      +1: hartmannathan, brane
 
- * r1931334, r1931337, r1931359, r1931369
+ * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
    Justification:
      Do not silently compute the wrong checksum.
    Notes:
      Triggering this bug was not likely, but still possible. In addition, we
      now use adler32_z() when available, which may be slightly more efficient.
-   Branch:
-     ^/subversion/branches/1.14.x-r1931334
    Votes:
      +1: brane
 
