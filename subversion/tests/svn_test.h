@@ -349,6 +349,14 @@ int svn_test_main(int argc, const char *argv[], int max_threads,
  */
 apr_uint32_t svn_test_rand(apr_uint32_t *seed);
 
+/* Allocate a buffer of size LEN from POOL and fill it with pseudo-random
+   data. In fact, the size of the buffer will be rounded up to the next
+   multiple of sizeof(apr_uint32_t).
+   Uses and updates *seed. */
+void *
+svn_test_make_random_data(apr_uint32_t *seed,
+                          apr_off_t len,
+                          apr_pool_t *pool);
 
 /* Add PATH to the test cleanup list.  */
 void svn_test_add_dir_cleanup(const char *path);

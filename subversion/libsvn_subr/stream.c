@@ -43,6 +43,7 @@
 #include "svn_path.h"
 #include "svn_private_config.h"
 #include "svn_sorts.h"
+#include "private/svn_adler32.h"
 #include "private/svn_atomic.h"
 #include "private/svn_error_private.h"
 #include "private/svn_eol_private.h"
@@ -1577,6 +1578,151 @@ svn_stream_contents_checksum(svn_checksum_t **checksum,
   /* Close source stream in all cases. */
   return svn_error_compose_create(err, svn_stream_close(stream));
 }
+
+
+struct adler32_stream_context
+{
+  apr_uint32_t *read_checksum;     /* Output value. */
+  apr_uint32_t *write_checksum;    /* Output value. */
+  svn_stream_t *proxy;
+
+  /* True if more data should be read when closing the stream. */
+  svn_boolean_t read_more;
+
+  /* Pool to allocate the read buffer. */
+  apr_pool_t *pool;
+};
+
+static svn_error_t *
+read_handler_adler32(void *baton, char *buffer, apr_size_t *len)
+{
+  struct adler32_stream_context *const ctx = baton;;
+
+  SVN_ERR(svn_stream_read2(ctx->proxy, buffer, len));
+
+  if (ctx->read_checksum)
+    *ctx->read_checksum = svn__adler32(*ctx->read_checksum, buffer, *len);
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+read_full_handler_adler32(void *baton, char *buffer, apr_size_t *len)
+{
+  struct adler32_stream_context *const ctx = baton;;
+  const apr_size_t saved_len = *len;
+
+  SVN_ERR(svn_stream_read_full(ctx->proxy, buffer, len));
+
+  if (ctx->read_checksum)
+    *ctx->read_checksum = svn__adler32(*ctx->read_checksum, buffer, *len);
+
+  if (saved_len != *len)
+    ctx->read_more = FALSE;
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+write_handler_adler32(void *baton, const char *buffer, apr_size_t *len)
+{
+  struct adler32_stream_context *const ctx = baton;;
+
+  if (ctx->write_checksum && *len > 0)
+    *ctx->write_checksum = svn__adler32(*ctx->write_checksum, buffer, *len);
+
+  return svn_error_trace(svn_stream_write(ctx->proxy, buffer, len));
+}
+
+static svn_error_t *
+data_available_handler_adler32(void *baton, svn_boolean_t *data_available)
+{
+  struct adler32_stream_context *const ctx = baton;;
+
+  return svn_error_trace(svn_stream_data_available(ctx->proxy,
+                                                   data_available));
+}
+
+static svn_error_t *
+close_handler_adler32(void *baton)
+{
+  struct adler32_stream_context *const ctx = baton;;
+
+  /* Drain the stream if required. */
+  if (ctx->read_more)
+    {
+      char *const buf = apr_palloc(ctx->pool, SVN__STREAM_CHUNK_SIZE);
+      apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+
+      do
+        {
+          SVN_ERR(read_full_handler_checksum(baton, buf, &len));
+        }
+      while (ctx->read_more);
+    }
+
+  return svn_error_trace(svn_stream_close(ctx->proxy));
+}
+
+static svn_error_t *
+seek_handler_adler32(void *baton, const svn_stream_mark_t *mark)
+{
+  struct adler32_stream_context *const ctx = baton;;
+
+  /* Only reset support. */
+  if (mark)
+      return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED,
+                              NULL, NULL);
+
+  /* Reset to initial checksum values. */
+  if (ctx->read_checksum)
+    *ctx->read_checksum = 0;
+  if (ctx->write_checksum)
+    *ctx->write_checksum = 0;
+
+  return svn_error_trace(svn_stream_reset(ctx->proxy));
+}
+
+svn_stream_t *
+svn_stream__adler32(svn_stream_t *stream,
+                    apr_uint32_t *read_checksum,
+                    apr_uint32_t *write_checksum,
+                    svn_boolean_t read_all,
+                    apr_pool_t *result_pool)
+{
+  svn_stream_t *s;
+  struct adler32_stream_context *ctx;
+
+  if (read_checksum == NULL && write_checksum == NULL)
+    return stream;
+
+  ctx = apr_palloc(result_pool, sizeof(*ctx));
+  ctx->read_checksum = read_checksum;
+  ctx->write_checksum = write_checksum;
+  ctx->proxy = stream;
+  ctx->read_more = read_all;
+  ctx->pool = result_pool;
+
+  s = svn_stream_create(ctx, result_pool);
+  svn_stream_set_read2(s,
+                       svn_stream_supports_partial_read(stream)
+                       ? read_handler_adler32 : NULL,
+                       read_full_handler_adler32);
+  svn_stream_set_write(s, write_handler_adler32);
+  svn_stream_set_data_available(s, data_available_handler_adler32);
+  svn_stream_set_close(s, close_handler_adler32);
+  if (svn_stream_supports_reset(stream))
+    svn_stream_set_seek(s, seek_handler_adler32);
+
+  /* Set initial checksum values. */
+  if (read_checksum)
+    *read_checksum = 0;
+  if (write_checksum)
+    *write_checksum = 0;
+
+  return s;
+}
+
 
 /* Miscellaneous stream functions. */
 

@@ -29,6 +29,7 @@
 #include <apr_general.h>
 
 #include "private/svn_io_private.h"
+#include "private/svn_adler32.h"
 
 #include "../svn_test.h"
 
@@ -871,6 +872,92 @@ test_stream_checksum(apr_pool_t *pool)
 }
 
 static svn_error_t *
+do_test_stream_adler32(apr_pool_t *pool, apr_uint32_t seed)
+{
+  const apr_off_t length = 11 * SVN__STREAM_CHUNK_SIZE + 37;
+  void *const data = svn_test_make_random_data(&seed, length, pool);
+  const apr_uint32_t expected_checksum = svn__adler32(0, data, length);
+  apr_off_t size;
+  char *ptr;
+  int i;
+
+  svn_stringbuf_t *outbuf = svn_stringbuf_create_empty(pool);
+  svn_stream_t *buffer = svn_stream_from_stringbuf(outbuf, pool);
+
+  apr_uint32_t read_checksum;
+  apr_uint32_t write_checksum;
+  svn_stream_t *adler = svn_stream__adler32(buffer,
+                                            &read_checksum,
+                                            &write_checksum,
+                                            FALSE, pool);
+
+  SVN_TEST_ASSERT(read_checksum == 0);
+  SVN_TEST_ASSERT(write_checksum == 0);
+
+  ptr = data;
+  size = length;
+  while (size > 0)
+    {
+      const apr_size_t chunk = (size <= SVN__STREAM_CHUNK_SIZE
+                                ? size : SVN__STREAM_CHUNK_SIZE);
+      apr_size_t len = chunk;
+
+      SVN_ERR(svn_stream_write(adler, ptr, &len));
+      SVN_TEST_ASSERT(len == chunk);
+
+      ptr += chunk;
+      size -= chunk;
+    }
+  SVN_TEST_ASSERT(size == 0);
+  SVN_TEST_ASSERT(write_checksum == expected_checksum);
+
+  ptr = apr_palloc(pool, SVN__STREAM_CHUNK_SIZE);
+  for (i = 0; ; ++i)
+    {
+      size = 0;
+      for (;;)
+        {
+          apr_size_t len = SVN__STREAM_CHUNK_SIZE;
+          SVN_ERR(svn_stream_read_full(adler, ptr, &len));
+          size += len;
+          if (len < SVN__STREAM_CHUNK_SIZE)
+            break;
+        }
+      SVN_TEST_ASSERT(size == length);
+      SVN_TEST_ASSERT(read_checksum == expected_checksum);
+
+      /* In the second read iteration after the reset, the write
+         checksum should be 0, because we only read from the stream. */
+      if (i > 0)
+        {
+          SVN_TEST_ASSERT(write_checksum == 0);
+          break;
+        }
+
+      SVN_TEST_ASSERT(write_checksum == expected_checksum);
+
+      SVN_ERR(svn_stream_reset(adler));
+      SVN_TEST_ASSERT(read_checksum == 0);
+      SVN_TEST_ASSERT(write_checksum == 0);
+    }
+
+  return SVN_NO_ERROR;
+}
+
+static svn_error_t *
+test_stream_adler32(apr_pool_t *pool)
+{
+  const apr_uint32_t seed = (apr_uint32_t)apr_time_now();
+  svn_error_t *err = do_test_stream_adler32(pool, seed);
+
+  if (err)
+    fprintf(stderr, "SEED: %lu\n", (unsigned long)seed);
+
+  return err;
+}
+
+
+static svn_error_t *
 test_stream_readline_file(const char *testname,
                           const char *eol,
                           apr_pool_t *pool)
@@ -1098,6 +1185,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test compression for streams without partial read"),
     SVN_TEST_PASS2(test_stream_checksum,
                    "test svn_stream_contents_checksum()"),
+    SVN_TEST_PASS2(test_stream_adler32,
+                   "test the adler32 checksumming stream"),
     SVN_TEST_PASS2(test_stream_readline_file_lf,
                    "test reading LF-terminated lines from file"),
     SVN_TEST_PASS2(test_stream_readline_file_crlf,

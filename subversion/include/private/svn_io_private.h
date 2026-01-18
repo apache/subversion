@@ -157,6 +157,20 @@ svn_stream__from_aprfile(apr_file_t *file,
                          svn_boolean_t truncate_on_seek,
                          apr_pool_t *pool);
 
+/* Similar to svn_stream_checksummed2(), but calculates the Adler-32
+   checksum of the data that was read and written. All parameters have
+   the same semantics, but of course there is no CHECKSUM_KIND parameter.
+
+   The initial values of *READ_CHECKSUM and *WRITE_CHECKSUM are set to 0
+   when the stream is created or reset.
+*/
+svn_stream_t *
+svn_stream__adler32(svn_stream_t *stream,
+                    apr_uint32_t *read_checksum,
+                    apr_uint32_t *write_checksum,
+                    svn_boolean_t read_all,
+                    apr_pool_t *result_pool);
+
 #if defined(WIN32)
 
 /* ### Move to something like io.h or subr.h, to avoid making it

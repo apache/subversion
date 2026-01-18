@@ -288,6 +288,25 @@ svn_test_rand(apr_uint32_t *seed)
   return *seed;
 }
 
+/* Allocate a buffer of size LEN from POOL and fill it with pseudo-random
+   data. In fact, the size of the buffer will be rounded up to the next
+   multiple of sizeof(apr_uint32_t). */
+void *
+svn_test_make_random_data(apr_uint32_t *seed,
+                          apr_off_t len,
+                          apr_pool_t *pool)
+{
+  const apr_off_t count = (len /  sizeof(apr_uint32_t)
+                           + (len %  sizeof(apr_uint32_t) ? 1 : 0));
+  apr_uint32_t *data = apr_palloc(pool, count * sizeof(*data));
+  apr_off_t i;
+
+  for (i = 0; i < count; ++i)
+    data[i] = svn_test_rand(seed);
+
+  return data;
+}
+
 
 /* ================================================================= */
 
