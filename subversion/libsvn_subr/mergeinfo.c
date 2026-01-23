@@ -816,6 +816,7 @@ svn_mergeinfo_parse(svn_mergeinfo_t *mergeinfo,
   return err;
 }
 
+#ifdef SVN_DEBUG
 static const char *
 rangelist_to_string_debug(const svn_rangelist_t *rl,
                           apr_pool_t *pool)
@@ -833,6 +834,7 @@ rangelist_to_string_debug(const svn_rangelist_t *rl,
     }
   return rls->data;
 }
+#endif  /* SVN_DEBUG */
 
 static svn_boolean_t
 rangelist_is_sorted(const svn_rangelist_t *rangelist)

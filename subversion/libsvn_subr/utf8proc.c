@@ -30,7 +30,8 @@
 #include "svn_private_config.h"
 
 #if SVN_INTERNAL_UTF8PROC
-#define UTF8PROC_INLINE
+#define UTF8PROC_STATIC
+#define UTF8PROC_DLLEXPORT static
 /* Somehow utf8proc thinks it is nice to use strlen as an argument name,
    while this function is already defined via apr.h */
 #define strlen svn__strlen_var
@@ -55,19 +56,24 @@ svn_utf__utf8proc_compiled_version(void)
 const char *
 svn_utf__utf8proc_runtime_version(void)
 {
+#ifdef UTF8PROC_STATIC
   /* Unused static function warning removal hack. */
-  SVN_UNUSED(utf8proc_grapheme_break);
-  SVN_UNUSED(utf8proc_tolower);
-  SVN_UNUSED(utf8proc_toupper);
-#if UTF8PROC_VERSION_MAJOR >= 2
-  SVN_UNUSED(utf8proc_totitle);
-#endif
-  SVN_UNUSED(utf8proc_charwidth);
   SVN_UNUSED(utf8proc_category_string);
-  SVN_UNUSED(utf8proc_NFD);
+  SVN_UNUSED(utf8proc_charwidth);
+  SVN_UNUSED(utf8proc_charwidth_ambiguous);
+  SVN_UNUSED(utf8proc_grapheme_break);
+  SVN_UNUSED(utf8proc_islower);
+  SVN_UNUSED(utf8proc_isupper);
+  SVN_UNUSED(utf8proc_tolower);
+  SVN_UNUSED(utf8proc_totitle);
+  SVN_UNUSED(utf8proc_toupper);
+  SVN_UNUSED(utf8proc_unicode_version);
   SVN_UNUSED(utf8proc_NFC);
-  SVN_UNUSED(utf8proc_NFKD);
+  SVN_UNUSED(utf8proc_NFD);
   SVN_UNUSED(utf8proc_NFKC);
+  SVN_UNUSED(utf8proc_NFKC_Casefold);
+  SVN_UNUSED(utf8proc_NFKD);
+#endif
 
   return utf8proc_version();
 }

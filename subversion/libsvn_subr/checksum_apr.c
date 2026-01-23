@@ -85,6 +85,27 @@ svn_checksum__md5_ctx_final(unsigned char *digest,
 
 
 /*** SHA1 checksum ***/
+static void
+sha1_update(apr_sha1_ctx_t *ctx,
+            const char *data,
+            apr_size_t len)
+{
+  while (len > 0)
+    {
+      unsigned int block;
+
+      if (len < UINT_MAX)
+        block = (unsigned int)len;
+      else
+        block = UINT_MAX;
+
+      apr_sha1_update(ctx, data, block);
+
+      len -= block;
+      data += block;
+    }
+}
+
 svn_error_t *
 svn_checksum__sha1(unsigned char *digest,
                    const void *data,
@@ -92,12 +113,10 @@ svn_checksum__sha1(unsigned char *digest,
 {
   apr_sha1_ctx_t sha1_ctx;
 
-  /* Do not blindly truncate the data length. */
-  SVN_ERR_ASSERT(len < UINT_MAX);
-
   apr_sha1_init(&sha1_ctx);
-  apr_sha1_update(&sha1_ctx, data, (unsigned int)len);
+  sha1_update(&sha1_ctx, data, len);
   apr_sha1_final(digest, &sha1_ctx);
+
   return SVN_NO_ERROR;
 }
 
@@ -127,9 +146,7 @@ svn_checksum__sha1_ctx_update(svn_checksum__sha1_ctx_t *ctx,
                               const void *data,
                               apr_size_t len)
 {
-  /* Do not blindly truncate the data length. */
-  SVN_ERR_ASSERT(len < UINT_MAX);
-  apr_sha1_update(&ctx->apr_ctx, data, (unsigned int)len);
+  sha1_update(&ctx->apr_ctx, data, len);
   return SVN_NO_ERROR;
 }
 

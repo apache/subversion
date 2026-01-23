@@ -11,15 +11,111 @@ https://svn.apache.org/repos/asf/subversion/tags/1.16.0
 Version 1.15.0
 (?? ??? 20XX, from /branches/1.15.x)
 https://svn.apache.org/repos/asf/subversion/tags/1.15.0
+
+See the 1.15 release notes for a more verbose overview of the changes since
+the 1.14 release:  https://subversion.apache.org/docs/release-notes/1.15.html
+
  User-visible changes:
+  - Major new features:
+    * New 'pristineless' mode for working copies that eliminates overhead
+      from storing cached pristine content (r1905955, issue #525)
+    * Support for multiple working copy formats (r1898187, issue #4883)
+
+  - Minor new features and improvements:
+    * Re-enable plaintext credential store by default on Unix (r1909351)
+    * Optimize checkout, update and export by simultaneously streaming
+      data to both pristine and working files (r1886490 et al)
+
   - Client-side improvements and bugfixes:
-    * Support multiple working copy formats (1.8-onward, 1.15) (issue #????)
+    * Disable best-fit Unicode mapping for Windows command-line arguments
+      (r1927953)
+    * Optimize checkout, update and export on Windows by reducing the
+      number of file reopens (r1886490 et al)
+    * Use a cryptographic checksum comparison to determine if a file
+      has been modified in a working copy (r1892645)
+    * Warn on merges from foreign repositories if UUIDs match but URLs
+      differ (r1888474 et al, issue #4874)
+    * Fix assertion on 'svn move [URL] [URL]/subdir' (r1909127, issue #4913)
+    * ra_serf: Fix segfault on unexpected server responses (r1929793)
+    * ra_serf: Optimize array filling for inherited properties (r1878084)
+    * svn: Print character encoding in 'svn --version --verbose' (r1926252)
+    * svn: Show new macOS versions in 'svn --version --verbose' (r1882127 et al)
+    * svn: Document trailing-@ trick to avoid peg-revision parsing (r1910826)
+    * svnlook: Fix handling of negative --limit arguments (r1919535)
+    * svnmucc: Fix handling of revision arguments like 'Head' (r1925905)
+    * svnmucc: Fix handling of revision arguments like 'r123' (r1925907)
+    * svnmucc: Ensure that log messages are using UTF-8 (r1925913)
+    * svnmucc: Ensure that property values are using UTF-8 (r1926023)
+    * svnmucc: Show usage instead of help for empty actions (r1926034)
+    * Use distinct temporary file names for regular and revision property
+      edits (r1885997)
+    * Expand ~username directories in tab completion (r1896619, issue #3714)
+    * Reimplement macOS Keychain auth provider with SecItem* API (r1926564)
+
+  - Server-side improvements and bugfixes:
+    * fsfs: Fix uninitialized read in the logical addressing code (r1880374)
+    * fsfs: Reduce spurious conflicts when file content and directory
+      properties are changed in parallel (r1908595)
+    * fsx: Fix uninitialized read in the logical addressing code (r1880374)
+    * fsx: Reduce spurious conflicts when file content and directory
+      properties are changed in parallel (r1908595)
+    * mod_dav_svn: Use mod_dav's DAVBasePath setting to determine the
+      repository root path (r1926683)
+    * svnadmin: Minor optimization in 'svnadmin load' (r1908751)
+    * svnserve: Add SIGTERM/SIGINT handling (r1908547)
 
   - Other tool improvements and bugfixes:
-    * When building on Unix, change default configure option to enable support
-      for the simple (plaintext) credential store unless disabled at configure
-      time with --disable-plaintext-password-storage. This reverts r1845377
-      (r1909351).
+    * case-insensitive.py: Update for Python 3 compatibility (r1881774)
+    * check-mime-type.pl: Support property-modified files (r1911931)
+    * fsfsfixer: Update to work with svnadmin verify versions 1.9+ (r1886928)
+    * fsfsfixer: Update to work with packed repositories (r1887170)
+    * fsfsverify.py: Support FSFS format >= 4 property lists (r1909337)
+    * mailer.py: Support message buffering (r1914915)
+    * mailer.py: Support maximum message length (r1917168)
+    * mailer.py: Omit diff content when messages are too long (r1917169)
+    * svn_apply_autoprops.py: Fix Windows compatibility (r1917382)
+    * svn_apply_autoprops.py: Support @-containing filenames (r1917397)
+    * svn_apply_autoprops.py: Update for Python 3 compatibility (r1917446)
+    * svn_load_dirs.pl: Update to handle 'svn propget' errors for non-existent
+      properties (r1912002, issue #4621)
+    * wc-format.py: Minor update for Python 3 compatibility (r1880178)
+
+ Developer-visible changes:
+  - General:
+    * Support building using CMake (r1920717 et al)
+    * Drop support for Python 2.x in test scripts (r1899944, r1925713)
+    * Support building for Windows on ARM64 (r1890668, r1890673)
+    * Support Visual Studio 2022 project generation (r1899028)
+    * Enable multi-processor compilation (/MP) on Windows (r1906011)
+    * Support shared RA modules on Windows with CMake (r1921006 et al)
+    * Support running Valgrind during 'make check' (r1908546)
+    * Fix building against static Serf on Windows (r1888560)
+    * Fix finding libexpat on static library builds on Windows (r1888565)
+    * Fix 'make clean' in out-of-tree builds (r1883939)
+    * Default AR_FLAGS to 'cr' to fix GNU archiver warnings (r1884094)
+    * Support generation of .clangd file with '--enable-dot-clangd' (r1925652)
+    * Fix propagation of libsvn_fs_x_LDFLAGS to the Makefile (r1908721)
+    * Support C++11 and later (r1883715)
+    * Allow selecting the C++ language standard with '--enable-c++' (r1883715)
+    * Remove use of some deprecated autoconf macros (r1908543)
+    * Guard experimental Serf logic with SVN__SERF_EXPERIMENTAL (r1930808)
+    * Add 'reverse-merge' attribute to the log schema (r1892455)
+    * tests: Allow testing ra_serf using Digest authentication (r1926790)
+    * tests: Close file descriptor using the context manager (r1884279)
+    * tests: Fix TypeError in some test cases (r1897708)
+    * tests: Stop encoding a test's number in the svntest library (r1897443)
+    * tests: Verify command output against Relax NG XML schemas (r1925717)
+
+  - Bindings:
+    * JavaHL: Fix JNI setup for translateOutputStream (r1886280)
+    * swig: Allow NULL wri_abspath in svn_client_ra_session2() (r1917448)
+    * swig-py: Allow str(unicode) input for string types (r1885370)
+    * swig-py: Allow SubversionException to carry attributes (r1880967)
+    * swig-rb: Block SWIG 4.2.0 because it produces broken external
+      runtime code (r1915235)
+    * swig-pl: Fix 'unable to close filehandle' warnings in tests (r1915576)
+    * swig-py: Fix test cleanup failing with Python 3 on Windows due
+      to a circular reference of the raised exception (r1897441)
 
 Version 1.14.5
 (7 Dec 2024, from /branches/1.14.x)

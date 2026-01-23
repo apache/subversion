@@ -1596,7 +1596,7 @@ struct adler32_stream_context
 static svn_error_t *
 read_handler_adler32(void *baton, char *buffer, apr_size_t *len)
 {
-  struct adler32_stream_context *const ctx = baton;;
+  struct adler32_stream_context *const ctx = baton;
 
   SVN_ERR(svn_stream_read2(ctx->proxy, buffer, len));
 
@@ -1609,7 +1609,7 @@ read_handler_adler32(void *baton, char *buffer, apr_size_t *len)
 static svn_error_t *
 read_full_handler_adler32(void *baton, char *buffer, apr_size_t *len)
 {
-  struct adler32_stream_context *const ctx = baton;;
+  struct adler32_stream_context *const ctx = baton;
   const apr_size_t saved_len = *len;
 
   SVN_ERR(svn_stream_read_full(ctx->proxy, buffer, len));
@@ -1626,7 +1626,7 @@ read_full_handler_adler32(void *baton, char *buffer, apr_size_t *len)
 static svn_error_t *
 write_handler_adler32(void *baton, const char *buffer, apr_size_t *len)
 {
-  struct adler32_stream_context *const ctx = baton;;
+  struct adler32_stream_context *const ctx = baton;
 
   if (ctx->write_checksum && *len > 0)
     *ctx->write_checksum = svn__adler32(*ctx->write_checksum, buffer, *len);
@@ -1637,7 +1637,7 @@ write_handler_adler32(void *baton, const char *buffer, apr_size_t *len)
 static svn_error_t *
 data_available_handler_adler32(void *baton, svn_boolean_t *data_available)
 {
-  struct adler32_stream_context *const ctx = baton;;
+  struct adler32_stream_context *const ctx = baton;
 
   return svn_error_trace(svn_stream_data_available(ctx->proxy,
                                                    data_available));
@@ -1646,7 +1646,7 @@ data_available_handler_adler32(void *baton, svn_boolean_t *data_available)
 static svn_error_t *
 close_handler_adler32(void *baton)
 {
-  struct adler32_stream_context *const ctx = baton;;
+  struct adler32_stream_context *const ctx = baton;
 
   /* Drain the stream if required. */
   if (ctx->read_more)
@@ -1667,7 +1667,7 @@ close_handler_adler32(void *baton)
 static svn_error_t *
 seek_handler_adler32(void *baton, const svn_stream_mark_t *mark)
 {
-  struct adler32_stream_context *const ctx = baton;;
+  struct adler32_stream_context *const ctx = baton;
 
   /* Only reset support. */
   if (mark)

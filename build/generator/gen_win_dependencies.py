@@ -125,6 +125,7 @@ class GenDependenciesBase(gen_base.GeneratorBase):
         'java_sdk',
         'openssl',
         'apr_memcache',
+        'checksum-libs',
 
         # So optional, we don't even have any code to detect them on Windows
         'magic',
