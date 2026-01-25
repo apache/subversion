@@ -21,6 +21,7 @@
  * ====================================================================
  */
 
+#include "svn_io.h"
 #include "svn_types.h"
 
 #include "private/svn_subr_private.h"
@@ -518,6 +519,8 @@ test_spillbuf__file_attrs(apr_pool_t *pool, svn_boolean_t spill_all,
                           svn_spillbuf_t *buf)
 {
   svn_filesize_t filesize;
+  svn_node_kind_t kind;
+  const char *path;
 
   SVN_ERR(svn_spillbuf__write(buf, "abcdef", 6, pool));
   SVN_ERR(svn_spillbuf__write(buf, "ghijkl", 6, pool));
@@ -537,6 +540,15 @@ test_spillbuf__file_attrs(apr_pool_t *pool, svn_boolean_t spill_all,
   else
     SVN_TEST_ASSERT(filesize == (svn_spillbuf__get_size(buf)
                                  - svn_spillbuf__get_memory_size(buf)));
+
+  /* The file must not exist after it is closed. */
+  path = svn_spillbuf__get_filename(buf);
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind == svn_node_file);
+  SVN_ERR(svn_io_file_close(svn_spillbuf__get_file(buf), pool));
+  SVN_ERR(svn_io_check_path(path, &kind, pool));
+  SVN_TEST_ASSERT(kind == svn_node_none);
+
   return SVN_NO_ERROR;
 }
 
@@ -560,6 +572,31 @@ test_spillbuf_file_attrs_spill_all(apr_pool_t *pool)
                           NULL, pool);
   return test_spillbuf__file_attrs(pool, TRUE, buf);
 }
+
+static svn_error_t *
+create_spillbuf_file(apr_file_t **file,
+                     const char **temp_path,
+                     const char *dirpath,
+                     svn_io_file_del_t delete_when,
+                     apr_pool_t *result_pool,
+                     apr_pool_t *scratch_pool)
+{
+  SVN_TEST_ASSERT(delete_when == svn_io_file_del_none);
+  return svn_io_open_unique_file3(file, temp_path, dirpath,
+                                  svn_io_file_del_on_close,
+                                  result_pool, scratch_pool);
+}
+
+static svn_error_t *
+test_spillbuf_file_attrs_spill_callback(apr_pool_t *pool)
+{
+  svn_spillbuf_t *buf = svn_spillbuf__create_extended(4 /* blocksize */,
+                                                      10 /* maxsize */,
+                                                      0, NULL, pool);
+  svn_spillbuf__set_spill_cb(buf, create_spillbuf_file);
+  return test_spillbuf__file_attrs(pool, FALSE, buf);
+}
+
 
 /* The test table.  */
 
@@ -592,6 +629,8 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_spillbuf_file_attrs, "check spill file properties"),
     SVN_TEST_PASS2(test_spillbuf_file_attrs_spill_all,
                    "check spill file properties (spill-all-data)"),
+    SVN_TEST_PASS2(test_spillbuf_file_attrs_spill_callback,
+                   "check spill file properties (custom file)"),
     SVN_TEST_NULL
   };
 

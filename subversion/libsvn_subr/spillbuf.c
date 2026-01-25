@@ -23,6 +23,7 @@
 
 #include <apr_file_io.h>
 
+#include "svn_error.h"
 #include "svn_io.h"
 #include "svn_pools.h"
 
@@ -80,6 +81,9 @@ struct svn_spillbuf_t {
   /* The name of the temporary spill file. */
   const char *filename;
 
+  /* The callback that creates the spill file, see above. */
+  svn_spillbuf__create_file_t create_spill_file;
+
   /* When false, do not delete the spill file when it is closed. */
   svn_boolean_t delete_on_close;
 
@@ -123,9 +127,10 @@ svn_spillbuf__create_extended(apr_size_t blocksize,
   buf->pool = result_pool;
   buf->blocksize = blocksize;
   buf->maxsize = maxsize;
+  buf->dirpath = dirpath;
+  buf->create_spill_file = svn_io_open_unique_file3;
   buf->delete_on_close = 0 != (flags & SVN_SPILLBUF__DELETE_ON_CLOSE);
   buf->spill_all_contents = 0 != (flags & SVN_SPILLBUF__SPILL_ALL_CONTENTS);
-  buf->dirpath = dirpath;
   return buf;
 }
 
@@ -139,6 +144,15 @@ svn_spillbuf__create(apr_size_t blocksize,
       SVN_SPILLBUF__DELETE_ON_CLOSE, /* flags */
       NULL,                          /* dirpath */
       result_pool);
+}
+
+svn_error_t *
+svn_spillbuf__set_spill_cb(svn_spillbuf_t *buf,
+                           svn_spillbuf__create_file_t create_spill_file)
+{
+  SVN_ERR_ASSERT(!buf->spill && !buf->filename);
+  buf->create_spill_file = create_spill_file;
+  return SVN_NO_ERROR;
 }
 
 svn_filesize_t
@@ -215,13 +229,13 @@ svn_spillbuf__write(svn_spillbuf_t *buf,
   if (buf->spill == NULL
       && ((buf->maxsize - buf->memory_size) < len))
     {
-      SVN_ERR(svn_io_open_unique_file3(&buf->spill,
-                                       &buf->filename,
-                                       buf->dirpath,
-                                       (buf->delete_on_close
-                                        ? svn_io_file_del_on_close
-                                        : svn_io_file_del_none),
-                                       buf->pool, scratch_pool));
+      SVN_ERR(buf->create_spill_file(&buf->spill,
+                                     &buf->filename,
+                                     buf->dirpath,
+                                     (buf->delete_on_close
+                                      ? svn_io_file_del_on_close
+                                      : svn_io_file_del_none),
+                                     buf->pool, scratch_pool));
 
       /* Optionally write the memory contents into the file. */
       if (buf->spill_all_contents)

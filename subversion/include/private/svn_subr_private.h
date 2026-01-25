@@ -118,7 +118,27 @@ svn_spillbuf__create(apr_size_t blocksize,
                      apr_size_t maxsize,
                      apr_pool_t *result_pool);
 
-/* Determine how much content is stored in the spill buffer.  */
+/* Callback for creating the spillbuf's spill file.
+   The prototype is the same as for svn_io_open_unique_file3(). */
+typedef svn_error_t *(*svn_spillbuf__create_file_t)(
+    apr_file_t **file,
+    const char **temp_path,
+    const char *dirpath,
+    svn_io_file_del_t delete_when,
+    apr_pool_t *result_pool,
+    apr_pool_t *scratch_pool);
+
+/* Set a callback that will be called to create the spillbuf's spill file.
+   A default implemntation will be used if this callback is not set.
+   NOTE: Calling this function after the spill file has been created is
+         a programming error and will cause an assertion. It's best to
+         set the callback when the spillbuf is created and before the
+         first write. */
+svn_error_t *
+svn_spillbuf__set_spill_cb(svn_spillbuf_t *buf,
+                           svn_spillbuf__create_file_t create_spill_file);
+
+/* Determine how much content is stored in the spill buffer. */
 svn_filesize_t
 svn_spillbuf__get_size(const svn_spillbuf_t *buf);
 
