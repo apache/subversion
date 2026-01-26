@@ -23,13 +23,6 @@ Candidate changes:
    Votes:
      +0: hartmannathan (cannot test; Windows testers needed please)
 
- * r1931020
-   Happy new year 2026!
-   Justification:
-     1.15.x will be released in 2026; use correct copyright date
-   Votes:
-     +1: hartmannathan, brane
-
  * r1931176
    Update checks for SERF 1.4.0 to check for SERF 1.5.0. There will never be a
    SERF 1.4.0 release and these APIs are officially available from 1.5.0 so it
@@ -80,3 +73,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1931020
+   Happy new year 2026!
+   Justification:
+     1.15.x will be released in 2026; use correct copyright date
+   Votes:
+     +1: hartmannathan, brane, kotkov
