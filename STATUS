@@ -49,13 +49,14 @@ Candidate changes:
      +0: hartmannathan
      +1: brane
 
- * r1931298
+ * r1931298, r1931552
    Update an omission in a docstring.
    Justification:
      Pristines On Demand is the 1.15 headliner feature; document the API
      difference more clearly for users of the old API
    Votes:
-     +1: hartmannathan, brane
+     +1: kotkov
+     +1: hartmannathan (without r1931552), brane (without r1931552)
 
  * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
