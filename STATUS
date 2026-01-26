@@ -57,6 +57,8 @@ Candidate changes:
    Votes:
      +1: kotkov
      +1: hartmannathan (without r1931552), brane (without r1931552)
+     -0: dsahlberg (until I'm de-confused about allow_unver_obstructions, see
+         https://lists.apache.org/thread/dhf6fmmx5mmtft7cf9pl7drfv03ygzyg)
 
  * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
