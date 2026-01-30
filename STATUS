@@ -32,6 +32,7 @@ Candidate changes:
    Votes:
      +0: hartmannathan
      +1 (not binding): brane
+     +1: dsahlberg
 
  * r1931265
    Newest OpenSSL/httpd does not like server certificates with tiny keys.
