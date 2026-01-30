@@ -50,15 +50,6 @@ Candidate changes:
      +0: hartmannathan
      +1 (not binding): brane
 
- * r1931298, r1931552
-   Update an omission in a docstring.
-   Justification:
-     Pristines On Demand is the 1.15 headliner feature; document the API
-     difference more clearly for users of the old API
-   Votes:
-     +1: kotkov, dsahlberg
-     +1: hartmannathan (without r1931552), brane (without r1931552)
-
  * r1931570
    Forward the allow_unver_obstructions argument from the deprecated function.
    Justification:
@@ -93,3 +84,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1931298, r1931552
+   Update an omission in a docstring.
+   Justification:
+     Pristines On Demand is the 1.15 headliner feature; document the API
+     difference more clearly for users of the old API
+   Votes:
+     +1: kotkov, dsahlberg, hartmannathan
+     +1: brane (without r1931552)
