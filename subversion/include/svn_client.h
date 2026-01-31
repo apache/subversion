@@ -1285,7 +1285,7 @@ svn_client_checkout4(svn_revnum_t *result_rev,
 
 /**
  * Similar to svn_client_checkout4() but with @a wc_format_version set
- * to @c NULL.
+ * to @c NULL and @a store_pristine set to #svn_tristate_unknown.
  *
  * @since New in 1.5.
  * @deprecated Provided for backward compatibility with the 1.10 API.

@@ -84,12 +84,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1931298, r1931552
-   Update an omission in a docstring.
-   Justification:
-     Pristines On Demand is the 1.15 headliner feature; document the API
-     difference more clearly for users of the old API
-   Votes:
-     +1: kotkov, dsahlberg, hartmannathan
-     +1: brane (without r1931552)
