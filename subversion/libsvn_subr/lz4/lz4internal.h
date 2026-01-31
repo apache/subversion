@@ -1,9 +1,4 @@
-#include "svn_private_config.h"
-#ifdef SVN_INTERNAL_LZ4
-#  if defined(__GNUC__) && (__GNUC__ >= 4)
-#    define LZ4LIB_VISIBILITY __attribute__((visibility("internal")))
-#  endif
-#  define LZ4_PUBLISH_STATIC_FUNCTIONS
+#include "svnlz4.h"
 /*
  *  LZ4 - Fast LZ compression algorithm
  *  Header File
@@ -90,7 +85,6 @@ extern "C" {
 */
 #ifndef LZ4LIB_VISIBILITY
 #  if defined(__GNUC__) && (__GNUC__ >= 4)
-#error "some other visibility"
 #    define LZ4LIB_VISIBILITY __attribute__ ((visibility ("default")))
 #  else
 #    define LZ4LIB_VISIBILITY
@@ -889,4 +883,3 @@ LZ4LIB_API void LZ4_resetStream (LZ4_stream_t* streamPtr);
 #if defined (__cplusplus)
 }
 #endif
-#endif /* SVN_INTERNAL_LZ4 */
