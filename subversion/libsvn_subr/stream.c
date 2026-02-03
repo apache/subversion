@@ -1148,13 +1148,10 @@ svn_stream__aprfile(svn_stream_t *stream)
 struct zbaton {
   z_stream *in;                 /* compressed stream for reading */
   z_stream *out;                /* compressed stream for writing */
-  void *substream;              /* The substream */
-  void *read_buffer;            /* buffer   used   for  reading   from
-                                   substream */
-  int read_flush;               /* what flush mode to use while
-                                   reading */
-  apr_pool_t *pool;             /* The pool this baton is allocated
-                                   on */
+  svn_stream_t *substream;      /* The substream */
+  void *read_buffer;            /* buffer used for reading from substream */
+  int read_flush;               /* what flush mode to use while reading */
+  apr_pool_t *pool;             /* The pool this baton is allocated in */
 };
 
 /* zlib alloc function. opaque is the pool we need. */
@@ -1365,6 +1362,139 @@ svn_stream_compressed(svn_stream_t *stream, apr_pool_t *pool)
                        read_handler_gz);
   svn_stream_set_write(zstream, write_handler_gz);
   svn_stream_set_close(zstream, close_handler_gz);
+
+  return zstream;
+}
+
+
+struct lz4_baton {
+  svn_lz4__decompress_ctx_t *dctx; /* Decompression context for reading */
+  svn_lz4__compress_ctx_t *cctx;   /* Compression context for writing */
+  svn_stream_t *substream;
+  svn_stringbuf_t *write_buffer;
+  char *read_buffer;
+  apr_size_t read_pos;
+  apr_size_t read_size;
+  apr_size_t size_hint;
+  apr_pool_t *pool;                /* The pool this baton is allocated in */
+};
+
+/* Read data from the substream and decompress it. */
+static svn_error_t *
+read_handler_lz4(void *baton, char *buffer, apr_size_t *len)
+{
+  struct lz4_baton *const ctx = baton;
+  apr_size_t read_total = 0;
+
+  if (!ctx->dctx)
+    {
+      SVN_ERR(svn_lz4__decompress_create(&ctx->dctx, FALSE, ctx->pool));
+      ctx->read_buffer = apr_palloc(ctx->pool, ZBUFFER_SIZE);
+      ctx->read_pos = ctx->read_size = 0;
+      ctx->size_hint = 1;
+    }
+
+  while (read_total < *len && ctx->size_hint > 0)
+    {
+      apr_size_t input_size;
+      apr_size_t output_size;
+
+      if (ctx->read_pos >= ctx->read_size)
+        {
+          ctx->read_size = ZBUFFER_SIZE;
+          SVN_ERR(svn_stream_read_full(ctx->substream,
+                                       ctx->read_buffer, &ctx->read_size));
+          ctx->read_pos = 0;
+        }
+
+      input_size = ctx->read_size - ctx->read_pos;
+      output_size = *len - read_total;
+      SVN_ERR(svn_lz4__decompress(&ctx->size_hint, ctx->dctx,
+                                  buffer + read_total, &output_size,
+                                  ctx->read_buffer + ctx->read_pos,
+                                  &input_size));
+      ctx->read_pos += input_size;
+
+      read_total += output_size;
+    }
+
+  *len = read_total;
+  return SVN_NO_ERROR;
+}
+
+/* Ensure we have enough space in the write buffer */
+static void
+ensure_write_buffer_lz4(struct lz4_baton *ctx, apr_size_t size)
+{
+  if (!ctx->write_buffer)
+    ctx->write_buffer = svn_stringbuf_create_ensure(size, ctx->pool);
+  else
+    svn_stringbuf_ensure(ctx->write_buffer, size);
+}
+
+/* Compress data and write it to the substream. */
+static svn_error_t *
+write_handler_lz4(void *baton, const char *buffer, apr_size_t *len)
+{
+  struct lz4_baton *const ctx = baton;
+
+  apr_size_t input_size = *len;
+  apr_size_t output_size = 0;
+
+  if (!ctx->cctx)
+    {
+      SVN_ERR(svn_lz4__compress_create(&ctx->cctx, FALSE, ctx->pool));
+      output_size = svn_lz4__header_size_max();
+    }
+
+  output_size += svn_lz4__compress_bound(ctx->cctx, input_size);
+  ensure_write_buffer_lz4(ctx, output_size);
+  SVN_ERR(svn_lz4__compress_update(&output_size, ctx->cctx,
+                                   ctx->write_buffer->data, output_size,
+                                   buffer, input_size));
+  return svn_error_trace(svn_stream_write(ctx->substream,
+                                          ctx->write_buffer->data,
+                                          &output_size));
+}
+
+/* Handle flushing and closing the stream */
+static svn_error_t *
+close_handler_lz4(void *baton)
+{
+  struct lz4_baton *const ctx = baton;
+  apr_size_t output_size;
+
+  /* If we haven't written anything, there's nothing to flush. */
+  if (!ctx->cctx)
+    return SVN_NO_ERROR;
+
+  output_size = svn_lz4__compress_bound(ctx->cctx, 0);
+  ensure_write_buffer_lz4(ctx, output_size);
+  SVN_ERR(svn_lz4__compress_end(&output_size, ctx->cctx,
+                                ctx->write_buffer->data, output_size));
+  return svn_error_trace(svn_stream_write(ctx->substream,
+                                          ctx->write_buffer->data,
+                                          &output_size));
+  return svn_error_trace(svn_stream_close(ctx->substream));
+}
+
+svn_stream_t *
+svn_stream__lz4_compressed(svn_stream_t *stream, apr_pool_t *pool)
+{
+  struct svn_stream_t *zstream;
+  struct lz4_baton *ctx;
+
+  assert(stream != NULL);
+
+  ctx = apr_pcalloc(pool, sizeof(*ctx));
+  ctx->substream = stream;
+  ctx->pool = pool;
+
+  zstream = svn_stream_create(ctx, pool);
+  svn_stream_set_read2(zstream, NULL /* only full read support */,
+                       read_handler_lz4);
+  svn_stream_set_write(zstream, write_handler_lz4);
+  svn_stream_set_close(zstream, close_handler_lz4);
 
   return zstream;
 }

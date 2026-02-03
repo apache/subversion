@@ -150,7 +150,8 @@ generate_test_bytes(int num_bytes, apr_pool_t *pool)
 
 
 static svn_error_t *
-test_stream_compressed(apr_pool_t *pool)
+do_test_stream_compressed(svn_stream_t *(*ctor)(svn_stream_t *, apr_pool_t *),
+                          apr_pool_t *pool)
 {
 #define NUM_TEST_STRINGS 5
 #define TEST_BUF_SIZE 10
@@ -194,16 +195,12 @@ test_stream_compressed(apr_pool_t *pool)
       inbuf = svn_stringbuf_create_empty(subpool);
       outbuf = svn_stringbuf_create_empty(subpool);
 
-      stream = svn_stream_compressed(svn_stream_from_stringbuf(outbuf,
-                                                               subpool),
-                                     subpool);
+      stream = ctor(svn_stream_from_stringbuf(outbuf, subpool), subpool);
       len = origbuf->len;
       SVN_ERR(svn_stream_write(stream, origbuf->data, &len));
       SVN_ERR(svn_stream_close(stream));
 
-      stream = svn_stream_compressed(svn_stream_from_stringbuf(outbuf,
-                                                               subpool),
-                                     subpool);
+      stream = ctor(svn_stream_from_stringbuf(outbuf, subpool), subpool);
       len = TEST_BUF_SIZE;
       while (len >= TEST_BUF_SIZE)
         {
@@ -229,6 +226,19 @@ test_stream_compressed(apr_pool_t *pool)
   svn_pool_destroy(subpool);
   return SVN_NO_ERROR;
 }
+
+static svn_error_t *
+test_stream_compressed(apr_pool_t *pool)
+{
+  return do_test_stream_compressed(svn_stream_compressed, pool);
+}
+
+static svn_error_t *
+test_stream_compressed_lz4(apr_pool_t *pool)
+{
+  return do_test_stream_compressed(svn_stream__lz4_compressed, pool);
+}
+
 
 static svn_error_t *
 test_stream_tee(apr_pool_t *pool)
@@ -1162,7 +1172,9 @@ static struct svn_test_descriptor_t test_funcs[] =
     SVN_TEST_PASS2(test_stream_from_string,
                    "test svn_stream_from_string"),
     SVN_TEST_PASS2(test_stream_compressed,
-                   "test compressed streams"),
+                   "test zlib compressed streams"),
+    SVN_TEST_PASS2(test_stream_compressed_lz4,
+                   "test LZ4 compressed streams"),
     SVN_TEST_PASS2(test_stream_tee,
                    "test 'tee' streams"),
     SVN_TEST_PASS2(test_stream_seek_file,

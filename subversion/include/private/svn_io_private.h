@@ -171,6 +171,12 @@ svn_stream__adler32(svn_stream_t *stream,
                     svn_boolean_t read_all,
                     apr_pool_t *result_pool);
 
+/* Similar to svn_stream_compressed() but uses LZ4 instead of zlib.
+   See: svn_lz4__compress_create() etc. in svn_subr_private.h.
+*/
+svn_stream_t *
+svn_stream__lz4_compressed(svn_stream_t *stream, apr_pool_t *pool);
+
 #if defined(WIN32)
 
 /* ### Move to something like io.h or subr.h, to avoid making it
