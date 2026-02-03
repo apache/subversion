@@ -23,15 +23,25 @@
 
 #include <assert.h>
 
+#include "svn_error.h"
 #include "private/svn_subr_private.h"
 
 #include "svn_private_config.h"
+#include "svn_types.h"
 
 #ifdef SVN_INTERNAL_LZ4
 #include "lz4/lz4internal.h"
+#include "lz4/lz4frame.h"
+#include "lz4/lz4hc.h"
 #else
 #include <lz4.h>
+#include <lz4frame.h>
+#include <lz4hc.h>
 #endif
+
+/*
+ * Simple compression and decompression
+ */
 
 svn_error_t *
 svn__compress_lz4(const void *data, apr_size_t len,
@@ -126,6 +136,212 @@ svn__decompress_lz4(const void *data, apr_size_t len,
 
   return SVN_NO_ERROR;
 }
+
+/*
+ * Streamy compression
+ */
+
+apr_size_t
+svn_lz4__header_size_max(void)
+{
+  return LZ4F_HEADER_SIZE_MAX;
+}
+
+struct svn_lz4__compress_ctx_t
+{
+  LZ4F_cctx *ctx;
+  unsigned started;
+  LZ4F_preferences_t prefs;
+  LZ4F_compressOptions_t options;
+};
+
+static apr_status_t free_lz4_cctx(void *data)
+{
+  svn_lz4__compress_ctx_t *const cctx = data;
+  const LZ4F_errorCode_t code = LZ4F_freeCompressionContext(cctx->ctx);
+  if (LZ4F_isError(code))
+    return SVN_ERR_LZ4_COMPRESSION_FAILED;
+  return APR_SUCCESS;
+}
+
+svn_error_t *
+svn_lz4__compress_create(svn_lz4__compress_ctx_t **cctx_out,
+                         svn_boolean_t stable_input,
+                         apr_pool_t *pool)
+{
+  static const LZ4F_preferences_t compression_prefs = {
+    {
+      LZ4F_max64KB,               /* frameInfo.blockSizeID */
+      LZ4F_blockLinked,           /* frameInfo.blockMode */
+      LZ4F_noContentChecksum,     /* frameInfo.contentChecksumFlag */
+      LZ4F_frame,                 /* frameInfo.frameType */
+      0,                          /* frameInfo.contentSize */
+      0,                          /* frameInfo.dictID */
+      LZ4F_blockChecksumEnabled   /* frameInfo.blockChecksumFlag */
+    },
+    /* NOTE: With LZ4 1.10+, the compression level will be 2, faster but less
+             compressed than with older versions of LZ4, where the value of
+             this constant was 3. This does not affect compression format
+             backward compatibility. */
+    LZ4HC_CLEVEL_MIN,           /* compressionLevel */
+    0,                          /* autoFlush */
+    1,                          /* favorDecSpeed */
+    { 0 }                       /* reserved */
+  };
+
+  LZ4F_cctx *ctx;
+  svn_lz4__compress_ctx_t *cctx;
+  LZ4F_errorCode_t code = LZ4F_createCompressionContext(&ctx, LZ4F_VERSION);
+
+  if (LZ4F_isError(code))
+    return svn_error_createf(SVN_ERR_LZ4_COMPRESSION_FAILED, NULL,
+                             _("Create LZ4 compression context: %s"),
+                             LZ4F_getErrorName(code));
+
+  cctx = apr_pcalloc(pool, sizeof(*cctx));
+  cctx->ctx = ctx;
+  cctx->prefs = compression_prefs;
+  cctx->options.stableSrc = !!stable_input;
+  apr_pool_cleanup_register(pool, cctx, free_lz4_cctx, apr_pool_cleanup_null);
+  *cctx_out = cctx;
+  return SVN_NO_ERROR;
+}
+
+static SVN__FORCE_INLINE svn_error_t *
+check_compress_status(apr_size_t *length, apr_size_t status, apr_size_t extra)
+{
+  if (LZ4F_isError(status))
+    return svn_error_createf(SVN_ERR_LZ4_COMPRESSION_FAILED, NULL,
+                             _("LZ4 compress: %s"),
+                             LZ4F_getErrorName(status));
+
+  *length = status + extra;
+  return SVN_NO_ERROR;
+}
+
+apr_size_t
+svn_lz4__compress_bound(svn_lz4__compress_ctx_t *cctx,
+                        apr_size_t size)
+{
+  return LZ4F_compressBound(size, &cctx->prefs);
+}
+
+svn_error_t *
+svn_lz4__compress_update(apr_size_t *length,
+                         svn_lz4__compress_ctx_t *cctx,
+                         void *output, apr_size_t capacity,
+                         const void *input, apr_size_t size)
+{
+  apr_size_t header_size = 0;
+  apr_size_t status;
+
+  if (!cctx->started)
+    {
+      if (capacity < LZ4F_HEADER_SIZE_MAX)
+        return svn_error_create(SVN_ERR_LZ4_COMPRESSION_FAILED, NULL,
+                                _("LZ4 compress: no space for frame header"));
+
+      status = LZ4F_compressBegin(cctx->ctx, output, capacity, &cctx->prefs);
+      SVN_ERR(check_compress_status(&header_size, status, 0));
+      output = (char*)output + header_size;
+      capacity -= header_size;
+      cctx->started = TRUE;
+    }
+
+  status = LZ4F_compressUpdate(cctx->ctx, output, capacity,
+                               input, size, &cctx->options);
+  return svn_error_trace(check_compress_status(length, status, header_size));
+}
+
+svn_error_t *
+svn_lz4__compress_flush(apr_size_t *length,
+                        svn_lz4__compress_ctx_t *cctx,
+                        void *output, apr_size_t capacity)
+{
+  const apr_size_t status = LZ4F_flush(cctx->ctx,
+                                       output, capacity,
+                                       &cctx->options);
+  return svn_error_trace(check_compress_status(length, status, 0));
+}
+
+svn_error_t *
+svn_lz4__compress_end(apr_size_t *length,
+                      svn_lz4__compress_ctx_t *cctx,
+                      void *output, apr_size_t capacity)
+{
+  const apr_size_t status = LZ4F_compressEnd(cctx->ctx,
+                                             output, capacity,
+                                             &cctx->options);
+  svn_error_t *const err = check_compress_status(length, status, 0);
+  if (!err)
+    cctx->started = FALSE;
+  return svn_error_trace(err);
+}
+
+/*
+ * Streamy decompression
+ */
+
+struct svn_lz4__decompress_ctx_t
+{
+  LZ4F_dctx* ctx;
+  LZ4F_decompressOptions_t options;
+};
+
+static apr_status_t free_lz4_dctx(void *data)
+{
+  svn_lz4__decompress_ctx_t *const dctx = data;
+  const LZ4F_errorCode_t code = LZ4F_freeDecompressionContext(dctx->ctx);
+  if (LZ4F_isError(code))
+    return SVN_ERR_LZ4_DECOMPRESSION_FAILED;
+  return APR_SUCCESS;
+}
+
+svn_error_t *
+svn_lz4__decompress_create(svn_lz4__decompress_ctx_t **dctx_out,
+                           svn_boolean_t stable_output,
+                           apr_pool_t *pool)
+{
+  LZ4F_dctx* ctx;
+  svn_lz4__decompress_ctx_t *dctx;
+  LZ4F_errorCode_t code = LZ4F_createDecompressionContext(&ctx, LZ4F_VERSION);
+
+  if (LZ4F_isError(code))
+    return svn_error_createf(SVN_ERR_LZ4_DECOMPRESSION_FAILED, NULL,
+                             _("Create LZ4 decompression context: %s"),
+                             LZ4F_getErrorName(code));
+
+  dctx = apr_pcalloc(pool, sizeof(*dctx));
+  dctx->ctx = ctx;
+  dctx->options.stableDst = !!stable_output;
+  apr_pool_cleanup_register(pool, dctx, free_lz4_dctx, apr_pool_cleanup_null);
+  *dctx_out = dctx;
+  return SVN_NO_ERROR;
+}
+
+svn_error_t *
+svn_lz4__decompress(apr_size_t *size_hint,
+                    svn_lz4__decompress_ctx_t *dctx,
+                    void *output, apr_size_t *output_size,
+                    const void *input, apr_size_t *input_size)
+{
+  const apr_size_t status = LZ4F_decompress(dctx->ctx,
+                                            output, output_size,
+                                            input, input_size,
+                                            &dctx->options);
+
+  if (LZ4F_isError(status))
+    return svn_error_createf(SVN_ERR_LZ4_DECOMPRESSION_FAILED, NULL,
+                             _("LZ4 decompress: %s"),
+                             LZ4F_getErrorName(status));
+
+  *size_hint = status;
+  return SVN_NO_ERROR;
+}
+
+/*
+ * Library version
+ */
 
 const char *
 svn_lz4__compiled_version(void)

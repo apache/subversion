@@ -625,6 +625,100 @@ svn__decompress_lz4(const void *data, apr_size_t len,
                     svn_stringbuf_t *out,
                     apr_size_t limit);
 
+/*
+ * LZ4 stream compression with framing.
+ */
+
+/* The largest size of an LZ4 frame header; see: LZ4F_HEADER_SIZE_MAX */
+apr_size_t
+svn_lz4__header_size_max(void);
+
+/* LZ4 stream compression and decompression contexts. */
+typedef struct svn_lz4__compress_ctx_t svn_lz4__compress_ctx_t;
+typedef struct svn_lz4__decompress_ctx_t svn_lz4__decompress_ctx_t;
+
+/* Creates a new LZ4 compression context CCTX, allocated from POOL.
+ * The context will be freed when the pool is cleared.
+ *
+ * If STABLE_INPUT is TRUE, the source buffer must be contiguous for the whole
+ * compression; this means that all uncompressed source data is available to
+ * svn_lz4__compress_update() through negative offsets from the INPUT pointer.
+ * When this option can be set, the compressor can avoid copying and caching
+ * source data in CCTX.
+ */
+svn_error_t *
+svn_lz4__compress_create(svn_lz4__compress_ctx_t **cctx,
+                         svn_boolean_t stable_input,
+                         apr_pool_t *pool);
+
+/* Returns the minimum CAPACITY of the output buffer to guarantee that
+ * the next svn_lz4__compress_update() with CCTX and SIZE amount
+ * of input data will succeed. If SIZE is 0, the returned value is
+ * computed for svn_lz4__compress_flush()/_end().
+ */
+apr_size_t
+svn_lz4__compress_bound(svn_lz4__compress_ctx_t *cctx, apr_size_t size);
+
+/* Using the context CCTX, compresses SIZE bytes from INPUT into the OUTPUT
+ * buffer of size CAPACITY. *LENGTH will be the number of bytes actually
+ * written to OUTPUT and can be 0 if the input data was buffered in the
+ * context.
+ *
+ * At the first call of svn_lz4__compress_update(), CAPACITY must be
+ * at least svn_lz4__header_size_max() to accomodate the frame header.
+ */
+svn_error_t *
+svn_lz4__compress_update(apr_size_t *length,
+                         svn_lz4__compress_ctx_t *cctx,
+                         void *output, apr_size_t capacity,
+                         const void *input, apr_size_t size);
+
+/* Flushes any data buffered in CCTX to the OUTPUT buffer of size CAPACITY
+ * and returns the number of bytes written in *LENGTH.
+ */
+svn_error_t *
+svn_lz4__compress_flush(apr_size_t *length,
+                        svn_lz4__compress_ctx_t *cctx,
+                        void *output, apr_size_t capacity);
+
+/* Ends the compression stream, returning the number of bytes written
+ * to OUTPUT in *LENGTH. Afterwards, CCTX will be available for to start
+ * a new compression stream with svn_lz4__compress_update().
+ */
+svn_error_t *
+svn_lz4__compress_end(apr_size_t *length,
+                      svn_lz4__compress_ctx_t *cctx,
+                      void *output, apr_size_t capacity);
+
+/* Creates a new LZ4 decompression context DCTX, allocated from POOL.
+ * The context will be freed when the pool is cleared.
+ *
+ * If STABLE_OUTPUT is TRUE, the output buffer must be contiguous for the whole
+ * decompression; this means that previously decompressed content is available
+ * to svn_lz4__decompress() through negative offsets from the OUTPUT pointer.
+ * This is the case, for example, when we store the decompressed data to a
+ * stringbuf, which remains contiguous even when it's reallocated. When this
+ * option can be set, the decompressor can avoid copying and caching output
+ * data in DCTX.
+ */
+svn_error_t *
+svn_lz4__decompress_create(svn_lz4__decompress_ctx_t **dctx,
+                           svn_boolean_t stable_output,
+                           apr_pool_t *pool);
+
+/* Using DCTX, read at most *INPUT_SIZE compressed bytes from the INPUT buffer
+ * and decompress them to the OUTPUT buffer of size *OUTPUT_SIZE. Upon return,
+ * *INPUT_SIZE will be the number of bytes actally read from INPUT and
+ * *OUTPUT_SIZE will be the number of bytes written to *OUTPUT. The returned
+ * *SIZE_HINT is a hint for the expected OUTPUT_SIZE for the next call, or 0
+ * if the frame has been completely decoded.
+ */
+svn_error_t *
+svn_lz4__decompress(apr_size_t *size_hint,
+                    svn_lz4__decompress_ctx_t *dctx,
+                    void *output, apr_size_t *output_size,
+                    const void *input, apr_size_t *input_size);
+
 /** @} */
 
 /**

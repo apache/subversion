@@ -141,6 +141,40 @@ extern "C" {
           tst_str2, tst_str1, __FILE__, __LINE__);                  \
   } while(0)
 
+/** Handy macro for testing buffer equality.
+ *
+ * EXPR and/or EXPECTED_EXPR may be NULL which compares equal to NULL and
+ * not equal to any non-NULL buffer.
+ */
+#define SVN_TEST_BUFFER_ASSERT(expr, expected_expr, size)           \
+  do {                                                              \
+    const char *tst_buf1 = (expr);                                  \
+    const char *tst_buf2 = (expected_expr);                         \
+    const apr_size_t tst_size = (size);                             \
+                                                                    \
+    if (tst_buf2 == NULL && tst_buf1 == NULL)                       \
+      break;                                                        \
+    if (tst_buf1 == NULL)                                           \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
+          "Buffers not equal\n  Expected: data\n  Found:    NULL"   \
+          "\n  at %s:%d",                                           \
+          __FILE__, __LINE__);                                      \
+    if (tst_buf2 == NULL)                                           \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
+          "Buffers not equal\n  Expected: NULL\n  Found:    data"   \
+          "\n  at %s:%d",                                           \
+          __FILE__, __LINE__);                                      \
+    if (memcmp(tst_buf2, tst_buf1, tst_size) != 0) {                \
+      apr_size_t i = 0;                                             \
+      while (i < tst_size && tst_buf2[i] == tst_buf1[i])            \
+        ++i;                                                        \
+      return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,           \
+          "Buffers not equal at position %" APR_SIZE_T_FMT          \
+          " of %" APR_SIZE_T_FMT " at %s:%d",                       \
+          i, tst_size, __FILE__, __LINE__);                         \
+    }                                                               \
+  } while(0)
+
  /** Handy macro for testing integer equality.
   */
 #define SVN_TEST_INT_ASSERT(expr, expected_expr)                  \
