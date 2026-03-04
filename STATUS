@@ -32,7 +32,7 @@ Candidate changes:
    Votes:
      +0: hartmannathan
      +1 (not binding): brane
-     +1: dsahlberg
+     +1: dsahlberg, rinrab
 
  * r1931265
    Newest OpenSSL/httpd does not like server certificates with tiny keys.
@@ -49,14 +49,6 @@ Candidate changes:
    Votes:
      +0: hartmannathan
      +1 (not binding): brane
-
- * r1931570
-   Forward the allow_unver_obstructions argument from the deprecated function.
-   Justification:
-     Without this, svn_client_checkout3 doesn't care about the argument and the
-     docstrings doesn't match implementation (see the r1931298 group).
-   Votes:
-     +1: dsahlberg, kotkov
 
  * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
@@ -77,10 +69,19 @@ Candidate changes:
    Notes:
      Discussed in https://lists.apache.org/thread/128rgf7ozn72ljfzn7o18gfhb9l43y26
    Votes:
-     +1: kotkov
+     +1: kotkov, rinrab
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1931570
+   Forward the allow_unver_obstructions argument from the deprecated function.
+   Justification:
+     Without this, svn_client_checkout3 doesn't care about the argument and the
+     docstrings doesn't match implementation (see the r1931298 group).
+   Votes:
+     +1: dsahlberg, kotkov, rinrab
+
