@@ -56,7 +56,7 @@ Candidate changes:
      Without this, svn_client_checkout3 doesn't care about the argument and the
      docstrings doesn't match implementation (see the r1931298 group).
    Votes:
-     +1: dsahlberg
+     +1: dsahlberg, kotkov
 
  * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
