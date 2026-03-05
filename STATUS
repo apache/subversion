@@ -76,12 +76,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1931570
-   Forward the allow_unver_obstructions argument from the deprecated function.
-   Justification:
-     Without this, svn_client_checkout3 doesn't care about the argument and the
-     docstrings doesn't match implementation (see the r1931298 group).
-   Votes:
-     +1: dsahlberg, kotkov, rinrab
-

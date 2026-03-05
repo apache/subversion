@@ -2683,7 +2683,7 @@ svn_client_checkout3(svn_revnum_t *result_rev,
   return svn_error_trace(svn_client_checkout4(
                              result_rev, URL, path,
                              peg_revision, revision, depth,
-                             ignore_externals, FALSE, NULL,
+                             ignore_externals, allow_unver_obstructions, NULL,
                              svn_tristate_unknown, ctx, pool));
 }
 
