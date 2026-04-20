@@ -49,17 +49,6 @@ Candidate changes:
    Votes:
      +1 (not binding): brane
 
- * r1931549
-   Use bytewise content comparison in the "is the file modified?" working copy
-   checks if we have the pristine file content.
-   Justification:
-     Avoid changing the file comparison characteristics for working copies with
-     pristine contents.
-   Notes:
-     Discussed in https://lists.apache.org/thread/128rgf7ozn72ljfzn7o18gfhb9l43y26
-   Votes:
-     +1: kotkov, rinrab
-
 Veto-blocked changes:
 =====================
 
@@ -76,3 +65,14 @@ Approved changes:
      +0: hartmannathan
      +1 (not binding): brane
      +1: dsahlberg, rinrab, ivan
+
+ * r1931549
+   Use bytewise content comparison in the "is the file modified?" working copy
+   checks if we have the pristine file content.
+   Justification:
+     Avoid changing the file comparison characteristics for working copies with
+     pristine contents.
+   Notes:
+     Discussed in https://lists.apache.org/thread/128rgf7ozn72ljfzn7o18gfhb9l43y26
+   Votes:
+     +1: kotkov, rinrab, ivan
