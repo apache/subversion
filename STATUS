@@ -23,17 +23,6 @@ Candidate changes:
    Votes:
      +0: hartmannathan (cannot test; Windows testers needed please)
 
- * r1931176
-   Update checks for SERF 1.4.0 to check for SERF 1.5.0. There will never be a
-   SERF 1.4.0 release and these APIs are officially available from 1.5.0 so it
-   should not be a functional change but make things consistent.
-   Justification:
-     Checking for nonexistent Serf releases could cause confusion
-   Votes:
-     +0: hartmannathan
-     +1 (not binding): brane
-     +1: dsahlberg, rinrab
-
  * r1931265
    Newest OpenSSL/httpd does not like server certificates with tiny keys.
    Justification:
@@ -76,3 +65,14 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1931176
+   Update checks for SERF 1.4.0 to check for SERF 1.5.0. There will never be a
+   SERF 1.4.0 release and these APIs are officially available from 1.5.0 so it
+   should not be a functional change but make things consistent.
+   Justification:
+     Checking for nonexistent Serf releases could cause confusion
+   Votes:
+     +0: hartmannathan
+     +1 (not binding): brane
+     +1: dsahlberg, rinrab, ivan
