@@ -24,15 +24,6 @@ Candidate changes:
      +0: hartmannathan (cannot test; Windows testers needed please)
      +1: jun66j5
 
- * r1931265
-   Newest OpenSSL/httpd does not like server certificates with tiny keys.
-   Justification:
-     Allow testing with latest OpenSSL/httpd
-   Votes:
-     +0: hartmannathan
-     +1 (not binding): brane
-     +1: jun66j5
-
  * r1931266
    In Python 3, hashlib input data must be byte strings, not Unicode.
    Justification:
@@ -57,3 +48,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+ * r1931265
+   Newest OpenSSL/httpd does not like server certificates with tiny keys.
+   Justification:
+     Allow testing with latest OpenSSL/httpd
+   Votes:
+     +0: hartmannathan
+     +1: brane, jun66j5, dsahlberg
