@@ -48,6 +48,7 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
  * r1931265
    Newest OpenSSL/httpd does not like server certificates with tiny keys.
    Justification:
