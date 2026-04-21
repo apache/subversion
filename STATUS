@@ -58,17 +58,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1931176
-   Update checks for SERF 1.4.0 to check for SERF 1.5.0. There will never be a
-   SERF 1.4.0 release and these APIs are officially available from 1.5.0 so it
-   should not be a functional change but make things consistent.
-   Justification:
-     Checking for nonexistent Serf releases could cause confusion
-   Votes:
-     +0: hartmannathan
-     +1 (not binding): brane
-     +1: dsahlberg, rinrab, ivan
-
  * r1931549
    Use bytewise content comparison in the "is the file modified?" working copy
    checks if we have the pristine file content.

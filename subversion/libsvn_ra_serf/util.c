@@ -482,7 +482,7 @@ load_authorities(svn_ra_serf__connection_t *conn, const char *authorities,
 }
 
 #ifdef SVN__SERF_EXPERIMENTAL
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && defined(SVN__SERF_TEST_HTTP2)
 /* Implements serf_ssl_protocol_result_cb_t */
 static apr_status_t
 conn_negotiate_protocol(void *data,
@@ -561,7 +561,7 @@ conn_setup(apr_socket_t *sock,
                                        conn->session->pool));
             }
 #ifdef SVN__SERF_EXPERIMENTAL
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && defined(SVN__SERF_TEST_HTTP2)
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && defined(SVN__SERF_TEST_HTTP2)
           if (APR_SUCCESS ==
                 serf_ssl_negotiate_protocol(conn->ssl_context, "h2,http/1.1",
                                             conn_negotiate_protocol, conn))
@@ -2277,7 +2277,7 @@ svn_ra_serf__default_readline(serf_bucket_t *bucket, int acceptable,
                               int *found,
                               const char **data, apr_size_t *len)
 {
-#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 4, 0)
+#if defined(SVN__SERF_EXPERIMENTAL) && SERF_VERSION_AT_LEAST(1, 5, 0)
   return serf_default_readline(bucket, acceptable, found, data, len);
 #else
   return bucket_limited_readline(bucket, acceptable, SERF_READ_ALL_AVAIL,
