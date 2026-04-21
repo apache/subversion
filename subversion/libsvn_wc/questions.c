@@ -77,14 +77,99 @@
    mark it for removal?
 */
 
+static svn_error_t *
+compare_exact(svn_boolean_t *modified_p,
+              svn_stream_t *stream,
+              const char *eol_str,
+              apr_hash_t *keywords,
+              const svn_checksum_t *pristine_checksum,
+              svn_stream_t *pristine_stream,
+              const char *pristine_eol_str,
+              apr_pool_t *scratch_pool)
+{
+  svn_boolean_t same;
+
+  /* For exact comparison, we check that contents remain the same when
+     retranslated according to file properties. */
+
+  if (pristine_stream)
+    {
+      /* We have pristine contents: wrap a stream to translate it into working
+         copy form, and check that contents remain the same. */
+
+      pristine_stream = svn_subst_stream_translated(pristine_stream,
+                                                    eol_str, FALSE,
+                                                    keywords, TRUE,
+                                                    scratch_pool);
+
+      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, stream,
+                                        scratch_pool));
+    }
+  else
+    {
+      svn_checksum_t *working_checksum;
+      svn_checksum_t *detranslated_checksum;
+      svn_checksum_t *retranslated_checksum;
+
+      /* We don't have pristine contents.  To make the comparison work without
+         it, let's check for two things:
+
+         1) That the checksum of the detranslated contents matches the recorded
+            pristine checksum, as in the case of a non-exact comparison, ...
+
+         2) ...and additionally, that the contents of the working file does not
+            change when retranslated according to its properties.
+
+         Technically we're going to do that with a single read of the file
+         contents, while checksumming it's original, detranslated and
+         retranslated versions.
+      */
+
+      stream = svn_stream_checksummed2(stream,
+                                       &working_checksum, NULL,
+                                       pristine_checksum->kind, TRUE,
+                                       scratch_pool);
+
+      stream = svn_subst_stream_translated(stream,
+                                           pristine_eol_str, TRUE,
+                                           keywords, FALSE,
+                                           scratch_pool);
+      stream = svn_stream_checksummed2(stream,
+                                       &detranslated_checksum, NULL,
+                                       pristine_checksum->kind, TRUE,
+                                       scratch_pool);
+
+      stream = svn_subst_stream_translated(stream, eol_str, FALSE,
+                                           keywords, TRUE,
+                                           scratch_pool);
+      stream = svn_stream_checksummed2(stream,
+                                       &retranslated_checksum, NULL,
+                                       pristine_checksum->kind, TRUE,
+                                       scratch_pool);
+
+      SVN_ERR(svn_stream_copy3(stream, svn_stream_empty(scratch_pool),
+                               NULL, NULL, scratch_pool));
+
+      same = svn_checksum_match(detranslated_checksum, pristine_checksum) &&
+             svn_checksum_match(working_checksum, retranslated_checksum);
+    }
+
+  *modified_p = !same;
+  return SVN_NO_ERROR;
+}
 
 /* Set *MODIFIED_P to TRUE if (after translation) VERSIONED_FILE_ABSPATH
- * (of VERSIONED_FILE_SIZE bytes) differs from pristine file with checksum
- * PRISTINE_CHECKSUM, else to FALSE if not.
+ * (of VERSIONED_FILE_SIZE bytes) differs from PRISTINE_STREAM (of
+ * PRISTINE_SIZE bytes with PRISTINE_CHECKSUM), else to FALSE if not.
+ *
+ * If PRISTINE_STREAM is NULL, perform checksum-based content comparison.
+ * If PRISTINE_STREAM is not NULL, perform bytewise content comparison
+ * against the provided stream. PRISTINE_STREAM will be closed before
+ * a successful return.
  *
  * If EXACT_COMPARISON is FALSE, translate VERSIONED_FILE_ABSPATH's EOL
  * style and keywords to repository-normal form according to its properties,
- * calculate checksum and compare the result with PRISTINE_CHECKSUM.
+ * and compare the result with pristine contents.
  * If EXACT_COMPARISON is TRUE, also check that VERSIONED_FILE_ABSPATH
  * contents remains the same when retranslated according to its properties.
  *
@@ -94,6 +179,7 @@
  * PROPS_MOD should be TRUE if the file's properties have been changed,
  * otherwise FALSE.
  *
+ *
  * DB is a wc_db; use SCRATCH_POOL for temporary allocation.
  */
 static svn_error_t *
@@ -101,6 +187,8 @@ compare_and_verify(svn_boolean_t *modified_p,
                    svn_wc__db_t *db,
                    const char *versioned_file_abspath,
                    svn_filesize_t versioned_file_size,
+                   svn_stream_t *pristine_stream,
+                   svn_filesize_t pristine_size,
                    const svn_checksum_t *pristine_checksum,
                    svn_boolean_t has_props,
                    svn_boolean_t props_mod,
@@ -113,8 +201,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   svn_boolean_t special = FALSE;
   svn_boolean_t need_translation;
   svn_stream_t *v_stream; /* versioned_file */
-  svn_checksum_t *v_checksum;
-  svn_error_t *err;
+  svn_boolean_t same;
 
   SVN_ERR_ASSERT(svn_dirent_is_absolute(versioned_file_abspath));
 
@@ -140,20 +227,15 @@ compare_and_verify(svn_boolean_t *modified_p,
   else
     need_translation = FALSE;
 
-  if (! need_translation)
+  /* Easy out check: different sizes with no translation mean the
+   * file was modified. */
+  if (!need_translation && versioned_file_size != pristine_size)
     {
-      svn_filesize_t pristine_size;
+      if (pristine_stream)
+        SVN_ERR(svn_stream_close(pristine_stream));
 
-      SVN_ERR(svn_wc__db_pristine_read(NULL, &pristine_size, db,
-                                       versioned_file_abspath, pristine_checksum,
-                                       scratch_pool, scratch_pool));
-
-      if (versioned_file_size != pristine_size)
-        {
-          *modified_p = TRUE;
-
-          return SVN_NO_ERROR;
-        }
+      *modified_p = TRUE;
+      return SVN_NO_ERROR;
     }
 
   /* ### Other checks possible? */
@@ -169,13 +251,8 @@ compare_and_verify(svn_boolean_t *modified_p,
       /* We don't use APR-level buffering because the comparison function
        * will do its own buffering. */
       apr_file_t *file;
-      err = svn_io_file_open(&file, versioned_file_abspath, APR_READ,
-                             APR_OS_DEFAULT, scratch_pool);
-      /* Convert EACCESS on working copy path to WC specific error code. */
-      if (err && APR_STATUS_IS_EACCES(err->apr_err))
-        return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
-      else
-        SVN_ERR(err);
+      SVN_ERR(svn_io_file_open(&file, versioned_file_abspath, APR_READ,
+                               APR_OS_DEFAULT, scratch_pool));
       v_stream = svn_stream_from_aprfile2(file, FALSE, scratch_pool);
 
       if (need_translation)
@@ -188,79 +265,41 @@ compare_and_verify(svn_boolean_t *modified_p,
             pristine_eol_str = eol_str;
 
           if (exact_comparison)
-            {
-              svn_checksum_t *working_checksum;
-              svn_checksum_t *detranslated_checksum;
-              svn_checksum_t *retranslated_checksum;
+            return svn_error_trace(compare_exact(modified_p,
+                                                 v_stream, eol_str, keywords,
+                                                 pristine_checksum,
+                                                 pristine_stream,
+                                                 pristine_eol_str,
+                                                 scratch_pool));
 
-              v_stream = svn_stream_checksummed2(v_stream,
-                                                 &working_checksum, NULL,
-                                                 pristine_checksum->kind, TRUE,
+          /* Wrap file stream to detranslate into normal form,
+           * "repairing" the EOL style if it is inconsistent. */
+          v_stream = svn_subst_stream_translated(v_stream,
+                                                 pristine_eol_str,
+                                                 TRUE /* repair */,
+                                                 keywords,
+                                                 FALSE /* expand */,
                                                  scratch_pool);
-
-              v_stream = svn_subst_stream_translated(v_stream,
-                                                     pristine_eol_str, TRUE,
-                                                     keywords, FALSE,
-                                                     scratch_pool);
-              v_stream = svn_stream_checksummed2(v_stream,
-                                                 &detranslated_checksum, NULL,
-                                                 pristine_checksum->kind, TRUE,
-                                                 scratch_pool);
-
-              v_stream = svn_subst_stream_translated(v_stream, eol_str, FALSE,
-                                                     keywords, TRUE,
-                                                     scratch_pool);
-              v_stream = svn_stream_checksummed2(v_stream,
-                                                 &retranslated_checksum, NULL,
-                                                 pristine_checksum->kind, TRUE,
-                                                 scratch_pool);
-
-              err = svn_stream_copy3(v_stream, svn_stream_empty(scratch_pool),
-                                     NULL, NULL, scratch_pool);
-              /* Convert EACCESS on working copy path to WC specific error code. */
-              if (err && APR_STATUS_IS_EACCES(err->apr_err))
-                return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
-              else
-                SVN_ERR(err);
-
-              if (svn_checksum_match(detranslated_checksum, pristine_checksum) &&
-                  svn_checksum_match(working_checksum, retranslated_checksum))
-                {
-                  *modified_p = FALSE;
-                }
-              else
-                {
-                  *modified_p = TRUE;
-                }
-
-              return SVN_NO_ERROR;
-            }
-          else
-            {
-              /* Wrap file stream to detranslate into normal form,
-               * "repairing" the EOL style if it is inconsistent. */
-              v_stream = svn_subst_stream_translated(v_stream,
-                                                     pristine_eol_str,
-                                                     TRUE /* repair */,
-                                                     keywords,
-                                                     FALSE /* expand */,
-                                                     scratch_pool);
-            }
         }
     }
 
-  /* Get checksum of detranslated (normalized) content. */
-  err = svn_stream_contents_checksum(&v_checksum, v_stream,
-                                     pristine_checksum->kind,
-                                     scratch_pool, scratch_pool);
-  /* Convert EACCESS on working copy path to WC specific error code. */
-  if (err && APR_STATUS_IS_EACCES(err->apr_err))
-    return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
+  if (pristine_stream)
+    {
+      SVN_ERR(svn_stream_contents_same2(&same, pristine_stream, v_stream,
+                                        scratch_pool));
+    }
   else
-    SVN_ERR(err);
+    {
+      svn_checksum_t *v_checksum;
 
-  *modified_p = (! svn_checksum_match(v_checksum, pristine_checksum));
+      SVN_ERR(svn_stream_contents_checksum(&v_checksum, v_stream,
+                                           pristine_checksum->kind,
+                                           scratch_pool,
+                                           scratch_pool));
+      same = svn_checksum_match(v_checksum, pristine_checksum);
+    }
 
+  *modified_p = !same;
   return SVN_NO_ERROR;
 }
 
@@ -279,6 +318,9 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
   svn_boolean_t has_props;
   svn_boolean_t props_mod;
   const svn_io_dirent2_t *dirent;
+  svn_stream_t *pristine_stream;
+  svn_filesize_t pristine_size;
+  svn_error_t *err;
 
   /* Read the relevant info */
   SVN_ERR(svn_wc__db_read_info(&status, &kind, NULL, NULL, NULL, NULL, NULL,
@@ -358,12 +400,23 @@ svn_wc__internal_file_modified_p(svn_boolean_t *modified_p,
     }
 
  compare_them:
-  /* Check all bytes, and verify checksum if requested. */
-  SVN_ERR(compare_and_verify(modified_p, db,
-                             local_abspath, dirent->filesize,
-                             checksum, has_props, props_mod,
-                             exact_comparison,
-                             scratch_pool));
+  SVN_ERR(svn_wc__db_pristine_read(&pristine_stream, &pristine_size,
+                                   db, local_abspath, checksum,
+                                   scratch_pool, scratch_pool));
+
+  err = compare_and_verify(modified_p, db,
+                           local_abspath, dirent->filesize,
+                           pristine_stream, pristine_size,
+                           checksum, has_props, props_mod,
+                           exact_comparison,
+                           scratch_pool);
+
+  /* At this point we already opened the pristine file, so we know that
+     the access denied applies to the working copy path. */
+  if (err && APR_STATUS_IS_EACCES(err->apr_err))
+    return svn_error_create(SVN_ERR_WC_PATH_ACCESS_DENIED, err, NULL);
+  else
+    SVN_ERR(err);
 
   if (!*modified_p)
     {
