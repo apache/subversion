@@ -24,15 +24,6 @@ Candidate changes:
      +0: hartmannathan (cannot test; Windows testers needed please)
      +1: jun66j5
 
- * r1931266
-   In Python 3, hashlib input data must be byte strings, not Unicode.
-   Justification:
-     Allow testing with davautocheck with SSL
-   Votes:
-     +0: hartmannathan
-     +1 (not binding): brane
-     +1: jun66j5
-
  * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
    Justification:
@@ -48,3 +39,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1931266
+   In Python 3, hashlib input data must be byte strings, not Unicode.
+   Justification:
+     Allow testing with davautocheck with SSL
+   Votes:
+     +0: hartmannathan
+     +1: jun66j5, brane, dsahlberg
