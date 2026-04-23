@@ -39,13 +39,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1932585
-   GitHub Actions: Adapt to apache-serf package separated from subversion
-   package on homebrew on Feb 19, 2026.
-   Justification:
-     Fix a broken build with macOS on GitHub Actions.
-   Votes:
-     +1: jun66j5
-     +0: dsahlberg (looks good and only affects GHA)
-

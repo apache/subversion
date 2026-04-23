@@ -140,19 +140,13 @@ jobs:
 
       - name: Install dependencies (Mac OS, homebrew)
         if: runner.os == 'macOS'
-        # Subversion is being installed here only to get the Serf library,
-        # since there is no separate package.
         run: |
-          brew install apr apr-util expat sqlite ninja subversion
-          $brew_prefix = "$(& brew --prefix)"
-          ls -r "$brew_prefix/opt/subversion/libexec/serf"
-          $PKG_CONFIG_PATH = @(
-            "$brew_prefix/opt/apr/lib/pkgconfig",
-            "$brew_prefix/opt/apr-util/lib/pkgconfig",
-            "$brew_prefix/opt/expat/lib/pkgconfig",
-            "$brew_prefix/opt/sqlite/lib/pkgconfig",
-            "$brew_prefix/opt/subversion/libexec/serf/lib/pkgconfig") `
-            -Join ":"
+          $packages = @('apr', 'apr-util', 'expat', 'sqlite', 'apache-serf')
+          brew install ninja $packages
+          $PKG_CONFIG_PATH = `
+            $packages | `
+            % { "$(& brew --prefix $_)/lib/pkgconfig" } | `
+            Join-String -Separator ':'
           "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"  >> $env:GITHUB_ENV
 
       - name: Use LF for Git checkout
