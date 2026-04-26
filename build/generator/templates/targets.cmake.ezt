@@ -59,6 +59,9 @@ if ([targets.enable_condition])[is targets.type "swig"]
   add_executable([targets.name][for targets.sources]
     [targets.sources][end]
   )
+  if (WIN32)
+    target_sources([targets.name] PRIVATE build/win32/compatibility.manifest)
+  endif()
   [end][is targets.type "test"]
   add_executable([targets.name][for targets.sources]
     [targets.sources][end]

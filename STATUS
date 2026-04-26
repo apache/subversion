@@ -39,13 +39,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
-* r1933257
-  Add Windows manifest with compatibility information to executable
-  files.
-  Justification:
-    Subversion is compatible with the latest (at the time of writing)
-    Windows versions so let's report this to the OS.
-  Votes:
-    +1: dsahlberg, ivan, jun66j5
-
