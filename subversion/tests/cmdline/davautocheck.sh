@@ -337,7 +337,7 @@ fi
 # Stop any previous instances, os we can re-use the port.
 if [ -x $STOPSCRIPT ]; then $STOPSCRIPT ; sleep 1; fi
 
-ss > /dev/null 2>&1 || netstat > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
+ss -n > /dev/null 2>&1 || netstat -n > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
 
 HTTPD_PORT=3691
 while \

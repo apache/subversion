@@ -39,11 +39,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1933475
-   Avoid DNS reverse name lookups during test configuration.
-   Justification:
-     Reverse lookups can cause long delays or even block.
-   Votes:
-     +1: brane, dsahlberg
-
