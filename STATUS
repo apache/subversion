@@ -55,11 +55,11 @@ Candidate changes:
    Remove a potentially data-truncating typecast in our adler32 implementation.
    Justification:
      Do not silently compute the wrong checksum.
+   Branch:
+     1.14.x-r1931334
    Notes:
      Triggering this bug was not likely, but still possible. In addition, we
      now use adler32_z() when available, which may be slightly more efficient.
-   Branch:
-     ^/subversion/branches/1.14.x-r1931334
    Votes:
      +1: brane
 
@@ -68,11 +68,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1933475
-   Avoid DNS reverse name lookups during test configuration.
-   Justification:
-     Reverse lookups can cause long delays or even block.
-   Votes:
-     +1: brane, dsahlberg
-
