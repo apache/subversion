@@ -34,6 +34,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1931400
+   Silence 'unused function' compilation warning.
+   Justification:
+     Debugging code should only be compiled with --enable-debug.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
