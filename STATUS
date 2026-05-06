@@ -64,6 +64,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1933877
+   Silence all deprecation warnings from the org.tigris JavaHL package.
+   Justification:
+     Unnecessary warnings hide actual problems.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
