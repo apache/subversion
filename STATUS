@@ -57,6 +57,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1933874
+   Silence the dangling-doc-comment warnings in JavaHL.
+   Justification:
+     Unnecessary warnings hide actual problems.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
