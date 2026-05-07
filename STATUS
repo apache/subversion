@@ -89,6 +89,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1933637
+   Fix building Python bindings with CMake.
+   Justification:
+     Build should not fail.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
