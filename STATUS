@@ -96,6 +96,13 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1933386, r1933394, r1933404
+   Corectness fixes in svn_subr__win32_xlate_to_stringbuf().
+   Justification:
+     Fix potential integer overflow.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
