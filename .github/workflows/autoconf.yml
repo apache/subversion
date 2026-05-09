@@ -82,7 +82,7 @@ jobs:
           ./configure --prefix=$HOME/root/httpd --enable-mpms-shared=event --enable-mods-shared=most --enable-dav
           make -j
           make install
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: autogen
         run: ./autogen.sh

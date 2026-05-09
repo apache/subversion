@@ -42,27 +42,27 @@ jobs:
       matrix:
         include:
           - name: Windows, shared, x64, with tests
-            os: windows-latest
+            os: windows-2022
             build_shared: ON
             cmake_generator: Ninja
             vcpkg_triplet: x64-windows
             arch: x64
             run_tests: true
           - name: Windows, shared, x64, vs2022, with tests
-            os: windows-latest
+            os: windows-2022
             build_shared: ON
             cmake_generator: 'Visual Studio 17 2022'
             vcpkg_triplet: x64-windows
             arch: x64
             run_tests: true
           - name: Windows, shared, x86
-            os: windows-latest
+            os: windows-2022
             build_shared: ON
             cmake_generator: Ninja
             vcpkg_triplet: x86-windows
             arch: x86
           - name: Windows, static, x64, with tests
-            os: windows-latest
+            os: windows-2022
             build_shared: OFF
             cmake_generator: Ninja
             vcpkg_triplet: x64-windows-static-md
@@ -100,8 +100,8 @@ jobs:
       - name: Prepare Environment (Windows)
         if: runner.os == 'Windows'
         run: |
-          $root = "C:\Program Files\Microsoft Visual Studio\2022\Enterprise"
-          Import-Module "$root\Common7\Tools\Microsoft.VisualStudio.DevShell.dll"
+          $root = &(Join-Path ${env:ProgramFiles(x86)} "\Microsoft Visual Studio\Installer\vswhere.exe") -property installationpath -latest
+          Import-Module (Join-Path $root "Common7\Tools\Microsoft.VisualStudio.DevShell.dll")
           Enter-VsDevShell -VsInstallPath $root -DevCmdArguments "-arch=${{ matrix.arch }}"
 
           ls env: | foreach { "$($_.Name)=$($_.Value)" >> $env:GITHUB_ENV }
@@ -154,7 +154,7 @@ jobs:
           git config --global core.autocrlf false
           git config --global core.eol lf
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - name: gen-make
         run: python ./gen-make.py -t cmake
