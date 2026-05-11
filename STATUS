@@ -39,7 +39,7 @@ Candidate changes:
    Justification:
      Debugging code should only be compiled with --enable-debug.
    Votes:
-     +1: brane
+     +1: brane, ivan
 
  * r1932863, r1933181
    Update some readme files
