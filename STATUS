@@ -110,6 +110,13 @@ Candidate changes:
      +1: hartmannathan (without r1934266 and r1934276)
      +1: dsahlberg
 
+ * r1934313
+   Include 1.15-specific APIs in JavaHL.
+   Justification:
+     We should try to keep our bindings up to date.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
