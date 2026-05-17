@@ -34,13 +34,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1931400
-   Silence 'unused function' compilation warning.
-   Justification:
-     Debugging code should only be compiled with --enable-debug.
-   Votes:
-     +1: brane, ivan
-
  * r1932863, r1933181
    Update some readme files
    Justification:
@@ -115,10 +108,17 @@ Candidate changes:
    Justification:
      We should try to keep our bindings up to date.
    Votes:
-     +1: brane
+     +1: brane, dsahlberg
 
 Veto-blocked changes:
 =====================
 
 Approved changes:
 =================
+
+ * r1931400
+   Silence 'unused function' compilation warning.
+   Justification:
+     Debugging code should only be compiled with --enable-debug.
+   Votes:
+     +1: brane, ivan, dsahlberg
