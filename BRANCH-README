@@ -1,7 +1,11 @@
+====================================================================
+=  This branch was merged and is CLOSED for further development.   =
+====================================================================
+
 1.15.0 JavaHL Updates
 =====================
 
-This is a temporary working branch to update JavaHL for 1.15.0.
+This was a temporary working branch to update JavaHL for 1.15.0.
 
 DONE:
   * Update use of deprecated Subversion APIs:
