@@ -49,13 +49,14 @@ Candidate changes:
      version 9, unless we're actually building with JDK 1.8.
    Votes:
      +1: brane
+     +0(concept): dsahlberg, LGTM have not tested under JDK 1.8
 
  * r1933874
    Silence the dangling-doc-comment warnings in JavaHL.
    Justification:
      Unnecessary warnings hide actual problems.
    Votes:
-     +1: brane
+     +1: brane, dsahlberg
 
  * r1933877
    Silence all deprecation warnings from the org.tigris JavaHL package.
@@ -64,7 +65,7 @@ Candidate changes:
    Depends:
      r1933796
    Votes:
-     +1: brane
+     +1: brane, dsahlberg
 
  * r1933892
    Make the JavaHL JAR an automatic module.
@@ -79,7 +80,7 @@ Candidate changes:
    Depends:
      r1933877, r1933796
    Votes:
-     +1: brane
+     +1: brane, dsahlberg
 
  * r1933637
    Fix building Python bindings with CMake.
