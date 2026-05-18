@@ -42,6 +42,7 @@ Candidate changes:
    Votes:
      +1: brane
      +0(concept): dsahlberg, LGTM have not tested under JDK 1.8
+     -1: jcorvel (some questions left on dev@)
 
  * r1933877
    Silence all deprecation warnings from the org.tigris JavaHL package.
