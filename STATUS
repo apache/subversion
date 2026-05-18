@@ -101,8 +101,7 @@ Candidate changes:
    Justification:
      Improve build documentation
    Votes:
-     +1: hartmannathan (without r1934266 and r1934276)
-     +1: dsahlberg
+     +1: dsahlberg, hartmannathan
 
  * r1934313
    Include 1.15-specific APIs in JavaHL.
