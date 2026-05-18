@@ -34,40 +34,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1933796
-   Silence JavaHL compiler warnings about missing bootstrap classpath.
-   Justification:
-     We should use the cross-compilation option supported by every JDK since
-     version 9, unless we're actually building with JDK 1.8.
-   Votes:
-     +1: brane
-     +0(concept): dsahlberg, LGTM have not tested under JDK 1.8
-     -1: jcorvel (some questions left on dev@)
-
- * r1933877
-   Silence all deprecation warnings from the org.tigris JavaHL package.
-   Justification:
-     Unnecessary warnings hide actual problems.
-   Depends:
-     r1933796
-   Votes:
-     +1: brane, dsahlberg
-
- * r1933892
-   Make the JavaHL JAR an automatic module.
-   Justification:
-     Provides fine-grained control of access to restricted methods. The
-     alternative requires granting access to all "unnamed" modules.
-   Notes:
-     Although this change does not affect backwards compatibility of JavaHL,
-     it is my opinion that it really should go into a minor release. So we
-     should either backport to 1.15.0 or wait for 1.16.0.
-     Tested with JDK 1.8, JDK 11 and JDK 25 on ARM64 macOS.
-   Depends:
-     r1933877, r1933796
-   Votes:
-     +1: brane, dsahlberg
-
  * r1933637
    Fix building Python bindings with CMake.
    Justification:
@@ -114,5 +80,38 @@ Approved changes:
    Silence the dangling-doc-comment warnings in JavaHL.
    Justification:
      Unnecessary warnings hide actual problems.
+   Votes:
+     +1: brane, dsahlberg, jcorvel
+
+ * r1933796
+   Silence JavaHL compiler warnings about missing bootstrap classpath.
+   Justification:
+     We should use the cross-compilation option supported by every JDK since
+     version 9, unless we're actually building with JDK 1.8.
+   Votes:
+     +1: brane, jcorvel
+     +0(concept): dsahlberg, LGTM have not tested under JDK 1.8
+
+ * r1933877
+   Silence all deprecation warnings from the org.tigris JavaHL package.
+   Justification:
+     Unnecessary warnings hide actual problems.
+   Depends:
+     r1933796
+   Votes:
+     +1: brane, dsahlberg, jcorvel
+
+ * r1933892
+   Make the JavaHL JAR an automatic module.
+   Justification:
+     Provides fine-grained control of access to restricted methods. The
+     alternative requires granting access to all "unnamed" modules.
+   Notes:
+     Although this change does not affect backwards compatibility of JavaHL,
+     it is my opinion that it really should go into a minor release. So we
+     should either backport to 1.15.0 or wait for 1.16.0.
+     Tested with JDK 1.8, JDK 11 and JDK 25 on ARM64 macOS.
+   Depends:
+     r1933877, r1933796
    Votes:
      +1: brane, dsahlberg, jcorvel
