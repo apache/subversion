@@ -62,7 +62,8 @@ Candidate changes:
    Silence all deprecation warnings from the org.tigris JavaHL package.
    Justification:
      Unnecessary warnings hide actual problems.
-   Depends: 
+   Depends:
+     r1933796
    Votes:
      +1: brane, dsahlberg
 
@@ -71,12 +72,13 @@ Candidate changes:
    Justification:
      Provides fine-grained control of access to restricted methods. The
      alternative requires granting access to all "unnamed" modules.
-   Depends: 
    Notes:
      Although this change does not affect backwards compatibility of JavaHL,
      it is my opinion that it really should go into a minor release. So we
      should either backport to 1.15.0 or wait for 1.16.0.
      Tested with JDK 1.8, JDK 11 and JDK 25 on ARM64 macOS.
+   Depends:
+     r1933877, r1933796
    Votes:
      +1: brane, dsahlberg
 
