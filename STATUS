@@ -43,13 +43,6 @@ Candidate changes:
      +1: brane
      +0(concept): dsahlberg, LGTM have not tested under JDK 1.8
 
- * r1933874
-   Silence the dangling-doc-comment warnings in JavaHL.
-   Justification:
-     Unnecessary warnings hide actual problems.
-   Votes:
-     +1: brane, dsahlberg
-
  * r1933877
    Silence all deprecation warnings from the org.tigris JavaHL package.
    Justification:
@@ -115,3 +108,10 @@ Approved changes:
      the time of release. IRC is no longer an official channel.
    Votes:
      +1: dsahlberg, jcorvel
+
+ * r1933874
+   Silence the dangling-doc-comment warnings in JavaHL.
+   Justification:
+     Unnecessary warnings hide actual problems.
+   Votes:
+     +1: brane, dsahlberg, jcorvel
