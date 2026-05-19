@@ -15,15 +15,6 @@ Status of 1.15.0:
 Candidate changes:
 ==================
 
- * r1930973, r1934367
-   Fix test failures of JavaHL with Java 25 on Windows due to that deleting a
-   file with readonly flag on Windows fails since Java 25.
-   Justification:
-     Allow JavaHL test to succeed on Windows since Java 25
-   Votes:
-     +0: hartmannathan (without r1934367; cannot test; Windows testers needed please)
-     +1: jun66j5
-
  * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
    Justification:
@@ -67,6 +58,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1930973, r1934367
+   Fix test failures of JavaHL with Java 25 on Windows due to that deleting a
+   file with readonly flag on Windows fails since Java 25.
+   Justification:
+     Allow JavaHL test to succeed on Windows since Java 25
+   Votes:
+     +0: hartmannathan (without r1934367; cannot test; Windows testers needed please)
+     +0: jcorvel (can't test atm, but LGTM)
+     +1: jun66j5
 
  * r1932863, r1933181
    Update some readme files
