@@ -22,50 +22,60 @@
 package org.apache.subversion.javahl.types;
 
 /**
- * Encapsulates the run-time version of the
- * <code>libsvn_clinent</code> library that was loaded by the current
- * process. The result may be different from that provided by {@link
- * Version}, because the latter returns compile-time, not run-time
- * information.
+ * A package-level derivation of Version that can hold arbitrary
+ * version numbers used by {@link Version::getInstance}.
+ * @since 1.15
  */
-public class RuntimeVersion extends Version
+class VersionNumber extends Version
 {
+    VersionNumber(int major, int minor, int patch)
+    {
+        this.major = major;
+        this.minor = minor;
+        this.patch = patch;
+    }
+
     /**
-     * @return The full version string for the loaded library,
-     * as defined by <code>MAJOR.MINOR.PATCH-NUMTAG</code>.
+     * @return The version string <code>MAJOR.MINOR.PATCH</code>.
      */
+    @Override
     public String toString()
     {
         StringBuffer version = new StringBuffer();
         version.append(getMajor())
             .append('.').append(getMinor())
-            .append('.').append(getPatch())
-            .append(getNumberTag());
+            .append('.').append(getPatch());
         return version.toString();
     }
 
     /**
-     * @return The major version number for the loaded JavaHL library.
+     * @return The major version number..
      */
     @Override
-    public native int getMajor();
+    public int getMajor()
+    {
+        return major;
+    }
 
     /**
-     * @return The minor version number for the loaded JavaHL library.
+     * @return The minor version number..
      */
     @Override
-    public native int getMinor();
+    public int getMinor()
+    {
+        return minor;
+    }
 
     /**
-     * @return The patch-level version number for the loaded JavaHL
-     * library.
+     * @return The patch-level version number.
      */
     @Override
-    public native int getPatch();
+    public int getPatch()
+    {
+        return patch;
+    }
 
-    /**
-     * @return Some text further describing the library version
-     * (e.g. "-r1234", "-alpha1", "-dev", etc.).
-     */
-    private native String getNumberTag();
+    private final int major;
+    private final int minor;
+    private final int patch;
 }

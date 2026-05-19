@@ -46,12 +46,18 @@ class DiffOptions
     return (flags & USE_GIT_DIFF_FORMAT ? TRUE : FALSE);
   }
 
+  svn_boolean_t formatMergeinfo() const
+  {
+    return (flags & FORMAT_MERGEINFO ? TRUE : FALSE);
+  }
+
  private:
   static const jint IGNORE_ALL_SPACE    = 0x01;
   static const jint IGNORE_SPACE_CHANGE = 0x02;
   static const jint IGNORE_EOL_STYLE    = 0x04;
   static const jint SHOW_C_FUNCTION     = 0x08;
   static const jint USE_GIT_DIFF_FORMAT = 0x10;
+  static const jint FORMAT_MERGEINFO    = 0x20;
 
   const jint flags;
 };

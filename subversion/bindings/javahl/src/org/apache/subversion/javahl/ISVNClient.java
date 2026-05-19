@@ -244,7 +244,23 @@ public interface ISVNClient
      * @param depth how deep to checkout files recursively.
      * @param ignoreExternals if externals are ignored during checkout
      * @param allowUnverObstructions allow unversioned paths that obstruct adds
+     * @param wcFormatVersion desired WC compatibiliy version or NULL default
+     * @param storePristines whether to store pristine files
      * @throws ClientException
+     * @since 1.15
+     */
+    long checkout(String moduleName, String destPath, Revision revision,
+                  Revision pegRevision, Depth depth,
+                  boolean ignoreExternals,
+                  boolean allowUnverObstructions,
+                  Version wcFormatVersion,
+                  Tristate storePristines) throws ClientException;
+
+    /**
+     * Executes a revision checkout.
+     * <p>
+     * Behaves like the 1.15 version with <code>wcFormatVersion = null</code>
+     * and <code>storePristines = Tristate.Unknown</code>
      */
     long checkout(String moduleName, String destPath, Revision revision,
                   Revision pegRevision, Depth depth,
@@ -298,7 +314,22 @@ public interface ISVNClient
      *                         from the reverted paths.
      * @param metadataOnly Revert just the metadata (including conflict data)
      *                     and not the working files/dirs
+     * @param addedKeepLocal With metadataOnly, keep locally added files.
      * @throws ClientException
+     * @since 1.15
+     */
+    void revert(Set<String> paths, Depth depth,
+                Collection<String> changelists,
+                boolean clearChangelists,
+                boolean metadataOnly,
+                boolean addedKeepLocal)
+            throws ClientException;
+
+    /**
+     * Reverts set of files or directories to a pristine state.
+     * <p>
+     * Behaves like the 1.15 version with <code>addedKeepLocal</code>
+     * set to <code>true</code>;
      * @since 1.9
      */
     void revert(Set<String> paths, Depth depth,
@@ -920,6 +951,7 @@ public interface ISVNClient
      * @param revision2     second revision
      * @param relativeToDir index path is relative to this path
      * @param outStream     the stream to which difference are written
+     * @param errStream     the stream to which error messages are written
      * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
@@ -929,6 +961,23 @@ public interface ISVNClient
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
      * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.15
+     * @see svn_client_diff7
+     */
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir,
+              OutputStream outStream, OutputStream errStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * <p>
+     * Behaves exactly like the 1.15 version except that it discards stderr.
      * @throws ClientException
      * @since 1.8
      */
@@ -948,6 +997,7 @@ public interface ISVNClient
      * @param revision2     second revision
      * @param relativeToDir index path is relative to this path
      * @param outFileName   file name where difference are written
+     * @param errFileName   file name where error messages are written
      * @param depth         how deep to traverse into subdirectories
      * @param ignoreAncestry ignore if files are not related
      * @param noDiffDeleted no output on deleted files
@@ -957,6 +1007,23 @@ public interface ISVNClient
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
      * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.15
+     * @see svn_client_diff7
+     */
+    void diff(String target1, Revision revision1, String target2,
+              Revision revision2, String relativeToDir,
+              String outFileName, String errFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * <p>
+     * Behaves exactly like the 1.15 version except that it discards stderr.
      * @throws ClientException
      * @since 1.8
      */
@@ -1026,6 +1093,7 @@ public interface ISVNClient
      * @param endRevision   second Revision to compare
      * @param relativeToDir index path is relative to this path
      * @param outStream     the stream to which difference are written
+     * @param errStream     the stream to which error messages are written
      * @param depth         how deep to traverse into subdirectories
      * @param changelists  if non-null, filter paths using changelists
      * @param ignoreAncestry ignore if files are not related
@@ -1036,6 +1104,23 @@ public interface ISVNClient
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
      * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.15
+     * @see svn_client_diff_peg7
+     */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir,
+              OutputStream outStream, OutputStream errStream,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * <p>
+     * Behaves exactly like the 1.15 version except that it discards stderr.
      * @throws ClientException
      * @since 1.8
      */
@@ -1055,6 +1140,7 @@ public interface ISVNClient
      * @param endRevision   second Revision to compare
      * @param relativeToDir index path is relative to this path
      * @param outFileName   file name where difference are written
+     * @param errFileName   file name where error messages are written
      * @param depth         how deep to traverse into subdirectories
      * @param changelists  if non-null, filter paths using changelists
      * @param ignoreAncestry ignore if files are not related
@@ -1065,6 +1151,23 @@ public interface ISVNClient
      * @param ignoreProps   don't show property diffs
      * @param propsOnly     show property changes only
      * @param options       additional options for controlling the output
+     * @throws ClientException
+     * @since 1.15
+     * @see svn_client_diff_peg7
+     */
+    void diff(String target, Revision pegRevision, Revision startRevision,
+              Revision endRevision, String relativeToDir,
+              String outFileName, String errFileName,
+              Depth depth, Collection<String> changelists,
+              boolean ignoreAncestry, boolean noDiffDeleted, boolean force,
+              boolean copiesAsAdds, boolean ignoreProps, boolean propsOnly,
+              DiffOptions options)
+            throws ClientException;
+
+    /**
+     * Display the differences between two paths
+     * <p>
+     * Behaves exactly like the 1.15 version except that it discards stderr.
      * @throws ClientException
      * @since 1.8
      */
@@ -1602,11 +1705,21 @@ public interface ISVNClient
 
     /**
      * Recursively upgrade a working copy to a new metadata storage format.
-     * @param path                  path of the working copy
+     * @param path             the working copy path
+     * @param targetWcVersion  the working copy version to upgrade to
      * @throws ClientException
+     * @since 1.15
      */
-    void upgrade(String path)
+    Version upgrade(String path, Version targetWcVersion)
             throws ClientException;
+
+    /**
+     * Recursively upgrade a working copy to a new metadata storage format.
+     * <p>
+     * Behaves like the 1.15 version with <code>targetWcVersion = null</code>.
+     */
+    void upgrade(String path) throws ClientException;
+
 
     /**
      * Apply a unidiff patch.
@@ -1655,6 +1768,8 @@ public interface ISVNClient
                 boolean removeUnusedPristines,
                 boolean includeExternals)
             throws ClientException;
+
+    Version defaultWcVersion() throws ClientException;
 
     /**
      * Open a persistent session to a repository.

@@ -60,6 +60,7 @@
 #include "DiffOptions.h"
 #include "CreateJ.h"
 #include "JNIStringHolder.h"
+#include "Version.hpp"
 
 #include "svn_auth.h"
 #include "svn_dso.h"
@@ -302,7 +303,9 @@ void SVNClient::logMessages(const char *path, Revision &pegRevision,
 jlong SVNClient::checkout(const char *moduleName, const char *destPath,
                           Revision &revision, Revision &pegRevision,
                           svn_depth_t depth, bool ignoreExternals,
-                          bool allowUnverObstructions)
+                          bool allowUnverObstructions,
+                          const svn_version_t *wcFormatVersion,
+                          svn_tristate_t storePristines)
 {
     SVN::Pool subPool;
 
@@ -319,13 +322,15 @@ jlong SVNClient::checkout(const char *moduleName, const char *destPath,
     if (ctx == NULL)
         return -1;
 
-    SVN_JNI_ERR(svn_client_checkout3(&rev, url.c_str(),
+    SVN_JNI_ERR(svn_client_checkout4(&rev, url.c_str(),
                                      path.c_str(),
                                      pegRevision.revision(),
                                      revision.revision(),
                                      depth,
                                      ignoreExternals,
                                      allowUnverObstructions,
+                                     wcFormatVersion,
+                                     storePristines,
                                      ctx,
                                      subPool.getPool()),
                 -1);
@@ -354,7 +359,8 @@ void SVNClient::remove(Targets &targets, CommitMessage *message, bool force,
 void SVNClient::revert(StringArray &paths, svn_depth_t depth,
                        StringArray &changelists,
                        bool clear_changelists,
-                       bool metadata_only)
+                       bool metadata_only,
+                       bool added_keep_local)
 {
     SVN::Pool subPool(pool);
 
@@ -364,10 +370,11 @@ void SVNClient::revert(StringArray &paths, svn_depth_t depth,
 
     Targets targets(paths, subPool);
     SVN_JNI_ERR(targets.error_occurred(), );
-    SVN_JNI_ERR(svn_client_revert3(targets.array(subPool), depth,
+    SVN_JNI_ERR(svn_client_revert4(targets.array(subPool), depth,
                                    changelists.array(subPool),
                                    clear_changelists,
                                    metadata_only,
+                                   added_keep_local,
                                    ctx, subPool.getPool()), );
 }
 
@@ -1010,8 +1017,8 @@ void SVNClient::propertySetRemote(const char *path, long base_rev,
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
                      Revision *pegRevision, const char *relativeToDir,
-                     OutputStream &outputStream, svn_depth_t depth,
-                     StringArray &changelists,
+                     OutputStream &outputStream, OutputStream &errorStream,
+                     svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
                      bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
                      DiffOptions const& options)
@@ -1038,7 +1045,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
     if (pegRevision)
     {
-        SVN_JNI_ERR(svn_client_diff_peg6(diffOptions,
+        SVN_JNI_ERR(svn_client_diff_peg7(diffOptions,
                                    path1.c_str(),
                                    pegRevision->revision(),
                                    revision1.revision(),
@@ -1053,10 +1060,10 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                    ignoreProps,
                                    propsOnly,
                                    options.useGitDiffFormat(),
+                                   options.formatMergeinfo(),
                                    SVN_APR_LOCALE_CHARSET,
                                    outputStream.getStream(subPool),
-                                   // Discard stderr; TODO: Update JavaHL API
-                                   svn_stream_empty(subPool.getPool()),
+                                   errorStream.getStream(subPool),
                                    changelists.array(subPool),
                                    ctx,
                                    subPool.getPool()),
@@ -1068,7 +1075,7 @@ void SVNClient::diff(const char *target1, Revision &revision1,
         Path path2(target2, subPool);
         SVN_JNI_ERR(path2.error_occurred(), );
 
-        SVN_JNI_ERR(svn_client_diff6(diffOptions,
+        SVN_JNI_ERR(svn_client_diff7(diffOptions,
                                path1.c_str(),
                                revision1.revision(),
                                path2.c_str(),
@@ -1083,10 +1090,10 @@ void SVNClient::diff(const char *target1, Revision &revision1,
                                ignoreProps,
                                propsOnly,
                                options.useGitDiffFormat(),
+                               options.formatMergeinfo(),
                                SVN_APR_LOCALE_CHARSET,
                                outputStream.getStream(subPool),
-                               // Discard stderr; TODO: Update JavaHL API
-                               svn_stream_empty(subPool.getPool()),
+                               errorStream.getStream(subPool),
                                changelists.array(subPool),
                                ctx,
                                subPool.getPool()),
@@ -1096,27 +1103,30 @@ void SVNClient::diff(const char *target1, Revision &revision1,
 
 void SVNClient::diff(const char *target1, Revision &revision1,
                      const char *target2, Revision &revision2,
-                     const char *relativeToDir, OutputStream &outputStream,
+                     const char *relativeToDir,
+                     OutputStream &outputStream, OutputStream &errorStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
                      bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
                      DiffOptions const& options)
 {
     diff(target1, revision1, target2, revision2, NULL, relativeToDir,
-         outputStream, depth, changelists, ignoreAncestry, noDiffDelete, force,
-         showCopiesAsAdds, ignoreProps, propsOnly, options);
+         outputStream, errorStream, depth, changelists, ignoreAncestry,
+         noDiffDelete, force, showCopiesAsAdds, ignoreProps, propsOnly,
+         options);
 }
 
 void SVNClient::diff(const char *target, Revision &pegRevision,
                      Revision &startRevision, Revision &endRevision,
-                     const char *relativeToDir, OutputStream &outputStream,
+                     const char *relativeToDir,
+                     OutputStream &outputStream, OutputStream &errorStream,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, bool noDiffDelete, bool force,
                      bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
                      DiffOptions const& options)
 {
     diff(target, startRevision, NULL, endRevision, &pegRevision,
-         relativeToDir, outputStream, depth, changelists,
+         relativeToDir, outputStream, errorStream, depth, changelists,
          ignoreAncestry, noDiffDelete, force, showCopiesAsAdds,
          ignoreProps, propsOnly, options);
 }
@@ -1465,19 +1475,27 @@ jstring SVNClient::getVersionInfo(const char *path, const char *trailUrl,
     return JNIUtil::makeJString(value.str().c_str());
 }
 
-void SVNClient::upgrade(const char *path)
+jobject SVNClient::upgrade(::Java::Env env, const char *path,
+                           const svn_version_t *targetWcVersion)
 {
     SVN::Pool subPool(pool);
-    SVN_JNI_NULL_PTR_EX(path, "path", );
+    SVN_JNI_NULL_PTR_EX(path, "path", NULL);
 
     svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
     if (ctx == NULL)
-        return;
+        return NULL;
 
     Path checkedPath(path, subPool);
-    SVN_JNI_ERR(checkedPath.error_occurred(), );
+    SVN_JNI_ERR(checkedPath.error_occurred(), NULL);
 
-    SVN_JNI_ERR(svn_client_upgrade(path, ctx, subPool.getPool()), );
+    apr_pool_t *pool = subPool.getPool();
+    const svn_version_t *wc_version = NULL;
+    SVN_JNI_ERR(svn_client_upgrade2(&wc_version, path, targetWcVersion,
+                                    ctx, pool, pool),
+                NULL);
+    if (wc_version != NULL)
+      return ::JavaHL::Version::getInstance(env, *wc_version);
+    return NULL;
 }
 
 jobject SVNClient::revProperties(const char *path, Revision &revision)
@@ -1584,6 +1602,21 @@ void SVNClient::vacuum(const char *path,
                                   remove_unused_pristines,
                                   include_externals,
                                   ctx, subPool.getPool()), );
+}
+
+jobject SVNClient::defaultWcVersion(::Java::Env env)
+{
+    SVN::Pool subPool(pool);
+    svn_client_ctx_t *ctx = context.getContext(NULL, subPool);
+    if (ctx == NULL)
+        return NULL;
+
+    apr_pool_t *pool = subPool.getPool();
+    const svn_version_t *version = NULL;
+    SVN_JNI_ERR(svn_client_default_wc_version(&version, ctx,
+                                              pool, pool),
+                NULL);
+    return JavaHL::Version::getInstance(env, *version);
 }
 
 jobject

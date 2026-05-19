@@ -676,12 +676,15 @@ class SVNTests extends TestCase
          * and initialize the expected working copy layout.
          * @param loadRepos Whether to load the sample repository, or
          * leave it with no initial revisions
+         * @param oldestVersion whether to create the working copy
+         * at the oldest instead of the default supported version.
          * @throws SubversionException If there is a problem
          * creating or loading the repository.
          * @throws IOException If there is a problem finding the
          * dump file.
          */
-        protected OneTest(boolean createWC, boolean loadRepos)
+        protected OneTest(boolean createWC, boolean loadRepos,
+                          boolean oldestVersion)
             throws SubversionException, IOException
         {
             this.testName = testBaseName + ++testCounter;
@@ -691,8 +694,27 @@ class SVNTests extends TestCase
 
             if (createWC)
             {
-                workingCopy = createInitialWorkingCopy(repository);
+                workingCopy = createInitialWorkingCopy(repository,
+                                                       oldestVersion);
             }
+        }
+
+        /**
+         * Build a new test setup with a new repository.  Create a
+         * corresponding working copy and expected working copy
+         * layout.
+         *
+         * @param createWC Whether to create the working copy on disk,
+         * and initialize the expected working copy layout.
+         * @param loadRepos Whether to load the sample repository, or
+         * leave it with no initial revisions
+         *
+         * @see #OneTest
+         */
+        protected OneTest(boolean createWC, boolean loadRepos)
+            throws SubversionException, IOException
+        {
+            this(createWC, loadRepos, false);
         }
 
         /**
@@ -708,7 +730,7 @@ class SVNTests extends TestCase
         protected OneTest(boolean createWC)
             throws SubversionException, IOException
         {
-            this(createWC,true);
+            this(createWC, true);
         }
         /**
          * Build a new test setup with a new repository.  Create a
@@ -750,7 +772,7 @@ class SVNTests extends TestCase
             repository = orig.getRepository();
             url = orig.getUrl();
             wc = orig.wc.copy();
-            workingCopy = createInitialWorkingCopy(repository);
+            workingCopy = createInitialWorkingCopy(repository, false);
         }
 
         /**
@@ -865,11 +887,12 @@ class SVNTests extends TestCase
          * Create the working copy for the beginning of the test.
          * Assumes that {@link #testName} has been set.
          *
-         * @param repos     the repository directory
+         * @param repos          the repository directory
+         * @param oldestVersion  create an oldest supported WC
          * @return the directory of the working copy
          * @throws Exception
          */
-        protected File createInitialWorkingCopy(File repos)
+        protected File createInitialWorkingCopy(File repos, boolean oldestVersion)
             throws SubversionException, IOException
         {
             // build a clean working directory
@@ -878,8 +901,11 @@ class SVNTests extends TestCase
             removeDirOrFile(workingCopy);
             trackDir(workingCopy);
             // checkout the repository
+            Version wcVersionFormat = oldestVersion
+                ? SVNClient.oldestWcVersion() : null;
             client.checkout(uri.toString(), workingCopy.getAbsolutePath(),
-                   null, null, Depth.infinity, false, false);
+                            null, null, Depth.infinity, false, false,
+                            wcVersionFormat, Tristate.Unknown);
             // sanity check the working with its expected status
             checkStatus();
             return workingCopy;

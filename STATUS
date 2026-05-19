@@ -51,10 +51,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1934313
-   Include 1.15-specific APIs in JavaHL.
-   Justification:
-     We should try to keep our bindings up to date.
-   Votes:
-     +1: brane, dsahlberg, jcorvel

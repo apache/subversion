@@ -172,15 +172,17 @@ public class ExceptionTests extends SVNTests
         // Test status of non-existent file
         try
         {
-            client.list(thisTest.getWorkingCopy() + "/A", null, null, Depth.immediates,
-                        7, false,
-                        new ListCallback()
-                          {
-                            public void doEntry(DirEntry dirent, Lock lock)
+            client.list(thisTest.getWorkingCopy() + "/A", null, null, null,
+                        Depth.immediates, 7, false, false,
+                        new ListItemCallback()
+                        {
+                            public void doEntry(DirEntry dirent, Lock lock,
+                                                String externalParentURL,
+                                                String externalTarget)
                             {
                                 throw new TestException("inner", theException);
                             }
-                          });
+                        });
         }
         catch (ClientException e)
         {
