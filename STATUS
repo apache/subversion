@@ -52,14 +52,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1933877
-   Silence all deprecation warnings from the org.tigris JavaHL package.
-   Justification:
-     Unnecessary warnings hide actual problems.
-   Depends: 
-   Votes:
-     +1: brane, dsahlberg, jcorvel
-
  * r1933892
    Make the JavaHL JAR an automatic module.
    Justification:

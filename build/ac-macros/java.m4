@@ -178,15 +178,12 @@ AC_DEFUN(SVN_FIND_JDK,
 
       if test "$enable_debugging" = "yes"; then
         JAVAC_FLAGS="-g -Xlint -Xlint:unchecked -Xlint:serial -Xlint:path $JAVAC_FLAGS"
-        if test -z "$JAVAC_COMPAT_FLAGS"; then
-          JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann -Xlint:-rawtypes"
-        fi
       else
         dnl Ignore warnings about deprecated version 8 (from --release 8)
-        JAVAC_FLAGS="-Xlint:options"
-        if test -z "$JAVAC_COMPAT_FLAGS"; then
-          JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS"
-        fi
+        JAVAC_FLAGS="-Xlint:-options $JAVAC_FLAGS"
+      fi
+      if test -z "$JAVAC_COMPAT_FLAGS"; then
+        JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann -Xlint:-rawtypes"
       fi
     fi
 
