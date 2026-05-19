@@ -378,8 +378,6 @@ SWIG_RB_SRC_DIR = $(abs_srcdir)/subversion/bindings/swig/ruby
 JAVAHL_MANIFEST_IN = $(abs_srcdir)/subversion/bindings/javahl/Manifest.in
 JAVAHL_MANIFEST = subversion/bindings/javahl/Manifest
 INSTALL_EXTRA_JAVAHL_JAVA=\
-	sed s/%bundleVersion/$(PACKAGE_VERSION)/ $(JAVAHL_MANIFEST_IN) > $(JAVAHL_MANIFEST); \
-	$(JAR) cfm $(JAVAHL_JAR) $(JAVAHL_MANIFEST) -C subversion/bindings/javahl/classes org; \
 	$(INSTALL_DATA) $(JAVAHL_JAR) $(DESTDIR)$(javahl_javadir);
 
 INSTALL_EXTRA_JAVAHL_LIB=@INSTALL_EXTRA_JAVAHL_LIB@
@@ -524,20 +522,26 @@ clean-javahl:
 	rm -f $(libsvnjavahl_PATH)/*.lo
 	rm -f $(libsvnjavahl_PATH)/*.o
 
-check-tigris-javahl: javahl-compat
-	@FIX_JAVAHL_LIB@
-	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_compat_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" org.tigris.subversion.javahl.RunTests
+JAVAHL_CHECK_FLAGS = @JAVAHL_CHECK_FLAGS@ -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" -classpath "$(JAVAHL_JAR):$(javahl_tests_CLASSPATH)"
 
-check-apache-javahl: javahl
-	@FIX_JAVAHL_LIB@
-	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" org.apache.subversion.javahl.RunTests
+$(JAVAHL_JAR): $(JAVAHL_MANIFEST_IN) $(javahl_callback_java_OBJECTS) $(javahl_compat_java_OBJECTS) $(javahl_compat_tests_OBJECTS) $(javahl_java_OBJECTS) $(javahl_remote_java_OBJECT) $(javahl_tests_OBJECTS) $(javahl_types_java_OBJECTS) $(javahl_util_java_OBJECTS)
+	sed s/%bundleVersion/$(PACKAGE_VERSION)/ $(JAVAHL_MANIFEST_IN) > $(JAVAHL_MANIFEST) && \
+	$(JAR) cfm $(JAVAHL_JAR) $(JAVAHL_MANIFEST) -C subversion/bindings/javahl/classes org
 
-check-deprecated-authn-javahl: javahl
+check-tigris-javahl: javahl-compat $(JAVAHL_JAR)
 	@FIX_JAVAHL_LIB@
 	$(TEST_SHLIB_VAR_JAVAHL) \
-	$(JAVA) -Xcheck:jni "-Dtest.rootdir=$(javahl_test_rootdir)" "-Dtest.srcdir=$(javahl_test_srcdir)" "-Dtest.rooturl=$(BASE_URL)" "-Dtest.fstype=$(FS_TYPE)" "-Djava.library.path=@JAVAHL_OBJDIR@:$(libdir)" -classpath "$(javahl_tests_PATH):$(javahl_tests_CLASSPATH)" "-Dtest.cleanup=$(JAVAHL_CLEANUP)" "-Dtest.tests=$(JAVAHL_TESTS)" "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
+	$(JAVA) $(JAVAHL_CHECK_FLAGS) org.tigris.subversion.javahl.RunTests
+
+check-apache-javahl: javahl $(JAVAHL_JAR)
+	@FIX_JAVAHL_LIB@
+	$(TEST_SHLIB_VAR_JAVAHL) \
+	$(JAVA) $(JAVAHL_CHECK_FLAGS) org.apache.subversion.javahl.RunTests
+
+check-deprecated-authn-javahl: javahl $(JAVAHL_JAR)
+	@FIX_JAVAHL_LIB@
+	$(TEST_SHLIB_VAR_JAVAHL) \
+	$(JAVA) $(JAVAHL_CHECK_FLAGS) "-Dtest.authn.deprecated=true" org.apache.subversion.javahl.RunTests
 
 check-javahl: check-apache-javahl
 

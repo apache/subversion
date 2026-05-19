@@ -192,6 +192,9 @@ if test -z "$MKDIR"; then
 fi
 AC_SUBST([MKDIR])
 
+# Look for 'head'
+AC_CHECK_TOOL([HEAD], [head], [SED="${HEAD:-head}"])
+
 # ==== Libraries, for which we may have source to build ======================
 
 dnl verify apr version and set apr flags
