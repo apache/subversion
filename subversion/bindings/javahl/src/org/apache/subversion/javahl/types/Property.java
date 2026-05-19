@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
@@ -28,10 +26,6 @@ package org.apache.subversion.javahl.types;
  */
 public class Property
 {
-    /**
-     * Standard subversion known properties
-     */
-
     /**
      * mime type of the entry, used to flag binary files
      */

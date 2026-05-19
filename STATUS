@@ -52,13 +52,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1933874
-   Silence the dangling-doc-comment warnings in JavaHL.
-   Justification:
-     Unnecessary warnings hide actual problems.
-   Votes:
-     +1: brane, dsahlberg, jcorvel
-
  * r1933796
    Silence JavaHL compiler warnings about missing bootstrap classpath.
    Justification:

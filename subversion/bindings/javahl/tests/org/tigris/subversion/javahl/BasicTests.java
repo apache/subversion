@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.tigris.subversion.javahl;
 
@@ -3057,18 +3055,19 @@ public class BasicTests extends SVNTests
         }
     }
 
-    /**
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      https://issues.apache.org/jira/browse/SVN-3680
+
+   / **
      * Test tolerance of unversioned obstructions when adding paths with
      * {@link org.tigris.subversion.javahl.SVNClient#checkout()},
      * {@link org.tigris.subversion.javahl.SVNClient#update()}, and
      * {@link org.tigris.subversion.javahl.SVNClient#doSwitch()}
      * @throws IOException
      * @throws SubversionException
-     */
-    /*
-      This is currently commented out, because we don't have an XFail method
-      for JavaHL.  The resolution is pending the result of issue #3680:
-      https://issues.apache.org/jira/browse/SVN-3680
+     * /
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
