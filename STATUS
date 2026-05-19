@@ -52,15 +52,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1933796
-   Silence JavaHL compiler warnings about missing bootstrap classpath.
-   Justification:
-     We should use the cross-compilation option supported by every JDK since
-     version 9, unless we're actually building with JDK 1.8.
-   Votes:
-     +1: brane, jcorvel
-     +0(concept): dsahlberg, LGTM have not tested under JDK 1.8
-
  * r1933877
    Silence all deprecation warnings from the org.tigris JavaHL package.
    Justification:

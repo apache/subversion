@@ -166,11 +166,26 @@ AC_DEFUN(SVN_FIND_JDK,
     # The release for "-source" could actually be greater than that
     # of "-target", if we want to cross-compile for lesser JVMs.
     if test -z "$JAVAC_FLAGS"; then
-      JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.8"
+      java_version=[`"$JDK/bin/javac" -version 2>&1 | $SED -e 's/^[^0-9]*//' -e 's/\.[^.]*$//'`]
+      java_major=[`echo $java_version | $SED -e 's/\.[^.]*$//'`]
+      java_minor=[`echo $java_version | $SED -e 's/^[^.]*\.//'`]
+      if test "$java_major" -eq 1 && test "$java_minor" -lt 9; then
+        JAVAC_FLAGS="-target $JAVA_OLDEST_WORKING_VER -source 1.8"
+      else
+        java_release=[`echo $JAVA_OLDEST_WORKING_VER | $SED -e 's/^[^.]*\.//'`]
+        JAVAC_FLAGS="--release $java_release"
+      fi
+
       if test "$enable_debugging" = "yes"; then
         JAVAC_FLAGS="-g -Xlint -Xlint:unchecked -Xlint:serial -Xlint:path $JAVAC_FLAGS"
         if test -z "$JAVAC_COMPAT_FLAGS"; then
           JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS -Xlint:-unchecked -Xlint:-deprecation -Xlint:-dep-ann -Xlint:-rawtypes"
+        fi
+      else
+        dnl Ignore warnings about deprecated version 8 (from --release 8)
+        JAVAC_FLAGS="-Xlint:options"
+        if test -z "$JAVAC_COMPAT_FLAGS"; then
+          JAVAC_COMPAT_FLAGS="$JAVAC_FLAGS"
         fi
       fi
     fi
