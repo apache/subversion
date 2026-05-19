@@ -39,15 +39,15 @@ Candidate changes:
    Votes:
      +1: ivan
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
  * r1934265, r1934266, r1934271, r1934276
    INSTALL: CMake isn't just in trunk anymore; tell Windows users about it
    Justification:
      Improve build documentation
    Votes:
      +1: dsahlberg, hartmannathan
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
