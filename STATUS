@@ -46,13 +46,6 @@ Candidate changes:
    Votes:
      +1: dsahlberg, hartmannathan
 
- * r1934313
-   Include 1.15-specific APIs in JavaHL.
-   Justification:
-     We should try to keep our bindings up to date.
-   Votes:
-     +1: brane, dsahlberg
-
 Veto-blocked changes:
 =====================
 
@@ -114,5 +107,12 @@ Approved changes:
      Tested with JDK 1.8, JDK 11 and JDK 25 on ARM64 macOS.
    Depends:
      r1933877, r1933796
+   Votes:
+     +1: brane, dsahlberg, jcorvel
+
+ * r1934313
+   Include 1.15-specific APIs in JavaHL.
+   Justification:
+     We should try to keep our bindings up to date.
    Votes:
      +1: brane, dsahlberg, jcorvel
