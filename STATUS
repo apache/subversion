@@ -52,16 +52,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1930973, r1934367
-   Fix test failures of JavaHL with Java 25 on Windows due to that deleting a
-   file with readonly flag on Windows fails since Java 25.
-   Justification:
-     Allow JavaHL test to succeed on Windows since Java 25
-   Votes:
-     +0: hartmannathan (without r1934367; cannot test; Windows testers needed please)
-     +0: jcorvel (can't test atm, but LGTM)
-     +1: jun66j5
-
  * r1932863, r1933181
    Update some readme files
    Justification:
@@ -90,8 +80,7 @@ Approved changes:
    Silence all deprecation warnings from the org.tigris JavaHL package.
    Justification:
      Unnecessary warnings hide actual problems.
-   Depends:
-     r1933796
+   Depends: 
    Votes:
      +1: brane, dsahlberg, jcorvel
 
@@ -100,13 +89,12 @@ Approved changes:
    Justification:
      Provides fine-grained control of access to restricted methods. The
      alternative requires granting access to all "unnamed" modules.
+   Depends: 
    Notes:
      Although this change does not affect backwards compatibility of JavaHL,
      it is my opinion that it really should go into a minor release. So we
      should either backport to 1.15.0 or wait for 1.16.0.
      Tested with JDK 1.8, JDK 11 and JDK 25 on ARM64 macOS.
-   Depends:
-     r1933877, r1933796
    Votes:
      +1: brane, dsahlberg, jcorvel
 
