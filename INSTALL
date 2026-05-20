@@ -848,6 +848,11 @@ II.   INSTALLATION
   E.  Building the Latest Source under Windows
       ----------------------------------------
 
+      Windows users may find it easier to build Subversion using CMake and
+      vcpkg (see section F below).
+
+      The following procedure does not use CMake or vcpkg.
+
   E.1 Prerequisites
 
       * Microsoft Visual Studio. Any recent (2005+) version containing the
@@ -1194,9 +1199,8 @@ II.   INSTALLATION
   F.  Building using CMake
       --------------------
 
-      Get the sources, either a release tarball or by checking out the
-      official repository. The CMake build system currently only exists in
-      /trunk and it will be included in the 1.15 release.
+      Get the sources, either from a release tarball or by checking out the
+      official repository.
 
       The process for building on Unix and Windows is the same.
 
@@ -1204,11 +1208,14 @@ II.   INSTALLATION
           $ cmake -B out [build options]
           $ cmake --build out
 
+      Note: If you're using the tarball distribution, the first gen-make step
+      can be skipped.
+
       "out" in the commands above is the build directory used by CMake.
 
       Build options can be added, for example:
 
-          $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_RA_SERF=ON
+          $ cmake -B out -DCMAKE_INSTALL_PREFIX=/usr/local/subversion -DSVN_ENABLE_TESTS=ON
 
       Build options can be listed using:
 
