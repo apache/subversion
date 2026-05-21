@@ -45,7 +45,20 @@ Candidate changes:
      Fix vcxproj build with zlib 1.3.2+ on Windows.
    Votes:
      +1: jun66j5
- 
+
+ * r1934437, r1934438, r1934443, r1934444
+   Make `svn --version -v` report actual character encoding used on Windows.
+   Justification:
+     Makes the reported information correct with respect to the actually used
+     character encoding on Windows (as per win32_xlate).
+   Notes:
+     - Character encoding information was added to `svn --version -v` in
+       1.15.x.
+     - This changes behavior when "Beta: Use Unicode UTF-8 for worldwide
+       support" option is used on Windows.
+   Votes:
+     +1: ivan
+
 Veto-blocked changes:
 =====================
 
