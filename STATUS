@@ -38,6 +38,7 @@ Candidate changes:
      Fix potential integer overflow.
    Votes:
      +1: ivan
+     +0: brane (review only, can't test)
 
  * r1934466
    Fix detection for zlib version in vcxproj build on Windows.
