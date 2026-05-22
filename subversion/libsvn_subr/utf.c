@@ -31,7 +31,6 @@
 #include <apr_lib.h>
 #include <apr_xlate.h>
 #include <apr_atomic.h>
-#include <apr_portable.h>       /* for apr_os_locale_encoding() */
 
 #include "svn_hash.h"
 #include "svn_string.h"
@@ -1195,16 +1194,6 @@ svn_utf__utf32_to_utf8(const svn_string_t **result,
   return SVN_NO_ERROR;
 }
 
-const char *
-svn_utf__locale_encoding(apr_pool_t *pool)
-{
-#if defined(WIN32)
-  /* We have special code for xlate on Windows. */
-  return svn_subr__win32_xlate_locale_encoding(pool);
-#else
-  return apr_os_locale_encoding(pool);
-#endif
-}
 
 #ifdef WIN32
 
