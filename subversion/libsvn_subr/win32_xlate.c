@@ -248,6 +248,31 @@ svn_subr__win32_xlate_to_stringbuf(svn_subr__win32_xlate_t *handle,
   return APR_SUCCESS;
 }
 
+const char *
+svn_subr__win32_xlate_locale_encoding(apr_pool_t *pool)
+{
+  CPINFOEXW cpinfo = { 0 };
+
+  if (GetCPInfoExW(CP_THREAD_ACP, 0, &cpinfo))
+    {
+      DWORD codepage = cpinfo.CodePage;
+      if (codepage == CP_UTF8)
+        {
+          return "UTF-8";
+        }
+      else
+        {
+          return apr_psprintf(pool, "CP%u", (unsigned int)cpinfo.CodePage);
+        }
+    }
+  else
+    {
+      /* Fallback to apr_os_default_encoding() like
+       * apr_os_locale_encoding(). */
+      return apr_os_default_encoding(pool);
+    }
+}
+
 #else  /* !WIN32 */
 
 /* Silence OSX ranlib warnings about object files with no symbols. */

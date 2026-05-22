@@ -93,6 +93,10 @@ svn_utf__cstring_from_utf8_fuzzy(const char *src,
                                                const char *,
                                                apr_pool_t *));
 
+/* Get the actual name of the character that will be used when
+ * SVN_APR_LOCALE_CHARSET is provided.
+ * Allocate result in POOL. */
+const char *svn_utf__locale_encoding(apr_pool_t *pool);
 
 #if defined(WIN32)
 /* On Windows: Convert the UTF-8 string SRC to UTF-16.

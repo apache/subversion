@@ -49,6 +49,9 @@ svn_subr__win32_xlate_to_stringbuf(svn_subr__win32_xlate_t *handle,
                                    svn_stringbuf_t **dest,
                                    apr_pool_t *pool);
 
+/* Windows specific implementation of svn_utf__locale_encoding(). */
+const char *svn_subr__win32_xlate_locale_encoding(apr_pool_t *pool);
+
 #endif /* WIN32 */
 
 #endif /* SVN_LIBSVN_SUBR_WIN32_XLATE_H */
