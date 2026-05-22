@@ -59,6 +59,13 @@ Candidate changes:
    Votes:
      +1: ivan
 
+ * r1934497, r1934500
+   Make test work without the 'venv' Python module.
+   Justification:
+     Support testing with embeddable Python that doesn't provide 'venv'.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
