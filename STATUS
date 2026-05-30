@@ -85,6 +85,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1934786
+   Fix an uninitialized memory access bug in FSX.
+   Justification:
+     FSX is experimental, but is shouldn't corrupt memory.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
