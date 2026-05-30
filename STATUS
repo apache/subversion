@@ -69,13 +69,18 @@ Candidate changes:
    Votes:
      +1: brane
 
-
-
  * r1934784
    Do not mix atomic and non-atomic access to a variable.
    Justification:
      It's just wrong, and whilst it might work on many modern CPUs,
      we shouldn't rely on that.
+   Votes:
+     +1: brane
+
+ * r1934787
+   Fix potential use of uninitialized memory in the conflict resolver.
+   Justification:
+     Subversion should try to not crash.
    Votes:
      +1: brane
 
