@@ -78,6 +78,13 @@ Candidate changes:
    Votes:
      +1: jun66j5
 
+ * r1934787
+   Fix potential use of uninitialized memory in the conflict resolver.
+   Justification:
+     Subversion should try to not crash.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
