@@ -92,6 +92,13 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1934788
+   Fix sprintf() deprecation warning on macOS newer versions of Xcode.
+   Justification:
+     Warnings, especially false positives, are distracting.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
