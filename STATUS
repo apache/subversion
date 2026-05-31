@@ -78,7 +78,7 @@ Candidate changes:
    Votes:
      +1: jun66j5
 
- * r1934787
+ * r1934787, r1934811
    Fix potential use of uninitialized memory in the conflict resolver.
    Justification:
      Subversion should try to not crash.
