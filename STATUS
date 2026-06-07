@@ -105,6 +105,11 @@ Candidate changes:
    Votes:
      +1: brane
 
+ * r1935107
+   Fix a bug in JavaHL where native code could modify a final attribute.
+   Votes:
+     +1: brane
+
 Veto-blocked changes:
 =====================
 
