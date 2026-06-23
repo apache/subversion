@@ -182,6 +182,10 @@ jobs:
             Join-String -Separator ':'
           "PKG_CONFIG_PATH=$PKG_CONFIG_PATH"  >> $env:GITHUB_ENV
 
+      - name: Install dependencies (Mac OS, python)
+        if: runner.os == 'macOS'
+        run: python -m pip --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
+
       - name: Use LF for Git checkout
         run: |
           git config --global core.autocrlf false
