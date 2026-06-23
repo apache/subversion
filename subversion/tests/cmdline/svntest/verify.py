@@ -1053,9 +1053,12 @@ __schema_dir = os.path.join(
           os.path.abspath(__file__))))),
   "svn", "schema")
 def validate_xml_schema(name: str, lines: Iterable[str]) -> None:
+  if not svntest.main.is_xml_schema_validation_enabled():
+    logger.debug("XML schema validation is disabled.")
+    return
+
   schema_name = name + ".rnc"
   try:
-    # Imported in this scope because sys.path may not have been updated yet.
     from lxml import etree #type:ignore
     schema_file = os.path.join(__schema_dir, schema_name)
     schema = etree.RelaxNG(file=schema_file)
@@ -1065,11 +1068,8 @@ def validate_xml_schema(name: str, lines: Iterable[str]) -> None:
       raise SVNXMLSchemaValidationError(schema.error_log)
   except ImportError:
     logger.error("XML: Module lxml.etree not found")
-    return
+    raise svntest.Failure
   except Exception as ex:
     logger.error("XML: " + str(ex))
     logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
-    if svntest.main.is_bad_xml_fatal():
-      raise
-    else:
-      logger.warning("XML:", exc_info=True)
+    raise

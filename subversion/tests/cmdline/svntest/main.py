@@ -41,13 +41,6 @@ import zipfile
 import codecs
 import queue
 
-# Even though 'venv' is part of the Python3 standard library,
-# some environment don't provide it. The tests do not require it.
-try:
-  import venv
-except ImportError:
-  venv = None
-
 from urllib.parse import quote as urllib_parse_quote
 from urllib.parse import unquote as urllib_parse_unquote
 from urllib.parse import urlparse
@@ -127,13 +120,11 @@ class SVNRepositoryCreateFailure(Failure):
 if sys.platform == 'win32':
   windows = True
   file_scheme_prefix = 'file:///'
-  venv_bin = 'Scripts'
   _exe = '.exe'
   _bat = '.bat'
   os.environ['SVN_DBG_STACKTRACES_TO_STDERR'] = 'y'
 else:
   windows = False
-  venv_bin = 'bin'
   file_scheme_prefix = 'file://'
   _exe = ''
   _bat = ''
@@ -226,18 +217,6 @@ options = None
 # All temporary repositories and working copies are created underneath
 # this dir, so there's one point at which to mount, e.g., a ramdisk.
 work_dir = "svn-test-work"
-
-# Directory for the Python virtual environment where we install
-# external dependencies of the test environment
-venv_create = venv is not None
-venv_base = work_dir
-def venv_path():
-  return os.path.join(venv_base, "__venv__")
-
-# List of dependencies
-found_dependencies = set()
-SVN_TESTS_REQUIRE = ["lxml==6.1.0", "rnc2rng==2.7.0"]  # for pip
-SVN_TESTS_DEPEND = ["lxml", "rnc2rng"]  # for install_module
 
 # Constant for the merge info property.
 SVN_PROP_MERGEINFO = "svn:mergeinfo"
@@ -1764,12 +1743,8 @@ def is_httpd_authz_provider_enabled():
 def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
-# XML schema validation
-def is_bad_xml_fatal():
-  """Are we treating invalid XML output as a fatal error?"""
-  # Only if we have all the necessary dependencies.
-  depends = {'lxml', 'rnc2rng'}
-  return depends == (depends & found_dependencies)
+def is_xml_schema_validation_enabled():
+  return not options.disable_xml_schema_validation
 
 
 def wc_format(ver=None):
@@ -1875,14 +1850,14 @@ class TestSpawningThread(threading.Thread):
       args.append('--allow-remote-http-connection')
     if options.svn_bin:
       args.append('--bin=' + options.svn_bin)
-    if options.venv_base:
-      args.append('--python-venv=' + options.venv_base)
     if options.store_pristine:
       args.append('--store-pristine=' + options.store_pristine)
     if options.valgrind:
       args.append('--valgrind=' + options.valgrind)
     if options.valgrind_opts:
       args.append('--valgrind-opts=' + options.valgrind_opts)
+    if options.disable_xml_schema_validation:
+      args.append('--disable-xml-schema-validation')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2251,9 +2226,6 @@ def _create_parser(usage=None):
                     help='Whether to clean up')
   parser.add_option('--enable-sasl', action='store_true',
                     help='Whether to enable SASL authentication')
-  parser.add_option('--python-venv', action='store', dest='venv_base',
-                    help=('Use the virtual environment inside this path to'
-                          ' find the dependencies used by the test suite.'))
   parser.add_option('--bin', action='store', dest='svn_bin',
                     help='Use the svn binaries installed in this path')
   parser.add_option('--use-jsvn', action='store_true',
@@ -2330,6 +2302,8 @@ def _create_parser(usage=None):
                     help='programs to run under valgrind')
   parser.add_option('--valgrind-opts', action='store',
                     help='options to pass to valgrind')
+  parser.add_option('--disable-xml-schema-validation', action='store_true',
+                    help='Disable extended XML schema validation')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
@@ -2360,8 +2334,6 @@ def parse_options(arglist=sys.argv[1:], usage=None):
   """Parse the arguments in arg_list, and set the global options object with
      the results"""
 
-  global venv_base
-  global venv_create
   global options
 
   parser = _create_parser(usage)
@@ -2411,10 +2383,6 @@ def parse_options(arglist=sys.argv[1:], usage=None):
                     svn_wc__max_supported_format_version(),
                     options.wc_format_version))
 
-  if options.venv_base:
-    venv_base = options.venv_base
-    venv_create = False
-
   return (parser, args)
 
 def tweak_options_for_precooked_repos():
@@ -2446,80 +2414,6 @@ def run_tests(test_list, serial_only = False):
   """
 
   sys.exit(execute_tests(test_list, serial_only))
-
-def _get_purelib_dir(venv_dir):
-  if sys.platform == 'win32':
-    return os.path.join(venv_dir, "Lib", "site-packages")
-  else:
-    return os.path.join(venv_dir, "lib", "python%d.%d" % sys.version_info[:2],
-                        "site-packages")
-
-def ensure_dependencies():
-  """Install the dependencies we need for running the tests.
-
-  NOTE: this function des not handle the case where the Python
-        version has changed. In theory, we could automagically
-        upgrade the venv in that case. In practice, we won't.
-  """
-
-  venv_dir = os.path.abspath(venv_path())
-  package_path = _get_purelib_dir(venv_dir)
-
-  # Check if all our dependencies are installed. It doesn't matter if
-  # they're installed in our venv, as long as they're available.
-  found_dependencies.clear()
-  saved_sys_path = sys.path[:]
-  try:
-    sys.path.insert(0, package_path)
-    for package in SVN_TESTS_DEPEND:
-      importlib.import_module(package)
-      found_dependencies.add(package)
-    have_required = True
-  except ImportError:
-    have_required = False
-  finally:
-    sys.path[:] = saved_sys_path
-
-  if have_required:
-    if package_path not in sys.path:
-      sys.path.append(package_path)
-    return package_path
-
-  if venv_create:
-    python_prog, python_path = create_python_venv(venv_dir)
-    if python_prog is not None:
-      assert python_path == package_path
-      if package_path not in sys.path:
-        sys.path.append(package_path)
-      found_dependencies.update(set(SVN_TESTS_DEPEND))
-      return package_path
-  return None
-
-def create_python_venv(venv_dir, quiet=False):
-  # We should never get this far if the 'venv' module isn't available.
-  assert venv is not None
-
-  try:
-    # Create the virtual environment
-    if not os.path.isdir(venv_dir):
-      if os.path.exists(venv_dir):
-        safe_rmtree(venv_dir)
-      venv.create(venv_dir, with_pip=True)
-
-    # Install the dependencies
-    pip = os.path.join(venv_dir, venv_bin, "pip" + _exe)
-    pip_options = ("--disable-pip-version-check", "--require-virtualenv")
-    subprocess.run([pip, *pip_options, "install", *SVN_TESTS_REQUIRE],
-                   check=True, stdout=subprocess.PIPE if quiet else None)
-    importlib.invalidate_caches()
-
-    python_prog = os.path.join(venv_dir, venv_bin, "python" + _exe)
-    python_path = _get_purelib_dir(venv_dir)
-    return python_prog, python_path
-  except Exception:
-    if logger:
-      logger.warning('Could not install test dependencies', exc_info=True)
-    return None, None
 
 def get_issue_details(issue_numbers):
   """For each issue number in ISSUE_NUMBERS query the issue
@@ -2718,10 +2612,6 @@ def execute_tests(test_list, serial_only = False, test_name = None,
                                          'wc-lock-tester' + _exe)
     wc_incomplete_tester_binary = os.path.join(options.tools_bin,
                                                'wc-incomplete-tester' + _exe)
-
-  assert options.venv_base is None or venv_base == options.venv_base, \
-    'venv_base=%s options.venv_base=%s' % (venv_base, options.venv_base)
-  ensure_dependencies()
 
   ######################################################################
 

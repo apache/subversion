@@ -259,8 +259,6 @@ class TestHarness:
       cmdline.append('--tools-bin=%s' % self.opts.tools_bin)
     if self.opts.svn_bin is not None:
       cmdline.append('--bin=%s' % self.opts.svn_bin)
-    if self.opts.venv_base is not None:
-      cmdline.append('--python-venv=%s' % self.opts.venv_base)
     if self.opts.url is not None:
       cmdline.append('--url=%s' % self.opts.url)
     if self.opts.fs_type is not None:
@@ -317,6 +315,8 @@ class TestHarness:
       cmdline.append('--valgrind=%s' % self.opts.valgrind)
     if self.opts.valgrind_opts is not None:
       cmdline.append('--valgrind-opts=%s' % self.opts.valgrind_opts)
+    if self.opts.disable_xml_schema_validation is not None:
+      cmdline.append('--disable-xml-schema-validation')
 
     self.py_test_cmdline = cmdline
 
@@ -330,15 +330,6 @@ class TestHarness:
       svntest = importlib.import_module('svntest')
       svntest.main.parse_options(cmdline, optparse.SUPPRESS_USAGE)
       svntest.testcase.TextColors.disable()
-      dependency_path = svntest.main.ensure_dependencies()
-
-      # We have to update PYTHONPATH, otherwise the whole setting up of a
-      # virtualenv and installing dependencies will happen for every test case.
-      if dependency_path:
-        python_path = os.environ.get("PYTHONPATH")
-        python_path = (dependency_path if not python_path
-                       else "%s:%s" % (dependency_path, python_path))
-        os.environ["PYTHONPATH"] = python_path
     finally:
       os.chdir(old_cwd)
 
@@ -1041,9 +1032,6 @@ def create_parser():
                     help='Use the svn binaries installed in this path')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
-  parser.add_option('--python-venv', action='store', dest='venv_base',
-                    help=('Use the virtual environment inside this path to'
-                          ' find the dependencies used by the test suite.'))
   parser.add_option('--fsfs-sharding', action='store', type='int',
                     help='Default shard size (for fsfs)')
   parser.add_option('--fsfs-packing', action='store_true',
@@ -1103,6 +1091,8 @@ def create_parser():
                     help='programs to run under valgrind')
   parser.add_option('--valgrind-opts', action='store',
                     help='options to pass valgrind')
+  parser.add_option('--disable-xml-schema-validation', action='store_true',
+                    help='Disable extended XML schema validation')
 
   parser.set_defaults(set_log_level=None)
   return parser
