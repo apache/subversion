@@ -113,7 +113,7 @@ mark_as_advanced(SVN_SOVERSION)
 find_package(PkgConfig QUIET)
 cmake_dependent_option(SVN_USE_PKG_CONFIG "Use pkg-config for the dependencies" ON "PKG_CONFIG_FOUND" OFF)
 
-# Dependecies
+# Dependencies
 option(SVN_USE_INTERNAL_LZ4 "Use internal version of lz4" ON)
 option(SVN_USE_INTERNAL_UTF8PROC "Use internal version of utf8proc" ON)
 option(SVN_SQLITE_USE_AMALGAMATION "Use sqlite amalgamation" OFF)
@@ -385,10 +385,10 @@ endif()
 ### Intl
 
 if(SVN_ENABLE_NLS)
-  # Note: when installing these dependecies with vcpkg, you will need to
+  # Note: when installing these dependencies with vcpkg, you will need to
   # install 'gettext' package with 'tools' feature. Use the following command
   # for this: `./vcpkg install gettext[tools]`. This package contains both,
-  # Gettext and Intl dependecies.
+  # Gettext and Intl dependencies.
   find_package(Gettext REQUIRED)
   find_package(Intl REQUIRED)
 

@@ -149,7 +149,7 @@ jobs:
 
       - name: Install dependencies (Windows, python)
         if: runner.os == 'Windows'
-        run: python -m pip --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
+        run: python -m pip -v --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
 
       - name: Install dependencies (Linux, apt-get)
         if: runner.os == 'Linux'
@@ -184,7 +184,7 @@ jobs:
 
       - name: Install dependencies (Mac OS, python)
         if: runner.os == 'macOS'
-        run: python -m pip --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
+        run: python -m pip -v --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
 
       - name: Use LF for Git checkout
         run: |
@@ -198,9 +198,6 @@ jobs:
 
       - name: Configure CMake
         run: >
-          if ($env:RUNNER_OS -eq 'Windows') {
-            $env:PATH += ";${env:VCPKG_ROOT}\installed\${{ matrix.vcpkg_triplet }}\bin";
-          };
           cmake -B out
           -DBUILD_SHARED_LIBS=${{ matrix.build_shared }}
           -DSVN_ENABLE_TESTS=ON
@@ -212,6 +209,7 @@ jobs:
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
           -DSVN_TEST_CONFIGURE_FOR_PARALLEL=ON
           -DPython3_FIND_REGISTRY=NEVER
+          -DPython3_FIND_STRATEGY=LOCATION
           ${{ matrix.extra_config_opts }}
 
       - name: Build CMake

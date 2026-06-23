@@ -94,6 +94,7 @@ jobs:
         run: |
           python3 -m venv "$HOME/test-python-venv"
           "$HOME/test-python-venv/bin/python3" -m pip \
+              -v \
               --disable-pip-version-check \
               install lxml==6.1.0 rnc2rng==2.7.0
 
