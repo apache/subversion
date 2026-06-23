@@ -32,6 +32,8 @@ import itertools
 from io import BytesIO
 from typing import Iterable
 
+import xml.etree.ElementTree
+
 import svntest
 
 logger = logging.getLogger()
@@ -1053,23 +1055,30 @@ __schema_dir = os.path.join(
           os.path.abspath(__file__))))),
   "svn", "schema")
 def validate_xml_schema(name: str, lines: Iterable[str]) -> None:
-  if not svntest.main.is_xml_schema_validation_enabled():
-    logger.debug("XML schema validation is disabled.")
-    return
+  source = ''.join(lines)
 
-  schema_name = name + ".rnc"
-  try:
-    from lxml import etree #type:ignore
-    schema_file = os.path.join(__schema_dir, schema_name)
-    schema = etree.RelaxNG(file=schema_file)
-    source = ''.join(lines)
-    document = etree.parse(BytesIO(source.encode("utf-8")))
-    if not schema.validate(document):
-      raise SVNXMLSchemaValidationError(schema.error_log)
-  except ImportError:
-    logger.error("XML: Module lxml.etree not found")
-    raise svntest.Failure
-  except Exception as ex:
-    logger.error("XML: " + str(ex))
-    logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
-    raise
+  if svntest.main.is_xml_schema_validation_enabled():
+    # Use full XML schema validation (requires lxml and rnc2rng packages)
+    schema_name = name + ".rnc"
+    try:
+      from lxml import etree #type:ignore
+      schema_file = os.path.join(__schema_dir, schema_name)
+      schema = etree.RelaxNG(file=schema_file)
+      document = etree.parse(BytesIO(source.encode("utf-8")))
+      if not schema.validate(document):
+        raise SVNXMLSchemaValidationError(schema.error_log)
+    except ImportError:
+      logger.error("XML: Module lxml.etree not found")
+      raise svntest.Failure
+    except Exception as ex:
+      logger.error("XML: " + str(ex))
+      logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+      raise
+  else:
+    # Use simple XML validation: just check that it parses.
+    try:
+      xml.etree.ElementTree.fromstring(source)
+    except Exception as ex:
+      logger.error("XML: " + str(ex))
+      logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+      raise
