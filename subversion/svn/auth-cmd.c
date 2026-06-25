@@ -418,13 +418,7 @@ svn_cl__auth(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   b.patterns = apr_array_make(pool, 1, sizeof(const char *));
   for (; os->ind < os->argc; os->ind++)
     {
-      /* The apr_getopt targets are still in native encoding. */
-      const char *raw_target = os->argv[os->ind];
-      const char *utf8_target;
-
-      SVN_ERR(svn_utf_cstring_to_utf8(&utf8_target,
-                                      raw_target, pool));
-      APR_ARRAY_PUSH(b.patterns, const char *) = utf8_target;
+      APR_ARRAY_PUSH(b.patterns, const char *) = os->argv[os->ind];
     }
 
   SVN_ERR(svn_config_get_user_config_path(&config_path,

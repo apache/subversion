@@ -902,7 +902,7 @@ initialize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   apr_array_header_t *targets;
   subcommand_baton_t *baton;
 
-  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array4(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1580,7 +1580,7 @@ synchronize_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
   subcommand_baton_t *baton;
   const char *to_url, *from_url;
 
-  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array4(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1775,17 +1775,14 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
      the source URL.  */
   if (os->argc - os->ind == 2)
     {
-      const char *arg_str;
-
-      SVN_ERR(svn_utf_cstring_to_utf8(&arg_str, os->argv[os->argc - 1],
-                                      pool));
+      const char *arg_str = os->argv[os->argc - 1];
 
       if (! svn_path_is_url(arg_str))
         {
           /* This is the old "... TO_URL REV[:REV2]" syntax.
              Revisions come only from this argument.  (We effectively
              pop that last argument from the end of the argument list
-             so svn_opt_args_to_target_array() can do its thang.) */
+             so svn_opt_args_to_target_array4() can do its thang.) */
           os->argc--;
 
           if ((opt_baton->start_rev.kind != svn_opt_revision_unspecified)
@@ -1806,7 +1803,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
           SVN_ERR(resolve_revnums(&start_rev, &end_rev,
                                   start_revision, end_revision));
 
-          SVN_ERR(svn_opt_args_to_target_array3(
+          SVN_ERR(svn_opt_args_to_target_array4(
                       &targets, os,
                       apr_array_make(pool, 1, sizeof(const char *)), pool));
           if (targets->nelts != 1)
@@ -1823,7 +1820,7 @@ copy_revprops_cmd(apr_getopt_t *os, void *b, apr_pool_t *pool)
       SVN_ERR(resolve_revnums(&start_rev, &end_rev,
                               opt_baton->start_rev, opt_baton->end_rev));
 
-      SVN_ERR(svn_opt_args_to_target_array3(
+      SVN_ERR(svn_opt_args_to_target_array4(
                   &targets, os,
                   apr_array_make(pool, 2, sizeof(const char *)), pool));
       if (targets->nelts < 1)
@@ -1873,7 +1870,7 @@ info_cmd(apr_getopt_t *os, void *b, apr_pool_t * pool)
   apr_hash_t *props;
   svn_string_t *from_url, *from_uuid, *last_merged_rev;
 
-  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array4(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -1986,7 +1983,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   SVN_ERR(svn_ra_initialize(pool));
 
@@ -2041,7 +2038,6 @@ sub_main(int *exit_code,
             break;
 
           case svnsync_opt_trust_server_cert_failures_src:
-            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
             SVN_ERR(svn_cmdline__parse_trust_options(
                       &opt_baton.src_trust.trust_server_cert_unknown_ca,
                       &opt_baton.src_trust.trust_server_cert_cn_mismatch,
@@ -2052,7 +2048,6 @@ sub_main(int *exit_code,
             break;
 
           case svnsync_opt_trust_server_cert_failures_dst:
-            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
             SVN_ERR(svn_cmdline__parse_trust_options(
                       &opt_baton.dst_trust.trust_server_cert_unknown_ca,
                       &opt_baton.dst_trust.trust_server_cert_cn_mismatch,
@@ -2067,37 +2062,31 @@ sub_main(int *exit_code,
             break;
 
           case svnsync_opt_auth_username:
-            opt_err = svn_utf_cstring_to_utf8(&username, opt_arg, pool);
+            username = apr_pstrdup(pool, opt_arg);
             break;
 
           case svnsync_opt_auth_password:
-            opt_err = svn_utf_cstring_to_utf8(&password, opt_arg, pool);
+            password = apr_pstrdup(pool, opt_arg);
             break;
 
           case svnsync_opt_source_username:
-            opt_err = svn_utf_cstring_to_utf8(&source_username, opt_arg, pool);
+            source_username = apr_pstrdup(pool, opt_arg);
             break;
 
           case svnsync_opt_source_password:
-            opt_err = svn_utf_cstring_to_utf8(&source_password, opt_arg, pool);
+            source_password = apr_pstrdup(pool, opt_arg);
             break;
 
           case svnsync_opt_sync_username:
-            opt_err = svn_utf_cstring_to_utf8(&sync_username, opt_arg, pool);
+            sync_username = apr_pstrdup(pool, opt_arg);
             break;
 
           case svnsync_opt_sync_password:
-            opt_err = svn_utf_cstring_to_utf8(&sync_password, opt_arg, pool);
+            sync_password = apr_pstrdup(pool, opt_arg);
             break;
 
           case svnsync_opt_config_dir:
-            {
-              const char *path;
-              opt_err = svn_utf_cstring_to_utf8(&path, opt_arg, pool);
-
-              if (!opt_err)
-                opt_baton.config_dir = svn_dirent_internal_style(path, pool);
-            }
+            opt_baton.config_dir = svn_dirent_internal_style(opt_arg, pool);
             break;
           case svnsync_opt_config_options:
             if (!config_options)
@@ -2105,15 +2094,13 @@ sub_main(int *exit_code,
                     apr_array_make(pool, 1,
                                    sizeof(svn_cmdline__config_argument_t*));
 
-            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
             SVN_ERR(svn_cmdline__parse_config_option(config_options,
                                                      opt_arg, "svnsync: ",
                                                      pool));
             break;
 
           case svnsync_opt_source_prop_encoding:
-            opt_err = svn_utf_cstring_to_utf8(&source_prop_encoding, opt_arg,
-                                              pool);
+            source_prop_encoding = apr_pstrdup(pool, opt_arg);
             break;
 
           case svnsync_opt_disable_locking:
@@ -2145,12 +2132,10 @@ sub_main(int *exit_code,
                                        &opt_baton.end_rev,
                                        opt_arg, pool) != 0)
               {
-                const char *utf8_opt_arg;
-                SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
                 return svn_error_createf(
                             SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                             _("Syntax error in revision argument '%s'"),
-                            utf8_opt_arg);
+                            opt_arg);
               }
 
             /* We only allow numbers and 'HEAD'. */
@@ -2179,8 +2164,7 @@ sub_main(int *exit_code,
               new_option->file = SVN_CONFIG_CATEGORY_CONFIG;
               new_option->section = SVN_CONFIG_SECTION_MISCELLANY;
               new_option->option = SVN_CONFIG_OPTION_MEMORY_CACHE_SIZE;
-              SVN_ERR(svn_utf_cstring_to_utf8(&new_option->value,
-                                              opt_arg, pool));
+              new_option->value = apr_pstrdup(pool, opt_arg);
 
               APR_ARRAY_PUSH(config_options,
                              svn_cmdline__config_argument_t *) = new_option;
@@ -2292,10 +2276,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(svnsync_cmd_table,
                                                          first_arg);
           if (subcommand == NULL)

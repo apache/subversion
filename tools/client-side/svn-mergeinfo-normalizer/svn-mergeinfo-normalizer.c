@@ -435,7 +435,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -465,12 +465,11 @@ sub_main(int *exit_code,
   os->interleave = 1;
   while (1)
     {
-      const char *opt_arg;
       const char *utf8_opt_arg;
 
       /* Parse the next option. */
       apr_status_t apr_err = apr_getopt_long(os, svn_min__options, &opt_id,
-                                             &opt_arg);
+                                             &utf8_opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -496,7 +495,6 @@ sub_main(int *exit_code,
         break;
       case 'F':
         /* We read the raw file content here. */
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(svn_stringbuf_from_file2(&(opt_state.filedata),
                                          utf8_opt_arg, pool));
         break;
@@ -504,7 +502,6 @@ sub_main(int *exit_code,
         {
           svn_stringbuf_t *buffer, *buffer_utf8;
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
           SVN_ERR(svn_stringbuf_from_file2(&buffer, utf8_opt_arg, pool));
           SVN_ERR(svn_utf_stringbuf_to_utf8(&buffer_utf8, buffer, pool));
           opt_state.targets = svn_cstring_split(buffer_utf8->data, "\n\r",
@@ -512,7 +509,6 @@ sub_main(int *exit_code,
         }
         break;
       case opt_depth:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.depth = svn_depth_from_word(utf8_opt_arg);
         if (opt_state.depth == svn_depth_unknown
             || opt_state.depth == svn_depth_exclude)
@@ -531,12 +527,10 @@ sub_main(int *exit_code,
         opt_state.dry_run = TRUE;
         break;
       case opt_auth_username:
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_username,
-                                        opt_arg, pool));
+        opt_state.auth_username = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case opt_auth_password:
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.auth_password,
-                                        opt_arg, pool));
+        opt_state.auth_password = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case opt_auth_password_from_stdin:
         read_pass_from_stdin = TRUE;
@@ -567,7 +561,6 @@ sub_main(int *exit_code,
         opt_state.trust_server_cert_other_failure = TRUE;
         break;
       case opt_config_dir:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(svn_dirent_internal_style_safe(&opt_state.config_dir, NULL,
                                                utf8_opt_arg, pool, pool));
         break;
@@ -577,7 +570,6 @@ sub_main(int *exit_code,
                    apr_array_make(pool, 1,
                                   sizeof(svn_cmdline__config_argument_t*));
 
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         SVN_ERR(svn_cmdline__parse_config_option(opt_state.config_options,
                                                  utf8_opt_arg,
                                                  "svn-mi-normalizer: ",
@@ -668,10 +660,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(svn_min__cmd_table,
                                                          first_arg);
           if (subcommand == NULL)
@@ -869,7 +859,7 @@ sub_main(int *exit_code,
    * The help sub-command will do its own parsing. */
   if (strcmp(subcommand->name, "help"))
     {
-      SVN_ERR(svn_client_args_to_target_array2(&opt_state.targets,
+      SVN_ERR(svn_client_args_to_target_array3(&opt_state.targets,
                                               os, opt_state.targets,
                                               ctx, FALSE, pool));
 

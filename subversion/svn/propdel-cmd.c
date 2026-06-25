@@ -52,10 +52,9 @@ svn_cl__propdel(apr_getopt_t *os,
   const char *pname;
   apr_array_header_t *args, *targets;
 
-  /* Get the property's name (and a UTF-8 version of that name). */
+  /* Get the property's name. */
   SVN_ERR(svn_opt_parse_num_args(&args, os, 1, pool));
   pname = APR_ARRAY_IDX(args, 0, const char *);
-  SVN_ERR(svn_utf_cstring_to_utf8(&pname, pname, pool));
   /* No need to check svn_prop_name_is_valid for *deleting*
      properties, and it may even be useful to allow, in case invalid
      properties sneaked through somehow. */

@@ -289,6 +289,12 @@ svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
                                     int argc,
                                     const wchar_t *argv[],
                                     apr_pool_t *result_pool);
+
+svn_error_t *
+svn_cmdline__win32_get_utf8_argv(const char **utf8_argv_p[],
+                                 int argc,
+                                 const wchar_t *argv[],
+                                 apr_pool_t *result_pool);
 #endif
 
 /* Default platform-agnostic handler that normalizes command line arguments
@@ -299,14 +305,22 @@ svn_cmdline__default_get_cstring_argv(const char **cstring_argv_p[],
                                       const char *argv[],
                                       apr_pool_t *result_pool);
 
+svn_error_t *
+svn_cmdline__default_get_utf8_argv(const char **utf8_argv_p[],
+                                   int argc,
+                                   const char *argv[],
+                                   apr_pool_t *result_pool);
+
 #if defined(WIN32) && defined(_MSC_VER)
 typedef wchar_t svn_cmdline__argv_char_t;
 #define SVN_CMDLINE__MAIN wmain
 #define svn_cmdline__get_cstring_argv svn_cmdline__win32_get_cstring_argv
+#define svn_cmdline__get_utf8_argv svn_cmdline__win32_get_utf8_argv
 #else
 typedef char svn_cmdline__argv_char_t;
 #define SVN_CMDLINE__MAIN main
 #define svn_cmdline__get_cstring_argv svn_cmdline__default_get_cstring_argv
+#define svn_cmdline__get_utf8_argv svn_cmdline__default_get_utf8_argv
 #endif
 
 #ifdef __cplusplus

@@ -625,9 +625,8 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
 
 /**
  * Pull remaining target arguments from @a os into @a *targets_p,
- * converting them to UTF-8, followed by targets from @a known_targets
- * (which might come from, for example, the "--targets" command line
- * option), which are already in UTF-8.
+ * followed by targets from @a known_targets (which might come from,
+ * for example, the "--targets" command line option).
  *
  * On each URL target, do some IRI-to-URI encoding and some
  * auto-escaping.  On each local path, canonicalize case and path
@@ -643,9 +642,23 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  * error, and if this is the only type of error encountered, complete
  * the operation before returning the error(s).
  *
- * @since New in 1.5.
+ * @since New in 1.16.
  * @see svn_client_args_to_target_array()
  */
+svn_error_t *
+svn_opt_args_to_target_array4(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              const apr_array_header_t *known_targets,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_opt_args_to_target_array4() except that it also performs
+ * conversion of the targets to UTF-8.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               apr_getopt_t *os,
@@ -701,10 +714,24 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
  * const char * revprop names to svn_string_t * revprop values for use
  * with svn_repos_get_commit_editor5 and other get_commit_editor APIs.
  *
- * @since New in 1.6.
+ * @since New in 1.16.
  */
 svn_error_t *
-svn_opt_parse_revprop(apr_hash_t **revprops, const char *revprop_spec,
+svn_opt_parse_revprop2(apr_hash_t **revprops,
+                       const char *revprop_spec,
+                       apr_pool_t *pool);
+
+/**
+ * Similar to svn_opt_parse_revprop2() but also converts @a revprop_spec
+ * to UTF-8 before parsing it.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_opt_parse_revprop(apr_hash_t **revprops,
+                      const char *revprop_spec,
                       apr_pool_t *pool);
 
 

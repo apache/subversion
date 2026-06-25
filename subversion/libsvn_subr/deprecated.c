@@ -814,13 +814,18 @@ svn_opt_args_to_target_array3(apr_array_header_t **targets_p,
                               const apr_array_header_t *known_targets,
                               apr_pool_t *pool)
 {
-  apr_array_header_t *utf8_input_targets =
-      apr_array_make(pool, os->argc - os->ind, sizeof(const char *));
+  apr_array_header_t *input_targets;
+  apr_array_header_t *utf8_input_targets;
+  int i;
 
-  for (; os->ind < os->argc; os->ind++)
+  SVN_ERR(svn_opt_parse_all_args(&input_targets, os, pool));
+
+  utf8_input_targets = apr_array_make(pool, input_targets->nelts,
+                                      sizeof(const char *));
+
+  for (i = 0; i < input_targets->nelts; i++)
     {
-      /* The apr_getopt targets are still in native encoding. */
-      const char *raw_target = os->argv[os->ind];
+      const char *raw_target = APR_ARRAY_IDX(input_targets, i, const char *);
       const char *utf8_target;
 
       SVN_ERR(svn_utf_cstring_to_utf8(&utf8_target, raw_target, pool));
@@ -1083,6 +1088,19 @@ svn_opt_print_generic_help(const char *header,
  print_error:
   svn_handle_error2(err, stderr, FALSE, "svn: ");
   svn_error_clear(err);
+}
+
+svn_error_t *
+svn_opt_parse_revprop(apr_hash_t **revprops,
+                      const char *revprop_spec,
+                      apr_pool_t *pool)
+{
+  const char *revprop_spec_utf8;
+
+  SVN_ERR(svn_utf_cstring_to_utf8(&revprop_spec_utf8, revprop_spec, pool));
+
+  return svn_error_trace(svn_opt_parse_revprop2(revprops,
+                                                revprop_spec_utf8, pool));
 }
 
 /*** From io.c ***/

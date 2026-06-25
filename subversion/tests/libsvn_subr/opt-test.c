@@ -27,6 +27,7 @@
 #include "../svn_test.h"
 
 #include "svn_opt.h"
+#include "svn_hash.h"
 #include "private/svn_opt_private.h"
 
 
@@ -288,6 +289,32 @@ test_parse_one_rev(apr_pool_t *pool)
   return SVN_NO_ERROR;
 }
 
+static svn_error_t *
+test_svn_opt_parse_revprop(apr_pool_t *pool)
+{
+#define UNICODE_TEST_STRING "\xf0\x9f\x91\x89\xf0\x9f\x91\x88"
+
+  apr_hash_t *hash = apr_hash_make(pool);
+  svn_string_t *val;
+
+  apr_hash_clear(hash);
+  SVN_ERR(svn_opt_parse_revprop2(&hash, "name=val", pool));
+  val = apr_hash_get(hash, "name", APR_HASH_KEY_STRING);
+  SVN_TEST_STRING_ASSERT(val->data, "val");
+
+  apr_hash_clear(hash);
+  SVN_ERR(svn_opt_parse_revprop2(&hash, "name=val", pool));
+  val = apr_hash_get(hash, "name", APR_HASH_KEY_STRING);
+  SVN_TEST_STRING_ASSERT(val->data, "val");
+
+  apr_hash_clear(hash);
+  SVN_ERR(svn_opt_parse_revprop2(&hash, "name=" UNICODE_TEST_STRING, pool));
+  val = apr_hash_get(hash, "name", APR_HASH_KEY_STRING);
+  SVN_TEST_STRING_ASSERT(val->data, UNICODE_TEST_STRING);
+
+  return SVN_NO_ERROR;
+}
+
 
 /* The test table.  */
 
@@ -304,6 +331,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                    "test svn_opt_parse_change_to_range"),
     SVN_TEST_PASS2(test_parse_one_rev,
                    "test svn_opt_parse_one_revision"),
+    SVN_TEST_PASS2(test_svn_opt_parse_revprop,
+                   "test test_svn_opt_parse_revprop"),
     SVN_TEST_NULL
   };
 

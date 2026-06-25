@@ -26,7 +26,6 @@
 #include "svn_opt.h"
 #include "svn_pools.h"
 #include "svn_repos.h"
-#include "svn_utf.h"
 #include "svn_path.h"
 
 #include "private/svn_fspath.h"
@@ -504,7 +503,7 @@ sub_main(int *exit_code,
   int i;
   const char **argv;
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -546,7 +545,7 @@ sub_main(int *exit_code,
               opt_state.help = TRUE;
               break;
             case 't':
-              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.txn, arg, pool));
+              opt_state.txn = apr_pstrdup(pool, arg);
               break;
             case 'R':
               opt_state.recursive = TRUE;
@@ -555,23 +554,19 @@ sub_main(int *exit_code,
               opt_state.version = TRUE;
               break;
             case svnauthz__username:
-              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.username, arg, pool));
+              opt_state.username = apr_pstrdup(pool, arg);
               break;
             case svnauthz__path:
-              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.fspath, arg, pool));
-              opt_state.fspath = svn_fspath__canonicalize(opt_state.fspath,
-                                                          pool);
+              opt_state.fspath = svn_fspath__canonicalize(arg, pool);
               break;
             case svnauthz__repos:
-              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_name, arg, pool));
+              opt_state.repos_name = apr_pstrdup(pool, arg);
               break;
             case svnauthz__is:
-              SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.is, arg, pool));
+              opt_state.is = apr_pstrdup(pool, arg);
               break;
             case svnauthz__groups_file:
-              SVN_ERR(
-                  svn_utf_cstring_to_utf8(&opt_state.groups_file,
-                                          arg, pool));
+              opt_state.groups_file = apr_pstrdup(pool, arg);
               break;
             default:
                 {
@@ -622,10 +617,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(cmd_table, first_arg);
           if (subcommand == NULL)
             {
@@ -655,13 +648,11 @@ sub_main(int *exit_code,
                                        "required"));
             }
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.repos_path, os->argv[os->ind],
-                                              pool));
-          os->ind++;
-
           SVN_ERR(svn_dirent_internal_style_safe(&opt_state.repos_path, NULL,
-                                                 opt_state.repos_path,
+                                                 os->argv[os->ind],
                                                  pool, pool));
+
+          os->ind++;
         }
 
       /* Exactly 1 non-option argument */
@@ -672,8 +663,7 @@ sub_main(int *exit_code,
         }
 
       /* Grab AUTHZ_FILE from argv. */
-      SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.authz_file, os->argv[os->ind],
-                                          pool));
+      opt_state.authz_file = os->argv[os->ind];
 
       /* Canonicalize opt_state.authz_file appropriately. */
       SVN_ERR(canonicalize_access_file(&opt_state.authz_file,

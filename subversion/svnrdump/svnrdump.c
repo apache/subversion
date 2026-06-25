@@ -31,7 +31,6 @@
 #include "svn_ra.h"
 #include "svn_repos.h"
 #include "svn_path.h"
-#include "svn_utf.h"
 #include "svn_private_config.h"
 #include "svn_string.h"
 #include "svn_props.h"
@@ -811,7 +810,7 @@ sub_main(int *exit_code,
   svn_boolean_t read_pass_from_stdin = FALSE;
   const char **argv;
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   opt_baton = apr_pcalloc(pool, sizeof(*opt_baton));
   opt_baton->start_revision.kind = svn_opt_revision_unspecified;
@@ -865,11 +864,9 @@ sub_main(int *exit_code,
                                        &(opt_baton->end_revision),
                                        opt_arg, pool) != 0)
               {
-                const char *utf8_opt_arg;
-                SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
                 return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                                          _("Syntax error in revision "
-                                           "argument '%s'"), utf8_opt_arg);
+                                           "argument '%s'"), opt_arg);
               }
           }
           break;
@@ -886,10 +883,10 @@ sub_main(int *exit_code,
           opt_baton->help = TRUE;
           break;
         case opt_auth_username:
-          SVN_ERR(svn_utf_cstring_to_utf8(&username, opt_arg, pool));
+          username = apr_pstrdup(pool, opt_arg);
           break;
         case opt_auth_password:
-          SVN_ERR(svn_utf_cstring_to_utf8(&password, opt_arg, pool));
+          password = apr_pstrdup(pool, opt_arg);
           break;
         case opt_auth_password_from_stdin:
           read_pass_from_stdin = TRUE;
@@ -907,14 +904,12 @@ sub_main(int *exit_code,
           opt_baton->incremental = TRUE;
           break;
         case opt_skip_revprop:
-          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
           svn_hash_sets(opt_baton->skip_revprops, opt_arg, opt_arg);
           break;
         case opt_trust_server_cert: /* backward compat */
           trust_unknown_ca = TRUE;
           break;
         case opt_trust_server_cert_failures:
-          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
           SVN_ERR(svn_cmdline__parse_trust_options(
                       &trust_unknown_ca,
                       &trust_cn_mismatch,
@@ -929,15 +924,13 @@ sub_main(int *exit_code,
                     apr_array_make(pool, 1,
                                    sizeof(svn_cmdline__config_argument_t*));
 
-            SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
             SVN_ERR(svn_cmdline__parse_config_option(config_options,
                                                      opt_arg,
                                                      "svnrdump: ",
                                                      pool));
           break;
         case 'F':
-          SVN_ERR(svn_utf_cstring_to_utf8(&opt_arg, opt_arg, pool));
-          opt_baton->dumpfile = opt_arg;
+          opt_baton->dumpfile = apr_pstrdup(pool, opt_arg);
           break;
         }
     }
@@ -980,10 +973,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(svnrdump__cmd_table,
                                                          first_arg);
 
@@ -1081,9 +1072,8 @@ sub_main(int *exit_code,
     }
   else
     {
-      const char *repos_url;
+      const char *repos_url = os->argv[os->ind];
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&repos_url, os->argv[os->ind], pool));
       if (! svn_path_is_url(repos_url))
         {
           return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, 0,

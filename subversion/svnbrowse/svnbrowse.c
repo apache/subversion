@@ -748,7 +748,7 @@ sub_main(int *code, int argc, const char *argv[], apr_pool_t *pool)
   SVN_ERR(svn_client_create_context2(&client, NULL, pool));
   client->auth_baton = auth;
 
-  SVN_ERR(svn_client_args_to_target_array2(&targets, os, NULL, client, FALSE,
+  SVN_ERR(svn_client_args_to_target_array3(&targets, os, NULL, client, FALSE,
                                            pool));
   svn_opt_push_implicit_dot_target(targets, pool);
 

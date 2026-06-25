@@ -186,6 +186,12 @@ jobs:
         if: runner.os == 'macOS'
         run: python -m pip -v --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
 
+      - name: Set platform-specific values
+        id: platform
+        run: |
+          $PYTHON_ROOT=$(python -c 'import pathlib, sys; print(str(pathlib.Path(sys.executable).resolve().parent.parent))')
+          "python_root=$PYTHON_ROOT" >> "$env:GITHUB_OUTPUT"
+
       - name: Use LF for Git checkout
         run: |
           git config --global core.autocrlf false
@@ -208,8 +214,10 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
           -DSVN_TEST_CONFIGURE_FOR_PARALLEL=ON
+          -DPython3_ROOT_DIR="${{ steps.platform.outputs.python_root }}"
           -DPython3_FIND_REGISTRY=NEVER
           -DPython3_FIND_STRATEGY=LOCATION
+          -DPython3_FIND_UNVERSIONED_NAMES=FIRST
           ${{ matrix.extra_config_opts }}
 
       - name: Build CMake

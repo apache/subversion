@@ -803,10 +803,8 @@ parse_args(apr_array_header_t **args,
       if (num_args)
         while (os->ind < os->argc)
           {
-            const char *arg;
-
-            SVN_ERR(svn_utf_cstring_to_utf8(&arg, os->argv[os->ind++], pool));
-            APR_ARRAY_PUSH(*args, const char *) = arg;
+            APR_ARRAY_PUSH(*args, const char *) =
+                apr_pstrdup(pool, os->argv[os->ind++]);
           }
     }
 
@@ -2071,7 +2069,7 @@ set_revprop(const char *prop_name, const char *filename,
       prop_value->len = file_contents->len;
 
       SVN_ERR(svn_subst_translate_string2(&prop_value, NULL, NULL, prop_value,
-                                          NULL, FALSE, pool, pool));
+                                          "UTF-8", FALSE, pool, pool));
     }
   else
     {
@@ -2595,7 +2593,7 @@ subcommand_lslocks(apr_getopt_t *os, void *baton, apr_pool_t *pool)
   apr_hash_index_t *hi;
   apr_pool_t *iterpool = svn_pool_create(pool);
 
-  SVN_ERR(svn_opt_args_to_target_array3(&targets, os,
+  SVN_ERR(svn_opt_args_to_target_array4(&targets, os,
                                         apr_array_make(pool, 0,
                                                        sizeof(const char *)),
                                         pool));
@@ -3075,7 +3073,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -3099,11 +3097,10 @@ sub_main(int *exit_code,
 
   while (1)
     {
-      const char *opt_arg;
       const char *utf8_opt_arg;
 
       /* Parse the next option. */
-      apr_err = apr_getopt_long(os, options_table, &opt_id, &opt_arg);
+      apr_err = apr_getopt_long(os, options_table, &opt_id, &utf8_opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -3127,10 +3124,8 @@ sub_main(int *exit_code,
             }
           if (svn_opt_parse_revision(&(opt_state.start_revision),
                                      &(opt_state.end_revision),
-                                     opt_arg, pool) != 0)
+                                     utf8_opt_arg, pool) != 0)
             {
-              SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-
               return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                         _("Syntax error in revision argument '%s'"),
                         utf8_opt_arg);
@@ -3138,7 +3133,7 @@ sub_main(int *exit_code,
         }
         break;
       case 't':
-        opt_state.txn_id = opt_arg;
+        opt_state.txn_id = apr_pstrdup(pool, utf8_opt_arg);
         break;
 
       case 'q':
@@ -3151,13 +3146,13 @@ sub_main(int *exit_code,
       case 'M':
         {
           apr_uint64_t sz_val;
-          SVN_ERR(svn_cstring_atoui64(&sz_val, opt_arg));
+          SVN_ERR(svn_cstring_atoui64(&sz_val, utf8_opt_arg));
 
           opt_state.memory_cache_size = 0x100000 * sz_val;
         }
         break;
       case 'F':
-        SVN_ERR(svn_utf_cstring_to_utf8(&(opt_state.file), opt_arg, pool));
+        opt_state.file = apr_pstrdup(pool, utf8_opt_arg);
         dash_F_arg = TRUE;
         break;
       case svnadmin__version:
@@ -3199,7 +3194,7 @@ sub_main(int *exit_code,
           /* Parse the version string which carries our target
              compatibility. */
           SVN_ERR(svn_version__parse_version_string(&compatible_version,
-                                                        opt_arg, pool));
+                                                    utf8_opt_arg, pool));
 
           /* We can't create repository with a version older than 1.0.0.  */
           if (! svn_version__at_least(compatible_version, 1, 0, 0))
@@ -3236,13 +3231,10 @@ sub_main(int *exit_code,
         opt_state.metadata_only = TRUE;
         break;
       case svnadmin__fs_type:
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.fs_type, opt_arg, pool));
+        opt_state.fs_type = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case svnadmin__parent_dir:
-        SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.parent_dir, opt_arg,
-                                            pool));
-        opt_state.parent_dir
-          = svn_dirent_internal_style(opt_state.parent_dir, pool);
+        opt_state.parent_dir = svn_dirent_internal_style(utf8_opt_arg, pool);
         break;
       case svnadmin__use_pre_commit_hook:
         opt_state.use_pre_commit_hook = TRUE;
@@ -3275,7 +3267,6 @@ sub_main(int *exit_code,
         opt_state.clean_logs = TRUE;
         break;
       case svnadmin__config_dir:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
         opt_state.config_dir =
             apr_pstrdup(pool, svn_dirent_canonicalize(utf8_opt_arg, pool));
         break;
@@ -3289,18 +3280,16 @@ sub_main(int *exit_code,
         opt_state.normalize_props = TRUE;
         break;
       case svnadmin__exclude:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-
         if (! opt_state.exclude)
           opt_state.exclude = apr_array_make(pool, 1, sizeof(const char *));
-        APR_ARRAY_PUSH(opt_state.exclude, const char *) = utf8_opt_arg;
+        APR_ARRAY_PUSH(opt_state.exclude, const char *)
+          = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case svnadmin__include:
-        SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-
         if (! opt_state.include)
           opt_state.include = apr_array_make(pool, 1, sizeof(const char *));
-        APR_ARRAY_PUSH(opt_state.include, const char *) = utf8_opt_arg;
+        APR_ARRAY_PUSH(opt_state.include, const char *)
+          = apr_pstrdup(pool, utf8_opt_arg);
         break;
       case svnadmin__glob:
         opt_state.glob = TRUE;
@@ -3349,10 +3338,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(cmd_table, first_arg);
           if (subcommand == NULL)
             {
@@ -3381,7 +3368,7 @@ sub_main(int *exit_code,
                                   _("Repository argument required"));
         }
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&repos_path, os->argv[os->ind++], pool));
+      repos_path = os->argv[os->ind++];
 
       if (svn_path_is_url(repos_path))
         {

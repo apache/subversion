@@ -39,7 +39,6 @@
 #include "svn_pools.h"
 #include "svn_error.h"
 #include "svn_ra_svn.h"
-#include "svn_utf.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
 #include "svn_opt.h"
@@ -774,7 +773,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -896,7 +895,7 @@ sub_main(int *exit_code,
           break;
 
         case 'r':
-          SVN_ERR(svn_utf_cstring_to_utf8(&params.root, arg, pool));
+          params.root = arg;
 
           SVN_ERR(svn_io_check_resolved_path(params.root, &kind, pool));
           if (kind != svn_node_dir)
@@ -1000,15 +999,13 @@ sub_main(int *exit_code,
 #endif
 
         case SVNSERVE_OPT_CONFIG_FILE:
-          SVN_ERR(svn_utf_cstring_to_utf8(&config_filename, arg, pool));
-          config_filename = svn_dirent_internal_style(config_filename, pool);
+          config_filename = svn_dirent_internal_style(arg, pool);
           SVN_ERR(svn_dirent_get_absolute(&config_filename, config_filename,
                                           pool));
           break;
 
         case SVNSERVE_OPT_PID_FILE:
-          SVN_ERR(svn_utf_cstring_to_utf8(&pid_filename, arg, pool));
-          pid_filename = svn_dirent_internal_style(pid_filename, pool);
+          pid_filename = svn_dirent_internal_style(arg, pool);
           SVN_ERR(svn_dirent_get_absolute(&pid_filename, pid_filename, pool));
           break;
 
@@ -1017,8 +1014,7 @@ sub_main(int *exit_code,
            break;
 
          case SVNSERVE_OPT_LOG_FILE:
-          SVN_ERR(svn_utf_cstring_to_utf8(&log_filename, arg, pool));
-          log_filename = svn_dirent_internal_style(log_filename, pool);
+          log_filename = svn_dirent_internal_style(arg, pool);
           SVN_ERR(svn_dirent_get_absolute(&log_filename, log_filename, pool));
           break;
 
