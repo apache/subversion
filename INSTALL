@@ -1273,12 +1273,17 @@ II.   INSTALLATION
 
       Some tests depend on additional Python modules to do the full tests.
       - lxml
-        For full XML schema validation.  If this module is not available, the
-        test suite will fail with the error "XML: Module lxml.etree not found".
+        For full XML schema validation (together with rnc2rng).  If lxml is
+        not installed, the test suite will fail with the error "XML: Module
+        lxml.etree not found".
         If you want to run the test suite without full XML schema validation
         you can use the --disable-xml-schema-validation option.  In this case
         only basic XML syntax validation is performed (e.g. check that each
         element is self-closing or has a closing tag at the correct level).
+      - rnc2rng
+        For full XML schema validation (together with lxml).  If lxml is
+        installed but not rnc2rng, the test test suite will fail with the
+        error "XML: compact syntax not supported (please install rnc2rng)".
 
 
   G.1 Running the test suite under the autoconf/make build system
