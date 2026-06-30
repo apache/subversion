@@ -1271,22 +1271,17 @@ II.   INSTALLATION
       - FAIL means a test returned an unexpected result.
       - XPASS means a test which was expected to fail completed successfully.
 
-      Some tests depend on additional Python modules to do the full tests.
-      - lxml
-        For full XML schema validation (together with rnc2rng).  If lxml is
-        not installed, the test suite will fail with the error "XML: Module
-        lxml.etree not found".
-        If you want to run the test suite without full XML schema validation
-        you can use the --disable-xml-schema-validation option.  In this case
-        only basic XML syntax validation is performed (e.g. check that each
-        element is self-closing or has a closing tag at the correct level).
-      - rnc2rng
-        For full XML schema validation (together with lxml).  If lxml is
-        installed but not rnc2rng, the test test suite will fail with the
-        error "XML: compact syntax not supported (please install rnc2rng)".
+
+  G.1 Validating XML output
+
+      Some Subversion commands can format their output as XML.  The test suite
+      will always verify that the output is valid XML, however it is also
+      possible to check the output against the expected XML schema. To do
+      this, install the lxml and rnc2rng Python modules and start the tests
+      using the --enable-xml-schema-validation argument.
 
 
-  G.1 Running the test suite under the autoconf/make build system
+  G.2 Running the test suite under the autoconf/make build system
 
       Tests can be started with either of the following commands
       - make check [options]
@@ -1300,7 +1295,7 @@ II.   INSTALLATION
 
       For either command, the usual -j argument can be used to have make run
       several tests concurrently.
-      
+
       The following list are options commonly used:
       - PARALLEL=n
         Run n python based command line tests concurrently
@@ -1309,11 +1304,12 @@ II.   INSTALLATION
       - APACHE_MPM=mpm type
         Used for davautocheck, run the test using the specified Apache httpd
         MPM engine
-      - DISABLE_XML_SCHEMA_VALIDATION
-        If this option is defined, full XML schema validation is not performed,
-        see the --disable-xml-schema-validation option above.
+      - ENABLE_XML_SCHEMA_VALIDATION
+        If this option is defined, full XML schema validation will be
+        performed, see the --enable-xml-schema-validation option above.
 
-  G.2 Running the test suite under the CMake build system
+
+  G.3 Running the test suite under the CMake build system
 
       Run the ctests command from the build directory.
 
