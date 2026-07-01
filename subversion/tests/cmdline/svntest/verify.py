@@ -1074,11 +1074,11 @@ def validate_xml_schema(name: str, lines: Iterable[str]) -> None:
       logger.error("XML: " + str(ex))
       logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
       raise
-  else:
-    # Use simple XML validation: just check that it parses.
-    try:
-      xml.etree.ElementTree.fromstring(source)
-    except Exception as ex:
-      logger.error("XML: " + str(ex))
-      logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
-      raise
+
+  # Always parse XML using built in XML parser to check structural validity.
+  try:
+    xml.etree.ElementTree.fromstring(source)
+  except Exception as ex:
+    logger.error("XML: " + str(ex))
+    logger.warning("XML:\n" + "\n".join(repr(line) for line in lines))
+    raise
