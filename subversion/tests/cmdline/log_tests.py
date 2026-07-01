@@ -2778,7 +2778,7 @@ def log_on_deleted_deep(sbox):
                                      '',
                                      '-q', '-c', '1-2')
 
-@XFail(svntest.main.is_bad_xml_fatal)
+@XFail()
 @Issue(4711)
 def log_with_merge_history_and_search(sbox):
   "log --use-merge-history --search"
@@ -2805,10 +2805,7 @@ def log_with_merge_history_and_search(sbox):
   svntest.verify.validate_xml_schema('log', output)
 
 
-def is_ra_local_and_is_bad_xml_fatal():
-  return svntest.main.is_ra_type_file() and svntest.main.is_bad_xml_fatal()
-
-@XFail(is_ra_local_and_is_bad_xml_fatal)
+@XFail(lambda: (svntest.main.is_ra_type_file()))
 @Issue(4856)
 def log_xml_with_merge_history(sbox):
   "log --use-merge-history --xml"
