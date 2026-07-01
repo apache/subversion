@@ -1278,7 +1278,7 @@ II.   INSTALLATION
       will always verify that the output is valid XML, however it is also
       possible to check the output against the expected XML schema. To do
       this, install the lxml and rnc2rng Python modules and start the tests
-      using the --enable-xml-schema-validation argument.
+      using the --check-xml-schema argument.
 
 
   G.2 Running the test suite under the autoconf/make build system
@@ -1304,9 +1304,9 @@ II.   INSTALLATION
       - APACHE_MPM=mpm type
         Used for davautocheck, run the test using the specified Apache httpd
         MPM engine
-      - ENABLE_XML_SCHEMA_VALIDATION
+      - CHECK_XML_SCHEMA
         If this option is defined, full XML schema validation will be
-        performed, see the --enable-xml-schema-validation option above.
+        performed, see the --check-xml-schema option above.
 
 
   G.3 Running the test suite under the CMake build system
