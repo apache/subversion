@@ -891,7 +891,7 @@ macro(autocheck_symbol_exists SYMBOL FILE VARIABLE)
   endif()
 endmacro()
 
-autocheck_symbol_exists("snprintf" "string.h" HAVE_SNPRINTF)
+autocheck_symbol_exists("snprintf" "stdio.h" HAVE_SNPRINTF)
 
 autocheck_include_files("elf.h" HAVE_ELF_H)
 autocheck_include_files("inttypes.h" HAVE_INTTYPES_H)
