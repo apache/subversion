@@ -91,12 +91,14 @@ Candidate changes:
    Votes:
      +1: brane, ivan
 
- * r1934788
-   Fix sprintf() deprecation warning on macOS newer versions of Xcode.
+ * r1934788, r1934920, r1935780, r1935781
+   Use snprintf() instead sprintf() if available. Fixes deprecation warning on
+   macOS newer versions of Xcode.
    Justification:
      Warnings, especially false positives, are distracting.
    Votes:
-     +1: brane
+     +1: brane (without r1934920, r1935780, r1935781)
+     +1: ivan
 
  * r1934965
    Replace obsolete Autoconf construct in configure.ac.
