@@ -99,10 +99,10 @@ format_size(double human_readable_size,
        files can't have fractional byte sizes. */
     if (absolute_human_readable_size >= 10)
       {
-#if !HAVE_SNPRINTF
-        sprintf(buffer, "%.0f", human_readable_size);
-#else
+#if HAVE_SNPRINTF
         snprintf(buffer, sizeof(buffer), "%.0f", human_readable_size);
+#else
+        sprintf(buffer, "%.0f", human_readable_size);
 #endif
       }
     else
@@ -110,10 +110,11 @@ format_size(double human_readable_size,
         double integral;
         const double frac = modf(absolute_human_readable_size, &integral);
         const int decimals = (index > 0 && (integral < 9 || frac <= .949999999));
-#if !HAVE_SNPRINTF
-        sprintf(buffer, "%.*f", decimals, human_readable_size);
+#if HAVE_SNPRINTF
+        snprintf(buffer, sizeof(buffer), "%.*f", decimals,
+                 human_readable_size);
 #else
-        snprintf(buffer, sizeof(buffer), "%.*f", decimals, human_readable_size);
+        sprintf(buffer, "%.*f", decimals, human_readable_size);
 #endif
       }
 
