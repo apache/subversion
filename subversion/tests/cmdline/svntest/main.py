@@ -36,7 +36,6 @@ import xml
 import urllib
 import logging
 import hashlib
-import importlib
 import zipfile
 import codecs
 import queue
