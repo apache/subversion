@@ -170,7 +170,8 @@ jobs:
         run: |
           make ${{matrix.check-target}} PARALLEL=6 \
               APACHE_MPM="${{ steps.platform.outputs.apache-mpm }}" \
-              PYTHON_VENV="$HOME/test-python-venv"
+              PYTHON_VENV="$HOME/test-python-venv" \
+              ENABLE_XML_SCHEMA_VALIDATION=1
 
       - name: Archive test logs
         if: always()

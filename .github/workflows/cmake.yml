@@ -214,6 +214,7 @@ jobs:
           -DCMAKE_INSTALL_PREFIX=${{ github.workspace }}/installdir
           -DVCPKG_TARGET_TRIPLET=${{ matrix.vcpkg_triplet }}
           -DSVN_TEST_CONFIGURE_FOR_PARALLEL=ON
+          -DSVN_TEST_COMMAND_ARGUMENTS="--enable-xml-schema-validation"
           -DPython3_ROOT_DIR="${{ steps.platform.outputs.python_root }}"
           -DPython3_FIND_REGISTRY=NEVER
           -DPython3_FIND_STRATEGY=LOCATION
