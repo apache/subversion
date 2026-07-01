@@ -315,7 +315,7 @@ put_explicit_length(svn_stringbuf_t *str,
 
   /* Generate the length and separator character.  */
 #if HAVE_SNPRINTF
-  snprintf(buf, alloc_len, "%" APR_SIZE_T_FMT "%c", len, sep);
+  snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT "%c", len, sep);
 #else
   sprintf(buf, "%" APR_SIZE_T_FMT "%c", len, sep);
 #endif
