@@ -75,7 +75,7 @@ Candidate changes:
      It's just wrong, and whilst it might work on many modern CPUs,
      we shouldn't rely on that.
    Votes:
-     +1: brane
+     +1: brane, ivan
 
  * r1934787, r1934811
    Fix potential use of uninitialized memory in the conflict resolver.
