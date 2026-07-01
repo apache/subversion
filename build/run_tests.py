@@ -315,8 +315,8 @@ class TestHarness:
       cmdline.append('--valgrind=%s' % self.opts.valgrind)
     if self.opts.valgrind_opts is not None:
       cmdline.append('--valgrind-opts=%s' % self.opts.valgrind_opts)
-    if self.opts.disable_xml_schema_validation is not None:
-      cmdline.append('--disable-xml-schema-validation')
+    if self.opts.enable_xml_schema_validation is not None:
+      cmdline.append('--enable-xml-schema-validation')
 
     self.py_test_cmdline = cmdline
 
@@ -1091,8 +1091,8 @@ def create_parser():
                     help='programs to run under valgrind')
   parser.add_option('--valgrind-opts', action='store',
                     help='options to pass valgrind')
-  parser.add_option('--disable-xml-schema-validation', action='store_true',
-                    help='Disable extended XML schema validation')
+  parser.add_option('--enable-xml-schema-validation', action='store_true',
+                    help='Enable extended XML schema validation')
 
   parser.set_defaults(set_log_level=None)
   return parser

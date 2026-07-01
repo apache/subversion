@@ -1744,7 +1744,7 @@ def is_remote_http_connection_allowed():
   return options.allow_remote_http_connection
 
 def is_xml_schema_validation_enabled():
-  return not options.disable_xml_schema_validation
+  return options.enable_xml_schema_validation
 
 
 def wc_format(ver=None):
@@ -1856,8 +1856,8 @@ class TestSpawningThread(threading.Thread):
       args.append('--valgrind=' + options.valgrind)
     if options.valgrind_opts:
       args.append('--valgrind-opts=' + options.valgrind_opts)
-    if options.disable_xml_schema_validation:
-      args.append('--disable-xml-schema-validation')
+    if options.enable_xml_schema_validation:
+      args.append('--enable-xml-schema-validation')
 
     result, stdout_lines, stderr_lines = spawn_process(command, 0, False, None,
                                                        *args)
@@ -2302,8 +2302,8 @@ def _create_parser(usage=None):
                     help='programs to run under valgrind')
   parser.add_option('--valgrind-opts', action='store',
                     help='options to pass to valgrind')
-  parser.add_option('--disable-xml-schema-validation', action='store_true',
-                    help='Disable extended XML schema validation')
+  parser.add_option('--enable-xml-schema-validation', action='store_true',
+                    help='Enable extended XML schema validation')
 
   # most of the defaults are None, but some are other values, set them here
   parser.set_defaults(
