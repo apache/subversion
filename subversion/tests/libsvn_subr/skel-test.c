@@ -26,6 +26,7 @@
 #include <stdio.h>
 
 #include <apr.h>
+#include <apr_strings.h> /* for apr_snprintf */
 
 #include "svn_pools.h"
 #include "svn_string.h"
@@ -314,12 +315,7 @@ put_explicit_length(svn_stringbuf_t *str,
     abort();
 
   /* Generate the length and separator character.  */
-#if HAVE_SNPRINTF
-  snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT "%c", len, sep);
-#else
-  sprintf(buf, "%" APR_SIZE_T_FMT "%c", len, sep);
-#endif
-
+  apr_snprintf(buf, sizeof(buf), "%" APR_SIZE_T_FMT "%c", len, sep);
   svn_stringbuf_appendcstr(str, buf);
 
   /* Copy in the real data (which may contain nulls).  */
