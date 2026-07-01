@@ -308,9 +308,7 @@ put_explicit_length(svn_stringbuf_t *str,
                     apr_size_t len,
                     char sep)
 {
-  const apr_size_t alloc_len = len + 100;
-  char *buf = malloc(alloc_len);
-  apr_size_t length_len;
+  char buf[100];
 
   if (! skel_is_space(sep))
     abort();
@@ -321,13 +319,11 @@ put_explicit_length(svn_stringbuf_t *str,
 #else
   sprintf(buf, "%" APR_SIZE_T_FMT "%c", len, sep);
 #endif
-  length_len = strlen(buf);
+
+  svn_stringbuf_appendcstr(str, buf);
 
   /* Copy in the real data (which may contain nulls).  */
-  memcpy(buf + length_len, data, len);
-
-  svn_stringbuf_appendbytes(str, buf, length_len + len);
-  free(buf);
+  svn_stringbuf_appendbytes(str, data, len);
 }
 
 
