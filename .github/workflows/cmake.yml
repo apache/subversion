@@ -159,6 +159,10 @@ jobs:
           path: vcpkg-archives
           key: vcpkg/${{ runner.os }}/${{ matrix.vcpkg_triplet }}/${{ steps.vcpkg-sha.outputs.sha }}
 
+      - name: Install dependencies (Windows, python)
+        if: runner.os == 'Windows'
+        run: python -m pip -q --disable-pip-version-check install lxml==6.1.0 rnc2rng==2.7.0
+
       - name: Install dependencies (Linux, apt-get)
         if: runner.os == 'Linux'
         run: >
