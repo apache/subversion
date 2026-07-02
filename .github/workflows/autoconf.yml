@@ -83,6 +83,8 @@ jobs:
           libutf8proc-dev
           ${{ matrix.httpd == 'system' && 'apache2-dev' || '' }}
           libsecret-1-dev
+          python3-lxml
+          python3-rnc2rng
 
       - name: Use LF for Git checkout
         run: |

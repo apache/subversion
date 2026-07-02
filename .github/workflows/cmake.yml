@@ -99,6 +99,8 @@ jobs:
               libdbus-1-dev
               qtbase5-dev
               libsecret-1-dev
+              python3-lxml
+              python3-rnc2rng
           - name: Mac OS
             os: macos-latest
             build_shared: ON
