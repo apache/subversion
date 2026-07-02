@@ -24,8 +24,24 @@ name: CMake
 on:
   push:
     branches: ["*"]
+    paths-ignore:
+      - 'doc/**'
+      - 'notes/**'
+      - CHANGES
+      - COMMITTERS
+      - INSTALL
+      - STATUS
+      - README
   pull_request:
     branches: ["*"]
+    paths-ignore:
+      - 'doc/**'
+      - 'notes/**'
+      - CHANGES
+      - COMMITTERS
+      - INSTALL
+      - STATUS
+      - README
 
 concurrency:
   group: ${{ github.ref }}
