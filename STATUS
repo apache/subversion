@@ -82,8 +82,7 @@ Candidate changes:
    Justification:
      Warnings, especially false positives, are distracting.
    Votes:
-     +1: brane (without r1934920, r1935780, r1935781)
-     +1: ivan
+     +1: ivan, brane
 
  * r1935107
    Fix a bug in JavaHL where native code could modify a final attribute.
