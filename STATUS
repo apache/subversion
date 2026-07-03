@@ -85,13 +85,6 @@ Candidate changes:
      +1: brane (without r1934920, r1935780, r1935781)
      +1: ivan
 
- * r1934965
-   Replace obsolete Autoconf construct in configure.ac.
-   Justification:
-     Autoconf says AC_HELP_STRING is obsolete.
-   Votes:
-     +1: brane, ivan
-
  * r1935107
    Fix a bug in JavaHL where native code could modify a final attribute.
    Votes:
@@ -117,3 +110,10 @@ Approved changes:
    Votes:
      +1: jun66j5, ivan
      +0: brane, dsahlberg (review only, can't test)
+
+ * r1934965
+   Replace obsolete Autoconf construct in configure.ac.
+   Justification:
+     Autoconf says AC_HELP_STRING is obsolete.
+   Votes:
+     +1: brane, ivan, dsahlberg
