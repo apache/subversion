@@ -25,13 +25,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1933637
-   Fix building Python bindings with CMake.
-   Justification:
-     Build should not fail.
-   Votes:
-     +1: ivan, kotkov
-
  * r1933386, r1933394, r1933404
    Corectness fixes in svn_subr__win32_xlate_to_stringbuf().
    Justification:
@@ -117,3 +110,10 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1933637
+   Fix building Python bindings with CMake.
+   Justification:
+     Build should not fail.
+   Votes:
+     +1: ivan, kotkov, dsahlberg
