@@ -356,7 +356,7 @@ fi
 [ -r "$MOD_AUTHZ_SVN" ] \
   || fail "authz_svn_module not found, please use '--enable-shared --enable-dso --with-apxs' with your 'configure' script"
 
-export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_neon/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
+export LD_LIBRARY_PATH="$ABS_BUILDDIR/subversion/libsvn_ra_local/.libs:$ABS_BUILDDIR/subversion/libsvn_ra_svn/.libs:$LD_LIBRARY_PATH"
 
 MASTER_REPOS="${MASTER_REPOS:-"$HTTPD_ROOT/master_repos"}"
 SLAVE_REPOS="${SLAVE_REPOS:-"$HTTPD_ROOT/slave_repos"}"
@@ -366,13 +366,12 @@ SLAVE_HOST=127.0.0.1
 #TEST_PORT=11111
 TEST_PORT=$(($RANDOM+1024))
 
-# location directive elements for master,slave,sync
-# tests currently work if master==slave,fail if different
-# ** Should different locations for each work?
-#MASTER_LOCATION="master"
-#SLAVE_LOCATION="slave"
-MASTER_LOCATION="repo"
-SLAVE_LOCATION="repo"
+# Location directive elements for master, slave, and sync. Master and slave
+# deliberately use different locations so the proxy actually has to translate
+# paths (slave root_dir <-> master URI) on the way through. With matching
+# locations some of the rewrite logic is not exercised.
+MASTER_LOCATION="master"
+SLAVE_LOCATION="slave"
 SYNC_LOCATION="sync"
 
 MASTER_URL="http://${MASTER_HOST}:${TEST_PORT}/${MASTER_LOCATION}"
@@ -475,26 +474,27 @@ fi
 
 say "PASS: master, slave are both at r4, as expected"
 
-# The following test case is for the regression issue triggered by r917523.
-# The revision r917523 do some url encodings to the paths and uris which are
-# not url-encoded. But there is one additional url-encoding of an uri which is
-# already encoded. With this extra encoding, committing a path to slave which
-# has space in it fails. Please see this thread
-# http://svn.haxx.se/dev/archive-2011-03/0641.shtml for more info.
+# Encoding regression coverage (originally r917523, see
+# http://svn.haxx.se/dev/archive-2011-03/0641.shtml). A path containing a
+# space must survive the proxy's URI rewriting encoded exactly once: the
+# COPY below sends a Destination header that proxy_request_fixup_destination()
+# must translate from the slave location to the master URI without re-encoding
+# the already-encoded "%20" (the bug double-encoded it to "%2520", silently
+# creating a path literally named "branch%20new"). The follow-up PUT
+# exercises the same encoding in the request-body location filter.
+say "Test case for encoding of paths with a space (regression r917523)"
 
-say "Test case for regression issue triggered by r917523"
-
-$svnmucc cp 2 "$BASE_URL/trunk" "$BASE_URL/branch new"
+$svnmucc cp 2 "$BASE_URL/trunk" "$BASE_URL/branch new" \
+  || fail "COPY to a path with a space failed (Destination mis-encoded?)"
 $svnmucc put /dev/null "$BASE_URL/branch new/file" \
---config-option servers:global:http-library=neon
-RETVAL=$?
+  || fail "PUT under a path with a space failed (request body mis-encoded?)"
 
-if [ $RETVAL -eq 0 ] ; then
-  say "PASS: committing a path which has space in it passes"
-else
-  say "FAIL: committing a path which has space in it fails as there are extra
-  url-encodings happening in server side"
-fi
+# A successful commit isn't enough: a double-encoded Destination still commits,
+# but lands as "branch%20new" on the master. Assert the decoded name instead.
+$SVNLOOK tree --full-paths "$MASTER_REPOS" | grep -Fq "branch new/" \
+  || fail "path with a space was double-encoded by the proxy (expected 'branch new', got '%20'-escaped name on master)"
+
+say "PASS: committing a path which has a space in it passes"
 
 # Test case for commit to out-dated(though target path is up to date) slave.
 # See issue #3860 for details.
@@ -521,14 +521,10 @@ say "Now the slave is at r$SLAVE_HEAD and master is at r$MASTER_HEAD."
 
 # Now any other commit operation will fail with an out-of-date error
 
-$svn cp -m "Creating a branch" ^/trunk ^/branch/newbranch --config-option "servers:global:http-library=neon"
-RETVAL=$?
+$svn cp -m "Creating a branch" ^/trunk ^/branch/newbranch \
+  || fail "Commits fail with an out-of-date slave"
 
-if [ $RETVAL -eq 0 ]; then
-  say "PASS: Commits succeed even with an out-of-date slave"
-else
-  say "FAIL: Commits fail with an out-of-date slave"
-fi
+say "PASS: Commits succeed even with an out-of-date slave"
 say "Some house-keeping..."
 say "Re-activating the post-commit hook on the master repo: $MASTER_REPOS."
 mv "$MASTER_REPOS/hooks/post-commit_" "$MASTER_REPOS/hooks/post-commit"
