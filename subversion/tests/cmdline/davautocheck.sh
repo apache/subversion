@@ -80,6 +80,13 @@
 #
 #  make davautocheck SVN_PATH_AUTHZ=short_circuit  # SVNPathAuthz short_circuit
 #
+#  make davautocheck SKIP_MIRROR=1          # skip the mod_dav_svn write-through
+#                                           # proxy (mirror) test phase
+#
+# After the normal test run, this script also exercises mod_dav_svn's
+# write-through proxy support by running dav-mirror-autocheck.sh in its own
+# isolated httpd instance.  Set SKIP_MIRROR=1 to skip that phase.
+#
 # Passing --no-tests as argv[1] will have the script start a server
 # but not run any tests.  Passing --gdb or --lldb will do the same, and in
 # addition spawn gdb/lldb in the foreground attached to the running server.
@@ -855,6 +862,32 @@ fi
 say "Finished testing..."
 
 kill $(cat "$HTTPD_PID")
+
+# Run the mod_dav_svn write-through proxy ("mirror") setup tests, this exercises
+# the SVNMasterURI proxy support in mod_dav_svn. 
+# The mirror test spins up its own isolated httpd on its own random port and
+# cleans up its running server itself. Its work area is nested under $HTTPD_ROOT
+# so the cleanup query below removes it as well. Set SKIP_MIRROR=1 to opt out
+if [ -z "${SKIP_MIRROR}" ]; then
+  # Avoid cluttering the main test output
+  MIRROR_LOG="$ABS_BUILDDIR/mirror-autocheck.log"
+  # Print the status on the same line, so it reads ".. tests... PASS/FAIL".
+  printf '%s: running mod_dav_svn write-through proxy (mirror) tests...' "$SCRIPT"
+  # Run from the build tree root and export the server-selection variables so
+  # the mirror script (a child process) locates the same binaries and modules
+  # as the run above.
+  ( cd "$ABS_BUILDDIR" \
+    && export APXS MODULE_PATH APACHE_MPM \
+    && bash "$ABS_SRCDIR/subversion/tests/cmdline/dav-mirror-autocheck.sh" \
+            "$HTTPD_ROOT/mirror" ) > "$MIRROR_LOG" 2>&1
+  mirror_r=$?
+  if [ $mirror_r -eq 0 ]; then
+    echo " PASS"
+  else
+    echo " FAIL (exit $mirror_r; see $MIRROR_LOG)"
+    [ $r -eq 0 ] && r=$mirror_r
+  fi
+fi
 
 query 'Browse server access log' n \
   && less "$HTTPD_ACCESS_LOG"
