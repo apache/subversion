@@ -33,14 +33,6 @@ Candidate changes:
      +1: ivan
      +0: brane (review only, can't test)
 
- * r1934466
-   Fix detection for zlib version in vcxproj build on Windows.
-   Justification:
-     Fix vcxproj build with zlib 1.3.2+ on Windows.
-   Votes:
-     +1: jun66j5, ivan
-     +0: brane (review only, can't test)
-
  * r1934437, r1934438, r1934443, r1934444
    Make `svn --version -v` report actual character encoding used on Windows.
    Justification:
@@ -117,3 +109,11 @@ Approved changes:
      Build should not fail.
    Votes:
      +1: ivan, kotkov, dsahlberg
+
+ * r1934466
+   Fix detection for zlib version in vcxproj build on Windows.
+   Justification:
+     Fix vcxproj build with zlib 1.3.2+ on Windows.
+   Votes:
+     +1: jun66j5, ivan
+     +0: brane, dsahlberg (review only, can't test)
