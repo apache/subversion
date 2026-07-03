@@ -33,6 +33,53 @@
 #include "dav_svn.h"
 
 
+/* If the request carries a Destination header (as COPY and MOVE do), rewrite
+   it to target the master server instead of this slave. MASTER_URI is the
+   SVNMasterURI configuration value (not URI-encoded). This is the
+   request-side counterpart to the Location-header rewrite performed by
+   dav_svn__location_header_filter() (the two are conceptual inverses, though
+   they differ in how they juggle the encoded/decoded root). */
+static void
+proxy_request_fixup_destination(request_rec *r, const char *master_uri)
+{
+    const char *destination = apr_table_get(r->headers_in, "Destination");
+    apr_uri_t dest_uri;
+    const char *dest_path, *root_dir, *rel;
+
+    if (destination == NULL
+        || apr_uri_parse(r->pool, destination, &dest_uri) != APR_SUCCESS
+        || dest_uri.path == NULL)
+      {
+        return;
+      }
+
+    /* apr_uri_parse() leaves dest_uri.path URI-encoded but
+       dav_svn__get_root_dir() is decoded. Encode the root so the comparison
+       and the rebuilt header both stay in the encoded domain. rel is then
+       already encoded and must not be re-encoded, only master_uri is, just
+       as dav_svn__location_header_filter() encodes it on the way back. */
+    dest_path = svn_urlpath__canonicalize(dest_uri.path, r->pool);
+    root_dir = svn_path_uri_encode(dav_svn__get_root_dir(r), r->pool);
+    root_dir = svn_urlpath__canonicalize(root_dir, r->pool);
+
+    rel = svn_urlpath__skip_ancestor(root_dir, dest_path);
+    if (rel == NULL)
+      {
+        /* The Destination isn't under this slave's location, so we have no
+           way to translate it to the master. Leave it untouched (the master
+           will reject it) but log for diagnosability. */
+        ap_log_rerror(APLOG_MARK, APLOG_DEBUG, 0, r,
+                      "Not rewriting Destination '%s': outside slave root '%s'",
+                      dest_path, root_dir);
+        return;
+      }
+
+    apr_table_set(r->headers_in, "Destination",
+                  apr_pstrcat(r->pool, svn_path_uri_encode(master_uri, r->pool),
+                              "/", rel, SVN_VA_NULL));
+}
+
+
 /* Tweak the request record R, and add the necessary filters, so that
    the request is ready to be proxied away.  MASTER_URI is the URI
    specified in the SVNMasterURI Apache configuration value.
@@ -59,6 +106,8 @@ static int proxy_request_fixup(request_rec *r,
                                                            SVN_VA_NULL),
                                                r->pool);
     r->handler = "proxy-server";
+
+    proxy_request_fixup_destination(r, master_uri);
 
     /* ### FIXME: Seems we could avoid adding some or all of these
            filters altogether when the root_dir (that is, the slave's
