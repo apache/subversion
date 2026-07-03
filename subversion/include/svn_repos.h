@@ -1540,8 +1540,12 @@ svn_repos_replay(svn_fs_root_t *root,
  * of the commit transaction, including author and log message if
  * present.
  *
- * @note #SVN_PROP_REVISION_DATE may be present in @a revprop_table, but
- * it will be overwritten when the transaction is committed.
+ * @a txn_flags is passed to svn_repos_fs_begin_txn_for_commit3() when
+ * creating a new transaction.
+ *
+ * @note If #SVN_FS_TXN_CLIENT_DATE is included in @a txn_flags, the
+ * #SVN_PROP_REVISION_DATE in @a revprop_table will be preserved as
+ * the commit date; otherwise it will be overwritten with the commit time.
  *
  * Iff @a authz_callback is provided, check read/write authorizations
  * on paths accessed by editor operations.  An operation which fails
@@ -1549,6 +1553,9 @@ svn_repos_replay(svn_fs_root_t *root,
  * SVN_ERR_AUTHZ_UNWRITABLE.
  *
  * Calling @a (*editor)->close_edit completes the commit.
+ *
+ * @a commit_callback may be @c NULL if the caller does not need to be
+ * notified of the commit result.
  *
  * If @a commit_callback is non-NULL, then before @c close_edit returns (but
  * after the commit has succeeded) @c close_edit will invoke
@@ -1566,7 +1573,7 @@ svn_repos_replay(svn_fs_root_t *root,
  * NULL).  Callers who supply their own transactions are responsible
  * for cleaning them up (either by committing them, or aborting them).
  *
- * @since New in 1.5. Since 1.6, @a commit_callback can be @c NULL.
+ * @since New in 1.16.
  *
  * @note Yes, @a repos_url_decoded is a <em>decoded</em> URL.  We realize
  * that's sorta wonky.  Sorry about that.
@@ -1575,6 +1582,32 @@ svn_repos_replay(svn_fs_root_t *root,
  * @c copyfrom_path parameter passed to its @c add_file and @c add_directory
  * methods is a full, URI-encoded URL, not a relative path.
  */
+svn_error_t *
+svn_repos_get_commit_editor6(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_repos_t *repos,
+                             svn_fs_txn_t *txn,
+                             const char *repos_url_decoded,
+                             const char *base_path,
+                             apr_hash_t *revprop_table,
+                             apr_uint32_t txn_flags,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
+                             svn_repos_authz_callback_t authz_callback,
+                             void *authz_baton,
+                             apr_pool_t *pool);
+
+/**
+ * Similar to svn_repos_get_commit_editor6(), but with @a txn_flags
+ * always set to 0.
+ *
+ * @note #SVN_PROP_REVISION_DATE may be present in @a revprop_table, but
+ * it will be overwritten when the transaction is committed.
+ *
+ * @since New in 1.5. Since 1.6, @a commit_callback can be @c NULL.
+ * @deprecated Provided for backward compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
                              void **edit_baton,
@@ -2510,16 +2543,42 @@ svn_repos_fs_commit_txn(const char **conflict_p,
  * repository object which contains the filesystem.  @a rev, @a
  * *txn_p, and @a pool are as in svn_fs_begin_txn().
  *
+ * @a txn_flags are additional transaction flags OR-ed with
+ * #SVN_FS_TXN_CHECK_LOCKS, which is always applied; passing 0 therefore
+ * yields the same lock-checking behavior as the older
+ * svn_repos_fs_begin_txn_for_commit2().
+ *
  * Before a txn is created, the repository's start-commit hooks are
  * run; if any of them fail, no txn is created, @a *txn_p is unaffected,
  * and #SVN_ERR_REPOS_HOOK_FAILURE is returned.
+ *
+ * @note @a revprop_table may contain an #SVN_PROP_REVISION_DATE property,
+ * which will be set on the transaction. If #SVN_FS_TXN_CLIENT_DATE is
+ * included in @a txn_flags, this date will be preserved when the transaction
+ * is committed; otherwise it will be overwritten with the commit time.
+ *
+ * @since New in 1.16.
+ */
+svn_error_t *
+svn_repos_fs_begin_txn_for_commit3(svn_fs_txn_t **txn_p,
+                                   svn_repos_t *repos,
+                                   svn_revnum_t rev,
+                                   apr_hash_t *revprop_table,
+                                   apr_uint32_t txn_flags,
+                                   apr_pool_t *pool);
+
+
+/** Like svn_repos_fs_begin_txn_for_commit3(), but with @a txn_flags
+ * set to #SVN_FS_TXN_CHECK_LOCKS only.
  *
  * @note @a revprop_table may contain an #SVN_PROP_REVISION_DATE property,
  * which will be set on the transaction, but that will be overwritten
  * when the transaction is committed.
  *
  * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.15 API.
  */
+SVN_DEPRECATED
 svn_error_t *
 svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
                                    svn_repos_t *repos,

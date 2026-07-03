@@ -131,7 +131,13 @@ svn_repos__fs_type(const char **fs_type,
                    apr_pool_t *pool);
 
 
-/* Create a commit editor for REPOS, based on REVISION.  */
+/* Create a commit editor for REPOS, based on REVISION.
+ *
+ * TXN_FLAGS are additional transaction flags (e.g. SVN_FS_TXN_CLIENT_DATE)
+ * OR-ed with SVN_FS_TXN_CHECK_LOCKS, which is always applied.  When
+ * SVN_FS_TXN_CLIENT_DATE is set, a caller-supplied SVN_PROP_REVISION_DATE
+ * in REVPROPS is preserved instead of being overwritten at commit time.
+ */
 svn_error_t *
 svn_repos__get_commit_ev2(svn_editor_t **editor,
                           svn_repos_t *repos,
@@ -139,6 +145,7 @@ svn_repos__get_commit_ev2(svn_editor_t **editor,
                           const char *authz_repos_name,
                           const char *authz_user,
                           apr_hash_t *revprops,
+                          apr_uint32_t txn_flags,
                           svn_commit_callback2_t commit_cb,
                           void *commit_baton,
                           svn_cancel_func_t cancel_func,

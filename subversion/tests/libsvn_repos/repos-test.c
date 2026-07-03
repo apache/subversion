@@ -3326,9 +3326,9 @@ prop_validation_commit_with_revprop(const char *filename,
 
   /* Make an arbitrary change and commit using above values... */
 
-  SVN_ERR(svn_repos_get_commit_editor5(&editor, &edit_baton, repos,
+  SVN_ERR(svn_repos_get_commit_editor6(&editor, &edit_baton, repos,
                                        NULL, "file://test", "/",
-                                       revprop_table,
+                                       revprop_table, 0,
                                        NULL, NULL, NULL, NULL, pool));
 
   SVN_ERR(editor->open_root(edit_baton, 0, pool, &root_baton));
@@ -3411,7 +3411,112 @@ prop_validation(const svn_test_opts_t *opts,
 }
 
 
-
+/* Drive the commit editor EDITOR/EDIT_BATON to add a single empty file
+   named FILENAME at the root, basing the txn on BASE_REV. */
+static svn_error_t *
+commit_add_file(const svn_delta_editor_t *editor,
+                void *edit_baton,
+                const char *filename,
+                svn_revnum_t base_rev,
+                apr_pool_t *pool)
+{
+  void *root_baton;
+  void *file_baton;
+
+  SVN_ERR(editor->open_root(edit_baton, base_rev, pool, &root_baton));
+  SVN_ERR(editor->add_file(filename, root_baton, NULL, SVN_INVALID_REVNUM,
+                           pool, &file_baton));
+  SVN_ERR(editor->close_file(file_baton, NULL, pool));
+  SVN_ERR(editor->close_directory(root_baton, pool));
+  SVN_ERR(editor->close_edit(edit_baton, pool));
+
+  return SVN_NO_ERROR;
+}
+
+/* Verify that svn_repos_get_commit_editor6() honors SVN_FS_TXN_CLIENT_DATE:
+   when the flag is set, a caller-supplied svn:author and svn:date survive
+   the commit verbatim; when it is not set, svn:date is overwritten with the
+   commit time. */
+static svn_error_t *
+commit_editor_preserve_revprops(const svn_test_opts_t *opts,
+                                apr_pool_t *pool)
+{
+  svn_repos_t *repos;
+  svn_fs_t *fs;
+  const svn_delta_editor_t *editor;
+  void *edit_baton;
+  apr_hash_t *revprop_table;
+  svn_revnum_t youngest_rev;
+  svn_string_t *value;
+  const char *the_author = "the-original-author";
+  /* A fixed date in the past, distinct from the current commit time. */
+  const char *the_date = "2000-01-01T00:00:00.000000Z";
+
+  /* Create a filesystem and repository. */
+  SVN_ERR(svn_test__create_repos(
+            &repos, "test-repo-commit-editor-preserve-revprops", opts, pool));
+  fs = svn_repos_fs(repos);
+
+  /* --- Case 1: with SVN_FS_TXN_CLIENT_DATE the date is preserved. --- */
+  revprop_table = apr_hash_make(pool);
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                svn_string_create(the_author, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_DATE,
+                svn_string_create(the_date, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                svn_string_create("preserve the date", pool));
+
+  SVN_ERR(svn_repos_get_commit_editor6(&editor, &edit_baton, repos, NULL,
+                                       "file://test", "/", revprop_table,
+                                       SVN_FS_TXN_CLIENT_DATE,
+                                       NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(commit_add_file(editor, edit_baton, "/f1", 0, pool));
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs, youngest_rev,
+                               SVN_PROP_REVISION_AUTHOR, pool));
+  SVN_TEST_ASSERT(value != NULL);
+  SVN_TEST_STRING_ASSERT(value->data, the_author);
+
+  SVN_ERR(svn_fs_revision_prop(&value, fs, youngest_rev,
+                               SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(value != NULL);
+  SVN_TEST_STRING_ASSERT(value->data, the_date);
+
+  /* --- Case 2: without the flag, svn:date is overwritten. --- */
+  revprop_table = apr_hash_make(pool);
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                svn_string_create(the_author, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_DATE,
+                svn_string_create(the_date, pool));
+  svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                svn_string_create("overwrite the date", pool));
+
+  SVN_ERR(svn_repos_get_commit_editor6(&editor, &edit_baton, repos, NULL,
+                                       "file://test", "/", revprop_table,
+                                       0 /* no SVN_FS_TXN_CLIENT_DATE */,
+                                       NULL, NULL, NULL, NULL, pool));
+  SVN_ERR(commit_add_file(editor, edit_baton, "/f2", youngest_rev, pool));
+
+  SVN_ERR(svn_fs_youngest_rev(&youngest_rev, fs, pool));
+
+  /* The author is still taken verbatim from the revprop table. */
+  SVN_ERR(svn_fs_revision_prop(&value, fs, youngest_rev,
+                               SVN_PROP_REVISION_AUTHOR, pool));
+  SVN_TEST_ASSERT(value != NULL);
+  SVN_TEST_STRING_ASSERT(value->data, the_author);
+
+  /* But the date must have been replaced with the commit time. */
+  SVN_ERR(svn_fs_revision_prop(&value, fs, youngest_rev,
+                               SVN_PROP_REVISION_DATE, pool));
+  SVN_TEST_ASSERT(value != NULL);
+  SVN_TEST_ASSERT(strcmp(value->data, the_date) != 0);
+
+  return SVN_NO_ERROR;
+}
+
+
 /* Tests for svn_repos_get_logsN() */
 
 /* Log receiver which simple increments a counter. */
@@ -4128,8 +4233,8 @@ deprecated_access_context_api(const svn_test_opts_t *opts,
   SVN_ERR(svn_fs_set_access(svn_repos_fs(repos), access));
 
   /* Commit a new revision. */
-  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
-                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit3(&txn, repos, 0,
+                                             apr_hash_make(pool), 0, pool));
   SVN_ERR(svn_fs_txn_root(&root, txn, pool));
   SVN_ERR(svn_fs_make_dir(root, "/whatever", pool));
   SVN_ERR(svn_repos_fs_commit_txn(&conflict, repos, &new_rev, txn, pool));
@@ -4391,8 +4496,8 @@ commit_aborted_txn(const svn_test_opts_t *opts,
                                  opts, pool));
 
   /* Create and abort the transaction. */
-  SVN_ERR(svn_repos_fs_begin_txn_for_commit2(&txn, repos, 0,
-                                             apr_hash_make(pool), pool));
+  SVN_ERR(svn_repos_fs_begin_txn_for_commit3(&txn, repos, 0,
+                                             apr_hash_make(pool), 0, pool));
   SVN_ERR(svn_fs_txn_root(&txn_root, txn, pool));
   SVN_ERR(svn_fs_make_dir(txn_root, "/A", pool));
   SVN_ERR(svn_fs_abort_txn(txn, pool));
@@ -4501,6 +4606,8 @@ static struct svn_test_descriptor_t test_funcs[] =
                        "test reporter and svn_depth_exclude"),
     SVN_TEST_OPTS_PASS(prop_validation,
                        "test if revprops are validated by repos"),
+    SVN_TEST_OPTS_PASS(commit_editor_preserve_revprops,
+                       "test SVN_FS_TXN_CLIENT_DATE in the commit editor"),
     SVN_TEST_OPTS_PASS(get_logs,
                        "test svn_repos_get_logs ranges and limits"),
     SVN_TEST_OPTS_PASS(test_get_file_revs,

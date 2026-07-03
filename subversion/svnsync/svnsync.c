@@ -494,6 +494,14 @@ check_if_session_is_at_repos_root(svn_ra_session_t *sess,
 }
 
 
+/* Return TRUE iff KEY names a property in the svnsync property namespace. */
+static svn_boolean_t
+is_svnsync_prop(const char *key)
+{
+  return strncmp(key, SVNSYNC_PROP_PREFIX,
+                 sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0;
+}
+
 /* Remove the properties in TARGET_PROPS but not in SOURCE_PROPS from
  * revision REV of the repository associated with RA session SESSION.
  *
@@ -519,8 +527,7 @@ remove_props_not_in_source(svn_ra_session_t *session,
 
       svn_pool_clear(subpool);
 
-      if (rev == 0 && !strncmp(propname, SVNSYNC_PROP_PREFIX,
-                               sizeof(SVNSYNC_PROP_PREFIX) - 1))
+      if (rev == 0 && is_svnsync_prop(propname))
         continue;
 
       /* Delete property if the name can't be found in SOURCE_PROPS. */
@@ -611,8 +618,7 @@ write_revprops(int *filtered_count,
 
       svn_pool_clear(subpool);
 
-      if (strncmp(propname, SVNSYNC_PROP_PREFIX,
-                  sizeof(SVNSYNC_PROP_PREFIX) - 1) != 0)
+      if (! is_svnsync_prop(propname))
         {
           if (old_rev_props)
             {
@@ -1027,8 +1033,17 @@ typedef struct replay_baton_t {
   svn_ra_session_t *to_session;
   svn_revnum_t current_revision;
   subcommand_baton_t *sb;
-  svn_boolean_t has_commit_revprops_capability;
   svn_boolean_t has_atomic_revprops_capability;
+
+  /* How each revision's properties are split between the commit and a
+     follow-up revprop update; resolved once by resolve_revprop_handling(),
+     which see.  Each filter returns TRUE for the properties to *exclude*
+     from its pass.  POST_COMMIT_FILTER is NULL when no follow-up pass is
+     needed.  Properties in the svnsync bookkeeping namespace (svn:sync-*)
+     are never mirrored by either pass. */
+  filter_func_t commit_filter;
+  filter_func_t post_commit_filter;
+
   int normalized_rev_props_count;
   int normalized_node_props_count;
   const char *to_root;
@@ -1070,15 +1085,9 @@ make_replay_baton(replay_baton_t **baton_p,
 static svn_boolean_t
 filter_exclude_date_author_sync(const char *key)
 {
-  if (strcmp(key, SVN_PROP_REVISION_AUTHOR) == 0)
-    return TRUE;
-  else if (strcmp(key, SVN_PROP_REVISION_DATE) == 0)
-    return TRUE;
-  else if (strncmp(key, SVNSYNC_PROP_PREFIX,
-                   sizeof(SVNSYNC_PROP_PREFIX) - 1) == 0)
-    return TRUE;
-
-  return FALSE;
+  return strcmp(key, SVN_PROP_REVISION_AUTHOR) == 0
+      || strcmp(key, SVN_PROP_REVISION_DATE) == 0
+      || is_svnsync_prop(key);
 }
 
 /* Return FALSE iff KEY is the name of an svn:date or svn:author or any svnsync
@@ -1090,7 +1099,6 @@ filter_include_date_author_sync(const char *key)
 {
   return ! filter_exclude_date_author_sync(key);
 }
-
 
 /* Return TRUE iff KEY is the name of the svn:log property.
  * Implements filter_func_t. Use with filter_props() to only exclude svn:log.
@@ -1111,6 +1119,45 @@ static svn_boolean_t
 filter_include_log(const char *key)
 {
   return ! filter_exclude_log(key);
+}
+
+/* Resolve, from the destination capabilities HAS_COMMIT_PRESERVES_AUTHOR_DATE
+ * and HAS_COMMIT_REVPROPS, how each revision's properties are divided between
+ * the commit itself and a follow-up revprop update, storing the decision on
+ * RB.  RB->COMMIT_FILTER excludes properties from the commit.
+ * RB->POST_COMMIT_FILTER excludes properties from the follow-up update, or
+ * is NULL when no follow-up update is needed at all.  The two filters are
+ * not exact complements: properties in the svnsync bookkeeping namespace
+ * (svn:sync-*) are excluded from both passes, since they describe the
+ * mirror relationship itself and must not be mirrored as payload. */
+static void
+resolve_revprop_handling(replay_baton_t *rb,
+                         svn_boolean_t has_commit_preserves_author_date,
+                         svn_boolean_t has_commit_revprops)
+{
+  if (has_commit_preserves_author_date)
+    {
+      /* The destination preserves a client-supplied svn:author/svn:date in
+         the commit (e.g. file:// via ra_local), so commit every property
+         except the svnsync bookkeeping ones and leave nothing for a
+         follow-up. */
+      rb->commit_filter = is_svnsync_prop;
+      rb->post_commit_filter = NULL;
+    }
+  else if (has_commit_revprops)
+    {
+      /* The destination accepts revprops in the commit but overwrites
+         svn:author/svn:date, so those are copied afterwards. */
+      rb->commit_filter = filter_exclude_date_author_sync;
+      rb->post_commit_filter = filter_include_date_author_sync;
+    }
+  else
+    {
+      /* The destination only carries svn:log through the commit; every other
+         property is copied afterwards. */
+      rb->commit_filter = filter_include_log;
+      rb->post_commit_filter = filter_exclude_log;
+    }
 }
 
 #ifdef ENABLE_EV2_SHIMS
@@ -1281,18 +1328,12 @@ replay_rev_started(svn_revnum_t revision,
                                   svn_string_createf(pool, "%ld", revision),
                                   pool));
 
-  /* The actual copy is just a replay hooked up to a commit.  Include
-     all the revision properties from the source repositories, except
-     'svn:author' and 'svn:date', those are not guaranteed to get
-     through the editor anyway.
-     If we're syncing to an non-commit-revprops capable server, filter
-     out all revprops except svn:log and add them later in
-     revplay_rev_finished. */
-  filtered = filter_props(&filtered_count, rev_props,
-                          (rb->has_commit_revprops_capability
-                            ? filter_exclude_date_author_sync
-                            : filter_include_log),
-                          pool);
+  /* The actual copy is just a replay hooked up to a commit.  Send through
+     the commit editor whichever revision properties the destination can
+     carry in the commit itself; rb->commit_filter encodes that choice (see
+     resolve_revprop_handling()).  Any properties it leaves behind are added
+     later in replay_rev_finished(). */
+  filtered = filter_props(&filtered_count, rev_props, rb->commit_filter, pool);
 
   /* svn_ra_get_commit_editor3 requires the log message to be
      set. It's possible that we didn't receive 'svn:log' here, so we
@@ -1353,9 +1394,8 @@ replay_rev_finished(svn_revnum_t revision,
 {
   apr_pool_t *subpool = svn_pool_create(pool);
   replay_baton_t *rb = replay_baton;
-  apr_hash_t *filtered, *existing_props;
-  int filtered_count;
-  int normalized_count;
+  apr_hash_t *existing_props;
+  int filtered_count = 0;
   const svn_string_t *rev_str;
 
   SVN_ERR(editor->close_edit(edit_baton, pool));
@@ -1371,24 +1411,28 @@ replay_rev_finished(svn_revnum_t revision,
                               subpool));
 
 
-  /* Ok, we're done with the data, now we just need to copy the remaining
-     'svn:date' and 'svn:author' revprops and we're all set.
-     If the server doesn't support revprops-in-a-commit, we still have to
-     set all revision properties except svn:log. */
-  filtered = filter_props(&filtered_count, rev_props,
-                          (rb->has_commit_revprops_capability
-                            ? filter_include_date_author_sync
-                            : filter_exclude_log),
-                          subpool);
+  /* Now copy whatever revision properties the commit could not carry.
+     rb->post_commit_filter excludes the properties already handled in
+     replay_rev_started(); it is NULL when no follow-up update is needed at
+     all.  See resolve_revprop_handling(). */
+  if (rb->post_commit_filter)
+    {
+      apr_hash_t *filtered;
+      int normalized_count;
 
-  /* If necessary, normalize encoding and line ending style, and add the number
-     of EOL-normalized properties to the overall count in the replay baton. */
-  SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count,
-                                     rb->sb->source_prop_encoding, pool));
-  rb->normalized_rev_props_count += normalized_count;
+      filtered = filter_props(&filtered_count, rev_props,
+                              rb->post_commit_filter, subpool);
 
-  SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision, filtered,
-                         NULL, subpool));
+      /* If necessary, normalize encoding and line ending style, and add the
+         number of EOL-normalized properties to the overall count in the
+         replay baton. */
+      SVN_ERR(svnsync_normalize_revprops(filtered, &normalized_count,
+                                         rb->sb->source_prop_encoding, pool));
+      rb->normalized_rev_props_count += normalized_count;
+
+      SVN_ERR(write_revprops(&filtered_count, rb->to_session, revision,
+                             filtered, NULL, subpool));
+    }
 
   /* Remove all extra properties in TARGET. */
   SVN_ERR(remove_props_not_in_source(rb->to_session, revision,
@@ -1415,8 +1459,11 @@ replay_rev_finished(svn_revnum_t revision,
                                     ? &rev_str : NULL,
                                   NULL, subpool));
 
-  /* Notify the user that we copied revision properties. */
-  if (! rb->sb->quiet)
+  /* Notify the user that we copied revision properties, unless the commit
+     itself carried them (post_commit_filter is NULL), in which case
+     commit_callback already printed "Committed revision X." and there is
+     nothing more to report. */
+  if (! rb->sb->quiet && rb->post_commit_filter)
     SVN_ERR(log_properties_copied(filtered_count > 0, revision, subpool));
 
   svn_pool_destroy(subpool);
@@ -1441,6 +1488,7 @@ do_synchronize(svn_ra_session_t *to_session,
   svn_revnum_t to_latest, copying, last_merged;
   svn_revnum_t start_revision, end_revision;
   replay_baton_t *rb;
+  svn_boolean_t has_commit_revprops, has_commit_preserves_author_date;
   int normalized_rev_props_count = 0;
 
   SVN_ERR(open_source_session(&from_session, &last_merged_rev,
@@ -1541,8 +1589,7 @@ do_synchronize(svn_ra_session_t *to_session,
 
   /* For compatibility with older svnserve versions, check first if we
      support adding revprops to the commit. */
-  SVN_ERR(svn_ra_has_capability(rb->to_session,
-                                &rb->has_commit_revprops_capability,
+  SVN_ERR(svn_ra_has_capability(rb->to_session, &has_commit_revprops,
                                 SVN_RA_CAPABILITY_COMMIT_REVPROPS,
                                 pool));
 
@@ -1550,6 +1597,24 @@ do_synchronize(svn_ra_session_t *to_session,
                                 &rb->has_atomic_revprops_capability,
                                 SVN_RA_CAPABILITY_ATOMIC_REVPROPS,
                                 pool));
+
+  /* Check if the destination supports setting author/date directly in
+     the commit */
+  SVN_ERR(svn_ra_has_capability(rb->to_session,
+                                &has_commit_preserves_author_date,
+                                SVN_RA_CAPABILITY_COMMIT_PRESERVES_AUTHOR_DATE,
+                                pool));
+
+  /* Decide how each revision's properties are split between the
+     commit and a follow-up revprop update. */
+  resolve_revprop_handling(rb, has_commit_preserves_author_date,
+                           has_commit_revprops);
+
+  if (! baton->quiet && has_commit_preserves_author_date)
+    SVN_ERR(svn_cmdline_printf(pool,
+                               _("Destination supports commit-time author "
+                                 "and date; no post-commit revprop sync "
+                                 "needed.\n")));
 
   start_revision = last_merged + 1;
   end_revision = from_latest;

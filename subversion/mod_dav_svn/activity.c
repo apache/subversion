@@ -256,8 +256,9 @@ dav_svn__create_txn(dav_svn_repos *repos,
                                   repos->pool);
     }
 
-  serr = svn_repos_fs_begin_txn_for_commit2(&txn, repos->repos, rev,
-                                            revprops, repos->pool);
+  serr = svn_repos_fs_begin_txn_for_commit3(&txn, repos->repos, rev,
+                                            revprops, 0 /* flags */,
+                                            repos->pool);
   if (serr != NULL)
     {
       return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,

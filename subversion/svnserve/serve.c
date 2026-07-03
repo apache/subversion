@@ -1547,11 +1547,11 @@ commit(svn_ra_svn_conn_t *conn,
   ccb.date = &date;
   ccb.author = &author;
   ccb.post_commit_err = &post_commit_err;
-  /* ### Note that svn_repos_get_commit_editor5 actually wants a decoded URL. */
-  SVN_CMD_ERR(svn_repos_get_commit_editor5
+  /* ### Note that svn_repos_get_commit_editor6 actually wants a decoded URL. */
+  SVN_CMD_ERR(svn_repos_get_commit_editor6
               (&editor, &edit_baton, b->repository->repos, NULL,
                svn_path_uri_decode(b->repository->repos_url, pool),
-               b->repository->fs_path->data, revprop_table,
+               b->repository->fs_path->data, revprop_table, 0,
                commit_done, &ccb,
                authz_commit_cb, &ab, pool));
   SVN_ERR(svn_ra_svn__write_cmd_response(conn, pool, ""));

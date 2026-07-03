@@ -46,6 +46,27 @@
 /*** From commit.c ***/
 
 svn_error_t *
+svn_repos_get_commit_editor5(const svn_delta_editor_t **editor,
+                             void **edit_baton,
+                             svn_repos_t *repos,
+                             svn_fs_txn_t *txn,
+                             const char *repos_url_decoded,
+                             const char *base_path,
+                             apr_hash_t *revprop_table,
+                             svn_commit_callback2_t commit_callback,
+                             void *commit_baton,
+                             svn_repos_authz_callback_t authz_callback,
+                             void *authz_baton,
+                             apr_pool_t *pool)
+{
+  return svn_repos_get_commit_editor6(editor, edit_baton, repos, txn,
+                                      repos_url_decoded, base_path,
+                                      revprop_table, 0,
+                                      commit_callback, commit_baton,
+                                      authz_callback, authz_baton, pool);
+}
+
+svn_error_t *
 svn_repos_get_commit_editor4(const svn_delta_editor_t **editor,
                              void **edit_baton,
                              svn_repos_t *repos,
@@ -410,6 +431,36 @@ svn_repos_replay(svn_fs_root_t *root,
 }
 
 /*** From fs-wrap.c ***/
+svn_error_t *
+svn_repos_fs_begin_txn_for_commit2(svn_fs_txn_t **txn_p,
+                                   svn_repos_t *repos,
+                                   svn_revnum_t rev,
+                                   apr_hash_t *revprop_table,
+                                   apr_pool_t *pool)
+{
+  return svn_repos_fs_begin_txn_for_commit3(txn_p, repos, rev, revprop_table,
+                                            0, pool);
+}
+
+svn_error_t *
+svn_repos_fs_begin_txn_for_commit(svn_fs_txn_t **txn_p,
+                                  svn_repos_t *repos,
+                                  svn_revnum_t rev,
+                                  const char *author,
+                                  const char *log_msg,
+                                  apr_pool_t *pool)
+{
+  apr_hash_t *revprop_table = apr_hash_make(pool);
+  if (author)
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                  svn_string_create(author, pool));
+  if (log_msg)
+    svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                  svn_string_create(log_msg, pool));
+  return svn_repos_fs_begin_txn_for_commit2(txn_p, repos, rev, revprop_table,
+                                            pool);
+}
+
 svn_error_t *
 svn_repos_fs_change_rev_prop3(svn_repos_t *repos,
                               svn_revnum_t rev,

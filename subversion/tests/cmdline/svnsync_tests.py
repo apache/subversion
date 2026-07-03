@@ -572,6 +572,56 @@ PROPS-END
   # Compare the dump produced by the mirror repository with expected
   verify_mirror(dest_sbox, dump_out)
 
+def sync_to_local_preserves_author_date(sbox):
+  "sync to a local mirror preserves author/date"
+
+  # Source repository with one real revision (the greek tree).
+  sbox.build(create_wc=False)
+
+  # Capture the source's r1 svn:author and svn:date.
+  exit_code, src_author, errput = svntest.main.run_svn(
+    None, "propget", "--revprop", "-r", "1", "svn:author", sbox.repo_url)
+  exit_code, src_date, errput = svntest.main.run_svn(
+    None, "propget", "--revprop", "-r", "1", "svn:date", sbox.repo_url)
+
+  # Empty destination mirror, addressed via file:// so ra_local is used.
+  dest_sbox = sbox.clone_dependent()
+  dest_sbox.build(create_wc=False, empty=True)
+
+  exit_code, output, errput = svntest.main.run_svnlook("uuid", sbox.repo_dir)
+  svntest.actions.run_and_verify_svnadmin2(None, None, 0,
+                                           'setuuid', dest_sbox.repo_dir,
+                                           output[0][:-1])
+  svntest.actions.enable_revprop_changes(dest_sbox.repo_dir)
+
+  dest_repo_url = dest_sbox.file_protocol_repo_url()
+  run_init(dest_repo_url, sbox.repo_url)
+
+  # Sync.  For an ra_local destination svnsync sets svn:author and svn:date
+  # during the commit itself, so the per-revision "Copied properties ..."
+  # line must NOT appear.
+  exit_code, output, errput = svntest.main.run_svnsync(
+    "synchronize", dest_repo_url, sbox.repo_url)
+  if errput:
+    raise SVNUnexpectedStderr(errput)
+  if [l for l in output if "Copied properties for revision 1" in l]:
+    raise svntest.Failure("svnsync performed a post-commit revprop copy "
+                          "for an ra_local destination")
+
+  # WITHOUT a separate copy-revprops step, the mirror must already carry the
+  # original author and date.
+  exit_code, dst_author, errput = svntest.main.run_svn(
+    None, "propget", "--revprop", "-r", "1", "svn:author", dest_repo_url)
+  exit_code, dst_date, errput = svntest.main.run_svn(
+    None, "propget", "--revprop", "-r", "1", "svn:date", dest_repo_url)
+
+  if dst_author != src_author:
+    raise svntest.Failure("svn:author not preserved: expected %s, got %s"
+                          % (src_author, dst_author))
+  if dst_date != src_date:
+    raise svntest.Failure("svn:date not preserved: expected %s, got %s"
+                          % (src_date, dst_date))
+
 def up_to_date_sync(sbox):
   """sync that does nothing"""
 
@@ -625,6 +675,7 @@ test_list = [ None,
               fd_leak_sync_from_serf_to_local, # calls setrlimit
               mergeinfo_contains_r0,
               up_to_date_sync,
+              sync_to_local_preserves_author_date,
              ]
 
 if __name__ == '__main__':

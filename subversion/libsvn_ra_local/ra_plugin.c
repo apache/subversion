@@ -861,6 +861,28 @@ remap_commit_callback(svn_commit_callback2_t *callback,
     }
 }
 
+/* Prepare REVPROPS, a mutable revprop hash owned by the caller, for an
+   ra_local commit and return the transaction flags it requires.
+
+   When the caller did not supply an svn:author, default it to USERNAME.
+   Return SVN_FS_TXN_CLIENT_DATE iff the caller supplied an svn:date, so the
+   filesystem preserves that date instead of stamping the commit time.
+
+   This lets tools like svnsync carry the original author and date through
+   the commit itself.  Any allocations are made in POOL. */
+static apr_uint32_t
+prepare_commit_revprops(apr_hash_t *revprops,
+                        const char *username,
+                        apr_pool_t *pool)
+{
+  if (! svn_hash_gets(revprops, SVN_PROP_REVISION_AUTHOR))
+    svn_hash_sets(revprops, SVN_PROP_REVISION_AUTHOR,
+                  svn_string_create(username, pool));
+
+  return svn_hash_gets(revprops, SVN_PROP_REVISION_DATE)
+           ? SVN_FS_TXN_CLIENT_DATE : 0;
+}
+
 static svn_error_t *
 svn_ra_local__get_commit_editor(svn_ra_session_t *session,
                                 const svn_delta_editor_t **editor,
@@ -874,6 +896,7 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   struct deltify_etc_baton *deb = apr_palloc(pool, sizeof(*deb));
+  apr_uint32_t txn_flags;
 
   /* Set repos_root_url in commit info */
   remap_commit_callback(&callback, &callback_baton, session,
@@ -896,20 +919,20 @@ svn_ra_local__get_commit_editor(svn_ra_session_t *session,
   SVN_ERR(apply_lock_tokens(sess->fs, sess->fs_path->data, lock_tokens,
                             session->pool, pool));
 
-  /* Copy the revprops table so we can add the username. */
+  /* Copy the revprops table so we can add/modify properties. */
   revprop_table = apr_hash_copy(pool, revprop_table);
-  svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                svn_string_create(sess->username, pool));
+  txn_flags = prepare_commit_revprops(revprop_table, sess->username, pool);
+
   svn_hash_sets(revprop_table, SVN_PROP_TXN_CLIENT_COMPAT_VERSION,
                 svn_string_create(SVN_VER_NUMBER, pool));
   svn_hash_sets(revprop_table, SVN_PROP_TXN_USER_AGENT,
                 svn_string_create(sess->useragent, pool));
 
   /* Get the repos commit-editor */
-  return svn_repos_get_commit_editor5
+  return svn_repos_get_commit_editor6
          (editor, edit_baton, sess->repos, NULL,
           svn_path_uri_decode(sess->repos_url, pool), sess->fs_path->data,
-          revprop_table, deltify_etc, deb, NULL, NULL, pool);
+          revprop_table, txn_flags, deltify_etc, deb, NULL, NULL, pool);
 }
 
 
@@ -1674,6 +1697,7 @@ svn_ra_local__has_capability(svn_ra_session_t *session,
       || strcmp(capability, SVN_RA_CAPABILITY_EPHEMERAL_TXNPROPS) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE) == 0
       || strcmp(capability, SVN_RA_CAPABILITY_LIST) == 0
+      || strcmp(capability, SVN_RA_CAPABILITY_COMMIT_PRESERVES_AUTHOR_DATE) == 0
       )
     {
       *has = TRUE;
@@ -1777,6 +1801,7 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
 {
   svn_ra_local__session_baton_t *sess = session->priv;
   struct deltify_etc_baton *deb = apr_palloc(result_pool, sizeof(*deb));
+  apr_uint32_t txn_flags;
 
   remap_commit_callback(&commit_cb, &commit_baton, session,
                         commit_cb, commit_baton, result_pool);
@@ -1803,15 +1828,14 @@ svn_ra_local__get_commit_ev2(svn_editor_t **editor,
   SVN_ERR(apply_lock_tokens(sess->fs, sess->fs_path->data, lock_tokens,
                             session->pool, scratch_pool));
 
-  /* Copy the REVPROPS and insert the author/username.  */
+  /* Copy the REVPROPS so we can add/modify properties.  */
   revprops = apr_hash_copy(scratch_pool, revprops);
-  svn_hash_sets(revprops, SVN_PROP_REVISION_AUTHOR,
-                svn_string_create(sess->username, scratch_pool));
+  txn_flags = prepare_commit_revprops(revprops, sess->username, scratch_pool);
 
   return svn_error_trace(svn_repos__get_commit_ev2(
                            editor, sess->repos, NULL /* authz */,
                            NULL /* authz_repos_name */, NULL /* authz_user */,
-                           revprops,
+                           revprops, txn_flags,
                            deltify_etc, deb, cancel_func, cancel_baton,
                            result_pool, scratch_pool));
 }

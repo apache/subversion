@@ -3079,6 +3079,8 @@ ra_svn_has_capability(svn_ra_session_t *session,
       {SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
                                        SVN_RA_SVN_CAP_GET_FILE_REVS_REVERSE},
       {SVN_RA_CAPABILITY_LIST, SVN_RA_SVN_CAP_LIST},
+      {SVN_RA_CAPABILITY_COMMIT_PRESERVES_AUTHOR_DATE,
+                             SVN_RA_SVN_CAP_COMMIT_PRESERVES_AUTHOR_DATE},
 
       {NULL, NULL} /* End of list marker */
   };

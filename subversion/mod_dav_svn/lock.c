@@ -729,8 +729,9 @@ append_locks(dav_lockdb *lockdb,
                                     "Could not determine youngest revision",
                                     resource->pool);
 
-      if ((serr = svn_repos_fs_begin_txn_for_commit2(&txn, repos->repos, rev,
+      if ((serr = svn_repos_fs_begin_txn_for_commit3(&txn, repos->repos, rev,
                                                      revprop_table,
+                                                     0 /* flags */,
                                                      resource->pool)))
         return dav_svn__convert_err(serr, HTTP_INTERNAL_SERVER_ERROR,
                                     "Could not begin a transaction",

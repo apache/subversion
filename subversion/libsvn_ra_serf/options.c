@@ -251,6 +251,13 @@ capabilities_headers_iterator_callback(void *baton,
         {
           session->supports_put_result_checksum = TRUE;
         }
+      if (svn_cstring_match_list(
+            SVN_DAV_NS_DAV_SVN_COMMIT_PRESERVES_AUTHOR_DATE, vals))
+        {
+          svn_hash_sets(session->capabilities,
+                        SVN_RA_CAPABILITY_COMMIT_PRESERVES_AUTHOR_DATE,
+                        capability_yes);
+        }
     }
 
   /* SVN-specific headers -- if present, server supports HTTP protocol v2 */
@@ -395,6 +402,9 @@ options_response_handler(serf_request_t *request,
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_GET_FILE_REVS_REVERSE,
                     capability_no);
       svn_hash_sets(session->capabilities, SVN_RA_CAPABILITY_LIST,
+                    capability_no);
+      svn_hash_sets(session->capabilities,
+                    SVN_RA_CAPABILITY_COMMIT_PRESERVES_AUTHOR_DATE,
                     capability_no);
 
       /* Then see which ones we can discover. */

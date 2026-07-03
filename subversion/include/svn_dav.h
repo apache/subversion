@@ -422,6 +422,16 @@ extern "C" {
 #define SVN_DAV_NS_DAV_SVN_PUT_RESULT_CHECKSUM\
             SVN_DAV_PROP_NS_DAV "svn/put-result-checksum"
 
+/** Presence of this in a DAV header in an OPTIONS response indicates
+ * that the transmitter (in this case, the server) preserves a
+ * client-supplied svn:author and svn:date in a commit's revision
+ * properties instead of overwriting them at commit time.
+ *
+ * @since New in 1.16.
+ */
+#define SVN_DAV_NS_DAV_SVN_COMMIT_PRESERVES_AUTHOR_DATE\
+            SVN_DAV_PROP_NS_DAV "svn/commit-preserves-author-date"
+
 /** @} */
 
 /** @} */

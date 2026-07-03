@@ -983,7 +983,10 @@ svn_ra_rev_prop(svn_ra_session_t *session,
  * names to @c svn_string_t property values.  The commit log message
  * is expected to be in the @c SVN_PROP_REVISION_LOG element.  @a
  * revprop_table can not contain either of @c SVN_PROP_REVISION_DATE
- * or @c SVN_PROP_REVISION_AUTHOR.
+ * or @c SVN_PROP_REVISION_AUTHOR, unless @a session advertises
+ * #SVN_RA_CAPABILITY_COMMIT_PRESERVES_AUTHOR_DATE.  If it does, both
+ * properties may be supplied and will be preserved verbatim as the
+ * new revision's svn:date and svn:author (since 1.16).
  *
  * Before @c close_edit returns, but after the commit has succeeded,
  * it will invoke @a commit_callback (if non-NULL) with filled-in
@@ -2288,6 +2291,21 @@ svn_ra_has_capability(svn_ra_session_t *session,
  */
 #define SVN_RA_CAPABILITY_LIST "list"
 
+/**
+ * The capability of a destination to preserve a client-supplied
+ * svn:author and svn:date passed in a commit's revision properties,
+ * rather than overwriting them with the committing user and the commit
+ * time.  This is useful for tools like svnsync that need to preserve
+ * the original author and date from the source repository.
+ *
+ * @note This is distinct from #SVN_RA_CAPABILITY_COMMIT_REVPROPS, which
+ * only indicates that arbitrary revision properties may be carried in a
+ * commit; svn:author and svn:date are still overwritten in that case.
+ *
+ * @since New in 1.16.
+ */
+#define SVN_RA_CAPABILITY_COMMIT_PRESERVES_AUTHOR_DATE \
+                                              "commit-preserves-author-date"
 
 /*       *** PLEASE READ THIS IF YOU ADD A NEW CAPABILITY ***
  *
