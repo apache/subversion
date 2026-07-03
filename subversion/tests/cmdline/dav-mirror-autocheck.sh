@@ -496,6 +496,50 @@ $SVNLOOK tree --full-paths "$MASTER_REPOS" | grep -Fq "branch new/" \
 
 say "PASS: committing a path which has a space in it passes"
 
+# Regression coverage for SVN-3445: when the master and slave locations differ,
+# the proxy's request-body filter (dav_svn__location_in_filter) does a blind,
+# byte-level search-and-replace of the slave location path with the master
+# location path over the entire commit body, including versioned file content
+# carried in the svndiff stream.  A file whose text contains the slave's path
+# is therefore mangled, whereas a file containing the master's path passes
+# through untouched.
+say "Test case for versioned content munging (SVN-3445)"
+
+# A file embedding the master URL must commit and round-trip verbatim: the
+# request-body filter only looks for the slave path, which this content does
+# not contain.
+echo "$MASTER_URL" > "$HTTPD_ROOT/master-url.txt"
+$svnmucc put "$HTTPD_ROOT/master-url.txt" "$BASE_URL/master-url.txt" \
+  || fail "committing a file containing the master URL failed"
+master_file_content=$($SVNLOOK cat "$SLAVE_REPOS" master-url.txt)
+[ "$master_file_content" = "$MASTER_URL" ] \
+  || fail "content embedding the master URL was munged: committed '$MASTER_URL', slave stores '$master_file_content'"
+say "PASS: content embedding the master URL is preserved verbatim"
+
+# A file embedding the slave URL is the SVN-3445 hazard.  The filter rewrites
+# the "/${SLAVE_LOCATION}" byte sequence to "/${MASTER_LOCATION}" inside the
+# svndiff-encoded file data.  When those path segments differ in length (as
+# here) the rewrite corrupts the svndiff framing and the master rejects the
+# commit (SVN_ERR_SVNDIFF_UNEXPECTED_END); when they are the same length it
+# instead silently stores content with the slave hostname but the master path.
+# Either outcome is a known bug, reported as XFAIL so it does not abort the
+# suite.  Once SVN-3445 is fixed, tighten this into a hard assertion that the
+# file both commits and round-trips verbatim.
+echo "$SLAVE_URL" > "$HTTPD_ROOT/slave-url.txt"
+slave_url_munged="http://${SLAVE_HOST}:${TEST_PORT}/${MASTER_LOCATION}"
+if ($svnmucc put "$HTTPD_ROOT/slave-url.txt" "$BASE_URL/slave-url.txt" 2>&1); then
+  slave_file_content=$($SVNLOOK cat "$SLAVE_REPOS" slave-url.txt)
+  if [ "$slave_file_content" = "$SLAVE_URL" ]; then
+    say "XPASS: SVN-3445 appears fixed: 'slave-url.txt' committed and survived verbatim."
+    say "       Please replace this XFAIL block with a hard assertion."
+  else
+    say "XFAIL (SVN-3445): 'slave-url.txt' content was altered unexpectedly:"
+    say "       committed '$SLAVE_URL', slave stores '$slave_file_content'."
+  fi
+else
+  say "XFAIL (SVN-3445): committing 'slave-url.txt' was rejected"
+fi
+
 # Test case for commit to out-dated(though target path is up to date) slave.
 # See issue #3860 for details.
 say "Test case for out-dated slave commit"
