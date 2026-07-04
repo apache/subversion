@@ -94,10 +94,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1934965
-   Replace obsolete Autoconf construct in configure.ac.
-   Justification:
-     Autoconf says AC_HELP_STRING is obsolete.
-   Votes:
-     +1: brane, ivan, dsahlberg

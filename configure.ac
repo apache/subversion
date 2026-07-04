@@ -50,7 +50,7 @@ SVN_CONFIG_NICE(config.nice)
 
 svn_dot_clangd_file="$abs_srcdir/.clangd"
 AC_ARG_ENABLE([dot-clangd],
-AC_HELP_STRING([--enable-dot-clangd],
+AS_HELP_STRING([--enable-dot-clangd],
                [Generate a .clangd file at the root of the source tree]),
 [
   AC_MSG_NOTICE([Creating $svn_dot_clangd_file])
