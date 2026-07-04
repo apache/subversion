@@ -817,21 +817,6 @@ if(SVN_ENABLE_TESTS)
   set(list_tests_script "${CMAKE_CURRENT_SOURCE_DIR}/build/list_tests.py")
   set(test_base_dir "${CMAKE_CURRENT_BINARY_DIR}/Testing")
 
-  # Create the virtual environment for Python tests.
-  execute_process(
-    COMMAND
-      "${Python3_EXECUTABLE}" "${run_tests_script}"
-      --create-python-venv "${test_base_dir}"
-      ${CMAKE_CURRENT_SOURCE_DIR}
-      OUTPUT_VARIABLE command_output
-      WORKING_DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}"
-      RESULT_VARIABLE command_result
-  )
-  if (command_result)
-    message(FATAL_ERROR "run_tests.py --create-python-venv failed.")
-  endif()
-  string(STRIP "${command_output}" python3_test_executable)
-
   function(add_py_test name prog)
     if(SVN_TEST_CONFIGURE_FOR_PARALLEL)
       set(test_root "${test_base_dir}/${name}")
@@ -845,7 +830,7 @@ if(SVN_ENABLE_TESTS)
       NAME
         "${name}"
       COMMAND
-        "${python3_test_executable}" "${run_tests_script}"
+        "${Python3_EXECUTABLE}" "${run_tests_script}"
         --bin ${binary_dir}
         --tools-bin ${binary_dir}
         --verbose

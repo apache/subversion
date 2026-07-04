@@ -1041,10 +1041,6 @@ def create_parser():
                     help='Use the svn binaries installed in this path')
   parser.add_option('--tools-bin', action='store', dest='tools_bin',
                     help='Use the svn tools installed in this path')
-  parser.add_option('--create-python-venv', action='store', dest='create_venv',
-                    help=('Create the Python virtual environment inside this'
-                          ' path and install the dependencies used by the'
-                          ' test suite, then exit. Do not run any tests.'))
   parser.add_option('--python-venv', action='store', dest='venv_base',
                     help=('Use the virtual environment inside this path to'
                           ' find the dependencies used by the test suite.'))
@@ -1113,13 +1109,6 @@ def create_parser():
 
 def main():
   (opts, args) = create_parser().parse_args(sys.argv[1:])
-  if opts.create_venv:
-    main_create_venv(opts, args)
-    sys.exit(0)
-
-  # Normal mode: don't create a virtual environment, run tests or whatever
-  # else was requested instead. Create the virtual environment on demand.
-  assert not opts.create_venv
 
   if len(args) < 3:
     print("{}: at least three positional arguments required; got {!r}".format(
@@ -1141,25 +1130,6 @@ def main():
   failed = th.run(programs)
   if failed:
     sys.exit(1)
-
-def main_create_venv(opts, args):
-  # Environment creation mode: create the requested virtual environment,
-  # install required dependencies and exit.
-  assert opts.create_venv
-
-  if len(args) < 1:
-    print("{}: at least one positional argument required; got {!r}".format(
-      os.path.basename(sys.argv[0]), args
-    ))
-    sys.exit(2)
-  abs_srcdir = args[0]
-
-  sys.path.insert(0, os.path.join(abs_srcdir, "subversion", "tests", "cmdline"))
-  svntest = importlib.import_module("svntest")
-  svntest.main.venv_base = opts.create_venv
-  venv_dir = svntest.main.venv_path()
-  python_prog, _ = svntest.main.create_python_venv(venv_dir, quiet=True)
-  print(python_prog)
 
 
 # Run main if not imported as a module
