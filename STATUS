@@ -76,7 +76,7 @@ Candidate changes:
    Justification:
      Fix vcxproj build with zlib 1.3.2+ on Windows.
    Votes:
-     +1: jun66j5
+     +1: jun66j5, ivan
 
  * r1934787, r1934811
    Fix potential use of uninitialized memory in the conflict resolver.
