@@ -63,14 +63,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1932863, r1933181
-   Update some readme files
-   Justification:
-     Release should be as accurate as possible, ivan is full committer by
-     the time of release. IRC is no longer an official channel.
-   Votes:
-     +1: dsahlberg
-
  * r1934466
    Fix detection for zlib version in vcxproj build on Windows.
    Justification:
@@ -109,3 +101,11 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1932863, r1933181
+   Update some readme files
+   Justification:
+     Release should be as accurate as possible, ivan is full committer by
+     the time of release. IRC is no longer an official channel.
+   Votes:
+     +1: dsahlberg, ivan
