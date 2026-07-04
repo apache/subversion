@@ -2641,8 +2641,7 @@ def xml_unsafe_author(sbox):
 
 @Issue(4415)
 @Issue(4919)
-@XFail(lambda: (svntest.main.is_bad_xml_fatal()
-                and not svntest.main.is_ra_type_dav()))
+@XFail(lambda: (not svntest.main.is_ra_type_dav()))
 def xml_unsafe_author2(sbox):
   "svn:author with XML unsafe chars 2"
 

@@ -21,6 +21,7 @@ Contents:
        D. Installing from a Zip or Installer File under Windows
        E. Building the Latest Source under Windows
        F. Building using CMake
+       G. Running the test suite
 
    III. BUILDING A SUBVERSION SERVER
        A. Setting Up Apache Httpd
@@ -693,10 +694,8 @@ II.   INSTALLATION
           $ make
           # make install
 
-      You can also run the full test suite by running 'make check'.  Even
-      in successful runs, some tests will report XFAIL; that is normal.
-      Failed runs are indicated by FAIL or XPASS results, or a non-zero exit
-      code from "make check".
+      You can also run the full test suite by running 'make check'.  See the
+      section G for more information.
 
 
   B.  Building the Latest Source under Unix
@@ -1255,6 +1254,64 @@ II.   INSTALLATION
         file` field, where VCPKG_ROOT is the path to vcpkg registry:
 
             <VCPKG_ROOT>/scripts/buildsystems/vcpkg.cmake
+
+
+  G.  Running the test suite
+      ----------------------
+
+      The test suite can be run using any of the build systems above.
+
+      Each test may report PASS, XFAIL, FAIL or XPASS.
+
+      The first two statuses are expected and "normal":
+      - PASS means a test completed with successful result.
+      - XFAIL means a test failed, but this is a known issue.
+
+      The last two statuses are unexpected and indicate a failure:
+      - FAIL means a test returned an unexpected result.
+      - XPASS means a test which was expected to fail completed successfully.
+
+
+  G.1 Validating XML output
+
+      Some Subversion commands can format their output as XML.  The test suite
+      will always verify that the output is valid XML, however it is also
+      possible to check the output against the expected XML schema. To do
+      this, install the lxml and rnc2rng Python modules and start the tests
+      using the --check-xml-schema argument.
+
+
+  G.2 Running the test suite under the autoconf/make build system
+
+      Tests can be started with either of the following commands
+      - make check [options]
+        Run the test suite using a local repository ("file://...")
+      - make davautocheck [options]
+        Run the test suite using a http:// repository on the local machine
+      - make svnserveautocheck [options]
+        Run the test suite using a svnserve:// repository on the local machine
+      - make check-javahl [options]
+        Test the javahl bindings
+
+      For either command, the usual -j argument can be used to have make run
+      several tests concurrently.
+
+      The following list are options commonly used:
+      - PARALLEL=n
+        Run n python based command line tests concurrently
+      - TESTS=[path to python based test in subversion/tests/cmdline/]
+        Run a specific Python based test
+      - APACHE_MPM=mpm type
+        Used for davautocheck, run the test using the specified Apache httpd
+        MPM engine
+      - CHECK_XML_SCHEMA
+        If this option is defined, full XML schema validation will be
+        performed, see the --check-xml-schema option above.
+
+
+  G.3 Running the test suite under the CMake build system
+
+      Run the ctests command from the build directory.
 
 
 III.  BUILDING A SUBVERSION SERVER
