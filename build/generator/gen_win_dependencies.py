@@ -752,16 +752,18 @@ class GenDependenciesBase(gen_base.GeneratorBase):
       inc_path = os.path.join(self.zlib_path, 'include')
       lib_path = os.path.join(self.zlib_path, 'lib')
 
-      # Different build options produce different library names :(
-      if os.path.exists(os.path.join(lib_path, 'zlibstatic.lib')):
-        # CMake default: zlibstatic.lib (static) and zlib.lib (dll)
-        lib_name = 'zlibstatic.lib'
-      elif os.path.exists(os.path.join(lib_path, 'zlibstat.lib')):
-        # Visual Studio project file default: zlibstat.lib (static) and zlibwapi.lib (dll)
-        lib_name = 'zlibstat.lib'
+      # Different versions and build options produce different library names :(
+      for name in (
+        'z.lib',           # >= 1.3.2 (shared)
+        'zs.lib',          # >= 1.3.2 (static)
+        'zlibstatic.lib',  # < 1.3.2 (cmake default)
+        'zlibstat.lib',    # < 1.3.2 (Visual Studio default)
+      ):
+        if os.path.exists(os.path.join(lib_path, name)):
+          lib_name = name
+          break
       else:
-        # Standard makefile produces zlib.lib (static) and zdll.lib (dll)
-        lib_name = 'zlib.lib'
+        lib_name = 'zlib.lib'  # < 1.3.2 (Standard makefile; fallback)
       debug_lib_name = None
     else:
       # We have a source location

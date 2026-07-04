@@ -95,14 +95,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1934466
-   Fix detection for zlib version in vcxproj build on Windows.
-   Justification:
-     Fix vcxproj build with zlib 1.3.2+ on Windows.
-   Votes:
-     +1: jun66j5, ivan
-     +0: brane, dsahlberg (review only, can't test)
-
  * r1934965
    Replace obsolete Autoconf construct in configure.ac.
    Justification:
