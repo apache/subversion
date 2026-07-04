@@ -386,12 +386,12 @@ endif()
 ### Python
 
 if(SVN_ENABLE_SWIG_PYTHON)
-  find_package(Python REQUIRED COMPONENTS
+  find_package(Python3 REQUIRED COMPONENTS
       Interpreter
       Development.Embed
   )
 elseif(SVN_ENABLE_TESTS)
-  find_package(Python REQUIRED COMPONENTS
+  find_package(Python3 REQUIRED COMPONENTS
       Interpreter
   )
 endif()
@@ -508,7 +508,7 @@ if(SVN_ENABLE_SWIG_PYTHON)
 
   add_library(external-python INTERFACE)
   target_link_libraries(external-python INTERFACE
-    Python::Python
+    Python3::Python
     Python::py3c
   )
   target_include_directories(external-python INTERFACE

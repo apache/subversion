@@ -95,13 +95,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1933637
-   Fix building Python bindings with CMake.
-   Justification:
-     Build should not fail.
-   Votes:
-     +1: ivan, kotkov, dsahlberg
-
  * r1934466
    Fix detection for zlib version in vcxproj build on Windows.
    Justification:
