@@ -38,19 +38,6 @@ Candidate changes:
    Votes:
      +1: brane
 
- * r1927953
-   On Windows, use the WC_NO_BEST_FIT_CHARS flag when converting individual
-   command-line arguments to the ANSI code page
-   Justification:
-     Fixes a bug with incorrect interpretation of some individual Unicode
-     command-line arguments.
-   Notes:
-     This is an interim fix. A long-term solution is to convert arguments
-     to UTF-8 and work with UTF-8 directly, but until then failing fast
-     should be better than changing the user input.
-   Votes:
-     +1: kotkov, rinrab
-
  * r1931334, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
    Justification:
@@ -101,3 +88,16 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1927953
+   On Windows, use the WC_NO_BEST_FIT_CHARS flag when converting individual
+   command-line arguments to the ANSI code page
+   Justification:
+     Fixes a bug with incorrect interpretation of some individual Unicode
+     command-line arguments.
+   Notes:
+     This is an interim fix. A long-term solution is to convert arguments
+     to UTF-8 and work with UTF-8 directly, but until then failing fast
+     should be better than changing the user input.
+   Votes:
+     +1: kotkov, rinrab, ivan
