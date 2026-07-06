@@ -3279,19 +3279,20 @@ def argv_with_best_fit_chars(sbox):
       yield chr(c), mbcs
 
   count = 0
-  expected_stderr = svntest.verify.RegexListOutput(
-    [r'^"foo.+bar": unknown command\.\n$', '\n'], match_all=True)
+  # E721113: Conversion from UTF-16 failed: No mapping for the Unicode
+  # character exists in the target multi-byte code page.
+  expected_stderr = 'svn: E721113: '
   for wc, mbcs in iter_bestfit_chars():
     count += 1
     logger.info('Code page %r - U+%04x -> 0x%s', codepage, ord(wc), mbcs.hex())
     if mbcs == b'"':
-      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 1, 'help',
                                           'foo{0} {0}bar'.format(wc))
     elif mbcs == b'\\':
-      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 1, 'help',
                                           'foo{0}" {0}"bar'.format(wc))
     elif mbcs == b' ':
-      svntest.actions.run_and_verify_svn2(None, expected_stderr, 0, 'help',
+      svntest.actions.run_and_verify_svn2(None, expected_stderr, 1, 'help',
                                           'foo{0}bar'.format(wc))
   if count == 0:
     raise svntest.Skip('No best fit characters in code page %r' % codepage)

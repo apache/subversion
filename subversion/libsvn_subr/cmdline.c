@@ -1917,21 +1917,34 @@ svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
       const wchar_t *arg = argv[i];
       char *cstring_arg;
       int rv;
+      BOOL used_default_char;
 
       /* Passing -1 for the string length guarantees that the returned length
          will account for a terminating null character. */
-      rv = WideCharToMultiByte(CP_ACP, 0, arg, -1, NULL, 0, NULL, NULL);
+      rv = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, arg, -1,
+                               NULL, 0, NULL, &used_default_char);
       if (rv <= 0)
         {
           return svn_error_wrap_apr(apr_get_os_error(),
                                     _("Conversion from UTF-16 failed"));
         }
+      else if (used_default_char)
+        {
+          return svn_error_wrap_apr(APR_FROM_OS_ERROR(ERROR_NO_UNICODE_TRANSLATION),
+                                    _("Conversion from UTF-16 failed"));
+        }
 
       cstring_arg = apr_palloc(result_pool, rv);
-      rv = WideCharToMultiByte(CP_ACP, 0, arg, -1, cstring_arg, rv, NULL, NULL);
+      rv = WideCharToMultiByte(CP_ACP, WC_NO_BEST_FIT_CHARS, arg, -1,
+                               cstring_arg, rv, NULL, &used_default_char);
       if (rv <= 0)
         {
           return svn_error_wrap_apr(apr_get_os_error(),
+                                    _("Conversion from UTF-16 failed"));
+        }
+      else if (used_default_char)
+        {
+          return svn_error_wrap_apr(APR_FROM_OS_ERROR(ERROR_NO_UNICODE_TRANSLATION),
                                     _("Conversion from UTF-16 failed"));
         }
 
