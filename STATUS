@@ -63,13 +63,6 @@ Candidate changes:
    Votes:
      +1: brane, ivan
 
- * r1934786
-   Fix an uninitialized memory access bug in FSX.
-   Justification:
-     FSX is experimental, but is shouldn't corrupt memory.
-   Votes:
-     +1: brane, ivan
-
  * r1934788, r1934920, r1935780, r1935781
    Use snprintf() instead sprintf() if available. Fixes deprecation warning on
    macOS newer versions of Xcode.
@@ -96,4 +89,11 @@ Approved changes:
      we shouldn't rely on that.
    Votes:
      +1: brane, ivan, dsahlberg
+
+ * r1934786
+   Fix an uninitialized memory access bug in FSX.
+   Justification:
+     FSX is experimental, but is shouldn't corrupt memory.
+   Votes:
+     +1: brane, ivan, kotkov
 
