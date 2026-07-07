@@ -63,14 +63,6 @@ Candidate changes:
    Votes:
      +1: brane, ivan
 
- * r1934788, r1934920, r1935780, r1935781
-   Use snprintf() instead sprintf() if available. Fixes deprecation warning on
-   macOS newer versions of Xcode.
-   Justification:
-     Warnings, especially false positives, are distracting.
-   Votes:
-     +1: ivan, brane
-
  * r1935107
    Fix a bug in JavaHL where native code could modify a final attribute.
    Votes:
@@ -96,4 +88,12 @@ Approved changes:
      FSX is experimental, but is shouldn't corrupt memory.
    Votes:
      +1: brane, ivan, kotkov
+
+ * r1934788, r1934920, r1935780, r1935781
+   Use snprintf() instead sprintf() if available. Fixes deprecation warning on
+   macOS newer versions of Xcode.
+   Justification:
+     Warnings, especially false positives, are distracting.
+   Votes:
+     +1: ivan, brane, kotkov
 
