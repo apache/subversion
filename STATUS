@@ -30,7 +30,7 @@ Candidate changes:
    Justification:
      Fix potential integer overflow.
    Votes:
-     +1: ivan
+     +1: ivan, kotkov
      +0: brane (review only, can't test)
 
  * r1934437, r1934438, r1934443, r1934444
