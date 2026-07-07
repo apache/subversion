@@ -44,7 +44,7 @@ Candidate changes:
      - This changes behavior when "Beta: Use Unicode UTF-8 for worldwide
        support" option is used on Windows.
    Votes:
-     +1: ivan
+     +1: ivan, kotkov
      +0: brane (review only, can't test)
 
  * r1935776
