@@ -56,13 +56,6 @@ Candidate changes:
    Votes:
      +1: ivan
 
- * r1934787, r1934811
-   Fix potential use of uninitialized memory in the conflict resolver.
-   Justification:
-     Subversion should try to not crash.
-   Votes:
-     +1: brane, ivan
-
  * r1935107
    Fix a bug in JavaHL where native code could modify a final attribute.
    Votes:
@@ -96,4 +89,11 @@ Approved changes:
      Warnings, especially false positives, are distracting.
    Votes:
      +1: ivan, brane, kotkov
+
+ * r1934787, r1934811
+   Fix potential use of uninitialized memory in the conflict resolver.
+   Justification:
+     Subversion should try to not crash.
+   Votes:
+     +1: brane, ivan, kotkov
 
