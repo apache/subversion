@@ -93,6 +93,25 @@ typedef struct bcrypt_ctx_t
   apr_pool_t *pool;
 } bcrypt_ctx_t;
 
+/* A cleanup handler. */
+static apr_status_t
+bcrypt_ctx_cleanup(void *data)
+{
+  bcrypt_ctx_t *ctx = data;
+
+  if (ctx->handle)
+    {
+      NTSTATUS status = BCryptDestroyHash(ctx->handle);
+
+      if (!BCRYPT_SUCCESS(status))
+        SVN_ERR_MALFUNCTION_NO_RETURN();
+
+      ctx->handle = NULL;
+    }
+
+  return APR_SUCCESS;
+}
+
 static svn_error_t *
 bcrypt_ctx_init(algorithm_state_t *algorithm,
                 bcrypt_ctx_t *ctx)
@@ -102,8 +121,12 @@ bcrypt_ctx_init(algorithm_state_t *algorithm,
   SVN_ERR(svn_atomic__init_once(&algorithm->initialized, algorithm_init,
                                 algorithm, NULL));
 
-  if (! ctx->object_buf)
-    ctx->object_buf = apr_pcalloc(ctx->pool, algorithm->object_length);
+  if (!ctx->object_buf)
+    {
+      ctx->object_buf = apr_pcalloc(ctx->pool, algorithm->object_length);
+      apr_pool_cleanup_register(ctx->pool, ctx, bcrypt_ctx_cleanup,
+                                apr_pool_cleanup_null);
+    }
 
   SVN_ERR(handle_error(BCryptCreateHash(algorithm->alg_handle,
                                         &handle,
@@ -162,8 +185,14 @@ bcrypt_ctx_final(algorithm_state_t *algorithm,
 static svn_error_t *
 bcrypt_ctx_reset(algorithm_state_t *algorithm, bcrypt_ctx_t *ctx)
 {
+  if (ctx->handle)
+    {
+      SVN_ERR(handle_error(BCryptDestroyHash(ctx->handle)));
+      ctx->handle = NULL;
+    }
+
   memset(ctx->object_buf, 0, algorithm->object_length);
-  ctx->handle = NULL;
+
   return SVN_NO_ERROR;
 }
 
@@ -175,6 +204,7 @@ bcrypt_checksum(algorithm_state_t *algorithm,
 {
   BCRYPT_HANDLE handle;
   void *object_buf;
+  svn_error_t *err;
 
   SVN_ERR(svn_atomic__init_once(&algorithm->initialized, algorithm_init,
                                 algorithm, NULL));
@@ -198,16 +228,29 @@ bcrypt_checksum(algorithm_state_t *algorithm,
       else
         block = UINT_MAX;
 
-      SVN_ERR(handle_error(BCryptHashData(handle, (PUCHAR)data, block,
-                                          /* dwFlags */ 0)));
+      err = handle_error(BCryptHashData(handle, (PUCHAR)data, block,
+                                        /* dwFlags */ 0));
+      if (err)
+        {
+          return svn_error_compose_create(
+            err, handle_error(BCryptDestroyHash(handle)));
+        }
 
       len -= block;
       data += block;
     }
 
-  SVN_ERR(handle_error(BCryptFinishHash(handle, digest,
-                                        algorithm->hash_length,
-                                        /* dwFlags */ 0)));
+  err = handle_error(BCryptFinishHash(handle, digest,
+                                      algorithm->hash_length,
+                                      /* dwFlags */ 0));
+
+  if (err)
+    {
+      return svn_error_compose_create(err,
+                                      handle_error(BCryptDestroyHash(handle)));
+    }
+
+  SVN_ERR(handle_error(BCryptDestroyHash(handle)));
 
   return SVN_NO_ERROR;
 }
