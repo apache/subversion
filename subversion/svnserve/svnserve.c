@@ -495,7 +495,7 @@ static void sigchld_handler(int signo)
 #endif
 
 #ifdef APR_HAVE_SIGACTION
-static svn_atomic_t sigtermint_seen = 0;
+static volatile svn_atomic_t sigtermint_seen = 0;
 static void
 sigtermint_handler(int signo)
 {
@@ -559,7 +559,7 @@ accept_connection(connection_t **connection,
       status = apr_socket_accept(&(*connection)->usock, sock,
                                  connection_pool);
 #if APR_HAVE_SIGACTION
-      if (sigtermint_seen)
+      if (svn_atomic_read(&sigtermint_seen))
           break;
 #endif
       if (handling_mode == connection_mode_fork)
@@ -579,7 +579,7 @@ accept_connection(connection_t **connection,
   if (!status)
     return SVN_NO_ERROR;
 #if APR_HAVE_SIGACTION
-  else if (sigtermint_seen)
+  else if (svn_atomic_read(&sigtermint_seen))
     return SVN_NO_ERROR;
 #endif
   else
@@ -1368,7 +1368,7 @@ sub_main(int *exit_code,
       SVN_ERR(accept_connection(&connection, sock, &params, handling_mode,
                                 pool));
 #if APR_HAVE_SIGACTION
-      if (sigtermint_seen)
+      if (svn_atomic_read(&sigtermint_seen))
           break;
 #endif
       if (run_mode == run_mode_listen_once)
