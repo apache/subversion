@@ -76,8 +76,7 @@ proxy_request_fixup_destination(request_rec *r, const char *master_uri)
       }
 
     apr_table_set(r->headers_in, "Destination",
-                  apr_pstrcat(r->pool, svn_path_uri_encode(master_uri, r->pool),
-                              "/", rel, SVN_VA_NULL));
+                  apr_pstrcat(r->pool, master_uri, "/", rel, SVN_VA_NULL));
 }
 
 
@@ -86,7 +85,8 @@ proxy_request_fixup_destination(request_rec *r, const char *master_uri)
    specified in the SVNMasterURI Apache configuration value.
    URI_SEGMENT is the URI bits relative to the repository root (but if
    non-empty, *does* have a leading slash delimiter).
-   MASTER_URI and URI_SEGMENT are not URI-encoded. */
+   MASTER_URI is canonical and URI-encoded (stored by SVNMasterURI_cmd);
+   URI_SEGMENT is not URI-encoded. */
 static int proxy_request_fixup(request_rec *r,
                                const char *master_uri,
                                const char *uri_segment)
@@ -101,11 +101,10 @@ static int proxy_request_fixup(request_rec *r,
 
     r->proxyreq = PROXYREQ_REVERSE;
     r->uri = r->unparsed_uri;
-    r->filename = (char *) svn_path_uri_encode(apr_pstrcat(r->pool, "proxy:",
-                                                           master_uri,
-                                                           uri_segment,
-                                                           SVN_VA_NULL),
-                                               r->pool);
+    r->filename = (char *) apr_pstrcat(r->pool, "proxy:", master_uri,
+                                       svn_path_uri_encode(uri_segment,
+                                                           r->pool),
+                                       SVN_VA_NULL);
     r->handler = "proxy-server";
 
     proxy_request_fixup_destination(r, master_uri);
@@ -300,7 +299,6 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
     /* Don't filter if we're in a subrequest or we aren't setup to
        proxy anything. */
     master_uri = dav_svn__get_master_uri(r);
-    master_uri = svn_path_uri_encode(master_uri, r->pool);
     if (r->main || !master_uri) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);

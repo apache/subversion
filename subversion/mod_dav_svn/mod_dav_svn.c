@@ -339,7 +339,10 @@ SVNMasterURI_cmd(cmd_parms *cmd, void *config, const char *arg1)
   if (! *uri_base_name)
     return "SVNMasterURI value must not be a server root";
 
-  conf->master_uri = apr_pstrdup(cmd->pool, arg1);
+  /* Store the URI canonicalized: no trailing slash, normalized hex
+     encoding.  mirror.c concatenates "/<relpath>" onto this value and
+     must never see a trailing "/" or a non-normalized escape. */
+  conf->master_uri = svn_urlpath__canonicalize(arg1, cmd->pool);
 
   return NULL;
 }
