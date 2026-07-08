@@ -66,10 +66,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1934787, r1934811
-   Fix potential use of uninitialized memory in the conflict resolver.
-   Justification:
-     Subversion should try to not crash.
-   Votes:
-     +1: brane, ivan, kotkov

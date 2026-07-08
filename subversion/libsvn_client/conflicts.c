@@ -40,6 +40,7 @@
 #include "svn_subst.h"
 #include "client.h"
 
+#include "private/svn_debug.h"
 #include "private/svn_diff_tree.h"
 #include "private/svn_ra_private.h"
 #include "private/svn_sorts_private.h"
@@ -4862,7 +4863,7 @@ conflict_tree_get_description_incoming_delete(
                      new_repos_relpath, new_rev, result_pool);
 
         }
-      }
+    }
   else if (conflict_operation == svn_wc_operation_merge)
     {
       if (details->deleted_rev != SVN_INVALID_REVNUM)
@@ -4883,7 +4884,14 @@ conflict_tree_get_description_incoming_delete(
                      details, victim_node_kind, old_repos_relpath, old_rev,
                      new_repos_relpath, new_rev, result_pool);
         }
-      }
+    }
+  else
+    {
+#ifdef SVN_DEBUG
+      SVN_DBG(("unknown conflict operation: %d", (int)conflict_operation));
+#endif
+      SVN_ERR_MALFUNCTION();
+    }
 
   *incoming_change_description = apr_pstrdup(result_pool, action);
 
@@ -5838,6 +5846,13 @@ conflict_tree_get_description_incoming_add(
                    details, new_node_kind, old_repos_relpath,
                    old_rev, new_rev, result_pool);
     }
+  else
+    {
+#ifdef SVN_DEBUG
+      SVN_DBG(("unknown conflict operation: %d", (int)conflict_operation));
+#endif
+      SVN_ERR_MALFUNCTION();
+    }
 
   *incoming_change_description = apr_pstrdup(result_pool, action);
 
@@ -5984,7 +5999,7 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
   svn_revnum_t new_rev;
   svn_node_kind_t old_node_kind;
   svn_node_kind_t new_node_kind;
-  svn_wc_operation_t operation;
+  svn_wc_operation_t conflict_operation;
   const char *url;
   const char *corrected_url;
   svn_ra_session_t *ra_session;
@@ -6001,8 +6016,8 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
   SVN_ERR(svn_client_conflict_get_repos_info(&repos_root_url, NULL,
                                              conflict,
                                              scratch_pool, scratch_pool));
-  operation = svn_client_conflict_get_operation(conflict);
-  if (operation == svn_wc_operation_update)
+  conflict_operation = svn_client_conflict_get_operation(conflict);
+  if (conflict_operation == svn_wc_operation_update)
     {
       b.node_kind = old_rev < new_rev ? new_node_kind : old_node_kind;
 
@@ -6018,14 +6033,21 @@ conflict_tree_get_details_incoming_edit(svn_client_conflict_t *conflict,
       b.repos_relpath = old_rev < new_rev ? new_repos_relpath
                                           : old_repos_relpath;
     }
-  else if (operation == svn_wc_operation_switch ||
-           operation == svn_wc_operation_merge)
+  else if (conflict_operation == svn_wc_operation_switch ||
+           conflict_operation == svn_wc_operation_merge)
     {
       url = svn_path_url_add_component2(repos_root_url, new_repos_relpath,
                                         scratch_pool);
 
       b.repos_relpath = new_repos_relpath;
       b.node_kind = new_node_kind;
+    }
+  else
+    {
+#ifdef SVN_DEBUG
+      SVN_DBG(("unknown conflict operation: %d", (int)conflict_operation));
+#endif
+      SVN_ERR_MALFUNCTION();
     }
 
   SVN_ERR(svn_client__open_ra_session_internal(&ra_session,
@@ -6362,6 +6384,13 @@ conflict_tree_get_description_incoming_edit(
                                       new_repos_relpath, new_rev + 1, old_rev);
             }
         }
+    }
+  else
+    {
+#ifdef SVN_DEBUG
+      SVN_DBG(("unknown conflict operation: %d", (int)conflict_operation));
+#endif
+      SVN_ERR_MALFUNCTION();
     }
 
   action = apr_psprintf(scratch_pool, "%s:\n%s", action,
