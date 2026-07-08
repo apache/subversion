@@ -120,7 +120,15 @@ static int proxy_request_fixup(request_rec *r,
 
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
-    ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
+
+    /* PUT bodies are svndiff-encoded file content and PROPPATCH bodies carry
+       opaque property values & versioned payload, never protocol URLs.
+       Rewriting them corrupts data (issue #3445).  The hrefs we must
+       translate live in MERGE/CHECKOUT/REPORT bodies, which still get the
+       input filter. */
+    if (r->method_number != M_PUT && r->method_number != M_PROPPATCH)
+        ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
+
     return OK;
 }
 
@@ -224,12 +232,6 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
 
-    /* ### FIXME: While we want to fix up any locations in proxied XML
-       ### requests, we do *not* want to be futzing with versioned (or
-       ### to-be-versioned) data, such as the file contents present in
-       ### PUT requests and properties in PROPPATCH requests.
-       ### See issue #3445 for details. */
-
     /* We are url encoding the current url and the master url
        as incoming(from client) request body has it encoded already. */
     canonicalized_uri = svn_path_uri_encode(canonicalized_uri, r->pool);
@@ -315,6 +317,20 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
     return ap_pass_brigade(f->next, bb);
 }
 
+/* Only protocol XML (a multistatus, activity set, etc.) carries hrefs the
+   proxy must translate. Anything else including a body of unidentified
+   type is versioned payload and must pass through untouched, else we
+   potentially corrupt it (issue #3445). */
+static svn_boolean_t
+response_is_xml(const request_rec *r)
+{
+    return r->content_type
+           && (ap_cstr_casecmpn(r->content_type, "text/xml",
+                                sizeof("text/xml") - 1) == 0
+               || ap_cstr_casecmpn(r->content_type, "application/xml",
+                                   sizeof("application/xml") - 1) == 0);
+}
+
 apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
                                            apr_bucket_brigade *bb)
 {
@@ -342,11 +358,22 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
         return ap_pass_brigade(f->next, bb);
     }
 
-    /* ### FIXME: GET and PROPFIND requests that make it here must be
-       ### referring to data inside commit transactions-in-progress.
-       ### We've got to be careful not to munge the versioned data
-       ### they return in the process of trying to do URI fix-ups.
-       ### See issue #3445 for details. */
+    /* Proxied GET/PROPFIND responses that reach this filter refer to data
+       inside commit transactions-in-progress.  A non-XML body is versioned
+       payload, not protocol XML, and must pass through untouched.  Note that
+       a versioned file whose svn:mime-type is itself text/xml or
+       application/xml still slips past this check into the rewrite below. */
+    if (!response_is_xml(r)) {
+        ap_remove_output_filter(f);
+        return ap_pass_brigade(f->next, bb);
+    }
+
+    /* ### FIXME (SVN-3445, residual): a PROPFIND multistatus is still rewritten
+       ### wholesale below, so a dead-property *value* that happens to contain
+       ### the master location gets silently rewritten along with the genuine
+       ### <D:href>s.  Fixing that safely requires an XML-structure-aware
+       ### rewrite (translate hrefs only, leave property values alone) rather
+       ### than the blind byte substitution used here. */
 
     /* We are url encoding the current url and the master url
        as incoming(from master) request body has it encoded already. */
