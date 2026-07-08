@@ -67,14 +67,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1934788, r1934920, r1935780, r1935781
-   Use snprintf() instead sprintf() if available. Fixes deprecation warning on
-   macOS newer versions of Xcode.
-   Justification:
-     Warnings, especially false positives, are distracting.
-   Votes:
-     +1: ivan, brane, kotkov
-
  * r1934787, r1934811
    Fix potential use of uninitialized memory in the conflict resolver.
    Justification:

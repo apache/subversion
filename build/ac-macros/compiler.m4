@@ -71,6 +71,9 @@ AC_DEFUN([SVN_CC_MODE_SETUP],
     ])
   fi
 
+  dnl check for snprintf so that we can use it instead of sprintf.
+  AC_CHECK_FUNCS(snprintf)
+
   CMODEFLAGS="$CFLAGS"
   CFLAGS=""
   SVN_DOT_CLANGD_CC([$CMODEFLAGS])

@@ -33,6 +33,7 @@
 
 #include "../svn_test.h"
 #include "../svn_test_fs.h"
+#include "svn_private_config.h"
 
 
 /* Some utility functions.  */
@@ -307,14 +308,19 @@ put_explicit_length(svn_stringbuf_t *str,
                     apr_size_t len,
                     char sep)
 {
-  char *buf = malloc(len + 100);
+  const apr_size_t alloc_len = len + 100;
+  char *buf = malloc(alloc_len);
   apr_size_t length_len;
 
   if (! skel_is_space(sep))
     abort();
 
   /* Generate the length and separator character.  */
-  sprintf(buf, "%"APR_SIZE_T_FMT"%c", len, sep);
+#if HAVE_SNPRINTF
+  snprintf(buf, alloc_len, "%" APR_SIZE_T_FMT "%c", len, sep);
+#else
+  sprintf(buf, "%" APR_SIZE_T_FMT "%c", len, sep);
+#endif
   length_len = strlen(buf);
 
   /* Copy in the real data (which may contain nulls).  */
