@@ -653,7 +653,7 @@ elseif (SVN_CHECKSUM_BACKEND STREQUAL "xdigest")
 else()
   message(SEND_ERROR
     "Invalid value of SVN_CHECKSUM_BACKEND: '${SVN_CHECKSUM_BACKEND}'. "
-    "Possible options are 'apr', 'openssl', 'bcrypt', 'xdifest'."
+    "Possible options are 'apr', 'openssl', 'bcrypt', 'xdigest'."
   )
 endif()
 
