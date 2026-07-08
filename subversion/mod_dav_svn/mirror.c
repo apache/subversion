@@ -121,12 +121,15 @@ static int proxy_request_fixup(request_rec *r,
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
     ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
 
-    /* PUT bodies are svndiff-encoded file content and PROPPATCH bodies carry
-       opaque property values & versioned payload, never protocol URLs.
-       Rewriting them corrupts data (issue #3445).  The hrefs we must
-       translate live in MERGE/CHECKOUT/REPORT bodies, which still get the
-       input filter. */
-    if (r->method_number != M_PUT && r->method_number != M_PROPPATCH)
+    /* Only MERGE and CHECKOUT (v1) request bodies carry protocol hrefs the
+       master must resolve (the activity/txn source href).  Every other body
+       reaching here is user or versioned payload -- svndiff file content in
+       PUT, property values in PROPPATCH, revprop skels in POST, the lock
+       owner in LOCK -- which the rewrite corrupts (issue #3445).  Attach
+       the filter only to what provably needs translation: a method missing
+       from this whitelist fails loudly at the master (untranslated href)
+       instead of silently corrupting data. */
+    if (r->method_number == M_MERGE || r->method_number == M_CHECKOUT)
         ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
 
     return OK;
