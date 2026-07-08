@@ -53,14 +53,15 @@ proxy_request_fixup_destination(request_rec *r, const char *master_uri)
         return;
       }
 
-    /* apr_uri_parse() leaves dest_uri.path URI-encoded but
-       dav_svn__get_root_dir() is decoded. Encode the root so the comparison
-       and the rebuilt header both stay in the encoded domain. rel is then
-       already encoded and must not be re-encoded, only master_uri is, just
-       as dav_svn__location_header_filter() encodes it on the way back. */
+    /* apr_uri_parse() leaves dest_uri.path URI-encoded, and
+       dav_svn__get_root_dir() is also stored URI-encoded and canonical
+       (create_dir_config() runs it through svn_urlpath__canonicalize(),
+       which encodes; see mod_dav_svn.c).  Canonicalizing DEST_PATH
+       normalizes its hex encoding to the same rules, so the ancestor
+       check compares like with like.  REL comes out still encoded and
+       must not be re-encoded. */
     dest_path = svn_urlpath__canonicalize(dest_uri.path, r->pool);
-    root_dir = svn_path_uri_encode(dav_svn__get_root_dir(r), r->pool);
-    root_dir = svn_urlpath__canonicalize(root_dir, r->pool);
+    root_dir = dav_svn__get_root_dir(r);
 
     rel = svn_urlpath__skip_ancestor(root_dir, dest_path);
     if (rel == NULL)
@@ -143,6 +144,11 @@ int dav_svn__proxy_request_fixup(request_rec *r)
 
     if (root_dir && master_uri) {
         const char *seg;
+        const char *root_dir_decoded;
+
+        /* ROOT_DIR is stored canonical and URI-encoded, but at fixup time
+           R->URI is the decoded path, compare like with like. */
+        root_dir_decoded = svn_path_uri_decode(root_dir, r->pool);
 
         /* We know we can always safely handle these. */
         if (r->method_number == M_REPORT ||
@@ -157,7 +163,7 @@ int dav_svn__proxy_request_fixup(request_rec *r)
            transaction tree resources. */
         if (r->method_number == M_PROPFIND ||
             r->method_number == M_GET) {
-            if ((seg = ap_strstr(r->uri, root_dir))) {
+            if ((seg = ap_strstr(r->uri, root_dir_decoded))) {
                 if (ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
                                                  "/wrk/", SVN_VA_NULL))
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
@@ -165,7 +171,7 @@ int dav_svn__proxy_request_fixup(request_rec *r)
                     || ap_strstr_c(seg, apr_pstrcat(r->pool, special_uri,
                                                     "/txr/", SVN_VA_NULL))) {
                     int rv;
-                    seg += strlen(root_dir);
+                    seg += strlen(root_dir_decoded);
                     rv = proxy_request_fixup(r, master_uri, seg);
                     if (rv) return rv;
                 }
@@ -176,13 +182,13 @@ int dav_svn__proxy_request_fixup(request_rec *r)
         /* If this is a write request aimed at a public URI (such as
            MERGE, LOCK, UNLOCK, etc.) or any as-yet-unhandled request
            using a "special URI", we have to doctor it a bit for proxying. */
-        seg = ap_strstr(r->uri, root_dir);
+        seg = ap_strstr(r->uri, root_dir_decoded);
         if (seg && (r->method_number == M_MERGE ||
                     r->method_number == M_LOCK ||
                     r->method_number == M_UNLOCK ||
                     ap_strstr_c(seg, special_uri))) {
             int rv;
-            seg += strlen(root_dir);
+            seg += strlen(root_dir_decoded);
             rv = proxy_request_fixup(r, master_uri, seg);
             if (rv) return rv;
             return OK;
@@ -232,10 +238,10 @@ apr_status_t dav_svn__location_in_filter(ap_filter_t *f,
         return ap_get_brigade(f->next, bb, mode, block, readbytes);
     }
 
-    /* We are url encoding the current url and the master url
-       as incoming(from client) request body has it encoded already. */
-    canonicalized_uri = svn_path_uri_encode(canonicalized_uri, r->pool);
-    root_dir = svn_path_uri_encode(root_dir, r->pool);
+    /* Both CANONICALIZED_URI and ROOT_DIR are already canonical and
+       URI-encoded (svn_urlpath__canonicalize() output and the stored
+       <Location> path, respectively), which is the same domain the
+       protocol bodies use on the wire. */
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
         ctx->remotepath = canonicalized_uri;
@@ -375,10 +381,10 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
        ### rewrite (translate hrefs only, leave property values alone) rather
        ### than the blind byte substitution used here. */
 
-    /* We are url encoding the current url and the master url
-       as incoming(from master) request body has it encoded already. */
-    canonicalized_uri = svn_path_uri_encode(canonicalized_uri, r->pool);
-    root_dir = svn_path_uri_encode(root_dir, r->pool);
+    /* Both CANONICALIZED_URI and ROOT_DIR are already canonical and
+       URI-encoded (svn_urlpath__canonicalize() output and the stored
+       <Location> path, respectively), which is the same domain the
+       protocol bodies use on the wire. */
     if (!f->ctx) {
         ctx = f->ctx = apr_pcalloc(r->pool, sizeof(*ctx));
         ctx->remotepath = canonicalized_uri;
