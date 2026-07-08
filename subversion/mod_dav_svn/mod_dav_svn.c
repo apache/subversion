@@ -1236,8 +1236,12 @@ static int dav_svn__translate_name(request_rec *r)
     }
   else
     {
-      /* Retrieve path to repo and within repo for the request */
-      dav_error *err = dav_svn_split_uri(r, r->uri, dav_svn__get_root_dir(r),
+      /* Retrieve path to repo and within repo for the request.
+         dav_svn_split_uri() strips the root from the decoded r->uri, so
+         hand it the decoded form of the (encoded, canonical) root dir. */
+      const char *root_dir_decoded =
+        svn_path_uri_decode(dav_svn__get_root_dir(r), r->pool);
+      dav_error *err = dav_svn_split_uri(r, r->uri, root_dir_decoded,
                                          &ignore_cleaned_uri,
                                          &ignore_had_slash, &repos_basename,
                                          &ignore_relative_path, &repos_path);

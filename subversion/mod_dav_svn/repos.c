@@ -4955,9 +4955,16 @@ int dav_svn__method_post(request_rec *r)
   dav_resource *resource;
   dav_error *derr;
   const char *content_type;
+  const char *root_dir_decoded;
 
-  /* We only allow POSTs against the "me resource" right now. */
-  derr = get_resource(r, dav_svn__get_root_dir(r),
+  /* We only allow POSTs against the "me resource" right now.
+     get_resource() expects ROOT_PATH in the decoded domain, it strips
+     it from the (decoded) r->uri and re-encodes it for href output
+     itself, but dav_svn__get_root_dir() is stored canonical and
+     URI-encoded.  Decode it or the strip fails for any <Location>
+     containing a URI-escapable character. */
+  root_dir_decoded = svn_path_uri_decode(dav_svn__get_root_dir(r), r->pool);
+  derr = get_resource(r, root_dir_decoded,
                       "ignored", 0, &resource);
   if (derr != NULL)
     return derr->status;

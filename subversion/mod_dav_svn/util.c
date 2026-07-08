@@ -434,7 +434,10 @@ dav_svn__is_parentpath_list(request_rec *r)
 
   if (fs_parent_path && dav_svn__get_list_parentpath_flag(r))
     {
-      const char *root_path = dav_svn__get_root_dir(r);
+      /* r->uri is decoded, but the stored root dir is canonical and
+         URI-encoded, decode it so the comparison is like-with-like. */
+      const char *root_path =
+        svn_path_uri_decode(dav_svn__get_root_dir(r), r->pool);
       char *uri = apr_pstrdup(r->pool, r->uri);
       char *parentpath = apr_pstrdup(r->pool, root_path);
       apr_size_t uri_len = strlen(uri);
