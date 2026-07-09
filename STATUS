@@ -47,15 +47,6 @@ Candidate changes:
      +1: ivan, kotkov
      +0: brane (review only, can't test)
 
- * r1935776
-   Rework XML output validation in tests.
-   Justification:
-     Support testing with embeddable Python that doesn't provide 'venv'.
-   Branch:
-     1.15.x-r1935776
-   Votes:
-     +1: ivan, kotkov
-
  * r1935107
    Fix a bug in JavaHL where native code could modify a final attribute.
    Votes:
@@ -66,3 +57,12 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+ * r1935776
+   Rework XML output validation in tests.
+   Justification:
+     Support testing with embeddable Python that doesn't provide 'venv'.
+   Branch:
+     1.15.x-r1935776
+   Votes:
+     +1: ivan, kotkov, brane
