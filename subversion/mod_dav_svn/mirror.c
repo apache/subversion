@@ -35,10 +35,9 @@
 
 /* If the request carries a Destination header (as COPY and MOVE do), rewrite
    it to target the master server instead of this slave. MASTER_URI is the
-   SVNMasterURI configuration value (not URI-encoded). This is the
+   SVNMasterURI configuration value (canonical and URI-encoded). This is the
    request-side counterpart to the Location-header rewrite performed by
-   dav_svn__location_header_filter() (the two are conceptual inverses, though
-   they differ in how they juggle the encoded/decoded root). */
+   dav_svn__location_header_filter(); the two are conceptual inverses. */
 static void
 proxy_request_fixup_destination(request_rec *r, const char *master_uri)
 {
@@ -329,10 +328,11 @@ apr_status_t dav_svn__location_header_filter(ap_filter_t *f,
     return ap_pass_brigade(f->next, bb);
 }
 
-/* Only protocol XML (a multistatus, activity set, etc.) carries hrefs the
-   proxy must translate. Anything else including a body of unidentified
-   type is versioned payload and must pass through untouched, else we
-   potentially corrupt it (issue #3445). */
+/* Only protocol XML (a multistatus, merge-response, etc.) carries hrefs
+   the proxy must translate.  Since the body filter is attached only for
+   MERGE and PROPFIND, anything non-XML reaching it is an error body
+   (an httpd or mod_proxy error page, whose fixed Content-Length the
+   rewrite would invalidate) and must pass through untouched. */
 static svn_boolean_t
 response_is_xml(const request_rec *r)
 {
