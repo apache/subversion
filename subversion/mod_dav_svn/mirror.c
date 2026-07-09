@@ -119,16 +119,21 @@ static int proxy_request_fixup(request_rec *r,
            dav_svn__location_body_filter().  -- cmpilato */
 
     ap_add_output_filter("LocationRewrite", NULL, r, r->connection);
-    ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
 
-    /* Only MERGE and CHECKOUT (v1) request bodies carry protocol hrefs the
-       master must resolve (the activity/txn source href).  Every other body
-       reaching here is user or versioned payload -- svndiff file content in
-       PUT, property values in PROPPATCH, revprop skels in POST, the lock
-       owner in LOCK -- which the rewrite corrupts (issue #3445).  Attach
-       the filter only to what provably needs translation: a method missing
-       from this whitelist fails loudly at the master (untranslated href)
-       instead of silently corrupting data. */
+    /* The body-rewrite filters are attached by whitelist, only bodies
+       that carry protocol hrefs to translate get filtered.
+       Responses: MERGE (merge-response hrefs, which the client
+       validates) and PROPFIND (multistatus hrefs on transaction
+       resources).  
+       Requests: MERGE and CHECKOUT (v1), whose bodies
+       carry the activity/txn source href the master must resolve.
+       Everything else is user or versioned payload which a rewrite
+       could corrupt (issue #3445).  A method missing from the
+       whitelist fails loudly instead of silently corrupting data. */
+    if (r->method_number == M_MERGE || r->method_number == M_PROPFIND)
+        ap_add_output_filter("ReposRewrite", NULL, r, r->connection);
+
+    /* Request-body whitelist, see above. */
     if (r->method_number == M_MERGE || r->method_number == M_CHECKOUT)
         ap_add_input_filter("IncomingRewrite", NULL, r, r->connection);
 
@@ -365,11 +370,10 @@ apr_status_t dav_svn__location_body_filter(ap_filter_t *f,
         return ap_pass_brigade(f->next, bb);
     }
 
-    /* Proxied GET/PROPFIND responses that reach this filter refer to data
-       inside commit transactions-in-progress.  A non-XML body is versioned
-       payload, not protocol XML, and must pass through untouched.  Note that
-       a versioned file whose svn:mime-type is itself text/xml or
-       application/xml still slips past this check into the rewrite below. */
+    /* This filter is only attached to MERGE and PROPFIND requests (see
+       proxy_request_fixup()), whose responses are protocol XML carrying
+       hrefs to translate.
+       Anything that is not protocol XML is not ours to touch. */
     if (!response_is_xml(r)) {
         ap_remove_output_filter(f);
         return ap_pass_brigade(f->next, bb);
