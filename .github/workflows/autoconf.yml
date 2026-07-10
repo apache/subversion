@@ -114,7 +114,9 @@ jobs:
         run: make -j
 
       - name: Run tests
-        run: make ${{matrix.check-target}} PARALLEL=16 APACHE_MPM=event
+        run: |
+          make ${{matrix.check-target}} PARALLEL=16 APACHE_MPM=event \
+              CHECK_XML_SCHEMA=1
 
       - name: Archive test logs
         if: always()

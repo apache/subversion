@@ -57,12 +57,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1935776
-   Rework XML output validation in tests.
-   Justification:
-     Support testing with embeddable Python that doesn't provide 'venv'.
-   Branch:
-     1.15.x-r1935776
-   Votes:
-     +1: ivan, kotkov, brane
