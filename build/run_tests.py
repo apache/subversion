@@ -670,7 +670,7 @@ class TestHarness:
 
     xml_error_list = [x for x in log_lines if x[:8] == 'E: XML: ']
     if xml_error_list:
-      print('There were some XML validation errors, checking' + self.logfile)
+      print('There were some XML validation errors, checking ' + self.logfile)
       for x in sorted(set(xml_error_list)):
         sys.stdout.write(x[3:])
 
