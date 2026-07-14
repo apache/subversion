@@ -539,12 +539,10 @@ view_update(svn_browse__view_t *view, int ch, apr_pool_t *scratch_pool)
 
   /* 3. Update the screen. */
 
-  /* ### TODO: We don't actually need it. */
-  clear();
-
   view_draw_header(view, view->header, scratch_pool);
   view_draw_footer(view, view->footer, scratch_pool);
 
+  werase(view->list);
   switch (view->model->current->type)
     {
       case svn_browse__state_dir:
