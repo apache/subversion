@@ -249,104 +249,6 @@ view_make(svn_browse__model_t *model, svn_browse__style_t *style, WINDOW *win,
   return view;
 }
 
-static svn_error_t *
-view_on_event(svn_browse__view_t *view, int ch, apr_pool_t *scratch_pool)
-{
-  int scrollsize;
-  view_layout(view);
-
-  /* scrollable height is one row less than the whole view */
-  scrollsize = getmaxy(view->list);
-
-  /* ch is received from getch() which would read the next character/key with
-   * the following additional rules:
-   * 1. as we configured it to use keypad(), arrows and other special keys
-   *    are handled as KEY_XXX.
-   * 2. Control (CTRL) version are handled as literal 1-26 values of ch where
-   *    1 is <C-A> and 26 is <C-Z>.
-   * 3. The rest of keys remain as their equivalents on the current layout.
-   * 4. If shift is held, they just become uppercased.
-   */
-
-  switch (ch)
-    {
-      case KEY_BACKSPACE:
-      case '-':
-      case 'u':
-        SVN_ERR(svn_browse__model_go_up(view->model, scratch_pool));
-        view->model->current->scroller_offset =
-            view->model->current->selection - scrollsize / 2;
-        break;
-      case 'q':
-      case KEY_ESC:
-        return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
-      default:
-        break;
-    }
-
-  if (view->model->current->type == svn_browse__state_dir)
-    {
-      switch (ch)
-        {
-          case KEY_UP:
-          case 'k':
-          case CTRL('p'):
-            SVN_ERR(svn_browse__model_move_selection(view->model, -1));
-            break;
-          case KEY_DOWN:
-          case 'j':
-          case CTRL('n'):
-            SVN_ERR(svn_browse__model_move_selection(view->model, 1));
-            break;
-          case '\n':
-          case '\r':
-            SVN_ERR(svn_browse__model_go_enter(view->model, scratch_pool));
-            break;
-          case CTRL('e'):
-            view->model->current->scroller_offset += 1;
-            break;
-          case CTRL('y'):
-            view->model->current->scroller_offset -= 1;
-            break;
-          case CTRL('d'):
-            SVN_ERR(svn_browse__model_move_selection(view->model,
-                                                     scrollsize / 2));
-            break;
-          case CTRL('f'):
-          case KEY_NPAGE:
-            SVN_ERR(svn_browse__model_move_selection(view->model,
-                                                     scrollsize));
-            break;
-          case CTRL('u'):
-            SVN_ERR(svn_browse__model_move_selection(view->model,
-                                                     -scrollsize / 2));
-            break;
-          case CTRL('b'):
-          case KEY_PPAGE:
-            SVN_ERR(svn_browse__model_move_selection(view->model,
-                                                     -scrollsize));
-            break;
-          case 'g':
-          case KEY_HOME:
-            view->model->current->selection = 0;
-            break;
-          case 'G':
-          case KEY_END:
-            view->model->current->selection =
-                view->model->current->list->nelts - 1;
-            break;
-          case 'z':
-            view->model->current->scroller_offset =
-                view->model->current->selection - scrollsize / 2;
-            break;
-        }
-
-      SVN_ERR(svn_browse__model_scroll_in_view(view->model, scrollsize));
-    }
-
-  return SVN_NO_ERROR;
-}
-
 static const char *
 format_node_size(const svn_browse__item_t *item, apr_pool_t *pool)
 {
@@ -534,22 +436,130 @@ file_draw(svn_browse__view_t *view, apr_pool_t *pool)
             svn_time_to_human_cstring(state->this_dirent->time, pool));
 }
 
-static void
-view_draw(svn_browse__view_t *view, apr_pool_t *pool)
+static svn_error_t *
+view_update(svn_browse__view_t *view, int ch, apr_pool_t *scratch_pool)
 {
-  view_draw_header(view, view->header, pool);
-  view_draw_footer(view, view->footer, pool);
+  int scrollsize;
+
+  /* 1. Make sure inner views are layed out properly. */
+  view_layout(view);
+
+  /* scrollable height is one row less than the whole view */
+  scrollsize = getmaxy(view->list);
+
+  /* 2. Handle the event. Some of them we consider of being relevant no matter
+   *    what state we're in, while others might be specific for either file or
+   *    directory views */
+
+  /* ch is received from getch() which would read the next character/key with
+   * the following additional rules:
+   * 1. as we configured it to use keypad(), arrows and other special keys
+   *    are handled as KEY_XXX.
+   * 2. Control (CTRL) version are handled as literal 1-26 values of ch where
+   *    1 is <C-A> and 26 is <C-Z>.
+   * 3. The rest of keys remain as their equivalents on the current layout.
+   * 4. If shift is held, they just become uppercased.
+   */
+
+  switch (ch)
+    {
+      case KEY_BACKSPACE:
+      case '-':
+      case 'u':
+        SVN_ERR(svn_browse__model_go_up(view->model, scratch_pool));
+        view->model->current->scroller_offset =
+            view->model->current->selection - scrollsize / 2;
+        break;
+      case 'q':
+      case KEY_ESC:
+        return svn_error_create(SVN_ERR_CANCELLED, NULL, NULL);
+      default:
+        break;
+    }
+
+  if (view->model->current->type == svn_browse__state_dir)
+    {
+      switch (ch)
+        {
+          case KEY_UP:
+          case 'k':
+          case CTRL('p'):
+            SVN_ERR(svn_browse__model_move_selection(view->model, -1));
+            break;
+          case KEY_DOWN:
+          case 'j':
+          case CTRL('n'):
+            SVN_ERR(svn_browse__model_move_selection(view->model, 1));
+            break;
+          case '\n':
+          case '\r':
+            SVN_ERR(svn_browse__model_go_enter(view->model, scratch_pool));
+            break;
+          case CTRL('e'):
+            view->model->current->scroller_offset += 1;
+            break;
+          case CTRL('y'):
+            view->model->current->scroller_offset -= 1;
+            break;
+          case CTRL('d'):
+            SVN_ERR(svn_browse__model_move_selection(view->model,
+                                                     scrollsize / 2));
+            break;
+          case CTRL('f'):
+          case KEY_NPAGE:
+            SVN_ERR(svn_browse__model_move_selection(view->model,
+                                                     scrollsize));
+            break;
+          case CTRL('u'):
+            SVN_ERR(svn_browse__model_move_selection(view->model,
+                                                     -scrollsize / 2));
+            break;
+          case CTRL('b'):
+          case KEY_PPAGE:
+            SVN_ERR(svn_browse__model_move_selection(view->model,
+                                                     -scrollsize));
+            break;
+          case 'g':
+          case KEY_HOME:
+            view->model->current->selection = 0;
+            break;
+          case 'G':
+          case KEY_END:
+            view->model->current->selection =
+                view->model->current->list->nelts - 1;
+            break;
+          case 'z':
+            view->model->current->scroller_offset =
+                view->model->current->selection - scrollsize / 2;
+            break;
+        }
+
+      SVN_ERR(svn_browse__model_scroll_in_view(view->model, scrollsize));
+    }
+
+  /* 3. Update the screen. */
+
+  /* ### TODO: We don't actually need it. */
+  clear();
+
+  view_draw_header(view, view->header, scratch_pool);
+  view_draw_footer(view, view->footer, scratch_pool);
 
   switch (view->model->current->type)
     {
       case svn_browse__state_dir:
-        dir_draw(view, pool);
+        dir_draw(view, scratch_pool);
         break;
       case svn_browse__state_file:
-        file_draw(view, pool);
+        file_draw(view, scratch_pool);
         break;
     }
+
+  refresh();
+
+  return SVN_NO_ERROR;
 }
+
 
 static svn_error_t *
 show_usage(apr_pool_t *scratch_pool)
@@ -802,6 +812,12 @@ sub_main(int *code, int argc, const char *argv[], apr_pool_t *pool)
 
   iterpool = svn_pool_create(pool);
 
+  /* Draw the initial state to the screen.
+   *
+   * ### Maybe there is a better way to make it do nothing but draw without
+   * ### strangely looking "hack" with a null-char. It should be fine IMO. */
+  err = view_update(view, '\0', iterpool);
+
   /* Loop forever, unless we're not in an error state. */
   while (! err)
     {
@@ -809,12 +825,8 @@ sub_main(int *code, int argc, const char *argv[], apr_pool_t *pool)
 
       svn_pool_clear(iterpool);
 
-      clear();
-      view_draw(view, iterpool);
-      refresh();
-
       ch = getch();
-      err = view_on_event(view, ch, iterpool);
+      err = view_update(view, ch, iterpool);
     }
 
   endwin();
