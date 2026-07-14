@@ -21,7 +21,7 @@ Release blockers for 1.15.0:
      Release tarball content must be stable. Blocks 1.15.0 because otherwise
      the tarball's content is not reproducible.
    Votes:
-     +1: kotkov
+     +1: kotkov, rinrab
 
 Candidate changes that cannot go into a later 1.15.x:
 =====================================================
