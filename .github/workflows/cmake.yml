@@ -240,9 +240,6 @@ jobs:
       - name: Build CMake
         run: cmake --build out --config Release
 
-      - name: Install
-        run: cmake --install out --config Release
-
       - name: Run all tests
         id: run_all_tests
         if: matrix.run_tests
@@ -262,3 +259,6 @@ jobs:
         env:
           SVN_EXPERIMENTAL_COMMANDS: shelf3
         run: ctest -R shelf3 --verbose -C Release
+
+      - name: Install
+        run: cmake --install out --config Release
