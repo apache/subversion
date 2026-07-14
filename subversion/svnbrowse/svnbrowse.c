@@ -786,6 +786,9 @@ sub_main(int *code, int argc, const char *argv[], apr_pool_t *pool)
   /* Disable echoing typed keys. */
   noecho();
 
+  /* Hide cursor. */
+  curs_set(0);
+
   /* ESCDELAY is a ncurses-exclusive variable that controls how curses will
    * handle escape sequences - when a user hits ESC and inputs a command for
    * the application to potentially do some handling. We don't really care
