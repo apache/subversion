@@ -12,8 +12,14 @@ delay a release, etc.
 
 Status of 1.15.0:
 
-Candidate changes:
-==================
+Release blockers for 1.15.0:
+============================
+
+Candidate changes that cannot go into a later 1.15.x:
+=====================================================
+
+Other candidate changes:
+========================
 
  * r1931334, r1931337, r1931359, r1931369, r1931373
    Remove a potentially data-truncating typecast in our adler32 implementation.
