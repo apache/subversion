@@ -831,7 +831,7 @@ sub_main(int *code, int argc, const char *argv[], apr_pool_t *pool)
 
   endwin();
 
-  /* Treat cancellation success. */
+  /* Treat cancellation as success. */
   if (! err || err->apr_err == SVN_ERR_CANCELLED)
     return SVN_NO_ERROR;
   else
