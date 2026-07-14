@@ -15,6 +15,14 @@ Status of 1.15.0:
 Release blockers for 1.15.0:
 ============================
 
+ * r1936132
+   cmake: Sort CMake target conditions to generate stable targets.cmake.
+   Justification:
+     Release tarball content must be stable. Blocks 1.15.0 because otherwise
+     the tarball's content is not reproducible.
+   Votes:
+     +1: kotkov
+
 Candidate changes that cannot go into a later 1.15.x:
 =====================================================
 
