@@ -54,17 +54,6 @@ Other candidate changes:
      +1: ivan, kotkov
      +0: brane (review only, can't test)
 
- * r1936038, r1936039
-   Don't use full path in the header of the generated config_keys.inc file
-   Justification:
-     Do not leak full path from the build environment into release tarballs.
-   Notes:
-     This is a long-standing existing issue, but fixing it prevents a local path
-     leak and makes content of the config_keys.inc file in the release tarballs
-     reproducible.
-   Votes:
-     +1: kotkov, ivan
-
 Veto-blocked changes:
 =====================
 
@@ -77,4 +66,15 @@ Approved changes:
      Release tarball content must be stable. Blocks 1.15.0 because otherwise
      the tarball's content is not reproducible.
    Votes:
-     +1: kotkov, rinrab, ivan
+     +1: kotkov, rinrab, ivan, dsahlberg
+
+ * r1936038, r1936039
+   Don't use full path in the header of the generated config_keys.inc file
+   Justification:
+     Do not leak full path from the build environment into release tarballs.
+   Notes:
+     This is a long-standing existing issue, but fixing it prevents a local path
+     leak and makes content of the config_keys.inc file in the release tarballs
+     reproducible.
+   Votes:
+     +1: kotkov, ivan, dsahlberg
