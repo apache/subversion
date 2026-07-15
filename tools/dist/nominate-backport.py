@@ -210,7 +210,8 @@ def main():
   e.justification_str = "\n" + textwrap.fill(justification, initial_indent='  ', subsequent_indent='  ') + "\n"
   e.votes_str = f"  +1: {AVAILID}\n"
   e.branch = branch
-  sf.insert(e, "Candidate changes")
+  if not sf.insert(e, "Other candidate changes", False):
+    sf.insert(e, "Candidate changes")
 
   # Write new STATUS file
   with open(STATUS, mode='w', encoding="UTF-8") as f:
