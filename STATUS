@@ -79,9 +79,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-Candidate changes:
-==================
-
 * r1935797
   GHA: Do not trigger build for changes in non-code files.
   Justification:
@@ -89,4 +86,7 @@ Candidate changes:
     tarballs)
   Votes:
     +1: dsahlberg
+
+Candidate changes:
+==================
 
