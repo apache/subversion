@@ -63,7 +63,7 @@ Other candidate changes:
      leak and makes content of the config_keys.inc file in the release tarballs
      reproducible.
    Votes:
-     +1: kotkov
+     +1: kotkov, ivan
 
 Veto-blocked changes:
 =====================
