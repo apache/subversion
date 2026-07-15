@@ -78,3 +78,15 @@ Veto-blocked changes:
 
 Approved changes:
 =================
+
+Candidate changes:
+==================
+
+* r1935797
+  GHA: Do not trigger build for changes in non-code files.
+  Justification:
+    Testing backport scripts (this change is not included in release
+    tarballs)
+  Votes:
+    +1: dsahlberg
+
