@@ -39,6 +39,7 @@ import textwrap
 
 import backport.merger
 import backport.status
+import backport.wc
 
 # Constants
 STATUS = './STATUS'
@@ -166,7 +167,8 @@ def main():
 
   # Determine whether a backport branch exists
   (exit_code, branch, stderr) = backport.merger.run_svn(['info', '--show-item', 'url', '--',
-                              wcinfo["URL"] + '-r'+str(revisions[0])]).replace('\n', '')
+                              wcinfo["URL"] + '-r'+str(revisions[0])], 'W170000')
+  branch.replace('\n', '')
   if branch == "":
     branch = None
 
