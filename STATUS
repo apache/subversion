@@ -59,14 +59,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1936038, r1936039
-   Don't use full path in the header of the generated config_keys.inc file
-   Justification:
-     Do not leak full path from the build environment into release tarballs.
-   Notes:
-     This is a long-standing existing issue, but fixing it prevents a local path
-     leak and makes content of the config_keys.inc file in the release tarballs
-     reproducible.
-   Votes:
-     +1: kotkov, ivan, dsahlberg
