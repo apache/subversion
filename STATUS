@@ -18,6 +18,18 @@ Release blockers for 1.15.0:
 Candidate changes that cannot go into a later 1.15.x:
 =====================================================
 
+ * r1936209
+   Remove tools/dev/wc-format.py.
+   Justification:
+     - `svn info` displays working copy format now.
+     - wc-format.py doesn't support working copy format 32.
+   Notes:
+     Can be merged without restarting soak period due to tools/ exception,
+     but cannot be merged after 1.15.0 release because it removes
+     functionality.
+   Votes:
+     +1: ivan
+
 Other candidate changes:
 ========================
 
