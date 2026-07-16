@@ -60,14 +60,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
- * r1936132
-   cmake: Sort CMake target conditions to generate stable targets.cmake.
-   Justification:
-     Release tarball content must be stable. Blocks 1.15.0 because otherwise
-     the tarball's content is not reproducible.
-   Votes:
-     +1: kotkov, rinrab, ivan, dsahlberg
-
  * r1936038, r1936039
    Don't use full path in the header of the generated config_keys.inc file
    Justification:
