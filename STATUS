@@ -18,14 +18,6 @@ Release blockers for 1.15.0:
 Candidate changes that cannot go into a later 1.15.x:
 =====================================================
 
-* r1936214
-  Remove the build-svn-deps-win.pl script. It currently doesn't work and
-  CMake/vcpkg is the preferred way to build on Windows.
-  Justification:
-    Script doesn't work and we shouldn't distribute awk sources
-  Votes:
-    +1: dsahlberg
-
 Other candidate changes:
 ========================
 
@@ -79,3 +71,11 @@ Approved changes:
      functionality.
    Votes:
      +1: ivan, dsahlberg
+
+ * r1936214
+   Remove the build-svn-deps-win.pl script. It currently doesn't work and
+   CMake/vcpkg is the preferred way to build on Windows.
+   Justification:
+     Script doesn't work and we shouldn't distribute awk sources
+   Votes:
+     +1: dsahlberg, ivan
