@@ -112,7 +112,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: subversion 1.9\n"
 "Report-Msgid-Bugs-To: dev@subversion.apache.org\n"
-"POT-Creation-Date: 2026-07-17 02:04+0200\n"
+"POT-Creation-Date: 2026-07-17 02:13+0200\n"
 "PO-Revision-Date: 2018-10-06 17:37+0200\n"
 "Last-Translator: Subversion Developers <dev@subversion.apache.org>\n"
 "Language-Team: Swedish <dev@subversion.apache.org>\n"
@@ -1350,7 +1350,6 @@ msgid "BCrypt method failed."
 msgstr "BCrypt-anrop misslyckades."
 
 #: ../include/svn_error_codes.h:1529
-#, fuzzy
 msgid "Error parsing revision argument"
 msgstr "Syntaxfel i revisionsnummer"
 
@@ -20851,7 +20850,7 @@ msgstr ""
 "                                             arkiveringen vid eller före BASE\n"
 "                                \"PREV\"       revisionen före COMMITTED"
 
-#: ../svnbrowse/svnbrowse.c:569
+#: ../svnbrowse/svnbrowse.c:577
 msgid ""
 "usage: svnbrowse <target> [options]\n"
 "Interactively browse Subversion repositories\n"
@@ -20861,7 +20860,7 @@ msgstr ""
 "Interaktiv bläddning i Subversion-arkiv\n"
 "\n"
 
-#: ../svnbrowse/svnbrowse.c:574
+#: ../svnbrowse/svnbrowse.c:582
 msgid "Valid options:\n"
 msgstr "Giltiga flaggor:\n"
 
