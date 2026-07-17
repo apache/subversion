@@ -66,11 +66,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1936214
-   Remove the build-svn-deps-win.pl script. It currently doesn't work and
-   CMake/vcpkg is the preferred way to build on Windows.
-   Justification:
-     Script doesn't work and we shouldn't distribute awk sources
-   Votes:
-     +1: dsahlberg, ivan
