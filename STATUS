@@ -54,15 +54,15 @@ Other candidate changes:
      +1: ivan, kotkov
      +0: brane (review only, can't test)
 
+Veto-blocked changes:
+=====================
+
+Approved changes:
+=================
+
 * r1936218
   Update and verify Swedish translation
   Justification:
     Swedish translation for 1.15
   Votes:
     +1: dsahlberg
-
-Veto-blocked changes:
-=====================
-
-Approved changes:
-=================
