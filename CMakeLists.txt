@@ -860,7 +860,13 @@ if(SVN_ENABLE_SWIG_RUBY)
     ${SWIG_INCLUDE_DIRECTORIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby/libsvn_swig_ruby
   )
-  target_compile_definitions(external-ruby INTERFACE HAVE_RB_ERRINFO)
+  target_compile_options(external-ruby INTERFACE
+    $<$<C_COMPILER_ID:MSVC>:/FIswigutil_rb__pre_ruby.h>
+  )
+  target_compile_definitions(external-ruby INTERFACE
+    HAVE_RB_ERRINFO
+    $<$<BOOL:${WIN32}>:SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG>
+  )
   target_link_libraries(external-ruby INTERFACE ${Ruby_LIBRARY})
 
   swig_target_external_runtime(external-ruby ruby)
