@@ -844,8 +844,10 @@ if(SVN_ENABLE_SWIG_PERL)
     ${SWIG_INCLUDE_DIRECTORIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/libsvn_swig_perl
   )
-  target_compile_definitions(external-perl INTERFACE "__inline__=__inline")
-  target_compile_options(external-perl INTERFACE ${PERL_EXTRA_C_FLAGS})
+  target_compile_options(external-perl INTERFACE
+    $<$<C_COMPILER_ID:MSVC>:/FIswigutil_pl__pre_perl.h>
+    ${PERL_EXTRA_C_FLAGS}
+  )
   target_link_libraries(external-perl INTERFACE ${PERL_LIBRARY})
 
   swig_target_external_runtime(external-perl perl)
