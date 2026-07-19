@@ -290,6 +290,8 @@ class StatusFile:
     s = ""
     for para in self.paragraphs:
       s += para.__str__()
+    if s[-1] == "\n":
+      s = s[:-1]
     return s
 
 class Test_StatusFile(unittest.TestCase):
@@ -318,7 +320,6 @@ class Test_StatusFile(unittest.TestCase):
         "   Bump version number to 1.0.\n"
         "   Votes:\n"
         "     +1: jrandom\n"
-        "\n"
     )
     test_file = io.StringIO(s)
     with test_file:
