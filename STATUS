@@ -26,7 +26,7 @@ Candidate changes that cannot go into a later 1.15.x:
   Votes:
     +1: dsahlberg
 
-* r1936310, r1936311, r1936312, r1936317
+* r1936310, r1936311, r1932433, r1936312, r1936317
   Remove backport.pl
   Justification:
     Remove backport.pl as discussed on dev@
