@@ -7,7 +7,7 @@ F1. Auto-merge bot; the nightly svn-role commits.
 
 F2. Conflicts detector bot; the backportbot GitHub Action.
 
-And two interactive functions¹:
+And two interactive functions:
 
 F3. Reviewing STATUS nominations and casting votes.
 
