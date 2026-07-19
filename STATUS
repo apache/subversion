@@ -84,7 +84,7 @@ Other candidate changes:
   Votes:
     +1: dsahlberg
 
-* r1936309, r1936313, r1936318
+* r1936153 r1936159, r1936309, r1936313, r1936318
   Remove automatic editing of STATUS from the script and cleanup code.
   Justification:
     Simplify backport.py scripts as suggested on dev@
