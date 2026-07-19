@@ -74,7 +74,7 @@ Other candidate changes:
    Justification:
      Silence GCC compiler warnings.
    Votes:
-     +1: rinrab
+     +1: rinrab, dsahlberg
 
 * r1936309, r1936313, r1936318
   Remove automatic editing of STATUS from the script and cleanup code.
