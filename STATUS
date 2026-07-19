@@ -74,7 +74,15 @@ Other candidate changes:
    Justification:
      Silence GCC compiler warnings.
    Votes:
-     +1: rinrab, dsahlberg
+     +1: rinrab
+
+* r1936304
+  cmake: Follow-up to r1935776, fix all tests via run_tests.py failing
+  with SVN_TEST_CHECK_XML_SCHEMA=OFF.
+  Justification:
+    Ensure ctest work
+  Votes:
+    +1: dsahlberg
 
 * r1936309, r1936313, r1936318
   Remove automatic editing of STATUS from the script and cleanup code.
