@@ -74,7 +74,7 @@ Other candidate changes:
    Justification:
      Silence GCC compiler warnings.
    Votes:
-     +1: rinrab
+     +1: rinrab, dsahlberg
 
 * r1936304
   cmake: Follow-up to r1935776, fix all tests via run_tests.py failing
