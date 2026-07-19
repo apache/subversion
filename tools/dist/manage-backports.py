@@ -70,8 +70,7 @@ def check_local_mods_to_STATUS():
   if status != "":
     print(f"Local mods to STATUS file {STATUS}")
     print(status)
-    if YES:
-      sys.exit(1)
+    print("Merging will not be possible\n")
     input("Press Enter to continue or Ctrl-C to abort...")
     return True
 
@@ -87,32 +86,44 @@ def get_availid():
     return os.environ["AVAILID"]
 
   except KeyError:
-    try:
-      # Failing, try executing svn auth
-      auth = subprocess_output(['svn', 'auth', 'svn.apache.org:443'])
+    pass
+
+  except:
+    raise
+
+  try:
+    # Failing, try executing svn auth
+    (exitcode, auth, stderr) = backport.merger.run_svn(['auth', 
+                                                        'svn.apache.org:443'],
+                                                       "E200009")
+    if exitcode == 0:
       correct_realm = False
       for line in auth.split('\n'):
         line = line.strip()
         if line.startswith('Authentication realm:'):
-          correct_realm = line.find(SVN_A_O_REALM)
-        elif line.startswith('Username:'):
+          correct_realm = True if line.find(SVN_A_O_REALM) > 0 else False
+        elif correct_realm and line.startswith('Username:'):
           return line[10:]
 
-    except OSError as e:
-      try:
-        # Last resort, read from ~/.subversion/auth/svn.simple
-        dir = os.environ["HOME"] + "/.subversion/auth/svn.simple/"
-        filename = hashlib.md5(SVN_A_O_REALM.encode('utf-8')).hexdigest()
-        with open(dir+filename, 'r') as file:
-          lines = file.readlines()
-          for i in range(0, len(lines), 4):
-            if lines[i].strip() == "K 8" and lines[i+1].strip() == 'username':
-              return lines[i+3]
+  except OSError:
+    pass
 
-      except:
-        raise
-    except:
-      raise
+  except:
+    raise
+
+  try:
+    # Last resort, read from ~/.subversion/auth/svn.simple
+    dir = os.environ["HOME"] + "/.subversion/auth/svn.simple/"
+    filename = hashlib.md5(SVN_A_O_REALM.encode('utf-8')).hexdigest()
+    with open(dir+filename, 'r') as file:
+      lines = file.readlines()
+      for i in range(0, len(lines), 4):
+        if lines[i].strip() == "K 8" and lines[i+1].strip() == 'username':
+          return lines[i+3]
+
+  except FileNotFoundError:
+    pass
+
   except:
     raise
 
@@ -129,12 +140,6 @@ q:   Quit the "for each entry" loop.  If you have entered any votes or
 a:   Move the entry to the "Approved changes" section.
      When both approving and voting on an entry, approve first: for example,
      to enter a third +1 vote, type "a" "+" "1".
-e:   Edit the entry in $EDITOR, which is '$EDITOR'.
-     You will be prompted to commit your edits at the end.
-N:   Move to the next entry.  Do not prompt for the current entry again, even
-     in future runs, unless the STATUS nomination has been modified (e.g.,
-     revisions added, justification changed) in the repository.
-     (This is a local action that will not affect other people or bots.)
  :   Move to the next entry.  Prompt for the current entry again in the next
      run of backport.pl.
      (That's a space character, ASCII 0x20.)
@@ -143,7 +148,7 @@ N:   Move to the next entry.  Do not prompt for the current entry again, even
 
 BACKPORT_OPTIONS_MERGE_OPTIONS_HELP=f"""y:   Open a shell.
 d:   View a diff.
-N:   Move to the next entry.
+n:   Move to the next entry.
 ?:   Display this list.
 """
 
@@ -173,20 +178,11 @@ After running a merge, you have the following options:
 
 {BACKPORT_OPTIONS_MERGE_OPTIONS_HELP}
 
-To commit a merge, you have two options: either answer 'y' to the second prompt
-to open a shell, and manually run 'svn commit' therein; or set $MAY_COMMIT=1
-in the environment before running the script, in which case answering 'y'
-to the first prompt will not only run the merge but also commit it.
+When moving to the next entry, any changes will be reverted.
 
 The 'svn' binary defined by the environment variable $SVN, or otherwise the
 'svn' found in $PATH, will be used to manage the working copy.
   """)
-
-def warned_cannot_commit(message):
-  if AVAILID is None:
-    print(message + ": Unable to determine your username via $AVAILID or svn auth or ~/.subversion/auth/.")
-    return True
-  return False
 
 def less(message):
   process = subprocess.Popen(["less"], stdin=subprocess.PIPE)
@@ -198,18 +194,18 @@ def less(message):
 
 def main():
   # Pre-requisite
-  if warned_cannot_commit("Nominating failed"):
-    print("Unable to proceed.\n")
+  if AVAILID is None:
+    print("Unable to determine your username via $AVAILID or svn auth or ~/.subversion/auth/.\n", file=sys.stderr)
     sys.exit(1)
-  had_local_mods = check_local_mods_to_STATUS()
+
+  status_has_local_mods = check_local_mods_to_STATUS()
 
   # Argument parsing.
   if len(sys.argv) > 1 and (sys.argv[1] == "-h" or sys.argv[1] == "--help"):
     usage()
     return
 
-  # Update existing status file and load it
-  backport.merger.run_svn_quiet(['update'])
+  # Load STATUS file
   try:
     sf = backport.status.StatusFile(open(STATUS, encoding="UTF-8"))
   except FileNotFoundError:
@@ -221,19 +217,28 @@ def main():
 
   # Iterate the existing nominations
   for e in sf.entries_paras():
+    # Ignore approved changes
+    if e._containing_section == "Approved changes":
+      continue
+    
     # Display entry and check for user actions
     a = ""
-    while a != "N":
-      if a != "v":
-        print("r" + ", r".join([str(r) for r in e._entry.revisions]))
+    while True:
+      if a == "":
+        print("\nr" + ", r".join([str(r) for r in e._entry.revisions]))
         print(e._entry.justification_str)
         print(e._entry.votes_str)
-      a = input("Run a merge? [y,l,v,q,±1,±0,a,e,N, ,?] ").strip()
+      a = input("Enter desired action [" + ("y," if not status_has_local_mods else "") + "l,v,q,±1,±0,a,n,?] ").strip()
       if a == "y":
+        # In case someone has a strong muscle memory
+        if status_has_local_mods:
+          print("Unable to merge, STATUS has local modifications!")
+          continue
+        
         # Run a merge
         backport.merger.merge(e._entry, commit=False)
         while a != "N":
-          a = input("Shall I open a subshell? [ydN?] ").strip()
+          a = input("Shall I open a subshell? [ydn?] ").strip()
           if a == "y":
             # Open Subshell
             subprocess.run([SHELL])
@@ -241,14 +246,14 @@ def main():
             # Show diff
             (exit_code, stdout, stderr) = backport.merger.run_svn(["diff"])
             less(stdout)
-          elif a == "N":
+          elif a == "n":
             # Next item
             break
           elif a == "?":
             # Help
             print(BACKPORT_OPTIONS_MERGE_OPTIONS_HELP)
           else:
-            print("Please use one of the options in brackets (N to continue with next item)!")
+            print("Please use one of the options in brackets (n to continue with next item)!")
         backport.merger.run_svn_quiet(["revert", ".", "--depth=infinity"])
 
       elif a == "l":
@@ -268,22 +273,14 @@ def main():
         break
 
       elif len(a) == 2 and a[0] in "+-" and a[1] in "01":
-        print("Voting " + a)
+        e._entry.votes_str += "  " + a + f": {AVAILID}\n"
 
       elif a == "a":
         # Approve the entry
         sf.remove(e._entry)
         sf.insert(e._entry, "Approved changes")
 
-      elif a == "e":
-        # Edit the entry in EDITOR
-        subprocess.run([EDITOR, STATUS])
-
-      elif a == "N":
-        # Move to next entry and don't prompt for this entry ever again
-        break
-
-      elif a == "":
+      elif a == "n":
         # Move to next entry
         break
 
@@ -292,7 +289,7 @@ def main():
         print(BACKPORT_OPTIONS_HELP)
 
       else:
-        print("Please use one of the options in brackets (q to quit)!")
+        print("Please use one of the options in brackets (n to continue with next item, q to quit)!")
 
     if a == "q":
       # Quit the "for each entry" loop.
@@ -302,53 +299,9 @@ def main():
     sf.unparse(f)
   sys.exit(0)
 
-  revisions = [int(''.join(filter(str.isdigit, revision))) for revision in sys.argv[1].split()]
-  justification = sys.argv[2]
-
-  # Create new status entry and add to STATUS
-  e = backport.status.StatusEntry(None)
-  e.revisions = revisions
-  e.logsummary = textwrap.wrap(logmsg)
-  e.justification_str = "\n" + textwrap.fill(justification, initial_indent='  ', subsequent_indent='  ') + "\n"
-  e.votes_str = f"  +1: {AVAILID}\n"
-  e.branch = branch
-  sf.insert(e, "Candidate changes")
-
-  # Write new STATUS file
-  with open(STATUS, mode='w', encoding="UTF-8") as f:
-    sf.unparse(f)
-
-  # Check for changes to commit
-  diff = subprocess_output(['svn', 'diff', STATUS])
-  print(diff)
-  answer = input("Commit this nomination [y/N]? ")
-  if answer.lower() == "y":
-    subprocess_output(['svn', 'commit', STATUS, '-m',
-                       '* STATUS: Nominate r' +
-                       ', r'.join(map(str, revisions))])
-  else:
-    answer = input("Revert STATUS (destroying local mods) [y/N]? ")
-    if answer.lower() == "y":
-      subprocess_output(['svn', 'revert', STATUS])
-
-  sys.exit(0)
-
 AVAILID = get_availid()
 
-# Load the various knobs
-try:
-  YES = True if os.environ["YES"].lower() in ["true", "1", "yes"] else False
-except:
-  YES = False
-
-try:
-  MAY_COMMIT = True if os.environ["MAY_COMMIT"].lower() in ["true", "1", "yes"] else False
-except:
-  MAY_COMMIT = False
-
 if __name__ == "__main__":
-#  print("Starting subshell!\n")
-
   try:
     main()
   except KeyboardInterrupt:
