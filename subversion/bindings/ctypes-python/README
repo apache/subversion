@@ -1,0 +1,6 @@
+This directory used to contain a ctypes based Python binding, however it
+was unmaintained and didn't work for Python3. Therefore, it was removed 
+in r1936306 (before the release of Subversion 1.15.0).
+
+If you want to see them or work with them, you can check them out from an
+earlier revision.
