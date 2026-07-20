@@ -77,6 +77,7 @@ option(SVN_TEST_EXPAND "Expand tests; This will slow-down configuration, but you
 option(SVN_TEST_CONFIGURE_FOR_PARALLEL "Configures tests for parallel run execution" OFF)
 set(SVN_TEST_COMMAND_ARGUMENTS "" CACHE STRING "Additional command line options to be passed to run_tests.py")
 option(SVN_TEST_CHECK_XML_SCHEMA "Enable extended XML schema validation" OFF)
+option(SVN_TEST_CLEANUP "Clean up directories for successful tests" ON)
 option(SVN_ENABLE_APACHE_MODULES "Build modules for Apache HTTPD" OFF)
 
 option(SVN_ENABLE_SWIG_PERL "Enable Subversion Perl bindings Perl" OFF)
@@ -1173,8 +1174,10 @@ if(SVN_ENABLE_TESTS)
       --verbose
       --log-to-stdout
       --set-log-level=WARNING
-      --cleanup
     )
+    if(SVN_TEST_CLEANUP)
+      list(APPEND test_args --cleanup)
+    endif()
     if(SVN_TEST_CHECK_XML_SCHEMA)
       list(APPEND test_args --check-xml-schema)
     endif()
