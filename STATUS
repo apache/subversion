@@ -75,7 +75,7 @@ Other candidate changes:
   Justification:
     Subversion shouldn't crash even if the dump file is corrupt
   Votes:
-    +1: dsahlberg
+    +1: dsahlberg, ivan
 
 * r1936304
   cmake: Follow-up to r1935776, fix all tests via run_tests.py failing
