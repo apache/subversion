@@ -21,7 +21,7 @@
 
 # CMAKE_MINIMUM_REQUIRED should be the first directive in the file:
 # https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html
-cmake_minimum_required(VERSION 3.14)
+cmake_minimum_required(VERSION 3.22)
 
 # CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
 if(POLICY CMP0092)
@@ -79,9 +79,22 @@ set(SVN_TEST_COMMAND_ARGUMENTS "" CACHE STRING "Additional command line options 
 option(SVN_TEST_CHECK_XML_SCHEMA "Enable extended XML schema validation" OFF)
 option(SVN_ENABLE_APACHE_MODULES "Build modules for Apache HTTPD" OFF)
 
-option(SVN_ENABLE_SWIG_PERL "Enable Subversion SWIG bindings for Perl" OFF)
-option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion SWIG bindings into Python" OFF)
-option(SVN_ENABLE_SWIG_RUBY "Enable Subversion SWIG bindings into Ruby" OFF)
+option(SVN_ENABLE_SWIG_PERL "Enable Subversion Perl bindings Perl" OFF)
+option(SVN_ENABLE_SWIG_PERL_MAN_PAGES "Enable man pages for Subversion Perl bindings" OFF)
+option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion Python bindings" OFF)
+option(SVN_ENABLE_SWIG_RUBY "Enable Subversion Ruby bindings" OFF)
+set(SVN_SWIG_PERL_SITEARCH "${CMAKE_INSTALL_PREFIX}/lib/svn-perl"
+  CACHE PATH "Path to install Subversion Perl bindings for sitearch")
+set(SVN_SWIG_PERL_MAN3DIR "${CMAKE_INSTALL_PREFIX}/share/man/man3"
+  CACHE PATH "Path to install Subversion Perl bindings for man3dir")
+set(SVN_SWIG_PYTHON_SITELIB "${CMAKE_INSTALL_PREFIX}/lib/svn-python"
+  CACHE PATH "Path to install Subversion Python bindings for sitelib")
+set(SVN_SWIG_PYTHON_SITEARCH "${CMAKE_INSTALL_PREFIX}/lib/svn-python"
+  CACHE PATH "Path to install Subversion Python bindings for sitearch")
+set(SVN_SWIG_RUBY_SITELIB "${CMAKE_INSTALL_PREFIX}/lib/svn-ruby"
+  CACHE PATH "Path to install Subversion Ruby bindings for sitelib")
+set(SVN_SWIG_RUBY_SITEARCH "${CMAKE_INSTALL_PREFIX}/lib/svn-ruby"
+  CACHE PATH "Path to install Subversion Ruby bindings for sitearch")
 
 # Enable modules and features
 option(SVN_ENABLE_RA_LOCAL "Enable Subversion Local Repository Access Library" ON)
@@ -210,7 +223,8 @@ add_private_config_definition(
   "SVN_SOVERSION" "${SVN_SOVERSION}"
 )
 
-if (SVN_ENABLE_TESTS)
+if (SVN_ENABLE_TESTS OR SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR
+    SVN_ENABLE_SWIG_RUBY)
   enable_testing()
 endif()
 
@@ -246,6 +260,36 @@ if (SVN_ENABLE_SWIG_PERL OR SVN_ENABLE_SWIG_PYTHON OR SVN_ENABLE_SWIG_RUBY)
     ${CMAKE_CURRENT_BINARY_DIR}/subversion/bindings/swig/proxy
     ${CMAKE_CURRENT_BINARY_DIR}
   )
+
+  if(SVN_ENABLE_SWIG_PYTHON)
+    if(SWIG_VERSION VERSION_LESS "3.0.10")
+      message(SEND_ERROR
+        "Subversion Python bindings require SWIG 3.0.10 or newer")
+    elseif(SWIG_VERSION VERSION_LESS "4.0.0")
+      set(SVN_SWIG_PY_OPTS "-py3;-nofastunpack;-modern")
+    elseif(SWIG_VERSION VERSION_LESS "4.1.0")
+      set(SVN_SWIG_PY_OPTS "-py3;-nofastunpack")
+    else()
+      set(SVN_SWIG_PY_OPTS "-nofastunpack")
+    endif()
+  endif()
+
+  if(SVN_ENABLE_SWIG_PERL)
+    set(SVN_SWIG_PL_OPTS "-nopm;-noproxy")
+  endif()
+
+  if(SVN_ENABLE_SWIG_RUBY)
+    if(SWIG_VERSION VERSION_EQUAL "4.2.0")
+      message(WARNING
+        "Ruby bindings cannot be built with swig 4.2.0, see "
+        "https://github.com/swig/swig/issues/2751")
+    elseif(SWIG_VERSION VERSION_EQUAL "3.0.8")
+      message(WARNING
+        "Ruby bindings are known not to support swig 3.0.8, see https://"
+        "subversion.apache.org/docs/release-notes/1.11#ruby-swig-issue-602")
+    endif()
+    set(SVN_SWIG_RB_OPTS)
+  endif()
 endif()
 
 if (MSVC)
@@ -828,13 +872,65 @@ if(SVN_ENABLE_SWIG_PYTHON)
     ${SWIG_INCLUDE_DIRECTORIES}
     ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/libsvn_swig_py
   )
-
   swig_target_external_runtime(external-python python)
+
+  add_custom_command(TARGET libsvn_swig_py POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E copy_directory
+      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/svn"
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python/svn"
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python/libsvn"
+    COMMAND ${CMAKE_COMMAND} -E copy
+      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/__init__.py"
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python/libsvn/__init__.py"
+  )
+  install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/svn/"
+    DESTINATION "${SVN_SWIG_PYTHON_SITELIB}/svn"
+    FILES_MATCHING
+      PATTERN "__pycache__" EXCLUDE
+      PATTERN "*.py"
+  )
+  install(
+    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-python/libsvn/"
+    DESTINATION "${SVN_SWIG_PYTHON_SITEARCH}/libsvn"
+    FILES_MATCHING
+      PATTERN "__pycache__" EXCLUDE
+      PATTERN "*.py"
+      PATTERN "*.so"
+      PATTERN "*.pyd"
+  )
+  install(CODE [==[
+    execute_process(
+      COMMAND
+        "${Python3_EXECUTABLE}" -m compileall -q
+        "${SVN_SWIG_PYTHON_SITELIB}/svn"
+        "${SVN_SWIG_PYTHON_SITEARCH}/libsvn"
+    )
+  ]==])
+
+  add_test(
+    NAME swig-python
+    COMMAND
+      "${Python3_EXECUTABLE}"
+      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/tests/run_all.py
+      --verbose
+    WORKING_DIRECTORY
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-python"
+  )
+  if(WIN32 OR CYGWIN)
+    set_property(TEST swig-python APPEND PROPERTY ENVIRONMENT_MODIFICATION
+      "PATH=path_list_prepend:$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}>"
+    )
+  endif()
 endif()
 
 if(SVN_ENABLE_SWIG_PERL)
   find_package(Perl REQUIRED)
   find_package(PerlLibs REQUIRED)
+  if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
+    find_program(POD2MAN_EXECUTABLE NAMES pod2man REQUIRED)
+  endif()
 
   separate_arguments(PERL_EXTRA_C_FLAGS)
 
@@ -849,8 +945,65 @@ if(SVN_ENABLE_SWIG_PERL)
     ${PERL_EXTRA_C_FLAGS}
   )
   target_link_libraries(external-perl INTERFACE ${PERL_LIBRARY})
-
   swig_target_external_runtime(external-perl perl)
+
+  block()
+    set(pm_files)
+    file(GLOB pm_files
+      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native/*.pm")
+    add_custom_command(TARGET libsvn_swig_perl POST_BUILD
+      COMMAND ${CMAKE_COMMAND} -E make_directory
+        "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
+        "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man"
+      COMMAND ${CMAKE_COMMAND} -E copy
+        ${pm_files}
+        "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
+    )
+    if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
+      foreach(pm_file ${pm_files})
+        get_filename_component(name ${pm_file} NAME_WLE)
+        set(man_file "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man/SVN::${name}.3pm")
+        add_custom_command(TARGET libsvn_swig_perl POST_BUILD
+          COMMAND ${POD2MAN_EXECUTABLE} --section=3pm ${pm_file} "${man_file}"
+        )
+      endforeach()
+    endif()
+  endblock()
+
+  install(
+    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN/"
+    DESTINATION "${SVN_SWIG_PERL_SITEARCH}/SVN"
+    FILES_MATCHING PATTERN "*.pm"
+  )
+  install(
+    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/auto/SVN/"
+    DESTINATION "${SVN_SWIG_PERL_SITEARCH}/auto/SVN"
+    FILES_MATCHING PATTERN "*.so"
+  )
+  if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
+    install(
+      DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man/"
+      DESTINATION "${SVN_SWIG_PERL_MAN3DIR}"
+      FILES_MATCHING PATTERN "*.3pm"
+    )
+  endif()
+
+  add_test(
+    NAME swig-perl
+    COMMAND
+      ${PERL_EXECUTABLE}
+      "-I${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib"
+      -MTest::Harness
+      -e
+      "$Test::Harness::verbose = 1; runtests(glob('t/*.t'))"
+    WORKING_DIRECTORY
+      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native
+  )
+  if(WIN32 OR CYGWIN)
+    set_property(TEST swig-perl APPEND PROPERTY ENVIRONMENT_MODIFICATION
+      "PATH=path_list_prepend:$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}>"
+    )
+  endif()
 endif()
 
 if(SVN_ENABLE_SWIG_RUBY)
@@ -870,8 +1023,38 @@ if(SVN_ENABLE_SWIG_RUBY)
     $<$<BOOL:${WIN32}>:SVN_SWIG_RUBY__CUSTOM_RUBY_CONFIG>
   )
   target_link_libraries(external-ruby INTERFACE ${Ruby_LIBRARY})
-
   swig_target_external_runtime(external-ruby ruby)
+
+  install(
+    DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby/svn/"
+    DESTINATION "${SVN_SWIG_RUBY_SITELIB}/svn"
+    FILES_MATCHING PATTERN "*.rb"
+  )
+  install(
+    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-ruby/svn/ext/"
+    DESTINATION "${SVN_SWIG_RUBY_SITEARCH}/svn/ext"
+    FILES_MATCHING PATTERN "*.so"
+  )
+
+  add_test(
+    NAME swig-ruby
+    COMMAND
+      "${Ruby_EXECUTABLE}"
+      "-I${CMAKE_CURRENT_BINARY_DIR}/swig-ruby"
+      "-I${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby"
+      test/run-test.rb
+      --collector=dir
+      --verbose=v
+    WORKING_DIRECTORY
+      ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby
+  )
+  set_property(TEST swig-ruby APPEND PROPERTY ENVIRONMENT
+    "SVN_TEST_SWIG_RUBY=ctest"
+  )
+  # svnserve in the build directory is launched by the tests
+  set_property(TEST swig-ruby APPEND PROPERTY ENVIRONMENT_MODIFICATION
+    "PATH=path_list_prepend:$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}>"
+  )
 endif()
 
 ### Checks
@@ -1106,20 +1289,6 @@ if(SVN_USE_WIN32_CRASHHANDLER)
   target_compile_definitions(libsvn_subr PRIVATE
     "SVN_USE_WIN32_CRASHHANDLER"
     "SVN_WIN32_CRASHREPORT_EMAIL=\"users@subversion.apache.org\""
-  )
-endif()
-
-if(SVN_ENABLE_SWIG_PYTHON)
-  add_custom_command(TARGET libsvn_swig_py POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_directory
-      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/svn"
-      "$<TARGET_FILE_DIR:libsvn_swig_py>/PythonPackages/svn"
-  )
-
-  add_custom_command(TARGET libsvn_swig_py POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy
-      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/python/__init__.py"
-      "$<TARGET_FILE_DIR:libsvn_swig_py>/PythonPackages/libsvn/__init__.py"
   )
 endif()
 

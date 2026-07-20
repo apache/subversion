@@ -38,11 +38,14 @@ module SvnTestUtil
         @svnserve_port = @svnserve_ports.last
         @repos_svnserve_uri = "svn://#{@svnserve_host}:#{@svnserve_port}"
 
-        top_directory = File.join(File.dirname(__FILE__), "..", "..", "..", "..", "..")
-        build_type = ENV["BUILD_TYPE"] || "Release"
-        svnserve_path = File.join(top_directory, build_type, 'subversion', 'svnserve', 'svnserve.exe')
+        if ENV['SVN_TEST_SWIG_RUBY'] == 'ctest'
+          svnserve_path = "svnserve.exe"
+        else
+          top_directory = File.join(File.dirname(__FILE__), "..", "..", "..", "..", "..")
+          build_type = ENV["BUILD_TYPE"] || "Release"
+          svnserve_path = File.join(top_directory, build_type, 'subversion', 'svnserve', 'svnserve.exe')
+        end
         svnserve_path = Svnserve.escape_value(svnserve_path)
-
         root = @full_repos_path.tr(File::SEPARATOR, File::ALT_SEPARATOR)
         FileUtils.mkdir_p(root)
 

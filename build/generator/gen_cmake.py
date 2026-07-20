@@ -59,10 +59,11 @@ def get_output_name(target):
     return target.name[3:] + "-1"
   elif isinstance(target, gen_base.TargetSWIG):
     module_name = target.name[len(target.lang + "_"):]
-    if target.lang == "python":
+    if target.lang in ("python", "ruby"):
       return module_name
-    else:
-      return target.name
+    if target.lang == "perl":
+      return "_" + module_name.capitalize()
+    return target.name
   else:
     return target.name
 
