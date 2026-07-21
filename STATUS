@@ -93,13 +93,6 @@ Veto-blocked changes:
 Approved changes:
 =================
 
-* r1936310, r1936311, r1932433, r1936312, r1936317
-  Remove backport.pl
-  Justification:
-    Remove backport.pl as discussed on dev@
-  Votes:
-    +1: dsahlberg, ivan
-
  * r1932158, r1932159, r1932160, r1932154
    Properly use const string pointers
    Justification:
