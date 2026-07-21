@@ -92,10 +92,3 @@ Veto-blocked changes:
 
 Approved changes:
 =================
-
- * r1932158, r1932159, r1932160, r1932154
-   Properly use const string pointers
-   Justification:
-     Silence GCC compiler warnings.
-   Votes:
-     +1: rinrab, dsahlberg, ivan

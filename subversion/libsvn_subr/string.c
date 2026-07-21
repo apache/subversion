@@ -902,7 +902,7 @@ svn_cstring_split_append(apr_array_header_t *array,
         }
 
       if (p[0] != '\0')
-        APR_ARRAY_PUSH(array, const char *) = p;
+        APR_ARRAY_PUSH(array, char *) = p;
 
       p = svn_cstring_tokenize(sep_chars, &pats);
     }

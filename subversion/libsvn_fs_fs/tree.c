@@ -2485,7 +2485,7 @@ fs_dir_optimal_order(apr_array_header_t **ordered_p,
 static svn_error_t *
 check_newline(const char *path, apr_pool_t *pool)
 {
-  char *c = strchr(path, '\n');
+  const char *c = strchr(path, '\n');
 
   if (c)
     return svn_error_createf(SVN_ERR_FS_PATH_SYNTAX, NULL,

@@ -253,7 +253,7 @@ svn_version__parse_version_string(svn_version_t **version_p,
      require that it be present. */
   if (pieces->nelts == 3)
     {
-      const char *piece = APR_ARRAY_IDX(pieces, 2, const char *);
+      char *piece = APR_ARRAY_IDX(pieces, 2, char *);
       char *hyphen = strchr(piece, '-');
       if (hyphen)
         {

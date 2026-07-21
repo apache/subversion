@@ -298,7 +298,7 @@ build_keywords(apr_hash_t **kw,
 
   for (i = 0; i < keyword_tokens->nelts; ++i)
     {
-      const char *keyword = APR_ARRAY_IDX(keyword_tokens, i, const char *);
+      char *keyword = APR_ARRAY_IDX(keyword_tokens, i, char *);
       const char *custom_fmt = NULL;
 
       if (expand_custom_keywords)

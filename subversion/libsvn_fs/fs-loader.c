@@ -468,7 +468,7 @@ default_warning_func(void *baton, svn_error_t *err)
 svn_error_t *
 svn_fs__path_valid(const char *path, apr_pool_t *pool)
 {
-  char *c;
+  const char *c;
 
   /* UTF-8 encoded string without NULs. */
   if (! svn_utf__cstring_is_valid(path))
