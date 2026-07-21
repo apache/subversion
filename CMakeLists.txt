@@ -21,7 +21,7 @@
 
 # CMAKE_MINIMUM_REQUIRED should be the first directive in the file:
 # https://cmake.org/cmake/help/latest/command/cmake_minimum_required.html
-cmake_minimum_required(VERSION 3.22)
+cmake_minimum_required(VERSION 3.14)
 
 # CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
 if(POLICY CMP0092)
@@ -861,6 +861,23 @@ function(swig_target_external_runtime target lang)
   target_sources(${target} INTERFACE ${swig_runtime_path})
 endfunction()
 
+function(test_prepend_builddir_to_path name)
+  file(TO_NATIVE_PATH "${CMAKE_CURRENT_BINARY_DIR}" dir)
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.22")
+    set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT_MODIFICATION
+      "PATH=path_list_prepend:${dir}"
+    )
+  else()
+    if(WIN32)
+      # Replace <;> with <\;> to prevent conversion to a list
+      string(REPLACE ";" "\\;" value "PATH=${dir};$ENV{PATH}")
+    else()
+      set(value "PATH=${dir}:$ENV{PATH}")
+    endif()
+    set_property(TEST ${name} APPEND PROPERTY ENVIRONMENT "${value}")
+  endif()
+endfunction()
+
 if(SVN_ENABLE_SWIG_PYTHON)
   find_package(PY3C REQUIRED)
 
@@ -920,9 +937,7 @@ if(SVN_ENABLE_SWIG_PYTHON)
       "${CMAKE_CURRENT_BINARY_DIR}/swig-python"
   )
   if(WIN32 OR CYGWIN)
-    set_property(TEST swig-python APPEND PROPERTY ENVIRONMENT_MODIFICATION
-      "PATH=path_list_prepend:$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}>"
-    )
+    test_prepend_builddir_to_path(swig-python)
   endif()
 endif()
 
@@ -1001,9 +1016,7 @@ if(SVN_ENABLE_SWIG_PERL)
       ${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native
   )
   if(WIN32 OR CYGWIN)
-    set_property(TEST swig-perl APPEND PROPERTY ENVIRONMENT_MODIFICATION
-      "PATH=path_list_prepend:$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}>"
-    )
+    test_prepend_builddir_to_path(swig-perl)
   endif()
 endif()
 
@@ -1053,9 +1066,7 @@ if(SVN_ENABLE_SWIG_RUBY)
     "SVN_TEST_SWIG_RUBY=ctest"
   )
   # svnserve in the build directory is launched by the tests
-  set_property(TEST swig-ruby APPEND PROPERTY ENVIRONMENT_MODIFICATION
-    "PATH=path_list_prepend:$<SHELL_PATH:${CMAKE_CURRENT_BINARY_DIR}>"
-  )
+  test_prepend_builddir_to_path(swig-ruby)
 endif()
 
 ### Checks
