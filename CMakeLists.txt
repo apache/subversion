@@ -1024,6 +1024,9 @@ if(SVN_ENABLE_SWIG_RUBY)
   find_package(Ruby REQUIRED)
 
   add_library(external-ruby IMPORTED INTERFACE)
+  if(NOT DEFINED Ruby_INCLUDE_DIRS)  # < 3.18
+    set(Ruby_INCLUDE_DIRS ${RUBY_INCLUDE_DIRS})
+  endif()
   target_include_directories(external-ruby INTERFACE
     ${Ruby_INCLUDE_DIRS}
     ${SWIG_INCLUDE_DIRECTORIES}
