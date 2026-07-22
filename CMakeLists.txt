@@ -963,28 +963,27 @@ if(SVN_ENABLE_SWIG_PERL)
   target_link_libraries(external-perl INTERFACE ${PERL_LIBRARY})
   swig_target_external_runtime(external-perl perl)
 
-  block()
-    set(pm_files)
-    file(GLOB pm_files
-      "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native/*.pm")
-    add_custom_command(TARGET libsvn_swig_perl POST_BUILD
-      COMMAND ${CMAKE_COMMAND} -E make_directory
-        "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
-        "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man"
-      COMMAND ${CMAKE_COMMAND} -E copy
-        ${pm_files}
-        "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
-    )
-    if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
-      foreach(pm_file ${pm_files})
-        get_filename_component(name ${pm_file} NAME_WLE)
-        set(man_file "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man/SVN::${name}.3pm")
-        add_custom_command(TARGET libsvn_swig_perl POST_BUILD
-          COMMAND ${POD2MAN_EXECUTABLE} --section=3pm ${pm_file} "${man_file}"
-        )
-      endforeach()
-    endif()
-  endblock()
+  set(SVN_SWIG_PERL_PM_FILES)
+  file(GLOB SVN_SWIG_PERL_PM_FILES
+    "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native/*.pm")
+  add_custom_command(TARGET libsvn_swig_perl POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man"
+    COMMAND ${CMAKE_COMMAND} -E copy
+    ${SVN_SWIG_PERL_PM_FILES}
+      "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN"
+  )
+  if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
+    foreach(name ${SVN_SWIG_PERL_PM_FILES})
+      get_filename_component(name ${name} NAME_WLE)
+      add_custom_command(TARGET libsvn_swig_perl POST_BUILD
+        COMMAND ${POD2MAN_EXECUTABLE} --section=3pm
+          "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/perl/native/${name}.pm"
+          "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man/SVN::${name}.3pm"
+      )
+    endforeach()
+  endif()
 
   install(
     DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/SVN/"
