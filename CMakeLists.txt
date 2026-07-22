@@ -707,10 +707,11 @@ endif()
 ### Python
 
 if(SVN_ENABLE_SWIG_PYTHON)
-  find_package(Python3 REQUIRED COMPONENTS
-      Interpreter
-      Development.Module
-  )
+  if(CMAKE_VERSION VERSION_GREATER_EQUAL "3.18")
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development.Module)
+  else()
+    find_package(Python3 REQUIRED COMPONENTS Interpreter Development)
+  endif()
 elseif(SVN_ENABLE_TESTS)
   find_package(Python3 REQUIRED COMPONENTS
       Interpreter
