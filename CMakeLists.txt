@@ -464,9 +464,8 @@ if(SVN_ENABLE_NLS)
     )
   endif()
 
-  add_custom_target(locale ALL)
-
   file(GLOB SVN_PO_FILES "subversion/po/*.po")
+  set(SVN_MO_FILES)
 
   foreach(po_file ${SVN_PO_FILES})
     get_filename_component(lang ${po_file} NAME_WLE)
@@ -480,15 +479,15 @@ if(SVN_ENABLE_NLS)
       COMMAND
         "${GETTEXT_MSGFMT_EXECUTABLE}" -c -o ${mo_file} ${po_file}
     )
-
-    target_sources(locale PRIVATE ${mo_file})
-
+    list(APPEND SVN_MO_FILES ${mo_file})
     install(
       FILES "${mo_file}"
       DESTINATION "share/locale/${lang}/LC_MESSAGES"
       RENAME "subversion.mo"
     )
   endforeach()
+
+  add_custom_target(locale ALL SOURCES ${SVN_MO_FILES})
 else()
   # Declare empty target for Intl if we don't use it.
   add_library(external-intl INTERFACE)
