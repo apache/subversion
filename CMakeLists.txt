@@ -96,21 +96,22 @@ option(SVN_TEST_CHECK_XML_SCHEMA "Enable extended XML schema validation" OFF)
 option(SVN_TEST_CLEANUP "Clean up directories for successful tests" ON)
 option(SVN_ENABLE_APACHE_MODULES "Build modules for Apache HTTPD" OFF)
 
+include(GNUInstallDirs)
 option(SVN_ENABLE_SWIG_PERL "Enable Subversion Perl bindings Perl" OFF)
 option(SVN_ENABLE_SWIG_PERL_MAN_PAGES "Enable man pages for Subversion Perl bindings" OFF)
 option(SVN_ENABLE_SWIG_PYTHON "Enable Subversion Python bindings" OFF)
 option(SVN_ENABLE_SWIG_RUBY "Enable Subversion Ruby bindings" OFF)
-set(SVN_SWIG_PERL_SITEARCH "${CMAKE_INSTALL_PREFIX}/lib/svn-perl"
+set(SVN_SWIG_PERL_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-perl"
   CACHE PATH "Path to install Subversion Perl bindings for sitearch")
-set(SVN_SWIG_PERL_MAN3DIR "${CMAKE_INSTALL_PREFIX}/share/man/man3"
+set(SVN_SWIG_PERL_MAN3DIR "${CMAKE_INSTALL_MANDIR}/man3"
   CACHE PATH "Path to install Subversion Perl bindings for man3dir")
-set(SVN_SWIG_PYTHON_SITELIB "${CMAKE_INSTALL_PREFIX}/lib/svn-python"
+set(SVN_SWIG_PYTHON_SITELIB "${CMAKE_INSTALL_LIBDIR}/svn-python"
   CACHE PATH "Path to install Subversion Python bindings for sitelib")
-set(SVN_SWIG_PYTHON_SITEARCH "${CMAKE_INSTALL_PREFIX}/lib/svn-python"
+set(SVN_SWIG_PYTHON_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-python"
   CACHE PATH "Path to install Subversion Python bindings for sitearch")
-set(SVN_SWIG_RUBY_SITELIB "${CMAKE_INSTALL_PREFIX}/lib/svn-ruby"
+set(SVN_SWIG_RUBY_SITELIB "${CMAKE_INSTALL_LIBDIR}/svn-ruby"
   CACHE PATH "Path to install Subversion Ruby bindings for sitelib")
-set(SVN_SWIG_RUBY_SITEARCH "${CMAKE_INSTALL_PREFIX}/lib/svn-ruby"
+set(SVN_SWIG_RUBY_SITEARCH "${CMAKE_INSTALL_LIBDIR}/svn-ruby"
   CACHE PATH "Path to install Subversion Ruby bindings for sitearch")
 
 # Enable modules and features
