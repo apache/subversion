@@ -438,6 +438,17 @@ function(target_exports target_name)
   endif()
 endfunction()
 
+function(svn_create_alias_target name target)
+  get_target_property(imported ${target} IMPORTED)
+  if(imported)
+    get_target_property(global ${target} IMPORTED_GLOBAL)
+    if(NOT global)
+      set_target_properties(${target} PROPERTIES IMPORTED_GLOBAL TRUE)
+    endif()
+  endif()
+  add_library(${name} ALIAS ${target})
+endfunction()
+
 if (NOT EXISTS "${CMAKE_SOURCE_DIR}/build/cmake/targets.cmake")
   message(SEND_ERROR
     "The 'build/cmake/targets.cmake' file does NOT exist. "
@@ -466,7 +477,7 @@ if(SVN_ENABLE_NLS)
     )
   endif()
 
-  add_library(external-intl ALIAS Intl::Intl)
+  svn_create_alias_target(external-intl Intl::Intl)
 
   add_private_config_definition(
     "Define to 1 if translation of program messages to the user's native language is requested."
@@ -523,8 +534,8 @@ link_libraries(external-intl)
 
 if(SVN_ENABLE_APACHE_MODULES)
   find_package(Httpd REQUIRED)
-  add_library(external-libhttpd ALIAS httpd::httpd)
-  add_library(external-mod_dav ALIAS httpd::mod_dav)
+  svn_create_alias_target(external-libhttpd httpd::httpd)
+  svn_create_alias_target(external-mod_dav httpd::mod_dav)
 endif()
 
 add_library(ra-libs INTERFACE)
@@ -545,27 +556,27 @@ endif()
 
 if(SVN_USE_PKG_CONFIG)
   pkg_search_module(apr REQUIRED IMPORTED_TARGET apr-2 apr-1)
-  add_library(external-apr ALIAS PkgConfig::apr)
+  svn_create_alias_target(external-apr PkgConfig::apr)
 
   if(APR_VERSION VERSION_LESS 2.0.0)
     # apr-1
     pkg_check_modules(aprutil-1 REQUIRED IMPORTED_TARGET apr-util-1)
-    add_library(external-aprutil ALIAS PkgConfig::aprutil-1)
+    svn_create_alias_target(external-aprutil PkgConfig::aprutil-1)
     set(SVN_APR_MAJOR_VERSION 1)
   else()
     # apr-2
-    add_library(external-aprutil ALIAS PkgConfig::apr)
+    svn_create_alias_target(external-aprutil PkgConfig::apr)
     set(SVN_APR_MAJOR_VERSION 2)
   endif()
 else()
   find_package(APR REQUIRED)
-  add_library(external-apr ALIAS apr::apr)
+  svn_create_alias_target(external-apr apr::apr)
 
   if(APR_VERSION VERSION_LESS 2.0.0)
     find_package(APRUtil REQUIRED)
-    add_library(external-aprutil ALIAS apr::aprutil)
+    svn_create_alias_target(external-aprutil apr::aprutil)
   else()
-    add_library(external-aprutil ALIAS apr::apr)
+    svn_create_alias_target(external-aprutil apr::apr)
   endif()
 endif()
 
@@ -573,22 +584,22 @@ endif()
 
 if(SVN_USE_PKG_CONFIG)
   pkg_check_modules(zlib REQUIRED IMPORTED_TARGET zlib)
-  add_library(external-zlib ALIAS PkgConfig::zlib)
+  svn_create_alias_target(external-zlib PkgConfig::zlib)
   set(SVN_ZLIB_LIBS ${zlib_LDFLAGS})
 else()
   find_package(ZLIB REQUIRED)
-  add_library(external-zlib ALIAS ZLIB::ZLIB)
+  svn_create_alias_target(external-zlib ZLIB::ZLIB)
 endif()
 
 ### EXPAT
 
 if(SVN_USE_PKG_CONFIG)
   pkg_check_modules(expat REQUIRED IMPORTED_TARGET expat)
-  add_library(external-xml ALIAS PkgConfig::expat)
+  svn_create_alias_target(external-xml PkgConfig::expat)
   set(SVN_XML_LIBS ${expat_LDFLAGS})
 else()
   find_package(EXPAT REQUIRED)
-  add_library(external-xml ALIAS EXPAT::EXPAT)
+  svn_create_alias_target(external-xml EXPAT::EXPAT)
 endif()
 
 ### LZ4
@@ -603,11 +614,11 @@ if(SVN_USE_INTERNAL_LZ4)
   )
 elseif(SVN_USE_PKG_CONFIG)
   pkg_check_modules(lz4 REQUIRED IMPORTED_TARGET liblz4)
-  add_library(external-lz4 ALIAS PkgConfig::lz4)
+  svn_create_alias_target(external-lz4 PkgConfig::lz4)
   set(SVN_LZ4_LIBS ${lz4_LDFLAGS})
 else()
   find_package(lz4 CONFIG REQUIRED)
-  add_library(external-lz4 ALIAS lz4::lz4)
+  svn_create_alias_target(external-lz4 lz4::lz4)
 endif()
 
 ### UTF8PROC
@@ -622,21 +633,21 @@ if(SVN_USE_INTERNAL_UTF8PROC)
   )
 elseif(SVN_USE_PKG_CONFIG)
   pkg_check_modules(utf8proc REQUIRED IMPORTED_TARGET libutf8proc)
-  add_library(external-utf8proc ALIAS PkgConfig::utf8proc)
+  svn_create_alias_target(external-utf8proc PkgConfig::utf8proc)
   set(SVN_UTF8PROC_LIBS ${utf8proc_LDFLAGS})
 else()
   find_package(UTF8PROC REQUIRED)
-  add_library(external-utf8proc ALIAS UTF8PROC::UTF8PROC)
+  svn_create_alias_target(external-utf8proc UTF8PROC::UTF8PROC)
 endif()
 
 ### SQLite3
 
 if(SVN_SQLITE_USE_AMALGAMATION)
   find_package(SQLiteAmalgamation REQUIRED)
-  add_library(external-sqlite ALIAS SQLite::SQLite3Amalgamation)
+  svn_create_alias_target(external-sqlite SQLite::SQLite3Amalgamation)
 elseif(SVN_USE_PKG_CONFIG)
   pkg_check_modules(sqlite3 REQUIRED IMPORTED_TARGET sqlite3)
-  add_library(external-sqlite ALIAS PkgConfig::sqlite3)
+  svn_create_alias_target(external-sqlite PkgConfig::sqlite3)
 else()
   # It should be not required.
   find_package(SQLite3)
@@ -646,13 +657,14 @@ else()
     # In prior versions of cmake, the sqlite targets were exported in the
     # SQLite namespace.
     if(TARGET SQLite3::SQLite3)
-      add_library(external-sqlite ALIAS SQLite3::SQLite3)
+      set(SVN_SQLITE_TARGET SQLite3::SQLite3)
     else()
-      add_library(external-sqlite ALIAS SQLite::SQLite3)
+      set(SVN_SQLITE_TARGET SQLite::SQLite3)
     endif()
+    svn_create_alias_target(external-sqlite ${SVN_SQLITE_TARGET})
   else()
     find_package(SQLiteAmalgamation REQUIRED)
-    add_library(external-sqlite ALIAS SQLite::SQLite3Amalgamation)
+    svn_create_alias_target(external-sqlite SQLite::SQLite3Amalgamation)
 
     # Is implicitness an actual problem? This warning could be removed
     # if it isn't.
@@ -667,10 +679,10 @@ endif()
 if (SVN_ENABLE_RA_SERF)
   if(SVN_USE_PKG_CONFIG)
     pkg_search_module(serf IMPORTED_TARGET REQUIRED serf-2 serf-1>=1.3.4)
-    add_library(external-serf ALIAS PkgConfig::serf)
+    svn_create_alias_target(external-serf PkgConfig::serf)
   else()
     find_package(Serf 1.3.4 REQUIRED)
-    add_library(external-serf ALIAS Serf::Serf)
+    svn_create_alias_target(external-serf Serf::Serf)
   endif()
 endif()
 
@@ -682,7 +694,7 @@ if (SVN_CHECKSUM_BACKEND STREQUAL "apr")
   )
 elseif (SVN_CHECKSUM_BACKEND STREQUAL "openssl")
   find_package(OpenSSL REQUIRED)
-  add_library(external-checksum-libs ALIAS OpenSSL::Crypto)
+  svn_create_alias_target(external-checksum-libs OpenSSL::Crypto)
   add_private_config_definition(
     "Defined if svn should use OpenSSL to compute checksums."
     "SVN_CHECKSUM_BACKEND_OPENSSL" "1"
@@ -702,10 +714,10 @@ elseif (SVN_CHECKSUM_BACKEND STREQUAL "bcrypt")
 elseif (SVN_CHECKSUM_BACKEND STREQUAL "xdigest")
   if (SVN_USE_PKG_CONFIG)
     pkg_check_modules(xdigest REQUIRED IMPORTED_TARGET xdigest)
-    add_library(external-checksum-libs ALIAS PkgConfig::xdigest)
+    svn_create_alias_target(external-checksum-libs PkgConfig::xdigest)
   else()
     find_package(XDIGEST REQUIRED)
-    add_library(external-checksum-libs ALIAS XDIGEST::XDIGEST)
+    svn_create_alias_target(external-checksum-libs XDIGEST::XDIGEST)
   endif()
 
   add_private_config_definition(
