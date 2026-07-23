@@ -24,19 +24,19 @@
 
 # Information about bundled CMake versions in different distributions and
 # toolsets:
-# - Visual Studio 2017 (supported until Apr 2027): CMake 3.6
-# - Visual Studio 2019 (supported until Apr 2029): CMake 3.20
-# - Visual Studio 2022 (supported until Jan 2032): CMake 3.31
-# - Visual Studio 2026 (supported until Nov 2028): CMake 4.3
-# - Debian 11 "bullseye" (supported until Aug 2026): CMake 3.18
-# - Debian 12 "bookworm" (supported until Jun 2028): CMake 3.25
-# - Debian 13 "trixie" (supported until Aug 2030): CMake 3.31
-# - Ubuntu 22.04 LTS (supported until May 2027): CMake 3.22
-# - Ubuntu 24.04 LTS (supported until May 2029): CMake 3.28
-# - Ubuntu 26.04 LTS (supported until May 2031): CMake 4.2
-# - RHEL 8 (supported until May 2029): CMake 3.26
-# - RHEL 9 (supported until May 2032): CMake 3.31
-# - RHEL 10 (supported until May 2035): CMake 3.31
+# - Visual Studio 2017     (supported until Apr 2027): CMake 3.6
+# - Visual Studio 2019     (supported until Apr 2029): CMake 3.20
+# - Visual Studio 2022     (supported until Jan 2032): CMake 3.31
+# - Visual Studio 2026     (supported until Nov 2028): CMake 4.3
+# - Debian 11 "bullseye"   (supported until Aug 2026): CMake 3.18
+# - Debian 12 "bookworm"   (supported until Jun 2028): CMake 3.25
+# - Debian 13 "trixie"     (supported until Aug 2030): CMake 3.31
+# - Ubuntu 22.04 LTS       (supported until May 2027): CMake 3.22
+# - Ubuntu 24.04 LTS       (supported until May 2029): CMake 3.28
+# - Ubuntu 26.04 LTS       (supported until May 2031): CMake 4.2
+# - RHEL 8                 (supported until May 2029): CMake 3.26
+# - RHEL 9                 (supported until May 2032): CMake 3.31
+# - RHEL 10                (supported until May 2035): CMake 3.31
 cmake_minimum_required(VERSION 3.14)
 
 # CMP0092: MSVC warning flags are not in CMAKE_<LANG>_FLAGS by default.
