@@ -57,6 +57,11 @@ if ([targets.enable_condition])[is targets.type "swig"][is targets.swig_lang "pe
   target_link_libraries([targets.name] PRIVATE[for targets.libs]
     [targets.libs][end]
     external-[targets.swig_lang]
+  )
+  install(TARGETS [targets.name] LIBRARY DESTINATION[is targets.swig_lang "python"]
+    "${SVN_SWIG_PYTHON_SITEARCH}/libsvn"[end][is targets.swig_lang "perl"]
+    "${SVN_SWIG_PERL_SITEARCH}/auto/SVN"[end][is targets.swig_lang "ruby"]
+    "${SVN_SWIG_RUBY_SITEARCH}/svn/ext"[end]
   )[else][is targets.type "lib"]
   add_library([targets.name][if-any targets.build_type] [targets.build_type][end][for targets.sources]
     [targets.sources][end]

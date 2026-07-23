@@ -943,8 +943,6 @@ if(SVN_ENABLE_SWIG_PYTHON)
     FILES_MATCHING
       PATTERN "__pycache__" EXCLUDE
       PATTERN "*.py"
-      PATTERN "*.so"
-      PATTERN "*.pyd"
   )
   install(CODE [==[
     execute_process(
@@ -1018,11 +1016,6 @@ if(SVN_ENABLE_SWIG_PERL)
     DESTINATION "${SVN_SWIG_PERL_SITEARCH}/SVN"
     FILES_MATCHING PATTERN "*.pm"
   )
-  install(
-    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/lib/auto/SVN/"
-    DESTINATION "${SVN_SWIG_PERL_SITEARCH}/auto/SVN"
-    FILES_MATCHING PATTERN "*.so"
-  )
   if(SVN_ENABLE_SWIG_PERL_MAN_PAGES)
     install(
       DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-perl/man/"
@@ -1073,11 +1066,6 @@ if(SVN_ENABLE_SWIG_RUBY)
     DIRECTORY "${CMAKE_CURRENT_SOURCE_DIR}/subversion/bindings/swig/ruby/svn/"
     DESTINATION "${SVN_SWIG_RUBY_SITELIB}/svn"
     FILES_MATCHING PATTERN "*.rb"
-  )
-  install(
-    DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}/swig-ruby/svn/ext/"
-    DESTINATION "${SVN_SWIG_RUBY_SITEARCH}/svn/ext"
-    FILES_MATCHING PATTERN "*.so"
   )
 
   add_test(
