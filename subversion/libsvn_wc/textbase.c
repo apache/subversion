@@ -42,7 +42,7 @@ compare_and_verify(svn_boolean_t *modified_p,
   svn_subst_eol_style_t eol_style;
   const char *eol_str;
   apr_hash_t *keywords;
-  svn_boolean_t special = FALSE;
+  svn_boolean_t special;
   svn_boolean_t need_translation;
   svn_stream_t *v_stream; /* versioned_file */
   svn_checksum_t *v_checksum;
@@ -64,12 +64,18 @@ compare_and_verify(svn_boolean_t *modified_p,
       if (eol_style == svn_subst_eol_style_unknown)
         return svn_error_create(SVN_ERR_IO_UNKNOWN_EOL, NULL, NULL);
 
-      need_translation = svn_subst_translation_required(eol_style, eol_str,
-                                                        keywords, special,
-                                                        TRUE);
     }
   else
-    need_translation = FALSE;
+    {
+      eol_style = svn_subst_eol_style_none;
+      eol_str = NULL;
+      keywords = NULL;
+      special = FALSE;
+    }
+
+  need_translation = svn_subst_translation_required(eol_style, eol_str,
+                                                    keywords, special,
+                                                    TRUE);
 
   if (! need_translation)
     {

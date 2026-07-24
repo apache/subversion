@@ -249,7 +249,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   /* Initialize the FS library. */
   SVN_ERR(svn_fs_initialize(pool));
@@ -273,11 +273,10 @@ sub_main(int *exit_code,
 
   while (1)
     {
-      const char *opt_arg;
       const char *utf8_opt_arg;
 
       /* Parse the next option. */
-      apr_err = apr_getopt_long(os, options_table, &opt_id, &opt_arg);
+      apr_err = apr_getopt_long(os, options_table, &opt_id, &utf8_opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -301,10 +300,8 @@ sub_main(int *exit_code,
             }
           if (svn_opt_parse_revision(&(opt_state.start_revision),
                                      &(opt_state.end_revision),
-                                     opt_arg, pool) != 0)
+                                     utf8_opt_arg, pool) != 0)
             {
-              SVN_ERR(svn_utf_cstring_to_utf8(&utf8_opt_arg, opt_arg, pool));
-
               return svn_error_createf(SVN_ERR_CL_ARG_PARSING_ERROR, NULL,
                         _("Syntax error in revision argument '%s'"),
                         utf8_opt_arg);
@@ -321,7 +318,7 @@ sub_main(int *exit_code,
       case 'M':
         {
           apr_uint64_t sz_val;
-          SVN_ERR(svn_cstring_atoui64(&sz_val, opt_arg));
+          SVN_ERR(svn_cstring_atoui64(&sz_val, utf8_opt_arg));
 
           opt_state.memory_cache_size = 0x100000 * sz_val;
         }
@@ -373,10 +370,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(cmd_table, first_arg);
           if (subcommand == NULL)
             {
@@ -403,7 +398,7 @@ sub_main(int *exit_code,
                                   _("Repository argument required"));
         }
 
-      SVN_ERR(svn_utf_cstring_to_utf8(&repos_path, os->argv[os->ind++], pool));
+      repos_path = os->argv[os->ind++];
 
       if (svn_path_is_url(repos_path))
         {

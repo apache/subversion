@@ -46,11 +46,93 @@ AC_SUBST([SWIG_LDFLAGS])
 # Generate config.nice early (before the arguments are munged)
 SVN_CONFIG_NICE(config.nice)
 
+# ==== Construcet .clangd ====================================================
+
+svn_dot_clangd_file="$abs_srcdir/.clangd"
+AC_ARG_ENABLE([dot-clangd],
+AS_HELP_STRING([--enable-dot-clangd],
+               [Generate a .clangd file at the root of the source tree]),
+[
+  AC_MSG_NOTICE([Creating $svn_dot_clangd_file])
+  svn_dot_clangdcc_contents='---
+# C
+If:
+  PathMatch: [.*\.[ch]]
+  PathExclude: [subversion/bindings/javahl/native/.*]
+
+CompileFlags:
+  Add:
+    - --language=c'
+
+  svn_dot_clangdxx_contents='---
+# C++
+If:
+  PathMatch: [.*\.[ch]pp|.*/bindings/javahl/native/.*\.h]
+
+CompileFlags:
+  Add:
+    - --language=c++'
+],
+[])
+
+AC_DEFUN([SVN_DOT_CLANGD_CC],
+[
+  if test "x$svn_dot_clangdcc_contents" != "x"; then
+    indent="    -"
+    dnl Split multiple flags to one per line.
+    set fake [$1]
+    while test "${#}" -gt 1; do
+      line="${2}"; shift
+      svn_dot_clangdcc_contents=`cat <<EOF
+$svn_dot_clangdcc_contents
+$indent $line
+EOF
+      `
+    done
+  fi
+])
+
+AC_DEFUN([SVN_DOT_CLANGD_CXX],
+[
+  if test "x$svn_dot_clangdxx_contents" != "x"; then
+    indent="    -"
+    dnl Split multiple flags to one per line.
+    set fake [$1]
+    while test "${#}" -gt 1; do
+      line="${2}"; shift
+svn_dot_clangdxx_contents=`cat <<EOF
+$svn_dot_clangdxx_contents
+$indent $line
+EOF
+      `
+    done
+  fi
+])
+
+AC_DEFUN([SVN_DOT_CLANGD],[
+  SVN_DOT_CLANGD_CC([$1])
+  SVN_DOT_CLANGD_CXX([$1])
+])
+
+
+dnl Add well-known source and build paths to .clangd
+SVN_DOT_CLANGD([-I$abs_builddir/subversion])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/include])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/tests])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/perl/libsvn_swig_perl])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/python/libsvn_swig_py])
+SVN_DOT_CLANGD([-I$abs_srcdir/subversion/bindings/swig/ruby/libsvn_swig_ruby])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/cxx/include])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/cxx/tests])
+SVN_DOT_CLANGD_CXX([-I$abs_srcdir/subversion/bindings/javahl/native])
+
 # ==== Check for programs ====================================================
 
 # Look for a C compiler (before anything can set CFLAGS)
 CUSERFLAGS="$CFLAGS"
 AC_PROG_CC
+AC_MSG_CHECKING([if cross-compiling])
+AC_MSG_RESULT([$cross_compiling])
 SVN_CC_MODE_SETUP
 
 # Look for a C++ compiler (before anything can set CXXFLAGS)
@@ -112,6 +194,9 @@ if test -z "$MKDIR"; then
 fi
 AC_SUBST([MKDIR])
 
+# Look for 'head'
+AC_CHECK_TOOL([HEAD], [head], [SED="${HEAD:-head}"])
+
 # ==== Libraries, for which we may have source to build ======================
 
 dnl verify apr version and set apr flags
@@ -138,7 +223,28 @@ else
   SVN_APR_MAJOR_VERSION=1
 fi
 AC_SUBST(SVN_APR_MAJOR_VERSION)
-SVN_LT_SOVERSION="-version-info $svn_lib_ver"
+
+# For libtool library versioning, follow the interface rules at:
+# https://www.gnu.org/software/libtool/manual/html_node/Libtool-versioning.html
+# for SVN <major>.<minor>.<patch>:
+#
+# 1. the oldest version supported is always 0 (or 2 for the above APR2
+# variant), corresponding to the ABI at <major>.0.0; changes to
+# <major> are reflected in the library names like "libsvn_subr-1.la"
+#
+# 2. the current version and age of the ABI both equal <minor>, since
+# SVN minor versions always maintain backwards-compatibility to
+# <major>.0; in the APR2 variant, the current version is 2+<minor>.
+#
+# 3. the revision is equal to the <patch> number.
+
+m4_define([svn_ver_major], m4_bpatsubst(AC_PACKAGE_VERSION, [\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)], [\1]))
+m4_define([svn_ver_minor], m4_bpatsubst(AC_PACKAGE_VERSION, [\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)], [\2]))
+m4_define([svn_ver_patch], m4_bpatsubst(AC_PACKAGE_VERSION, [\([0-9]*\)\.\([0-9]*\)\.\([0-9]*\)], [\3]))
+svn_ver_current="`expr $svn_lib_ver + svn_ver_minor`"
+
+SVN_LT_SOVERSION="-version-info $svn_ver_current:svn_ver_patch:svn_ver_minor"
+
 AC_SUBST(SVN_LT_SOVERSION)
 AC_DEFINE_UNQUOTED(SVN_SOVERSION, $svn_lib_ver,
                    [Subversion library major version])
@@ -153,6 +259,12 @@ if test "$svn_lib_serf" = "yes"; then
   AC_DEFINE([SVN_HAVE_SERF], 1,
             [Defined if support for Serf is enabled])
 fi
+
+dnl Checksum backend
+AC_DEFINE([SVN_CHECKSUM_BACKEND_APR], 1,
+          [Defined if svn should use APR to compute checksums])
+SVN_CHECKSUM_LIBS=""
+AC_SUBST(SVN_CHECKSUM_LIBS)
 
 dnl Search for apr_memcache (only affects fs_fs)
 SVN_LIB_APR_MEMCACHE
@@ -887,10 +999,10 @@ AS_HELP_STRING([--disable-plaintext-password-storage],
 
 dnl Build and install rules -------------------
 
-INSTALL_STATIC_RULES="install-bin install-docs"
+INSTALL_STATIC_RULES="install-bin install-tui install-docs"
 INSTALL_RULES="install-fsmod-lib install-ramod-lib install-lib install-include install-static"
 INSTALL_RULES="$INSTALL_RULES $INSTALL_APACHE_RULE"
-BUILD_RULES="fsmod-lib ramod-lib lib bin test sub-test $BUILD_APACHE_RULE tools"
+BUILD_RULES="fsmod-lib ramod-lib lib bin tui test sub-test $BUILD_APACHE_RULE tools"
 
 if test "$svn_lib_berkeley_db" = "yes"; then
   BUILD_RULES="$BUILD_RULES bdb-lib bdb-test"
@@ -1078,6 +1190,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         dnl Add flags that all versions of GCC (should) support
         CMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wformat=2 -Wunused -Wstrict-prototypes -Wmissing-prototypes -Wmissing-declarations -Wno-multichar -Wredundant-decls -Wnested-externs -Winline -Wno-long-long -Wbad-function-cast $CMAINTAINERFLAGS"
+        SVN_DOT_CLANGD_CC([$CMAINTAINERFLAGS])
       fi
       if test "$GXX" = "yes"; then
         AC_MSG_NOTICE([maintainer-mode: adding G++ warning flags])
@@ -1096,6 +1209,7 @@ AS_HELP_STRING([--enable-maintainer-mode],
 
         dnl Add flags that all versions of G++ (should) support
         CXXMAINTAINERFLAGS="-Wall -Wpointer-arith -Wwrite-strings -Wshadow -Wunused -Wunreachable-code $CXXMAINTAINERFLAGS"
+        SVN_DOT_CLANGD_CXX([$CXXMAINTAINERFLAGS])
       fi
     fi
 ])
@@ -1131,6 +1245,7 @@ if test "$enable_debugging" = "yes" ; then
   dnl AP_DEBUG enables specific (Apache) features for developer builds
   CFLAGS="$CFLAGS -DSVN_DEBUG -DAP_DEBUG"
   CXXFLAGS="$CXXFLAGS -DSVN_DEBUG -DAP_DEBUG"
+  SVN_DOT_CLANGD([-DSVN_DEBUG -DAP_DEBUG])
 elif test "$enable_debugging" = "no" ; then
   AC_MSG_NOTICE([Disabling debugging])
   CFLAGS=["`echo $CFLAGS' ' | $SED -e 's/-g[0-9] //g' -e 's/-g //g'`"]
@@ -1138,6 +1253,7 @@ elif test "$enable_debugging" = "no" ; then
   dnl Compile with NDEBUG to get rid of assertions
   CFLAGS="$CFLAGS -DNDEBUG"
   CXXFLAGS="$CXXFLAGS -DNDEBUG"
+  SVN_DOT_CLANGD([-DNDEBUG])
 # elif test "$enable_debugging" = "maybe" ; then
 #   # do nothing
 fi
@@ -1220,6 +1336,8 @@ AS_HELP_STRING([--with-editor=PATH],
     fi
 
 ])
+
+SVN_SVNBROWSE
 
 SVN_LIB_Z
 
@@ -1476,8 +1594,6 @@ AC_ARG_VAR(SWIG_FEATURES, [SWIG feature flags common to all bindings])
 AC_ARG_VAR(SWIG_RB_FEATURES, [SWIG feature flags specific to Ruby bindings])
 AC_ARG_VAR(SWIG_PL_FEATURES, [SWIG feature flags specific to Perl bindings])
 AC_ARG_VAR(SWIG_PY_FEATURES, [SWIG feature flags specific to Python bindings])
-
-SVN_CHECK_CTYPESGEN
 
 dnl decide whether we want to link against the RA/FS libraries
 AC_ARG_ENABLE(runtime-module-search,
@@ -1782,6 +1898,13 @@ AC_DEFINE_UNQUOTED([SVN_BUILD_TARGET], "${target}",
                    [Defined to the config.guess name of the build target])
 
 AC_OUTPUT
+
+# ==== Generate the .clangd file =============================================
+if test "x$svn_dot_clangdcc_contents$svn_dot_clangdxx_contents" != "x" ; then
+  AC_MSG_NOTICE([Writing $svn_dot_clangd_file])
+  echo "$svn_dot_clangdcc_contents" > "$svn_dot_clangd_file"
+  echo "$svn_dot_clangdxx_contents" >> "$svn_dot_clangd_file"
+fi
 
 # ==== Print final messages to user ==========================================
 

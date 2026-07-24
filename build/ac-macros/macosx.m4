@@ -91,8 +91,22 @@ AC_DEFUN(SVN_LIB_MACOS_KEYCHAIN,
     ]],[[]])],[
       SVN_MACOS_KEYCHAIN_LIBS="-framework Security -framework CoreServices"
       AC_SUBST(SVN_MACOS_KEYCHAIN_LIBS)
-      AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1], [Is Mac OS KeyChain support enabled?])
+      AC_DEFINE([SVN_HAVE_KEYCHAIN_SERVICES], [1],
+                [Is Mac OS KeyChain support enabled?])
       AC_MSG_RESULT([yes])
+
+      dnl Check if the newer, 10.6+ SecItem API is available.
+      old_LIBS="$LIBS"
+      LIBS="$SVN_MACOS_KEYCHAIN_LIBS $LIBS"
+      AC_CHECK_FUNCS(SecItemCopyMatching SecItemAdd SecItemUpdate)
+      LIBS="$old_LIBS"
+
+      if [[ x$ac_cv_func_SecItemCopyMatching = xyes \
+           -a x$ac_cv_func_SecItemAdd = xyes        \
+           -a x$ac_cv_func_SecItemUpdate = xyes ]]; then
+        AC_DEFINE([SVN_HAVE_KEYCHAIN_SECITEM_API], [1],
+                  [Is the Mac OS KeyChain SecItem API available?])
+      fi
     ],[
       enable_keychain=no
       AC_MSG_RESULT([no])

@@ -222,9 +222,18 @@ def invalid_status_targets(sbox):
 def invalid_patch_targets(sbox):
   "non-working copy paths for 'patch'"
   sbox.build(read_only=True)
-  for (target1, target2) in [("foo", "^/"), ("^/", "^/"), ("^/", "foo")]:
-    run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'patch',
-                             target1, target2)
+
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'patch',
+                           "iota", "^/")
+
+  run_and_verify_svn_in_wc(sbox, "svn:.*is not a local path", 'patch',
+                           "^/", "^/")
+
+  run_and_verify_svn_in_wc(sbox, "svn:.*does not exist", 'patch',
+                           "non-existent.patch", "")
+
+  run_and_verify_svn_in_wc(sbox, "svn:.*does not exist", 'patch',
+                           "iota", "non-existent-wc")
 
 def invalid_switch_targets(sbox):
   "non-working copy paths for 'switch'"

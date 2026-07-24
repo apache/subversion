@@ -70,6 +70,9 @@ def foo_to_bar(m):
 def append_foo(m):
     return m + 'foo\n'
 
+def prepend_foo(m):
+    return 'foo\n' + m
+
 def identity(m):
     return m
 

@@ -279,6 +279,7 @@ class SvnReposTest < Test::Unit::TestCase
       assert_equal(prev_rev, @repos.youngest_rev)
       assert_equal(prev_rev, @repos.dated_revision(past_date))
 
+      sleep 0.032r if Svn::Util::windows?
       prev_rev = @repos.youngest_rev
       @repos.transaction_for_commit(@author, log) do |txn|
       end
@@ -646,11 +647,11 @@ class SvnReposTest < Test::Unit::TestCase
         @repos.dump_fs(nil, nil, rev1, rev2)
       end
 
-      dump = StringIO.new("")
-      feedback = StringIO.new("")
+      dump = StringIO.new(String.new)
+      feedback = StringIO.new(String.new)
       @repos.dump_fs(dump, feedback, rev1, rev2)
 
-      dump_unless_feedback = StringIO.new("")
+      dump_unless_feedback = StringIO.new(String.new)
       @repos.dump_fs(dump_unless_feedback, nil, rev1, rev2)
 
       dump.rewind
@@ -673,7 +674,7 @@ class SvnReposTest < Test::Unit::TestCase
       File.open(path, "a") {|f| f.print(source)}
       rev2 = ctx.ci(@wc_path).revision
 
-      dump = StringIO.new("")
+      dump = StringIO.new(String.new)
       @repos.dump_fs(dump, nil, rev1, rev2)
 
       dest_path = File.join(@tmp_path, "dest")
@@ -684,8 +685,8 @@ class SvnReposTest < Test::Unit::TestCase
       end
 
       [
-       [StringIO.new(""), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
-       [StringIO.new("")],
+       [StringIO.new(String.new), Svn::Repos::LOAD_UUID_DEFAULT, "/"],
+       [StringIO.new(String.new)],
        [],
       ].each_with_index do |args, i|
         dest_path = File.join(@tmp_path, "dest#{i}")

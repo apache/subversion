@@ -591,7 +591,7 @@ EOD
   def test_stream_copy
     source = "content"
     original = StringIO.new(source)
-    copied = StringIO.new("")
+    copied = StringIO.new(String.new)
     original_stream = Svn::Core::Stream.new(original)
     copied_stream = Svn::Core::Stream.new(copied)
 

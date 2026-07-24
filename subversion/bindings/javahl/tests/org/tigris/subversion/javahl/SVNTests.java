@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.tigris.subversion.javahl;
 
@@ -26,6 +24,10 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.file.FileStore;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.attribute.DosFileAttributeView;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -245,7 +247,7 @@ class SVNTests extends TestCase
      * Create a directory for the sample (Greek) repository, config
      * files, repositories and working copies.
      */
-    private void createDirectories()
+    private void createDirectories() throws IOException
     {
         this.rootDir.mkdirs();
 
@@ -381,7 +383,7 @@ class SVNTests extends TestCase
      *
      * @param path The file or directory to be removed.
      */
-    static final void removeDirOrFile(File path)
+    static final void removeDirOrFile(File path) throws IOException
     {
         if (!path.exists())
         {
@@ -395,6 +397,18 @@ class SVNTests extends TestCase
             for (int i = 0; i < dirContents.length; i++)
             {
                 removeDirOrFile(dirContents[i]);
+            }
+        }
+
+        // Unset readonly flag of the file because deleting a file with
+        // readonly flag on Windows fails since Java 25.
+        Path nioPath = path.toPath();
+        FileStore store = Files.getFileStore(nioPath);
+        if (store.supportsFileAttributeView(DosFileAttributeView.class)) {
+            DosFileAttributeView view = Files.getFileAttributeView(
+                    nioPath, DosFileAttributeView.class);
+            if (view != null) {
+                view.setReadOnly(false);
             }
         }
 

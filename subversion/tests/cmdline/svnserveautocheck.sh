@@ -143,7 +143,7 @@ if type time > /dev/null ; then TIME_CMD() { time "$@"; } ; else TIME_CMD() { "$
 MAKE=${MAKE:-make}
 PATH="$PATH:/usr/sbin/:/usr/local/sbin/"
 
-ss > /dev/null 2>&1 || netstat > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
+ss -n > /dev/null 2>&1 || netstat -n > /dev/null 2>&1 || fail "unable to find ss or netstat required to find a free port"
 
 SVNSERVE_PORT=$(random_port)
 while \

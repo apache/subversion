@@ -325,6 +325,16 @@ def run_and_verify_svnversion2(wc_dir, trail_url,
   verify.verify_exit_code("Unexpected return code", exit_code, expected_exit)
   return exit_code, out, err
 
+def run_and_verify_svn_xml(expected_stdout, expected_stderr,
+                            command, *varargs):
+  """Like run_and_verify_svn but expects the output to be XML
+  and validates it against the schema for the given command"""
+  exit_code, out, err = run_and_verify_svn(expected_stdout, expected_stderr,
+                                           command, *varargs)
+  if exit_code == 0:
+    verify.validate_xml_schema(command, out)
+  return exit_code, out, err
+
 def run_and_verify_svn(expected_stdout, expected_stderr, *varargs):
   """like run_and_verify_svn2, but the expected exit code is assumed to
   be 0 if no output is expected on stderr, and 1 otherwise."""
@@ -338,6 +348,16 @@ def run_and_verify_svn(expected_stdout, expected_stderr, *varargs):
       expected_exit = 1
   return run_and_verify_svn2(expected_stdout, expected_stderr,
                              expected_exit, *varargs)
+
+def run_and_verify_svn_xml2(expected_stdout, expected_stderr,
+                            expected_exit, command, *varargs):
+  """Like run_and_verify_svn2 but expects the output to be XML
+  and validates it against the schema for the given command"""
+  exit_code, out, err = run_and_verify_svn2(expected_stdout, expected_stderr,
+                                            expected_exit, command, *varargs)
+  if exit_code == 0:
+    verify.validate_xml_schema(command, out)
+  return exit_code, out, err
 
 def run_and_verify_svn2(expected_stdout, expected_stderr,
                         expected_exit, *varargs):
@@ -777,11 +797,11 @@ def run_and_verify_log_xml(expected_log_attrs=None,
   # We'll parse the output unless the caller specifies expected_stderr or
   # expected_stdout for run_and_verify_svn.
   parse = True
-  if expected_stderr == None:
+  if expected_stderr is None:
     expected_stderr = []
   else:
     parse = False
-  if expected_stdout != None:
+  if expected_stdout is not None:
     parse = False
 
   log_args = list(args)
@@ -793,6 +813,7 @@ def run_and_verify_log_xml(expected_log_attrs=None,
     'log', '--xml', *log_args)
   if not parse:
     return
+  verify.validate_xml_schema('log', stdout)
 
   entries = LogParser().parse(stdout)
   for index in range(len(entries)):
@@ -1512,6 +1533,15 @@ def process_output_for_commit(output, error_re_string):
 def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
                           expected_stderr=[],
                           *args):
+  """Like run_and_verify_commit2(), but a log message will always
+  be appended to the command-line arguments."""
+  return run_and_verify_commit2(wc_dir_name, output_tree, status_tree,
+                                False, True, expected_stderr, *args)
+
+def run_and_verify_commit2(wc_dir_name, output_tree, status_tree,
+                           prepend_wc_dir_name=False, append_log_message=True,
+                           expected_stderr=[],
+                           *args):
   """Commit and verify results within working copy WC_DIR_NAME,
   sending ARGS to the commit subcommand.
 
@@ -1519,6 +1549,13 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
   optional STATUS_TREE is given, then 'svn status' output will
   be compared.  (This is a good way to check that revision numbers
   were bumped.)
+
+  Set PREPEND_WC_DIR_NAME to True to always prepend the working copy
+  directory to the argument list, otherwise it will only be used when
+  ARGS are empty.
+
+  Set APPEND_LOG_MESSAGE to False to prevent adding a log message argument
+  if ARGS doesn't contain one.
 
   EXPECTED_STDERR is handled as in run_and_verify_svn()
 
@@ -1528,10 +1565,11 @@ def run_and_verify_commit(wc_dir_name, output_tree, status_tree,
     output_tree = output_tree.old_tree()
 
   # Commit.
-  if len(args) == 0:
-    args = (wc_dir_name,)
-  if '-m' not in args and '-F' not in args:
-    args = list(args) + ['-m', 'log msg']
+  args = list(args)
+  if len(args) == 0 or prepend_wc_dir_name:
+    args.insert(0, wc_dir_name)
+  if append_log_message and '-m' not in args and '-F' not in args:
+    args.extend(['-m', 'log msg'])
   exit_code, output, errput = run_and_verify_svn(None, expected_stderr,
                                                  'ci', *args)
 
@@ -1627,9 +1665,9 @@ def run_and_verify_status_xml(expected_entries = [],
 
   exit_code, output, errput = run_and_verify_svn(None, [],
                                                  'status', '--xml', *args)
-
   if len(errput) > 0:
     raise Failure
+  verify.validate_xml_schema('status', output)
 
   doc = parseString(''.join(output))
   entries = doc.getElementsByTagName('entry')
@@ -1706,6 +1744,7 @@ def run_and_verify_inherited_prop_xml(path_or_url,
 
   if len(errput) > 0:
     raise Failure
+  ## FIXME: Need XML schema: verify.validate_xml_schema('props', output)
 
   # Props inherited from within the WC are keyed on absolute paths.
   expected_iprops = {}
@@ -1778,10 +1817,10 @@ def run_and_verify_diff_summarize_xml(error_re_string = [],
                                                  'diff', '--summarize',
                                                  '--xml', *args)
 
-
   # Return if errors are present since they were expected
   if len(errput) > 0:
     return
+  verify.validate_xml_schema('diff', output)
 
   doc = parseString(''.join(output))
   paths = doc.getElementsByTagName("path")

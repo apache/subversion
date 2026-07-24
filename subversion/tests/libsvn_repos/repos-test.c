@@ -950,15 +950,13 @@ rmlocks_change_prop(void *file_baton,
                                 "Value for lock-token property not NULL");
 
       /* We only want it removed once. */
-      if (apr_hash_get(fb->main_baton->removed, fb->path,
-                       APR_HASH_KEY_STRING) != NULL)
+      if (svn_hash_gets(fb->main_baton->removed, fb->path) != NULL)
         return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                  "Lock token for '%s' already removed",
                                  fb->path);
 
       /* Mark as removed. */
-      apr_hash_set(fb->main_baton->removed, fb->path, APR_HASH_KEY_STRING,
-                   (void *)1);
+      svn_hash_sets(fb->main_baton->removed, fb->path, (void *)1);
     }
 
   return SVN_NO_ERROR;
@@ -3317,15 +3315,13 @@ prop_validation_commit_with_revprop(const char *filename,
   /* Set usual author and log props, if not set already */
   if (strcmp(prop_key, SVN_PROP_REVISION_AUTHOR) != 0)
     {
-      apr_hash_set(revprop_table, SVN_PROP_REVISION_AUTHOR,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create("plato", pool));
+      svn_hash_sets(revprop_table, SVN_PROP_REVISION_AUTHOR,
+                    svn_string_create("plato", pool));
     }
   else if (strcmp(prop_key, SVN_PROP_REVISION_LOG) != 0)
     {
-      apr_hash_set(revprop_table, SVN_PROP_REVISION_LOG,
-                   APR_HASH_KEY_STRING,
-                   svn_string_create("revision log", pool));
+      svn_hash_sets(revprop_table, SVN_PROP_REVISION_LOG,
+                    svn_string_create("revision log", pool));
     }
 
   /* Make an arbitrary change and commit using above values... */

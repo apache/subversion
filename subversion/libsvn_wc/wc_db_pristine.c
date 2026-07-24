@@ -286,13 +286,18 @@ install_stream_seek_fn(void *baton, const svn_stream_mark_t *mark)
 {
   svn_wc__db_install_data_t *install_data = baton;
 
-  if (!mark)
-    return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
+  /* Only reset support. */
+  if (mark)
+    {
+      return svn_error_create(SVN_ERR_STREAM_SEEK_NOT_SUPPORTED, NULL, NULL);
+    }
+  else
+    {
+      if (install_data->inner_stream)
+        SVN_ERR(svn_stream_reset(install_data->inner_stream));
 
-  if (install_data->inner_stream)
-    SVN_ERR(svn_stream_reset(install_data->inner_stream));
-
-  install_data->size = 0;
+      install_data->size = 0;
+    }
 
   return SVN_NO_ERROR;
 }

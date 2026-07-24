@@ -86,7 +86,7 @@ svn_thread_cond__broadcast(svn_thread_cond__t *cond);
 /**
  * Atomically release @a mutex and start waiting for @a cond.  @a mutex will
  * be locked again upon waking up this thread.
- * 
+ *
  * @note Wakeups are usually caused by @a cond being signalled but there may
  * also be spurious wake-ups.  I.e. the caller needs to verify whether the
  * underlying event actually happened.

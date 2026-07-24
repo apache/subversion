@@ -215,7 +215,7 @@ parse_property_block(svn_stream_t *stream,
           char *keybuf;
           apr_uint64_t len;
 
-          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX - 1, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
                                   stream, (apr_size_t)len, proppool));
 
@@ -231,9 +231,9 @@ parse_property_block(svn_stream_t *stream,
             {
               svn_string_t propstring;
               char *valbuf;
-              apr_int64_t val;
+              apr_uint64_t val;
 
-              SVN_ERR(svn_cstring_atoi64(&val, buf + 2));
+              SVN_ERR(svn_cstring_strtoui64(&val, buf + 2, 0, APR_SIZE_MAX - 1, 10));
               propstring.len = (apr_size_t)val;
               SVN_ERR(read_key_or_val(&valbuf, actual_length,
                                       stream, propstring.len, proppool));
@@ -261,7 +261,7 @@ parse_property_block(svn_stream_t *stream,
           char *keybuf;
           apr_uint64_t len;
 
-          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX, 10));
+          SVN_ERR(svn_cstring_strtoui64(&len, buf + 2, 0, APR_SIZE_MAX - 1, 10));
           SVN_ERR(read_key_or_val(&keybuf, actual_length,
                                   stream, (apr_size_t)len, proppool));
 

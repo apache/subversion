@@ -116,6 +116,7 @@ def _usage_exit():
   print("  --fsfs-compression=VAL : Set compression type to VAL (for fsfs)")
   print("  --wc-format-version=VAL: Set the WC format version")
   print("  --store-pristine=VAL   : Set the WC pristine mode")
+  print("  --check-xml-schema     : Enable extended XML schema validation")
   print("  -q, --quiet            : Deprecated; this is the default.")
   print("                           Use --set-log-level instead.")
 
@@ -148,7 +149,7 @@ opts, args = my_getopt(sys.argv[1:], 'hrdvqct:pu:f:',
                         'ssl-cert=', 'exclusive-wc-locks', 'memcached-server=',
                         'skip-c-tests', 'dump-load-cross-check', 'memcached-dir=',
                         'fsfs-compression=', 'wc-format-version=',
-                        'store-pristine='
+                        'store-pristine=', 'check-xml-schema'
                         ])
 if len(args) > 1:
   print('Warning: non-option arguments after the first one will be ignored')
@@ -198,6 +199,7 @@ fsfs_compression = None
 fsfs_dir_deltification = None
 wc_format_version = None
 store_pristine = None
+check_xml_schema = None
 
 for opt, val in opts:
   if opt in ('-h', '--help'):
@@ -300,6 +302,8 @@ for opt, val in opts:
     wc_format_version = val
   elif opt == '--store-pristine':
     store_pristine = val
+  elif opt == '--check-xml-schema':
+    check_xml_schema = True
 
 # Calculate the source and test directory names
 abs_srcdir = os.path.abspath("")
@@ -1143,6 +1147,7 @@ if not test_javahl and not test_swig:
   opts.fsfs_dir_deltification = fsfs_dir_deltification
   opts.wc_format_version = wc_format_version
   opts.store_pristine = store_pristine
+  opts.check_xml_schema = check_xml_schema
   th = run_tests.TestHarness(abs_srcdir, abs_builddir,
                              log_file, fail_log_file, opts)
   old_cwd = os.getcwd()
@@ -1344,7 +1349,7 @@ elif test_swig == 'ruby':
     ruby_args = [
         '-I', os.path.join(abs_srcdir, ruby_subdir),
         os.path.join(abs_srcdir, ruby_subdir, 'test', 'run-test.rb'),
-        '--verbose'
+        '--collector=dir', '--verbose',
       ]
 
     print('-- Running Swig Ruby tests --')

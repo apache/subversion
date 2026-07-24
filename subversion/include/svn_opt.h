@@ -482,6 +482,36 @@ typedef struct svn_opt_revision_range_t
   svn_opt_revision_t end;
 } svn_opt_revision_range_t;
 
+
+/**
+ * Parse NULL-terminated C string @a str as a revision number and
+ * store its value in @a rev.
+ *
+ * If @a str is not a valid revision number, then the error
+ * #SVN_ERR_REVNUM_PARSE_FAILURE error is returned.  Negative numbers
+ * parsed from @a str are considered invalid, and result in the same error.
+ *
+ * Unlike svn_revnum_parse(), this function support our cmdline revision
+ * number format, whereas the revnum may be prefixed with an 'r' symbol.
+ *
+ * @since New in 1.15
+ * @see svn_revnum_parse()
+ */
+svn_error_t *
+svn_opt_parse_revnum(svn_revnum_t *rev, const char *str);
+
+/**
+ * Parse one revision specification from @a arg into @a revision. Use @a
+ * scratch_pool for temporary allocation.
+ *
+ * @since New in 1.16
+ * @see svn_opt_parse_revision
+ */
+svn_error_t *
+svn_opt_parse_one_revision(svn_opt_revision_t *revision,
+                           const char *arg,
+                           apr_pool_t *scratch_pool);
+
 /**
  * Set @a *start_revision and/or @a *end_revision according to @a arg,
  * where @a arg is "N" or "N:M", like so:
@@ -553,9 +583,10 @@ svn_opt_parse_revision_to_range(apr_array_header_t *opt_ranges,
  *
  * @since New in 1.15.
  */
-int svn_opt_parse_change_to_range(apr_array_header_t *opt_ranges,
-                                  const char *arg,
-                                  apr_pool_t *result_pool);
+int
+svn_opt_parse_change_to_range(apr_array_header_t *opt_ranges,
+                              const char *arg,
+                              apr_pool_t *result_pool);
 
 /**
  * Resolve peg revisions and operational revisions in the following way:
@@ -594,9 +625,8 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
 
 /**
  * Pull remaining target arguments from @a os into @a *targets_p,
- * converting them to UTF-8, followed by targets from @a known_targets
- * (which might come from, for example, the "--targets" command line
- * option), which are already in UTF-8.
+ * followed by targets from @a known_targets (which might come from,
+ * for example, the "--targets" command line option).
  *
  * On each URL target, do some IRI-to-URI encoding and some
  * auto-escaping.  On each local path, canonicalize case and path
@@ -612,8 +642,21 @@ svn_opt_resolve_revisions(svn_opt_revision_t *peg_rev,
  * error, and if this is the only type of error encountered, complete
  * the operation before returning the error(s).
  *
- * @deprecated Provided for backward compatibility with the 1.5 API.
+ * @since New in 1.16.
  * @see svn_client_args_to_target_array()
+ */
+svn_error_t *
+svn_opt_args_to_target_array4(apr_array_header_t **targets_p,
+                              apr_getopt_t *os,
+                              const apr_array_header_t *known_targets,
+                              apr_pool_t *pool);
+
+/**
+ * Similar to svn_opt_args_to_target_array4() except that it also performs
+ * conversion of the targets to UTF-8.
+ *
+ * @since New in 1.5.
+ * @deprecated Provided for backward compatibility with the 1.15 API.
  */
 SVN_DEPRECATED
 svn_error_t *
@@ -671,10 +714,24 @@ svn_opt_args_to_target_array(apr_array_header_t **targets_p,
  * const char * revprop names to svn_string_t * revprop values for use
  * with svn_repos_get_commit_editor5 and other get_commit_editor APIs.
  *
- * @since New in 1.6.
+ * @since New in 1.16.
  */
 svn_error_t *
-svn_opt_parse_revprop(apr_hash_t **revprops, const char *revprop_spec,
+svn_opt_parse_revprop2(apr_hash_t **revprops,
+                       const char *revprop_spec,
+                       apr_pool_t *pool);
+
+/**
+ * Similar to svn_opt_parse_revprop2() but also converts @a revprop_spec
+ * to UTF-8 before parsing it.
+ *
+ * @since New in 1.6.
+ * @deprecated Provided for backward compatibility with the 1.15 API.
+ */
+SVN_DEPRECATED
+svn_error_t *
+svn_opt_parse_revprop(apr_hash_t **revprops,
+                      const char *revprop_spec,
                       apr_pool_t *pool);
 
 

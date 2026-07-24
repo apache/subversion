@@ -55,90 +55,28 @@ struct config_access_t
  * delays accessing the repository data until the stream is first used.
  * IOW, the stream object is cheap as long as it is not accessed.
  */
-typedef struct presentation_stream_baton_t
+struct repr_stream_baton_t
 {
   svn_fs_root_t *root;
   const char *fs_path;
-  apr_pool_t *pool;
-  svn_stream_t *inner;
-} presentation_stream_baton_t;
+};
 
 static svn_error_t *
-auto_open_inner_stream(presentation_stream_baton_t *b)
+lazyopen_repr_stream(svn_stream_t **repr_stream, void *baton,
+                     apr_pool_t *result_pool, apr_pool_t *scratch_pool)
 {
-  if (!b->inner)
-    {
-      svn_filesize_t length;
-      svn_stream_t *stream;
-      svn_stringbuf_t *contents;
+  const struct repr_stream_baton_t *const b = baton;
+  svn_filesize_t length;
+  svn_stream_t *stream;
+  svn_stringbuf_t *contents;
 
-      SVN_ERR(svn_fs_file_length(&length, b->root, b->fs_path, b->pool));
-      SVN_ERR(svn_fs_file_contents(&stream, b->root, b->fs_path, b->pool));
-      SVN_ERR(svn_stringbuf_from_stream(&contents, stream,
-                                        (apr_size_t)length, b->pool));
-      b->inner = svn_stream_from_stringbuf(contents, b->pool);
-    }
+  SVN_ERR(svn_fs_file_length(&length, b->root, b->fs_path, scratch_pool));
+  SVN_ERR(svn_fs_file_contents(&stream, b->root, b->fs_path, scratch_pool));
+  SVN_ERR(svn_stringbuf_from_stream(&contents, stream,
+                                    (apr_size_t)length, result_pool));
 
+  *repr_stream = svn_stream_from_stringbuf(contents, result_pool);
   return SVN_NO_ERROR;
-}
-
-static svn_error_t *
-read_handler_rep(void *baton, char *buffer, apr_size_t *len)
-{
-  presentation_stream_baton_t *b = baton;
-  SVN_ERR(auto_open_inner_stream(b));
-
-  return svn_error_trace(svn_stream_read2(b->inner, buffer, len));
-}
-
-static svn_error_t *
-mark_handler_rep(void *baton, svn_stream_mark_t **mark, apr_pool_t *pool)
-{
-  presentation_stream_baton_t *b = baton;
-  SVN_ERR(auto_open_inner_stream(b));
-
-  return svn_error_trace(svn_stream_mark(b->inner, mark, pool));
-}
-
-static svn_error_t *
-seek_handler_rep(void *baton, const svn_stream_mark_t *mark)
-{
-  presentation_stream_baton_t *b = baton;
-  SVN_ERR(auto_open_inner_stream(b));
-
-  return svn_error_trace(svn_stream_seek(b->inner, mark));
-}
-
-static svn_error_t *
-skip_handler_rep(void *baton, apr_size_t len)
-{
-  presentation_stream_baton_t *b = baton;
-  SVN_ERR(auto_open_inner_stream(b));
-
-  return svn_error_trace(svn_stream_skip(b->inner, len));
-}
-
-static svn_error_t *
-data_available_handler_rep(void *baton, svn_boolean_t *data_available)
-{
-  presentation_stream_baton_t *b = baton;
-  SVN_ERR(auto_open_inner_stream(b));
-
-  return svn_error_trace(svn_stream_data_available(b->inner, data_available));
-}
-
-static svn_error_t *
-readline_handler_rep(void *baton,
-                        svn_stringbuf_t **stringbuf,
-                        const char *eol,
-                        svn_boolean_t *eof,
-                        apr_pool_t *pool)
-{
-  presentation_stream_baton_t *b = baton;
-  SVN_ERR(auto_open_inner_stream(b));
-
-  return svn_error_trace(svn_stream_readline(b->inner, stringbuf, eol, eof,
-                                             pool));
 }
 
 /* Return a lazy access stream for FS_PATH under ROOT, allocated in POOL. */
@@ -147,22 +85,11 @@ representation_stream(svn_fs_root_t *root,
                       const char *fs_path,
                       apr_pool_t *pool)
 {
-  svn_stream_t *stream;
-  presentation_stream_baton_t *baton;
-
-  baton = apr_pcalloc(pool, sizeof(*baton));
+  struct repr_stream_baton_t *const baton = apr_pcalloc(pool, sizeof(*baton));
   baton->root = root;
   baton->fs_path = fs_path;
-  baton->pool = pool;
-
-  stream = svn_stream_create(baton, pool);
-  svn_stream_set_read2(stream, read_handler_rep, read_handler_rep);
-  svn_stream_set_mark(stream, mark_handler_rep);
-  svn_stream_set_seek(stream, seek_handler_rep);
-  svn_stream_set_skip(stream, skip_handler_rep);
-  svn_stream_set_data_available(stream, data_available_handler_rep);
-  svn_stream_set_readline(stream, readline_handler_rep);
-  return stream;
+  return svn_stream_lazyopen_create(lazyopen_repr_stream, baton,
+                                    FALSE /*open_on_close*/, pool);
 }
 
 /* Handle the case of a file PATH / url pointing to anything that is either

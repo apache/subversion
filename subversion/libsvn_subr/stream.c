@@ -236,9 +236,15 @@ svn_stream_supports_mark(svn_stream_t *stream)
 }
 
 svn_boolean_t
-svn_stream_supports_reset(svn_stream_t *stream)
+svn_stream_supports_seek(svn_stream_t *stream)
 {
   return stream->seek_fn != NULL;
+}
+
+svn_boolean_t
+svn_stream_supports_reset(svn_stream_t *stream)
+{
+  return svn_stream_supports_seek(stream);
 }
 
 svn_error_t *
@@ -658,12 +664,16 @@ svn_stream_t *
 svn_stream_disown(svn_stream_t *stream, apr_pool_t *pool)
 {
   svn_stream_t *s = svn_stream_create(stream, pool);
+  const svn_read_fn_t read_handler =
+    svn_stream_supports_partial_read(stream) ? read_handler_disown : NULL;
 
-  svn_stream_set_read2(s, read_handler_disown, read_full_handler_disown);
+  svn_stream_set_read2(s, read_handler, read_full_handler_disown);
   svn_stream_set_skip(s, skip_handler_disown);
   svn_stream_set_write(s, write_handler_disown);
-  svn_stream_set_mark(s, mark_handler_disown);
-  svn_stream_set_seek(s, seek_handler_disown);
+  if (svn_stream_supports_mark(stream))
+    svn_stream_set_mark(s, mark_handler_disown);
+  if (svn_stream_supports_seek(stream))
+    svn_stream_set_seek(s, seek_handler_disown);
   svn_stream_set_data_available(s, data_available_disown);
   svn_stream_set_readline(s, readline_handler_disown);
 
@@ -1490,6 +1500,8 @@ svn_stream_checksummed2(svn_stream_t *stream,
 {
   svn_stream_t *s;
   struct checksum_stream_baton *baton;
+  const svn_read_fn_t read_handler =
+    svn_stream_supports_partial_read(stream) ? read_handler_checksum : NULL;
 
   if (read_checksum == NULL && write_checksum == NULL)
     return stream;
@@ -1512,7 +1524,7 @@ svn_stream_checksummed2(svn_stream_t *stream,
   baton->pool = pool;
 
   s = svn_stream_create(baton, pool);
-  svn_stream_set_read2(s, read_handler_checksum, read_full_handler_checksum);
+  svn_stream_set_read2(s, read_handler, read_full_handler_checksum);
   svn_stream_set_write(s, write_handler_checksum);
   svn_stream_set_data_available(s, data_available_handler_checksum);
   svn_stream_set_close(s, close_handler_checksum);

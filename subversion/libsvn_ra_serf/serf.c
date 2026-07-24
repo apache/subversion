@@ -165,9 +165,11 @@ load_config(svn_ra_serf__session_t *session,
   const char *exceptions;
   apr_port_t proxy_port;
   svn_tristate_t chunked_requests;
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && !defined(SVN_SERF_NO_LOGGING)
+#ifdef SVN__SERF_EXPERIMENTAL
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && !defined(SVN_SERF_NO_LOGGING)
   apr_int64_t log_components;
   apr_int64_t log_level;
+#endif
 #endif
 
   if (config_hash)
@@ -252,7 +254,8 @@ load_config(svn_ra_serf__session_t *session,
                                   SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
                                   "auto", svn_tristate_unknown));
 
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && !defined(SVN_SERF_NO_LOGGING)
+#ifdef SVN__SERF_EXPERIMENTAL
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && !defined(SVN_SERF_NO_LOGGING)
   SVN_ERR(svn_config_get_int64(config, &log_components,
                                SVN_CONFIG_SECTION_GLOBAL,
                                SVN_CONFIG_OPTION_SERF_LOG_COMPONENTS,
@@ -261,6 +264,7 @@ load_config(svn_ra_serf__session_t *session,
                                SVN_CONFIG_SECTION_GLOBAL,
                                SVN_CONFIG_OPTION_SERF_LOG_LEVEL,
                                SERF_LOG_INFO));
+#endif
 #endif
 
   server_group = svn_auth_get_parameter(session->auth_baton,
@@ -319,7 +323,8 @@ load_config(svn_ra_serf__session_t *session,
                                       SVN_CONFIG_OPTION_HTTP_CHUNKED_REQUESTS,
                                       "auto", chunked_requests));
 
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && !defined(SVN_SERF_NO_LOGGING)
+#ifdef SVN__SERF_EXPERIMENTAL
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && !defined(SVN_SERF_NO_LOGGING)
       SVN_ERR(svn_config_get_int64(config, &log_components,
                                    server_group,
                                    SVN_CONFIG_OPTION_SERF_LOG_COMPONENTS,
@@ -329,9 +334,11 @@ load_config(svn_ra_serf__session_t *session,
                                     SVN_CONFIG_OPTION_SERF_LOG_LEVEL,
                                     log_level));
 #endif
+#endif
     }
 
-#if SERF_VERSION_AT_LEAST(1, 4, 0) && !defined(SVN_SERF_NO_LOGGING)
+#ifdef SVN__SERF_EXPERIMENTAL
+#if SERF_VERSION_AT_LEAST(1, 5, 0) && !defined(SVN_SERF_NO_LOGGING)
   if (log_components != SERF_LOGCOMP_NONE)
     {
       serf_log_output_t *output;
@@ -348,6 +355,7 @@ load_config(svn_ra_serf__session_t *session,
       if (!status)
           serf_logging_add_output(session->context, output);
     }
+#endif
 #endif
 
   /* Don't allow the http-max-connections value to be larger than our
@@ -591,7 +599,7 @@ svn_ra_serf__open(svn_ra_session_t *session,
 
      Luckily our caller now passes us two pools which handle this case.
    */
-#if defined(SVN_DEBUG) && !SERF_VERSION_AT_LEAST(1,4,0)
+#if defined(SVN_DEBUG) && !SERF_VERSION_AT_LEAST(1,5,0)
   /* Currently ensured by svn_ra_open5().
      If failing causes segfault in basic_tests.py 48, "basic auth test" */
   SVN_ERR_ASSERT((serf_sess->pool != scratch_pool)

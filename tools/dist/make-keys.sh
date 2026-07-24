@@ -43,7 +43,7 @@ cd $TMP
 for availid in $( perl -anE 'say $F[0] if (/^Blanket/../END ACTIVE FULL.*SCRIPTS LOOK FOR IT/ and /@/)' < $COMMITTERS )
 do
 	key_url=https://people.apache.org/keys/committer/${availid}.asc
-	
+
 	echo -n "Fetching ${key_url}..."
 	curl -sSfO ${key_url} 2> /dev/null
 

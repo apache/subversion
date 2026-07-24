@@ -1370,6 +1370,45 @@ svn_error_t *
 svn_diff_close_patch_file(svn_patch_file_t *patch_file,
                           apr_pool_t *scratch_pool);
 
+/**
+ * Patch file parser.
+ *
+ * @since New in 1.15
+ */
+typedef struct svn_diff_patch_parser_t svn_diff_patch_parser_t;
+
+/**
+ * Initialises an instance of @a svn_diff_patch_parser_t from @a patch_file,
+ * which may be used in order to parse patch files through svn_diff_parser*
+ * routines.
+ *
+ * @since New in 1.15
+ */
+svn_diff_patch_parser_t *
+svn_diff_patch_parser_create(apr_file_t *patch_file,
+                             apr_pool_t *result_pool);
+
+/**
+ * Parses the next @a *patch from @a parser.
+ * If no patch can be found, set @a *patch to NULL.
+ * If @a reverse is TRUE, invert the patch while parsing it.
+ * If @a ignore_whitespace is TRUE, allow patches with no leading
+ * whitespace to be parsed.
+ * Allocate results in @a result_pool.
+ * Use @a scratch_pool for all other allocations.
+ *
+ * @since New in 1.15.
+ * @note Similar to @c svn_diff_parse_next_patch(), but utilizing the parser
+ *       as its source.
+ */
+svn_error_t *
+svn_diff_patch_parser_next(svn_patch_t **patch,
+                           svn_diff_patch_parser_t *parser,
+                           svn_boolean_t reverse,
+                           svn_boolean_t ignore_whitespace,
+                           apr_pool_t *result_pool,
+                           apr_pool_t *scratch_pool);
+
 #ifdef __cplusplus
 }
 #endif /* __cplusplus */

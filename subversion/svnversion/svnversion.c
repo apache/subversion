@@ -23,7 +23,6 @@
 #include "svn_dirent_uri.h"
 #include "svn_pools.h"
 #include "svn_wc.h"
-#include "svn_utf.h"
 #include "svn_opt.h"
 #include "svn_version.h"
 
@@ -154,7 +153,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
 #if defined(WIN32) || defined(__CYGWIN__)
   /* Set the working copy administrative directory name. */
@@ -217,16 +216,17 @@ sub_main(int *exit_code,
       return SVN_NO_ERROR;
     }
 
-  SVN_ERR(svn_utf_cstring_to_utf8(&wc_path,
-                                  (os->ind < argc) ? os->argv[os->ind] : ".",
-                                  pool));
+  if (os->ind < argc)
+    wc_path = os->argv[os->ind];
+  else
+    wc_path = ".";
 
   SVN_ERR(svn_opt__arg_canonicalize_path(&wc_path, wc_path, pool));
   SVN_ERR(svn_dirent_get_absolute(&local_abspath, wc_path, pool));
   SVN_ERR(svn_wc_context_create(&wc_ctx, NULL, pool, pool));
 
   if (os->ind+1 < argc)
-    SVN_ERR(svn_utf_cstring_to_utf8(&trail_url, os->argv[os->ind+1], pool));
+    trail_url = os->argv[os->ind+1];
   else
     trail_url = NULL;
 

@@ -686,7 +686,7 @@ def info_item_url(sbox):
     sbox.repo_url)
 
 
-def info_item_uncommmitted(sbox):
+def info_item_uncommitted(sbox):
   "show one info item on uncommitted targets"
 
   sbox.build()
@@ -984,7 +984,7 @@ test_list = [ None,
               info_item_simple,
               info_item_simple_multiple,
               info_item_url,
-              info_item_uncommmitted,
+              info_item_uncommitted,
               info_item_size_wc_recursive,
               info_item_size_repos,
               info_item_size_repos_recursive,

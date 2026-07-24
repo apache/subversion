@@ -87,15 +87,32 @@ class DumpStreamParser(repos.ParseFns3):
 
 class BatonCollector(repos.ChangeCollector):
   """A ChangeCollector with collecting batons, too"""
+
   def __init__(self, fs_ptr, root, pool=None, notify_cb=None):
+
+    def get_expected_baton_refcount():
+      """determine expected refcount of batons within a batoun_tuple,
+         by using dumy object"""
+      self.open_root(-1, None)
+      for baton_tuple in self.batons:
+        rc = sys.getrefcount(baton_tuple[2])
+        break
+      return rc
+
     repos.ChangeCollector.__init__(self, fs_ptr, root, pool, notify_cb)
-    self.batons = []
     self.close_called = False
     self.abort_called = False
+    # temporary values for get_expected_baton_refcount
+    self.batons = []
+    self.expected_baton_refcount = 0
+    # determin expected_baton_refcount
+    self.expected_baton_refcount = get_expected_baton_refcount()
+    # re-initialize the values after calling get_expected_baton_refcount()
+    self.batons = []
 
   def open_root(self, base_revision, dir_pool=None):
     bt = repos.ChangeCollector.open_root(self, base_revision, dir_pool)
-    self.batons.append((b'dir baton', b'', bt, sys.getrefcount(bt)))
+    self.batons.append((b'dir baton', b'', bt, self.expected_baton_refcount))
     return bt
 
   def add_directory(self, path, parent_baton,
@@ -104,14 +121,14 @@ class BatonCollector(repos.ChangeCollector):
                                              copyfrom_path,
                                              copyfrom_revision,
                                              dir_pool)
-    self.batons.append((b'dir baton', path, bt, sys.getrefcount(bt)))
+    self.batons.append((b'dir baton', path, bt, self.expected_baton_refcount))
     return bt
 
   def open_directory(self, path, parent_baton, base_revision,
                      dir_pool=None):
     bt = repos.ChangeCollector.open_directory(self, path, parent_baton,
                                               base_revision, dir_pool)
-    self.batons.append((b'dir baton', path, bt, sys.getrefcount(bt)))
+    self.batons.append((b'dir baton', path, bt, self.expected_baton_refcount))
     return bt
 
   def add_file(self, path, parent_baton,
@@ -119,13 +136,13 @@ class BatonCollector(repos.ChangeCollector):
     bt = repos.ChangeCollector.add_file(self, path, parent_baton,
                                         copyfrom_path, copyfrom_revision,
                                         file_pool)
-    self.batons.append((b'file baton', path, bt, sys.getrefcount(bt)))
+    self.batons.append((b'file baton', path, bt, self.expected_baton_refcount))
     return bt
 
   def open_file(self, path, parent_baton, base_revision, file_pool=None):
     bt = repos.ChangeCollector.open_file(self, path, parent_baton,
                                          base_revision, file_pool)
-    self.batons.append((b'file baton', path, bt, sys.getrefcount(bt)))
+    self.batons.append((b'file baton', path, bt, self.expected_baton_refcount))
     return bt
 
   def close_edit(self, pool=None):
@@ -429,29 +446,33 @@ class SubversionRepositoryTestCase(unittest.TestCase):
     root = fs.revision_root(self.fs, self.rev)
     editor = BatonCollector(self.fs, root)
     e_ptr, e_baton = delta.make_editor(editor)
+    refcount_at_first = sys.getrefcount(e_ptr)
     repos.replay(root, e_ptr, e_baton)
-    for baton in editor.batons:
-      self.assertEqual(sys.getrefcount(baton[2]), 2,
+    for baton_tuple in editor.batons:
+      # baton_tuple: 4-tuple(baton_type: bytes, node: bytes, bt: baton,
+      #                      expected_refcount_of_bt: int)
+      self.assertEqual(sys.getrefcount(baton_tuple[2]), baton_tuple[3],
                        "leak on baton %s after replay without errors"
-                       % repr(baton))
+                       % repr(baton_tuple))
     del e_baton
-    self.assertEqual(sys.getrefcount(e_ptr), 2,
+    self.assertEqual(sys.getrefcount(e_ptr), refcount_at_first,
                      "leak on editor baton after replay without errors")
 
     editor = BatonCollectorErrorOnClose(self.fs, root,
                                         error_path=b'branches/v1x')
     e_ptr, e_baton = delta.make_editor(editor)
+    refcount_at_first = sys.getrefcount(e_ptr)
     self.assertRaises(SubversionException, repos.replay, root, e_ptr, e_baton)
     batons = editor.batons
     # As svn_repos_replay calls neither close_edit callback nor abort_edit
     # if an error has occurred during processing, references of Python objects
     # in descendant batons may live until e_baton is deleted.
     del e_baton
-    for baton in batons:
-      self.assertEqual(sys.getrefcount(baton[2]), 2,
+    for baton_tuple in batons:
+      self.assertEqual(sys.getrefcount(baton_tuple[2]), baton_tuple[3],
                        "leak on baton %s after replay with an error"
-                       % repr(baton))
-    self.assertEqual(sys.getrefcount(e_ptr), 2,
+                       % repr(baton_tuple))
+    self.assertEqual(sys.getrefcount(e_ptr), refcount_at_first,
                      "leak on editor baton after replay with an error")
 
   def test_delta_editor_apply_textdelta_handler_refcount(self):

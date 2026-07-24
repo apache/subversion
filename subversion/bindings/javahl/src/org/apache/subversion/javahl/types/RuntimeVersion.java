@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 
 package org.apache.subversion.javahl.types;
@@ -67,7 +65,7 @@ public class RuntimeVersion extends Version
 
     /**
      * @return Some text further describing the library version
-     * (e.g. "r1234", "Alpha 1", "dev build", etc.).
+     * (e.g. "-r1234", "-alpha1", "-dev", etc.).
      */
     private native String getNumberTag();
 }

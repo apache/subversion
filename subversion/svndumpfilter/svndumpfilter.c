@@ -1310,7 +1310,7 @@ sub_main(int *exit_code,
   /* Check library versions */
   SVN_ERR(check_lib_versions());
 
-  SVN_ERR(svn_cmdline__get_cstring_argv(&argv, argc, cmdline_argv, pool));
+  SVN_ERR(svn_cmdline__get_utf8_argv(&argv, argc, cmdline_argv, pool));
 
   received_opts = apr_array_make(pool, SVN_OPT_MAX_OPTIONS, sizeof(int));
 
@@ -1335,10 +1335,10 @@ sub_main(int *exit_code,
   os->interleave = 1;
   while (1)
     {
-      const char *opt_arg;
+      const char *utf8_opt_arg;
 
       /* Parse the next option. */
-      apr_err = apr_getopt_long(os, options_table, &opt_id, &opt_arg);
+      apr_err = apr_getopt_long(os, options_table, &opt_id, &utf8_opt_arg);
       if (APR_STATUS_IS_EOF(apr_err))
         break;
       else if (apr_err)
@@ -1382,8 +1382,7 @@ sub_main(int *exit_code,
           opt_state.skip_missing_merge_sources = TRUE;
           break;
         case svndumpfilter__targets:
-          SVN_ERR(svn_utf_cstring_to_utf8(&opt_state.targets_file,
-                                          opt_arg, pool));
+          opt_state.targets_file = apr_pstrdup(pool, utf8_opt_arg);
           break;
         default:
           {
@@ -1440,10 +1439,8 @@ sub_main(int *exit_code,
         }
       else
         {
-          const char *first_arg;
+          const char *first_arg = os->argv[os->ind++];
 
-          SVN_ERR(svn_utf_cstring_to_utf8(&first_arg, os->argv[os->ind++],
-                                          pool));
           subcommand = svn_opt_get_canonical_subcommand3(cmd_table, first_arg);
           if (subcommand == NULL)
             {
@@ -1471,10 +1468,9 @@ sub_main(int *exit_code,
         {
           const char *prefix;
 
-          /* Ensure that each prefix is UTF8-encoded, in internal
-             style, and absolute. */
-          SVN_ERR(svn_utf_cstring_to_utf8(&prefix, os->argv[i], pool));
-          SVN_ERR(svn_relpath__make_internal(&prefix, prefix, pool, pool));
+          /* Ensure that each prefix is in internal style and absolute. */
+          SVN_ERR(svn_relpath__make_internal(&prefix, os->argv[i],
+                                             pool, pool));
           if (prefix[0] != '/')
             prefix = apr_pstrcat(pool, "/", prefix, SVN_VA_NULL);
           APR_ARRAY_PUSH(opt_state.prefixes, const char *) = prefix;

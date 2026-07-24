@@ -232,7 +232,7 @@
 
 %typemap(argout) svn_revnum_t *target_revision
 {
-  %append_output(LONG2NUM((long)$1));
+  %append_output(SWIG2NUM($1));
 }
 #endif
 

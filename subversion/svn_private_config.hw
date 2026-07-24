@@ -73,6 +73,9 @@
 /* Defined to be the path to the installed binaries */
 #define SVN_BINDIR "/usr/local/bin"
 
+/* Defined if svn should use APR to compute checksums */
+#define SVN_CHECKSUM_BACKEND_APR 1
+
 
 
 /* The default FS back-end type */

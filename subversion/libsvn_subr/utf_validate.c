@@ -258,17 +258,6 @@ static const char machine [9][14] = {
 static const char *
 first_non_fsm_start_char(const char *data, apr_size_t max_len)
 {
-#if SVN_UNALIGNED_ACCESS_IS_OK
-
-  /* Scan the input one machine word at a time. */
-  for (; max_len > sizeof(apr_uintptr_t)
-       ; data += sizeof(apr_uintptr_t), max_len -= sizeof(apr_uintptr_t))
-    if (*(const apr_uintptr_t *)data & SVN__BIT_7_SET)
-      break;
-
-#endif
-
-  /* The remaining odd bytes will be examined the naive way: */
   for (; max_len > 0; ++data, --max_len)
     if ((unsigned char)*data >= 0x80)
       break;

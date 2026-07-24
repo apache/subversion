@@ -60,7 +60,7 @@ def get_current_format():
 
 def target_ver():
   """Get the default value of --compatible-version to use.
-  
+
   Compare svntest.main.wc_format()."""
   return (svntest.main.options.wc_format_version or svntest.main.DEFAULT_COMPATIBLE_VERSION)
 
@@ -499,9 +499,9 @@ def basic_upgrade_1_0(sbox):
   #
   # ### This was originally added in r919021, during 1.7 development, because
   # ### check_format() recursed into the separate working copy.
-  # ### 
+  # ###
   # ### The remainder of the test passes if this call is removed.
-  # ### 
+  # ###
   # ### So, for now, this call serves only as a smoke test, to confirm that the
   # ### upgrade returns 0.  However:
   # ###
@@ -1523,9 +1523,9 @@ def upgrade_1_0_with_externals(sbox):
   # ### This was originally added in r1702474, during 1.10 development, because
   # ### check_format() recursed into the separate working copy.  It was copied
   # ### from basic_upgrade_1_0() above.
-  # ### 
+  # ###
   # ### The remainder of the test passes if this call is removed.
-  # ### 
+  # ###
   # ### So, for now, this call serves only as a smoke test, to confirm that the
   # ### upgrade returns 0.  However:
   # ###

@@ -104,26 +104,28 @@ OBJDIR		= $(PWD)/objdir
 # Default dependency versions
 BDB_MAJOR_VER	= 4.7
 BDB_VER		= $(BDB_MAJOR_VER).25
-APR_VER		= 1.7.5
+APR_VER		= 1.7.6
 APR_ICONV_VER	= 1.2.1
 GNU_ICONV_VER	= 1.15
-APR_UTIL_VER	= 1.6.1
-PCRE_VER	= 8.41
-HTTPD_VER	= 2.4.37
+OPENLDAP_VER	= 2.6.10
+APR_UTIL_VER	= 1.6.3
+PCRE_VER	= 8.45
+HTTPD_VER	= 2.4.65
 NEON_VER	= 0.32.5
 SERF_VER	= 1.3.10
 CYRUS_SASL_VER	= 2.1.28
-SQLITE_VER	= 3390400
-LIBMAGIC_VER	= 5.30
-RUBY_MAJOR_VER	= 2.7
-RUBY_VER	= $(RUBY_MAJOR_VER).4
-BZ2_VER	= 1.0.6
-PYTHON_VER	= 3.11.10
-PYTHON2_VER	= 2.7.13
+SQLITE_VER	= 3510100
+LIBMAGIC_VER	= 5.46
+RUBY_MAJOR_VER	= 3.4
+RUBY_VER	= $(RUBY_MAJOR_VER).7
+BZ2_VER	= 1.0.8
+PYTHON_MAJOR_VER= 3.13
+PYTHON_VER	= ${PYTHON_MAJOR_VER}.9
+PYTHON2_VER	= 2.7.18
 PY3C_VER	= 1.1
 JUNIT_VER	= 4.10
-GETTEXT_VER	= 0.19.8.1
-LZ4_VER		= 1.7.5
+GETTEXT_VER	= 0.23.1
+LZ4_VER		= 1.10.0
 ifeq ($(BRANCH_MAJOR), $(filter 1.5 1.6 1.7 1.8 1.9 1.10 1.11 1.12 1.13, $(BRANCH_MAJOR)))
 SWIG_VER	= 3.0.12
 else
@@ -134,6 +136,7 @@ endif
 include Makefile.local
 
 BDB_DIST	= db-$(BDB_VER).tar.gz
+OPENLDAP_DIST	= openldap-$(OPENLDAP_VER).tgz
 APR_ICONV_DIST	= apr-iconv-$(APR_ICONV_VER).tar.gz
 GNU_ICONV_DIST	= libiconv-$(GNU_ICONV_VER).tar.gz
 NEON_DIST	= neon-$(NEON_VER).tar.gz
@@ -155,24 +158,26 @@ SWIG_DIST	= swig-$(SWIG_VER).tar.gz
 SHA256_${BDB_DIST} = f14fd96dd38915a1d63dcb94a63fbb8092334ceba6b5060760427096f631263e
 SHA256_${APR_ICONV_DIST} = 19381959d50c4a5f3b9c84d594a5f9ffb3809786919b3058281f4c87e1f4b245
 SHA256_${GNU_ICONV_DIST} = ccf536620a45458d26ba83887a983b96827001e92a13847b45e4925cc8913178
-SHA256_${PCRE_DIST} = 244838e1f1d14f7e2fa7681b857b3a8566b74215f28133f14a8f5e59241b682c
-SHA256_${HTTPD_DIST} = aa97a834a32d51974be8d8a013b561e28d327387cb1da2c3c2762acd0146aabd
+SHA256_${OPENLDAP_DIST} = c065f04aad42737aebd60b2fe4939704ac844266bc0aeaa1609f0cad987be516
+SHA256_${PCRE_DIST} = 4e6ce03e0336e8b4a3d6c2b70b1c5e18590a5673a98186da90d4f33c23defc09
+SHA256_httpd-$(HTTPD_VER).tar.gz = 4f92861a50325c6d1046ebad5d814bff0d4169ada8cc265655f32b7f1ba4be1b
 SHA256_${NEON_DIST} = 4872e12f802572dedd4b02f870065814b2d5141f7dbdaf708eedab826b51a58a
 SHA256_${CYRUS_SASL_DIST} = 7ccfc6abd01ed67c1a0924b353e526f1b766b21f42d4562ee635a8ebfc5bb38c
-SHA256_${SQLITE_DIST} = f31d445b48e67e284cf206717cc170ab63cbe4fd7f79a82793b772285e78fdbb
-SHA256_${LIBMAGIC_DIST} = 694c2432e5240187524c9e7cf1ec6acc77b47a0e19554d34c14773e43dbbf214
+SHA256_${SQLITE_DIST} = 4f2445cd70479724d32ad015ec7fd37fbb6f6130013bd4bfbc80c32beb42b7e0
+SHA256_${LIBMAGIC_DIST} = c9cc77c7c560c543135edc555af609d5619dbef011997e988ce40a3d75d86088
 SHA256_ruby-2.7.4.tar.gz = 3043099089608859fc8cce7f9fdccaa1f53a462457e3838ec3b25a7d609fbc5b
 SHA256_ruby-2.7.7.tar.gz = e10127db691d7ff36402cfe88f418c8d025a3f1eea92044b162dd72f0b8c7b90
 SHA256_ruby-2.7.8.tar.gz = c2dab63cbc8f2a05526108ad419efa63a67ed4074dbbcf9fc2b1ca664cb45ba0
 SHA256_ruby-3.0.7.tar.gz = 2a3411977f2850431136b0fab8ad53af09fb74df2ee2f4fb7f11b378fe034388
 SHA256_ruby-3.1.6.tar.gz = 0d0dafb859e76763432571a3109d1537d976266be3083445651dc68deed25c22
-SHA256_${BZ2_DIST} = a2848f34fcd5d6cf47def00461fcb528a0484d8edef8208d6d2e2909dc61d9cd
-SHA256_${PYTHON_DIST} = 92f2faf242681bfa406d53a51e17d42c5373affe23a130cd9697e132ef574706
-SHA256_${PYTHON2_DIST} = a4f05a0720ce0fd92626f0278b6b433eee9a6173ddf2bced7957dfb599a5ece1
+SHA256_ruby-${RUBY_VER}.tar.gz = 23815a6d095696f7919090fdc3e2f9459b2c83d57224b2e446ce1f5f7333ef36
+SHA256_${BZ2_DIST} = ab5a03176ee106d3f0fa90e381da478ddae405918153cca248e682cd0c4a2269
+SHA256_${PYTHON_DIST} = c4c066af19c98fb7835d473bebd7e23be84f6e9874d47db9e39a68ee5d0ce35c
+SHA256_${PYTHON2_DIST} = da3080e3b488f648a3d7a4560ddee895284c3380b11d6de75edb986526b9a814
 SHA256_${PY3C_DIST} = c7ffc22bc92dded0ca859db53ef3a0b466f89a9f8aad29359c9fe4ff18ebdd20
 SHA256_${JUNIT_DIST} = 36a747ca1e0b86f6ea88055b8723bb87030d627766da6288bf077afdeeb0f75a
-SHA256_${GETTEXT_DIST} = ff942af0e438ced4a8b0ea4b0b6e0d6d657157c5e2364de57baa279c1c125c43
-SHA256_${LZ4_DIST} = 0190cacd63022ccb86f44fa5041dc6c3804407ad61550ca21c382827319e7e7e
+SHA256_${GETTEXT_DIST} = 52a578960fe308742367d75cd1dff8552c5797bd0beba7639e12bdcda28c0e49
+SHA256_${LZ4_DIST} = 537512904744b35e232912055ccf8ec66d768639ff3abe5788d90d792ec5f48b
 SHA256_swig-3.0.12.tar.gz = 7cf9f447ae7ed1c51722efc45e7f14418d15d7a1e143ac9f09a668999f4fc94d
 SHA256_swig-4.2.1.tar.gz = fa045354e2d048b2cddc69579e4256245d4676894858fcf0bab2290ecf59b7d8
 SHA256_swig-4.3.0.tar.gz = f7203ef796f61af986c70c05816236cbd0d31b7aa9631e5ab53020ab7804aa9e
@@ -200,6 +205,7 @@ endef
 DISTFILES	= $(DISTDIR)/$(NEON_DIST) \
 		$(DISTDIR)/$(SERF_DIST) \
 		$(DISTDIR)/$(SQLITE_DIST) \
+		$(DISTDIR)/$(OPENLDAP_DIST) \
 		$(DISTDIR)/$(PCRE_DIST) \
 		$(DISTDIR)/$(HTTPD_DIST) \
 		$(DISTDIR)/$(APR_ICONV_DIST) \
@@ -222,16 +228,17 @@ BDB_URL		= http://download.oracle.com/berkeley-db/$(BDB_DIST)
 APR_URL		= https://svn.apache.org/repos/asf/apr/apr
 APR_ICONV_URL	= https://archive.apache.org/dist/apr/$(APR_ICONV_DIST)
 GNU_ICONV_URL	= https://ftp.gnu.org/pub/gnu/libiconv/$(GNU_ICONV_DIST)
+OPENLDAP_URL	= https://openldap.org/software/download/OpenLDAP/openldap-release/${OPENLDAP_DIST}
 APR_UTIL_URL	= https://svn.apache.org/repos/asf/apr/apr-util
 PCRE_URL	= https://downloads.sourceforge.net/project/pcre/pcre/$(PCRE_VER)/$(PCRE_DIST)
 HTTPD_URL	= https://archive.apache.org/dist/httpd/$(HTTPD_DIST)
 NEON_URL	= https://notroj.github.io/neon/$(NEON_DIST)
 SERF_URL	= https://svn.apache.org/repos/asf/serf/tags/$(SERF_VER)
-SQLITE_URL	= https://www.sqlite.org/2022/$(SQLITE_DIST)
+SQLITE_URL	= https://www.sqlite.org/2025/$(SQLITE_DIST)
 CYRUS_SASL_URL	= https://github.com/cyrusimap/cyrus-sasl/releases/download/cyrus-sasl-${CYRUS_SASL_VER}/$(CYRUS_SASL_DIST)
 LIBMAGIC_URL	= ftp://ftp.astron.com/pub/file/$(LIBMAGIC_DIST)
 RUBY_URL	= https://cache.ruby-lang.org/pub/ruby/$(RUBY_MAJOR_VER)/$(RUBY_DIST)
-BZ2_URL		= https://stsp.name/distfiles/$(BZ2_DIST)
+BZ2_URL		= https://sourceware.org/pub/bzip2/$(BZ2_DIST)
 PYTHON_URL	= https://python.org/ftp/python/$(PYTHON_VER)/$(PYTHON_DIST)
 PYTHON2_URL	= https://python.org/ftp/python/$(PYTHON2_VER)/$(PYTHON2_DIST)
 PY3C_URL	= https://stsp.name/distfiles/py3c-${PY3C_VER}.tar.gz
@@ -245,6 +252,7 @@ BDB_SRCDIR	= $(SRCDIR)/db-$(BDB_VER)
 APR_SRCDIR	= $(SRCDIR)/apr-$(APR_VER)
 APR_ICONV_SRCDIR	= $(SRCDIR)/apr-iconv-$(APR_ICONV_VER)
 GNU_ICONV_SRCDIR	= $(SRCDIR)/libiconv-$(GNU_ICONV_VER)
+OPENLDAP_SRCDIR	= ${SRCDIR}/openldap-$(OPENLDAP_VER)
 APR_UTIL_SRCDIR	= $(SRCDIR)/apr-util-$(APR_UTIL_VER)
 PCRE_SRCDIR	= $(SRCDIR)/pcre-$(PCRE_VER)
 HTTPD_SRCDIR	= $(SRCDIR)/httpd-$(HTTPD_VER)
@@ -267,6 +275,7 @@ BDB_OBJDIR	= $(OBJDIR)/db-$(BDB_VER)
 APR_OBJDIR	= $(OBJDIR)/apr-$(APR_VER)
 APR_ICONV_OBJDIR	= $(OBJDIR)/apr-iconv-$(APR_ICONV_VER)
 GNU_ICONV_OBJDIR	= $(OBJDIR)/libiconv-$(GNU_ICONV_VER)
+OPENLDAP_OBJDIR	= ${OBJDIR}/openldap-$(OPENLDAP_VER)
 APR_UTIL_OBJDIR	= $(OBJDIR)/apr-util-$(APR_UTIL_VER)
 PCRE_OBJDIR	= $(OBJDIR)/pcre-$(PCRE_VER)
 HTTPD_OBJDIR	= $(OBJDIR)/httpd-$(HTTPD_VER)
@@ -295,10 +304,10 @@ PROFILE_CFLAGS=-pg
 endif
 
 # We need this to make sure some targets below pick up the right libraries
-LD_LIBRARY_PATH=$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/svn-$(WC)/lib
+LD_LIBRARY_PATH=$(PREFIX)/lz4/lib:$(PREFIX)/openldap/lib:$(PREFIX)/apr/lib:$(PREFIX)/gettext/lib:$(PREFIX)/iconv/lib:$(PREFIX)/bdb/lib:$(PREFIX)/neon/lib:$(PREFIX)/serf/lib:$(PREFIX)/sqlite/lib:$(PREFIX)/cyrus-sasl/lib:$(PREFIX)/iconv/lib:$(PREFIX)/libmagic/lib:$(PREFIX)/ruby/lib:$(PREFIX)/svn-$(WC)/lib
 
 # We need this to make sure some targets below pick up the right pkg-config files
-PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFIX)/serf/lib/pkgconfig:$(PREFIX)/sqlite/lib/pkgconfig:$(PREFIX)/ruby/lib/pkgconfig:$(PREFIX)/lz4/lib/pkgconfig
+PKG_CONFIG_PATH=$(PREFIX)/openldap/lib/pkgconfig:$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFIX)/serf/lib/pkgconfig:$(PREFIX)/sqlite/lib/pkgconfig:$(PREFIX)/ruby/lib/pkgconfig:$(PREFIX)/lz4/lib/pkgconfig
 
 
 #######################################################################
@@ -307,24 +316,24 @@ PKG_CONFIG_PATH=$(PREFIX)/apr/lib/pkgconfig:$(PREFIX)/neon/lib/pkgconfig:$(PREFI
 
 .PHONY: all reset clean nuke fetch
 
-all: dirs-create bdb-install apr-install iconv-install apr-util-install \
-	pcre-install httpd-install neon-install serf-install \
-	sqlite-install cyrus-sasl-install libmagic-install \
+all: dirs-create bdb-install sqlite-install cyrus-sasl-install \
+	openldap-install apr-install iconv-install apr-util-install \
+	pcre-install httpd-install neon-install serf-install libmagic-install \
 	ruby-install bz2-install python-install python2-install py3c-retrieve \
-	gettext-install lz4-install swig-install svn-install \
-	svn-bindings-install
+	gettext-install lz4-install swig-install svn-install svn-bindings-install
 
 # Use these to start a build from the beginning.
 reset: dirs-reset bdb-reset apr-reset iconv-reset apr-util-reset \
 	pcre-reset httpd-reset neon-reset serf-reset \
 	sqlite-reset cyrus-sasl-reset libmagic-reset ruby-reset python-reset \
-	python2-reset bz2-reset gettext-reset lz4-reset swig-reset svn-reset
+	python2-reset bz2-reset gettext-reset lz4-reset swig-reset \
+	openldap-reset svn-reset
 
 # Use to save disk space.
 clean: bdb-clean apr-clean iconv-clean apr-util-clean pcre-clean httpd-clean \
 	neon-clean serf-clean sqlite-clean cyrus-sasl-clean \
 	libmagic-clean ruby-clean bz2-clean python-clean python2-clean \
-	gettext-clean lz4-clean swig-clean svn-clean
+	gettext-clean lz4-clean swig-clean openldap-clean svn-clean
 
 # Nukes everything (including installed binaries!)
 # Use this to start ALL OVER AGAIN! Use with caution!
@@ -631,6 +640,65 @@ iconv-clean: gnu-iconv-clean
 endif
 
 #######################################################################
+# openldap
+#######################################################################
+
+openldap-retrieve:	$(OPENLDAP_OBJDIR)/.retrieved
+openldap-configure:	$(OPENLDAP_OBJDIR)/.configured
+openldap-compile:	$(OPENLDAP_OBJDIR)/.compiled
+openldap-install:	$(OPENLDAP_OBJDIR)/.installed
+openldap-reset:
+	$(foreach f, .retrieved .configured .compiled .installed, \
+		rm -f $(OPENLDAP_OBJDIR)/$(f);)
+
+openldap-clean:
+	-(cd $(OPENLDAP_OBJDIR) && env MAKEFLAGS= make clean)
+
+
+# fetch distfile for openldap
+$(DISTDIR)/$(OPENLDAP_DIST):
+	cd $(DISTDIR) && $(FETCH_CMD) $(OPENLDAP_URL)
+
+# retrieve pcre
+$(OPENLDAP_OBJDIR)/.retrieved: $(DISTDIR)/$(OPENLDAP_DIST)
+	$(call do_check_sha256,$(OPENLDAP_DIST))
+	[ -d $(OPENLDAP_OBJDIR) ] || mkdir -p $(OPENLDAP_OBJDIR)
+	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(OPENLDAP_DIST)
+	touch $@
+
+# configure openldap
+$(OPENLDAP_OBJDIR)/.configured: $(OPENLDAP_OBJDIR)/.retrieved \
+	$(CYRUS_SASL_OBJDIR)/.installed
+	cd $(OPENLDAP_OBJDIR) \
+		&& env PKG_CONFIG_PATH=$(PKG_CONFIG_PATH) \
+			CFLAGS="-O0 -g $(PROFILE_CFLAGS)" \
+			CPPFLAGS="-I$(PREFIX)/cyrus-sasl/include" \
+			LDFLAGS="-L$(PREFIX)/cyrus-sasl/lib" \
+			CC=$(CC) CXX=$(CXX) \
+			GREP="`which grep`" \
+			ac_cv_lib_ssl_SSL_export_keying_material_early=yes \
+			$(OPENLDAP_SRCDIR)/configure \
+			--enable-dynamic \
+			--enable-local \
+			--enable-ipv6 \
+			--with-tls=openssl \
+			--disable-balancer \
+			--disable-slapd \
+			--with-cyrus-sasl=yes \
+		--prefix=$(PREFIX)/openldap
+	touch $@
+
+# compile openldap
+$(OPENLDAP_OBJDIR)/.compiled: $(OPENLDAP_OBJDIR)/.configured
+	(cd $(OPENLDAP_OBJDIR) && env MAKEFLAGS= make -j${MAKE_JOBS})
+	touch $@
+
+# install openldap
+$(OPENLDAP_OBJDIR)/.installed: $(OPENLDAP_OBJDIR)/.compiled
+	(cd $(OPENLDAP_OBJDIR) && env MAKEFLAGS= make install)
+	touch $@
+
+#######################################################################
 # apr-util
 #######################################################################
 
@@ -678,6 +746,9 @@ $(APR_UTIL_OBJDIR)/.configured: $(APR_UTIL_OBJDIR)/.retrieved \
 		--enable-maintainer-mode \
 		--with-apr=$(PREFIX)/apr \
 		--with-berkeley-db=$(PREFIX)/bdb \
+		--with-ldap-includes=$(PREFIX)/openldap/include/ \
+		--with-ldap-lib=$(PREFIX)/openldap/lib/ \
+		--with-ldap=yes \
 		$(ICONV_FLAG)
 	touch $@
 
@@ -785,9 +856,13 @@ $(HTTPD_OBJDIR)/.retrieved: $(DISTDIR)/$(HTTPD_DIST) \
 	$(call do_check_sha256,$(HTTPD_DIST))
 	[ -d $(HTTPD_OBJDIR) ] || mkdir -p $(HTTPD_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(HTTPD_DIST)
+ifeq ($(shell test $(HTTPD_VER) \< 2.4.42 && echo 1), 1)
 	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/ssl-init-proxy-certs.diff)
 	(cd $(HTTPD_SRCDIR) && patch -p0 < $(HTTPD_OBJDIR)/mod-proxy-no-threads-2.4.diff)
+endif
+ifeq ($(shell test $(HTTPD_VER) \< 2.4.49 && echo 1), 1)
 	(cd $(HTTPD_SRCDIR) && svn diff -cr1849590 https://svn.apache.org/repos/asf/httpd/httpd/trunk | patch -p0)
+endif
 	(cd $(HTTPD_SRCDIR) && svn diff -cr1663375 https://svn.apache.org/repos/asf/httpd/httpd/trunk | patch -p0)
 	touch $@
 
@@ -813,7 +888,7 @@ $(HTTPD_OBJDIR)/.configured: $(HTTPD_OBJDIR)/.retrieved \
 		--disable-brotli \
 		--with-apr="$(PREFIX)/apr/bin/apr-1-config" \
 		--with-apr-util="$(PREFIX)/apr/bin/apu-1-config" \
-		--with-pcre="$(PREFIX)/pcre"
+		--with-pcre="$(PREFIX)/pcre/bin/pcre-config"
 	touch $@
 
 # compile httpd
@@ -952,6 +1027,9 @@ $(SERF_OBJDIR)/.retrieved:
 	if [ ! -d $(SERF_SRCDIR) ]; then \
 		svn co $(SERF_URL) $(SERF_SRCDIR); \
 		svn merge ^/serf/branches/1.3.x-sslbuild@1910116 $(SERF_SRCDIR); \
+		(cd $(SERF_SRCDIR) && svn merge -c r1833229 \
+			^/serf/trunk/buckets/ssl_buckets.c \
+			buckets/ssl_buckets.c); \
 	fi
 	touch $@
 
@@ -1007,9 +1085,9 @@ $(SQLITE_OBJDIR)/.retrieved: $(DISTDIR)/$(SQLITE_DIST)
 	touch $@
 
 ifeq ($(THREADING),yes)
-THREADSAFE_FLAG=--enable-threadsafe
+SQLITE_THREADSAFE_FLAG=--enable-threadsafe
 else
-THREADSAFE_FLAG=--disable-threadsafe
+SQLITE_THREADSAFE_FLAG=--disable-threadsafe
 endif
 
 # configure sqlite
@@ -1020,7 +1098,7 @@ $(SQLITE_OBJDIR)/.configured: $(SQLITE_OBJDIR)/.retrieved
 		CC=$(CC) CXX=$(CXX) \
 		$(SQLITE_SRCDIR)/configure \
 		--prefix=$(PREFIX)/sqlite \
-		$(THREADSAFE_FLAG)
+		$(SQLITE_THREADSAFE_FLAG)
 	touch $@
 
 # compile sqlite
@@ -1265,9 +1343,9 @@ endif
 	touch $@
 
 ifeq ($(THREADING),yes)
-THREADSAFE_FLAG=--enable-pthread
+RUBY_PTHREAD_FLAG=--enable-pthread
 else
-THREADSAFE_FLAG=--disable-pthread
+RUBY_PTHREAD_FLAG=--disable-pthread
 endif
 
 # configure ruby
@@ -1280,7 +1358,7 @@ $(RUBY_OBJDIR)/.configured: $(RUBY_OBJDIR)/.retrieved
 		--prefix=$(PREFIX)/ruby \
 		--enable-shared \
 		--with-baseruby="$(RUBY)" \
-		$(THREADSAFE_FLAG) \
+		$(RUBY_PTHREAD_FLAG) \
 		--disable-install-doc \
 		--without-valgrind \
 		--without-gmp
@@ -1385,15 +1463,17 @@ $(PYTHON_OBJDIR)/.retrieved: $(DISTDIR)/$(PYTHON_DIST) $(PYTHON_OBJDIR)/openbsd-
 	[ -d $(PYTHON_OBJDIR) ] || mkdir -p $(PYTHON_OBJDIR)
 	tar -C $(SRCDIR) -zxf $(DISTDIR)/$(PYTHON_DIST)
 	# Make setup.py use our own dependencies instead of system ones
+	if [ -f $(PYTHON_SRCDIR)/setup.py ]; then \
 	sed -e "s#sqlite_inc_paths = \[ '/usr/include',#sqlite_inc_paths = [ '$(PREFIX)/sqlite/include',#" \
 		-e "s#'/usr/include/db4'#'$(PREFIX)/bdb/include'#" \
 		-e "s|\(add_dir_to_list(self.compiler.library_dirs, '/usr/local/lib')\)|pass #\1|" \
 		-e "s|\(add_dir_to_list(self.compiler.include_dirs, '/usr/local/include')\)|pass #\1|" \
 		-e "s#find_library_file(lib_dirs, 'bz2'#find_library_file(['$(PREFIX)/bz2/lib'] + lib_dirs, 'bz2'#" \
 		< $(PYTHON_SRCDIR)/setup.py \
-		> $(PYTHON_SRCDIR)/setup.py.patched
-	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py
-	chmod +x $(PYTHON_SRCDIR)/setup.py
+		> $(PYTHON_SRCDIR)/setup.py.patched && \
+	mv $(PYTHON_SRCDIR)/setup.py.patched $(PYTHON_SRCDIR)/setup.py && \
+	chmod +x $(PYTHON_SRCDIR)/setup.py; \
+	fi
 	cd $(PYTHON_SRCDIR) && patch -p0 < $(PYTHON_OBJDIR)/openbsd-march.diff
 	cd $(PYTHON_SRCDIR) && patch -p0 < $(PYTHON_OBJDIR)/openbsd-make.diff
 	touch $@
@@ -1404,7 +1484,7 @@ PYTHON_PROFILING=--enable-profiling
 endif
 $(PYTHON_OBJDIR)/.configured: $(PYTHON_OBJDIR)/.retrieved \
 	$(BZ2_OBJDIR)/.installed
-	cd $(PYTHON_SRCDIR) && autoconf
+	if [ "`uname`" = "OpenBSD" ]; then cd $(PYTHON_SRCDIR) && autoconf; fi
 	cd $(PYTHON_OBJDIR) \
 		&& env CFLAGS="-g $(PROFILE_CFLAGS)" GREP="`which grep`" \
 		CC=$(CC) CXX=$(CXX) \
@@ -1460,7 +1540,7 @@ $(DISTDIR)/$(PYTHON2_DIST):
 # https://bugs.python.org/issue12560
 $(DISTDIR)/python-issue12560.patch:
 	cd $(DISTDIR) && $(FETCH_CMD) -O "$@" \
-		https://hg.python.org/cpython/raw-rev/32cc37a89b58
+		https://bugs.python.org/file22654/python-2.7.2-configure.diff
 
 # retrieve python 2
 #
@@ -1750,7 +1830,7 @@ $(SVN_OBJDIR)/.retrieved:
 	if [ "$(TAG)" != "none" ]; then \
 		branchdir="tags/$(TAG)"; \
 		co="export"; \
-	elif [ $(BRANCH) != trunk ]; then \
+	elif [ "$(BRANCH)" != "trunk" ]; then \
 		branchdir="branches/$(BRANCH)"; \
 		co="co"; \
 	else \
@@ -2417,7 +2497,8 @@ define do_check
     echo "Begin test: $(subst svn-check-,,$@) x $$fs"; \
     test -d "$(RAMDISK)/tmp" && export TMPDIR="$(RAMDISK)/tmp"; \
     env LD_LIBRARY_PATH=$(LD_LIBRARY_PATH) $(LIB_PTHREAD_HACK) \
-        env MAKEFLAGS= make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
+	  PATH=$(PYTHON_BIN_PATH):$(PREFIX)/ruby/bin:$$PATH \
+	  MAKEFLAGS= make check PARALLEL=$(PARALLEL) CLEANUP=$(CLEANUP) \
 	  EXCLUSIVE_WC_LOCKS=$(EXCLUSIVE_WC_LOCKS) \
 	  THREADED=$(THREADED) \
 	  SVN_BIN_DIR=$(SVN_PREFIX)/bin \
@@ -2444,13 +2525,13 @@ svn-check-neon:
 	@echo Neon is not supported by this build of Subversion, skipping tests
 	@true
 else
-svn-check-neon: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
+svn-check-neon: $(HTTPD_CHECK_CONF) svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=neon)
 	$(HTTPD_STOP_CMD)
 endif
 
-svn-check-serf: $(HTTPD_CHECK_CONF) $(SVN_OBJDIR)/.compiled $(SVN_OBJDIR)/.bindings-compiled svn-check-prepare-ramdisk
+svn-check-serf: $(HTTPD_CHECK_CONF) svn-check-prepare-ramdisk
 	$(HTTPD_START_CMD)
 	$(call do_check,BASE_URL=http://localhost:$(HTTPD_CHECK_PORT) HTTP_LIBRARY=serf)
 	$(HTTPD_STOP_CMD)
@@ -2508,6 +2589,8 @@ svn-check-javahl:
 				tee $(svn_builddir)/tests.log.bindings.javahl; \
 	fi
 
+.PHONY: svn-check-neon svn-check-serf svn-check-local svn-check-svn
+.PHONY: svn-check-prepare-ramdisk svn-check-bindings svn-check
 svn-check: svn-check-prepare-ramdisk svn-check-local svn-check-svn \
 	svn-check-neon svn-check-serf svn-check-bindings
 
@@ -2538,6 +2621,7 @@ else
 endif
 	@echo "apr:        $(APR_VER)"
 	@echo "apr-util:   $(APR_UTIL_VER)"
+	@echo "OpenLDAP:   $(OPENLDAP_VER)"
 	@echo "httpd:      $(HTTPD_VER)"
 	$(NEON_VER_LINE)
 	@echo "serf:       $(SERF_VER)"

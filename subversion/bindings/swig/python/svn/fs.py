@@ -158,7 +158,7 @@ class FileDiff:
       try:
         p = _subprocess.Popen(cmd, stdout=_subprocess.PIPE, bufsize=-1,
                               close_fds=_sys.platform != "win32")
-      # When removing Python 2 support: Change to FileNotFoundError and 
+      # When removing Python 2 support: Change to FileNotFoundError and
       # remove check for ENOENT (FileNotFoundError "Corresponds to errno
       # ENOENT" according to documentation)
       except OSError as err:

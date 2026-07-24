@@ -298,7 +298,7 @@ build_keywords(apr_hash_t **kw,
 
   for (i = 0; i < keyword_tokens->nelts; ++i)
     {
-      const char *keyword = APR_ARRAY_IDX(keyword_tokens, i, const char *);
+      char *keyword = APR_ARRAY_IDX(keyword_tokens, i, char *);
       const char *custom_fmt = NULL;
 
       if (expand_custom_keywords)
@@ -1542,10 +1542,9 @@ stream_translated(svn_stream_t *stream,
       svn_stream_set_write(s, translated_stream_write);
       svn_stream_set_close(s, translated_stream_close);
       if (svn_stream_supports_mark(stream))
-        {
-          svn_stream_set_mark(s, translated_stream_mark);
-          svn_stream_set_seek(s, translated_stream_seek);
-        }
+        svn_stream_set_mark(s, translated_stream_mark);
+      if (svn_stream_supports_seek(stream))
+        svn_stream_set_seek(s, translated_stream_seek);
 
       return s;
     }
@@ -1625,7 +1624,7 @@ svn_subst_translate_cstring2(const char *src,
                              apr_pool_t *pool)
 {
   return translate_cstring(dst, NULL, src, eol_str, repair, keywords, expand,
-                            pool);
+                           pool);
 }
 
 /* Given a special file at SRC, generate a textual representation of

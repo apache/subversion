@@ -1027,10 +1027,10 @@ svn_stream_disown(svn_stream_t *stream,
                   apr_pool_t *pool);
 
 
-/** Create a stream to read the file at @a path. It will be opened using
- * the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the perms.
- * If you'd like to use different values, then open the file yourself, and
- * use the svn_stream_from_aprfile2() interface.
+/** Create a stream to read the file at @a path. It will be opened using the
+ * APR_BUFFERED flag, and APR_OS_DEFAULT for the perms. If you'd like to use
+ * different values, then open the file yourself, and use the
+ * svn_stream_from_aprfile2() interface.
  *
  * The stream will be returned in @a stream, and allocated from @a result_pool.
  * Temporary allocations will be performed in @a scratch_pool.
@@ -1045,11 +1045,11 @@ svn_stream_open_readonly(svn_stream_t **stream,
 
 
 /** Create a stream to write a file at @a path. The file will be *created*
- * using the APR_BUFFERED and APR_BINARY flag, and APR_OS_DEFAULT for the
- * perms. The file will be created "exclusively", so if it already exists,
- * then an error will be thrown. If you'd like to use different values, or
- * open an existing file, then open the file yourself, and use the
- * svn_stream_from_aprfile2() interface.
+ * using the APR_BUFFERED flag, and APR_OS_DEFAULT for the perms. The file
+ * will be created "exclusively", so if it already exists, then an error will
+ * be thrown. If you'd like to use different values, or open an existing file,
+ * then open the file yourself, and use the svn_stream_from_aprfile2()
+ * interface.
  *
  * The stream will be returned in @a stream, and allocated from @a result_pool.
  * Temporary allocations will be performed in @a scratch_pool.
@@ -1384,6 +1384,14 @@ svn_stream_reset(svn_stream_t *stream);
  */
 svn_boolean_t
 svn_stream_supports_mark(svn_stream_t *stream);
+
+/** Returns @c TRUE if the generic @a stream supports svn_stream_seek().
+ *
+ * @see svn_stream_seek()
+ * @since New in 1.15.
+ */
+svn_boolean_t
+svn_stream_supports_seek(svn_stream_t *stream);
 
 /** Returns @c TRUE if the generic @a stream supports svn_stream_reset().
  *

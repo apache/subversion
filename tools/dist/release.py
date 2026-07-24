@@ -85,8 +85,6 @@ tool_versions = dist_metadata['tool_versions']
 recommended_release = dist_metadata['recommended_release']
 # For clean-dist, a whitelist of artifacts to keep, by version.
 supported_release_lines = frozenset(dist_metadata['supported_release_lines'])
-# Long-Term Support (LTS) versions
-lts_release_lines = frozenset(dist_metadata['lts_release_lines'])
 
 # Some constants
 svn_repos = os.getenv('SVN_RELEASE_SVN_REPOS',
@@ -96,8 +94,6 @@ dist_repos = os.getenv('SVN_RELEASE_DIST_REPOS',
 dist_dev_url = dist_repos + '/dev/subversion'
 dist_release_url = dist_repos + '/release/subversion'
 dist_archive_url = 'https://archive.apache.org/dist/subversion'
-buildbot_repos = os.getenv('SVN_RELEASE_BUILDBOT_REPOS',
-                           'https://svn.apache.org/repos/infra/infrastructure/buildbot2')
 extns = ['zip', 'tar.gz', 'tar.bz2']
 
 
@@ -309,9 +305,6 @@ def run_svnmucc(cmd, verbose=True, dry_run=False, username=None):
     run_command(['svnmucc'] + cmd, verbose=verbose, dry_run=dry_run)
 
 #----------------------------------------------------------------------
-def is_lts(version):
-    return version.branch in lts_release_lines
-
 def is_recommended(version):
     return version.branch == recommended_release
 
@@ -512,11 +505,6 @@ def get_trunk_wc_path(base_dir, path=None):
     if path is None: return trunk_wc_path
     return os.path.join(trunk_wc_path, path)
 
-def get_buildbot_wc_path(base_dir, path=None):
-    buildbot_wc_path = os.path.join(get_tempdir(base_dir), 'svn-buildmaster')
-    if path is None: return buildbot_wc_path
-    return os.path.join(buildbot_wc_path, path)
-
 def get_trunk_url(revnum=None):
     return svn_repos + '/trunk' + '@' + (str(revnum) if revnum else '')
 
@@ -646,7 +634,7 @@ def create_status_file_on_branch(args):
       print('\nNew STATUS file:')
       print(template.generate(sys.stdout, data))
     else:
-      with open(status_local_path, 'wx') as g:
+      with open(status_local_path, 'x') as g:
         template.generate(g, data)
     run_svn(['add', status_local_path],
             dry_run=args.dry_run)
@@ -670,36 +658,11 @@ def update_backport_bot(args):
 """ % (ver.branch,))
 
 #----------------------------------------------------------------------
-def update_buildbot_config(args):
-    """Add the new branch to the list of branches monitored by the buildbot
-       master.
-    """
-    ver = args.version
-    buildbot_wc = get_buildbot_wc_path(args.base_dir)
-    run_svn(['checkout', buildbot_repos, buildbot_wc])
-
-    prev_ver = Version('1.%d.0' % (ver.minor - 1,))
-    next_ver = Version('1.%d.0' % (ver.minor + 1,))
-
-    relpath = 'projects/subversion.py'
-    edit_file(get_buildbot_wc_path(args.base_dir, relpath),
-              r'(MINOR_LINES = \[.*%s)(\])' % (prev_ver.minor,),
-              r'\1, %s\2' % (ver.minor,))
-
-    log_msg = '''\
-Subversion: start monitoring the %s branch.
-''' % (ver.branch)
-    commit_paths = [get_buildbot_wc_path(args.base_dir, relpath)]
-    run_svn(['commit'] + commit_paths + ['-m', log_msg],
-            dry_run=args.dry_run)
-
-#----------------------------------------------------------------------
 def create_release_branch(args):
     make_release_branch(args)
     update_minor_ver_in_trunk(args)
     create_status_file_on_branch(args)
     update_backport_bot(args)
-    update_buildbot_config(args)
 
 
 #----------------------------------------------------------------------
@@ -707,8 +670,7 @@ def write_release_notes(args):
 
     # Create a skeleton release notes file from template
 
-    template_filename = \
-        'release-notes-lts.ezt' if is_lts(args.version) else 'release-notes.ezt'
+    template_filename = 'release-notes.ezt'
 
     prev_ver = Version('%d.%d.0' % (args.version.major, args.version.minor - 1))
     data = { 'major-minor'          : args.version.branch,
@@ -920,7 +882,7 @@ def roll_tarballs(args):
     # line endings and won't run, so use the one in the working copy.
     run_script(args.verbose,
                '%s/tools/po/po-update.sh pot' % get_workdir(args.base_dir))
-    if not args.version < Version("1.15.0"):
+    if not args.version < Version("1.15.0-alpha1"):
       run_script(args.verbose,
                  'python gen-make.py -t cmake --release')
     clean_pycache()  # as with clean_autom4te, is this pointless on Windows?
@@ -939,7 +901,7 @@ def roll_tarballs(args):
                '''tools/po/po-update.sh pot
                   ./autogen.sh --release''',
                hide_stderr=True) # SWIG is noisy
-    if not args.version < Version("1.15.0"):
+    if not args.version < Version("1.15.0-alpha1"):
       run_script(args.verbose,
                  'python gen-make.py -t cmake --release')
     clean_pycache()  # without this, tarballs contain empty __pycache__ dirs
@@ -1752,8 +1714,7 @@ def main():
     subparser = subparsers.add_parser('create-release-branch',
                     help='''Create a minor release branch: branch from trunk,
                             update version numbers on trunk, create status
-                            file on branch, update backport bot,
-                            update buildbot config.''')
+                            file on branch, update backport bot.''')
     subparser.set_defaults(func=create_release_branch)
     subparser.add_argument('version', type=Version,
                     help='''A version number to indicate the branch, such as
@@ -1765,7 +1726,7 @@ def main():
     subparser.add_argument('--dry-run', action='store_true', default=False,
                    help='Avoid committing any changes to repositories.')
 
-    # Setup the parser for the create-release-branch subcommand
+    # Setup the parser for the write-release-notes subcommand
     subparser = subparsers.add_parser('write-release-notes',
                     help='''Write a template release-notes file.''')
     subparser.set_defaults(func=write_release_notes)

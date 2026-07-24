@@ -313,7 +313,7 @@ def basic_svnmucc(sbox):
 
   # Expected missing revision error
   xtest_svnmucc(sbox.repo_url,
-                ["svnmucc: E200004: 'a' is not a revision"
+                ["svnmucc: E200022: Invalid revision number found parsing 'a'"
                  ], #---------
                 '-m', 'log msg',
                 'cp', 'a', 'b')

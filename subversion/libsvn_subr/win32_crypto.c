@@ -21,9 +21,6 @@
  * ====================================================================
  */
 
-/* prevent "empty compilation unit" warning on e.g. UNIX */
-typedef int win32_crypto__dummy;
-
 /* ==================================================================== */
 
 #if defined(WIN32) && !defined(__MINGW32__)
@@ -56,7 +53,7 @@ static const WCHAR description[] = L"auth_svn.simple.wincrypt";
 
 /* Return a copy of ORIG, encrypted using the Windows CryptoAPI and
    allocated from POOL. */
-const svn_string_t *
+static const svn_string_t *
 encrypt_data(const svn_string_t *orig,
              apr_pool_t *pool)
 {
@@ -78,7 +75,7 @@ encrypt_data(const svn_string_t *orig,
 
 /* Return a copy of CRYPTED, decrypted using the Windows CryptoAPI and
    allocated from POOL. */
-const svn_string_t *
+static const svn_string_t *
 decrypt_data(const svn_string_t *crypted,
              apr_pool_t *pool)
 {

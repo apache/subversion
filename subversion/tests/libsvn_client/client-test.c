@@ -123,8 +123,7 @@ test_elide_mergeinfo_catalog(apr_pool_t *pool)
 
           SVN_ERR(svn_mergeinfo_parse(&mergeinfo, item->unparsed_mergeinfo,
                                       iterpool));
-          apr_hash_set(mergeinfo_catalog, item->path, APR_HASH_KEY_STRING,
-                       mergeinfo);
+          svn_hash_sets(mergeinfo_catalog, item->path, mergeinfo);
         }
 
       SVN_ERR(svn_client__elide_mergeinfo_catalog(mergeinfo_catalog,
@@ -132,8 +131,8 @@ test_elide_mergeinfo_catalog(apr_pool_t *pool)
 
       for (item = elide_testcases[i]; item->path; item++)
         {
-          apr_hash_t *mergeinfo = apr_hash_get(mergeinfo_catalog, item->path,
-                                               APR_HASH_KEY_STRING);
+          apr_hash_t *mergeinfo = svn_hash_gets(mergeinfo_catalog, item->path);
+
           if (item->remains && !mergeinfo)
             return svn_error_createf(SVN_ERR_TEST_FAILED, NULL,
                                      "Elision for test case #%d incorrectly "
@@ -315,16 +314,14 @@ patch_collection_func(void *baton,
   struct patch_collection_baton *pcb = baton;
 
   if (patch_abspath)
-    apr_hash_set(pcb->patched_tempfiles,
-                 apr_pstrdup(pcb->state_pool, canon_path_from_patchfile),
-                 APR_HASH_KEY_STRING,
-                 apr_pstrdup(pcb->state_pool, patch_abspath));
+    svn_hash_sets(pcb->patched_tempfiles,
+                  apr_pstrdup(pcb->state_pool, canon_path_from_patchfile),
+                  apr_pstrdup(pcb->state_pool, patch_abspath));
 
   if (reject_abspath)
-    apr_hash_set(pcb->reject_tempfiles,
-                 apr_pstrdup(pcb->state_pool, canon_path_from_patchfile),
-                 APR_HASH_KEY_STRING,
-                 apr_pstrdup(pcb->state_pool, reject_abspath));
+    svn_hash_sets(pcb->reject_tempfiles,
+                  apr_pstrdup(pcb->state_pool, canon_path_from_patchfile),
+                  apr_pstrdup(pcb->state_pool, reject_abspath));
 
   if (filtered)
     *filtered = FALSE;
@@ -418,20 +415,38 @@ test_patch(const svn_test_opts_t *opts,
   SVN_ERR(svn_client_patch(patch_file_path, wc_path, FALSE, 0, FALSE,
                            FALSE, FALSE, patch_collection_func, &pcb,
                            ctx, pool));
-  SVN_ERR(svn_io_file_close(patch_file, pool));
 
   SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
   key = "A/D/gamma";
+  patched_tempfile_path = svn_hash_gets(pcb.patched_tempfiles, key);
+  SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
+                             EXPECTED_GAMMA_LINES, pool));
+  SVN_TEST_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
+  key = "A/D/gamma";
+  reject_tempfile_path = svn_hash_gets(pcb.reject_tempfiles, key);
+  SVN_ERR(check_patch_result(reject_tempfile_path, expected_gamma_reject,
+                             APR_EOL_STR, EXPECTED_GAMMA_REJECT_LINES, pool));
+
+  /* svn_client_patch_stream() test */
+  apr_hash_clear(pcb.patched_tempfiles);
+  apr_hash_clear(pcb.reject_tempfiles);
+
+  SVN_ERR(svn_client_patch_stream(patch_file, wc_path, FALSE, 0, FALSE,
+                                  FALSE, FALSE, patch_collection_func, &pcb,
+                                  ctx, pool));
+
+  SVN_TEST_ASSERT(apr_hash_count(pcb.patched_tempfiles) == 1);
   patched_tempfile_path = apr_hash_get(pcb.patched_tempfiles, key,
                                        APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(patched_tempfile_path, expected_gamma, "\n",
                              EXPECTED_GAMMA_LINES, pool));
   SVN_TEST_ASSERT(apr_hash_count(pcb.reject_tempfiles) == 1);
-  key = "A/D/gamma";
   reject_tempfile_path = apr_hash_get(pcb.reject_tempfiles, key,
                                      APR_HASH_KEY_STRING);
   SVN_ERR(check_patch_result(reject_tempfile_path, expected_gamma_reject,
                              APR_EOL_STR, EXPECTED_GAMMA_REJECT_LINES, pool));
+
+  SVN_ERR(svn_io_file_close(patch_file, pool));
 
   return SVN_NO_ERROR;
 }

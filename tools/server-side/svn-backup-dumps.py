@@ -149,7 +149,7 @@
 #  - improve documentation
 #
 
-__version = "0.6"
+__version = "0.7"
 
 import sys
 import os
@@ -452,7 +452,7 @@ class SvnBackup:
         return -1
 
     def get_last_dumped_rev(self):
-        filename_regex = re.compile("(.+)\.\d+-(\d+)\.svndmp.*")
+        filename_regex = re.compile(r"(.+)\.\d+-(\d+)\.svndmp.*")
         # start with -1 so the next one will be rev 0
         highest_rev = -1
 

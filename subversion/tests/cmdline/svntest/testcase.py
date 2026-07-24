@@ -349,3 +349,50 @@ def SkipDumpLoadCrossCheck_deco(cond_func = lambda: True):
 
 # Create a singular alias, for linguistic correctness
 Issue_deco = Issues_deco
+
+
+# Determines the name of UTF-8 locale on the system, or returns None if one
+# couldn't be found.
+def _detect_utf8_locale():
+    import locale
+
+    orig = None
+    try:
+        for name in ('C.UTF-8', 'en_US.UTF-8'):
+            try:
+                orig = locale.setlocale(locale.LC_ALL, name)
+            except locale.Error:
+                continue
+            else:
+                return name
+    finally:
+        if orig is not None:
+            locale.setlocale(locale.LC_ALL, orig)
+
+    return None  # utf-8 locale unavailable
+
+_utf8_locale = _detect_utf8_locale() if os.name != 'nt' else False
+
+# Decorator that runs the test in UTF-8 environment. If there are no good
+# UTF-8 locales availible on the system, skips the test.
+def RequireUtf8_deco(f):
+
+    import functools
+
+    @functools.wraps(f)
+    def wrapper(sbox: svntest.sandbox.Sandbox):
+        if _utf8_locale is None:
+            raise svntest.Skip
+        if _utf8_locale is not False:
+            orig = os.environ.get('LC_ALL')
+            os.environ['LC_ALL'] = _utf8_locale
+        try:
+            return f(sbox)
+        finally:
+            if _utf8_locale is not False:
+                if orig is None:
+                    del os.environ['LC_ALL']
+                else:
+                    os.environ['LC_ALL'] = orig
+
+    return wrapper

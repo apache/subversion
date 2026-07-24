@@ -23,6 +23,7 @@ import os
 import sys
 import ezt
 import gen_base
+from gen_pkgconfig import write_pkg_config_dot_in_files 
 
 class _eztdata(object):
   def __init__(self, **kw):
@@ -58,10 +59,11 @@ def get_output_name(target):
     return target.name[3:] + "-1"
   elif isinstance(target, gen_base.TargetSWIG):
     module_name = target.name[len(target.lang + "_"):]
-    if target.lang == "python":
+    if target.lang in ("python", "ruby"):
       return module_name
-    else:
-      return target.name
+    if target.lang == "perl":
+      return "_" + module_name.capitalize()
+    return target.name
   else:
     return target.name
 
@@ -87,6 +89,9 @@ def get_target_conditions(target):
       enable_condition.append("SVN_ENABLE_TOOLS")
     else:
       enable_condition.append("SVN_ENABLE_PROGRAMS")
+
+    if target.name == "svnbrowse":
+      enable_condition.append("SVN_ENABLE_TUI")
 
   if isinstance(target, gen_base.TargetSWIG) or \
      isinstance(target, gen_base.TargetSWIGLib):
@@ -146,7 +151,8 @@ class Generator(gen_base.GeneratorBase):
           msvc_export.append("subversion/include/" + export)
 
       sources = []
-      libs = []
+      private_libs = []
+      public_libs = []
 
       for dep in self.get_dependencies(target.name):
         enable_condition += get_target_conditions(dep)
@@ -157,22 +163,28 @@ class Generator(gen_base.GeneratorBase):
         elif isinstance(dep, gen_base.TargetLinked):
           if dep.external_lib:
             if dep.name == "ra-libs":
-              libs.append("ra-libs")
+              private_libs.append("ra-libs")
             elif dep.name == "fs-libs":
-              libs.append("fs-libs")
+              private_libs.append("fs-libs")
             elif dep.name in ["apriconv",
                               "apr_memcache",
-                              "magic",
                               "macos-plist",
-                              "macos-keychain",
-                              "sasl"]:
+                              "macos-keychain"]:
               # These dependencies are currently ignored
               # TODO:
               pass
             else:
-              libs.append("external-" + dep.name)
+              dep_name = "external-" + dep.name
+
+              # APR and APR-Util are part of our public interface and should be
+              # declared PUBLIC in library target dependencies.
+              if (dep_name in ["external-apr", "external-aprutil"]
+                  and not isinstance(target, gen_base.TargetExe)):
+                public_libs.append(dep_name)
+              else:
+                private_libs.append(dep_name)
           else:
-            libs.append(dep.name)
+            private_libs.append(dep.name)
         elif isinstance(dep, gen_base.ObjectFile):
           for source in self.graph.get_sources(gen_base.DT_OBJECT, dep,
                                                gen_base.SourceFile):
@@ -196,12 +208,14 @@ class Generator(gen_base.GeneratorBase):
           else:
             msvc_libs.append(lib)
 
-        if isinstance(target, gen_base.TargetLib) or target.install == "bin":
+        if isinstance(target, gen_base.TargetLib) and target.install != 'test':
+          install_target = True
+        elif target.install in ("bin", "tui"):
           install_target = True
         else:
           install_target = False
 
-        enable_condition = list(set(enable_condition))
+        enable_condition = sorted(list(set(enable_condition)))
         if len(enable_condition) > 0:
           enable_condition_str = " AND ".join(enable_condition)
         else:
@@ -212,7 +226,9 @@ class Generator(gen_base.GeneratorBase):
           output_name = get_output_name(target),
           type = target_type,
           sources = sources,
-          libs = libs,
+          libs = public_libs + private_libs,
+          public_libs = public_libs,
+          private_libs = private_libs,
           msvc_libs = msvc_libs,
           msvc_objects = msvc_objects,
           msvc_export = msvc_export,
@@ -238,6 +254,9 @@ class Generator(gen_base.GeneratorBase):
     template.parse_file(os.path.join('build', 'generator', 'templates',
                                      'targets.cmake.ezt'))
     template.generate(output_file, data)
+
+    write_pkg_config_dot_in_files(self.version, self.sections,
+                                  self.get_install_sources())
 
   def get_install_sources(self):
     install_sources = self.graph.get_all_sources(gen_base.DT_INSTALL)

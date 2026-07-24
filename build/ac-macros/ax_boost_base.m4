@@ -291,6 +291,7 @@ AC_DEFUN([_AX_BOOST_BASE_RUNDETECT],[
         ifelse([$3], , :, [$3])
     else
         AC_DEFINE(HAVE_BOOST,,[define if the Boost library is available])
+        SVN_DOT_CLANGD_CXX([$BOOST_CPPFLAGS])
         # execute ACTION-IF-FOUND (if present):
         ifelse([$2], , :, [$2])
     fi

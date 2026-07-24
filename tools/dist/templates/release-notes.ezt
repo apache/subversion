@@ -233,18 +233,6 @@ if they occur.</p>
 </div>  <!- - troubleshooting - ->
 -->
 
-<div class="h2" id="non-lts-release">
-<h2>Subversion [major-minor].x is a Regular Release
-  <a class="sectionlink" href="#non-lts-release"
-    title="Link to this section">&para;</a>
-</h2>
-
-<p>[major-minor] is a regular release, not a Long-Term Support release.
-   See <a href="/docs/release-notes/#supported-versions">Supported Versions</a>
-   and <a href="/roadmap.html#release-planning">How We Plan Releases</a>.</p>
-
-</div>  <!-- non-lts-release -->
-
 <!-- ***************** END CONTENT ****************** -->
 </div> <!-- #site-content -->
 </body>

@@ -58,6 +58,7 @@ class DiffOptions;
 #include "svn_types.h"
 #include "svn_client.h"
 #include "SVNBase.h"
+#include "jniwrapper/jni_env.hpp"
 
 class SVNClient :public SVNBase
 {
@@ -162,13 +163,15 @@ class SVNClient :public SVNBase
   void add(const char *path, svn_depth_t depth, bool force,
            bool no_ignore, bool no_autoprops, bool add_parents);
   void revert(StringArray &paths, svn_depth_t depth, StringArray &changelists,
-              bool clear_changelists, bool metadata_only);
+              bool clear_changelists, bool metadata_only, bool added_keep_local);
   void remove(Targets &targets, CommitMessage *message, bool force,
               bool keep_local, PropertyTable &revprops,
               CommitCallback *callback);
   jlong checkout(const char *moduleName, const char *destPath,
                  Revision &revision, Revision &pegRevsion, svn_depth_t depth,
-                 bool ignoreExternals, bool allowUnverObstructions);
+                 bool ignoreExternals, bool allowUnverObstructions,
+                 const svn_version_t *wcFormatVersion,
+                 svn_tristate_t storePristines);
   void logMessages(const char *path, Revision &pegRevision,
                    std::vector<RevisionRange> &ranges, bool stopOnCopy,
                    bool discoverPaths, bool includeMergedRevisions,
@@ -198,20 +201,23 @@ class SVNClient :public SVNBase
                       const char *original_value, bool force);
   jstring getVersionInfo(const char *path, const char *trailUrl,
                          bool lastChanged);
-  void upgrade(const char *path);
+  jobject upgrade(::Java::Env env, const char *path,
+                  const svn_version_t *targetWcVersion);
   jbyteArray propertyGet(const char *path, const char *name,
                          Revision &revision, Revision &pegRevision,
                          StringArray &changelists);
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
-            const char *relativeToDir, OutputStream &outputStream,
+            const char *relativeToDir,
+            OutputStream &outputStream, OutputStream &errorStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
             DiffOptions const& options);
   void diff(const char *target, Revision &pegevision,
             Revision &startRevision, Revision &endRevision,
-            const char *relativeToDir, OutputStream &outputStream,
+            const char *relativeToDir,
+            OutputStream &outputStream, OutputStream &errorStream,
             svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
@@ -224,6 +230,7 @@ class SVNClient :public SVNBase
                      Revision &startRevision, Revision &endRevision,
                      svn_depth_t depth, StringArray &changelists,
                      bool ignoreAncestry, DiffSummaryReceiver &receiver);
+  jobject defaultWcVersion(::Java::Env env);
 
   ClientContext &getClientContext();
 
@@ -241,8 +248,8 @@ class SVNClient :public SVNBase
   void diff(const char *target1, Revision &revision1,
             const char *target2, Revision &revision2,
             Revision *pegRevision, const char *relativeToDir,
-            OutputStream &outputStream, svn_depth_t depth,
-            StringArray &changelists,
+            OutputStream &outputStream, OutputStream &errorStream,
+            svn_depth_t depth, StringArray &changelists,
             bool ignoreAncestry, bool noDiffDelete, bool force,
             bool showCopiesAsAdds, bool ignoreProps, bool propsOnly,
             DiffOptions const& options);

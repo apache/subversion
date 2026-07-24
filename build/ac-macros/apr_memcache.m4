@@ -77,6 +77,7 @@ dnl We are already linking apr-util everywhere, so no special treatement needed.
     svn_lib_apr_memcache=no
   fi
 
+  SVN_DOT_CLANGD([$SVN_APR_MEMCACHE_INCLUDES])
   AC_SUBST(SVN_APR_MEMCACHE_INCLUDES)
   AC_SUBST(SVN_APR_MEMCACHE_LIBS)
 ])

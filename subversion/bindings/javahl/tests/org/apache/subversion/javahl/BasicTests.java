@@ -1,5 +1,4 @@
-/**
- * @copyright
+/*
  * ====================================================================
  *    Licensed to the Apache Software Foundation (ASF) under one
  *    or more contributor license agreements.  See the NOTICE file
@@ -18,7 +17,6 @@
  *    specific language governing permissions and limitations
  *    under the License.
  * ====================================================================
- * @endcopyright
  */
 package org.apache.subversion.javahl;
 
@@ -240,9 +238,10 @@ public class BasicTests extends SVNTests
      */
     public void testRuntimeVersion() throws Throwable
     {
+        RuntimeVersion runtimeVersion = null;
         try
         {
-            RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+            runtimeVersion = client.getRuntimeVersion();
             String versionString = runtimeVersion.toString();
             if (versionString == null || versionString.trim().length() == 0)
             {
@@ -255,11 +254,103 @@ public class BasicTests extends SVNTests
                  "native libraries failed to initialize: " + e);
         }
 
-        RuntimeVersion runtimeVersion = client.getRuntimeVersion();
+        assertNotNull(runtimeVersion);
         Version version = client.getVersion();
         assertTrue(runtimeVersion.getMajor() > version.getMajor()
                    || (runtimeVersion.getMajor() == version.getMajor()
                        && runtimeVersion.getMinor() >= version.getMinor()));
+    }
+
+    /**
+     * Test defaultWcVersion
+     * @throws Throwable
+     */
+    public void testDefaultWcVersion() throws Throwable
+    {
+        try
+        {
+            Version defaultWcVersion = client.defaultWcVersion();
+            String versionString = defaultWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("defaultWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test oldestWcVersion
+     */
+    public void testOldestWcVersion()
+    {
+        try
+        {
+            Version oldestWcVersion = SVNClient.oldestWcVersion();
+            String versionString = oldestWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("oldestWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+    }
+
+    /**
+     * Test latestWcVersion
+     */
+    public void testLatestWcVersion()
+    {
+        try
+        {
+            Version latestWcVersion = SVNClient.latestWcVersion();
+            String versionString = latestWcVersion.toString();
+            if (versionString == null || versionString.trim().length() == 0)
+            {
+                throw new Exception("Version string empty");
+            }
+        }
+        catch (Exception e)
+        {
+            fail("latestWcVersion should always be available unless " +
+                 "the native libraries failed to initialize: " + e);
+        }
+
+    }
+
+    /**
+     * Test relationships between WC versions
+     * @throws Throwable
+     */
+    public void testWcVersionOrder() throws Throwable
+    {
+        Version defaultWcVersion = client.defaultWcVersion();
+        Version oldestWcVersion = SVNClient.oldestWcVersion();
+        Version latestWcVersion = SVNClient.latestWcVersion();
+
+        assertNotEquals(0, defaultWcVersion.getMajor());
+        assertNotEquals(0, defaultWcVersion.getMinor());
+        assertEquals(0, defaultWcVersion.getPatch());
+
+        assertNotEquals(0, oldestWcVersion.getMajor());
+        assertNotEquals(0, oldestWcVersion.getMinor());
+        assertEquals(0, oldestWcVersion.getPatch());
+
+        assertNotEquals(0, latestWcVersion.getMajor());
+        assertNotEquals(0, latestWcVersion.getMinor());
+        assertEquals(0, latestWcVersion.getPatch());
+
+        assertTrue(latestWcVersion.isAtLeast(oldestWcVersion));
+        assertTrue(latestWcVersion.isAtLeast(defaultWcVersion));
+        assertTrue(defaultWcVersion.isAtLeast(oldestWcVersion));
     }
 
     /**
@@ -770,7 +861,8 @@ public class BasicTests extends SVNTests
         {
             // obstructed checkout must fail
             client.checkout(thisTest.getUrl() + "/A", thisTest.getWCPath(),
-                            null, null, Depth.infinity, false, false);
+                            null, null, Depth.infinity, false, false,
+                            null, Tristate.Unknown);
             fail("missing exception");
         }
         catch (ClientException expected)
@@ -801,13 +893,87 @@ public class BasicTests extends SVNTests
 
         // recheckout the working copy
         client.checkout(thisTest.getUrl().toString(), thisTest.getWCPath(),
-                   null, null, Depth.infinity, false, false);
+                        null, null, Depth.infinity, false, false,
+                        null, Tristate.Unknown);
 
         // deleted file should reapear
         thisTest.getWc().setItemTextStatus("A/B/lambda", Status.Kind.normal);
 
         // check the status of the working copy
         thisTest.checkStatus();
+    }
+
+    /**
+     * Test checkout with the current runtime WC version
+     * @throws Throwable
+     */
+    public void testCurrentWcVersionCheckout() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+        client.checkout(thisTest.getUrl() + "/A",
+                        thisTest.getWCPath()  + "/ZZZ",
+                        null, null, Depth.infinity, false, false,
+                        client.getRuntimeVersion(),
+                        Tristate.Unknown);
+    }
+
+    /**
+     * Test checkout with unsupported WC version
+     * @throws Throwable
+     */
+    public void testAncientWcVersionCheckout() throws Throwable
+    {
+        OneTest thisTest = new OneTest();
+
+        try
+        {
+            // Checkout with invalid version must fail
+            client.checkout(thisTest.getUrl() + "/A",
+                            thisTest.getWCPath()  + "/ZZZ",
+                            null, null, Depth.infinity, false, false,
+                            Version.getInstance(0, 9, 0),
+                            Tristate.Unknown);
+            fail("missing exception");
+        }
+        catch (ClientException expected)
+        {
+        }
+    }
+
+    /**
+     * Test the basic SVNClient.upgrade functionality.
+     * @throws Throwable
+     */
+    public void testBasicUpgrade() throws Throwable
+    {
+        OneTest thisTest = new OneTest(true, true, true);
+        Version oldestVersion = SVNClient.oldestWcVersion();
+        Version defaultVersion = client.defaultWcVersion();
+
+        Version upgradedVersion =
+            client.upgrade(thisTest.getWCPath(), null);
+
+        assertNotNull(upgradedVersion);
+        assertTrue(upgradedVersion.isAtLeast(oldestVersion));
+        assertTrue(upgradedVersion.isAtLeast(defaultVersion));
+        assertTrue(defaultVersion.isAtLeast(upgradedVersion));
+    }
+
+    /**
+     * Test SVNClient.upgrade to the latest version.
+     * @throws Throwable
+     */
+    public void testLatestUpgrade() throws Throwable
+    {
+        OneTest thisTest = new OneTest(true, true, true);
+        Version latestVersion = SVNClient.latestWcVersion();
+
+        Version upgradedVersion =
+            client.upgrade(thisTest.getWCPath(), latestVersion);
+
+        assertNotNull(upgradedVersion);
+        assertTrue(upgradedVersion.isAtLeast(latestVersion));
+        assertTrue(latestVersion.isAtLeast(upgradedVersion));
     }
 
     /**
@@ -2217,8 +2383,9 @@ public class BasicTests extends SVNTests
 
         // check out the previous revision
         client.checkout(thisTest.getUrl()+"/A/D",
-                thisTest.getWCPath()+"/new_D", new Revision.Number(1),
-                new Revision.Number(1), Depth.infinity, false, false);
+                        thisTest.getWCPath()+"/new_D", new Revision.Number(1),
+                        new Revision.Number(1), Depth.infinity, false, false,
+                        null, Tristate.Unknown);;
     }
 
     /**
@@ -2440,6 +2607,13 @@ public class BasicTests extends SVNTests
                      Info.ScheduleKind.normal, info.getSchedule());
         assertEquals("wrong node kind from info", NodeKind.file,
                      info.getKind());
+        assertTrue("unexpected store-pristine", info.getStorePristine());
+
+        Version current = info.getWorkingCopyVersion();
+        assertNotNull("WC version not available", current);
+        Version expected = client.defaultWcVersion();
+        assertTrue("unexpected WC version", current.isAtLeast(expected));
+        assertTrue("unexpected WC version", expected.isAtLeast(current));
     }
 
     /**
@@ -2592,8 +2766,9 @@ public class BasicTests extends SVNTests
         String secondWC = thisTest.getWCPath() + ".empty";
         removeDirOrFile(new File(secondWC));
 
-        client.checkout(thisTest.getUrl().toString(), secondWC, null, null,
-                       Depth.empty, false, true);
+        client.checkout(thisTest.getUrl().toString(), secondWC,
+                        null, null, Depth.empty, false, true,
+                        null, Tristate.Unknown);
 
         infos = collectInfos(secondWC, null, null, Depth.empty, null);
 
@@ -3924,19 +4099,19 @@ public class BasicTests extends SVNTests
 
     }
 
-    /**
+    /*
+      This is currently commented out, because we don't have an XFail method
+      for JavaHL.  The resolution is pending the result of issue #3680:
+      https://issues.apache.org/jira/browse/SVN-3680
+
+   / **
      * Test tolerance of unversioned obstructions when adding paths with
      * {@link org.apache.subversion.javahl.SVNClient#checkout()},
      * {@link org.apache.subversion.javahl.SVNClient#update()}, and
      * {@link org.apache.subversion.javahl.SVNClient#doSwitch()}
      * @throws IOException
      * @throws SubversionException
-     */
-    /*
-      This is currently commented out, because we don't have an XFail method
-      for JavaHL.  The resolution is pending the result of issue #3680:
-      https://issues.apache.org/jira/browse/SVN-3680
-
+     * /
     public void testObstructionTolerance()
             throws SubversionException, IOException
     {
@@ -4733,7 +4908,9 @@ public class BasicTests extends SVNTests
                                null,
                                Depth.infinity,
                                true,
-                               false);
+                               false,
+                               null,
+                               Tristate.Unknown);
 
             svnClient.dispose();
         }
@@ -4946,11 +5123,13 @@ public class BasicTests extends SVNTests
                                          int direntFields, boolean fetchLocks)
         throws ClientException
     {
-        class MyListCallback implements ListCallback
+        class MyListItemCallback implements ListItemCallback
         {
             private List<DirEntry> dirents = new ArrayList<DirEntry>();
 
-            public void doEntry(DirEntry dirent, Lock lock)
+            public void doEntry(DirEntry dirent, Lock lock,
+                                String externalParentURL,
+                                String externalTarget)
             {
                 // All of this is meant to retain backward compatibility with
                 // the old svn_client_ls-style API.  For further information
@@ -4984,9 +5163,9 @@ public class BasicTests extends SVNTests
             }
         }
 
-        MyListCallback callback = new MyListCallback();
-        client.list(url, revision, pegRevision, depth, direntFields,
-                    fetchLocks, callback);
+        MyListItemCallback callback = new MyListItemCallback();
+        client.list(url, revision, pegRevision, null, depth, direntFields,
+                    fetchLocks, false, callback);
         return callback.getDirEntryArray();
     }
 

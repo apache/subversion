@@ -226,15 +226,18 @@ svn_cmdline__stdout_is_a_terminal(void);
 svn_boolean_t
 svn_cmdline__stderr_is_a_terminal(void);
 
-/* Determine whether interactive mode should be enabled, based on whether
- * the user passed the --non-interactive or --force-interactive options.
- * If neither option was passed, interactivity is enabled if standard
- * input is connected to a terminal device.
+/* Adjusts boolean described by @a non_interactive to whether interactive
+ * mode should be disabled, based on whether the user passed the
+ * --non-interactive or --force-interactive options. If neither option
+ * was passed, interactivity is enabled if standard input is connected to a terminal device.
+ *
+ * If both, @a non_interactive and @a force_interactive are @c TRUE, an
+ * @c SVN_ERR_CL_ARG_PARSING_ERROR error will be returned.
  *
  * @since New in 1.8.
  */
-svn_boolean_t
-svn_cmdline__be_interactive(svn_boolean_t non_interactive,
+svn_error_t *
+svn_cmdline__be_interactive(svn_boolean_t *non_interactive,
                             svn_boolean_t force_interactive);
 
 /* Parses the argument value of '--trust-server-cert-failures' OPT_ARG into
@@ -286,6 +289,12 @@ svn_cmdline__win32_get_cstring_argv(const char **cstring_argv_p[],
                                     int argc,
                                     const wchar_t *argv[],
                                     apr_pool_t *result_pool);
+
+svn_error_t *
+svn_cmdline__win32_get_utf8_argv(const char **utf8_argv_p[],
+                                 int argc,
+                                 const wchar_t *argv[],
+                                 apr_pool_t *result_pool);
 #endif
 
 /* Default platform-agnostic handler that normalizes command line arguments
@@ -296,14 +305,22 @@ svn_cmdline__default_get_cstring_argv(const char **cstring_argv_p[],
                                       const char *argv[],
                                       apr_pool_t *result_pool);
 
+svn_error_t *
+svn_cmdline__default_get_utf8_argv(const char **utf8_argv_p[],
+                                   int argc,
+                                   const char *argv[],
+                                   apr_pool_t *result_pool);
+
 #if defined(WIN32) && defined(_MSC_VER)
 typedef wchar_t svn_cmdline__argv_char_t;
 #define SVN_CMDLINE__MAIN wmain
 #define svn_cmdline__get_cstring_argv svn_cmdline__win32_get_cstring_argv
+#define svn_cmdline__get_utf8_argv svn_cmdline__win32_get_utf8_argv
 #else
 typedef char svn_cmdline__argv_char_t;
 #define SVN_CMDLINE__MAIN main
 #define svn_cmdline__get_cstring_argv svn_cmdline__default_get_cstring_argv
+#define svn_cmdline__get_utf8_argv svn_cmdline__default_get_utf8_argv
 #endif
 
 #ifdef __cplusplus

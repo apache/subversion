@@ -164,5 +164,5 @@ install-include:[for includes] [includes.file][end]
 ########################################
 [for deps]
 [deps.name]:[for deps.deps] [deps.deps][end][if-any deps.cmd]
-	[if-any deps.when]if $([deps.when]) ; then [else][end][deps.cmd] [if-any deps.generated][else]$(canonicalized_srcdir)[end][deps.source][end][if-any deps.when] ; else echo "fake" > [deps.name] ; fi[else][end]
+	[if-any deps.when]if $([deps.when]) ; then [else][end][deps.cmd] [if-any deps.generated][else]$(canonicalized_srcdir)[end][deps.source][if-any deps.when] ; else echo "fake" > [deps.name] ; fi[else][end][end]
 [end]

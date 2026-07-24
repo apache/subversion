@@ -40,6 +40,7 @@
 
 #include "../svn_test.h"
 
+#include "svn_hash.h"
 #include "svn_pools.h"
 #include "svn_subst.h"
 
@@ -303,36 +304,27 @@ substitute_and_verify(const char *test_name,
   if (rev)
     {
       val = svn_string_create(rev, pool);
-      apr_hash_set(keywords, SVN_KEYWORD_REVISION_LONG,
-                   APR_HASH_KEY_STRING, val);
-      apr_hash_set(keywords, SVN_KEYWORD_REVISION_MEDIUM,
-                   APR_HASH_KEY_STRING, val);
-      apr_hash_set(keywords, SVN_KEYWORD_REVISION_SHORT,
-                   APR_HASH_KEY_STRING, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_REVISION_LONG, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_REVISION_MEDIUM, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_REVISION_SHORT, val);
     }
   if (date)
     {
       val = svn_string_create(date, pool);
-      apr_hash_set(keywords, SVN_KEYWORD_DATE_LONG,
-                   APR_HASH_KEY_STRING, val);
-      apr_hash_set(keywords, SVN_KEYWORD_DATE_SHORT,
-                   APR_HASH_KEY_STRING, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_DATE_LONG, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_DATE_SHORT, val);
     }
   if (author)
     {
       val = svn_string_create(author, pool);
-      apr_hash_set(keywords, SVN_KEYWORD_AUTHOR_LONG,
-                   APR_HASH_KEY_STRING, val);
-      apr_hash_set(keywords, SVN_KEYWORD_AUTHOR_SHORT,
-                   APR_HASH_KEY_STRING, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_AUTHOR_LONG, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_AUTHOR_SHORT, val);
     }
   if (url)
     {
       val = svn_string_create(url, pool);
-      apr_hash_set(keywords, SVN_KEYWORD_URL_LONG,
-                   APR_HASH_KEY_STRING, val);
-      apr_hash_set(keywords, SVN_KEYWORD_URL_SHORT,
-                   APR_HASH_KEY_STRING, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_URL_LONG, val);
+      svn_hash_sets(keywords, SVN_KEYWORD_URL_SHORT, val);
     }
 
   err = svn_subst_copy_and_translate4(src_fname, dst_fname, dst_eol, repair,

@@ -29,7 +29,6 @@
 #include "svn_xml.h"
 #include "svn_dirent_uri.h"
 #include "svn_path.h"
-#include "svn_utf.h"
 #include "svn_opt.h"
 
 #include "cl.h"

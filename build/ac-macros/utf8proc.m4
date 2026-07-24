@@ -57,6 +57,7 @@ AC_DEFUN(SVN_UTF8PROC,
       AC_MSG_ERROR([Subversion requires UTF8PROC; install it or re-run configure with "--with-utf8proc=internal"])
     fi
   fi
+  SVN_DOT_CLANGD([$SVN_UTF8PROC_INCLUDES])
   AC_SUBST(SVN_UTF8PROC_INCLUDES)
   AC_SUBST(SVN_UTF8PROC_LIBS)
 ])

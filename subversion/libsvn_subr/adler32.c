@@ -25,6 +25,7 @@
 #include <apr.h>
 #include <zlib.h>
 
+#include "svn_private_config.h"
 #include "private/svn_adler32.h"
 
 /**
@@ -34,20 +35,63 @@
  * still provides an extremely low probability of undetected errors"
  */
 
+/* Prefer adler32_z() over adler32(). It should be more efficient, especially
+ * if the length of the data is larger then the size of zlib's uInt. The
+ * current implementation of adler32() in zlib just calls adler32_z() anyway.
+ *
+ * adler32_z() was added in zlib 1.2.9.
+ */
+#if SVN_ZLIB_HAS_ADLER32_Z
+#define svn__adler32_impl adler32_z
+typedef z_size_t svn__adler32_size_t;
+#else
+typedef uInt svn__adler32_size_t;
+#define svn__adler32_impl adler32
+#endif  /* SVN_ZLIB_HAS_ADLER32_Z */
+
+#define svn__adler32_fn(c,d,s) svn__adler32_impl((c), (const Bytef *)(d), (s))
+
+/* See adler32-test.c which invokes dark magic in order to test the
+   (len > SVN__ADLER32_SIZE_MAX) branch of the implementation. */
+#ifndef SVN__ADLER32_STATIC
+#define SVN__ADLER32_STATIC
+#define SVN__ADLER32_SIZE_MAX (~(svn__adler32_size_t)0)
+#endif
+
 /*
  * 65521 is the largest prime less than 65536.
  * "That 65521 is prime is important to avoid a possible large class of
  *  two-byte errors that leave the check unchanged."
  */
-#define ADLER_MOD_BASE 65521
+#define SVN__ADLER_MOD_BASE 65521U
 
 /*
  * Start with CHECKSUM and update the checksum by processing a chunk
  * of DATA sized LEN.
  */
-apr_uint32_t
+SVN__ADLER32_STATIC apr_uint32_t
 svn__adler32(apr_uint32_t checksum, const char *data, apr_off_t len)
 {
+  /* Process large amounts of data in max-sized chunks.
+   *
+   * Note: > not >=; then if sizeof(apr_off_t) <= sizeof(svn__adler32_size_t),
+   *                 this whole code block can be elided at compile time ...
+   */
+  if (SVN__PREDICT_FALSE(len > SVN__ADLER32_SIZE_MAX))
+    {
+      uLong partial = checksum; /* Avoid typecasts in the while loop. */
+      /* ... but >= here because we just might get lucky and
+       *     consume all the data in this loop.
+       */
+      while (len >= SVN__ADLER32_SIZE_MAX)
+        {
+          partial = svn__adler32_fn(partial, data, SVN__ADLER32_SIZE_MAX);
+          len -= SVN__ADLER32_SIZE_MAX;
+          data += SVN__ADLER32_SIZE_MAX;
+        }
+      checksum = (apr_uint32_t)partial;
+    }
+
   /* The actual limit can be set somewhat higher but should
    * not be lower because the SIMD code would not be used
    * in that case.
@@ -61,11 +105,10 @@ svn__adler32(apr_uint32_t checksum, const char *data, apr_off_t len)
        * optimized code. Also, new zlib versions will come with
        * SIMD code for x86 and x64.
        */
-      return (apr_uint32_t)adler32(checksum,
-                                   (const Bytef *)data,
-                                   (uInt)len);
+      return (apr_uint32_t)svn__adler32_fn(checksum, data,
+                                           (svn__adler32_size_t)len);
     }
-  else
+  else if (len > 0)
     {
       const unsigned char *input = (const unsigned char *)data;
       apr_uint32_t s1 = checksum & 0xFFFF;
@@ -96,6 +139,8 @@ svn__adler32(apr_uint32_t checksum, const char *data, apr_off_t len)
           s2 += s1;
         }
 
-      return ((s2 % ADLER_MOD_BASE) << 16) | (s1 % ADLER_MOD_BASE);
+      return ((s2 % SVN__ADLER_MOD_BASE) << 16) | (s1 % SVN__ADLER_MOD_BASE);
     }
+
+  return checksum;
 }

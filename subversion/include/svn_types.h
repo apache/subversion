@@ -124,16 +124,12 @@ extern "C" {
  * if unaligned access is supported for integers.
  *
  * @since New in 1.7.
+ * @deprecated Provided for backward compatibility with the 1.14 API.
  */
-#ifndef SVN_UNALIGNED_ACCESS_IS_OK
-# if defined(_M_IX86) || defined(i386) \
-     || defined(_M_X64) || defined(__x86_64) \
-     || defined(__powerpc__) || defined(__ppc__)
-#  define SVN_UNALIGNED_ACCESS_IS_OK 1
-# else
-#  define SVN_UNALIGNED_ACCESS_IS_OK 0
-# endif
+#ifdef SVN_UNALIGNED_ACCESS_IS_OK
+#  undef SVN_UNALIGNED_ACCESS_IS_OK
 #endif
+#define SVN_UNALIGNED_ACCESS_IS_OK 0
 
 
 

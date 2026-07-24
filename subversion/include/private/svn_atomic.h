@@ -96,6 +96,12 @@ typedef svn_error_t *(*svn_atomic__err_init_func_t)(void *baton,
 typedef const char *(*svn_atomic__str_init_func_t)(void *baton);
 
 /**
+ * Callback for svn_atomic__init_once_void().
+ * @since New in 1.16
+ */
+typedef void (*svn_atomic__void_init_func_t)(void *baton);
+
+/**
  * Call an initialization function in a thread-safe manner.
  *
  * @a global_status must be a pointer to a global, zero-initialized
@@ -134,6 +140,23 @@ svn_atomic__init_once_no_error(volatile svn_atomic_t *global_status,
                                svn_atomic__str_init_func_t str_init_func,
                                void *baton);
 
+
+/**
+ * Call an initialization function in a thread-safe manner.
+ *
+ * Unlike svn_atomic__init_once(), this function does not need pool and doesn't
+ * do any error handling at all.
+ *
+ * @a global_status must be a pointer to a global, zero-initialized
+ * #svn_atomic_t. @a init_func is a pointer to the function that performs the
+ * actual initialization. @a baton is passed on to @a init_func for its use.
+ *
+ * @since New in 1.16.
+ */
+void
+svn_atomic__init_once_void(volatile svn_atomic_t *global_status,
+                           svn_atomic__void_init_func_t init_func,
+                           void *baton);
 
 /**
  * Query and increment the global counter and set @a value to the new
