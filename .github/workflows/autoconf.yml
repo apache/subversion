@@ -188,6 +188,12 @@ jobs:
               APACHE_MPM="${{ steps.platform.outputs.apache-mpm }}" \
               CHECK_XML_SCHEMA=1
 
+      - name: Run tests (STORE_PRISTINE=no)
+        run: |
+          make ${{matrix.check-target}} PARALLEL=6 \
+              APACHE_MPM="${{ steps.platform.outputs.apache-mpm }}" \
+              CHECK_XML_SCHEMA=1 STORE_PRISTINE=no
+
       - name: Archive test logs
         if: always()
         uses: actions/upload-artifact@v7
